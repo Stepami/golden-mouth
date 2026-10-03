@@ -91,9 +91,9 @@
 
 Продуктовая аналитика (вопросы, события, воронки, хранение): [analytics.md](analytics.md). Ниже журнал ошибок.
 
-Фронт шлёт события и ошибки пачкой на `POST /logs` (`frontend/src/app/log.ts`). В записях **нет текстов игрока, ников и initData**: только код экрана, id, числа, длины (`len:123`). Ошибки: `js_error`, `promise_rejection`, `render_error` (экран «Что-то пошло не так»), `api_error` (5xx как error, 4xx как warn), `sse_error`; одна и та же ошибка не чаще раза в минуту. Бэкенд хранит логи 30 дней и удаляет их вместе с аккаунтом.
+Ошибки фронт шлёт пачкой на `POST /logs` (`frontend/src/app/log.ts`), события поведения отдельно на `POST /events` (`frontend/src/app/analytics.ts`). В записях **нет текстов игрока, ников и initData**: только код экрана, id, числа, длины (`len:123`). Ошибки: `js_error`, `promise_rejection`, `render_error` (экран «Что-то пошло не так»), `api_error` (5xx как error, 4xx как warn), `sse_error`; одна и та же ошибка не чаще раза в минуту. Бэкенд хранит логи 30 дней и удаляет их вместе с аккаунтом.
 
-События фронта: `session_start`, `screen_view`, `onboarding_step` (age / world / channel / done), `post_publish` (len, own_words), `post_result` (delta, viral, flop), `limit_reached`, `plus_interest`, `plus_bonus_only`, `invite_sent`, `share` (chat / story), `event_answered`, `challenge_post`, `report`, `crisis_shown`. Серверные события, полный список с полями и метрики теста: [analytics.md](analytics.md) («Что пишет бэкенд сам»), формат записи для дашбордов: [dashboards.md](dashboards.md).
+События фронта (`POST /events`): `session_start`, `screen_view`, `screen_leave`, `tap`, `app_hidden`, `app_visible`, `onboarding_step` (age / world / channel / done), `post_publish` (len, own_words), `post_result` (delta, viral, flop), `limit_reached`, `plus_interest`, `plus_bonus_only`, `invite_sent`, `share` (chat / story), `event_answered`, `challenge_post`, `report`, `crisis_shown`. Серверные события, полный список с полями и метрики теста: [analytics.md](analytics.md) («Что пишет бэкенд сам»), формат записи для дашбордов: [dashboards.md](dashboards.md).
 Метрики теста: D1 ≥ 40%, D7 ≥ 15%, K (честный: приглашённый дожил до D1), доля упёршихся в лимит и что они выбрали, на каком посте впервые пишут своими словами, клик «Хочу Реки+».
 
 ## 11. API для фронта
