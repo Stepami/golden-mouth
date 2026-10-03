@@ -148,7 +148,7 @@ function Channel() {
         <div className="card row" style={{ gap: 12 }}><Avatar id={ava} size={48} />
           <div><b>{name}</b><div className="muted small">{handle} · 120 подписчиков</div><div className="small" style={{ marginTop: 4 }}>{mockPlayer.bio} <span className="muted">(дописал AI)</span></div></div></div>
       </div>
-      <BottomCTA main="Дальше" disabled={!name.trim() || !handle.trim()} onMain={() => nav.push('01-5_first_star', { ...nav.params, role: roles[role], avatar: ava, name, handle, address: addr })} />
+      <BottomCTA main="Дальше" disabled={!name.trim() || !handle.trim()} onMain={() => { track('onboarding_step', { step: 'channel', address: addr }); nav.push('01-5_first_star', { ...nav.params, role: roles[role], avatar: ava, name, handle, address: addr }) }} />
     </div>
   )
 }

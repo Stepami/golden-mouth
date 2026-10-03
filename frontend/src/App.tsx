@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NavContext, TABS, type Nav, type ScreenId } from './app/nav'
 import { StoreProvider, useStore } from './app/store'
 import { SCREENS, TAB_OF } from './screens'
-import { setScreen, track } from './app/log'
+import { screenView, setExperiments, setPlayerId, tap } from './app/analytics'
+import { setScreen } from './app/log'
 import { syncBackButton } from './telegram'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
@@ -29,7 +30,8 @@ function Shell() {
     tab: i => { setStack([{ id: TABS[i].screen, params: {} }]); window.scrollTo(0, 0) },
   }), [top, stack.length])
 
-  useEffect(() => { setScreen(top.id); track('screen_view') }, [top.id])
+  useEffect(() => { setScreen(top.id); screenView(top.id) }, [top.id])
+  useEffect(() => { if (player) setPlayerId(player.id); if (player?.experiments) setExperiments(player.experiments) }, [player?.id, player?.experiments])
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1, back), [stack.length, back])
 
@@ -42,7 +44,7 @@ function Shell() {
         <Screen />
         {tab !== undefined && (
           <nav className="tabbar">
-            {TABS.map((t, i) => <button key={t.title} className={i === tab ? 'on' : ''} onClick={() => nav.tab(i)}><b>{t.icon}</b>{t.title}</button>)}
+            {TABS.map((t, i) => <button key={t.title} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button>)}
           </nav>
         )}
       </div>
