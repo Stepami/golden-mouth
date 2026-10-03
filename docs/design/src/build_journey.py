@@ -3,7 +3,7 @@
 import os, subprocess, time
 D = os.path.dirname(os.path.abspath(__file__))
 exec(open(os.path.join(D, 'build.py')).read().split('S={}')[0])  # CSS, page, ava из общих макетов
-OUT = os.path.join(os.path.dirname(os.path.dirname(D)), 'docs', 'screens'); os.makedirs(OUT, exist_ok=True)
+OUT = os.path.join(os.path.dirname(os.path.dirname(D)), 'screens'); os.makedirs(OUT, exist_ok=True)
 AVD = 'file://' + os.path.join(os.path.dirname(D), 'avatars') + '/'
 # Аватарки персонажей (CC0, см. ../avatars/README.md). Буква из макета -> файл
 AV = {'Л': 'pick0', 'М': 'mira', 'С': 'sonya', 'Е': 'eva', 'Ю': 'yuna', 'К': 'katya', 'Д': 'dima', 'к': 'dasha', 'х': 'critic'}

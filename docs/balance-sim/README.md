@@ -1,8 +1,8 @@
 # Симуляция баланса, 03.10.2026
 
-Навык для агента: [.claude/skills/game-balance-sim](../../.claude/skills/game-balance-sim/SKILL.md). Запуск из этой папки: `python3 <скрипт>`.
+Навык для агента: [.agents/skills/game-balance-sim](../../.agents/skills/game-balance-sim/SKILL.md). Запуск из этой папки: `python3 <скрипт>`.
 
-`game_sim.py`: 7 типов игроков × 400 прогонов × 30 дней по правилам [docs/game-flow.md](../../docs/game-flow.md). Запуск `python3 game_sim.py v1` (правила как были) или `v2` (с правками). Сырой вывод: [out_v1.txt](out_v1.txt), [out_v2.txt](out_v2.txt). Таблицы ниже это медианы, день события.
+`game_sim.py`: 7 типов игроков × 400 прогонов × 30 дней по правилам [docs/game-flow.md](../game-flow.md). Запуск `python3 game_sim.py v1` (правила как были) или `v2` (с правками). Сырой вывод: [out_v1.txt](out_v1.txt), [out_v2.txt](out_v2.txt). Таблицы ниже это медианы, день события.
 
 Типы игроков: казуал (3 поста, заходит 6 дней из 10), средний (10 постов), вовлечённый (10 постов каждый день, пишет сам), Реки+ (30 постов), «только подсказки», парень в Айти-тусовке, зовущий друзей (12 приглашений).
 
@@ -81,7 +81,7 @@
 
 ## Цикл 4: аудит как в Sims (`game_sim3.py`, `playthrough.py`)
 
-Прохождения 5 персонажей по дням: [out_playthrough.txt](out_playthrough.txt). Сложность миров, ритм уровней, провалы, переезд: [до](out_c3_before.txt), [после](out_c3_after.txt), [после с 10 уровнями](out_c3_after10.txt). Выводы и рекомендации: [docs/audit.md](../../docs/audit.md).
+Прохождения 5 персонажей по дням: [out_playthrough.txt](out_playthrough.txt). Сложность миров, ритм уровней, провалы, переезд: [до](out_c3_before.txt), [после](out_c3_after.txt), [после с 10 уровнями](out_c3_after10.txt). Выводы и рекомендации: [docs/audit.md](../audit.md).
 
 ## Цикл 5: серия дней (`game_sim4.py`)
 
