@@ -111,7 +111,7 @@ function World() {
           </div>
         ))}
         <div className="card row" style={{ gap: 12, padding: '11px 14px', border: '1px dashed #9B6BFF77', background: 'transparent' }}>
-          <div style={{ fontSize: 24 }}>✨</div><div className="small muted"><b style={{ color: '#fff' }}>Свой мир</b> по описанию голосом или текстом. Откроется на 10k или когда друг сделает первый пост по твоей ссылке</div>
+          <div style={{ fontSize: 24 }}>✨</div><div className="small muted"><b style={{ color: '#fff' }}>Свой мир</b> по описанию голосом или текстом. Откроется на 10k, когда друг сделает первый пост по твоей ссылке, или с Реки+</div>
         </div>
       </div>
       <BottomCTA main={`В ${w.title === 'Сцена' ? 'Сцену' : w.title === 'Академия' ? 'Академию' : w.title === 'Айти-тусовка' ? 'Айти-тусовку' : w.title}`} onMain={() => { track('onboarding_step', { step: 'world', world: pick }); nav.push('01-4_channel', { ...nav.params, world: pick }) }} />
