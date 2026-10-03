@@ -1,7 +1,8 @@
-// Логи и аналитика фронта. Правила:
+// Журнал ошибок фронта (POST /logs). Аналитика поведения отдельно: app/analytics.ts. Правила:
 // - никаких текстов игрока, имён, ников и initData: только коды экранов, id, числа, длины;
 // - события копятся и уходят пачкой (POST /logs, sendBeacon при закрытии), без VITE_API_URL пишутся в консоль в dev;
 // - ошибки ловятся глобально и в ErrorBoundary; повтор одной ошибки не чаще раза в минуту.
+import { event } from './analytics'
 const BASE = import.meta.env.VITE_API_URL as string | undefined
 const DEV = import.meta.env.DEV
 
@@ -39,8 +40,8 @@ export function flush(beacon = false) {
   fetch(`${BASE}/logs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {})
 }
 
-/** Событие аналитики (список в docs/backend-spec.md, раздел 9). */
-export const track = (event: string, props?: LogEntry['props']) => push('info', event, props)
+/** Событие продуктовой аналитики: уходит в app/analytics.ts (POST /events), не в журнал ошибок. */
+export const track = (name: string, props?: LogEntry['props']) => event(name, props ?? undefined)
 export const warn = (event: string, props?: LogEntry['props']) => push('warn', event, props)
 export function error(event: string, err: unknown, props?: LogEntry['props']) {
   const msg = err instanceof Error ? `${err.name}: ${err.message}`.slice(0, 200) : String(err).slice(0, 200)
@@ -55,5 +56,4 @@ export function installGlobalHandlers() {
   window.addEventListener('unhandledrejection', e => error('promise_rejection', e.reason))
   setInterval(() => flush(), 15_000)
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(true) })
-  track('session_start', { tg: 'Telegram' in window })
 }

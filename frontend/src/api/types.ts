@@ -22,6 +22,8 @@ export interface Player {
   bio: string; type: string                     // «дерзкая с самоиронией»
   nextWorld?: { id: WorldId; title: string; need: string }
   settings: { drama: Drama; notifications: string; quiet: string; voice: string; plus: boolean }
+  /** A/B-флаги, например { plus_offer: '10' } — аналитика прикладывает их к каждому событию */
+  experiments?: Record<string, string>
 }
 
 export interface Reaction { emoji: string; count: number }
