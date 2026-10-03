@@ -8,6 +8,7 @@ import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
 import { Avatar, BottomCTA, Button, Comment, Gift, Ribbon, TopBar, Whisper, fmt, plural } from '../ui'
 import { ChannelHead } from './onboarding'
+import { track } from '../app/log'
 import { register } from '.'
 
 const LINK = 'https://t.me/reki_game?start=liza7'
@@ -36,7 +37,7 @@ function Compose() {
         <div className="small muted" style={{ margin: '4px 0 8px' }}>💡 ПОДСКАЖИ</div>
         {ideas.map(i => <button key={i} className="opt" onClick={() => setText(i.replace(/[«»]/g, '').replace('…', ' '))}>{i}</button>)}
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => p.postsLeft > 0 ? nav.replace('02-2_live', { text }) : nav.replace('04-1_limit')} />
+      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: !ideas.some(i => text.startsWith(i.replace(/[«»…]/g, '').trim())) }); nav.replace('02-2_live', { text }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
     </div>
   )
 }
@@ -55,7 +56,7 @@ function Live() {
     if (e.type === 'react') setFloats(f => [...f, { id: Date.now() + Math.random(), emoji: e.emoji, x: 10 + Math.random() * 70 }])
     if (e.type === 'comment') { setComments(c => [...c, e.comment]); setToast(true) }
     if (e.type === 'typing') setTyping(e.who)
-    if (e.type === 'result') { patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: p.subs + e.result.delta }); nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: e.result, text }) }
+    if (e.type === 'result') { track('post_result', { delta: e.result.delta, viral: e.result.viral, flop: e.result.flop }); patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: p.subs + e.result.delta }); nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: e.result, text }) }
   }), []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="screen">
@@ -159,9 +160,9 @@ function Thread() {
 function Share() {
   const nav = useNav()
   const text = 'Мой пост залетел в Реки 🌊 А ты кем будешь в Сцене?'
-  const toChat = () => { if (inTelegram) shareURL.ifAvailable(LINK, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(LINK)}&text=${encodeURIComponent(text)}`) }
+  const toChat = () => { track('share', { to: 'chat' }); if (inTelegram) shareURL.ifAvailable(LINK, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(LINK)}&text=${encodeURIComponent(text)}`) }
   // Картинку 9:16 рисует бэкенд (#10): GET /cards/story/<postId>.png
-  const toStory = () => { if (inTelegram) shareStory.ifAvailable(`${import.meta.env.VITE_API_URL ?? ''}/cards/story/${firstPost.id}.png`, { text, widgetLink: { url: LINK, name: 'Играть' } }) }
+  const toStory = () => { track('share', { to: 'story' }); if (inTelegram) shareStory.ifAvailable(`${import.meta.env.VITE_API_URL ?? ''}/cards/story/${firstPost.id}.png`, { text, widgetLink: { url: LINK, name: 'Играть' } }) }
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Поделиться" />

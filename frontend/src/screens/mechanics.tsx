@@ -7,6 +7,7 @@ import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
 import { Avatar, BottomCTA, Card, Chip, TopBar } from '../ui'
+import { track } from '../app/log'
 import { register } from '.'
 
 // 03-4c: заруба на 3 дня. Счёт = 0,7 × оценка постов по шкалам мира + 0,3 × рост к своей медиане (считает бэкенд)
@@ -32,7 +33,7 @@ function Challenge() {
         <Card style={{ marginBottom: 10 }}><b>Ставка</b><div className="why"><span>🏆 Победитель</span><span className="up">+3 поста в день на 3 дня</span></div><div className="why"><span>🫠 Проигравший</span><span className="muted">ничего не теряет · карточка «Реванш»</span></div></Card>
         <Card style={{ background: '#20202B' }} onClick={() => nav.push('03-4d_duel')}><span className="small">🔥 Лучший пост дня: {c.bestPost} ›</span></Card>
       </div>
-      <BottomCTA main="Новый пост в зарубу" onMain={() => nav.push('02-1_compose')} />
+      <BottomCTA main="Новый пост в зарубу" onMain={() => { track('challenge_post'); nav.push('02-1_compose') }} />
     </div>
   )
 }

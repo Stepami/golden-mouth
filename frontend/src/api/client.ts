@@ -1,6 +1,7 @@
 // Клиент API. Без VITE_API_URL работает на тестовых данных (mock.ts).
 // Во фронте НЕТ секретов: всё из import.meta.env попадает в браузер. Ключи LLM и токен бота живут только на бэкенде.
 import * as mock from './mock'
+import { error, warn } from '../app/log'
 import type { Challenge, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, PostResult, WorldRules } from './types'
 
 const BASE = import.meta.env.VITE_API_URL as string | undefined
@@ -9,7 +10,7 @@ export const setInitData = (raw: string) => { initDataRaw = raw }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`${BASE}${path}`, { ...init, headers: { 'Content-Type': 'application/json', Authorization: `tma ${initDataRaw}`, ...init?.headers } })
-  if (!r.ok) throw new Error(`${path}: ${r.status}`)
+  if (!r.ok) { const e = new Error(`${init?.method ?? 'GET'} ${path.replace(/\/[\w-]{16,}/g, '/:id')} ${r.status}`); if (r.status >= 500) error('api_error', e, { status: r.status }); else warn('api_error', { status: r.status, msg: e.message }); throw e }
   return r.json() as Promise<T>
 }
 const later = <T,>(v: T, ms = 150) => new Promise<T>(res => setTimeout(() => res(structuredClone(v)), ms))
@@ -27,7 +28,7 @@ export const api = {
           const reader = r.body!.getReader(); const dec = new TextDecoder(); let buf = ''
           for (;;) { const { done, value } = await reader.read(); if (done) break; buf += dec.decode(value, { stream: true })
             let i; while ((i = buf.indexOf('\n\n')) >= 0) { const chunk = buf.slice(0, i); buf = buf.slice(i + 2); const data = chunk.replace(/^data: /gm, ''); if (data) onEvent(JSON.parse(data)) } }
-        }).catch(() => {})
+        }).catch(e => { if ((e as Error).name !== 'AbortError') error('sse_error', e) })
       return () => ctrl.abort()
     }
     const steps: [number, LiveEvent][] = [[200, { type: 'views', views: 48 }], [500, { type: 'react', emoji: '😂' }], [800, { type: 'comment', comment: mock.liveComment }],

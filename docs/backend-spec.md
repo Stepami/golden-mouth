@@ -87,7 +87,11 @@
 - Бонус +5 обоим, когда новый игрок сделал первый пост. До 3 бонусов в день на пригласившего, один бонус на Telegram-аккаунт приглашённого.
 - «Дуэт» на 2-й день, если приглашённый вернулся.
 
-## 9. Аналитика (для теста)
+## 9. Аналитика и логи (для теста)
+
+Фронт шлёт события и ошибки пачкой на `POST /logs` (`frontend/src/app/log.ts`). В записях **нет текстов игрока, ников и initData**: только код экрана, id, числа, длины (`len:123`). Ошибки: `js_error`, `promise_rejection`, `render_error` (экран «Что-то пошло не так»), `api_error` (5xx как error, 4xx как warn), `sse_error`; одна и та же ошибка не чаще раза в минуту. Бэкенд хранит логи 30 дней и удаляет их вместе с аккаунтом.
+
+События фронта: `session_start`, `screen_view`, `onboarding_step` (age / world / done), `post_publish` (len, own_words), `post_result` (delta, viral, flop), `limit_reached`, `plus_interest`, `plus_bonus_only`, `invite_sent`, `share` (chat / story), `event_answered`, `challenge_post`, `report`, `crisis_shown`. Остальное считает бэкенд:
 
 События: `onboarding_step`, `post_published` (own_words, quality, delta, viral, flop), `limit_reached`, `plus_interest`, `invite_sent`, `invite_converted`, `share`, `challenge_started/finished`, `event_answered`, `report`, `crisis_shown`, `session_start`.
 Метрики теста: D1 ≥ 40%, D7 ≥ 15%, K (честный: приглашённый дожил до D1), доля упёршихся в лимит и что они выбрали, на каком посте впервые пишут своими словами, клик «Хочу Реки+».
@@ -118,6 +122,7 @@
 | `POST /plus-interest` | `{ bonus: 5 }` | 04-2 |
 | `DELETE /me` | `{ ok }` | 05-8 |
 | `GET /cards/story/:postId.png` | картинка 9:16 | 02-7 |
+| `POST /logs` `{ session, entries: LogEntry[] }` | 204 | все (пачками раз в 15 с, при ошибке сразу, при закрытии через sendBeacon) |
 
 ## 10. Окружение
 

@@ -6,10 +6,12 @@ import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
 import { Avatar, BottomCTA, Button, Card, Gift, Toggle, TopBar, fmt } from '../ui'
 import { ChannelHead } from './onboarding'
+import { track } from '../app/log'
 import { register } from '.'
 
 const LINK = 'https://t.me/reki_game?start=liza7'
 const shareInvite = () => {
+  track('invite_sent')
   const text = 'Играю в Реки: веду канал, а AI-звёзды реагируют на каждый пост. Заходи, +5 постов нам обоим'
   if (inTelegram) shareURL.ifAvailable(LINK, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(LINK)}&text=${encodeURIComponent(text)}`)
 }
@@ -37,7 +39,7 @@ function Limit() {
 function FakeDoor() {
   const nav = useNav(); const p = usePlayer(); const { patch } = useStore()
   const [sent, setSent] = useState(false)
-  const take = async (interest: boolean) => { if (interest) await api.plusInterest(); patch({ postsLeft: p.postsLeft + 5 }); setSent(true); setTimeout(() => nav.back(), 900) }
+  const take = async (interest: boolean) => { track(interest ? 'plus_interest' : 'plus_bonus_only'); if (interest) await api.plusInterest(); patch({ postsLeft: p.postsLeft + 5 }); setSent(true); setTimeout(() => nav.back(), 900) }
   const plan = (name: string, price: string, rows: [string, boolean][], hi?: boolean) => (
     <div className="card" style={{ flex: 1, padding: 12, ...(hi ? { border: '2px solid var(--accent)', background: 'linear-gradient(160deg,#2A1A2E,#1A1A24)' } : { border: '1px solid #33323F' }) }}>
       <b>{name}</b><div style={{ fontSize: 20, fontWeight: 900, margin: '2px 0 8px' }}>{price}</div>
