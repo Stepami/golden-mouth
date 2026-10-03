@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { closeMiniApp } from '@telegram-apps/sdk-react'
 import { api } from '../api/client'
 import { firstPost } from '../api/mock'
 import { useNav } from '../app/nav'
 import { Avatar, Bubble, Button, Comment, TopBar } from '../ui'
 import { inTelegram } from '../telegram'
+import { track } from '../app/log'
 import { register } from '.'
 
 const REASONS = ['про внешность или тело', 'оскорбление', 'пошлое', 'что-то другое']
@@ -16,7 +17,7 @@ function Report() {
   const [sent, setSent] = useState(false)
   const target = firstPost.comments[3]
   const id = (nav.params.id as string) ?? target.id
-  const send = async () => { if (!reason) return; await api.report(id, reason); setSent(true); setTimeout(nav.back, 900) }
+  const send = async () => { if (!reason) return; track('report', { reason: REASONS.indexOf(reason) }); await api.report(id, reason); setSent(true); setTimeout(nav.back, 900) }
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Реакции" />
@@ -41,6 +42,7 @@ function Report() {
  *  Кризис определяет бэкенд (#9) и присылает флаг; фронт только показывает. После кризиса хейт выключен на неделю. */
 function Crisis({ adult }: { adult: boolean }) {
   const nav = useNav()
+  useEffect(() => { track('crisis_shown', { adult }) }, [adult])
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back}><Avatar id="mira" size={36} /><div><b>Мира</b><div className="small muted">лидер BLESK</div></div></TopBar>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NavContext, TABS, type Nav, type ScreenId } from './app/nav'
 import { StoreProvider, useStore } from './app/store'
 import { SCREENS, TAB_OF } from './screens'
+import { setScreen, track } from './app/log'
 import { syncBackButton } from './telegram'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
@@ -28,6 +29,7 @@ function Shell() {
     tab: i => { setStack([{ id: TABS[i].screen, params: {} }]); window.scrollTo(0, 0) },
   }), [top, stack.length])
 
+  useEffect(() => { setScreen(top.id); track('screen_view') }, [top.id])
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1, back), [stack.length, back])
 

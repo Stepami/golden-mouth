@@ -5,6 +5,7 @@ import type { Address, WorldId } from '../api/types'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
 import { Avatar, BottomCTA, Card, Chip, Dots, fmt } from '../ui'
+import { track } from '../app/log'
 import { register } from '.'
 
 /** Точки прогресса онбординга и «назад», кроме первого шага. */
@@ -72,7 +73,7 @@ function Age() {
         </Card>
         {!agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
       </div>
-      <BottomCTA main="Дальше" disabled={!agree} onMain={() => nav.push(age < 14 ? '01-2b_under14' : '01-3_world', { group: age < 18 ? '14-17' : '18+' })} />
+      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 14 }); nav.push(age < 14 ? '01-2b_under14' : '01-3_world', { group: age < 18 ? '14-17' : '18+' }) }} />
     </div>
   )
 }
@@ -113,7 +114,7 @@ function World() {
           <div style={{ fontSize: 24 }}>✨</div><div className="small muted"><b style={{ color: '#fff' }}>Свой мир</b> по описанию голосом или текстом. Откроется на 10k или когда друг сделает первый пост по твоей ссылке</div>
         </div>
       </div>
-      <BottomCTA main={`В ${w.title === 'Сцена' ? 'Сцену' : w.title === 'Академия' ? 'Академию' : w.title === 'Айти-тусовка' ? 'Айти-тусовку' : w.title}`} onMain={() => nav.push('01-4_channel', { ...nav.params, world: pick })} />
+      <BottomCTA main={`В ${w.title === 'Сцена' ? 'Сцену' : w.title === 'Академия' ? 'Академию' : w.title === 'Айти-тусовка' ? 'Айти-тусовку' : w.title}`} onMain={() => { track('onboarding_step', { step: 'world', world: pick }); nav.push('01-4_channel', { ...nav.params, world: pick }) }} />
     </div>
   )
 }
@@ -161,7 +162,7 @@ function FirstStar() {
   const go = async () => {
     const p = nav.params as Record<string, string>
     const pl = await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', world: p.world ?? 'stage', role: p.role ?? '', avatar: p.avatar ?? 'pick0', name: p.name ?? '', handle: p.handle ?? '', address: p.address ?? 'nick', star: pick })
-    setPlayer(pl); nav.replace('01-6_home')
+    track('onboarding_step', { step: 'done', star: pick }); setPlayer(pl); nav.replace('01-6_home')
   }
   return (
     <div className="screen no-tab">
