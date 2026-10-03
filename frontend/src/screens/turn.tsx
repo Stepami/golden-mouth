@@ -36,7 +36,7 @@ function Compose() {
         <div className="small muted" style={{ margin: '4px 0 8px' }}>💡 ПОДСКАЖИ</div>
         {ideas.map(i => <button key={i} className="opt" onClick={() => setText(i.replace(/[«»]/g, '').replace('…', ' '))}>{i}</button>)}
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim() || p.postsLeft <= 0} onMain={() => nav.replace('02-2_live', { text })} />
+      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => p.postsLeft > 0 ? nav.replace('02-2_live', { text }) : nav.replace('04-1_limit')} />
     </div>
   )
 }
