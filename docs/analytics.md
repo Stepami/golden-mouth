@@ -45,7 +45,7 @@
 
 ## Что пишет бэкенд сам
 
-`player_created` (мир, группа возраста, пришёл по ссылке или нет), `invite_converted`, `post_scored` (три шкалы, quality, номер поста за день), `level_up`, `card_earned`, `stage_reached`, `hate_wave`, `challenge_started/finished`, `notification_sent/opened`, `plus_shown`. Сервер видит то, чего не видит фронт: оценки модели, конверсию приглашений, уведомления.
+`player_created` (мир, группа возраста, пришёл по ссылке или нет), `invite_converted`, `post_scored` (три шкалы, quality, номер поста за день), `level_up`, `card_earned`, `stage_reached`, `hate_wave`, `challenge_started`, `challenge_finished`, `notification_sent`, `notification_opened`, `plus_shown`. Сервер видит то, чего не видит фронт: оценки модели, конверсию приглашений, уведомления.
 
 ## Метрики теста
 
