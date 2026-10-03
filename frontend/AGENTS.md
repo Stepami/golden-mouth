@@ -7,6 +7,11 @@ Telegram Mini App: веб-страница, которая открываетс�
 - @telegram-apps/sdk для initData, темы и кнопок Telegram
 - Бэкенд в ../backend, общаемся по REST/JSON
 
+## Запуск
+- Локально: `npm ci && npm run dev`
+- Контейнер: `docker build -t reki-frontend .` и `docker run -p 8080:80 reki-frontend` (Vite собирает статику, nginx раздаёт). В общий docker-compose фронт входит этим образом.
+- Новые пакеты только `npm i <pkg>@<точная версия>`: .npmrc закрепляет версии и не берёт релизы новее даты в `before`, её сдвигаем вручную.
+
 ## Как работаем
 - Задача = GitHub issue со спецификацией в теле (как в Stepami/hydrascript). Ветка `issue-<N>-кратко`, PR с `Closes #N`.
 - Экран = компонент в `src/screens/<код экрана>`, коды как в макетах (01-3_world, 04-1_limit…).

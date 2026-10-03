@@ -1,0 +1,12 @@
+/* Токены из макетов reki-concept/design/mockups: тёмная тема, розово-фиолетовый акцент */
+:root {
+  --bg: #0E0E13; --card: #1A1A24; --text: #F2F0FA; --muted: #A9A6BD;
+  --accent: #FF6B8B; --accent2: #9B6BFF; --gift: #FFD66B; --up: #6BFFB8;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, 'Inter', system-ui, sans-serif; }
+.app { min-height: 100dvh; display: flex; flex-direction: column; }
+.screen { flex: 1; padding: 16px; }
+.tabs { display: flex; border-top: 1px solid #262634; padding-bottom: env(safe-area-inset-bottom); }
+.tabs button { flex: 1; background: none; border: 0; color: var(--muted); padding: 8px 0; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
+.tabs button.on { color: var(--accent); }
