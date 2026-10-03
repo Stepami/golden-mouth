@@ -8,6 +8,7 @@ Telegram Mini App 14+: ведёшь канал блогера в вымышле�
 | [docs/backend-spec.md](docs/backend-spec.md) | Спека бэкенда: ход, оценка поста LLM, контент миров, бот, безопасность, антифрод, аналитика |
 | [docs/config/balance.json](docs/config/balance.json) | Все числа баланса одним конфигом |
 | [docs/analytics.md](docs/analytics.md) | Продуктовая аналитика: вопросы, события, воронки, метрики, хранение |
+| [docs/dashboards.md](docs/dashboards.md) | Шесть дашбордов Metabase: графики, как считать, какие решения принимать |
 | [docs/screens/](docs/screens/README.md) | Макеты всех экранов |
 | [docs/audit.md](docs/audit.md) | Итоговый аудит игры и экранов, вердикт для вёрстки |
 | [docs/design/](docs/design/README.md) | Исходники экранов (HTML → PNG) |
