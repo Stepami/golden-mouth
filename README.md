@@ -12,7 +12,7 @@ Telegram Mini App 14+: ведёшь канал блогера в вымышле�
 | [docs/audit.md](docs/audit.md) | Итоговый аудит игры и экранов, вердикт для вёрстки |
 | [docs/design/](docs/design/README.md) | Исходники экранов (HTML → PNG) |
 | [docs/balance-sim/](docs/balance-sim/README.md) | Симуляции баланса и их выводы |
-| [.agents/skills/game-balance-sim/](.agents/skills/game-balance-sim/SKILL.md) | Навык агента: прогнать симуляцию и внести выводы |
+| [.agents/skills/](.agents/skills) | Навыки агента: `game-balance-sim` (симуляция баланса), `repo-consistency-check` (сверка на противоречия), `screen-check` (экраны против макетов) |
 | [frontend/](frontend/README.md) | Mini App: React + TypeScript + Vite, Docker |
 | [Issues](https://github.com/Stepami/golden-mouth/issues) | Задачи со спецификацией в теле |
 

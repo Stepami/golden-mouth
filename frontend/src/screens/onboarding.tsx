@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
-import { avatarChoices, player as mockPlayer, roles, stars, worlds } from '../api/mock'
+import { avatarChoices, player as mockPlayer, roles, stars, worldOf, worlds } from '../api/mock'
 import type { Address, WorldId } from '../api/types'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
@@ -114,7 +114,7 @@ function World() {
           <div style={{ fontSize: 24 }}>✨</div><div className="small muted"><b style={{ color: '#fff' }}>Свой мир</b> по описанию голосом или текстом. Откроется на 10k, когда друг сделает первый пост по твоей ссылке, или с Реки+</div>
         </div>
       </div>
-      <BottomCTA main={`В ${w.title === 'Сцена' ? 'Сцену' : w.title === 'Академия' ? 'Академию' : w.title === 'Айти-тусовка' ? 'Айти-тусовку' : w.title}`} onMain={() => { track('onboarding_step', { step: 'world', world: pick }); nav.push('01-4_channel', { ...nav.params, world: pick }) }} />
+      <BottomCTA main={`В ${worldOf(w.id).acc}`} onMain={() => { track('onboarding_step', { step: 'world', world: pick }); nav.push('01-4_channel', { ...nav.params, world: pick }) }} />
     </div>
   )
 }

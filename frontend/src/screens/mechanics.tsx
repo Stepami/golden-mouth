@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { shareURL } from '@telegram-apps/sdk-react'
 import { api } from '../api/client'
-import { challenge as challengeMock } from '../api/mock'
+import { challenge as challengeMock, worldOf } from '../api/mock'
 import { useApi } from '../app/useApi'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
@@ -12,14 +12,14 @@ import { register } from '.'
 
 // 03-4c: заруба на 3 дня. Счёт = 0,7 × оценка постов по шкалам мира + 0,3 × рост к своей медиане (считает бэкенд)
 function Challenge() {
-  const nav = useNav(); const c = useApi(api.challenge, challengeMock) ?? challengeMock
+  const nav = useNav(); const p = usePlayer(); const c = useApi(api.challenge, challengeMock) ?? challengeMock
   const max = Math.max(c.myScore, c.rivalScore) * 1.4
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Заруба" right={`день ${c.day} из ${c.days}`} />
       <div className="pad">
         <div className="row" style={{ justifyContent: 'center', gap: 18, margin: '6px 0 14px' }}>
-          <div style={{ textAlign: 'center' }}><Avatar id="liza" size={64} style={{ margin: '0 auto 6px' }} /><b>{c.me}</b><div className="small muted">🎤 Сцена</div></div>
+          <div style={{ textAlign: 'center' }}><Avatar id="liza" size={64} style={{ margin: '0 auto 6px' }} /><b>{c.me}</b><div className="small muted">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
           <div style={{ fontSize: 28 }}>⚔️</div>
           <div style={{ textAlign: 'center' }}><Avatar id={c.rival.avatar} size={64} style={{ margin: '0 auto 6px' }} /><b>Катя</b><div className="small muted">{c.rival.world}</div></div>
         </div>
