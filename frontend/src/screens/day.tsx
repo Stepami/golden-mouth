@@ -212,7 +212,7 @@ function Settings() {
             <Segmented value={drama} onChange={setD} options={[{ id: 'soft', label: 'мягко' }, { id: 'mid', label: 'средне' }, { id: 'hot', label: 'остро' }, { id: 'off', label: 'без хейта' }]} /></div>
         </Card>
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
-          {row('🎙 Голос канала', `${p.settings.voice} ›`)}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`)}
+          {row('🎙 Голос канала', `${p.settings.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`)}
           {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('🔒 Мои данные и правила', '›')}{row('✉ Поддержка', '›', true)}
         </Card>
         <button onClick={() => setDel(true)} className="card" style={{ width: '100%', textAlign: 'center', color: 'var(--accent)', background: 'transparent', border: '1px solid #FF6B8B55' }}>Удалить аккаунт и всё</button>
