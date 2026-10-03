@@ -1,6 +1,6 @@
 #!/bin/sh
 # Публичный репозиторий: блокируем коммит, если в изменениях похоже на секрет.
-# Запуск вручную: scripts/check-secrets.sh --all (весь репозиторий) или без флага (только staged).
+# Запуск вручную: .github/scripts/check-secrets.sh --all (весь репозиторий) или без флага (только staged).
 set -e
 if [ "$1" = "--all" ]; then FILES=$(git ls-files); else FILES=$(git diff --cached --name-only --diff-filter=ACM); fi
 [ -z "$FILES" ] && exit 0

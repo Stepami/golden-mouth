@@ -1,6 +1,6 @@
 # Исходники экранов
 
-Экраны собираются из HTML в PNG 1170×2532 через headless Chrome: `python3 design/src/build_journey.py [коды экранов]`, результат в [docs/screens/](../docs/screens/README.md).
+Экраны собираются из HTML в PNG 1170×2532 через headless Chrome: `python3 docs/design/src/build_journey.py [коды экранов]`, результат в [docs/screens/](../docs/screens/README.md).
 
 - `src/build.py`: стили и общие блоки (берётся часть до `S={}`).
 - `src/build_journey.py`: базовые экраны пути игрока.

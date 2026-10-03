@@ -19,7 +19,7 @@ Telegram Mini App: веб-страница, которая открываетс�
 - `scripts/screens.sh [коды]`: скриншоты 390×844 в `shots/` для сравнения с `docs/screens/`.
 
 ## Секреты
-- Перед работой один раз: `git config core.hooksPath .githooks`. Хук `scripts/check-secrets.sh` останавливает коммит с токенами, ключами, `.env` и личными путями.
+- Перед работой один раз: `git config core.hooksPath .github/hooks`. Хук `.github/scripts/check-secrets.sh` останавливает коммит с токенами, ключами, `.env` и личными путями.
 - Во фронте секретов нет и быть не может: всё из `import.meta.env` видно в браузере.
 
 ## Как работаем
