@@ -92,6 +92,33 @@
 События: `onboarding_step`, `post_published` (own_words, quality, delta, viral, flop), `limit_reached`, `plus_interest`, `invite_sent`, `invite_converted`, `share`, `challenge_started/finished`, `event_answered`, `report`, `crisis_shown`, `session_start`.
 Метрики теста: D1 ≥ 40%, D7 ≥ 15%, K (честный: приглашённый дожил до D1), доля упёршихся в лимит и что они выбрали, на каком посте впервые пишут своими словами, клик «Хочу Реки+».
 
+## 11. API для фронта
+
+Авторизация: `Authorization: tma <initData raw>`, бэкенд проверяет подпись. Типы: `frontend/src/api/types.ts`. Все методы уже вызываются из `frontend/src/api/client.ts`; без `VITE_API_URL` фронт работает на `mock.ts`.
+
+| Метод | Ответ | Экран |
+|---|---|---|
+| `GET /me` | `Player` | все |
+| `POST /onboarding` | `Player` | 01-5 |
+| `POST /posts` (SSE) | поток `LiveEvent`, последним `result: PostResult`; 409, если постов нет | 02-2 |
+| `POST /posts/:id/replies` | `{ ok }` | 02-6 |
+| `GET /feed` | `FeedItem[]` | 03-3 |
+| `GET /friends` | `Friend[]` | 03-4 |
+| `GET /dm/:starId` | `Dm` (сообщения, память, ответов осталось) | 03-1 |
+| `POST /dm/:starId` | `{ reply?, repliesLeft }` | 03-1 |
+| `DELETE /stars/:id/memory` `{ fact }` | `{ ok }` | 03-1 |
+| `GET /events/today` | `GameEvent` | 05-0, 05-2 |
+| `POST /events/:id/answer` | `{ ok }` | 05-0, 05-2 |
+| `GET /challenges/active` | `Challenge \| null` | 03-4c |
+| `POST /challenges` `{ friendId }` | `{ ok }` | 03-4 |
+| `GET /worlds/:id/rules` | `WorldRules` | 05-11, 05-7b |
+| `PUT /worlds/own` | `{ ok }` | 05-7b |
+| `PATCH /settings` | `{ ok }` | 05-8, 05-11 |
+| `POST /reports` `{ commentId, reason }` | `{ ok }` | 06-1 |
+| `POST /plus-interest` | `{ bonus: 5 }` | 04-2 |
+| `DELETE /me` | `{ ok }` | 05-8 |
+| `GET /cards/story/:postId.png` | картинка 9:16 | 02-7 |
+
 ## 10. Окружение
 
 Ключи LLM, токен бота, строка Mongo: только переменные окружения сервера и GitHub Secrets (#26). Фронт получает только `VITE_API_URL`.

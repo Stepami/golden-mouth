@@ -1,7 +1,7 @@
 /* Перенесено из design/src/build.py и build_journey.py: экраны должны совпадать с docs/screens */
 :root {
   --bg: #0E0E13; --card: #181821; --card2: #1C1C26; --line: #22222C; --line2: #262634;
-  --text: #F2F1F7; --muted: #8E8BA3; --muted2: #A9A6BD; --soft: #C9C6D8;
+  --text: #F2F1F7; --muted: #A9A6BD; --muted2: #A9A6BD; --soft: #C9C6D8;
   --accent: #FF6B8B; --accent2: #9B6BFF; --grad: linear-gradient(90deg, #FF6B8B, #9B6BFF);
   --gift: #FFD66B; --up: #6BFFB8; --warn: #FFB86B; --lilac: #C9A8FF;
 }
@@ -61,3 +61,12 @@ html.shot .app { width: 390px; max-width: 390px; }
 html.shot .tabbar, html.shot .bottom-cta { max-width: 390px; }
 html.shot .toast { max-width: 358px; }
 html.shot .sheet { max-width: 366px; }
+
+/* Итог поста: чипы по одному, конфетти на залёте */
+@keyframes pop { from { opacity: 0; transform: scale(.85) } to { opacity: 1; transform: none } }
+.pop { opacity: 0; animation: pop .25s ease-out forwards; }
+html.shot .pop { opacity: 1; animation: none; }
+.confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: 26px; }
+.confetti i { position: absolute; top: -10px; width: 7px; height: 12px; border-radius: 2px; animation: fall 1.6s ease-in forwards; }
+@keyframes fall { to { transform: translateY(560px) rotate(540deg); opacity: 0 } }
+@media (prefers-reduced-motion: reduce) { .pop { opacity: 1; animation: none } .confetti, .float-react { display: none } }

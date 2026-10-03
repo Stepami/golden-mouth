@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../api/client'
-import { dm as dmMock, feed, firstPost, friends, worlds } from '../api/mock'
+import { dm as dmMock, feed, firstPost, friends as friendsMock, worlds } from '../api/mock'
 import type { DmMessage, Drama } from '../api/types'
 import { useNav } from '../app/nav'
+import { useApi } from '../app/useApi'
 import { usePlayer, useStore } from '../app/store'
 import { Avatar, Bubble, Button, Card, Chip, Gift, Segmented, SkillBar, Sheet, TopBar, fmt, short } from '../ui'
 import { ChannelHead } from './onboarding'
@@ -13,13 +14,20 @@ const SKILL_NAMES = { brave: 'смелость', humor: 'юмор', topic: 'в �
 // 03-1: личка со звездой; память видна и правится; ~5 ответов звезды в день
 function Dm() {
   const nav = useNav(); const p = usePlayer()
-  const d = dmMock
+  const d = useApi(() => api.dm('mira'), dmMock)
   const [msgs, setMsgs] = useState<DmMessage[]>(d.messages)
+  const [left, setLeft] = useState(d.repliesLeft)
+  useEffect(() => { setMsgs(d.messages); setMemory(d.memory); setLeft(d.repliesLeft) }, [d])
   const [text, setText] = useState('')
-  const [memory, setMemory] = useState(d.memory)
+  const [memory, setMemory] = useState<string[]>(d.memory)
   const [showMem, setShowMem] = useState(false)
   const closed = p.postsLeft <= 0
-  const send = (t: string) => { if (!t.trim() || closed) return; setMsgs(m => [...m, { from: 'me', text: t }]); setText('') }
+  const send = async (t: string) => {
+    if (!t.trim() || closed || left <= 0) return
+    setMsgs(m => [...m, { from: 'me', text: t }]); setText('')
+    const r = await api.dmSend(d.star.id, t); setLeft(r.repliesLeft)
+    if (r.reply) setMsgs(m => [...m, { from: 'star', text: r.reply! }])
+  }
   return (
     <div className="screen">
       <TopBar onBack={nav.canBack ? nav.back : undefined}><Avatar id={d.star.id} size={36} /><div><b>{d.star.name}</b><div className="small" style={{ color: 'var(--accent)' }}>{d.star.role} · {d.status}</div></div></TopBar>
@@ -29,9 +37,9 @@ function Dm() {
           <div className="small muted" style={{ marginTop: 2 }}>На +3 её карточка попадёт в коллекцию</div>
           <button onClick={() => setShowMem(true)} className="small" style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--lilac)' }}>Мира помнит: {memory.join(', ')} ›</button>
         </Card>
-        {msgs.map((m, i) => <Bubble key={i} me={m.from === 'me'}>{m.text}</Bubble>)}
+        {msgs.map((m, i) => <div key={i} style={{ position: 'relative' }}><Bubble me={m.from === 'me'}>{m.text}</Bubble>{m.from === 'star' && <button onClick={() => nav.push('06-1_report', { text: m.text })} aria-label="Пожаловаться" style={{ position: 'absolute', right: 0, top: 6, background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>}</div>)}
         {closed ? <Card style={{ marginTop: 10, textAlign: 'center' }}><span className="muted small">Мира ушла на репетицию. Ответит утром, в 9:00</span></Card> : <>
-          <div className="small muted" style={{ margin: '10px 0 8px' }}>💡 ИДЕИ ИЛИ СВОИМИ СЛОВАМИ · бесплатно · Мира ответит ещё {d.repliesLeft} раза сегодня</div>
+          <div className="small muted" style={{ margin: '10px 0 8px' }}>💡 ИДЕИ ИЛИ СВОИМИ СЛОВАМИ · бесплатно · Мира ответит ещё {left} {left === 1 ? 'раз' : 'раза'} сегодня</div>
           {d.ideas.map(i => <Chip key={i} idea onClick={() => send(i.replace(/[«»]/g, ''))}>{i}</Chip>)}
         </>}
       </div>
@@ -42,7 +50,7 @@ function Dm() {
       {showMem && <Sheet onClose={() => setShowMem(false)}>
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Что Мира помнит о тебе</div>
         <div className="small muted" style={{ marginBottom: 12 }}>Она опирается на это в разговорах. Удали, что не хочешь, чтобы она помнила</div>
-        {memory.map(m => <div key={m} className="why"><span>{m}</span><button onClick={() => setMemory(x => x.filter(y => y !== m))} style={{ background: 'none', border: 'none', color: 'var(--accent)' }}>удалить</button></div>)}
+        {memory.map(m => <div key={m} className="why"><span>{m}</span><button onClick={() => { setMemory(x => x.filter(y => y !== m)); api.forget(d.star.id, m) }} style={{ background: 'none', border: 'none', color: 'var(--accent)' }}>удалить</button></div>)}
         <Button secondary style={{ marginTop: 14 }} onClick={() => setShowMem(false)}>Готово</Button>
       </Sheet>}
     </div>
@@ -68,15 +76,17 @@ function StarCard() {
 
 // 03-3: лента мира
 function Feed() {
+  const nav = useNav()
+  const items = useApi(api.feed, feed)
   const p = usePlayer(); const w = worlds.find(x => x.id === p.world) ?? worlds[0]
   return (
     <div className="screen">
-      <TopBar title={`Лента ${w.title === 'Сцена' ? 'Сцены' : w.title}`} right="🎤 BLESK · NOIR" />
+      <TopBar title={`Лента ${w.title === 'Сцена' ? 'Сцены' : w.title}`} right={<button onClick={() => nav.push('05-11_world_rules')} style={{ background: 'none', border: 'none', color: 'inherit', fontSize: 13 }}>📜 Как устроен мир</button>} />
       <div className="pad">
-        {feed.map((f, i) => f.kind === 'news'
+        {items.map((f, i) => f.kind === 'news'
           ? <Card key={i} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ АГЕНТСТВА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
           : <Card key={i} style={{ marginBottom: 12 }}>
-              <div className="row"><Avatar id={f.avatar!} size={36} /><div><b>{f.author}</b> <span className="small muted">{f.role}</span><div className="tiny muted">{f.ago}</div></div></div>
+              <div className="row"><Avatar id={f.avatar!} size={36} /><div style={{ flex: 1 }}><b>{f.author}</b> <span className="small muted">{f.role}</span><div className="tiny muted">{f.ago}</div></div><button onClick={() => nav.push('06-1_report', { text: f.text })} aria-label="Пожаловаться" style={{ background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button></div>
               {f.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>Лиза · трейни</b> <span className="muted">· в реках 🌊</span><div>{f.repost}</div></div>}
               <div style={{ marginTop: 8 }}>{f.text}</div>
               <div style={{ marginTop: 8 }}>{f.reactions?.map(r => <span key={r.emoji} className="react">{r.emoji} {short(r.count)}</span>)}</div>
@@ -89,6 +99,7 @@ function Feed() {
 // 03-4: друзья; гонки по умолчанию нет, заруба по вызову
 function Friends() {
   const nav = useNav()
+  const friends = useApi(api.friends, friendsMock)
   return (
     <div className="screen">
       <TopBar title="Друзья" right={`${friends.length} в Реках`} />
@@ -213,7 +224,7 @@ function Settings() {
         </Card>
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
           {row('🎙 Голос канала', `${p.settings.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`)}
-          {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('🔒 Мои данные и правила', '›')}{row('✉ Поддержка', '›', true)}
+          {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📜 Как устроен мир', '›', false, () => nav.push('05-11_world_rules'))}{row('🔒 Мои данные и правила', '›')}{row('✉ Поддержка', '›', true)}
         </Card>
         <button onClick={() => setDel(true)} className="card" style={{ width: '100%', textAlign: 'center', color: 'var(--accent)', background: 'transparent', border: '1px solid #FF6B8B55' }}>Удалить аккаунт и всё</button>
         <div className="small muted" style={{ textAlign: 'center', marginTop: 8 }}>Удалим канал, переписку и коллекцию. Вернуть будет нельзя</div>
@@ -221,7 +232,7 @@ function Settings() {
       {del && <Sheet onClose={() => setDel(false)}>
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>Удалить всё?</div>
         <div className="muted" style={{ marginBottom: 16 }}>Канал, переписка со звёздами, коллекция и прогресс удалятся навсегда</div>
-        <Button style={{ background: '#C0392B', marginBottom: 8 }} onClick={() => setDel(false)}>Удалить навсегда</Button><Button secondary onClick={() => setDel(false)}>Отмена</Button>
+        <Button style={{ background: '#C0392B', marginBottom: 8 }} onClick={async () => { await api.deleteAccount(); setDel(false); nav.replace('01-2_age') }}>Удалить навсегда</Button><Button secondary onClick={() => setDel(false)}>Отмена</Button>
       </Sheet>}
     </div>
   )

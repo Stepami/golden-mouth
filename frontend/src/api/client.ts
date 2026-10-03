@@ -1,7 +1,7 @@
 // Клиент API. Без VITE_API_URL работает на тестовых данных (mock.ts).
 // Во фронте НЕТ секретов: всё из import.meta.env попадает в браузер. Ключи LLM и токен бота живут только на бэкенде.
 import * as mock from './mock'
-import type { LiveEvent, Player, PostResult } from './types'
+import type { Challenge, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, PostResult, WorldRules } from './types'
 
 const BASE = import.meta.env.VITE_API_URL as string | undefined
 let initDataRaw = ''
@@ -40,4 +40,16 @@ export const api = {
   report: (commentId: string, reason: string) => BASE ? call('/reports', { method: 'POST', body: JSON.stringify({ commentId, reason }) }) : later({ ok: true }),
   plusInterest: () => BASE ? call('/plus-interest', { method: 'POST' }) : later({ bonus: 5 }),
   settings: (patch: Partial<Player['settings']>) => BASE ? call('/settings', { method: 'PATCH', body: JSON.stringify(patch) }) : later({ ok: true }),
+  feed: (): Promise<FeedItem[]> => BASE ? call('/feed') : later(mock.feed),
+  friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),
+  dm: (starId: string): Promise<Dm> => BASE ? call(`/dm/${starId}`) : later(mock.dm),
+  dmSend: (starId: string, text: string): Promise<{ reply?: string; repliesLeft: number }> => BASE ? call(`/dm/${starId}`, { method: 'POST', body: JSON.stringify({ text }) }) : later({ repliesLeft: 2 }),
+  forget: (starId: string, fact: string) => BASE ? call(`/stars/${starId}/memory`, { method: 'DELETE', body: JSON.stringify({ fact }) }) : later({ ok: true }),
+  eventToday: (): Promise<GameEvent> => BASE ? call('/events/today') : later(mock.events.collab),
+  answerEvent: (id: string, text: string) => BASE ? call(`/events/${id}/answer`, { method: 'POST', body: JSON.stringify({ text }) }) : later({ ok: true }),
+  challenge: (): Promise<Challenge | null> => BASE ? call('/challenges/active') : later(mock.challenge),
+  startChallenge: (friendId: string) => BASE ? call('/challenges', { method: 'POST', body: JSON.stringify({ friendId }) }) : later({ ok: true }),
+  worldRules: (worldId: string): Promise<WorldRules> => BASE ? call(`/worlds/${worldId}/rules`) : later(worldId === 'own' ? mock.ownWorld : mock.presetRules),
+  saveWorld: (rules: WorldRules) => BASE ? call('/worlds/own', { method: 'PUT', body: JSON.stringify(rules) }) : later({ ok: true }),
+  deleteAccount: () => BASE ? call('/me', { method: 'DELETE' }) : later({ ok: true }),
 }

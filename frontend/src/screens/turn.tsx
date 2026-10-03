@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { shareStory, shareURL } from '@telegram-apps/sdk-react'
+import { hapticFeedback, shareStory, shareURL } from '@telegram-apps/sdk-react'
 import { api } from '../api/client'
 import { firstPost, ideas, liveComment, results } from '../api/mock'
 import type { CommentT, PostResult } from '../api/types'
@@ -69,7 +69,7 @@ function Live() {
         <div style={{ position: 'absolute', right: 14, top: 120, width: 120, height: 200, pointerEvents: 'none' }}>
           {floats.map(f => <span key={f.id} className="float-react" style={{ left: `${f.x}%`, bottom: 0, fontSize: 24 }}>{f.emoji}</span>)}
         </div>
-        {comments.map(c => <Comment key={c.id} avatar={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} />)}
+        {comments.map(c => <Comment key={c.id} avatar={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} onMore={() => nav.push('06-1_report', { id: c.id })} />)}
         {typing && <div className="muted small row" style={{ gap: 8 }}><Avatar id="sonya" size={22} /> {typing} печатает…</div>}
       </div>
       <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }}>реакции ещё идут · итог через пару секунд</div>
@@ -78,9 +78,24 @@ function Live() {
 }
 
 /** Итог поста одной карточкой поверх канала: обычный, провал, залёт (праздничная тема). */
+/** Отсчёт числа 0 → n за 0,8 с (UX-аудит: «число считается, чипы по одному, haptic»). */
+function useCount(n: number, ms = 800) {
+  const [v, setV] = useState(0)
+  useEffect(() => {
+    if (new URLSearchParams(location.search).has('shot')) { setV(n); return }
+    const t0 = performance.now(); let raf = 0
+    const tick = (t: number) => { const k = Math.min(1, (t - t0) / ms); setV(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(tick) }
+    raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf)
+  }, [n, ms])
+  return v
+}
+const haptic = (kind: 'success' | 'warning' | 'light') => { if (!inTelegram) return; try { if (kind === 'light') hapticFeedback.impactOccurred.ifAvailable('light'); else hapticFeedback.notificationOccurred.ifAvailable(kind) } catch { /* вне Telegram */ } }
+
 function ResultCard({ r, text, theme }: { r: PostResult; text: string; theme: 'normal' | 'flop' | 'viral' }) {
   const nav = useNav()
   const viral = theme === 'viral'
+  const shown = useCount(Math.abs(r.delta))
+  useEffect(() => { haptic(r.delta >= 0 ? 'success' : 'warning'); const ts = r.whys.map((_, i) => setTimeout(() => haptic('light'), 850 + i * 150)); return () => ts.forEach(clearTimeout) }, [r])
   return (
     <div className="screen no-tab">
       <ChannelHead />
@@ -88,10 +103,11 @@ function ResultCard({ r, text, theme }: { r: PostResult; text: string; theme: 'n
       <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.55)' }}>
         <div className="sheet" style={{ background: viral ? 'linear-gradient(170deg,#1B2A4A,#2A1236 60%,#1A1A24)' : '#1A1A24', position: 'relative' }}>
           <div className="small" style={{ letterSpacing: '.06em', color: viral ? 'var(--gift)' : 'var(--muted2)' }}>{viral ? '🌊 ПОСТ ЗАЛЕТЕЛ В РЕКИ' : 'ИТОГ ПОСТА'}</div>
-          <div style={{ fontSize: 64, fontWeight: 900, lineHeight: 1.1 }} className={r.delta >= 0 ? 'up' : 'down'}>{r.delta >= 0 ? '+' : '−'}{fmt(Math.abs(r.delta))}</div>
+          <div style={{ fontSize: 64, fontWeight: 900, lineHeight: 1.1 }} className={r.delta >= 0 ? 'up' : 'down'}>{r.delta >= 0 ? '+' : '−'}{fmt(shown)}</div>
           <div className="muted2" style={{ marginBottom: 12 }}>{plural(r.delta, 'подписчик', 'подписчика', 'подписчиков')}</div>
           <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{r.headline}</div>
-          <div>{r.whys.map(w => <span key={w.label} className="chip" style={{ background: '#22222D' }}>{w.icon} {w.label} <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b></span>)}</div>
+          {viral && <div className="confetti" aria-hidden>{Array.from({ length: 18 }, (_, i) => <i key={i} style={{ left: `${(i * 53) % 100}%`, animationDelay: `${(i % 6) * 0.12}s`, background: ['#FF6B8B', '#9B6BFF', '#FFD66B', '#6BFFB8'][i % 4] }} />)}</div>}
+          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{w.icon} {w.label} <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b></span>)}</div>
           {r.ribbons.map(x => <Ribbon key={x.title} icon={x.icon} title={x.title} sub={x.sub} />)}
           {r.bestComment && <div className="row" style={{ margin: '8px 0 12px' }}><Avatar id={r.bestComment.avatar} size={28} /><span className="small">«{r.bestComment.text}»</span></div>}
           {theme === 'normal' && <Whisper>Подписчики приходят за смелость, юмор и попадание в тему мира. Смотри, за что дали в этот раз</Whisper>}
@@ -126,7 +142,7 @@ function Thread() {
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{firstPost.text}<div style={{ marginTop: 8 }}>{firstPost.reactions.map(r => <span key={r.emoji} className="react">{r.emoji} {r.count}</span>)}</div></div>
         <div className="small" style={{ color: 'var(--gift)', marginBottom: 12 }}>💬 Ответь на комментарии: первые 3 ответа +подписчики · {Math.min(3, replied)}/3</div>
-        {firstPost.comments.slice(0, 3).map(c => <Comment key={c.id} avatar={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} me={c.me} onMore={() => nav.push('06-1_report')} />)}
+        {firstPost.comments.slice(0, 3).map(c => <Comment key={c.id} avatar={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} me={c.me} onMore={c.me ? undefined : () => nav.push('06-1_report', { id: c.id })} />)}
         <div className="small muted" style={{ margin: '-6px 0 12px 44px' }}>ответить ещё раз · ветка до 2 ответов · <span className="up">+9 подписчиков</span></div>
         {[firstPost.comments[3], liveComment as CommentT, ...mine].map(c => <Comment key={c.id} avatar={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} me={c.me} onMore={() => nav.push('06-1_report')} />)}
         <div className="muted small row" style={{ gap: 8 }}><Avatar id="eva" size={22} /> Ева печатает…</div>

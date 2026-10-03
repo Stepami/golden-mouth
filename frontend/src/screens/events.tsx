@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { api } from '../api/client'
 import { events } from '../api/mock'
 import type { GameEvent } from '../api/types'
 import { useNav } from '../app/nav'
+import { useApi } from '../app/useApi'
 import { usePlayer } from '../app/store'
 import { Avatar, BottomCTA, Button, Card, Chip, Gift, SkillBar, fmt } from '../ui'
 import { ChannelHead } from './onboarding'
@@ -21,7 +23,7 @@ function EventCard({ e, border }: { e: GameEvent; border: string }) {
   const nav = useNav()
   const [text, setText] = useState('')
   const [pick, setPick] = useState<string | null>(null)
-  const go = () => nav.replace(e.kind === 'hate' ? '05-2b_hate_result' : '03-5_stage', { answer: text || pick })
+  const go = () => { api.answerEvent(e.id, text || pick || ''); nav.replace(e.kind === 'hate' ? '05-2b_hate_result' : '03-5_stage', { answer: text || pick }) }
   return (
     <div className="screen">
       <ChannelHead />
@@ -40,7 +42,7 @@ function EventCard({ e, border }: { e: GameEvent; border: string }) {
     </div>
   )
 }
-const Collab = () => <EventCard e={events.collab} border="#6BFFB866" />
+const Collab = () => { const e = useApi(api.eventToday, events.collab); return <EventCard e={e} border="#6BFFB866" /> }
 const Hate = () => <EventCard e={events.hate} border="#FF6B8B66" />
 
 const EveningPush = () => <TgBot time="18:40">
@@ -70,7 +72,7 @@ function HateResult() {
         <Card style={{ textAlign: 'left', border: '1px solid #FFB86B66', marginBottom: 12 }}><span className="badge">НОВАЯ КАРТОЧКА</span><div style={{ marginTop: 6 }}><b>Хейт пережит</b><div className="small muted">4/12 в коллекции</div></div></Card>
         <Gift>Покажи друзьям, как держать удар: друг зайдёт = +5 постов вам обоим</Gift>
       </div>
-      <BottomCTA second="Поделиться" onSecond={() => nav.push('02-7_share')} main="Дальше" onMain={() => nav.replace('03-5_stage')} />
+      <BottomCTA second="Дальше" onSecond={() => nav.replace('03-5_stage')} main="Поделиться" onMain={() => nav.push('02-7_share')} />
     </div>
   )
 }

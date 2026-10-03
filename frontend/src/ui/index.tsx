@@ -80,7 +80,7 @@ export function Comment({ avatar, name, handle, text, star, me, onMore }: { avat
       <Avatar id={avatar} size={34} />
       <div style={{ flex: 1 }}>
         <div className="row" style={{ gap: 6 }}><b>{name}</b><span className="muted small">{handle}</span>{star && <span className="small" style={{ color: 'var(--accent)' }}>★ звезда</span>}{me && <span className="small muted">ты</span>}
-          <button onClick={onMore} aria-label="Пожаловаться" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button></div>
+          {onMore && <button onClick={onMore} aria-label="Пожаловаться" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>}</div>
         <div style={{ marginTop: 2 }}>{text}</div>
       </div>
     </div>
