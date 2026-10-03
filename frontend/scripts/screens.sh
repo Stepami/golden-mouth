@@ -12,8 +12,9 @@ CODES="$*"
 [ -z "$CODES" ] && CODES=$(grep -ohE "'[0-9]{2}-[0-9a-z]+_[a-z0-9_]+'" src/screens/*.tsx src/screens/*/*.tsx 2>/dev/null | tr -d "'" | sort -u)
 mkdir -p shots
 for c in $CODES; do
-  "$CHROME" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=3 --window-size=390,844 \
-    --user-data-dir="$(mktemp -d)" --virtual-time-budget=4000 --screenshot="shots/$c.png" "http://localhost:$PORT/?screen=$c" >/dev/null 2>&1 &
+  "$CHROME" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=3 --window-size=500,844 \
+    --user-data-dir="$(mktemp -d)" --virtual-time-budget=4000 --screenshot="shots/$c.png" "http://localhost:$PORT/?shot&screen=$c" >/dev/null 2>&1 &
   P=$!; i=0; while [ $i -lt 40 ] && [ ! -s "shots/$c.png" ]; do sleep .5; i=$((i+1)); done; sleep 1; kill $P 2>/dev/null || true
+  sips -c 2532 1170 "shots/$c.png" >/dev/null 2>&1 || true
   echo "$c"
 done
