@@ -5,6 +5,8 @@ Telegram Mini App 14+: ведёшь канал блогера в вымышле�
 | Где | Что |
 |---|---|
 | [docs/game-flow.md](docs/game-flow.md) | Флоу игры и правила: источник правды |
+| [docs/backend-spec.md](docs/backend-spec.md) | Спека бэкенда: ход, оценка поста LLM, контент миров, бот, безопасность, антифрод, аналитика |
+| [docs/config/balance.json](docs/config/balance.json) | Все числа баланса одним конфигом |
 | [docs/screens/](docs/screens/README.md) | Макеты всех экранов |
 | [docs/audit.md](docs/audit.md) | Итоговый аудит игры и экранов, вердикт для вёрстки |
 | [design/](design/README.md) | Исходники экранов (HTML → PNG) |
