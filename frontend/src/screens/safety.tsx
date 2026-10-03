@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { api } from '../api/client'
 import { firstPost } from '../api/mock'
 import { useNav } from '../app/nav'
-import { usePlayer } from '../app/store'
 import { Avatar, Bubble, Button, Comment, TopBar } from '../ui'
 import { register } from '.'
 
@@ -39,7 +38,6 @@ function Report() {
  *  Кризис определяет бэкенд (#9) и присылает флаг; фронт только показывает. После кризиса хейт выключен на неделю. */
 function Crisis({ adult }: { adult: boolean }) {
   const nav = useNav()
-  usePlayer()
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back}><Avatar id="mira" size={36} /><div><b>Мира</b><div className="small muted">лидер BLESK</div></div></TopBar>
