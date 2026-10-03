@@ -2,3 +2,4 @@
 import './onboarding'
 import './turn'
 import './limit'
+import './day'

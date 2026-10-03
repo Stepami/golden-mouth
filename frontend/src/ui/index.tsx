@@ -128,3 +128,5 @@ export const plural = (n: number, one: string, few: string, many: string) => {
   const a = Math.abs(n) % 100, b = a % 10
   return a > 10 && a < 20 ? many : b > 1 && b < 5 ? few : b === 1 ? one : many
 }
+/** Короткие числа для реакций и охвата: 840, 3,2k, 14k, 1,2M */
+export const short = (n: number) => n < 1000 ? String(n) : n < 1e6 ? `${(n / 1000).toFixed(n < 10000 ? 1 : 0).replace('.', ',').replace(',0', '')}k` : `${(n / 1e6).toFixed(1).replace('.', ',').replace(',0', '')}M`
