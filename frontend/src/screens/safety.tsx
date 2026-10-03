@@ -15,7 +15,8 @@ function Report() {
   const [reason, setReason] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
   const target = firstPost.comments[3]
-  const send = async () => { if (!reason) return; await api.report(target.id, reason); setSent(true); setTimeout(nav.back, 900) }
+  const id = (nav.params.id as string) ?? target.id
+  const send = async () => { if (!reason) return; await api.report(id, reason); setSent(true); setTimeout(nav.back, 900) }
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Реакции" />

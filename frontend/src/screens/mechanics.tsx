@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { shareURL } from '@telegram-apps/sdk-react'
-import { challenge } from '../api/mock'
+import { api } from '../api/client'
+import { challenge as challengeMock } from '../api/mock'
+import { useApi } from '../app/useApi'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
@@ -9,7 +11,7 @@ import { register } from '.'
 
 // 03-4c: заруба на 3 дня. Счёт = 0,7 × оценка постов по шкалам мира + 0,3 × рост к своей медиане (считает бэкенд)
 function Challenge() {
-  const nav = useNav(); const c = challenge
+  const nav = useNav(); const c = useApi(api.challenge, challengeMock) ?? challengeMock
   const max = Math.max(c.myScore, c.rivalScore) * 1.4
   return (
     <div className="screen no-tab">
