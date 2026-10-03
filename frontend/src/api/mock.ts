@@ -104,3 +104,10 @@ export const presetRules: WorldRules = {
     { text: 'Фанаты: фансайты BLESK и NOIR, любят камбэки и честность', locked: true }, { text: 'Тон: поддержка до 1k, честная критика с 1k, хейт-волны с 5k', locked: true },
     { text: 'События: коллабы с брендами, слухи фансайтов, прослушивания, хейт-волны', locked: true }, { text: 'Без тем 18+ и травли по внешности', locked: true }],
 }
+
+/** Мир игрока с падежами для заголовков: «Лента Сцены», «В Академию». */
+export const WORLD_FORMS: Record<string, { gen: string; acc: string }> = {
+  stage: { gen: 'Сцены', acc: 'Сцену' }, academy: { gen: 'Академии', acc: 'Академию' }, it: { gen: 'Айти-тусовки', acc: 'Айти-тусовку' },
+  stream: { gen: 'Стрима', acc: 'Стрим' }, own: { gen: 'своего мира', acc: 'свой мир' },
+}
+export const worldOf = (id: string) => { const w = worlds.find(x => x.id === id) ?? worlds[0]; return { ...w, ...(WORLD_FORMS[w.id] ?? WORLD_FORMS.stage) } }

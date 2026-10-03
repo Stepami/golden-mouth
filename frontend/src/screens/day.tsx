@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
-import { dm as dmMock, feed, firstPost, friends as friendsMock, worlds } from '../api/mock'
+import { dm as dmMock, feed, firstPost, friends as friendsMock, worldOf } from '../api/mock'
 import type { DmMessage, Drama } from '../api/types'
 import { useNav } from '../app/nav'
 import { useApi } from '../app/useApi'
@@ -78,10 +78,10 @@ function StarCard() {
 function Feed() {
   const nav = useNav()
   const items = useApi(api.feed, feed)
-  const p = usePlayer(); const w = worlds.find(x => x.id === p.world) ?? worlds[0]
+  const p = usePlayer(); const w = worldOf(p.world)
   return (
     <div className="screen">
-      <TopBar title={`Лента ${w.title === 'Сцена' ? 'Сцены' : w.title}`} right={<button onClick={() => nav.push('05-11_world_rules')} style={{ background: 'none', border: 'none', color: 'inherit', fontSize: 13 }}>📜 Как устроен мир</button>} />
+      <TopBar title={`Лента ${w.gen}`} right={<button onClick={() => nav.push('05-11_world_rules')} style={{ background: 'none', border: 'none', color: 'inherit', fontSize: 13 }}>📜 Как устроен мир</button>} />
       <div className="pad">
         {items.map((f, i) => f.kind === 'news'
           ? <Card key={i} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ АГЕНТСТВА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
@@ -183,7 +183,7 @@ function Me() {
   return (
     <div className="screen">
       <div className="top" style={{ border: 'none' }}><b style={{ fontSize: 18 }}>Я</b><button className="pill" onClick={() => nav.push('05-8_settings')} style={{ border: 'none' }}>⚙ Настройки</button></div>
-      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar id={p.avatar} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b><div className="muted small">🎤 Сцена · типаж: {p.type}</div></div>
+      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar id={p.avatar} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b><div className="muted small">{worldOf(p.world).emoji} {worldOf(p.world).title} · типаж: {p.type}</div></div>
       <div className="pad">
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           {[[`✍️ ${p.postsLeft}`, 'постов осталось'], [`🎯 ${p.wants.filter(w => w.done).length}/${p.wants.length}`, 'желаний дня'], [fmt(6210), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ flex: 1, padding: 10, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
