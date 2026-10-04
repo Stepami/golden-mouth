@@ -1,0 +1,61 @@
+name: Frontend CI
+
+on:
+  push:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Check for the required Node.js version
+        id: node
+        shell: bash
+        run: |
+          required="$(tr -d '[:space:]' < .node-version)"
+          if command -v node >/dev/null 2>&1 \
+            && command -v npm >/dev/null 2>&1 \
+            && [ "$(node --version)" = "v${required}" ]; then
+            echo "setup-required=false" >> "$GITHUB_OUTPUT"
+            node --version
+            npm --version
+          else
+            echo "setup-required=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js
+        if: steps.node.outputs.setup-required == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.node-version
+          check-latest: false
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile and build
+        run: npm run build

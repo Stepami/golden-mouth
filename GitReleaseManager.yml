@@ -1,0 +1,35 @@
+issue-labels-include:
+  - breaking change
+  - bug
+  - dependencies
+  - documentation
+  - feature
+  - improvement
+
+issue-labels-exclude:
+  - build
+
+issue-labels-alias:
+  - name: breaking change
+    header: Breaking change
+    plural: Breaking changes
+  - name: bug
+    header: Bug fix
+    plural: Bug fixes
+  - name: dependencies
+    header: Dependency
+    plural: Dependencies
+  - name: documentation
+    header: Documentation
+    plural: Documentation
+  - name: feature
+    header: Feature
+    plural: Features
+  - name: improvement
+    header: Improvement
+    plural: Improvements
+
+create:
+  include-sha-section: false
+  include-contributors: true
+  allow-milestone-without-issues: false

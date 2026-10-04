@@ -1,0 +1,133 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  validate-tag:
+    name: Validate semantic version
+    runs-on: ubuntu-latest
+    outputs:
+      image-version: ${{ steps.semver.outputs.image-version }}
+    steps:
+      - name: Validate tag
+        id: semver
+        shell: bash
+        run: |
+          tag="$GITHUB_REF_NAME"
+          semver='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+          if [[ ! "$tag" =~ $semver ]]; then
+            echo "Tag '$tag' is not a semantic version (for example, 0.1.0)." >&2
+            exit 1
+          fi
+
+          echo "image-version=${tag//+/-}" >> "$GITHUB_OUTPUT"
+
+  backend:
+    name: Backend checks
+    needs: validate-tag
+    uses: ./.github/workflows/backend-ci.yml
+
+  frontend:
+    name: Frontend checks
+    needs: validate-tag
+    uses: ./.github/workflows/frontend-ci.yml
+
+  create-release:
+    name: Create draft release
+    needs: [validate-tag, backend, frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Create draft release with GitReleaseManager
+        uses: gittools/actions/gitreleasemanager/create@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          milestone: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+
+  deploy:
+    name: Deploy to production
+    needs: [validate-tag, create-release]
+    runs-on: [self-hosted, linux, x64]
+    environment: production
+    env:
+      REKI_DEPLOY_ENV_FILE: /etc/reki/deploy.env
+      REKI_VERSION: ${{ needs.validate-tag.outputs.image-version }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Validate production configuration
+        shell: bash
+        run: |
+          test -r "$REKI_DEPLOY_ENV_FILE"
+          docker compose \
+            --env-file "$REKI_DEPLOY_ENV_FILE" \
+            -f compose.yml \
+            -f compose.production.yml \
+            config --quiet
+
+      - name: Build release images
+        shell: bash
+        run: |
+          docker compose \
+            --env-file "$REKI_DEPLOY_ENV_FILE" \
+            -f compose.yml \
+            -f compose.production.yml \
+            build backend frontend
+
+      - name: Deploy release
+        shell: bash
+        run: |
+          docker compose \
+            --env-file "$REKI_DEPLOY_ENV_FILE" \
+            -f compose.yml \
+            -f compose.production.yml \
+            up --detach --no-build --remove-orphans --wait --wait-timeout 180
+
+      - name: Show container status on failure
+        if: failure()
+        shell: bash
+        run: |
+          docker compose \
+            --env-file "$REKI_DEPLOY_ENV_FILE" \
+            -f compose.yml \
+            -f compose.production.yml \
+            ps
+
+  publish-release:
+    name: Publish release
+    needs: [validate-tag, deploy]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Publish release with GitReleaseManager
+        uses: gittools/actions/gitreleasemanager/publish@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          milestone: ${{ github.ref_name }}

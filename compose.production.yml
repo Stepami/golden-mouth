@@ -1,0 +1,30 @@
+services:
+  gateway:
+    image: nginx:1.29.1-alpine
+    environment:
+      REKI_DOMAIN: ${REKI_DOMAIN:?Set REKI_DOMAIN in the deployment environment file}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ${REKI_TLS_CERT_PATH:?Set REKI_TLS_CERT_PATH in the deployment environment file}:/etc/nginx/tls/fullchain.pem:ro
+      - ${REKI_TLS_KEY_PATH:?Set REKI_TLS_KEY_PATH in the deployment environment file}:/etc/nginx/tls/private.key:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --spider http://127.0.0.1/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  frontend:
+    image: reki-frontend:${REKI_VERSION:-local}
+    volumes:
+      - ./deploy/runtime-config:/usr/share/nginx/html/runtime-config:ro
+
+  backend:
+    image: reki-backend:${REKI_VERSION:-local}
