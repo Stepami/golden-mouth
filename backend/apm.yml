@@ -1,0 +1,22 @@
+name: reki-backend
+version: 0.1.0
+
+dependencies:
+  apm:
+    - dotnet/skills/plugins/dotnet-advanced
+    - dotnet/skills/plugins/dotnet-ai
+    - dotnet/skills/plugins/dotnet-aspnetcore
+    - dotnet/skills/plugins/dotnet-blazor
+    - dotnet/skills/plugins/dotnet-data
+    - dotnet/skills/plugins/dotnet-diag
+    - dotnet/skills/plugins/dotnet-experimental
+    - dotnet/skills/plugins/dotnet-maui
+    - dotnet/skills/plugins/dotnet-msbuild
+    - dotnet/skills/plugins/dotnet-nuget
+    - dotnet/skills/plugins/dotnet-template-engine
+    - dotnet/skills/plugins/dotnet-test
+    - dotnet/skills/plugins/dotnet-test-migration
+    - dotnet/skills/plugins/dotnet-upgrade
+    - dotnet/skills/plugins/dotnet11
+    - JetBrains/rider-skills
+    - codewithmukesh/dotnet-claude-kit
