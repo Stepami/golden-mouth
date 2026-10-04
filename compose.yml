@@ -1,0 +1,97 @@
+name: reki
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    volumes:
+      - ./frontend/public/runtime-config:/usr/share/nginx/html/runtime-config:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ > /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Mongo__ConnectionString: ${MONGO_CONNECTION_STRING:-mongodb://mongo:27017}
+      Mongo__DatabaseName: ${MONGO_DATABASE_NAME:-reki}
+      Mongo__LogCollectionName: ${MONGO_LOG_COLLECTION_NAME:-logs}
+      OpenTelemetry__Enabled: "true"
+      OpenTelemetry__Endpoint: http://aspire-dashboard:18889
+      OTEL_SERVICE_NAME: reki-backend
+    ports:
+      - "${BACKEND_PORT:-8081}:8080"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          bash -ec 'exec 3<>/dev/tcp/127.0.0.1/8080;
+          printf "GET /health/ready HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3;
+          head -n 1 <&3 | grep -q " 200 "'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:8.0.32-noble
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo-data:/data/db
+      - mongo-config:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  metabase:
+    image: metabase/metabase:v0.63.18.x
+    environment:
+      MB_DB_FILE: /metabase-data/metabase.db
+      JAVA_TIMEZONE: Europe/Moscow
+    ports:
+      - "${METABASE_PORT:-3000}:3000"
+    volumes:
+      - metabase-data:/metabase-data
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:3000/api/health > /dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.6.0
+    environment:
+      ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+      AllowedHosts: localhost;127.0.0.1;aspire-dashboard
+    ports:
+      - "127.0.0.1:${ASPIRE_DASHBOARD_PORT:-18888}:18888"
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
+  mongo-config:
+  metabase-data:

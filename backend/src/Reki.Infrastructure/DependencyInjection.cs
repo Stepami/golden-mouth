@@ -4,8 +4,11 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using Reki.Infrastructure.Health;
+using Reki.Infrastructure.Observability;
 using Reki.Infrastructure.Persistence;
 
 namespace Reki.Infrastructure;
@@ -20,18 +23,18 @@ public static class DependencyInjection
         InfrastructureMode mode)
     {
         services.AddSingleton(TimeProvider.System);
-        AddObservability(services, configuration);
-        AddBaseHealthChecks(services);
+        services.AddObservability(configuration);
+        services.AddBaseHealthChecks();
 
         if (mode == InfrastructureMode.Production)
         {
-            AddProductionInfrastructure(services);
+            services.AddProductionInfrastructure();
         }
 
         return services;
     }
 
-    private static void AddProductionInfrastructure(IServiceCollection services)
+    private static void AddProductionInfrastructure(this IServiceCollection services)
     {
         services
             .AddOptions<MongoOptions>()
@@ -58,7 +61,7 @@ public static class DependencyInjection
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);
     }
 
-    private static void AddBaseHealthChecks(IServiceCollection services)
+    private static void AddBaseHealthChecks(this IServiceCollection services)
     {
         services
             .AddHealthChecks()
@@ -69,19 +72,38 @@ public static class DependencyInjection
     }
 
     private static void AddObservability(
-        IServiceCollection services,
+        this IServiceCollection services,
         IConfiguration configuration)
     {
-        OpenTelemetryBuilder telemetry = services
-            .AddOpenTelemetry()
+        IConfigurationSection optionsSection = configuration.GetRequiredSection(
+            OpenTelemetryOptions.SectionName);
+
+        services
+            .AddOptions<OpenTelemetryOptions>()
+            .Bind(optionsSection)
+            .Validate(
+                options => options.TryGetEndpoint(out _),
+                "OpenTelemetry:Endpoint must be an absolute HTTP or HTTPS URI.")
+            .ValidateOnStart();
+
+        var options = optionsSection.Get<OpenTelemetryOptions>()
+            ?? throw new InvalidOperationException(
+                $"The {OpenTelemetryOptions.SectionName} configuration section is invalid.");
+
+        if (!options.Enabled || !options.TryGetEndpoint(out var endpoint))
+        {
+            return;
+        }
+
+        services.AddOpenTelemetry()
+            .WithTracing(tracing => tracing
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation())
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
-                .AddRuntimeInstrumentation());
-
-        if (!string.IsNullOrWhiteSpace(configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
-        {
-            telemetry.UseOtlpExporter();
-        }
+                .AddRuntimeInstrumentation())
+            .WithLogging()
+            .UseOtlpExporter(OtlpExportProtocol.Grpc, endpoint);
     }
 }

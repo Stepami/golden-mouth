@@ -30,6 +30,7 @@ public sealed partial class ExampleController(
 
     [LoggerMessage(
         EventId = 1000,
+        EventName = "Business.ExampleStatusRequestCompleted",
         Level = LogLevel.Information,
         Message = "Example status request completed")]
     private partial void LogRequestCompleted();

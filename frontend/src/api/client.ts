@@ -1,10 +1,10 @@
-// Клиент API. Без VITE_API_URL работает на тестовых данных (mock.ts).
-// Во фронте НЕТ секретов: всё из import.meta.env попадает в браузер. Ключи LLM и токен бота живут только на бэкенде.
+// Клиент API. Runtime config выбирает backend или тестовые данные (mock.ts).
+// Во фронте НЕТ секретов: runtime config виден в браузере. Ключи LLM и токен бота живут только на бэкенде.
 import * as mock from './mock'
 import { error, warn } from '../app/log'
+import { apiBaseUrl as BASE } from '../app/runtimeConfig'
 import type { Challenge, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, PostResult, WorldRules } from './types'
 
-const BASE = import.meta.env.VITE_API_URL as string | undefined
 let initDataRaw = ''
 export const setInitData = (raw: string) => { initDataRaw = raw }
 

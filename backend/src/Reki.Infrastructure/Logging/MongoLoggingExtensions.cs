@@ -13,12 +13,14 @@ public static class MongoLoggingExtensions
         IMongoClient mongoClient,
         MongoOptions options)
     {
-        return loggerConfiguration.WriteTo.MongoDBBson(sink =>
-        {
-            IMongoDatabase database = mongoClient.GetDatabase(options.DatabaseName);
-            sink.SetMongoDatabase(database);
-            sink.SetCollectionName(options.LogCollectionName);
-            sink.SetExpireTTL(LogRetention);
-        });
+        return loggerConfiguration.WriteTo.Logger(mongoLogger => mongoLogger
+            .Filter.ByIncludingOnly(MongoLogEventFilter.ShouldPersist)
+            .WriteTo.MongoDBBson(sink =>
+            {
+                IMongoDatabase database = mongoClient.GetDatabase(options.DatabaseName);
+                sink.SetMongoDatabase(database);
+                sink.SetCollectionName(options.LogCollectionName);
+                sink.SetExpireTTL(LogRetention);
+            }));
     }
 }
