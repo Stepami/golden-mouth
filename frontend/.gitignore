@@ -4,3 +4,7 @@ dist/
 *.local
 apm_modules/
 shots/
+.agents/
+.codex/
+.claude/
+apm.lock.yaml
