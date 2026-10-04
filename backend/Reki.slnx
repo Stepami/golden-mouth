@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="dotnet-tools.json" />
+    <File Path="global.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Reki.Api/Reki.Api.csproj" />
+    <Project Path="src/Reki.Application/Reki.Application.csproj" />
+    <Project Path="src/Reki.Contracts/Reki.Contracts.csproj" />
+    <Project Path="src/Reki.Domain/Reki.Domain.csproj" />
+    <Project Path="src/Reki.Infrastructure/Reki.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Reki.Tests/Reki.Tests.csproj" />
+  </Folder>
+</Solution>

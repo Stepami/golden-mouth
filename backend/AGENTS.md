@@ -5,9 +5,9 @@
 ## Технологический контракт
 
 - .NET 10 (`net10.0`), `LangVersion=latest`, nullable reference types и warnings as errors.
-- Modular monolith, Clean Architecture и DDD в четырёх production-проектах: Api, Infrastructure, Application и Domain. Один процесс и один deployable; feature/use-case boundaries задаются папками и namespaces, а не новыми проектами.
+- Modular monolith, Clean Architecture и DDD в пяти production-проектах: Api, Contracts, Infrastructure, Application и Domain. Один процесс и один deployable; feature/use-case boundaries задаются папками и namespaces, а не новыми проектами.
 - MongoDB через `MongoDB.Driver` **3.9.0**. Entity Framework и другие ORM не добавлять.
-- Minimal API вместо controllers. Исключение требует отдельного решения в issue.
+- HTTP API реализуется только ASP.NET Core controllers с attribute routing. Minimal API handlers для прикладных маршрутов не использовать.
 - Source generation: `Mediator`, `Validly`, `Mapperly`, `Vogen`, `System.Text.Json`.
 - Внешние HTTP API — декларативные клиенты `WebApiClientCore`, работающие поверх настроенного `HttpClient`.
 - OpenAPI генерируется встроенным ASP.NET Core OpenAPI и на build-time через `Microsoft.Extensions.ApiDescription.Server`; клиент тестов генерируется NSwag.
@@ -18,7 +18,7 @@
 
 ## Структура solution и зависимости
 
-При создании solution используй `.slnx`, Central Package Management и ровно четыре production-проекта:
+При создании solution используй `.slnx`, Central Package Management и ровно пять production-проектов:
 
 ```text
 backend/
@@ -29,7 +29,8 @@ backend/
   .editorconfig
   BannedSymbols.txt
   src/
-    Reki.Api/                         # composition root, middleware, HTTP slices
+    Reki.Api/                         # composition root, exception handlers, controllers
+    Reki.Contracts/                   # публичные request/response API contracts
     Reki.Infrastructure/              # MongoDB, external API clients, adapters
     Reki.Application/                 # commands, queries, handlers, ports
     Reki.Domain/                      # aggregates, entities, value objects, domain events
@@ -41,14 +42,16 @@ backend/
 
 - `Domain` не ссылается на ASP.NET Core, MongoDB, Serilog и инфраструктурные пакеты.
 - `Application` ссылается на `Domain` и объявляет use cases и порты.
+- `Contracts` не ссылается на остальные production-проекты и содержит только публичные модели HTTP-контракта.
 - `Infrastructure` ссылается на `Application` и `Domain` и реализует порты: MongoDB, внешние API, часы и прочий I/O.
-- `Api` ссылается на `Application` и `Infrastructure`, является composition root и HTTP-адаптером; бизнес-логики в endpoints нет.
-- Не создавай отдельные проекты на feature, bounded context, module, contracts или shared kernel. Новые production-проекты требуют отдельного архитектурного решения в issue.
+- `Api` ссылается на `Application`, `Contracts` и `Infrastructure`, является composition root и HTTP-адаптером; бизнес-логики в controllers нет.
+- Не создавай отдельные проекты на feature, bounded context, module или shared kernel. Новые production-проекты, кроме закреплённого `Reki.Contracts`, требуют отдельного архитектурного решения в issue.
 
 Код внутри проектов делится по feature/use case, а не по техническим папкам `Services`, `Dtos` и `Repositories` на весь проект:
 
 ```text
-Reki.Api/<Feature>/<UseCase>/Endpoint.cs, Request.cs, Response.cs
+Reki.Api/<Feature>/<UseCase>/Controller.cs, Mapper.cs
+Reki.Contracts/<Feature>/Request.cs, Response.cs
 Reki.Application/<Feature>/<UseCase>/Command.cs|Query.cs, Handler.cs, Result.cs
 Reki.Domain/<Feature>/... aggregates, entities, value objects, domain events
 Reki.Infrastructure/<Feature>/... repositories, BSON mappings, external adapters
@@ -56,7 +59,7 @@ Reki.Tests/<Feature>/<UseCase>/... component and domain tests
 ```
 
 - Один use case хранит рядом свои command/query, handler, validation, result и ports, если они не переиспользуются другим use case.
-- API contracts принадлежат соответствующему endpoint slice; application contracts не зависят от HTTP.
+- Все публичные API request/response DTO и связанные enum находятся в `Reki.Contracts`, остаются immutable и не содержат поведения. Application contracts не зависят от HTTP и от `Reki.Contracts`.
 - Domain организуется вокруг business concepts и aggregate boundaries: не дублируй aggregate только ради зеркальной папки каждого handler.
 - Infrastructure-код, специфичный для use case, лежит в том же feature slice; общий repository/serializer остаётся на уровне feature.
 - Логические bounded contexts изолируются namespaces и internal API. Они не читают Mongo collections друг друга напрямую; между ними используй узкие application contracts и integration events, а domain events оставляй внутри context.
@@ -103,6 +106,7 @@ Reki.Tests/<Feature>/<UseCase>/... component and domain tests
 ```
 
 - Analyzer diagnostics являются build errors из-за `TreatWarningsAsErrors`; не добавляй глобальные `NoWarn`, `WarningsNotAsErrors` или blanket suppressions.
+- Redundant `this.` qualification в handwritten code запрещена анализатором `IDE0003`; CI запускает общий `dotnet format style --verify-no-changes` gate без фильтра по diagnostic ID. StyleCop `SA1101` отключён как конфликтующий. Используй `this.` только когда он необходим для разрешения неоднозначности. Generated `*.g.cs` исключены через `generated_code = true`.
 - Настраивай severity и style централизованно в `.editorconfig`. Локальный suppression требует комментария с причиной и минимального scope.
 - `BannedSymbols.txt` хранится в корне `backend/` и содержит запрещённые API с объяснением безопасной альтернативы.
 - Generated files должны иметь `<auto-generated>` marker. Исключения анализаторов для `Generated/` задаются точечно в `.editorconfig`, а не ослабляют handwritten code.
@@ -139,19 +143,21 @@ Reki.Tests/<Feature>/<UseCase>/... component and domain tests
 
 ## HTTP API, JSON и внешние сервисы
 
-- Endpoints группируются по feature/use case через `MapGroup`; `Program.cs` содержит только composition root и одно подключение endpoint groups.
-- Каждый endpoint — именованный static method с `TypedResults` и явным union return type. Всегда задавай `.WithName()`, `.WithTags()`, `.WithSummary()` и документируй все ответы.
-- Endpoint только связывает HTTP contract с command/query и переводит результат в HTTP. Domain entities наружу не возвращаются.
+- Controllers группируются по feature/use case, наследуются от `ControllerBase` и помечаются `[ApiController]`. Маршруты задаются attribute routing; `Program.cs` содержит composition root и одно `MapControllers()`.
+- Каждый action имеет явный HTTP-атрибут, стабильное имя route, `CancellationToken` и возвращает конкретный typed result из `Microsoft.AspNetCore.Http.HttpResults` через `TypedResults`. Для нескольких вариантов используй `Results<T1, T2, ...>`. Атрибуты `[ProducesResponseType]` не добавляй: OpenAPI получает response metadata из typed return type. Не смешивай controllers с `MapGet`/`MapPost` и самописными Minimal API endpoint groups.
+- Controller только связывает contract из `Reki.Contracts` с command/query и переводит результат в HTTP. Domain entities и application results наружу не возвращаются; преобразование выполняет явный Mapperly mapper в `Reki.Api`.
 - Ошибки отдаются как `ProblemDetails`/`ValidationProblemDetails` с устойчивыми кодами; stack trace и внутренние сообщения клиенту не выдаются.
+- Глобальные исключения обрабатываются через зарегистрированный `IExceptionHandler`. Свои application exceptions маппятся на безопасные `ProblemDetails`; неизвестные исключения дают обобщённый HTTP 500 без `Exception.Message`.
 - Используй `System.Text.Json` без Newtonsoft.Json. Все request/response/external DTO и используемые ими Vogen types регистрируются в `JsonSerializerContext`; подключай сгенерированную Vogen converter factory. В JSON value object представляется underlying primitive, а не объектом `{ "value": ... }`; reflection fallback не включай незаметно.
 - Внешний API объявляется интерфейсом WebApiClientCore и скрывается за портом Application. Base URL, timeout и credentials приходят из validated options.
 - Каждый внешний client получает factory-managed `HttpClient`, timeout и resilience policy. Не создавай `new HttpClient()` и не повторяй небезопасные HTTP методы автоматически.
 
 ## OpenAPI и NSwag
 
-- Используй `AddOpenApi`/`MapOpenApi`; Swashbuckle не добавлять. Build-time document создаёт `Microsoft.Extensions.ApiDescription.Server`.
+- Используй `AddOpenApi`/`MapOpenApi`; build-time document создаёт `Microsoft.Extensions.ApiDescription.Server`. Для UI разрешён только пакет `Swashbuckle.AspNetCore.SwaggerUI`; `AddSwaggerGen` и генератор Swashbuckle не использовать.
 - OpenAPI — проверяемый контракт. Изменение endpoint считается завершённым только после обновления build-time spec и успешной генерации клиента.
 - `nswag.json` лежит рядом с тестируемым API project и использует только относительные пути/ MSBuild variables.
+- NSwag не генерирует DTO (`generateDtoTypes=false`): generated client импортирует и использует типы из `Reki.Contracts`.
 - В `Reki.Tests.csproj` должен быть custom MSBuild target, который после получения build-time OpenAPI запускает локальный tool manifest (`dotnet nswag run ...`) и генерирует typed test client до компиляции тестов.
 - Generated client хранится в явно выделенной папке `Generated/`, не редактируется вручную и генерируется детерминированно. Конфигурация не должна обращаться к запущенному dev-серверу или remote URL.
 
@@ -161,7 +167,8 @@ Reki.Tests/<Feature>/<UseCase>/... component and domain tests
 - Хост подключает Serilog через `builder.Host.UseSerilog(..., writeToProviders: true)`. `writeToProviders: true` обязателен: MEL providers, включая provider тестового раннера, должны видеть события приложения.
 - Не добавляй второй MEL Console provider, если активен Serilog Console sink, иначе сообщения будут дублироваться.
 - Production sinks: console и structured BSON sink `Serilog.Sinks.MongoDB`. Connection string Mongo sink приходит через configuration/env; в `appsettings*.json` допускается только несекретная структура.
-- Для стабильных сообщений используй `partial` методы с `[LoggerMessage]`; без string interpolation и без destructuring больших графов.
+- Каждый класс, который пишет прикладной лог, должен быть `partial`, получать `ILogger<TClass>` через primary constructor и объявлять свои нестатические `partial` методы с `[LoggerMessage]` внутри этого же класса. Вызывай их как instance methods; не создавай статические `*Logs` helper-классы и не передавай `ILogger` параметром в logging methods.
+- Для стабильных сообщений не используй string interpolation и destructuring больших графов. До построения DI host используй локально принадлежащий `ILoggerFactory`; static `Serilog.Log` запрещён и для bootstrap-сообщений.
 - Никогда не логируй токены, connection strings, Telegram init data, тексты игрока, личные данные или полный HTTP body.
 - OpenTelemetry настраивается для metrics с ASP.NET Core, HttpClient, runtime и custom meters и экспортирует их через OTLP. Routing задаётся стандартными `OTEL_*` variables.
 - Custom metrics создаются singleton-сервисами через `IMeterFactory`. Tags только низкой кардинальности; user ID, post ID, request ID и свободный текст в tags запрещены.
@@ -202,7 +209,7 @@ Reki.Tests/<Feature>/<UseCase>/... component and domain tests
 | Создание solution и первичный scaffold | `dotnet-init`, `project-setup`, `project-structure` |
 | Современный C# и общие code conventions | `modern-csharp` |
 | Проектирование и проверка границ архитектуры | `clean-architecture`, `ddd`, `arch-check` |
-| ASP.NET Core API и Minimal API | `dotnet-webapi`, `minimal-api` |
+| ASP.NET Core controllers | `dotnet-webapi` |
 | OpenAPI, build-time contract и versioning | `openapi`; `api-versioning` только при реальном введении новой версии API |
 | ProblemDetails, validation и exception pipeline | `error-handling` |
 | Liveness/readiness и dependency checks | `health-check` |
@@ -254,17 +261,18 @@ Semantic refactoring выполняй через Rider, а не глобальн
 Из `backend/`:
 
 1. Восстановить local tools и locked NuGet dependencies.
-2. Собрать solution в Release; build обязан также создать OpenAPI и test client без diff от ручных правок.
-3. Запустить весь `Reki.Tests` на MTP v2 и убедиться, что component tests реально выполнились.
-4. Собрать Docker image из чистого build context и проверить `/health/live` после запуска без root.
-5. Запустить корневой `.github/scripts/check-secrets.sh --all`.
+2. Запустить `dotnet format Reki.slnx style --verify-no-changes --no-restore --severity warn`.
+3. Собрать solution в Release; build обязан также создать OpenAPI и test client без diff от ручных правок.
+4. Запустить весь `Reki.Tests` на MTP v2 и убедиться, что component tests реально выполнились.
+5. Собрать Docker image из чистого build context и проверить `/health/live` после запуска без root.
+6. Запустить корневой `.github/scripts/check-secrets.sh --all`.
 
 Не объявляй задачу завершённой, если build, tests, OpenAPI/NSwag generation или Docker build не проверены. Если Docker daemon, Rider MCP или внешний tool недоступен, назови конкретную непроверенную часть.
 
 ## Запрещено
 
-- Ручные primitive wrappers вместо Vogen для одно-значных value objects/IDs; EF Core, controllers, MediatR, AutoMapper, Newtonsoft.Json, runtime-reflection serialization/mapping без отдельного решения.
+- Ручные primitive wrappers вместо Vogen для одно-значных value objects/IDs; EF Core, Minimal API для прикладных маршрутов, MediatR, AutoMapper, Newtonsoft.Json, runtime-reflection serialization/mapping без отдельного решения.
 - Дополнительные production-проекты без отдельного решения; прямой cross-feature доступ к чужим Mongo collections.
-- Бизнес-логика в endpoints, Mongo repositories или mapping profiles.
+- Бизнес-логика в controllers, Mongo repositories или mapping profiles.
 - Реальные секреты, `.env`, адреса окружений, личные пути и персональные данные в коде, fixtures, logs, snapshots, Docker layers и OpenAPI examples.
 - Ручное редактирование generated OpenAPI/NSwag client.

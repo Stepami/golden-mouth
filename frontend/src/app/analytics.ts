@@ -1,6 +1,6 @@
 // Продуктовая аналитика: кто куда ходит и что делает. Отдельно от журнала ошибок (app/log.ts).
 // Таксономия, воронки и вопросы: docs/analytics.md. Приватность: только обезличенный id, без текстов, ников, initData.
-const BASE = import.meta.env.VITE_API_URL as string | undefined
+import { apiBaseUrl as BASE } from './runtimeConfig'
 type Props = Record<string, string | number | boolean | null>
 export interface AEvent { name: string; t: number; screen: string; prev: string | null; props?: Props }
 

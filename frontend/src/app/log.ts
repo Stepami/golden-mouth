@@ -1,9 +1,9 @@
 // Журнал ошибок фронта (POST /logs). Аналитика поведения отдельно: app/analytics.ts. Правила:
 // - никаких текстов игрока, имён, ников и initData: только коды экранов, id, числа, длины;
-// - события копятся и уходят пачкой (POST /logs, sendBeacon при закрытии), без VITE_API_URL пишутся в консоль в dev;
+// - события копятся и уходят пачкой (POST /logs, sendBeacon при закрытии), в mock mode пишутся в консоль в dev;
 // - ошибки ловятся глобально и в ErrorBoundary; повтор одной ошибки не чаще раза в минуту.
 import { event } from './analytics'
-const BASE = import.meta.env.VITE_API_URL as string | undefined
+import { apiBaseUrl as BASE } from './runtimeConfig'
 const DEV = import.meta.env.DEV
 
 export type Level = 'info' | 'warn' | 'error'

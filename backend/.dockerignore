@@ -1,0 +1,14 @@
+**/bin
+**/obj
+**/TestResults
+.git
+.gitignore
+.env
+.agents
+.claude
+.codex
+.idea
+.vs
+apm_modules
+tests
+README.md

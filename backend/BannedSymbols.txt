@@ -1,0 +1,5 @@
+# Time must come from TimeProvider so production code and tests use the same seam.
+M:System.DateTime.get_Now; Use TimeProvider.GetLocalNow().
+M:System.DateTime.get_UtcNow; Use TimeProvider.GetUtcNow().
+M:System.DateTimeOffset.get_Now; Use TimeProvider.GetLocalNow().
+M:System.DateTimeOffset.get_UtcNow; Use TimeProvider.GetUtcNow().

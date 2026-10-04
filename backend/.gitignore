@@ -487,3 +487,8 @@ apm_modules/
 .codex/
 .claude/
 apm.lock.yaml
+
+# Generated backend contracts
+src/Reki.Api/Reki.Api.http
+src/Reki.Api/OpenApi/
+tests/Reki.Tests/Generated/RekiApiClient.g.cs

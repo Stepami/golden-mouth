@@ -9,6 +9,7 @@ import { inTelegram } from '../telegram'
 import { Avatar, BottomCTA, Button, Comment, Gift, Ribbon, TopBar, Whisper, fmt, plural } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
+import { apiBaseUrl } from '../app/runtimeConfig'
 import { register } from '.'
 
 const LINK = 'https://t.me/reki_game?start=liza7'
@@ -162,7 +163,8 @@ function Share() {
   const text = 'Мой пост залетел в Реки 🌊 А ты кем будешь в Сцене?'
   const toChat = () => { track('share', { to: 'chat' }); if (inTelegram) shareURL.ifAvailable(LINK, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(LINK)}&text=${encodeURIComponent(text)}`) }
   // Картинку 9:16 рисует бэкенд (#10): GET /cards/story/<postId>.png
-  const toStory = () => { track('share', { to: 'story' }); if (inTelegram) shareStory.ifAvailable(`${import.meta.env.VITE_API_URL ?? ''}/cards/story/${firstPost.id}.png`, { text, widgetLink: { url: LINK, name: 'Играть' } }) }
+  const storyCardUrl = new URL(`${apiBaseUrl ?? ''}/cards/story/${firstPost.id}.png`, location.origin).toString()
+  const toStory = () => { track('share', { to: 'story' }); if (inTelegram) shareStory.ifAvailable(storyCardUrl, { text, widgetLink: { url: LINK, name: 'Играть' } }) }
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Поделиться" />
