@@ -67,10 +67,9 @@ jobs:
   deploy:
     name: Deploy to production
     needs: [validate-tag, create-release]
-    runs-on: [self-hosted, linux, x64]
-    environment: production
+    runs-on: self-hosted
     env:
-      REKI_DEPLOY_ENV_FILE: /etc/reki/deploy.env
+      COMPOSE_FILE: compose.yml:compose.production.yml
       REKI_VERSION: ${{ needs.validate-tag.outputs.image-version }}
 
     steps:
@@ -82,40 +81,22 @@ jobs:
       - name: Validate production configuration
         shell: bash
         run: |
-          test -r "$REKI_DEPLOY_ENV_FILE"
-          docker compose \
-            --env-file "$REKI_DEPLOY_ENV_FILE" \
-            -f compose.yml \
-            -f compose.production.yml \
-            config --quiet
+          test -r /etc/reki/tls/fullchain.pem
+          test -r /etc/reki/tls/private.key
+          docker compose config --quiet
 
       - name: Build release images
         shell: bash
-        run: |
-          docker compose \
-            --env-file "$REKI_DEPLOY_ENV_FILE" \
-            -f compose.yml \
-            -f compose.production.yml \
-            build backend frontend
+        run: docker compose build backend frontend
 
       - name: Deploy release
         shell: bash
-        run: |
-          docker compose \
-            --env-file "$REKI_DEPLOY_ENV_FILE" \
-            -f compose.yml \
-            -f compose.production.yml \
-            up --detach --no-build --remove-orphans --wait --wait-timeout 180
+        run: docker compose up --detach --no-build --remove-orphans --wait --wait-timeout 180
 
       - name: Show container status on failure
         if: failure()
         shell: bash
-        run: |
-          docker compose \
-            --env-file "$REKI_DEPLOY_ENV_FILE" \
-            -f compose.yml \
-            -f compose.production.yml \
-            ps
+        run: docker compose ps
 
   publish-release:
     name: Publish release

@@ -1,33 +1,22 @@
 issue-labels-include:
-  - breaking change
   - bug
-  - dependencies
-  - documentation
-  - feature
-  - improvement
-
-issue-labels-exclude:
-  - build
+  - BackEnd
+  - FrontEnd
+  - CI-CD
 
 issue-labels-alias:
-  - name: breaking change
-    header: Breaking change
-    plural: Breaking changes
   - name: bug
     header: Bug fix
     plural: Bug fixes
-  - name: dependencies
-    header: Dependency
-    plural: Dependencies
-  - name: documentation
-    header: Documentation
-    plural: Documentation
-  - name: feature
-    header: Feature
-    plural: Features
-  - name: improvement
-    header: Improvement
-    plural: Improvements
+  - name: BackEnd
+    header: "API, данные, AI"
+    plural: "API, данные, AI"
+  - name: FrontEnd
+    header: "Telegram Mini App"
+    plural: "Telegram Mini App"
+  - name: CI-CD
+    header: CI/CD
+    plural: CI/CD
 
 create:
   include-sha-section: false

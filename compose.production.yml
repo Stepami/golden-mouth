@@ -1,15 +1,13 @@
 services:
   gateway:
     image: nginx:1.29.1-alpine
-    environment:
-      REKI_DOMAIN: ${REKI_DOMAIN:?Set REKI_DOMAIN in the deployment environment file}
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./deploy/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
-      - ${REKI_TLS_CERT_PATH:?Set REKI_TLS_CERT_PATH in the deployment environment file}:/etc/nginx/tls/fullchain.pem:ro
-      - ${REKI_TLS_KEY_PATH:?Set REKI_TLS_KEY_PATH in the deployment environment file}:/etc/nginx/tls/private.key:ro
+      - ./nginx.production.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/reki/tls/fullchain.pem:/etc/nginx/tls/fullchain.pem:ro
+      - /etc/reki/tls/private.key:/etc/nginx/tls/private.key:ro
     depends_on:
       frontend:
         condition: service_healthy
@@ -23,8 +21,6 @@ services:
 
   frontend:
     image: reki-frontend:${REKI_VERSION:-local}
-    volumes:
-      - ./deploy/runtime-config:/usr/share/nginx/html/runtime-config:ro
 
   backend:
     image: reki-backend:${REKI_VERSION:-local}
