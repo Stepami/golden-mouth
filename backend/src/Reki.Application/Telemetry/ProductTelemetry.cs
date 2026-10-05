@@ -4,10 +4,8 @@ using Reki.Domain.Telemetry;
 
 namespace Reki.Application.Telemetry;
 
-public sealed class ProductTelemetry
+public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, TimeProvider timeProvider)
 {
-    private readonly ILogger<ProductTelemetry> _logger;
-    private readonly TimeProvider _timeProvider;
     private readonly int _maxAttributeLength = 64;
     private readonly HashSet<string> _events = new(StringComparer.Ordinal)
     {
@@ -77,12 +75,6 @@ public sealed class ProductTelemetry
         "world",
     };
 
-    public ProductTelemetry(ILogger<ProductTelemetry> logger, TimeProvider timeProvider)
-    {
-        _logger = logger;
-        _timeProvider = timeProvider;
-    }
-
     public void TrackSubmission(PlayerProfile player, AnalyticsSubmission submission)
     {
         foreach (AnalyticsEntry entry in submission.Events)
@@ -127,7 +119,7 @@ public sealed class ProductTelemetry
         var attributes = CreateAttributes(
             playerId,
             eventName,
-            _timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
+            timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
         AddProperties(attributes, properties);
         Write(eventName, attributes);
     }
@@ -144,7 +136,7 @@ public sealed class ProductTelemetry
             ["event_name"] = eventName,
             ["event_time_unix_ms"] = timestamp,
             ["player_id"] = playerId.Value,
-            ["received_time_unix_ms"] = _timeProvider.GetUtcNow().ToUnixTimeMilliseconds(),
+            ["received_time_unix_ms"] = timeProvider.GetUtcNow().ToUnixTimeMilliseconds(),
         };
     }
 
@@ -169,7 +161,10 @@ public sealed class ProductTelemetry
 
     private void Write(string eventName, IReadOnlyDictionary<string, object?> attributes)
     {
-        using IDisposable? scope = _logger.BeginScope(attributes);
-        _logger.LogInformation("Product event {EventName}", eventName);
+        using IDisposable? scope = logger.BeginScope(attributes);
+        LogProductEvent(eventName);
     }
+
+    [LoggerMessage(LogLevel.Information, "Product event {EventName}")]
+    private partial void LogProductEvent(string eventName);
 }
