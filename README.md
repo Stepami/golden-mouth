@@ -36,11 +36,13 @@ Docker images собираются только во время deployment на 
 ```powershell
 $env:OPENOBSERVE_EMAIL = '<выбранный email администратора>'
 $env:OPENOBSERVE_PASSWORD = '<случайный длинный пароль>'
-$env:TG_PAT = '<токен тестового Telegram-бота>'
+$env:TG_PAT = '123456:reki-test-bot-tg-token'
 docker compose up --build
 ```
 
-Внешний LLM и `LLM_PAT` для локального запуска не нужны: `compose.override.yml` объявляет модель `ai/qwen2.5:3B-Q4_K_M`, а Compose сам скачивает её и передаёт backend совместимые с OpenAI endpoint и имя модели. Первая загрузка модели занимает около 1,8 ГБ; backend ждёт локальную генерацию до 120 секунд. `TG_PAT` нужен для защищённых игровых методов, но не для health checks, OpenAPI и Swagger.
+Внешний LLM, `LLM_PAT` и Telegram-бот для локального запуска не нужны. `compose.override.yml` объявляет модель `ai/qwen2.5:3B-Q4_K_M`, а Compose сам скачивает её и передаёт backend совместимые с OpenAI endpoint и имя модели. Первая загрузка модели занимает около 1,8 ГБ; backend ждёт локальную генерацию до 120 секунд.
+
+Локальный Vite dev server эмулирует Telegram Mini App, каждый раз создаёт свежий HMAC-подписанный `initData` для вымышленного игрока и отправляет запросы в backend. Backend проверяет подпись штатным `TgMiniAppAuth`; auth bypass нет. `TG_PAT` — единый вход Compose: Vite читает его при подписи, а Compose передаёт то же значение в настройку `TgMiniAppAuth` backend. Показанное значение фиктивное, не связано с Telegram и не даёт доступа ни к одному боту.
 
 Compose соберёт и запустит пять сервисов и локальную AI-модель:
 
@@ -58,7 +60,7 @@ Compose соберёт и запустит пять сервисов и лока
 
 Backend отправляет OTLP/gRPC во внутренний `otel-collector:4317`. Collector разделяет продуктовые события и технические логи по атрибуту `reki.stream`, после чего отправляет оба потока, метрики и трейсы в OpenObserve. Backend не зависит от доступности OpenObserve при запуске.
 
-Фронтенд выбирает источник данных во время запуска через `frontend/public/runtime-config/config.js`. По умолчанию включён `mock`; чтобы перейти на реальный API, поменяй `apiMode` на `backend` и перезагрузи Mini App. Пересборка образа и перезапуск контейнера не нужны. `apiBaseUrl` остаётся same-origin путём `/api/v1`, а реальный адрес backend скрыт за nginx-прокси.
+Фронтенд выбирает источник данных во время запуска через единственный `frontend/public/runtime-config/config.js`; сейчас он настроен на backend. `apiBaseUrl` остаётся same-origin путём `/api/v1`: Vite проксирует его в backend при разработке, а production nginx — после деплоя. Для автономной работы с моками достаточно временно поменять `apiMode` на `mock` в этом же файле.
 
 ```javascript
 window.__REKI_CONFIG__ = Object.freeze({
