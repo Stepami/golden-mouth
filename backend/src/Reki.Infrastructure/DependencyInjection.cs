@@ -7,12 +7,11 @@ using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
-using Reki.Application.Game.Common;
-using Reki.Infrastructure.Game.Persistence;
-using Reki.Infrastructure.Game.Rendering;
+using Reki.Application.Common;
 using Reki.Infrastructure.Health;
 using Reki.Infrastructure.Observability;
 using Reki.Infrastructure.Persistence;
+using Reki.Infrastructure.Rendering;
 
 namespace Reki.Infrastructure;
 

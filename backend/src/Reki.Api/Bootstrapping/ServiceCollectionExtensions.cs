@@ -3,16 +3,15 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Reki.Api.Common.Errors;
-using Reki.Api.Example.GetExample;
-using Reki.Api.Game.Common;
+using Reki.Api.Mapping;
 using Reki.Api.Serialization;
 using Reki.Application;
-using Reki.Application.Game.Common;
-using Reki.Contracts.Game.Events;
-using Reki.Contracts.Game.Player;
-using Reki.Contracts.Game.Posts;
-using Reki.Contracts.Game.Social;
-using Reki.Contracts.Game.Telemetry;
+using Reki.Application.Common;
+using Reki.Contracts.Events;
+using Reki.Contracts.Player;
+using Reki.Contracts.Posts;
+using Reki.Contracts.Social;
+using Reki.Contracts.Telemetry;
 using TgMiniAppAuth;
 
 namespace Reki.Api.Bootstrapping;
@@ -52,8 +51,7 @@ internal static class ServiceCollectionExtensions
             .AddControllers(options => options.Filters.Add(
                 new AuthorizeFilter(TgMiniAppAuthConstants.AuthenticationScheme)))
             .AddJsonOptions(options => ConfigureJson(options.JsonSerializerOptions));
-        services.AddSingleton<ExampleMapper>();
-        services.AddSingleton<GameMapper>();
+        services.AddSingleton<ApiMapper>();
         services.ConfigureHttpJsonOptions(options => ConfigureJson(options.SerializerOptions));
 
         return services;

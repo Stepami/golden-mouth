@@ -16,7 +16,6 @@ dotnet run --project src/Reki.Api/Reki.Api.csproj
 
 Development uses MongoDB for game data. Logs stay in the console and are not written to MongoDB outside Production. Protected game endpoints accept Telegram Mini App init data in `Authorization: TMiniApp <initData raw>`; set the bot token outside the repository before starting the API. Try:
 
-- `GET /api/v1/example/`
 - `GET /health/live`
 - `GET /health/ready`
 - `GET /openapi/v1.json`

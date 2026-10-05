@@ -46,14 +46,12 @@
       "excludedOperationIds": [],
       "additionalNamespaceUsages": [
         "Microsoft.AspNetCore.Mvc",
-        "Reki.Contracts.Example",
-        "Reki.Contracts.Game.Common",
-        "Reki.Contracts.Game.Events",
-        "Reki.Contracts.Game.Player",
-        "Reki.Contracts.Game.Posts",
-        "Reki.Contracts.Game.Social",
-        "Reki.Contracts.Game.Telemetry",
-        "Reki.Contracts.Game.Worlds"
+        "Reki.Contracts.Events",
+        "Reki.Contracts.Player",
+        "Reki.Contracts.Posts",
+        "Reki.Contracts.Social",
+        "Reki.Contracts.Telemetry",
+        "Reki.Contracts.Worlds"
       ],
       "additionalContractNamespaceUsages": [],
       "generateOptionalParameters": false,

@@ -117,22 +117,22 @@
 | `GET /me` | `Player` (с обезличенным `id` и `experiments`) | все |
 | `POST /onboarding` | `Player` | 01-5 |
 | `POST /posts` (SSE) | поток `LiveEvent`, последним `result: PostResult`; 409, если постов нет | 02-2 |
-| `POST /posts/:id/replies` | `{ ok }` | 02-6 |
+| `POST /posts/:id/replies` | 200 без тела | 02-6 |
 | `GET /feed` | `FeedItem[]` | 03-3 |
 | `GET /friends` | `Friend[]` | 03-4 |
 | `GET /dm/:starId` | `Dm` (сообщения, память, ответов осталось) | 03-1 |
 | `POST /dm/:starId` | `{ reply?, repliesLeft }` | 03-1 |
-| `DELETE /stars/:id/memory` `{ fact }` | `{ ok }` | 03-1 |
+| `DELETE /stars/:id/memory` `{ fact }` | 200 без тела | 03-1 |
 | `GET /events/today` | `GameEvent` | 05-0, 05-2 |
-| `POST /events/:id/answer` | `{ ok }` | 05-0, 05-2 |
+| `POST /events/:id/answer` | 200 без тела | 05-0, 05-2 |
 | `GET /challenges/active` | `Challenge \| null` | 03-4c |
-| `POST /challenges` `{ friendId }` | `{ ok }` | 03-4 |
+| `POST /challenges` `{ friendId }` | 200 без тела | 03-4 |
 | `GET /worlds/:id/rules` | `WorldRules` | 05-11, 05-7b |
-| `PUT /worlds/own` | `{ ok }` | 05-7b |
-| `PATCH /settings` | `{ ok }` | 05-8, 05-11 |
-| `POST /reports` `{ commentId, reason }` | `{ ok }` | 06-1 |
+| `PUT /worlds/own` | 200 без тела | 05-7b |
+| `PATCH /settings` | 200 без тела | 05-8, 05-11 |
+| `POST /reports` `{ commentId, reason }` | 200 без тела | 06-1 |
 | `POST /plus-interest` | `{ bonus: 5 }` | 04-2 |
-| `DELETE /me` | `{ ok }` | 05-8 |
+| `DELETE /me` | 200 без тела | 05-8 |
 | `GET /cards/story/:postId.png` | картинка 9:16 | 02-7 |
 | `POST /events` `{ session, platform, experiments, events }` | 204 | все (TMA auth; продуктовая аналитика, [analytics.md](analytics.md)) |
 | `POST /logs` `{ session, entries: LogEntry[] }` | 204 | все (TMA auth; пачками раз в 15 с, при ошибке сразу, при закрытии через `fetch` с `keepalive: true`) |

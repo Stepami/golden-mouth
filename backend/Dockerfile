@@ -14,13 +14,19 @@ RUN dotnet restore src/Reki.Api/Reki.Api.csproj
 FROM restore AS publish
 COPY backend/. .
 COPY docs/config/balance.json /src/docs/config/balance.json
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
 RUN dotnet publish src/Reki.Api/Reki.Api.csproj \
     --configuration Release \
     --no-restore \
     --output /app/publish \
     /p:UseAppHost=false \
     /p:OpenApiGenerateDocuments=false \
-    /p:OpenApiGenerateDocumentsOnBuild=false
+    /p:OpenApiGenerateDocumentsOnBuild=false \
+    && mkdir --parents /app/publish/fonts \
+    && cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /app/publish/fonts/ \
+    && cp /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf /app/publish/fonts/
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble@sha256:222759b391a1aaf241166672c8f99b2d4ada452e7b5319f3c6e8f265a37b5ad4 AS final
 WORKDIR /app

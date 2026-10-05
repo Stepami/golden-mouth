@@ -2,7 +2,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using Reki.Application.Game.Common;
+using Reki.Application.Common;
 using Reki.Infrastructure;
 using Reki.Infrastructure.Logging;
 using Reki.Infrastructure.Persistence;

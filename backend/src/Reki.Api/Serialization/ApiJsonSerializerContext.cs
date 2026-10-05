@@ -1,17 +1,14 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Contracts.Example;
-using Reki.Contracts.Game.Common;
-using Reki.Contracts.Game.Events;
-using Reki.Contracts.Game.Player;
-using Reki.Contracts.Game.Posts;
-using Reki.Contracts.Game.Social;
-using Reki.Contracts.Game.Telemetry;
-using Reki.Contracts.Game.Worlds;
+using Reki.Contracts.Events;
+using Reki.Contracts.Player;
+using Reki.Contracts.Posts;
+using Reki.Contracts.Social;
+using Reki.Contracts.Telemetry;
+using Reki.Contracts.Worlds;
 
 namespace Reki.Api.Serialization;
 
-[JsonSerializable(typeof(ExampleResponse))]
 [JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(HttpValidationProblemDetails))]
 [JsonSerializable(typeof(PlayerResponse))]
@@ -34,7 +31,6 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(GameEventResponse))]
 [JsonSerializable(typeof(WorldRulesResponse))]
 [JsonSerializable(typeof(UpdateWorldRulesRequest))]
-[JsonSerializable(typeof(OkResponse))]
 [JsonSerializable(typeof(PlusInterestResponse))]
 [JsonSerializable(typeof(ViewsLiveEvent))]
 [JsonSerializable(typeof(ReactionLiveEvent))]
