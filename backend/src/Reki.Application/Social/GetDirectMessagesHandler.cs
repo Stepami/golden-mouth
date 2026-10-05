@@ -36,8 +36,10 @@ public sealed class GetDirectMessagesHandler(
 
         int repliesLeft = Math.Max(
             0,
-            balance.DirectMessageRepliesPerDay - conversation.RepliesUsed);
-        return new DirectMessageView(conversation, repliesLeft);
+            balance.Relations.DirectMessageRepliesPerDay - conversation.RepliesUsed);
+        int relation = player.StarRelations
+            .FirstOrDefault(item => item.StarId == request.StarId)?.Value ?? 0;
+        return new DirectMessageView(conversation, repliesLeft, relation);
     }
 }
 

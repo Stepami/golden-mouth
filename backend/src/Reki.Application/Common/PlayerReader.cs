@@ -10,8 +10,9 @@ public sealed class PlayerReader(IGameStore store, GameBalance balance)
         TelegramUserId telegramUserId,
         CancellationToken cancellationToken)
     {
-        return await store.GetPlayerAsync(telegramUserId, cancellationToken)
+        PlayerProfile player = await store.GetPlayerAsync(telegramUserId, cancellationToken)
             ?? throw new ResourceNotFoundException("Player not found.");
+        return player.EnsureDefaults();
     }
 
     public PlayerView CreateView(PlayerProfile player)

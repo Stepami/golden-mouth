@@ -47,6 +47,15 @@ internal sealed class MongoGameStore : IGameStore
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public async ValueTask<PlayerProfile?> GetPlayerAsync(
+        PlayerId playerId,
+        CancellationToken cancellationToken)
+    {
+        return await _players
+            .Find(player => player.Id == playerId)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async ValueTask UpsertPlayerAsync(
         PlayerProfile player,
         CancellationToken cancellationToken)
@@ -93,9 +102,9 @@ internal sealed class MongoGameStore : IGameStore
             item => item.PlayerId == player.Id,
             cancellationToken);
         Task deleteEvents = _events.DeleteManyAsync(item => item.PlayerId == player.Id, cancellationToken);
-        Task deleteChallenges = _challenges.DeleteManyAsync(
-            item => item.PlayerId == player.Id,
-            cancellationToken);
+        FilterDefinition<GameChallenge> challengeFilter = Builders<GameChallenge>.Filter
+            .AnyEq(item => item.Participants, player.Id);
+        Task deleteChallenges = _challenges.DeleteManyAsync(challengeFilter, cancellationToken);
         Task deleteWorlds = _worlds.DeleteManyAsync(item => item.PlayerId == player.Id, cancellationToken);
         Task deleteAnalytics = _analytics.DeleteManyAsync(item => item.PlayerId == player.Id, cancellationToken);
         Task deleteThreads = _threads.DeleteManyAsync(threadFilter, cancellationToken);
@@ -129,6 +138,19 @@ internal sealed class MongoGameStore : IGameStore
             .Find(item => item.PlayerId == playerId)
             .SortByDescending(item => item.CreatedAtUtc)
             .Limit(count)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async ValueTask<IReadOnlyList<long>> GetRecentPostViewsAsync(
+        PlayerId playerId,
+        int count,
+        CancellationToken cancellationToken)
+    {
+        return await _posts
+            .Find(item => item.PlayerId == playerId)
+            .SortByDescending(item => item.CreatedAtUtc)
+            .Limit(count)
+            .Project(item => item.Views)
             .ToListAsync(cancellationToken);
     }
 
@@ -215,19 +237,68 @@ internal sealed class MongoGameStore : IGameStore
         PlayerId playerId,
         CancellationToken cancellationToken)
     {
-        return await _challenges.Find(item => item.PlayerId == playerId).FirstOrDefaultAsync(cancellationToken);
+        FilterDefinition<GameChallenge> participantFilter = Builders<GameChallenge>.Filter
+            .AnyEq(item => item.Participants, playerId);
+        FilterDefinition<GameChallenge> statusFilter = Builders<GameChallenge>.Filter
+            .Eq(item => item.Status, ChallengeStatus.Active);
+        return await _challenges
+            .Find(Builders<GameChallenge>.Filter.And(participantFilter, statusFilter))
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async ValueTask SaveChallengeAsync(
+    public async ValueTask<GameChallenge?> GetPendingChallengeAsync(
+        PlayerId firstPlayerId,
+        PlayerId secondPlayerId,
+        CancellationToken cancellationToken)
+    {
+        FilterDefinition<GameChallenge> participantsFilter = Builders<GameChallenge>.Filter.And(
+            Builders<GameChallenge>.Filter.AnyEq(item => item.Participants, firstPlayerId),
+            Builders<GameChallenge>.Filter.AnyEq(item => item.Participants, secondPlayerId));
+        FilterDefinition<GameChallenge> statusFilter = Builders<GameChallenge>.Filter
+            .Eq(item => item.Status, ChallengeStatus.Pending);
+        return await _challenges
+            .Find(Builders<GameChallenge>.Filter.And(participantsFilter, statusFilter))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async ValueTask<bool> TryInsertChallengeAsync(
         GameChallenge challenge,
         CancellationToken cancellationToken)
     {
-        var options = new ReplaceOptions { IsUpsert = true };
-        await _challenges.ReplaceOneAsync(
-            item => item.Id == challenge.Id,
-            challenge,
-            options,
-            cancellationToken);
+        try
+        {
+            await _challenges.InsertOneAsync(challenge, cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (MongoWriteException exception) when (
+            exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
+    }
+
+    public async ValueTask<bool> TryReplaceChallengeAsync(
+        GameChallenge challenge,
+        int expectedVersion,
+        CancellationToken cancellationToken)
+    {
+        FilterDefinition<GameChallenge> idFilter = Builders<GameChallenge>.Filter
+            .Eq(item => item.Id, challenge.Id);
+        FilterDefinition<GameChallenge> versionFilter = Builders<GameChallenge>.Filter
+            .Eq(item => item.Version, expectedVersion);
+        try
+        {
+            ReplaceOneResult result = await _challenges.ReplaceOneAsync(
+                Builders<GameChallenge>.Filter.And(idFilter, versionFilter),
+                challenge,
+                cancellationToken: cancellationToken);
+            return result.ModifiedCount == 1;
+        }
+        catch (MongoWriteException exception) when (
+            exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
     }
 
     public async ValueTask<WorldRules?> GetWorldRulesAsync(

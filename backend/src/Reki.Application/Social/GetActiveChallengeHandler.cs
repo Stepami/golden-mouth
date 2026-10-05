@@ -5,15 +5,17 @@ using Reki.Domain.Social;
 
 namespace Reki.Application.Social;
 
-public sealed class GetActiveChallengeHandler(IGameStore store, PlayerReader playerReader)
-    : IRequestHandler<GetActiveChallengeQuery, GameChallenge?>
+public sealed class GetActiveChallengeHandler(
+    PlayerReader playerReader,
+    ChallengeLifecycle challengeLifecycle)
+    : IRequestHandler<GetActiveChallengeQuery, ChallengeView?>
 {
-    public async ValueTask<GameChallenge?> Handle(
+    public async ValueTask<ChallengeView?> Handle(
         GetActiveChallengeQuery request,
         CancellationToken cancellationToken)
     {
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        return await store.GetActiveChallengeAsync(player.Id, cancellationToken);
+        return await challengeLifecycle.GetActiveViewAsync(player.Id, cancellationToken);
     }
 }
 

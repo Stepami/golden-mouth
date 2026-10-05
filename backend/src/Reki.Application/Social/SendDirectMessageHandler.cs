@@ -40,7 +40,7 @@ public sealed class SendDirectMessageHandler(
             conversation = conversation with { RepliesUsed = 0, PeriodStartedAtUtc = periodStart };
         }
 
-        if (conversation.RepliesUsed >= balance.DirectMessageRepliesPerDay)
+        if (conversation.RepliesUsed >= balance.Relations.DirectMessageRepliesPerDay)
         {
             throw new RequestConflictException("The daily direct-message limit has been reached.");
         }
@@ -83,6 +83,6 @@ public sealed class SendDirectMessageHandler(
         await store.SaveStarConversationAsync(updated, cancellationToken);
         return new SentDirectMessage(
             generated.Text,
-            balance.DirectMessageRepliesPerDay - updated.RepliesUsed);
+            balance.Relations.DirectMessageRepliesPerDay - updated.RepliesUsed);
     }
 }

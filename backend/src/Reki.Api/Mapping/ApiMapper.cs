@@ -50,8 +50,17 @@ public sealed partial class ApiMapper
             source.PostsCap,
             new StreakResponse(player.StreakDays, week, "ещё день — и бонус"),
             skills,
-            [],
-            [],
+            player.Wants
+                .Select(want => new WantResponse(want.Id, want.Text, want.Reward, want.Done))
+                .ToArray(),
+            player.Achievements
+                .Where(item => item.WorldId == player.World)
+                .Select(item => new CollectionCardResponse(
+                    item.Id,
+                    item.Emoji,
+                    item.Title,
+                    item.IsOpen))
+                .ToArray(),
             string.Empty,
             "свой голос",
             null,
@@ -79,7 +88,7 @@ public sealed partial class ApiMapper
 
     public DmResponse MapDirectMessages(DirectMessageView view, string starId)
     {
-        StarResponse star = CreateStar(starId);
+        StarResponse star = CreateStar(starId, view.Relation);
         return new DmResponse(
             star,
             "на связи",
@@ -170,7 +179,7 @@ public sealed partial class ApiMapper
             .ToDictionary(item => item.Key, item => SanitizeElement(item.Value));
     }
 
-    private static StarResponse CreateStar(string starId)
+    private static StarResponse CreateStar(string starId, int relation)
     {
         return new StarResponse(
             starId,
@@ -178,7 +187,7 @@ public sealed partial class ApiMapper
             "звезда мира",
             "слышит свой голос",
             "Реагирует на развитие канала.",
-            0);
+            relation);
     }
 
     private static DirectMessageAuthor MapDirectMessageAuthor(string source)
@@ -215,6 +224,7 @@ public sealed partial class ApiMapper
         return value.Length <= maxLength ? value : $"len:{value.Length}";
     }
 
+    [MapperIgnoreSource(nameof(SkillProgress.Experience))]
     private partial SkillResponse MapSkill(SkillProgress source);
 
     private partial DirectMessageResponse MapDirectMessage(DirectMessage source);

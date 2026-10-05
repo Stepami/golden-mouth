@@ -33,8 +33,9 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
         IndexKeysDefinition<DailyGameEvent> eventKeys = Builders<DailyGameEvent>.IndexKeys
             .Ascending(item => item.PlayerId)
             .Descending(item => item.DayStartedAtUtc);
+        await DropLegacyChallengeIndexAsync(challenges, cancellationToken);
         IndexKeysDefinition<GameChallenge> challengeKey = Builders<GameChallenge>.IndexKeys
-            .Ascending(item => item.PlayerId);
+            .Ascending(item => item.Participants);
         IndexKeysDefinition<WorldRules> worldKeys = Builders<WorldRules>.IndexKeys
             .Ascending(item => item.PlayerId)
             .Ascending(item => item.WorldId);
@@ -52,10 +53,14 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
             "ux_stars_memory_player_star",
             unique: true);
         CreateIndexModel<DailyGameEvent> eventIndex = IndexFactory.Create(eventKeys, "ix_events_player_day");
-        CreateIndexModel<GameChallenge> challengeIndex = IndexFactory.Create(
-            challengeKey,
-            "ux_challenges_active_player",
-            unique: true);
+        var challengeOptions = new CreateIndexOptions<GameChallenge>
+        {
+            Name = "ux_challenges_active_participants",
+            Unique = true,
+            PartialFilterExpression = Builders<GameChallenge>.Filter
+                .Eq(item => item.Status, ChallengeStatus.Active),
+        };
+        var challengeIndex = new CreateIndexModel<GameChallenge>(challengeKey, challengeOptions);
         CreateIndexModel<WorldRules> worldIndex = IndexFactory.Create(
             worldKeys,
             "ux_worlds_player_world",
@@ -97,6 +102,22 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
     public Task StopAsync(CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
+    }
+
+    private static async Task DropLegacyChallengeIndexAsync(
+        IMongoCollection<GameChallenge> challenges,
+        CancellationToken cancellationToken)
+    {
+        using IAsyncCursor<BsonDocument> cursor = await challenges.Indexes.ListAsync(cancellationToken);
+        IReadOnlyList<BsonDocument> indexes = await cursor.ToListAsync(cancellationToken);
+        if (indexes.Any(index =>
+            index.TryGetValue("name", out BsonValue? name) &&
+            name.AsString == "ux_challenges_active_player"))
+        {
+            await challenges.Indexes.DropOneAsync(
+                "ux_challenges_active_player",
+                cancellationToken);
+        }
     }
 
     private Task<string> CreateDocumentIndexAsync(
