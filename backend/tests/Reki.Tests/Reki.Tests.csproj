@@ -17,6 +17,7 @@
     <PackageReference Include="Testcontainers.MongoDb" />
     <PackageReference Include="MongoDB.Driver" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="NSubstitute" />
     <PackageReference Include="WebMotions.Fake.Authentication.JwtBearer" />
   </ItemGroup>
 

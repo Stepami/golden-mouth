@@ -1,8 +1,10 @@
 using System.Buffers.Binary;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using NSubstitute;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
 using Reki.Contracts.Telemetry;
@@ -15,13 +17,27 @@ namespace Reki.Tests.Api;
 [ClassDataSource<ApiFactory>(Shared = SharedType.PerTestSession)]
 public sealed class GameApiTests(ApiFactory factory)
 {
+    private ChatOptions? _lastChatOptions;
+
     private IMongoDatabase Database => new MongoClient(factory.MongoConnectionString)
         .GetDatabase(factory.DatabaseName);
 
     [Before(Test)]
-    public void ResetChatClient()
+    public void ConfigureChatClient()
     {
-        factory.ChatClient.Reset();
+        _lastChatOptions = null;
+        factory.ChatClient.ClearReceivedCalls();
+        factory.ChatClient
+            .GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                IEnumerable<ChatMessage> messages = callInfo.ArgAt<IEnumerable<ChatMessage>>(0);
+                _lastChatOptions = callInfo.ArgAt<ChatOptions?>(1)?.Clone();
+                return Task.FromResult(CreateChatResponse(messages));
+            });
     }
 
     [Test]
@@ -107,7 +123,12 @@ public sealed class GameApiTests(ApiFactory factory)
         const long telegramUserId = 1007;
         using TestApiClient api = factory.CreateApiClient(telegramUserId);
         await OnboardAsync(api);
-        factory.ChatClient.ReturnUnknownArgumentOnce();
+        factory.ChatClient
+            .GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(CreateCommentResponse(includeUnknownArgument: true)));
 
         PostsApiException? exception = null;
         try
@@ -149,7 +170,7 @@ public sealed class GameApiTests(ApiFactory factory)
             new CreatePostRequest { Text = "короткий пост про сцену" },
             CancellationToken.None);
 
-        ChatOptions? options = factory.ChatClient.LastOptions;
+        ChatOptions? options = _lastChatOptions;
         if (options is null)
         {
             throw new InvalidOperationException("The chat client did not receive options.");
@@ -174,7 +195,12 @@ public sealed class GameApiTests(ApiFactory factory)
         const long telegramUserId = 1009;
         using TestApiClient api = factory.CreateApiClient(telegramUserId);
         await OnboardAsync(api);
-        factory.ChatClient.ThrowOnce(new TimeoutException());
+        factory.ChatClient
+            .GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<ChatResponse>(new TimeoutException()));
 
         PostsApiException? exception = null;
         try
@@ -237,7 +263,10 @@ public sealed class GameApiTests(ApiFactory factory)
             .IsEqualTo(new DateTime(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc));
         await Assert.That(player["HateDisabledUntilUtc"].AsBsonDocument["DateTime"].ToUniversalTime())
             .IsEqualTo(new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
-        await Assert.That(factory.ChatClient.Calls).IsEqualTo(0);
+        await factory.ChatClient.DidNotReceive().GetResponseAsync(
+            Arg.Any<IEnumerable<ChatMessage>>(),
+            Arg.Any<ChatOptions?>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -413,6 +442,53 @@ public sealed class GameApiTests(ApiFactory factory)
         using var buffer = new MemoryStream();
         await stream.CopyToAsync(buffer, CancellationToken.None);
         return buffer.ToArray();
+    }
+
+    private static ChatResponse CreateChatResponse(IEnumerable<ChatMessage> messages)
+    {
+        bool directMessage = messages.Any(message => message.Text.Contains(
+            "tool dm",
+            StringComparison.Ordinal));
+        return directMessage
+            ? CreateDirectMessageResponse()
+            : CreateCommentResponse(includeUnknownArgument: false);
+    }
+
+    private static ChatResponse CreateCommentResponse(bool includeUnknownArgument)
+    {
+        using JsonDocument reasons = JsonDocument.Parse(
+            """[{"icon":"🔥","label":"в голосе канала"}]""");
+        var arguments = new Dictionary<string, object?>
+        {
+            ["author"] = "Соня",
+            ["star_id"] = "sonya",
+            ["text"] = "Есть голос. Продолжай в том же духе.",
+            ["hook"] = "Соня вернётся к этой теме через пару постов",
+            ["brave"] = 0.7,
+            ["humor"] = 0.6,
+            ["topic"] = 0.8,
+            ["why"] = reasons.RootElement.Clone(),
+            ["on_topic"] = true,
+        };
+        if (includeUnknownArgument)
+        {
+            arguments["followers"] = 1_000_000;
+        }
+
+        var call = new FunctionCallContent("test-call", "comment", arguments);
+        return new ChatResponse(new ChatMessage(ChatRole.Assistant, [call]));
+    }
+
+    private static ChatResponse CreateDirectMessageResponse()
+    {
+        var arguments = new Dictionary<string, object?>
+        {
+            ["star_id"] = "sonya",
+            ["text"] = "Вижу, о чём ты. Вернёмся к этому после следующего поста.",
+            ["memory_fact"] = "любит короткие посты",
+        };
+        var call = new FunctionCallContent("test-dm-call", "dm", arguments);
+        return new ChatResponse(new ChatMessage(ChatRole.Assistant, [call]));
     }
 
     private static Task<PlayerResponse> OnboardAsync(TestApiClient api)

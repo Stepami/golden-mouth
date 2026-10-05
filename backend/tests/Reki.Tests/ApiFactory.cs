@@ -5,6 +5,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
 using Testcontainers.MongoDb;
 using TUnit.AspNetCore;
 using TUnit.Core.Interfaces;
@@ -20,7 +21,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncIniti
 
     public string MongoConnectionString => _mongo.GetConnectionString();
 
-    public TestChatClient ChatClient { get; } = new();
+    public IChatClient ChatClient { get; } = Substitute.For<IChatClient>();
 
     public TestApiClient CreateApiClient(long? telegramUserId = null)
     {
