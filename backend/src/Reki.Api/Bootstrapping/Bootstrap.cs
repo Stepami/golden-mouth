@@ -1,5 +1,8 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Reki.Api.Authentication;
 using Reki.Application.Common;
 using Reki.Infrastructure;
 using Serilog;
@@ -37,6 +40,26 @@ internal static class Bootstrap
         builder.Services.AddSingleton(ReadGameBalance(builder.Configuration));
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddTgMiniAppAuth(builder.Configuration);
+        if (builder.Environment.IsDevelopment())
+        {
+            builder.Services
+                .AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme =
+                        DevelopmentTelegramAuthenticationHandler.SchemeName;
+                    options.DefaultChallengeScheme =
+                        DevelopmentTelegramAuthenticationHandler.SchemeName;
+                })
+                .AddScheme<AuthenticationSchemeOptions, DevelopmentTelegramAuthenticationHandler>(
+                    DevelopmentTelegramAuthenticationHandler.SchemeName,
+                    _ => { });
+            builder.Services.AddAuthorizationBuilder().AddPolicy(
+                TgMiniAppAuthConstants.AuthenticationScheme,
+                new AuthorizationPolicyBuilder(DevelopmentTelegramAuthenticationHandler.SchemeName)
+                    .RequireAuthenticatedUser()
+                    .Build());
+        }
+
         if (OpenApiGeneration.IsRunning)
         {
             builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
@@ -171,6 +194,7 @@ internal static class Bootstrap
         app.UseExceptionHandler();
         app.UseStatusCodePages();
         app.UseSerilogRequestLogging();
+        app.UseMiddleware<DevelopmentTelegramAuthenticationGuard>();
         app.UseAuthentication();
         app.UseAuthorization();
 

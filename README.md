@@ -36,11 +36,12 @@ Docker images собираются только во время deployment на 
 ```powershell
 $env:OPENOBSERVE_EMAIL = '<выбранный email администратора>'
 $env:OPENOBSERVE_PASSWORD = '<случайный длинный пароль>'
-$env:TG_PAT = '<токен тестового Telegram-бота>'
 docker compose up --build
 ```
 
-Внешний LLM и `LLM_PAT` для локального запуска не нужны: `compose.override.yml` объявляет модель `ai/qwen2.5:3B-Q4_K_M`, а Compose сам скачивает её и передаёт backend совместимые с OpenAI endpoint и имя модели. Первая загрузка модели занимает около 1,8 ГБ; backend ждёт локальную генерацию до 120 секунд. `TG_PAT` нужен для защищённых игровых методов, но не для health checks, OpenAPI и Swagger.
+Внешний LLM, `LLM_PAT` и Telegram bot token для локального запуска не нужны. `compose.override.yml` включает окружение `Development`, подключает отдельную runtime-конфигурацию фронтенда и эмулирует Telegram-пользователя с id `1001`. Фронтенд отправляет обычный заголовок `Authorization: TMiniApp <initData raw>`, а backend принимает специальный dev-вариант этих данных только в `Development`. В production dev-аутентификация не регистрируется и требуется подпись Telegram.
+
+Тот же override объявляет модель `ai/qwen2.5:3B-Q4_K_M`: Compose сам скачивает её и передаёт backend совместимые с OpenAI endpoint и имя модели. Первая загрузка модели занимает около 1,8 ГБ; backend ждёт локальную генерацию до 120 секунд.
 
 Compose соберёт и запустит пять сервисов и локальную AI-модель:
 
@@ -58,14 +59,17 @@ Compose соберёт и запустит пять сервисов и лока
 
 Backend отправляет OTLP/gRPC во внутренний `otel-collector:4317`. Collector разделяет продуктовые события и технические логи по атрибуту `reki.stream`, после чего отправляет оба потока, метрики и трейсы в OpenObserve. Backend не зависит от доступности OpenObserve при запуске.
 
-Фронтенд выбирает источник данных во время запуска через `frontend/public/runtime-config/config.js`. По умолчанию включён `mock`; чтобы перейти на реальный API, поменяй `apiMode` на `backend` и перезагрузи Mini App. Пересборка образа и перезапуск контейнера не нужны. `apiBaseUrl` остаётся same-origin путём `/api/v1`, а реальный адрес backend скрыт за nginx-прокси.
+Фронтенд выбирает источник данных во время запуска через `frontend/public/runtime-config/config.js`. В обычном образе по умолчанию включён `mock`; чтобы перейти на реальный API, поменяй `apiMode` на `backend` и перезагрузи Mini App. Пересборка образа и перезапуск контейнера не нужны. Локальный Compose автоматически монтирует `config.development.js`, где уже выбраны backend и dev-пользователь `1001`. `apiBaseUrl` остаётся same-origin путём `/api/v1`, а реальный адрес backend скрыт за nginx-прокси.
 
 ```javascript
 window.__REKI_CONFIG__ = Object.freeze({
   apiMode: 'backend',
   apiBaseUrl: '/api/v1',
+  developmentTelegramUserId: 1001,
 })
 ```
+
+`developmentTelegramUserId` действует только вместе с backend в окружении `Development`. В production это поле не даёт доступа к API.
 
 Данные MongoDB, её служебная конфигурация и данные OpenObserve хранятся в именованных volumes `reki_mongo-data`, `reki_mongo-config` и `reki_openobserve-data`.
 
