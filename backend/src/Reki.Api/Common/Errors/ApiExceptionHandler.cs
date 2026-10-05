@@ -18,7 +18,11 @@ internal sealed partial class ApiExceptionHandler(
         httpContext.Response.StatusCode = problemDetails.Status
             ?? StatusCodes.Status500InternalServerError;
 
-        if (exception is ResourceNotFoundException or RequestConflictException)
+        if (exception is ResourceNotFoundException or
+            RequestConflictException or
+            ContentRejectedException or
+            CrisisDetectedException or
+            AiServiceUnavailableException)
         {
             LogMappedException(
                 exception.GetType().Name,
@@ -57,6 +61,29 @@ internal sealed partial class ApiExceptionHandler(
                 Title = "Request conflict",
                 Type = "urn:reki:problem:request-conflict",
                 Detail = "The request conflicts with the current resource state.",
+            },
+            ContentRejectedException => new ProblemDetails
+            {
+                Status = StatusCodes.Status422UnprocessableEntity,
+                Title = "Content rejected",
+                Type = "urn:reki:problem:content-rejected",
+                Detail = "Так не получится, попробуй по-другому.",
+            },
+            CrisisDetectedException crisis => new ProblemDetails
+            {
+                Status = StatusCodes.Status422UnprocessableEntity,
+                Title = "Support is available",
+                Type = "urn:reki:problem:crisis",
+                Detail = crisis.IsTeen
+                    ? "Игра поставлена на паузу. Детский телефон доверия: 8-800-2000-122."
+                    : "Игра поставлена на паузу. Поговори с близким человеком или обратись к психологу.",
+            },
+            AiServiceUnavailableException => new ProblemDetails
+            {
+                Status = StatusCodes.Status503ServiceUnavailable,
+                Title = "AI service unavailable",
+                Type = "urn:reki:problem:ai-unavailable",
+                Detail = "Не получилось получить безопасный ответ. Попробуй ещё раз позже.",
             },
             _ => new ProblemDetails
             {

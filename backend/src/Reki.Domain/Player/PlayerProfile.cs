@@ -18,6 +18,8 @@ public sealed record PlayerProfile(
     int StreakDays,
     PlayerSettings Settings,
     IReadOnlyDictionary<string, SkillProgress> Skills,
+    DateTimeOffset? PausedAtUtc,
+    DateTimeOffset? HateDisabledUntilUtc,
     int Version)
 {
     public int GetPostsCap(int freePerDay, int plusPerDay)
@@ -61,5 +63,14 @@ public sealed record PlayerProfile(
             Version = Version + 1,
         };
     }
-}
 
+    public PlayerProfile StartCrisisPause(DateTimeOffset now, TimeSpan hateCooldown)
+    {
+        return this with
+        {
+            PausedAtUtc = now,
+            HateDisabledUntilUtc = now.Add(hateCooldown),
+            Version = Version + 1,
+        };
+    }
+}

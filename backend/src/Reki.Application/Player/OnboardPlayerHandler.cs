@@ -59,6 +59,8 @@ public sealed class OnboardPlayerHandler(
             1,
             settings,
             skills,
+            null,
+            null,
             0);
     }
 
@@ -79,4 +81,3 @@ public sealed class OnboardPlayerHandler(
         };
     }
 }
-

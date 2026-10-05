@@ -112,7 +112,9 @@ public sealed partial class ApiMapper
             post.Id,
             post.SubscriberDelta,
             post.Viral ? "Пост залетел" : "Канал растёт",
-            [new WhyResponse("🔥", "в голосе канала", $"+{post.SubscriberDelta}")],
+            source.Reasons
+                .Select(reason => new WhyResponse(reason.Icon, reason.Label, $"+{post.SubscriberDelta}"))
+                .ToArray(),
             post.Viral ? [new RibbonResponse("🚀", "залёт", null)] : [],
             bestComment is null ? null : new BestCommentResponse(bestComment.Avatar, bestComment.Text),
             post.Viral,

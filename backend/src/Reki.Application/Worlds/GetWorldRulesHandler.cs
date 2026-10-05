@@ -17,29 +17,6 @@ public sealed class GetWorldRulesHandler(IGameStore store, PlayerReader playerRe
             player.Id,
             request.WorldId,
             cancellationToken);
-        return stored ?? CreateDefaults(player.Id, request.WorldId);
-    }
-
-    private static WorldRules CreateDefaults(string playerId, string worldId)
-    {
-        string title = worldId switch
-        {
-            "academy" => "Академия",
-            "it" => "Айти-тусовка",
-            "stream" => "Стрим",
-            "own" => "Свой мир",
-            _ => "Сцена",
-        };
-        return new WorldRules(
-            playerId,
-            worldId,
-            title,
-            ["дерзко", "по-доброму", "загадочно"],
-            "Правила мира определяют, за что растёт канал.",
-            [
-                new WorldRule("Контент подходит для 14+", true),
-                new WorldRule("Пиши в голосе своего канала", false),
-            ]);
+        return stored ?? WorldRulesDefaults.Create(player.Id, request.WorldId);
     }
 }
-

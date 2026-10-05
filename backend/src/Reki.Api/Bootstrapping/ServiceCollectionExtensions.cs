@@ -7,6 +7,9 @@ using Reki.Api.Mapping;
 using Reki.Api.Serialization;
 using Reki.Application;
 using Reki.Application.Common;
+using Reki.Application.Common.AI;
+using Reki.Application.Common.Safety;
+using Reki.Application.Posts;
 using Reki.Contracts.Events;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
@@ -27,6 +30,8 @@ internal static class ServiceCollectionExtensions
         });
         services.AddSingleton<GameDay>();
         services.AddSingleton<PlayerReader>();
+        services.AddSingleton<PlayerSafetyGuard>();
+        services.AddSingleton<StarTurnGenerator>();
 
         return services;
     }

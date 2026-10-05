@@ -1,10 +1,12 @@
 using System.Buffers.Binary;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.AI;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
 using Reki.Contracts.Telemetry;
+using Reki.Contracts.Worlds;
 using Reki.Tests.Generated;
 
 namespace Reki.Tests.Api;
@@ -15,6 +17,12 @@ public sealed class GameApiTests(ApiFactory factory)
 {
     private IMongoDatabase Database => new MongoClient(factory.MongoConnectionString)
         .GetDatabase(factory.DatabaseName);
+
+    [Before(Test)]
+    public void ResetChatClient()
+    {
+        factory.ChatClient.Reset();
+    }
 
     [Test]
     public async Task Me_WithoutTelegramAuthentication_ReturnsUnauthorizedAsync()
@@ -91,6 +99,167 @@ public sealed class GameApiTests(ApiFactory factory)
         }
 
         await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status409Conflict);
+    }
+
+    [Test]
+    public async Task PublishPost_WhenLlmReturnsUnknownArgument_DoesNotConsumePostAsync()
+    {
+        const long telegramUserId = 1007;
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        factory.ChatClient.ReturnUnknownArgumentOnce();
+
+        PostsApiException? exception = null;
+        try
+        {
+            await api.Posts.PublishPostAsync(
+                new CreatePostRequest { Text = "обычный безопасный пост" },
+                CancellationToken.None);
+        }
+        catch (PostsApiException caught)
+        {
+            exception = caught;
+        }
+
+        if (exception is null)
+        {
+            throw new InvalidOperationException("The typed client did not surface the LLM error.");
+        }
+
+        BsonDocument player = await Database
+            .GetCollection<BsonDocument>("players")
+            .Find(new BsonDocument("TelegramUserId", telegramUserId))
+            .SingleAsync();
+        long postCount = await Database
+            .GetCollection<BsonDocument>("posts")
+            .CountDocumentsAsync(new BsonDocument("PlayerId", player["_id"]));
+
+        await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status503ServiceUnavailable);
+        await Assert.That(player["PostsUsed"].AsInt32).IsEqualTo(0);
+        await Assert.That(postCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task PublishPost_UsesExplicitConfiguredGenerationOptionsAsync()
+    {
+        using TestApiClient api = factory.CreateApiClient(1008);
+        await OnboardAsync(api);
+
+        await api.Posts.PublishPostAsync(
+            new CreatePostRequest { Text = "короткий пост про сцену" },
+            CancellationToken.None);
+
+        ChatOptions? options = factory.ChatClient.LastOptions;
+        if (options is null)
+        {
+            throw new InvalidOperationException("The chat client did not receive options.");
+        }
+
+        string[] toolNames = options.Tools?
+            .OfType<AIFunctionDeclaration>()
+            .Select(tool => tool.Name)
+            .Order()
+            .ToArray() ?? [];
+        await Assert.That(options.ModelId).IsEqualTo("gigachat3.5-432b-a28b");
+        await Assert.That(options.Temperature).IsEqualTo(0.4f);
+        await Assert.That(options.MaxOutputTokens).IsEqualTo(700);
+        await Assert.That(options.Reasoning).IsNull();
+        await Assert.That(toolNames).IsEquivalentTo(
+            new[] { "comment", "dm", "react", "repost", "start_event" });
+    }
+
+    [Test]
+    public async Task PublishPost_WhenLlmTimesOut_DoesNotConsumePostAsync()
+    {
+        const long telegramUserId = 1009;
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        factory.ChatClient.ThrowOnce(new TimeoutException());
+
+        PostsApiException? exception = null;
+        try
+        {
+            await api.Posts.PublishPostAsync(
+                new CreatePostRequest { Text = "безопасный пост перед таймаутом" },
+                CancellationToken.None);
+        }
+        catch (PostsApiException caught)
+        {
+            exception = caught;
+        }
+
+        if (exception is null)
+        {
+            throw new InvalidOperationException("The typed client did not surface the timeout.");
+        }
+
+        BsonDocument player = await Database
+            .GetCollection<BsonDocument>("players")
+            .Find(new BsonDocument("TelegramUserId", telegramUserId))
+            .SingleAsync();
+
+        await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status503ServiceUnavailable);
+        await Assert.That(player["PostsUsed"].AsInt32).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task PublishPost_WhenCrisisSignalDetected_AppliesCrisisSafetyStateAsync()
+    {
+        const long telegramUserId = 1010;
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+
+        PostsApiException? exception = null;
+        try
+        {
+            await api.Posts.PublishPostAsync(
+                new CreatePostRequest { Text = "я не хочу жить" },
+                CancellationToken.None);
+        }
+        catch (PostsApiException caught)
+        {
+            exception = caught;
+        }
+
+        if (exception is null)
+        {
+            throw new InvalidOperationException("The typed client did not surface the crisis response.");
+        }
+
+        BsonDocument player = await Database
+            .GetCollection<BsonDocument>("players")
+            .Find(new BsonDocument("TelegramUserId", telegramUserId))
+            .SingleAsync();
+
+        await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status422UnprocessableEntity);
+        await Assert.That(player["PostsUsed"].AsInt32).IsEqualTo(0);
+        await Assert.That(player["PausedAtUtc"].AsBsonDocument["DateTime"].ToUniversalTime())
+            .IsEqualTo(new DateTime(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc));
+        await Assert.That(player["HateDisabledUntilUtc"].AsBsonDocument["DateTime"].ToUniversalTime())
+            .IsEqualTo(new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
+        await Assert.That(factory.ChatClient.Calls).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task SaveOwnWorld_WithoutLockedSafetyRule_RestoresRuleAsync()
+    {
+        using TestApiClient api = factory.CreateApiClient(1011);
+        await OnboardAsync(api);
+        var request = new UpdateWorldRulesRequest
+        {
+            Title = "Мой мир",
+            Presets = [],
+            Description = "Безопасное описание мира",
+            Rules = [new WorldRuleResponse("Звёзды любят короткие посты")],
+        };
+
+        await api.Worlds.SaveOwnWorldAsync(request, CancellationToken.None);
+        WorldRulesResponse rules = await api.Worlds.GetWorldRulesAsync(
+            WorldId.Own,
+            CancellationToken.None);
+
+        WorldRuleResponse safetyRule = rules.Rules.Single(rule => rule.Locked);
+        await Assert.That(safetyRule.Text).IsEqualTo("Контент подходит для 14+");
     }
 
     [Test]

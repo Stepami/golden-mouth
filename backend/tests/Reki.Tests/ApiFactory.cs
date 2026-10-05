@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
@@ -18,6 +19,8 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncIniti
     public string DatabaseName { get; } = $"reki_tests_{Guid.NewGuid():N}";
 
     public string MongoConnectionString => _mongo.GetConnectionString();
+
+    public TestChatClient ChatClient { get; } = new();
 
     public TestApiClient CreateApiClient(long? telegramUserId = null)
     {
@@ -40,12 +43,17 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncIniti
         builder.UseEnvironment("Development");
         builder.UseSetting("Mongo:ConnectionString", MongoConnectionString);
         builder.UseSetting("Mongo:DatabaseName", DatabaseName);
+        builder.UseSetting("Llm:BaseUrl", "https://llm.invalid/v1");
+        builder.UseSetting("Llm:ApiKey", "placeholder");
+        builder.UseSetting("Llm:Model", "gigachat3.5-432b-a28b");
         builder.ConfigureServices(services =>
         {
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.RemoveAll<TimeProvider>();
+            services.RemoveAll<IChatClient>();
             services.AddSingleton<TimeProvider>(new FakeTimeProvider(
                 new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero)));
+            services.AddSingleton<IChatClient>(ChatClient);
             services
                 .AddAuthentication(options =>
                 {

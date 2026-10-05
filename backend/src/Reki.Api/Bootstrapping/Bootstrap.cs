@@ -50,7 +50,8 @@ internal static class Bootstrap
             .AddApplication()
             .AddInfrastructure(
                 builder.Configuration,
-                initializeDatabase: !OpenApiGeneration.IsRunning)
+                initializeDatabase: !OpenApiGeneration.IsRunning,
+                initializeLlm: !OpenApiGeneration.IsRunning)
             .AddApi();
     }
 

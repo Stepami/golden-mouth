@@ -1,6 +1,8 @@
 using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Common.Safety;
+using Reki.Application.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Social;
 
@@ -10,7 +12,9 @@ public sealed class SendDirectMessageHandler(
     IGameStore store,
     GameBalance balance,
     GameDay gameDay,
-    PlayerReader playerReader) : IRequestHandler<SendDirectMessageCommand, SentDirectMessage>
+    PlayerReader playerReader,
+    PlayerSafetyGuard safetyGuard,
+    StarTurnGenerator turnGenerator) : IRequestHandler<SendDirectMessageCommand, SentDirectMessage>
 {
     public async ValueTask<SentDirectMessage> Handle(
         SendDirectMessageCommand request,
@@ -38,22 +42,34 @@ public sealed class SendDirectMessageHandler(
             throw new RequestConflictException("The daily direct-message limit has been reached.");
         }
 
-        const string reply = "Вижу, о чём ты. Давай вернёмся к этому после следующего поста.";
+        await safetyGuard.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
+        GeneratedDirectMessage generated = await turnGenerator.GenerateDirectMessageAsync(
+            new StarDirectMessageContext(
+                request.StarId,
+                player.World,
+                player.Settings.Voice,
+                conversation.Memory,
+                request.Text),
+            cancellationToken);
         IReadOnlyList<DirectMessage> messages =
         [
             .. conversation.Messages,
             new DirectMessage("me", request.Text),
-            new DirectMessage("star", reply),
+            new DirectMessage("star", generated.Text),
         ];
+        IReadOnlyList<string> memory = string.IsNullOrWhiteSpace(generated.MemoryFact) ||
+            conversation.Memory.Contains(generated.MemoryFact, StringComparer.OrdinalIgnoreCase)
+            ? conversation.Memory
+            : [.. conversation.Memory, generated.MemoryFact];
         StarConversation updated = conversation with
         {
             Messages = messages,
+            Memory = memory,
             RepliesUsed = conversation.RepliesUsed + 1,
         };
         await store.SaveStarConversationAsync(updated, cancellationToken);
         return new SentDirectMessage(
-            reply,
+            generated.Text,
             balance.DirectMessageRepliesPerDay - updated.RepliesUsed);
     }
 }
-

@@ -38,7 +38,7 @@ public sealed class PostsController(
             ApiJsonSerializerContext.Default.ViewsLiveEvent,
             cancellationToken);
         await WriteEventAsync(
-            new ReactionLiveEvent(LiveEventType.React, "🔥"),
+            new ReactionLiveEvent(LiveEventType.React, published.Reaction),
             ApiJsonSerializerContext.Default.ReactionLiveEvent,
             cancellationToken);
         GameComment comment = published.Post.Comments[0];
