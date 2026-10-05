@@ -38,12 +38,12 @@ public sealed class SendDirectMessageHandler(
             throw new RequestConflictException("The daily direct-message limit has been reached.");
         }
 
-        const string Reply = "Вижу, о чём ты. Давай вернёмся к этому после следующего поста.";
+        const string reply = "Вижу, о чём ты. Давай вернёмся к этому после следующего поста.";
         IReadOnlyList<DirectMessage> messages =
         [
             .. conversation.Messages,
             new DirectMessage("me", request.Text),
-            new DirectMessage("star", Reply),
+            new DirectMessage("star", reply),
         ];
         StarConversation updated = conversation with
         {
@@ -52,7 +52,7 @@ public sealed class SendDirectMessageHandler(
         };
         await store.SaveStarConversationAsync(updated, cancellationToken);
         return new SentDirectMessage(
-            Reply,
+            reply,
             balance.DirectMessageRepliesPerDay - updated.RepliesUsed);
     }
 }

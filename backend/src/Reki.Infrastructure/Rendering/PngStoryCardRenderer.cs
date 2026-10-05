@@ -11,14 +11,14 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
     private const int Height = 1920;
     private const int MaxConcurrentRenders = 2;
 
-    private readonly SemaphoreSlim renderSlots = new(MaxConcurrentRenders, MaxConcurrentRenders);
-    private readonly SKTypeface regularTypeface;
-    private readonly SKTypeface boldTypeface;
+    private readonly SemaphoreSlim _renderSlots = new(MaxConcurrentRenders, MaxConcurrentRenders);
+    private readonly SKTypeface _regularTypeface;
+    private readonly SKTypeface _boldTypeface;
 
     public PngStoryCardRenderer()
     {
-        regularTypeface = LoadTypeface("DejaVuSans.ttf");
-        boldTypeface = LoadTypeface("DejaVuSans-Bold.ttf");
+        _regularTypeface = LoadTypeface("DejaVuSans.ttf");
+        _boldTypeface = LoadTypeface("DejaVuSans-Bold.ttf");
     }
 
     public async ValueTask RenderAsync(
@@ -26,7 +26,7 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
         Stream target,
         CancellationToken cancellationToken)
     {
-        await renderSlots.WaitAsync(cancellationToken);
+        await _renderSlots.WaitAsync(cancellationToken);
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -48,17 +48,17 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
         }
         finally
         {
-            renderSlots.Release();
+            _renderSlots.Release();
         }
     }
 
     public void Dispose()
     {
-        renderSlots.Dispose();
-        DisposeOwnedTypeface(regularTypeface);
-        if (!ReferenceEquals(regularTypeface, boldTypeface))
+        _renderSlots.Dispose();
+        DisposeOwnedTypeface(_regularTypeface);
+        if (!ReferenceEquals(_regularTypeface, _boldTypeface))
         {
-            DisposeOwnedTypeface(boldTypeface);
+            DisposeOwnedTypeface(_boldTypeface);
         }
     }
 
@@ -173,13 +173,13 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
 
     private void DrawCard(SKCanvas canvas, StoryCardData card)
     {
-        DrawText(canvas, "Реки", 82, boldTypeface, new SKColor(255, 184, 107), 90, 150);
-        DrawText(canvas, card.PlayerName, 66, boldTypeface, SKColors.White, 90, 300);
+        DrawText(canvas, "Реки", 82, _boldTypeface, new SKColor(255, 184, 107), 90, 150);
+        DrawText(canvas, card.PlayerName, 66, _boldTypeface, SKColors.White, 90, 300);
         DrawText(
             canvas,
             NormalizeHandle(card.Handle),
             38,
-            regularTypeface,
+            _regularTypeface,
             new SKColor(201, 198, 216),
             90,
             365);
@@ -187,11 +187,11 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
             canvas,
             FormatNumber(card.Subscribers),
             128,
-            boldTypeface,
+            _boldTypeface,
             new SKColor(255, 107, 139),
             90,
             570);
-        DrawText(canvas, "подписчиков", 42, regularTypeface, SKColors.White, 94, 635);
+        DrawText(canvas, "подписчиков", 42, _regularTypeface, SKColors.White, 94, 635);
 
         using var cardPaint = new SKPaint
         {
@@ -203,12 +203,12 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
             canvas,
             card.Viral ? "ЗАЛЕТЕВШИЙ ПОСТ" : "ПОСТ",
             30,
-            boldTypeface,
+            _boldTypeface,
             new SKColor(155, 184, 255),
             115,
             810);
 
-        using var postFont = new SKFont(regularTypeface, 52);
+        using var postFont = new SKFont(_regularTypeface, 52);
         using var postPaint = new SKPaint { Color = SKColors.White, IsAntialias = true };
         DrawWrappedText(canvas, card.PostText, postFont, postPaint, 115, 900, 850, 7, 72);
 
@@ -216,7 +216,7 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
             canvas,
             $"Просмотры  {FormatNumber(card.Views)}",
             34,
-            regularTypeface,
+            _regularTypeface,
             new SKColor(201, 198, 216),
             115,
             1350);
@@ -224,16 +224,16 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
             canvas,
             $"Подписчики  +{FormatNumber(card.SubscriberDelta)}",
             34,
-            boldTypeface,
+            _boldTypeface,
             new SKColor(126, 231, 135),
             540,
             1350);
-        DrawText(canvas, "а ты сколько наберёшь?", 44, boldTypeface, SKColors.White, 90, 1630);
+        DrawText(canvas, "а ты сколько наберёшь?", 44, _boldTypeface, SKColors.White, 90, 1630);
         DrawText(
             canvas,
             "t.me/reki_game",
             36,
-            regularTypeface,
+            _regularTypeface,
             new SKColor(201, 198, 216),
             90,
             1695);

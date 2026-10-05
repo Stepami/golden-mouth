@@ -98,7 +98,8 @@ dotnet_diagnostic.SA1602.severity = none
 dotnet_diagnostic.SA1633.severity = none
 dotnet_diagnostic.IDE0003.severity = error
 
-# allow long methods
+# loosen rules
+dotnet_diagnostic.SA1309.severity = none
 dotnet_diagnostic.AV1500.severity = none
 dotnet_diagnostic.AV1561.severity = none
 dotnet_diagnostic.AV1564.severity = none

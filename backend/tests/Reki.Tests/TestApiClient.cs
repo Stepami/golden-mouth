@@ -2,18 +2,17 @@ using System.Globalization;
 using System.Net;
 using Reki.Tests.Generated;
 using TgMiniAppAuth;
-using WebMotions.Fake.Authentication.JwtBearer;
 
 namespace Reki.Tests;
 
 public sealed class TestApiClient : IDisposable
 {
-    private readonly HttpClient httpClient;
+    private readonly HttpClient _httpClient;
 
     internal TestApiClient(HttpClient httpClient, long? telegramUserId)
     {
-        this.httpClient = httpClient;
-        if (telegramUserId is long userId)
+        _httpClient = httpClient;
+        if (telegramUserId is { } userId)
         {
             SetAuthenticatedUser(userId);
         }
@@ -43,7 +42,7 @@ public sealed class TestApiClient : IDisposable
 
     public void Dispose()
     {
-        httpClient.Dispose();
+        _httpClient.Dispose();
     }
 
     private void SetAuthenticatedUser(long userId)
@@ -56,6 +55,6 @@ public sealed class TestApiClient : IDisposable
             [TgMiniAppAuthConstants.Claims.FirstName] = "Test player",
             [TgMiniAppAuthConstants.Claims.RawAuthData] = rawAuthData,
         };
-        httpClient.SetFakeBearerToken(claims);
+        _httpClient.SetFakeBearerToken(claims);
     }
 }

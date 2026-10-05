@@ -69,11 +69,11 @@ public sealed class PublishPostHandler(
             delta,
             viral,
             false);
-        const string Hook = "Соня обещала вернуться к этой теме через пару постов";
+        const string hook = "Соня обещала вернуться к этой теме через пару постов";
 
         await store.AddPostAsync(post, cancellationToken);
-        await store.AppendThreadAsync(player.Id, postId, Hook, now, cancellationToken);
-        return new PublishedPost(post, Hook, "Соня");
+        await store.AppendThreadAsync(player.Id, postId, hook, now, cancellationToken);
+        return new PublishedPost(post, hook, "Соня");
     }
 }
 

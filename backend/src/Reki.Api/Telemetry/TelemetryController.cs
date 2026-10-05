@@ -18,8 +18,6 @@ public sealed partial class TelemetryController(
     ApiMapper mapper,
     ILogger<TelemetryController> logger) : ControllerBase
 {
-    private readonly ILogger<TelemetryController> logger = logger;
-
     [HttpPost("events", Name = "SubmitAnalytics")]
     [ActionName("SubmitAnalytics")]
     public async Task<NoContent> SubmitAnalyticsAsync(
