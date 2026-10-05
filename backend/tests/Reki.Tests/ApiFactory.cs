@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
@@ -9,7 +10,6 @@ using NSubstitute;
 using Testcontainers.MongoDb;
 using TUnit.AspNetCore;
 using TUnit.Core.Interfaces;
-using WebMotions.Fake.Authentication.JwtBearer;
 
 namespace Reki.Tests;
 
@@ -58,13 +58,15 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncIniti
             services
                 .AddAuthentication(options =>
                 {
-                    options.DefaultAuthenticateScheme = FakeJwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = FakeJwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultAuthenticateScheme = TestAuthenticationHandler.SchemeName;
+                    options.DefaultChallengeScheme = TestAuthenticationHandler.SchemeName;
                 })
-                .AddFakeJwtBearer();
+                .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                    TestAuthenticationHandler.SchemeName,
+                    _ => { });
             services.AddAuthorization(options => options.AddPolicy(
                 "TMiniApp",
-                new AuthorizationPolicyBuilder(FakeJwtBearerDefaults.AuthenticationScheme)
+                new AuthorizationPolicyBuilder(TestAuthenticationHandler.SchemeName)
                     .RequireAuthenticatedUser()
                     .Build()));
         });

@@ -1,7 +1,4 @@
-using System.Globalization;
-using System.Net;
 using Reki.Tests.Generated;
-using TgMiniAppAuth;
 
 namespace Reki.Tests;
 
@@ -47,14 +44,8 @@ public sealed class TestApiClient : IDisposable
 
     private void SetAuthenticatedUser(long userId)
     {
-        string serializedUser = $$"""{"id":{{userId}},"first_name":"Test player"}""";
-        string rawAuthData = $"user={Uri.EscapeDataString(serializedUser)}";
-        var claims = new Dictionary<string, object>
-        {
-            [TgMiniAppAuthConstants.Claims.Id] = userId.ToString(CultureInfo.InvariantCulture),
-            [TgMiniAppAuthConstants.Claims.FirstName] = "Test player",
-            [TgMiniAppAuthConstants.Claims.RawAuthData] = rawAuthData,
-        };
-        _httpClient.SetFakeBearerToken(claims);
+        _httpClient.DefaultRequestHeaders.Add(
+            TestAuthenticationHandler.UserIdHeaderName,
+            userId.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
 }
