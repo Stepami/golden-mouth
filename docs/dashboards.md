@@ -20,7 +20,7 @@ Metabase плохо работает с вложенными полями Mongo,
 | `screen`, `prev` | `02-3_result`, `02-2_live` | событие |
 | `p_*` | `p_delta: 38`, `p_viral: false` | `props` развёрнутые в поля с префиксом `p_` |
 
-Ошибки в `logs` так же плоско: `event`, `t`, `day`, `screen`, `platform`, `msg`, `status`.
+Ошибки в `logs` хранятся в нативной структуре `Serilog.Sinks.MongoDB`: верхнеуровневые `Level`, `UtcTimeStamp`, `RenderedMessage`, `TraceId`, `SpanId` и встроенный документ `Properties`. Message template и enrichers должны приводить клиентские и серверные ошибки к одному набору измерений: `Properties.Event`, `Properties.Player`, `Properties.Screen`, `Properties.Platform`, `Properties.Version`, `Properties.Status`, `Properties.Path`. Значения очищаются до передачи в Serilog; тексты игрока, initData, токены и полный HTTP body не пишутся.
 
 Фильтры на каждом дашборде: период, `world`, `age_group`, `platform`, `invited`.
 
@@ -102,11 +102,11 @@ Metabase плохо работает с вложенными полями Mongo,
 
 | График | Тип | Как считать |
 |---|---|---|
-| Ошибки по дням | Line | `logs` с `level = error` по `day`, разрез `event` |
-| Топ ошибок | Table | `msg` по числу и числу затронутых игроков |
-| Где ломается | Bar | `screen` и `platform` |
-| API | Table | `api_error` по `status` и пути |
-| Экран «Что-то пошло не так» | Число | `render_error` за сутки |
+| Ошибки по дням | Line | `logs` с `Level = Error` по `UtcTimeStamp`, разрез `Properties.Event` |
+| Топ ошибок | Table | `Properties.Event` и безопасный fingerprint по числу событий и уникальных `Properties.Player` |
+| Где ломается | Bar | `Properties.Screen` и `Properties.Platform` |
+| API | Table | `Properties.Event = api_error` по `Properties.Status` и `Properties.Path` |
+| Экран «Что-то пошло не так» | Число | `Properties.Event = render_error` за сутки |
 
 **Алерт** в Telegram-чат команды настраивает бэкенд (#35): новая ошибка или больше 20 за час.
 

@@ -1,6 +1,6 @@
 # Спека бэкенда
 
-03.10.2026. Что нужно бэкенду, чтобы игра работала как в [game-flow.md](game-flow.md) и на экранах [screens/](screens/README.md). Числа: [config/balance.json](config/balance.json). Контракт с фронтом: `frontend/src/api/types.ts` и комментарий в #10. Задачи: #8 (навыки, достижения, заруба), #9 (AI звёзд), #10 (данные и API), #26 (CI и секреты).
+03.10.2026, обновлено 05.10.2026. Что нужно бэкенду, чтобы игра работала как в [game-flow.md](game-flow.md) и на экранах [screens/](screens/README.md). Числа: [config/balance.json](config/balance.json). Контракт с фронтом: `frontend/src/api/types.ts` и комментарий в #10. Задачи: #8 (навыки, достижения, заруба), #9 (AI звёзд), #10 (данные и API), #26 (CI и секреты).
 
 ## 1. Главный принцип: модель пишет текст, код считает игру
 
@@ -12,6 +12,16 @@
 | Собирает правила своего мира из описания | Какие правила можно править (правило 14+ нельзя) |
 
 Звезда действует только инструментами: `react`, `comment`, `repost`, `dm`, `start_event(type)`. Модель не может изменить экономику: любые числа в её ответе игнорируются.
+
+### LLM-клиент
+
+- В Application используется абстракция `Microsoft.Extensions.AI.IChatClient`; конкретный провайдер подключается только в Infrastructure через `Microsoft.Extensions.AI.OpenAI`.
+- Провайдер предоставляет OpenAI-compatible API. Для MVP используем Chat Completions; переход на Responses API требует отдельного решения и подтверждённой поддержки провайдером.
+- Base URL, Bearer token и имя модели приходят только из typed options: `Llm__BaseUrl`, `Llm__ApiKey`, `Llm__Model`. Реальных значений в репозитории, Compose-файлах, issue и логах нет.
+- API вызывается только бэкендом. Фронт не получает URL провайдера, токен или прямой доступ к модели.
+- Ответ модели считается недоверенным вводом: структурированный JSON проверяется по схеме, неизвестные поля и любые числа экономики игнорируются.
+- Timeout, отмена запроса и повтор временной ошибки выполняются вокруг `IChatClient`; после начала потокового ответа автоматического повтора нет. Ошибка провайдера не тратит пост и возвращает безопасный результат без текста исключения.
+- В telemetry и логи не попадают Bearer token, полный URL провайдера, HTTP body, тексты игрока и ответы модели.
 
 ## 2. Ход: что происходит на `POST /posts`
 
@@ -91,7 +101,7 @@
 
 Продуктовая аналитика (вопросы, события, воронки, хранение): [analytics.md](analytics.md). Ниже журнал ошибок.
 
-Ошибки фронт шлёт пачкой на `POST /logs` (`frontend/src/app/log.ts`), события поведения отдельно на `POST /events` (`frontend/src/app/analytics.ts`). В записях **нет текстов игрока, ников и initData**: только код экрана, id, числа, длины (`len:123`). Ошибки: `js_error`, `promise_rejection`, `render_error` (экран «Что-то пошло не так»), `api_error` (5xx как error, 4xx как warn), `sse_error`; одна и та же ошибка не чаще раза в минуту. Бэкенд хранит логи 30 дней и удаляет их вместе с аккаунтом.
+Ошибки фронт шлёт пачкой на `POST /logs` (`frontend/src/app/log.ts`), события поведения отдельно на `POST /events` (`frontend/src/app/analytics.ts`). Каждая принятая ошибка превращается в структурированное событие Serilog и попадает через `MongoDBBson` в общую коллекцию `logs`: `Level`, `UtcTimeStamp`, `RenderedMessage`, `TraceId` и `SpanId` остаются на верхнем уровне, а поля из message template и enrichers (`Event`, `Player`, `Screen`, `Platform`, `Version`, `Status`, `Path`) лежат во встроенном BSON-объекте `Properties`. Параллельную плоскую схему для клиентских логов не создаём. В записях **нет текстов игрока, ников и initData**: только код экрана, id, числа, длины (`len:123`). Ошибки: `js_error`, `promise_rejection`, `render_error` (экран «Что-то пошло не так»), `api_error` (5xx как error, 4xx как warn), `sse_error`; одна и та же ошибка не чаще раза в минуту. Бэкенд хранит логи 30 дней и удаляет их вместе с аккаунтом.
 
 События фронта (`POST /events`): `session_start`, `screen_view`, `screen_leave`, `tap`, `app_hidden`, `app_visible`, `onboarding_step` (age / world / channel / done), `post_publish` (len, own_words), `post_result` (delta, viral, flop), `limit_reached`, `plus_interest`, `plus_bonus_only`, `invite_sent`, `share` (chat / story), `event_answered`, `challenge_post`, `report`, `crisis_shown`. Серверные события, полный список с полями и метрики теста: [analytics.md](analytics.md) («Что пишет бэкенд сам»), формат записи для дашбордов: [dashboards.md](dashboards.md).
 Метрики теста: D1 ≥ 40%, D7 ≥ 15%, K (честный: приглашённый дожил до D1), доля упёршихся в лимит и что они выбрали, на каком посте впервые пишут своими словами, клик «Хочу Реки+».
@@ -127,4 +137,4 @@
 
 ## 10. Окружение
 
-Ключи LLM, токен бота, строка Mongo: только переменные окружения сервера и GitHub Secrets (#26). Фронт получает только `VITE_API_URL`.
+Настройки LLM (`Llm__BaseUrl`, `Llm__ApiKey`, `Llm__Model`), токен бота и строка Mongo приходят только из переменных окружения сервера или защищённого secret store (#26). Отсутствующая обязательная настройка останавливает startup без вывода её значения. Фронт получает только same-origin runtime config для `/api/v1` и не знает адресов внутренних сервисов.
