@@ -1,115 +1,33 @@
-# Дашборды аналитики
+# Представления OpenObserve
 
-03.10.2026. Шесть дашбордов в Metabase на коллекции `analytics` и `logs` (MongoDB). События и зачем они: [analytics.md](analytics.md). Поднимает Metabase бэкенд (#35), дашборды собираем мы в интерфейсе Metabase по этому описанию.
+05.10.2026. Источники: log streams `product` и `backend`, стандартные OTel metrics и traces. В issue #35 поднимается сбор и хранение; автоматическое provision дашбордов и алертов не входит в MVP.
 
-## Как бэкенд пишет событие (чтобы графики строились без кода)
+## Конкурсные показатели
 
-Metabase плохо работает с вложенными полями Mongo, поэтому каждое событие пишется **плоским документом**, контекст игрока бэкенд добавляет сам при записи:
-
-| Поле | Пример | Откуда |
+| Показатель | Как считать | Источник |
 |---|---|---|
-| `name` | `post_result` | событие |
-| `t` | дата и время | событие |
-| `day` | `2026-10-05` (по Москве) | бэкенд |
-| `player` | `p_8f3k…` | обезличенный id |
-| `cohort` | `2026-10-03` | день `player_created` |
-| `day_n` | `2` | дней с `cohort` (0 = день старта) |
-| `world`, `age_group`, `platform` | `stage`, `14-17`, `ios` | профиль и пакет |
-| `invited` | `true` | пришёл по ссылке |
-| `plus_offer` | `10` | A/B-флаг |
-| `screen`, `prev` | `02-3_result`, `02-2_live` | событие |
-| `p_*` | `p_delta: 38`, `p_viral: false` | `props` развёрнутые в поля с префиксом `p_` |
+| DAU | `count(distinct player_id)` по календарному дню, `activity_kind = real` | `product` |
+| Обращения / DAU | число GenAI operations за день / DAU | `gen_ai.client.operation.duration` и `product` |
+| Токены | сумма input/output token usage по модели и операции | `gen_ai.client.token.usage` |
+| LLM-cost / DAU | `(input_tokens × input_price + output_tokens × output_price) / DAU`; цены хранятся в версии запроса/дашборда, а не в телеметрии | GenAI metrics + прайс модели |
+| Ошибки | 5xx и Error/Critical по часу, route и exception type | HTTP metrics + `backend` |
+| Нагрузка | RPS, p50/p95/p99 latency, active requests, GC, allocations, exceptions, thread-pool queue | ASP.NET Core + runtime metrics |
 
-Ошибки в `logs` хранятся в нативной структуре `Serilog.Sinks.MongoDB`: верхнеуровневые `Level`, `UtcTimeStamp`, `RenderedMessage`, `TraceId`, `SpanId` и встроенный документ `Properties`. Message template и enrichers должны приводить клиентские и серверные ошибки к одному набору измерений: `Properties.Event`, `Properties.Player`, `Properties.Screen`, `Properties.Platform`, `Properties.Version`, `Properties.Status`, `Properties.Path`. Значения очищаются до передачи в Serilog; тексты игрока, initData, токены и полный HTTP body не пишутся.
+Тестовые и отладочные обращения не должны попадать в конкурсный расчёт. Production-события имеют `activity_kind = real`; тесты проекта не экспортируют OTLP.
 
-Фильтры на каждом дашборде: период, `world`, `age_group`, `platform`, `invited`.
+## Поля продуктового stream
 
-## 1. Онбординг
+`ProductTelemetry` пишет плоские log attributes: `event_name`, `player_id`, `event_time_unix_ms`, `received_time_unix_ms`, `session_id`, `platform`, `screen`, `previous_screen`, `world`, `age_group`, `experiment_plus_offer` и разрешённые `prop_*`. Тексты постов, сообщений, комментариев, имена, Telegram ID и `initData` не экспортируются.
 
-**Вопрос:** сколько новых игроков доходит до первого поста и где отваливаются.
+Для DAU и когорт используется `player_id`, для сессий — `session_id`. Эти поля допустимы в log stream, но не должны становиться labels OTel-метрик.
 
-| График | Тип | Как считать |
-|---|---|---|
-| Воронка | Funnel | уникальные `player` по шагам: `session_start` (первый, `day_n = 0`) → `onboarding_step` `p_step=age` (`p_ok=true`) → `world` → `channel` → `done` → первый `post_publish` → первый `post_result` |
-| Отказ по возрасту | Число | доля `onboarding_step` `p_step=age` с `p_ok=false` |
-| Выбор мира | Bar | `p_world` в шаге `world` |
-| Время до первого итога | Distribution | от первого `session_start` до первого `post_result`, медиана и 90-й перцентиль |
-| Где ушли | Bar | последний `screen` перед `app_hidden` у тех, кто не дошёл до `done` |
+## Продуктовые представления
 
-**Решения:** провал больше 20% на одном шаге → упрощать этот экран. Медиана до первого итога больше 90 секунд → резать онбординг. Мир почти не выбирают → менять описание или подачу.
+1. Онбординг: уникальные игроки по `onboarding_step` и первому `post_publish`; время от `session_start` до `post_result`.
+2. Первая сессия: число `post_publish` на сессию, доля `prop_own_words`, `prop_viral` и `prop_flop`, время `screen_leave`.
+3. Retention: наличие любого события игрока в D1/D3/D7 относительно первого `player_created` или `session_start`, в разрезах `world` и `age_group`.
+4. Лимит и Реки+: первое действие после `limit_reached`, `plus_interest` на показ и разрез `experiment_plus_offer`.
+5. Друзья: `invite_sent` → `invite_converted` → первый пост → D1; `challenge_started` и `challenge_finished`.
+6. Ошибки: severity, event name, HTTP route/status, screen и безопасный exception type; переход из лога в связанный trace по trace id.
 
-## 2. Первая сессия
-
-**Вопрос:** затягивает ли ход и на каком посте бросают.
-
-| График | Тип | Как считать |
-|---|---|---|
-| Постов в первый день | Distribution | `post_publish` при `day_n = 0` на игрока |
-| Где бросают ход | Bar | номер поста за день у последнего `post_publish` перед уходом (`app_hidden` без возврата в тот день) |
-| Свои слова против «Подскажи» | Line | доля `p_own_words = true` по номеру поста и по `day_n` |
-| Итог поста | Stacked bar | доля `p_viral`, `p_flop`, обычных по номеру поста |
-| Время на экранах | Table | медиана `screen_leave` `p_ms` по `screen` |
-| Быстрый «назад» | Table | `screen_view` с `screen_leave` меньше 2 секунд, по экрану |
-
-**Решения:** массово бросают после провала → смягчать подпись или провал. Своих слов меньше 30% к 3-му дню → менять подсказки. Экран с медианой больше 20 секунд или с частым быстрым «назад» → он непонятен.
-
-## 3. Удержание по когортам
-
-**Вопрос:** возвращаются ли и что держит.
-
-| График | Тип | Как считать |
-|---|---|---|
-| Матрица удержания | Pivot | строки `cohort`, столбцы `day_n` 0…14, ячейка: доля игроков когорты с `session_start` в этот `day_n` |
-| D1 / D7 по миру | Bar | то же, разрез `world` |
-| D1 после хейт-волны | Bar | D1 у игроков с серверным `hate_wave` вчера против без |
-| Что было в последней сессии | Table | у вернувшихся на следующий день и у ушедших (нет `session_start` 3+ дней): доля с залётом, провалом, хейтом, новым уровнем, пустым днём |
-| Уведомления | Bar | `notification_opened` / `notification_sent` по типу (утро, вечер, друг пришёл) |
-| Серия | Distribution | максимальная серия дней по игроку |
-
-**Цели теста:** D1 ≥ 40%, D7 ≥ 15%. **Решения:** D1 после хейта заметно ниже → чаще мягкий градус по умолчанию. Ушедшие чаще видели пустой день → усиливать «открытие дня».
-
-## 4. Лимит и Реки+
-
-**Вопрос:** что делают на лимите и сколько хотят Реки+.
-
-| График | Тип | Как считать |
-|---|---|---|
-| Упёрлись в лимит | Line | доля активных за день с `limit_reached` |
-| Что после лимита | Bar | первое событие после `limit_reached` в течение 10 минут: `invite_sent`, `plus_interest`, `plus_bonus_only`, просмотр ленты или друзей, `app_hidden` |
-| Интерес к Реки+ | Число | `plus_interest` / игроки с `screen_view` на `04-2_fake_door` |
-| A/B оффера | Bar | то же, разрез `plus_offer` (10 / 20) |
-| Возврат после лимита | Число | доля упёршихся, кто открыл игру на следующий день |
-
-**Решения:** после лимита в основном уходят → лимит слишком жёсткий или интрига слабая. Оффер «20» даёт интерес заметно выше «10» при тех же уходах → брать «20». Интерес к Реки+ ниже 3% показов → пересобрать, что в нём.
-
-## 5. Друзья
-
-**Вопрос:** приводят ли друзей и играют ли вместе.
-
-| График | Тип | Как считать |
-|---|---|---|
-| K честный | Число | `invite_converted` (приглашённый сделал первый пост и вернулся на D1) / активные игроки |
-| Воронка приглашения | Funnel | `invite_sent` → открыли ссылку (`player_created` с `invited`) → первый пост → D1 |
-| Откуда зовут | Bar | `screen`, на котором был `invite_sent` и `share` (лимит, итог, залёт, хейт, друзья) |
-| Пары против одиночек | Bar | D7 у игроков с другом в игре против без |
-| Заруба | Числа | `challenge_started`, доля завершённых, D3 у участников |
-
-**Цель:** K ≥ 0,3. **Решения:** зовут в основном с залёта → поднимать «Поделиться» на итогах. Пары держатся заметно лучше → двигать друзей раньше в первой сессии.
-
-## 6. Ошибки
-
-**Вопрос:** что ломается и у кого.
-
-| График | Тип | Как считать |
-|---|---|---|
-| Ошибки по дням | Line | `logs` с `Level = Error` по `UtcTimeStamp`, разрез `Properties.Event` |
-| Топ ошибок | Table | `Properties.Event` и безопасный fingerprint по числу событий и уникальных `Properties.Player` |
-| Где ломается | Bar | `Properties.Screen` и `Properties.Platform` |
-| API | Table | `Properties.Event = api_error` по `Properties.Status` и `Properties.Path` |
-| Экран «Что-то пошло не так» | Число | `Properties.Event = render_error` за сутки |
-
-**Алерт** в Telegram-чат команды настраивает бэкенд (#35): новая ошибка или больше 20 за час.
-
-## Порядок сборки
-
-Сначала 1, 2 и 6: они нужны с первого дня теста. 3 и 5 имеют смысл с 3–7-го дня, 4 когда наберётся 50+ упёршихся в лимит.
+Цели продукта остаются в [analytics.md](analytics.md). OpenObserve заменяет только хранилище и UI аналитики; контракт `POST /events` и `POST /logs` для фронтенда не меняется.

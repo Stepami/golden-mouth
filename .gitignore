@@ -1,2 +1,3 @@
 docs/design/src/journey_*.html
 docs/design/src/__pycache__/
+.env

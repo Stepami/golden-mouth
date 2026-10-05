@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Reki.Application.Common;
@@ -56,7 +57,9 @@ public sealed class ChallengeLifecycleTests
         GameBalance balance = TestGameData.CreateBalance();
         var timeProvider = new FakeTimeProvider(TestGameData.PeriodStart.AddHours(2));
         var gameDay = new GameDay(timeProvider, balance);
-        var analytics = new ServerAnalyticsWriter(store, timeProvider);
+        var analytics = new ProductTelemetry(
+            Substitute.For<ILogger<ProductTelemetry>>(),
+            timeProvider);
         var lifecycle = new ChallengeLifecycle(store, balance, gameDay, timeProvider, analytics);
 
         // Act

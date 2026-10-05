@@ -1,11 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.Options;
-using MongoDB.Driver;
 using Reki.Application.Common;
 using Reki.Infrastructure;
-using Reki.Infrastructure.Logging;
-using Reki.Infrastructure.Persistence;
 using Serilog;
 using TgMiniAppAuth;
 
@@ -168,23 +164,6 @@ internal static class Bootstrap
             .ReadFrom.Services(services)
             .Enrich.FromLogContext()
             .WriteTo.Console();
-
-        if (context.HostingEnvironment.IsProduction() && !OpenApiGeneration.IsRunning)
-        {
-            AddMongoSink(services, loggerConfiguration);
-        }
-    }
-
-    private static void AddMongoSink(
-        IServiceProvider services,
-        LoggerConfiguration loggerConfiguration)
-    {
-        IMongoClient mongoClient = services.GetRequiredService<IMongoClient>();
-        MongoOptions mongoOptions = services
-            .GetRequiredService<IOptions<MongoOptions>>()
-            .Value;
-
-        loggerConfiguration.WriteToMongoDb(mongoClient, mongoOptions);
     }
 
     private static void ConfigurePipeline(WebApplication app)

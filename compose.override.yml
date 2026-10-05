@@ -1,0 +1,26 @@
+services:
+  frontend:
+    build:
+      target: development
+    environment:
+      TG_PAT: ${TG_PAT:?TG_PAT is required}
+      REKI_BACKEND_PROXY_TARGET: http://backend:8080
+    ports: !override
+      - "127.0.0.1:${FRONTEND_PORT:-8080}:5173"
+    volumes: !override
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5173/ > /dev/null || exit 1"]
+
+  backend:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      TelegramMiniAppAuthorizationOptions__Token: ${TG_PAT:?TG_PAT is required}
+      Llm__ApiKey: local-model-runner
+      Llm__BaseUrl: http://model-runner.docker.internal/engines/v1/
+      Llm__Model: ai/gemma4:e2b-q4_K_M
+      Llm__TimeoutSeconds: 120
+
+volumes:
+  frontend-node-modules:

@@ -1,4 +1,4 @@
 window.__REKI_CONFIG__ = Object.freeze({
-  apiMode: 'mock',
+  apiMode: 'backend',
   apiBaseUrl: '/api/v1',
 })

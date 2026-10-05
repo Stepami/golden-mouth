@@ -9,7 +9,7 @@ Telegram Mini App 14+: ведёшь канал блогера в вымышле�
 | [docs/backend-spec.md](docs/backend-spec.md) | Спека бэкенда: ход, оценка поста LLM, контент миров, бот, безопасность, антифрод, аналитика |
 | [docs/config/balance.json](docs/config/balance.json) | Все числа баланса одним конфигом |
 | [docs/analytics.md](docs/analytics.md) | Продуктовая аналитика: вопросы, события, воронки, метрики, хранение |
-| [docs/dashboards.md](docs/dashboards.md) | Шесть дашбордов Metabase: графики, как считать, какие решения принимать |
+| [docs/dashboards.md](docs/dashboards.md) | Представления OpenObserve: конкурсные, продуктовые и технические метрики |
 | [docs/deployment.md](docs/deployment.md) | CI/CD, production HTTPS и доступ к служебным сервисам через SSH |
 | [docs/screens/](docs/screens/README.md) | Макеты всех экранов |
 | [docs/audit.md](docs/audit.md) | Итоговый аудит игры и экранов, вердикт для вёрстки |
@@ -31,27 +31,44 @@ Docker images собираются только во время deployment на 
 
 ## Запуск всего проекта
 
-Из корня репозитория:
+Перед первым запуском включи Docker Desktop → **Settings → AI → Enable Docker Model Runner** и задай логин и пароль администратора OpenObserve. Эти же данные Collector использует только внутри Compose-сети для отправки OTLP. Затем из корня репозитория запусти Compose:
+
+Один раз скачай основную 4-битную Gemma 4 E2B и её MTP draft, затем включи speculative decoding. Основная модель остаётся моделью API, а `e2b-mtp` предлагает ей несколько следующих токенов для параллельной проверки:
 
 ```powershell
-docker compose up
+docker model pull ai/gemma4:e2b-q4_K_M
+docker model pull ai/gemma4:e2b-mtp
+docker model configure --context-size 4096 --speculative-draft-model ai/gemma4:e2b-mtp --speculative-num-tokens 2 ai/gemma4:e2b-q4_K_M
 ```
 
-Compose соберёт и запустит пять сервисов:
+```powershell
+$env:OPENOBSERVE_EMAIL = '<выбранный email администратора>'
+$env:OPENOBSERVE_PASSWORD = '<случайный длинный пароль>'
+$env:TG_PAT = '123456:reki-test-bot-tg-token'
+docker compose up --build
+```
+
+Внешний LLM, `LLM_PAT` и Telegram-бот для локального запуска не нужны. `compose.override.yml` передаёт backend основную `ai/gemma4:e2b-q4_K_M`, а выполненная выше команда атомарно задаёт ей контекст 4096 токенов и MTP draft. Модель намеренно не объявлена через Compose `models:`: model-provider повторно конфигурирует основную модель и сбрасывает speculative decoding. Backend внутри контейнера обращается к Docker Desktop через `http://model-runner.docker.internal/engines/v1/` и ждёт локальную генерацию до 120 секунд.
+
+Локальный Vite dev server эмулирует Telegram Mini App, каждый раз создаёт свежий HMAC-подписанный `initData` для вымышленного игрока и отправляет запросы в backend. Backend проверяет подпись штатным `TgMiniAppAuth`; auth bypass нет. `TG_PAT` — единый вход Compose: Vite читает его при подписи, а Compose передаёт то же значение в настройку `TgMiniAppAuth` backend. Показанное значение фиктивное, не связано с Telegram и не даёт доступа ни к одному боту.
+
+Compose соберёт и запустит пять сервисов и локальную AI-модель:
 
 - фронтенд: `http://localhost:8080`;
 - бэкенд: `http://localhost:8081` (`/health/live`, `/health/ready`, `/swagger/`);
-- Metabase: `http://localhost:3000`;
-- Aspire Dashboard: `http://localhost:18888` (метрики, трейсы и логи бэкенда);
+- OpenObserve: `http://localhost:5080` (логи, метрики и трейсы);
+- OpenTelemetry Collector во внутренней Compose-сети;
 - MongoDB: `mongodb://127.0.0.1:27017/reki` для локального подключения через Compass; внутри Compose-сети — `mongo:27017`.
 
-При первом запуске Metabase создай учётную запись команды и добавь MongoDB с host `mongo`, port `27017` и database `reki`. Настройки Metabase и данные MongoDB сохраняются в отдельных Docker volumes.
+Локальные модели и их размер видны в Docker Desktop на вкладке **Models**. Удалить основную модель и MTP draft можно там же или командами `docker model rm ai/gemma4:e2b-q4_K_M` и `docker model rm ai/gemma4:e2b-mtp`. Если нужен внешний LLM вместо локального, запусти только `compose.yml` с отдельным незакоммиченным override, который передаёт `Llm__ApiKey`, `Llm__BaseUrl` и `Llm__Model`.
 
-Порты можно переопределить через `FRONTEND_PORT`, `BACKEND_PORT`, `MONGO_PORT`, `METABASE_PORT` и `ASPIRE_DASHBOARD_PORT`. MongoDB и Aspire Dashboard публикуются только на loopback-интерфейсе и недоступны другим устройствам в сети. Для внешней MongoDB задай `MONGO_CONNECTION_STRING` вне репозитория.
+При первом запуске OpenObserve создаёт root-пользователя из `OPENOBSERVE_EMAIL` и `OPENOBSERVE_PASSWORD`; отдельный ingestion token для MVP не нужен.
 
-Все локальные порты привязаны к loopback-интерфейсу и не принимают подключения с других устройств. Compose включает типизированную секцию `OpenTelemetry` через `OpenTelemetry__Enabled=true` и направляет OTLP/gRPC-телеметрию во внутренний endpoint `aspire-dashboard:18889`. Backend не зависит от доступности Dashboard при запуске. Dashboard работает в anonymous mode; в production он доступен только через SSH-туннель.
+Порты можно переопределить через `FRONTEND_PORT`, `BACKEND_PORT`, `MONGO_PORT` и `OPENOBSERVE_PORT`. MongoDB и OpenObserve публикуются только на loopback-интерфейсе и недоступны другим устройствам в сети. Для внешней MongoDB задай `MONGO_CONNECTION_STRING` вне репозитория.
 
-Фронтенд выбирает источник данных во время запуска через `frontend/public/runtime-config/config.js`. По умолчанию включён `mock`; чтобы перейти на реальный API, поменяй `apiMode` на `backend` и перезагрузи Mini App. Пересборка образа и перезапуск контейнера не нужны. `apiBaseUrl` остаётся same-origin путём `/api/v1`, а реальный адрес backend скрыт за nginx-прокси.
+Backend отправляет OTLP/gRPC во внутренний `otel-collector:4317`. Collector разделяет продуктовые события и технические логи по атрибуту `reki.stream`, после чего отправляет оба потока, метрики и трейсы в OpenObserve. Backend не зависит от доступности OpenObserve при запуске.
+
+Фронтенд выбирает источник данных во время запуска через единственный `frontend/public/runtime-config/config.js`; сейчас он настроен на backend. `apiBaseUrl` остаётся same-origin путём `/api/v1`: Vite проксирует его в backend при разработке, а production nginx — после деплоя. Для автономной работы с моками достаточно временно поменять `apiMode` на `mock` в этом же файле.
 
 ```javascript
 window.__REKI_CONFIG__ = Object.freeze({
@@ -60,7 +77,7 @@ window.__REKI_CONFIG__ = Object.freeze({
 })
 ```
 
-Данные MongoDB, её служебная конфигурация и состояние Metabase хранятся в именованных volumes `reki_mongo-data`, `reki_mongo-config` и `reki_metabase-data`.
+Данные MongoDB, её служебная конфигурация и данные OpenObserve хранятся в именованных volumes `reki_mongo-data`, `reki_mongo-config` и `reki_openobserve-data`.
 
 Остановить проект без удаления данных:
 

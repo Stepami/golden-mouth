@@ -10,5 +10,4 @@ internal static class MongoCollections
     public const string Invites = "invites";
     public const string Challenges = "challenges";
     public const string Events = "events";
-    public const string Analytics = "analytics";
 }

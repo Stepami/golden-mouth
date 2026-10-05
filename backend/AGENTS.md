@@ -11,8 +11,8 @@
 - Source generation: `Mediator`, `Validly`, `Mapperly`, `Vogen`, `System.Text.Json`.
 - Внешние HTTP API — декларативные клиенты `WebApiClientCore`, работающие поверх настроенного `HttpClient`.
 - OpenAPI генерируется встроенным ASP.NET Core OpenAPI и на build-time через `Microsoft.Extensions.ApiDescription.Server`; клиент тестов генерируется NSwag.
-- Логи — Serilog через MEL; sinks: console и `Serilog.Sinks.MongoDB`. Прикладные логи — через `[LoggerMessage]`.
-- Метрики — OpenTelemetry/OTLP, локальный просмотр — Aspire Dashboard.
+- Логи — Serilog через MEL; console остаётся локальным sink, OTLP provider отправляет logs, metrics и traces через Collector в OpenObserve. Прикладные логи — через `[LoggerMessage]` или экземплярный компонент с `ILogger<T>` и `BeginScope`.
+- Метрики и трейсы — OpenTelemetry/OTLP, хранение и просмотр — OpenObserve.
 - Тесты — TUnit на Microsoft.Testing.Platform v2, один проект `*.Tests`.
 - Сервис обязан собираться и запускаться как Docker image.
 
@@ -139,7 +139,7 @@ Reki.Tests/<Feature>/<UseCase>/... component and domain tests
 - Индексы объявляются явно и создаются идемпотентно при старте/инициализации. Новый query обязан учитывать индекс и projection.
 - Multi-document transactions не являются default. Сначала пересмотри aggregate boundary; необходимость транзакции зафиксируй в issue и покрой component test.
 - Для конкурентных записей используй version/optimistic concurrency там, где возможна потеря обновления.
-- Коллекция логов Serilog отделена от доменных коллекций. Отказ log sink не должен раскрывать секреты или менять бизнес-результат.
+- Телеметрия не хранится в доменных Mongo-коллекциях. Отказ OTLP exporter не должен раскрывать секреты или менять бизнес-результат. Для MongoDB tracing регистрируй `MongoTelemetry.ActivitySourceName`; query text не включай.
 
 ## HTTP API, JSON и внешние сервисы
 
@@ -166,13 +166,14 @@ Reki.Tests/<Feature>/<UseCase>/... component and domain tests
 - Прикладной код зависит от `Microsoft.Extensions.Logging.ILogger<T>`, а не от статического `Serilog.Log`.
 - Хост подключает Serilog через `builder.Host.UseSerilog(..., writeToProviders: true)`. `writeToProviders: true` обязателен: MEL providers, включая provider тестового раннера, должны видеть события приложения.
 - Не добавляй второй MEL Console provider, если активен Serilog Console sink, иначе сообщения будут дублироваться.
-- Production sinks: console и structured BSON sink `Serilog.Sinks.MongoDB`. Connection string Mongo sink приходит через configuration/env; в `appsettings*.json` допускается только несекретная структура.
+- Production logging: Serilog пишет в console и через `writeToProviders: true` передаёт записи OTel provider. OTLP endpoint задаётся стандартными `OTEL_*` variables; приложение не знает credentials хранилища.
 - Каждый класс, который пишет прикладной лог, должен быть `partial`, получать `ILogger<TClass>` через primary constructor и объявлять свои нестатические `partial` методы с `[LoggerMessage]` внутри этого же класса. Вызывай их как instance methods; не создавай статические `*Logs` helper-классы и не передавай `ILogger` параметром в logging methods.
 - Для стабильных сообщений не используй string interpolation и destructuring больших графов. До построения DI host используй локально принадлежащий `ILoggerFactory`; static `Serilog.Log` запрещён и для bootstrap-сообщений.
 - Никогда не логируй токены, connection strings, Telegram init data, тексты игрока, личные данные или полный HTTP body.
 - OpenTelemetry настраивается для metrics с ASP.NET Core, HttpClient, runtime и custom meters и экспортирует их через OTLP. Routing задаётся стандартными `OTEL_*` variables.
-- Custom metrics создаются singleton-сервисами через `IMeterFactory`. Tags только низкой кардинальности; user ID, post ID, request ID и свободный текст в tags запрещены.
-- Aspire Dashboard используется как локальный OTLP backend; приложение не должно зависеть от Dashboard для запуска.
+- Custom metrics создаются singleton-сервисами через `IMeterFactory`. Tags только низкой кардинальности; user ID, post ID, request ID и свободный текст в tags запрещены. В обезличенных product logs `player_id` разрешён для DAU/retention.
+- Продуктовые log streams разделяй экземплярным `ILogger.BeginScope` с `reki.stream`; маршрутизацию выполняет Collector. Не создавай static logging helpers и отдельные sink/enricher-фабрики.
+- OpenObserve используется как self-hosted OTLP backend; приложение не должно зависеть от OpenObserve или Collector для запуска. GenAI content capture всегда выключен.
 
 ## Тесты
 

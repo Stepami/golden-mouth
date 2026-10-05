@@ -5,7 +5,6 @@ using Reki.Domain.Events;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Social;
-using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Persistence;
@@ -20,7 +19,6 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
         IMongoCollection<DailyGameEvent> events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
         IMongoCollection<GameChallenge> challenges = database.GetCollection<GameChallenge>(MongoCollections.Challenges);
         IMongoCollection<WorldRules> worlds = database.GetCollection<WorldRules>(MongoCollections.Worlds);
-        IMongoCollection<AnalyticsBatch> analytics = database.GetCollection<AnalyticsBatch>(MongoCollections.Analytics);
 
         IndexKeysDefinition<PlayerProfile> telegramKey = Builders<PlayerProfile>.IndexKeys
             .Ascending(item => item.TelegramUserId);
@@ -39,9 +37,6 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
         IndexKeysDefinition<WorldRules> worldKeys = Builders<WorldRules>.IndexKeys
             .Ascending(item => item.PlayerId)
             .Ascending(item => item.WorldId);
-        IndexKeysDefinition<AnalyticsBatch> analyticsKeys = Builders<AnalyticsBatch>.IndexKeys
-            .Ascending(item => item.PlayerId)
-            .Descending(item => item.ReceivedAtUtc);
 
         CreateIndexModel<PlayerProfile> telegramIndex = IndexFactory.Create(
             telegramKey,
@@ -65,9 +60,6 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
             worldKeys,
             "ux_worlds_player_world",
             unique: true);
-        CreateIndexModel<AnalyticsBatch> analyticsIndex = IndexFactory.Create(
-            analyticsKeys,
-            "ix_analytics_player_received");
 
         Task telegramTask = players.Indexes.CreateOneAsync(telegramIndex, cancellationToken: cancellationToken);
         Task postTask = posts.Indexes.CreateOneAsync(postIndex, cancellationToken: cancellationToken);
@@ -75,7 +67,6 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
         Task eventTask = events.Indexes.CreateOneAsync(eventIndex, cancellationToken: cancellationToken);
         Task challengeTask = challenges.Indexes.CreateOneAsync(challengeIndex, cancellationToken: cancellationToken);
         Task worldTask = worlds.Indexes.CreateOneAsync(worldIndex, cancellationToken: cancellationToken);
-        Task analyticsTask = analytics.Indexes.CreateOneAsync(analyticsIndex, cancellationToken: cancellationToken);
         Task threadTask = CreateDocumentIndexAsync(
             MongoCollections.Threads,
             "PlayerId",
@@ -94,7 +85,6 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
             eventTask,
             challengeTask,
             worldTask,
-            analyticsTask,
             threadTask,
             inviteTask);
     }

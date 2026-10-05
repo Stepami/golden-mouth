@@ -1,8 +1,15 @@
 # Сборка статики и раздача через nginx. Образы закреплены по версии.
-FROM node:22.20.0-alpine3.22 AS build
+FROM node:22.20.0-alpine3.22 AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci
+
+FROM dependencies AS development
+COPY . .
+EXPOSE 5173
+CMD ["npm", "run", "dev"]
+
+FROM dependencies AS build
 COPY . .
 RUN npm run build
 

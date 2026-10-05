@@ -11,7 +11,4 @@ public sealed class MongoOptions
 
     [Required]
     public string DatabaseName { get; init; } = string.Empty;
-
-    [Required]
-    public string LogCollectionName { get; init; } = string.Empty;
 }
