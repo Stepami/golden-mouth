@@ -80,7 +80,12 @@ function Voice() {
         {presets.map(x => <Chip key={x} idea={x === v} onClick={() => setV(x)}>{x}</Chip>)}
         <Card style={{ marginTop: 10, background: '#20202B' }}><div className="small muted" style={{ marginBottom: 4 }}>ПРИМЕР ПОДСКАЗКИ</div>«сегодня на репетиции до меня дошло, что я танцую лучше, когда не думаю. жаль, думаю я всегда»</Card>
       </div>
-      <BottomCTA main="Сохранить" onMain={() => { patch({ settings: { ...p.settings, voice: `«${v}»` } }); nav.back() }} />
+      <BottomCTA main="Сохранить" onMain={async () => {
+        const voice = v.trim()
+        await api.settings({ voice })
+        patch({ settings: { ...p.settings, voice } })
+        nav.back()
+      }} />
     </div>
   )
 }
