@@ -27,8 +27,10 @@ public sealed class SaveWorldRulesHandler(
             WorldId = "own",
             Rules =
             [
-                new WorldRule("Контент подходит для 14+", true),
-                .. request.Rules.Rules.Where(rule => !rule.Locked),
+                .. request.Rules.Rules.Where(rule =>
+                    !rule.Locked &&
+                    !rule.Text.Equals(WorldRulesDefaults.SafetyRule, StringComparison.OrdinalIgnoreCase)),
+                new WorldRule(WorldRulesDefaults.SafetyRule, true),
             ],
         };
         await store.SaveWorldRulesAsync(safeRules, cancellationToken);

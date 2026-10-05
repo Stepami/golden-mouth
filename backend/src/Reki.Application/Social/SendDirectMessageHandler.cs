@@ -3,8 +3,10 @@ using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
 using Reki.Application.Posts;
+using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Social;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Social;
 
@@ -43,12 +45,22 @@ public sealed class SendDirectMessageHandler(
         }
 
         await safetyGuard.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
+        WorldRules? storedRules = await store.GetWorldRulesAsync(
+            player.Id,
+            player.World,
+            cancellationToken);
+        WorldRules worldRules = storedRules ?? WorldRulesDefaults.Create(player.Id, player.World);
         GeneratedDirectMessage generated = await turnGenerator.GenerateDirectMessageAsync(
             new StarDirectMessageContext(
-                request.StarId,
-                player.World,
-                player.Settings.Voice,
-                conversation.Memory,
+                new StarAgentProfile(
+                    player.World,
+                    worldRules.Title,
+                    worldRules.Description,
+                    worldRules.Rules,
+                    player.Settings.Drama,
+                    player.Settings.Voice,
+                    request.StarId,
+                    conversation.Memory),
                 request.Text),
             cancellationToken);
         IReadOnlyList<DirectMessage> messages =

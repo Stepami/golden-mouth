@@ -47,9 +47,15 @@ public sealed class PublishPostHandler(
         GeneratedPostTurn turn = await turnGenerator.GeneratePostTurnAsync(
             new StarPostContext(
                 request.Text,
-                player.World,
-                string.Join("; ", worldRules.Rules.Select(rule => rule.Text)),
-                player.Settings.Voice,
+                new StarAgentProfile(
+                    player.World,
+                    worldRules.Title,
+                    worldRules.Description,
+                    worldRules.Rules,
+                    player.Settings.Drama,
+                    player.Settings.Voice,
+                    string.Empty,
+                    []),
                 GetStage(player.Subscribers),
                 recentPosts.Select(post => post.Text).ToArray(),
                 hateEnabled),

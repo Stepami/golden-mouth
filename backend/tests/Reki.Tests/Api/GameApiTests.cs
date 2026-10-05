@@ -7,6 +7,7 @@ using MongoDB.Driver;
 using NSubstitute;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
+using Reki.Contracts.Social;
 using Reki.Contracts.Telemetry;
 using Reki.Contracts.Worlds;
 using Reki.Tests.Generated;
@@ -18,6 +19,7 @@ namespace Reki.Tests.Api;
 public sealed class GameApiTests(ApiFactory factory)
 {
     private ChatOptions? _lastChatOptions;
+    private IReadOnlyList<ChatMessage>? _lastChatMessages;
 
     private IMongoDatabase Database => new MongoClient(factory.MongoConnectionString)
         .GetDatabase(factory.DatabaseName);
@@ -26,6 +28,7 @@ public sealed class GameApiTests(ApiFactory factory)
     public void ConfigureChatClient()
     {
         _lastChatOptions = null;
+        _lastChatMessages = null;
         factory.ChatClient.ClearReceivedCalls();
         factory.ChatClient
             .GetResponseAsync(
@@ -34,7 +37,10 @@ public sealed class GameApiTests(ApiFactory factory)
                 Arg.Any<CancellationToken>())
             .Returns(callInfo =>
             {
-                IEnumerable<ChatMessage> messages = callInfo.ArgAt<IEnumerable<ChatMessage>>(0);
+                ChatMessage[] messages = callInfo
+                    .ArgAt<IEnumerable<ChatMessage>>(0)
+                    .ToArray();
+                _lastChatMessages = messages;
                 _lastChatOptions = callInfo.ArgAt<ChatOptions?>(1)?.Clone();
                 return Task.FromResult(CreateChatResponse(messages));
             });
@@ -288,7 +294,118 @@ public sealed class GameApiTests(ApiFactory factory)
             CancellationToken.None);
 
         WorldRuleResponse safetyRule = rules.Rules.Single(rule => rule.Locked);
-        await Assert.That(safetyRule.Text).IsEqualTo("Контент подходит для 14+");
+        await Assert.That(safetyRule.Text).IsEqualTo("Без тем 18+ и травли по внешности");
+    }
+
+    [Test]
+    public async Task PublishPost_UsesPlayerOwnedWorldSettingsSystemLayerAsync()
+    {
+        // Arrange
+        const long telegramUserId = 1012;
+        const string currentPost = "Сегодня разбираю сценическую уверенность";
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api, WorldId.Own);
+        await api.Worlds.SaveOwnWorldAsync(
+            new UpdateWorldRulesRequest
+            {
+                Title = "Театральная мастерская",
+                Presets = [],
+                Description = "Камерный мир молодых режиссёров и актёров.",
+                Rules = [new WorldRuleResponse("Звёзды спорят о постановках, но поддерживают дебютантов")],
+            },
+            CancellationToken.None);
+        await api.Player.UpdateSettingsAsync(
+            new UpdateSettingsRequest
+            {
+                Drama = Drama.Hot,
+                Voice = "Иронично, тепло и короткими фразами",
+            },
+            CancellationToken.None);
+
+        // Act
+        await api.Posts.PublishPostAsync(
+            new CreatePostRequest { Text = currentPost },
+            CancellationToken.None);
+
+        // Assert
+        IReadOnlyList<ChatMessage> messages = GetCapturedChatMessages();
+        ChatMessage playerOwnedLayer = messages.Single(message =>
+            message.Role == ChatRole.System &&
+            message.Text.Contains("ПОЛЬЗОВАТЕЛЬСКИЙ СИСТЕМНЫЙ СЛОЙ", StringComparison.Ordinal));
+        ChatMessage userMessage = messages.Single(message => message.Role == ChatRole.User);
+        await Assert.That(messages.Count(message => message.Role == ChatRole.System)).IsEqualTo(2);
+        await Assert.That(playerOwnedLayer.Text).Contains("Мир: Театральная мастерская (own)");
+        await Assert.That(playerOwnedLayer.Text)
+            .Contains("Описание мира: Камерный мир молодых режиссёров и актёров.");
+        await Assert.That(playerOwnedLayer.Text).Contains("Градус драмы: остро");
+        await Assert.That(playerOwnedLayer.Text)
+            .Contains("Голос канала: Иронично, тепло и короткими фразами");
+        await Assert.That(playerOwnedLayer.Text)
+            .Contains("Звёзды спорят о постановках, но поддерживают дебютантов");
+        await Assert.That(userMessage.Text).Contains(currentPost);
+        await Assert.That(messages
+                .Where(message => message.Role == ChatRole.System)
+                .Any(message => message.Text.Contains(currentPost, StringComparison.Ordinal)))
+            .IsFalse();
+    }
+
+    [Test]
+    public async Task SendDirectMessage_UsesStarMemorySystemLayerWithCurrentUserMessageAsync()
+    {
+        // Arrange
+        const long telegramUserId = 1013;
+        const string currentMessage = "Напомни, какой формат мне лучше продолжать";
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        await api.Social.SendDirectMessageAsync(
+            "sonya",
+            new DirectMessageRequest { Text = "Мне нравятся короткие посты" },
+            CancellationToken.None);
+
+        // Act
+        await api.Social.SendDirectMessageAsync(
+            "sonya",
+            new DirectMessageRequest { Text = currentMessage },
+            CancellationToken.None);
+
+        // Assert
+        IReadOnlyList<ChatMessage> messages = GetCapturedChatMessages();
+        ChatMessage playerOwnedLayer = messages.Single(message =>
+            message.Role == ChatRole.System &&
+            message.Text.Contains("ПОЛЬЗОВАТЕЛЬСКИЙ СИСТЕМНЫЙ СЛОЙ", StringComparison.Ordinal));
+        ChatMessage userMessage = messages.Single(message => message.Role == ChatRole.User);
+        await Assert.That(messages.Count(message => message.Role == ChatRole.System)).IsEqualTo(2);
+        await Assert.That(playerOwnedLayer.Text).Contains("Текущая звезда: sonya");
+        await Assert.That(playerOwnedLayer.Text)
+            .Contains("Память звезды об игроке: любит короткие посты");
+        await Assert.That(userMessage.Text).Contains(currentMessage);
+        await Assert.That(messages
+                .Where(message => message.Role == ChatRole.System)
+                .Any(message => message.Text.Contains(currentMessage, StringComparison.Ordinal)))
+            .IsFalse();
+    }
+
+    [Test]
+    public async Task GetReadyWorldRules_ExposesWorldDataPlusExactLockedSafetyRuleAsync()
+    {
+        // Arrange
+        using TestApiClient api = factory.CreateApiClient(1014);
+        await OnboardAsync(api);
+
+        // Act
+        WorldRulesResponse rules = await api.Worlds.GetWorldRulesAsync(
+            WorldId.Stage,
+            CancellationToken.None);
+
+        // Assert
+        string visibleRules = string.Join("\n", rules.Rules.Select(rule => rule.Text));
+        await Assert.That(visibleRules).Contains("Звёзды:");
+        await Assert.That(visibleRules).Contains("Фанаты:");
+        await Assert.That(visibleRules).Contains("Тон:");
+        await Assert.That(visibleRules).Contains("События:");
+        WorldRuleResponse safetyRule = rules.Rules.Single(rule =>
+            rule.Text == "Без тем 18+ и травли по внешности");
+        await Assert.That(safetyRule.Locked).IsTrue();
     }
 
     [Test]
@@ -491,13 +608,15 @@ public sealed class GameApiTests(ApiFactory factory)
         return new ChatResponse(new ChatMessage(ChatRole.Assistant, [call]));
     }
 
-    private static Task<PlayerResponse> OnboardAsync(TestApiClient api)
+    private static Task<PlayerResponse> OnboardAsync(
+        TestApiClient api,
+        WorldId world = WorldId.Stage)
     {
         return api.Player.CompleteOnboardingAsync(
             new OnboardingRequest
             {
                 BirthGroup = BirthGroup.Teen,
-                World = WorldId.Stage,
+                World = world,
                 Role = "creator",
                 Avatar = "pick0",
                 Name = "Player",
@@ -506,6 +625,12 @@ public sealed class GameApiTests(ApiFactory factory)
                 Star = "mira",
             },
             CancellationToken.None);
+    }
+
+    private IReadOnlyList<ChatMessage> GetCapturedChatMessages()
+    {
+        return _lastChatMessages ??
+            throw new InvalidOperationException("The chat client did not receive messages.");
     }
 
     private async Task AssertCollectionHasNoPlayerAsync(string collectionName, BsonDocument filter)

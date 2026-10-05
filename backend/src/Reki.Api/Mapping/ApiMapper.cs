@@ -94,7 +94,7 @@ public sealed partial class ApiMapper
             source.Platform,
             source.Experiments.ToDictionary(
                 item => item.Key,
-                item => SanitizeString(item.Value)),
+                item => SanitizeJsonString(item.Value, 64)),
             source.Events.Select(item => new AnalyticsEntry(
                 item.Name,
                 item.Timestamp,
@@ -183,7 +183,7 @@ public sealed partial class ApiMapper
     {
         return element.ValueKind switch
         {
-            JsonValueKind.String => SanitizeString(element.GetString() ?? string.Empty),
+            JsonValueKind.String => SanitizeJsonString(element.GetString() ?? string.Empty, 64),
             JsonValueKind.Number => element.GetRawText(),
             JsonValueKind.True => bool.TrueString,
             JsonValueKind.False => bool.FalseString,
@@ -192,9 +192,9 @@ public sealed partial class ApiMapper
         };
     }
 
-    private static string SanitizeString(string value)
+    private static string SanitizeJsonString(string value, int maxLength)
     {
-        return value.Length <= 64 ? value : $"len:{value.Length}";
+        return value.Length <= maxLength ? value : $"len:{value.Length}";
     }
 
     private partial SkillResponse MapSkill(SkillProgress source);

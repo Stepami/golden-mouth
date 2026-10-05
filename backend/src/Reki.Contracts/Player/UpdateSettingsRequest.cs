@@ -12,7 +12,7 @@ public sealed record UpdateSettingsRequest
     [MaxLength(64)]
     public string? Quiet { get; init; }
 
-    [MaxLength(64)]
+    [MaxLength(200)]
     public string? Voice { get; init; }
 
     public bool? Plus { get; init; }
