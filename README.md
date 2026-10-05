@@ -10,6 +10,7 @@ Telegram Mini App 14+: ведёшь канал блогера в вымышле�
 | [docs/config/balance.json](docs/config/balance.json) | Все числа баланса одним конфигом |
 | [docs/analytics.md](docs/analytics.md) | Продуктовая аналитика: вопросы, события, воронки, метрики, хранение |
 | [docs/dashboards.md](docs/dashboards.md) | Шесть дашбордов Metabase: графики, как считать, какие решения принимать |
+| [docs/deployment.md](docs/deployment.md) | CI/CD, production HTTPS и доступ к служебным сервисам через SSH |
 | [docs/screens/](docs/screens/README.md) | Макеты всех экранов |
 | [docs/audit.md](docs/audit.md) | Итоговый аудит игры и экранов, вердикт для вёрстки |
 | [docs/design/](docs/design/README.md) | Исходники экранов (HTML → PNG) |
@@ -17,6 +18,16 @@ Telegram Mini App 14+: ведёшь канал блогера в вымышле�
 | [.agents/skills/](.agents/skills) | Навыки агента: `rule-change`, `issue-spec`, `repo-consistency-check`, `screen-check`, `game-balance-sim` (таблица в AGENTS.md) |
 | [frontend/](frontend/README.md) | Mini App: React + TypeScript + Vite, Docker |
 | [Issues](https://github.com/Stepami/golden-mouth/issues) | Задачи со спецификацией в теле |
+
+## CI/CD
+
+- push в рабочую ветку запускает проверки только затронутой части проекта;
+- pull request и push в `master` запускают проверку секретов во всех отслеживаемых файлах;
+- тег семантической версии запускает полный CI, создаёт GitHub Release через GitReleaseManager и разворачивает версию на self-hosted runner.
+
+Docker images собираются только во время deployment на VDS.
+
+Подробная настройка VDS, HTTPS, release labels и SSH-туннелей описана в [docs/deployment.md](docs/deployment.md).
 
 ## Запуск всего проекта
 
@@ -38,7 +49,7 @@ Compose соберёт и запустит пять сервисов:
 
 Порты можно переопределить через `FRONTEND_PORT`, `BACKEND_PORT`, `MONGO_PORT`, `METABASE_PORT` и `ASPIRE_DASHBOARD_PORT`. MongoDB и Aspire Dashboard публикуются только на loopback-интерфейсе и недоступны другим устройствам в сети. Для внешней MongoDB задай `MONGO_CONNECTION_STRING` вне репозитория.
 
-Compose включает типизированную секцию `OpenTelemetry` через `OpenTelemetry__Enabled=true` и направляет OTLP/gRPC-телеметрию во внутренний endpoint `aspire-dashboard:18889`. Backend не зависит от доступности Dashboard при запуске. Dashboard работает в anonymous mode только для локальной разработки; не публикуй его порт во внешнюю сеть.
+Все локальные порты привязаны к loopback-интерфейсу и не принимают подключения с других устройств. Compose включает типизированную секцию `OpenTelemetry` через `OpenTelemetry__Enabled=true` и направляет OTLP/gRPC-телеметрию во внутренний endpoint `aspire-dashboard:18889`. Backend не зависит от доступности Dashboard при запуске. Dashboard работает в anonymous mode; в production он доступен только через SSH-туннель.
 
 Фронтенд выбирает источник данных во время запуска через `frontend/public/runtime-config/config.js`. По умолчанию включён `mock`; чтобы перейти на реальный API, поменяй `apiMode` на `backend` и перезагрузи Mini App. Пересборка образа и перезапуск контейнера не нужны. `apiBaseUrl` остаётся same-origin путём `/api/v1`, а реальный адрес backend скрыт за nginx-прокси.
 
@@ -57,4 +68,4 @@ window.__REKI_CONFIG__ = Object.freeze({
 docker compose down
 ```
 
-Репозиторий публичный: токены, ключи, адреса серверов и реальные данные людей сюда не кладём.
+Репозиторий приватный, но токены, ключи, адреса серверов и реальные данные людей в Git не кладём.

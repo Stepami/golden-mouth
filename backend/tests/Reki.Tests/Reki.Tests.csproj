@@ -14,8 +14,15 @@
     <PackageReference Include="TUnit.AspNetCore" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Generated\RekiApiClient.g.cs" />
+  </ItemGroup>
+
   <Target Name="GenerateApiClient" BeforeTargets="CoreCompile">
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)\..\..\src\Reki.Api"
           Command="dotnet tool run nswag run nswag.json /variables:Configuration=$(Configuration)" />
+    <ItemGroup>
+      <Compile Include="Generated\RekiApiClient.g.cs" />
+    </ItemGroup>
   </Target>
 </Project>
