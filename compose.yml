@@ -28,7 +28,7 @@ services:
       Mongo__ConnectionString: ${MONGO_CONNECTION_STRING:-mongodb://mongo:27017}
       Mongo__DatabaseName: ${MONGO_DATABASE_NAME:-reki}
       Mongo__LogCollectionName: ${MONGO_LOG_COLLECTION_NAME:-logs}
-      TelegramMiniAppAuthorizationOptions__Token: ${TELEGRAM_BOT_TOKEN:-}
+      TelegramMiniAppAuthorizationOptions__Token: ${TG_PAT:-}
       OpenTelemetry__Enabled: "true"
       OpenTelemetry__Endpoint: http://aspire-dashboard:18889
       OTEL_SERVICE_NAME: reki-backend

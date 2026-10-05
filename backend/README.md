@@ -32,7 +32,7 @@ cd ..
 docker compose up --build
 ```
 
-The API is available at `http://localhost:8081`, and Aspire Dashboard at `http://localhost:18888`. Set `TELEGRAM_BOT_TOKEN` outside the repository before starting Compose. In Production, Serilog writes every log to the console, while the MongoDB sink stores only explicitly named `Business.*` events and Error/Critical events emitted by `Reki.*` code. Development and tests never write logs to MongoDB. OpenTelemetry sends backend metrics, traces, and all logs to Aspire Dashboard over the internal Compose network. MongoDB log documents expire after 30 days. Set `MONGO_CONNECTION_STRING` outside the repository to override the bundled MongoDB service.
+The API is available at `http://localhost:8081`, and Aspire Dashboard at `http://localhost:18888`. Set `TG_PAT` outside the repository before starting Compose. In Production, Serilog writes every log to the console, while the MongoDB sink stores only explicitly named `Business.*` events and Error/Critical events emitted by `Reki.*` code. Development and tests never write logs to MongoDB. OpenTelemetry sends backend metrics, traces, and all logs to Aspire Dashboard over the internal Compose network. MongoDB log documents expire after 30 days. Set `MONGO_CONNECTION_STRING` outside the repository to override the bundled MongoDB service.
 
 OpenTelemetry is configured through the validated `OpenTelemetry` options section. Set `OpenTelemetry__Enabled=true` and `OpenTelemetry__Endpoint=<absolute OTLP gRPC URI>` in the environment to enable export. Business logs that must be retained in MongoDB use a `[LoggerMessage]` event name beginning with `Business.`; framework and request-pipeline noise remains available in the console and Aspire Dashboard only.
 
