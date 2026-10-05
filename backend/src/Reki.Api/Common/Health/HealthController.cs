@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 namespace Reki.Api.Common.Health;
 
 [ApiController]
+[AllowAnonymous]
 [ApiExplorerSettings(IgnoreApi = true)]
 [Route("health")]
 public sealed class HealthController(HealthCheckService healthCheckService) : ControllerBase

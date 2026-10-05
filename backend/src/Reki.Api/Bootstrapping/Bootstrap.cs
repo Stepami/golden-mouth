@@ -1,9 +1,13 @@
+using System.Globalization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using Reki.Application.Common;
 using Reki.Infrastructure;
 using Reki.Infrastructure.Logging;
 using Reki.Infrastructure.Persistence;
 using Serilog;
+using TgMiniAppAuth;
 
 namespace Reki.Api.Bootstrapping;
 
@@ -19,9 +23,12 @@ internal static class Bootstrap
     public static async Task RunAsync(string[] arguments)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(arguments);
-        InfrastructureMode infrastructureMode = GetInfrastructureMode(builder.Environment);
+        builder.Configuration.AddJsonFile(
+            Path.Combine(AppContext.BaseDirectory, "config", "balance.json"),
+            optional: false,
+            reloadOnChange: true);
 
-        ConfigureServices(builder, infrastructureMode);
+        ConfigureServices(builder);
         ConfigureLogging(builder);
 
         WebApplication app = builder.Build();
@@ -29,21 +36,48 @@ internal static class Bootstrap
         await app.RunAsync();
     }
 
-    private static InfrastructureMode GetInfrastructureMode(IHostEnvironment environment)
+    private static void ConfigureServices(WebApplicationBuilder builder)
     {
-        return environment.IsProduction() && !OpenApiGeneration.IsRunning
-            ? InfrastructureMode.Production
-            : InfrastructureMode.Local;
-    }
+        builder.Services.AddSingleton(ReadGameBalance(builder.Configuration));
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddTgMiniAppAuth(builder.Configuration);
+        if (OpenApiGeneration.IsRunning)
+        {
+            builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
+        }
 
-    private static void ConfigureServices(
-        WebApplicationBuilder builder,
-        InfrastructureMode infrastructureMode)
-    {
         builder.Services
             .AddApplication()
-            .AddInfrastructure(builder.Configuration, infrastructureMode)
+            .AddInfrastructure(
+                builder.Configuration,
+                initializeDatabase: !OpenApiGeneration.IsRunning)
             .AddApi();
+    }
+
+    private static GameBalance ReadGameBalance(IConfiguration configuration)
+    {
+        IConfigurationSection posts = configuration.GetRequiredSection("posts");
+        IConfigurationSection growth = configuration.GetRequiredSection("growth");
+        IConfigurationSection relations = configuration.GetRequiredSection("relations");
+        string resetValue = posts["reset_time_msk"]
+            ?? throw new InvalidOperationException("posts.reset_time_msk is required.");
+        if (!TimeOnly.TryParseExact(
+            resetValue,
+            "HH:mm",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out TimeOnly resetTime))
+        {
+            throw new InvalidOperationException("posts.reset_time_msk must use HH:mm format.");
+        }
+
+        return new GameBalance(
+            posts.GetValue<int>("free_per_day"),
+            posts.GetValue<int>("plus_per_day"),
+            resetTime,
+            posts.GetValue<int>("plus_interest_bonus_once"),
+            growth.GetValue<long>("start_subs"),
+            relations.GetValue<int>("dm_star_replies_per_day"));
     }
 
     private static void ConfigureLogging(WebApplicationBuilder builder)
@@ -87,6 +121,8 @@ internal static class Bootstrap
         app.UseExceptionHandler();
         app.UseStatusCodePages();
         app.UseSerilogRequestLogging();
+        app.UseAuthentication();
+        app.UseAuthorization();
 
         MapApiDocumentation(app);
         app.MapControllers();

@@ -76,6 +76,7 @@ jobs:
     env:
       COMPOSE_FILE: compose.yml:compose.production.yml
       REKI_VERSION: ${{ needs.validate-tag.outputs.image-version }}
+      TG_PAT: ${{ secrets.TG_PAT }}
 
     steps:
       - name: Check out repository

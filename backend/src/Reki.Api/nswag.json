@@ -46,7 +46,12 @@
       "excludedOperationIds": [],
       "additionalNamespaceUsages": [
         "Microsoft.AspNetCore.Mvc",
-        "Reki.Contracts.Example"
+        "Reki.Contracts.Events",
+        "Reki.Contracts.Player",
+        "Reki.Contracts.Posts",
+        "Reki.Contracts.Social",
+        "Reki.Contracts.Telemetry",
+        "Reki.Contracts.Worlds"
       ],
       "additionalContractNamespaceUsages": [],
       "generateOptionalParameters": false,
