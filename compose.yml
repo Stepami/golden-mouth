@@ -28,9 +28,6 @@ services:
       Mongo__ConnectionString: ${MONGO_CONNECTION_STRING:-mongodb://mongo:27017}
       Mongo__DatabaseName: ${MONGO_DATABASE_NAME:-reki}
       TelegramMiniAppAuthorizationOptions__Token: ${TG_PAT:-}
-      Llm__ApiKey: ${LLM_PAT:?LLM_PAT is required}
-      Llm__BaseUrl: ${LLM_BASE_URL:?LLM_BASE_URL is required}
-      Llm__Model: ${LLM_MODEL:?LLM_MODEL is required}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OTEL_SERVICE_NAME: reki-backend

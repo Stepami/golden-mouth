@@ -1,0 +1,14 @@
+services:
+  backend:
+    environment:
+      Llm__ApiKey: local-model-runner
+      Llm__TimeoutSeconds: 120
+    models:
+      reki_llm:
+        endpoint_var: Llm__BaseUrl
+        model_var: Llm__Model
+
+models:
+  reki_llm:
+    model: ai/qwen2.5:3B-Q4_K_M
+    context_size: 8192

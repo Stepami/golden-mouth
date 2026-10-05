@@ -31,26 +31,26 @@ Docker images собираются только во время deployment на 
 
 ## Запуск всего проекта
 
-Из корня репозитория:
-
-```powershell
-docker compose up
-```
-
-Перед первым запуском задай логин и пароль администратора OpenObserve. Эти же данные Collector использует только внутри Compose-сети для отправки OTLP:
+Перед первым запуском включи Docker Desktop → **Settings → AI → Enable Docker Model Runner** и задай логин и пароль администратора OpenObserve. Эти же данные Collector использует только внутри Compose-сети для отправки OTLP. Затем из корня репозитория запусти Compose:
 
 ```powershell
 $env:OPENOBSERVE_EMAIL = '<выбранный email администратора>'
 $env:OPENOBSERVE_PASSWORD = '<случайный длинный пароль>'
+$env:TG_PAT = '<токен тестового Telegram-бота>'
+docker compose up --build
 ```
 
-Compose соберёт и запустит пять сервисов:
+Внешний LLM и `LLM_PAT` для локального запуска не нужны: `compose.override.yml` объявляет модель `ai/qwen2.5:3B-Q4_K_M`, а Compose сам скачивает её и передаёт backend совместимые с OpenAI endpoint и имя модели. Первая загрузка модели занимает около 1,8 ГБ; backend ждёт локальную генерацию до 120 секунд. `TG_PAT` нужен для защищённых игровых методов, но не для health checks, OpenAPI и Swagger.
+
+Compose соберёт и запустит пять сервисов и локальную AI-модель:
 
 - фронтенд: `http://localhost:8080`;
 - бэкенд: `http://localhost:8081` (`/health/live`, `/health/ready`, `/swagger/`);
 - OpenObserve: `http://localhost:5080` (логи, метрики и трейсы);
 - OpenTelemetry Collector во внутренней Compose-сети;
 - MongoDB: `mongodb://127.0.0.1:27017/reki` для локального подключения через Compass; внутри Compose-сети — `mongo:27017`.
+
+Локальные модели и их размер видны в Docker Desktop на вкладке **Models**; удалить модель можно там же или командой `docker model rm ai/qwen2.5:3B-Q4_K_M`. Если нужен внешний LLM вместо локального, запусти только `compose.yml` с отдельным незакоммиченным override, который передаёт `Llm__ApiKey`, `Llm__BaseUrl` и `Llm__Model`.
 
 При первом запуске OpenObserve создаёт root-пользователя из `OPENOBSERVE_EMAIL` и `OPENOBSERVE_PASSWORD`; отдельный ingestion token для MVP не нужен.
 
