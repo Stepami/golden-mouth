@@ -39,5 +39,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(ResultLiveEvent))]
 [JsonSerializable(typeof(AnalyticsBatchRequest))]
 [JsonSerializable(typeof(ClientLogBatchRequest))]
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSourceGenerationOptions(
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    UseStringEnumConverter = true)]
 public sealed partial class ApiJsonSerializerContext : JsonSerializerContext;

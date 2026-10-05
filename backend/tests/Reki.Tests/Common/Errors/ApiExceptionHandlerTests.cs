@@ -1,7 +1,7 @@
-using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Tests.Serialization;
+using Reki.Api.Serialization;
+using Reki.Tests.Generated;
 
 namespace Reki.Tests.Common.Errors;
 
@@ -12,22 +12,32 @@ public sealed class ApiExceptionHandlerTests(ApiFactory factory)
     [Test]
     public async Task ExceptionHandler_WhenCustomExceptionIsThrown_ReturnsSafeProblemDetailsAsync()
     {
-        // Arrange
-        using HttpClient httpClient = factory.CreateClient();
+        using TestApiClient api = factory.CreateApiClient(2001);
+        PlayerApiException? exception = null;
+        try
+        {
+            await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        }
+        catch (PlayerApiException caught)
+        {
+            exception = caught;
+        }
 
-        // Act
-        using HttpResponseMessage response = await httpClient.GetAsync("/_tests/exceptions/not-found");
-        string json = await response.Content.ReadAsStringAsync();
+        if (exception is null)
+        {
+            throw new InvalidOperationException("The typed client did not surface the not-found response.");
+        }
+
+        string json = exception.Response;
         ProblemDetails problemDetails = JsonSerializer.Deserialize(
                 json,
-                GeneratedClientJsonContext.Default.ProblemDetails)
+                ApiJsonSerializerContext.Default.ProblemDetails)
             ?? throw new InvalidOperationException("ProblemDetails response was empty.");
 
-        // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+        await Assert.That(exception.StatusCode).IsEqualTo(404);
         await Assert.That(problemDetails.Title).IsEqualTo("Resource not found");
         await Assert.That(problemDetails.Detail)
             .IsEqualTo("The requested resource was not found.");
-        await Assert.That(json).DoesNotContain("Internal resource details");
+        await Assert.That(json).DoesNotContain("Player not found");
     }
 }

@@ -11,6 +11,7 @@
     <PackageVersion Include="Mediator.SourceGenerator" Version="3.0.2" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.0.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.12.19" />
     <PackageVersion Include="MongoDB.Driver" Version="3.9.0" />
     <PackageVersion Include="Nullable.Extended.Analyzer" Version="1.15.6495" />
@@ -31,5 +32,6 @@
     <PackageVersion Include="TUnit.AspNetCore" Version="1.72.10" />
     <PackageVersion Include="Testcontainers.MongoDb" Version="4.15.0" />
     <PackageVersion Include="TgMiniAppAuth" Version="0.0.6" />
+    <PackageVersion Include="WebMotions.Fake.Authentication.JwtBearer" Version="10.0.0" />
   </ItemGroup>
 </Project>

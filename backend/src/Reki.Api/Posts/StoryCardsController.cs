@@ -16,6 +16,7 @@ public sealed class StoryCardsController(
 {
     [HttpGet("{postId}.png", Name = "GetStoryCard")]
     [ActionName("GetStoryCard")]
+    [ProducesResponseType<Stream>(StatusCodes.Status200OK, "image/png")]
     public async Task<EmptyHttpResult> GetStoryCardAsync(
         string postId,
         CancellationToken cancellationToken)

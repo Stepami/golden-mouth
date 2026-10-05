@@ -16,6 +16,8 @@
     <PackageReference Include="TUnit.AspNetCore" />
     <PackageReference Include="Testcontainers.MongoDb" />
     <PackageReference Include="MongoDB.Driver" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="WebMotions.Fake.Authentication.JwtBearer" />
   </ItemGroup>
 
   <ItemGroup>
