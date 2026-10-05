@@ -33,6 +33,14 @@ Docker images собираются только во время deployment на 
 
 Перед первым запуском включи Docker Desktop → **Settings → AI → Enable Docker Model Runner** и задай логин и пароль администратора OpenObserve. Эти же данные Collector использует только внутри Compose-сети для отправки OTLP. Затем из корня репозитория запусти Compose:
 
+Один раз скачай основную 4-битную Gemma 4 E2B и её MTP draft, затем включи speculative decoding. Основная модель остаётся моделью API, а `e2b-mtp` предлагает ей несколько следующих токенов для параллельной проверки:
+
+```powershell
+docker model pull ai/gemma4:e2b-q4_K_M
+docker model pull ai/gemma4:e2b-mtp
+docker model configure --context-size 4096 --speculative-draft-model ai/gemma4:e2b-mtp --speculative-num-tokens 2 ai/gemma4:e2b-q4_K_M
+```
+
 ```powershell
 $env:OPENOBSERVE_EMAIL = '<выбранный email администратора>'
 $env:OPENOBSERVE_PASSWORD = '<случайный длинный пароль>'
@@ -40,7 +48,7 @@ $env:TG_PAT = '123456:reki-test-bot-tg-token'
 docker compose up --build
 ```
 
-Внешний LLM, `LLM_PAT` и Telegram-бот для локального запуска не нужны. `compose.override.yml` объявляет модель `gemma4:e2b-mtp`, а Compose сам скачивает её и передаёт backend совместимые с OpenAI endpoint и имя модели. Backend ждёт локальную генерацию до 120 секунд.
+Внешний LLM, `LLM_PAT` и Telegram-бот для локального запуска не нужны. `compose.override.yml` передаёт backend основную `ai/gemma4:e2b-q4_K_M`, а выполненная выше команда атомарно задаёт ей контекст 4096 токенов и MTP draft. Модель намеренно не объявлена через Compose `models:`: model-provider повторно конфигурирует основную модель и сбрасывает speculative decoding. Backend внутри контейнера обращается к Docker Desktop через `http://model-runner.docker.internal/engines/v1/` и ждёт локальную генерацию до 120 секунд.
 
 Локальный Vite dev server эмулирует Telegram Mini App, каждый раз создаёт свежий HMAC-подписанный `initData` для вымышленного игрока и отправляет запросы в backend. Backend проверяет подпись штатным `TgMiniAppAuth`; auth bypass нет. `TG_PAT` — единый вход Compose: Vite читает его при подписи, а Compose передаёт то же значение в настройку `TgMiniAppAuth` backend. Показанное значение фиктивное, не связано с Telegram и не даёт доступа ни к одному боту.
 
@@ -52,7 +60,7 @@ Compose соберёт и запустит пять сервисов и лока
 - OpenTelemetry Collector во внутренней Compose-сети;
 - MongoDB: `mongodb://127.0.0.1:27017/reki` для локального подключения через Compass; внутри Compose-сети — `mongo:27017`.
 
-Локальные модели и их размер видны в Docker Desktop на вкладке **Models**; удалить модель можно там же или командой `docker model rm gemma4:e2b-mtp`. Если нужен внешний LLM вместо локального, запусти только `compose.yml` с отдельным незакоммиченным override, который передаёт `Llm__ApiKey`, `Llm__BaseUrl` и `Llm__Model`.
+Локальные модели и их размер видны в Docker Desktop на вкладке **Models**. Удалить основную модель и MTP draft можно там же или командами `docker model rm ai/gemma4:e2b-q4_K_M` и `docker model rm ai/gemma4:e2b-mtp`. Если нужен внешний LLM вместо локального, запусти только `compose.yml` с отдельным незакоммиченным override, который передаёт `Llm__ApiKey`, `Llm__BaseUrl` и `Llm__Model`.
 
 При первом запуске OpenObserve создаёт root-пользователя из `OPENOBSERVE_EMAIL` и `OPENOBSERVE_PASSWORD`; отдельный ingestion token для MVP не нужен.
 

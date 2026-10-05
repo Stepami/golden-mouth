@@ -35,7 +35,15 @@ $env:TG_PAT = '<test Telegram bot token>'
 docker compose up --build
 ```
 
-Enable Docker Model Runner once in Docker Desktop under **Settings → AI** before the first run. The local `compose.override.yml` declares `gemma4:e2b-mtp`; Compose downloads it, injects its OpenAI-compatible endpoint and model name into the backend, and uses a 120-second local inference timeout. No external LLM or `LLM_PAT` is required locally. Docker Desktop's **Models** tab shows local model disk usage and can remove the model when it is no longer needed.
+Enable Docker Model Runner once in Docker Desktop under **Settings → AI** before the first run. Pull and configure the 4-bit main model with its MTP draft once:
+
+```powershell
+docker model pull ai/gemma4:e2b-q4_K_M
+docker model pull ai/gemma4:e2b-mtp
+docker model configure --context-size 4096 --speculative-draft-model ai/gemma4:e2b-mtp --speculative-num-tokens 2 ai/gemma4:e2b-q4_K_M
+```
+
+The local `compose.override.yml` passes `ai/gemma4:e2b-q4_K_M` to the backend; the command above atomically configures its 4096-token context and `ai/gemma4:e2b-mtp` draft. The model is intentionally not declared through Compose `models:` because the model provider reconfigures the main model and resets speculative decoding. The override uses Docker Desktop's container endpoint at `http://model-runner.docker.internal/engines/v1/` and a 120-second local inference timeout. No external LLM or `LLM_PAT` is required locally.
 
 The API is available at `http://localhost:8081`, and OpenObserve at `http://localhost:5080`. Set `TG_PAT`, `OPENOBSERVE_EMAIL`, and `OPENOBSERVE_PASSWORD` outside the repository before starting Compose. OpenTelemetry sends logs, metrics, and traces to Collector over the internal Compose network. Product events use the `product` log stream; other application and framework logs use `backend`. Set `MONGO_CONNECTION_STRING` outside the repository to override the bundled MongoDB service.
 
