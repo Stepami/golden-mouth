@@ -1,4 +1,4 @@
-namespace Reki.Application.Game;
+namespace Reki.Application.Game.Common;
 
 public sealed record GameBalance(
     int FreePostsPerDay,

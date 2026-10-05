@@ -1,7 +1,13 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Contracts.Example;
-using Reki.Contracts.Game;
+using Reki.Contracts.Game.Common;
+using Reki.Contracts.Game.Events;
+using Reki.Contracts.Game.Player;
+using Reki.Contracts.Game.Posts;
+using Reki.Contracts.Game.Social;
+using Reki.Contracts.Game.Telemetry;
+using Reki.Contracts.Game.Worlds;
 
 namespace Reki.Api.Serialization;
 

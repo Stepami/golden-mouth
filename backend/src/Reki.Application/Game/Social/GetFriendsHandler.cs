@@ -1,8 +1,7 @@
 using Mediator;
-using Reki.Application.Common.Exceptions;
-using Reki.Domain.Game;
+using Reki.Application.Game.Common;
 
-namespace Reki.Application.Game;
+namespace Reki.Application.Game.Social;
 
 public sealed class GetFriendsHandler(PlayerReader playerReader)
     : IRequestHandler<GetFriendsQuery, IReadOnlyList<FriendSummary>>

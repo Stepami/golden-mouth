@@ -1,4 +1,4 @@
-namespace Reki.Domain.Game;
+namespace Reki.Domain.Game.Worlds;
 
 public sealed record WorldRules(
     string PlayerId,

@@ -1,11 +1,16 @@
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Application.Game;
-using Reki.Domain.Game;
+using Reki.Application.Game.Common;
+using Reki.Domain.Game.Events;
+using Reki.Domain.Game.Player;
+using Reki.Domain.Game.Posts;
+using Reki.Domain.Game.Social;
+using Reki.Domain.Game.Telemetry;
+using Reki.Domain.Game.Worlds;
 using Reki.Infrastructure.Persistence;
 
-namespace Reki.Infrastructure.Game;
+namespace Reki.Infrastructure.Game.Persistence;
 
 internal sealed class MongoGameStore : IGameStore
 {

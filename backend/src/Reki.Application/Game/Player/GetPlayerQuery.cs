@@ -1,7 +1,6 @@
 using Mediator;
-using Reki.Domain.Game;
 
-namespace Reki.Application.Game;
+namespace Reki.Application.Game.Player;
 
 public sealed record GetPlayerQuery(long TelegramUserId) : IRequest<PlayerView>;
 

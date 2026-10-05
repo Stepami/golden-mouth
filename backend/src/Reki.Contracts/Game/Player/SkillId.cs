@@ -1,7 +1,4 @@
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
-
-namespace Reki.Contracts.Game;
+namespace Reki.Contracts.Game.Player;
 
 public enum SkillId
 {

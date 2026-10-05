@@ -1,5 +1,4 @@
-using Reki.Application.Game;
-using TUnit.Core;
+using Reki.Application.Game.Common;
 
 namespace Reki.Tests.Game.Common;
 

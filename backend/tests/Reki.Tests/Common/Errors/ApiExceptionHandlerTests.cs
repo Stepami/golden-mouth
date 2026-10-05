@@ -2,7 +2,6 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Tests.Serialization;
-using TUnit.Core;
 
 namespace Reki.Tests.Common.Errors;
 

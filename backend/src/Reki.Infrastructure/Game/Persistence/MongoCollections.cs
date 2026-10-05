@@ -1,10 +1,4 @@
-using MongoDB.Bson;
-using MongoDB.Driver;
-using Reki.Application.Game;
-using Reki.Domain.Game;
-using Reki.Infrastructure.Persistence;
-
-namespace Reki.Infrastructure.Game;
+namespace Reki.Infrastructure.Game.Persistence;
 
 internal static class MongoCollections
 {

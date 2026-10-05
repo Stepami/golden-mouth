@@ -1,8 +1,9 @@
 using Mediator;
-using Reki.Application.Common.Exceptions;
-using Reki.Domain.Game;
+using Reki.Application.Game.Common;
+using Reki.Domain.Game.Events;
+using Reki.Domain.Game.Player;
 
-namespace Reki.Application.Game;
+namespace Reki.Application.Game.Events;
 
 public sealed class GetTodayEventHandler(
     IGameStore store,

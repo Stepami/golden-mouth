@@ -1,8 +1,9 @@
 using Mediator;
-using Reki.Application.Common.Exceptions;
-using Reki.Domain.Game;
+using Reki.Application.Game.Common;
+using Reki.Domain.Game.Player;
+using Reki.Domain.Game.Worlds;
 
-namespace Reki.Application.Game;
+namespace Reki.Application.Game.Worlds;
 
 public sealed class SaveWorldRulesHandler(IGameStore store, PlayerReader playerReader)
     : IRequestHandler<SaveWorldRulesCommand>

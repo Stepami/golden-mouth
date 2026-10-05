@@ -1,7 +1,6 @@
 using Mediator;
-using Reki.Domain.Game;
 
-namespace Reki.Application.Game;
+namespace Reki.Application.Game.Posts;
 
 public sealed record AddReplyCommand(long TelegramUserId, string PostId, string Text) : IRequest;
 

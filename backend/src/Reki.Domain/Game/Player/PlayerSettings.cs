@@ -1,4 +1,4 @@
-namespace Reki.Domain.Game;
+namespace Reki.Domain.Game.Player;
 
 public sealed record PlayerSettings(
     string Drama,

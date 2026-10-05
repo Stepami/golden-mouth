@@ -1,6 +1,5 @@
 using Mediator;
-using Reki.Domain.Game;
 
-namespace Reki.Application.Game;
+namespace Reki.Application.Game.Telemetry;
 
 public sealed record ReportCommentCommand(long TelegramUserId, string CommentId, string Reason) : IRequest;

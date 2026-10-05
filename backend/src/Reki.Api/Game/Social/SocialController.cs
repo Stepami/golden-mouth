@@ -1,12 +1,14 @@
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Application.Game;
-using Reki.Contracts.Game;
-using Reki.Domain.Game;
+using Reki.Api.Game.Common;
+using Reki.Application.Game.Social;
+using Reki.Contracts.Game.Common;
+using Reki.Contracts.Game.Social;
+using Reki.Domain.Game.Social;
 using TgMiniAppAuth.AuthContext.User;
 
-namespace Reki.Api.Game;
+namespace Reki.Api.Game.Social;
 
 [ApiController]
 [Produces("application/json")]

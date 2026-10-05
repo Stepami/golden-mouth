@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Application.Game;
+using Reki.Application.Game.Common;
 
-namespace Reki.Api.Game;
+namespace Reki.Api.Game.Posts;
 
 [ApiController]
 [Route("cards/story")]

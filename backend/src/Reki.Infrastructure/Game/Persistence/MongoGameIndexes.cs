@@ -1,9 +1,14 @@
 using Microsoft.Extensions.Hosting;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Domain.Game;
+using Reki.Domain.Game.Events;
+using Reki.Domain.Game.Player;
+using Reki.Domain.Game.Posts;
+using Reki.Domain.Game.Social;
+using Reki.Domain.Game.Telemetry;
+using Reki.Domain.Game.Worlds;
 
-namespace Reki.Infrastructure.Game;
+namespace Reki.Infrastructure.Game.Persistence;
 
 internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
 {

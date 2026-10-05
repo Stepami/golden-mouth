@@ -4,11 +4,15 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Reki.Api.Common.Errors;
 using Reki.Api.Example.GetExample;
-using Reki.Api.Game;
+using Reki.Api.Game.Common;
 using Reki.Api.Serialization;
 using Reki.Application;
-using Reki.Application.Game;
-using Reki.Contracts.Game;
+using Reki.Application.Game.Common;
+using Reki.Contracts.Game.Events;
+using Reki.Contracts.Game.Player;
+using Reki.Contracts.Game.Posts;
+using Reki.Contracts.Game.Social;
+using Reki.Contracts.Game.Telemetry;
 using TgMiniAppAuth;
 
 namespace Reki.Api.Bootstrapping;

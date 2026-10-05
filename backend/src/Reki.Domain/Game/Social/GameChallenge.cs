@@ -1,4 +1,4 @@
-namespace Reki.Domain.Game;
+namespace Reki.Domain.Game.Social;
 
 public sealed record GameChallenge(
     string Id,

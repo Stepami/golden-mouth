@@ -1,7 +1,6 @@
 using Mediator;
-using Reki.Domain.Game;
 
-namespace Reki.Application.Game;
+namespace Reki.Application.Game.Social;
 
 public sealed record ForgetStarMemoryCommand(long TelegramUserId, string StarId, string Fact) : IRequest;
 

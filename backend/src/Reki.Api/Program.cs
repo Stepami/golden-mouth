@@ -10,9 +10,12 @@ var applicationRunner = new ApplicationRunner(applicationLogger);
 
 await applicationRunner.RunAsync(args);
 
-public partial class Program
+namespace Reki.Api
 {
-    protected Program()
+    public partial class Program
     {
+        protected Program()
+        {
+        }
     }
 }

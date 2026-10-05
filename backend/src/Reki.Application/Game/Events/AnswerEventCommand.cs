@@ -1,7 +1,6 @@
 using Mediator;
-using Reki.Domain.Game;
 
-namespace Reki.Application.Game;
+namespace Reki.Application.Game.Events;
 
 public sealed record AnswerEventCommand(long TelegramUserId, string EventId, string Text) : IRequest;
 

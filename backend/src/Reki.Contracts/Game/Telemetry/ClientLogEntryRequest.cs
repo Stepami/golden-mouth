@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
-namespace Reki.Contracts.Game;
+namespace Reki.Contracts.Game.Telemetry;
 
 public sealed record ClientLogEntryRequest
 {

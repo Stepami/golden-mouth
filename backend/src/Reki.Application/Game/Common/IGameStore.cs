@@ -1,6 +1,11 @@
-using Reki.Domain.Game;
+using Reki.Domain.Game.Events;
+using Reki.Domain.Game.Player;
+using Reki.Domain.Game.Posts;
+using Reki.Domain.Game.Social;
+using Reki.Domain.Game.Telemetry;
+using Reki.Domain.Game.Worlds;
 
-namespace Reki.Application.Game;
+namespace Reki.Application.Game.Common;
 
 public interface IGameStore
 {

@@ -3,13 +3,15 @@ using System.Text.Json.Serialization.Metadata;
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Reki.Api.Game.Common;
 using Reki.Api.Serialization;
-using Reki.Application.Game;
-using Reki.Contracts.Game;
-using Reki.Domain.Game;
+using Reki.Application.Game.Posts;
+using Reki.Contracts.Game.Common;
+using Reki.Contracts.Game.Posts;
+using Reki.Domain.Game.Posts;
 using TgMiniAppAuth.AuthContext.User;
 
-namespace Reki.Api.Game;
+namespace Reki.Api.Game.Posts;
 
 [ApiController]
 [Produces("application/json")]

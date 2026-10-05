@@ -1,9 +1,9 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Text;
-using Reki.Application.Game;
+using Reki.Application.Game.Common;
 
-namespace Reki.Infrastructure.Game;
+namespace Reki.Infrastructure.Game.Rendering;
 
 internal sealed class PngStoryCardRenderer : IStoryCardRenderer
 {

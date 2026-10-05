@@ -1,10 +1,21 @@
 using System.Globalization;
 using System.Text.Json;
-using Reki.Application.Game;
-using Reki.Contracts.Game;
-using Reki.Domain.Game;
+using Reki.Application.Game.Player;
+using Reki.Application.Game.Posts;
+using Reki.Application.Game.Social;
+using Reki.Contracts.Game.Events;
+using Reki.Contracts.Game.Player;
+using Reki.Contracts.Game.Posts;
+using Reki.Contracts.Game.Social;
+using Reki.Contracts.Game.Telemetry;
+using Reki.Contracts.Game.Worlds;
+using Reki.Domain.Game.Events;
+using Reki.Domain.Game.Player;
+using Reki.Domain.Game.Posts;
+using Reki.Domain.Game.Telemetry;
+using Reki.Domain.Game.Worlds;
 
-namespace Reki.Api.Game;
+namespace Reki.Api.Game.Common;
 
 public sealed class GameMapper
 {

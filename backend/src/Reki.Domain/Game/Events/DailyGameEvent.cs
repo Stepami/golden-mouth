@@ -1,4 +1,4 @@
-namespace Reki.Domain.Game;
+namespace Reki.Domain.Game.Events;
 
 public sealed record DailyGameEvent(
     string Id,

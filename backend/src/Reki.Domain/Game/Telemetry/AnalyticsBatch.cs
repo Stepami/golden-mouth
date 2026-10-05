@@ -1,4 +1,4 @@
-namespace Reki.Domain.Game;
+namespace Reki.Domain.Game.Telemetry;
 
 public sealed record AnalyticsBatch(
     string PlayerId,

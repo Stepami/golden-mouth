@@ -1,4 +1,4 @@
-namespace Reki.Domain.Game;
+namespace Reki.Domain.Game.Posts;
 
 public sealed record GamePost(
     string Id,

@@ -1,7 +1,6 @@
 using System.Net;
 using Reki.Contracts.Example;
 using Reki.Tests.Generated;
-using TUnit.Core;
 
 namespace Reki.Tests.Example;
 

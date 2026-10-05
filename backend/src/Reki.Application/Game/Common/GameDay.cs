@@ -1,8 +1,6 @@
-using Mediator;
-using Reki.Application.Common.Exceptions;
-using Reki.Domain.Game;
+using Reki.Domain.Game.Player;
 
-namespace Reki.Application.Game;
+namespace Reki.Application.Game.Common;
 
 public sealed class GameDay(TimeProvider timeProvider, GameBalance balance)
 {
