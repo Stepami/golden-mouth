@@ -47,6 +47,7 @@
       "additionalNamespaceUsages": [
         "Microsoft.AspNetCore.Mvc",
         "Reki.Contracts.Example"
+        ,"Reki.Contracts.Game"
       ],
       "additionalContractNamespaceUsages": [],
       "generateOptionalParameters": false,

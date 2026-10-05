@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Application.Example.GetExample;
@@ -7,6 +8,7 @@ using Reki.Contracts.Example;
 namespace Reki.Api.Example.GetExample;
 
 [ApiController]
+[AllowAnonymous]
 [Produces("application/json")]
 [Route("api/v1/example")]
 public sealed partial class ExampleController(

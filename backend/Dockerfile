@@ -1,18 +1,19 @@
 # syntax=docker/dockerfile:1
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0-noble@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS restore
-WORKDIR /src
+WORKDIR /src/backend
 
-COPY Directory.Build.props Directory.Packages.props global.json ./
-COPY src/Reki.Domain/Reki.Domain.csproj src/Reki.Domain/
-COPY src/Reki.Application/Reki.Application.csproj src/Reki.Application/
-COPY src/Reki.Contracts/Reki.Contracts.csproj src/Reki.Contracts/
-COPY src/Reki.Infrastructure/Reki.Infrastructure.csproj src/Reki.Infrastructure/
-COPY src/Reki.Api/Reki.Api.csproj src/Reki.Api/
+COPY backend/Directory.Build.props backend/Directory.Packages.props backend/global.json ./
+COPY backend/src/Reki.Domain/Reki.Domain.csproj src/Reki.Domain/
+COPY backend/src/Reki.Application/Reki.Application.csproj src/Reki.Application/
+COPY backend/src/Reki.Contracts/Reki.Contracts.csproj src/Reki.Contracts/
+COPY backend/src/Reki.Infrastructure/Reki.Infrastructure.csproj src/Reki.Infrastructure/
+COPY backend/src/Reki.Api/Reki.Api.csproj src/Reki.Api/
 RUN dotnet restore src/Reki.Api/Reki.Api.csproj
 
 FROM restore AS publish
-COPY . .
+COPY backend/. .
+COPY docs/config/balance.json /src/docs/config/balance.json
 RUN dotnet publish src/Reki.Api/Reki.Api.csproj \
     --configuration Release \
     --no-restore \

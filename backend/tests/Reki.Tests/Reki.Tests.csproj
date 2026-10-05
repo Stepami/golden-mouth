@@ -2,6 +2,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsTestProject>true</IsTestProject>
+    <!-- The tested API uses TgMiniAppAuth's reflection-based built-in user accessor. -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,6 +14,8 @@
   <ItemGroup>
     <PackageReference Include="TUnit" />
     <PackageReference Include="TUnit.AspNetCore" />
+    <PackageReference Include="Testcontainers.MongoDb" />
+    <PackageReference Include="MongoDB.Driver" />
   </ItemGroup>
 
   <ItemGroup>

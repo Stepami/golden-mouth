@@ -112,6 +112,14 @@ dotnet_diagnostic.AV1210.severity = none
 # Mediator fixes the asynchronous interface member name as Handle; handlers cannot append Async.
 dotnet_diagnostic.AV1755.severity = none
 
+[src/Reki.Api/Game/Common/GameMapper.cs]
+# Contract mapping is an injected, replaceable service; keep it instance-based for testability.
+dotnet_diagnostic.S2325.severity = none
+
+[tests/Reki.Tests/Game/GameApiTests.cs]
+# Keep the HTTP test DSL instance-based so it can evolve with fixture state.
+dotnet_diagnostic.S2325.severity = none
+
 [*.g.cs]
 generated_code = true
 

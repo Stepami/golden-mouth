@@ -7,6 +7,8 @@ using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using Reki.Application.Game;
+using Reki.Infrastructure.Game;
 using Reki.Infrastructure.Health;
 using Reki.Infrastructure.Observability;
 using Reki.Infrastructure.Persistence;
@@ -20,21 +22,19 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration,
-        InfrastructureMode mode)
+        bool initializeDatabase = true)
     {
         services.AddSingleton(TimeProvider.System);
         services.AddObservability(configuration);
         services.AddBaseHealthChecks();
-
-        if (mode == InfrastructureMode.Production)
-        {
-            services.AddProductionInfrastructure();
-        }
+        services.AddMongoInfrastructure(initializeDatabase);
 
         return services;
     }
 
-    private static void AddProductionInfrastructure(this IServiceCollection services)
+    private static void AddMongoInfrastructure(
+        this IServiceCollection services,
+        bool initializeDatabase)
     {
         services
             .AddOptions<MongoOptions>()
@@ -57,6 +57,21 @@ public static class DependencyInjection
 
             return new MongoClient(settings);
         });
+
+        services.AddSingleton(serviceProvider =>
+        {
+            MongoOptions options = serviceProvider
+                .GetRequiredService<IOptions<MongoOptions>>()
+                .Value;
+            IMongoClient client = serviceProvider.GetRequiredService<IMongoClient>();
+            return client.GetDatabase(options.DatabaseName);
+        });
+        services.AddSingleton<IGameStore, MongoGameStore>();
+        services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
+        if (initializeDatabase)
+        {
+            services.AddHostedService<MongoGameIndexes>();
+        }
 
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);
     }

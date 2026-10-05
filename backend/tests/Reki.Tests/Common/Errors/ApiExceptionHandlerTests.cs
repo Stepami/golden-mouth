@@ -2,18 +2,19 @@ using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Tests.Serialization;
-using TUnit.AspNetCore;
+using TUnit.Core;
 
 namespace Reki.Tests.Common.Errors;
 
 [NotInParallel]
-public sealed class ApiExceptionHandlerTests : WebApplicationTest<ApiFactory, Program>
+[ClassDataSource<ApiFactory>(Shared = SharedType.PerTestSession)]
+public sealed class ApiExceptionHandlerTests(ApiFactory factory)
 {
     [Test]
     public async Task ExceptionHandler_WhenCustomExceptionIsThrown_ReturnsSafeProblemDetailsAsync()
     {
         // Arrange
-        using HttpClient httpClient = Factory.CreateClient();
+        using HttpClient httpClient = factory.CreateClient();
 
         // Act
         using HttpResponseMessage response = await httpClient.GetAsync("/_tests/exceptions/not-found");

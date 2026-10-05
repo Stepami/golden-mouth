@@ -1,17 +1,18 @@
 using System.Net;
 using Reki.Contracts.Example;
 using Reki.Tests.Generated;
-using TUnit.AspNetCore;
+using TUnit.Core;
 
 namespace Reki.Tests.Example;
 
 [NotInParallel]
-public sealed class GetExampleTests : WebApplicationTest<ApiFactory, Program>
+[ClassDataSource<ApiFactory>(Shared = SharedType.PerTestSession)]
+public sealed class GetExampleTests(ApiFactory factory)
 {
     [Test]
     public async Task GetExample_WhenCalled_ReturnsServiceStatusAsync()
     {
-        using HttpClient httpClient = Factory.CreateClient();
+        using HttpClient httpClient = factory.CreateClient();
         var client = new ExampleClient(httpClient);
 
         ExampleResponse response = await client.GetExampleAsync();
@@ -23,7 +24,7 @@ public sealed class GetExampleTests : WebApplicationTest<ApiFactory, Program>
     [Test]
     public async Task SwaggerUi_WhenRequested_ReturnsHtmlAsync()
     {
-        using HttpClient httpClient = Factory.CreateClient();
+        using HttpClient httpClient = factory.CreateClient();
         using HttpResponseMessage response = await httpClient.GetAsync("/swagger/");
         string html = await response.Content.ReadAsStringAsync();
 
