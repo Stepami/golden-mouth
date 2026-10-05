@@ -103,14 +103,14 @@
 
 Продуктовая аналитика (вопросы, события, воронки, хранение): [analytics.md](analytics.md). Ниже журнал ошибок.
 
-Ошибки фронт шлёт пачкой на `POST /logs` (`frontend/src/app/log.ts`), события поведения отдельно на `POST /events` (`frontend/src/app/analytics.ts`). Каждая принятая ошибка превращается в структурированное событие Serilog и попадает через `MongoDBBson` в общую коллекцию `logs`: `Level`, `UtcTimeStamp`, `RenderedMessage`, `TraceId` и `SpanId` остаются на верхнем уровне, а поля из message template и enrichers (`Event`, `Player`, `Screen`, `Platform`, `Version`, `Status`, `Path`) лежат во встроенном BSON-объекте `Properties`. Параллельную плоскую схему для клиентских логов не создаём. В записях **нет текстов игрока, ников и initData**: только код экрана, id, числа, длины (`len:123`). Ошибки: `js_error`, `promise_rejection`, `render_error` (экран «Что-то пошло не так»), `api_error` (5xx как error, 4xx как warn), `sse_error`; одна и та же ошибка не чаще раза в минуту. Бэкенд хранит логи 30 дней и удаляет их вместе с аккаунтом.
+Ошибки фронт шлёт пачкой на `POST /logs` (`frontend/src/app/log.ts`), события поведения отдельно на `POST /events` (`frontend/src/app/analytics.ts`). Оба метода проходят обычную TMA-аутентификацию и при закрытии отправляются через `fetch` с `keepalive: true`; идентификатор игрока бэкенд определяет по подписанному Telegram `user`, а не принимает от клиента. Каждая принятая ошибка превращается в структурированное событие Serilog и попадает через `MongoDBBson` в общую коллекцию `logs`: `Level`, `UtcTimeStamp`, `RenderedMessage`, `TraceId` и `SpanId` остаются на верхнем уровне, а поля из message template и enrichers (`Event`, `Player`, `Screen`, `Platform`, `Version`, `Status`, `Path`) лежат во встроенном BSON-объекте `Properties`. Параллельную плоскую схему для клиентских логов не создаём. В записях **нет текстов игрока, ников, Telegram ID и initData**: только код экрана, обезличенный id, числа, длины (`len:123`). Ошибки: `js_error`, `promise_rejection`, `render_error` (экран «Что-то пошло не так»), `api_error` (5xx как error, 4xx как warn), `sse_error`; одна и та же ошибка не чаще раза в минуту. Бэкенд хранит логи 30 дней и удаляет их вместе с аккаунтом.
 
 События фронта (`POST /events`): `session_start`, `screen_view`, `screen_leave`, `tap`, `app_hidden`, `app_visible`, `onboarding_step` (age / world / channel / done), `post_publish` (len, own_words), `post_result` (delta, viral, flop), `limit_reached`, `plus_interest`, `plus_bonus_only`, `invite_sent`, `share` (chat / story), `event_answered`, `challenge_post`, `report`, `crisis_shown`. Серверные события, полный список с полями и метрики теста: [analytics.md](analytics.md) («Что пишет бэкенд сам»), формат записи для дашбордов: [dashboards.md](dashboards.md).
 Метрики теста: D1 ≥ 40%, D7 ≥ 15%, K (честный: приглашённый дожил до D1), доля упёршихся в лимит и что они выбрали, на каком посте впервые пишут своими словами, клик «Хочу Реки+».
 
 ## 11. API для фронта
 
-Авторизация: `Authorization: tma <initData raw>`, бэкенд проверяет подпись. Типы: `frontend/src/api/types.ts`. Все методы уже вызываются из `frontend/src/api/client.ts`; без `VITE_API_URL` фронт работает на `mock.ts`.
+Авторизация: `Authorization: TMiniApp <initData raw>`. Для серверной проверки подписи TMA используем NuGet-пакет `TgMiniAppAuth` версии `0.0.6` как опубликован, без форка, подмены handler или валидатора; версию закрепляем через Central Package Management. `AddTgMiniAppAuth` задаёт `TMiniApp` как схему аутентификации по умолчанию, а защищённая группа API один раз требует зарегистрированную пакетом policy `TMiniApp`, поэтому отдельные методы схему не повторяют. Игрок определяется только по Telegram `user.id` из `initData`, прошедшего встроенную проверку подписи и `auth_date`: нет валидного Telegram `user` — запрос получает 401, игрок не создаётся и не возвращается. Один Telegram `user.id` соответствует одному игроку. Клиентский `player` не является доказательством личности. `initData` не логируем и не сохраняем. Типы: `frontend/src/api/types.ts`; mock-режим фронта остаётся в `frontend/src/api/mock.ts`.
 
 | Метод | Ответ | Экран |
 |---|---|---|
@@ -134,9 +134,11 @@
 | `POST /plus-interest` | `{ bonus: 5 }` | 04-2 |
 | `DELETE /me` | `{ ok }` | 05-8 |
 | `GET /cards/story/:postId.png` | картинка 9:16 | 02-7 |
-| `POST /events` `{ player, session, platform, experiments, events }` | 204 | все (продуктовая аналитика, [analytics.md](analytics.md)) |
-| `POST /logs` `{ session, entries: LogEntry[] }` | 204 | все (пачками раз в 15 с, при ошибке сразу, при закрытии через sendBeacon) |
+| `POST /events` `{ session, platform, experiments, events }` | 204 | все (TMA auth; продуктовая аналитика, [analytics.md](analytics.md)) |
+| `POST /logs` `{ session, entries: LogEntry[] }` | 204 | все (TMA auth; пачками раз в 15 с, при ошибке сразу, при закрытии через `fetch` с `keepalive: true`) |
 
 ## 10. Окружение
 
 Настройки LLM (`Llm__BaseUrl`, `Llm__ApiKey`, `Llm__Model`), токен бота и строка Mongo приходят только из переменных окружения сервера или защищённого secret store (#26). Отсутствующая обязательная настройка останавливает startup без вывода её значения. Фронт получает только same-origin runtime config для `/api/v1` и не знает адресов внутренних сервисов.
+
+`docs/config/balance.json` включается в backend Docker image как `/app/config/balance.json` с правами только на чтение (`COPY --chmod=0444`). Бэкенд читает и валидирует его при startup; отсутствующий или невалидный файл останавливает запуск. В production конфиг не перезаписывается и не подменяется writable volume. Изменение баланса не требует правки кода, но требует пересборки и деплоя backend image.

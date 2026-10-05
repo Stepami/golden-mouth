@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NavContext, TABS, type Nav, type ScreenId } from './app/nav'
 import { StoreProvider, useStore } from './app/store'
 import { SCREENS, TAB_OF } from './screens'
-import { screenView, setExperiments, setPlayerId, tap } from './app/analytics'
+import { screenView, setExperiments, tap } from './app/analytics'
 import { setScreen } from './app/log'
 import { syncBackButton } from './telegram'
 
@@ -31,7 +31,7 @@ function Shell() {
   }), [top, stack.length])
 
   useEffect(() => { setScreen(top.id); screenView(top.id) }, [top.id])
-  useEffect(() => { if (player) setPlayerId(player.id); if (player?.experiments) setExperiments(player.experiments) }, [player?.id, player?.experiments])
+  useEffect(() => { if (player?.experiments) setExperiments(player.experiments) }, [player?.experiments])
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1, back), [stack.length, back])
 

@@ -20,15 +20,15 @@
 
 ## Что шлёт фронт
 
-`POST /events`, пачкой раз в 10 секунд и при закрытии (`frontend/src/app/analytics.ts`):
+`POST /events`, пачкой раз в 10 секунд и при закрытии через `fetch` с `keepalive: true` (`frontend/src/app/analytics.ts`). Запрос проходит обычную TMA-аутентификацию:
 
 ```json
-{ "player": "p_8f3k…", "session": "uuid", "platform": "ios|android|tdesktop|web",
+{ "session": "uuid", "platform": "ios|android|tdesktop|web",
   "experiments": { "plus_offer": "10" },
   "events": [{ "name": "screen_view", "t": 1759500000000, "screen": "02-3_result", "prev": "02-2_live", "props": {} }] }
 ```
 
-`player` — обезличенный id, который выдаёт бэкенд в `/me`. Не Telegram ID.
+`player` не принимается от клиента как доказательство личности. Бэкенд получает Telegram `user.id` только из подписанного `initData`, находит соответствующего игрока и при записи сам добавляет его обезличенный внутренний id. Нет валидного Telegram `user` — событие не принимается. Telegram ID и `initData` в аналитику не записываются.
 
 | Событие | Когда | Свойства |
 |---|---|---|
