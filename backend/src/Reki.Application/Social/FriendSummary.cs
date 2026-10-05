@@ -1,10 +1,13 @@
+using Reki.Domain.Player;
+using Reki.Domain.Worlds;
+
 namespace Reki.Application.Social;
 
 public sealed record FriendSummary(
-    string Id,
+    PlayerId Id,
     string Name,
     string Avatar,
-    string World,
+    WorldId World,
     long Subscribers,
     string LastPost,
     string Pronoun);

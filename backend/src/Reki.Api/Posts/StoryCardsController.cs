@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Application.Common;
 using Reki.Application.Posts;
+using Reki.Domain.Player;
+using Reki.Domain.Posts;
 using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Api.Posts;
@@ -22,7 +24,9 @@ public sealed class StoryCardsController(
         CancellationToken cancellationToken)
     {
         StoryCardData card = await sender.Send(
-            new GetStoryCardQuery(telegramUser.User.Id, postId),
+            new GetStoryCardQuery(
+                TelegramUserId.From(telegramUser.User.Id),
+                PostId.From(postId)),
             cancellationToken);
         Response.StatusCode = StatusCodes.Status200OK;
         Response.ContentType = "image/png";

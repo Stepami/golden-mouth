@@ -1,15 +1,17 @@
+using Reki.Domain.Worlds;
+
 namespace Reki.Domain.Player;
 
 public sealed record PlayerProfile(
-    string Id,
-    long TelegramUserId,
+    PlayerId Id,
+    TelegramUserId TelegramUserId,
     string BirthGroup,
     string Name,
     string Handle,
     string Role,
     string Avatar,
     string Address,
-    string World,
+    WorldId World,
     long Subscribers,
     int PostsUsed,
     int DailyBonus,
@@ -17,7 +19,9 @@ public sealed record PlayerProfile(
     bool PlusInterestClaimed,
     int StreakDays,
     PlayerSettings Settings,
-    IReadOnlyDictionary<string, SkillProgress> Skills,
+    IReadOnlyDictionary<SkillId, SkillProgress> Skills,
+    DateTimeOffset? PausedAtUtc,
+    DateTimeOffset? HateDisabledUntilUtc,
     int Version)
 {
     public int GetPostsCap(int freePerDay, int plusPerDay)
@@ -61,5 +65,14 @@ public sealed record PlayerProfile(
             Version = Version + 1,
         };
     }
-}
 
+    public PlayerProfile StartCrisisPause(DateTimeOffset now, TimeSpan hateCooldown)
+    {
+        return this with
+        {
+            PausedAtUtc = now,
+            HateDisabledUntilUtc = now.Add(hateCooldown),
+            Version = Version + 1,
+        };
+    }
+}

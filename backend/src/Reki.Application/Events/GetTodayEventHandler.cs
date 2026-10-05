@@ -25,9 +25,8 @@ public sealed class GetTodayEventHandler(
             return existing;
         }
 
-        string eventId = Guid.NewGuid().ToString("N");
         var gameEvent = new DailyGameEvent(
-            eventId,
+            EventId.New(),
             player.Id,
             "collab",
             "событие дня",

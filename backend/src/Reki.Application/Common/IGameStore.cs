@@ -9,7 +9,7 @@ namespace Reki.Application.Common;
 
 public interface IGameStore
 {
-    ValueTask<PlayerProfile?> GetPlayerAsync(long telegramUserId, CancellationToken cancellationToken);
+    ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken);
 
     ValueTask UpsertPlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
 
@@ -23,24 +23,24 @@ public interface IGameStore
     ValueTask AddPostAsync(GamePost post, CancellationToken cancellationToken);
 
     ValueTask<IReadOnlyList<GamePost>> GetRecentPostsAsync(
-        string playerId,
+        PlayerId playerId,
         int count,
         CancellationToken cancellationToken);
 
     ValueTask<GamePost?> GetPostAsync(
-        string playerId,
-        string postId,
+        PlayerId playerId,
+        PostId postId,
         CancellationToken cancellationToken);
 
     ValueTask<bool> AddReplyAsync(
-        string playerId,
-        string postId,
+        PlayerId playerId,
+        PostId postId,
         GameComment reply,
         CancellationToken cancellationToken);
 
     ValueTask<StarConversation?> GetStarConversationAsync(
-        string playerId,
-        string starId,
+        PlayerId playerId,
+        StarId starId,
         CancellationToken cancellationToken);
 
     ValueTask SaveStarConversationAsync(
@@ -48,21 +48,21 @@ public interface IGameStore
         CancellationToken cancellationToken);
 
     ValueTask<DailyGameEvent?> GetTodayEventAsync(
-        string playerId,
+        PlayerId playerId,
         DateTimeOffset dayStartedAtUtc,
         CancellationToken cancellationToken);
 
     ValueTask SaveEventAsync(DailyGameEvent gameEvent, CancellationToken cancellationToken);
 
     ValueTask<GameChallenge?> GetActiveChallengeAsync(
-        string playerId,
+        PlayerId playerId,
         CancellationToken cancellationToken);
 
     ValueTask SaveChallengeAsync(GameChallenge challenge, CancellationToken cancellationToken);
 
     ValueTask<WorldRules?> GetWorldRulesAsync(
-        string playerId,
-        string worldId,
+        PlayerId playerId,
+        WorldId worldId,
         CancellationToken cancellationToken);
 
     ValueTask SaveWorldRulesAsync(WorldRules rules, CancellationToken cancellationToken);
@@ -70,8 +70,8 @@ public interface IGameStore
     ValueTask AppendAnalyticsAsync(AnalyticsBatch batch, CancellationToken cancellationToken);
 
     ValueTask AppendThreadAsync(
-        string playerId,
-        string postId,
+        PlayerId playerId,
+        PostId postId,
         string hook,
         DateTimeOffset createdAtUtc,
         CancellationToken cancellationToken);

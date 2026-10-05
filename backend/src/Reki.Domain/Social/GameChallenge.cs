@@ -1,9 +1,11 @@
+using Reki.Domain.Player;
+
 namespace Reki.Domain.Social;
 
 public sealed record GameChallenge(
-    string Id,
-    string PlayerId,
-    string FriendId,
+    ChallengeId Id,
+    PlayerId PlayerId,
+    PlayerId FriendId,
     int Day,
     int Days,
     int MyScore,

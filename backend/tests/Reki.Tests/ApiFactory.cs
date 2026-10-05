@@ -1,13 +1,15 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
 using Testcontainers.MongoDb;
 using TUnit.AspNetCore;
 using TUnit.Core.Interfaces;
-using WebMotions.Fake.Authentication.JwtBearer;
 
 namespace Reki.Tests;
 
@@ -18,6 +20,8 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncIniti
     public string DatabaseName { get; } = $"reki_tests_{Guid.NewGuid():N}";
 
     public string MongoConnectionString => _mongo.GetConnectionString();
+
+    public IChatClient ChatClient { get; } = Substitute.For<IChatClient>();
 
     public TestApiClient CreateApiClient(long? telegramUserId = null)
     {
@@ -40,22 +44,29 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncIniti
         builder.UseEnvironment("Development");
         builder.UseSetting("Mongo:ConnectionString", MongoConnectionString);
         builder.UseSetting("Mongo:DatabaseName", DatabaseName);
+        builder.UseSetting("Llm:BaseUrl", "https://llm.invalid/v1");
+        builder.UseSetting("Llm:ApiKey", "placeholder");
+        builder.UseSetting("Llm:Model", "gigachat3.5-432b-a28b");
         builder.ConfigureServices(services =>
         {
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.RemoveAll<TimeProvider>();
+            services.RemoveAll<IChatClient>();
             services.AddSingleton<TimeProvider>(new FakeTimeProvider(
                 new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero)));
+            services.AddSingleton<IChatClient>(ChatClient);
             services
                 .AddAuthentication(options =>
                 {
-                    options.DefaultAuthenticateScheme = FakeJwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = FakeJwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultAuthenticateScheme = TestAuthenticationHandler.SchemeName;
+                    options.DefaultChallengeScheme = TestAuthenticationHandler.SchemeName;
                 })
-                .AddFakeJwtBearer();
+                .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                    TestAuthenticationHandler.SchemeName,
+                    _ => { });
             services.AddAuthorization(options => options.AddPolicy(
                 "TMiniApp",
-                new AuthorizationPolicyBuilder(FakeJwtBearerDefaults.AuthenticationScheme)
+                new AuthorizationPolicyBuilder(TestAuthenticationHandler.SchemeName)
                     .RequireAuthenticatedUser()
                     .Build()));
         });

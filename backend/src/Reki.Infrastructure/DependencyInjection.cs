@@ -1,13 +1,19 @@
+using System.ClientModel;
+using System.ClientModel.Primitives;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using OpenAI;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Reki.Application.Common;
+using Reki.Application.Common.AI;
+using Reki.Infrastructure.AI;
 using Reki.Infrastructure.Health;
 using Reki.Infrastructure.Observability;
 using Reki.Infrastructure.Persistence;
@@ -22,20 +28,62 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration,
-        bool initializeDatabase = true)
+        bool initializeDatabase = true,
+        bool initializeLlm = true)
     {
         services.AddSingleton(TimeProvider.System);
         services.AddObservability(configuration);
         services.AddBaseHealthChecks();
         services.AddMongoInfrastructure(initializeDatabase);
+        if (initializeLlm)
+        {
+            services.AddLlmInfrastructure();
+        }
 
         return services;
+    }
+
+    private static void AddLlmInfrastructure(this IServiceCollection services)
+    {
+        services
+            .AddOptions<LlmOptions>()
+            .BindConfiguration(LlmOptions.SectionName)
+            .ValidateDataAnnotations()
+            .Validate(
+                options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out Uri? uri) &&
+                    uri.Scheme is "http" or "https",
+                "Llm:BaseUrl must be an absolute HTTP or HTTPS URI.")
+            .ValidateOnStart();
+
+        services.AddSingleton(serviceProvider =>
+        {
+            LlmOptions options = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
+            return new LlmTurnSettings(
+                options.Model,
+                0.4f,
+                700,
+                TimeSpan.FromSeconds(options.TimeoutSeconds));
+        });
+        services.AddSingleton<IChatClient>(serviceProvider =>
+        {
+            LlmOptions options = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
+            var clientOptions = new OpenAIClientOptions
+            {
+                ClientLoggingOptions = new ClientLoggingOptions { EnableLogging = true },
+                Endpoint = new Uri(options.BaseUrl),
+                NetworkTimeout = TimeSpan.FromSeconds(options.TimeoutSeconds),
+                RetryPolicy = new ClientRetryPolicy(),
+            };
+            var client = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
+            return client.GetChatClient(options.Model).AsIChatClient();
+        });
     }
 
     private static void AddMongoInfrastructure(
         this IServiceCollection services,
         bool initializeDatabase)
     {
+        MongoClassMappings.Register();
         services
             .AddOptions<MongoOptions>()
             .BindConfiguration(MongoOptions.SectionName)

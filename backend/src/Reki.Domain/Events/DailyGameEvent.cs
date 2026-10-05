@@ -1,8 +1,10 @@
+using Reki.Domain.Player;
+
 namespace Reki.Domain.Events;
 
 public sealed record DailyGameEvent(
-    string Id,
-    string PlayerId,
+    EventId Id,
+    PlayerId PlayerId,
     string Kind,
     string Badge,
     string Title,

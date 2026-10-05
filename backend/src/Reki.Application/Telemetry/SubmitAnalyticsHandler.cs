@@ -1,6 +1,7 @@
 using Mediator;
 using Reki.Application.Common;
 using Reki.Domain.Player;
+using Reki.Domain.Telemetry;
 
 namespace Reki.Application.Telemetry;
 
@@ -15,12 +16,15 @@ public sealed class SubmitAnalyticsHandler(
         CancellationToken cancellationToken)
     {
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
+        AnalyticsSubmission submission = request.Submission;
         await store.AppendAnalyticsAsync(
-            request.Batch with
-            {
-                PlayerId = player.Id,
-                ReceivedAtUtc = timeProvider.GetUtcNow(),
-            },
+            new AnalyticsBatch(
+                player.Id,
+                submission.Session,
+                submission.Platform,
+                submission.Experiments,
+                submission.Events,
+                timeProvider.GetUtcNow()),
             cancellationToken);
         return Unit.Value;
     }

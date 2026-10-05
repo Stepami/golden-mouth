@@ -1,8 +1,11 @@
+using Reki.Domain.Player;
+
 namespace Reki.Domain.Social;
 
 public sealed record StarConversation(
-    string PlayerId,
-    string StarId,
+    StarConversationId Id,
+    PlayerId PlayerId,
+    StarId StarId,
     IReadOnlyList<string> Memory,
     IReadOnlyList<DirectMessage> Messages,
     int RepliesUsed,

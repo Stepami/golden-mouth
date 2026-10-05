@@ -1,11 +1,15 @@
 using Mediator;
 using Reki.Application.Common;
+using Reki.Application.Common.Safety;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Worlds;
 
-public sealed class SaveWorldRulesHandler(IGameStore store, PlayerReader playerReader)
+public sealed class SaveWorldRulesHandler(
+    IGameStore store,
+    PlayerReader playerReader,
+    PlayerSafetyGuard safetyGuard)
     : IRequestHandler<SaveWorldRulesCommand>
 {
     public async ValueTask<Unit> Handle(
@@ -13,18 +17,29 @@ public sealed class SaveWorldRulesHandler(IGameStore store, PlayerReader playerR
         CancellationToken cancellationToken)
     {
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        WorldRules safeRules = request.Rules with
-        {
-            PlayerId = player.Id,
-            WorldId = "own",
-            Rules =
+        await safetyGuard.EnsureInputAllowedAsync(
+            player,
+            [request.Description, .. request.Rules.Select(rule => rule.Text)],
+            cancellationToken);
+        WorldId ownWorldId = WorldId.From("own");
+        WorldRules? existingRules = await store.GetWorldRulesAsync(
+            player.Id,
+            ownWorldId,
+            cancellationToken);
+        var safeRules = new WorldRules(
+            existingRules?.Id ?? WorldRulesId.New(),
+            player.Id,
+            ownWorldId,
+            request.Title,
+            request.Presets,
+            request.Description,
             [
-                new WorldRule("Контент подходит для 14+", true),
-                .. request.Rules.Rules.Where(rule => !rule.Locked),
-            ],
-        };
+                .. request.Rules.Where(rule =>
+                    !rule.Locked &&
+                    !rule.Text.Equals(WorldRulesDefaults.SafetyRule, StringComparison.OrdinalIgnoreCase)),
+                new WorldRule(WorldRulesDefaults.SafetyRule, true),
+            ]);
         await store.SaveWorldRulesAsync(safeRules, cancellationToken);
         return Unit.Value;
     }
 }
-

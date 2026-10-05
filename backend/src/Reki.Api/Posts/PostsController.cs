@@ -7,6 +7,7 @@ using Reki.Api.Mapping;
 using Reki.Api.Serialization;
 using Reki.Application.Posts;
 using Reki.Contracts.Posts;
+using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using TgMiniAppAuth.AuthContext.User;
 
@@ -27,7 +28,7 @@ public sealed class PostsController(
         CancellationToken cancellationToken)
     {
         PublishedPost published = await sender.Send(
-            new PublishPostCommand(telegramUser.User.Id, request.Text),
+            new PublishPostCommand(TelegramUserId.From(telegramUser.User.Id), request.Text),
             cancellationToken);
         Response.StatusCode = StatusCodes.Status200OK;
         Response.ContentType = "text/event-stream; charset=utf-8";
@@ -38,7 +39,7 @@ public sealed class PostsController(
             ApiJsonSerializerContext.Default.ViewsLiveEvent,
             cancellationToken);
         await WriteEventAsync(
-            new ReactionLiveEvent(LiveEventType.React, "🔥"),
+            new ReactionLiveEvent(LiveEventType.React, published.Reaction),
             ApiJsonSerializerContext.Default.ReactionLiveEvent,
             cancellationToken);
         GameComment comment = published.Post.Comments[0];
@@ -66,7 +67,10 @@ public sealed class PostsController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new AddReplyCommand(telegramUser.User.Id, postId, request.Text),
+            new AddReplyCommand(
+                TelegramUserId.From(telegramUser.User.Id),
+                PostId.From(postId),
+                request.Text),
             cancellationToken);
         return TypedResults.Ok();
     }
@@ -77,7 +81,7 @@ public sealed class PostsController(
         CancellationToken cancellationToken)
     {
         IReadOnlyList<GamePost> posts = await sender.Send(
-            new GetFeedQuery(telegramUser.User.Id),
+            new GetFeedQuery(TelegramUserId.From(telegramUser.User.Id)),
             cancellationToken);
         return TypedResults.Ok<IReadOnlyList<FeedItemResponse>>(
             posts.Select(mapper.MapFeedItem).ToArray());

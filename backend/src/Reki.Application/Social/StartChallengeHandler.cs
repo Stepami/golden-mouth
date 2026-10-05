@@ -20,9 +20,8 @@ public sealed class StartChallengeHandler(IGameStore store, PlayerReader playerR
             throw new RequestConflictException("An active challenge already exists.");
         }
 
-        string challengeId = Guid.NewGuid().ToString("N");
         var challenge = new GameChallenge(
-                challengeId,
+                ChallengeId.New(),
                 player.Id,
                 request.FriendId,
                 1,

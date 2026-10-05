@@ -1,9 +1,10 @@
 using Mediator;
+using Reki.Domain.Player;
 
 namespace Reki.Application.Player;
 
 public sealed record UpdateSettingsCommand(
-    long TelegramUserId,
+    TelegramUserId TelegramUserId,
     string? Drama,
     string? Notifications,
     string? Quiet,

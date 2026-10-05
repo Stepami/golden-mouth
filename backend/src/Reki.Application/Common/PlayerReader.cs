@@ -7,7 +7,7 @@ namespace Reki.Application.Common;
 public sealed class PlayerReader(IGameStore store, GameBalance balance)
 {
     public async ValueTask<PlayerProfile> GetAsync(
-        long telegramUserId,
+        TelegramUserId telegramUserId,
         CancellationToken cancellationToken)
     {
         return await store.GetPlayerAsync(telegramUserId, cancellationToken)

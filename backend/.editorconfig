@@ -113,6 +113,14 @@ dotnet_diagnostic.AV1210.severity = none
 # Mediator fixes the asynchronous interface member name as Handle; handlers cannot append Async.
 dotnet_diagnostic.AV1755.severity = none
 
+[src/Reki.Application/Posts/StarTurnGenerator.cs]
+# The provider boundary maps arbitrary IChatClient failures to one safe application error.
+dotnet_diagnostic.AV1210.severity = none
+
+[src/Reki.Application/Common/AI/StarToolCallParser.cs]
+# Tool action records stay nested so the strict parser and its internal result types form one unit.
+dotnet_diagnostic.SA1201.severity = none
+
 [src/Reki.Api/Mapping/ApiMapper.cs]
 # API mappings are injected as one Mapperly-backed service, including handwritten composition mappings.
 dotnet_diagnostic.S2325.severity = none

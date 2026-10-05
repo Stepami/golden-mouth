@@ -32,17 +32,16 @@ public sealed class OnboardPlayerHandler(
         DateTimeOffset periodStart,
         long startingSubscribers)
     {
-        IReadOnlyDictionary<string, SkillProgress> skills = new Dictionary<string, SkillProgress>
+        IReadOnlyDictionary<SkillId, SkillProgress> skills = new Dictionary<SkillId, SkillProgress>
         {
-            ["brave"] = new(1, 0),
-            ["humor"] = new(1, 0),
-            ["topic"] = new(1, 0),
+            [SkillId.From("brave")] = new(1, 0),
+            [SkillId.From("humor")] = new(1, 0),
+            [SkillId.From("topic")] = new(1, 0),
         };
 
-        string playerId = Guid.NewGuid().ToString("N");
         var settings = new PlayerSettings("mid", "all", "22:00-09:00", "default", false);
         return new PlayerProfile(
-            playerId,
+            PlayerId.New(),
             request.TelegramUserId,
             request.BirthGroup,
             request.Name,
@@ -59,6 +58,8 @@ public sealed class OnboardPlayerHandler(
             1,
             settings,
             skills,
+            null,
+            null,
             0);
     }
 
@@ -79,4 +80,3 @@ public sealed class OnboardPlayerHandler(
         };
     }
 }
-

@@ -1,15 +1,18 @@
 using Mediator;
+using Reki.Domain.Player;
+using Reki.Domain.Social;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Player;
 
 public sealed record OnboardPlayerCommand(
-    long TelegramUserId,
+    TelegramUserId TelegramUserId,
     string BirthGroup,
-    string World,
+    WorldId World,
     string Role,
     string Avatar,
     string Name,
     string Handle,
     string Address,
-    string Star) : IRequest<PlayerView>;
+    StarId Star) : IRequest<PlayerView>;
 

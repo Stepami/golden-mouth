@@ -77,6 +77,9 @@ jobs:
       COMPOSE_FILE: compose.yml:compose.production.yml
       REKI_VERSION: ${{ needs.validate-tag.outputs.image-version }}
       TG_PAT: ${{ secrets.TG_PAT }}
+      LLM_PAT: ${{ secrets.LLM_PAT }}
+      LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+      LLM_MODEL: ${{ secrets.LLM_MODEL }}
 
     steps:
       - name: Check out repository

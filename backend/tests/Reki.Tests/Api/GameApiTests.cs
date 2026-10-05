@@ -1,10 +1,15 @@
 using System.Buffers.Binary;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.AI;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using NSubstitute;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
+using Reki.Contracts.Social;
 using Reki.Contracts.Telemetry;
+using Reki.Contracts.Worlds;
 using Reki.Tests.Generated;
 
 namespace Reki.Tests.Api;
@@ -13,8 +18,33 @@ namespace Reki.Tests.Api;
 [ClassDataSource<ApiFactory>(Shared = SharedType.PerTestSession)]
 public sealed class GameApiTests(ApiFactory factory)
 {
+    private ChatOptions? _lastChatOptions;
+    private IReadOnlyList<ChatMessage>? _lastChatMessages;
+
     private IMongoDatabase Database => new MongoClient(factory.MongoConnectionString)
         .GetDatabase(factory.DatabaseName);
+
+    [Before(Test)]
+    public void ConfigureChatClient()
+    {
+        _lastChatOptions = null;
+        _lastChatMessages = null;
+        factory.ChatClient.ClearReceivedCalls();
+        factory.ChatClient
+            .GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                ChatMessage[] messages = callInfo
+                    .ArgAt<IEnumerable<ChatMessage>>(0)
+                    .ToArray();
+                _lastChatMessages = messages;
+                _lastChatOptions = callInfo.ArgAt<ChatOptions?>(1)?.Clone();
+                return Task.FromResult(CreateChatResponse(messages));
+            });
+    }
 
     [Test]
     public async Task Me_WithoutTelegramAuthentication_ReturnsUnauthorizedAsync()
@@ -55,6 +85,11 @@ public sealed class GameApiTests(ApiFactory factory)
             .GetCollection<BsonDocument>("players")
             .Find(new BsonDocument("TelegramUserId", telegramUserId))
             .SingleAsync();
+        await Assert.That(player["_id"].BsonType).IsEqualTo(BsonType.String);
+        await Assert.That(player["TelegramUserId"].BsonType).IsEqualTo(BsonType.Int64);
+        await Assert.That(player["World"].AsString).IsEqualTo("stage");
+        await Assert.That(player["Skills"].AsBsonDocument.Names)
+            .IsEquivalentTo(["brave", "humor", "topic"]);
         await Assert.That(player["BirthGroup"].AsString).IsEqualTo("14-17");
         await Assert.That(player.Names.Any(name => name.Contains("year", StringComparison.OrdinalIgnoreCase)))
             .IsFalse();
@@ -91,6 +126,291 @@ public sealed class GameApiTests(ApiFactory factory)
         }
 
         await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status409Conflict);
+    }
+
+    [Test]
+    public async Task PublishPost_WhenLlmReturnsUnknownArgument_DoesNotConsumePostAsync()
+    {
+        const long telegramUserId = 1007;
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        factory.ChatClient
+            .GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(CreateCommentResponse(includeUnknownArgument: true)));
+
+        PostsApiException? exception = null;
+        try
+        {
+            await api.Posts.PublishPostAsync(
+                new CreatePostRequest { Text = "обычный безопасный пост" },
+                CancellationToken.None);
+        }
+        catch (PostsApiException caught)
+        {
+            exception = caught;
+        }
+
+        if (exception is null)
+        {
+            throw new InvalidOperationException("The typed client did not surface the LLM error.");
+        }
+
+        BsonDocument player = await Database
+            .GetCollection<BsonDocument>("players")
+            .Find(new BsonDocument("TelegramUserId", telegramUserId))
+            .SingleAsync();
+        long postCount = await Database
+            .GetCollection<BsonDocument>("posts")
+            .CountDocumentsAsync(new BsonDocument("PlayerId", player["_id"]));
+
+        await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status503ServiceUnavailable);
+        await Assert.That(player["PostsUsed"].AsInt32).IsEqualTo(0);
+        await Assert.That(postCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task PublishPost_UsesExplicitConfiguredGenerationOptionsAsync()
+    {
+        using TestApiClient api = factory.CreateApiClient(1008);
+        await OnboardAsync(api);
+
+        await api.Posts.PublishPostAsync(
+            new CreatePostRequest { Text = "короткий пост про сцену" },
+            CancellationToken.None);
+
+        ChatOptions? options = _lastChatOptions;
+        if (options is null)
+        {
+            throw new InvalidOperationException("The chat client did not receive options.");
+        }
+
+        string[] toolNames = options.Tools?
+            .OfType<AIFunctionDeclaration>()
+            .Select(tool => tool.Name)
+            .Order()
+            .ToArray() ?? [];
+        await Assert.That(options.ModelId).IsEqualTo("gigachat3.5-432b-a28b");
+        await Assert.That(options.Temperature).IsEqualTo(0.4f);
+        await Assert.That(options.MaxOutputTokens).IsEqualTo(700);
+        await Assert.That(options.Reasoning).IsNull();
+        await Assert.That(toolNames).IsEquivalentTo(
+            new[] { "comment", "dm", "react", "repost", "start_event" });
+    }
+
+    [Test]
+    public async Task PublishPost_WhenLlmTimesOut_DoesNotConsumePostAsync()
+    {
+        const long telegramUserId = 1009;
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        factory.ChatClient
+            .GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<ChatResponse>(new TimeoutException()));
+
+        PostsApiException? exception = null;
+        try
+        {
+            await api.Posts.PublishPostAsync(
+                new CreatePostRequest { Text = "безопасный пост перед таймаутом" },
+                CancellationToken.None);
+        }
+        catch (PostsApiException caught)
+        {
+            exception = caught;
+        }
+
+        if (exception is null)
+        {
+            throw new InvalidOperationException("The typed client did not surface the timeout.");
+        }
+
+        BsonDocument player = await Database
+            .GetCollection<BsonDocument>("players")
+            .Find(new BsonDocument("TelegramUserId", telegramUserId))
+            .SingleAsync();
+
+        await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status503ServiceUnavailable);
+        await Assert.That(player["PostsUsed"].AsInt32).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task PublishPost_WhenCrisisSignalDetected_AppliesCrisisSafetyStateAsync()
+    {
+        const long telegramUserId = 1010;
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+
+        PostsApiException? exception = null;
+        try
+        {
+            await api.Posts.PublishPostAsync(
+                new CreatePostRequest { Text = "я не хочу жить" },
+                CancellationToken.None);
+        }
+        catch (PostsApiException caught)
+        {
+            exception = caught;
+        }
+
+        if (exception is null)
+        {
+            throw new InvalidOperationException("The typed client did not surface the crisis response.");
+        }
+
+        BsonDocument player = await Database
+            .GetCollection<BsonDocument>("players")
+            .Find(new BsonDocument("TelegramUserId", telegramUserId))
+            .SingleAsync();
+
+        await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status422UnprocessableEntity);
+        await Assert.That(player["PostsUsed"].AsInt32).IsEqualTo(0);
+        await Assert.That(player["PausedAtUtc"].AsBsonDocument["DateTime"].ToUniversalTime())
+            .IsEqualTo(new DateTime(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc));
+        await Assert.That(player["HateDisabledUntilUtc"].AsBsonDocument["DateTime"].ToUniversalTime())
+            .IsEqualTo(new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
+        await factory.ChatClient.DidNotReceive().GetResponseAsync(
+            Arg.Any<IEnumerable<ChatMessage>>(),
+            Arg.Any<ChatOptions?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task SaveOwnWorld_WithoutLockedSafetyRule_RestoresRuleAsync()
+    {
+        using TestApiClient api = factory.CreateApiClient(1011);
+        await OnboardAsync(api);
+        var request = new UpdateWorldRulesRequest
+        {
+            Title = "Мой мир",
+            Presets = [],
+            Description = "Безопасное описание мира",
+            Rules = [new WorldRuleResponse("Звёзды любят короткие посты")],
+        };
+
+        await api.Worlds.SaveOwnWorldAsync(request, CancellationToken.None);
+        WorldRulesResponse rules = await api.Worlds.GetWorldRulesAsync(
+            WorldId.Own,
+            CancellationToken.None);
+
+        WorldRuleResponse safetyRule = rules.Rules.Single(rule => rule.Locked);
+        await Assert.That(safetyRule.Text).IsEqualTo("Без тем 18+ и травли по внешности");
+    }
+
+    [Test]
+    public async Task PublishPost_UsesPlayerOwnedWorldSettingsSystemLayerAsync()
+    {
+        // Arrange
+        const long telegramUserId = 1012;
+        const string currentPost = "Сегодня разбираю сценическую уверенность";
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api, WorldId.Own);
+        await api.Worlds.SaveOwnWorldAsync(
+            new UpdateWorldRulesRequest
+            {
+                Title = "Театральная мастерская",
+                Presets = [],
+                Description = "Камерный мир молодых режиссёров и актёров.",
+                Rules = [new WorldRuleResponse("Звёзды спорят о постановках, но поддерживают дебютантов")],
+            },
+            CancellationToken.None);
+        await api.Player.UpdateSettingsAsync(
+            new UpdateSettingsRequest
+            {
+                Drama = Drama.Hot,
+                Voice = "Иронично, тепло и короткими фразами",
+            },
+            CancellationToken.None);
+
+        // Act
+        await api.Posts.PublishPostAsync(
+            new CreatePostRequest { Text = currentPost },
+            CancellationToken.None);
+
+        // Assert
+        IReadOnlyList<ChatMessage> messages = GetCapturedChatMessages();
+        ChatMessage playerOwnedLayer = messages.Single(message =>
+            message.Role == ChatRole.System &&
+            message.Text.Contains("ПОЛЬЗОВАТЕЛЬСКИЙ СИСТЕМНЫЙ СЛОЙ", StringComparison.Ordinal));
+        ChatMessage userMessage = messages.Single(message => message.Role == ChatRole.User);
+        await Assert.That(messages.Count(message => message.Role == ChatRole.System)).IsEqualTo(2);
+        await Assert.That(playerOwnedLayer.Text).Contains("Мир: Театральная мастерская (own)");
+        await Assert.That(playerOwnedLayer.Text)
+            .Contains("Описание мира: Камерный мир молодых режиссёров и актёров.");
+        await Assert.That(playerOwnedLayer.Text).Contains("Градус драмы: остро");
+        await Assert.That(playerOwnedLayer.Text)
+            .Contains("Голос канала: Иронично, тепло и короткими фразами");
+        await Assert.That(playerOwnedLayer.Text)
+            .Contains("Звёзды спорят о постановках, но поддерживают дебютантов");
+        await Assert.That(userMessage.Text).Contains(currentPost);
+        await Assert.That(messages
+                .Where(message => message.Role == ChatRole.System)
+                .Any(message => message.Text.Contains(currentPost, StringComparison.Ordinal)))
+            .IsFalse();
+    }
+
+    [Test]
+    public async Task SendDirectMessage_UsesStarMemorySystemLayerWithCurrentUserMessageAsync()
+    {
+        // Arrange
+        const long telegramUserId = 1013;
+        const string currentMessage = "Напомни, какой формат мне лучше продолжать";
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        await api.Social.SendDirectMessageAsync(
+            "sonya",
+            new DirectMessageRequest { Text = "Мне нравятся короткие посты" },
+            CancellationToken.None);
+
+        // Act
+        await api.Social.SendDirectMessageAsync(
+            "sonya",
+            new DirectMessageRequest { Text = currentMessage },
+            CancellationToken.None);
+
+        // Assert
+        IReadOnlyList<ChatMessage> messages = GetCapturedChatMessages();
+        ChatMessage playerOwnedLayer = messages.Single(message =>
+            message.Role == ChatRole.System &&
+            message.Text.Contains("ПОЛЬЗОВАТЕЛЬСКИЙ СИСТЕМНЫЙ СЛОЙ", StringComparison.Ordinal));
+        ChatMessage userMessage = messages.Single(message => message.Role == ChatRole.User);
+        await Assert.That(messages.Count(message => message.Role == ChatRole.System)).IsEqualTo(2);
+        await Assert.That(playerOwnedLayer.Text).Contains("Текущая звезда: sonya");
+        await Assert.That(playerOwnedLayer.Text)
+            .Contains("Память звезды об игроке: любит короткие посты");
+        await Assert.That(userMessage.Text).Contains(currentMessage);
+        await Assert.That(messages
+                .Where(message => message.Role == ChatRole.System)
+                .Any(message => message.Text.Contains(currentMessage, StringComparison.Ordinal)))
+            .IsFalse();
+    }
+
+    [Test]
+    public async Task GetReadyWorldRules_ExposesWorldDataPlusExactLockedSafetyRuleAsync()
+    {
+        // Arrange
+        using TestApiClient api = factory.CreateApiClient(1014);
+        await OnboardAsync(api);
+
+        // Act
+        WorldRulesResponse rules = await api.Worlds.GetWorldRulesAsync(
+            WorldId.Stage,
+            CancellationToken.None);
+
+        // Assert
+        string visibleRules = string.Join("\n", rules.Rules.Select(rule => rule.Text));
+        await Assert.That(visibleRules).Contains("Звёзды:");
+        await Assert.That(visibleRules).Contains("Фанаты:");
+        await Assert.That(visibleRules).Contains("Тон:");
+        await Assert.That(visibleRules).Contains("События:");
+        WorldRuleResponse safetyRule = rules.Rules.Single(rule =>
+            rule.Text == "Без тем 18+ и травли по внешности");
+        await Assert.That(safetyRule.Locked).IsTrue();
     }
 
     [Test]
@@ -246,13 +566,62 @@ public sealed class GameApiTests(ApiFactory factory)
         return buffer.ToArray();
     }
 
-    private static Task<PlayerResponse> OnboardAsync(TestApiClient api)
+    private static ChatResponse CreateChatResponse(IEnumerable<ChatMessage> messages)
+    {
+        bool directMessage = messages.Any(message => message.Text.Contains(
+            "tool dm",
+            StringComparison.Ordinal));
+        return directMessage
+            ? CreateDirectMessageResponse()
+            : CreateCommentResponse(includeUnknownArgument: false);
+    }
+
+    private static ChatResponse CreateCommentResponse(bool includeUnknownArgument)
+    {
+        using JsonDocument reasons = JsonDocument.Parse(
+            """[{"icon":"🔥","label":"в голосе канала"}]""");
+        var arguments = new Dictionary<string, object?>
+        {
+            ["author"] = "Соня",
+            ["star_id"] = "sonya",
+            ["text"] = "Есть голос. Продолжай в том же духе.",
+            ["hook"] = "Соня вернётся к этой теме через пару постов",
+            ["brave"] = 0.7,
+            ["humor"] = 0.6,
+            ["topic"] = 0.8,
+            ["why"] = reasons.RootElement.Clone(),
+            ["on_topic"] = true,
+        };
+        if (includeUnknownArgument)
+        {
+            arguments["followers"] = 1_000_000;
+        }
+
+        var call = new FunctionCallContent("test-call", "comment", arguments);
+        return new ChatResponse(new ChatMessage(ChatRole.Assistant, [call]));
+    }
+
+    private static ChatResponse CreateDirectMessageResponse()
+    {
+        var arguments = new Dictionary<string, object?>
+        {
+            ["star_id"] = "sonya",
+            ["text"] = "Вижу, о чём ты. Вернёмся к этому после следующего поста.",
+            ["memory_fact"] = "любит короткие посты",
+        };
+        var call = new FunctionCallContent("test-dm-call", "dm", arguments);
+        return new ChatResponse(new ChatMessage(ChatRole.Assistant, [call]));
+    }
+
+    private static Task<PlayerResponse> OnboardAsync(
+        TestApiClient api,
+        WorldId world = WorldId.Stage)
     {
         return api.Player.CompleteOnboardingAsync(
             new OnboardingRequest
             {
                 BirthGroup = BirthGroup.Teen,
-                World = WorldId.Stage,
+                World = world,
                 Role = "creator",
                 Avatar = "pick0",
                 Name = "Player",
@@ -261,6 +630,12 @@ public sealed class GameApiTests(ApiFactory factory)
                 Star = "mira",
             },
             CancellationToken.None);
+    }
+
+    private IReadOnlyList<ChatMessage> GetCapturedChatMessages()
+    {
+        return _lastChatMessages ??
+            throw new InvalidOperationException("The chat client did not receive messages.");
     }
 
     private async Task AssertCollectionHasNoPlayerAsync(string collectionName, BsonDocument filter)

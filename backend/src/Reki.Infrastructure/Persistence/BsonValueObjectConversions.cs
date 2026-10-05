@@ -1,0 +1,23 @@
+using Reki.Domain.Events;
+using Reki.Domain.Player;
+using Reki.Domain.Posts;
+using Reki.Domain.Social;
+using Reki.Domain.Telemetry;
+using Reki.Domain.Worlds;
+using Vogen;
+
+namespace Reki.Infrastructure.Persistence;
+
+[BsonSerializer<ChallengeId>]
+[BsonSerializer<CommentId>]
+[BsonSerializer<EventId>]
+[BsonSerializer<PlayerId>]
+[BsonSerializer<PostId>]
+[BsonSerializer<SessionId>]
+[BsonSerializer<SkillId>]
+[BsonSerializer<StarId>]
+[BsonSerializer<StarConversationId>]
+[BsonSerializer<TelegramUserId>]
+[BsonSerializer<WorldId>]
+[BsonSerializer<WorldRulesId>]
+internal partial class BsonValueObjectConversions;

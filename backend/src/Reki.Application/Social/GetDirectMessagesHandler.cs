@@ -21,6 +21,7 @@ public sealed class GetDirectMessagesHandler(
             player.Id,
             request.StarId,
             cancellationToken) ?? new StarConversation(
+                StarConversationId.New(),
                 player.Id,
                 request.StarId,
                 [],
