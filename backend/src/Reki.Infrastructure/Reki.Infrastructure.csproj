@@ -16,5 +16,6 @@
     <PackageReference Include="Serilog.Sinks.MongoDB" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+    <PackageReference Include="Vogen" />
   </ItemGroup>
 </Project>

@@ -137,13 +137,22 @@ public sealed partial class ApiMapper
     [MapperIgnoreSource(nameof(DailyGameEvent.Answer))]
     public partial GameEventResponse MapEvent(DailyGameEvent source);
 
+    [MapperIgnoreSource(nameof(WorldRules.Id))]
     [MapperIgnoreSource(nameof(WorldRules.PlayerId))]
     [MapperIgnoreSource(nameof(WorldRules.WorldId))]
     public partial WorldRulesResponse MapWorldRules(WorldRules source);
 
-    [MapValue(nameof(WorldRules.PlayerId), "")]
-    [MapValue(nameof(WorldRules.WorldId), "own")]
-    public partial WorldRules MapWorldRulesRequest(UpdateWorldRulesRequest source);
+    public WorldRules MapWorldRulesRequest(UpdateWorldRulesRequest source)
+    {
+        return new WorldRules(
+            WorldRulesId.From(Guid.NewGuid().ToString("N")),
+            string.Empty,
+            "own",
+            source.Title,
+            source.Presets,
+            source.Description,
+            source.Rules.Select(MapWorldRule).ToArray());
+    }
 
     public IReadOnlyDictionary<string, string> SanitizeProperties(
         IReadOnlyDictionary<string, JsonElement>? properties)

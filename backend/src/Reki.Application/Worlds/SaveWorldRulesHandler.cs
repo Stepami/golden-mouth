@@ -21,8 +21,13 @@ public sealed class SaveWorldRulesHandler(
             player,
             [request.Rules.Description, .. request.Rules.Rules.Select(rule => rule.Text)],
             cancellationToken);
+        WorldRules? existingRules = await store.GetWorldRulesAsync(
+            player.Id,
+            "own",
+            cancellationToken);
         WorldRules safeRules = request.Rules with
         {
+            Id = existingRules?.Id ?? request.Rules.Id,
             PlayerId = player.Id,
             WorldId = "own",
             Rules =

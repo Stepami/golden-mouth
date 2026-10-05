@@ -1,6 +1,7 @@
 namespace Reki.Domain.Worlds;
 
 public sealed record WorldRules(
+    WorldRulesId Id,
     string PlayerId,
     string WorldId,
     string Title,

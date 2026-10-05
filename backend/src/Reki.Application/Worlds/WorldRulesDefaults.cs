@@ -58,6 +58,7 @@ public static class WorldRulesDefaults
         };
 
         return new WorldRules(
+            WorldRulesId.From(Guid.NewGuid().ToString("N")),
             playerId,
             worldId,
             title,
