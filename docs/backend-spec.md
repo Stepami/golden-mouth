@@ -1,6 +1,6 @@
 # Спека бэкенда
 
-03.10.2026. Что нужно бэкенду, чтобы игра работала как в [game-flow.md](game-flow.md) и на экранах [screens/](screens/README.md). Числа: [config/balance.json](config/balance.json). Контракт с фронтом: `frontend/src/api/types.ts` и комментарий в #10. Задачи: #8 (навыки, достижения, заруба), #9 (AI звёзд), #10 (данные и API), #26 (CI и секреты).
+03.10.2026, обновлено 05.10.2026. Что нужно бэкенду, чтобы игра работала как в [game-flow.md](game-flow.md) и на экранах [screens/](screens/README.md). Числа: [config/balance.json](config/balance.json). Контракт с фронтом: `frontend/src/api/types.ts` и комментарий в #10. Задачи: #8 (навыки, достижения, заруба), #9 (AI звёзд), #10 (данные и API), #26 (CI и секреты).
 
 ## 1. Главный принцип: модель пишет текст, код считает игру
 
@@ -12,6 +12,18 @@
 | Собирает правила своего мира из описания | Какие правила можно править (правило 14+ нельзя) |
 
 Звезда действует только инструментами: `react`, `comment`, `repost`, `dm`, `start_event(type)`. Модель не может изменить экономику: любые числа в её ответе игнорируются.
+
+### LLM-клиент
+
+- В Application используется абстракция `Microsoft.Extensions.AI.IChatClient`; конкретный провайдер подключается только в Infrastructure через `Microsoft.Extensions.AI.OpenAI`.
+- Провайдер предоставляет OpenAI-compatible API. Для MVP используем Chat Completions; переход на Responses API требует отдельного решения и подтверждённой поддержки провайдером.
+- Решено 05.10.2026: так как весь игровой контент русскоязычный, основная модель MVP — `gigachat3.5-432b-a28b` без reasoning. Бюджетный fallback — `deepseek-v4-flash` в non-thinking режиме; в MVP переключаем его вручную через конфигурацию, без каскадного повторного вызова. Reasoning-вариант GigaChat оставляем только кандидатом для редких сложных задач. Исследование и тарифный снимок: [llm-model-research.md](llm-model-research.md).
+- Base URL, Bearer token и имя модели приходят только из typed options: `Llm__BaseUrl`, `Llm__ApiKey`, `Llm__Model`. Реальных значений в репозитории, Compose-файлах, issue и логах нет.
+- API вызывается только бэкендом. Фронт не получает URL провайдера, токен или прямой доступ к модели.
+- Обычный игровой ход выполняется без reasoning с явными `Temperature` и `MaxOutputTokens`. Для ограниченной генерации и вызова tools достаточно `IChatClient`; многошаговый agent loop в MVP не нужен.
+- Ответ модели считается недоверенным вводом: аргументы tools и структурированный JSON проверяются по JSON Schema, все поля строгого контракта обязательны, `additionalProperties: false`; неизвестные поля и любые числа экономики игнорируются.
+- Timeout, отмена запроса и повтор временной ошибки выполняются вокруг `IChatClient`; после начала потокового ответа автоматического повтора нет. Ошибка провайдера не тратит пост и возвращает безопасный результат без текста исключения.
+- В telemetry и логи не попадают Bearer token, полный URL провайдера, HTTP body, тексты игрока и ответы модели. Разрешены имя модели, latency, usage, finish reason и безопасный код ошибки.
 
 ## 2. Ход: что происходит на `POST /posts`
 
@@ -91,14 +103,14 @@
 
 Продуктовая аналитика (вопросы, события, воронки, хранение): [analytics.md](analytics.md). Ниже журнал ошибок.
 
-Ошибки фронт шлёт пачкой на `POST /logs` (`frontend/src/app/log.ts`), события поведения отдельно на `POST /events` (`frontend/src/app/analytics.ts`). В записях **нет текстов игрока, ников и initData**: только код экрана, id, числа, длины (`len:123`). Ошибки: `js_error`, `promise_rejection`, `render_error` (экран «Что-то пошло не так»), `api_error` (5xx как error, 4xx как warn), `sse_error`; одна и та же ошибка не чаще раза в минуту. Бэкенд хранит логи 30 дней и удаляет их вместе с аккаунтом.
+Ошибки фронт шлёт пачкой на `POST /logs` (`frontend/src/app/log.ts`), события поведения отдельно на `POST /events` (`frontend/src/app/analytics.ts`). Оба метода проходят обычную TMA-аутентификацию и при закрытии отправляются через `fetch` с `keepalive: true`; идентификатор игрока бэкенд определяет по подписанному Telegram `user`, а не принимает от клиента. Каждая принятая ошибка превращается в структурированное событие Serilog и попадает через `MongoDBBson` в общую коллекцию `logs`: `Level`, `UtcTimeStamp`, `RenderedMessage`, `TraceId` и `SpanId` остаются на верхнем уровне, а поля из message template и enrichers (`Event`, `Player`, `Screen`, `Platform`, `Version`, `Status`, `Path`) лежат во встроенном BSON-объекте `Properties`. Параллельную плоскую схему для клиентских логов не создаём. В записях **нет текстов игрока, ников, Telegram ID и initData**: только код экрана, обезличенный id, числа, длины (`len:123`). Ошибки: `js_error`, `promise_rejection`, `render_error` (экран «Что-то пошло не так»), `api_error` (5xx как error, 4xx как warn), `sse_error`; одна и та же ошибка не чаще раза в минуту. Бэкенд хранит логи 30 дней и удаляет их вместе с аккаунтом.
 
 События фронта (`POST /events`): `session_start`, `screen_view`, `screen_leave`, `tap`, `app_hidden`, `app_visible`, `onboarding_step` (age / world / channel / done), `post_publish` (len, own_words), `post_result` (delta, viral, flop), `limit_reached`, `plus_interest`, `plus_bonus_only`, `invite_sent`, `share` (chat / story), `event_answered`, `challenge_post`, `report`, `crisis_shown`. Серверные события, полный список с полями и метрики теста: [analytics.md](analytics.md) («Что пишет бэкенд сам»), формат записи для дашбордов: [dashboards.md](dashboards.md).
 Метрики теста: D1 ≥ 40%, D7 ≥ 15%, K (честный: приглашённый дожил до D1), доля упёршихся в лимит и что они выбрали, на каком посте впервые пишут своими словами, клик «Хочу Реки+».
 
 ## 11. API для фронта
 
-Авторизация: `Authorization: tma <initData raw>`, бэкенд проверяет подпись. Типы: `frontend/src/api/types.ts`. Все методы уже вызываются из `frontend/src/api/client.ts`; без `VITE_API_URL` фронт работает на `mock.ts`.
+Авторизация: `Authorization: TMiniApp <initData raw>`. Для серверной проверки подписи TMA используем NuGet-пакет `TgMiniAppAuth` версии `0.0.6` как опубликован, без форка, подмены handler или валидатора; версию закрепляем через Central Package Management. `AddTgMiniAppAuth` задаёт `TMiniApp` как схему аутентификации по умолчанию, а защищённая группа API один раз требует зарегистрированную пакетом policy `TMiniApp`, поэтому отдельные методы схему не повторяют. Игрок определяется только по Telegram `user.id` из `initData`, прошедшего встроенную проверку подписи и `auth_date`: нет валидного Telegram `user` — запрос получает 401, игрок не создаётся и не возвращается. Один Telegram `user.id` соответствует одному игроку. Клиентский `player` не является доказательством личности. `initData` не логируем и не сохраняем. Типы: `frontend/src/api/types.ts`; mock-режим фронта остаётся в `frontend/src/api/mock.ts`.
 
 | Метод | Ответ | Экран |
 |---|---|---|
@@ -122,9 +134,20 @@
 | `POST /plus-interest` | `{ bonus: 5 }` | 04-2 |
 | `DELETE /me` | `{ ok }` | 05-8 |
 | `GET /cards/story/:postId.png` | картинка 9:16 | 02-7 |
-| `POST /events` `{ player, session, platform, experiments, events }` | 204 | все (продуктовая аналитика, [analytics.md](analytics.md)) |
-| `POST /logs` `{ session, entries: LogEntry[] }` | 204 | все (пачками раз в 15 с, при ошибке сразу, при закрытии через sendBeacon) |
+| `POST /events` `{ session, platform, experiments, events }` | 204 | все (TMA auth; продуктовая аналитика, [analytics.md](analytics.md)) |
+| `POST /logs` `{ session, entries: LogEntry[] }` | 204 | все (TMA auth; пачками раз в 15 с, при ошибке сразу, при закрытии через `fetch` с `keepalive: true`) |
+
+### Генерация карточек для сторис
+
+При реализации динамических PNG рендерер принимает целевой `Stream` и `CancellationToken`, а endpoint пишет результат через `HttpResponse.Body` / `BodyWriter`: готовая картинка не возвращается из Application как `byte[]`, не копируется через `MemoryStream.ToArray()` и не хранится в MongoDB. Если выбранный PNG-кодировщик требует seekable stream или выполняет только синхронную запись, используем ограниченный pooled/recyclable stream и затем `CopyToAsync` в response; синхронный I/O Kestrel глобально не включаем.
+
+- `ArrayPool<byte>` / `MemoryPool<byte>` используем только для временных managed-буферов, которые реально нужны кодировщику. Буфер возвращается в `finally` только после завершения всех async-операций и не сохраняется в кеше после возврата в pool.
+- Native-ресурсы рендера освобождаются детерминированно. Шрифты и SVG-иконки входят в backend image; на системные шрифты и emoji Linux не полагаемся.
+- Число одновременных рендеров ограничено; ожидание уважает request cancellation. Повторная выдача использует `ETag` / `Cache-Control` и версию шаблона, чтобы не рендерить неизменившуюся карточку заново.
+- Перед выпуском проверяем под параллельной нагрузкой время p95, managed allocations, process RSS/native memory и освобождение ресурсов после отменённых запросов. Нагрузка не должна приводить к неограниченному росту очереди или памяти.
 
 ## 10. Окружение
 
-Ключи LLM, токен бота, строка Mongo: только переменные окружения сервера и GitHub Secrets (#26). Фронт получает только `VITE_API_URL`.
+Настройки LLM (`Llm__BaseUrl`, `Llm__ApiKey`, `Llm__Model`), токен бота и строка Mongo приходят только из переменных окружения сервера или защищённого secret store (#26). Отсутствующая обязательная настройка останавливает startup без вывода её значения. Фронт получает только same-origin runtime config для `/api/v1` и не знает адресов внутренних сервисов.
+
+`docs/config/balance.json` включается в backend Docker image как `/app/config/balance.json` с правами только на чтение (`COPY --chmod=0444`). Бэкенд читает и валидирует его при startup; отсутствующий или невалидный файл останавливает запуск. В production конфиг не перезаписывается и не подменяется writable volume. Изменение баланса не требует правки кода, но требует пересборки и деплоя backend image.

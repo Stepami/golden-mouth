@@ -3,13 +3,11 @@
 import * as mock from './mock'
 import { error, warn } from '../app/log'
 import { apiBaseUrl as BASE } from '../app/runtimeConfig'
+import { telegramAuthHeaders } from './auth'
 import type { Challenge, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, PostResult, WorldRules } from './types'
 
-let initDataRaw = ''
-export const setInitData = (raw: string) => { initDataRaw = raw }
-
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(`${BASE}${path}`, { ...init, headers: { 'Content-Type': 'application/json', Authorization: `tma ${initDataRaw}`, ...init?.headers } })
+  const r = await fetch(`${BASE}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...telegramAuthHeaders(), ...init?.headers } })
   if (!r.ok) { const e = new Error(`${init?.method ?? 'GET'} ${path.replace(/\/[\w-]{16,}/g, '/:id')} ${r.status}`); if (r.status >= 500) error('api_error', e, { status: r.status }); else warn('api_error', { status: r.status, msg: e.message }); throw e }
   return r.json() as Promise<T>
 }
@@ -23,7 +21,7 @@ export const api = {
   publish(text: string, onEvent: (e: LiveEvent) => void): () => void {
     if (BASE) {
       const ctrl = new AbortController()
-      fetch(`${BASE}/posts`, { method: 'POST', signal: ctrl.signal, headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', Authorization: `tma ${initDataRaw}` }, body: JSON.stringify({ text }) })
+      fetch(`${BASE}/posts`, { method: 'POST', signal: ctrl.signal, headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', ...telegramAuthHeaders() }, body: JSON.stringify({ text }) })
         .then(async r => {
           const reader = r.body!.getReader(); const dec = new TextDecoder(); let buf = ''
           for (;;) { const { done, value } = await reader.read(); if (done) break; buf += dec.decode(value, { stream: true })

@@ -1,9 +1,10 @@
 // Журнал ошибок фронта (POST /logs). Аналитика поведения отдельно: app/analytics.ts. Правила:
 // - никаких текстов игрока, имён, ников и initData: только коды экранов, id, числа, длины;
-// - события копятся и уходят пачкой (POST /logs, sendBeacon при закрытии), в mock mode пишутся в консоль в dev;
+// - события копятся и уходят пачкой (POST /logs, fetch keepalive при закрытии), в mock mode пишутся в консоль в dev;
 // - ошибки ловятся глобально и в ErrorBoundary; повтор одной ошибки не чаще раза в минуту.
 import { event } from './analytics'
 import { apiBaseUrl as BASE } from './runtimeConfig'
+import { telegramAuthHeaders } from '../api/auth'
 const DEV = import.meta.env.DEV
 
 export type Level = 'info' | 'warn' | 'error'
@@ -33,11 +34,10 @@ function push(level: Level, event: string, props?: LogEntry['props']) {
   if (queue.length >= 20 || level === 'error') flush()
 }
 
-export function flush(beacon = false) {
+export function flush() {
   if (!BASE || !queue.length) return
   const body = JSON.stringify({ session, entries: queue.splice(0) })
-  if (beacon && navigator.sendBeacon) { navigator.sendBeacon(`${BASE}/logs`, new Blob([body], { type: 'application/json' })); return }
-  fetch(`${BASE}/logs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {})
+  fetch(`${BASE}/logs`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...telegramAuthHeaders() }, body, keepalive: true }).catch(() => {})
 }
 
 /** Событие продуктовой аналитики: уходит в app/analytics.ts (POST /events), не в журнал ошибок. */
@@ -55,5 +55,5 @@ export function installGlobalHandlers() {
   window.addEventListener('error', e => error('js_error', e.error ?? e.message))
   window.addEventListener('unhandledrejection', e => error('promise_rejection', e.reason))
   setInterval(() => flush(), 15_000)
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(true) })
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush() })
 }
