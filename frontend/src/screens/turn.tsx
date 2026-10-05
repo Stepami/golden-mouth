@@ -17,7 +17,7 @@ const LINK = 'https://t.me/reki_game?start=liza7'
 // 02-1: пост, желания дня, «Подскажи» дописывает черновик
 function Compose() {
   const nav = useNav(); const p = usePlayer()
-  const [text, setText] = useState(firstPost.text.replace(' 🫠', ''))
+  const [text, setText] = useState(() => typeof nav.params.text === 'string' ? nav.params.text : firstPost.text.replace(' 🫠', ''))
   const done = p.wants.filter(w => w.done).length
   return (
     <div className="screen no-tab">
@@ -58,7 +58,7 @@ function Live() {
     if (e.type === 'comment') { setComments(c => [...c, e.comment]); setToast(true) }
     if (e.type === 'typing') setTyping(e.who)
     if (e.type === 'result') { track('post_result', { delta: e.result.delta, viral: e.result.viral, flop: e.result.flop }); patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: p.subs + e.result.delta }); nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: e.result, text }) }
-  }), []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, () => nav.replace('02-2b_publish_error', { text })), []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="screen">
       <ChannelHead />
@@ -75,6 +75,24 @@ function Live() {
         {typing && <div className="muted small row" style={{ gap: 8 }}><Avatar id="sonya" size={22} /> {typing} печатает…</div>}
       </div>
       <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }}>реакции ещё идут · итог через пару секунд</div>
+    </div>
+  )
+}
+
+function PublishError() {
+  const nav = useNav()
+  const text = typeof nav.params.text === 'string' ? nav.params.text : firstPost.text.replace(' 🫠', '')
+  return (
+    <div className="screen no-tab">
+      <ChannelHead />
+      <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">не опубликовано</div>{text}</div></div>
+      <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.65)' }}>
+        <div className="sheet" role="alert" aria-live="assertive">
+          <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Пост не вышел</div>
+          <div className="muted" style={{ marginBottom: 20 }}>Текст сохранён. «Повторить» вернёт в редактор — пост не отправится сам.</div>
+          <Button onClick={() => nav.replace('02-1_compose', { text })}>Повторить</Button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -186,6 +204,7 @@ function Share() {
 register({
   '02-1_compose': { component: Compose, title: 'Новый пост' },
   '02-2_live': { component: Live, title: 'Живая реакция' },
+  '02-2b_publish_error': { component: PublishError, title: 'Ошибка публикации' },
   '02-3_result': { component: Result, title: 'Итог поста' },
   '02-4_flop': { component: Flop, title: 'Провал' },
   '02-5_viral': { component: Viral, title: 'Залёт' },

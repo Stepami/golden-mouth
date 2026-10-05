@@ -1,8 +1,8 @@
 # Макеты пути игрока v2 по шагам сценария (product/mvp-journey.md), мир «Сцена», игрок Лиза.
 # Каждый шаг отдельным PNG в docs/screens/. Запуск: python3 build_journey.py
-import os, subprocess, time
+import os, shutil, subprocess, tempfile, time
 D = os.path.dirname(os.path.abspath(__file__))
-exec(open(os.path.join(D, 'build.py')).read().split('S={}')[0])  # CSS, page, ava из общих макетов
+exec(open(os.path.join(D, 'build.py'), encoding='utf-8').read().split('S={}')[0])  # CSS, page, ava из общих макетов
 OUT = os.path.join(os.path.dirname(os.path.dirname(D)), 'screens'); os.makedirs(OUT, exist_ok=True)
 AVD = 'file://' + os.path.join(os.path.dirname(D), 'avatars') + '/'
 # Аватарки персонажей (CC0, см. ../avatars/README.md). Буква из макета -> файл
@@ -296,17 +296,23 @@ S['06-3_crisis_adult'] = P(f'''<div class="top"><span style="font-size:22px">‹
 <div class="small muted" style="margin-top:10px;text-align:center">Вариант для 18+ по году рождения</div></div>
 {BTN("Продолжим","Давай потом")}''')
 
-exec(open(os.path.join(D, 'journey_v3.py')).read())  # правки v3 по UX-аудиту
-exec(open(os.path.join(D, 'journey_v4.py')).read())  # правки v4 по встрече 02.10.2026
-exec(open(os.path.join(D, 'journey_v5.py')).read())  # правки v5 по комментариям 03.10.2026
-exec(open(os.path.join(D, 'journey_v6.py')).read())  # правки v6 по аудиту геймдизайна 03.10.2026
-exec(open(os.path.join(D, 'journey_v7.py')).read())  # правки v7: итоговый аудит экранов 03.10.2026
+exec(open(os.path.join(D, 'journey_v3.py'), encoding='utf-8').read())  # правки v3 по UX-аудиту
+exec(open(os.path.join(D, 'journey_v4.py'), encoding='utf-8').read())  # правки v4 по встрече 02.10.2026
+exec(open(os.path.join(D, 'journey_v5.py'), encoding='utf-8').read())  # правки v5 по комментариям 03.10.2026
+exec(open(os.path.join(D, 'journey_v6.py'), encoding='utf-8').read())  # правки v6 по аудиту геймдизайна 03.10.2026
+exec(open(os.path.join(D, 'journey_v7.py'), encoding='utf-8').read())  # правки v7: итоговый аудит экранов 03.10.2026
+exec(open(os.path.join(D, 'journey_v8.py'), encoding='utf-8').read())  # правки v8: восстановление поста после ошибки 06.10.2026
 
-CH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+CH = os.environ.get('CHROME_BIN') or shutil.which('google-chrome') or shutil.which('chrome')
+if not CH and os.name == 'nt':
+    CH = os.path.join(os.environ.get('PROGRAMFILES', 'C:\\Program Files'), 'Google', 'Chrome', 'Application', 'chrome.exe')
+if not CH:
+    CH = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 def shot(name, html):
-    f = f'{D}/journey_{name}.html'; open(f, 'w').write(html); png = f'{OUT}/{name}.png'
+    f = f'{D}/journey_{name}.html'; open(f, 'w', encoding='utf-8').write(html); png = f'{OUT}/{name}.png'
     if os.path.exists(png): os.remove(png)
-    pr = subprocess.Popen([CH, '--headless=new', '--user-data-dir=/tmp/reki-chrome-j-' + name, '--no-first-run', '--disable-gpu', '--hide-scrollbars',
+    profile = os.path.join(tempfile.gettempdir(), 'reki-chrome-j-' + name)
+    pr = subprocess.Popen([CH, '--headless=new', f'--user-data-dir={profile}', '--no-first-run', '--disable-gpu', '--hide-scrollbars',
                            '--force-device-scale-factor=3', '--window-size=390,844', f'--screenshot={png}', f'file://{f}'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(120):
         time.sleep(0.5)
