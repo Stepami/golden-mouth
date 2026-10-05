@@ -34,7 +34,7 @@
     <PackageVersion Include="TUnit" Version="1.72.10" />
     <PackageVersion Include="TUnit.AspNetCore" Version="1.72.10" />
     <PackageVersion Include="Testcontainers.MongoDb" Version="4.15.0" />
-    <PackageVersion Include="TgMiniAppAuth" Version="0.0.6" />
+    <PackageVersion Include="TgMiniAppAuth" Version="0.0.8" />
     <PackageVersion Include="Vogen" Version="8.0.7" />
     <PackageVersion Include="WebMotions.Fake.Authentication.JwtBearer" Version="10.0.0" />
   </ItemGroup>

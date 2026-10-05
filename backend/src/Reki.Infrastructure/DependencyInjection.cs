@@ -69,10 +69,10 @@ public static class DependencyInjection
             LlmOptions options = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
             var clientOptions = new OpenAIClientOptions
             {
-                ClientLoggingOptions = new ClientLoggingOptions { EnableLogging = false },
+                ClientLoggingOptions = new ClientLoggingOptions { EnableLogging = true },
                 Endpoint = new Uri(options.BaseUrl),
                 NetworkTimeout = TimeSpan.FromSeconds(options.TimeoutSeconds),
-                RetryPolicy = new ClientRetryPolicy(1),
+                RetryPolicy = new ClientRetryPolicy(),
             };
             var client = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
             return client.GetChatClient(options.Model).AsIChatClient();

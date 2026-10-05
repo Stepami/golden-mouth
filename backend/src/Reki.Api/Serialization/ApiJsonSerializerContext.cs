@@ -9,6 +9,7 @@ using Reki.Contracts.Worlds;
 
 namespace Reki.Api.Serialization;
 
+[JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(HttpValidationProblemDetails))]
 [JsonSerializable(typeof(PlayerResponse))]
