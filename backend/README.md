@@ -8,12 +8,13 @@ MVP backend scaffold for the Reki Telegram Mini App. The solution separates API 
 cd ..
 docker compose up --detach mongo
 cd backend
+$env:TelegramMiniAppAuthorizationOptions__Token = '<telegram bot token>'
 dotnet tool restore
 dotnet restore Reki.slnx
 dotnet run --project src/Reki.Api/Reki.Api.csproj
 ```
 
-Development uses MongoDB for game data. Logs stay in the console and are not written to MongoDB outside Production. Protected game endpoints still use `Authorization: TMiniApp <initData raw>`, but Development intentionally uses the repository's explicit dev payload (`hash=development`) and maps it to the same Telegram claims. To test real Telegram-signed init data, run the API outside `Development` and provide the bot token; production never registers the dev handler. Try:
+Development uses MongoDB for game data. Logs stay in the console and are not written to MongoDB outside Production. Protected game endpoints accept Telegram Mini App init data in `Authorization: TMiniApp <initData raw>`; set the bot token outside the repository before starting the API. Try:
 
 - `GET /health/live`
 - `GET /health/ready`
@@ -30,12 +31,13 @@ The project-wide Compose file lives in the repository root and starts the fronte
 cd ..
 $env:OPENOBSERVE_EMAIL = '<chosen local administrator email>'
 $env:OPENOBSERVE_PASSWORD = '<chosen local administrator password>'
+$env:TG_PAT = '<test Telegram bot token>'
 docker compose up --build
 ```
 
 Enable Docker Model Runner once in Docker Desktop under **Settings → AI** before the first run. The local `compose.override.yml` declares `ai/qwen2.5:3B-Q4_K_M`; Compose downloads it, injects its OpenAI-compatible endpoint and model name into the backend, and uses a 120-second local inference timeout. No external LLM or `LLM_PAT` is required locally. The initial model download is about 1.8 GB. Docker Desktop's **Models** tab shows local model disk usage and can remove the model when it is no longer needed.
 
-The frontend is available at `http://localhost:8080`, the API at `http://localhost:8081`, and OpenObserve at `http://localhost:5080`. Local Compose mounts `frontend/public/runtime-config/config.development.js`, selects the real backend API, and emulates Telegram user `1001`; no `TG_PAT` is needed for this flow. Set `OPENOBSERVE_EMAIL` and `OPENOBSERVE_PASSWORD` outside the repository before starting Compose. OpenTelemetry sends logs, metrics, and traces to Collector over the internal Compose network. Product events use the `product` log stream; other application and framework logs use `backend`. Set `MONGO_CONNECTION_STRING` outside the repository to override the bundled MongoDB service.
+The API is available at `http://localhost:8081`, and OpenObserve at `http://localhost:5080`. Set `TG_PAT`, `OPENOBSERVE_EMAIL`, and `OPENOBSERVE_PASSWORD` outside the repository before starting Compose. OpenTelemetry sends logs, metrics, and traces to Collector over the internal Compose network. Product events use the `product` log stream; other application and framework logs use `backend`. Set `MONGO_CONNECTION_STRING` outside the repository to override the bundled MongoDB service.
 
 OTLP export is configured with the standard `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_PROTOCOL`, and `OTEL_SERVICE_NAME` variables. MongoDB driver activities and `Microsoft.Extensions.AI` GenAI spans/metrics are enabled; prompts, responses, tool arguments, Mongo query text, tokens, and connection strings are not exported.
 

@@ -3,7 +3,6 @@ export type ApiMode = 'mock' | 'backend'
 export interface RuntimeConfig {
   apiMode: ApiMode
   apiBaseUrl: string
-  developmentTelegramUserId?: number
 }
 
 declare global {
@@ -23,20 +22,17 @@ function readRuntimeConfig(): Readonly<RuntimeConfig> {
   const apiBaseUrl = typeof source?.apiBaseUrl === 'string'
     ? source.apiBaseUrl.replace(/\/$/, '')
     : undefined
-  const developmentTelegramUserId = source?.developmentTelegramUserId
 
   if (
     (apiMode !== 'mock' && apiMode !== 'backend') ||
     !apiBaseUrl?.startsWith('/') ||
-    apiBaseUrl.startsWith('//') ||
-    (developmentTelegramUserId !== undefined &&
-      (!Number.isSafeInteger(developmentTelegramUserId) || developmentTelegramUserId <= 0))
+    apiBaseUrl.startsWith('//')
   ) {
     console.error('[config] Invalid runtime configuration; mock mode is enabled')
     return fallbackConfig
   }
 
-  return Object.freeze({ apiMode, apiBaseUrl, developmentTelegramUserId })
+  return Object.freeze({ apiMode, apiBaseUrl })
 }
 
 export const runtimeConfig = readRuntimeConfig()

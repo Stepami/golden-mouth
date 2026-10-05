@@ -1,11 +1,6 @@
 services:
-  frontend:
-    volumes:
-      - ./frontend/public/runtime-config/config.development.js:/usr/share/nginx/html/runtime-config/config.js:ro
-
   backend:
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
       Llm__ApiKey: local-model-runner
       Llm__TimeoutSeconds: 120
     models:
