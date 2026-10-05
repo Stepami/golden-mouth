@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Common;
@@ -6,7 +5,6 @@ using Reki.Domain.Events;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Social;
-using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Persistence;
@@ -19,12 +17,10 @@ internal sealed class MongoGameStore : IGameStore
     private readonly IMongoCollection<DailyGameEvent> _events;
     private readonly IMongoCollection<GameChallenge> _challenges;
     private readonly IMongoCollection<WorldRules> _worlds;
-    private readonly IMongoCollection<AnalyticsBatch> _analytics;
     private readonly IMongoCollection<BsonDocument> _threads;
     private readonly IMongoCollection<BsonDocument> _invites;
-    private readonly IMongoCollection<BsonDocument> _logs;
 
-    public MongoGameStore(IMongoDatabase database, IOptions<MongoOptions> options)
+    public MongoGameStore(IMongoDatabase database)
     {
         _players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
         _posts = database.GetCollection<GamePost>(MongoCollections.Posts);
@@ -32,10 +28,8 @@ internal sealed class MongoGameStore : IGameStore
         _events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
         _challenges = database.GetCollection<GameChallenge>(MongoCollections.Challenges);
         _worlds = database.GetCollection<WorldRules>(MongoCollections.Worlds);
-        _analytics = database.GetCollection<AnalyticsBatch>(MongoCollections.Analytics);
         _threads = database.GetCollection<BsonDocument>(MongoCollections.Threads);
         _invites = database.GetCollection<BsonDocument>(MongoCollections.Invites);
-        _logs = database.GetCollection<BsonDocument>(options.Value.LogCollectionName);
     }
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
@@ -92,8 +86,6 @@ internal sealed class MongoGameStore : IGameStore
     {
         FilterDefinition<BsonDocument> threadFilter = Builders<BsonDocument>.Filter
             .Eq("PlayerId", player.Id.Value);
-        FilterDefinition<BsonDocument> logFilter = Builders<BsonDocument>.Filter
-            .Eq("Properties.Player", player.Id.Value);
         Task deletePlayer = _players.DeleteOneAsync(
             item => item.TelegramUserId == player.TelegramUserId,
             cancellationToken);
@@ -106,10 +98,8 @@ internal sealed class MongoGameStore : IGameStore
             .AnyEq(item => item.Participants, player.Id);
         Task deleteChallenges = _challenges.DeleteManyAsync(challengeFilter, cancellationToken);
         Task deleteWorlds = _worlds.DeleteManyAsync(item => item.PlayerId == player.Id, cancellationToken);
-        Task deleteAnalytics = _analytics.DeleteManyAsync(item => item.PlayerId == player.Id, cancellationToken);
         Task deleteThreads = _threads.DeleteManyAsync(threadFilter, cancellationToken);
         Task deleteInvites = _invites.DeleteManyAsync(threadFilter, cancellationToken);
-        Task deleteLogs = _logs.DeleteManyAsync(logFilter, cancellationToken);
 
         await Task.WhenAll(
             deletePlayer,
@@ -118,10 +108,8 @@ internal sealed class MongoGameStore : IGameStore
             deleteEvents,
             deleteChallenges,
             deleteWorlds,
-            deleteAnalytics,
             deleteThreads,
-            deleteInvites,
-            deleteLogs);
+            deleteInvites);
     }
 
     public async ValueTask AddPostAsync(GamePost post, CancellationToken cancellationToken)
@@ -321,13 +309,6 @@ internal sealed class MongoGameStore : IGameStore
             rules,
             options,
             cancellationToken);
-    }
-
-    public async ValueTask AppendAnalyticsAsync(
-        AnalyticsBatch batch,
-        CancellationToken cancellationToken)
-    {
-        await _analytics.InsertOneAsync(batch, cancellationToken: cancellationToken);
     }
 
     public async ValueTask AppendThreadAsync(

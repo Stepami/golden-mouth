@@ -35,7 +35,7 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<PlayerSafetyGuard>();
         services.AddSingleton<ChallengeLifecycle>();
         services.AddSingleton<PostProgressionCalculator>();
-        services.AddSingleton<ServerAnalyticsWriter>();
+        services.AddSingleton<ProductTelemetry>();
         services.AddSingleton<StarTurnGenerator>();
 
         return services;

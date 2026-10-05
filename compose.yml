@@ -27,13 +27,12 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       Mongo__ConnectionString: ${MONGO_CONNECTION_STRING:-mongodb://mongo:27017}
       Mongo__DatabaseName: ${MONGO_DATABASE_NAME:-reki}
-      Mongo__LogCollectionName: ${MONGO_LOG_COLLECTION_NAME:-logs}
       TelegramMiniAppAuthorizationOptions__Token: ${TG_PAT:-}
       Llm__ApiKey: ${LLM_PAT:?LLM_PAT is required}
       Llm__BaseUrl: ${LLM_BASE_URL:?LLM_BASE_URL is required}
       Llm__Model: ${LLM_MODEL:?LLM_MODEL is required}
-      OpenTelemetry__Enabled: "true"
-      OpenTelemetry__Endpoint: http://aspire-dashboard:18889
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OTEL_SERVICE_NAME: reki-backend
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8081}:8080"
@@ -68,36 +67,29 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  metabase:
-    image: metabase/metabase:v0.63.18.x
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.161.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
     environment:
-      MB_DB_FILE: /metabase-data/metabase.db
-      JAVA_TIMEZONE: Europe/Moscow
-    ports:
-      - "127.0.0.1:${METABASE_PORT:-3000}:3000"
+      OPENOBSERVE_EMAIL: ${OPENOBSERVE_EMAIL:?OPENOBSERVE_EMAIL is required}
+      OPENOBSERVE_PASSWORD: ${OPENOBSERVE_PASSWORD:?OPENOBSERVE_PASSWORD is required}
     volumes:
-      - metabase-data:/metabase-data
-    depends_on:
-      mongo:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent http://localhost:3000/api/health > /dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
+      - ./observability/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
     restart: unless-stopped
 
-  aspire-dashboard:
-    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.6.0
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:v1.0.4
     environment:
-      ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
-      AllowedHosts: localhost;127.0.0.1;aspire-dashboard
+      ZO_DATA_DIR: /data
+      ZO_ROOT_USER_EMAIL: ${OPENOBSERVE_EMAIL:?OPENOBSERVE_EMAIL is required}
+      ZO_ROOT_USER_PASSWORD: ${OPENOBSERVE_PASSWORD:?OPENOBSERVE_PASSWORD is required}
     ports:
-      - "127.0.0.1:${ASPIRE_DASHBOARD_PORT:-18888}:18888"
+      - "127.0.0.1:${OPENOBSERVE_PORT:-5080}:5080"
+    volumes:
+      - openobserve-data:/data
     restart: unless-stopped
 
 volumes:
   mongo-data:
   mongo-config:
-  metabase-data:
+  openobserve-data:

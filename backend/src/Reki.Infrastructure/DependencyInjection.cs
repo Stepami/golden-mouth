@@ -4,18 +4,17 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using OpenAI;
 using OpenTelemetry;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Reki.Application.Common;
 using Reki.Application.Common.AI;
 using Reki.Infrastructure.AI;
 using Reki.Infrastructure.Health;
-using Reki.Infrastructure.Observability;
 using Reki.Infrastructure.Persistence;
 using Reki.Infrastructure.Rendering;
 
@@ -32,7 +31,7 @@ public static class DependencyInjection
         bool initializeLlm = true)
     {
         services.AddSingleton(TimeProvider.System);
-        services.AddObservability(configuration);
+        services.AddObservability();
         services.AddBaseHealthChecks();
         services.AddMongoInfrastructure(initializeDatabase);
         if (initializeLlm)
@@ -69,13 +68,20 @@ public static class DependencyInjection
             LlmOptions options = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
             var clientOptions = new OpenAIClientOptions
             {
-                ClientLoggingOptions = new ClientLoggingOptions { EnableLogging = true },
+                ClientLoggingOptions = new ClientLoggingOptions { EnableLogging = false },
                 Endpoint = new Uri(options.BaseUrl),
                 NetworkTimeout = TimeSpan.FromSeconds(options.TimeoutSeconds),
                 RetryPolicy = new ClientRetryPolicy(),
             };
             var client = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
-            return client.GetChatClient(options.Model).AsIChatClient();
+            IChatClient inner = client.GetChatClient(options.Model).AsIChatClient();
+            ILoggerFactory loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+            return new ChatClientBuilder(inner)
+                .UseOpenTelemetry(
+                    loggerFactory,
+                    "Reki.GenAI",
+                    telemetry => telemetry.EnableSensitiveData = false)
+                .Build(serviceProvider);
         });
     }
 
@@ -134,39 +140,21 @@ public static class DependencyInjection
                 ["live"]);
     }
 
-    private static void AddObservability(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    private static void AddObservability(this IServiceCollection services)
     {
-        IConfigurationSection optionsSection = configuration.GetRequiredSection(
-            OpenTelemetryOptions.SectionName);
-
-        services
-            .AddOptions<OpenTelemetryOptions>()
-            .Bind(optionsSection)
-            .Validate(
-                options => options.TryGetEndpoint(out _),
-                "OpenTelemetry:Endpoint must be an absolute HTTP or HTTPS URI.")
-            .ValidateOnStart();
-
-        var options = optionsSection.Get<OpenTelemetryOptions>()
-            ?? throw new InvalidOperationException(
-                $"The {OpenTelemetryOptions.SectionName} configuration section is invalid.");
-
-        if (!options.Enabled || !options.TryGetEndpoint(out var endpoint))
-        {
-            return;
-        }
-
         services.AddOpenTelemetry()
             .WithTracing(tracing => tracing
+                .AddSource(MongoTelemetry.ActivitySourceName, "Reki.GenAI")
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation())
             .WithMetrics(metrics => metrics
+                .AddMeter("Reki.GenAI")
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation())
-            .WithLogging()
-            .UseOtlpExporter(OtlpExportProtocol.Grpc, endpoint);
+            .WithLogging(
+                _ => { },
+                logging => logging.IncludeScopes = true)
+            .UseOtlpExporter();
     }
 }

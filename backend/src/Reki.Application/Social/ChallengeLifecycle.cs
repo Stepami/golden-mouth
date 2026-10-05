@@ -13,7 +13,7 @@ public sealed class ChallengeLifecycle(
     GameBalance balance,
     GameDay gameDay,
     TimeProvider timeProvider,
-    ServerAnalyticsWriter analytics)
+    ProductTelemetry analytics)
 {
     private const int ReplaceAttempts = 3;
 
@@ -74,15 +74,14 @@ public sealed class ChallengeLifecycle(
             friend.Id,
             profile => profile.UnlockAchievement(AchievementCatalog.Challenge),
             cancellationToken);
-        await analytics.TrackAsync(
+        analytics.Track(
             player.Id,
             "challenge_started",
             new Dictionary<string, string>
             {
                 ["days"] = active.Days.ToString(CultureInfo.InvariantCulture),
                 ["min_posts"] = active.MinimumPosts.ToString(CultureInfo.InvariantCulture),
-            },
-            cancellationToken);
+            });
     }
 
     public async ValueTask<ChallengeView?> GetActiveViewAsync(
@@ -156,7 +155,7 @@ public sealed class ChallengeLifecycle(
 
         if (completed.WinnerId is null)
         {
-            await TrackChallengeFinishedAsync(completed, cancellationToken);
+            TrackChallengeFinished(completed);
             return;
         }
 
@@ -173,14 +172,12 @@ public sealed class ChallengeLifecycle(
             loserId,
             profile => profile.UnlockAchievement(AchievementCatalog.Rematch),
             cancellationToken);
-        await TrackChallengeFinishedAsync(completed, cancellationToken);
+        TrackChallengeFinished(completed);
     }
 
-    private ValueTask TrackChallengeFinishedAsync(
-        GameChallenge challenge,
-        CancellationToken cancellationToken)
+    private void TrackChallengeFinished(GameChallenge challenge)
     {
-        return analytics.TrackAsync(
+        analytics.Track(
             challenge.InitiatorId,
             "challenge_finished",
             new Dictionary<string, string>
@@ -190,8 +187,7 @@ public sealed class ChallengeLifecycle(
                     .ToString(CultureInfo.InvariantCulture),
                 ["opponent_posts"] = challenge.OpponentPerformance.PostCount
                     .ToString(CultureInfo.InvariantCulture),
-            },
-            cancellationToken);
+            });
     }
 
     private async ValueTask UpdatePlayerAsync(

@@ -1,0 +1,61 @@
+extensions:
+  basicauth/openobserve:
+    client_auth:
+      username: ${env:OPENOBSERVE_EMAIL}
+      password: ${env:OPENOBSERVE_PASSWORD}
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 256
+    spike_limit_mib: 64
+  batch: {}
+
+connectors:
+  routing/logs:
+    default_pipelines: [logs/backend]
+    table:
+      - condition: log.attributes["reki.stream"] == "product"
+        pipelines: [logs/product]
+
+exporters:
+  otlphttp/backend:
+    endpoint: http://openobserve:5080/api/default
+    auth:
+      authenticator: basicauth/openobserve
+    headers:
+      stream-name: backend
+  otlphttp/product:
+    endpoint: http://openobserve:5080/api/default
+    auth:
+      authenticator: basicauth/openobserve
+    headers:
+      stream-name: product
+
+service:
+  extensions: [basicauth/openobserve]
+  pipelines:
+    logs/in:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [routing/logs]
+    logs/backend:
+      receivers: [routing/logs]
+      exporters: [otlphttp/backend]
+    logs/product:
+      receivers: [routing/logs]
+      exporters: [otlphttp/product]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/backend]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/backend]

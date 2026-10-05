@@ -21,7 +21,7 @@ public sealed class PublishPostHandler(
     PlayerSafetyGuard safetyGuard,
     ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
-    ServerAnalyticsWriter analytics,
+    ProductTelemetry analytics,
     StarTurnGenerator turnGenerator) : IRequestHandler<PublishPostCommand, PublishedPost>
 {
     public async ValueTask<PublishedPost> Handle(
@@ -142,7 +142,7 @@ public sealed class PublishPostHandler(
 
         await store.AddPostAsync(post, cancellationToken);
         await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
-        await TrackProgressionAsync(player, updated, post, turn, analytics, cancellationToken);
+        TrackProgression(player, updated, post, turn, analytics);
         await store.AppendThreadAsync(player.Id, postId, hook, now, cancellationToken);
         return new PublishedPost(post, hook, turn.StarName, turn.Reaction, turn.Reasons);
     }
@@ -167,15 +167,14 @@ public sealed class PublishPostHandler(
         };
     }
 
-    private static async ValueTask TrackProgressionAsync(
+    private static void TrackProgression(
         PlayerProfile before,
         PlayerProfile after,
         GamePost post,
         GeneratedPostTurn turn,
-        ServerAnalyticsWriter analytics,
-        CancellationToken cancellationToken)
+        ProductTelemetry analytics)
     {
-        await analytics.TrackAsync(
+        analytics.Track(
             after.Id,
             "post_scored",
             new Dictionary<string, string>
@@ -185,23 +184,21 @@ public sealed class PublishPostHandler(
                 ["topic"] = turn.Topic.ToString("0.###", CultureInfo.InvariantCulture),
                 ["quality"] = post.Quality.ToString("0.###", CultureInfo.InvariantCulture),
                 ["post_index"] = after.PostsUsed.ToString(CultureInfo.InvariantCulture),
-            },
-            cancellationToken);
+            });
 
         foreach ((SkillId skillId, SkillProgress progress) in after.Skills)
         {
             int previousLevel = before.Skills[skillId].Level;
             if (progress.Level > previousLevel)
             {
-                await analytics.TrackAsync(
+                analytics.Track(
                     after.Id,
                     "level_up",
                     new Dictionary<string, string>
                     {
                         ["skill"] = skillId.Value,
                         ["level"] = progress.Level.ToString(CultureInfo.InvariantCulture),
-                    },
-                    cancellationToken);
+                    });
             }
         }
 
@@ -210,11 +207,10 @@ public sealed class PublishPostHandler(
                 previous.WorldId == item.WorldId && previous.Id == item.Id && previous.IsOpen));
         foreach (AchievementProgress achievement in earned)
         {
-            await analytics.TrackAsync(
+            analytics.Track(
                 after.Id,
                 "card_earned",
-                new Dictionary<string, string> { ["card"] = achievement.Id },
-                cancellationToken);
+                new Dictionary<string, string> { ["card"] = achievement.Id });
         }
     }
 }

@@ -86,8 +86,6 @@ public interface IGameStore
 
     ValueTask SaveWorldRulesAsync(WorldRules rules, CancellationToken cancellationToken);
 
-    ValueTask AppendAnalyticsAsync(AnalyticsBatch batch, CancellationToken cancellationToken);
-
     ValueTask AppendThreadAsync(
         PlayerId playerId,
         PostId postId,

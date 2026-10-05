@@ -1,13 +1,11 @@
 using Mediator;
 using Reki.Application.Common;
 using Reki.Domain.Player;
-using Reki.Domain.Telemetry;
 
 namespace Reki.Application.Telemetry;
 
 public sealed class ReportCommentHandler(
-    IGameStore store,
-    TimeProvider timeProvider,
+    ProductTelemetry telemetry,
     PlayerReader playerReader)
     : IRequestHandler<ReportCommentCommand>
 {
@@ -16,28 +14,7 @@ public sealed class ReportCommentHandler(
         CancellationToken cancellationToken)
     {
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        DateTimeOffset now = timeProvider.GetUtcNow();
-        long timestamp = now.ToUnixTimeMilliseconds();
-        var properties = new Dictionary<string, string>
-        {
-            ["comment_id"] = request.CommentId.Value,
-            ["reason"] = request.Reason,
-        };
-        var analyticsEvent = new AnalyticsEntry(
-            "report",
-            timestamp,
-            "report",
-            null,
-            properties);
-        var experiments = new Dictionary<string, string>();
-        var batch = new AnalyticsBatch(
-            player.Id,
-            SessionId.New(),
-            "server",
-            experiments,
-            [analyticsEvent],
-            now);
-        await store.AppendAnalyticsAsync(batch, cancellationToken);
+        telemetry.Track(player.Id, "report", new Dictionary<string, string>());
         return Unit.Value;
     }
 }

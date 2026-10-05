@@ -79,7 +79,7 @@ dig +short A reki-app.ru
 6. В блоке подключения сервисов выбери свой VDS, назови группу, например `reki-production`, и нажми **Создать**.
 7. Не закрывай текущую SSH-сессию. Открой вторую и убедись, что SSH всё ещё работает.
 
-Порты `27017`, `3000`, `8080`, `8081` и `18888` в Timeweb открывать не нужно. MongoDB, Metabase, прямые порты фронтенда и backend, а также Aspire доступны только через loopback VDS и SSH-туннель.
+Порты `27017`, `5080`, `8080` и `8081` в Timeweb открывать не нужно. MongoDB, OpenObserve и прямые порты фронтенда и backend доступны только через loopback VDS и SSH-туннель.
 
 Если используешь IPv6, отдельно добавь правила `::/0` для портов `80` и `443`. Официальная справка: [управление Firewall Timeweb Cloud](https://timeweb.cloud/docs/firewall/upravlenie-fajrvolom).
 
@@ -188,9 +188,20 @@ sudo ./svc.sh status
 
 8. Вернись в **Settings → Actions → Runners**. Статус должен стать **Idle**. Не используй флаг `--disableupdate`: обычный self-hosted runner умеет обновляться автоматически.
 
+### 7. Создать учётные данные OpenObserve
+
+В GitHub открой **Settings → Secrets and variables → Actions** и добавь два repository secrets:
+
+- `OPENOBSERVE_EMAIL` — выбранный командой email/login администратора OpenObserve;
+- `OPENOBSERVE_PASSWORD` — случайный длинный пароль, например результат `openssl rand -base64 32`.
+
+Это не выданные провайдером значения: до первого deployment команда сама выбирает email и пароль. На первом старте контейнер создаст root-пользователя с этой парой. Collector использует её только внутри Compose-сети для OTLP ingestion. Других токенов OpenObserve для MVP создавать не нужно. Не записывай значения в `.env`, compose-файлы, issue или документацию.
+
+После инициализации `openobserve-data` одной замены GitHub Secrets недостаточно: она не меняет пароль уже созданного root-пользователя. Для ротации сначала измени пароль в OpenObserve или выполни официальный `openobserve reset -c root`, затем обнови оба GitHub Secrets, чтобы Collector продолжил проходить аутентификацию.
+
 Официальная справка: [добавление self-hosted runner](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners) и [запуск runner как systemd-службы](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/configure-the-application?platform=linux).
 
-### 7. Скопировать купленный SSL-сертификат из Timeweb Cloud
+### 8. Скопировать купленный SSL-сертификат из Timeweb Cloud
 
 Балансировщик Timeweb и отдельный nginx в Ubuntu не нужны: порты `80` и `443`, TLS и перенаправление обслуживает контейнер `gateway` из `compose.production.yml`.
 
@@ -232,7 +243,7 @@ sudo ./svc.sh status
 
 Проверки бэкенда и фронтенда выполняются на `ubuntu-latest`; self-hosted runner участвует только в deployment job и не требует установленных .NET SDK или Node.js. Создавать GitHub Environment для текущей схемы не нужно.
 
-### 8. Проверить готовность перед первым тегом
+### 9. Проверить готовность перед первым тегом
 
 1. Убедись, что [frontend runtime config](../frontend/public/runtime-config/config.js) содержит `apiMode: 'backend'` и изменение закоммичено до создания тега.
 2. Проверь, что порты `80` и `443` не заняты системным nginx, Apache или другим приложением:
@@ -291,20 +302,18 @@ Release workflow выполняет следующие стадии:
 
 ## Закрытый доступ через SSH
 
-MongoDB, Metabase, Aspire Dashboard, прямой порт фронтенда и прямой порт бэкенда слушают только loopback-интерфейс VDS. Открой один туннель с доверенного компьютера:
+MongoDB, OpenObserve, прямой порт фронтенда и прямой порт бэкенда слушают только loopback-интерфейс VDS. Открой один туннель с доверенного компьютера:
 
 ```bash
 ssh -N \
   -L 27017:127.0.0.1:27017 \
-  -L 3000:127.0.0.1:3000 \
-  -L 18888:127.0.0.1:18888 \
+  -L 5080:127.0.0.1:5080 \
   <user>@<server>
 ```
 
 Пока туннель открыт:
 
 - подключай MongoDB Compass к `mongodb://127.0.0.1:27017/reki`;
-- открывай Metabase по адресу `http://127.0.0.1:3000`;
-- открывай Aspire Dashboard по адресу `http://127.0.0.1:18888`.
+- открывай OpenObserve по адресу `http://127.0.0.1:5080` и входи с `OPENOBSERVE_EMAIL` / `OPENOBSERVE_PASSWORD`.
 
-Aspire работает без собственной авторизации, но его порт доступен только после аутентификации по SSH. Metabase дополнительно использует собственную учётную запись. Используй SSH-ключи, отключи вход по паролю после проверки доступа по ключу и по возможности ограничь порт `22` доверенными исходными IP-адресами.
+Используй SSH-ключи, отключи вход по паролю после проверки доступа по ключу и по возможности ограничь порт `22` доверенными исходными IP-адресами.
