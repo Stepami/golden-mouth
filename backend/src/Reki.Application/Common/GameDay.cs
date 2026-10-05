@@ -18,9 +18,24 @@ public sealed class GameDay(TimeProvider timeProvider, GameBalance balance)
     public PlayerProfile Normalize(PlayerProfile player)
     {
         DateTimeOffset periodStart = PeriodStart;
-        return player.PostsPeriodStartedAtUtc == periodStart
-            ? player
-            : player.StartNewPeriod(periodStart);
+        if (player.PostsPeriodStartedAtUtc == periodStart)
+        {
+            return player;
+        }
+
+        int skippedDays = player.LastPostAtUtc is null
+            ? 0
+            : GetSkippedDays(GetPeriodStart(player.LastPostAtUtc.Value), periodStart);
+        int restedPosts = skippedDays >= balance.Growth.RestedAfterSkippedDays
+            ? balance.Growth.RestedFirstPosts
+            : 0;
+        return player.StartNewPeriod(periodStart, restedPosts);
+    }
+
+    private static int GetSkippedDays(DateTimeOffset lastPostPeriod, DateTimeOffset currentPeriod)
+    {
+        int elapsedPeriods = Math.Max(0, (int)(currentPeriod - lastPostPeriod).TotalDays);
+        return Math.Max(0, elapsedPeriods - 1);
     }
 
     private DateTimeOffset GetPeriodStart(DateTimeOffset utcNow)

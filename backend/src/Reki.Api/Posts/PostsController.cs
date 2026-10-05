@@ -28,7 +28,11 @@ public sealed class PostsController(
         CancellationToken cancellationToken)
     {
         PublishedPost published = await sender.Send(
-            new PublishPostCommand(TelegramUserId.From(telegramUser.User.Id), request.Text),
+            new PublishPostCommand(
+                TelegramUserId.From(telegramUser.User.Id),
+                request.Text,
+                request.OwnWords,
+                request.WantId),
             cancellationToken);
         Response.StatusCode = StatusCodes.Status200OK;
         Response.ContentType = "text/event-stream; charset=utf-8";

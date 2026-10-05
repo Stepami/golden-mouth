@@ -5,13 +5,7 @@ namespace Reki.Tests.Common;
 
 public sealed class GameDayTests
 {
-    private static readonly GameBalance Balance = new(
-        10,
-        20,
-        new TimeOnly(9, 0),
-        5,
-        120,
-        5);
+    private static readonly GameBalance Balance = TestGameData.CreateBalance();
 
     [Test]
     public async Task PeriodStart_ChangesAtNineOClockMoscowAsync()

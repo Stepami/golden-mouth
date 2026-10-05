@@ -6,7 +6,9 @@ using Reki.Domain.Social;
 
 namespace Reki.Application.Social;
 
-public sealed class StartChallengeHandler(IGameStore store, PlayerReader playerReader)
+public sealed class StartChallengeHandler(
+    PlayerReader playerReader,
+    ChallengeLifecycle challengeLifecycle)
     : IRequestHandler<StartChallengeCommand>
 {
     public async ValueTask<Unit> Handle(
@@ -14,22 +16,7 @@ public sealed class StartChallengeHandler(IGameStore store, PlayerReader playerR
         CancellationToken cancellationToken)
     {
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        GameChallenge? active = await store.GetActiveChallengeAsync(player.Id, cancellationToken);
-        if (active is not null)
-        {
-            throw new RequestConflictException("An active challenge already exists.");
-        }
-
-        var challenge = new GameChallenge(
-                ChallengeId.New(),
-                player.Id,
-                request.FriendId,
-                1,
-                3,
-                0,
-                0,
-                string.Empty);
-        await store.SaveChallengeAsync(challenge, cancellationToken);
+        await challengeLifecycle.StartOrAcceptAsync(player, request.FriendId, cancellationToken);
         return Unit.Value;
     }
 }

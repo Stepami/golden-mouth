@@ -4,5 +4,5 @@ using Reki.Domain.Social;
 
 namespace Reki.Application.Social;
 
-public sealed record GetActiveChallengeQuery(TelegramUserId TelegramUserId) : IRequest<GameChallenge?>;
+public sealed record GetActiveChallengeQuery(TelegramUserId TelegramUserId) : IRequest<ChallengeView?>;
 

@@ -10,6 +10,8 @@ using Reki.Application.Common;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Safety;
 using Reki.Application.Posts;
+using Reki.Application.Social;
+using Reki.Application.Telemetry;
 using Reki.Contracts.Events;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
@@ -31,6 +33,9 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<GameDay>();
         services.AddSingleton<PlayerReader>();
         services.AddSingleton<PlayerSafetyGuard>();
+        services.AddSingleton<ChallengeLifecycle>();
+        services.AddSingleton<PostProgressionCalculator>();
+        services.AddSingleton<ServerAnalyticsWriter>();
         services.AddSingleton<StarTurnGenerator>();
 
         return services;

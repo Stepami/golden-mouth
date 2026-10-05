@@ -6,7 +6,7 @@ public sealed record ChallengeResponse(
     FriendResponse Rival,
     int Day,
     int Days,
-    int MyScore,
-    int RivalScore,
+    double MyScore,
+    double RivalScore,
     string BestPost);
 

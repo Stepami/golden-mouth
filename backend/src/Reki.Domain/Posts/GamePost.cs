@@ -10,6 +10,8 @@ public sealed record GamePost(
     IReadOnlyList<GameComment> Comments,
     DateTimeOffset CreatedAtUtc,
     long SubscriberDelta,
+    double Quality,
+    double ReachRatio,
     bool Viral,
     bool Flop);
 

@@ -5,5 +5,12 @@ public sealed record GameBalance(
     int PlusPostsPerDay,
     TimeOnly PostsResetTimeMoscow,
     int PlusInterestBonus,
-    long StartingSubscribers,
-    int DirectMessageRepliesPerDay);
+    int ChallengeWinBonusPerDay,
+    int ChallengeWinBonusDays,
+    GrowthBalance Growth,
+    ViralBalance Viral,
+    FlopBalance Flop,
+    SkillBalance Skills,
+    RelationBalance Relations,
+    ChallengeBalance Challenge,
+    IReadOnlyDictionary<string, WorldBalance> Worlds);

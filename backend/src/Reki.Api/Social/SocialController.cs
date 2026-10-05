@@ -81,27 +81,31 @@ public sealed class SocialController(
     public async Task<Ok<ChallengeResponse?>> GetActiveChallengeAsync(
         CancellationToken cancellationToken)
     {
-        GameChallenge? challenge = await sender.Send(
+        ChallengeView? view = await sender.Send(
             new GetActiveChallengeQuery(TelegramUserId.From(telegramUser.User.Id)),
             cancellationToken);
-        ChallengeResponse? response = challenge is null
-            ? null
-            : new ChallengeResponse(
-                challenge.Id.Value,
+        ChallengeResponse? response = null;
+        if (view is not null)
+        {
+            string rivalPronoun = view.Rival.Address == "she" ? "её" : "его";
+            response = new ChallengeResponse(
+                view.Challenge.Id.Value,
                 "я",
                 new FriendResponse(
-                    challenge.FriendId.Value,
-                    "друг",
-                    "pick0",
-                    "Сцена",
-                    0,
+                    view.Rival.Id.Value,
+                    view.Rival.Name,
+                    view.Rival.Avatar,
+                    view.Rival.World.Value,
+                    view.Rival.Subscribers,
                     string.Empty,
-                    "его"),
-                challenge.Day,
-                challenge.Days,
-                challenge.MyScore,
-                challenge.RivalScore,
-                challenge.BestPost);
+                    rivalPronoun),
+                view.Day,
+                view.Challenge.Days,
+                view.Challenge.GetPerformance(view.PlayerId).Score,
+                view.Challenge.GetPerformance(view.Rival.Id).Score,
+                view.Challenge.BestPost);
+        }
+
         return TypedResults.Ok<ChallengeResponse?>(response);
     }
 

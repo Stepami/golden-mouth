@@ -16,9 +16,12 @@ public sealed class GetPlayerHandler(
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
         PlayerProfile normalized = gameDay.Normalize(player);
 
-        if (!ReferenceEquals(player, normalized))
+        if (!ReferenceEquals(player, normalized) && !await store.TryReplacePlayerAsync(
+            normalized,
+            player.Version,
+            cancellationToken))
         {
-            await store.UpsertPlayerAsync(normalized, cancellationToken);
+            normalized = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
         }
 
         return playerReader.CreateView(normalized);

@@ -11,6 +11,8 @@ public interface IGameStore
 {
     ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken);
 
+    ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
+
     ValueTask UpsertPlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
 
     ValueTask<bool> TryReplacePlayerAsync(
@@ -23,6 +25,11 @@ public interface IGameStore
     ValueTask AddPostAsync(GamePost post, CancellationToken cancellationToken);
 
     ValueTask<IReadOnlyList<GamePost>> GetRecentPostsAsync(
+        PlayerId playerId,
+        int count,
+        CancellationToken cancellationToken);
+
+    ValueTask<IReadOnlyList<long>> GetRecentPostViewsAsync(
         PlayerId playerId,
         int count,
         CancellationToken cancellationToken);
@@ -58,7 +65,19 @@ public interface IGameStore
         PlayerId playerId,
         CancellationToken cancellationToken);
 
-    ValueTask SaveChallengeAsync(GameChallenge challenge, CancellationToken cancellationToken);
+    ValueTask<GameChallenge?> GetPendingChallengeAsync(
+        PlayerId firstPlayerId,
+        PlayerId secondPlayerId,
+        CancellationToken cancellationToken);
+
+    ValueTask<bool> TryInsertChallengeAsync(
+        GameChallenge challenge,
+        CancellationToken cancellationToken);
+
+    ValueTask<bool> TryReplaceChallengeAsync(
+        GameChallenge challenge,
+        int expectedVersion,
+        CancellationToken cancellationToken);
 
     ValueTask<WorldRules?> GetWorldRulesAsync(
         PlayerId playerId,
