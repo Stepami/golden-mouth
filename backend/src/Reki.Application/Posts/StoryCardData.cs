@@ -1,7 +1,9 @@
+using Reki.Domain.Posts;
+
 namespace Reki.Application.Posts;
 
 public sealed record StoryCardData(
-    string PostId,
+    PostId PostId,
     string PlayerName,
     string Handle,
     long Subscribers,

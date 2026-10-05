@@ -1,9 +1,11 @@
+using Reki.Domain.Player;
+
 namespace Reki.Domain.Worlds;
 
 public sealed record WorldRules(
     WorldRulesId Id,
-    string PlayerId,
-    string WorldId,
+    PlayerId PlayerId,
+    WorldId WorldId,
     string Title,
     IReadOnlyList<string> Presets,
     string Description,

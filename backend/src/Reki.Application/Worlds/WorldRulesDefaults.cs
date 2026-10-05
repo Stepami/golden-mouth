@@ -1,3 +1,4 @@
+using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Worlds;
@@ -6,9 +7,9 @@ public static class WorldRulesDefaults
 {
     public const string SafetyRule = "Без тем 18+ и травли по внешности";
 
-    public static WorldRules Create(string playerId, string worldId)
+    public static WorldRules Create(PlayerId playerId, WorldId worldId)
     {
-        string title = worldId switch
+        string title = worldId.Value switch
         {
             "stage" => "Сцена",
             "academy" => "Академия",
@@ -16,7 +17,7 @@ public static class WorldRulesDefaults
             "stream" => "Стрим",
             _ => "Свой мир",
         };
-        string description = worldId switch
+        string description = worldId.Value switch
         {
             "stage" => "Айдол-агентство: трейни, дебют, камбэки и фансайты.",
             "academy" => "Школьная академия: клубы, соперники и фестиваль.",
@@ -25,7 +26,7 @@ public static class WorldRulesDefaults
             _ => "Мир, который создаёт игрок.",
         };
 
-        IReadOnlyList<WorldRule> rules = worldId switch
+        IReadOnlyList<WorldRule> rules = worldId.Value switch
         {
             "stage" => Lock(
                 "Звёзды: Мира — дерзкая лидер BLESK, Соня — добрая вокалистка BLESK, Ева — загадочная солистка NOIR, Юна — трейни-соперница",
@@ -58,11 +59,11 @@ public static class WorldRulesDefaults
         };
 
         return new WorldRules(
-            WorldRulesId.From(Guid.NewGuid().ToString("N")),
+            WorldRulesId.New(),
             playerId,
             worldId,
             title,
-            worldId == "own" ? ["🏫 моя школа", "💻 IT-драма", "🏰 фэнтези-академия"] : [],
+            worldId.Value == "own" ? ["🏫 моя школа", "💻 IT-драма", "🏰 фэнтези-академия"] : [],
             description,
             rules);
     }

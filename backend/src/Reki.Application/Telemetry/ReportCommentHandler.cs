@@ -20,7 +20,7 @@ public sealed class ReportCommentHandler(
         long timestamp = now.ToUnixTimeMilliseconds();
         var properties = new Dictionary<string, string>
         {
-            ["comment_id"] = request.CommentId,
+            ["comment_id"] = request.CommentId.Value,
             ["reason"] = request.Reason,
         };
         var analyticsEvent = new AnalyticsEntry(
@@ -29,11 +29,10 @@ public sealed class ReportCommentHandler(
             "report",
             null,
             properties);
-        string sessionId = Guid.NewGuid().ToString("N");
         var experiments = new Dictionary<string, string>();
         var batch = new AnalyticsBatch(
             player.Id,
-            sessionId,
+            SessionId.New(),
             "server",
             experiments,
             [analyticsEvent],

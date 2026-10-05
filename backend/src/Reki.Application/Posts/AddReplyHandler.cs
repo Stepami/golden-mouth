@@ -14,9 +14,8 @@ public sealed class AddReplyHandler(IGameStore store, PlayerReader playerReader)
         CancellationToken cancellationToken)
     {
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        string replyId = Guid.NewGuid().ToString("N");
         var reply = new GameComment(
-            replyId,
+            CommentId.New(),
             player.Name,
             player.Avatar,
             player.Handle,

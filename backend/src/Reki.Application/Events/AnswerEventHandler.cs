@@ -18,7 +18,7 @@ public sealed class AnswerEventHandler(IGameStore store, PlayerReader playerRead
             player.Id,
             DateTimeOffset.MinValue,
             cancellationToken);
-        if (gameEvent is null || !string.Equals(gameEvent.Id, request.EventId, StringComparison.Ordinal))
+        if (gameEvent is null || gameEvent.Id != request.EventId)
         {
             throw new ResourceNotFoundException("Event not found.");
         }

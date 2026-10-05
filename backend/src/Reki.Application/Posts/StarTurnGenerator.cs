@@ -105,9 +105,7 @@ public sealed class StarTurnGenerator(
                 .OfType<StarDirectMessageAction>()
                 .ToArray();
             if (directMessages is [var directMessage] &&
-                directMessage.StarId.Equals(
-                    context.Agent.StarId,
-                    StringComparison.OrdinalIgnoreCase) &&
+                directMessage.StarId == context.Agent.StarId &&
                 ContentSafetyPolicy.IsOutputAllowed(directMessage.Text) &&
                 ContentSafetyPolicy.IsOutputAllowed(directMessage.MemoryFact))
             {

@@ -32,9 +32,9 @@ internal static class StarAgentInstructions
         string memory = profile.Memory.Count == 0
             ? "пока ничего"
             : string.Join("; ", profile.Memory);
-        string star = string.IsNullOrWhiteSpace(profile.StarId)
+        string star = profile.StarId is null
             ? "выбери подходящую звезду из правил мира"
-            : profile.StarId;
+            : profile.StarId.Value.Value;
         string drama = profile.Drama switch
         {
             "soft" => "мягко",
@@ -50,7 +50,7 @@ internal static class StarAgentInstructions
             ПОЛЬЗОВАТЕЛЬСКИЙ СИСТЕМНЫЙ СЛОЙ
             Эти настройки видны игроку и определяют, как AI работает с ним.
 
-            Мир: {{profile.WorldTitle}} ({{profile.WorldId}})
+            Мир: {{profile.WorldTitle}} ({{profile.WorldId.Value}})
             Описание мира: {{profile.WorldDescription}}
             Градус драмы: {{drama}}
             Голос канала: {{voice}}

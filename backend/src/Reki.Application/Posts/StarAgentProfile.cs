@@ -1,13 +1,14 @@
+using Reki.Domain.Social;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
 
 public sealed record StarAgentProfile(
-    string WorldId,
+    WorldId WorldId,
     string WorldTitle,
     string WorldDescription,
     IReadOnlyList<WorldRule> WorldRules,
     string Drama,
     string Voice,
-    string StarId,
+    StarId? StarId,
     IReadOnlyList<string> Memory);

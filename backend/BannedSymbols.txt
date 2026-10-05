@@ -3,3 +3,4 @@ M:System.DateTime.get_Now; Use TimeProvider.GetLocalNow().
 M:System.DateTime.get_UtcNow; Use TimeProvider.GetUtcNow().
 M:System.DateTimeOffset.get_Now; Use TimeProvider.GetLocalNow().
 M:System.DateTimeOffset.get_UtcNow; Use TimeProvider.GetUtcNow().
+F:Vogen.CastOperator.Implicit; Implicit conversions weaken strong typing and bypass validation.

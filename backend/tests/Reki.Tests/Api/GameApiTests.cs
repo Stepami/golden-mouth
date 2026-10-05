@@ -85,6 +85,11 @@ public sealed class GameApiTests(ApiFactory factory)
             .GetCollection<BsonDocument>("players")
             .Find(new BsonDocument("TelegramUserId", telegramUserId))
             .SingleAsync();
+        await Assert.That(player["_id"].BsonType).IsEqualTo(BsonType.String);
+        await Assert.That(player["TelegramUserId"].BsonType).IsEqualTo(BsonType.Int64);
+        await Assert.That(player["World"].AsString).IsEqualTo("stage");
+        await Assert.That(player["Skills"].AsBsonDocument.Names)
+            .IsEquivalentTo(["brave", "humor", "topic"]);
         await Assert.That(player["BirthGroup"].AsString).IsEqualTo("14-17");
         await Assert.That(player.Names.Any(name => name.Contains("year", StringComparison.OrdinalIgnoreCase)))
             .IsFalse();

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
 using Reki.Application.Social;
 using Reki.Contracts.Social;
+using Reki.Domain.Player;
 using Reki.Domain.Social;
 using TgMiniAppAuth.AuthContext.User;
 
@@ -23,7 +24,7 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         IReadOnlyList<FriendSummary> friends = await sender.Send(
-            new GetFriendsQuery(telegramUser.User.Id),
+            new GetFriendsQuery(TelegramUserId.From(telegramUser.User.Id)),
             cancellationToken);
         IReadOnlyList<FriendResponse> response = mapper.MapFriends(friends);
         return TypedResults.Ok(response);
@@ -36,7 +37,9 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         DirectMessageView result = await sender.Send(
-            new GetDirectMessagesQuery(telegramUser.User.Id, starId),
+            new GetDirectMessagesQuery(
+                TelegramUserId.From(telegramUser.User.Id),
+                StarId.From(starId)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapDirectMessages(result, starId));
     }
@@ -49,7 +52,10 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         SentDirectMessage result = await sender.Send(
-            new SendDirectMessageCommand(telegramUser.User.Id, starId, request.Text),
+            new SendDirectMessageCommand(
+                TelegramUserId.From(telegramUser.User.Id),
+                StarId.From(starId),
+                request.Text),
             cancellationToken);
         return TypedResults.Ok(mapper.MapSentDirectMessage(result));
     }
@@ -62,7 +68,10 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new ForgetStarMemoryCommand(telegramUser.User.Id, starId, request.Fact),
+            new ForgetStarMemoryCommand(
+                TelegramUserId.From(telegramUser.User.Id),
+                StarId.From(starId),
+                request.Fact),
             cancellationToken);
         return TypedResults.Ok();
     }
@@ -73,15 +82,15 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         GameChallenge? challenge = await sender.Send(
-            new GetActiveChallengeQuery(telegramUser.User.Id),
+            new GetActiveChallengeQuery(TelegramUserId.From(telegramUser.User.Id)),
             cancellationToken);
         ChallengeResponse? response = challenge is null
             ? null
             : new ChallengeResponse(
-                challenge.Id,
+                challenge.Id.Value,
                 "я",
                 new FriendResponse(
-                    challenge.FriendId,
+                    challenge.FriendId.Value,
                     "друг",
                     "pick0",
                     "Сцена",
@@ -103,7 +112,9 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new StartChallengeCommand(telegramUser.User.Id, request.FriendId),
+            new StartChallengeCommand(
+                TelegramUserId.From(telegramUser.User.Id),
+                PlayerId.From(request.FriendId)),
             cancellationToken);
         return TypedResults.Ok();
     }

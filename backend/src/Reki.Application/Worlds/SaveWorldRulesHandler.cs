@@ -19,25 +19,26 @@ public sealed class SaveWorldRulesHandler(
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
         await safetyGuard.EnsureInputAllowedAsync(
             player,
-            [request.Rules.Description, .. request.Rules.Rules.Select(rule => rule.Text)],
+            [request.Description, .. request.Rules.Select(rule => rule.Text)],
             cancellationToken);
+        WorldId ownWorldId = WorldId.From("own");
         WorldRules? existingRules = await store.GetWorldRulesAsync(
             player.Id,
-            "own",
+            ownWorldId,
             cancellationToken);
-        WorldRules safeRules = request.Rules with
-        {
-            Id = existingRules?.Id ?? request.Rules.Id,
-            PlayerId = player.Id,
-            WorldId = "own",
-            Rules =
+        var safeRules = new WorldRules(
+            existingRules?.Id ?? WorldRulesId.New(),
+            player.Id,
+            ownWorldId,
+            request.Title,
+            request.Presets,
+            request.Description,
             [
-                .. request.Rules.Rules.Where(rule =>
+                .. request.Rules.Where(rule =>
                     !rule.Locked &&
                     !rule.Text.Equals(WorldRulesDefaults.SafetyRule, StringComparison.OrdinalIgnoreCase)),
                 new WorldRule(WorldRulesDefaults.SafetyRule, true),
-            ],
-        };
+            ]);
         await store.SaveWorldRulesAsync(safeRules, cancellationToken);
         return Unit.Value;
     }

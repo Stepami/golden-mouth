@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
+using Reki.Domain.Social;
 
 namespace Reki.Application.Common.AI;
 
@@ -24,7 +25,7 @@ internal static class StarToolCallParser
 
     internal sealed record StarCommentAction(
         string Author,
-        string StarId,
+        StarId StarId,
         string Text,
         string Hook,
         double Brave,
@@ -33,10 +34,10 @@ internal static class StarToolCallParser
         IReadOnlyList<StarReason> Reasons,
         bool OnTopic) : IStarAction;
 
-    internal sealed record StarRepostAction(string StarId, string Text) : IStarAction;
+    internal sealed record StarRepostAction(StarId StarId, string Text) : IStarAction;
 
     internal sealed record StarDirectMessageAction(
-        string StarId,
+        StarId StarId,
         string Text,
         string MemoryFact) : IStarAction;
 
@@ -73,7 +74,7 @@ internal static class StarToolCallParser
         EnsureExactKeys(arguments, CommentKeys);
         return new StarCommentAction(
             GetString(arguments, "author", 40, allowEmpty: false),
-            GetString(arguments, "star_id", 40, allowEmpty: false),
+            StarId.From(GetString(arguments, "star_id", 40, allowEmpty: false)),
             GetString(arguments, "text", 500, allowEmpty: false),
             GetString(arguments, "hook", 240, allowEmpty: false),
             GetScore(arguments, "brave"),
@@ -87,7 +88,7 @@ internal static class StarToolCallParser
     {
         EnsureExactKeys(arguments, ["star_id", "text"]);
         return new StarRepostAction(
-            GetString(arguments, "star_id", 40, allowEmpty: false),
+            StarId.From(GetString(arguments, "star_id", 40, allowEmpty: false)),
             GetString(arguments, "text", 500, allowEmpty: false));
     }
 
@@ -95,7 +96,7 @@ internal static class StarToolCallParser
     {
         EnsureExactKeys(arguments, ["star_id", "text", "memory_fact"]);
         return new StarDirectMessageAction(
-            GetString(arguments, "star_id", 40, allowEmpty: false),
+            StarId.From(GetString(arguments, "star_id", 40, allowEmpty: false)),
             GetString(arguments, "text", 1000, allowEmpty: false),
             GetString(arguments, "memory_fact", 160, allowEmpty: true));
     }

@@ -54,7 +54,7 @@ public sealed class PublishPostHandler(
                     worldRules.Rules,
                     player.Settings.Drama,
                     player.Settings.Voice,
-                    string.Empty,
+                    null,
                     []),
                 GetStage(player.Subscribers),
                 recentPosts.Select(post => post.Text).ToArray(),
@@ -82,13 +82,12 @@ public sealed class PublishPostHandler(
             throw new RequestConflictException("The player state changed while publishing the post.");
         }
 
-        string postId = Guid.NewGuid().ToString("N");
-        string commentId = Guid.NewGuid().ToString("N");
+        PostId postId = PostId.New();
         var starComment = new GameComment(
-            commentId,
+            CommentId.New(),
             turn.StarName,
-            turn.StarId,
-            $"@{turn.StarId}",
+            turn.StarId.Value,
+            $"@{turn.StarId.Value}",
             turn.Comment,
             true,
             false,

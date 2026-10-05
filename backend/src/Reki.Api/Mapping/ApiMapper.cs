@@ -3,6 +3,8 @@ using System.Text.Json;
 using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Application.Social;
+using Reki.Application.Telemetry;
+using Reki.Application.Worlds;
 using Reki.Contracts.Events;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
@@ -16,6 +18,9 @@ using Reki.Domain.Social;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 using Riok.Mapperly.Abstractions;
+using ContractSkillId = Reki.Contracts.Player.SkillId;
+using ContractWorldId = Reki.Contracts.Player.WorldId;
+using DomainEventId = Reki.Domain.Events.EventId;
 
 namespace Reki.Api.Mapping;
 
@@ -25,21 +30,21 @@ public sealed partial class ApiMapper
     public PlayerResponse MapPlayer(PlayerView source)
     {
         PlayerProfile player = source.Player;
-        IReadOnlyDictionary<SkillId, SkillResponse> skills = player.Skills.ToDictionary(
-            item => Enum.Parse<SkillId>(item.Key, true),
+        IReadOnlyDictionary<ContractSkillId, SkillResponse> skills = player.Skills.ToDictionary(
+            item => Enum.Parse<ContractSkillId>(item.Key.Value, true),
             item => MapSkill(item.Value));
         var week = Enumerable.Range(0, 7)
             .Select(day => day < Math.Min(7, player.StreakDays))
             .ToArray();
 
         return new PlayerResponse(
-            player.Id,
+            player.Id.Value,
             player.Name,
             player.Handle,
             player.Role,
             player.Avatar,
             Enum.Parse<Address>(player.Address, true),
-            Enum.Parse<WorldId>(player.World, true),
+            Enum.Parse<ContractWorldId>(player.World.Value, true),
             player.Subscribers,
             source.PostsLeft,
             source.PostsCap,
@@ -86,11 +91,10 @@ public sealed partial class ApiMapper
             view.RepliesLeft);
     }
 
-    public AnalyticsBatch MapAnalytics(AnalyticsBatchRequest source)
+    public AnalyticsSubmission MapAnalytics(AnalyticsBatchRequest source)
     {
-        return new AnalyticsBatch(
-            string.Empty,
-            source.Session,
+        return new AnalyticsSubmission(
+            SessionId.From(source.Session),
             source.Platform,
             source.Experiments.ToDictionary(
                 item => item.Key,
@@ -100,8 +104,7 @@ public sealed partial class ApiMapper
                 item.Timestamp,
                 item.Screen,
                 item.Prev,
-                SanitizeProperties(item.Props))).ToArray(),
-            default);
+                SanitizeProperties(item.Props))).ToArray());
     }
 
     public PostResultResponse MapPublishedPost(PublishedPost source)
@@ -109,7 +112,7 @@ public sealed partial class ApiMapper
         GamePost post = source.Post;
         GameComment? bestComment = post.Comments.FirstOrDefault();
         return new PostResultResponse(
-            post.Id,
+            post.Id.Value,
             post.SubscriberDelta,
             post.Viral ? "Пост залетел" : "Канал растёт",
             source.Reasons
@@ -142,12 +145,12 @@ public sealed partial class ApiMapper
     [MapperIgnoreSource(nameof(WorldRules.WorldId))]
     public partial WorldRulesResponse MapWorldRules(WorldRules source);
 
-    public WorldRules MapWorldRulesRequest(UpdateWorldRulesRequest source)
+    public SaveWorldRulesCommand MapWorldRulesRequest(
+        UpdateWorldRulesRequest source,
+        TelegramUserId telegramUserId)
     {
-        return new WorldRules(
-            WorldRulesId.From(Guid.NewGuid().ToString("N")),
-            string.Empty,
-            "own",
+        return new SaveWorldRulesCommand(
+            telegramUserId,
             source.Title,
             source.Presets,
             source.Description,
@@ -187,6 +190,12 @@ public sealed partial class ApiMapper
     {
         return Enum.Parse<GameEventKind>(source, true);
     }
+
+    private static string MapCommentId(CommentId source) => source.Value;
+
+    private static string MapEventId(DomainEventId source) => source.Value;
+
+    private static string MapPlayerId(PlayerId source) => source.Value;
 
     private static string SanitizeElement(JsonElement element)
     {

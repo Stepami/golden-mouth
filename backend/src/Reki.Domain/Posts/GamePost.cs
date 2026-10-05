@@ -1,8 +1,10 @@
+using Reki.Domain.Player;
+
 namespace Reki.Domain.Posts;
 
 public sealed record GamePost(
-    string Id,
-    string PlayerId,
+    PostId Id,
+    PlayerId PlayerId,
     string Text,
     long Views,
     IReadOnlyList<GameComment> Comments,

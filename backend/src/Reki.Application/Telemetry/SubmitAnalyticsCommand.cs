@@ -1,7 +1,9 @@
 using Mediator;
-using Reki.Domain.Telemetry;
+using Reki.Domain.Player;
 
 namespace Reki.Application.Telemetry;
 
-public sealed record SubmitAnalyticsCommand(long TelegramUserId, AnalyticsBatch Batch) : IRequest;
+public sealed record SubmitAnalyticsCommand(
+    TelegramUserId TelegramUserId,
+    AnalyticsSubmission Submission) : IRequest;
 

@@ -4,7 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
 using Reki.Application.Player;
 using Reki.Contracts.Player;
+using Reki.Domain.Player;
+using Reki.Domain.Social;
 using TgMiniAppAuth.AuthContext.User;
+using DomainWorldId = Reki.Domain.Worlds.WorldId;
 
 namespace Reki.Api.Player;
 
@@ -21,7 +24,7 @@ public sealed class PlayerController(
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
         PlayerView result = await sender.Send(
-            new GetPlayerQuery(telegramUser.User.Id),
+            new GetPlayerQuery(TelegramUserId.From(telegramUser.User.Id)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapPlayer(result));
     }
@@ -34,15 +37,15 @@ public sealed class PlayerController(
     {
         PlayerView result = await sender.Send(
             new OnboardPlayerCommand(
-                telegramUser.User.Id,
+                TelegramUserId.From(telegramUser.User.Id),
                 ToStorageValue(request.BirthGroup),
-                request.World.ToString().ToLowerInvariant(),
+                DomainWorldId.From(request.World.ToString()),
                 request.Role,
                 request.Avatar,
                 request.Name,
                 request.Handle,
                 request.Address.ToString().ToLowerInvariant(),
-                request.Star),
+                StarId.From(request.Star)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapPlayer(result));
     }
@@ -55,7 +58,7 @@ public sealed class PlayerController(
     {
         await sender.Send(
             new UpdateSettingsCommand(
-                telegramUser.User.Id,
+                TelegramUserId.From(telegramUser.User.Id),
                 request.Drama?.ToString().ToLowerInvariant(),
                 request.Notifications,
                 request.Quiet,
@@ -71,7 +74,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         int bonus = await sender.Send(
-            new ClaimPlusInterestCommand(telegramUser.User.Id),
+            new ClaimPlusInterestCommand(TelegramUserId.From(telegramUser.User.Id)),
             cancellationToken);
         return TypedResults.Ok(new PlusInterestResponse(bonus));
     }
@@ -81,7 +84,9 @@ public sealed class PlayerController(
     public async Task<Ok> DeleteCurrentPlayerAsync(
         CancellationToken cancellationToken)
     {
-        await sender.Send(new DeletePlayerCommand(telegramUser.User.Id), cancellationToken);
+        await sender.Send(
+            new DeletePlayerCommand(TelegramUserId.From(telegramUser.User.Id)),
+            cancellationToken);
         return TypedResults.Ok();
     }
 

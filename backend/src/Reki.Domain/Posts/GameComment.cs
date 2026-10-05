@@ -1,7 +1,7 @@
 namespace Reki.Domain.Posts;
 
 public sealed record GameComment(
-    string Id,
+    CommentId Id,
     string Author,
     string Avatar,
     string Handle,

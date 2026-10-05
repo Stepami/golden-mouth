@@ -39,7 +39,7 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
-        long telegramUserId,
+        TelegramUserId telegramUserId,
         CancellationToken cancellationToken)
     {
         return await _players
@@ -82,9 +82,9 @@ internal sealed class MongoGameStore : IGameStore
         CancellationToken cancellationToken)
     {
         FilterDefinition<BsonDocument> threadFilter = Builders<BsonDocument>.Filter
-            .Eq("PlayerId", player.Id);
+            .Eq("PlayerId", player.Id.Value);
         FilterDefinition<BsonDocument> logFilter = Builders<BsonDocument>.Filter
-            .Eq("Properties.Player", player.Id);
+            .Eq("Properties.Player", player.Id.Value);
         Task deletePlayer = _players.DeleteOneAsync(
             item => item.TelegramUserId == player.TelegramUserId,
             cancellationToken);
@@ -121,7 +121,7 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<IReadOnlyList<GamePost>> GetRecentPostsAsync(
-        string playerId,
+        PlayerId playerId,
         int count,
         CancellationToken cancellationToken)
     {
@@ -133,8 +133,8 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<GamePost?> GetPostAsync(
-        string playerId,
-        string postId,
+        PlayerId playerId,
+        PostId postId,
         CancellationToken cancellationToken)
     {
         return await _posts
@@ -143,8 +143,8 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<bool> AddReplyAsync(
-        string playerId,
-        string postId,
+        PlayerId playerId,
+        PostId postId,
         GameComment reply,
         CancellationToken cancellationToken)
     {
@@ -158,8 +158,8 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<StarConversation?> GetStarConversationAsync(
-        string playerId,
-        string starId,
+        PlayerId playerId,
+        StarId starId,
         CancellationToken cancellationToken)
     {
         return await _starMemories
@@ -180,7 +180,7 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<DailyGameEvent?> GetTodayEventAsync(
-        string playerId,
+        PlayerId playerId,
         DateTimeOffset dayStartedAtUtc,
         CancellationToken cancellationToken)
     {
@@ -212,7 +212,7 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<GameChallenge?> GetActiveChallengeAsync(
-        string playerId,
+        PlayerId playerId,
         CancellationToken cancellationToken)
     {
         return await _challenges.Find(item => item.PlayerId == playerId).FirstOrDefaultAsync(cancellationToken);
@@ -231,8 +231,8 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<WorldRules?> GetWorldRulesAsync(
-        string playerId,
-        string worldId,
+        PlayerId playerId,
+        WorldId worldId,
         CancellationToken cancellationToken)
     {
         return await _worlds
@@ -260,16 +260,16 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask AppendThreadAsync(
-        string playerId,
-        string postId,
+        PlayerId playerId,
+        PostId postId,
         string hook,
         DateTimeOffset createdAtUtc,
         CancellationToken cancellationToken)
     {
         var document = new BsonDocument
         {
-            ["PlayerId"] = playerId,
-            ["PostId"] = postId,
+            ["PlayerId"] = playerId.Value,
+            ["PostId"] = postId.Value,
             ["Hook"] = hook,
             ["CreatedAtUtc"] = createdAtUtc.UtcDateTime,
             ["Open"] = true,
