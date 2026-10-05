@@ -17,10 +17,16 @@ function startEntry(): Entry {
   return { id: '01-1_invite', params: {} }
 }
 
+function hasExplicitStart(): boolean {
+  const q = new URLSearchParams(location.search)
+  return q.has('screen') || q.has('gallery')
+}
+
 function Shell() {
   const [stack, setStack] = useState<Entry[]>(() => [startEntry()])
   const top = stack[stack.length - 1]
-  const { player } = useStore()
+  const { player, playerState } = useStore()
+  const explicitStart = hasExplicitStart()
 
   const nav: Nav = useMemo(() => ({
     current: top.id, params: top.params, canBack: stack.length > 1,
@@ -32,11 +38,17 @@ function Shell() {
 
   useEffect(() => { setScreen(top.id); screenView(top.id) }, [top.id])
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments) }, [player?.experiments])
+  useEffect(() => {
+    if (playerState === 'ready' && !explicitStart && top.id === '01-1_invite') {
+      setStack([{ id: '01-6_home', params: {} }])
+    }
+  }, [explicitStart, playerState, top.id])
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1, back), [stack.length, back])
 
   const Screen = SCREENS[top.id]?.component
-  if (!player || !Screen) return <div className="app" />
+  const resolvingExistingPlayer = playerState === 'ready' && !explicitStart && top.id === '01-1_invite'
+  if (!Screen || playerState === 'loading' || playerState === 'failed' || resolvingExistingPlayer) return <div className="app" />
   const tab = TAB_OF[top.id]
   return (
     <NavContext.Provider value={nav}>

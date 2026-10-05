@@ -6,9 +6,16 @@ import { apiBaseUrl as BASE } from '../app/runtimeConfig'
 import { telegramAuthHeaders } from './auth'
 import type { Challenge, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, PostResult, WorldRules } from './types'
 
+export class ApiError extends Error {
+  constructor(public readonly status: number, method: string, path: string) {
+    super(`${method} ${path.replace(/\/[\w-]{16,}/g, '/:id')} ${status}`)
+    this.name = 'ApiError'
+  }
+}
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`${BASE}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...telegramAuthHeaders(), ...init?.headers } })
-  if (!r.ok) { const e = new Error(`${init?.method ?? 'GET'} ${path.replace(/\/[\w-]{16,}/g, '/:id')} ${r.status}`); if (r.status >= 500) error('api_error', e, { status: r.status }); else warn('api_error', { status: r.status, msg: e.message }); throw e }
+  if (!r.ok) { const e = new ApiError(r.status, init?.method ?? 'GET', path); if (r.status >= 500) error('api_error', e, { status: r.status }); else warn('api_error', { status: r.status, msg: e.message }); throw e }
   return r.json() as Promise<T>
 }
 const later = <T,>(v: T, ms = 150) => new Promise<T>(res => setTimeout(() => res(structuredClone(v)), ms))
