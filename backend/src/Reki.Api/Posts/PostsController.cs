@@ -19,23 +19,6 @@ public sealed class PostsController(
     ApiMapper mapper,
     PostLiveEventMapper liveEvents) : ControllerBase
 {
-    [HttpPost("posts", Name = "PublishPost")]
-    [ActionName("PublishPost")]
-    public async Task<ServerSentEventsResult<object>> PublishPostAsync(
-        CreatePostRequest request,
-        CancellationToken cancellationToken)
-    {
-        PublishedPost published = await sender.Send(
-            new PublishPostCommand(
-                TelegramUserId.From(telegramUser.User.Id),
-                request.Text,
-                request.OwnWords,
-                request.WantId,
-                null),
-            cancellationToken);
-        return TypedResults.ServerSentEvents(liveEvents.MapPublishedAsync(published, cancellationToken));
-    }
-
     [HttpPost("posts/publications", Name = "GeneratePublication")]
     [ActionName("GeneratePublication")]
     public ServerSentEventsResult<PublicationStatusLiveEvent> GeneratePublication(
@@ -79,7 +62,7 @@ public sealed class PostsController(
         CancellationToken cancellationToken)
     {
         PublishedPost published = await sender.Send(
-            PublishPostCommand.ForPublication(
+            new PublishPostCommand(
                 TelegramUserId.From(telegramUser.User.Id),
                 publicationId),
             cancellationToken);

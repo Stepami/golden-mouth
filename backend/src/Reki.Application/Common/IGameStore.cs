@@ -29,7 +29,7 @@ public interface IGameStore
         PlayerProfile updatedPlayer,
         int expectedPlayerVersion,
         PublishedPost published,
-        string? publicationId,
+        string publicationId,
         CancellationToken cancellationToken);
 
     ValueTask<Publication?> GetPublicationAsync(string id, CancellationToken cancellationToken);

@@ -18,7 +18,6 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(HttpValidationProblemDetails))]
 [JsonSerializable(typeof(PlayerResponse))]
 [JsonSerializable(typeof(OnboardingRequest))]
-[JsonSerializable(typeof(CreatePostRequest))]
 [JsonSerializable(typeof(StartPublicationRequest))]
 [JsonSerializable(typeof(PublicationStatusLiveEvent))]
 [JsonSerializable(typeof(PublicationStatusResponse))]

@@ -130,33 +130,30 @@ internal sealed class MongoGameStore : IGameStore
         PlayerProfile updatedPlayer,
         int expectedPlayerVersion,
         PublishedPost published,
-        string? publicationId,
+        string publicationId,
         CancellationToken cancellationToken)
     {
         GamePost post = published.Post;
         using IClientSessionHandle session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
         session.StartTransaction();
-        if (publicationId is not null)
+        FilterDefinition<Publication> readyFilter = Builders<Publication>.Filter.And(
+            Builders<Publication>.Filter.Eq(item => item.Id, publicationId),
+            Builders<Publication>.Filter.Eq(item => item.PlayerId, updatedPlayer.Id),
+            Builders<Publication>.Filter.Eq(item => item.Status, PublicationStatus.ReadyForModeration));
+        UpdateDefinition<Publication> complete = Builders<Publication>.Update
+            .Set(item => item.Status, PublicationStatus.Completed)
+            .Set(item => item.Result, published)
+            .Set(item => item.Text, string.Empty)
+            .Set(item => item.Parts, []);
+        UpdateResult publicationResult = await _publications.UpdateOneAsync(
+            session,
+            readyFilter,
+            complete,
+            cancellationToken: cancellationToken);
+        if (publicationResult.ModifiedCount != 1)
         {
-            FilterDefinition<Publication> readyFilter = Builders<Publication>.Filter.And(
-                Builders<Publication>.Filter.Eq(item => item.Id, publicationId),
-                Builders<Publication>.Filter.Eq(item => item.PlayerId, updatedPlayer.Id),
-                Builders<Publication>.Filter.Eq(item => item.Status, PublicationStatus.ReadyForModeration));
-            UpdateDefinition<Publication> complete = Builders<Publication>.Update
-                .Set(item => item.Status, PublicationStatus.Completed)
-                .Set(item => item.Result, published)
-                .Set(item => item.Text, string.Empty)
-                .Set(item => item.Parts, []);
-            UpdateResult publicationResult = await _publications.UpdateOneAsync(
-                session,
-                readyFilter,
-                complete,
-                cancellationToken: cancellationToken);
-            if (publicationResult.ModifiedCount != 1)
-            {
-                await session.AbortTransactionAsync(cancellationToken);
-                return false;
-            }
+            await session.AbortTransactionAsync(cancellationToken);
+            return false;
         }
 
         FilterDefinition<PlayerProfile> playerFilter = Builders<PlayerProfile>.Filter.And(

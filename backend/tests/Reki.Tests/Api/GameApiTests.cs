@@ -6,6 +6,7 @@ using Microsoft.Extensions.AI;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NSubstitute;
+using Reki.Api.Serialization;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
 using Reki.Contracts.Social;
@@ -44,6 +45,20 @@ public sealed class GameApiTests(ApiFactory factory)
                 _lastChatMessages = messages;
                 _lastChatOptions = callInfo.ArgAt<ChatOptions?>(1)?.Clone();
                 return Task.FromResult(CreateChatResponse(messages));
+            });
+        factory.ChatClient
+            .GetStreamingResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                ChatMessage[] messages = callInfo
+                    .ArgAt<IEnumerable<ChatMessage>>(0)
+                    .ToArray();
+                _lastChatMessages = messages;
+                _lastChatOptions = callInfo.ArgAt<ChatOptions?>(1)?.Clone();
+                return StreamResponseAsync(CreateChatResponse(messages));
             });
     }
 
@@ -234,36 +249,35 @@ public sealed class GameApiTests(ApiFactory factory)
     }
 
     [Test]
+    public async Task LegacyPostRoute_AfterRemoval_ReturnsNotFoundAsync()
+    {
+        using HttpClient http = CreateAuthenticatedHttpClient(1022);
+        using var body = new StringContent("{\"text\":\"hello\"}", Encoding.UTF8, "application/json");
+
+        using HttpResponseMessage response = await http.PostAsync(
+            "/posts",
+            body,
+            CancellationToken.None);
+
+        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+    }
+
+    [Test]
     public async Task PublishPost_AfterDailyLimit_ReturnsConflictAsync()
     {
+        const long telegramUserId = 1002;
         using TestApiClient api = factory.CreateApiClient(1002);
         await OnboardAsync(api);
 
         for (int postIndex = 0; postIndex < 10; postIndex++)
         {
-            await api.Posts.PublishPostAsync(
-                new CreatePostRequest { Text = $"post {postIndex}" },
-                CancellationToken.None);
+            await PublishAsync(telegramUserId, $"post {postIndex}");
         }
 
-        PostsApiException? exception = null;
-        try
-        {
-            await api.Posts.PublishPostAsync(
-                new CreatePostRequest { Text = "over limit" },
-                CancellationToken.None);
-        }
-        catch (PostsApiException caught)
-        {
-            exception = caught;
-        }
-
-        if (exception is null)
-        {
-            throw new InvalidOperationException("The typed client did not surface the conflict response.");
-        }
-
-        await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status409Conflict);
+        (System.Net.HttpStatusCode statusCode, _, _) = await GenerateAsync(
+            telegramUserId,
+            "over limit");
+        await Assert.That(statusCode).IsEqualTo(System.Net.HttpStatusCode.Conflict);
     }
 
     [Test]
@@ -273,28 +287,15 @@ public sealed class GameApiTests(ApiFactory factory)
         using TestApiClient api = factory.CreateApiClient(telegramUserId);
         await OnboardAsync(api);
         factory.ChatClient
-            .GetResponseAsync(
+            .GetStreamingResponseAsync(
                 Arg.Any<IEnumerable<ChatMessage>>(),
                 Arg.Any<ChatOptions?>(),
                 Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(CreateCommentResponse(includeUnknownArgument: true)));
+            .Returns(StreamResponseAsync(CreateCommentResponse(includeUnknownArgument: true)));
 
-        PostsApiException? exception = null;
-        try
-        {
-            await api.Posts.PublishPostAsync(
-                new CreatePostRequest { Text = "обычный безопасный пост" },
-                CancellationToken.None);
-        }
-        catch (PostsApiException caught)
-        {
-            exception = caught;
-        }
-
-        if (exception is null)
-        {
-            throw new InvalidOperationException("The typed client did not surface the LLM error.");
-        }
+        (_, string generation, string publicationId) = await GenerateAsync(
+            telegramUserId,
+            "обычный безопасный пост");
 
         BsonDocument player = await Database
             .GetCollection<BsonDocument>("players")
@@ -304,7 +305,11 @@ public sealed class GameApiTests(ApiFactory factory)
             .GetCollection<BsonDocument>("posts")
             .CountDocumentsAsync(new BsonDocument("PlayerId", player["_id"]));
 
-        await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status503ServiceUnavailable);
+        await Assert.That(generation).Contains("\"type\":\"failed\"");
+        BsonDocument publication = await Database.GetCollection<BsonDocument>("publications")
+            .Find(new BsonDocument("_id", publicationId))
+            .SingleAsync();
+        await Assert.That(publication["ExpiresAtUtc"].BsonType).IsEqualTo(BsonType.DateTime);
         await Assert.That(player["PostsUsed"].AsInt32).IsEqualTo(0);
         await Assert.That(postCount).IsEqualTo(0);
     }
@@ -315,9 +320,7 @@ public sealed class GameApiTests(ApiFactory factory)
         using TestApiClient api = factory.CreateApiClient(1008);
         await OnboardAsync(api);
 
-        await api.Posts.PublishPostAsync(
-            new CreatePostRequest { Text = "короткий пост про сцену" },
-            CancellationToken.None);
+        await PublishAsync(1008, "короткий пост про сцену");
 
         ChatOptions? options = _lastChatOptions;
         if (options is null)
@@ -345,35 +348,22 @@ public sealed class GameApiTests(ApiFactory factory)
         using TestApiClient api = factory.CreateApiClient(telegramUserId);
         await OnboardAsync(api);
         factory.ChatClient
-            .GetResponseAsync(
+            .GetStreamingResponseAsync(
                 Arg.Any<IEnumerable<ChatMessage>>(),
                 Arg.Any<ChatOptions?>(),
                 Arg.Any<CancellationToken>())
-            .Returns(Task.FromException<ChatResponse>(new TimeoutException()));
+            .Returns(StreamTimeoutAsync());
 
-        PostsApiException? exception = null;
-        try
-        {
-            await api.Posts.PublishPostAsync(
-                new CreatePostRequest { Text = "безопасный пост перед таймаутом" },
-                CancellationToken.None);
-        }
-        catch (PostsApiException caught)
-        {
-            exception = caught;
-        }
-
-        if (exception is null)
-        {
-            throw new InvalidOperationException("The typed client did not surface the timeout.");
-        }
+        (_, string generation, _) = await GenerateAsync(
+            telegramUserId,
+            "безопасный пост перед таймаутом");
 
         BsonDocument player = await Database
             .GetCollection<BsonDocument>("players")
             .Find(new BsonDocument("TelegramUserId", telegramUserId))
             .SingleAsync();
 
-        await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status503ServiceUnavailable);
+        await Assert.That(generation).Contains("\"type\":\"failed\"");
         await Assert.That(player["PostsUsed"].AsInt32).IsEqualTo(0);
     }
 
@@ -384,35 +374,20 @@ public sealed class GameApiTests(ApiFactory factory)
         using TestApiClient api = factory.CreateApiClient(telegramUserId);
         await OnboardAsync(api);
 
-        PostsApiException? exception = null;
-        try
-        {
-            await api.Posts.PublishPostAsync(
-                new CreatePostRequest { Text = "я не хочу жить" },
-                CancellationToken.None);
-        }
-        catch (PostsApiException caught)
-        {
-            exception = caught;
-        }
-
-        if (exception is null)
-        {
-            throw new InvalidOperationException("The typed client did not surface the crisis response.");
-        }
+        (_, string generation, _) = await GenerateAsync(telegramUserId, "я не хочу жить");
 
         BsonDocument player = await Database
             .GetCollection<BsonDocument>("players")
             .Find(new BsonDocument("TelegramUserId", telegramUserId))
             .SingleAsync();
 
-        await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status422UnprocessableEntity);
+        await Assert.That(generation).Contains("\"type\":\"failed\"");
         await Assert.That(player["PostsUsed"].AsInt32).IsEqualTo(0);
         await Assert.That(player["PausedAtUtc"].AsBsonDocument["DateTime"].ToUniversalTime())
             .IsEqualTo(new DateTime(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc));
         await Assert.That(player["HateDisabledUntilUtc"].AsBsonDocument["DateTime"].ToUniversalTime())
             .IsEqualTo(new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
-        await factory.ChatClient.DidNotReceive().GetResponseAsync(
+        _ = factory.ChatClient.DidNotReceive().GetStreamingResponseAsync(
             Arg.Any<IEnumerable<ChatMessage>>(),
             Arg.Any<ChatOptions?>(),
             Arg.Any<CancellationToken>());
@@ -466,9 +441,7 @@ public sealed class GameApiTests(ApiFactory factory)
             CancellationToken.None);
 
         // Act
-        await api.Posts.PublishPostAsync(
-            new CreatePostRequest { Text = currentPost },
-            CancellationToken.None);
+        await PublishAsync(telegramUserId, currentPost);
 
         // Assert
         IReadOnlyList<ChatMessage> messages = GetCapturedChatMessages();
@@ -602,9 +575,7 @@ public sealed class GameApiTests(ApiFactory factory)
         const long telegramUserId = 1006;
         using TestApiClient api = factory.CreateApiClient(telegramUserId);
         await OnboardAsync(api);
-        await api.Posts.PublishPostAsync(
-            new CreatePostRequest { Text = "настоящий текст поста для карточки" },
-            CancellationToken.None);
+        await PublishAsync(telegramUserId, "настоящий текст поста для карточки");
         BsonDocument player = await Database
             .GetCollection<BsonDocument>("players")
             .Find(new BsonDocument("TelegramUserId", telegramUserId))
@@ -653,9 +624,7 @@ public sealed class GameApiTests(ApiFactory factory)
             .SingleAsync();
         string playerId = player["_id"].AsString;
 
-        await api.Posts.PublishPostAsync(
-            new CreatePostRequest { Text = "hello" },
-            CancellationToken.None);
+        await PublishAsync(telegramUserId, "hello");
         await api.Telemetry.SubmitAnalyticsAsync(
             new AnalyticsBatchRequest
             {
@@ -721,6 +690,12 @@ public sealed class GameApiTests(ApiFactory factory)
         {
             yield return update;
         }
+    }
+
+    private static async IAsyncEnumerable<ChatResponseUpdate> StreamTimeoutAsync()
+    {
+        await Task.Yield();
+        yield return await Task.FromException<ChatResponseUpdate>(new TimeoutException());
     }
 
     private static async IAsyncEnumerable<ChatResponseUpdate> StreamResponseAsync(ChatResponse response)
@@ -792,6 +767,56 @@ public sealed class GameApiTests(ApiFactory factory)
     {
         return _lastChatMessages ??
             throw new InvalidOperationException("The chat client did not receive messages.");
+    }
+
+    private async Task<(System.Net.HttpStatusCode StatusCode, string Body, string PublicationId)> GenerateAsync(
+        long telegramUserId,
+        string text)
+    {
+        string publicationId = Guid.NewGuid().ToString();
+        using HttpClient http = CreateAuthenticatedHttpClient(telegramUserId);
+        var request = new StartPublicationRequest
+        {
+            PublicationId = publicationId,
+            Text = text,
+        };
+        using var body = new StringContent(
+            JsonSerializer.Serialize(request, ApiJsonSerializerContext.Default.StartPublicationRequest),
+            Encoding.UTF8,
+            "application/json");
+        using HttpResponseMessage response = await http.PostAsync(
+            "/posts/publications",
+            body,
+            CancellationToken.None);
+        return (
+            response.StatusCode,
+            await response.Content.ReadAsStringAsync(CancellationToken.None),
+            publicationId);
+    }
+
+    private async Task PublishAsync(long telegramUserId, string text)
+    {
+        (System.Net.HttpStatusCode statusCode, string generation, string publicationId) =
+            await GenerateAsync(telegramUserId, text);
+        await Assert.That(statusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        await Assert.That(generation).Contains("\"type\":\"ready_for_moderation\"");
+        using HttpClient http = CreateAuthenticatedHttpClient(telegramUserId);
+        using HttpResponseMessage moderation = await http.PostAsync(
+            $"/posts/publications/{publicationId}/moderation",
+            null,
+            CancellationToken.None);
+        await Assert.That(moderation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        await Assert.That(await moderation.Content.ReadAsStringAsync(CancellationToken.None))
+            .Contains("\"type\":\"result\"");
+    }
+
+    private HttpClient CreateAuthenticatedHttpClient(long telegramUserId)
+    {
+        HttpClient http = factory.CreateClient();
+        http.DefaultRequestHeaders.Add(
+            TestAuthenticationHandler.UserIdHeaderName,
+            telegramUserId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        return http;
     }
 
     private async Task AssertCollectionHasNoPlayerAsync(string collectionName, BsonDocument filter)

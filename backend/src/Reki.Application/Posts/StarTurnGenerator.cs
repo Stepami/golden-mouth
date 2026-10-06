@@ -54,66 +54,6 @@ public sealed class StarTurnGenerator(
         }
     }
 
-    public async ValueTask<GeneratedPostTurn> GeneratePostTurnAsync(
-        StarPostContext context,
-        PlayerProfile player,
-        CancellationToken cancellationToken)
-    {
-        string recentPosts = context.RecentPosts.Count == 0
-            ? "нет"
-            : string.Join("\n---\n", context.RecentPosts);
-        const string turnPolicy = """
-            Для поста обязательно вызови comment ровно один раз и можешь вызвать react
-            не более одного раза. Оцени текст по трём шкалам мира от 0 до 1.
-            """;
-        string userPrompt = $$"""
-            Этап: {{context.Stage}}
-            Хейт разрешён сейчас: {{context.HateEnabled}}
-            Последние посты:
-            {{recentPosts}}
-
-            Новый пост:
-            {{context.Text}}
-            """;
-        List<ChatMessage> messages =
-        [
-            StarAgentInstructions.CreatePlatformPolicy(turnPolicy),
-            StarAgentInstructions.CreatePlayerOwnedLayer(context.Agent),
-            new(ChatRole.User, userPrompt),
-        ];
-
-        IReadOnlyList<IStarAction> actions = await GetActionsAsync(
-            messages,
-            ChatToolMode.RequireSpecific("comment"),
-            new ChatInputSafetyContext(player, [context.Text]),
-            cancellationToken);
-        StarCommentAction[] comments = actions.OfType<StarCommentAction>().ToArray();
-        StarReactionAction[] reactions = actions.OfType<StarReactionAction>().ToArray();
-        if (comments.Length != 1 || reactions.Length > 1)
-        {
-            throw new AiServiceUnavailableException("The model returned an invalid action set.");
-        }
-
-        StarCommentAction comment = comments[0];
-        if (!ContentSafetyPolicy.IsOutputAllowed(comment.Text) ||
-            !ContentSafetyPolicy.IsOutputAllowed(comment.Hook))
-        {
-            throw new AiServiceUnavailableException("The model output did not pass the safety policy.");
-        }
-
-        return new GeneratedPostTurn(
-            comment.Author,
-            comment.StarId,
-            comment.Text,
-            comment.Hook,
-            reactions.FirstOrDefault()?.Emoji ?? "🔥",
-            comment.Brave,
-            comment.Humor,
-            comment.Topic,
-            comment.Reasons,
-            comment.OnTopic);
-    }
-
     public async ValueTask<GeneratedDirectMessage> GenerateDirectMessageAsync(
         StarDirectMessageContext context,
         PlayerProfile player,

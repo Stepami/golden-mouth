@@ -4,10 +4,8 @@ using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
-using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
 
@@ -19,38 +17,34 @@ public sealed class PublishPostHandler(
     PlayerReader playerReader,
     ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
-    ProductTelemetry analytics,
-    StarTurnGenerator turnGenerator) : IRequestHandler<PublishPostCommand, PublishedPost>
+    ProductTelemetry analytics) : IRequestHandler<PublishPostCommand, PublishedPost>
 {
     public async ValueTask<PublishedPost> Handle(
         PublishPostCommand request,
         CancellationToken cancellationToken)
     {
-        Publication? publication = request.PublicationId is null
-            ? null
-            : await store.GetPublicationAsync(request.PublicationId, cancellationToken);
+        Publication? publication = await store.GetPublicationAsync(request.PublicationId, cancellationToken);
         PlayerProfile storedPlayer = await playerReader.GetAsync(
             request.TelegramUserId,
             cancellationToken);
-        if (request.PublicationId is not null &&
-            (publication is null || publication.PlayerId != storedPlayer.Id))
+        if (publication is null || publication.PlayerId != storedPlayer.Id)
         {
             throw new ResourceNotFoundException("Publication not found.");
         }
 
-        if (publication?.Status == PublicationStatus.Completed && publication.Result is not null)
+        if (publication.Status == PublicationStatus.Completed && publication.Result is not null)
         {
             return publication.Result;
         }
 
-        if (publication is not null && publication.Status != PublicationStatus.ReadyForModeration)
+        if (publication.Status != PublicationStatus.ReadyForModeration)
         {
             throw new RequestConflictException("The publication is not ready for moderation.");
         }
 
-        string text = publication?.Text ?? request.Text;
-        bool ownWords = publication?.OwnWords ?? request.OwnWords;
-        string? wantId = publication?.WantId ?? request.WantId;
+        string text = publication.Text;
+        bool ownWords = publication.OwnWords;
+        string? wantId = publication.WantId;
         DateTimeOffset now = timeProvider.GetUtcNow();
         PlayerProfile player = gameDay.Normalize(storedPlayer);
         if (!ReferenceEquals(player, storedPlayer) && !await store.TryReplacePlayerAsync(
@@ -68,34 +62,7 @@ public sealed class PublishPostHandler(
             throw new RequestConflictException("The daily post limit has been reached.");
         }
 
-        WorldRules? storedRules = await store.GetWorldRulesAsync(
-            player.Id,
-            player.World,
-            cancellationToken);
-        WorldRules worldRules = storedRules ?? WorldRulesDefaults.Create(player.Id, player.World);
-        IReadOnlyList<GamePost> recentPosts = await store.GetRecentPostsAsync(
-            player.Id,
-            3,
-            cancellationToken);
-        bool hateEnabled = player.Settings.Drama != "off" &&
-            (player.HateDisabledUntilUtc is null || player.HateDisabledUntilUtc <= now);
-        GeneratedPostTurn turn = publication?.AssembleTurn() ?? await turnGenerator.GeneratePostTurnAsync(
-            new StarPostContext(
-                text,
-                new StarAgentProfile(
-                    player.World,
-                    worldRules.Title,
-                    worldRules.Description,
-                    worldRules.Rules,
-                    player.Settings.Drama,
-                    player.Settings.Voice,
-                    null,
-                    []),
-                GetStage(player.Subscribers),
-                recentPosts.Select(post => post.Text).ToArray(),
-                hateEnabled),
-            player,
-            cancellationToken);
+        GeneratedPostTurn turn = publication.AssembleTurn();
 
         bool wantCompleted = wantId is not null && player.Wants.Any(want =>
             want.Id == wantId && !want.Done);
@@ -175,17 +142,6 @@ public sealed class PublishPostHandler(
         return ordered.Length % 2 == 0
             ? Math.Max(1, (ordered[middle - 1] + ordered[middle]) / 2.0)
             : Math.Max(1, ordered[middle]);
-    }
-
-    private static string GetStage(long subscribers)
-    {
-        return subscribers switch
-        {
-            < 1000 => "mask",
-            < 5000 => "views",
-            < 10000 => "strike",
-            _ => "new_line",
-        };
     }
 
     private static void TrackProgression(

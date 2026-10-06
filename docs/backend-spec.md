@@ -120,7 +120,6 @@
 | `POST /posts/publications` (SSE) | `{ publicationId, text, ownWords?, wantId? }`; статусы `pending` → `ready_for_moderation` либо `failed`; 409 при лимите или конфликте ключа | 02-2, 02-2b |
 | `POST /posts/publications/:id/moderation` (SSE) | поток `LiveEvent` со строчными `type`, последним `result: PostResult`; повтор завершённой публикации не списывает пост снова | 02-2, 02-3 |
 | `GET /posts/publications/:id` | `{ publicationId, status, result? }` для восстановления после обрыва; при неопределённом состоянии ручная проверка без автоповтора | 02-2b |
-| `POST /posts` (SSE, совместимость) | прежний одношаговый контракт для старых клиентов; новый фронт его не использует | — |
 | `POST /posts/:id/replies` | 200 без тела | 02-6 |
 | `GET /feed` | `FeedItem[]` | 03-3 |
 | `GET /friends` | `Friend[]` | 03-4 |
