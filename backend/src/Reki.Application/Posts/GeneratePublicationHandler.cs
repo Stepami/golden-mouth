@@ -81,43 +81,82 @@ public sealed class GeneratePublicationHandler(
 
         yield return new PublicationStatusLiveEvent(PublicationStatus.Pending, request.Id);
         bool failed = false;
+        bool ready = false;
         try
         {
-            await PersistGenerationAsync(request, player, cancellationToken);
-        }
-        catch (AiServiceUnavailableException)
-        {
-            failed = true;
-        }
-        catch (ContentRejectedException)
-        {
-            failed = true;
-        }
-        catch (CrisisDetectedException)
-        {
-            failed = true;
-        }
-        catch (InvalidOperationException)
-        {
-            failed = true;
-        }
-        catch (OperationCanceledException)
-        {
-            failed = true;
-        }
-        catch (HttpRequestException)
-        {
-            failed = true;
-        }
-        catch (TimeoutException)
-        {
-            failed = true;
-        }
+            StarPostContext? context = null;
+            try
+            {
+                context = await CreatePostContextAsync(request, player, cancellationToken);
+            }
+            catch (Exception exception) when (IsGenerationFailure(exception))
+            {
+                failed = true;
+            }
 
-        if (failed)
+            if (context is null)
+            {
+                failed = true;
+            }
+
+            if (!failed && context is not null)
+            {
+                await using IAsyncEnumerator<ChatResponseUpdate> updates = generator
+                    .StreamPostTurnAsync(context, player, cancellationToken)
+                    .GetAsyncEnumerator(cancellationToken);
+                while (!failed)
+                {
+                    bool hasUpdate = false;
+                    try
+                    {
+                        hasUpdate = await updates.MoveNextAsync();
+                        if (hasUpdate)
+                        {
+                            ChatResponseUpdate update = updates.Current;
+                            await store.AppendPublicationPartAsync(
+                                request.Id,
+                                new PublicationPart(update.Text, null, null),
+                                cancellationToken);
+                            await PersistActionsAsync(request.Id, update, cancellationToken);
+                        }
+                    }
+                    catch (Exception exception) when (IsGenerationFailure(exception))
+                    {
+                        failed = true;
+                    }
+
+                    if (failed || !hasUpdate)
+                    {
+                        break;
+                    }
+
+                    yield return new PublicationStatusLiveEvent(PublicationStatus.Pending, request.Id);
+                }
+            }
+
+            if (!failed)
+            {
+                try
+                {
+                    Publication complete = await store.GetPublicationAsync(request.Id, cancellationToken)
+                        ?? throw new InvalidOperationException("The publication disappeared during generation.");
+                    _ = complete.AssembleTurn();
+                    await store.MarkPublicationReadyAsync(request.Id, cancellationToken);
+                    ready = true;
+                }
+                catch (Exception exception) when (IsGenerationFailure(exception))
+                {
+                    failed = true;
+                }
+            }
+        }
+        finally
         {
-            DateTime expiresAtUtc = timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime;
-            await store.MarkPublicationFailedAsync(request.Id, expiresAtUtc, CancellationToken.None);
+            if (!ready)
+            {
+                DateTime expiresAtUtc = timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime;
+                await store.MarkPublicationFailedAsync(request.Id, expiresAtUtc, CancellationToken.None);
+            }
         }
 
         yield return new PublicationStatusLiveEvent(
@@ -150,7 +189,16 @@ public sealed class GeneratePublicationHandler(
         _ => "new_line",
     };
 
-    private async ValueTask PersistGenerationAsync(
+    private static bool IsGenerationFailure(Exception exception) => exception is
+        AiServiceUnavailableException or
+        ContentRejectedException or
+        CrisisDetectedException or
+        InvalidOperationException or
+        OperationCanceledException or
+        HttpRequestException or
+        TimeoutException;
+
+    private async ValueTask<StarPostContext> CreatePostContextAsync(
         GeneratePublicationCommand request,
         PlayerProfile player,
         CancellationToken cancellationToken)
@@ -161,7 +209,7 @@ public sealed class GeneratePublicationHandler(
         IReadOnlyList<GamePost> recentPosts = await store.GetRecentPostsAsync(player.Id, 3, cancellationToken);
         bool hateEnabled = player.Settings.Drama != "off" &&
             (player.HateDisabledUntilUtc is null || player.HateDisabledUntilUtc <= now);
-        var context = new StarPostContext(
+        return new StarPostContext(
             request.Text,
             new StarAgentProfile(
                 player.World,
@@ -175,22 +223,6 @@ public sealed class GeneratePublicationHandler(
             GetStage(player.Subscribers),
             recentPosts.Select(post => post.Text).ToArray(),
             hateEnabled);
-        await foreach (ChatResponseUpdate update in generator.StreamPostTurnAsync(
-            context,
-            player,
-            cancellationToken))
-        {
-            await store.AppendPublicationPartAsync(
-                request.Id,
-                new PublicationPart(update.Text, null, null),
-                cancellationToken);
-            await PersistActionsAsync(request.Id, update, cancellationToken);
-        }
-
-        Publication complete = await store.GetPublicationAsync(request.Id, cancellationToken)
-            ?? throw new InvalidOperationException("The publication disappeared during generation.");
-        _ = complete.AssembleTurn();
-        await store.MarkPublicationReadyAsync(request.Id, cancellationToken);
     }
 
     private async ValueTask PersistActionsAsync(

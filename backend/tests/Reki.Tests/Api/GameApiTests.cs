@@ -159,6 +159,8 @@ public sealed class GameApiTests(ApiFactory factory)
         string generationSse = await generation.Content.ReadAsStringAsync(CancellationToken.None);
         await Assert.That(generation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
         await Assert.That(generationSse).Contains("\"type\":\"pending\"");
+        await Assert.That(generationSse.Split("\"type\":\"pending\"", StringSplitOptions.None).Length)
+            .IsGreaterThan(2);
         await Assert.That(generationSse).Contains("\"type\":\"ready_for_moderation\"");
         BsonDocument ready = await Database.GetCollection<BsonDocument>("publications")
             .Find(new BsonDocument("_id", publicationId))
