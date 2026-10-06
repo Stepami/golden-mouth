@@ -36,7 +36,7 @@ internal sealed class DeepSeekThinkingChatClient(IChatClient innerClient) : Dele
 
     private ChatOptions? WithThinkingDisabled(ChatOptions? options)
     {
-        Uri? providerUri = GetService<ChatClientMetadata>()?.ProviderUri;
+        Uri? providerUri = this.GetService<ChatClientMetadata>()?.ProviderUri;
         if (providerUri?.Host.Contains(ProviderMarker, StringComparison.OrdinalIgnoreCase) != true)
         {
             return options;
