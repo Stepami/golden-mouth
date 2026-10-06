@@ -73,13 +73,13 @@ public sealed partial class ApiMapper
             new Dictionary<string, string>());
     }
 
-    public FeedItemResponse MapFeedItem(GamePost post)
+    public FeedItemResponse MapFeedItem(GamePost post, PlayerProfile player)
     {
         return new FeedItemResponse(
             FeedItemKind.Post,
-            null,
-            null,
-            null,
+            player.Name,
+            player.Avatar,
+            player.Role,
             post.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             post.Text,
             [new ReactionResponse("🔥", post.Viral ? 3 : 1)],
