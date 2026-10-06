@@ -111,22 +111,25 @@ public sealed class GameApiTests(ApiFactory factory)
             .IsFalse();
     }
 
-    /*[Test]
+    [Test]
     public async Task Feed_UsesPlayerProfileForPostAuthorAsync()
     {
-        using TestApiClient api = factory.CreateApiClient(1020);
+        // Arrange
+        const long telegramUserId = 1023;
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
         await OnboardAsync(api);
-        await api.Posts.PublishPostAsync(
-            new CreatePostRequest { Text = "пост для ленты" },
-            CancellationToken.None);
+        await PublishAsync(telegramUserId, "пост для ленты");
 
+        // Act
         IReadOnlyList<FeedItemResponse> feed = await api.Posts.GetFeedAsync(CancellationToken.None);
 
+        // Assert
         await Assert.That(feed.Count).IsEqualTo(1);
+        await Assert.That(feed[0].Text).IsEqualTo("пост для ленты");
         await Assert.That(feed[0].Author).IsEqualTo("Player");
         await Assert.That(feed[0].Avatar).IsEqualTo("pick0");
         await Assert.That(feed[0].Role).IsEqualTo("creator");
-    }*/
+    }
 
     [Test]
     public async Task Publication_StreamingModeration_ExposesCommittedRecoveryStatusAsync()
