@@ -54,20 +54,33 @@ export const api = {
     if (BASE) {
       const ctrl = new AbortController()
       let deliveredResult = false
-      const pause = (ms: number) => new Promise<void>((resolve, reject) => {
-        const onAbort = () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')) }
-        const timer = setTimeout(() => { ctrl.signal.removeEventListener('abort', onAbort); resolve() }, ms)
-        if (ctrl.signal.aborted) onAbort()
-        else ctrl.signal.addEventListener('abort', onAbort, { once: true })
-      })
+      const pause = (ms: number): Promise<void> => {
+        if (ctrl.signal.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'))
+        if (document.hidden) return Promise.resolve()
+        return new Promise((resolve, reject) => {
+          const finish = () => { clearTimeout(timer); ctrl.signal.removeEventListener('abort', onAbort); document.removeEventListener('visibilitychange', onVisibilityChange) }
+          const onAbort = () => { finish(); reject(new DOMException('Aborted', 'AbortError')) }
+          const onVisibilityChange = () => { if (document.hidden) { finish(); resolve() } }
+          const timer = setTimeout(() => { finish(); resolve() }, ms)
+          ctrl.signal.addEventListener('abort', onAbort, { once: true })
+          document.addEventListener('visibilitychange', onVisibilityChange)
+          if (ctrl.signal.aborted) onAbort()
+          else if (document.hidden) onVisibilityChange()
+        })
+      }
       const moderation = async () => {
         const r = await fetch(`${BASE}/posts/publications/${encodeURIComponent(publicationId)}/moderation`, {
           method: 'POST', signal: ctrl.signal, headers: { Accept: 'text/event-stream', ...telegramAuthHeaders() },
         })
         if (!r.ok) throw new ApiError(r.status, 'POST', '/posts/publications/:id/moderation')
-        let shown = 0
+        let lastShownAt = 0
+        const minimumGap: Record<LiveEvent['type'], number> = {
+          views: 650, react: 700, comment: 850, typing: 850, result: 1200,
+        }
         await readSse<LiveEvent>(r, async event => {
-          if (shown++ > 0) await pause(event.type === 'result' ? 700 : 500)
+          const remaining = minimumGap[event.type] - (performance.now() - lastShownAt)
+          if (lastShownAt && remaining > 0) await pause(remaining)
+          lastShownAt = performance.now()
           if (event.type === 'result') deliveredResult = true
           onEvent(event)
         })
@@ -112,9 +125,9 @@ export const api = {
       return () => { clearTimeout(start); ctrl.abort() }
     }
     onStatus?.('pending')
-    const steps: [number, LiveEvent][] = [[200, { type: 'views', views: 48 }], [500, { type: 'react', emoji: '😂' }], [800, { type: 'comment', comment: mock.liveComment }],
-      [1100, { type: 'views', views: 190 }], [1300, { type: 'react', emoji: '🫶' }], [1600, { type: 'typing', who: 'Соня' }], [1900, { type: 'react', emoji: '🔥' }],
-      [2200, { type: 'views', views: 312 }], [2900, { type: 'result', result: mock.results.normal as PostResult }]]
+    const steps: [number, LiveEvent][] = [[250, { type: 'views', views: 48 }], [650, { type: 'react', emoji: '😂' }], [1100, { type: 'comment', comment: mock.liveComment }],
+      [1450, { type: 'views', views: 190 }], [1800, { type: 'react', emoji: '🫶' }], [2250, { type: 'typing', who: 'Соня' }], [2650, { type: 'react', emoji: '🔥' }],
+      [3000, { type: 'views', views: 312 }], [3900, { type: 'result', result: mock.results.normal as PostResult }]]
     const timers = steps.map(([ms, e]) => setTimeout(() => onEvent(e), ms))
     return () => timers.forEach(clearTimeout)
   },

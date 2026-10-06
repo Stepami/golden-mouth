@@ -44,7 +44,7 @@ function Compose() {
   )
 }
 
-// 02-2: живая реакция 2–3 с, потом итог одной карточкой
+// 02-2: живая реакция 3–4 с, потом итог одной карточкой
 function Live() {
   const nav = useNav(); const { patch } = useStore(); const p = usePlayer()
   const text = (nav.params.text as string) ?? firstPost.text
@@ -81,7 +81,9 @@ function Live() {
       <div className="pad" style={{ position: 'relative' }}>
         <div className="card" style={{ boxShadow: '0 0 0 2px rgba(255,107,139,.6),0 0 44px rgba(255,107,139,.35)', marginBottom: 12 }}>
           <div className="small" style={{ color: 'var(--accent)', marginBottom: 6 }} aria-live="polite">{phase === 'generating' ? 'готовим публикацию' : phase === 'moderating' ? 'проверяем публикацию' : 'только что опубликовано'}</div>{text}
-          <div className="row" style={{ marginTop: 12 }}><span style={{ fontSize: 26, fontWeight: 900 }}>👁 {fmt(views)}</span><span className="up small">растёт</span></div>
+          {phase === 'reacting'
+            ? <div className="row" style={{ marginTop: 12 }}><span style={{ fontSize: 26, fontWeight: 900 }}>👁 {fmt(views)}</span><span className="up small">растёт</span></div>
+            : <div className="live-current" aria-hidden="true"><span /></div>}
         </div>
         <div style={{ position: 'absolute', right: 14, top: 120, width: 120, height: 200, pointerEvents: 'none' }}>
           {floats.map(f => <span key={f.id} className="float-react" style={{ left: `${f.x}%`, bottom: 0, fontSize: 24 }}>{f.emoji}</span>)}
