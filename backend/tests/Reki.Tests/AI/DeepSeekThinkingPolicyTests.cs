@@ -53,7 +53,7 @@ public sealed class DeepSeekThinkingPolicyTests
     private static JsonObject ReadBody(PipelineRequest request)
     {
         using var buffer = new MemoryStream();
-        request.Content!.WriteTo(buffer);
-        return (JsonObject)JsonNode.Parse(buffer.ToArray())!;
+        request.Content?.WriteTo(buffer);
+        return JsonNode.Parse(buffer.ToArray()) as JsonObject ?? [];
     }
 }
