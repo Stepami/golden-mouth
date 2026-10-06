@@ -1,14 +1,15 @@
 using Mediator;
 using Reki.Application.Common;
+using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts;
 
 public sealed class GetFeedHandler(IGameStore store, PlayerReader playerReader)
-    : IRequestHandler<GetFeedQuery, FeedView>
+    : IRequestHandler<GetFeedQuery, IReadOnlyList<FeedItemResponse>>
 {
-    public async ValueTask<FeedView> Handle(
+    public async ValueTask<IReadOnlyList<FeedItemResponse>> Handle(
         GetFeedQuery request,
         CancellationToken cancellationToken)
     {
@@ -17,7 +18,7 @@ public sealed class GetFeedHandler(IGameStore store, PlayerReader playerReader)
             player.Id,
             20,
             cancellationToken);
-        return new FeedView(player, posts);
+        return posts.Select(post => PostContractMapper.MapFeedItem(post, player)).ToArray();
     }
 }
 

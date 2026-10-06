@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using Reki.Application.Player;
 using Reki.Application.Posts;
@@ -73,19 +72,6 @@ public sealed partial class ApiMapper
             new Dictionary<string, string>());
     }
 
-    public FeedItemResponse MapFeedItem(GamePost post, PlayerProfile player)
-    {
-        return new FeedItemResponse(
-            FeedItemKind.Post,
-            player.Name,
-            player.Avatar,
-            player.Role,
-            post.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
-            post.Text,
-            [new ReactionResponse("🔥", post.Viral ? 3 : 1)],
-            null);
-    }
-
     public DmResponse MapDirectMessages(DirectMessageView view, string starId)
     {
         StarResponse star = CreateStar(starId, view.Relation);
@@ -115,27 +101,6 @@ public sealed partial class ApiMapper
                 item.Prev,
                 SanitizeProperties(item.Props))).ToArray());
     }
-
-    public PostResultResponse MapPublishedPost(PublishedPost source)
-    {
-        GamePost post = source.Post;
-        GameComment? bestComment = post.Comments.FirstOrDefault();
-        return new PostResultResponse(
-            post.Id.Value,
-            post.SubscriberDelta,
-            post.Viral ? "Пост залетел" : "Канал растёт",
-            source.Reasons
-                .Select(reason => new WhyResponse(reason.Icon, reason.Label, $"+{post.SubscriberDelta}"))
-                .ToArray(),
-            post.Viral ? [new RibbonResponse("🚀", "залёт", null)] : [],
-            bestComment is null ? null : new BestCommentResponse(bestComment.Avatar, bestComment.Text),
-            post.Viral,
-            post.Flop,
-            post.Views,
-            source.Hook);
-    }
-
-    public partial CommentResponse MapComment(GameComment source);
 
     public partial SendDirectMessageResponse MapSentDirectMessage(SentDirectMessage source);
 
@@ -199,8 +164,6 @@ public sealed partial class ApiMapper
     {
         return Enum.Parse<GameEventKind>(source, true);
     }
-
-    private static string MapCommentId(CommentId source) => source.Value;
 
     private static string MapEventId(DomainEventId source) => source.Value;
 

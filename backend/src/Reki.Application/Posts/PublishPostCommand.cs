@@ -5,5 +5,5 @@ namespace Reki.Application.Posts;
 
 public sealed record PublishPostCommand(
     TelegramUserId TelegramUserId,
-    string PublicationId) : IRequest<PublishedPost>;
+    string PublicationId) : IStreamRequest<object>;
 

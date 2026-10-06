@@ -16,4 +16,14 @@ public sealed class PublicationContractTests
 
         await Assert.That(document.RootElement.GetProperty("type").GetString()).IsEqualTo("views");
     }
+
+    [Test]
+    public async Task PublicationStatus_DefaultContext_UsesSnakeCaseAsync()
+    {
+        string json = JsonSerializer.Serialize(
+            PublicationStatus.ReadyForModeration,
+            ApiJsonSerializerContext.Default.PublicationStatus);
+
+        await Assert.That(json).IsEqualTo("\"ready_for_moderation\"");
+    }
 }

@@ -1,4 +1,4 @@
-namespace Reki.Application.Posts;
+namespace Reki.Contracts.Posts;
 
 public enum PublicationStatus
 {

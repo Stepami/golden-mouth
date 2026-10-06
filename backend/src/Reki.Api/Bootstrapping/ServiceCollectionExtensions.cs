@@ -4,7 +4,6 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Reki.Api.Common.Errors;
 using Reki.Api.Mapping;
-using Reki.Api.Posts;
 using Reki.Api.Serialization;
 using Reki.Application;
 using Reki.Application.Common;
@@ -72,7 +71,6 @@ internal static class ServiceCollectionExtensions
                 new AuthorizeFilter(TgMiniAppAuthConstants.AuthenticationScheme)))
             .AddJsonOptions(options => ConfigureJson(options.JsonSerializerOptions));
         services.AddSingleton<ApiMapper>();
-        services.AddSingleton<PostLiveEventMapper>();
         services.ConfigureHttpJsonOptions(options => ConfigureJson(options.SerializerOptions));
 
         return services;
@@ -82,15 +80,9 @@ internal static class ServiceCollectionExtensions
     {
         IJsonTypeInfoResolver resolver = ApiJsonSerializerContext.Default;
         options.TypeInfoResolverChain.Insert(0, resolver);
-        options.Converters.Add(new JsonStringEnumConverter<SkillId>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<WorldId>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<Address>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<Drama>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<BirthGroup>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<FeedItemKind>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<DirectMessageAuthor>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<GameEventKind>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<LiveEventType>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<ClientLogLevel>(JsonNamingPolicy.CamelCase));
+        foreach (JsonConverter converter in ApiJsonSerializerContext.Default.Options.Converters)
+        {
+            options.Converters.Add(converter);
+        }
     }
 }

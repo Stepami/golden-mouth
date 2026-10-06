@@ -7,6 +7,7 @@ using Reki.Application.Common;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Worlds;
+using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -20,11 +21,11 @@ public sealed class GeneratePublicationHandler(
     TimeProvider timeProvider,
     GameDay gameDay,
     PlayerReader playerReader,
-    StarTurnGenerator generator) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatus>
+    StarTurnGenerator generator) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatusLiveEvent>
 {
     private static readonly TimeSpan FailedRetention = TimeSpan.FromDays(1);
 
-    public async IAsyncEnumerable<PublicationStatus> Handle(
+    public async IAsyncEnumerable<PublicationStatusLiveEvent> Handle(
         GeneratePublicationCommand request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -48,7 +49,7 @@ public sealed class GeneratePublicationHandler(
         if (existing is not null)
         {
             EnsureSameRequest(existing, player, requestHash);
-            yield return existing.Status;
+            yield return new PublicationStatusLiveEvent(existing.Status, request.Id);
             yield break;
         }
 
@@ -74,11 +75,11 @@ public sealed class GeneratePublicationHandler(
             existing = await store.GetPublicationAsync(request.Id, cancellationToken)
                 ?? throw new RequestConflictException("The publication changed concurrently.");
             EnsureSameRequest(existing, player, requestHash);
-            yield return existing.Status;
+            yield return new PublicationStatusLiveEvent(existing.Status, request.Id);
             yield break;
         }
 
-        yield return PublicationStatus.Pending;
+        yield return new PublicationStatusLiveEvent(PublicationStatus.Pending, request.Id);
         bool failed = false;
         try
         {
@@ -119,7 +120,9 @@ public sealed class GeneratePublicationHandler(
             await store.MarkPublicationFailedAsync(request.Id, expiresAtUtc, CancellationToken.None);
         }
 
-        yield return failed ? PublicationStatus.Failed : PublicationStatus.ReadyForModeration;
+        yield return new PublicationStatusLiveEvent(
+            failed ? PublicationStatus.Failed : PublicationStatus.ReadyForModeration,
+            request.Id);
     }
 
     private static void EnsureSameRequest(

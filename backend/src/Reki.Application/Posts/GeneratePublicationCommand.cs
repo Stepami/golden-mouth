@@ -1,4 +1,5 @@
 using Mediator;
+using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Posts;
@@ -8,4 +9,4 @@ public sealed record GeneratePublicationCommand(
     TelegramUserId TelegramUserId,
     string Text,
     bool OwnWords,
-    string? WantId) : IStreamRequest<PublicationStatus>;
+    string? WantId) : IStreamRequest<PublicationStatusLiveEvent>;

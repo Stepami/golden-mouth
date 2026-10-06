@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Api.Mapping;
 using Reki.Application.Posts;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
@@ -15,9 +14,7 @@ namespace Reki.Api.Posts;
 [Route("/")]
 public sealed class PostsController(
     ISender sender,
-    ITelegramUserAccessor telegramUser,
-    ApiMapper mapper,
-    PostLiveEventMapper liveEvents) : ControllerBase
+    ITelegramUserAccessor telegramUser) : ControllerBase
 {
     [HttpPost("posts/publications", Name = "GeneratePublication")]
     [ActionName("GeneratePublication")]
@@ -25,7 +22,7 @@ public sealed class PostsController(
         StartPublicationRequest request,
         CancellationToken cancellationToken)
     {
-        IAsyncEnumerable<PublicationStatus> result = sender.CreateStream(
+        IAsyncEnumerable<PublicationStatusLiveEvent> result = sender.CreateStream(
             new GeneratePublicationCommand(
                 request.PublicationId,
                 TelegramUserId.From(telegramUser.User.Id),
@@ -33,8 +30,7 @@ public sealed class PostsController(
                 request.OwnWords,
                 request.WantId),
             cancellationToken);
-        return TypedResults.ServerSentEvents(
-            PostLiveEventMapper.MapStatusesAsync(result, request.PublicationId, cancellationToken));
+        return TypedResults.ServerSentEvents(result);
     }
 
     [HttpGet("posts/publications/{publicationId}", Name = "GetPublicationStatus")]
@@ -43,30 +39,24 @@ public sealed class PostsController(
         string publicationId,
         CancellationToken cancellationToken)
     {
-        Publication publication = await sender.Send(
+        PublicationStatusResponse result = await sender.Send(
             new GetPublicationQuery(TelegramUserId.From(telegramUser.User.Id), publicationId),
             cancellationToken);
-        PostResultResponse? result = publication.Result is null
-            ? null
-            : mapper.MapPublishedPost(publication.Result);
-        return TypedResults.Ok(new PublicationStatusResponse(
-            publication.Id,
-            PostLiveEventMapper.MapPublicationStatus(publication.Status),
-            result));
+        return TypedResults.Ok(result);
     }
 
     [HttpPost("posts/publications/{publicationId}/moderation", Name = "ModeratePublication")]
     [ActionName("ModeratePublication")]
-    public async Task<ServerSentEventsResult<object>> ModeratePublicationAsync(
+    public ServerSentEventsResult<object> ModeratePublication(
         string publicationId,
         CancellationToken cancellationToken)
     {
-        PublishedPost published = await sender.Send(
+        IAsyncEnumerable<object> result = sender.CreateStream(
             new PublishPostCommand(
                 TelegramUserId.From(telegramUser.User.Id),
                 publicationId),
             cancellationToken);
-        return TypedResults.ServerSentEvents(liveEvents.MapPublishedAsync(published, cancellationToken));
+        return TypedResults.ServerSentEvents(result);
     }
 
     [HttpPost("posts/{postId}/replies", Name = "ReplyToPost")]
@@ -90,10 +80,9 @@ public sealed class PostsController(
     public async Task<Ok<IReadOnlyList<FeedItemResponse>>> GetFeedAsync(
         CancellationToken cancellationToken)
     {
-        FeedView feed = await sender.Send(
+        IReadOnlyList<FeedItemResponse> result = await sender.Send(
             new GetFeedQuery(TelegramUserId.From(telegramUser.User.Id)),
             cancellationToken);
-        return TypedResults.Ok<IReadOnlyList<FeedItemResponse>>(
-            feed.Posts.Select(post => mapper.MapFeedItem(post, feed.Player)).ToArray());
+        return TypedResults.Ok(result);
     }
 }

@@ -21,6 +21,8 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(StartPublicationRequest))]
 [JsonSerializable(typeof(PublicationStatusLiveEvent))]
 [JsonSerializable(typeof(PublicationStatusResponse))]
+[JsonSerializable(typeof(PublicationStatus))]
+[JsonSerializable(typeof(LiveEventType))]
 [JsonSerializable(typeof(ReplyRequest))]
 [JsonSerializable(typeof(DirectMessageRequest))]
 [JsonSerializable(typeof(ForgetMemoryRequest))]
@@ -48,5 +50,6 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(ClientLogBatchRequest))]
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    Converters = new[] { typeof(ContractEnumConverterFactory) },
     UseStringEnumConverter = true)]
 public sealed partial class ApiJsonSerializerContext : JsonSerializerContext;

@@ -1,5 +1,6 @@
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
+using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Posts;

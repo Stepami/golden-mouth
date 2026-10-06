@@ -41,25 +41,25 @@ backend/
 Зависимости направлены внутрь:
 
 - `Domain` не ссылается на ASP.NET Core, MongoDB, Serilog и инфраструктурные пакеты.
-- `Application` ссылается на `Domain` и объявляет use cases и порты.
+- `Application` ссылается на `Domain` и `Contracts`, объявляет use cases и порты и формирует готовые публичные response DTO в обработчиках.
 - `Contracts` не ссылается на остальные production-проекты и содержит только публичные модели HTTP-контракта.
-- `Infrastructure` ссылается на `Application` и `Domain` и реализует порты: MongoDB, внешние API, часы и прочий I/O.
+- `Infrastructure` ссылается на `Application`, `Domain` и при необходимости `Contracts` и реализует порты: MongoDB, внешние API, часы и прочий I/O.
 - `Api` ссылается на `Application`, `Contracts` и `Infrastructure`, является composition root и HTTP-адаптером; бизнес-логики в controllers нет.
 - Не создавай отдельные проекты на feature, bounded context, module или shared kernel. Новые production-проекты, кроме закреплённого `Reki.Contracts`, требуют отдельного архитектурного решения в issue.
 
 Код внутри проектов делится по feature/use case, а не по техническим папкам `Services`, `Dtos` и `Repositories` на весь проект:
 
 ```text
-Reki.Api/<Feature>/<UseCase>/Controller.cs, Mapper.cs
+Reki.Api/<Feature>/<UseCase>/Controller.cs
 Reki.Contracts/<Feature>/Request.cs, Response.cs
-Reki.Application/<Feature>/<UseCase>/Command.cs|Query.cs, Handler.cs, Result.cs
+Reki.Application/<Feature>/<UseCase>/Command.cs|Query.cs, Handler.cs, Mapper.cs
 Reki.Domain/<Feature>/... aggregates, entities, value objects, domain events
 Reki.Infrastructure/<Feature>/... repositories, BSON mappings, external adapters
 Reki.Tests/<Feature>/<UseCase>/... component and domain tests
 ```
 
 - Один use case хранит рядом свои command/query, handler, validation, result и ports, если они не переиспользуются другим use case.
-- Все публичные API request/response DTO и связанные enum находятся в `Reki.Contracts`, остаются immutable и не содержат поведения. Application contracts не зависят от HTTP и от `Reki.Contracts`.
+- Все публичные API request/response DTO и связанные enum находятся в `Reki.Contracts`, остаются immutable и не содержат поведения. Application может зависеть от `Contracts` для типизированных входов и готовых ответов; `Contracts` не зависит от `Application` или HTTP runtime.
 - Domain организуется вокруг business concepts и aggregate boundaries: не дублируй aggregate только ради зеркальной папки каждого handler.
 - Infrastructure-код, специфичный для use case, лежит в том же feature slice; общий repository/serializer остаётся на уровне feature.
 - Логические bounded contexts изолируются namespaces и internal API. Они не читают Mongo collections друг друга напрямую; между ними используй узкие application contracts и integration events, а domain events оставляй внутри context.
@@ -145,7 +145,7 @@ Reki.Tests/<Feature>/<UseCase>/... component and domain tests
 
 - Controllers группируются по feature/use case, наследуются от `ControllerBase` и помечаются `[ApiController]`. Маршруты задаются attribute routing; `Program.cs` содержит composition root и одно `MapControllers()`.
 - Каждый action имеет явный HTTP-атрибут, стабильное имя route, `CancellationToken` и возвращает конкретный typed result из `Microsoft.AspNetCore.Http.HttpResults` через `TypedResults`. Для нескольких вариантов используй `Results<T1, T2, ...>`. Атрибуты `[ProducesResponseType]` не добавляй: OpenAPI получает response metadata из typed return type. Не смешивай controllers с `MapGet`/`MapPost` и самописными Minimal API endpoint groups.
-- Controller только связывает contract из `Reki.Contracts` с command/query и переводит результат в HTTP. Domain entities и application results наружу не возвращаются; преобразование выполняет явный Mapperly mapper в `Reki.Api`.
+- Controller только связывает HTTP-вход с command/query и возвращает результат через `TypedResults`. Domain entities и внутренние application results наружу не возвращаются; преобразование в публичные DTO и SSE events выполняется в Application. Существующие маршруты мигрируй по use case, не добавляй новые mapper-вызовы в controllers.
 - Ошибки отдаются как `ProblemDetails`/`ValidationProblemDetails` с устойчивыми кодами; stack trace и внутренние сообщения клиенту не выдаются.
 - Глобальные исключения обрабатываются через зарегистрированный `IExceptionHandler`. Свои application exceptions маппятся на безопасные `ProblemDetails`; неизвестные исключения дают обобщённый HTTP 500 без `Exception.Message`.
 - Используй `System.Text.Json` без Newtonsoft.Json. Все request/response/external DTO и используемые ими Vogen types регистрируются в `JsonSerializerContext`; подключай сгенерированную Vogen converter factory. В JSON value object представляется underlying primitive, а не объектом `{ "value": ... }`; reflection fallback не включай незаметно.

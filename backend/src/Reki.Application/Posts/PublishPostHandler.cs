@@ -1,9 +1,11 @@
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
+using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 
@@ -17,11 +19,11 @@ public sealed class PublishPostHandler(
     PlayerReader playerReader,
     ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
-    ProductTelemetry analytics) : IRequestHandler<PublishPostCommand, PublishedPost>
+    ProductTelemetry analytics) : IStreamRequestHandler<PublishPostCommand, object>
 {
-    public async ValueTask<PublishedPost> Handle(
+    public async IAsyncEnumerable<object> Handle(
         PublishPostCommand request,
-        CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         Publication? publication = await store.GetPublicationAsync(request.PublicationId, cancellationToken);
         PlayerProfile storedPlayer = await playerReader.GetAsync(
@@ -34,7 +36,12 @@ public sealed class PublishPostHandler(
 
         if (publication.Status == PublicationStatus.Completed && publication.Result is not null)
         {
-            return publication.Result;
+            foreach (object liveEvent in PostContractMapper.MapLiveEvents(publication.Result))
+            {
+                yield return liveEvent;
+            }
+
+            yield break;
         }
 
         if (publication.Status != PublicationStatus.ReadyForModeration)
@@ -132,7 +139,10 @@ public sealed class PublishPostHandler(
 
         await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
         TrackProgression(player, updated, post, turn, analytics);
-        return published;
+        foreach (object liveEvent in PostContractMapper.MapLiveEvents(published))
+        {
+            yield return liveEvent;
+        }
     }
 
     private static double GetMedian(IReadOnlyList<long> values)
