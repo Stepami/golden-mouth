@@ -1,0 +1,96 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing Git tag to deploy
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  validate-version:
+    name: Validate version tag
+    runs-on: ubuntu-latest
+    outputs:
+      commit-sha: ${{ steps.commit.outputs.sha }}
+      image-version: ${{ steps.version.outputs.image-version }}
+    steps:
+      - name: Validate version format
+        id: version
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          semver='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+          if [[ ! "$VERSION" =~ $semver ]]; then
+            echo "Version '$VERSION' is not a semantic version (for example, 0.1.0)." >&2
+            exit 1
+          fi
+
+          echo "image-version=${VERSION//+/-}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out version tag
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ inputs.version }}
+          persist-credentials: false
+
+      - name: Resolve tagged commit
+        id: commit
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Build and deploy to production
+    needs: validate-version
+    runs-on: self-hosted
+    env:
+      COMPOSE_FILE: compose.yml:compose.production.yml
+      REKI_VERSION: ${{ needs.validate-version.outputs.image-version }}
+      TG_PAT: ${{ secrets.TG_PAT }}
+      LLM_PAT: ${{ secrets.LLM_PAT }}
+      LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+      LLM_MODEL: ${{ secrets.LLM_MODEL }}
+      OPENOBSERVE_EMAIL: ${{ secrets.OPENOBSERVE_EMAIL }}
+      OPENOBSERVE_PASSWORD: ${{ secrets.OPENOBSERVE_PASSWORD }}
+
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate-version.outputs.commit-sha }}
+          persist-credentials: false
+
+      - name: Validate production configuration
+        shell: bash
+        run: |
+          test -r /etc/reki/tls/fullchain.pem
+          test -r /etc/reki/tls/private.key
+          docker compose config --quiet
+
+      - name: Build release images
+        shell: bash
+        run: docker compose build backend frontend
+
+      - name: Deploy release
+        shell: bash
+        run: docker compose up --detach --no-build --remove-orphans --wait --wait-timeout 180
+
+      - name: Show container status on failure
+        if: failure()
+        shell: bash
+        run: docker compose ps

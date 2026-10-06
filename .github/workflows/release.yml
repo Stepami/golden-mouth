@@ -2,49 +2,72 @@ name: Release
 
 on:
   push:
-    tags:
-      - "*.*.*"
+    branches: [master]
 
 permissions:
   contents: read
 
-concurrency:
-  group: production
-  cancel-in-progress: false
-
 jobs:
-  validate-tag:
-    name: Validate semantic version
-    runs-on: ubuntu-latest
-    outputs:
-      image-version: ${{ steps.semver.outputs.image-version }}
-    steps:
-      - name: Validate tag
-        id: semver
-        shell: bash
-        run: |
-          tag="$GITHUB_REF_NAME"
-          semver='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
-          if [[ ! "$tag" =~ $semver ]]; then
-            echo "Tag '$tag' is not a semantic version (for example, 0.1.0)." >&2
-            exit 1
-          fi
-
-          echo "image-version=${tag//+/-}" >> "$GITHUB_OUTPUT"
-
   backend:
     name: Backend checks
-    needs: validate-tag
     uses: ./.github/workflows/backend-ci.yml
 
   frontend:
     name: Frontend checks
-    needs: validate-tag
     uses: ./.github/workflows/frontend-ci.yml
+
+  secret-scan:
+    name: Secret scan
+    uses: ./.github/workflows/secret-scan.yml
+
+  version:
+    name: Tag checked commit
+    needs: [backend, frontend, secret-scan]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.gitversion.outputs.majorMinorPatch }}
+    steps:
+      - name: Check out repository with full history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.x
+
+      - name: Set up GitVersion
+        uses: gittools/actions/gitversion/setup@v4
+        with:
+          versionSpec: "6.8.x"
+
+      - name: Determine version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v4
+
+      - name: Push version tag
+        shell: bash
+        env:
+          VERSION: ${{ steps.gitversion.outputs.majorMinorPatch }}
+        run: |
+          git tag "$VERSION" "$GITHUB_SHA"
+          git push origin "refs/tags/$VERSION"
+
+  deploy:
+    name: Deploy to production
+    needs: version
+    uses: ./.github/workflows/deploy.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+    secrets: inherit
 
   create-release:
     name: Create draft release
-    needs: [validate-tag, backend, frontend]
+    if: ${{ !contains(github.event.head_commit.message, '[skip-release]') }}
+    needs: [version, deploy]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -66,55 +89,16 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
-          milestone: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
-
-  deploy:
-    name: Deploy to production
-    needs: [validate-tag, create-release]
-    runs-on: self-hosted
-    env:
-      COMPOSE_FILE: compose.yml:compose.production.yml
-      REKI_VERSION: ${{ needs.validate-tag.outputs.image-version }}
-      TG_PAT: ${{ secrets.TG_PAT }}
-      LLM_PAT: ${{ secrets.LLM_PAT }}
-      LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
-      LLM_MODEL: ${{ secrets.LLM_MODEL }}
-      OPENOBSERVE_EMAIL: ${{ secrets.OPENOBSERVE_EMAIL }}
-      OPENOBSERVE_PASSWORD: ${{ secrets.OPENOBSERVE_PASSWORD }}
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Validate production configuration
-        shell: bash
-        run: |
-          test -r /etc/reki/tls/fullchain.pem
-          test -r /etc/reki/tls/private.key
-          docker compose config --quiet
-
-      - name: Build release images
-        shell: bash
-        run: docker compose build backend frontend
-
-      - name: Deploy release
-        shell: bash
-        run: docker compose up --detach --no-build --remove-orphans --wait --wait-timeout 180
-
-      - name: Show container status on failure
-        if: failure()
-        shell: bash
-        run: docker compose ps
+          milestone: ${{ needs.version.outputs.version }}
+          name: ${{ needs.version.outputs.version }}
 
   publish-release:
     name: Publish release
-    needs: [validate-tag, deploy]
+    needs: [version, create-release]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
 
     steps:
       - name: Set up GitReleaseManager
@@ -127,4 +111,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
-          milestone: ${{ github.ref_name }}
+          milestone: ${{ needs.version.outputs.version }}
+
+      - name: Close milestone with GitReleaseManager
+        uses: gittools/actions/gitreleasemanager/close@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          milestone: ${{ needs.version.outputs.version }}
