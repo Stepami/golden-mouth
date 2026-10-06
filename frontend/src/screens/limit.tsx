@@ -99,7 +99,7 @@ function Invite() {
           <div style={{ fontSize: 28, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{fmt(2310)}</div>
           <div className="small">подписчиков за 2 дня · {worldOf(p.world).emoji} {worldOf(p.world).title}</div><div className="small muted" style={{ marginTop: 4 }}>а ты кем будешь?</div>
         </div>
-        <Card style={{ color: 'var(--muted)' }}><span className="small">Твоя ссылка: t.me/{TELEGRAM_BOT_USERNAME}?start=liza7 · до 3 бонусов в день</span></Card>
+        <Card style={{ color: 'var(--muted)' }}><span className="small">Твоя ссылка: t.me/{TELEGRAM_BOT_USERNAME}?startapp=liza7 · до 3 бонусов в день</span></Card>
       </div>
       <BottomCTA second="Скопировать ссылку" onSecond={copy} main="Отправить в чат" onMain={shareInvite} />
     </div>
