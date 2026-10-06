@@ -19,9 +19,9 @@ public sealed class PublishPostHandler(
     PlayerReader playerReader,
     ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
-    ProductTelemetry analytics) : IStreamRequestHandler<PublishPostCommand, object>
+    ProductTelemetry analytics) : IStreamRequestHandler<PublishPostCommand, LiveEvent>
 {
-    public async IAsyncEnumerable<object> Handle(
+    public async IAsyncEnumerable<LiveEvent> Handle(
         PublishPostCommand request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -36,7 +36,7 @@ public sealed class PublishPostHandler(
 
         if (publication.Status == PublicationStatus.Completed && publication.Result is not null)
         {
-            foreach (object liveEvent in PostContractMapper.MapLiveEvents(publication.Result))
+            foreach (LiveEvent liveEvent in PostContractMapper.MapLiveEvents(publication.Result))
             {
                 yield return liveEvent;
             }
@@ -139,7 +139,7 @@ public sealed class PublishPostHandler(
 
         await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
         TrackProgression(player, updated, post, turn, analytics);
-        foreach (object liveEvent in PostContractMapper.MapLiveEvents(published))
+        foreach (LiveEvent liveEvent in PostContractMapper.MapLiveEvents(published))
         {
             yield return liveEvent;
         }

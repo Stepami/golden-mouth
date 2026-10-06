@@ -12,7 +12,7 @@ namespace Reki.Api.Serialization;
 
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]
-[JsonSerializable(typeof(SseItem<object>))]
+[JsonSerializable(typeof(SseItem<LiveEvent>))]
 [JsonSerializable(typeof(SseItem<PublicationStatusLiveEvent>))]
 [JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(HttpValidationProblemDetails))]
@@ -42,6 +42,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(UpdateWorldRulesRequest))]
 [JsonSerializable(typeof(PlusInterestResponse))]
 [JsonSerializable(typeof(ViewsLiveEvent))]
+[JsonSerializable(typeof(LiveEvent))]
 [JsonSerializable(typeof(ReactionLiveEvent))]
 [JsonSerializable(typeof(CommentLiveEvent))]
 [JsonSerializable(typeof(TypingLiveEvent))]

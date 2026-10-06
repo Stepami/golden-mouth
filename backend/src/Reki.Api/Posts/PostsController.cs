@@ -47,11 +47,11 @@ public sealed class PostsController(
 
     [HttpPost("posts/publications/{publicationId}/moderation", Name = "ModeratePublication")]
     [ActionName("ModeratePublication")]
-    public ServerSentEventsResult<object> ModeratePublication(
+    public ServerSentEventsResult<LiveEvent> ModeratePublication(
         string publicationId,
         CancellationToken cancellationToken)
     {
-        IAsyncEnumerable<object> result = sender.CreateStream(
+        IAsyncEnumerable<LiveEvent> result = sender.CreateStream(
             new PublishPostCommand(
                 TelegramUserId.From(telegramUser.User.Id),
                 publicationId),

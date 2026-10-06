@@ -24,15 +24,14 @@ internal static class PostContractMapper
             [new ReactionResponse("🔥", post.Viral ? 3 : 1)],
             null);
 
-    public static IReadOnlyList<object> MapLiveEvents(PublishedPost published)
+    public static IReadOnlyList<LiveEvent> MapLiveEvents(PublishedPost published)
     {
         GameComment comment = published.Post.Comments[0];
         return
         [
-            new ViewsLiveEvent(LiveEventType.Views, Math.Min(48, published.Post.Views)),
-            new ReactionLiveEvent(LiveEventType.React, published.Reaction),
+            new ViewsLiveEvent(Math.Min(48, published.Post.Views)),
+            new ReactionLiveEvent(published.Reaction),
             new CommentLiveEvent(
-                LiveEventType.Comment,
                 new CommentResponse(
                     comment.Id.Value,
                     comment.Author,
@@ -42,8 +41,8 @@ internal static class PostContractMapper
                     comment.Star,
                     comment.Me,
                     comment.Hidden)),
-            new TypingLiveEvent(LiveEventType.Typing, published.StarName),
-            new ResultLiveEvent(LiveEventType.Result, MapResult(published)),
+            new TypingLiveEvent(published.StarName),
+            new ResultLiveEvent(MapResult(published)),
         ];
     }
 

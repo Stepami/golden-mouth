@@ -1,4 +1,4 @@
 namespace Reki.Contracts.Posts;
 
-public sealed record ReactionLiveEvent(LiveEventType Type, string Emoji);
+public sealed record ReactionLiveEvent(string Emoji) : LiveEvent(LiveEventType.React);
 
