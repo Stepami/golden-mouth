@@ -73,11 +73,6 @@ public static class DependencyInjection
                 NetworkTimeout = TimeSpan.FromSeconds(options.TimeoutSeconds),
                 RetryPolicy = new ClientRetryPolicy(),
             };
-            if (DeepSeekThinkingPolicy.AppliesTo(clientOptions.Endpoint))
-            {
-                clientOptions.AddPolicy(new DeepSeekThinkingPolicy(), PipelinePosition.PerCall);
-            }
-
             var client = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
             IChatClient inner = client.GetChatClient(options.Model).AsIChatClient();
             ILoggerFactory loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
@@ -86,6 +81,7 @@ public static class DependencyInjection
                     loggerFactory,
                     "Reki.GenAI",
                     telemetry => telemetry.EnableSensitiveData = false)
+                .Use(innerClient => new DeepSeekThinkingChatClient(innerClient))
                 .Build(serviceProvider);
         });
     }
