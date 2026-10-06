@@ -17,10 +17,6 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       TelegramMiniAppAuthorizationOptions__Token: ${TG_PAT:?TG_PAT is required}
-      Llm__ApiKey: local-model-runner
-      Llm__BaseUrl: http://model-runner.docker.internal/engines/v1/
-      Llm__Model: ai/gemma4:e2b-q4_K_M
-      Llm__TimeoutSeconds: 120
 
 volumes:
   frontend-node-modules:

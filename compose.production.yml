@@ -25,7 +25,3 @@ services:
 
   backend:
     image: reki-backend:${REKI_VERSION:-local}
-    environment:
-      Llm__ApiKey: ${LLM_PAT:?LLM_PAT is required}
-      Llm__BaseUrl: ${LLM_BASE_URL:?LLM_BASE_URL is required}
-      Llm__Model: ${LLM_MODEL:?LLM_MODEL is required}
