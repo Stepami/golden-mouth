@@ -84,11 +84,11 @@ public sealed class PostsController(
     public async Task<Ok<IReadOnlyList<FeedItemResponse>>> GetFeedAsync(
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<GamePost> posts = await sender.Send(
+        FeedView feed = await sender.Send(
             new GetFeedQuery(TelegramUserId.From(telegramUser.User.Id)),
             cancellationToken);
         return TypedResults.Ok<IReadOnlyList<FeedItemResponse>>(
-            posts.Select(mapper.MapFeedItem).ToArray());
+            feed.Posts.Select(post => mapper.MapFeedItem(post, feed.Player)).ToArray());
     }
 
     private async Task WriteEventAsync<T>(

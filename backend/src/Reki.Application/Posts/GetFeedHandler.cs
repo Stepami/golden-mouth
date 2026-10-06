@@ -6,14 +6,18 @@ using Reki.Domain.Posts;
 namespace Reki.Application.Posts;
 
 public sealed class GetFeedHandler(IGameStore store, PlayerReader playerReader)
-    : IRequestHandler<GetFeedQuery, IReadOnlyList<GamePost>>
+    : IRequestHandler<GetFeedQuery, FeedView>
 {
-    public async ValueTask<IReadOnlyList<GamePost>> Handle(
+    public async ValueTask<FeedView> Handle(
         GetFeedQuery request,
         CancellationToken cancellationToken)
     {
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        return await store.GetRecentPostsAsync(player.Id, 20, cancellationToken);
+        IReadOnlyList<GamePost> posts = await store.GetRecentPostsAsync(
+            player.Id,
+            20,
+            cancellationToken);
+        return new FeedView(player, posts);
     }
 }
 
