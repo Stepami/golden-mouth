@@ -4,7 +4,8 @@ import { StoreProvider, useStore } from './app/store'
 import { SCREENS, TAB_OF } from './screens'
 import { screenView, setExperiments, tap } from './app/analytics'
 import { setScreen } from './app/log'
-import { syncBackButton } from './telegram'
+import { TelegramLaunch } from './app/TelegramLaunch'
+import { inTelegram, syncBackButton } from './telegram'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
 
@@ -65,5 +66,6 @@ function Shell() {
 }
 
 export function App() {
+  if (!inTelegram && !hasExplicitStart()) return <TelegramLaunch />
   return <StoreProvider><Shell /></StoreProvider>
 }

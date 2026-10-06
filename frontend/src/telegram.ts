@@ -4,9 +4,9 @@ import { setInitData } from './api/auth'
 
 export let inTelegram = false
 
-export function initTelegram() {
+export function initTelegram(): boolean {
   try {
-    if (!isTMA()) return
+    if (!isTMA()) return false
     init()
     inTelegram = true
     setInitData(retrieveRawInitData() ?? '')
@@ -18,6 +18,7 @@ export function initTelegram() {
     if (viewport.mount.isAvailable()) viewport.mount().then(() => expandViewport.ifAvailable()).catch(() => {})
     miniApp.ready.ifAvailable()
   } catch { inTelegram = false }
+  return inTelegram
 }
 
 /** Системная кнопка «назад» Telegram вместо своей стрелки. */

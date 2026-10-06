@@ -10,9 +10,10 @@ import { Avatar, BottomCTA, Button, Comment, Gift, Ribbon, TopBar, Whisper, fmt,
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
 import { apiBaseUrl } from '../app/runtimeConfig'
+import { telegramStartUrl } from '../app/telegramLinks'
 import { register } from '.'
 
-const LINK = 'https://t.me/reki_game?start=liza7'
+const LINK = telegramStartUrl('liza7')
 
 // 02-1: пост, желания дня, «Подскажи» дописывает черновик
 function Compose() {

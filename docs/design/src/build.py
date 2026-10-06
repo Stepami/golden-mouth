@@ -139,7 +139,7 @@ body{{background:linear-gradient(160deg,#2A1236,#0E0E13 55%,#12203A)}}</style></
 <div style="font-size:64px;font-weight:900;margin:24px 0 0;background:linear-gradient(90deg,#FF6B8B,#FFB86B);-webkit-background-clip:text;color:transparent">10 000</div>
 <div style="font-size:18px;margin-bottom:30px">подписчиков за 5 дней</div>
 <div class="card" style="text-align:left"><div class="small muted">ЛУЧШИЙ ПОСТ</div><div style="margin-top:4px">я официально самый медленный человек в спортзале 🐢</div><div class="small muted" style="margin-top:6px">👁 8,4k · Мира сделала репост</div></div>
-<div class="muted small" style="margin-top:34px">а ты сколько наберёшь? · t.me/reki_game</div>
+<div class="muted small" style="margin-top:34px">а ты сколько наберёшь? · t.me/reki_appbot</div>
 </div></body></html>'''
 # 10 Вехи
 steps=[('1 000','✓','Первые фанаты',True),('10 000','✓','Мира зовёт на коллаб',True),('100 000','24%','Премия Рек',False),('1 000 000','','Легенда',False)]

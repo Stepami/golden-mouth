@@ -231,7 +231,7 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
         DrawText(canvas, "а ты сколько наберёшь?", 44, _boldTypeface, SKColors.White, 90, 1630);
         DrawText(
             canvas,
-            "t.me/reki_game",
+            "t.me/reki_appbot",
             36,
             _regularTypeface,
             new SKColor(201, 198, 216),

@@ -8,6 +8,7 @@ import { usePlayer } from '../app/store'
 import { Avatar, BottomCTA, Button, Card, Chip, Gift, SkillBar, fmt } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
+import { TELEGRAM_BOT_USERNAME } from '../app/telegramLinks'
 import { register } from '.'
 
 function TgBot({ time, children }: { time: string; children: React.ReactNode }) {
@@ -130,7 +131,7 @@ function StatsCard() {
         <div className="small muted" style={{ marginTop: 10 }}>ЛУЧШАЯ ЗВЕЗДА</div><div>👑 Мира · отношения +4</div>
         <div className="small muted" style={{ marginTop: 6 }}>ПЕРЕЖИТО</div><div>🌩 хейт-волна фансайта</div>
       </Card>
-      <div className="muted small" style={{ marginTop: 26 }}>а ты кем будешь в Сцене? · t.me/reki_game</div>
+      <div className="muted small" style={{ marginTop: 26 }}>а ты кем будешь в Сцене? · t.me/{TELEGRAM_BOT_USERNAME}</div>
     </div>
   )
 }
