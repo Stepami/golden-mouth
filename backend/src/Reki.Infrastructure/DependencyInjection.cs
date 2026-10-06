@@ -81,6 +81,7 @@ public static class DependencyInjection
                     loggerFactory,
                     "Reki.GenAI",
                     telemetry => telemetry.EnableSensitiveData = false)
+                .Use(innerClient => new DeepSeekThinkingChatClient(innerClient))
                 .Build(serviceProvider);
         });
     }
