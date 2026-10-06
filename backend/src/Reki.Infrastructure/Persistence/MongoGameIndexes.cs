@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Application.Posts;
 using Reki.Domain.Events;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
@@ -15,6 +16,7 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
     {
         IMongoCollection<PlayerProfile> players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
         IMongoCollection<GamePost> posts = database.GetCollection<GamePost>(MongoCollections.Posts);
+        IMongoCollection<Publication> publications = database.GetCollection<Publication>(MongoCollections.Publications);
         IMongoCollection<StarConversation> memories = database.GetCollection<StarConversation>(MongoCollections.StarsMemory);
         IMongoCollection<DailyGameEvent> events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
         IMongoCollection<GameChallenge> challenges = database.GetCollection<GameChallenge>(MongoCollections.Challenges);
@@ -43,6 +45,9 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
             "ux_players_telegram_user",
             unique: true);
         CreateIndexModel<GamePost> postIndex = IndexFactory.Create(postKeys, "ix_posts_player_created");
+        var publicationExpiryIndex = new CreateIndexModel<Publication>(
+            Builders<Publication>.IndexKeys.Ascending(item => item.ExpiresAtUtc),
+            new CreateIndexOptions { Name = "ix_publications_expiry", ExpireAfter = TimeSpan.Zero });
         CreateIndexModel<StarConversation> memoryIndex = IndexFactory.Create(
             memoryKeys,
             "ux_stars_memory_player_star",
@@ -63,6 +68,9 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
 
         Task telegramTask = players.Indexes.CreateOneAsync(telegramIndex, cancellationToken: cancellationToken);
         Task postTask = posts.Indexes.CreateOneAsync(postIndex, cancellationToken: cancellationToken);
+        Task publicationTask = publications.Indexes.CreateOneAsync(
+            publicationExpiryIndex,
+            cancellationToken: cancellationToken);
         Task memoryTask = memories.Indexes.CreateOneAsync(memoryIndex, cancellationToken: cancellationToken);
         Task eventTask = events.Indexes.CreateOneAsync(eventIndex, cancellationToken: cancellationToken);
         Task challengeTask = challenges.Indexes.CreateOneAsync(challengeIndex, cancellationToken: cancellationToken);
@@ -81,6 +89,7 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
         await Task.WhenAll(
             telegramTask,
             postTask,
+            publicationTask,
             memoryTask,
             eventTask,
             challengeTask,

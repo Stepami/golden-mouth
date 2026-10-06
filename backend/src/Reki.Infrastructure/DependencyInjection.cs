@@ -13,6 +13,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Reki.Application.Common;
 using Reki.Application.Common.AI;
+using Reki.Application.Common.Safety;
 using Reki.Infrastructure.AI;
 using Reki.Infrastructure.Health;
 using Reki.Infrastructure.Persistence;
@@ -82,6 +83,9 @@ public static class DependencyInjection
                     "Reki.GenAI",
                     telemetry => telemetry.EnableSensitiveData = false)
                 .Use(innerClient => new DeepSeekThinkingChatClient(innerClient))
+                .Use(innerClient => new PlayerSafetyChatClient(
+                    innerClient,
+                    serviceProvider.GetRequiredService<PlayerSafetyGuard>()))
                 .Build(serviceProvider);
         });
     }

@@ -1,7 +1,6 @@
 using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Common.Safety;
 using Reki.Application.Posts;
 using Reki.Application.Worlds;
 using Reki.Domain.Player;
@@ -15,7 +14,6 @@ public sealed class SendDirectMessageHandler(
     GameBalance balance,
     GameDay gameDay,
     PlayerReader playerReader,
-    PlayerSafetyGuard safetyGuard,
     StarTurnGenerator turnGenerator) : IRequestHandler<SendDirectMessageCommand, SentDirectMessage>
 {
     public async ValueTask<SentDirectMessage> Handle(
@@ -45,7 +43,6 @@ public sealed class SendDirectMessageHandler(
             throw new RequestConflictException("The daily direct-message limit has been reached.");
         }
 
-        await safetyGuard.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
         WorldRules? storedRules = await store.GetWorldRulesAsync(
             player.Id,
             player.World,
@@ -63,6 +60,7 @@ public sealed class SendDirectMessageHandler(
                     request.StarId,
                     conversation.Memory),
                 request.Text),
+            player,
             cancellationToken);
         IReadOnlyList<DirectMessage> messages =
         [

@@ -39,7 +39,7 @@ function Compose() {
         <div className="small muted" style={{ margin: '4px 0 8px' }}>💡 ПОДСКАЖИ</div>
         {ideas.map(i => <button key={i} className="opt" onClick={() => setText(i.replace(/[«»]/g, '').replace('…', ' '))}>{i}</button>)}
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: !ideas.some(i => text.startsWith(i.replace(/[«»…]/g, '').trim())) }); nav.replace('02-2_live', { text }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
+      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: !ideas.some(i => text.startsWith(i.replace(/[«»…]/g, '').trim())) }); nav.replace('02-2_live', { text, publicationId: crypto.randomUUID() }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
     </div>
   )
 }
@@ -48,25 +48,28 @@ function Compose() {
 function Live() {
   const nav = useNav(); const { patch } = useStore(); const p = usePlayer()
   const text = (nav.params.text as string) ?? firstPost.text
+  const [publicationId] = useState(() => (nav.params.publicationId as string) ?? crypto.randomUUID())
   const [views, setViews] = useState(0)
   const [floats, setFloats] = useState<{ id: number; emoji: string; x: number }[]>([])
   const [comments, setComments] = useState<CommentT[]>([])
   const [typing, setTyping] = useState<string | null>(null)
   const [toast, setToast] = useState(false)
-  useEffect(() => api.publish(text, e => {
+  const [published, setPublished] = useState(false)
+  useEffect(() => api.publish(text, publicationId, e => {
+    setPublished(true)
     if (e.type === 'views') setViews(e.views)
     if (e.type === 'react') setFloats(f => [...f, { id: Date.now() + Math.random(), emoji: e.emoji, x: 10 + Math.random() * 70 }])
     if (e.type === 'comment') { setComments(c => [...c, e.comment]); setToast(true) }
     if (e.type === 'typing') setTyping(e.who)
     if (e.type === 'result') { track('post_result', { delta: e.result.delta, viral: e.result.viral, flop: e.result.flop }); patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: p.subs + e.result.delta }); nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: e.result, text }) }
-  }, () => nav.replace('02-2b_publish_error', { text })), []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, state => nav.replace('02-2b_publish_error', { text, publicationId, uncertain: state === 'unknown' })), []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="screen">
       <ChannelHead />
       {toast && <div className="toast"><Avatar id="mira" size={32} /><div className="small"><b>Мира прокомментировала</b><div style={{ color: 'var(--soft)' }}>«„уверенно“ это комплимент, поверь»</div></div></div>}
       <div className="pad" style={{ position: 'relative' }}>
         <div className="card" style={{ boxShadow: '0 0 0 2px rgba(255,107,139,.6),0 0 44px rgba(255,107,139,.35)', marginBottom: 12 }}>
-          <div className="small" style={{ color: 'var(--accent)', marginBottom: 6 }}>только что опубликовано</div>{text}
+          <div className="small" style={{ color: 'var(--accent)', marginBottom: 6 }}>{published ? 'только что опубликовано' : 'готовим публикацию'}</div>{text}
           <div className="row" style={{ marginTop: 12 }}><span style={{ fontSize: 26, fontWeight: 900 }}>👁 {fmt(views)}</span><span className="up small">растёт</span></div>
         </div>
         <div style={{ position: 'absolute', right: 14, top: 120, width: 120, height: 200, pointerEvents: 'none' }}>
@@ -75,7 +78,7 @@ function Live() {
         {comments.map(c => <Comment key={c.id} avatar={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} onMore={() => nav.push('06-1_report', { id: c.id })} />)}
         {typing && <div className="muted small row" style={{ gap: 8 }}><Avatar id="sonya" size={22} /> {typing} печатает…</div>}
       </div>
-      <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }}>реакции ещё идут · итог через пару секунд</div>
+      <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }}>{published ? 'реакции ещё идут · итог через пару секунд' : 'звезда готовит ответ'}</div>
     </div>
   )
 }
@@ -83,15 +86,18 @@ function Live() {
 function PublishError() {
   const nav = useNav()
   const text = typeof nav.params.text === 'string' ? nav.params.text : firstPost.text.replace(' 🫠', '')
+  const uncertain = nav.params.uncertain === true
+  const publicationId = typeof nav.params.publicationId === 'string' ? nav.params.publicationId : undefined
   return (
     <div className="screen no-tab">
       <ChannelHead />
       <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">не опубликовано</div>{text}</div></div>
       <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.65)' }}>
         <div className="sheet" role="alert" aria-live="assertive">
-          <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Пост не вышел</div>
-          <div className="muted" style={{ marginBottom: 20 }}>Текст сохранён. «Повторить» вернёт в редактор — пост не отправится сам.</div>
-          <Button onClick={() => nav.replace('02-1_compose', { text })}>Повторить</Button>
+          <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{uncertain ? 'Проверим публикацию' : 'Пост не вышел'}</div>
+          <div className="muted" style={{ marginBottom: 20 }}>{uncertain ? 'Связь прервалась. Текст сохранён; проверь статус, когда будешь готов.' : 'Текст сохранён. Публикация не списала доступный пост.'}</div>
+          {uncertain && publicationId && <Button onClick={() => nav.replace('02-2_live', { text, publicationId })}>Проверить статус</Button>}
+          <Button onClick={() => nav.replace('02-1_compose', { text })}>Вернуться в редактор</Button>
         </div>
       </div>
     </div>

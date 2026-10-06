@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -93,6 +94,133 @@ public sealed class GameApiTests(ApiFactory factory)
         await Assert.That(player["BirthGroup"].AsString).IsEqualTo("14-17");
         await Assert.That(player.Names.Any(name => name.Contains("year", StringComparison.OrdinalIgnoreCase)))
             .IsFalse();
+    }
+
+    [Test]
+    public async Task Publication_StreamingModeration_ExposesCommittedRecoveryStatusAsync()
+    {
+        const long telegramUserId = 1020;
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        factory.ChatClient.GetStreamingResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(StreamCommentAsync());
+        using HttpClient http = factory.CreateClient();
+        http.DefaultRequestHeaders.Add(
+            TestAuthenticationHandler.UserIdHeaderName,
+            telegramUserId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        string publicationId = Guid.NewGuid().ToString();
+        using var body = new StringContent(
+            $$"""{"publicationId":"{{publicationId}}","text":"безопасный пост"}""",
+            Encoding.UTF8,
+            "application/json");
+
+        using HttpResponseMessage generation = await http.PostAsync(
+            "/posts/publications",
+            body,
+            CancellationToken.None);
+        string generationSse = await generation.Content.ReadAsStringAsync(CancellationToken.None);
+        await Assert.That(generation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        await Assert.That(generationSse).Contains("\"type\":\"pending\"");
+        await Assert.That(generationSse).Contains("\"type\":\"ready_for_moderation\"");
+        BsonDocument ready = await Database.GetCollection<BsonDocument>("publications")
+            .Find(new BsonDocument("_id", publicationId))
+            .SingleAsync();
+        await Assert.That(ready["ExpiresAtUtc"].IsBsonNull).IsTrue();
+
+        using var duplicateBody = new StringContent(
+            $$"""{"publicationId":"{{publicationId}}","text":"безопасный пост"}""",
+            Encoding.UTF8,
+            "application/json");
+        using HttpResponseMessage duplicateGeneration = await http.PostAsync(
+            "/posts/publications",
+            duplicateBody,
+            CancellationToken.None);
+        await Assert.That(duplicateGeneration.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        await Assert.That(await duplicateGeneration.Content.ReadAsStringAsync(CancellationToken.None))
+            .Contains("\"type\":\"ready_for_moderation\"");
+        _ = factory.ChatClient.Received(1).GetStreamingResponseAsync(
+            Arg.Any<IEnumerable<ChatMessage>>(),
+            Arg.Any<ChatOptions?>(),
+            Arg.Any<CancellationToken>());
+
+        using HttpResponseMessage moderation = await http.PostAsync(
+            $"/posts/publications/{publicationId}/moderation",
+            null,
+            CancellationToken.None);
+        string moderationSse = await moderation.Content.ReadAsStringAsync(CancellationToken.None);
+        await Assert.That(moderation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        await Assert.That(moderationSse).Contains("\"type\":\"result\"");
+
+        using HttpResponseMessage status = await http.GetAsync(
+            $"/posts/publications/{publicationId}",
+            CancellationToken.None);
+        string statusJson = await status.Content.ReadAsStringAsync(CancellationToken.None);
+        await Assert.That(statusJson).Contains("\"status\":\"completed\"");
+        await Assert.That(statusJson).Contains("\"result\":{");
+        using HttpResponseMessage duplicateModeration = await http.PostAsync(
+            $"/posts/publications/{publicationId}/moderation",
+            null,
+            CancellationToken.None);
+        await Assert.That(duplicateModeration.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        PlayerResponse player = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        await Assert.That(player.PostsLeft).IsEqualTo(9);
+        BsonDocument storedPlayer = await Database.GetCollection<BsonDocument>("players")
+            .Find(new BsonDocument("TelegramUserId", telegramUserId))
+            .SingleAsync();
+        long postCount = await Database.GetCollection<BsonDocument>("posts")
+            .CountDocumentsAsync(new BsonDocument("PlayerId", storedPlayer["_id"]));
+        await Assert.That(postCount).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task Publication_UnsafeStream_RecordsFailedStatusWithoutChargingAsync()
+    {
+        const long telegramUserId = 1021;
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        ChatResponse unsafeResponse = CreateCommentResponse(false);
+        FunctionCallContent call = unsafeResponse.Messages
+            .SelectMany(message => message.Contents)
+            .OfType<FunctionCallContent>()
+            .Single();
+        IDictionary<string, object?> arguments = call.Arguments
+            ?? throw new InvalidOperationException("Tool call has no arguments.");
+        arguments["text"] = "наркотики";
+        factory.ChatClient.GetStreamingResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(StreamResponseAsync(unsafeResponse));
+        using HttpClient http = factory.CreateClient();
+        http.DefaultRequestHeaders.Add(
+            TestAuthenticationHandler.UserIdHeaderName,
+            telegramUserId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        string publicationId = Guid.NewGuid().ToString();
+        using var body = new StringContent(
+            $$"""{"publicationId":"{{publicationId}}","text":"безопасный пост"}""",
+            Encoding.UTF8,
+            "application/json");
+
+        using HttpResponseMessage generation = await http.PostAsync(
+            "/posts/publications",
+            body,
+            CancellationToken.None);
+        string sse = await generation.Content.ReadAsStringAsync(CancellationToken.None);
+        await Assert.That(sse).Contains("\"type\":\"failed\"");
+        BsonDocument publication = await Database.GetCollection<BsonDocument>("publications")
+            .Find(new BsonDocument("_id", publicationId))
+            .SingleAsync();
+        await Assert.That(publication["Parts"].AsBsonArray.Count).IsEqualTo(0);
+        await Assert.That(publication["ExpiresAtUtc"].BsonType).IsEqualTo(BsonType.DateTime);
+        PlayerResponse player = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        await Assert.That(player.PostsLeft).IsEqualTo(10);
+        _ = factory.ChatClient.Received(1).GetStreamingResponseAsync(
+            Arg.Any<IEnumerable<ChatMessage>>(),
+            Arg.Any<ChatOptions?>(),
+            Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -546,6 +674,7 @@ public sealed class GameApiTests(ApiFactory factory)
         foreach (string collection in new[]
                  {
                      "posts",
+                     "publications",
                      "threads",
                      "stars_memory",
                      "invites",
@@ -574,6 +703,23 @@ public sealed class GameApiTests(ApiFactory factory)
         return directMessage
             ? CreateDirectMessageResponse()
             : CreateCommentResponse(includeUnknownArgument: false);
+    }
+
+    private static async IAsyncEnumerable<ChatResponseUpdate> StreamCommentAsync()
+    {
+        await foreach (ChatResponseUpdate update in StreamResponseAsync(CreateCommentResponse(false)))
+        {
+            yield return update;
+        }
+    }
+
+    private static async IAsyncEnumerable<ChatResponseUpdate> StreamResponseAsync(ChatResponse response)
+    {
+        await Task.Yield();
+        foreach (ChatResponseUpdate update in response.ToChatResponseUpdates())
+        {
+            yield return update;
+        }
     }
 
     private static ChatResponse CreateCommentResponse(bool includeUnknownArgument)

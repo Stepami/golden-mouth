@@ -1,3 +1,4 @@
+using Reki.Application.Posts;
 using Reki.Domain.Events;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
@@ -23,6 +24,29 @@ public interface IGameStore
     ValueTask DeletePlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
 
     ValueTask AddPostAsync(GamePost post, CancellationToken cancellationToken);
+
+    ValueTask<bool> TryCommitPostAsync(
+        PlayerProfile updatedPlayer,
+        int expectedPlayerVersion,
+        PublishedPost published,
+        string? publicationId,
+        CancellationToken cancellationToken);
+
+    ValueTask<Publication?> GetPublicationAsync(string id, CancellationToken cancellationToken);
+
+    ValueTask<bool> TryCreatePublicationAsync(Publication publication, CancellationToken cancellationToken);
+
+    ValueTask AppendPublicationPartAsync(
+        string id,
+        PublicationPart part,
+        CancellationToken cancellationToken);
+
+    ValueTask MarkPublicationReadyAsync(string id, CancellationToken cancellationToken);
+
+    ValueTask MarkPublicationFailedAsync(
+        string id,
+        DateTime expiresAtUtc,
+        CancellationToken cancellationToken);
 
     ValueTask<IReadOnlyList<GamePost>> GetRecentPostsAsync(
         PlayerId playerId,
