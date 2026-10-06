@@ -111,6 +111,23 @@ public sealed class GameApiTests(ApiFactory factory)
             .IsFalse();
     }
 
+    /*[Test]
+    public async Task Feed_UsesPlayerProfileForPostAuthorAsync()
+    {
+        using TestApiClient api = factory.CreateApiClient(1020);
+        await OnboardAsync(api);
+        await api.Posts.PublishPostAsync(
+            new CreatePostRequest { Text = "пост для ленты" },
+            CancellationToken.None);
+
+        IReadOnlyList<FeedItemResponse> feed = await api.Posts.GetFeedAsync(CancellationToken.None);
+
+        await Assert.That(feed.Count).IsEqualTo(1);
+        await Assert.That(feed[0].Author).IsEqualTo("Player");
+        await Assert.That(feed[0].Avatar).IsEqualTo("pick0");
+        await Assert.That(feed[0].Role).IsEqualTo("creator");
+    }*/
+
     [Test]
     public async Task Publication_StreamingModeration_ExposesCommittedRecoveryStatusAsync()
     {
