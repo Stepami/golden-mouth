@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: backend-ci-${{ github.ref }}
+  group: backend-ci-${{ github.workflow == 'Release' && github.run_id || github.ref }}
   cancel-in-progress: true
 
 env:

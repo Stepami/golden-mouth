@@ -1,6 +1,6 @@
 # Развёртывание в production
 
-Production разворачивается на self-hosted GitHub Actions runner, установленном на VDS. Тег семантической версии, например `0.1.0`, запускает проверки бэкенда и фронтенда на GitHub-hosted runners, создаёт черновик GitHub Release, собирает Docker images на VDS, разворачивает их через Docker Compose и публикует релиз.
+Production разворачивается на self-hosted GitHub Actions runner, установленном на VDS. Push в `master` запускает проверки бэкенда, фронтенда и секретов. Затем GitVersion вычисляет версию, workflow создаёт тег и выкатывает соответствующий коммит. Если сообщение коммита не содержит `[skip-release]`, после успешного deployment создаётся и публикуется GitHub Release.
 
 ## Одноразовая настройка сервера
 
@@ -243,9 +243,9 @@ sudo ./svc.sh status
 
 Проверки бэкенда и фронтенда выполняются на `ubuntu-latest`; self-hosted runner участвует только в deployment job и не требует установленных .NET SDK или Node.js. Создавать GitHub Environment для текущей схемы не нужно.
 
-### 9. Проверить готовность перед первым тегом
+### 9. Проверить готовность перед первой выкладкой
 
-1. Убедись, что [frontend runtime config](../frontend/public/runtime-config/config.js) содержит `apiMode: 'backend'` и изменение закоммичено до создания тега.
+1. Убедись, что [frontend runtime config](../frontend/public/runtime-config/config.js) содержит `apiMode: 'backend'` и изменение закоммичено до push в `master`.
 2. Проверь, что порты `80` и `443` не заняты системным nginx, Apache или другим приложением:
 
    ```bash
@@ -268,7 +268,7 @@ sudo ./svc.sh status
 
 ## Подготовка релиза
 
-GitReleaseManager формирует описание релиза из GitHub issues, включённых в milestone. Перед созданием тега:
+GitReleaseManager формирует описание релиза из GitHub issues, включённых в milestone. Перед push в `master`, если сообщение коммита не содержит `[skip-release]`:
 
 1. Создай milestone с именем будущей версии, например `0.1.0`.
 2. Добавь в него завершённые issues этого релиза.
@@ -281,20 +281,16 @@ GitReleaseManager формирует описание релиза из GitHub i
 
 Issues без одного из этих четырёх labels не попадают в release notes. Настройки группировки находятся в `GitReleaseManager.yml`. GitReleaseManager добавляет в описание ссылки на issues и список участников; секция SHA и release-артефакты отключены.
 
-Создай и отправь тег без префикса `v`:
-
-```bash
-git tag 0.1.0
-git push origin 0.1.0
-```
+Тег без префикса `v` (например, `0.1.0`) создаётся автоматически. Конфигурация GitVersion находится в `GitVersion.yml`; вычисленная версия используется только как тег и значение `REKI_VERSION` для Docker Compose.
 
 Release workflow выполняет следующие стадии:
 
-1. Проверяет формат тега на GitHub-hosted runner.
-2. Параллельно запускает полные backend и frontend проверки на GitHub-hosted runners.
-3. Создаёт draft release через GitReleaseManager. Отсутствующий milestone или issues с подходящими labels останавливают pipeline до deployment.
-4. На self-hosted runner собирает images `reki-backend:0.1.0` и `reki-frontend:0.1.0`, запускает Compose и ждёт healthy-состояния всех сервисов.
-5. После успешного deployment публикует GitHub Release. Файлы и Docker images к нему не прикладываются.
+1. Параллельно запускает полные backend и frontend проверки и сканирование секретов на GitHub-hosted runners.
+2. Вычисляет версию через GitVersion и отправляет тег текущего коммита.
+3. Передаёт версию в `deploy.yml`. Тот проверяет формат и существование тега, на self-hosted runner собирает images `reki-backend:0.1.0` и `reki-frontend:0.1.0`, запускает Compose и ждёт healthy-состояния всех сервисов.
+4. Если сообщение коммита содержит `[skip-release]`, на этом процесс заканчивается. Иначе GitReleaseManager после успешного deployment создаёт draft release, публикует его и закрывает milestone. Отсутствующий milestone или issues с подходящими labels останавливают публикацию уже после deployment.
+
+Для повторной выкладки открой **Actions → Deploy → Run workflow**, введи существующий тег версии и запусти workflow. Ручной запуск проверяет тег, собирает и разворачивает Docker images из соответствующего коммита. Он не запускает backend/frontend проверки и сканирование секретов, не создаёт новый тег или GitHub Release и не закрывает milestone.
 
 Публичная точка входа — `https://reki-app.ru`; HTTP перенаправляется на HTTPS. Production использует тот же `frontend/public/runtime-config/config.js`, что и локальный Compose. Перед релизом установи в нём `apiMode: 'backend'`, чтобы фронтенд обращался к backend по same-origin адресу `/api/v1`.
 
