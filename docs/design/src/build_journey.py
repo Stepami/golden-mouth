@@ -190,7 +190,7 @@ S['04-3_invite'] = P(f'''<div class="top"><span style="font-size:22px">‹</span
 <div class="gift" style="margin-bottom:12px">🤝 Вернётся завтра: карточка «Дуэт» и его фанаты будут заходить к тебе</div>
 <div class="small muted" style="margin-bottom:8px">ДРУГ УВИДИТ ТВОЮ КАРТОЧКУ</div>
 <div style="background:linear-gradient(160deg,#2A1236,#141420 60%,#12203A);border-radius:16px;padding:14px;text-align:center;margin-bottom:12px">{ava("Л","g1",44,18,"margin:0 auto 6px")}<b>Лиза · трейни</b><div style="font-size:28px;font-weight:900;background:linear-gradient(90deg,#FF6B8B,#FFB86B);-webkit-background-clip:text;color:transparent">2 310</div><div class="small">подписчиков за 2 дня · 🎤 Сцена</div><div class="small muted" style="margin-top:4px">а ты кем будешь?</div></div>
-<div class="card small muted">Твоя ссылка: t.me/reki_game?start=liza7 · до 3 бонусов в день</div></div>{BTN("Отправить в чат", "Скопировать ссылку")}''')
+<div class="card small muted">Твоя ссылка: t.me/reki_appbot?start=liza7 · до 3 бонусов в день</div></div>{BTN("Отправить в чат", "Скопировать ссылку")}''')
 
 # ---------- 5. Возврат и рост ----------
 S['05-1_evening_push'] = TG('Реки', 'бот', 'g2', 'Р', '''<div class="small" style="text-align:center;color:#6C8EA8;margin-bottom:10px">сегодня</div>
@@ -230,7 +230,7 @@ S['05-6_stats_card'] = f'''<!doctype html><html><head><meta charset="utf-8"><sty
 <div style="font-size:56px;font-weight:900;margin:18px 0 0;background:linear-gradient(90deg,#FF6B8B,#FFB86B);-webkit-background-clip:text;color:transparent">6 210</div><div style="margin-bottom:20px">подписчиков за 4 дня</div>
 <div class="card" style="text-align:left;margin-bottom:10px">{scales(72,64,58)}<div class="small muted" style="margin-top:4px">типаж: дерзкая с самоиронией</div></div>
 <div class="card" style="text-align:left"><div class="small muted">ЛУЧШАЯ ЗВЕЗДА</div><div>👑 Мира · отношения +4</div><div class="small muted" style="margin-top:6px">ПЕРЕЖИЛА</div><div>🌩 хейт-волну фансайта</div></div>
-<div class="muted small" style="margin-top:26px">а ты кем будешь в Сцене? · t.me/reki_game</div></div></body></html>'''
+<div class="muted small" style="margin-top:26px">а ты кем будешь в Сцене? · t.me/reki_appbot</div></div></body></html>'''
 
 S['05-7_new_world'] = P(f'''<div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 35%,#24344A,#0E0E13 70%)"></div>
 <div style="position:relative;padding:60px 26px;text-align:center"><span class="badge">10 000 ПОДПИСЧИКОВ</span><div style="font-size:70px;margin:20px 0 8px">🌸</div>

@@ -8,6 +8,7 @@ import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
 import { Avatar, BottomCTA, Card, Chip, TopBar } from '../ui'
 import { track } from '../app/log'
+import { telegramStartUrl } from '../app/telegramLinks'
 import { register } from '.'
 
 // 03-4c: заруба на 3 дня. Счёт = 0,7 × оценка постов по шкалам мира + 0,3 × рост к своей медиане (считает бэкенд)
@@ -41,7 +42,7 @@ function Challenge() {
 // 03-4d: дуэль дня: лучшие посты обоих одной карточкой, звёзды комментируют
 function Duel() {
   const nav = useNav()
-  const send = () => { const u = 'https://t.me/reki_game?start=duel'; const t = 'Дуэль дня в Реках: чей пост сильнее?'; if (inTelegram) shareURL.ifAvailable(u, t); else window.open(`https://t.me/share/url?url=${encodeURIComponent(u)}&text=${encodeURIComponent(t)}`) }
+  const send = () => { const u = telegramStartUrl('duel'); const t = 'Дуэль дня в Реках: чей пост сильнее?'; if (inTelegram) shareURL.ifAvailable(u, t); else window.open(`https://t.me/share/url?url=${encodeURIComponent(u)}&text=${encodeURIComponent(t)}`) }
   const post = (ava: string, name: string, world: string, text: string, score: string, win?: boolean) => (
     <Card style={{ flex: 1, padding: 12, ...(win ? { border: '2px solid var(--accent)' } : {}) }}>
       <div className="row" style={{ gap: 6 }}><Avatar id={ava} size={26} /><b className="small">{name}</b></div><div className="tiny muted" style={{ margin: '2px 0 6px' }}>{world}</div>
