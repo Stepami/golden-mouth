@@ -16,11 +16,12 @@ export class ApiError extends Error {
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`${BASE}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...telegramAuthHeaders(), ...init?.headers } })
   if (!r.ok) { const e = new ApiError(r.status, init?.method ?? 'GET', path); if (r.status >= 500) error('api_error', e, { status: r.status }); else warn('api_error', { status: r.status, msg: e.message }); throw e }
-  return r.json() as Promise<T>
+  const body = await r.text()
+  return body ? JSON.parse(body) as T : undefined as T
 }
 const later = <T,>(v: T, ms = 150) => new Promise<T>(res => setTimeout(() => res(structuredClone(v)), ms))
 
-async function readSse<T>(response: Response, onEvent: (event: T) => void): Promise<void> {
+async function readSse<T>(response: Response, onEvent: (event: T) => void | Promise<void>): Promise<void> {
   if (!response.body) throw new Error('Response has no event stream')
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
@@ -34,7 +35,7 @@ async function readSse<T>(response: Response, onEvent: (event: T) => void): Prom
       const frame = buffer.slice(0, match.index)
       buffer = buffer.slice(match.index + match[0].length)
       const data = frame.split(/\r?\n/).filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n')
-      if (data) onEvent(JSON.parse(data) as T)
+      if (data) await onEvent(JSON.parse(data) as T)
     }
     if (done) break
   }
@@ -49,16 +50,24 @@ export const api = {
   onboarding: (body: { birthGroup: '14-17' | '18+'; world: string; role: string; avatar: string; name: string; handle: string; address: string; star: string }): Promise<Player> =>
     BASE ? call('/onboarding', { method: 'POST', body: JSON.stringify(body) }) : later({ ...mock.player, subs: 120, postsLeft: 10 }),
   /** Генерация, затем модерация и поток реакции; при обрыве сверяем сохранённый статус. */
-  publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown') => void): () => void {
+  publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown') => void, onStatus?: (status: PublicationStatus) => void): () => void {
     if (BASE) {
       const ctrl = new AbortController()
       let deliveredResult = false
+      const pause = (ms: number) => new Promise<void>((resolve, reject) => {
+        const onAbort = () => { clearTimeout(timer); reject(new DOMException('Aborted', 'AbortError')) }
+        const timer = setTimeout(() => { ctrl.signal.removeEventListener('abort', onAbort); resolve() }, ms)
+        if (ctrl.signal.aborted) onAbort()
+        else ctrl.signal.addEventListener('abort', onAbort, { once: true })
+      })
       const moderation = async () => {
         const r = await fetch(`${BASE}/posts/publications/${encodeURIComponent(publicationId)}/moderation`, {
           method: 'POST', signal: ctrl.signal, headers: { Accept: 'text/event-stream', ...telegramAuthHeaders() },
         })
         if (!r.ok) throw new ApiError(r.status, 'POST', '/posts/publications/:id/moderation')
-        await readSse<LiveEvent>(r, event => {
+        let shown = 0
+        await readSse<LiveEvent>(r, async event => {
+          if (shown++ > 0) await pause(event.type === 'result' ? 700 : 500)
           if (event.type === 'result') deliveredResult = true
           onEvent(event)
         })
@@ -88,7 +97,7 @@ export const api = {
           })
           if (!r.ok) throw new ApiError(r.status, 'POST', '/posts/publications')
           let lastStatus: PublicationStatus | null = null
-          await readSse<{ type: PublicationStatus; publicationId: string }>(r, event => { lastStatus = event.type })
+          await readSse<{ type: PublicationStatus; publicationId: string }>(r, event => { lastStatus = event.type; onStatus?.(event.type) })
           if (lastStatus === 'failed') { onError('failed'); return }
           if (lastStatus === 'completed') { await recover(); return }
           if (lastStatus !== 'ready_for_moderation') { await recover(); return }
@@ -102,6 +111,7 @@ export const api = {
       })() }, 0)
       return () => { clearTimeout(start); ctrl.abort() }
     }
+    onStatus?.('pending')
     const steps: [number, LiveEvent][] = [[200, { type: 'views', views: 48 }], [500, { type: 'react', emoji: '😂' }], [800, { type: 'comment', comment: mock.liveComment }],
       [1100, { type: 'views', views: 190 }], [1300, { type: 'react', emoji: '🫶' }], [1600, { type: 'typing', who: 'Соня' }], [1900, { type: 'react', emoji: '🔥' }],
       [2200, { type: 'views', views: 312 }], [2900, { type: 'result', result: mock.results.normal as PostResult }]]
