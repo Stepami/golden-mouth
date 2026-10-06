@@ -190,7 +190,7 @@ S['04-3_invite'] = P(f'''<div class="top"><span style="font-size:22px">‹</span
 <div class="gift" style="margin-bottom:12px">🤝 Вернётся завтра: карточка «Дуэт» и его фанаты будут заходить к тебе</div>
 <div class="small muted" style="margin-bottom:8px">ДРУГ УВИДИТ ТВОЮ КАРТОЧКУ</div>
 <div style="background:linear-gradient(160deg,#2A1236,#141420 60%,#12203A);border-radius:16px;padding:14px;text-align:center;margin-bottom:12px">{ava("Л","g1",44,18,"margin:0 auto 6px")}<b>Лиза · трейни</b><div style="font-size:28px;font-weight:900;background:linear-gradient(90deg,#FF6B8B,#FFB86B);-webkit-background-clip:text;color:transparent">2 310</div><div class="small">подписчиков за 2 дня · 🎤 Сцена</div><div class="small muted" style="margin-top:4px">а ты кем будешь?</div></div>
-<div class="card small muted">Твоя ссылка: t.me/reki_appbot?start=liza7 · до 3 бонусов в день</div></div>{BTN("Отправить в чат", "Скопировать ссылку")}''')
+<div class="card small muted">Твоя ссылка: t.me/reki_appbot?startapp=liza7 · до 3 бонусов в день</div></div>{BTN("Отправить в чат", "Скопировать ссылку")}''')
 
 # ---------- 5. Возврат и рост ----------
 S['05-1_evening_push'] = TG('Реки', 'бот', 'g2', 'Р', '''<div class="small" style="text-align:center;color:#6C8EA8;margin-bottom:10px">сегодня</div>
@@ -302,6 +302,7 @@ exec(open(os.path.join(D, 'journey_v5.py'), encoding='utf-8').read())  # пра�
 exec(open(os.path.join(D, 'journey_v6.py'), encoding='utf-8').read())  # правки v6 по аудиту геймдизайна 03.10.2026
 exec(open(os.path.join(D, 'journey_v7.py'), encoding='utf-8').read())  # правки v7: итоговый аудит экранов 03.10.2026
 exec(open(os.path.join(D, 'journey_v8.py'), encoding='utf-8').read())  # правки v8: восстановление поста после ошибки 06.10.2026
+exec(open(os.path.join(D, 'journey_v9.py'), encoding='utf-8').read())  # правки v9: TMA deep links 06.10.2026
 
 CH = os.environ.get('CHROME_BIN') or shutil.which('google-chrome') or shutil.which('chrome')
 if not CH and os.name == 'nt':

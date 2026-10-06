@@ -1,6 +1,4 @@
-import { telegramStartUrl } from './telegramLinks'
-
-const TELEGRAM_GAME_URL = telegramStartUrl('web')
+import { TELEGRAM_APP_URL } from './telegramLinks'
 
 function TelegramMark() {
   return (
@@ -18,7 +16,7 @@ export function TelegramLaunch() {
         <div className="telegram-launch__icon"><TelegramMark /></div>
         <h1 id="telegram-launch-title">Продолжим в Telegram</h1>
         <p>«Реки» работают как мини-приложение. Открой игру в Telegram, чтобы войти и сохранить прогресс.</p>
-        <a className="telegram-launch__button" href={TELEGRAM_GAME_URL}>Открыть в Telegram</a>
+        <a className="telegram-launch__button" href={TELEGRAM_APP_URL}>Открыть в Telegram</a>
       </section>
       <p className="telegram-launch__hint">В Telegram нажми «Старт», затем открой игру.</p>
     </main>
