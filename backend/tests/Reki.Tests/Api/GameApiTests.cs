@@ -152,7 +152,17 @@ public sealed class GameApiTests(ApiFactory factory)
             CancellationToken.None);
         string moderationSse = await moderation.Content.ReadAsStringAsync(CancellationToken.None);
         await Assert.That(moderation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        await Assert.That(moderation.Content.Headers.ContentType?.MediaType).IsEqualTo("text/event-stream");
+        await Assert.That(moderationSse).Contains("\"type\":\"views\"");
+        await Assert.That(moderationSse).Contains("\"views\":");
+        await Assert.That(moderationSse).Contains("\"type\":\"react\"");
+        await Assert.That(moderationSse).Contains("\"emoji\":");
+        await Assert.That(moderationSse).Contains("\"type\":\"comment\"");
+        await Assert.That(moderationSse).Contains("\"comment\":");
+        await Assert.That(moderationSse).Contains("\"type\":\"typing\"");
+        await Assert.That(moderationSse).Contains("\"who\":");
         await Assert.That(moderationSse).Contains("\"type\":\"result\"");
+        await Assert.That(moderationSse).Contains("\"result\":");
 
         using HttpResponseMessage status = await http.GetAsync(
             $"/posts/publications/{publicationId}",

@@ -4,6 +4,7 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Reki.Api.Common.Errors;
 using Reki.Api.Mapping;
+using Reki.Api.Posts;
 using Reki.Api.Serialization;
 using Reki.Application;
 using Reki.Application.Common;
@@ -55,6 +56,15 @@ internal static class ServiceCollectionExtensions
                 operation.OperationId = $"{controller}_{action}";
             }
 
+            if (operation.Responses is { } responses &&
+                responses.TryGetValue("200", out var response) &&
+                response is { Content: { } content } &&
+                content.TryGetValue("text/event-stream", out var stream))
+            {
+                stream.Schema = null;
+                content.Remove("application/json");
+            }
+
             return Task.CompletedTask;
         }));
         services
@@ -62,6 +72,7 @@ internal static class ServiceCollectionExtensions
                 new AuthorizeFilter(TgMiniAppAuthConstants.AuthenticationScheme)))
             .AddJsonOptions(options => ConfigureJson(options.JsonSerializerOptions));
         services.AddSingleton<ApiMapper>();
+        services.AddSingleton<PostLiveEventMapper>();
         services.ConfigureHttpJsonOptions(options => ConfigureJson(options.SerializerOptions));
 
         return services;

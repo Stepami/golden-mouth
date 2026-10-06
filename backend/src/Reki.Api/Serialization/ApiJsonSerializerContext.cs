@@ -1,3 +1,4 @@
+using System.Net.ServerSentEvents;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Contracts.Events;
@@ -10,6 +11,9 @@ using Reki.Contracts.Worlds;
 namespace Reki.Api.Serialization;
 
 [JsonSerializable(typeof(Stream))]
+[JsonSerializable(typeof(object))]
+[JsonSerializable(typeof(SseItem<object>))]
+[JsonSerializable(typeof(SseItem<PublicationStatusLiveEvent>))]
 [JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(HttpValidationProblemDetails))]
 [JsonSerializable(typeof(PlayerResponse))]
