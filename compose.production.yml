@@ -9,6 +9,7 @@ services:
       - /var/lib/reki/acme-webroot:/var/www/letsencrypt:ro
       - /etc/reki/tls/fullchain.pem:/etc/nginx/tls/fullchain.pem:ro
       - /etc/reki/tls/private.key:/etc/nginx/tls/private.key:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       frontend:
         condition: service_healthy

@@ -298,9 +298,47 @@ Healthcheck сервисов выполняется каждые 10 секунд
 
 При продлении купленного сертификата атомарно замени оба TLS-файла и перезапусти контейнер `gateway` из checkout репозитория. При ручном вызове Compose задай `REKI_VERSION`, равный текущему deployment-тегу.
 
+## OpenObserve на отдельном поддомене
+
+OpenObserve доступен через `https://openobserve.reki-app.ru`. Прямой порт `5080` остаётся привязан к loopback VDS; шлюз обращается к сервису по внутренней сети Compose. Сертификат поддомена выпускает Certbot на VDS через HTTP-01, основной сайт продолжает использовать свой сертификат из `/etc/reki/tls`.
+
+Первый выпуск требует двух последовательных релизов: сначала конфигурацию с обработкой `/.well-known/acme-challenge/`, затем, после получения сертификата, конфигурацию с HTTPS virtual host и проверкой сертификата в `deploy.yml`. Если выкатить второй релиз раньше, `gateway` не сможет запуститься из-за отсутствующих файлов сертификата.
+
+1. В Timeweb Cloud открой **Домены и SSL → `reki-app.ru` → DNS** и создай A-запись для `openobserve` с публичным IPv4 VDS. Не добавляй AAAA-запись без работающего IPv6. Проверь, что `openobserve.reki-app.ru` уже разрешается в этот IPv4. Порты `80` и `443` должны оставаться доступными извне.
+2. На VDS создай каталог для проверки владения доменом:
+
+   ```bash
+   sudo install -d -m 755 /var/lib/reki/acme-webroot
+   ```
+
+3. Выкати первый релиз: `gateway` монтирует этот каталог в `/var/www/letsencrypt` и отдаёт файлы из `/.well-known/acme-challenge/` по HTTP. До выпуска сертификата не выкатывай HTTPS virtual host поддомена.
+4. Установи Certbot на VDS и выпусти сертификат. Поскольку Nginx работает в контейнере, используй режим `webroot`, а не плагин `--nginx`:
+
+   ```bash
+   sudo snap install --classic certbot
+   sudo /snap/bin/certbot certonly --webroot \
+     -w /var/lib/reki/acme-webroot \
+     -d openobserve.reki-app.ru
+   sudo test -r /etc/letsencrypt/live/openobserve.reki-app.ru/fullchain.pem
+   sudo test -r /etc/letsencrypt/live/openobserve.reki-app.ru/privkey.pem
+   ```
+
+   Certbot спросит контактный email и согласие с условиями Let’s Encrypt. Не сохраняй email, сертификат или приватный ключ в репозитории. Если проверка домена не прошла, сначала проверь DNS и доступность HTTP challenge, не останавливая основной сайт.
+5. Выкати второй релиз: `gateway` получит read-only доступ к `/etc/letsencrypt`, а отдельный HTTPS virtual host направит запросы в `openobserve:5080`. `deploy.yml` проверит наличие обоих файлов сертификата до запуска Compose. Каталог `/etc/letsencrypt` монтируется целиком, потому что файлы в `live/` ссылаются на файлы в `archive/`.
+6. Второй релиз автоматически установит `.github/scripts/reload-openobserve-gateway.sh` в `/etc/letsencrypt/renewal-hooks/deploy/`. После успешного продления Certbot проверит конфигурацию и перечитает её в работающем `gateway`. Проверь продление:
+
+   ```bash
+   sudo /snap/bin/certbot renew --dry-run --run-deploy-hooks
+   ```
+
+   Автоматическое расписание продления создаётся при установке Certbot через snap. Hook использует Docker labels проекта `reki` и сервиса `gateway`, поэтому не зависит от имени контейнера или каталога checkout. При следующем релизе workflow обновит hook на VDS.
+7. Проверь `http://openobserve.reki-app.ru` (перенаправление на HTTPS), `https://openobserve.reki-app.ru` (сертификат и вход в OpenObserve) и `https://reki-app.ru` (основной сайт). Не открывай `5080` в Firewall Timeweb.
+
+Справка: [поддомены Timeweb](https://timeweb.cloud/docs/domains/subdomains), [HTTP-01 Let’s Encrypt](https://letsencrypt.org/docs/challenge-types/), [режим webroot и renewal hooks Certbot](https://eff-certbot.readthedocs.io/en/stable/using.html).
+
 ## Закрытый доступ через SSH
 
-MongoDB, OpenObserve, прямой порт фронтенда и прямой порт бэкенда слушают только loopback-интерфейс VDS. Открой один туннель с доверенного компьютера:
+MongoDB, прямой порт OpenObserve, прямой порт фронтенда и прямой порт бэкенда слушают только loopback-интерфейс VDS. OpenObserve также доступен через HTTPS-шлюз на `openobserve.reki-app.ru`. Если нужен прямой доступ к одному из loopback-портов, открой туннель с доверенного компьютера:
 
 ```bash
 ssh -N \
