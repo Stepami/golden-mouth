@@ -9,10 +9,10 @@ namespace Reki.Tests.AI;
 public sealed class DeepSeekThinkingChatClientTests
 {
     [Test]
-    public async Task GetResponse_DeepSeekProvider_DisablesThinkingAsync()
+    public async Task GetResponse_DeepSeekModel_DisablesThinkingAsync()
     {
         // Arrange
-        IChatClient inner = CreateInner("https://api.deepseek.com/");
+        IChatClient inner = CreateInner();
         using var client = new DeepSeekThinkingChatClient(inner);
 
         // Act
@@ -29,10 +29,10 @@ public sealed class DeepSeekThinkingChatClientTests
     }
 
     [Test]
-    public async Task GetResponse_OtherProvider_KeepsOptionsAsync()
+    public async Task GetResponse_OtherModel_KeepsOptionsAsync()
     {
         // Arrange
-        IChatClient inner = CreateInner("http://model-runner.docker.internal/engines/v1/");
+        IChatClient inner = CreateInner();
         using var client = new DeepSeekThinkingChatClient(inner);
         var options = new ChatOptions { ModelId = "ai/gemma4" };
 
@@ -43,11 +43,9 @@ public sealed class DeepSeekThinkingChatClientTests
         await Assert.That(SentOptions(inner)).IsSameReferenceAs(options);
     }
 
-    private static IChatClient CreateInner(string providerUri)
+    private static IChatClient CreateInner()
     {
         IChatClient inner = Substitute.For<IChatClient>();
-        inner.GetService(typeof(ChatClientMetadata), null)
-            .Returns(new ChatClientMetadata("openai", new Uri(providerUri)));
         inner.GetResponseAsync(
                 Arg.Any<IEnumerable<ChatMessage>>(),
                 Arg.Any<ChatOptions?>(),

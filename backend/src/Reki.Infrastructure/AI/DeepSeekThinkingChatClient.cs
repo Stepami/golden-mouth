@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
 using OpenAI.Chat;
 using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
@@ -7,12 +6,17 @@ namespace Reki.Infrastructure.AI;
 
 /// <summary>
 /// DeepSeek включает режим размышления по умолчанию, а в нём запрещён принудительный выбор
-/// инструмента, на котором построен ход звезды. Для провайдера DeepSeek middleware дописывает
-/// в опции запроса <c>"thinking": {"type": "disabled"}</c>; другие провайдеры не затронуты.
+/// инструмента, на котором построен ход звезды. Для моделей DeepSeek из списка middleware дописывает
+/// в опции запроса <c>"thinking": {"type": "disabled"}</c>; остальные модели не затронуты.
 /// </summary>
 internal sealed class DeepSeekThinkingChatClient(IChatClient innerClient) : DelegatingChatClient(innerClient)
 {
-    private const string ProviderMarker = "deepseek";
+    private static readonly HashSet<string> Models = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "deepseek-flash",
+        "deepseek-v4-flash",
+        "deepseek-v4-pro",
+    };
 
     public override Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages,
@@ -20,24 +24,16 @@ internal sealed class DeepSeekThinkingChatClient(IChatClient innerClient) : Dele
         CancellationToken cancellationToken = default) =>
         base.GetResponseAsync(messages, WithThinkingDisabled(options), cancellationToken);
 
-    public override async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+    public override IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
         IEnumerable<ChatMessage> messages,
         ChatOptions? options = null,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        await foreach (ChatResponseUpdate update in base.GetStreamingResponseAsync(
-            messages,
-            WithThinkingDisabled(options),
-            cancellationToken))
-        {
-            yield return update;
-        }
-    }
+        CancellationToken cancellationToken = default) =>
+        base.GetStreamingResponseAsync(messages, WithThinkingDisabled(options), cancellationToken);
 
     private ChatOptions? WithThinkingDisabled(ChatOptions? options)
     {
-        Uri? providerUri = this.GetService<ChatClientMetadata>()?.ProviderUri;
-        if (providerUri?.Host.Contains(ProviderMarker, StringComparison.OrdinalIgnoreCase) != true)
+        string? modelId = options?.ModelId ?? this.GetService<ChatClientMetadata>()?.DefaultModelId;
+        if (modelId is null || !Models.Contains(modelId))
         {
             return options;
         }
