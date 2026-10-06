@@ -117,7 +117,7 @@
 |---|---|---|
 | `GET /me` | `Player` (с обезличенным `id` и `experiments`) | все |
 | `POST /onboarding` | `Player` | 01-5 |
-| `POST /posts` (SSE) | поток `LiveEvent`, последним `result: PostResult`; 409, если постов нет | 02-2 |
+| `POST /posts` (SSE) | поток `LiveEvent`, последним `result: PostResult`; 409, если постов нет. При HTTP-ошибке или обрыве потока до `result` клиент показывает ошибку и возвращает по «Повторить» в редактор с сохранённым текстом без автоматической повторной отправки | 02-2, 02-2b |
 | `POST /posts/:id/replies` | 200 без тела | 02-6 |
 | `GET /feed` | `FeedItem[]` | 03-3 |
 | `GET /friends` | `Friend[]` | 03-4 |

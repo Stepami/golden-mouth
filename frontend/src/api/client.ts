@@ -6,9 +6,16 @@ import { apiBaseUrl as BASE } from '../app/runtimeConfig'
 import { telegramAuthHeaders } from './auth'
 import type { Challenge, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, PostResult, WorldRules } from './types'
 
+export class ApiError extends Error {
+  constructor(public readonly status: number, method: string, path: string) {
+    super(`${method} ${path.replace(/\/[\w-]{16,}/g, '/:id')} ${status}`)
+    this.name = 'ApiError'
+  }
+}
+
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`${BASE}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...telegramAuthHeaders(), ...init?.headers } })
-  if (!r.ok) { const e = new Error(`${init?.method ?? 'GET'} ${path.replace(/\/[\w-]{16,}/g, '/:id')} ${r.status}`); if (r.status >= 500) error('api_error', e, { status: r.status }); else warn('api_error', { status: r.status, msg: e.message }); throw e }
+  if (!r.ok) { const e = new ApiError(r.status, init?.method ?? 'GET', path); if (r.status >= 500) error('api_error', e, { status: r.status }); else warn('api_error', { status: r.status, msg: e.message }); throw e }
   return r.json() as Promise<T>
 }
 const later = <T,>(v: T, ms = 150) => new Promise<T>(res => setTimeout(() => res(structuredClone(v)), ms))
@@ -18,15 +25,18 @@ export const api = {
   onboarding: (body: { birthGroup: '14-17' | '18+'; world: string; role: string; avatar: string; name: string; handle: string; address: string; star: string }): Promise<Player> =>
     BASE ? call('/onboarding', { method: 'POST', body: JSON.stringify(body) }) : later({ ...mock.player, subs: 120, postsLeft: 10 }),
   /** Публикация: поток событий реакции, последним приходит итог. */
-  publish(text: string, onEvent: (e: LiveEvent) => void): () => void {
+  publish(text: string, onEvent: (e: LiveEvent) => void, onError: () => void): () => void {
     if (BASE) {
       const ctrl = new AbortController()
       fetch(`${BASE}/posts`, { method: 'POST', signal: ctrl.signal, headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', ...telegramAuthHeaders() }, body: JSON.stringify({ text }) })
         .then(async r => {
-          const reader = r.body!.getReader(); const dec = new TextDecoder(); let buf = ''
+          if (!r.ok) throw new ApiError(r.status, 'POST', '/posts')
+          if (!r.body) throw new Error('Post response has no event stream')
+          const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = ''; let receivedResult = false
           for (;;) { const { done, value } = await reader.read(); if (done) break; buf += dec.decode(value, { stream: true })
-            let i; while ((i = buf.indexOf('\n\n')) >= 0) { const chunk = buf.slice(0, i); buf = buf.slice(i + 2); const data = chunk.replace(/^data: /gm, ''); if (data) onEvent(JSON.parse(data)) } }
-        }).catch(e => { if ((e as Error).name !== 'AbortError') error('sse_error', e) })
+            let i; while ((i = buf.indexOf('\n\n')) >= 0) { const chunk = buf.slice(0, i); buf = buf.slice(i + 2); const data = chunk.replace(/^data: /gm, ''); if (data) { const event = JSON.parse(data) as LiveEvent; receivedResult ||= event.type === 'result'; onEvent(event) } } }
+          if (!receivedResult) throw new Error('Post event stream ended before result')
+        }).catch(e => { if ((e as Error).name !== 'AbortError') { error('sse_error', e); onError() } })
       return () => ctrl.abort()
     }
     const steps: [number, LiveEvent][] = [[200, { type: 'views', views: 48 }], [500, { type: 'react', emoji: '😂' }], [800, { type: 'comment', comment: mock.liveComment }],
