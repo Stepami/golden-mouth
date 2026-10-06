@@ -315,8 +315,9 @@ OpenObserve доступен через `https://openobserve.reki-app.ru`. Пр�
 4. Установи Certbot на VDS и выпусти сертификат. Поскольку Nginx работает в контейнере, используй режим `webroot`, а не плагин `--nginx`:
 
    ```bash
-   sudo snap install --classic certbot
-   sudo /snap/bin/certbot certonly --webroot \
+   sudo apt-get update
+   sudo apt-get install --yes certbot
+   sudo certbot certonly --webroot \
      -w /var/lib/reki/acme-webroot \
      -d openobserve.reki-app.ru
    sudo test -r /etc/letsencrypt/live/openobserve.reki-app.ru/fullchain.pem
@@ -328,10 +329,11 @@ OpenObserve доступен через `https://openobserve.reki-app.ru`. Пр�
 6. Второй релиз автоматически установит `.github/scripts/reload-openobserve-gateway.sh` в `/etc/letsencrypt/renewal-hooks/deploy/`. После успешного продления Certbot проверит конфигурацию и перечитает её в работающем `gateway`. Проверь продление:
 
    ```bash
-   sudo /snap/bin/certbot renew --dry-run --run-deploy-hooks
+   sudo certbot renew --dry-run --run-deploy-hooks
+   systemctl list-timers certbot.timer
    ```
 
-   Автоматическое расписание продления создаётся при установке Certbot через snap. Hook использует Docker labels проекта `reki` и сервиса `gateway`, поэтому не зависит от имени контейнера или каталога checkout. При следующем релизе workflow обновит hook на VDS.
+   Пакет Certbot для Ubuntu устанавливает `certbot.timer` для автоматического продления; убедись, что таймер отображается в выводе команды выше. Hook использует Docker labels проекта `reki` и сервиса `gateway`, поэтому не зависит от имени контейнера или каталога checkout. При следующем релизе workflow обновит hook на VDS.
 7. Проверь `http://openobserve.reki-app.ru` (перенаправление на HTTPS), `https://openobserve.reki-app.ru` (сертификат и вход в OpenObserve) и `https://reki-app.ru` (основной сайт). Не открывай `5080` в Firewall Timeweb.
 
 Справка: [поддомены Timeweb](https://timeweb.cloud/docs/domains/subdomains), [HTTP-01 Let’s Encrypt](https://letsencrypt.org/docs/challenge-types/), [режим webroot и renewal hooks Certbot](https://eff-certbot.readthedocs.io/en/stable/using.html).
