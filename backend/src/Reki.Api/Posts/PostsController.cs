@@ -61,18 +61,20 @@ public sealed class PostsController(
 
     [HttpPost("posts/{postId}/replies", Name = "ReplyToPost")]
     [ActionName("ReplyToPost")]
-    public async Task<Ok> ReplyToPostAsync(
+    public async Task<Ok<ReplyResponse>> ReplyToPostAsync(
         string postId,
         ReplyRequest request,
         CancellationToken cancellationToken)
     {
-        await sender.Send(
+        ReplyResponse result = await sender.Send(
             new AddReplyCommand(
                 TelegramUserId.From(telegramUser.User.Id),
                 PostId.From(postId),
+                CommentId.From(request.CommentId),
+                request.ReplyId,
                 request.Text),
             cancellationToken);
-        return TypedResults.Ok();
+        return TypedResults.Ok(result);
     }
 
     [HttpGet("feed", Name = "GetFeed")]

@@ -24,6 +24,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(PublicationStatus))]
 [JsonSerializable(typeof(LiveEventType))]
 [JsonSerializable(typeof(ReplyRequest))]
+[JsonSerializable(typeof(ReplyResponse))]
 [JsonSerializable(typeof(DirectMessageRequest))]
 [JsonSerializable(typeof(ForgetMemoryRequest))]
 [JsonSerializable(typeof(AnswerEventRequest))]

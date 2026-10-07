@@ -4,7 +4,7 @@ import * as mock from './mock'
 import { error, warn } from '../app/log'
 import { apiBaseUrl as BASE } from '../app/runtimeConfig'
 import { telegramAuthHeaders } from './auth'
-import type { Challenge, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, PostResult, PublicationState, PublicationStatus, WorldRules } from './types'
+import type { Challenge, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, PostResult, PublicationState, PublicationStatus, ReplyResult, WorldRules } from './types'
 
 export class ApiError extends Error {
   constructor(public readonly status: number, method: string, path: string) {
@@ -131,7 +131,10 @@ export const api = {
     const timers = steps.map(([ms, e]) => setTimeout(() => onEvent(e), ms))
     return () => timers.forEach(clearTimeout)
   },
-  reply: (postId: string, text: string) => BASE ? call(`/posts/${postId}/replies`, { method: 'POST', body: JSON.stringify({ text }) }) : later({ ok: true }),
+  reply: (postId: string, commentId: string, replyId: string, text: string): Promise<ReplyResult> =>
+    BASE
+      ? call(`/posts/${postId}/replies`, { method: 'POST', body: JSON.stringify({ commentId, replyId, text }) })
+      : later(mock.threadReply(replyId)),
   report: (commentId: string, reason: string) => BASE ? call('/reports', { method: 'POST', body: JSON.stringify({ commentId, reason }) }) : later({ ok: true }),
   plusInterest: () => BASE ? call('/plus-interest', { method: 'POST' }) : later({ bonus: 5 }),
   settings: (patch: Partial<Player['settings']>) => BASE ? call('/settings', { method: 'PATCH', body: JSON.stringify(patch) }) : later({ ok: true }),

@@ -281,6 +281,7 @@ public sealed class GameChallengeTests
             text,
             views,
             [],
+            [],
             TestGameData.PeriodStart,
             subscriberDelta,
             quality,

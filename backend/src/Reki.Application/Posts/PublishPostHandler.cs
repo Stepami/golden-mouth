@@ -117,6 +117,7 @@ public sealed class PublishPostHandler(
             text,
             views,
             [starComment],
+            [],
             now,
             progression.SubscriberDelta,
             progression.Quality,

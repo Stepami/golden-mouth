@@ -29,6 +29,11 @@ export interface Player {
 export interface Reaction { emoji: string; count: number }
 export interface CommentT { id: string; author: string; avatar: string; handle: string; text: string; star?: boolean; me?: boolean; hidden?: boolean }
 export interface Post { id: string; text: string; views: number; reactions: Reaction[]; comments: CommentT[]; inRivers?: boolean; at: string }
+/** Ответ на комментарий (02-6). Идемпотентен по replyId: повтор возвращает тот же сохранённый итог. */
+export interface ReplyResult {
+  replyId: string; commentId: string; subscriberBonus: number
+  awardedReplies: number; replyLimit: number; subscriberTotal: number; reaction?: string
+}
 
 export interface Why { icon: string; label: string; value: string }
 export interface PostResult {
