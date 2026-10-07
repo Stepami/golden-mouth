@@ -22,8 +22,8 @@ function Report() {
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Реакции" />
       <div className="pad" style={{ filter: 'blur(1px)', opacity: .5 }}>
-        {firstPost.comments.slice(0, 1).map(c => <Comment key={c.id} avatar={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} />)}
-        <Comment avatar="critic" name="stan_critic" handle="" text={<span className="muted">[реплика скрыта]</span>} />
+        {firstPost.comments.slice(0, 1).map(c => <Comment key={c.id} seed={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} />)}
+        <Comment seed="critic" name="stan_critic" handle="" text={<span className="muted">[реплика скрыта]</span>} />
       </div>
       <div className="sheet-bg"><div className="sheet">
         <div className="row" style={{ marginBottom: 4 }}><div style={{ fontSize: 20, fontWeight: 800, flex: 1 }}>Что не так?</div><button onClick={nav.back} style={{ fontSize: 22, color: 'var(--muted2)', background: 'none', border: 'none' }}>✕</button></div>
@@ -45,7 +45,7 @@ function Crisis({ adult }: { adult: boolean }) {
   useEffect(() => { track('crisis_shown', { adult }) }, [adult])
   return (
     <div className="screen no-tab">
-      <TopBar onBack={nav.back}><Avatar id="mira" size={36} /><div><b>Мира</b><div className="small muted">лидер BLESK</div></div></TopBar>
+      <TopBar onBack={nav.back}><Avatar seed="mira" size={36} /><div><b>Мира</b><div className="small muted">лидер BLESK</div></div></TopBar>
       <div className="pad">
         <Bubble>ты сегодня какая-то тихая. всё ок?</Bubble><Bubble me>не знаю. иногда кажется, что не хочу жить</Bubble>
         <div className="card" style={{ marginTop: 14, border: '1px solid #FFB86B66', background: '#1E1A16' }}>

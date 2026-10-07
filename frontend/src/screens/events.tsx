@@ -14,7 +14,7 @@ import { register } from '.'
 function TgBot({ time, children }: { time: string; children: React.ReactNode }) {
   return (
     <div className="tg screen no-tab">
-      <div className="top" style={{ background: '#0E1621', borderColor: '#1A2533' }}><span style={{ fontSize: 22, color: '#8CC8FF' }}>‹</span><Avatar id="R" size={36} /><div><b>Реки</b><div className="small" style={{ color: '#6C8EA8' }}>бот</div></div></div>
+      <div className="top" style={{ background: '#0E1621', borderColor: '#1A2533' }}><span style={{ fontSize: 22, color: '#8CC8FF' }}>‹</span><Avatar label="R" size={36} /><div><b>Реки</b><div className="small" style={{ color: '#6C8EA8' }}>бот</div></div></div>
       <div style={{ padding: 16 }}><div className="small" style={{ textAlign: 'center', color: '#6C8EA8', marginBottom: 10 }}>сегодня</div>{children}<div className="small" style={{ color: '#6C8EA8', marginTop: 8 }}>{time}</div></div>
     </div>
   )
@@ -86,9 +86,9 @@ function NewStar() {
       <ChannelHead />
       <div style={{ padding: '20px 18px' }}>
         <div style={{ textAlign: 'center', margin: '6px 0 16px' }}><span className="badge">ДЕНЬ 3 · НОВАЯ ЗВЕЗДА</span>
-          <Avatar id="yuna" size={86} style={{ margin: '14px auto 8px' }} /><div style={{ fontSize: 22, fontWeight: 800 }}>Юна</div><div className="muted">трейни-соперница · из того же агентства</div></div>
+          <Avatar seed="yuna" size={86} style={{ margin: '14px auto 8px' }} /><div style={{ fontSize: 22, fontWeight: 800 }}>Юна</div><div className="muted">трейни-соперница · из того же агентства</div></div>
         <div className="small muted" style={{ textAlign: 'center', marginBottom: 12 }}>Подписалась на тебя и уже оставила комментарий</div>
-        <Card style={{ marginBottom: 12 }}><div className="row"><Avatar id="yuna" size={32} /><b>Юна</b><span className="small muted">трейни</span><span className="small" style={{ color: 'var(--accent)' }}>★ звезда</span></div><div style={{ marginTop: 6 }}>мило. на прослушивании посмотрим, кто уверенно, а кто нет 🙂</div></Card>
+        <Card style={{ marginBottom: 12 }}><div className="row"><Avatar seed="yuna" size={32} /><b>Юна</b><span className="small muted">трейни</span><span className="small" style={{ color: 'var(--accent)' }}>★ звезда</span></div><div style={{ marginTop: 6 }}>мило. на прослушивании посмотрим, кто уверенно, а кто нет 🙂</div></Card>
         <div className="small muted" style={{ textAlign: 'center' }}>Соперница: с ней можно враждовать или подружиться</div>
       </div>
       <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push('03-1_dm')}>Ответить Юне</Button></div>
@@ -107,7 +107,7 @@ function WhileAway() {
         <div style={{ fontSize: 24, fontWeight: 800, margin: '6px 0 4px' }}>Пока тебя не было</div>
         <div className="muted" style={{ marginBottom: 12 }}>{days === 1 ? 'Вчера' : `${days} дня`} в Сцене было без тебя. Вот что случилось</div>
         {[['mira', 'Мира', 'выложила тизер камбэка и спросила, где ты 👀'], ['yuna', 'Юна', 'прошла прослушивание и намекнула на тебя в посте'], ['sonya', 'Соня', 'ответила на твой комментарий 💛']].map(([a, n, t]) => (
-          <Card key={n} style={{ marginBottom: 8 }}><div className="row"><Avatar id={a} size={32} /><div className="small"><b>{n}</b> {t}</div></div></Card>
+          <Card key={n} style={{ marginBottom: 8 }}><div className="row"><Avatar seed={a} size={32} /><div className="small"><b>{n}</b> {t}</div></div></Card>
         ))}
         <Card style={{ margin: '12px 0', border: '1px solid #6BFFB866' }}><span className="badge" style={{ color: '#6BFFB8' }}>СОБЫТИЕ · БЕЗ ЛИМИТА</span><div style={{ fontWeight: 800, margin: '6px 0 2px' }}>Вернись громко</div><div className="small muted">Один пост про твоё возвращение не тратит лимит</div></Card>
         {days >= 2 && <Gift>Канал отдохнул: первые 3 поста сегодня дают ×2</Gift>}
@@ -123,7 +123,7 @@ function StatsCard() {
   return (
     <div className="screen no-tab" style={{ background: 'linear-gradient(160deg,#2A1236,#0E0E13 55%,#12203A)', padding: '50px 26px', textAlign: 'center' }}>
       <div className="brand" style={{ fontSize: 22 }}>Реки</div><div className="small" style={{ color: 'var(--soft)', letterSpacing: '.08em', marginTop: 4 }}>МОИ СТАТЫ · {worldOf(p.world).emoji} {worldOf(p.world).title.toUpperCase()}</div>
-      <Avatar id={p.avatar} size={96} style={{ margin: '22px auto 8px' }} /><div style={{ fontSize: 22, fontWeight: 800 }}>{p.name}</div>
+      <Avatar seed={p.handle} size={96} style={{ margin: '22px auto 8px' }} /><div style={{ fontSize: 22, fontWeight: 800 }}>{p.name}</div>
       <div style={{ fontSize: 40, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent', marginTop: 8 }}>{fmt(p.subs)}</div><div className="muted">подписчиков за 4 дня</div>
       <Card style={{ marginTop: 18, textAlign: 'left' }}>
         <SkillBar name="смелость" progress={.72} /><SkillBar name="юмор" progress={.64} /><SkillBar name="в тему" progress={.58} />
