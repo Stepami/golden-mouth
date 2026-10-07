@@ -754,13 +754,14 @@ public sealed class GameApiTests(ApiFactory factory)
         const long telegramUserId = 1103;
         (string postId, _) = await PublishPostForThreadAsync(telegramUserId);
         using HttpClient http = CreateAuthenticatedHttpClient(telegramUserId);
+        var request = new ReplyRequest
+        {
+            CommentId = Guid.NewGuid().ToString("N"),
+            ReplyId = "thread-missing-target",
+            Text = "ответ в пустоту",
+        };
         using var body = new StringContent(
-            JsonSerializer.Serialize(new
-            {
-                commentId = Guid.NewGuid().ToString("N"),
-                replyId = "thread-missing-target",
-                text = "ответ в пустоту",
-            }),
+            JsonSerializer.Serialize(request, ApiJsonSerializerContext.Default.ReplyRequest),
             Encoding.UTF8,
             "application/json");
 
@@ -784,13 +785,14 @@ public sealed class GameApiTests(ApiFactory factory)
         using TestApiClient strangerApi = factory.CreateApiClient(strangerUserId);
         await OnboardAsync(strangerApi);
         using HttpClient http = CreateAuthenticatedHttpClient(strangerUserId);
+        var request = new ReplyRequest
+        {
+            CommentId = commentId,
+            ReplyId = "thread-foreign-post",
+            Text = "чужой пост",
+        };
         using var body = new StringContent(
-            JsonSerializer.Serialize(new
-            {
-                commentId,
-                replyId = "thread-foreign-post",
-                text = "чужой пост",
-            }),
+            JsonSerializer.Serialize(request, ApiJsonSerializerContext.Default.ReplyRequest),
             Encoding.UTF8,
             "application/json");
 
@@ -926,8 +928,14 @@ public sealed class GameApiTests(ApiFactory factory)
         string text)
     {
         using HttpClient http = CreateAuthenticatedHttpClient(telegramUserId);
+        var request = new ReplyRequest
+        {
+            CommentId = commentId,
+            ReplyId = replyId,
+            Text = text,
+        };
         using var body = new StringContent(
-            JsonSerializer.Serialize(new { commentId, replyId, text }),
+            JsonSerializer.Serialize(request, ApiJsonSerializerContext.Default.ReplyRequest),
             Encoding.UTF8,
             "application/json");
         using HttpResponseMessage response = await http.PostAsync(
