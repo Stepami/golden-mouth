@@ -903,7 +903,7 @@ public sealed class GameApiTests(ApiFactory factory)
             .GetCollection<BsonDocument>("posts")
             .Find(new BsonDocument("PlayerId", player["_id"]))
             .SingleAsync();
-        return (post["_id"].AsString, post["Comments"].AsBsonArray[0]["Id"].AsString);
+        return (post["_id"].AsString, post["Comments"].AsBsonArray[0]["_id"].AsString);
     }
 
     private Task<BsonDocument> GetStoredPlayerAsync(long telegramUserId) =>
