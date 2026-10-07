@@ -140,10 +140,13 @@
 | `POST /plus-interest` | `{ bonus: 5 }` | 04-2 |
 | `DELETE /me` | 200 без тела | 05-8 |
 | `GET /cards/story/:postId.png` | картинка 9:16 | 02-7 |
+| `GET /cards/story/:playerId/:postId.png` | публичная картинка 9:16 для Telegram Stories, без TMA-авторизации | 02-7 |
 | `POST /events` `{ session, platform, experiments, events }` | 204 | все (TMA auth; продуктовая аналитика, [analytics.md](analytics.md)) |
 | `POST /logs` `{ session, entries: LogEntry[] }` | 204 | все (TMA auth; пачками раз в 15 с, при ошибке сразу, при закрытии через `fetch` с `keepalive: true`) |
 
 ### Генерация карточек для сторис
+
+Публичная ссылка строится из случайных внутренних ID игрока и поста. Она доступна любому, кто её знает, пока существуют игрок и пост. Маршрут проверяет принадлежность поста игроку и возвращает 404 для неверной пары и удалённых данных. Telegram загружает PNG без заголовка Authorization; авторизованный маршрут остаётся для запросов приложения.
 
 При реализации динамических PNG рендерер принимает целевой `Stream` и `CancellationToken`, а endpoint пишет результат через `HttpResponse.Body` / `BodyWriter`: готовая картинка не возвращается из Application как `byte[]`, не копируется через `MemoryStream.ToArray()` и не хранится в MongoDB. Если выбранный PNG-кодировщик требует seekable stream или выполняет только синхронную запись, используем ограниченный pooled/recyclable stream и затем `CopyToAsync` в response; синхронный I/O Kestrel глобально не включаем.
 

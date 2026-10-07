@@ -22,14 +22,6 @@ public sealed class GetStoryCardHandler(IGameStore store, PlayerReader playerRea
             cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");
 
-        return new StoryCardData(
-            post.Id,
-            player.Name,
-            player.Handle,
-            player.Subscribers,
-            post.Text,
-            post.Views,
-            post.SubscriberDelta,
-            post.Viral);
+        return StoryCardData.From(player, post);
     }
 }

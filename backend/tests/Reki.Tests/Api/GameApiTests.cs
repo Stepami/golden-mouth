@@ -815,6 +815,55 @@ public sealed class GameApiTests(ApiFactory factory)
     }
 
     [Test]
+    public async Task PublicStoryCard_WithoutAuthentication_RequiresExistingOwnedPostAsync()
+    {
+        // Arrange
+        const long ownerTelegramId = 1202;
+        const long otherTelegramId = 1203;
+        using TestApiClient ownerApi = factory.CreateApiClient(ownerTelegramId);
+        using TestApiClient otherApi = factory.CreateApiClient(otherTelegramId);
+        await OnboardAsync(ownerApi);
+        await OnboardAsync(otherApi);
+        await PublishAsync(ownerTelegramId, "публичная карточка");
+
+        BsonDocument owner = await Database.GetCollection<BsonDocument>("players")
+            .Find(new BsonDocument("TelegramUserId", ownerTelegramId))
+            .SingleAsync();
+        BsonDocument other = await Database.GetCollection<BsonDocument>("players")
+            .Find(new BsonDocument("TelegramUserId", otherTelegramId))
+            .SingleAsync();
+        string ownerId = owner["_id"].AsString;
+        string otherId = other["_id"].AsString;
+        BsonDocument post = await Database.GetCollection<BsonDocument>("posts")
+            .Find(new BsonDocument("PlayerId", ownerId))
+            .SingleAsync();
+        string postId = post["_id"].AsString;
+        using HttpClient anonymous = factory.CreateClient();
+        string publicPath = $"/cards/story/{ownerId}/{postId}.png";
+
+        // Act
+        using HttpResponseMessage response = await anonymous.GetAsync(publicPath);
+        byte[] png = await response.Content.ReadAsByteArrayAsync();
+        using HttpResponseMessage wrongOwner = await anonymous.GetAsync(
+            $"/cards/story/{otherId}/{postId}.png");
+        using HttpResponseMessage invalidId = await anonymous.GetAsync(
+            $"/cards/story/invalid/{postId}.png");
+        await ownerApi.Player.DeleteCurrentPlayerAsync(CancellationToken.None);
+        using HttpResponseMessage deleted = await anonymous.GetAsync(publicPath);
+
+        // Assert
+        await Assert.That((int)response.StatusCode).IsEqualTo(StatusCodes.Status200OK);
+        await Assert.That(response.Content.Headers.ContentType?.MediaType).IsEqualTo("image/png");
+        await Assert.That(png.AsSpan(0, 8).ToArray())
+            .IsEquivalentTo(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
+        await Assert.That(BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(16, 4))).IsEqualTo(1080);
+        await Assert.That(BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(20, 4))).IsEqualTo(1920);
+        await Assert.That((int)wrongOwner.StatusCode).IsEqualTo(StatusCodes.Status404NotFound);
+        await Assert.That((int)invalidId.StatusCode).IsEqualTo(StatusCodes.Status404NotFound);
+        await Assert.That((int)deleted.StatusCode).IsEqualTo(StatusCodes.Status404NotFound);
+    }
+
+    [Test]
     public async Task DeleteAccount_RemovesPlayerDataFromMongoAsync()
     {
         const long telegramUserId = 1004;
