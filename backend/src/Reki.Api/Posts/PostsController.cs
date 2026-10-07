@@ -88,7 +88,7 @@ public sealed class PostsController(
         return TypedResults.Ok(result);
     }
 
-    [HttpGet("posts", Name = "GetChannelPosts")]
+    [HttpGet("posts/mine", Name = "GetChannelPosts")]
     [ActionName("GetChannelPosts")]
     public async Task<Ok<IReadOnlyList<ChannelPostResponse>>> GetChannelPostsAsync(
         CancellationToken cancellationToken)
