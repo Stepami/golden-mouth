@@ -4,7 +4,7 @@ import * as mock from './mock'
 import { error, warn } from '../app/log'
 import { apiBaseUrl as BASE } from '../app/runtimeConfig'
 import { telegramAuthHeaders } from './auth'
-import type { Challenge, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostResult, PublicationState, PublicationStatus, ReplyResult, WorldRules } from './types'
+import type { Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostResult, PublicationState, PublicationStatus, ReplyResult, WorldRules } from './types'
 
 export class ApiError extends Error {
   constructor(public readonly status: number, method: string, path: string) {
@@ -140,6 +140,7 @@ export const api = {
   plusInterest: () => BASE ? call('/plus-interest', { method: 'POST' }) : later({ bonus: 5 }),
   settings: (patch: Partial<Player['settings']>) => BASE ? call('/settings', { method: 'PATCH', body: JSON.stringify(patch) }) : later({ ok: true }),
   feed: (): Promise<FeedItem[]> => BASE ? call('/feed') : later(mock.feed),
+  channelPosts: (): Promise<ChannelPost[]> => BASE ? call('/posts/mine') : later(mock.channelPosts),
   post: (postId: string): Promise<Post> => BASE ? call(`/posts/${encodeURIComponent(postId)}`) : laterLazy(() => mock.post(postId)),
   friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),
   dm: (starId: string): Promise<Dm> => BASE ? call(`/dm/${starId}`) : later(mock.dm),

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
-import { dm as dmMock, feed, firstPost, friends as friendsMock, worldOf } from '../api/mock'
-import type { DmMessage, Drama, FeedItem } from '../api/types'
+import { dm as dmMock, feed, friends as friendsMock, worldOf } from '../api/mock'
+import type { ChannelPost, DmMessage, Drama, FeedItem } from '../api/types'
 import { useNav } from '../app/nav'
 import { useApi } from '../app/useApi'
 import { usePlayer, useStore } from '../app/store'
@@ -172,6 +172,19 @@ function FriendChannel() {
 function Stage() {
   const nav = useNav(); const p = usePlayer()
   const [banner, setBanner] = useState(true)
+  const [posts, setPosts] = useState<ChannelPost[]>([])
+  const [load, setLoad] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [reloadToken, setReloadToken] = useState(0)
+  useEffect(() => {
+    let current = true
+    setLoad('loading')
+    api.channelPosts().then(items => {
+      if (!current) return
+      setPosts(items)
+      setLoad('ready')
+    }).catch(() => { if (current) setLoad('error') })
+    return () => { current = false }
+  }, [reloadToken])
   return (
     <div className="screen">
       <ChannelHead />
@@ -187,7 +200,10 @@ function Stage() {
           {(Object.keys(SKILL_NAMES) as (keyof typeof SKILL_NAMES)[]).map(k => <SkillBar key={k} name={SKILL_NAMES[k]} level={p.skills[k].level} progress={p.skills[k].progress} />)}
         </Card>
         <Card style={{ marginBottom: 10 }} onClick={() => nav.tab(4)}><div className="row"><div style={{ fontSize: 22 }}>🃏</div><div style={{ flex: 1 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b><div className="small muted">Первый залёт</div></div><span className="muted">›</span></div></Card>
-        <Card onClick={() => nav.push('02-6_thread')}><div className="small muted" style={{ marginBottom: 6 }}>вчера · в реках 🌊</div>{firstPost.text}<div style={{ marginTop: 8 }}><span className="react">😂 412</span><span className="react">🫶 96</span><span className="small muted" style={{ float: 'right' }}>👁 48k</span></div></Card>
+        {load === 'loading' && <Card><span className="small muted">загружаем посты…</span></Card>}
+        {load === 'error' && <Card><div className="small">Не получилось загрузить канал.</div><Button style={{ marginTop: 12 }} onClick={() => setReloadToken(token => token + 1)}>Попробовать снова</Button></Card>}
+        {load === 'ready' && posts.length === 0 && <Card style={{ textAlign: 'center' }}><b>Канал пока пуст</b><div className="small muted" style={{ marginTop: 6 }}>Первый пост появится здесь после публикации</div></Card>}
+        {load === 'ready' && posts.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{new Date(post.createdAtUtc).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
       </div>
       <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
     </div>

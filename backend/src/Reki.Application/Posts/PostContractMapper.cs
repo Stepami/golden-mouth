@@ -29,6 +29,15 @@ internal static class PostContractMapper
             null,
             canReply);
 
+    public static ChannelPostResponse MapChannelPost(GamePost post) =>
+        new(
+            post.Id.Value,
+            post.Text,
+            post.CreatedAtUtc,
+            post.Views,
+            CreateReactions(post),
+            post.GetComments().Count);
+
     public static PostDetailResponse MapPostDetail(GamePost post, bool canReply) =>
         new(
             post.Id.Value,
