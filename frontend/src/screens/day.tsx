@@ -186,7 +186,7 @@ function Stage() {
     return () => { current = false }
   }, [reloadToken])
   return (
-    <div className="screen">
+    <div className="screen channel-screen">
       <ChannelHead />
       <div className="pad">
         {banner && <Card style={{ marginBottom: 10, background: 'linear-gradient(135deg,#2A1A2E,#1E1A33)', border: '1px solid #FF6B8B55', position: 'relative' }}>
