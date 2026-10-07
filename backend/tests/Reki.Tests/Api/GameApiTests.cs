@@ -689,6 +689,168 @@ public sealed class GameApiTests(ApiFactory factory)
         }
     }
 
+    [Test]
+    public async Task ThreadReply_FirstThreeRepliesAwardBonusThenLaterRepliesDoNotAsync()
+    {
+        // Arrange
+        const long telegramUserId = 1101;
+        (string postId, string commentId) = await PublishPostForThreadAsync(telegramUserId);
+
+        // Act
+        ReplyResponse first = await ReplyAsync(telegramUserId, postId, commentId, "thread-key-1", "первый ответ");
+        ReplyResponse second = await ReplyAsync(telegramUserId, postId, commentId, "thread-key-2", "второй ответ");
+        ReplyResponse third = await ReplyAsync(telegramUserId, postId, commentId, "thread-key-3", "третий ответ");
+        ReplyResponse fourth = await ReplyAsync(telegramUserId, postId, commentId, "thread-key-4", "четвёртый ответ");
+
+        // Assert
+        await Assert.That(first.SubscriberBonus).IsEqualTo(9);
+        await Assert.That(first.AwardedReplies).IsEqualTo(1);
+        await Assert.That(first.ReplyLimit).IsEqualTo(3);
+        await Assert.That(first.Reaction).IsEqualTo("🔥");
+        await Assert.That(second.SubscriberBonus).IsEqualTo(9);
+        await Assert.That(second.SubscriberTotal).IsEqualTo(first.SubscriberTotal + second.SubscriberBonus);
+        await Assert.That(third.SubscriberBonus).IsEqualTo(9);
+        await Assert.That(third.AwardedReplies).IsEqualTo(3);
+        await Assert.That(fourth.SubscriberBonus).IsEqualTo(0);
+        await Assert.That(fourth.AwardedReplies).IsEqualTo(3);
+        await Assert.That(fourth.SubscriberTotal).IsEqualTo(third.SubscriberTotal);
+
+        BsonDocument stored = await GetStoredPostAsync(postId);
+        await Assert.That(stored["Comments"].AsBsonArray.Count).IsEqualTo(5);
+        await Assert.That(stored["ThreadReplies"].AsBsonArray.Count).IsEqualTo(4);
+        BsonDocument player = await GetStoredPlayerAsync(telegramUserId);
+        await Assert.That(player["Subscribers"].ToInt64()).IsEqualTo(fourth.SubscriberTotal);
+    }
+
+    [Test]
+    public async Task ThreadReply_RetryWithSameReplyId_ReturnsSavedOutcomeWithoutNewCommentOrBonusAsync()
+    {
+        // Arrange
+        const long telegramUserId = 1102;
+        (string postId, string commentId) = await PublishPostForThreadAsync(telegramUserId);
+        const string replyId = "thread-stable-key";
+
+        // Act
+        ReplyResponse first = await ReplyAsync(telegramUserId, postId, commentId, replyId, "ответ");
+        ReplyResponse retry = await ReplyAsync(telegramUserId, postId, commentId, replyId, "другой текст");
+
+        // Assert
+        await Assert.That(retry.CommentId).IsEqualTo(first.CommentId);
+        await Assert.That(retry.SubscriberBonus).IsEqualTo(first.SubscriberBonus);
+        await Assert.That(retry.SubscriberTotal).IsEqualTo(first.SubscriberTotal);
+        await Assert.That(retry.Reaction).IsEqualTo(first.Reaction);
+
+        BsonDocument stored = await GetStoredPostAsync(postId);
+        await Assert.That(stored["Comments"].AsBsonArray.Count).IsEqualTo(2);
+        await Assert.That(stored["ThreadReplies"].AsBsonArray.Count).IsEqualTo(1);
+        BsonDocument player = await GetStoredPlayerAsync(telegramUserId);
+        await Assert.That(player["Subscribers"].ToInt64()).IsEqualTo(first.SubscriberTotal);
+    }
+
+    [Test]
+    public async Task ThreadReply_UnknownTargetComment_ReturnsNotFoundAsync()
+    {
+        // Arrange
+        const long telegramUserId = 1103;
+        (string postId, _) = await PublishPostForThreadAsync(telegramUserId);
+        using HttpClient http = CreateAuthenticatedHttpClient(telegramUserId);
+        using var body = new StringContent(
+            JsonSerializer.Serialize(new
+            {
+                commentId = Guid.NewGuid().ToString("N"),
+                replyId = "thread-missing-target",
+                text = "ответ в пустоту",
+            }),
+            Encoding.UTF8,
+            "application/json");
+
+        // Act
+        using HttpResponseMessage response = await http.PostAsync(
+            $"/posts/{postId}/replies",
+            body,
+            CancellationToken.None);
+
+        // Assert
+        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+    }
+
+    [Test]
+    public async Task ThreadReply_OnAnotherPlayerPost_ReturnsNotFoundAsync()
+    {
+        // Arrange
+        const long ownerUserId = 1104;
+        const long strangerUserId = 1105;
+        (string postId, string commentId) = await PublishPostForThreadAsync(ownerUserId);
+        using TestApiClient strangerApi = factory.CreateApiClient(strangerUserId);
+        await OnboardAsync(strangerApi);
+        using HttpClient http = CreateAuthenticatedHttpClient(strangerUserId);
+        using var body = new StringContent(
+            JsonSerializer.Serialize(new
+            {
+                commentId,
+                replyId = "thread-foreign-post",
+                text = "чужой пост",
+            }),
+            Encoding.UTF8,
+            "application/json");
+
+        // Act
+        using HttpResponseMessage response = await http.PostAsync(
+            $"/posts/{postId}/replies",
+            body,
+            CancellationToken.None);
+
+        // Assert
+        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+    }
+
+    private async Task<(string PostId, string CommentId)> PublishPostForThreadAsync(long telegramUserId)
+    {
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        await PublishAsync(telegramUserId, "пост для треда");
+        BsonDocument player = await GetStoredPlayerAsync(telegramUserId);
+        BsonDocument post = await Database
+            .GetCollection<BsonDocument>("posts")
+            .Find(new BsonDocument("PlayerId", player["_id"]))
+            .SingleAsync();
+        return (post["_id"].AsString, post["Comments"].AsBsonArray[0]["Id"].AsString);
+    }
+
+    private Task<BsonDocument> GetStoredPlayerAsync(long telegramUserId) =>
+        Database
+            .GetCollection<BsonDocument>("players")
+            .Find(new BsonDocument("TelegramUserId", telegramUserId))
+            .SingleAsync();
+
+    private Task<BsonDocument> GetStoredPostAsync(string postId) =>
+        Database
+            .GetCollection<BsonDocument>("posts")
+            .Find(new BsonDocument("_id", postId))
+            .SingleAsync();
+
+    private async Task<ReplyResponse> ReplyAsync(
+        long telegramUserId,
+        string postId,
+        string commentId,
+        string replyId,
+        string text)
+    {
+        using HttpClient http = CreateAuthenticatedHttpClient(telegramUserId);
+        using var body = new StringContent(
+            JsonSerializer.Serialize(new { commentId, replyId, text }),
+            Encoding.UTF8,
+            "application/json");
+        using HttpResponseMessage response = await http.PostAsync(
+            $"/posts/{postId}/replies",
+            body,
+            CancellationToken.None);
+        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        string json = await response.Content.ReadAsStringAsync(CancellationToken.None);
+        return JsonSerializer.Deserialize(json, ApiJsonSerializerContext.Default.ReplyResponse)
+            ?? throw new InvalidOperationException("The reply response was empty.");
+    }
+
     private static async Task<byte[]> ReadAllBytesAsync(Stream stream)
     {
         using var buffer = new MemoryStream();

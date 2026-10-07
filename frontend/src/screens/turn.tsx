@@ -169,26 +169,46 @@ const Result = () => { const n = useNav(); const r = (n.params.result as PostRes
 const Flop = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.flop; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? 'сегодня сдавала пробник по ЕГЭ, всё сложно' }} theme="flop" /> }
 const Viral = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.viral; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="viral" /> }
 
-// 02-6: тред, первые 3 ответа дают подписчиков, ветка до 2 шагов
+// 02-6: тред, первые ответы дают подписчиков, ветка до 2 шагов, потом реакция комментатора
 function Thread() {
   const nav = useNav()
   const player = usePlayer()
+  const { patch } = useStore()
   const publishedPost = nav.params.post as Post | undefined
   const post = publishedPost ?? firstPost
   const [reply, setReply] = useState('')
+  const [targetId, setTargetId] = useState<string | null>(null)
   const [mine, setMine] = useState<CommentT[]>([])
+  const [reactions, setReactions] = useState<Record<string, string>>({})
+  const [awarded, setAwarded] = useState(() => post.comments.filter(comment => comment.me).length)
+  const [limit, setLimit] = useState<number | null>(null)
+  const [bonus, setBonus] = useState<number | null>(null)
   const [sending, setSending] = useState(false)
   const [replyError, setReplyError] = useState('')
-  const replied = post.comments.filter(comment => comment.me).length + mine.length
+  // replyId стабилен для одного черновика: при ошибке повтор идёт с тем же ключом, после успеха сбрасывается
+  const [replyId, setReplyId] = useState(() => crypto.randomUUID())
+  const draftKey = `${targetId ?? ''}|${reply}`
+  const draftKeyRef = useRef(draftKey)
+  useEffect(() => {
+    if (draftKeyRef.current !== draftKey) { draftKeyRef.current = draftKey; setReplyId(crypto.randomUUID()) }
+  }, [draftKey])
+  const target = [...post.comments, ...mine].find(comment => comment.id === targetId)
   const send = async () => {
-    if (!reply.trim() || sending) return
+    if (!reply.trim() || !targetId || sending) return
     if (apiBaseUrl && !publishedPost) { setReplyError('Открой опубликованный пост, чтобы ответить на него.'); return }
     setSending(true)
     setReplyError('')
     try {
-      await api.reply(post.id, reply)
-      setMine(comments => [...comments, { id: crypto.randomUUID(), author: player.name, avatar: player.avatar, handle: player.handle, text: reply, me: true }])
+      const result = await api.reply(post.id, targetId, replyId, reply)
+      setMine(comments => [...comments, { id: result.commentId, author: player.name, avatar: player.avatar, handle: player.handle, text: reply, me: true }])
+      setAwarded(result.awardedReplies)
+      setLimit(result.replyLimit)
+      setBonus(result.subscriberBonus)
+      const reaction = result.reaction
+      if (reaction) setReactions(prev => ({ ...prev, [result.commentId]: reaction }))
+      patch({ subs: result.subscriberTotal })
       setReply('')
+      setTargetId(null)
     } catch {
       setReplyError('Ответ не отправился. Попробуй ещё раз.')
     } finally {
@@ -200,13 +220,26 @@ function Thread() {
       <TopBar onBack={() => nav.replace('03-5_stage')} title="Реакции" right={`👁 ${post.views} ↑`} />
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(r => <span key={r.emoji} className="react">{r.emoji} {r.count}</span>)}</div></div>
-        <div className="small" style={{ color: 'var(--gift)', marginBottom: 12 }}>💬 Ответь на комментарии: первые 3 ответа +подписчики · {Math.min(3, replied)}/3</div>
-        {[...post.comments, ...mine].map(c => <Comment key={c.id} avatar={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} me={c.me} onMore={c.me ? undefined : () => nav.push('06-1_report', { id: c.id })} />)}
+        <div className="small" style={{ color: 'var(--gift)', marginBottom: 12 }}>💬 Ответь на комментарии: первые ответы +подписчики{limit != null ? ` · ${awarded}/${limit}` : ''}</div>
+        {bonus != null && bonus > 0 && <Gift style={{ marginBottom: 12 }}>+{bonus} подписчиков за ответ</Gift>}
+        {post.comments.map(c => (
+          <div key={c.id}>
+            <Comment avatar={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} me={c.me} onMore={c.me ? undefined : () => nav.push('06-1_report', { id: c.id })} />
+            {!c.me && <button className="small" onClick={() => setTargetId(c.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: targetId === c.id ? 'var(--accent)' : 'var(--lilac)' }}>{targetId === c.id ? 'отвечаешь этому комментарию' : 'Ответить'}</button>}
+          </div>
+        ))}
+        {mine.map(c => (
+          <div key={c.id}>
+            <Comment avatar={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} me={c.me} />
+            {reactions[c.id] && <div className="small" style={{ margin: '-6px 0 12px 44px', color: 'var(--accent)' }}>реакция комментатора: {reactions[c.id]}</div>}
+          </div>
+        ))}
+        {target && <div className="small muted" style={{ marginBottom: 8 }}>Отвечаешь: {target.author}</div>}
         {replyError && <div className="small" role="alert" style={{ color: 'var(--accent)', marginBottom: 12 }}>{replyError}</div>}
       </div>
       <div className="bottom-cta" style={{ flexDirection: 'row' }}>
-        <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input value={reply} onChange={e => setReply(e.target.value)} placeholder="Ответить · бесплатно" maxLength={300} /></div>
-        <button className="card" onClick={send} disabled={sending || !reply.trim()} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label="Отправить">➤</button>
+        <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input value={reply} onChange={e => setReply(e.target.value)} placeholder={targetId ? 'Ответ · бесплатно' : 'Выбери комментарий'} maxLength={300} /></div>
+        <button className="card" onClick={send} disabled={sending || !reply.trim() || !targetId} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label="Отправить">➤</button>
       </div>
     </div>
   )

@@ -63,10 +63,13 @@ public interface IGameStore
         PostId postId,
         CancellationToken cancellationToken);
 
-    ValueTask<bool> AddReplyAsync(
+    ValueTask<bool> TryAddThreadReplyAsync(
         PlayerId playerId,
         PostId postId,
-        GameComment reply,
+        ThreadReply reply,
+        GameComment comment,
+        PlayerProfile? updatedPlayer,
+        int expectedPlayerVersion,
         CancellationToken cancellationToken);
 
     ValueTask<StarConversation?> GetStarConversationAsync(

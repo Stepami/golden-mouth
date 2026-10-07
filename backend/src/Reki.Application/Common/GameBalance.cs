@@ -13,4 +13,5 @@ public sealed record GameBalance(
     SkillBalance Skills,
     RelationBalance Relations,
     ChallengeBalance Challenge,
+    ThreadBalance Thread,
     IReadOnlyDictionary<string, WorldBalance> Worlds);

@@ -1,39 +1,93 @@
 using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
+using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts;
 
-public sealed class AddReplyHandler(IGameStore store, PlayerReader playerReader)
-    : IRequestHandler<AddReplyCommand>
+public sealed class AddReplyHandler(
+    IGameStore store,
+    GameBalance balance,
+    PlayerReader playerReader)
+    : IRequestHandler<AddReplyCommand, ReplyResponse>
 {
-    public async ValueTask<Unit> Handle(
+    private const int MaxAttempts = 3;
+
+    public async ValueTask<ReplyResponse> Handle(
         AddReplyCommand request,
         CancellationToken cancellationToken)
     {
-        PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        var reply = new GameComment(
-            CommentId.New(),
-            player.Name,
-            player.Avatar,
-            player.Handle,
-            request.Text,
-            false,
-            true,
-            false);
-        bool updated = await store.AddReplyAsync(
-            player.Id,
-            request.PostId,
-            reply,
-            cancellationToken);
-        if (!updated)
+        for (int attempt = 0; attempt < MaxAttempts; attempt++)
         {
-            throw new ResourceNotFoundException("Post not found.");
+            PlayerProfile player = await playerReader.GetAsync(
+                request.TelegramUserId,
+                cancellationToken);
+            GamePost post = await store.GetPostAsync(
+                player.Id,
+                request.PostId,
+                cancellationToken) ?? throw new ResourceNotFoundException("Post not found.");
+
+            ThreadReply? existing = post.FindReply(request.ReplyId);
+            if (existing is not null)
+            {
+                return Map(existing);
+            }
+
+            bool targetExists = post.Comments.Any(comment =>
+                comment.Id == request.TargetCommentId && !comment.Me);
+            if (!targetExists)
+            {
+                throw new ResourceNotFoundException("Comment not found.");
+            }
+
+            ThreadReply reply = ThreadReplyPolicy.CreateReply(
+                post,
+                request.ReplyId,
+                CommentId.New(),
+                request.TargetCommentId,
+                player.Subscribers,
+                balance.Thread.BonusReplies,
+                balance.Thread.SubscriberBonus,
+                balance.Thread.BranchDepth);
+            var comment = new GameComment(
+                reply.CommentId,
+                player.Name,
+                player.Avatar,
+                player.Handle,
+                request.Text,
+                false,
+                true,
+                false);
+            PlayerProfile? updated = reply.BonusAwarded > 0
+                ? player.AwardThreadBonus(reply.BonusAwarded)
+                : null;
+            bool added = await store.TryAddThreadReplyAsync(
+                player.Id,
+                request.PostId,
+                reply,
+                comment,
+                updated,
+                player.Version,
+                cancellationToken);
+            if (added)
+            {
+                return Map(reply);
+            }
         }
 
-        return Unit.Value;
+        throw new RequestConflictException("The thread reply could not be saved.");
     }
+
+    private ReplyResponse Map(ThreadReply reply) =>
+        new(
+            reply.ReplyId,
+            reply.CommentId.Value,
+            reply.BonusAwarded,
+            reply.AwardedReplies,
+            balance.Thread.BonusReplies,
+            reply.SubscriberTotal,
+            reply.Reaction);
 }
 
