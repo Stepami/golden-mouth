@@ -1,0 +1,546 @@
+{
+  "org_id": "default",
+  "request_body": {
+    "title": "Реки: продукт",
+    "description": "DAU, новые игроки, возврат и churn D1, события и срезы. Источник: поток product.",
+    "tabs": [
+      {
+        "tabId": "product",
+        "name": "Продукт",
+        "panels": [
+          {
+            "id": "p1",
+            "type": "line",
+            "title": "DAU по дням",
+            "description": "Уникальные игроки за календарный день. activity_kind = real отсекает служебные события.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": true
+            },
+            "queries": [
+              {
+                "query": "SELECT histogram(_timestamp, '1 day') AS day, count(DISTINCT player_id) AS dau\nFROM \"product\" WHERE activity_kind = 'real'\nGROUP BY day ORDER BY day",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "day",
+                      "alias": "day",
+                      "column": "day",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "dau",
+                      "alias": "dau",
+                      "column": "dau",
+                      "type": "build"
+                    }
+                  ],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "w": 96,
+              "h": 8,
+              "i": 1
+            }
+          },
+          {
+            "id": "p2",
+            "type": "bar",
+            "title": "Новые игроки",
+            "description": "Первый день, в который игрок вообще появился в событиях.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": true
+            },
+            "queries": [
+              {
+                "query": "SELECT histogram(first_seen, '1 day') AS day, count(*) AS new_players\nFROM (SELECT player_id, min(_timestamp) AS first_seen FROM \"product\" WHERE activity_kind = 'real' GROUP BY player_id)\nGROUP BY day ORDER BY day",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "day",
+                      "alias": "day",
+                      "column": "day",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "new_players",
+                      "alias": "new_players",
+                      "column": "new_players",
+                      "type": "build"
+                    }
+                  ],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 96,
+              "y": 0,
+              "w": 96,
+              "h": 8,
+              "i": 2
+            }
+          },
+          {
+            "id": "p3",
+            "type": "line",
+            "title": "Сессии и события",
+            "description": "Число сессий и общее число событий за день. Помогает понять, растёт ли глубина, а не только охват.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": true
+            },
+            "queries": [
+              {
+                "query": "SELECT histogram(_timestamp, '1 day') AS day, count(DISTINCT session_id) AS sessions, count(*) AS events\nFROM \"product\" WHERE activity_kind = 'real'\nGROUP BY day ORDER BY day",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "day",
+                      "alias": "day",
+                      "column": "day",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "sessions",
+                      "alias": "sessions",
+                      "column": "sessions",
+                      "type": "build"
+                    },
+                    {
+                      "label": "events",
+                      "alias": "events",
+                      "column": "events",
+                      "type": "build"
+                    }
+                  ],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 8,
+              "w": 96,
+              "h": 8,
+              "i": 3
+            }
+          },
+          {
+            "id": "p4",
+            "type": "table",
+            "title": "Возврат D1",
+            "description": "Сколько игроков из дня вернулись на следующий день. Знаменатель это DAU того дня.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false
+            },
+            "queries": [
+              {
+                "query": "SELECT to_timestamp_micros(a.day_index * 86400000000) AS day,\n       count(DISTINCT a.player_id) AS dau,\n       count(DISTINCT b.player_id) AS returned_d1\nFROM (SELECT DISTINCT player_id, floor(_timestamp / 86400000000) AS day_index FROM \"product\" WHERE activity_kind = 'real') a\nLEFT JOIN (SELECT DISTINCT player_id, floor(_timestamp / 86400000000) AS day_index FROM \"product\" WHERE activity_kind = 'real') b\n  ON b.player_id = a.player_id AND b.day_index = a.day_index + 1\nGROUP BY a.day_index ORDER BY a.day_index",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "day",
+                      "alias": "day",
+                      "column": "day",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "dau",
+                      "alias": "dau",
+                      "column": "dau",
+                      "type": "build"
+                    },
+                    {
+                      "label": "returned_d1",
+                      "alias": "returned_d1",
+                      "column": "returned_d1",
+                      "type": "build"
+                    }
+                  ],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 96,
+              "y": 8,
+              "w": 96,
+              "h": 8,
+              "i": 4
+            }
+          },
+          {
+            "id": "p9",
+            "type": "line",
+            "title": "Churn D1",
+            "description": "Churn = 100% - возврат D1. churned это игроки дня, не пришедшие на следующий.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": true
+            },
+            "queries": [
+              {
+                "query": "SELECT to_timestamp_micros(a.day_index * 86400000000) AS day,\n       count(DISTINCT a.player_id) AS dau,\n       count(DISTINCT b.player_id) AS returned_d1,\n       count(DISTINCT a.player_id) - count(DISTINCT b.player_id) AS churned,\n       round(100.0 * (count(DISTINCT a.player_id) - count(DISTINCT b.player_id)) / count(DISTINCT a.player_id), 1) AS churn_pct\nFROM (SELECT DISTINCT player_id, floor(_timestamp / 86400000000) AS day_index FROM \"product\" WHERE activity_kind = 'real') a\nLEFT JOIN (SELECT DISTINCT player_id, floor(_timestamp / 86400000000) AS day_index FROM \"product\" WHERE activity_kind = 'real') b\n  ON b.player_id = a.player_id AND b.day_index = a.day_index + 1\nGROUP BY a.day_index ORDER BY a.day_index",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "day",
+                      "alias": "day",
+                      "column": "day",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "dau",
+                      "alias": "dau",
+                      "column": "dau",
+                      "type": "build"
+                    },
+                    {
+                      "label": "returned_d1",
+                      "alias": "returned_d1",
+                      "column": "returned_d1",
+                      "type": "build"
+                    },
+                    {
+                      "label": "churned",
+                      "alias": "churned",
+                      "column": "churned",
+                      "type": "build"
+                    },
+                    {
+                      "label": "churn_pct",
+                      "alias": "churn_pct",
+                      "column": "churn_pct",
+                      "type": "build"
+                    }
+                  ],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 16,
+              "w": 96,
+              "h": 8,
+              "i": 5
+            }
+          },
+          {
+            "id": "p5",
+            "type": "table",
+            "title": "События и охват игроков",
+            "description": "Какие события вообще происходят и сколько уникальных игроков в каждом.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false
+            },
+            "queries": [
+              {
+                "query": "SELECT event_name, count(DISTINCT player_id) AS players, count(*) AS events\nFROM \"product\" WHERE activity_kind = 'real'\nGROUP BY event_name ORDER BY events DESC",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "event_name",
+                      "alias": "event_name",
+                      "column": "event_name",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "players",
+                      "alias": "players",
+                      "column": "players",
+                      "type": "build"
+                    },
+                    {
+                      "label": "events",
+                      "alias": "events",
+                      "column": "events",
+                      "type": "build"
+                    }
+                  ],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 96,
+              "y": 16,
+              "w": 96,
+              "h": 10,
+              "i": 6
+            }
+          },
+          {
+            "id": "p6",
+            "type": "pie",
+            "title": "Срез по платформе",
+            "description": "Как распределены игроки и события по платформам клиента.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": true
+            },
+            "queries": [
+              {
+                "query": "SELECT platform, count(DISTINCT player_id) AS players, count(*) AS events\nFROM \"product\" WHERE activity_kind = 'real'\nGROUP BY platform ORDER BY players DESC",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "platform",
+                      "alias": "platform",
+                      "column": "platform",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "players",
+                      "alias": "players",
+                      "column": "players",
+                      "type": "build"
+                    },
+                    {
+                      "label": "events",
+                      "alias": "events",
+                      "column": "events",
+                      "type": "build"
+                    }
+                  ],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 26,
+              "w": 64,
+              "h": 8,
+              "i": 7
+            }
+          },
+          {
+            "id": "p7",
+            "type": "pie",
+            "title": "Срез по миру",
+            "description": "Образовательный мир, в котором играют.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": true
+            },
+            "queries": [
+              {
+                "query": "SELECT world, count(DISTINCT player_id) AS players, count(*) AS events\nFROM \"product\" WHERE activity_kind = 'real'\nGROUP BY world ORDER BY players DESC",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "world",
+                      "alias": "world",
+                      "column": "world",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "players",
+                      "alias": "players",
+                      "column": "players",
+                      "type": "build"
+                    },
+                    {
+                      "label": "events",
+                      "alias": "events",
+                      "column": "events",
+                      "type": "build"
+                    }
+                  ],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 64,
+              "y": 26,
+              "w": 64,
+              "h": 8,
+              "i": 8
+            }
+          },
+          {
+            "id": "p8",
+            "type": "table",
+            "title": "Срез по возрасту",
+            "description": "Возрастная группа игрока.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false
+            },
+            "queries": [
+              {
+                "query": "SELECT age_group, count(DISTINCT player_id) AS players, count(*) AS events\nFROM \"product\" WHERE activity_kind = 'real'\nGROUP BY age_group ORDER BY players DESC",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "age_group",
+                      "alias": "age_group",
+                      "column": "age_group",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "players",
+                      "alias": "players",
+                      "column": "players",
+                      "type": "build"
+                    },
+                    {
+                      "label": "events",
+                      "alias": "events",
+                      "column": "events",
+                      "type": "build"
+                    }
+                  ],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 128,
+              "y": 26,
+              "w": 64,
+              "h": 8,
+              "i": 9
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
