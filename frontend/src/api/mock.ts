@@ -115,8 +115,8 @@ export const dm: Dm = {
 
 export const feed: FeedItem[] = [
   { kind: 'news', text: 'BLESK объявили камбэк. Трейни, у кого лучший пост недели, позовут на съёмки тизера 👀' },
-  { kind: 'post', postId: foreignPost.id, canReply: false, author: 'Ева', avatar: 'eva', role: 'солистка NOIR', ago: '2 ч назад', text: foreignPost.text, reactions: foreignPost.reactions },
-  { kind: 'post', postId: firstPost.id, canReply: true, author: 'Мира', avatar: 'mira', role: 'лидер BLESK', ago: '12 мин назад', text: 'репостнула к себе. трейни, учитесь 😏', repost: 'первый день трейни: перепутала право и лево…', reactions: [{ emoji: '🔥', count: 2100 }, { emoji: '😂', count: 840 }] },
+  { kind: 'post', postId: foreignPost.id, canReply: false, author: 'Ева', avatar: 'eva', role: 'солистка NOIR', ago: '2026-10-07T04:09:02Z', text: foreignPost.text, reactions: foreignPost.reactions, views: foreignPost.views, commentCount: foreignPost.comments.length },
+  { kind: 'post', postId: firstPost.id, canReply: true, author: 'Мира', avatar: 'mira', role: 'лидер BLESK', ago: channelPosts[0].createdAtUtc, text: 'репостнула к себе. трейни, учитесь 😏', repost: 'первый день трейни: перепутала право и лево…', reactions: [{ emoji: '🔥', count: 2100 }, { emoji: '😂', count: 840 }], views: firstPost.views, commentCount: firstPost.comments.length },
 ]
 
 export const friends: Friend[] = [

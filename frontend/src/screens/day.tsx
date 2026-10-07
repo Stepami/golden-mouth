@@ -11,6 +11,11 @@ import { register } from '.'
 
 const SKILL_NAMES = { brave: 'смелость', humor: 'юмор', topic: 'в тему' } as const
 
+function postDate(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
 // 03-1: личка со звездой; память видна и правится; ~5 ответов звезды в день
 function Dm() {
   const nav = useNav(); const p = usePlayer()
@@ -88,10 +93,13 @@ function FeedPostCard({ item }: { item: FeedItem }) {
         onKeyDown={open ? event => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open() } } : undefined}
         style={open ? { cursor: 'pointer' } : undefined}
       >
-        <div className="row"><Avatar seed={item.avatar!} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b> <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago}</div></div></div>
+        <div className="row"><Avatar seed={item.avatar!} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b> <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}</div></div></div>
         {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>Лиза · трейни</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
         <div style={{ marginTop: 8 }}>{item.text}</div>
-        <div style={{ marginTop: 8 }}>{item.reactions?.map(r => <span key={r.emoji} className="react">{r.emoji} {short(r.count)}</span>)}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{item.reactions?.map(r => <span key={r.emoji} className="react">{r.emoji} {short(r.count)}</span>)}</div>
+          {item.commentCount != null && item.views != null && <span className="small muted" style={{ whiteSpace: 'nowrap' }}>💬 {item.commentCount} · 👁 {short(item.views)}</span>}
+        </div>
       </div>
       <button onClick={event => { event.stopPropagation(); nav.push('06-1_report', { text: item.text }) }} aria-label="Пожаловаться" style={{ position: 'absolute', right: 14, top: 12, background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>
     </Card>
@@ -203,7 +211,7 @@ function Stage() {
         {load === 'loading' && <Card><span className="small muted">загружаем посты…</span></Card>}
         {load === 'error' && <Card><div className="small">Не получилось загрузить канал.</div><Button style={{ marginTop: 12 }} onClick={() => setReloadToken(token => token + 1)}>Попробовать снова</Button></Card>}
         {load === 'ready' && posts.length === 0 && <Card style={{ textAlign: 'center' }}><b>Канал пока пуст</b><div className="small muted" style={{ marginTop: 6 }}>Первый пост появится здесь после публикации</div></Card>}
-        {load === 'ready' && posts.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{new Date(post.createdAtUtc).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
+        {load === 'ready' && posts.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
       </div>
       <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
     </div>

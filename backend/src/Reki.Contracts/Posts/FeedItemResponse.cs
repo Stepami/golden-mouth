@@ -9,5 +9,7 @@ public sealed record FeedItemResponse(
     string? Ago,
     string Text,
     IReadOnlyList<ReactionResponse>? Reactions,
+    long? Views,
+    int? CommentCount,
     string? Repost,
     bool CanReply);

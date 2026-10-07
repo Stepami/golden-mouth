@@ -26,6 +26,8 @@ internal static class PostContractMapper
             post.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             post.Text,
             CreateReactions(post),
+            post.Views,
+            post.GetComments().Count,
             null,
             canReply);
 
