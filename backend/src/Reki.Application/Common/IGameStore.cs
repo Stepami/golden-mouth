@@ -53,6 +53,10 @@ public interface IGameStore
         int count,
         CancellationToken cancellationToken);
 
+    ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
+        PlayerId playerId,
+        CancellationToken cancellationToken);
+
     ValueTask<IReadOnlyList<GamePost>> GetRecentWorldPostsAsync(
         WorldId worldId,
         int count,

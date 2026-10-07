@@ -262,6 +262,16 @@ internal sealed class MongoGameStore : IGameStore
             .ToListAsync(cancellationToken);
     }
 
+    public async ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
+        PlayerId playerId,
+        CancellationToken cancellationToken)
+    {
+        return await _posts
+            .Find(item => item.PlayerId == playerId)
+            .SortByDescending(item => item.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+    }
+
     public async ValueTask<IReadOnlyList<GamePost>> GetRecentWorldPostsAsync(
         WorldId worldId,
         int count,

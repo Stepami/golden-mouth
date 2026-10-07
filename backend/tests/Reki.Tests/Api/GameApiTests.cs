@@ -163,6 +163,64 @@ public sealed class GameApiTests(ApiFactory factory)
     }
 
     [Test]
+    public async Task ChannelPosts_ReturnsOnlyCompletedOwnPostsNewestFirstAsync()
+    {
+        // Arrange
+        const long ownerUserId = 1027;
+        const long otherUserId = 1028;
+        using TestApiClient ownerApi = factory.CreateApiClient(ownerUserId);
+        using TestApiClient otherApi = factory.CreateApiClient(otherUserId);
+        await OnboardAsync(ownerApi);
+        await OnboardAsync(otherApi);
+        await PublishAsync(ownerUserId, "старый пост канала");
+        await PublishAsync(ownerUserId, "новый пост канала");
+        await PublishAsync(otherUserId, "чужой пост канала");
+        (System.Net.HttpStatusCode pendingStatus, _, _) = await GenerateAsync(
+            ownerUserId,
+            "незавершённая публикация");
+        await Assert.That(pendingStatus).IsEqualTo(System.Net.HttpStatusCode.OK);
+
+        BsonDocument owner = await GetStoredPlayerAsync(ownerUserId);
+        IMongoCollection<BsonDocument> posts = Database.GetCollection<BsonDocument>("posts");
+        await posts.UpdateOneAsync(
+            new BsonDocument { ["PlayerId"] = owner["_id"], ["Text"] = "старый пост канала" },
+            new BsonDocument("$set", new BsonDocument("CreatedAtUtc", new BsonDateTime(new DateTime(2026, 10, 7, 6, 0, 0, DateTimeKind.Utc)))));
+        await posts.UpdateOneAsync(
+            new BsonDocument { ["PlayerId"] = owner["_id"], ["Text"] = "новый пост канала" },
+            new BsonDocument("$set", new BsonDocument("CreatedAtUtc", new BsonDateTime(new DateTime(2026, 10, 7, 7, 0, 0, DateTimeKind.Utc)))));
+
+        // Act
+        IReadOnlyList<ChannelPostResponse> channel = await ownerApi.Posts.GetChannelPostsAsync(
+            CancellationToken.None);
+
+        // Assert
+        string[] texts = channel.Select(post => post.Text).ToArray();
+        await Assert.That(texts.Length).IsEqualTo(2);
+        await Assert.That(texts[0]).IsEqualTo("новый пост канала");
+        await Assert.That(texts[1]).IsEqualTo("старый пост канала");
+        await Assert.That(channel.All(post => post.PostId.Length > 0)).IsTrue();
+        await Assert.That(channel.All(post => post.CommentCount > 0)).IsTrue();
+        await Assert.That(channel.Any(post => post.Text == "чужой пост канала")).IsFalse();
+        await Assert.That(channel.Any(post => post.Text == "незавершённая публикация")).IsFalse();
+    }
+
+    [Test]
+    public async Task ChannelPosts_WithoutPublishedPosts_ReturnsEmptyListAsync()
+    {
+        // Arrange
+        const long telegramUserId = 1029;
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+
+        // Act
+        IReadOnlyList<ChannelPostResponse> channel = await api.Posts.GetChannelPostsAsync(
+            CancellationToken.None);
+
+        // Assert
+        await Assert.That(channel).IsEmpty();
+    }
+
+    [Test]
     public async Task Post_ForOwnPost_ReturnsReplyRightsAsync()
     {
         // Arrange

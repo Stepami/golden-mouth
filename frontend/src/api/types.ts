@@ -36,6 +36,7 @@ export interface Reaction { emoji: string; count: number }
 export interface CommentT { id: string; author: string; avatar: string; handle: string; text: string; star?: boolean; me?: boolean; hidden?: boolean }
 /** Пост канала. `canReply` есть только при загрузке с сервера (GET /posts/:id): отвечать можно лишь под своими постами. */
 export interface Post { id: string; text: string; views: number; reactions: Reaction[]; comments: CommentT[]; inRivers?: boolean; at?: string; canReply?: boolean }
+export interface ChannelPost { postId: string; text: string; createdAtUtc: string; views: number; reactions: Reaction[]; commentCount: number }
 /** Ответ на комментарий (02-6). Идемпотентен по replyId: повтор возвращает тот же сохранённый итог. */
 export interface ReplyResult {
   replyId: string; commentId: string; subscriberBonus: number

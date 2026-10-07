@@ -88,6 +88,17 @@ public sealed class PostsController(
         return TypedResults.Ok(result);
     }
 
+    [HttpGet("posts", Name = "GetChannelPosts")]
+    [ActionName("GetChannelPosts")]
+    public async Task<Ok<IReadOnlyList<ChannelPostResponse>>> GetChannelPostsAsync(
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<ChannelPostResponse> result = await sender.Send(
+            new GetChannelPostsQuery(TelegramUserId.From(telegramUser.User.Id)),
+            cancellationToken);
+        return TypedResults.Ok(result);
+    }
+
     [HttpGet("posts/{postId}", Name = "GetPost")]
     [ActionName("GetPost")]
     public async Task<Ok<PostDetailResponse>> GetPostAsync(

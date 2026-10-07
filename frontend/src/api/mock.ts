@@ -45,6 +45,15 @@ export const firstPost: Post = {
     { id: 'k4', author: 'stan_critic', avatar: 'critic', handle: '', text: 'трейни пишет про ошибки? ну такое…' },
   ],
 }
+
+export const channelPosts = [{
+  postId: firstPost.id,
+  text: firstPost.text,
+  createdAtUtc: '2026-10-07T06:09:02Z',
+  views: firstPost.views,
+  reactions: firstPost.reactions,
+  commentCount: firstPost.comments.length,
+}]
 export const liveComment = { id: 'k0', author: 'kpop_dasha', avatar: 'dasha', handle: 'фанатка', text: 'ЗАТО УВЕРЕННО 😭 это теперь мой девиз' }
 
 /** Чужой пост того же мира (03-3 → 02-6): читается, но `canReply: false` — ответы только под своими постами. */

@@ -123,6 +123,7 @@
 | `GET /posts/publications/:id` | `{ publicationId, status, result? }` для восстановления после обрыва; при неопределённом состоянии ручная проверка без автоповтора | 02-2b |
 | `POST /posts/:id/replies` `{ commentId, replyId, text }` | `{ replyId, commentId, subscriberBonus, awardedReplies, replyLimit, subscriberTotal, reaction? }`; идемпотентно по `replyId` | 02-6 |
 | `GET /posts/:id` | `PostDetail`: текущий текст, просмотры, реакции, комментарии и `canReply`; доступен свой или чужой пост того же мира, иначе 404 | 02-6 |
+| `GET /posts` | `ChannelPost[]`: сохранённые посты текущего игрока, newest-first; стабильный `postId`, текст, время, просмотры, реакции и число комментариев | 03-5 |
 | `GET /feed` | `FeedItem[]`: общая лента своего мира, у постов стабильный `postId` и явный `canReply`; новости без `postId` не открываются | 03-3 |
 | `GET /friends` | `Friend[]` | 03-4 |
 | `GET /dm/:starId` | `Dm` (сообщения, память, ответов осталось) | 03-1 |
