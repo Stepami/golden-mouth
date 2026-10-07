@@ -143,7 +143,7 @@ function Channel() {
         <div className="card row" style={{ gap: 12 }}><Avatar seed={handle} size={48} />
           <div><b>{name}</b><div className="muted small">{handle} · 120 подписчиков</div><div className="small" style={{ marginTop: 4 }}>{mockPlayer.bio} <span className="muted">(дописал AI)</span></div></div></div>
       </div>
-      <BottomCTA main="Дальше" disabled={!name.trim() || !handle.trim()} onMain={() => { track('onboarding_step', { step: 'channel', address: addr }); nav.push('01-5_first_star', { ...nav.params, role: roles[role], avatar: handle, name, handle, address: addr }) }} />
+      <BottomCTA main="Дальше" disabled={!name.trim() || !handle.trim()} onMain={() => { track('onboarding_step', { step: 'channel', address: addr }); nav.push('01-5_first_star', { ...nav.params, role: roles[role], name, handle, address: addr }) }} />
     </div>
   )
 }
@@ -156,7 +156,7 @@ function FirstStar() {
   const s = stars.find(x => x.id === pick)!
   const go = async () => {
     const p = nav.params as Record<string, string>
-    const pl = await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', world: p.world ?? 'stage', role: p.role ?? '', avatar: p.handle ?? '', name: p.name ?? '', handle: p.handle ?? '', address: p.address ?? 'nick', star: pick })
+    const pl = await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', world: p.world ?? 'stage', role: p.role ?? '', name: p.name ?? '', handle: p.handle ?? '', address: p.address ?? 'nick', star: pick })
     track('onboarding_step', { step: 'done', star: pick }); setPlayer(pl); nav.replace('01-6_home')
   }
   return (

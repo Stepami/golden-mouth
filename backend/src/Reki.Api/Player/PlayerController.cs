@@ -41,7 +41,6 @@ public sealed class PlayerController(
                 ToStorageValue(request.BirthGroup),
                 DomainWorldId.From(request.World.ToString()),
                 request.Role,
-                request.Avatar,
                 request.Name,
                 request.Handle,
                 request.Address.ToString().ToLowerInvariant(),

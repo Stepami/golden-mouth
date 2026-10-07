@@ -10,7 +10,6 @@ public sealed record OnboardPlayerCommand(
     string BirthGroup,
     WorldId World,
     string Role,
-    string Avatar,
     string Name,
     string Handle,
     string Address,

@@ -5,7 +5,6 @@ public sealed record PlayerResponse(
     string Name,
     string Handle,
     string Role,
-    string Avatar,
     Address Address,
     WorldId World,
     long Subs,
@@ -20,4 +19,3 @@ public sealed record PlayerResponse(
     NextWorldResponse? NextWorld,
     PlayerSettingsResponse Settings,
     IReadOnlyDictionary<string, string> Experiments);
-

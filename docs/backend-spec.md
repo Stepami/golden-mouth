@@ -117,7 +117,7 @@
 | Метод | Ответ | Экран |
 |---|---|---|
 | `GET /me` | `Player` (с обезличенным `id` и `experiments`) | все |
-| `POST /onboarding` | `Player` | 01-5 |
+| `POST /onboarding` | `Player`; аватар игрока детерминированно строится frontend из `handle`, отдельного поля `avatar` в запросе и ответе нет | 01-5 |
 | `POST /posts/publications` (SSE) | `{ publicationId, text, ownWords?, wantId? }`; статусы `pending` → `ready_for_moderation` либо `failed`; 409 при лимите или конфликте ключа | 02-2, 02-2b |
 | `POST /posts/publications/:id/moderation` (SSE) | поток `LiveEvent` со строчными `type`, последним `result: PostResult`; повтор завершённой публикации не списывает пост снова | 02-2, 02-3 |
 | `GET /posts/publications/:id` | `{ publicationId, status, result? }` для восстановления после обрыва; при неопределённом состоянии ручная проверка без автоповтора | 02-2b |
