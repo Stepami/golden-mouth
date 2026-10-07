@@ -37,7 +37,7 @@ export const player: Player = {
 
 export const firstPost: Post = {
   id: 'post1', text: 'первый день трейни: перепутала право и лево три раза. хореограф сказал «зато уверенно» 🫠', views: 312,
-  reactions: [{ emoji: '😂', count: 48 }, { emoji: '🫶', count: 21 }, { emoji: '💀', count: 9 }], at: 'только что',
+  reactions: [{ emoji: '😂', count: 48 }, { emoji: '🫶', count: 21 }, { emoji: '💀', count: 9 }], at: 'только что', canReply: true,
   comments: [
     { id: 'k1', author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'я на первой репетиции упала со сцены. «уверенно» это комплимент, поверь', star: true },
     { id: 'k2', author: 'Лиза · трейни', avatar: '@liza.trainee', handle: '', text: 'серьёзно? со сцены?? 😳', me: true },
@@ -46,6 +46,24 @@ export const firstPost: Post = {
   ],
 }
 export const liveComment = { id: 'k0', author: 'kpop_dasha', avatar: 'dasha', handle: 'фанатка', text: 'ЗАТО УВЕРЕННО 😭 это теперь мой девиз' }
+
+/** Чужой пост того же мира (03-3 → 02-6): читается, но `canReply: false` — ответы только под своими постами. */
+export const foreignPost: Post = {
+  id: 'post-eva', text: 'иногда самый громкий пост это тот, который так и не выложен. 🖤', views: 14000,
+  reactions: [{ emoji: '🖤', count: 14000 }, { emoji: '🌙', count: 3200 }], at: '2 ч назад', canReply: false,
+  comments: [
+    { id: 'fe1', author: 'Ева', avatar: 'eva', handle: 'солистка NOIR', text: 'набросала в черновик и оставила. пусть живёт', star: true },
+    { id: 'fe2', author: 'stan_critic', avatar: 'critic', handle: '', text: 'загадочно. или просто лень?' },
+  ],
+}
+
+const postsById: Record<string, Post> = { [firstPost.id]: firstPost, [foreignPost.id]: foreignPost }
+/** Пост по стабильному id для GET /posts/:id в mock-режиме; неизвестный id = 404. */
+export const post = (postId: string): Post => {
+  const found = postsById[postId]
+  if (!found) throw Object.assign(new Error(`post ${postId} not found`), { status: 404 })
+  return structuredClone(found)
+}
 
 // Тред (02-6): +9 за первые 3 ответа из макета; в mock-режиме просто считаем ответы в сессии.
 let mockReplies = 0
@@ -88,8 +106,8 @@ export const dm: Dm = {
 
 export const feed: FeedItem[] = [
   { kind: 'news', text: 'BLESK объявили камбэк. Трейни, у кого лучший пост недели, позовут на съёмки тизера 👀' },
-  { kind: 'post', author: 'Ева', avatar: 'eva', role: 'солистка NOIR', ago: '2 ч назад', text: 'иногда самый громкий пост это тот, который так и не выложен. 🖤', reactions: [{ emoji: '🖤', count: 14000 }, { emoji: '🌙', count: 3200 }] },
-  { kind: 'post', author: 'Мира', avatar: 'mira', role: 'лидер BLESK', ago: '12 мин назад', text: 'репостнула к себе. трейни, учитесь 😏', repost: 'первый день трейни: перепутала право и лево…', reactions: [{ emoji: '🔥', count: 2100 }, { emoji: '😂', count: 840 }] },
+  { kind: 'post', postId: foreignPost.id, canReply: false, author: 'Ева', avatar: 'eva', role: 'солистка NOIR', ago: '2 ч назад', text: foreignPost.text, reactions: foreignPost.reactions },
+  { kind: 'post', postId: firstPost.id, canReply: true, author: 'Мира', avatar: 'mira', role: 'лидер BLESK', ago: '12 мин назад', text: 'репостнула к себе. трейни, учитесь 😏', repost: 'первый день трейни: перепутала право и лево…', reactions: [{ emoji: '🔥', count: 2100 }, { emoji: '😂', count: 840 }] },
 ]
 
 export const friends: Friend[] = [

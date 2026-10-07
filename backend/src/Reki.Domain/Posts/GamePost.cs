@@ -16,6 +16,14 @@ public sealed record GamePost(
     bool Viral,
     bool Flop)
 {
+    public IReadOnlyList<GameComment> GetComments()
+    {
+        // Mongo can hydrate null for fields absent from legacy documents,
+        // despite the non-nullable domain contract.
+        // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
+        return Comments ?? [];
+    }
+
     public IReadOnlyList<ThreadReply> GetThreadReplies()
     {
         // Mongo can hydrate null for fields absent from legacy documents,

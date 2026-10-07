@@ -24,6 +24,8 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
 
         IndexKeysDefinition<PlayerProfile> telegramKey = Builders<PlayerProfile>.IndexKeys
             .Ascending(item => item.TelegramUserId);
+        IndexKeysDefinition<PlayerProfile> playerWorldKey = Builders<PlayerProfile>.IndexKeys
+            .Ascending(item => item.World);
         IndexKeysDefinition<GamePost> postKeys = Builders<GamePost>.IndexKeys
             .Ascending(item => item.PlayerId)
             .Descending(item => item.CreatedAtUtc);
@@ -44,6 +46,9 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
             telegramKey,
             "ux_players_telegram_user",
             unique: true);
+        CreateIndexModel<PlayerProfile> playerWorldIndex = IndexFactory.Create(
+            playerWorldKey,
+            "ix_players_world");
         CreateIndexModel<GamePost> postIndex = IndexFactory.Create(postKeys, "ix_posts_player_created");
         var publicationExpiryIndex = new CreateIndexModel<Publication>(
             Builders<Publication>.IndexKeys.Ascending(item => item.ExpiresAtUtc),
@@ -67,6 +72,9 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
             unique: true);
 
         Task telegramTask = players.Indexes.CreateOneAsync(telegramIndex, cancellationToken: cancellationToken);
+        Task playerWorldTask = players.Indexes.CreateOneAsync(
+            playerWorldIndex,
+            cancellationToken: cancellationToken);
         Task postTask = posts.Indexes.CreateOneAsync(postIndex, cancellationToken: cancellationToken);
         Task publicationTask = publications.Indexes.CreateOneAsync(
             publicationExpiryIndex,
@@ -88,6 +96,7 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
 
         await Task.WhenAll(
             telegramTask,
+            playerWorldTask,
             postTask,
             publicationTask,
             memoryTask,

@@ -13,16 +13,40 @@ internal static class PostContractMapper
             publication.Status,
             publication.Result is null ? null : MapResult(publication.Result));
 
-    public static FeedItemResponse MapFeedItem(GamePost post, PlayerProfile player) =>
+    public static FeedItemResponse MapFeedItem(
+        GamePost post,
+        PlayerProfile author,
+        bool canReply) =>
         new(
             FeedItemKind.Post,
-            player.Name,
-            player.Avatar,
-            player.Role,
+            post.Id.Value,
+            author.Name,
+            author.Avatar,
+            author.Role,
             post.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             post.Text,
-            [new ReactionResponse("🔥", post.Viral ? 3 : 1)],
-            null);
+            CreateReactions(post),
+            null,
+            canReply);
+
+    public static PostDetailResponse MapPostDetail(GamePost post, bool canReply) =>
+        new(
+            post.Id.Value,
+            post.Text,
+            post.Views,
+            CreateReactions(post),
+            post.GetComments()
+                .Select(comment => new CommentResponse(
+                    comment.Id.Value,
+                    comment.Author,
+                    comment.Avatar,
+                    comment.Handle,
+                    comment.Text,
+                    comment.Star,
+                    canReply && comment.Me,
+                    comment.Hidden))
+                .ToArray(),
+            canReply);
 
     public static IReadOnlyList<LiveEvent> MapLiveEvents(PublishedPost published)
     {
@@ -64,4 +88,7 @@ internal static class PostContractMapper
             post.Views,
             source.Hook);
     }
+
+    private static ReactionResponse[] CreateReactions(GamePost post) =>
+        [new ReactionResponse("🔥", post.Viral ? 3 : 1)];
 }

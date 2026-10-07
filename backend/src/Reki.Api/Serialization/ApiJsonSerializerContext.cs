@@ -33,6 +33,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(UpdateSettingsRequest))]
 [JsonSerializable(typeof(FeedItemResponse[]))]
 [JsonSerializable(typeof(IReadOnlyList<FeedItemResponse>))]
+[JsonSerializable(typeof(PostDetailResponse))]
 [JsonSerializable(typeof(FriendResponse[]))]
 [JsonSerializable(typeof(IReadOnlyList<FriendResponse>))]
 [JsonSerializable(typeof(DmResponse))]

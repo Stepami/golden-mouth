@@ -170,18 +170,26 @@ const Result = () => { const n = useNav(); const r = (n.params.result as PostRes
 const Flop = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.flop; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? 'сегодня сдавала пробник по ЕГЭ, всё сложно' }} theme="flop" /> }
 const Viral = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.viral; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="viral" /> }
 
-// 02-6: тред, первые ответы дают подписчиков, ветка до 2 шагов, потом реакция комментатора
+// 02-6: тред, первые ответы дают подписчиков, ветка до 2 шагов, потом реакция комментатора.
+// Реальная лента приходит с postId: грузим именно этот пост. Fallback на firstPost — только для
+// экранов-макетов без id (например, карточка в канале 03-5), не для ленты.
 function Thread() {
   const nav = useNav()
   const player = usePlayer()
   const { patch } = useStore()
   const publishedPost = nav.params.post as Post | undefined
-  const post = publishedPost ?? firstPost
+  const postId = typeof nav.params.postId === 'string' ? nav.params.postId : undefined
+  // Ключ открытого треда: реальный пост из ленты, только что опубликованный или мок-карточка.
+  const threadKey = postId ?? (publishedPost ? `own:${publishedPost.id}` : 'mock')
+  const [post, setPost] = useState<Post | null>(() => publishedPost ?? (postId ? null : firstPost))
+  const [load, setLoad] = useState<'ready' | 'loading' | 'error' | 'unavailable'>(() => (publishedPost || !postId ? 'ready' : 'loading'))
+  const [loadedKey, setLoadedKey] = useState(threadKey)
+  const [reloadToken, setReloadToken] = useState(0)
   const [reply, setReply] = useState('')
   const [targetId, setTargetId] = useState<string | null>(null)
   const [mine, setMine] = useState<CommentT[]>([])
   const [reactions, setReactions] = useState<Record<string, string>>({})
-  const [awarded, setAwarded] = useState(() => post.comments.filter(comment => comment.me).length)
+  const [awarded, setAwarded] = useState(0)
   const [limit, setLimit] = useState<number | null>(null)
   const [bonus, setBonus] = useState<number | null>(null)
   const [sending, setSending] = useState(false)
@@ -190,13 +198,45 @@ function Thread() {
   const [replyId, setReplyId] = useState(() => crypto.randomUUID())
   const draftKey = `${targetId ?? ''}|${reply}`
   const draftKeyRef = useRef(draftKey)
+  // Пост сменился (навигация/повторное открытие): стираем прошлый тред и его черновик до отрисовки нового,
+  // чтобы не показать и не отправить чужой пост.
+  if (loadedKey !== threadKey) {
+    setLoadedKey(threadKey)
+    setPost(publishedPost ?? (postId ? null : firstPost))
+    setLoad(publishedPost || !postId ? 'ready' : 'loading')
+    setReply('')
+    setTargetId(null)
+    setMine([])
+    setReactions({})
+    setAwarded(0)
+    setLimit(null)
+    setBonus(null)
+    setSending(false)
+    setReplyError('')
+    setReplyId(crypto.randomUUID())
+  }
   useEffect(() => {
     if (draftKeyRef.current !== draftKey) { draftKeyRef.current = draftKey; setReplyId(crypto.randomUUID()) }
   }, [draftKey])
-  const target = [...post.comments, ...mine].find(comment => comment.id === targetId)
+  useEffect(() => {
+    if (publishedPost || !postId) return
+    let alive = true
+    setLoad('loading')
+    api.post(postId)
+      .then(found => { if (alive) { setPost(found); setLoad('ready') } })
+      .catch((error: unknown) => {
+        if (!alive) return
+        const status = (error as { status?: number } | null)?.status
+        setLoad(status === 404 ? 'unavailable' : 'error')
+      })
+    return () => { alive = false }
+  }, [postId, publishedPost, reloadToken])
+  // Свой пост (только что опубликованный) отвечаем; чужой — только читаем, это решает canReply с сервера.
+  const canReply = publishedPost ? true : post?.canReply === true
+  const target = post ? [...post.comments, ...mine].find(comment => comment.id === targetId) : undefined
   const send = async () => {
-    if (!reply.trim() || !targetId || sending) return
-    if (apiBaseUrl && !publishedPost) { setReplyError('Открой опубликованный пост, чтобы ответить на него.'); return }
+    if (!post || !reply.trim() || !targetId || sending) return
+    if (apiBaseUrl && !publishedPost && !postId) { setReplyError('Открой опубликованный пост, чтобы ответить на него.'); return }
     setSending(true)
     setReplyError('')
     try {
@@ -216,17 +256,35 @@ function Thread() {
       setSending(false)
     }
   }
+  const goBack = () => { if (postId && !publishedPost) nav.back(); else nav.replace('03-5_stage') }
+  if (load !== 'ready') {
+    return (
+      <div className="screen no-tab">
+        <TopBar onBack={goBack} title="Реакции" />
+        <div className="pad">
+          <div className="card" role={load === 'error' ? 'alert' : 'status'} aria-live="polite">
+            {load === 'loading' && <div className="small muted">загружаем пост…</div>}
+            {load === 'error' && <><div className="small">Не получилось открыть пост.</div><Button style={{ marginTop: 12 }} onClick={() => setReloadToken(token => token + 1)}>Попробовать снова</Button></>}
+            {load === 'unavailable' && <><div className="small">Этот пост больше не доступен.</div><div className="small muted" style={{ marginTop: 6 }}>Возможно, его удалили или он из другого мира.</div></>}
+          </div>
+        </div>
+      </div>
+    )
+  }
+  if (!post) return null
   return (
     <div className="screen no-tab">
-      <TopBar onBack={() => nav.replace('03-5_stage')} title="Реакции" right={`👁 ${post.views} ↑`} />
+      <TopBar onBack={goBack} title="Реакции" right={`👁 ${fmt(post.views)} ↑`} />
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(r => <span key={r.emoji} className="react">{r.emoji} {r.count}</span>)}</div></div>
-        <div className="small" style={{ color: 'var(--gift)', marginBottom: 12 }}>💬 Ответь на комментарии: первые ответы +подписчики{limit != null ? ` · ${awarded}/${limit}` : ''}</div>
+        {canReply
+          ? <div className="small" style={{ color: 'var(--gift)', marginBottom: 12 }}>💬 Ответь на комментарии: первые ответы +подписчики{limit != null ? ` · ${awarded}/${limit}` : ''}</div>
+          : <div className="small muted" style={{ marginBottom: 12 }}>Чужой пост · отвечать можно только под своими</div>}
         {bonus != null && bonus > 0 && <Gift style={{ marginBottom: 12 }}>+{bonus} подписчиков за ответ</Gift>}
         {post.comments.map(c => (
           <div key={c.id}>
             <Comment seed={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} me={c.me} onMore={c.me ? undefined : () => nav.push('06-1_report', { id: c.id })} />
-            {!c.me && <button className="small" onClick={() => setTargetId(c.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: targetId === c.id ? 'var(--accent)' : 'var(--lilac)' }}>{targetId === c.id ? 'отвечаешь этому комментарию' : 'Ответить'}</button>}
+            {canReply && !c.me && <button className="small" onClick={() => setTargetId(c.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: targetId === c.id ? 'var(--accent)' : 'var(--lilac)' }}>{targetId === c.id ? 'отвечаешь этому комментарию' : 'Ответить'}</button>}
           </div>
         ))}
         {mine.map(c => (
@@ -238,10 +296,12 @@ function Thread() {
         {target && <div className="small muted" style={{ marginBottom: 8 }}>Отвечаешь: {target.author}</div>}
         {replyError && <div className="small" role="alert" style={{ color: 'var(--accent)', marginBottom: 12 }}>{replyError}</div>}
       </div>
-      <div className="bottom-cta" style={{ flexDirection: 'row' }}>
-        <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input value={reply} onChange={e => setReply(e.target.value)} placeholder={targetId ? 'Ответ · бесплатно' : 'Выбери комментарий'} maxLength={300} /></div>
-        <button className="card" onClick={send} disabled={sending || !reply.trim() || !targetId} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label="Отправить">➤</button>
-      </div>
+      {canReply && (
+        <div className="bottom-cta" style={{ flexDirection: 'row' }}>
+          <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input value={reply} onChange={e => setReply(e.target.value)} placeholder={targetId ? 'Ответ · бесплатно' : 'Выбери комментарий'} maxLength={300} /></div>
+          <button className="card" onClick={send} disabled={sending || !reply.trim() || !targetId} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label="Отправить">➤</button>
+        </div>
+      )}
     </div>
   )
 }

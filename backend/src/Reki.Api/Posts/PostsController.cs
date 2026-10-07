@@ -87,4 +87,18 @@ public sealed class PostsController(
             cancellationToken);
         return TypedResults.Ok(result);
     }
+
+    [HttpGet("posts/{postId}", Name = "GetPost")]
+    [ActionName("GetPost")]
+    public async Task<Ok<PostDetailResponse>> GetPostAsync(
+        string postId,
+        CancellationToken cancellationToken)
+    {
+        PostDetailResponse result = await sender.Send(
+            new GetPostQuery(
+                TelegramUserId.From(telegramUser.User.Id),
+                PostId.From(postId)),
+            cancellationToken);
+        return TypedResults.Ok(result);
+    }
 }
