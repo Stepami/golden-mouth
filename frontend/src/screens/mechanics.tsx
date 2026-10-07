@@ -20,9 +20,9 @@ function Challenge() {
       <TopBar onBack={nav.back} title="Заруба" right={`день ${c.day} из ${c.days}`} />
       <div className="pad">
         <div className="row" style={{ justifyContent: 'center', gap: 18, margin: '6px 0 14px' }}>
-          <div style={{ textAlign: 'center' }}><Avatar id="liza" size={64} style={{ margin: '0 auto 6px' }} /><b>{c.me}</b><div className="small muted">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
+          <div style={{ textAlign: 'center' }}><Avatar seed={c.me} size={64} style={{ margin: '0 auto 6px' }} /><b>{c.me}</b><div className="small muted">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
           <div style={{ fontSize: 28 }}>⚔️</div>
-          <div style={{ textAlign: 'center' }}><Avatar id={c.rival.avatar} size={64} style={{ margin: '0 auto 6px' }} /><b>Катя</b><div className="small muted">{c.rival.world}</div></div>
+          <div style={{ textAlign: 'center' }}><Avatar seed={c.rival.avatar} size={64} style={{ margin: '0 auto 6px' }} /><b>Катя</b><div className="small muted">{c.rival.world}</div></div>
         </div>
         <Card style={{ marginBottom: 10 }}>
           <div className="small muted" style={{ marginBottom: 8 }}>СЧЁТ · оценка постов + рост к своей норме</div>
@@ -41,11 +41,11 @@ function Challenge() {
 
 // 03-4d: дуэль дня: лучшие посты обоих одной карточкой, звёзды комментируют
 function Duel() {
-  const nav = useNav()
+  const nav = useNav(); const p = usePlayer()
   const send = () => { const u = telegramStartUrl('duel'); const t = 'Дуэль дня в Реках: чей пост сильнее?'; if (inTelegram) shareURL.ifAvailable(u, t); else window.open(`https://t.me/share/url?url=${encodeURIComponent(u)}&text=${encodeURIComponent(t)}`) }
   const post = (ava: string, name: string, world: string, text: string, score: string, win?: boolean) => (
     <Card style={{ flex: 1, padding: 12, ...(win ? { border: '2px solid var(--accent)' } : {}) }}>
-      <div className="row" style={{ gap: 6 }}><Avatar id={ava} size={26} /><b className="small">{name}</b></div><div className="tiny muted" style={{ margin: '2px 0 6px' }}>{world}</div>
+      <div className="row" style={{ gap: 6 }}><Avatar seed={ava} size={26} /><b className="small">{name}</b></div><div className="tiny muted" style={{ margin: '2px 0 6px' }}>{world}</div>
       <div className="small">{text}</div><div style={{ marginTop: 8, fontWeight: 900 }} className={win ? 'up' : ''}>{score}</div>
     </Card>
   )
@@ -55,12 +55,12 @@ function Duel() {
       <div className="pad">
         <div className="small muted" style={{ textAlign: 'center', marginBottom: 10 }}>Лучший пост каждого за сегодня</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          {post('liza', 'Лиза', '🎤 Сцена', 'первый день трейни: перепутала право и лево три раза. хореограф сказал «зато уверенно»', '×6,1', true)}
+          {post(p.name, 'Лиза', '🎤 Сцена', 'первый день трейни: перепутала право и лево три раза. хореограф сказал «зато уверенно»', '×6,1', true)}
           {post('katya', 'Катя', '🌸 Академия', 'на фестивале мой клуб занял последнее место. зато лучший баннер', '×4,8')}
         </div>
         <div className="label">Звёзды комментируют</div>
-        <div className="row" style={{ marginBottom: 10 }}><Avatar id="mira" size={30} /><div className="small"><b>Мира</b> Лиза сегодня жёстче. Катя, соберись 😏</div></div>
-        <div className="row"><Avatar id="sonya" size={30} /><div className="small"><b>Соня</b> баннер правда лучший, я бы проголосовала за обеих 💛</div></div>
+        <div className="row" style={{ marginBottom: 10 }}><Avatar seed="mira" size={30} /><div className="small"><b>Мира</b> Лиза сегодня жёстче. Катя, соберись 😏</div></div>
+        <div className="row"><Avatar seed="sonya" size={30} /><div className="small"><b>Соня</b> баннер правда лучший, я бы проголосовала за обеих 💛</div></div>
       </div>
       <BottomCTA main="Отправить в чат" onMain={send} />
     </div>

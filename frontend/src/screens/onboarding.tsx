@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
-import { avatarChoices, player as mockPlayer, roles, stars, worldOf, worlds } from '../api/mock'
+import { player as mockPlayer, roles, stars, worldOf, worlds } from '../api/mock'
 import type { Address, WorldId } from '../api/types'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
@@ -25,13 +25,13 @@ function Invite() {
   const nav = useNav()
   return (
     <div className="tg screen no-tab">
-      <div className="top" style={{ background: '#0E1621', borderColor: '#1A2533' }}><span style={{ fontSize: 22, color: '#8CC8FF' }}>‹</span><Avatar id="katya" size={36} /><div><b>Катя</b><div className="small" style={{ color: '#6C8EA8' }}>в сети</div></div></div>
+      <div className="top" style={{ background: '#0E1621', borderColor: '#1A2533' }}><span style={{ fontSize: 22, color: '#8CC8FF' }}>‹</span><Avatar seed="katya" size={36} /><div><b>Катя</b><div className="small" style={{ color: '#6C8EA8' }}>в сети</div></div></div>
       <div style={{ padding: 16 }}>
         <div className="tgb">нашла игру: как симс, только ты блогер. ведёшь свой канал, а AI-звёзды и фанаты реагируют на каждый пост. я уже 5к, го наперегонки</div>
         <div className="tgb" style={{ padding: 8 }}>
           <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420 60%,#12203A)', borderRadius: 16, padding: 14, textAlign: 'center' }}>
             <div className="brand" style={{ fontSize: 16 }}>Реки</div><div className="small" style={{ color: 'var(--soft)' }}>симс, только ты блогер</div>
-            <Avatar id="katya" size={48} style={{ margin: '10px auto 6px' }} /><b>Катя · ахаха</b>
+            <Avatar seed="katya" size={48} style={{ margin: '10px auto 6px' }} /><b>Катя · ахаха</b>
             <div style={{ fontSize: 28, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent' }}>5 120</div>
             <div className="small">подписчиков за 3 дня</div><div className="small muted">мир 🌸 Академия: аниме-школа</div><div className="small muted" style={{ marginTop: 4 }}>а ты кем будешь?</div>
           </div>
@@ -123,7 +123,6 @@ function World() {
 function Channel() {
   const nav = useNav()
   const [role, setRole] = useState(0)
-  const [ava, setAva] = useState(avatarChoices[0])
   const [name, setName] = useState('Лиза · трейни')
   const [handle, setHandle] = useState('@liza.trainee')
   const [addr, setAddr] = useState<Address>('she')
@@ -134,21 +133,17 @@ function Channel() {
         <div style={{ fontSize: 24, fontWeight: 800, margin: '6px 0' }}>Кем будешь в Сцене?</div>
         <div className="muted" style={{ marginBottom: 14 }}>Поменять можно позже</div>
         {roles.map((r, i) => <Chip key={r} on={i === role} onClick={() => setRole(i)}>{r}</Chip>)}
-        <div className="label" style={{ marginTop: 12 }}>Аватарка</div>
-        <div className="row" style={{ marginBottom: 4 }}>
-          {avatarChoices.map(a => <button key={a} onClick={() => setAva(a)} style={{ border: 'none', background: 'none', borderRadius: '50%', outline: a === ava ? '3px solid var(--accent)' : 'none', outlineOffset: 2, opacity: a === ava ? 1 : .85 }}><Avatar id={a} size={46} /></button>)}
-          <button onClick={() => setAva(avatarChoices[Math.floor(Math.random() * avatarChoices.length)])} style={{ width: 46, height: 46, borderRadius: '50%', background: '#22222D', border: 'none', fontSize: 20 }}>🎲</button>
-        </div>
         <div className="label" style={{ marginTop: 12 }}>Название и ник</div>
+        <div className="small muted" style={{ marginBottom: 8 }}>Аватарка соберётся из ника: поменяешь ник, поменяется и она</div>
         <div className="card" style={{ marginBottom: 8 }}><input value={name} onChange={e => setName(e.target.value)} maxLength={32} /></div>
         <div className="card" style={{ marginBottom: 4 }}><input value={handle} onChange={e => setHandle(e.target.value)} maxLength={24} /></div>
         <div className="label" style={{ marginTop: 12 }}>Как к тебе обращаться</div>
         {([['she', 'она'], ['he', 'он'], ['nick', 'по нику']] as const).map(([id, t]) => <Chip key={id} on={addr === id} onClick={() => setAddr(id)}>{t}</Chip>)}
         <div className="label" style={{ marginTop: 6 }}>Так тебя увидят фанаты</div>
-        <div className="card row" style={{ gap: 12 }}><Avatar id={ava} size={48} />
+        <div className="card row" style={{ gap: 12 }}><Avatar seed={name} size={48} />
           <div><b>{name}</b><div className="muted small">{handle} · 120 подписчиков</div><div className="small" style={{ marginTop: 4 }}>{mockPlayer.bio} <span className="muted">(дописал AI)</span></div></div></div>
       </div>
-      <BottomCTA main="Дальше" disabled={!name.trim() || !handle.trim()} onMain={() => { track('onboarding_step', { step: 'channel', address: addr }); nav.push('01-5_first_star', { ...nav.params, role: roles[role], avatar: ava, name, handle, address: addr }) }} />
+      <BottomCTA main="Дальше" disabled={!name.trim() || !handle.trim()} onMain={() => { track('onboarding_step', { step: 'channel', address: addr }); nav.push('01-5_first_star', { ...nav.params, role: roles[role], avatar: name, name, handle, address: addr }) }} />
     </div>
   )
 }
@@ -161,7 +156,7 @@ function FirstStar() {
   const s = stars.find(x => x.id === pick)!
   const go = async () => {
     const p = nav.params as Record<string, string>
-    const pl = await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', world: p.world ?? 'stage', role: p.role ?? '', avatar: p.avatar ?? 'pick0', name: p.name ?? '', handle: p.handle ?? '', address: p.address ?? 'nick', star: pick })
+    const pl = await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', world: p.world ?? 'stage', role: p.role ?? '', avatar: p.name ?? '', name: p.name ?? '', handle: p.handle ?? '', address: p.address ?? 'nick', star: pick })
     track('onboarding_step', { step: 'done', star: pick }); setPlayer(pl); nav.replace('01-6_home')
   }
   return (
@@ -172,7 +167,7 @@ function FirstStar() {
         <div className="muted" style={{ marginBottom: 18 }}>Звёзды Сцены вымышленные, у каждой свой характер</div>
         {stars.map(x => (
           <div key={x.id} className="card" onClick={() => setPick(x.id)} style={{ display: 'flex', gap: 12, marginBottom: 12, outline: x.id === pick ? '2px solid var(--accent)' : 'none' }}>
-            <Avatar id={x.id} size={52} />
+            <Avatar seed={x.id} size={52} />
             <div><b>{x.name}</b> <span className="muted small">{x.role}</span><div className="small" style={{ color: 'var(--accent)', margin: '2px 0' }}>{x.trait}</div><div className="small muted">{x.about}</div></div>
           </div>
         ))}
@@ -188,7 +183,7 @@ export function ChannelHead() {
   const w = worlds.find(x => x.id === p.world) ?? worlds[0]
   return (
     <div className="top">
-      <Avatar id={p.avatar} size={36} />
+      <Avatar seed={p.name} size={36} />
       <div><b>{p.name}</b><div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div>
       <div className="pill">✍️ осталось {p.postsLeft}</div>
     </div>
@@ -202,7 +197,7 @@ function Home() {
       <div className="pad">
         <div className="small muted" style={{ marginBottom: 10 }}>цель игры: 120 → 1 000 000 подписчиков</div>
         <div className="card" style={{ padding: 18, border: '1px solid #FF6B8B66', background: 'linear-gradient(160deg,#2A1A2E,#181821)' }}>
-          <div className="row" style={{ marginBottom: 12 }}><Avatar id="mira" size={44} /><div><b>Мира подписалась на тебя</b><div className="small muted">лидер BLESK · ждёт твой первый пост</div></div></div>
+          <div className="row" style={{ marginBottom: 12 }}><Avatar seed="mira" size={44} /><div><b>Мира подписалась на тебя</b><div className="small muted">лидер BLESK · ждёт твой первый пост</div></div></div>
           <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>Как прошёл твой первый день трейни?</div>
           <button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button>
           <div style={{ textAlign: 'center', marginTop: 10, fontSize: 14, color: 'var(--lilac)' }}>Нет идей? Внутри есть «Подскажи»</div>

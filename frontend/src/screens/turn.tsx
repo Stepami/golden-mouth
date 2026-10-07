@@ -77,7 +77,7 @@ function Live() {
   return (
     <div className="screen">
       <ChannelHead />
-      {toastComment && <div className="toast"><Avatar id={toastComment.avatar} size={32} /><div className="small"><b>Новый комментарий от {toastComment.author}</b><div style={{ color: 'var(--soft)' }}>«{toastComment.text}»</div></div></div>}
+      {toastComment && <div className="toast"><Avatar seed={toastComment.avatar} size={32} /><div className="small"><b>Новый комментарий от {toastComment.author}</b><div style={{ color: 'var(--soft)' }}>«{toastComment.text}»</div></div></div>}
       <div className="pad" style={{ position: 'relative' }}>
         <div className="card" style={{ boxShadow: '0 0 0 2px rgba(255,107,139,.6),0 0 44px rgba(255,107,139,.35)', marginBottom: 12 }}>
           <div className="small" style={{ color: 'var(--accent)', marginBottom: 6 }} aria-live="polite">{phase === 'generating' ? 'готовим публикацию' : phase === 'moderating' ? 'проверяем публикацию' : 'только что опубликовано'}</div>{text}
@@ -88,7 +88,7 @@ function Live() {
         <div style={{ position: 'absolute', right: 14, top: 120, width: 120, height: 200, pointerEvents: 'none' }}>
           {floats.map(f => <span key={f.id} className="float-react" style={{ left: `${f.x}%`, bottom: 0, fontSize: 24 }}>{f.emoji}</span>)}
         </div>
-        {comments.map(c => <Comment key={c.id} avatar={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} onMore={() => nav.push('06-1_report', { id: c.id })} />)}
+        {comments.map(c => <Comment key={c.id} seed={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} onMore={() => nav.push('06-1_report', { id: c.id })} />)}
         {typing && <div className="muted small row" style={{ gap: 8 }}>{typing} печатает…</div>}
       </div>
       <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }} aria-live="polite">{phase === 'generating' ? 'звезда готовит ответ' : phase === 'moderating' ? 'скоро появятся реакции' : 'реакции ещё идут · итог через пару секунд'}</div>
@@ -149,7 +149,7 @@ function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'nor
           {viral && <div className="confetti" aria-hidden>{Array.from({ length: 18 }, (_, i) => <i key={i} style={{ left: `${(i * 53) % 100}%`, animationDelay: `${(i % 6) * 0.12}s`, background: ['#FF6B8B', '#9B6BFF', '#FFD66B', '#6BFFB8'][i % 4] }} />)}</div>}
           <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{w.icon} {w.label} <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b></span>)}</div>
           {r.ribbons.map(x => <Ribbon key={x.title} icon={x.icon} title={x.title} sub={x.sub} />)}
-          {r.bestComment && <div className="row" style={{ margin: '8px 0 12px' }}><Avatar id={r.bestComment.avatar} size={28} /><span className="small">«{r.bestComment.text}»</span></div>}
+          {r.bestComment && <div className="row" style={{ margin: '8px 0 12px' }}><Avatar seed={r.bestComment.avatar} size={28} /><span className="small">«{r.bestComment.text}»</span></div>}
           {theme === 'normal' && <Whisper>Подписчики приходят за смелость, юмор и попадание в тему мира. Смотри, за что дали в этот раз</Whisper>}
           {viral ? <>
             <Button onClick={() => nav.push('02-7_share', { post })}>Поделиться залётом</Button>
@@ -187,7 +187,7 @@ function Thread() {
     setReplyError('')
     try {
       await api.reply(post.id, reply)
-      setMine(comments => [...comments, { id: crypto.randomUUID(), author: player.name, avatar: player.avatar, handle: player.handle, text: reply, me: true }])
+      setMine(comments => [...comments, { id: crypto.randomUUID(), author: player.name, avatar: player.name, handle: player.handle, text: reply, me: true }])
       setReply('')
     } catch {
       setReplyError('Ответ не отправился. Попробуй ещё раз.')
@@ -201,7 +201,7 @@ function Thread() {
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(r => <span key={r.emoji} className="react">{r.emoji} {r.count}</span>)}</div></div>
         <div className="small" style={{ color: 'var(--gift)', marginBottom: 12 }}>💬 Ответь на комментарии: первые 3 ответа +подписчики · {Math.min(3, replied)}/3</div>
-        {[...post.comments, ...mine].map(c => <Comment key={c.id} avatar={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} me={c.me} onMore={c.me ? undefined : () => nav.push('06-1_report', { id: c.id })} />)}
+        {[...post.comments, ...mine].map(c => <Comment key={c.id} seed={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} me={c.me} onMore={c.me ? undefined : () => nav.push('06-1_report', { id: c.id })} />)}
         {replyError && <div className="small" role="alert" style={{ color: 'var(--accent)', marginBottom: 12 }}>{replyError}</div>}
       </div>
       <div className="bottom-cta" style={{ flexDirection: 'row' }}>

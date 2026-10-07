@@ -304,6 +304,7 @@ exec(open(os.path.join(D, 'journey_v7.py'), encoding='utf-8').read())  # пра�
 exec(open(os.path.join(D, 'journey_v8.py'), encoding='utf-8').read())  # правки v8: восстановление поста после ошибки 06.10.2026
 exec(open(os.path.join(D, 'journey_v9.py'), encoding='utf-8').read())  # правки v9: TMA deep links 06.10.2026
 exec(open(os.path.join(D, 'journey_v10.py'), encoding='utf-8').read())  # правки v10: ошибка публикации 06.10.2026
+exec(open(os.path.join(D, 'journey_v11.py'), encoding='utf-8').read())  # правки v11: аватарка из ника, 07.10.2026
 
 CH = os.environ.get('CHROME_BIN') or shutil.which('google-chrome') or shutil.which('chrome')
 if not CH and os.name == 'nt':

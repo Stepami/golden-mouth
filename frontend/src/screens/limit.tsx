@@ -25,7 +25,7 @@ function Limit() {
     <div className="screen no-tab">
       <ChannelHead />
       <div style={{ padding: '14px 20px', textAlign: 'center' }}>
-        <Avatar id="mira" size={72} style={{ margin: '2px auto 10px' }} />
+        <Avatar seed="mira" size={72} style={{ margin: '2px auto 10px' }} />
         <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Мира ответит утром</div>
         <div className="muted" style={{ marginBottom: 14 }}>Она сказала «надо подумать 👀». Посты на сегодня всё, звёзды отдыхают. В 9:00 будут новые</div>
         <Card style={{ textAlign: 'left', marginBottom: 12 }}><div className="small" style={{ color: 'var(--soft)', marginBottom: 4 }}>А пока бесплатно</div>отвечать на комментарии к своим постам · комментировать друзей · листать ленту</Card>
@@ -70,7 +70,7 @@ function FakeDoor() {
 function PlusPush() {
   return (
     <div className="tg screen no-tab">
-      <div className="top" style={{ background: '#0E1621', borderColor: '#1A2533' }}><span style={{ fontSize: 22, color: '#8CC8FF' }}>‹</span><Avatar id="R" size={36} /><div><b>Реки</b><div className="small" style={{ color: '#6C8EA8' }}>бот</div></div></div>
+      <div className="top" style={{ background: '#0E1621', borderColor: '#1A2533' }}><span style={{ fontSize: 22, color: '#8CC8FF' }}>‹</span><Avatar label="R" size={36} /><div><b>Реки</b><div className="small" style={{ color: '#6C8EA8' }}>бот</div></div></div>
       <div style={{ padding: 16 }}>
         <div className="small" style={{ textAlign: 'center', color: '#6C8EA8', marginBottom: 10 }}>сегодня</div>
         <div className="tgb">✨ <b>Реки+ открыт.</b> Обещали сказать тебе первым делом<br /><br />✍️ +10 постов в день<br />🎨 свой стиль канала: фон, рамка аватарки, шрифт<br />🌍 все миры сразу, без прокачки<br /><br />Первая неделя 99 ₽, дальше 349 ₽ в месяц. Отменить можно в настройках</div>
@@ -95,7 +95,7 @@ function Invite() {
         <div className="card row" style={{ marginBottom: 12 }}><div className="small" style={{ flex: 1 }}><b>Сыграй мою историю</b><div className="muted">Друг начнёт с твоей завязки: Сцена, Мира злится на новенького. Твою переписку не видит. Потом сравните, кто как разрулил</div></div><Toggle on={story} onChange={setStory} /></div>
         <div className="label">Друг увидит твою карточку</div>
         <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420 60%,#12203A)', borderRadius: 16, padding: 14, textAlign: 'center', marginBottom: 12 }}>
-          <Avatar id={p.avatar} size={44} style={{ margin: '0 auto 6px' }} /><b>{p.name}</b>
+          <Avatar seed={p.name} size={44} style={{ margin: '0 auto 6px' }} /><b>{p.name}</b>
           <div style={{ fontSize: 28, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{fmt(2310)}</div>
           <div className="small">подписчиков за 2 дня · {worldOf(p.world).emoji} {worldOf(p.world).title}</div><div className="small muted" style={{ marginTop: 4 }}>а ты кем будешь?</div>
         </div>
@@ -108,12 +108,12 @@ function Invite() {
 
 // 04-4: друг пришёл по карточке
 function FriendJoined() {
-  const nav = useNav()
+  const nav = useNav(); const p = usePlayer()
   return (
     <div className="screen no-tab">
       <ChannelHead />
       <div className="sheet-bg" style={{ alignItems: 'center' }}><div className="sheet" style={{ textAlign: 'center', padding: 24 }}>
-        <div className="row" style={{ justifyContent: 'center', gap: 0, marginBottom: 12 }}><Avatar id="liza" size={64} style={{ border: '3px solid #1A1A24' }} /><Avatar id="katya" size={64} style={{ marginLeft: -14, border: '3px solid #1A1A24' }} /></div>
+        <div className="row" style={{ justifyContent: 'center', gap: 0, marginBottom: 12 }}><Avatar seed={p.name} size={64} style={{ border: '3px solid #1A1A24' }} /><Avatar seed="katya" size={64} style={{ marginLeft: -14, border: '3px solid #1A1A24' }} /></div>
         <div style={{ fontSize: 22, fontWeight: 900 }}>Катя пришла по твоей карточке!</div>
         <div className="muted" style={{ margin: '6px 0 16px' }}>Она завела канал в Академии и сделала первый пост</div>
         <Gift style={{ fontSize: 20, padding: 14 }}>+5 постов тебе и ей</Gift>

@@ -14,6 +14,11 @@ export interface Skill { level: number; progress: number } // progress 0..1 до
 export interface Want { id: string; text: string; reward: string; done: boolean }
 export interface CollectionCard { id: string; emoji: string; title: string; open: boolean }
 
+/**
+ * avatar везде означает сид аватара, а не ссылку на картинку: у персонажа это id из
+ * справочника, у игрока ник (см. `ui/avatar.ts`). У игрока фронт рисует аватар прямо из
+ * name, поэтому поле дублирует его — бэкенд-часть #69 его уберёт.
+ */
 export interface Player {
   id: string; name: string; handle: string; role: string; avatar: string; address: Address
   world: WorldId; subs: number; postsLeft: number; postsCap: number

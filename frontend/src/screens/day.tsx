@@ -30,7 +30,7 @@ function Dm() {
   }
   return (
     <div className="screen">
-      <TopBar onBack={nav.canBack ? nav.back : undefined}><Avatar id={d.star.id} size={36} /><div><b>{d.star.name}</b><div className="small" style={{ color: 'var(--accent)' }}>{d.star.role} · {d.status}</div></div></TopBar>
+      <TopBar onBack={nav.canBack ? nav.back : undefined}><Avatar seed={d.star.id} size={36} /><div><b>{d.star.name}</b><div className="small" style={{ color: 'var(--accent)' }}>{d.star.role} · {d.status}</div></div></TopBar>
       <div className="pad">
         <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#2A1A2E,#1E1A33)' }}>
           <div className="row"><b style={{ flex: 1 }}>Отношения с Мирой +2 → +3</b><span className="small" style={{ color: 'var(--gift)' }}>👑</span></div>
@@ -64,7 +64,7 @@ function StarCard() {
     <div className="screen no-tab" style={{ background: 'radial-gradient(circle at 50% 40%,#3A1F4A,#0E0E13 70%)', textAlign: 'center', padding: '50px 26px' }}>
       <span className="badge">НОВАЯ КАРТОЧКА · 2/12</span>
       <div style={{ margin: '24px auto', width: 230, borderRadius: 22, padding: 18, background: 'linear-gradient(160deg,#3A2147,#21324A)', boxShadow: '0 20px 60px #0008' }}>
-        <Avatar id="mira" size={120} style={{ margin: '0 auto 12px' }} /><b style={{ fontSize: 22 }}>Мира</b><div className="small muted">лидер BLESK</div>
+        <Avatar seed="mira" size={120} style={{ margin: '0 auto 12px' }} /><b style={{ fontSize: 22 }}>Мира</b><div className="small muted">лидер BLESK</div>
         <div style={{ marginTop: 12, fontStyle: 'italic' }}>«ты из тех, кто падает и встаёт. уважаю»</div>
       </div>
       <div style={{ fontSize: 22, fontWeight: 800 }}>Мира теперь на твоей стороне</div>
@@ -86,7 +86,7 @@ function Feed() {
         {items.map((f, i) => f.kind === 'news'
           ? <Card key={i} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ АГЕНТСТВА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
           : <Card key={i} style={{ marginBottom: 12 }}>
-              <div className="row"><Avatar id={f.avatar!} size={36} /><div style={{ flex: 1 }}><b>{f.author}</b> <span className="small muted">{f.role}</span><div className="tiny muted">{f.ago}</div></div><button onClick={() => nav.push('06-1_report', { text: f.text })} aria-label="Пожаловаться" style={{ background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button></div>
+              <div className="row"><Avatar seed={f.avatar!} size={36} /><div style={{ flex: 1 }}><b>{f.author}</b> <span className="small muted">{f.role}</span><div className="tiny muted">{f.ago}</div></div><button onClick={() => nav.push('06-1_report', { text: f.text })} aria-label="Пожаловаться" style={{ background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button></div>
               {f.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>Лиза · трейни</b> <span className="muted">· в реках 🌊</span><div>{f.repost}</div></div>}
               <div style={{ marginTop: 8 }}>{f.text}</div>
               <div style={{ marginTop: 8 }}>{f.reactions?.map(r => <span key={r.emoji} className="react">{r.emoji} {short(r.count)}</span>)}</div>
@@ -106,7 +106,7 @@ function Friends() {
       <div className="pad">
         {friends.map(f => (
           <Card key={f.id} style={{ marginBottom: 10 }}>
-            <div className="row"><Avatar id={f.avatar} size={40} /><div style={{ flex: 1 }}><b>{f.name}</b><div className="small muted">{f.world} · {fmt(f.subs)} подписчиков</div></div><button className="react" onClick={() => nav.push('03-4b_friend_channel', { id: f.id })} style={{ border: 'none' }}>→ канал</button></div>
+            <div className="row"><Avatar seed={f.avatar} size={40} /><div style={{ flex: 1 }}><b>{f.name}</b><div className="small muted">{f.world} · {fmt(f.subs)} подписчиков</div></div><button className="react" onClick={() => nav.push('03-4b_friend_channel', { id: f.id })} style={{ border: 'none' }}>→ канал</button></div>
             <div className="small" style={{ marginTop: 8, background: '#20202B', borderRadius: 10, padding: 8 }}>{f.lastPost}</div>
             <div className="small" style={{ marginTop: 8, color: 'var(--gift)' }}>💬 Прокомментируй: {f.pronoun} фанаты увидят и придут к тебе</div>
           </Card>
@@ -125,19 +125,19 @@ function Friends() {
 
 // 03-4b: канал друга; комментарий бесплатно; личка друга закрыта
 function FriendChannel() {
-  const nav = useNav()
+  const nav = useNav(); const p = usePlayer()
   const [c, setC] = useState('')
   const [mine, setMine] = useState(['баннер решает, остальное мелочи 😌'])
   return (
     <div className="screen no-tab">
-      <TopBar onBack={nav.back} right="друг"><Avatar id="katya" size={36} /><div><b>Катя · ахаха</b><div className="muted small">5 120 подписчиков · 🌸 Академия</div></div></TopBar>
+      <TopBar onBack={nav.back} right="друг"><Avatar seed="katya" size={36} /><div><b>Катя · ахаха</b><div className="muted small">5 120 подписчиков · 🌸 Академия</div></div></TopBar>
       <div className="pad">
         <Card style={{ marginBottom: 10 }}>{(['brave', 'humor', 'topic'] as const).map((k, i) => <SkillBar key={k} name={SKILL_NAMES[k]} progress={[.5, .8, .6][i]} />)}<div className="small muted" style={{ marginTop: 6 }}>коллекция 4/12 · 🔥 3 дня</div></Card>
         <Card style={{ marginBottom: 10 }}>
           <div className="tiny muted">сегодня, 19:02</div><div style={{ margin: '6px 0' }}>на фестивале мой клуб занял последнее место. зато у нас был лучший баннер 🏳️</div>
           <span className="react">😂 310</span><span className="react">🫶 88</span><span className="small muted" style={{ float: 'right' }}>👁 6,1k · 💬 41</span>
         </Card>
-        {mine.map((t, i) => <div key={i} className="row" style={{ gap: 10, marginBottom: 10 }}><Avatar id="liza" size={30} /><div><b>Лиза · трейни</b> <span className="small muted">ты</span><div>{t}</div></div></div>)}
+        {mine.map((t, i) => <div key={i} className="row" style={{ gap: 10, marginBottom: 10 }}><Avatar seed={p.name} size={30} /><div><b>Лиза · трейни</b> <span className="small muted">ты</span><div>{t}</div></div></div>)}
         <Gift style={{ marginBottom: 10 }}>Твой комментарий видят 5 120 её подписчиков. Обычно +20–60 к тебе</Gift>
         <div className="small muted">Видно только то, что Катя выложила в игре. Её личка со звёздами закрыта</div>
       </div>
@@ -183,7 +183,7 @@ function Me() {
   return (
     <div className="screen">
       <div className="top" style={{ border: 'none' }}><b style={{ fontSize: 18 }}>Я</b><button className="pill" onClick={() => nav.push('05-8_settings')} style={{ border: 'none' }}>⚙ Настройки</button></div>
-      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar id={p.avatar} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b><div className="muted small">{worldOf(p.world).emoji} {worldOf(p.world).title} · типаж: {p.type}</div></div>
+      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.name} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b><div className="muted small">{worldOf(p.world).emoji} {worldOf(p.world).title} · типаж: {p.type}</div></div>
       <div className="pad">
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           {[[`✍️ ${p.postsLeft}`, 'постов осталось'], [`🎯 ${p.wants.filter(w => w.done).length}/${p.wants.length}`, 'желаний дня'], [fmt(6210), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ flex: 1, padding: 10, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
