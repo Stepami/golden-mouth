@@ -133,7 +133,7 @@ public sealed class GameApiTests(ApiFactory factory)
     }
 
     [Test]
-    public async Task Feed_ReturnsSameWorldSharedPostsAndExcludesOtherWorldsAsync()
+    public async Task Feed_ReturnsSameWorldPostsAsync()
     {
         // Arrange
         const long viewerUserId = 1024;
@@ -163,7 +163,7 @@ public sealed class GameApiTests(ApiFactory factory)
     }
 
     [Test]
-    public async Task Post_ForOwnPost_ReturnsReplyRightsAndCurrentCommentsAsync()
+    public async Task Post_ForOwnPost_ReturnsReplyRightsAsync()
     {
         // Arrange
         const long telegramUserId = 1031;
