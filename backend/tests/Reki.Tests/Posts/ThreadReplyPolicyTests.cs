@@ -10,7 +10,7 @@ public sealed class ThreadReplyPolicyTests
     private static readonly CommentId ReplyComment = CommentId.From("reply-comment");
 
     [Test]
-    public async Task CreateReply_FirstReply_AwardsBonusAndReturnsReactionAsync()
+    public async Task CreateReply_FirstReply_ReturnsAwardedOutcomeAsync()
     {
         // Arrange
         GamePost post = CreatePost([]);
@@ -26,7 +26,7 @@ public sealed class ThreadReplyPolicyTests
     }
 
     [Test]
-    public async Task CreateReply_AfterConfiguredLimit_AwardsNothingAndKeepsProgressAsync()
+    public async Task CreateReply_AfterConfiguredLimit_ReturnsUnchangedProgressAsync()
     {
         // Arrange
         GamePost post = CreatePost(

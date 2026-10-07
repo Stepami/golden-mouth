@@ -851,7 +851,7 @@ public sealed class GameApiTests(ApiFactory factory)
             ?? throw new InvalidOperationException("The reply response was empty.");
     }
 
-    private static async Task<byte[]> ReadAllBytesAsync(Stream stream)
+    private async Task<byte[]> ReadAllBytesAsync(Stream stream)
     {
         using var buffer = new MemoryStream();
         await stream.CopyToAsync(buffer, CancellationToken.None);
