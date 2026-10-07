@@ -46,7 +46,7 @@ function Compose() {
 
 // 02-2: живая реакция 3–4 с, потом итог одной карточкой
 function Live() {
-  const nav = useNav(); const { patch } = useStore(); const p = usePlayer()
+  const nav = useNav(); const { patch, refresh } = useStore(); const p = usePlayer()
   const text = (nav.params.text as string) ?? firstPost.text
   const [publicationId] = useState(() => (nav.params.publicationId as string) ?? crypto.randomUUID())
   const [views, setViews] = useState(0)
@@ -68,7 +68,8 @@ function Live() {
         reactions: [...new Set(reactionsRef.current)].map(emoji => ({ emoji, count: reactionsRef.current.filter(value => value === emoji).length })),
         comments: commentsRef.current, at: 'только что' }
       track('post_result', { delta: e.result.delta, viral: e.result.viral, flop: e.result.flop })
-      patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: p.subs + e.result.delta })
+      if (apiBaseUrl) void refresh()
+      else patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: p.subs + e.result.delta })
       nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: e.result, post })
     }
   }, state => nav.replace('02-2b_publish_error', { text, publicationId, uncertain: state === 'unknown' }), status => {

@@ -186,7 +186,7 @@ function Me() {
       <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar id={p.avatar} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b><div className="muted small">{worldOf(p.world).emoji} {worldOf(p.world).title} · типаж: {p.type}</div></div>
       <div className="pad">
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          {[[`✍️ ${p.postsLeft}`, 'постов осталось'], [`🎯 ${p.wants.filter(w => w.done).length}/${p.wants.length}`, 'желаний дня'], [fmt(6210), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ flex: 1, padding: 10, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
+          {[[`✍️ ${p.postsLeft}`, 'постов осталось'], [`🎯 ${p.wants.filter(w => w.done).length}/${p.wants.length}`, 'желаний дня'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ flex: 1, padding: 10, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
         </div>
         <Card style={{ marginBottom: 10 }}>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Серия {p.streak.days} дня</b><span className="small" style={{ color: 'var(--gift)' }}>{p.streak.nextReward}</span></div>

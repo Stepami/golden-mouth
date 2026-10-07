@@ -6,7 +6,7 @@ import { useApi } from '../app/useApi'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
-import { Avatar, BottomCTA, Card, Chip, TopBar } from '../ui'
+import { Avatar, BottomCTA, Card, Chip, TopBar, fmt } from '../ui'
 import { track } from '../app/log'
 import { telegramStartUrl } from '../app/telegramLinks'
 import { register } from '.'
@@ -29,7 +29,7 @@ function Challenge() {
           {[[c.me, c.myScore, 'var(--grad)'], ['Катя', c.rivalScore, 'linear-gradient(90deg,#6BB8FF,#9B6BFF)']].map(([n, v, g]) => (
             <div key={n as string} className="row" style={{ fontSize: 13, marginBottom: 6 }}><span style={{ width: 70, color: 'var(--soft)' }}>{n}</span><div className="bar"><i style={{ width: `${(v as number) / max * 100}%`, background: g as string }} /></div><b style={{ width: 40, textAlign: 'right' }}>×{String(v).replace('.', ',')}</b></div>
           ))}
-          <div className="small muted" style={{ marginTop: 6 }}>У Кати 5 120 подписчиков, у тебя 2 310. Считаем качество постов, а не подписчиков, поэтому шансы равные</div>
+          <div className="small muted" style={{ marginTop: 6 }}>У Кати {fmt(c.rival.subs)} подписчиков, у тебя {fmt(p.subs)}. Считаем качество постов, а не подписчиков, поэтому шансы равные</div>
         </Card>
         <Card style={{ marginBottom: 10 }}><b>Ставка</b><div className="why"><span>🏆 Победитель</span><span className="up">+3 поста в день на 3 дня</span></div><div className="why"><span>🫠 Проигравший</span><span className="muted">ничего не теряет · карточка «Реванш»</span></div></Card>
         <Card style={{ background: '#20202B' }} onClick={() => nav.push('03-4d_duel')}><span className="small">🔥 Лучший пост дня: {c.bestPost} ›</span></Card>
