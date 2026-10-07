@@ -123,7 +123,7 @@ function StatsCard() {
   return (
     <div className="screen no-tab" style={{ background: 'linear-gradient(160deg,#2A1236,#0E0E13 55%,#12203A)', padding: '50px 26px', textAlign: 'center' }}>
       <div className="brand" style={{ fontSize: 22 }}>Реки</div><div className="small" style={{ color: 'var(--soft)', letterSpacing: '.08em', marginTop: 4 }}>МОИ СТАТЫ · {worldOf(p.world).emoji} {worldOf(p.world).title.toUpperCase()}</div>
-      <Avatar seed={p.name} size={96} style={{ margin: '22px auto 8px' }} /><div style={{ fontSize: 22, fontWeight: 800 }}>{p.name}</div>
+      <Avatar seed={p.handle} size={96} style={{ margin: '22px auto 8px' }} /><div style={{ fontSize: 22, fontWeight: 800 }}>{p.name}</div>
       <div style={{ fontSize: 40, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent', marginTop: 8 }}>{fmt(6210)}</div><div className="muted">подписчиков за 4 дня</div>
       <Card style={{ marginTop: 18, textAlign: 'left' }}>
         <SkillBar name="смелость" progress={.72} /><SkillBar name="юмор" progress={.64} /><SkillBar name="в тему" progress={.58} />

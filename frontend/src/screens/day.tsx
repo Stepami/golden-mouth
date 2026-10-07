@@ -137,7 +137,7 @@ function FriendChannel() {
           <div className="tiny muted">сегодня, 19:02</div><div style={{ margin: '6px 0' }}>на фестивале мой клуб занял последнее место. зато у нас был лучший баннер 🏳️</div>
           <span className="react">😂 310</span><span className="react">🫶 88</span><span className="small muted" style={{ float: 'right' }}>👁 6,1k · 💬 41</span>
         </Card>
-        {mine.map((t, i) => <div key={i} className="row" style={{ gap: 10, marginBottom: 10 }}><Avatar seed={p.name} size={30} /><div><b>Лиза · трейни</b> <span className="small muted">ты</span><div>{t}</div></div></div>)}
+        {mine.map((t, i) => <div key={i} className="row" style={{ gap: 10, marginBottom: 10 }}><Avatar seed={p.handle} size={30} /><div><b>Лиза · трейни</b> <span className="small muted">ты</span><div>{t}</div></div></div>)}
         <Gift style={{ marginBottom: 10 }}>Твой комментарий видят 5 120 её подписчиков. Обычно +20–60 к тебе</Gift>
         <div className="small muted">Видно только то, что Катя выложила в игре. Её личка со звёздами закрыта</div>
       </div>
@@ -183,7 +183,7 @@ function Me() {
   return (
     <div className="screen">
       <div className="top" style={{ border: 'none' }}><b style={{ fontSize: 18 }}>Я</b><button className="pill" onClick={() => nav.push('05-8_settings')} style={{ border: 'none' }}>⚙ Настройки</button></div>
-      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.name} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b><div className="muted small">{worldOf(p.world).emoji} {worldOf(p.world).title} · типаж: {p.type}</div></div>
+      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b><div className="muted small">{worldOf(p.world).emoji} {worldOf(p.world).title} · типаж: {p.type}</div></div>
       <div className="pad">
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
           {[[`✍️ ${p.postsLeft}`, 'постов осталось'], [`🎯 ${p.wants.filter(w => w.done).length}/${p.wants.length}`, 'желаний дня'], [fmt(6210), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ flex: 1, padding: 10, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}

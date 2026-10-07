@@ -16,7 +16,7 @@ export const stars: Star[] = [
 ]
 
 export const player: Player = {
-  id: 'p1', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', avatar: 'Лиза · трейни', address: 'she',
+  id: 'p1', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', avatar: '@liza.trainee', address: 'she',
   world: 'stage', subs: 120, postsLeft: 10, postsCap: 10,
   streak: { days: 4, week: [true, true, true, true, false, false, false], nextReward: '7 дней: карточка «Неделя в эфире»' },
   skills: { brave: { level: 6, progress: .4 }, humor: { level: 5, progress: .7 }, topic: { level: 4, progress: .3 } },
@@ -40,7 +40,7 @@ export const firstPost: Post = {
   reactions: [{ emoji: '😂', count: 48 }, { emoji: '🫶', count: 21 }, { emoji: '💀', count: 9 }], at: 'только что',
   comments: [
     { id: 'k1', author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'я на первой репетиции упала со сцены. «уверенно» это комплимент, поверь', star: true },
-    { id: 'k2', author: 'Лиза · трейни', avatar: 'Лиза · трейни', handle: '', text: 'серьёзно? со сцены?? 😳', me: true },
+    { id: 'k2', author: 'Лиза · трейни', avatar: '@liza.trainee', handle: '', text: 'серьёзно? со сцены?? 😳', me: true },
     { id: 'k3', author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'прямо в оркестровую яму. потом расскажу 🙃', star: true },
     { id: 'k4', author: 'stan_critic', avatar: 'critic', handle: '', text: 'трейни пишет про ошибки? ну такое…' },
   ],

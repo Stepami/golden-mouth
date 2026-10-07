@@ -16,8 +16,9 @@ export interface CollectionCard { id: string; emoji: string; title: string; open
 
 /**
  * avatar везде означает сид аватара, а не ссылку на картинку: у персонажа это id из
- * справочника, у игрока ник (см. `ui/avatar.ts`). У игрока фронт рисует аватар прямо из
- * name, поэтому поле дублирует его — бэкенд-часть #69 его уберёт.
+ * справочника, у игрока ник (handle, например `@liza.trainee`, см. `ui/avatar.ts`).
+ * Фронт рисует аватар игрока прямо из handle, поэтому поле дублирует его — бэкенд-часть
+ * #69 его уберёт.
  */
 export interface Player {
   id: string; name: string; handle: string; role: string; avatar: string; address: Address

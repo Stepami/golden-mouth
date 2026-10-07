@@ -187,7 +187,7 @@ function Thread() {
     setReplyError('')
     try {
       await api.reply(post.id, reply)
-      setMine(comments => [...comments, { id: crypto.randomUUID(), author: player.name, avatar: player.name, handle: player.handle, text: reply, me: true }])
+      setMine(comments => [...comments, { id: crypto.randomUUID(), author: player.name, avatar: player.handle, handle: player.handle, text: reply, me: true }])
       setReply('')
     } catch {
       setReplyError('Ответ не отправился. Попробуй ещё раз.')

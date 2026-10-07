@@ -20,7 +20,7 @@ function Challenge() {
       <TopBar onBack={nav.back} title="Заруба" right={`день ${c.day} из ${c.days}`} />
       <div className="pad">
         <div className="row" style={{ justifyContent: 'center', gap: 18, margin: '6px 0 14px' }}>
-          <div style={{ textAlign: 'center' }}><Avatar seed={c.me} size={64} style={{ margin: '0 auto 6px' }} /><b>{c.me}</b><div className="small muted">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
+          <div style={{ textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b>{c.me}</b><div className="small muted">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
           <div style={{ fontSize: 28 }}>⚔️</div>
           <div style={{ textAlign: 'center' }}><Avatar seed={c.rival.avatar} size={64} style={{ margin: '0 auto 6px' }} /><b>Катя</b><div className="small muted">{c.rival.world}</div></div>
         </div>
@@ -55,7 +55,7 @@ function Duel() {
       <div className="pad">
         <div className="small muted" style={{ textAlign: 'center', marginBottom: 10 }}>Лучший пост каждого за сегодня</div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          {post(p.name, 'Лиза', '🎤 Сцена', 'первый день трейни: перепутала право и лево три раза. хореограф сказал «зато уверенно»', '×6,1', true)}
+          {post(p.handle, 'Лиза', '🎤 Сцена', 'первый день трейни: перепутала право и лево три раза. хореограф сказал «зато уверенно»', '×6,1', true)}
           {post('katya', 'Катя', '🌸 Академия', 'на фестивале мой клуб занял последнее место. зато лучший баннер', '×4,8')}
         </div>
         <div className="label">Звёзды комментируют</div>
