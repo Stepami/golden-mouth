@@ -1,4 +1,4 @@
 namespace Reki.Contracts.Posts;
 
-public sealed record TypingLiveEvent(LiveEventType Type, string Who);
+public sealed record TypingLiveEvent(string Who) : LiveEvent(LiveEventType.Typing);
 

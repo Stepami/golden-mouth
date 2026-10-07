@@ -1,11 +1,10 @@
 using Mediator;
+using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Posts;
 
 public sealed record PublishPostCommand(
     TelegramUserId TelegramUserId,
-    string Text,
-    bool OwnWords,
-    string? WantId) : IRequest<PublishedPost>;
+    string PublicationId) : IStreamRequest<LiveEvent>;
 

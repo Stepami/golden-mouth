@@ -1,6 +1,8 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Common;
+using Reki.Application.Posts;
+using Reki.Contracts.Posts;
 using Reki.Domain.Events;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
@@ -11,8 +13,10 @@ namespace Reki.Infrastructure.Persistence;
 
 internal sealed class MongoGameStore : IGameStore
 {
+    private readonly IMongoClient _client;
     private readonly IMongoCollection<PlayerProfile> _players;
     private readonly IMongoCollection<GamePost> _posts;
+    private readonly IMongoCollection<Publication> _publications;
     private readonly IMongoCollection<StarConversation> _starMemories;
     private readonly IMongoCollection<DailyGameEvent> _events;
     private readonly IMongoCollection<GameChallenge> _challenges;
@@ -20,10 +24,12 @@ internal sealed class MongoGameStore : IGameStore
     private readonly IMongoCollection<BsonDocument> _threads;
     private readonly IMongoCollection<BsonDocument> _invites;
 
-    public MongoGameStore(IMongoDatabase database)
+    public MongoGameStore(IMongoClient client, IMongoDatabase database)
     {
+        _client = client;
         _players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
         _posts = database.GetCollection<GamePost>(MongoCollections.Posts);
+        _publications = database.GetCollection<Publication>(MongoCollections.Publications);
         _starMemories = database.GetCollection<StarConversation>(MongoCollections.StarsMemory);
         _events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
         _challenges = database.GetCollection<GameChallenge>(MongoCollections.Challenges);
@@ -90,6 +96,9 @@ internal sealed class MongoGameStore : IGameStore
             item => item.TelegramUserId == player.TelegramUserId,
             cancellationToken);
         Task deletePosts = _posts.DeleteManyAsync(item => item.PlayerId == player.Id, cancellationToken);
+        Task deletePublications = _publications.DeleteManyAsync(
+            item => item.PlayerId == player.Id,
+            cancellationToken);
         Task deleteMemories = _starMemories.DeleteManyAsync(
             item => item.PlayerId == player.Id,
             cancellationToken);
@@ -104,6 +113,7 @@ internal sealed class MongoGameStore : IGameStore
         await Task.WhenAll(
             deletePlayer,
             deletePosts,
+            deletePublications,
             deleteMemories,
             deleteEvents,
             deleteChallenges,
@@ -115,6 +125,129 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask AddPostAsync(GamePost post, CancellationToken cancellationToken)
     {
         await _posts.InsertOneAsync(post, cancellationToken: cancellationToken);
+    }
+
+    public async ValueTask<bool> TryCommitPostAsync(
+        PlayerProfile updatedPlayer,
+        int expectedPlayerVersion,
+        PublishedPost published,
+        string publicationId,
+        CancellationToken cancellationToken)
+    {
+        GamePost post = published.Post;
+        using IClientSessionHandle session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
+        session.StartTransaction();
+        FilterDefinition<Publication> readyFilter = Builders<Publication>.Filter.And(
+            Builders<Publication>.Filter.Eq(item => item.Id, publicationId),
+            Builders<Publication>.Filter.Eq(item => item.PlayerId, updatedPlayer.Id),
+            Builders<Publication>.Filter.Eq(item => item.Status, PublicationStatus.ReadyForModeration));
+        UpdateDefinition<Publication> complete = Builders<Publication>.Update
+            .Set(item => item.Status, PublicationStatus.Completed)
+            .Set(item => item.Result, published)
+            .Set(item => item.Text, string.Empty)
+            .Set(item => item.Parts, []);
+        UpdateResult publicationResult = await _publications.UpdateOneAsync(
+            session,
+            readyFilter,
+            complete,
+            cancellationToken: cancellationToken);
+        if (publicationResult.ModifiedCount != 1)
+        {
+            await session.AbortTransactionAsync(cancellationToken);
+            return false;
+        }
+
+        FilterDefinition<PlayerProfile> playerFilter = Builders<PlayerProfile>.Filter.And(
+            Builders<PlayerProfile>.Filter.Eq(item => item.Id, updatedPlayer.Id),
+            Builders<PlayerProfile>.Filter.Eq(item => item.Version, expectedPlayerVersion));
+        ReplaceOneResult replaced = await _players.ReplaceOneAsync(
+            session,
+            playerFilter,
+            updatedPlayer,
+            cancellationToken: cancellationToken);
+        if (replaced.ModifiedCount != 1)
+        {
+            await session.AbortTransactionAsync(cancellationToken);
+            return false;
+        }
+
+        await _posts.InsertOneAsync(session, post, cancellationToken: cancellationToken);
+        await _threads.InsertOneAsync(
+            session,
+            CreateThreadDocument(updatedPlayer.Id, post.Id, published.Hook, post.CreatedAtUtc),
+            cancellationToken: cancellationToken);
+        await session.CommitTransactionAsync(cancellationToken);
+        return true;
+    }
+
+    public async ValueTask<Publication?> GetPublicationAsync(
+        string id,
+        CancellationToken cancellationToken)
+    {
+        return await _publications.Find(item => item.Id == id)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async ValueTask<bool> TryCreatePublicationAsync(
+        Publication publication,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _publications.InsertOneAsync(publication, cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
+    }
+
+    public async ValueTask AppendPublicationPartAsync(
+        string id,
+        PublicationPart part,
+        CancellationToken cancellationToken)
+    {
+        UpdateDefinition<Publication> update = Builders<Publication>.Update.Push(item => item.Parts, part);
+        UpdateResult result = await _publications.UpdateOneAsync(
+            item => item.Id == id && item.Status == PublicationStatus.Pending,
+            update,
+            cancellationToken: cancellationToken);
+        if (result.ModifiedCount != 1)
+        {
+            throw new InvalidOperationException("The publication is no longer pending.");
+        }
+    }
+
+    public async ValueTask MarkPublicationReadyAsync(string id, CancellationToken cancellationToken)
+    {
+        UpdateDefinition<Publication> update = Builders<Publication>.Update
+            .Set(item => item.Status, PublicationStatus.ReadyForModeration)
+            .Set(item => item.ExpiresAtUtc, null);
+        UpdateResult result = await _publications.UpdateOneAsync(
+            item => item.Id == id && item.Status == PublicationStatus.Pending,
+            update,
+            cancellationToken: cancellationToken);
+        if (result.ModifiedCount != 1)
+        {
+            throw new InvalidOperationException("The publication could not be marked ready.");
+        }
+    }
+
+    public async ValueTask MarkPublicationFailedAsync(
+        string id,
+        DateTime expiresAtUtc,
+        CancellationToken cancellationToken)
+    {
+        UpdateDefinition<Publication> update = Builders<Publication>.Update
+            .Set(item => item.Status, PublicationStatus.Failed)
+            .Set(item => item.Text, string.Empty)
+            .Set(item => item.Parts, [])
+            .Set(item => item.ExpiresAtUtc, expiresAtUtc);
+        await _publications.UpdateOneAsync(
+            item => item.Id == id && item.Status != PublicationStatus.Completed,
+            update,
+            cancellationToken: cancellationToken);
     }
 
     public async ValueTask<IReadOnlyList<GamePost>> GetRecentPostsAsync(
@@ -318,7 +451,17 @@ internal sealed class MongoGameStore : IGameStore
         DateTimeOffset createdAtUtc,
         CancellationToken cancellationToken)
     {
-        var document = new BsonDocument
+        await _threads.InsertOneAsync(
+            CreateThreadDocument(playerId, postId, hook, createdAtUtc),
+            cancellationToken: cancellationToken);
+    }
+
+    private static BsonDocument CreateThreadDocument(
+        PlayerId playerId,
+        PostId postId,
+        string hook,
+        DateTimeOffset createdAtUtc) =>
+        new()
         {
             ["PlayerId"] = playerId.Value,
             ["PostId"] = postId.Value,
@@ -326,6 +469,4 @@ internal sealed class MongoGameStore : IGameStore
             ["CreatedAtUtc"] = createdAtUtc.UtcDateTime,
             ["Open"] = true,
         };
-        await _threads.InsertOneAsync(document, cancellationToken: cancellationToken);
-    }
 }

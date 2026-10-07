@@ -2,8 +2,12 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Reki.Contracts.Posts;
 
-public sealed record CreatePostRequest
+/// <summary>Starts streaming generation for a publication identified by a client-generated UUID.</summary>
+public sealed record StartPublicationRequest
 {
+    [Required]
+    public required string PublicationId { get; init; }
+
     [Required]
     [StringLength(2000, MinimumLength = 1)]
     public required string Text { get; init; }
@@ -13,4 +17,3 @@ public sealed record CreatePostRequest
     [StringLength(64)]
     public string? WantId { get; init; }
 }
-

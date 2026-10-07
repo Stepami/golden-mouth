@@ -1,4 +1,4 @@
 namespace Reki.Contracts.Posts;
 
-public sealed record ViewsLiveEvent(LiveEventType Type, long Views);
+public sealed record ViewsLiveEvent(long Views) : LiveEvent(LiveEventType.Views);
 

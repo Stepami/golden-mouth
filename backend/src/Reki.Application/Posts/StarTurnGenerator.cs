@@ -1,7 +1,9 @@
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
+using Reki.Domain.Player;
 using static Reki.Application.Common.AI.StarToolCallParser;
 
 namespace Reki.Application.Posts;
@@ -12,9 +14,10 @@ public sealed class StarTurnGenerator(
 {
     private const int SafeGenerationAttempts = 2;
 
-    public async ValueTask<GeneratedPostTurn> GeneratePostTurnAsync(
+    public async IAsyncEnumerable<ChatResponseUpdate> StreamPostTurnAsync(
         StarPostContext context,
-        CancellationToken cancellationToken)
+        PlayerProfile player,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         string recentPosts = context.RecentPosts.Count == 0
             ? "нет"
@@ -38,47 +41,22 @@ public sealed class StarTurnGenerator(
             StarAgentInstructions.CreatePlayerOwnedLayer(context.Agent),
             new(ChatRole.User, userPrompt),
         ];
-
-        for (int attempt = 0; attempt < SafeGenerationAttempts; attempt++)
+        ChatOptions options = CreateOptions(
+            ChatToolMode.RequireSpecific("comment"),
+            new ChatInputSafetyContext(player, [context.Text]));
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(settings.Timeout);
+        await foreach (ChatResponseUpdate update in chatClient
+            .GetStreamingResponseAsync(messages, options, timeoutSource.Token)
+            .WithCancellation(timeoutSource.Token))
         {
-            IReadOnlyList<IStarAction> actions = await GetActionsAsync(
-                messages,
-                ChatToolMode.RequireSpecific("comment"),
-                cancellationToken);
-            StarCommentAction[] comments = actions.OfType<StarCommentAction>().ToArray();
-            StarReactionAction[] reactions = actions.OfType<StarReactionAction>().ToArray();
-            if (comments.Length != 1 || reactions.Length > 1)
-            {
-                throw new AiServiceUnavailableException("The model returned an invalid action set.");
-            }
-
-            StarCommentAction comment = comments[0];
-            if (ContentSafetyPolicy.IsOutputAllowed(comment.Text) &&
-                ContentSafetyPolicy.IsOutputAllowed(comment.Hook))
-            {
-                return new GeneratedPostTurn(
-                    comment.Author,
-                    comment.StarId,
-                    comment.Text,
-                    comment.Hook,
-                    reactions.FirstOrDefault()?.Emoji ?? "🔥",
-                    comment.Brave,
-                    comment.Humor,
-                    comment.Topic,
-                    comment.Reasons,
-                    comment.OnTopic);
-            }
-
-            messages.Add(new ChatMessage(
-                ChatRole.System,
-                "Предыдущий вариант не прошёл фильтр 14+. Сгенерируй безопасный вариант."));
+            yield return update;
         }
-
-        throw new AiServiceUnavailableException("The model output did not pass the safety policy.");
     }
 
     public async ValueTask<GeneratedDirectMessage> GenerateDirectMessageAsync(
         StarDirectMessageContext context,
+        PlayerProfile player,
         CancellationToken cancellationToken)
     {
         const string turnPolicy = """
@@ -100,6 +78,7 @@ public sealed class StarTurnGenerator(
             IReadOnlyList<IStarAction> actions = await GetActionsAsync(
                 messages,
                 ChatToolMode.RequireSpecific("dm"),
+                new ChatInputSafetyContext(player, [context.Text]),
                 cancellationToken);
             StarDirectMessageAction[] directMessages = actions
                 .OfType<StarDirectMessageAction>()
@@ -123,17 +102,10 @@ public sealed class StarTurnGenerator(
     private async ValueTask<IReadOnlyList<IStarAction>> GetActionsAsync(
         IReadOnlyList<ChatMessage> messages,
         ChatToolMode toolMode,
+        ChatInputSafetyContext safetyContext,
         CancellationToken cancellationToken)
     {
-        var options = new ChatOptions
-        {
-            ModelId = settings.Model,
-            Temperature = settings.Temperature,
-            MaxOutputTokens = settings.MaxOutputTokens,
-            Tools = [.. StarToolSchemas.All],
-            ToolMode = toolMode,
-            AllowMultipleToolCalls = true,
-        };
+        ChatOptions options = CreateOptions(toolMode, safetyContext);
         using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutSource.CancelAfter(settings.Timeout);
 
@@ -156,9 +128,36 @@ public sealed class StarTurnGenerator(
         {
             throw;
         }
+        catch (ContentRejectedException)
+        {
+            throw;
+        }
+        catch (CrisisDetectedException)
+        {
+            throw;
+        }
         catch (Exception exception)
         {
             throw new AiServiceUnavailableException("The model request failed.", exception);
         }
+    }
+
+    private ChatOptions CreateOptions(
+        ChatToolMode toolMode,
+        ChatInputSafetyContext safetyContext)
+    {
+        return new ChatOptions
+        {
+            ModelId = settings.Model,
+            Temperature = settings.Temperature,
+            MaxOutputTokens = settings.MaxOutputTokens,
+            Tools = [.. StarToolSchemas.All],
+            ToolMode = toolMode,
+            AllowMultipleToolCalls = true,
+            AdditionalProperties = new AdditionalPropertiesDictionary
+            {
+                [ChatInputSafetyContext.OptionKey] = safetyContext,
+            },
+        };
     }
 }

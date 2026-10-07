@@ -1,3 +1,4 @@
+using System.Net.ServerSentEvents;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Contracts.Events;
@@ -10,11 +11,18 @@ using Reki.Contracts.Worlds;
 namespace Reki.Api.Serialization;
 
 [JsonSerializable(typeof(Stream))]
+[JsonSerializable(typeof(object))]
+[JsonSerializable(typeof(SseItem<LiveEvent>))]
+[JsonSerializable(typeof(SseItem<PublicationStatusLiveEvent>))]
 [JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(HttpValidationProblemDetails))]
 [JsonSerializable(typeof(PlayerResponse))]
 [JsonSerializable(typeof(OnboardingRequest))]
-[JsonSerializable(typeof(CreatePostRequest))]
+[JsonSerializable(typeof(StartPublicationRequest))]
+[JsonSerializable(typeof(PublicationStatusLiveEvent))]
+[JsonSerializable(typeof(PublicationStatusResponse))]
+[JsonSerializable(typeof(PublicationStatus))]
+[JsonSerializable(typeof(LiveEventType))]
 [JsonSerializable(typeof(ReplyRequest))]
 [JsonSerializable(typeof(DirectMessageRequest))]
 [JsonSerializable(typeof(ForgetMemoryRequest))]
@@ -34,6 +42,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(UpdateWorldRulesRequest))]
 [JsonSerializable(typeof(PlusInterestResponse))]
 [JsonSerializable(typeof(ViewsLiveEvent))]
+[JsonSerializable(typeof(LiveEvent))]
 [JsonSerializable(typeof(ReactionLiveEvent))]
 [JsonSerializable(typeof(CommentLiveEvent))]
 [JsonSerializable(typeof(TypingLiveEvent))]
@@ -42,5 +51,6 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(ClientLogBatchRequest))]
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
+    Converters = new[] { typeof(ContractEnumConverterFactory) },
     UseStringEnumConverter = true)]
 public sealed partial class ApiJsonSerializerContext : JsonSerializerContext;

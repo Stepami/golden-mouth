@@ -1,14 +1,13 @@
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Common.Safety;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
-using Reki.Application.Worlds;
+using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
 
@@ -18,19 +17,41 @@ public sealed class PublishPostHandler(
     TimeProvider timeProvider,
     GameDay gameDay,
     PlayerReader playerReader,
-    PlayerSafetyGuard safetyGuard,
     ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
-    ProductTelemetry analytics,
-    StarTurnGenerator turnGenerator) : IRequestHandler<PublishPostCommand, PublishedPost>
+    ProductTelemetry analytics) : IStreamRequestHandler<PublishPostCommand, LiveEvent>
 {
-    public async ValueTask<PublishedPost> Handle(
+    public async IAsyncEnumerable<LiveEvent> Handle(
         PublishPostCommand request,
-        CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        Publication? publication = await store.GetPublicationAsync(request.PublicationId, cancellationToken);
         PlayerProfile storedPlayer = await playerReader.GetAsync(
             request.TelegramUserId,
             cancellationToken);
+        if (publication is null || publication.PlayerId != storedPlayer.Id)
+        {
+            throw new ResourceNotFoundException("Publication not found.");
+        }
+
+        if (publication.Status == PublicationStatus.Completed && publication.Result is not null)
+        {
+            foreach (LiveEvent liveEvent in PostContractMapper.MapLiveEvents(publication.Result))
+            {
+                yield return liveEvent;
+            }
+
+            yield break;
+        }
+
+        if (publication.Status != PublicationStatus.ReadyForModeration)
+        {
+            throw new RequestConflictException("The publication is not ready for moderation.");
+        }
+
+        string text = publication.Text;
+        bool ownWords = publication.OwnWords;
+        string? wantId = publication.WantId;
         DateTimeOffset now = timeProvider.GetUtcNow();
         PlayerProfile player = gameDay.Normalize(storedPlayer);
         if (!ReferenceEquals(player, storedPlayer) && !await store.TryReplacePlayerAsync(
@@ -48,38 +69,11 @@ public sealed class PublishPostHandler(
             throw new RequestConflictException("The daily post limit has been reached.");
         }
 
-        await safetyGuard.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
-        WorldRules? storedRules = await store.GetWorldRulesAsync(
-            player.Id,
-            player.World,
-            cancellationToken);
-        WorldRules worldRules = storedRules ?? WorldRulesDefaults.Create(player.Id, player.World);
-        IReadOnlyList<GamePost> recentPosts = await store.GetRecentPostsAsync(
-            player.Id,
-            3,
-            cancellationToken);
-        bool hateEnabled = player.Settings.Drama != "off" &&
-            (player.HateDisabledUntilUtc is null || player.HateDisabledUntilUtc <= now);
-        GeneratedPostTurn turn = await turnGenerator.GeneratePostTurnAsync(
-            new StarPostContext(
-                request.Text,
-                new StarAgentProfile(
-                    player.World,
-                    worldRules.Title,
-                    worldRules.Description,
-                    worldRules.Rules,
-                    player.Settings.Drama,
-                    player.Settings.Voice,
-                    null,
-                    []),
-                GetStage(player.Subscribers),
-                recentPosts.Select(post => post.Text).ToArray(),
-                hateEnabled),
-            cancellationToken);
+        GeneratedPostTurn turn = publication.AssembleTurn();
 
-        bool wantCompleted = request.WantId is not null && player.Wants.Any(want =>
-            want.Id == request.WantId && !want.Done);
-        if (request.WantId is not null && !wantCompleted)
+        bool wantCompleted = wantId is not null && player.Wants.Any(want =>
+            want.Id == wantId && !want.Done);
+        if (wantId is not null && !wantCompleted)
         {
             throw new RequestConflictException("The selected daily want is unavailable.");
         }
@@ -87,29 +81,20 @@ public sealed class PublishPostHandler(
         PostProgression progression = progressionCalculator.Calculate(
             player,
             turn,
-            request.OwnWords,
+            ownWords,
             wantCompleted);
         PlayerProfile updated = player.PublishPost(
             progression.SubscriberDelta,
             progression.Viral,
             progression.Flop,
             progression.Skills,
-            request.WantId,
+            wantId,
             turn.StarId,
             now,
             balance.Relations.Minimum,
             balance.Relations.Maximum,
             balance.Relations.MaxGainPerDay,
             balance.Relations.StarCardAt);
-        bool replaced = await store.TryReplacePlayerAsync(
-            updated,
-            player.Version,
-            cancellationToken);
-        if (!replaced)
-        {
-            throw new RequestConflictException("The player state changed while publishing the post.");
-        }
-
         PostId postId = PostId.New();
         var starComment = new GameComment(
             CommentId.New(),
@@ -129,7 +114,7 @@ public sealed class PublishPostHandler(
         var post = new GamePost(
             postId,
             player.Id,
-            request.Text,
+            text,
             views,
             [starComment],
             now,
@@ -140,11 +125,24 @@ public sealed class PublishPostHandler(
             progression.Flop);
         string hook = turn.Hook;
 
-        await store.AddPostAsync(post, cancellationToken);
+        var published = new PublishedPost(post, hook, turn.StarName, turn.Reaction, turn.Reasons);
+        bool committed = await store.TryCommitPostAsync(
+            updated,
+            player.Version,
+            published,
+            request.PublicationId,
+            cancellationToken);
+        if (!committed)
+        {
+            throw new RequestConflictException("The player state changed while publishing the post.");
+        }
+
         await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
         TrackProgression(player, updated, post, turn, analytics);
-        await store.AppendThreadAsync(player.Id, postId, hook, now, cancellationToken);
-        return new PublishedPost(post, hook, turn.StarName, turn.Reaction, turn.Reasons);
+        foreach (LiveEvent liveEvent in PostContractMapper.MapLiveEvents(published))
+        {
+            yield return liveEvent;
+        }
     }
 
     private static double GetMedian(IReadOnlyList<long> values)
@@ -154,17 +152,6 @@ public sealed class PublishPostHandler(
         return ordered.Length % 2 == 0
             ? Math.Max(1, (ordered[middle - 1] + ordered[middle]) / 2.0)
             : Math.Max(1, ordered[middle]);
-    }
-
-    private static string GetStage(long subscribers)
-    {
-        return subscribers switch
-        {
-            < 1000 => "mask",
-            < 5000 => "views",
-            < 10000 => "strike",
-            _ => "new_line",
-        };
     }
 
     private static void TrackProgression(

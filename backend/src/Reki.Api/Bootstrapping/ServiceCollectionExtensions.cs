@@ -55,6 +55,15 @@ internal static class ServiceCollectionExtensions
                 operation.OperationId = $"{controller}_{action}";
             }
 
+            if (operation.Responses is { } responses &&
+                responses.TryGetValue("200", out var response) &&
+                response is { Content: { } content } &&
+                content.TryGetValue("text/event-stream", out var stream))
+            {
+                stream.Schema = null;
+                content.Remove("application/json");
+            }
+
             return Task.CompletedTask;
         }));
         services
@@ -71,15 +80,9 @@ internal static class ServiceCollectionExtensions
     {
         IJsonTypeInfoResolver resolver = ApiJsonSerializerContext.Default;
         options.TypeInfoResolverChain.Insert(0, resolver);
-        options.Converters.Add(new JsonStringEnumConverter<SkillId>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<WorldId>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<Address>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<Drama>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<BirthGroup>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<FeedItemKind>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<DirectMessageAuthor>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<GameEventKind>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<LiveEventType>(JsonNamingPolicy.CamelCase));
-        options.Converters.Add(new JsonStringEnumConverter<ClientLogLevel>(JsonNamingPolicy.CamelCase));
+        foreach (JsonConverter converter in ApiJsonSerializerContext.Default.Options.Converters)
+        {
+            options.Converters.Add(converter);
+        }
     }
 }
