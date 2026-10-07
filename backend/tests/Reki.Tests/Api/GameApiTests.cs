@@ -131,6 +131,15 @@ public sealed class GameApiTests(ApiFactory factory)
         await Assert.That(item.Role).IsEqualTo("creator");
         await Assert.That(item.PostId).IsNotNull();
         await Assert.That(item.CanReply).IsTrue();
+        string postId = item.PostId ?? throw new InvalidOperationException("The feed post has no id.");
+        PostDetailResponse post = await api.Posts.GetPostAsync(postId, CancellationToken.None);
+        await Assert.That(item.Views).IsEqualTo(post.Views);
+        await Assert.That(item.CommentCount).IsEqualTo(post.Comments.Count);
+        await Assert.That(DateTimeOffset.TryParse(
+            item.Ago,
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.RoundtripKind,
+            out _)).IsTrue();
     }
 
     [Test]

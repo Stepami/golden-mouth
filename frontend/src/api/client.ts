@@ -4,7 +4,7 @@ import * as mock from './mock'
 import { error, warn } from '../app/log'
 import { apiBaseUrl as BASE } from '../app/runtimeConfig'
 import { telegramAuthHeaders } from './auth'
-import type { Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostResult, PublicationState, PublicationStatus, ReplyResult, WorldRules } from './types'
+import type { Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, ReplyResult, WorldRules } from './types'
 
 export class ApiError extends Error {
   constructor(public readonly status: number, method: string, path: string) {
@@ -141,7 +141,9 @@ export const api = {
   settings: (patch: Partial<Player['settings']>) => BASE ? call('/settings', { method: 'PATCH', body: JSON.stringify(patch) }) : later({ ok: true }),
   feed: (): Promise<FeedItem[]> => BASE ? call('/feed') : later(mock.feed),
   channelPosts: (): Promise<ChannelPost[]> => BASE ? call('/posts/mine') : later(mock.channelPosts),
-  post: (postId: string): Promise<Post> => BASE ? call(`/posts/${encodeURIComponent(postId)}`) : laterLazy(() => mock.post(postId)),
+  post: (postId: string): Promise<Post> => BASE
+    ? call<PostDetailResponse>(`/posts/${encodeURIComponent(postId)}`).then(({ postId: id, ...detail }) => ({ ...detail, id }))
+    : laterLazy(() => mock.post(postId)),
   friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),
   dm: (starId: string): Promise<Dm> => BASE ? call(`/dm/${starId}`) : later(mock.dm),
   dmSend: (starId: string, text: string): Promise<{ reply?: string; repliesLeft: number }> => BASE ? call(`/dm/${starId}`, { method: 'POST', body: JSON.stringify({ text }) }) : later({ repliesLeft: 2 }),

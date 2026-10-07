@@ -124,7 +124,7 @@
 | `POST /posts/:id/replies` `{ commentId, replyId, text }` | `{ replyId, commentId, subscriberBonus, awardedReplies, replyLimit, subscriberTotal, reaction? }`; идемпотентно по `replyId` | 02-6 |
 | `GET /posts/:id` | `PostDetail`: текущий текст, просмотры, реакции, комментарии и `canReply`; доступен свой или чужой пост того же мира, иначе 404 | 02-6 |
 | `GET /posts/mine` | `ChannelPost[]`: сохранённые посты текущего игрока, newest-first; стабильный `postId`, текст, время, просмотры, реакции и число комментариев | 03-5 |
-| `GET /feed` | `FeedItem[]`: общая лента своего мира, у постов стабильный `postId` и явный `canReply`; новости без `postId` не открываются | 03-3 |
+| `GET /feed` | `FeedItem[]`: общая лента своего мира; у постов стабильный `postId`, явный `canReply`, время публикации в `ago` (ISO 8601), `views` и `commentCount`; новости без `postId` не открываются | 03-3 |
 | `GET /friends` | `Friend[]` | 03-4 |
 | `GET /dm/:starId` | `Dm` (сообщения, память, ответов осталось) | 03-1 |
 | `POST /dm/:starId` | `{ reply?, repliesLeft }` | 03-1 |

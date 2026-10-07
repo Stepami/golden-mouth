@@ -298,8 +298,8 @@ function Thread() {
       </div>
       {canReply && (
         <div className="bottom-cta" style={{ flexDirection: 'row' }}>
-          <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input value={reply} onChange={e => setReply(e.target.value)} placeholder={targetId ? 'Ответ · бесплатно' : 'Выбери комментарий'} maxLength={300} /></div>
-          <button className="card" onClick={send} disabled={sending || !reply.trim() || !targetId} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label="Отправить">➤</button>
+          <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input className="thread-reply-input" value={reply} onChange={e => setReply(e.target.value)} placeholder={targetId ? 'Ответ · бесплатно' : 'Выбери комментарий'} maxLength={300} disabled={!targetId || sending} /></div>
+          <button className="card thread-reply-send" onClick={send} disabled={sending || !reply.trim() || !targetId} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label="Отправить">➤</button>
         </div>
       )}
     </div>

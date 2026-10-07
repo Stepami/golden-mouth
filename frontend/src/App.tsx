@@ -6,6 +6,7 @@ import { screenView, setExperiments, tap } from './app/analytics'
 import { setScreen } from './app/log'
 import { TelegramLaunch } from './app/TelegramLaunch'
 import { inTelegram, syncBackButton } from './telegram'
+import { api } from './api/client'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
 
@@ -40,9 +41,12 @@ function Shell() {
   useEffect(() => { setScreen(top.id); screenView(top.id) }, [top.id])
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments) }, [player?.experiments])
   useEffect(() => {
-    if (playerState === 'ready' && !explicitStart && top.id === '01-1_invite') {
-      setStack([{ id: '01-6_home', params: {} }])
-    }
+    if (playerState !== 'ready' || explicitStart || top.id !== '01-1_invite') return
+    let current = true
+    api.channelPosts()
+      .then(posts => { if (current) setStack([{ id: posts.length === 0 ? '01-6_home' : '03-5_stage', params: {} }]) })
+      .catch(() => { if (current) setStack([{ id: '03-5_stage', params: {} }]) })
+    return () => { current = false }
   }, [explicitStart, playerState, top.id])
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1, back), [stack.length, back])
