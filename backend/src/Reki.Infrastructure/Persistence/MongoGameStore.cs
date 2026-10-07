@@ -285,19 +285,63 @@ internal sealed class MongoGameStore : IGameStore
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async ValueTask<bool> AddReplyAsync(
+    public async ValueTask<bool> TryAddThreadReplyAsync(
         PlayerId playerId,
         PostId postId,
-        GameComment reply,
+        ThreadReply reply,
+        GameComment comment,
+        PlayerProfile? updatedPlayer,
+        int expectedPlayerVersion,
         CancellationToken cancellationToken)
     {
-        FilterDefinition<GamePost> playerFilter = Builders<GamePost>.Filter
-            .Eq(item => item.PlayerId, playerId);
-        FilterDefinition<GamePost> postFilter = Builders<GamePost>.Filter.Eq(item => item.Id, postId);
-        FilterDefinition<GamePost> filter = Builders<GamePost>.Filter.And(playerFilter, postFilter);
-        UpdateDefinition<GamePost> update = Builders<GamePost>.Update.Push(item => item.Comments, reply);
-        UpdateResult result = await _posts.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
-        return result.ModifiedCount == 1;
+        try
+        {
+            using IClientSessionHandle session = await _client.StartSessionAsync(
+                cancellationToken: cancellationToken);
+            session.StartTransaction();
+            var replyIdField = new StringFieldDefinition<GamePost, string>("ThreadReplies.ReplyId");
+            FilterDefinition<GamePost> postFilter = Builders<GamePost>.Filter.And(
+                Builders<GamePost>.Filter.Eq(item => item.Id, postId),
+                Builders<GamePost>.Filter.Eq(item => item.PlayerId, playerId),
+                Builders<GamePost>.Filter.Ne(replyIdField, reply.ReplyId));
+            UpdateDefinition<GamePost> update = Builders<GamePost>.Update
+                .Push(item => item.Comments, comment)
+                .Push(item => item.ThreadReplies, reply);
+            UpdateResult postResult = await _posts.UpdateOneAsync(
+                session,
+                postFilter,
+                update,
+                cancellationToken: cancellationToken);
+            if (postResult.ModifiedCount != 1)
+            {
+                await session.AbortTransactionAsync(cancellationToken);
+                return false;
+            }
+
+            if (updatedPlayer is not null)
+            {
+                FilterDefinition<PlayerProfile> playerFilter = Builders<PlayerProfile>.Filter.And(
+                    Builders<PlayerProfile>.Filter.Eq(item => item.Id, updatedPlayer.Id),
+                    Builders<PlayerProfile>.Filter.Eq(item => item.Version, expectedPlayerVersion));
+                ReplaceOneResult replaced = await _players.ReplaceOneAsync(
+                    session,
+                    playerFilter,
+                    updatedPlayer,
+                    cancellationToken: cancellationToken);
+                if (replaced.ModifiedCount != 1)
+                {
+                    await session.AbortTransactionAsync(cancellationToken);
+                    return false;
+                }
+            }
+
+            await session.CommitTransactionAsync(cancellationToken);
+            return true;
+        }
+        catch (MongoException exception) when (exception.HasErrorLabel("TransientTransactionError"))
+        {
+            return false;
+        }
     }
 
     public async ValueTask<StarConversation?> GetStarConversationAsync(

@@ -96,7 +96,7 @@ function Invite() {
         <div className="label">Друг увидит твою карточку</div>
         <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420 60%,#12203A)', borderRadius: 16, padding: 14, textAlign: 'center', marginBottom: 12 }}>
           <Avatar seed={p.handle} size={44} style={{ margin: '0 auto 6px' }} /><b>{p.name}</b>
-          <div style={{ fontSize: 28, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{fmt(2310)}</div>
+          <div style={{ fontSize: 28, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{fmt(p.subs)}</div>
           <div className="small">подписчиков за 2 дня · {worldOf(p.world).emoji} {worldOf(p.world).title}</div><div className="small muted" style={{ marginTop: 4 }}>а ты кем будешь?</div>
         </div>
         <Card style={{ color: 'var(--muted)' }}><span className="small">Твоя ссылка: t.me/{TELEGRAM_BOT_USERNAME}?startapp=liza7 · до 3 бонусов в день</span></Card>

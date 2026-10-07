@@ -60,6 +60,7 @@ internal static class Bootstrap
         IConfigurationSection skills = configuration.GetRequiredSection("skills");
         IConfigurationSection relations = configuration.GetRequiredSection("relations");
         IConfigurationSection challenge = configuration.GetRequiredSection("challenge");
+        IConfigurationSection thread = configuration.GetRequiredSection("thread");
         string resetValue = posts["reset_time_msk"]
             ?? throw new InvalidOperationException("posts.reset_time_msk is required.");
         if (!TimeOnly.TryParseExact(
@@ -144,6 +145,10 @@ internal static class Bootstrap
             new ChallengeBalance(
                 challenge.GetValue<int>("days"),
                 challenge.GetValue<int>("min_posts")),
+            new ThreadBalance(
+                thread.GetValue<int>("bonus_replies"),
+                thread.GetValue<int>("subscriber_bonus"),
+                thread.GetValue<int>("branch_depth")),
             worlds);
     }
 

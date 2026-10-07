@@ -164,6 +164,15 @@ public sealed record PlayerProfile(
             : this with { Achievements = updated, Version = Version + 1 };
     }
 
+    public PlayerProfile AwardThreadBonus(long bonus)
+    {
+        return this with
+        {
+            Subscribers = Math.Max(0, Subscribers + bonus),
+            Version = Version + 1,
+        };
+    }
+
     public PlayerProfile ApplyChallengeWinBonus(
         int dailyBonus,
         DateTimeOffset bonusUntilUtc)

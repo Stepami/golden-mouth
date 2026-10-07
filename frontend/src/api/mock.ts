@@ -1,5 +1,5 @@
 // Тестовые данные = тексты и числа из макетов docs/screens. Пока бэкенд (#10) не готов, экраны живут на них.
-import type { Challenge, Dm, FeedItem, Friend, GameEvent, Player, Post, PostResult, Star, World, WorldRules } from './types'
+import type { Challenge, Dm, FeedItem, Friend, GameEvent, Player, Post, PostResult, ReplyResult, Star, World, WorldRules } from './types'
 
 export const worlds: World[] = [
   { id: 'stage', title: 'Сцена', emoji: '🎤', description: 'Айдол-агентство: трейни, дебют, фансайты', difficulty: 1, summary: 'мало провалов · хейт с 5k · ценят смелость' },
@@ -46,6 +46,22 @@ export const firstPost: Post = {
   ],
 }
 export const liveComment = { id: 'k0', author: 'kpop_dasha', avatar: 'dasha', handle: 'фанатка', text: 'ЗАТО УВЕРЕННО 😭 это теперь мой девиз' }
+
+// Тред (02-6): +9 за первые 3 ответа из макета; в mock-режиме просто считаем ответы в сессии.
+let mockReplies = 0
+const mockThreadReplies = new Map<string, ReplyResult>()
+export const threadReply = (replyId: string): ReplyResult => {
+  const existing = mockThreadReplies.get(replyId)
+  if (existing) return existing
+  const subscriberBonus = mockReplies < 3 ? 9 : 0
+  if (subscriberBonus > 0) mockReplies += 1
+  const result = {
+    replyId, commentId: crypto.randomUUID(), subscriberBonus,
+    awardedReplies: mockReplies, replyLimit: 3, subscriberTotal: player.subs + mockReplies * 9, reaction: '🔥',
+  }
+  mockThreadReplies.set(replyId, result)
+  return result
+}
 
 export const results: Record<'normal' | 'flop' | 'viral', PostResult> = {
   normal: { postId: 'post1', delta: 38, headline: 'Тебя заметили: первый мем уже есть', views: 312, viral: false, flop: false,
