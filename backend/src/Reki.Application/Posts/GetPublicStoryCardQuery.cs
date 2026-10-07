@@ -4,5 +4,5 @@ using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts;
 
-public sealed record GetStoryCardQuery(TelegramUserId TelegramUserId, PostId PostId)
+public sealed record GetPublicStoryCardQuery(PlayerId PlayerId, PostId PostId)
     : IRequest<StoryCardData>;

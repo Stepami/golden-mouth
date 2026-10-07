@@ -309,11 +309,12 @@ function Thread() {
 // 02-7: «Отправить в чат» через нативный шеринг Telegram или в сторис. Чаты игрока мы не видим.
 function Share() {
   const nav = useNav()
+  const player = usePlayer()
   const post = (nav.params.post as Post | undefined) ?? firstPost
   const text = 'Мой пост залетел в Реки 🌊 А ты кем будешь в Сцене?'
   const toChat = () => { track('share', { to: 'chat' }); if (inTelegram) shareURL.ifAvailable(LINK, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(LINK)}&text=${encodeURIComponent(text)}`) }
-  // Картинку 9:16 рисует бэкенд (#10): GET /cards/story/<postId>.png
-  const storyCardUrl = new URL(`${apiBaseUrl ?? ''}/cards/story/${post.id}.png`, location.origin).toString()
+  // Публичную картинку 9:16 Telegram загружает без заголовков авторизации.
+  const storyCardUrl = new URL(`${apiBaseUrl ?? ''}/cards/story/${encodeURIComponent(player.id)}/${encodeURIComponent(post.id)}.png`, location.origin).toString()
   const toStory = () => { track('share', { to: 'story' }); if (inTelegram) shareStory.ifAvailable(storyCardUrl, { text, widgetLink: { url: LINK, name: 'Играть' } }) }
   return (
     <div className="screen no-tab">
