@@ -107,6 +107,7 @@ public sealed class GameApiTests(ApiFactory factory)
         await Assert.That(player["Skills"].AsBsonDocument.Names)
             .IsEquivalentTo(["brave", "humor", "topic"]);
         await Assert.That(player["BirthGroup"].AsString).IsEqualTo("14-17");
+        await Assert.That(player["Avatar"].AsString).IsEqualTo("player");
         await Assert.That(player.Names.Any(name => name.Contains("year", StringComparison.OrdinalIgnoreCase)))
             .IsFalse();
     }
@@ -126,7 +127,7 @@ public sealed class GameApiTests(ApiFactory factory)
         // Assert
         FeedItemResponse item = feed.Single(feedItem => feedItem.Text == "пост для ленты");
         await Assert.That(item.Author).IsEqualTo("Player");
-        await Assert.That(item.Avatar).IsEqualTo("pick0");
+        await Assert.That(item.Avatar).IsEqualTo("player");
         await Assert.That(item.Role).IsEqualTo("creator");
         await Assert.That(item.PostId).IsNotNull();
         await Assert.That(item.CanReply).IsTrue();
@@ -999,7 +1000,6 @@ public sealed class GameApiTests(ApiFactory factory)
                 BirthGroup = BirthGroup.Teen,
                 World = world,
                 Role = "creator",
-                Avatar = "pick0",
                 Name = "Player",
                 Handle = "player",
                 Address = Address.Nick,

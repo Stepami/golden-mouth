@@ -16,7 +16,7 @@ export const stars: Star[] = [
 ]
 
 export const player: Player = {
-  id: 'p1', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', avatar: '@liza.trainee', address: 'she',
+  id: 'p1', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', address: 'she',
   world: 'stage', subs: 120, postsLeft: 10, postsCap: 10,
   streak: { days: 4, week: [true, true, true, true, false, false, false], nextReward: '7 дней: карточка «Неделя в эфире»' },
   skills: { brave: { level: 6, progress: .4 }, humor: { level: 5, progress: .7 }, topic: { level: 4, progress: .3 } },

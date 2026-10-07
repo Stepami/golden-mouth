@@ -13,10 +13,6 @@ public sealed record OnboardingRequest
     public required string Role { get; init; }
 
     [Required]
-    [MaxLength(64)]
-    public required string Avatar { get; init; }
-
-    [Required]
     [MaxLength(80)]
     public required string Name { get; init; }
 
@@ -30,4 +26,3 @@ public sealed record OnboardingRequest
     [MaxLength(64)]
     public required string Star { get; init; }
 }
-

@@ -41,7 +41,6 @@ public sealed partial class ApiMapper
             player.Name,
             player.Handle,
             player.Role,
-            player.Avatar,
             Enum.Parse<Address>(player.Address, true),
             Enum.Parse<ContractWorldId>(player.World.Value, true),
             player.Subscribers,

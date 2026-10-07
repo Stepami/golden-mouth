@@ -48,7 +48,7 @@ async function publicationState(id: string): Promise<PublicationState> {
 
 export const api = {
   me: (): Promise<Player> => BASE ? call('/me') : later(mock.player),
-  onboarding: (body: { birthGroup: '14-17' | '18+'; world: string; role: string; avatar: string; name: string; handle: string; address: string; star: string }): Promise<Player> =>
+  onboarding: (body: { birthGroup: '14-17' | '18+'; world: string; role: string; name: string; handle: string; address: string; star: string }): Promise<Player> =>
     BASE ? call('/onboarding', { method: 'POST', body: JSON.stringify(body) }) : later({ ...mock.player, subs: 120, postsLeft: 10 }),
   /** Генерация, затем модерация и поток реакции; при обрыве сверяем сохранённый статус. */
   publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown') => void, onStatus?: (status: PublicationStatus) => void): () => void {
