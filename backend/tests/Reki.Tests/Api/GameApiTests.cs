@@ -117,18 +117,131 @@ public sealed class GameApiTests(ApiFactory factory)
         // Arrange
         const long telegramUserId = 1023;
         using TestApiClient api = factory.CreateApiClient(telegramUserId);
-        await OnboardAsync(api);
+        await OnboardAsync(api, WorldId.Stream);
         await PublishAsync(telegramUserId, "пост для ленты");
 
         // Act
         IReadOnlyList<FeedItemResponse> feed = await api.Posts.GetFeedAsync(CancellationToken.None);
 
         // Assert
-        await Assert.That(feed.Count).IsEqualTo(1);
-        await Assert.That(feed[0].Text).IsEqualTo("пост для ленты");
-        await Assert.That(feed[0].Author).IsEqualTo("Player");
-        await Assert.That(feed[0].Avatar).IsEqualTo("pick0");
-        await Assert.That(feed[0].Role).IsEqualTo("creator");
+        FeedItemResponse item = feed.Single(feedItem => feedItem.Text == "пост для ленты");
+        await Assert.That(item.Author).IsEqualTo("Player");
+        await Assert.That(item.Avatar).IsEqualTo("pick0");
+        await Assert.That(item.Role).IsEqualTo("creator");
+        await Assert.That(item.PostId).IsNotNull();
+        await Assert.That(item.CanReply).IsTrue();
+    }
+
+    [Test]
+    public async Task Feed_ReturnsSameWorldSharedPostsAndExcludesOtherWorldsAsync()
+    {
+        // Arrange
+        const long viewerUserId = 1024;
+        const long neighborUserId = 1025;
+        const long otherWorldUserId = 1026;
+        using TestApiClient viewerApi = factory.CreateApiClient(viewerUserId);
+        using TestApiClient neighborApi = factory.CreateApiClient(neighborUserId);
+        using TestApiClient otherWorldApi = factory.CreateApiClient(otherWorldUserId);
+        await OnboardAsync(viewerApi, WorldId.It);
+        await OnboardAsync(neighborApi, WorldId.It);
+        await OnboardAsync(otherWorldApi, WorldId.Academy);
+        await PublishAsync(viewerUserId, "пост зрителя");
+        await PublishAsync(neighborUserId, "пост соседа");
+        await PublishAsync(otherWorldUserId, "пост другого мира");
+
+        // Act
+        IReadOnlyList<FeedItemResponse> feed = await viewerApi.Posts.GetFeedAsync(CancellationToken.None);
+
+        // Assert
+        FeedItemResponse own = feed.Single(feedItem => feedItem.Text == "пост зрителя");
+        FeedItemResponse neighbor = feed.Single(feedItem => feedItem.Text == "пост соседа");
+        await Assert.That(own.PostId).IsNotNull();
+        await Assert.That(own.CanReply).IsTrue();
+        await Assert.That(neighbor.PostId).IsNotNull();
+        await Assert.That(neighbor.CanReply).IsFalse();
+        await Assert.That(feed.Any(feedItem => feedItem.Text == "пост другого мира")).IsFalse();
+    }
+
+    [Test]
+    public async Task Post_ForOwnPost_ReturnsReplyRightsAndCurrentCommentsAsync()
+    {
+        // Arrange
+        const long telegramUserId = 1031;
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        await PublishAsync(telegramUserId, "пост с комментариями");
+        BsonDocument player = await GetStoredPlayerAsync(telegramUserId);
+        BsonDocument post = await Database
+            .GetCollection<BsonDocument>("posts")
+            .Find(new BsonDocument("PlayerId", player["_id"]))
+            .SingleAsync();
+        string postId = post["_id"].AsString;
+        string commentId = post["Comments"].AsBsonArray[0]["_id"].AsString;
+        await ReplyAsync(telegramUserId, postId, commentId, "detail-own-reply", "мой ответ");
+
+        // Act
+        PostDetailResponse detail = await api.Posts.GetPostAsync(postId, CancellationToken.None);
+
+        // Assert
+        await Assert.That(detail.PostId).IsEqualTo(postId);
+        await Assert.That(detail.Text).IsEqualTo("пост с комментариями");
+        await Assert.That(detail.CanReply).IsTrue();
+        await Assert.That(detail.Views).IsGreaterThanOrEqualTo(48);
+        await Assert.That(detail.Reactions.Count).IsEqualTo(1);
+        await Assert.That(detail.Comments.Count).IsEqualTo(2);
+        await Assert.That(detail.Comments.Any(comment => comment.Me && comment.Text == "мой ответ")).IsTrue();
+    }
+
+    [Test]
+    public async Task Post_ForForeignSameWorldPost_ReturnsReadOnlyDetailAsync()
+    {
+        // Arrange
+        const long ownerUserId = 1032;
+        const long viewerUserId = 1033;
+        (string postId, string commentId) = await PublishPostForThreadAsync(ownerUserId);
+        await ReplyAsync(ownerUserId, postId, commentId, "detail-owner-reply", "ответ владельца");
+        using TestApiClient viewerApi = factory.CreateApiClient(viewerUserId);
+        await OnboardAsync(viewerApi);
+
+        // Act
+        PostDetailResponse detail = await viewerApi.Posts.GetPostAsync(postId, CancellationToken.None);
+
+        // Assert
+        await Assert.That(detail.PostId).IsEqualTo(postId);
+        await Assert.That(detail.CanReply).IsFalse();
+        await Assert.That(detail.Comments.Any(comment => comment.Text == "ответ владельца")).IsTrue();
+        await Assert.That(detail.Comments.All(comment => !comment.Me)).IsTrue();
+    }
+
+    [Test]
+    public async Task Post_ForMissingOrOtherWorldPost_ReturnsNotFoundAsync()
+    {
+        // Arrange
+        const long viewerUserId = 1034;
+        const long otherWorldUserId = 1035;
+        using TestApiClient viewerApi = factory.CreateApiClient(viewerUserId);
+        await OnboardAsync(viewerApi);
+        using TestApiClient otherWorldApi = factory.CreateApiClient(otherWorldUserId);
+        await OnboardAsync(otherWorldApi, WorldId.Academy);
+        await PublishAsync(otherWorldUserId, "пост чужого мира");
+        BsonDocument otherPlayer = await GetStoredPlayerAsync(otherWorldUserId);
+        BsonDocument otherPost = await Database
+            .GetCollection<BsonDocument>("posts")
+            .Find(new BsonDocument("PlayerId", otherPlayer["_id"]))
+            .SingleAsync();
+        using HttpClient http = CreateAuthenticatedHttpClient(viewerUserId);
+
+        // Act
+        using HttpResponseMessage missing = await http.GetAsync(
+            $"/posts/{Guid.NewGuid():N}",
+            CancellationToken.None);
+        using HttpResponseMessage foreign = await http.GetAsync(
+            $"/posts/{otherPost["_id"].AsString}",
+            CancellationToken.None);
+
+        // Assert
+        await Assert.That(missing.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+        await Assert.That(foreign.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
     }
 
     [Test]

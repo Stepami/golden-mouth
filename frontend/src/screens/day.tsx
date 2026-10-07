@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { dm as dmMock, feed, firstPost, friends as friendsMock, worldOf } from '../api/mock'
-import type { DmMessage, Drama } from '../api/types'
+import type { DmMessage, Drama, FeedItem } from '../api/types'
 import { useNav } from '../app/nav'
 import { useApi } from '../app/useApi'
 import { usePlayer, useStore } from '../app/store'
@@ -74,6 +74,30 @@ function StarCard() {
   )
 }
 
+// 03-3: карточка поста в общей ленте. Открывается с клавиатуры (Enter/Space) и ведёт
+// именно на свой postId; жалоба — отдельное действие, она не открывает пост.
+function FeedPostCard({ item }: { item: FeedItem }) {
+  const nav = useNav()
+  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId }) : undefined
+  return (
+    <Card style={{ marginBottom: 12, position: 'relative' }}>
+      <div
+        role={open ? 'button' : undefined}
+        tabIndex={open ? 0 : undefined}
+        onClick={open}
+        onKeyDown={open ? event => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open() } } : undefined}
+        style={open ? { cursor: 'pointer' } : undefined}
+      >
+        <div className="row"><Avatar seed={item.avatar!} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b> <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago}</div></div></div>
+        {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>Лиза · трейни</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
+        <div style={{ marginTop: 8 }}>{item.text}</div>
+        <div style={{ marginTop: 8 }}>{item.reactions?.map(r => <span key={r.emoji} className="react">{r.emoji} {short(r.count)}</span>)}</div>
+      </div>
+      <button onClick={event => { event.stopPropagation(); nav.push('06-1_report', { text: item.text }) }} aria-label="Пожаловаться" style={{ position: 'absolute', right: 14, top: 12, background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>
+    </Card>
+  )
+}
+
 // 03-3: лента мира
 function Feed() {
   const nav = useNav()
@@ -84,13 +108,8 @@ function Feed() {
       <TopBar title={`Лента ${w.gen}`} right={<button onClick={() => nav.push('05-11_world_rules')} style={{ background: 'none', border: 'none', color: 'inherit', fontSize: 13 }}>📜 Как устроен мир</button>} />
       <div className="pad">
         {items.map((f, i) => f.kind === 'news'
-          ? <Card key={i} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ АГЕНТСТВА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
-          : <Card key={i} style={{ marginBottom: 12 }}>
-              <div className="row"><Avatar seed={f.avatar!} size={36} /><div style={{ flex: 1 }}><b>{f.author}</b> <span className="small muted">{f.role}</span><div className="tiny muted">{f.ago}</div></div><button onClick={() => nav.push('06-1_report', { text: f.text })} aria-label="Пожаловаться" style={{ background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button></div>
-              {f.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>Лиза · трейни</b> <span className="muted">· в реках 🌊</span><div>{f.repost}</div></div>}
-              <div style={{ marginTop: 8 }}>{f.text}</div>
-              <div style={{ marginTop: 8 }}>{f.reactions?.map(r => <span key={r.emoji} className="react">{r.emoji} {short(r.count)}</span>)}</div>
-            </Card>)}
+          ? <Card key={`news-${i}`} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ АГЕНТСТВА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
+          : <FeedPostCard key={f.postId ?? `post-${i}`} item={f} />)}
       </div>
     </div>
   )

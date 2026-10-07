@@ -262,6 +262,41 @@ internal sealed class MongoGameStore : IGameStore
             .ToListAsync(cancellationToken);
     }
 
+    public async ValueTask<IReadOnlyList<GamePost>> GetRecentWorldPostsAsync(
+        WorldId worldId,
+        int count,
+        CancellationToken cancellationToken)
+    {
+        List<PlayerId> playerIds = await _players
+            .Find(item => item.World == worldId)
+            .Project(item => item.Id)
+            .ToListAsync(cancellationToken);
+        if (playerIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await _posts
+            .Find(Builders<GamePost>.Filter.In(item => item.PlayerId, playerIds))
+            .SortByDescending(item => item.CreatedAtUtc)
+            .Limit(count)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async ValueTask<IReadOnlyList<PlayerProfile>> GetPlayersAsync(
+        IReadOnlyCollection<PlayerId> playerIds,
+        CancellationToken cancellationToken)
+    {
+        if (playerIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await _players
+            .Find(Builders<PlayerProfile>.Filter.In(item => item.Id, playerIds))
+            .ToListAsync(cancellationToken);
+    }
+
     public async ValueTask<IReadOnlyList<long>> GetRecentPostViewsAsync(
         PlayerId playerId,
         int count,
@@ -273,6 +308,15 @@ internal sealed class MongoGameStore : IGameStore
             .Limit(count)
             .Project(item => item.Views)
             .ToListAsync(cancellationToken);
+    }
+
+    public async ValueTask<GamePost?> GetPostAsync(
+        PostId postId,
+        CancellationToken cancellationToken)
+    {
+        return await _posts
+            .Find(item => item.Id == postId)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async ValueTask<GamePost?> GetPostAsync(
