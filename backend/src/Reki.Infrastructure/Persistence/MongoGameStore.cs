@@ -310,7 +310,7 @@ internal sealed class MongoGameStore : IGameStore
             .ToListAsync(cancellationToken);
     }
 
-    public async ValueTask<GamePost?> GetPostAsync(
+    public async ValueTask<GamePost?> FindPostAsync(
         PostId postId,
         CancellationToken cancellationToken)
     {

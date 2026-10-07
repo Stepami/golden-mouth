@@ -15,7 +15,7 @@ public sealed class GetPostHandler(IGameStore store, PlayerReader playerReader)
         CancellationToken cancellationToken)
     {
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        GamePost post = await store.GetPostAsync(request.PostId, cancellationToken)
+        GamePost post = await store.FindPostAsync(request.PostId, cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");
         bool canReply = post.PlayerId == player.Id;
         if (!canReply)

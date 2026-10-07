@@ -67,7 +67,7 @@ public interface IGameStore
         int count,
         CancellationToken cancellationToken);
 
-    ValueTask<GamePost?> GetPostAsync(
+    ValueTask<GamePost?> FindPostAsync(
         PostId postId,
         CancellationToken cancellationToken);
 
