@@ -804,60 +804,6 @@ public sealed class GameApiTests(ApiFactory factory)
         await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
     }
 
-    private async Task<(string PostId, string CommentId)> PublishPostForThreadAsync(long telegramUserId)
-    {
-        using TestApiClient api = factory.CreateApiClient(telegramUserId);
-        await OnboardAsync(api);
-        await PublishAsync(telegramUserId, "пост для треда");
-        BsonDocument player = await GetStoredPlayerAsync(telegramUserId);
-        BsonDocument post = await Database
-            .GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("PlayerId", player["_id"]))
-            .SingleAsync();
-        return (post["_id"].AsString, post["Comments"].AsBsonArray[0]["Id"].AsString);
-    }
-
-    private Task<BsonDocument> GetStoredPlayerAsync(long telegramUserId) =>
-        Database
-            .GetCollection<BsonDocument>("players")
-            .Find(new BsonDocument("TelegramUserId", telegramUserId))
-            .SingleAsync();
-
-    private Task<BsonDocument> GetStoredPostAsync(string postId) =>
-        Database
-            .GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("_id", postId))
-            .SingleAsync();
-
-    private async Task<ReplyResponse> ReplyAsync(
-        long telegramUserId,
-        string postId,
-        string commentId,
-        string replyId,
-        string text)
-    {
-        using HttpClient http = CreateAuthenticatedHttpClient(telegramUserId);
-        using var body = new StringContent(
-            JsonSerializer.Serialize(new { commentId, replyId, text }),
-            Encoding.UTF8,
-            "application/json");
-        using HttpResponseMessage response = await http.PostAsync(
-            $"/posts/{postId}/replies",
-            body,
-            CancellationToken.None);
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        string json = await response.Content.ReadAsStringAsync(CancellationToken.None);
-        return JsonSerializer.Deserialize(json, ApiJsonSerializerContext.Default.ReplyResponse)
-            ?? throw new InvalidOperationException("The reply response was empty.");
-    }
-
-    private async Task<byte[]> ReadAllBytesAsync(Stream stream)
-    {
-        using var buffer = new MemoryStream();
-        await stream.CopyToAsync(buffer, CancellationToken.None);
-        return buffer.ToArray();
-    }
-
     private static ChatResponse CreateChatResponse(IEnumerable<ChatMessage> messages)
     {
         bool directMessage = messages.Any(message => message.Text.Contains(
@@ -945,6 +891,60 @@ public sealed class GameApiTests(ApiFactory factory)
                 Star = "mira",
             },
             CancellationToken.None);
+    }
+
+    private async Task<(string PostId, string CommentId)> PublishPostForThreadAsync(long telegramUserId)
+    {
+        using TestApiClient api = factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        await PublishAsync(telegramUserId, "пост для треда");
+        BsonDocument player = await GetStoredPlayerAsync(telegramUserId);
+        BsonDocument post = await Database
+            .GetCollection<BsonDocument>("posts")
+            .Find(new BsonDocument("PlayerId", player["_id"]))
+            .SingleAsync();
+        return (post["_id"].AsString, post["Comments"].AsBsonArray[0]["Id"].AsString);
+    }
+
+    private Task<BsonDocument> GetStoredPlayerAsync(long telegramUserId) =>
+        Database
+            .GetCollection<BsonDocument>("players")
+            .Find(new BsonDocument("TelegramUserId", telegramUserId))
+            .SingleAsync();
+
+    private Task<BsonDocument> GetStoredPostAsync(string postId) =>
+        Database
+            .GetCollection<BsonDocument>("posts")
+            .Find(new BsonDocument("_id", postId))
+            .SingleAsync();
+
+    private async Task<ReplyResponse> ReplyAsync(
+        long telegramUserId,
+        string postId,
+        string commentId,
+        string replyId,
+        string text)
+    {
+        using HttpClient http = CreateAuthenticatedHttpClient(telegramUserId);
+        using var body = new StringContent(
+            JsonSerializer.Serialize(new { commentId, replyId, text }),
+            Encoding.UTF8,
+            "application/json");
+        using HttpResponseMessage response = await http.PostAsync(
+            $"/posts/{postId}/replies",
+            body,
+            CancellationToken.None);
+        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        string json = await response.Content.ReadAsStringAsync(CancellationToken.None);
+        return JsonSerializer.Deserialize(json, ApiJsonSerializerContext.Default.ReplyResponse)
+            ?? throw new InvalidOperationException("The reply response was empty.");
+    }
+
+    private async Task<byte[]> ReadAllBytesAsync(Stream stream)
+    {
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer, CancellationToken.None);
+        return buffer.ToArray();
     }
 
     private IReadOnlyList<ChatMessage> GetCapturedChatMessages()
