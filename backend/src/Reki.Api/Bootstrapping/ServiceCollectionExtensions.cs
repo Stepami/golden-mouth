@@ -4,6 +4,7 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Reki.Api.Common.Errors;
 using Reki.Api.Mapping;
+using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Application;
 using Reki.Application.Common;
@@ -45,27 +46,11 @@ internal static class ServiceCollectionExtensions
     {
         services.AddExceptionHandler<ApiExceptionHandler>();
         services.AddProblemDetails();
-        services.AddOpenApi(options => options.AddOperationTransformer((operation, context, _) =>
+        services.AddOpenApi(options =>
         {
-            var routeValues = context.Description.ActionDescriptor.RouteValues;
-
-            if (routeValues.TryGetValue("controller", out var controller) &&
-                routeValues.TryGetValue("action", out var action))
-            {
-                operation.OperationId = $"{controller}_{action}";
-            }
-
-            if (operation.Responses is { } responses &&
-                responses.TryGetValue("200", out var response) &&
-                response is { Content: { } content } &&
-                content.TryGetValue("text/event-stream", out var stream))
-            {
-                stream.Schema = null;
-                content.Remove("application/json");
-            }
-
-            return Task.CompletedTask;
-        }));
+            options.AddOperationTransformer<OperationMetadataTransformer>();
+            options.AddDocumentTransformer<TelegramMiniAppSecurityTransformer>();
+        });
         services
             .AddControllers(options => options.Filters.Add(
                 new AuthorizeFilter(TgMiniAppAuthConstants.AuthenticationScheme)))
