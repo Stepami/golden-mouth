@@ -490,5 +490,5 @@ apm.lock.yaml
 
 # Generated backend contracts
 src/Reki.Api/Reki.Api.http
-src/Reki.Api/OpenApi/
+src/Reki.Api/OpenApi/reki-api.json
 tests/Reki.Tests/Generated/RekiApiClient.g.cs

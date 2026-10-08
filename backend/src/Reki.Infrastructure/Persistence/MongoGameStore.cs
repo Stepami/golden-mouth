@@ -58,14 +58,40 @@ internal sealed class MongoGameStore : IGameStore
 
     public async ValueTask<bool> TryCreatePlayerAsync(
         PlayerProfile player,
+        PlayerProfile? updatedInviter,
+        int expectedInviterVersion,
         CancellationToken cancellationToken)
     {
         try
         {
-            await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
+            if (updatedInviter is null)
+            {
+                await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
+                return true;
+            }
+
+            using IClientSessionHandle session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
+            session.StartTransaction();
+            await _players.InsertOneAsync(session, player, cancellationToken: cancellationToken);
+            ReplaceOneResult result = await _players.ReplaceOneAsync(
+                session,
+                item => item.Id == updatedInviter.Id && item.Version == expectedInviterVersion,
+                updatedInviter,
+                cancellationToken: cancellationToken);
+            if (result.ModifiedCount != 1)
+            {
+                await session.AbortTransactionAsync(cancellationToken);
+                return false;
+            }
+
+            await session.CommitTransactionAsync(cancellationToken);
             return true;
         }
         catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
+        catch (MongoException exception) when (exception.HasErrorLabel("TransientTransactionError"))
         {
             return false;
         }

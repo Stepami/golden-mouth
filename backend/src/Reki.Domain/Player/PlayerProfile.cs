@@ -41,6 +41,12 @@ public sealed record PlayerProfile(
 
     public DateTimeOffset? InvitedAtUtc { get; init; }
 
+    public int FirstPostInviteBonus { get; init; }
+
+    public bool FirstPostInviteBonusUsed { get; init; }
+
+    public int InviteBonusesEarnedInPeriod { get; init; }
+
     public PlayerProfile EnsureDefaults()
     {
         // Mongo can hydrate null for fields absent from legacy documents despite the domain contract.
@@ -84,6 +90,7 @@ public sealed record PlayerProfile(
         {
             PostsUsed = 0,
             DailyBonus = 0,
+            InviteBonusesEarnedInPeriod = 0,
             PostsPeriodStartedAtUtc = periodStartedAtUtc,
             RestedPostsRemaining = restedPosts,
             Wants = Wants.Select(want => want with { Done = false }).ToArray(),
@@ -149,6 +156,11 @@ public sealed record PlayerProfile(
         {
             Subscribers = subscribers,
             PostsUsed = PostsUsed + 1,
+            DailyBonus = DailyBonus + (TotalPostsPublished == 0 && !FirstPostInviteBonusUsed
+                ? FirstPostInviteBonus
+                : 0),
+            FirstPostInviteBonusUsed = FirstPostInviteBonusUsed ||
+                (TotalPostsPublished == 0 && FirstPostInviteBonus > 0),
             Skills = skills,
             Wants = wants,
             Achievements = achievements,
@@ -202,6 +214,21 @@ public sealed record PlayerProfile(
         {
             DailyBonus = DailyBonus + bonus,
             PlusInterestClaimed = true,
+            Version = Version + 1,
+        };
+    }
+
+    public PlayerProfile GrantInviteBonus(int bonus, int maxPerPeriod)
+    {
+        if (InviteBonusesEarnedInPeriod >= maxPerPeriod)
+        {
+            return this;
+        }
+
+        return this with
+        {
+            DailyBonus = DailyBonus + bonus,
+            InviteBonusesEarnedInPeriod = InviteBonusesEarnedInPeriod + 1,
             Version = Version + 1,
         };
     }

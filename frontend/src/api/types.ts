@@ -16,7 +16,7 @@ export interface CollectionCard { id: string; emoji: string; title: string; open
 
 export interface Player {
   id: string; name: string; handle: string; role: string; address: Address
-  world: WorldId; subs: number; postsLeft: number; postsCap: number
+  world: WorldId; subs: number; postsLeft: number; postsCap: number; firstPostInviteBonus: number
   streak: { days: number; week: boolean[]; nextReward: string }
   skills: Record<SkillId, Skill>; wants: Want[]; collection: CollectionCard[]
   bio: string; type: string                     // «дерзкая с самоиронией»

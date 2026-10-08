@@ -24,6 +24,8 @@ internal static class TestGameData
             new TimeOnly(9, 0),
             5,
             3,
+            5,
+            3,
             3,
             new GrowthBalance(
                 0.6,

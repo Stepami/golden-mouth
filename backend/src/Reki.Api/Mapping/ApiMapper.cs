@@ -46,6 +46,7 @@ public sealed partial class ApiMapper
             player.Subscribers,
             source.PostsLeft,
             source.PostsCap,
+            player.FirstPostInviteBonusUsed ? 0 : player.FirstPostInviteBonus,
             new StreakResponse(player.StreakDays, week, "ещё день — и бонус"),
             skills,
             player.Wants

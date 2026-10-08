@@ -4,6 +4,8 @@ public sealed record GameBalance(
     int FreePostsPerDay,
     int PlusPostsPerDay,
     TimeOnly PostsResetTimeMoscow,
+    int InviteBonusBoth,
+    int InviteBonusMaxPerDay,
     int PlusInterestBonus,
     int ChallengeWinBonusPerDay,
     int ChallengeWinBonusDays,

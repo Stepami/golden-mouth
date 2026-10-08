@@ -14,7 +14,11 @@ public interface IGameStore
 
     ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
 
-    ValueTask<bool> TryCreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
+    ValueTask<bool> TryCreatePlayerAsync(
+        PlayerProfile player,
+        PlayerProfile? updatedInviter,
+        int expectedInviterVersion,
+        CancellationToken cancellationToken);
 
     ValueTask UpsertPlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
 
