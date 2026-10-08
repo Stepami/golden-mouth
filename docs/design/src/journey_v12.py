@@ -5,4 +5,4 @@ S['01-4b_world_setup'] = P(f'''<div style="padding:20px"><div style="font-size:2
 S['02-3_result'] = S['02-3_result'].replace('+12</b>', '+28</b>').replace('+8</b>', '+10</b>')
 S['02-4_flop'] = S['02-4_flop'].replace('−6</b>', '−7</b>').replace('не про Сцену', 'мимо темы мира')
 
-S['02-3_result'] = S['02-3_result'].replace(why("✍️", "своими словами", "×1,3"), '').replace('🎁 друг зайдёт по карточке: +5 постов вам обоим', 'Отправь другу свой пост')
+S['02-3_result'] = S['02-3_result'].replace(why("✍️", "своими словами", "×1,3"), '').replace('🎁 друг зайдёт по карточке: +5 постов вам обоим', '')

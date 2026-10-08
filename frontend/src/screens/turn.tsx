@@ -165,7 +165,7 @@ function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'nor
           </> : <>
             <Button onClick={() => nav.replace('02-6_thread', { post })}>Дальше</Button>
             {theme === 'normal' && <><button onClick={() => nav.push('02-7_share', { post })} style={{ display: 'block', margin: '10px auto 4px', background: 'none', border: 'none', color: 'var(--lilac)' }}>Поделиться в чат или сторис ›</button>
-              <div className="small" style={{ textAlign: 'center', color: 'var(--gift)' }}>Отправь другу свой пост</div></>}
+              </>}
           </>}
         </div>
       </div>
