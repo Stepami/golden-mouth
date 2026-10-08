@@ -56,6 +56,21 @@ internal sealed class MongoGameStore : IGameStore
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public async ValueTask<bool> TryCreatePlayerAsync(
+        PlayerProfile player,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
+    }
+
     public async ValueTask UpsertPlayerAsync(
         PlayerProfile player,
         CancellationToken cancellationToken)

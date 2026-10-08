@@ -44,9 +44,20 @@ public sealed class PlayerController(
                 request.Name,
                 request.Handle,
                 request.Address.ToString().ToLowerInvariant(),
-                StarId.From(request.Star)),
+                StarId.From(request.Star),
+                request.ReferralCode),
             cancellationToken);
         return TypedResults.Ok(mapper.MapPlayer(result));
+    }
+
+    [HttpGet("referral", Name = "GetReferralCode")]
+    [ActionName("GetReferralCode")]
+    public async Task<Ok<ReferralResponse>> GetReferralCodeAsync(CancellationToken cancellationToken)
+    {
+        ReferralResponse result = await sender.Send(
+            new GetReferralQuery(TelegramUserId.From(telegramUser.User.Id)),
+            cancellationToken);
+        return TypedResults.Ok(result);
     }
 
     [HttpPatch("settings", Name = "UpdateSettings")]

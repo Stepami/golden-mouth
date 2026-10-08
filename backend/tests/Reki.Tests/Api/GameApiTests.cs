@@ -143,7 +143,7 @@ public sealed class GameApiTests(ApiFactory factory)
     }
 
     [Test]
-    public async Task Feed_ReturnsSameWorldPostsAsync()
+    public async Task Feed_WithOtherPlayersInSameWorld_ReturnsOnlyOwnPostsAsync()
     {
         // Arrange
         const long viewerUserId = 1024;
@@ -164,12 +164,81 @@ public sealed class GameApiTests(ApiFactory factory)
 
         // Assert
         FeedItemResponse own = feed.Single(feedItem => feedItem.Text == "пост зрителя");
-        FeedItemResponse neighbor = feed.Single(feedItem => feedItem.Text == "пост соседа");
         await Assert.That(own.PostId).IsNotNull();
         await Assert.That(own.CanReply).IsTrue();
-        await Assert.That(neighbor.PostId).IsNotNull();
-        await Assert.That(neighbor.CanReply).IsFalse();
+        await Assert.That(feed.Any(feedItem => feedItem.Text == "пост соседа")).IsFalse();
         await Assert.That(feed.Any(feedItem => feedItem.Text == "пост другого мира")).IsFalse();
+    }
+
+    [Test]
+    public async Task Referral_NewPlayerFromCode_PreservesFirstInviterAsync()
+    {
+        // Arrange
+        using TestApiClient inviterApi = factory.CreateApiClient(8001);
+        using TestApiClient otherApi = factory.CreateApiClient(8002);
+        using TestApiClient friendApi = factory.CreateApiClient(8003);
+        await OnboardAsync(inviterApi);
+        await OnboardAsync(otherApi);
+        ReferralResponse first = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        ReferralResponse other = await otherApi.Player.GetReferralCodeAsync(CancellationToken.None);
+
+        // Act
+        await OnboardAsync(friendApi, referralCode: first.Code);
+        await OnboardAsync(friendApi, referralCode: other.Code);
+        ReferralResponse repeated = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        BsonDocument friend = await GetStoredPlayerAsync(8003);
+        BsonDocument inviter = await GetStoredPlayerAsync(8001);
+
+        // Assert
+        await Assert.That(first.Code).IsEqualTo(repeated.Code);
+        await Assert.That(first.Code == other.Code).IsFalse();
+        await Assert.That(friend["InvitedBy"].AsString).IsEqualTo(inviter["_id"].AsString);
+        await Assert.That(friend["InvitedAtUtc"].IsBsonNull).IsFalse();
+        await Assert.That(friend["DailyBonus"].AsInt32).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task Referral_InvalidSource_DoesNotCreateAttributionAsync()
+    {
+        // Arrange
+        using TestApiClient unknownApi = factory.CreateApiClient(8004);
+        using TestApiClient malformedApi = factory.CreateApiClient(8005);
+        using TestApiClient selfApi = factory.CreateApiClient(8006);
+        await OnboardAsync(selfApi);
+        ReferralResponse own = await selfApi.Player.GetReferralCodeAsync(CancellationToken.None);
+
+        // Act
+        await OnboardAsync(unknownApi, referralCode: $"ref_{Guid.NewGuid():N}");
+        await OnboardAsync(malformedApi, referralCode: "invalid-code");
+        await OnboardAsync(selfApi, referralCode: own.Code);
+
+        // Assert
+        foreach (long userId in new long[] { 8004, 8005, 8006 })
+        {
+            BsonDocument player = await GetStoredPlayerAsync(userId);
+            await Assert.That(player["InvitedBy"].IsBsonNull).IsTrue();
+            await Assert.That(player["DailyBonus"].AsInt32).IsEqualTo(0);
+        }
+    }
+
+    [Test]
+    public async Task Onboarding_ConcurrentInvitations_PreservesAttributionAsync()
+    {
+        // Arrange
+        using TestApiClient inviterApi = factory.CreateApiClient(8007);
+        using TestApiClient friendApi = factory.CreateApiClient(8008);
+        await OnboardAsync(inviterApi);
+        ReferralResponse referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+
+        // Act
+        PlayerResponse[] results = await Task.WhenAll(
+            OnboardAsync(friendApi, referralCode: referral.Code),
+            OnboardAsync(friendApi, referralCode: referral.Code));
+        BsonDocument friend = await GetStoredPlayerAsync(8008);
+
+        // Assert
+        await Assert.That(results[0].Id).IsEqualTo(results[1].Id);
+        await Assert.That(friend["InvitedBy"].AsString).IsEqualTo(referral.Code[4..]);
     }
 
     [Test]
@@ -1066,7 +1135,8 @@ public sealed class GameApiTests(ApiFactory factory)
 
     private static Task<PlayerResponse> OnboardAsync(
         TestApiClient api,
-        WorldId world = WorldId.Stage)
+        WorldId world = WorldId.Stage,
+        string referralCode = "")
     {
         return api.Player.CompleteOnboardingAsync(
             new OnboardingRequest
@@ -1078,6 +1148,7 @@ public sealed class GameApiTests(ApiFactory factory)
                 Handle = "player",
                 Address = Address.Nick,
                 Star = "mira",
+                ReferralCode = referralCode,
             },
             CancellationToken.None);
     }

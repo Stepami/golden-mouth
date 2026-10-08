@@ -8,6 +8,7 @@ import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
 import { Avatar, BottomCTA, Card, Chip, Dots, Segmented, fmt } from '../ui'
 import { track } from '../app/log'
+import { pendingReferral, clearReferral } from '../app/referral'
 import { register } from '.'
 
 /** Точки прогресса онбординга и «назад», кроме первого шага. */
@@ -189,8 +190,9 @@ function FirstStar() {
     setSaving(true); setError('')
     const p = nav.params as Record<string, string>
     try {
-      const pl = created.current ?? await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', world: p.world ?? 'stage', role: p.role ?? profile.roles[0], name: p.name ?? profile.name, handle: p.handle ?? profile.handle, address: p.address ?? 'nick', star: pick })
+      const pl = created.current ?? await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', world: p.world ?? 'stage', role: p.role ?? profile.roles[0], name: p.name ?? profile.name, handle: p.handle ?? profile.handle, address: p.address ?? 'nick', star: pick, referralCode: pendingReferral() })
       created.current = pl
+      clearReferral()
       const settings = { voice: p.voice ?? profile.voices[0], drama: (p.drama as Drama) ?? profile.drama }
       await api.settings(settings)
       try { localStorage.setItem(`reki:first-star:${pl.id}`, pick) } catch { /* optional storage */ }

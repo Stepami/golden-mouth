@@ -4,6 +4,9 @@ namespace Reki.Contracts.Player;
 
 public sealed record OnboardingRequest
 {
+    [MaxLength(64)]
+    public string? ReferralCode { get; init; }
+
     public required BirthGroup BirthGroup { get; init; }
 
     public required WorldId World { get; init; }

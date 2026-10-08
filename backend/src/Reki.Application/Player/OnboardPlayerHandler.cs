@@ -1,5 +1,6 @@
 using Mediator;
 using Reki.Application.Common;
+using Reki.Application.Common.Exceptions;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Player;
@@ -8,25 +9,41 @@ public sealed class OnboardPlayerHandler(
     IGameStore store,
     GameBalance balance,
     GameDay gameDay,
-    PlayerReader playerReader) : IRequestHandler<OnboardPlayerCommand, PlayerView>
+    PlayerReader playerReader,
+    TimeProvider timeProvider) : IRequestHandler<OnboardPlayerCommand, PlayerView>
 {
     public async ValueTask<PlayerView> Handle(
         OnboardPlayerCommand request,
         CancellationToken cancellationToken)
     {
-        DateTimeOffset periodStart = gameDay.PeriodStart;
-        PlayerProfile? existing = await store.GetPlayerAsync(
-            request.TelegramUserId,
-            cancellationToken);
-        PlayerProfile? normalized = existing is null
-            ? null
-            : gameDay.Normalize(existing.EnsureDefaults());
-        PlayerProfile player = normalized is null
-            ? CreatePlayer(request, periodStart, balance.Growth.StartingSubscribers)
-            : UpdatePlayer(normalized, request);
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            PlayerProfile? existing = await store.GetPlayerAsync(request.TelegramUserId, cancellationToken);
+            if (existing is null)
+            {
+                PlayerId? inviter = await ResolveInviterAsync(request, cancellationToken);
+                PlayerProfile created = CreatePlayer(request, gameDay.PeriodStart, balance.Growth.StartingSubscribers) with
+                {
+                    InvitedBy = inviter,
+                    InvitedAtUtc = inviter is null ? null : timeProvider.GetUtcNow(),
+                };
+                if (await store.TryCreatePlayerAsync(created, cancellationToken))
+                {
+                    return playerReader.CreateView(created);
+                }
+            }
+            else
+            {
+                PlayerProfile normalized = gameDay.Normalize(existing.EnsureDefaults());
+                PlayerProfile updated = UpdatePlayer(normalized, request);
+                if (await store.TryReplacePlayerAsync(updated, existing.Version, cancellationToken))
+                {
+                    return playerReader.CreateView(updated);
+                }
+            }
+        }
 
-        await store.UpsertPlayerAsync(player, cancellationToken);
-        return playerReader.CreateView(player);
+        throw new RequestConflictException("Player changed while onboarding. Retry the request.");
     }
 
     private static PlayerProfile CreatePlayer(
@@ -104,5 +121,22 @@ public sealed class OnboardPlayerHandler(
             StarRelations = relations,
             Version = player.Version + 1,
         };
+    }
+
+    private async ValueTask<PlayerId?> ResolveInviterAsync(
+        OnboardPlayerCommand request,
+        CancellationToken cancellationToken)
+    {
+        string? code = request.ReferralCode;
+        if (code is null || !code.StartsWith("ref_", StringComparison.Ordinal) ||
+            !Guid.TryParseExact(code[4..], "N", out _))
+        {
+            return null;
+        }
+
+        PlayerProfile? inviter = await store.GetPlayerAsync(PlayerId.From(code[4..]), cancellationToken);
+        return inviter is not null && inviter.TelegramUserId != request.TelegramUserId
+            ? inviter.Id
+            : null;
     }
 }

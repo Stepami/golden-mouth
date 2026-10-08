@@ -53,10 +53,10 @@ async function publicationState(id: string): Promise<PublicationState> {
 
 export const api = {
   me: (): Promise<Player> => (BASE ? call<Player>('/me') : laterLazy(demoPlayer)).then(rememberPlayer),
-  onboarding: (body: { birthGroup: '14-17' | '18+'; world: string; role: string; name: string; handle: string; address: string; star: string }): Promise<Player> =>
+  onboarding: (body: { birthGroup: '14-17' | '18+'; world: string; role: string; name: string; handle: string; address: string; star: string; referralCode?: string }): Promise<Player> =>
     (BASE ? call<Player>('/onboarding', { method: 'POST', body: JSON.stringify(body) }) : laterLazy(() => saveDemoPlayer({
       ...structuredClone(mock.player), ...body, world: body.world as WorldId, address: body.address as Player['address'],
-      id: crypto.randomUUID(), bio: '', type: 'автор своего канала', subs: 120, postsLeft: 10, wants: wantsFor(body.world),
+      id: crypto.randomUUID().replaceAll('-', ''), bio: '', type: 'автор своего канала', subs: 120, postsLeft: 10, wants: wantsFor(body.world),
       skills: { brave: { level: 1, progress: 0 }, humor: { level: 1, progress: 0 }, topic: { level: 1, progress: 0 } },
     }))).then(rememberPlayer),
   /** Генерация, затем модерация и поток реакции; при обрыве сверяем сохранённый статус. */
@@ -158,6 +158,7 @@ export const api = {
       : later(mock.threadReply(replyId)),
   report: (commentId: string, reason: string) => BASE ? call('/reports', { method: 'POST', body: JSON.stringify({ commentId, reason }) }) : later({ ok: true }),
   plusInterest: () => BASE ? call('/plus-interest', { method: 'POST' }) : later({ bonus: 5 }),
+  referral: (): Promise<{ code: string }> => BASE ? call('/referral') : laterLazy(() => ({ code: `ref_${sessionPlayer!.id === 'p1' ? mock.player.id : sessionPlayer!.id.replaceAll('-', '')}` })),
   settings: async (patch: Partial<Player['settings']>) => {
     if (BASE) await call('/settings', { method: 'PATCH', body: JSON.stringify(patch) })
     if (sessionPlayer) {
@@ -166,7 +167,11 @@ export const api = {
     }
   },
   feed: async (world: WorldId = sessionPlayer?.world ?? 'stage'): Promise<FeedItem[]> => {
-    const remote = BASE ? await call<FeedItem[]>('/feed') : []
+    const remote: FeedItem[] = BASE ? await call<FeedItem[]>('/feed') : demoOwnPosts(sessionPlayer?.id ?? '').slice(0, 20).map(post => ({
+      kind: 'post', postId: post.id, canReply: true, author: sessionPlayer?.name, avatar: sessionPlayer?.handle, role: sessionPlayer?.role,
+      ago: post.at, text: post.text, reactions: post.reactions, views: post.views,
+      commentCount: withDemoComments(post, sessionPlayer?.id ?? '').comments.length,
+    }))
     const demos = runtimeConfig.features.mockFeed ? demoFeed(world).map(item => ({ ...item,
       commentCount: withDemoComments(demoPost(item.postId!)!, sessionPlayer?.id ?? '').comments.length })) : []
     return runtimeConfig.features.mockFeed ? shuffle([...remote, ...demos]) : remote

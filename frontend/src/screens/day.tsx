@@ -96,7 +96,7 @@ function FeedPostCard({ item }: { item: FeedItem }) {
         onKeyDown={open ? event => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open() } } : undefined}
         style={open ? { cursor: 'pointer' } : undefined}
       >
-        <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b> <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
+        <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{item.starId && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
         {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>{p.name}</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
         <div style={{ marginTop: 8 }}>{item.text}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
