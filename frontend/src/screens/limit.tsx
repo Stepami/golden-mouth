@@ -38,9 +38,24 @@ function Limit() {
 
 // 04-2: Реки+ тарифом; платёжки нет, «Хочу» пишет интерес и даёт +5 постов
 function FakeDoor() {
-  const nav = useNav(); const p = usePlayer(); const { patch } = useStore()
+  const nav = useNav(); const p = usePlayer(); const { setPlayer } = useStore()
   const [sent, setSent] = useState(false)
-  const take = async (interest: boolean) => { track(interest ? 'plus_interest' : 'plus_bonus_only'); if (interest) await api.plusInterest(); patch({ postsLeft: p.postsLeft + 5 }); setSent(true); setTimeout(() => nav.back(), 900) }
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const close = () => nav.canBack ? nav.back() : nav.tab(0)
+  const take = async (interest: boolean) => {
+    if (busy || sent) return
+    setBusy(true); setError('')
+    try {
+      const result = await api.plusInterest(interest)
+      setPlayer(await api.me())
+      track(interest ? 'plus_interest' : 'plus_bonus_only')
+      setMessage(result.bonus > 0 ? `+${result.bonus} постов уже у тебя` : 'Бонус уже был получен — повторно не начисляется')
+      setSent(true)
+    } catch { setError('Не получилось подтвердить бонус. Попробуй ещё раз.') }
+    finally { setBusy(false) }
+  }
   const plan = (name: string, price: string, rows: [string, boolean][], hi?: boolean) => (
     <div className="card" style={{ flex: 1, padding: 12, ...(hi ? { border: '2px solid var(--accent)', background: 'linear-gradient(160deg,#2A1A2E,#1A1A24)' } : { border: '1px solid #33323F' }) }}>
       <b>{name}</b><div style={{ fontSize: 20, fontWeight: 900, margin: '2px 0 8px' }}>{price}</div>
@@ -56,10 +71,12 @@ function FakeDoor() {
           {plan('Бесплатно', '0 ₽', [['10 постов в день', true], ['+5 за друга', true], ['свой стиль канала', false], ['все миры сразу', false]])}
           {plan('Реки+', '349 ₽/мес', [['20 постов в день', true], ['+5 за друга', true], ['свой стиль канала', true], ['все миры сразу', true]], true)}
         </div>
-        <div className="muted small" style={{ marginBottom: 12 }}>Реки+ ещё в работе, деньги не списываются. Нажми, и мы напишем в боте, когда откроем</div>
-        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#1F2A26,#1A1A24)', border: '1px solid #6BFFB855' }}><b className="up">{sent ? '+5 постов уже у тебя' : 'А пока держи +5 постов'}</b></Card>
-        <Button onClick={() => take(true)} disabled={sent} style={{ marginBottom: 8 }}>Хочу Реки+, напишите мне</Button>
-        <button className="muted small" onClick={() => take(false)} disabled={sent} style={{ background: 'none', border: 'none' }}>Забрать только +5 постов</button>
+        <div className="muted small" style={{ marginBottom: 12 }}>Реки+ ещё в работе, деньги не списываются. Можно оставить интерес к запуску. Рассылка в боте появится позже</div>
+        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#1F2A26,#1A1A24)', border: '1px solid #6BFFB855' }}><b className="up">{sent ? message : 'Можно получить +5 постов один раз'}</b></Card>
+        {error && <p className="small" role="alert">{error}</p>}
+        <Button onClick={() => take(true)} disabled={sent || busy} style={{ marginBottom: 8 }}>Хочу Реки+</Button>
+        <button className="muted small" onClick={() => take(false)} disabled={sent || busy} style={{ background: 'none', border: 'none' }}>Забрать только +5 постов</button>
+        <Button secondary onClick={close} style={{ marginTop: 12 }}>Не сейчас</Button>
       </div></div>
     </div>
   )
