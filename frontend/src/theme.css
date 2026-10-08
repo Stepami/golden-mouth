@@ -94,3 +94,10 @@ html.shot .pop { opacity: 1; animation: none; }
 .confetti i { position: absolute; top: -10px; width: 7px; height: 12px; border-radius: 2px; animation: fall 1.6s ease-in forwards; }
 @keyframes fall { to { transform: translateY(560px) rotate(540deg); opacity: 0 } }
 @media (prefers-reduced-motion: reduce) { .pop { opacity: 1; animation: none } .confetti, .float-react { display: none } .live-current span { left: 0; width: 100%; animation: none } }
+
+.star-choice { width:100%; text-align:left; color:inherit; font:inherit; cursor:pointer; }
+.star-choice:focus-visible, .text-button:focus-visible { outline:2px solid var(--lilac); outline-offset:3px; }
+.text-button { background:none; border:0; color:var(--lilac); font:inherit; cursor:pointer; padding:4px; }
+
+/* Emulator panel is disabled in vite.config; do not let its collapsed control cover Back. */
+#tma-panel { display:none; }

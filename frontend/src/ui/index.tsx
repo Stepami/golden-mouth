@@ -1,6 +1,7 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useContext, type CSSProperties, type ReactNode } from 'react'
 import { tap } from '../app/analytics'
-import { avatarUri } from './avatar'
+import { avatarUri, AvatarWorld } from './avatar'
+import type { WorldId } from '../api/types'
 
 /**
  * Круглая аватарка. seed это устойчивый признак того, кто на картинке:
@@ -8,9 +9,10 @@ import { avatarUri } from './avatar'
  * поэтому отдельного файла или ссылки на аватар нигде не нужно.
  * Без сида рисуем букву — так показывается бот.
  */
-export function Avatar({ seed, label, size = 40, style }: { seed?: string; label?: string; size?: number; style?: CSSProperties }) {
+export function Avatar({ seed, label, size = 40, style, world }: { seed?: string; label?: string; size?: number; style?: CSSProperties; world?: WorldId }) {
+  const currentWorld = useContext(AvatarWorld)
   if (!seed) return <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--grad)', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.4, ...style }}>{(label ?? '?').slice(0, 1).toUpperCase()}</div>
-  return <img src={avatarUri(seed)} alt="" width={size} height={size} style={{ borderRadius: '50%', flex: 'none', display: 'block', ...style }} />
+  return <img src={avatarUri(seed, world ?? currentWorld)} alt="" width={size} height={size} style={{ borderRadius: '50%', flex: 'none', display: 'block', ...style }} />
 }
 
 export function Button({ children, secondary, onClick, disabled, style }: { children: ReactNode; secondary?: boolean; onClick?: () => void; disabled?: boolean; style?: CSSProperties }) {

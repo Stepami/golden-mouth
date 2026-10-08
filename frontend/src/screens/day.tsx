@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
-import { dm as dmMock, feed, friends as friendsMock, worldOf } from '../api/mock'
+import { dm as dmMock, friends as friendsMock, worldOf } from '../api/mock'
 import type { ChannelPost, DmMessage, Drama, FeedItem } from '../api/types'
 import { useNav } from '../app/nav'
-import { useApi } from '../app/useApi'
+import { useApi, cachedApi, saveApiCache } from '../app/useApi'
+import { runtimeConfig } from '../app/runtimeConfig'
+import { SkillHelp } from '../ui/SkillHelp'
 import { usePlayer, useStore } from '../app/store'
 import { Avatar, Bubble, Button, Card, Chip, Gift, Segmented, SkillBar, Sheet, TopBar, fmt, short } from '../ui'
 import { ChannelHead } from './onboarding'
@@ -83,6 +85,7 @@ function StarCard() {
 // именно на свой postId; жалоба — отдельное действие, она не открывает пост.
 function FeedPostCard({ item }: { item: FeedItem }) {
   const nav = useNav()
+  const p = usePlayer()
   const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId }) : undefined
   return (
     <Card style={{ marginBottom: 12, position: 'relative' }}>
@@ -93,8 +96,8 @@ function FeedPostCard({ item }: { item: FeedItem }) {
         onKeyDown={open ? event => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open() } } : undefined}
         style={open ? { cursor: 'pointer' } : undefined}
       >
-        <div className="row"><Avatar seed={item.avatar!} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b> <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}</div></div></div>
-        {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>Лиза · трейни</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
+        <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b> <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
+        {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>{p.name}</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
         <div style={{ marginTop: 8 }}>{item.text}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{item.reactions?.map(r => <span key={r.emoji} className="react">{r.emoji} {short(r.count)}</span>)}</div>
@@ -109,15 +112,28 @@ function FeedPostCard({ item }: { item: FeedItem }) {
 // 03-3: лента мира
 function Feed() {
   const nav = useNav()
-  const items = useApi(api.feed, feed)
   const p = usePlayer(); const w = worldOf(p.world)
+  const [portion, setPortion] = useState(0)
+  const key = `feed:${p.id}:${p.world}`
+  const [items, setItems] = useState<FeedItem[]>(() => cachedApi<FeedItem[]>(key) ?? [])
+  const [feedState, setFeedState] = useState<'loading' | 'ready' | 'error'>(() => cachedApi(key) ? 'ready' : 'loading')
+  useEffect(() => {
+    let alive = true
+    api.feed(p.world).then(found => { if (alive) { saveApiCache(key, found); setItems(found); setFeedState('ready') } })
+      .catch(() => { if (alive) setFeedState('error') })
+    return () => { alive = false }
+  }, [key, p.world, portion])
   return (
     <div className="screen">
       <TopBar title={`Лента ${w.gen}`} right={<button onClick={() => nav.push('05-11_world_rules')} style={{ background: 'none', border: 'none', color: 'inherit', fontSize: 13 }}>📜 Как устроен мир</button>} />
       <div className="pad">
         {items.map((f, i) => f.kind === 'news'
-          ? <Card key={`news-${i}`} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ АГЕНТСТВА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
+          ? <Card key={`news-${i}`} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ МИРА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
           : <FeedPostCard key={f.postId ?? `post-${i}`} item={f} />)}
+        {feedState === 'loading' && <Card>Загружаем ленту…</Card>}
+        {feedState === 'error' && <Card>Не получилось обновить ленту. Попробуй ещё раз.</Card>}
+        {feedState === 'ready' && items.length === 0 && <Card>В ленте пока нет постов.</Card>}
+        <Button secondary onClick={() => setPortion(value => value + 1)}>Ещё посты</Button>
       </div>
     </div>
   )
@@ -179,41 +195,46 @@ function FriendChannel() {
 // 03-5: канал: баннер этапа, навыки, коллекция, посты
 function Stage() {
   const nav = useNav(); const p = usePlayer()
+  const [skillHelp, setSkillHelp] = useState(false)
+  const cacheKey = `channel:${p.id}:${p.world}`
   const [banner, setBanner] = useState(true)
-  const [posts, setPosts] = useState<ChannelPost[]>([])
-  const [load, setLoad] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [posts, setPosts] = useState<ChannelPost[]>(() => cachedApi<ChannelPost[]>(cacheKey) ?? [])
+  const [load, setLoad] = useState<'loading' | 'ready' | 'error'>(() => cachedApi(cacheKey) ? 'ready' : 'loading')
   const [reloadToken, setReloadToken] = useState(0)
   useEffect(() => {
     let current = true
-    setLoad('loading')
+    if (!cachedApi(cacheKey)) setLoad('loading')
     api.channelPosts().then(items => {
       if (!current) return
       setPosts(items)
+      saveApiCache(cacheKey, items)
       setLoad('ready')
     }).catch(() => { if (current) setLoad('error') })
     return () => { current = false }
-  }, [reloadToken])
+  }, [reloadToken, cacheKey])
   return (
     <div className="screen channel-screen">
       <ChannelHead />
       <div className="pad">
-        {banner && <Card style={{ marginBottom: 10, background: 'linear-gradient(135deg,#2A1A2E,#1E1A33)', border: '1px solid #FF6B8B55', position: 'relative' }}>
+        {banner && p.subs >= 1000 && <Card style={{ marginBottom: 10, background: 'linear-gradient(135deg,#2A1A2E,#1E1A33)', border: '1px solid #FF6B8B55', position: 'relative' }}>
           <button onClick={() => setBanner(false)} className="muted" style={{ position: 'absolute', right: 14, top: 10, background: 'none', border: 'none' }}>✕</button>
           <span className="badge">НОВЫЙ ЭТАП · 1 000 ПОДПИСЧИКОВ</span>
           <div style={{ fontSize: 18, fontWeight: 800, margin: '6px 0 4px' }}>👀 Взгляды</div>
           <div className="small muted">Тебя заметили. Теперь фанаты и звёзды пишут честно: хвалят и критикуют по делу. Только про посты</div>
         </Card>}
         <Card style={{ marginBottom: 10 }}>
-          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Навыки · из 10</b><span className="small" style={{ color: 'var(--lilac)' }}>как поднять ›</span></div>
+          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Навыки · из 10</b><button className="text-button small" onClick={() => setSkillHelp(true)}>как поднять ›</button></div>
           {(Object.keys(SKILL_NAMES) as (keyof typeof SKILL_NAMES)[]).map(k => <SkillBar key={k} name={SKILL_NAMES[k]} level={p.skills[k].level} progress={p.skills[k].progress} />)}
         </Card>
-        <Card style={{ marginBottom: 10 }} onClick={() => nav.tab(4)}><div className="row"><div style={{ fontSize: 22 }}>🃏</div><div style={{ flex: 1 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b><div className="small muted">Первый залёт</div></div><span className="muted">›</span></div></Card>
+        {runtimeConfig.features.collection && <Card style={{ marginBottom: 10 }} onClick={() => nav.tab(4)}><div className="row"><div style={{ fontSize: 22 }}>🃏</div><div style={{ flex: 1 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b></div><span className="muted">›</span></div></Card>}
+        <Button secondary style={{ marginBottom: 10 }} onClick={() => nav.push('04-3_invite')}>Позвать друга</Button>
         {load === 'loading' && <Card><span className="small muted">загружаем посты…</span></Card>}
         {load === 'error' && <Card><div className="small">Не получилось загрузить канал.</div><Button style={{ marginTop: 12 }} onClick={() => setReloadToken(token => token + 1)}>Попробовать снова</Button></Card>}
         {load === 'ready' && posts.length === 0 && <Card style={{ textAlign: 'center' }}><b>Канал пока пуст</b><div className="small muted" style={{ marginTop: 6 }}>Первый пост появится здесь после публикации</div></Card>}
         {load === 'ready' && posts.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
       </div>
       <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
+      {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
     </div>
   )
 }
@@ -221,6 +242,7 @@ function Stage() {
 // 05-5: «Я»: статы, серия неделей, навыки, коллекция, следующий мир
 function Me() {
   const nav = useNav(); const p = usePlayer()
+  const [skillHelp, setSkillHelp] = useState(false)
   const DAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
   const today = p.streak.week.indexOf(false)
   return (
@@ -236,15 +258,16 @@ function Me() {
           <div style={{ display: 'flex', gap: 6 }}>{DAYS.map((d, i) => <div key={d} style={{ flex: 1, textAlign: 'center' }}><div style={{ height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, ...(p.streak.week[i] ? { background: 'var(--grad)' } : i === today ? { border: '2px dashed var(--accent)' } : { background: '#20202B' }) }}>{p.streak.week[i] ? '🔥' : i === today ? '?' : ''}</div><div className="small muted" style={{ marginTop: 3 }}>{d}</div></div>)}</div>
         </Card>
         <Card style={{ marginBottom: 10 }}>
-          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Навыки · из 10</b><span className="small" style={{ color: 'var(--lilac)' }}>как поднять ›</span></div>
+          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Навыки · из 10</b><button className="text-button small" onClick={() => setSkillHelp(true)}>как поднять ›</button></div>
           {(Object.keys(SKILL_NAMES) as (keyof typeof SKILL_NAMES)[]).map(k => <SkillBar key={k} name={SKILL_NAMES[k]} level={p.skills[k].level} progress={p.skills[k].progress} />)}
         </Card>
-        <Card style={{ marginBottom: 10 }}>
+        {runtimeConfig.features.collection && <Card style={{ marginBottom: 10 }}>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b><span className="small" style={{ color: 'var(--lilac)' }}>все ›</span></div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6 }}>{p.collection.map(c => <div key={c.id} className={`slot${c.open ? ' on' : ''}`} onClick={() => c.emoji === '👑' && nav.push('03-2_star_card')} style={{ fontSize: c.open ? 22 : 14 }}>{c.open ? c.emoji : '?'}</div>)}</div>
-        </Card>
+        </Card>}
         {p.nextWorld && <Card><div className="row"><div style={{ fontSize: 22 }}>🔒</div><div style={{ flex: 1 }}><b>Мир «{p.nextWorld.title}»</b><div className="small muted">откроется на {p.nextWorld.need}</div></div><button onClick={() => nav.push('04-3_invite')} className="small" style={{ color: 'var(--gift)', background: 'none', border: 'none' }}>позвать друга ›</button></div></Card>}
       </div>
+      {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
     </div>
   )
 }

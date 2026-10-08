@@ -7,6 +7,9 @@ import { setScreen } from './app/log'
 import { TelegramLaunch } from './app/TelegramLaunch'
 import { inTelegram, syncBackButton } from './telegram'
 import { api } from './api/client'
+import { runtimeConfig } from './app/runtimeConfig'
+import { AvatarWorld } from './ui/avatar'
+import type { WorldId } from './api/types'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
 
@@ -15,7 +18,7 @@ function startEntry(): Entry {
   const q = new URLSearchParams(location.search)
   const s = q.get('screen')
   if (q.has('gallery')) return { id: 'gallery', params: {} }
-  if (s && SCREENS[s]) return { id: s, params: {} }
+  if (s && SCREENS[s]) return { id: s, params: q.has('world') ? { world: q.get('world') } : {} }
   return { id: '01-1_invite', params: {} }
 }
 
@@ -53,18 +56,21 @@ function Shell() {
 
   const Screen = SCREENS[top.id]?.component
   const resolvingExistingPlayer = playerState === 'ready' && !explicitStart && top.id === '01-1_invite'
-  if (!Screen || playerState === 'loading' || playerState === 'failed' || resolvingExistingPlayer) return <div className="app" />
+  if (!Screen || playerState === 'loading' || resolvingExistingPlayer) return <div className="app"><div className="screen"><div className="pad" role="status">Загружаем твою игру…</div></div></div>
+  if (playerState === 'failed') return <div className="app"><div className="screen"><div className="pad"><p>Не получилось загрузить игру.</p><button className="btn" onClick={() => location.reload()}>Попробовать снова</button></div></div></div>
   const tab = TAB_OF[top.id]
   return (
     <NavContext.Provider value={nav}>
+      <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'stage'}>
       <div className="app">
         <Screen />
         {tab !== undefined && (
           <nav className="tabbar">
-            {TABS.map((t, i) => <button key={t.title} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button>)}
+            {TABS.map((t, i) => (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button>)}
           </nav>
         )}
       </div>
+      </AvatarWorld.Provider>
     </NavContext.Provider>
   )
 }

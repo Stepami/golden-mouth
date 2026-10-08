@@ -29,7 +29,7 @@ export interface Player {
 export interface Reaction { emoji: string; count: number }
 export interface CommentT { id: string; author: string; avatar: string; handle: string; text: string; star?: boolean; me?: boolean; hidden?: boolean }
 /** Пост канала. `canReply` есть только при загрузке с сервера (GET /posts/:id): отвечать можно лишь под своими постами. */
-export interface Post { id: string; text: string; views: number; reactions: Reaction[]; comments: CommentT[]; inRivers?: boolean; at?: string; canReply?: boolean }
+export interface Post { id: string; text: string; views: number; reactions: Reaction[]; comments: CommentT[]; inRivers?: boolean; at?: string; canReply?: boolean; demoComments?: boolean }
 /** Wire-контракт GET /posts/:id: сервер называет идентификатор postId. */
 export interface PostDetailResponse extends Omit<Post, 'id'> { postId: string }
 export interface ChannelPost { postId: string; text: string; createdAtUtc: string; views: number; reactions: Reaction[]; commentCount: number }
@@ -58,5 +58,5 @@ export interface GameEvent { id: string; kind: 'collab' | 'hate' | 'gossip' | 'b
 export interface DmMessage { from: 'star' | 'me'; text: string }
 export interface Dm { star: Star; status: string; memory: string[]; messages: DmMessage[]; ideas: string[]; repliesLeft: number }
 /** Карточка ленты 03-3. У постов стабильный `postId`; `canReply` открывает ответ только под своими. Новости без `postId` не открываются. */
-export interface FeedItem { kind: 'news' | 'post'; postId?: string; canReply?: boolean; author?: string; avatar?: string; role?: string; ago?: string; text: string; reactions?: Reaction[]; views?: number; commentCount?: number; repost?: string }
+export interface FeedItem { kind: 'news' | 'post'; postId?: string; canReply?: boolean; author?: string; avatar?: string; role?: string; ago?: string; text: string; reactions?: Reaction[]; views?: number; commentCount?: number; repost?: string; demo?: boolean; world?: WorldId }
 export interface WorldRules { title: string; presets: string[]; description: string; rules: { text: string; locked?: boolean }[] }

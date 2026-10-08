@@ -3,17 +3,19 @@ export type ApiMode = 'mock' | 'backend'
 export interface RuntimeConfig {
   apiMode: ApiMode
   apiBaseUrl: string
+  features: { dm: boolean; friends: boolean; collection: boolean; mockFeed: boolean }
 }
 
 declare global {
   interface Window {
-    __REKI_CONFIG__?: Partial<RuntimeConfig>
+    __REKI_CONFIG__?: Partial<Omit<RuntimeConfig, 'features'>> & { features?: Partial<RuntimeConfig['features']> }
   }
 }
 
 const fallbackConfig: Readonly<RuntimeConfig> = Object.freeze({
   apiMode: 'mock',
   apiBaseUrl: '/api/v1',
+  features: { dm: false, friends: false, collection: false, mockFeed: true },
 })
 
 function readRuntimeConfig(): Readonly<RuntimeConfig> {
@@ -32,7 +34,11 @@ function readRuntimeConfig(): Readonly<RuntimeConfig> {
     return fallbackConfig
   }
 
-  return Object.freeze({ apiMode, apiBaseUrl })
+  const features = Object.fromEntries(Object.entries(fallbackConfig.features).map(([key, fallback]) => [key,
+    typeof source?.features?.[key as keyof RuntimeConfig['features']] === 'boolean'
+      ? source.features[key as keyof RuntimeConfig['features']] : fallback,
+  ])) as RuntimeConfig['features']
+  return Object.freeze({ apiMode, apiBaseUrl, features: Object.freeze(features) })
 }
 
 export const runtimeConfig = readRuntimeConfig()
