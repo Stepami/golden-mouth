@@ -17,6 +17,8 @@ public sealed class GetWorldRulesHandler(IGameStore store, PlayerReader playerRe
             player.Id,
             request.WorldId,
             cancellationToken);
-        return stored ?? WorldRulesDefaults.Create(player.Id, request.WorldId);
+        return request.WorldId.Value == "own" && stored is not null
+            ? stored
+            : WorldRulesDefaults.Create(player.Id, request.WorldId);
     }
 }

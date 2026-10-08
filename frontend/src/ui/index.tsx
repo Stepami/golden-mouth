@@ -20,9 +20,9 @@ export function Button({ children, secondary, onClick, disabled, style }: { chil
 }
 
 /** Кнопки внизу экрана: главная последней, вторичная над ней (как в макетах). */
-export function BottomCTA({ main, onMain, second, onSecond, disabled }: { main: ReactNode; onMain?: () => void; second?: ReactNode; onSecond?: () => void; disabled?: boolean }) {
+export function BottomCTA({ main, onMain, second, onSecond, disabled, secondDisabled }: { main: ReactNode; onMain?: () => void; second?: ReactNode; onSecond?: () => void; disabled?: boolean; secondDisabled?: boolean }) {
   // id кнопки для аналитики: main / second на текущем экране (экран добавит analytics.ts)
-  return <div className="bottom-cta">{second && <Button secondary onClick={() => { tap('cta_second'); onSecond?.() }}>{second}</Button>}<Button onClick={() => { tap('cta_main'); onMain?.() }} disabled={disabled}>{main}</Button></div>
+  return <div className="bottom-cta">{second && <Button secondary disabled={secondDisabled} onClick={() => { tap('cta_second'); onSecond?.() }}>{second}</Button>}<Button onClick={() => { tap('cta_main'); onMain?.() }} disabled={disabled}>{main}</Button></div>
 }
 
 export function TopBar({ title, onBack, right, children }: { title?: ReactNode; onBack?: () => void; right?: ReactNode; children?: ReactNode }) {

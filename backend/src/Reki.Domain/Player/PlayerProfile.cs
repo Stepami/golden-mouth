@@ -35,6 +35,12 @@ public sealed record PlayerProfile(
     int ChallengeDailyBonus,
     DateTimeOffset? ChallengeBonusUntilUtc)
 {
+    public bool PlusNotifyRequested { get; init; }
+
+    public PlayerId? InvitedBy { get; init; }
+
+    public DateTimeOffset? InvitedAtUtc { get; init; }
+
     public PlayerProfile EnsureDefaults()
     {
         // Mongo can hydrate null for fields absent from legacy documents despite the domain contract.

@@ -117,7 +117,7 @@ public sealed class GeneratePublicationHandler(
                                 request.Id,
                                 new PublicationPart(update.Text, null, null),
                                 cancellationToken);
-                            await PersistActionsAsync(request.Id, update, cancellationToken);
+                            await PersistActionsAsync(request.Id, update, context, cancellationToken);
                         }
                     }
                     catch (Exception exception) when (IsGenerationFailure(exception))
@@ -205,10 +205,11 @@ public sealed class GeneratePublicationHandler(
     {
         DateTimeOffset now = timeProvider.GetUtcNow();
         WorldRules? storedRules = await store.GetWorldRulesAsync(player.Id, player.World, cancellationToken);
-        WorldRules worldRules = storedRules ?? WorldRulesDefaults.Create(player.Id, player.World);
+        WorldRules worldRules = player.World.Value == "own" && storedRules is not null
+            ? storedRules
+            : WorldRulesDefaults.Create(player.Id, player.World);
         IReadOnlyList<GamePost> recentPosts = await store.GetRecentPostsAsync(player.Id, 3, cancellationToken);
-        bool hateEnabled = player.Settings.Drama != "off" &&
-            (player.HateDisabledUntilUtc is null || player.HateDisabledUntilUtc <= now);
+        bool hateEnabled = StarTurnPolicy.IsHateEnabled(player, balance, now);
         return new StarPostContext(
             request.Text,
             new StarAgentProfile(
@@ -219,7 +220,8 @@ public sealed class GeneratePublicationHandler(
                 player.Settings.Drama,
                 player.Settings.Voice,
                 null,
-                []),
+                [],
+                player.Address),
             GetStage(player.Subscribers),
             recentPosts.Select(post => post.Text).ToArray(),
             hateEnabled);
@@ -228,6 +230,7 @@ public sealed class GeneratePublicationHandler(
     private async ValueTask PersistActionsAsync(
         string publicationId,
         ChatResponseUpdate update,
+        StarPostContext context,
         CancellationToken cancellationToken)
     {
         foreach (FunctionCallContent call in update.Contents.OfType<FunctionCallContent>())
@@ -247,11 +250,17 @@ public sealed class GeneratePublicationHandler(
                         comment.Humor,
                         comment.Topic,
                         comment.Reasons,
-                        comment.OnTopic),
+                        comment.OnTopic,
+                        comment.Tone),
                     null),
                 StarReactionAction reaction => new PublicationPart(null, null, reaction.Emoji),
                 _ => throw new AiServiceUnavailableException("The model returned an unsupported action."),
             };
+            if (part.Comment is { } generated)
+            {
+                StarTurnPolicy.EnsurePostAllowed(generated, context.Agent.WorldId, context.HateEnabled);
+            }
+
             await store.AppendPublicationPartAsync(publicationId, part, cancellationToken);
         }
     }

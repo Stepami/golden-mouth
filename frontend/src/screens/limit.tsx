@@ -8,14 +8,13 @@ import { inTelegram } from '../telegram'
 import { Avatar, BottomCTA, Button, Card, Gift, TopBar, fmt } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
-import { TELEGRAM_APP_URL } from '../app/telegramLinks'
+import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
 
-const LINK = TELEGRAM_APP_URL
-const shareInvite = () => {
+const shareInvite = (link: string) => {
   track('invite_sent')
   const text = 'Играю в Реки: веду канал, а AI-звёзды реагируют на каждый пост. Заходи в мой мир!'
-  if (inTelegram) shareURL.ifAvailable(LINK, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(LINK)}&text=${encodeURIComponent(text)}`)
+  if (inTelegram) shareURL.ifAvailable(link, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`)
 }
 
 // 04-1: «звёзды отдыхают»; звёздам не пишем, бесплатное остаётся
@@ -101,9 +100,10 @@ function PlusPush() {
 // 04-3: позвать друзей; первый друг открывает «Свой мир»; «Сыграй мою историю»
 function Invite() {
   const nav = useNav(); const p = usePlayer()
+  const { link, error: linkError, retry } = useReferralLink()
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
-  const copy = async () => { try { if (inTelegram) await copyTextToClipboard(LINK); else await navigator.clipboard.writeText(LINK); setCopied(true); setCopyError(false) } catch { setCopyError(true) } }
+  const copy = async () => { if (!link) return; try { if (inTelegram) await copyTextToClipboard(link); else await navigator.clipboard.writeText(link); setCopied(true); setCopyError(false) } catch { setCopyError(true) } }
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Позвать друзей" />
@@ -115,10 +115,11 @@ function Invite() {
           <div style={{ fontSize: 28, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{fmt(p.subs)}</div>
           <div className="small">подписчиков · {worldOf(p.world).emoji} {worldOf(p.world).title}</div><div className="small muted" style={{ marginTop: 4 }}>а ты кем будешь?</div>
         </div>
-        <Card style={{ color: 'var(--muted)' }}><span className="small">Ссылка на игру: {LINK}</span></Card>
+        <Card style={{ color: 'var(--muted)' }}><span className="small">Твоя ссылка: {link ?? 'Загружаем…'}</span></Card>
       </div>
+      {linkError && <div className="pad" role="alert">Не удалось получить твою ссылку.<Button secondary onClick={retry}>Попробовать снова</Button></div>}
       {copyError && <div className="pad small" role="alert">Не удалось скопировать. Ссылка показана выше.</div>}
-      <BottomCTA second={copied ? "Ссылка скопирована" : "Скопировать ссылку"} onSecond={copy} main="Отправить в чат" onMain={shareInvite} />
+      <BottomCTA secondDisabled={!link} second={copied ? "Ссылка скопирована" : "Скопировать ссылку"} onSecond={copy} main={link ? "Отправить в чат" : "Загружаем ссылку…"} disabled={!link} onMain={() => { if (link) shareInvite(link) }} />
     </div>
   )
 }

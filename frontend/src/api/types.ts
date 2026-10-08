@@ -58,5 +58,5 @@ export interface GameEvent { id: string; kind: 'collab' | 'hate' | 'gossip' | 'b
 export interface DmMessage { from: 'star' | 'me'; text: string }
 export interface Dm { star: Star; status: string; memory: string[]; messages: DmMessage[]; ideas: string[]; repliesLeft: number }
 /** Карточка ленты 03-3. У постов стабильный `postId`; `canReply` открывает ответ только под своими. Новости без `postId` не открываются. */
-export interface FeedItem { kind: 'news' | 'post'; postId?: string; canReply?: boolean; author?: string; avatar?: string; role?: string; ago?: string; text: string; reactions?: Reaction[]; views?: number; commentCount?: number; repost?: string; demo?: boolean; world?: WorldId }
+export interface FeedItem { kind: 'news' | 'post'; postId?: string; canReply?: boolean; author?: string; avatar?: string; role?: string; ago?: string; text: string; reactions?: Reaction[]; views?: number; commentCount?: number; repost?: string; demo?: boolean; starId?: string; world?: WorldId }
 export interface WorldRules { title: string; presets: string[]; description: string; rules: { text: string; locked?: boolean }[] }

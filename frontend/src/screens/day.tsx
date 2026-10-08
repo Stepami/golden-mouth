@@ -96,7 +96,7 @@ function FeedPostCard({ item }: { item: FeedItem }) {
         onKeyDown={open ? event => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open() } } : undefined}
         style={open ? { cursor: 'pointer' } : undefined}
       >
-        <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b> <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
+        <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{item.starId && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
         {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>{p.name}</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
         <div style={{ marginTop: 8 }}>{item.text}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
@@ -277,12 +277,13 @@ function Settings() {
   const nav = useNav(); const p = usePlayer(); const { patch } = useStore()
   const [drama, setDrama] = useState<Drama>(p.settings.drama)
   const [del, setDel] = useState(false)
-  const [panel, setPanel] = useState<'notifications' | 'quiet' | 'support' | 'data' | null>(null)
+  const [panel, setPanel] = useState<'notifications' | 'quiet' | 'support' | 'data' | 'address' | null>(null)
   const [notifications, setNotifications] = useState(p.settings.notifications === 'off' ? 'off' : p.settings.notifications === 'important' ? 'important' : 'all')
   const quietParts = p.settings.quiet.replace('–', '-').split('-')
   const [quietOff, setQuietOff] = useState(p.settings.quiet === 'off')
   const [quietStart, setQuietStart] = useState(quietParts[0]?.match(/^\d{2}:\d{2}$/) ? quietParts[0] : '22:00')
   const [quietEnd, setQuietEnd] = useState(quietParts[1]?.match(/^\d{2}:\d{2}$/) ? quietParts[1] : '09:00')
+  const [address, setAddress] = useState(p.address)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const openPanel = (value: typeof panel) => { setError(''); setPanel(value) }
@@ -305,7 +306,7 @@ function Settings() {
             <Segmented value={drama} onChange={setD} options={[{ id: 'soft', label: 'мягко' }, { id: 'mid', label: 'средне' }, { id: 'hot', label: 'остро' }, { id: 'off', label: 'без хейта' }]} /></div>
         </Card>
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
-          {row('🎙 Голос канала', `${p.settings.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`)}
+          {row('🎙 Голос канала', `${p.settings.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`, false, () => openPanel('address'))}
           {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📜 Как устроен мир', '›', false, () => nav.push('05-11_world_rules'))}{row('🔒 Мои данные и правила', 'скоро ›', false, () => openPanel('data'))}{row('✉ Поддержка', 'скоро ›', true, () => openPanel('support'))}
         </Card>
         <button onClick={() => setDel(true)} className="card" style={{ width: '100%', textAlign: 'center', color: 'var(--accent)', background: 'transparent', border: '1px solid #FF6B8B55' }}>Удалить аккаунт и всё</button>
@@ -313,7 +314,8 @@ function Settings() {
       </div>
       {error && !panel && <div className="pad small" role="alert">{error}</div>}
       {panel && <Sheet onClose={() => { if (!saving) setPanel(null) }}>
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 12 }}>{({ notifications: 'Уведомления', quiet: 'Тихие часы', support: 'Поддержка', data: 'Мои данные и правила' })[panel]}</div>
+        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 12 }}>{({ notifications: 'Уведомления', quiet: 'Тихие часы', support: 'Поддержка', data: 'Мои данные и правила', address: 'Как к тебе обращаться' })[panel]}</div>
+        {panel === 'address' && <><Segmented value={address} onChange={value => setAddress(value as typeof address)} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} /><Button disabled={saving} style={{ marginTop: 14, marginBottom: 8 }} onClick={async () => { if (saving) return; setSaving(true); setError(''); try { await api.settings({ address }); patch({ address }); setPanel(null) } catch { setError('Не получилось сохранить. Попробуй ещё раз.') } finally { setSaving(false) } }}>Сохранить</Button></>}
         {panel === 'notifications' && <><Segmented value={notifications} onChange={setNotifications} options={[{ id: 'all', label: 'все' }, { id: 'important', label: 'важные' }, { id: 'off', label: 'выключены' }]} /><p className="small muted">Пока сохраняем твой выбор. Уведомления в боте появятся позже.</p></>}
         {panel === 'quiet' && <><label className="row" style={{ marginBottom: 14 }}><input type="checkbox" checked={quietOff} onChange={e => setQuietOff(e.target.checked)} />Выключить тихие часы</label><div className="row" style={{ gap: 12 }}><label>С <input aria-label="Начало тихих часов" type="time" value={quietStart} disabled={quietOff} onChange={e => setQuietStart(e.target.value)} /></label><label>До <input aria-label="Конец тихих часов" type="time" value={quietEnd} disabled={quietOff} onChange={e => setQuietEnd(e.target.value)} /></label></div><p className="small muted">Пока сохраняем твой выбор. Тихие часы начнут действовать вместе с уведомлениями в боте.</p></>}
         {(panel === 'support' || panel === 'data') && <p className="muted">Скоро будет. Готовим этот раздел.</p>}

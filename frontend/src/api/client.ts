@@ -53,10 +53,10 @@ async function publicationState(id: string): Promise<PublicationState> {
 
 export const api = {
   me: (): Promise<Player> => (BASE ? call<Player>('/me') : laterLazy(demoPlayer)).then(rememberPlayer),
-  onboarding: (body: { birthGroup: '14-17' | '18+'; world: string; role: string; name: string; handle: string; address: string; star: string }): Promise<Player> =>
+  onboarding: (body: { birthGroup: '14-17' | '18+'; world: string; role: string; name: string; handle: string; address: string; star: string; referralCode?: string }): Promise<Player> =>
     (BASE ? call<Player>('/onboarding', { method: 'POST', body: JSON.stringify(body) }) : laterLazy(() => saveDemoPlayer({
       ...structuredClone(mock.player), ...body, world: body.world as WorldId, address: body.address as Player['address'],
-      id: crypto.randomUUID(), bio: '', type: 'автор своего канала', subs: 120, postsLeft: 10, wants: wantsFor(body.world),
+      id: crypto.randomUUID().replaceAll('-', ''), bio: '', type: 'автор своего канала', subs: 120, postsLeft: 10, wants: wantsFor(body.world),
       skills: { brave: { level: 1, progress: 0 }, humor: { level: 1, progress: 0 }, topic: { level: 1, progress: 0 } },
     }))).then(rememberPlayer),
   /** Генерация, затем модерация и поток реакции; при обрыве сверяем сохранённый статус. */
@@ -165,15 +165,21 @@ export const api = {
     if (!claimed && sessionPlayer) { sessionPlayer = saveDemoPlayer({ ...sessionPlayer, postsLeft: sessionPlayer.postsLeft + bonus, postsCap: sessionPlayer.postsCap + bonus }); localStorage.setItem(key, 'true') }
     return later({ bonus })
   },
-  settings: async (patch: Partial<Player['settings']>) => {
+  referral: (): Promise<{ code: string }> => BASE ? call('/referral') : laterLazy(() => ({ code: `ref_${sessionPlayer!.id === 'p1' ? mock.player.id : sessionPlayer!.id.replaceAll('-', '')}` })),
+  settings: async (patch: Partial<Player['settings']> & { address?: Player['address'] }) => {
     if (BASE) await call('/settings', { method: 'PATCH', body: JSON.stringify(patch) })
     if (sessionPlayer) {
-      sessionPlayer = { ...sessionPlayer, settings: { ...sessionPlayer.settings, ...patch } }
+      const { address, ...settings } = patch
+      sessionPlayer = { ...sessionPlayer, address: address ?? sessionPlayer.address, settings: { ...sessionPlayer.settings, ...settings } }
       if (!BASE) saveDemoPlayer(sessionPlayer)
     }
   },
   feed: async (world: WorldId = sessionPlayer?.world ?? 'stage'): Promise<FeedItem[]> => {
-    const remote = BASE ? await call<FeedItem[]>('/feed') : []
+    const remote: FeedItem[] = BASE ? await call<FeedItem[]>('/feed') : demoOwnPosts(sessionPlayer?.id ?? '').slice(0, 20).map(post => ({
+      kind: 'post', postId: post.id, canReply: true, author: sessionPlayer?.name, avatar: sessionPlayer?.handle, role: sessionPlayer?.role,
+      ago: post.at, text: post.text, reactions: post.reactions, views: post.views,
+      commentCount: withDemoComments(post, sessionPlayer?.id ?? '').comments.length,
+    }))
     const demos = runtimeConfig.features.mockFeed ? demoFeed(world).map(item => ({ ...item,
       commentCount: withDemoComments(demoPost(item.postId!)!, sessionPlayer?.id ?? '').comments.length })) : []
     return runtimeConfig.features.mockFeed ? shuffle([...remote, ...demos]) : remote
@@ -190,7 +196,11 @@ export const api = {
   },
   demoComment: (postId: string, player: Player, text: string, replyId: string) => laterLazy(() => addDemoComment(postId, player, text, replyId)),
   friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),
-  dm: (starId: string): Promise<Dm> => BASE ? call(`/dm/${starId}`) : later(mock.dm),
+  dm: (starId: string): Promise<Dm> => BASE ? call(`/dm/${starId}`) : laterLazy(() => {
+    const star = contentOf(sessionPlayer?.world ?? 'stage').stars.find(profile => profile.id === starId)
+    if (!star) throw new ApiError(404, 'GET', `/dm/${starId}`)
+    return { ...mock.dm, star }
+  }),
   dmSend: (starId: string, text: string): Promise<{ reply?: string; repliesLeft: number }> => BASE ? call(`/dm/${starId}`, { method: 'POST', body: JSON.stringify({ text }) }) : later({ repliesLeft: 2 }),
   forget: (starId: string, fact: string) => BASE ? call(`/stars/${starId}/memory`, { method: 'DELETE', body: JSON.stringify({ fact }) }) : later({ ok: true }),
   eventToday: (): Promise<GameEvent> => BASE ? call('/events/today') : later(mock.events.collab),

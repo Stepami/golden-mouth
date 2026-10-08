@@ -13,6 +13,7 @@ public sealed class ForgetStarMemoryHandler(IGameStore store, PlayerReader playe
         CancellationToken cancellationToken)
     {
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
+        _ = StarCatalog.Require(player.World, request.StarId);
         StarConversation? conversation = await store.GetStarConversationAsync(
             player.Id,
             request.StarId,

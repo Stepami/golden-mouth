@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Mapping;
 using Reki.Application.Player;
 using Reki.Contracts.Player;
@@ -44,9 +45,20 @@ public sealed class PlayerController(
                 request.Name,
                 request.Handle,
                 request.Address.ToString().ToLowerInvariant(),
-                StarId.From(request.Star)),
+                StarId.From(request.Star),
+                request.ReferralCode),
             cancellationToken);
         return TypedResults.Ok(mapper.MapPlayer(result));
+    }
+
+    [HttpGet("referral", Name = "GetReferralCode")]
+    [ActionName("GetReferralCode")]
+    public async Task<Ok<ReferralResponse>> GetReferralCodeAsync(CancellationToken cancellationToken)
+    {
+        ReferralResponse result = await sender.Send(
+            new GetReferralQuery(TelegramUserId.From(telegramUser.User.Id)),
+            cancellationToken);
+        return TypedResults.Ok(result);
     }
 
     [HttpPatch("settings", Name = "UpdateSettings")]
@@ -62,7 +74,8 @@ public sealed class PlayerController(
                 request.Notifications,
                 request.Quiet,
                 request.Voice,
-                request.Plus),
+                request.Plus,
+                request.Address?.ToString().ToLowerInvariant()),
             cancellationToken);
         return TypedResults.Ok();
     }
@@ -70,10 +83,11 @@ public sealed class PlayerController(
     [HttpPost("plus-interest", Name = "ClaimPlusInterest")]
     [ActionName("ClaimPlusInterest")]
     public async Task<Ok<PlusInterestResponse>> ClaimPlusInterestAsync(
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] PlusInterestRequest? request,
         CancellationToken cancellationToken)
     {
         int bonus = await sender.Send(
-            new ClaimPlusInterestCommand(TelegramUserId.From(telegramUser.User.Id)),
+            new ClaimPlusInterestCommand(TelegramUserId.From(telegramUser.User.Id), request?.Interest ?? true),
             cancellationToken);
         return TypedResults.Ok(new PlusInterestResponse(bonus));
     }

@@ -59,11 +59,11 @@ export function demoFeed(world: WorldId): FeedItem[] {
       id, text, views: 340 + index * 170,
       reactions: [{ emoji: '🔥', count: 12 + index * 5 }, { emoji: '😂', count: 7 + index * 3 }],
       comments: [{ id: `${id}-comment`, author: profile.stars[(index + 1) % profile.stars.length].name,
-        avatar: profile.stars[(index + 1) % profile.stars.length].id, handle: '', text: ['Вот это история. Расскажешь продолжение?', 'Знакомая ситуация! Спасибо за честность.', 'Утащу эту мысль в следующий пост.'][index % 3], star: true }],
+        avatar: profile.stars[(index + 1) % profile.stars.length].id, handle: profile.stars[(index + 1) % profile.stars.length].role, text: ['Вот это история. Расскажешь продолжение?', 'Знакомая ситуация! Спасибо за честность.', 'Утащу эту мысль в следующий пост.'][index % 3], star: true }],
       canReply: false, demoComments: true,
     }
     posts.set(id, post)
-    return { kind: 'post' as const, postId: id, author: author.name, avatar: author.id, role: author.role,
+    return { kind: 'post' as const, postId: id, author: author.name, avatar: author.id, role: author.role, starId: author.id,
       text, ago: 'сегодня', reactions: post.reactions, views: post.views, commentCount: post.comments.length,
       demo: true, world }
   })

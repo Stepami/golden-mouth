@@ -12,6 +12,7 @@ internal static class StarToolCallParser
         "star_id",
         "text",
         "hook",
+        "tone",
         "brave",
         "humor",
         "topic",
@@ -28,6 +29,7 @@ internal static class StarToolCallParser
         StarId StarId,
         string Text,
         string Hook,
+        string Tone,
         double Brave,
         double Humor,
         double Topic,
@@ -77,11 +79,20 @@ internal static class StarToolCallParser
             StarId.From(GetString(arguments, "star_id", 40, allowEmpty: false)),
             GetString(arguments, "text", 500, allowEmpty: false),
             GetString(arguments, "hook", 240, allowEmpty: false),
+            GetTone(arguments),
             GetScore(arguments, "brave"),
             GetScore(arguments, "humor"),
             GetScore(arguments, "topic"),
             GetReasons(arguments, "why"),
             GetBoolean(arguments, "on_topic"));
+    }
+
+    private static string GetTone(IDictionary<string, object?> arguments)
+    {
+        string tone = GetString(arguments, "tone", 10, allowEmpty: false);
+        return tone is "support" or "critique" or "hate"
+            ? tone
+            : throw new InvalidOperationException("The model returned an invalid comment tone.");
     }
 
     private static StarRepostAction ParseRepost(IDictionary<string, object?> arguments)

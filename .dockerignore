@@ -16,3 +16,8 @@ backend/.codex
 backend/.idea
 backend/.vs
 backend/apm_modules
+
+!frontend/
+!frontend/src/
+!frontend/src/api/
+!frontend/src/api/personas.json

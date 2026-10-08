@@ -16,6 +16,7 @@ public sealed class GetDirectMessagesHandler(
         CancellationToken cancellationToken)
     {
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
+        _ = StarCatalog.Require(player.World, request.StarId);
         DateTimeOffset periodStart = gameDay.PeriodStart;
         StarConversation conversation = await store.GetStarConversationAsync(
             player.Id,
@@ -39,7 +40,7 @@ public sealed class GetDirectMessagesHandler(
             balance.Relations.DirectMessageRepliesPerDay - conversation.RepliesUsed);
         int relation = player.StarRelations
             .FirstOrDefault(item => item.StarId == request.StarId)?.Value ?? 0;
-        return new DirectMessageView(conversation, repliesLeft, relation);
+        return new DirectMessageView(conversation, repliesLeft, relation, StarCatalog.Require(player.World, request.StarId));
     }
 }
 

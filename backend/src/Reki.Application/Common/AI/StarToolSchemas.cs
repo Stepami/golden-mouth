@@ -23,6 +23,10 @@ internal static class StarToolSchemas
             StartEventSchema),
     ];
 
+    public static readonly IReadOnlyList<AITool> Post = All.Where(tool => tool.Name is "comment" or "react").ToArray();
+
+    public static readonly IReadOnlyList<AITool> DirectMessage = All.Where(tool => tool.Name == "dm").ToArray();
+
     private const string ReactSchema = """
         {
           "type": "object",
@@ -38,10 +42,11 @@ internal static class StarToolSchemas
         {
           "type": "object",
           "properties": {
-            "author": { "type": "string", "minLength": 1, "maxLength": 40 },
+            "author": { "type": "string", "description": "Точное отображаемое name персонажа из каталога, не id.", "minLength": 1, "maxLength": 40 },
             "star_id": { "type": "string", "minLength": 1, "maxLength": 40 },
             "text": { "type": "string", "minLength": 1, "maxLength": 500 },
             "hook": { "type": "string", "minLength": 1, "maxLength": 240 },
+            "tone": { "type": "string", "enum": ["support", "critique", "hate"] },
             "brave": { "type": "number", "minimum": 0, "maximum": 1 },
             "humor": { "type": "number", "minimum": 0, "maximum": 1 },
             "topic": { "type": "number", "minimum": 0, "maximum": 1 },
@@ -61,7 +66,7 @@ internal static class StarToolSchemas
             },
             "on_topic": { "type": "boolean" }
           },
-          "required": ["author", "star_id", "text", "hook", "brave", "humor", "topic", "why", "on_topic"],
+          "required": ["author", "star_id", "text", "hook", "tone", "brave", "humor", "topic", "why", "on_topic"],
           "additionalProperties": false
         }
         """;

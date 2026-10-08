@@ -70,6 +70,7 @@ public sealed class PublishPostHandler(
         }
 
         GeneratedPostTurn turn = publication.AssembleTurn();
+        StarTurnPolicy.EnsurePostAllowed(turn, player.World, StarTurnPolicy.IsHateEnabled(player, balance, now));
 
         bool wantCompleted = wantId is not null && player.Wants.Any(want =>
             want.Id == wantId && !want.Done);

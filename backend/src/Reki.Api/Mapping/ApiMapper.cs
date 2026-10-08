@@ -71,9 +71,10 @@ public sealed partial class ApiMapper
             new Dictionary<string, string>());
     }
 
-    public DmResponse MapDirectMessages(DirectMessageView view, string starId)
+    public DmResponse MapDirectMessages(DirectMessageView view)
     {
-        StarResponse star = CreateStar(starId, view.Relation);
+        StarPersona persona = view.Persona;
+        StarResponse star = new(persona.Id, persona.Name, persona.Role, persona.Trait, persona.About, view.Relation);
         return new DmResponse(
             star,
             "на связи",
@@ -141,17 +142,6 @@ public sealed partial class ApiMapper
         return properties
             .Where(item => item.Key.Length <= 64)
             .ToDictionary(item => item.Key, item => SanitizeElement(item.Value));
-    }
-
-    private static StarResponse CreateStar(string starId, int relation)
-    {
-        return new StarResponse(
-            starId,
-            starId.Equals("mira", StringComparison.OrdinalIgnoreCase) ? "Мира" : "Соня",
-            "звезда мира",
-            "слышит свой голос",
-            "Реагирует на развитие канала.",
-            relation);
     }
 
     private static DirectMessageAuthor MapDirectMessageAuthor(string source)

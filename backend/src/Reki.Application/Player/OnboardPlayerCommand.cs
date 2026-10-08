@@ -13,5 +13,6 @@ public sealed record OnboardPlayerCommand(
     string Name,
     string Handle,
     string Address,
-    StarId Star) : IRequest<PlayerView>;
+    StarId Star,
+    string? ReferralCode) : IRequest<PlayerView>;
 

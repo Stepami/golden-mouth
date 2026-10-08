@@ -1,6 +1,7 @@
 using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Common.Safety;
 using Reki.Application.Posts;
 using Reki.Application.Worlds;
 using Reki.Domain.Player;
@@ -21,6 +22,7 @@ public sealed class SendDirectMessageHandler(
         CancellationToken cancellationToken)
     {
         PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
+        _ = StarCatalog.Require(player.World, request.StarId);
         DateTimeOffset periodStart = gameDay.PeriodStart;
         StarConversation conversation = await store.GetStarConversationAsync(
             player.Id,
@@ -47,7 +49,9 @@ public sealed class SendDirectMessageHandler(
             player.Id,
             player.World,
             cancellationToken);
-        WorldRules worldRules = storedRules ?? WorldRulesDefaults.Create(player.Id, player.World);
+        WorldRules worldRules = player.World.Value == "own" && storedRules is not null
+            ? storedRules
+            : WorldRulesDefaults.Create(player.Id, player.World);
         GeneratedDirectMessage generated = await turnGenerator.GenerateDirectMessageAsync(
             new StarDirectMessageContext(
                 new StarAgentProfile(
@@ -58,8 +62,10 @@ public sealed class SendDirectMessageHandler(
                     player.Settings.Drama,
                     player.Settings.Voice,
                     request.StarId,
-                    conversation.Memory),
-                request.Text),
+                    conversation.Memory,
+                    player.Address),
+                request.Text,
+                conversation.Messages.TakeLast(12).ToArray()),
             player,
             cancellationToken);
         IReadOnlyList<DirectMessage> messages =
@@ -68,7 +74,7 @@ public sealed class SendDirectMessageHandler(
             new DirectMessage("me", request.Text),
             new DirectMessage("star", generated.Text),
         ];
-        IReadOnlyList<string> memory = string.IsNullOrWhiteSpace(generated.MemoryFact) ||
+        IReadOnlyList<string> memory = !MemoryFactPolicy.IsAllowed(generated.MemoryFact) ||
             conversation.Memory.Contains(generated.MemoryFact, StringComparer.OrdinalIgnoreCase)
             ? conversation.Memory
             : [.. conversation.Memory, generated.MemoryFact];

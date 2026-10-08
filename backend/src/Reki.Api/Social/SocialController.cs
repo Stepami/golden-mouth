@@ -41,7 +41,7 @@ public sealed class SocialController(
                 TelegramUserId.From(telegramUser.User.Id),
                 StarId.From(starId)),
             cancellationToken);
-        return TypedResults.Ok(mapper.MapDirectMessages(result, starId));
+        return TypedResults.Ok(mapper.MapDirectMessages(result));
     }
 
     [HttpPost("dm/{starId}", Name = "SendDirectMessage")]

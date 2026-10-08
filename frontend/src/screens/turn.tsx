@@ -11,10 +11,9 @@ import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
 import { contentOf } from '../api/worldContent'
 import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
-import { TELEGRAM_APP_URL } from '../app/telegramLinks'
+import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
 
-const LINK = TELEGRAM_APP_URL
 
 // 02-1: пост, желания дня, «Подскажи» дописывает черновик
 function Compose() {
@@ -326,12 +325,13 @@ function Thread() {
 function Share() {
   const nav = useNav()
   const player = usePlayer()
+  const { link, error: linkError, retry } = useReferralLink()
   const post = (nav.params.post as Post | undefined) ?? firstPost
   const text = `Мой пост в Реках 🌊 А ты кем будешь в ${contentOf(player.world).where}?`
-  const toChat = () => { track('share', { to: 'chat' }); if (inTelegram) shareURL.ifAvailable(LINK, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(LINK)}&text=${encodeURIComponent(text)}`) }
+  const toChat = () => { if (!link) return; track('share', { to: 'chat' }); if (inTelegram) shareURL.ifAvailable(link, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`) }
   // Публичную картинку 9:16 Telegram загружает без заголовков авторизации.
   const storyCardUrl = new URL(`${apiBaseUrl ?? ''}/cards/story/${encodeURIComponent(player.id)}/${encodeURIComponent(post.id)}.png`, location.origin).toString()
-  const toStory = () => { track('share', { to: 'story' }); if (inTelegram) shareStory.ifAvailable(storyCardUrl, { text, widgetLink: { url: LINK, name: 'Играть' } }) }
+  const toStory = () => { if (!link) return; track('share', { to: 'story' }); if (inTelegram) shareStory.ifAvailable(storyCardUrl, { text, widgetLink: { url: link, name: 'Играть' } }) }
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Поделиться" />
@@ -345,7 +345,8 @@ function Share() {
         <Gift style={{ marginBottom: 12 }}>Позови друга в Реки</Gift>
         <div className="small muted">Telegram откроет список твоих чатов. Мы его не видим и никому не пишем сами.</div>
       </div>
-      <BottomCTA second="＋ В сторис" onSecond={toStory} main="Отправить в чат" onMain={toChat} />
+      {linkError && <div className="pad" role="alert">Не удалось получить твою ссылку.<Button secondary onClick={retry}>Попробовать снова</Button></div>}
+      <BottomCTA disabled={!link} secondDisabled={!link} second="＋ В сторис" onSecond={toStory} main="Отправить в чат" onMain={toChat} />
     </div>
   )
 }

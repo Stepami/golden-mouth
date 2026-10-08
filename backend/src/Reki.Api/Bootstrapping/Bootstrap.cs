@@ -92,7 +92,8 @@ internal static class Bootstrap
                 item => new WorldBalance(
                     item.GetValue<double>("k"),
                     item.GetValue<double>("flop"),
-                    item.GetValue<double>("viral_x")),
+                    item.GetValue<double>("viral_x"),
+                    item.GetValue<long>("hate_from")),
                 StringComparer.Ordinal);
 
         if (decay.Count == 0 || levelThresholds.Count != 10 || worlds.Count == 0)

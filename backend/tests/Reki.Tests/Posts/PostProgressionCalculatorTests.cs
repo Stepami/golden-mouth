@@ -300,7 +300,7 @@ public sealed class PostProgressionCalculatorTests
         {
             Worlds = new Dictionary<string, WorldBalance>
             {
-                [TestGameData.WorldId.Value] = new(1, 1, 1),
+                [TestGameData.WorldId.Value] = new(1, 1, 1, long.MaxValue),
             },
         };
         var calculator = new PostProgressionCalculator(balance);
@@ -342,7 +342,7 @@ public sealed class PostProgressionCalculatorTests
             },
             Worlds = new Dictionary<string, WorldBalance>
             {
-                [TestGameData.WorldId.Value] = new(1, 0, 1),
+                [TestGameData.WorldId.Value] = new(1, 0, 1, long.MaxValue),
             },
         };
     }
