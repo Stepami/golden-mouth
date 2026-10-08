@@ -101,3 +101,10 @@ html.shot .pop { opacity: 1; animation: none; }
 
 /* Emulator panel is disabled in vite.config; do not let its collapsed control cover Back. */
 #tma-panel { display:none; }
+
+.quiet-toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.quiet-toggle input { width: 20px; height: 20px; flex: 0 0 20px; margin: 0; }
+.quiet-toggle span { flex: 1; min-width: 0; }
+.quiet-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.quiet-times label { min-width: 0; }
+.quiet-times input { display: block; min-width: 0; max-width: 100%; margin-top: 6px; padding: 10px; border-radius: 10px; background: var(--line2); }
