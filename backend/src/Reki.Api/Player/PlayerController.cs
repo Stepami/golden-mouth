@@ -74,7 +74,8 @@ public sealed class PlayerController(
                 request.Notifications,
                 request.Quiet,
                 request.Voice,
-                request.Plus) { Address = request.Address?.ToString().ToLowerInvariant() },
+                request.Plus,
+                request.Address?.ToString().ToLowerInvariant()),
             cancellationToken);
         return TypedResults.Ok();
     }
@@ -86,7 +87,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         int bonus = await sender.Send(
-            new ClaimPlusInterestCommand(TelegramUserId.From(telegramUser.User.Id)) { Interest = request?.Interest ?? true },
+            new ClaimPlusInterestCommand(TelegramUserId.From(telegramUser.User.Id), request?.Interest ?? true),
             cancellationToken);
         return TypedResults.Ok(new PlusInterestResponse(bonus));
     }

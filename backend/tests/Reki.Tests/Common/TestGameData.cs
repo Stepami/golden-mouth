@@ -52,7 +52,7 @@ internal static class TestGameData
             new ThreadBalance(3, 9, 2),
             new Dictionary<string, WorldBalance>
             {
-                [WorldId.Value] = new(1, 0.1, 1),
+                [WorldId.Value] = new(1, 0.1, 1, long.MaxValue),
             });
     }
 

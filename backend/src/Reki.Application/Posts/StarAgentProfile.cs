@@ -11,7 +11,5 @@ public sealed record StarAgentProfile(
     string Drama,
     string Voice,
     StarId? StarId,
-    IReadOnlyList<string> Memory)
-{
-    public string Address { get; init; } = "nick";
-}
+    IReadOnlyList<string> Memory,
+    string Address);

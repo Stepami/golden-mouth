@@ -62,8 +62,10 @@ public sealed class SendDirectMessageHandler(
                     player.Settings.Drama,
                     player.Settings.Voice,
                     request.StarId,
-                    conversation.Memory) { Address = player.Address },
-                request.Text) { History = conversation.Messages.TakeLast(12).ToArray() },
+                    conversation.Memory,
+                    player.Address),
+                request.Text,
+                conversation.Messages.TakeLast(12).ToArray()),
             player,
             cancellationToken);
         IReadOnlyList<DirectMessage> messages =

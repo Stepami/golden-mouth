@@ -1,6 +1,3 @@
 namespace Reki.Contracts.Player;
 
-public sealed record PlusInterestRequest
-{
-    public bool Interest { get; init; } = true;
-}
+public sealed record PlusInterestRequest(bool Interest = true);
