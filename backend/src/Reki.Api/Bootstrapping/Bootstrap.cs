@@ -105,6 +105,8 @@ internal static class Bootstrap
             posts.GetValue<int>("free_per_day"),
             posts.GetValue<int>("plus_per_day"),
             resetTime,
+            posts.GetValue<int>("invite_bonus_both"),
+            posts.GetValue<int>("invite_bonus_max_per_day"),
             posts.GetValue<int>("plus_interest_bonus_once"),
             posts.GetValue<int>("challenge_win_bonus_per_day"),
             posts.GetValue<int>("challenge_win_bonus_days"),

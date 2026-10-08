@@ -23,13 +23,27 @@ public sealed class OnboardPlayerHandler(
             PlayerProfile? existing = await store.GetPlayerAsync(request.TelegramUserId, cancellationToken);
             if (existing is null)
             {
-                PlayerId? inviter = await ResolveInviterAsync(request, cancellationToken);
+                PlayerProfile? inviter = await ResolveInviterAsync(request, cancellationToken);
+                PlayerProfile? updatedInviter = inviter is null
+                    ? null
+                    : gameDay.Normalize(inviter.EnsureDefaults())
+                        .GrantInviteBonus(balance.InviteBonusBoth, balance.InviteBonusMaxPerDay);
+                if (ReferenceEquals(updatedInviter, inviter))
+                {
+                    updatedInviter = null;
+                }
+
                 PlayerProfile created = CreatePlayer(request, gameDay.PeriodStart, balance.Growth.StartingSubscribers) with
                 {
-                    InvitedBy = inviter,
+                    InvitedBy = inviter?.Id,
                     InvitedAtUtc = inviter is null ? null : timeProvider.GetUtcNow(),
+                    FirstPostInviteBonus = inviter is null ? 0 : balance.InviteBonusBoth,
                 };
-                if (await store.TryCreatePlayerAsync(created, cancellationToken))
+                if (await store.TryCreatePlayerAsync(
+                    created,
+                    updatedInviter,
+                    inviter?.Version ?? 0,
+                    cancellationToken))
                 {
                     return playerReader.CreateView(created);
                 }
@@ -125,7 +139,7 @@ public sealed class OnboardPlayerHandler(
         };
     }
 
-    private async ValueTask<PlayerId?> ResolveInviterAsync(
+    private async ValueTask<PlayerProfile?> ResolveInviterAsync(
         OnboardPlayerCommand request,
         CancellationToken cancellationToken)
     {
@@ -138,7 +152,7 @@ public sealed class OnboardPlayerHandler(
 
         PlayerProfile? inviter = await store.GetPlayerAsync(PlayerId.From(code[4..]), cancellationToken);
         return inviter is not null && inviter.TelegramUserId != request.TelegramUserId
-            ? inviter.Id
+            ? inviter
             : null;
     }
 }

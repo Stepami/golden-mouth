@@ -10,6 +10,7 @@ public sealed record PlayerResponse(
     long Subs,
     int PostsLeft,
     int PostsCap,
+    int FirstPostInviteBonus,
     StreakResponse Streak,
     IReadOnlyDictionary<SkillId, SkillResponse> Skills,
     IReadOnlyList<WantResponse> Wants,
