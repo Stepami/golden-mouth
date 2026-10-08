@@ -157,7 +157,14 @@ export const api = {
       ? call(`/posts/${postId}/replies`, { method: 'POST', body: JSON.stringify({ commentId, replyId, text }) })
       : later(mock.threadReply(replyId)),
   report: (commentId: string, reason: string) => BASE ? call('/reports', { method: 'POST', body: JSON.stringify({ commentId, reason }) }) : later({ ok: true }),
-  plusInterest: () => BASE ? call('/plus-interest', { method: 'POST' }) : later({ bonus: 5 }),
+  plusInterest: async (interest = true): Promise<{ bonus: number }> => {
+    if (BASE) return call('/plus-interest', { method: 'POST', body: JSON.stringify({ interest }) })
+    const key = `reki:demo-plus-claimed:${sessionPlayer?.id}`
+    const claimed = localStorage.getItem(key) === 'true'
+    const bonus = claimed ? 0 : 5
+    if (!claimed && sessionPlayer) { sessionPlayer = saveDemoPlayer({ ...sessionPlayer, postsLeft: sessionPlayer.postsLeft + bonus, postsCap: sessionPlayer.postsCap + bonus }); localStorage.setItem(key, 'true') }
+    return later({ bonus })
+  },
   settings: async (patch: Partial<Player['settings']>) => {
     if (BASE) await call('/settings', { method: 'PATCH', body: JSON.stringify(patch) })
     if (sessionPlayer) {
