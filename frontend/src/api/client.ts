@@ -166,10 +166,11 @@ export const api = {
     return later({ bonus })
   },
   referral: (): Promise<{ code: string }> => BASE ? call('/referral') : laterLazy(() => ({ code: `ref_${sessionPlayer!.id === 'p1' ? mock.player.id : sessionPlayer!.id.replaceAll('-', '')}` })),
-  settings: async (patch: Partial<Player['settings']>) => {
+  settings: async (patch: Partial<Player['settings']> & { address?: Player['address'] }) => {
     if (BASE) await call('/settings', { method: 'PATCH', body: JSON.stringify(patch) })
     if (sessionPlayer) {
-      sessionPlayer = { ...sessionPlayer, settings: { ...sessionPlayer.settings, ...patch } }
+      const { address, ...settings } = patch
+      sessionPlayer = { ...sessionPlayer, address: address ?? sessionPlayer.address, settings: { ...sessionPlayer.settings, ...settings } }
       if (!BASE) saveDemoPlayer(sessionPlayer)
     }
   },

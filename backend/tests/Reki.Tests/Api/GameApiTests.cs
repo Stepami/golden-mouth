@@ -1342,6 +1342,106 @@ public sealed class GameApiTests(ApiFactory factory)
         await Assert.That(profile.RootElement.GetProperty("memory")[0].GetString()).IsEqualTo("интересуется робототехникой");
     }
 
+    [Test]
+    public async Task Settings_PlayerPreferences_PersistAsync()
+    {
+        using TestApiClient api = factory.CreateApiClient(8400);
+        await OnboardAsync(api);
+        foreach (Address address in new[] { Address.She, Address.He, Address.Nick })
+        {
+            await api.Player.UpdateSettingsAsync(
+                new UpdateSettingsRequest
+            {
+                Address = address,
+                Notifications = "important",
+                Quiet = "21:30-08:15",
+            },
+                CancellationToken.None);
+            PlayerResponse saved = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+            await Assert.That(saved.Address).IsEqualTo(address);
+            await Assert.That(saved.Settings.Notifications).IsEqualTo("important");
+            await Assert.That(saved.Settings.Quiet).IsEqualTo("21:30-08:15");
+        }
+
+        await api.Player.UpdateSettingsAsync(new UpdateSettingsRequest { Address = Address.She }, CancellationToken.None);
+        await api.Social.SendDirectMessageAsync("sonya", new DirectMessageRequest { Text = "Привет" }, CancellationToken.None);
+        using JsonDocument profile = ParsePlayerLayer(GetCapturedChatMessages()[1]);
+        await Assert.That(profile.RootElement.GetProperty("address").GetString()).IsEqualTo("she");
+    }
+
+    [Test]
+    public async Task Settings_InvalidAddress_ReturnsBadRequestAsync()
+    {
+        using TestApiClient api = factory.CreateApiClient(8401);
+        await OnboardAsync(api);
+        using HttpClient http = factory.CreateClient();
+        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8401");
+        using var content = new StringContent("{\"address\":\"wizard\"}", Encoding.UTF8, "application/json");
+        using HttpResponseMessage result = await http.PatchAsync("/settings", content, CancellationToken.None);
+        await Assert.That(result.StatusCode).IsEqualTo(System.Net.HttpStatusCode.BadRequest);
+        PlayerResponse saved = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        await Assert.That(saved.Address).IsEqualTo(Address.Nick);
+    }
+
+    [Test]
+    public async Task PlusInterest_BonusOnlyThenNotify_DoesNotRepeatBonusAsync()
+    {
+        using TestApiClient api = factory.CreateApiClient(8402);
+        await OnboardAsync(api);
+        IGameStore store = factory.Services.GetRequiredService<IGameStore>();
+        using HttpClient http = factory.CreateClient();
+        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8402");
+        foreach (bool interest in new[] { false, true, true })
+        {
+            using var body = new StringContent(interest ? "{\"interest\":true}" : "{\"interest\":false}", Encoding.UTF8, "application/json");
+            using HttpResponseMessage response = await http.PostAsync("/plus-interest", body, CancellationToken.None);
+            await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+            using JsonDocument payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync(CancellationToken.None));
+            await Assert.That(payload.RootElement.GetProperty("bonus").GetInt32()).IsEqualTo(interest ? 0 : 5);
+            PlayerProfile saved = await store.GetPlayerAsync(TelegramUserId.From(8402), CancellationToken.None)
+                ?? throw new InvalidOperationException("Missing player.");
+            await Assert.That(saved.PlusNotifyRequested).IsEqualTo(interest);
+            PlayerResponse current = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+            await Assert.That(current.PostsLeft).IsEqualTo(15);
+        }
+
+        using TestApiClient legacyApi = factory.CreateApiClient(8403);
+        await OnboardAsync(legacyApi);
+        http.DefaultRequestHeaders.Remove(TestAuthenticationHandler.UserIdHeaderName);
+        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8403");
+        using HttpResponseMessage legacy = await http.PostAsync("/plus-interest", null, CancellationToken.None);
+        await Assert.That(legacy.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        PlayerProfile legacyPlayer = await store.GetPlayerAsync(TelegramUserId.From(8403), CancellationToken.None)
+            ?? throw new InvalidOperationException("Missing player.");
+        await Assert.That(legacyPlayer.PlusNotifyRequested).IsTrue();
+    }
+
+    [Test]
+    public async Task PlusInterest_ConcurrentClaims_GrantExactlyOneBonusAsync()
+    {
+        using TestApiClient api = factory.CreateApiClient(8404);
+        await OnboardAsync(api);
+        using HttpClient http = factory.CreateClient();
+        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8404");
+        Task<HttpResponseMessage>[] calls = Enumerable.Range(0, 2).Select(_ =>
+            http.PostAsync("/plus-interest", null, CancellationToken.None)).ToArray();
+        HttpResponseMessage[] results = await Task.WhenAll(calls);
+        int bonuses = 0;
+        foreach (HttpResponseMessage result in results)
+        {
+            using (result)
+            {
+                await Assert.That(result.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+                using JsonDocument data = JsonDocument.Parse(await result.Content.ReadAsStringAsync(CancellationToken.None));
+                bonuses += data.RootElement.GetProperty("bonus").GetInt32();
+            }
+        }
+
+        await Assert.That(bonuses).IsEqualTo(5);
+        PlayerResponse current = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        await Assert.That(current.PostsLeft).IsEqualTo(15);
+    }
+
     private static JsonDocument ParsePlayerLayer(ChatMessage layer) =>
         JsonDocument.Parse(layer.Text[(layer.Text.IndexOf("DATA_JSON:", StringComparison.Ordinal) + "DATA_JSON:".Length)..].Trim());
 

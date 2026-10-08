@@ -169,3 +169,7 @@ Production-настройки LLM (`Llm__BaseUrl`, `Llm__ApiKey`, `Llm__Model`),
 В публикации доступны только `comment` и `react`, в личке только `dm`. Комментарий содержит обязательный `tone`: `support`, `critique`, `hate`. Сервер проверяет пару star_id/name по каталогу и разрешает hate только при достижении `hate_from` мира, drama не off и истёкшем safety cooldown. Проверка повторяется при подтверждении публикации. Невалидные действия не расходуют лимит. Проверка tone не доказывает смысл текста: LLM может неверно классифицировать реплику; лексические safety/memory фильтры также не являются полной семантической защитой.
 
 Проверки и границы: [повторный аудит](audits/persona-prompts-after-98-99.md).
+
+### Настройки и Реки+ (#104)
+
+PATCH /settings принимает optional address (she/he/nick); POST /plus-interest принимает optional {interest: bool}, без тела interest=true для совместимости. PlusNotifyRequested отделён от однократного бонуса PlusInterestClaimed; запрос bonus-only не включает уведомление. Обе записи используют CAS по версии профиля с ограниченным повтором. Оплата и бот-рассылка этим API не реализуются. Сохранённые notifications/quiet являются предпочтениями будущей доставки. Проверки: [settings audit](audits/settings-2026-10-08.md).

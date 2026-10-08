@@ -9,5 +9,8 @@ public sealed record UpdateSettingsCommand(
     string? Notifications,
     string? Quiet,
     string? Voice,
-    bool? Plus) : IRequest;
+    bool? Plus) : IRequest
+{
+    public string? Address { get; init; }
+}
 

@@ -4,6 +4,8 @@ namespace Reki.Contracts.Player;
 
 public sealed record UpdateSettingsRequest
 {
+    public Address? Address { get; init; }
+
     public Drama? Drama { get; init; }
 
     [MaxLength(64)]
