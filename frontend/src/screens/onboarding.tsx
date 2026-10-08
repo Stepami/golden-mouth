@@ -245,6 +245,7 @@ export function Home() {
         <div className="card" style={{ padding: 18, border: '1px solid #FF6B8B66', background: 'linear-gradient(160deg,#2A1A2E,#181821)' }}>
           <div className="row" style={{ marginBottom: 12 }}><Avatar seed={star.id} size={44} /><div><b>{star.name} · первый подписчик</b><div className="small muted">{star.role} · ждёт твой первый пост</div></div></div>
           <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>{profile.firstPrompt}</div>
+          {(p?.firstPostInviteBonus ?? 0) > 0 && <div className="gift" style={{ marginBottom: 12 }}>🎁 Первый пост даст ещё {p?.firstPostInviteBonus} ходов. Начни с любой идеи!</div>}
           <button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button>
           <div style={{ textAlign: 'center', marginTop: 10, fontSize: 14, color: 'var(--lilac)' }}>Нет идей? Внутри есть «Подскажи»</div>
         </div>

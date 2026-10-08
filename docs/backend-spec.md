@@ -117,7 +117,7 @@
 
 | Метод | Ответ | Экран |
 |---|---|---|
-| `GET /me` | `Player` (с обезличенным `id` и `experiments`) | все |
+| `GET /me` | `Player` (с обезличенным `id`, `experiments` и вычисляемым `firstPostInviteBonus`: 0 при отсутствии бонуса или после его использования) | все |
 | `POST /onboarding` | `Player`; optional `referralCode` (`ref_` + 32 hex символа непрозрачного PlayerId); первое создание атомарно сохраняет `InvitedBy`/`InvitedAtUtc`, повтор не меняет источник; неизвестный/свой код игнорируется, переход не даёт наград. Аватар игрока детерминированно строится frontend из `handle`, отдельного поля `avatar` в запросе и ответе нет; затем frontend вызывает `PATCH /settings` с выбранными voice/drama | 01-5 |
 | `POST /posts/publications` (SSE) | `{ publicationId, text, ownWords?, wantId? }`; статусы `pending` → `ready_for_moderation` либо `failed`; 409 при лимите или конфликте ключа | 02-2, 02-2b |
 | `POST /posts/publications/:id/moderation` (SSE) | поток `LiveEvent` со строчными `type`, последним `result: PostResult`; повтор завершённой публикации не списывает пост снова | 02-2, 02-3 |
