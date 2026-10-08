@@ -5,16 +5,16 @@ import { worldOf } from '../api/mock'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
-import { Avatar, BottomCTA, Button, Card, Gift, Toggle, TopBar, fmt } from '../ui'
+import { Avatar, BottomCTA, Button, Card, Gift, TopBar, fmt } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
-import { TELEGRAM_BOT_USERNAME, telegramStartUrl } from '../app/telegramLinks'
+import { TELEGRAM_APP_URL } from '../app/telegramLinks'
 import { register } from '.'
 
-const LINK = telegramStartUrl('liza7')
+const LINK = TELEGRAM_APP_URL
 const shareInvite = () => {
   track('invite_sent')
-  const text = 'Играю в Реки: веду канал, а AI-звёзды реагируют на каждый пост. Заходи, +5 постов нам обоим'
+  const text = 'Играю в Реки: веду канал, а AI-звёзды реагируют на каждый пост. Заходи в мой мир!'
   if (inTelegram) shareURL.ifAvailable(LINK, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(LINK)}&text=${encodeURIComponent(text)}`)
 }
 
@@ -84,24 +84,24 @@ function PlusPush() {
 // 04-3: позвать друзей; первый друг открывает «Свой мир»; «Сыграй мою историю»
 function Invite() {
   const nav = useNav(); const p = usePlayer()
-  const [story, setStory] = useState(true)
-  const copy = () => { if (inTelegram) copyTextToClipboard(LINK).catch(() => {}); else navigator.clipboard?.writeText(LINK) }
+  const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState(false)
+  const copy = async () => { try { if (inTelegram) await copyTextToClipboard(LINK); else await navigator.clipboard.writeText(LINK); setCopied(true); setCopyError(false) } catch { setCopyError(true) } }
   return (
     <div className="screen no-tab">
-      <TopBar onBack={nav.back} title="Позвать друзей" right="сегодня 1/3" />
+      <TopBar onBack={nav.back} title="Позвать друзей" />
       <div className="pad">
-        <Card style={{ marginBottom: 12, textAlign: 'center' }}><div style={{ fontSize: 36 }}>🎁</div><b style={{ fontSize: 18 }}>+5 постов тебе и другу сразу</b><div className="small muted" style={{ marginTop: 4 }}>как только друг сделает первый пост</div></Card>
-        <div className="card row" style={{ marginBottom: 12 }}><div style={{ fontSize: 22 }}>🔓</div><div className="small" style={{ flex: 1 }}><b>Первый друг откроет «Свой мир»</b><div className="muted">не нужно ждать 10k</div></div></div>
-        <div className="card row" style={{ marginBottom: 12 }}><div className="small" style={{ flex: 1 }}><b>Сыграй мою историю</b><div className="muted">Друг начнёт с твоей завязки: Сцена, Мира злится на новенького. Твою переписку не видит. Потом сравните, кто как разрулил</div></div><Toggle on={story} onChange={setStory} /></div>
+        <Card style={{ marginBottom: 12 }}>Поделись ссылкой на Реки — друг сможет выбрать мир и завести свой канал.</Card>
         <div className="label">Друг увидит твою карточку</div>
         <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420 60%,#12203A)', borderRadius: 16, padding: 14, textAlign: 'center', marginBottom: 12 }}>
           <Avatar seed={p.handle} size={44} style={{ margin: '0 auto 6px' }} /><b>{p.name}</b>
           <div style={{ fontSize: 28, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{fmt(p.subs)}</div>
-          <div className="small">подписчиков за 2 дня · {worldOf(p.world).emoji} {worldOf(p.world).title}</div><div className="small muted" style={{ marginTop: 4 }}>а ты кем будешь?</div>
+          <div className="small">подписчиков · {worldOf(p.world).emoji} {worldOf(p.world).title}</div><div className="small muted" style={{ marginTop: 4 }}>а ты кем будешь?</div>
         </div>
-        <Card style={{ color: 'var(--muted)' }}><span className="small">Твоя ссылка: t.me/{TELEGRAM_BOT_USERNAME}?startapp=liza7 · до 3 бонусов в день</span></Card>
+        <Card style={{ color: 'var(--muted)' }}><span className="small">Ссылка на игру: {LINK}</span></Card>
       </div>
-      <BottomCTA second="Скопировать ссылку" onSecond={copy} main="Отправить в чат" onMain={shareInvite} />
+      {copyError && <div className="pad small" role="alert">Не удалось скопировать. Ссылка показана выше.</div>}
+      <BottomCTA second={copied ? "Ссылка скопирована" : "Скопировать ссылку"} onSecond={copy} main="Отправить в чат" onMain={shareInvite} />
     </div>
   )
 }

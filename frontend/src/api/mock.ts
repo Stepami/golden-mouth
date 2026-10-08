@@ -92,11 +92,11 @@ export const threadReply = (replyId: string): ReplyResult => {
 
 export const results: Record<'normal' | 'flop' | 'viral', PostResult> = {
   normal: { postId: 'post1', delta: 38, headline: 'Тебя заметили: первый мем уже есть', views: 312, viral: false, flop: false,
-    whys: [{ icon: '😂', label: 'смешно', value: '+12' }, { icon: '🔥', label: 'смело', value: '+8' }, { icon: '✍️', label: 'своими словами', value: '×1,3' }],
+    whys: [{ icon: '😂', label: 'смешно', value: '+28' }, { icon: '🔥', label: 'смело', value: '+10' }],
     ribbons: [{ icon: '🌊', title: 'Пост почти залетел в Реки', sub: 'не хватило 12 репостов: смелее, и залетит' }, { icon: '👑', title: 'Мира: отношения +1' }],
     bestComment: { avatar: 'mira', text: '„уверенно“ это комплимент, поверь' }, hook: 'Соня пишет ответ…' },
   flop: { postId: 'post2', delta: -4, headline: 'Агентство сделало вид, что не видело этот пост', views: 640, viral: false, flop: true,
-    whys: [{ icon: '🎤', label: 'не про Сцену', value: '−6' }, { icon: '😂', label: 'смешно', value: '+3' }],
+    whys: [{ icon: '🎤', label: 'мимо темы мира', value: '−7' }, { icon: '😂', label: 'смешно', value: '+3' }],
     ribbons: [{ icon: '💪', title: 'Провал тоже опыт: опыт смелости +1', sub: 'серия дней не сгорает' }],
     bestComment: { avatar: 'critic', text: 'а при чём тут Сцена?' } },
   viral: { postId: 'post1', delta: 620, headline: 'Мира сделала репост. Фанаты BLESK пошли смотреть, кто такая Лиза', views: 48000, viral: true, flop: false,
@@ -152,4 +152,4 @@ export const WORLD_FORMS: Record<string, { gen: string; acc: string }> = {
   stage: { gen: 'Сцены', acc: 'Сцену' }, academy: { gen: 'Академии', acc: 'Академию' }, it: { gen: 'Айти-тусовки', acc: 'Айти-тусовку' },
   stream: { gen: 'Стрима', acc: 'Стрим' }, own: { gen: 'своего мира', acc: 'свой мир' },
 }
-export const worldOf = (id: string) => { const w = worlds.find(x => x.id === id) ?? worlds[0]; return { ...w, ...(WORLD_FORMS[w.id] ?? WORLD_FORMS.stage) } }
+export const worldOf = (id: string) => { const w = worlds.find(x => x.id === id) ?? (id === 'own' ? { ...worlds[0], id: 'own', title: 'Свой мир', emoji: '✨' } : worlds[0]); return { ...w, ...(WORLD_FORMS[w.id] ?? WORLD_FORMS.stage) } }

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { ApiError, api } from '../api/client'
+import { api } from '../api/client'
 import type { Player } from '../api/types'
 
 export type PlayerState = 'loading' | 'ready' | 'missing' | 'failed'
@@ -18,7 +18,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setPlayerValue(await api.me())
       setPlayerState('ready')
     } catch (e) {
-      setPlayerState(prev => prev === 'ready' ? 'ready' : e instanceof ApiError && e.status === 404 ? 'missing' : 'failed')
+      setPlayerState(prev => prev === 'ready' ? 'ready' : (e as { status?: number })?.status === 404 ? 'missing' : 'failed')
     }
   }, [])
   useEffect(() => { void refresh() }, [refresh])

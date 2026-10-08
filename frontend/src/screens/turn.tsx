@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { hapticFeedback, shareStory, shareURL } from '@telegram-apps/sdk-react'
 import { api } from '../api/client'
-import { firstPost, ideas, results } from '../api/mock'
+import { firstPost, results } from '../api/mock'
 import type { CommentT, Post, PostResult } from '../api/types'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
@@ -9,16 +9,18 @@ import { inTelegram } from '../telegram'
 import { Avatar, BottomCTA, Button, Comment, Gift, Ribbon, TopBar, Whisper, fmt, plural } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
-import { apiBaseUrl } from '../app/runtimeConfig'
-import { telegramStartUrl } from '../app/telegramLinks'
+import { contentOf } from '../api/worldContent'
+import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
+import { TELEGRAM_APP_URL } from '../app/telegramLinks'
 import { register } from '.'
 
-const LINK = telegramStartUrl('liza7')
+const LINK = TELEGRAM_APP_URL
 
 // 02-1: пост, желания дня, «Подскажи» дописывает черновик
 function Compose() {
   const nav = useNav(); const p = usePlayer()
-  const [text, setText] = useState(() => typeof nav.params.text === 'string' ? nav.params.text : firstPost.text.replace(' 🫠', ''))
+  const ideas = contentOf(p.world).ideas
+  const [text, setText] = useState(() => typeof nav.params.text === 'string' ? nav.params.text : '')
   const done = p.wants.filter(w => w.done).length
   return (
     <div className="screen no-tab">
@@ -68,9 +70,11 @@ function Live() {
         reactions: [...new Set(reactionsRef.current)].map(emoji => ({ emoji, count: reactionsRef.current.filter(value => value === emoji).length })),
         comments: commentsRef.current, at: 'только что' }
       track('post_result', { delta: e.result.delta, viral: e.result.viral, flop: e.result.flop })
-      if (apiBaseUrl) void refresh()
-      else patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: p.subs + e.result.delta })
-      nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: e.result, post })
+      void (async () => {
+        if (apiBaseUrl) await refresh()
+        else patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + e.result.delta) })
+        nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: e.result, post })
+      })()
     }
   }, state => nav.replace('02-2b_publish_error', { text, publicationId, uncertain: state === 'unknown' }), status => {
     if (status === 'ready_for_moderation') setPhase('moderating')
@@ -123,7 +127,7 @@ function PublishError() {
 function useCount(n: number, ms = 800) {
   const [v, setV] = useState(0)
   useEffect(() => {
-    if (new URLSearchParams(location.search).has('shot')) { setV(n); return }
+    if (new URLSearchParams(location.search).has('shot') || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setV(n); return }
     const t0 = performance.now(); let raf = 0
     const tick = (t: number) => { const k = Math.min(1, (t - t0) / ms); setV(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(tick) }
     raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf)
@@ -136,6 +140,8 @@ function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'nor
   const nav = useNav()
   const viral = theme === 'viral'
   const shown = useCount(Math.abs(r.delta))
+  const additive = r.whys.filter(why => /^[+−-]\d+(?:[.,]\d+)?$/.test(why.value))
+  const explainsDelta = additive.length > 0 && additive.reduce((sum, why) => sum + Number(why.value.replace('−', '-').replace(',', '.')), 0) === r.delta
   useEffect(() => { haptic(r.delta >= 0 ? 'success' : 'warning'); const ts = r.whys.map((_, i) => setTimeout(() => haptic('light'), 850 + i * 150)); return () => ts.forEach(clearTimeout) }, [r])
   return (
     <div className="screen no-tab">
@@ -145,21 +151,21 @@ function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'nor
         <div className="sheet" style={{ background: viral ? 'linear-gradient(170deg,#1B2A4A,#2A1236 60%,#1A1A24)' : '#1A1A24', position: 'relative' }}>
           <div className="small" style={{ letterSpacing: '.06em', color: viral ? 'var(--gift)' : 'var(--muted2)' }}>{viral ? '🌊 ПОСТ ЗАЛЕТЕЛ В РЕКИ' : 'ИТОГ ПОСТА'}</div>
           <div style={{ fontSize: 64, fontWeight: 900, lineHeight: 1.1 }} className={r.delta >= 0 ? 'up' : 'down'}>{r.delta >= 0 ? '+' : '−'}{fmt(shown)}</div>
-          <div className="muted2" style={{ marginBottom: 12 }}>{plural(r.delta, 'подписчик', 'подписчика', 'подписчиков')}</div>
+          <div className="muted2" style={{ marginBottom: 12 }}>{plural(shown, 'подписчик', 'подписчика', 'подписчиков')}</div>
           <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{r.headline}</div>
           {viral && <div className="confetti" aria-hidden>{Array.from({ length: 18 }, (_, i) => <i key={i} style={{ left: `${(i * 53) % 100}%`, animationDelay: `${(i % 6) * 0.12}s`, background: ['#FF6B8B', '#9B6BFF', '#FFD66B', '#6BFFB8'][i % 4] }} />)}</div>}
-          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{w.icon} {w.label} <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b></span>)}</div>
-          {r.ribbons.map(x => <Ribbon key={x.title} icon={x.icon} title={x.title} sub={x.sub} />)}
+          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[w.icon] ?? w.icon} {w.label} {(!/^[+−-]/.test(w.value) || explainsDelta) && <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b>}</span>)}</div>
+          {(runtimeConfig.features.collection ? r.ribbons : []).map(x => <Ribbon key={x.title} icon={x.icon} title={x.title} sub={x.sub} />)}
           {r.bestComment && <div className="row" style={{ margin: '8px 0 12px' }}><Avatar seed={r.bestComment.avatar} size={28} /><span className="small">«{r.bestComment.text}»</span></div>}
           {theme === 'normal' && <Whisper>Подписчики приходят за смелость, юмор и попадание в тему мира. Смотри, за что дали в этот раз</Whisper>}
           {viral ? <>
             <Button onClick={() => nav.push('02-7_share', { post })}>Поделиться залётом</Button>
-            <div className="small" style={{ textAlign: 'center', margin: '8px 0', color: 'var(--gift)' }}>🎁 друг зайдёт: +5 постов вам обоим</div>
+            <div className="small" style={{ textAlign: 'center', margin: '8px 0', color: 'var(--gift)' }}>Позови друга в свой мир</div>
             <Button secondary onClick={() => nav.replace('03-5_stage')}>Дальше</Button>
           </> : <>
             <Button onClick={() => nav.replace('02-6_thread', { post })}>Дальше</Button>
             {theme === 'normal' && <><button onClick={() => nav.push('02-7_share', { post })} style={{ display: 'block', margin: '10px auto 4px', background: 'none', border: 'none', color: 'var(--lilac)' }}>Поделиться в чат или сторис ›</button>
-              <div className="small" style={{ textAlign: 'center', color: 'var(--gift)' }}>🎁 друг зайдёт по карточке: +5 постов вам обоим</div></>}
+              <div className="small" style={{ textAlign: 'center', color: 'var(--gift)' }}>Отправь другу свой пост</div></>}
           </>}
         </div>
       </div>
@@ -231,15 +237,23 @@ function Thread() {
       })
     return () => { alive = false }
   }, [postId, publishedPost, reloadToken])
-  // Свой пост (только что опубликованный) отвечаем; чужой — только читаем, это решает canReply с сервера.
-  const canReply = publishedPost ? true : post?.canReply === true
+  const rewardedReplies = !!apiBaseUrl && (!!publishedPost || post?.canReply === true)
+  const demoComments = runtimeConfig.features.mockFeed && (post?.demoComments === true || !apiBaseUrl || post?.comments.length === 0)
+  const canReply = rewardedReplies || demoComments
   const target = post ? [...post.comments, ...mine].find(comment => comment.id === targetId) : undefined
   const send = async () => {
-    if (!post || !reply.trim() || !targetId || sending) return
+    if (!post || !reply.trim() || (!targetId && !demoComments) || sending) return
     if (apiBaseUrl && !publishedPost && !postId) { setReplyError('Открой опубликованный пост, чтобы ответить на него.'); return }
     setSending(true)
     setReplyError('')
     try {
+      if (demoComments && (!rewardedReplies || !targetId || !apiBaseUrl)) {
+        const comment = await api.demoComment(post.id, player, reply, replyId)
+        setMine(comments => [...comments, comment])
+        setReply(''); setTargetId(null)
+        return
+      }
+      if (!targetId) return
       const result = await api.reply(post.id, targetId, replyId, reply)
       setMine(comments => [...comments, { id: result.commentId, author: player.name, avatar: player.handle, handle: player.handle, text: reply, me: true }])
       setAwarded(result.awardedReplies)
@@ -277,7 +291,9 @@ function Thread() {
       <TopBar onBack={goBack} title="Реакции" right={`👁 ${fmt(post.views)} ↑`} />
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(r => <span key={r.emoji} className="react">{r.emoji} {r.count}</span>)}</div></div>
-        {canReply
+        {demoComments && !rewardedReplies
+          ? <div className="small muted" style={{ marginBottom: 12 }}>Демо-комментарии сохраняются на этом устройстве. Подписчики за них не начисляются.</div>
+          : rewardedReplies
           ? <div className="small" style={{ color: 'var(--gift)', marginBottom: 12 }}>💬 Ответь на комментарии: первые ответы +подписчики{limit != null ? ` · ${awarded}/${limit}` : ''}</div>
           : <div className="small muted" style={{ marginBottom: 12 }}>Чужой пост · отвечать можно только под своими</div>}
         {bonus != null && bonus > 0 && <Gift style={{ marginBottom: 12 }}>+{bonus} подписчиков за ответ</Gift>}
@@ -298,8 +314,8 @@ function Thread() {
       </div>
       {canReply && (
         <div className="bottom-cta" style={{ flexDirection: 'row' }}>
-          <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input className="thread-reply-input" value={reply} onChange={e => setReply(e.target.value)} placeholder={targetId ? 'Ответ · бесплатно' : 'Выбери комментарий'} maxLength={300} disabled={!targetId || sending} /></div>
-          <button className="card thread-reply-send" onClick={send} disabled={sending || !reply.trim() || !targetId} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label="Отправить">➤</button>
+          <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input className="thread-reply-input" value={reply} onChange={e => setReply(e.target.value)} placeholder={targetId ? 'Ответ · бесплатно' : demoComments ? 'Твой комментарий' : 'Выбери комментарий'} maxLength={300} disabled={(!targetId && !demoComments) || sending} /></div>
+          <button className="card thread-reply-send" onClick={send} disabled={sending || !reply.trim() || (!targetId && !demoComments)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label="Отправить">➤</button>
         </div>
       )}
     </div>
@@ -311,7 +327,7 @@ function Share() {
   const nav = useNav()
   const player = usePlayer()
   const post = (nav.params.post as Post | undefined) ?? firstPost
-  const text = 'Мой пост залетел в Реки 🌊 А ты кем будешь в Сцене?'
+  const text = `Мой пост в Реках 🌊 А ты кем будешь в ${contentOf(player.world).where}?`
   const toChat = () => { track('share', { to: 'chat' }); if (inTelegram) shareURL.ifAvailable(LINK, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(LINK)}&text=${encodeURIComponent(text)}`) }
   // Публичную картинку 9:16 Telegram загружает без заголовков авторизации.
   const storyCardUrl = new URL(`${apiBaseUrl ?? ''}/cards/story/${encodeURIComponent(player.id)}/${encodeURIComponent(post.id)}.png`, location.origin).toString()
@@ -324,9 +340,9 @@ function Share() {
           <div className="small" style={{ color: 'var(--gift)' }}>РЕКИ · ПОСТ ЗАЛЕТЕЛ 🌊</div>
           <div style={{ margin: '8px 0' }}>{post.text}</div>
           <div className="small muted">👁 {fmt(post.views)}</div>
-          <div className="small" style={{ marginTop: 8 }}>а ты кем будешь в Сцене? <b>▶ Играть</b></div>
+          <div className="small" style={{ marginTop: 8 }}>а ты кем будешь в {contentOf(player.world).where}? <b>▶ Играть</b></div>
         </div>
-        <Gift style={{ marginBottom: 12 }}>Кто зайдёт по карточке: +5 постов вам обоим</Gift>
+        <Gift style={{ marginBottom: 12 }}>Позови друга в Реки</Gift>
         <div className="small muted">Telegram откроет список твоих чатов. Мы его не видим и никому не пишем сами.</div>
       </div>
       <BottomCTA second="＋ В сторис" onSecond={toStory} main="Отправить в чат" onMain={toChat} />

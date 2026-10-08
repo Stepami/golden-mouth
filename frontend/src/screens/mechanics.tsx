@@ -9,6 +9,7 @@ import { inTelegram } from '../telegram'
 import { Avatar, BottomCTA, Card, Chip, TopBar, fmt } from '../ui'
 import { track } from '../app/log'
 import { telegramStartUrl } from '../app/telegramLinks'
+import { contentOf } from '../api/worldContent'
 import { register } from '.'
 
 // 03-4c: заруба на 3 дня. Счёт = 0,7 × оценка постов по шкалам мира + 0,3 × рост к своей медиане (считает бэкенд)
@@ -71,7 +72,7 @@ function Duel() {
 function Voice() {
   const nav = useNav(); const p = usePlayer(); const { patch } = useStore()
   const [v, setV] = useState(p.settings.voice.replace(/[«»]/g, ''))
-  const presets = ['коротко, с самоиронией', 'капслоком и эмодзи', 'спокойно и честно', 'как в дневнике']
+  const presets = contentOf(p.world).voices
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Голос канала" />
@@ -79,7 +80,7 @@ function Voice() {
         <div className="muted" style={{ marginBottom: 12 }}>Как ты пишешь. «Подскажи» дописывает твои черновики в этом стиле, а не в общем AI-стиле</div>
         <div className="card" style={{ marginBottom: 10 }}><textarea value={v} onChange={e => setV(e.target.value)} rows={3} maxLength={200} /></div>
         {presets.map(x => <Chip key={x} idea={x === v} onClick={() => setV(x)}>{x}</Chip>)}
-        <Card style={{ marginTop: 10, background: '#20202B' }}><div className="small muted" style={{ marginBottom: 4 }}>ПРИМЕР ПОДСКАЗКИ</div>«сегодня на репетиции до меня дошло, что я танцую лучше, когда не думаю. жаль, думаю я всегда»</Card>
+        <Card style={{ marginTop: 10, background: '#20202B' }}><div className="small muted" style={{ marginBottom: 4 }}>ПРИМЕР ПОДСКАЗКИ</div>{contentOf(p.world).ideas[0]}</Card>
       </div>
       <BottomCTA main="Сохранить" onMain={async () => {
         const voice = v.trim()

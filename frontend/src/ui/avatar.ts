@@ -1,11 +1,11 @@
 import { createAvatar } from '@dicebear/core'
-import { lorelei } from '@dicebear/collection'
+import { lorelei, notionists, pixelArt, thumbs, shapes } from '@dicebear/collection'
+import { createContext } from 'react'
+import type { WorldId } from '../api/types'
+import { contentOf } from '../api/worldContent'
 
-/**
- * Стиль аватаров. Пока один на все миры: стиль по мирам ждём из справочника (#68),
- * поэтому точка замены ровно одна, эта константа.
- */
-export const AVATAR_STYLE = 'lorelei'
+/** Мир определяет стиль; сид определяет персонажа. */
+export const AvatarWorld = createContext<WorldId>('stage')
 
 const cache = new Map<string, string>()
 
@@ -14,10 +14,17 @@ const cache = new Map<string, string>()
  * Один и тот же сид всегда даёт одну и ту же картинку, поэтому результат кэшируем:
  * в ленте на экране десятки аватарок, и пересобирать каждую на каждый рендер незачем.
  */
-export function avatarUri(seed: string): string {
-  const got = cache.get(seed)
+export function avatarUri(seed: string, world: WorldId = 'stage'): string {
+  const key = `${world}:${seed}`
+  const got = cache.get(key)
   if (got) return got
-  const uri = createAvatar(lorelei, { seed, size: 96, radius: 50 }).toDataUri()
-  cache.set(seed, uri)
+  const options = { seed, size: 96, radius: 50 }
+  const style = contentOf(world).avatarStyle
+  const avatar = style === 'pixelArt' ? createAvatar(pixelArt, options)
+    : style === 'notionists' ? createAvatar(notionists, options)
+    : style === 'thumbs' ? createAvatar(thumbs, options)
+    : style === 'shapes' ? createAvatar(shapes, options) : createAvatar(lorelei, options)
+  const uri = avatar.toDataUri()
+  cache.set(key, uri)
   return uri
 }
