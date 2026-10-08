@@ -9,4 +9,7 @@
     <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../../../frontend/src/api/personas.json" LogicalName="Reki.StarPersonas.json" />
+  </ItemGroup>
 </Project>

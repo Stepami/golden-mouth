@@ -188,7 +188,11 @@ export const api = {
   },
   demoComment: (postId: string, player: Player, text: string, replyId: string) => laterLazy(() => addDemoComment(postId, player, text, replyId)),
   friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),
-  dm: (starId: string): Promise<Dm> => BASE ? call(`/dm/${starId}`) : later(mock.dm),
+  dm: (starId: string): Promise<Dm> => BASE ? call(`/dm/${starId}`) : laterLazy(() => {
+    const star = contentOf(sessionPlayer?.world ?? 'stage').stars.find(profile => profile.id === starId)
+    if (!star) throw new ApiError(404, 'GET', `/dm/${starId}`)
+    return { ...mock.dm, star }
+  }),
   dmSend: (starId: string, text: string): Promise<{ reply?: string; repliesLeft: number }> => BASE ? call(`/dm/${starId}`, { method: 'POST', body: JSON.stringify({ text }) }) : later({ repliesLeft: 2 }),
   forget: (starId: string, fact: string) => BASE ? call(`/stars/${starId}/memory`, { method: 'DELETE', body: JSON.stringify({ fact }) }) : later({ ok: true }),
   eventToday: (): Promise<GameEvent> => BASE ? call('/events/today') : later(mock.events.collab),

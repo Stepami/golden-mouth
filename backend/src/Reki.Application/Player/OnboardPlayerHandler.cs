@@ -1,6 +1,7 @@
 using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Social;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Player;
@@ -16,6 +17,7 @@ public sealed class OnboardPlayerHandler(
         OnboardPlayerCommand request,
         CancellationToken cancellationToken)
     {
+        _ = StarCatalog.Require(request.World, request.Star);
         for (int attempt = 0; attempt < 3; attempt++)
         {
             PlayerProfile? existing = await store.GetPlayerAsync(request.TelegramUserId, cancellationToken);

@@ -1,4 +1,5 @@
 // Тестовые данные = тексты и числа из макетов docs/screens. Пока бэкенд (#10) не готов, экраны живут на них.
+import { WORLD_CONTENT } from './worldContent'
 import type { Challenge, Dm, FeedItem, Friend, GameEvent, Player, Post, PostResult, ReplyResult, Star, World, WorldRules } from './types'
 
 export const worlds: World[] = [
@@ -9,11 +10,7 @@ export const worlds: World[] = [
 ]
 export const roles = ['🎤 Трейни', '📸 Фансайт', '💃 Хореограф', '🎧 Продюсер']
 
-export const stars: Star[] = [
-  { id: 'mira', name: 'Мира', role: 'лидер BLESK', trait: 'Дерзкая', about: 'Говорит, что думает. Может раскритиковать, может сделать звездой', relation: 2 },
-  { id: 'sonya', name: 'Соня', role: 'вокал BLESK', trait: 'Добрая', about: 'Поддержит любой пост и придёт с фанатами', relation: 0 },
-  { id: 'eva', name: 'Ева', role: 'солистка NOIR', trait: 'Загадочная', about: 'Пишет редко. Если написала, это событие', relation: 0 },
-]
+export const stars: Star[] = WORLD_CONTENT.stage.stars.map(profile => ({ ...profile, relation: profile.id === 'mira' ? 2 : 0 }))
 
 export const player: Player = {
   id: '00000000000000000000000000000001', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', address: 'she',
