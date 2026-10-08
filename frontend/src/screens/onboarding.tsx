@@ -228,7 +228,7 @@ export function ChannelHead() {
     </div>
   )
 }
-function Home() {
+export function Home() {
   const nav = useNav()
   const { player: p } = useStore()
   const profile = contentOf(p?.world ?? 'stage')
