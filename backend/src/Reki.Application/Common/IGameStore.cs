@@ -4,7 +4,6 @@ using Reki.Domain.Events;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Social;
-using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Common;

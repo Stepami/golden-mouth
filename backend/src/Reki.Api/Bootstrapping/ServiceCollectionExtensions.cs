@@ -8,16 +8,10 @@ using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Application;
 using Reki.Application.Common;
-using Reki.Application.Common.AI;
 using Reki.Application.Common.Safety;
 using Reki.Application.Posts;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
-using Reki.Contracts.Events;
-using Reki.Contracts.Player;
-using Reki.Contracts.Posts;
-using Reki.Contracts.Social;
-using Reki.Contracts.Telemetry;
 using TgMiniAppAuth;
 
 namespace Reki.Api.Bootstrapping;
