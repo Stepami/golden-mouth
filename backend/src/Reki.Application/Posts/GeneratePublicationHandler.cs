@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Mediator;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.AI;
@@ -15,14 +16,15 @@ using static Reki.Application.Common.AI.StarToolCallParser;
 
 namespace Reki.Application.Posts;
 
-public sealed class GeneratePublicationHandler(
+public sealed partial class GeneratePublicationHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     GameDay gameDay,
     PlayerReader playerReader,
-    StarTurnGenerator generator) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatusLiveEvent>
+    StarTurnGenerator generator,
+    ILogger<GeneratePublicationHandler> logger) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatusLiveEvent>
 {
     private static readonly TimeSpan FailedRetention = TimeSpan.FromDays(1);
 
@@ -91,8 +93,9 @@ public sealed class GeneratePublicationHandler(
             {
                 context = await CreatePostContextAsync(request, player, cancellationToken);
             }
-            catch (Exception exception) when (IsGenerationFailure(exception))
+            catch (Exception exception)
             {
+                GenerationFailed(exception);
                 failed = true;
             }
 
@@ -122,8 +125,9 @@ public sealed class GeneratePublicationHandler(
                             await PersistActionsAsync(request.Id, update, context, cancellationToken);
                         }
                     }
-                    catch (Exception exception) when (IsGenerationFailure(exception))
+                    catch (Exception exception)
                     {
+                        GenerationFailed(exception);
                         failed = true;
                     }
 
@@ -146,8 +150,9 @@ public sealed class GeneratePublicationHandler(
                     await store.MarkPublicationReadyAsync(request.Id, cancellationToken);
                     ready = true;
                 }
-                catch (Exception exception) when (IsGenerationFailure(exception))
+                catch (Exception exception)
                 {
+                    GenerationFailed(exception);
                     failed = true;
                 }
             }
@@ -191,17 +196,8 @@ public sealed class GeneratePublicationHandler(
         _ => "new_line",
     };
 
-    private static bool IsGenerationFailure(Exception exception) => exception is
-        AiServiceUnavailableException or
-        ContentRejectedException or
-        CrisisDetectedException or
-        InvalidOperationException or
-        OperationCanceledException or
-        HttpRequestException or
-        TimeoutException ||
-        (exception is AggregateException aggregate &&
-         aggregate.InnerExceptions.Count > 0 &&
-         aggregate.InnerExceptions.All(IsGenerationFailure));
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Publication generation failed.")]
+    private partial void GenerationFailed(Exception exception);
 
     private async ValueTask<StarPostContext> CreatePostContextAsync(
         GeneratePublicationCommand request,
