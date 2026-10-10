@@ -264,11 +264,6 @@ internal sealed class MongoGameStore : IGameStore
             deleteInvites);
     }
 
-    public async ValueTask AddPostAsync(GamePost post, CancellationToken cancellationToken)
-    {
-        await _posts.InsertOneAsync(post, cancellationToken: cancellationToken);
-    }
-
     public async ValueTask<bool> TryCommitPostAsync(
         PlayerProfile updatedPlayer,
         int expectedPlayerVersion,
@@ -411,41 +406,6 @@ internal sealed class MongoGameStore : IGameStore
         return await _posts
             .Find(item => item.PlayerId == playerId)
             .SortByDescending(item => item.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
-    }
-
-    public async ValueTask<IReadOnlyList<GamePost>> GetRecentWorldPostsAsync(
-        WorldId worldId,
-        int count,
-        CancellationToken cancellationToken)
-    {
-        List<PlayerId> playerIds = await _players
-            .Find(item => item.World == worldId)
-            .Project(item => item.Id)
-            .ToListAsync(cancellationToken);
-        if (playerIds.Count == 0)
-        {
-            return [];
-        }
-
-        return await _posts
-            .Find(Builders<GamePost>.Filter.In(item => item.PlayerId, playerIds))
-            .SortByDescending(item => item.CreatedAtUtc)
-            .Limit(count)
-            .ToListAsync(cancellationToken);
-    }
-
-    public async ValueTask<IReadOnlyList<PlayerProfile>> GetPlayersAsync(
-        IReadOnlyCollection<PlayerId> playerIds,
-        CancellationToken cancellationToken)
-    {
-        if (playerIds.Count == 0)
-        {
-            return [];
-        }
-
-        return await _players
-            .Find(Builders<PlayerProfile>.Filter.In(item => item.Id, playerIds))
             .ToListAsync(cancellationToken);
     }
 
@@ -682,18 +642,6 @@ internal sealed class MongoGameStore : IGameStore
             rules,
             options,
             cancellationToken);
-    }
-
-    public async ValueTask AppendThreadAsync(
-        PlayerId playerId,
-        PostId postId,
-        string hook,
-        DateTimeOffset createdAtUtc,
-        CancellationToken cancellationToken)
-    {
-        await _threads.InsertOneAsync(
-            CreateThreadDocument(playerId, postId, hook, createdAtUtc),
-            cancellationToken: cancellationToken);
     }
 
     private static BsonDocument CreateThreadDocument(

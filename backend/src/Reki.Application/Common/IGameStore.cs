@@ -42,8 +42,6 @@ public interface IGameStore
 
     ValueTask DeletePlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
 
-    ValueTask AddPostAsync(GamePost post, CancellationToken cancellationToken);
-
     ValueTask<bool> TryCommitPostAsync(
         PlayerProfile updatedPlayer,
         int expectedPlayerVersion,
@@ -74,15 +72,6 @@ public interface IGameStore
 
     ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
         PlayerId playerId,
-        CancellationToken cancellationToken);
-
-    ValueTask<IReadOnlyList<GamePost>> GetRecentWorldPostsAsync(
-        WorldId worldId,
-        int count,
-        CancellationToken cancellationToken);
-
-    ValueTask<IReadOnlyList<PlayerProfile>> GetPlayersAsync(
-        IReadOnlyCollection<PlayerId> playerIds,
         CancellationToken cancellationToken);
 
     ValueTask<IReadOnlyList<long>> GetRecentPostViewsAsync(
@@ -148,11 +137,4 @@ public interface IGameStore
         CancellationToken cancellationToken);
 
     ValueTask SaveWorldRulesAsync(WorldRules rules, CancellationToken cancellationToken);
-
-    ValueTask AppendThreadAsync(
-        PlayerId playerId,
-        PostId postId,
-        string hook,
-        DateTimeOffset createdAtUtc,
-        CancellationToken cancellationToken);
 }
