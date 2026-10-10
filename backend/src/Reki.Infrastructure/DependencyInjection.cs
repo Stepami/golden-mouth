@@ -4,7 +4,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using OpenAI;
@@ -23,6 +22,8 @@ namespace Reki.Infrastructure;
 
 public static class DependencyInjection
 {
+    internal const string LlmProviderKey = "llm-provider";
+
     private static readonly TimeSpan MongoServerSelectionTimeout = TimeSpan.FromSeconds(5);
 
     public static IServiceCollection AddInfrastructure(
@@ -43,7 +44,7 @@ public static class DependencyInjection
         return services;
     }
 
-    private static void AddLlmInfrastructure(this IServiceCollection services)
+    internal static void AddLlmInfrastructure(this IServiceCollection services)
     {
         services
             .AddOptions<LlmOptions>()
@@ -63,7 +64,7 @@ public static class DependencyInjection
                 0.4f,
                 700);
         });
-        services.AddSingleton<IChatClient>(serviceProvider =>
+        services.AddKeyedSingleton<IChatClient>(LlmProviderKey, (serviceProvider, _) =>
         {
             LlmOptions options = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
             var clientOptions = new OpenAIClientOptions
@@ -74,19 +75,18 @@ public static class DependencyInjection
                 RetryPolicy = new ClientRetryPolicy(),
             };
             var client = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
-            IChatClient inner = client.GetChatClient(options.Model).AsIChatClient();
-            ILoggerFactory loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-            return new ChatClientBuilder(inner)
-                .UseOpenTelemetry(
-                    loggerFactory,
-                    "Reki.GenAI",
-                    telemetry => telemetry.EnableSensitiveData = false)
-                .Use(innerClient => new DeepSeekThinkingChatClient(innerClient))
-                .Use(innerClient => new PlayerSafetyChatClient(
-                    innerClient,
-                    serviceProvider.GetRequiredService<PlayerSafetyGuard>()))
-                .Build(serviceProvider);
+            return client.GetChatClient(options.Model).AsIChatClient();
         });
+
+        services.AddChatClient(serviceProvider =>
+                serviceProvider.GetRequiredKeyedService<IChatClient>(LlmProviderKey))
+            .UseOpenTelemetry(
+                sourceName: "Reki.GenAI",
+                configure: telemetry => telemetry.EnableSensitiveData = false)
+            .Use(innerClient => new DeepSeekThinkingChatClient(innerClient))
+            .Use((innerClient, serviceProvider) => new PlayerSafetyChatClient(
+                innerClient,
+                serviceProvider.GetRequiredService<PlayerSafetyGuard>()));
     }
 
     private static void AddMongoInfrastructure(

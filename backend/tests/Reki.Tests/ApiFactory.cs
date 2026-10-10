@@ -7,8 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
-using Reki.Application.Common.Safety;
-using Reki.Infrastructure.AI;
+using Reki.Infrastructure;
 using Testcontainers.MongoDb;
 using TUnit.AspNetCore;
 using TUnit.Core.Interfaces;
@@ -55,12 +54,10 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncIniti
         {
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.RemoveAll<TimeProvider>();
-            services.RemoveAll<IChatClient>();
+            services.RemoveAllKeyed<IChatClient>(DependencyInjection.LlmProviderKey);
             services.AddSingleton<TimeProvider>(new FakeTimeProvider(
                 new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero)));
-            services.AddSingleton<IChatClient>(provider => new PlayerSafetyChatClient(
-                ChatClient,
-                provider.GetRequiredService<PlayerSafetyGuard>()));
+            services.AddKeyedSingleton(DependencyInjection.LlmProviderKey, ChatClient);
             services
                 .AddAuthentication(options =>
                 {
