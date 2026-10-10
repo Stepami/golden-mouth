@@ -14,8 +14,8 @@ public sealed class DeletePlayerHandler(
         DeletePlayerCommand request,
         CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        PlayerProfile player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
         await store.DeletePlayerAsync(player, cancellationToken);
         return Unit.Value;
     }

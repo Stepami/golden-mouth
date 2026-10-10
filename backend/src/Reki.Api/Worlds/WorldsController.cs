@@ -22,7 +22,7 @@ public sealed class WorldsController(
         ContractWorldId worldId,
         CancellationToken cancellationToken)
     {
-        WorldRules result = await sender.Send(
+        var result = await sender.Send(
             new GetWorldRulesQuery(WorldId.From(worldId.ToString())),
             cancellationToken);
         return TypedResults.Ok(mapper.MapWorldRules(result));
@@ -34,7 +34,7 @@ public sealed class WorldsController(
         UpdateWorldRulesRequest request,
         CancellationToken cancellationToken)
     {
-        SaveWorldRulesCommand command = mapper.MapWorldRulesRequest(
+        var command = mapper.MapWorldRulesRequest(
             request);
         await sender.Send(command, cancellationToken);
         return TypedResults.Ok();

@@ -19,7 +19,7 @@ public sealed class PostsController(
         StartPublicationRequest request,
         CancellationToken cancellationToken)
     {
-        IAsyncEnumerable<PublicationStatusLiveEvent> result = sender.CreateStream(
+        var result = sender.CreateStream(
             new GeneratePublicationCommand(
                 request.PublicationId,
                 request.Text,
@@ -35,7 +35,7 @@ public sealed class PostsController(
         string publicationId,
         CancellationToken cancellationToken)
     {
-        PublicationStatusResponse result = await sender.Send(
+        var result = await sender.Send(
             new GetPublicationQuery(publicationId),
             cancellationToken);
         return TypedResults.Ok(result);
@@ -47,7 +47,7 @@ public sealed class PostsController(
         string publicationId,
         CancellationToken cancellationToken)
     {
-        IAsyncEnumerable<LiveEvent> result = sender.CreateStream(
+        var result = sender.CreateStream(
             new PublishPostCommand(publicationId),
             cancellationToken);
         return TypedResults.ServerSentEvents(result);
@@ -60,7 +60,7 @@ public sealed class PostsController(
         ReplyRequest request,
         CancellationToken cancellationToken)
     {
-        ReplyResponse result = await sender.Send(
+        var result = await sender.Send(
             new AddReplyCommand(
                 PostId.From(postId),
                 CommentId.From(request.CommentId),
@@ -75,7 +75,7 @@ public sealed class PostsController(
     public async Task<Ok<IReadOnlyList<FeedItemResponse>>> GetFeedAsync(
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<FeedItemResponse> result = await sender.Send(
+        var result = await sender.Send(
             new GetFeedQuery(),
             cancellationToken);
         return TypedResults.Ok(result);
@@ -86,7 +86,7 @@ public sealed class PostsController(
     public async Task<Ok<IReadOnlyList<ChannelPostResponse>>> GetChannelPostsAsync(
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<ChannelPostResponse> result = await sender.Send(
+        var result = await sender.Send(
             new GetChannelPostsQuery(),
             cancellationToken);
         return TypedResults.Ok(result);
@@ -98,7 +98,7 @@ public sealed class PostsController(
         string postId,
         CancellationToken cancellationToken)
     {
-        PostDetailResponse result = await sender.Send(
+        var result = await sender.Send(
             new GetPostQuery(PostId.From(postId)),
             cancellationToken);
         return TypedResults.Ok(result);

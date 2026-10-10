@@ -17,9 +17,9 @@ public sealed class ClaimPlusInterestHandler(
         ClaimPlusInterestCommand request,
         CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        PlayerProfile storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
-        PlayerProfile player = gameDay.Normalize(storedPlayer);
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var player = gameDay.Normalize(storedPlayer);
         if (!ReferenceEquals(player, storedPlayer))
         {
             await store.StartPlayerPeriodAsync(storedPlayer, player, cancellationToken);
@@ -27,7 +27,7 @@ public sealed class ClaimPlusInterestHandler(
 
         if (request.Interest)
         {
-            PlayerProfile subscribed = player.RequestPlusNotification();
+            var subscribed = player.RequestPlusNotification();
             if (!ReferenceEquals(subscribed, player))
             {
                 await store.SavePlusNotificationAsync(player, subscribed, cancellationToken);
@@ -35,7 +35,7 @@ public sealed class ClaimPlusInterestHandler(
             }
         }
 
-        PlayerProfile updated = player.ClaimPlusInterestBonus(balance.Value.PlusInterestBonus);
+        var updated = player.ClaimPlusInterestBonus(balance.Value.PlusInterestBonus);
         if (ReferenceEquals(updated, player))
         {
             return 0;

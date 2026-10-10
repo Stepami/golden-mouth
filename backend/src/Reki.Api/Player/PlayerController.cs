@@ -21,7 +21,7 @@ public sealed class PlayerController(
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
-        PlayerView result = await sender.Send(
+        var result = await sender.Send(
             new GetPlayerQuery(),
             cancellationToken);
         return TypedResults.Ok(mapper.MapPlayer(result));
@@ -33,7 +33,7 @@ public sealed class PlayerController(
         OnboardingRequest request,
         CancellationToken cancellationToken)
     {
-        PlayerView result = await sender.Send(
+        var result = await sender.Send(
             new OnboardPlayerCommand(
                 ToStorageValue(request.BirthGroup),
                 DomainWorldId.From(request.World.ToString()),
@@ -51,7 +51,7 @@ public sealed class PlayerController(
     [ActionName("GetReferralCode")]
     public async Task<Ok<ReferralResponse>> GetReferralCodeAsync(CancellationToken cancellationToken)
     {
-        ReferralResponse result = await sender.Send(
+        var result = await sender.Send(
             new GetReferralQuery(),
             cancellationToken);
         return TypedResults.Ok(result);
@@ -81,7 +81,7 @@ public sealed class PlayerController(
         [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] PlusInterestRequest? request,
         CancellationToken cancellationToken)
     {
-        int bonus = await sender.Send(
+        var bonus = await sender.Send(
             new ClaimPlusInterestCommand(request?.Interest ?? true),
             cancellationToken);
         return TypedResults.Ok(new PlusInterestResponse(bonus));

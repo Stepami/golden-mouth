@@ -16,7 +16,7 @@ internal static class Bootstrap
 
     public static async Task RunAsync(string[] arguments)
     {
-        WebApplicationBuilder builder = WebApplication.CreateBuilder(arguments);
+        var builder = WebApplication.CreateBuilder(arguments);
         builder.Configuration.AddJsonFile(
             Path.Combine(AppContext.BaseDirectory, "config", "balance.json"),
             optional: false,
@@ -25,7 +25,7 @@ internal static class Bootstrap
         ConfigureServices(builder);
         ConfigureLogging(builder);
 
-        WebApplication app = builder.Build();
+        var app = builder.Build();
         ConfigurePipeline(app);
         await app.RunAsync();
     }

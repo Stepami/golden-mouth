@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Serialization;
 using Reki.Tests.Generated;
 
@@ -12,7 +11,7 @@ public sealed class ApiExceptionHandlerTests(ApiFactory factory)
     [Test]
     public async Task ExceptionHandler_WhenCustomExceptionIsThrown_ReturnsSafeProblemDetailsAsync()
     {
-        using TestApiClient api = factory.CreateApiClient(2001);
+        using var api = factory.CreateApiClient(2001);
         PlayerApiException? exception = null;
         try
         {
@@ -28,8 +27,8 @@ public sealed class ApiExceptionHandlerTests(ApiFactory factory)
             throw new InvalidOperationException("The typed client did not surface the not-found response.");
         }
 
-        string json = exception.Response;
-        ProblemDetails problemDetails = JsonSerializer.Deserialize(
+        var json = exception.Response;
+        var problemDetails = JsonSerializer.Deserialize(
                 json,
                 ApiJsonSerializerContext.Default.ProblemDetails)
             ?? throw new InvalidOperationException("ProblemDetails response was empty.");

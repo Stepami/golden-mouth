@@ -15,7 +15,7 @@ public sealed class UpdateSettingsHandler(
         UpdateSettingsCommand request,
         CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         if (await store.UpdatePlayerSettingsAsync(telegramUserId, request, cancellationToken))
         {
             return Unit.Value;

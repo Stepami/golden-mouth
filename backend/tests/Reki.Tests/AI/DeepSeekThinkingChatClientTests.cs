@@ -12,17 +12,17 @@ public sealed class DeepSeekThinkingChatClientTests
     public async Task GetResponse_DeepSeekModel_DisablesThinkingAsync()
     {
         // Arrange
-        IChatClient inner = CreateInner();
+        var inner = CreateInner();
         using var client = new DeepSeekThinkingChatClient(inner);
 
         // Act
         await client.GetResponseAsync([], new ChatOptions { ModelId = "deepseek-flash" });
 
         // Assert
-        ChatOptions? sent = SentOptions(inner);
+        var sent = SentOptions(inner);
         var completionOptions = sent?.RawRepresentationFactory?.Invoke(inner) as ChatCompletionOptions;
 #pragma warning disable SCME0001 // JsonPatch экспериментальный.
-        bool hasThinking = completionOptions?.Patch.Contains("$.thinking"u8) ?? false;
+        var hasThinking = completionOptions?.Patch.Contains("$.thinking"u8) ?? false;
 #pragma warning restore SCME0001
         await Assert.That(hasThinking).IsTrue();
         await Assert.That(sent?.ModelId).IsEqualTo("deepseek-flash");
@@ -32,7 +32,7 @@ public sealed class DeepSeekThinkingChatClientTests
     public async Task GetResponse_OtherModel_KeepsOptionsAsync()
     {
         // Arrange
-        IChatClient inner = CreateInner();
+        var inner = CreateInner();
         using var client = new DeepSeekThinkingChatClient(inner);
         var options = new ChatOptions { ModelId = "ai/gemma4" };
 
@@ -45,7 +45,7 @@ public sealed class DeepSeekThinkingChatClientTests
 
     private static IChatClient CreateInner()
     {
-        IChatClient inner = Substitute.For<IChatClient>();
+        var inner = Substitute.For<IChatClient>();
         inner.GetResponseAsync(
                 Arg.Any<IEnumerable<ChatMessage>>(),
                 Arg.Any<ChatOptions?>(),

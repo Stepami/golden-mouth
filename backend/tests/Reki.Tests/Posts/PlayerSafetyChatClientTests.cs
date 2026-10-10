@@ -14,8 +14,8 @@ public sealed class PlayerSafetyChatClientTests
     [Test]
     public async Task GetResponse_StripsCheckedPlayerContextAsync()
     {
-        IChatClient inner = Substitute.For<IChatClient>();
-        IGameStore store = Substitute.For<IGameStore>();
+        var inner = Substitute.For<IChatClient>();
+        var store = Substitute.For<IGameStore>();
         ChatOptions? forwarded = null;
         inner.GetResponseAsync(
                 Arg.Any<IEnumerable<ChatMessage>>(),
@@ -51,8 +51,8 @@ public sealed class PlayerSafetyChatClientTests
     [Test]
     public async Task StreamingInput_IsCheckedWhenEnumeratedAsync()
     {
-        IChatClient inner = Substitute.For<IChatClient>();
-        IGameStore store = Substitute.For<IGameStore>();
+        var inner = Substitute.For<IChatClient>();
+        var store = Substitute.For<IGameStore>();
         var client = new PlayerSafetyChatClient(
             inner,
             new PlayerSafetyGuard(store, TimeProvider.System));
@@ -65,15 +65,15 @@ public sealed class PlayerSafetyChatClientTests
                     ["наркотики"]),
             },
         };
-        IAsyncEnumerable<ChatResponseUpdate> stream = client.GetStreamingResponseAsync(
+        var stream = client.GetStreamingResponseAsync(
             [new ChatMessage(ChatRole.User, "наркотики")],
             options);
-        bool rejected = false;
-        int updates = 0;
+        var rejected = false;
+        var updates = 0;
 
         try
         {
-            await foreach (ChatResponseUpdate update in stream)
+            await foreach (var update in stream)
             {
                 updates += update.Contents.Count;
             }

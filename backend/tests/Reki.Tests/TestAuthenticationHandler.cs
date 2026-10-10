@@ -4,7 +4,6 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
 using TgMiniAppAuth;
 
 namespace Reki.Tests;
@@ -20,18 +19,18 @@ public sealed class TestAuthenticationHandler(
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        if (!Request.Headers.TryGetValue(UserIdHeaderName, out StringValues values))
+        if (!Request.Headers.TryGetValue(UserIdHeaderName, out var values))
         {
             return Task.FromResult(AuthenticateResult.NoResult());
         }
 
-        if (!long.TryParse(values.ToString(), CultureInfo.InvariantCulture, out long userId))
+        if (!long.TryParse(values.ToString(), CultureInfo.InvariantCulture, out var userId))
         {
             return Task.FromResult(AuthenticateResult.Fail("Invalid test Telegram user ID."));
         }
 
-        string serializedUser = $$"""{"id":{{userId}},"first_name":"Test player"}""";
-        string rawAuthData = $"user={Uri.EscapeDataString(serializedUser)}";
+        var serializedUser = $$"""{"id":{{userId}},"first_name":"Test player"}""";
+        var rawAuthData = $"user={Uri.EscapeDataString(serializedUser)}";
         Claim[] claims =
         [
             new Claim(TgMiniAppAuthConstants.Claims.Id, values.ToString()),

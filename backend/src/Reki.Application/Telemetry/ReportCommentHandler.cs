@@ -15,8 +15,8 @@ public sealed class ReportCommentHandler(
         ReportCommentCommand request,
         CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        PlayerProfile player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
         telemetry.Track(player.Id, "report", new Dictionary<string, string>());
         return Unit.Value;
     }

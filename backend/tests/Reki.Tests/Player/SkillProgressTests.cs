@@ -13,12 +13,12 @@ public sealed class SkillProgressTests
         var initial = new SkillProgress(1, 0, 0);
 
         // Act
-        SkillProgress[] results = Thresholds
+        var results = Thresholds
             .Select(threshold => initial.AddExperience(threshold, Thresholds))
             .ToArray();
 
         // Assert
-        for (int index = 0; index < results.Length; index++)
+        for (var index = 0; index < results.Length; index++)
         {
             await Assert.That(results[index].Level).IsEqualTo(index + 1);
             await Assert.That(results[index].Experience).IsEqualTo(Thresholds[index]);
@@ -33,7 +33,7 @@ public sealed class SkillProgressTests
         var initial = new SkillProgress(1, 0, 0);
 
         // Act
-        SkillProgress result = initial.AddExperience(14, Thresholds);
+        var result = initial.AddExperience(14, Thresholds);
 
         // Assert
         await Assert.That(result.Level).IsEqualTo(2);
@@ -48,7 +48,7 @@ public sealed class SkillProgressTests
         var legacy = new SkillProgress(2, 0.5, 0);
 
         // Act
-        SkillProgress result = legacy.AddExperience(6, Thresholds);
+        var result = legacy.AddExperience(6, Thresholds);
 
         // Assert
         await Assert.That(result.Experience).IsEqualTo(20);
@@ -63,7 +63,7 @@ public sealed class SkillProgressTests
         var initial = new SkillProgress(9, 0.9, 263);
 
         // Act
-        SkillProgress result = initial.AddExperience(20, Thresholds);
+        var result = initial.AddExperience(20, Thresholds);
 
         // Assert
         await Assert.That(result.Level).IsEqualTo(10);

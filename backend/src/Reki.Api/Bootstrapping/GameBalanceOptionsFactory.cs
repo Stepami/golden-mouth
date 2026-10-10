@@ -14,22 +14,22 @@ internal sealed class GameBalanceOptionsFactory(
     // The JSON structure differs from the immutable GameBalance record.
     protected override GameBalance CreateInstance(string name)
     {
-        IConfigurationSection posts = configuration.GetRequiredSection("posts");
-        IConfigurationSection growth = configuration.GetRequiredSection("growth");
-        IConfigurationSection viral = configuration.GetRequiredSection("viral");
-        IConfigurationSection flop = configuration.GetRequiredSection("flop");
-        IConfigurationSection skills = configuration.GetRequiredSection("skills");
-        IConfigurationSection relations = configuration.GetRequiredSection("relations");
-        IConfigurationSection challenge = configuration.GetRequiredSection("challenge");
-        IConfigurationSection thread = configuration.GetRequiredSection("thread");
-        string resetValue = posts["reset_time_msk"]
-                            ?? throw new InvalidOperationException("posts.reset_time_msk is required.");
+        var posts = configuration.GetRequiredSection("posts");
+        var growth = configuration.GetRequiredSection("growth");
+        var viral = configuration.GetRequiredSection("viral");
+        var flop = configuration.GetRequiredSection("flop");
+        var skills = configuration.GetRequiredSection("skills");
+        var relations = configuration.GetRequiredSection("relations");
+        var challenge = configuration.GetRequiredSection("challenge");
+        var thread = configuration.GetRequiredSection("thread");
+        var resetValue = posts["reset_time_msk"]
+                         ?? throw new InvalidOperationException("posts.reset_time_msk is required.");
         if (!TimeOnly.TryParseExact(
                 resetValue,
                 "HH:mm",
                 CultureInfo.InvariantCulture,
                 DateTimeStyles.None,
-                out TimeOnly resetTime))
+                out var resetTime))
         {
             throw new InvalidOperationException("posts.reset_time_msk must use HH:mm format.");
         }

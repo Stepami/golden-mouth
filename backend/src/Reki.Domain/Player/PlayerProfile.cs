@@ -52,17 +52,17 @@ public sealed record PlayerProfile(
         // Mongo can hydrate null for fields absent from legacy documents despite the domain contract.
 
         // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
-        IReadOnlyList<DailyWant> wants = Wants ?? DailyWantCatalog.Create();
+        var wants = Wants ?? DailyWantCatalog.Create();
 
         // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
-        IReadOnlyList<AchievementProgress> achievements = Achievements ?? [];
+        var achievements = Achievements ?? [];
         if (!achievements.Any(item => item.WorldId == World))
         {
             achievements = [.. achievements, .. AchievementCatalog.Create(World)];
         }
 
         // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
-        IReadOnlyList<StarRelationProgress> relations = StarRelations ?? [];
+        var relations = StarRelations ?? [];
         return ReferenceEquals(wants, Wants) &&
             ReferenceEquals(achievements, Achievements) &&
             ReferenceEquals(relations, StarRelations)
@@ -77,8 +77,8 @@ public sealed record PlayerProfile(
 
     public int GetPostsCap(int freePerDay, int plusPerDay)
     {
-        int baseLimit = Settings.Plus ? plusPerDay : freePerDay;
-        int challengeBonus = ChallengeBonusUntilUtc > PostsPeriodStartedAtUtc
+        var baseLimit = Settings.Plus ? plusPerDay : freePerDay;
+        var challengeBonus = ChallengeBonusUntilUtc > PostsPeriodStartedAtUtc
             ? ChallengeDailyBonus
             : 0;
         return baseLimit + DailyBonus + challengeBonus;
@@ -118,20 +118,20 @@ public sealed record PlayerProfile(
         int relationMaxGainPerDay,
         int starCardAt)
     {
-        bool completedWant = !string.IsNullOrWhiteSpace(completedWantId) &&
-            Wants.Any(want => want.Id == completedWantId && !want.Done);
-        IReadOnlyList<DailyWant> wants = completedWant
+        var completedWant = !string.IsNullOrWhiteSpace(completedWantId) &&
+                            Wants.Any(want => want.Id == completedWantId && !want.Done);
+        var wants = completedWant
             ? Wants.Select(want => want.Id == completedWantId ? want with { Done = true } : want).ToArray()
             : Wants;
-        IReadOnlyList<StarRelationProgress> relations = completedWant
+        var relations = completedWant
             ? GainStarRelation(
                 starId,
                 relationMinimum,
                 relationMaximum,
                 relationMaxGainPerDay)
             : StarRelations;
-        long subscribers = Math.Max(0, Subscribers + subscriberDelta);
-        IReadOnlyList<AchievementProgress> achievements = Achievements;
+        var subscribers = Math.Max(0, Subscribers + subscriberDelta);
+        var achievements = Achievements;
         if (viral)
         {
             achievements = Unlock(achievements, World, AchievementCatalog.FirstViral);
@@ -176,7 +176,7 @@ public sealed record PlayerProfile(
 
     public PlayerProfile UnlockAchievement(string achievementId)
     {
-        IReadOnlyList<AchievementProgress> updated = Unlock(Achievements, World, achievementId);
+        var updated = Unlock(Achievements, World, achievementId);
         return ReferenceEquals(updated, Achievements)
             ? this
             : this with { Achievements = updated, Version = Version + 1 };
@@ -256,13 +256,13 @@ public sealed record PlayerProfile(
         int maximum,
         int maxGainPerDay)
     {
-        StarRelationProgress? current = StarRelations.FirstOrDefault(item => item.StarId == starId);
+        var current = StarRelations.FirstOrDefault(item => item.StarId == starId);
         current ??= new StarRelationProgress(starId, 0, 0, PostsPeriodStartedAtUtc);
-        int gained = current.PeriodStartedAtUtc == PostsPeriodStartedAtUtc
+        var gained = current.PeriodStartedAtUtc == PostsPeriodStartedAtUtc
             ? current.GainedInPeriod
             : 0;
-        int available = Math.Max(0, maxGainPerDay - gained);
-        int increase = Math.Min(1, available);
+        var available = Math.Max(0, maxGainPerDay - gained);
+        var increase = Math.Min(1, available);
         var updated = current with
         {
             Value = Math.Clamp(current.Value + increase, minimum, maximum),
@@ -281,7 +281,7 @@ public sealed record PlayerProfile(
         WorldId worldId,
         string achievementId)
     {
-        AchievementProgress? target = achievements.FirstOrDefault(item =>
+        var target = achievements.FirstOrDefault(item =>
             item.WorldId == worldId && item.Id == achievementId);
         if (target is null || target.IsOpen)
         {

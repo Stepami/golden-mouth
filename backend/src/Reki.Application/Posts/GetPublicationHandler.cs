@@ -16,9 +16,9 @@ public sealed class GetPublicationHandler(
         GetPublicationQuery request,
         CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        PlayerProfile player = await playerReader.GetAsync(telegramUserId, cancellationToken);
-        Publication? publication = await store.GetPublicationAsync(request.PublicationId, cancellationToken);
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var publication = await store.GetPublicationAsync(request.PublicationId, cancellationToken);
         return publication is not null && publication.PlayerId == player.Id
             ? PostContractMapper.MapPublication(publication)
             : throw new ResourceNotFoundException("Publication not found.");

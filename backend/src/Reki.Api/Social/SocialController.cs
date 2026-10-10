@@ -21,10 +21,10 @@ public sealed class SocialController(
     public async Task<Ok<IReadOnlyList<FriendResponse>>> GetFriendsAsync(
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<FriendSummary> friends = await sender.Send(
+        var friends = await sender.Send(
             new GetFriendsQuery(),
             cancellationToken);
-        IReadOnlyList<FriendResponse> response = mapper.MapFriends(friends);
+        var response = mapper.MapFriends(friends);
         return TypedResults.Ok(response);
     }
 
@@ -34,7 +34,7 @@ public sealed class SocialController(
         string starId,
         CancellationToken cancellationToken)
     {
-        DirectMessageView result = await sender.Send(
+        var result = await sender.Send(
             new GetDirectMessagesQuery(StarId.From(starId)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapDirectMessages(result));
@@ -47,7 +47,7 @@ public sealed class SocialController(
         DirectMessageRequest request,
         CancellationToken cancellationToken)
     {
-        SentDirectMessage result = await sender.Send(
+        var result = await sender.Send(
             new SendDirectMessageCommand(
                 StarId.From(starId),
                 request.Text),
@@ -75,13 +75,13 @@ public sealed class SocialController(
     public async Task<Ok<ChallengeResponse?>> GetActiveChallengeAsync(
         CancellationToken cancellationToken)
     {
-        ChallengeView? view = await sender.Send(
+        var view = await sender.Send(
             new GetActiveChallengeQuery(),
             cancellationToken);
         ChallengeResponse? response = null;
         if (view is not null)
         {
-            string rivalPronoun = view.Rival.Address == "she" ? "её" : "его";
+            var rivalPronoun = view.Rival.Address == "she" ? "её" : "его";
             response = new ChallengeResponse(
                 view.Challenge.Id.Value,
                 "я",

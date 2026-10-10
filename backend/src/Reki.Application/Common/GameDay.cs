@@ -11,23 +11,23 @@ public sealed class GameDay(TimeProvider timeProvider, IOptions<GameBalance> bal
     {
         get
         {
-            DateTimeOffset utcNow = timeProvider.GetUtcNow();
+            var utcNow = timeProvider.GetUtcNow();
             return GetPeriodStart(utcNow);
         }
     }
 
     public PlayerProfile Normalize(PlayerProfile player)
     {
-        DateTimeOffset periodStart = PeriodStart;
+        var periodStart = PeriodStart;
         if (player.PostsPeriodStartedAtUtc == periodStart)
         {
             return player;
         }
 
-        int skippedDays = player.LastPostAtUtc is null
+        var skippedDays = player.LastPostAtUtc is null
             ? 0
             : GetSkippedDays(GetPeriodStart(player.LastPostAtUtc.Value), periodStart);
-        int restedPosts = skippedDays >= balance.Value.Growth.RestedAfterSkippedDays
+        var restedPosts = skippedDays >= balance.Value.Growth.RestedAfterSkippedDays
             ? balance.Value.Growth.RestedFirstPosts
             : 0;
         return player.StartNewPeriod(periodStart, restedPosts);
@@ -35,13 +35,13 @@ public sealed class GameDay(TimeProvider timeProvider, IOptions<GameBalance> bal
 
     private static int GetSkippedDays(DateTimeOffset lastPostPeriod, DateTimeOffset currentPeriod)
     {
-        int elapsedPeriods = Math.Max(0, (int)(currentPeriod - lastPostPeriod).TotalDays);
+        var elapsedPeriods = Math.Max(0, (int)(currentPeriod - lastPostPeriod).TotalDays);
         return Math.Max(0, elapsedPeriods - 1);
     }
 
     private DateTimeOffset GetPeriodStart(DateTimeOffset utcNow)
     {
-        DateTimeOffset localNow = utcNow.ToOffset(MoscowOffset);
+        var localNow = utcNow.ToOffset(MoscowOffset);
         var start = new DateTimeOffset(
             localNow.Year,
             localNow.Month,

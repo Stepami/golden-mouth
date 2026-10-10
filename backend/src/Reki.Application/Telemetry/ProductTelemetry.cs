@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Logging;
 using Reki.Domain.Player;
-using Reki.Domain.Telemetry;
 
 namespace Reki.Application.Telemetry;
 
@@ -77,7 +76,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
 
     public void TrackSubmission(PlayerProfile player, AnalyticsSubmission submission)
     {
-        foreach (AnalyticsEntry entry in submission.Events)
+        foreach (var entry in submission.Events)
         {
             if (!_events.Contains(entry.Name))
             {
@@ -95,7 +94,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
                 attributes["previous_screen"] = entry.PreviousScreen;
             }
 
-            if (submission.Experiments.TryGetValue("plus_offer", out string? plusOffer) &&
+            if (submission.Experiments.TryGetValue("plus_offer", out var plusOffer) &&
                 IsSafeValue(plusOffer))
             {
                 attributes["experiment_plus_offer"] = plusOffer;
@@ -144,7 +143,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         IDictionary<string, object?> attributes,
         IReadOnlyDictionary<string, string> properties)
     {
-        foreach ((string name, string value) in properties)
+        foreach ((var name, var value) in properties)
         {
             if (_properties.Contains(name) && IsSafeValue(value))
             {
@@ -161,7 +160,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
 
     private void Write(string eventName, IReadOnlyDictionary<string, object?> attributes)
     {
-        using IDisposable? scope = logger.BeginScope(attributes);
+        using var scope = logger.BeginScope(attributes);
         LogProductEvent(eventName);
     }
 

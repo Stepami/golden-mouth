@@ -19,31 +19,31 @@ public sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
         bool ownWords,
         bool wantCompleted)
     {
-        WorldBalance world = balance.Value.Worlds.TryGetValue(player.World.Value, out WorldBalance? value)
+        var world = balance.Value.Worlds.TryGetValue(player.World.Value, out var value)
             ? value
             : throw new InvalidOperationException($"World balance is missing for '{player.World.Value}'.");
-        double quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
-        int postIndex = player.PostsUsed + 1;
-        double multiplier = GetGrowthMultiplier(player, postIndex, ownWords);
-        bool viral = IsViral(player, quality, world);
-        bool flop = !viral && IsFlop(player, world);
+        var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
+        var postIndex = player.PostsUsed + 1;
+        var multiplier = GetGrowthMultiplier(player, postIndex, ownWords);
+        var viral = IsViral(player, quality, world);
+        var flop = !viral && IsFlop(player, world);
         if (viral)
         {
             multiplier *= balance.Value.Viral.Multiplier * world.ViralMultiplier;
         }
 
-        double decay = balance.Value.Growth.Decay
+        var decay = balance.Value.Growth.Decay
             .First(item => postIndex >= item.From && postIndex <= item.To)
             .Multiplier;
-        double growth = balance.Value.Growth.Coefficient * world.GrowthCoefficient *
-            (0.5 + quality) *
-            Math.Pow(Math.Max(1, player.Subscribers), balance.Value.Growth.Power) *
-            decay *
-            multiplier;
-        long subscriberDelta = flop
+        var growth = balance.Value.Growth.Coefficient * world.GrowthCoefficient *
+                     (0.5 + quality) *
+                     Math.Pow(Math.Max(1, player.Subscribers), balance.Value.Growth.Power) *
+                     decay *
+                     multiplier;
+        var subscriberDelta = flop
             ? Math.Min(-1, (long)Math.Round(growth * balance.Value.Flop.LossMultiplier))
             : Math.Max(1, (long)Math.Round(growth));
-        IReadOnlyDictionary<SkillId, SkillProgress> skills = AddSkillExperience(
+        var skills = AddSkillExperience(
             player,
             turn,
             postIndex,
@@ -64,9 +64,9 @@ public sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
 
     private static double StableRoll(PlayerProfile player, int postNumber, string purpose)
     {
-        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(
             $"{player.Id.Value}:{postNumber}:{purpose}"));
-        ulong value = BinaryPrimitives.ReadUInt64LittleEndian(hash);
+        var value = BinaryPrimitives.ReadUInt64LittleEndian(hash);
         return value / (double)ulong.MaxValue;
     }
 
@@ -93,16 +93,16 @@ public sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
 
     private bool IsViral(PlayerProfile player, double quality, WorldBalance world)
     {
-        int nextPost = player.TotalPostsPublished + 1;
-        bool hasNeverGoneViral = player.TotalPostsPublished == player.PostsSinceViral;
+        var nextPost = player.TotalPostsPublished + 1;
+        var hasNeverGoneViral = player.TotalPostsPublished == player.PostsSinceViral;
         if ((hasNeverGoneViral && nextPost == balance.Value.Viral.GuaranteedPost) ||
             player.PostsSinceViral + 1 >= balance.Value.Viral.PityPosts)
         {
             return true;
         }
 
-        double chance = (balance.Value.Viral.BaseChance + (balance.Value.Viral.ChancePerQuality * quality)) *
-            world.ViralMultiplier;
+        var chance = (balance.Value.Viral.BaseChance + (balance.Value.Viral.ChancePerQuality * quality)) *
+                     world.ViralMultiplier;
         return StableRoll(player, nextPost, "viral") < Math.Clamp(chance, 0, 1);
     }
 
@@ -128,8 +128,8 @@ public sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
             return player.Skills;
         }
 
-        SkillId main = GetMainSkill(turn);
-        double multiplier = postIndex <= balance.Value.Skills.FirstPostsCount
+        var main = GetMainSkill(turn);
+        var multiplier = postIndex <= balance.Value.Skills.FirstPostsCount
             ? balance.Value.Skills.FirstPostsMultiplier
             : 1;
         if (ownWords)

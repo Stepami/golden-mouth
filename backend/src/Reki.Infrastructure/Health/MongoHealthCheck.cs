@@ -17,7 +17,7 @@ internal sealed class MongoHealthCheck(
     {
         try
         {
-            IMongoDatabase database = mongoClient.GetDatabase(options.Value.DatabaseName);
+            var database = mongoClient.GetDatabase(options.Value.DatabaseName);
             var command = new BsonDocument("ping", 1);
             await database.RunCommandAsync<BsonDocument>(
                 command,

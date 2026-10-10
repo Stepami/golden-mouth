@@ -7,8 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
-using Reki.Application.Common.Safety;
-using Reki.Infrastructure.AI;
 using Testcontainers.MongoDb;
 using TUnit.AspNetCore;
 using TUnit.Core.Interfaces;
@@ -18,7 +16,7 @@ namespace Reki.Tests;
 public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncInitializer
 {
     private readonly MongoDbContainer _mongo = new MongoDbBuilder("mongo:8.0.32-noble")
-        .WithReplicaSet("rs0")
+        .WithReplicaSet()
         .Build();
 
     public string DatabaseName { get; } = $"reki_tests_{Guid.NewGuid():N}";
@@ -55,12 +53,9 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncIniti
         {
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.RemoveAll<TimeProvider>();
-            services.RemoveAll<IChatClient>();
             services.AddSingleton<TimeProvider>(new FakeTimeProvider(
                 new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero)));
-            services.AddSingleton<IChatClient>(provider => new PlayerSafetyChatClient(
-                ChatClient,
-                provider.GetRequiredService<PlayerSafetyGuard>()));
+
             services
                 .AddAuthentication(options =>
                 {

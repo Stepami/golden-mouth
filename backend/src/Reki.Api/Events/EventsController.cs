@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
 using Reki.Application.Events;
 using Reki.Contracts.Events;
-using Reki.Domain.Events;
 using DomainEventId = Reki.Domain.Events.EventId;
 
 namespace Reki.Api.Events;
@@ -21,7 +20,7 @@ public sealed class EventsController(
     public async Task<Ok<GameEventResponse>> GetTodayEventAsync(
         CancellationToken cancellationToken)
     {
-        DailyGameEvent gameEvent = await sender.Send(
+        var gameEvent = await sender.Send(
             new GetTodayEventQuery(),
             cancellationToken);
         return TypedResults.Ok(mapper.MapEvent(gameEvent));

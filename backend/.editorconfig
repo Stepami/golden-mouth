@@ -97,6 +97,8 @@ dotnet_diagnostic.SA1601.severity = none
 dotnet_diagnostic.SA1602.severity = none
 dotnet_diagnostic.SA1633.severity = none
 dotnet_diagnostic.IDE0003.severity = error
+dotnet_diagnostic.IDE0005.severity = error
+dotnet_diagnostic.IDE0007.severity = error
 
 # loosen rules
 dotnet_diagnostic.SA1309.severity = none

@@ -22,7 +22,7 @@ internal sealed class TelegramMiniAppSecurityTransformer : IOpenApiDocumentTrans
                 Description = "Enter TMiniApp followed by a space and the raw Telegram initData.",
             };
 
-        foreach (OpenApiOperation operation in document.Paths.Values.SelectMany(path =>
+        foreach (var operation in document.Paths.Values.SelectMany(path =>
                      path.Operations?.Values.AsEnumerable() ?? Enumerable.Empty<OpenApiOperation>()))
         {
             operation.Security ??= [];

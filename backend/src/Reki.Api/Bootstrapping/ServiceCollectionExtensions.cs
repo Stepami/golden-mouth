@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.Options;
@@ -62,7 +61,7 @@ internal static class ServiceCollectionExtensions
     {
         IJsonTypeInfoResolver resolver = ApiJsonSerializerContext.Default;
         options.TypeInfoResolverChain.Insert(0, resolver);
-        foreach (JsonConverter converter in ApiJsonSerializerContext.Default.Options.Converters)
+        foreach (var converter in ApiJsonSerializerContext.Default.Options.Converters)
         {
             options.Converters.Add(converter);
         }

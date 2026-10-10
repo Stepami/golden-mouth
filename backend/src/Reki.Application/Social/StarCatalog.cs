@@ -28,8 +28,8 @@ public static class StarCatalog
 
     private static IReadOnlyList<StarPersona> Load()
     {
-        using Stream stream = typeof(StarCatalog).Assembly.GetManifestResourceStream("Reki.StarPersonas.json")
-            ?? throw new InvalidOperationException("The star catalog is missing.");
+        using var stream = typeof(StarCatalog).Assembly.GetManifestResourceStream("Reki.StarPersonas.json")
+                           ?? throw new InvalidOperationException("The star catalog is missing.");
         StarPersona[] personas = JsonSerializer.Deserialize(stream, StarCatalogJsonContext.Default.StarPersonaArray)
             ?? throw new InvalidOperationException("The star catalog is empty.");
         if (personas.Length == 0 || personas.Select(persona => persona.Id).Distinct(StringComparer.Ordinal).Count() != personas.Length)

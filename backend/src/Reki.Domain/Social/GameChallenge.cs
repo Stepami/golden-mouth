@@ -99,8 +99,8 @@ public sealed record GameChallenge(
             return this;
         }
 
-        ChallengePerformance initiator = InitiatorPerformance;
-        ChallengePerformance opponent = OpponentPerformance;
+        var initiator = InitiatorPerformance;
+        var opponent = OpponentPerformance;
         if (playerId == InitiatorId)
         {
             initiator = initiator.Add(post.Quality, post.ReachRatio);
@@ -110,8 +110,8 @@ public sealed record GameChallenge(
             opponent = opponent.Add(post.Quality, post.ReachRatio);
         }
 
-        double postScore = ChallengePerformance.CalculatePostScore(post.Quality, post.ReachRatio);
-        bool newBest = postScore > BestPostScore;
+        var postScore = ChallengePerformance.CalculatePostScore(post.Quality, post.ReachRatio);
+        var newBest = postScore > BestPostScore;
         return this with
         {
             InitiatorPerformance = initiator,
@@ -154,8 +154,8 @@ public sealed record GameChallenge(
 
     private PlayerId? GetWinnerId()
     {
-        bool initiatorEligible = InitiatorPerformance.PostCount >= MinimumPosts;
-        bool opponentEligible = OpponentPerformance.PostCount >= MinimumPosts;
+        var initiatorEligible = InitiatorPerformance.PostCount >= MinimumPosts;
+        var opponentEligible = OpponentPerformance.PostCount >= MinimumPosts;
         if (!initiatorEligible && !opponentEligible)
         {
             return null;
@@ -166,7 +166,7 @@ public sealed record GameChallenge(
             return initiatorEligible ? InitiatorId : OpponentId;
         }
 
-        int comparison = InitiatorPerformance.Score.CompareTo(OpponentPerformance.Score);
+        var comparison = InitiatorPerformance.Score.CompareTo(OpponentPerformance.Score);
         return comparison switch
         {
             > 0 => InitiatorId,
