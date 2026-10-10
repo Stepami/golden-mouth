@@ -153,61 +153,54 @@ internal sealed class MongoGameStore : IGameStore
         return result.MatchedCount == 1;
     }
 
-    public async ValueTask<int> ClaimPlusInterestAsync(
-        TelegramUserId telegramUserId,
-        int bonus,
-        bool interest,
-        PlayerProfile? newPeriod,
+    public async ValueTask StartPlayerPeriodAsync(
+        PlayerProfile player,
+        PlayerProfile updated,
         CancellationToken cancellationToken)
     {
-        FilterDefinition<PlayerProfile> playerFilter = Builders<PlayerProfile>.Filter
-            .Eq(player => player.TelegramUserId, telegramUserId);
-        if (newPeriod is not null)
-        {
-            // Apply the domain-calculated day reset once, without replacing unrelated profile fields.
-            FilterDefinition<PlayerProfile> periodFilter = playerFilter & Builders<PlayerProfile>.Filter
-                .Ne(player => player.PostsPeriodStartedAtUtc, newPeriod.PostsPeriodStartedAtUtc);
-            UpdateDefinition<PlayerProfile> periodUpdate = Builders<PlayerProfile>.Update
-                .Set(player => player.PostsUsed, newPeriod.PostsUsed)
-                .Set(player => player.DailyBonus, newPeriod.DailyBonus)
-                .Set(player => player.InviteBonusesEarnedInPeriod, newPeriod.InviteBonusesEarnedInPeriod)
-                .Set(player => player.PostsPeriodStartedAtUtc, newPeriod.PostsPeriodStartedAtUtc)
-                .Set(player => player.RestedPostsRemaining, newPeriod.RestedPostsRemaining)
-                .Set(player => player.Wants, newPeriod.Wants)
-                .Set(player => player.StarRelations, newPeriod.StarRelations)
-                .Inc(player => player.Version, 1);
-            await _players.UpdateOneAsync(periodFilter, periodUpdate, cancellationToken: cancellationToken);
-        }
+        FilterDefinition<PlayerProfile> filter = Builders<PlayerProfile>.Filter.And(
+            Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id),
+            Builders<PlayerProfile>.Filter.Ne(item => item.PostsPeriodStartedAtUtc, updated.PostsPeriodStartedAtUtc));
+        UpdateDefinition<PlayerProfile> update = Builders<PlayerProfile>.Update
+            .Set(item => item.PostsUsed, updated.PostsUsed)
+            .Set(item => item.DailyBonus, updated.DailyBonus)
+            .Set(item => item.InviteBonusesEarnedInPeriod, updated.InviteBonusesEarnedInPeriod)
+            .Set(item => item.PostsPeriodStartedAtUtc, updated.PostsPeriodStartedAtUtc)
+            .Set(item => item.RestedPostsRemaining, updated.RestedPostsRemaining)
+            .Set(item => item.Wants, updated.Wants)
+            .Set(item => item.StarRelations, updated.StarRelations)
+            .Inc(item => item.Version, updated.Version - player.Version);
+        await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+    }
 
-        FilterDefinition<PlayerProfile> claimFilter = playerFilter & Builders<PlayerProfile>.Filter
-            .Ne(player => player.PlusInterestClaimed, true);
-        UpdateDefinition<PlayerProfile> claimUpdate = Builders<PlayerProfile>.Update
-            .Inc(player => player.DailyBonus, bonus)
-            .Set(player => player.PlusInterestClaimed, true)
-            .Inc(player => player.Version, 1);
-        if (interest)
-        {
-            claimUpdate = claimUpdate.Set(player => player.PlusNotifyRequested, true);
-        }
+    public async ValueTask SavePlusNotificationAsync(
+        PlayerProfile player,
+        PlayerProfile updated,
+        CancellationToken cancellationToken)
+    {
+        FilterDefinition<PlayerProfile> filter = Builders<PlayerProfile>.Filter.And(
+            Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id),
+            Builders<PlayerProfile>.Filter.Ne(item => item.PlusNotifyRequested, updated.PlusNotifyRequested));
+        UpdateDefinition<PlayerProfile> update = Builders<PlayerProfile>.Update
+            .Set(item => item.PlusNotifyRequested, updated.PlusNotifyRequested)
+            .Inc(item => item.Version, updated.Version - player.Version);
+        await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+    }
 
-        UpdateResult result =
-            await _players.UpdateOneAsync(claimFilter, claimUpdate, cancellationToken: cancellationToken);
-        if (result.ModifiedCount == 1)
-        {
-            return bonus;
-        }
-
-        if (interest)
-        {
-            FilterDefinition<PlayerProfile> notifyFilter = playerFilter & Builders<PlayerProfile>.Filter
-                .Ne(player => player.PlusNotifyRequested, true);
-            UpdateDefinition<PlayerProfile> notifyUpdate = Builders<PlayerProfile>.Update
-                .Set(player => player.PlusNotifyRequested, true)
-                .Inc(player => player.Version, 1);
-            await _players.UpdateOneAsync(notifyFilter, notifyUpdate, cancellationToken: cancellationToken);
-        }
-
-        return 0;
+    public async ValueTask<bool> TryClaimPlusInterestAsync(
+        PlayerProfile player,
+        PlayerProfile updated,
+        CancellationToken cancellationToken)
+    {
+        FilterDefinition<PlayerProfile> filter = Builders<PlayerProfile>.Filter.And(
+            Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id),
+            Builders<PlayerProfile>.Filter.Ne(item => item.PlusInterestClaimed, updated.PlusInterestClaimed));
+        UpdateDefinition<PlayerProfile> update = Builders<PlayerProfile>.Update
+            .Inc(item => item.DailyBonus, updated.DailyBonus - player.DailyBonus)
+            .Set(item => item.PlusInterestClaimed, updated.PlusInterestClaimed)
+            .Inc(item => item.Version, updated.Version - player.Version);
+        UpdateResult result = await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+        return result.ModifiedCount == 1;
     }
 
     public async ValueTask<bool> TryReplacePlayerAsync(

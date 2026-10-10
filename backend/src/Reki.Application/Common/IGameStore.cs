@@ -27,11 +27,19 @@ public interface IGameStore
         UpdateSettingsCommand settings,
         CancellationToken cancellationToken);
 
-    ValueTask<int> ClaimPlusInterestAsync(
-        TelegramUserId telegramUserId,
-        int bonus,
-        bool interest,
-        PlayerProfile? newPeriod,
+    ValueTask StartPlayerPeriodAsync(
+        PlayerProfile player,
+        PlayerProfile updated,
+        CancellationToken cancellationToken);
+
+    ValueTask SavePlusNotificationAsync(
+        PlayerProfile player,
+        PlayerProfile updated,
+        CancellationToken cancellationToken);
+
+    ValueTask<bool> TryClaimPlusInterestAsync(
+        PlayerProfile player,
+        PlayerProfile updated,
         CancellationToken cancellationToken);
 
     ValueTask<bool> TryReplacePlayerAsync(
