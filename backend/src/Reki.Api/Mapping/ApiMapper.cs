@@ -120,12 +120,9 @@ public sealed partial class ApiMapper
     [MapperIgnoreSource(nameof(WorldRules.WorldId))]
     public partial WorldRulesResponse MapWorldRules(WorldRules source);
 
-    public SaveWorldRulesCommand MapWorldRulesRequest(
-        UpdateWorldRulesRequest source,
-        TelegramUserId telegramUserId)
+    public SaveWorldRulesCommand MapWorldRulesRequest(UpdateWorldRulesRequest source)
     {
         return new SaveWorldRulesCommand(
-            telegramUserId,
             source.Title,
             source.Presets,
             source.Description,

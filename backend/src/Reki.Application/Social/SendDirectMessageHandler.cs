@@ -7,10 +7,12 @@ using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Social;
 using Reki.Domain.Worlds;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Social;
 
 public sealed class SendDirectMessageHandler(
+    ITelegramUserAccessor telegramUser,
     IGameStore store,
     GameBalance balance,
     GameDay gameDay,
@@ -21,7 +23,8 @@ public sealed class SendDirectMessageHandler(
         SendDirectMessageCommand request,
         CancellationToken cancellationToken)
     {
-        PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
+        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        PlayerProfile player = await playerReader.GetAsync(telegramUserId, cancellationToken);
         _ = StarCatalog.Require(player.World, request.StarId);
         DateTimeOffset periodStart = gameDay.PeriodStart;
         StarConversation conversation = await store.GetStarConversationAsync(

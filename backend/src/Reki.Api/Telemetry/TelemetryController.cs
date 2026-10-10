@@ -5,9 +5,7 @@ using Reki.Api.Mapping;
 using Reki.Application.Player;
 using Reki.Application.Telemetry;
 using Reki.Contracts.Telemetry;
-using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Api.Telemetry;
 
@@ -16,7 +14,6 @@ namespace Reki.Api.Telemetry;
 [Route("/")]
 public sealed partial class TelemetryController(
     ISender sender,
-    ITelegramUserAccessor telegramUser,
     ApiMapper mapper,
     ILogger<TelemetryController> logger) : ControllerBase
 {
@@ -27,9 +24,7 @@ public sealed partial class TelemetryController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new SubmitAnalyticsCommand(
-                TelegramUserId.From(telegramUser.User.Id),
-                mapper.MapAnalytics(request)),
+            new SubmitAnalyticsCommand(mapper.MapAnalytics(request)),
             cancellationToken);
         return TypedResults.NoContent();
     }
@@ -41,7 +36,7 @@ public sealed partial class TelemetryController(
         CancellationToken cancellationToken)
     {
         PlayerView player = await sender.Send(
-            new GetPlayerQuery(TelegramUserId.From(telegramUser.User.Id)),
+            new GetPlayerQuery(),
             cancellationToken);
         foreach (ClientLogEntryRequest entry in request.Entries)
         {
@@ -68,7 +63,6 @@ public sealed partial class TelemetryController(
     {
         await sender.Send(
             new ReportCommentCommand(
-                TelegramUserId.From(telegramUser.User.Id),
                 CommentId.From(request.CommentId),
                 request.Reason),
             cancellationToken);

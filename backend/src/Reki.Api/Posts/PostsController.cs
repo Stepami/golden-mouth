@@ -3,9 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Application.Posts;
 using Reki.Contracts.Posts;
-using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Api.Posts;
 
@@ -13,8 +11,7 @@ namespace Reki.Api.Posts;
 [Produces("application/json")]
 [Route("/")]
 public sealed class PostsController(
-    ISender sender,
-    ITelegramUserAccessor telegramUser) : ControllerBase
+    ISender sender) : ControllerBase
 {
     [HttpPost("posts/publications", Name = "GeneratePublication")]
     [ActionName("GeneratePublication")]
@@ -25,7 +22,6 @@ public sealed class PostsController(
         IAsyncEnumerable<PublicationStatusLiveEvent> result = sender.CreateStream(
             new GeneratePublicationCommand(
                 request.PublicationId,
-                TelegramUserId.From(telegramUser.User.Id),
                 request.Text,
                 request.OwnWords,
                 request.WantId),
@@ -40,7 +36,7 @@ public sealed class PostsController(
         CancellationToken cancellationToken)
     {
         PublicationStatusResponse result = await sender.Send(
-            new GetPublicationQuery(TelegramUserId.From(telegramUser.User.Id), publicationId),
+            new GetPublicationQuery(publicationId),
             cancellationToken);
         return TypedResults.Ok(result);
     }
@@ -52,9 +48,7 @@ public sealed class PostsController(
         CancellationToken cancellationToken)
     {
         IAsyncEnumerable<LiveEvent> result = sender.CreateStream(
-            new PublishPostCommand(
-                TelegramUserId.From(telegramUser.User.Id),
-                publicationId),
+            new PublishPostCommand(publicationId),
             cancellationToken);
         return TypedResults.ServerSentEvents(result);
     }
@@ -68,7 +62,6 @@ public sealed class PostsController(
     {
         ReplyResponse result = await sender.Send(
             new AddReplyCommand(
-                TelegramUserId.From(telegramUser.User.Id),
                 PostId.From(postId),
                 CommentId.From(request.CommentId),
                 request.ReplyId,
@@ -83,7 +76,7 @@ public sealed class PostsController(
         CancellationToken cancellationToken)
     {
         IReadOnlyList<FeedItemResponse> result = await sender.Send(
-            new GetFeedQuery(TelegramUserId.From(telegramUser.User.Id)),
+            new GetFeedQuery(),
             cancellationToken);
         return TypedResults.Ok(result);
     }
@@ -94,7 +87,7 @@ public sealed class PostsController(
         CancellationToken cancellationToken)
     {
         IReadOnlyList<ChannelPostResponse> result = await sender.Send(
-            new GetChannelPostsQuery(TelegramUserId.From(telegramUser.User.Id)),
+            new GetChannelPostsQuery(),
             cancellationToken);
         return TypedResults.Ok(result);
     }
@@ -106,9 +99,7 @@ public sealed class PostsController(
         CancellationToken cancellationToken)
     {
         PostDetailResponse result = await sender.Send(
-            new GetPostQuery(
-                TelegramUserId.From(telegramUser.User.Id),
-                PostId.From(postId)),
+            new GetPostQuery(PostId.From(postId)),
             cancellationToken);
         return TypedResults.Ok(result);
     }

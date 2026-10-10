@@ -29,7 +29,7 @@ internal static class ServiceCollectionExtensions
         services.AddMediator(options =>
         {
             options.Assemblies = [typeof(ApplicationAssemblyMarker)];
-            options.ServiceLifetime = ServiceLifetime.Singleton;
+            options.ServiceLifetime = ServiceLifetime.Scoped;
         });
         services.AddSingleton<GameDay>();
         services.AddSingleton<PlayerReader>();

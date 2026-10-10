@@ -5,8 +5,6 @@ using Reki.Api.Mapping;
 using Reki.Application.Events;
 using Reki.Contracts.Events;
 using Reki.Domain.Events;
-using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
 using DomainEventId = Reki.Domain.Events.EventId;
 
 namespace Reki.Api.Events;
@@ -16,7 +14,6 @@ namespace Reki.Api.Events;
 [Route("events")]
 public sealed class EventsController(
     ISender sender,
-    ITelegramUserAccessor telegramUser,
     ApiMapper mapper) : ControllerBase
 {
     [HttpGet("today", Name = "GetTodayEvent")]
@@ -25,7 +22,7 @@ public sealed class EventsController(
         CancellationToken cancellationToken)
     {
         DailyGameEvent gameEvent = await sender.Send(
-            new GetTodayEventQuery(TelegramUserId.From(telegramUser.User.Id)),
+            new GetTodayEventQuery(),
             cancellationToken);
         return TypedResults.Ok(mapper.MapEvent(gameEvent));
     }
@@ -39,7 +36,6 @@ public sealed class EventsController(
     {
         await sender.Send(
             new AnswerEventCommand(
-                TelegramUserId.From(telegramUser.User.Id),
                 DomainEventId.From(eventId),
                 request.Text),
             cancellationToken);

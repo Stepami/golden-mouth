@@ -3,17 +3,21 @@ using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Domain.Events;
 using Reki.Domain.Player;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Events;
 
-public sealed class AnswerEventHandler(IGameStore store, PlayerReader playerReader)
+public sealed class AnswerEventHandler(
+    ITelegramUserAccessor telegramUser,
+    IGameStore store, PlayerReader playerReader)
     : IRequestHandler<AnswerEventCommand>
 {
     public async ValueTask<Unit> Handle(
         AnswerEventCommand request,
         CancellationToken cancellationToken)
     {
-        PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
+        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        PlayerProfile player = await playerReader.GetAsync(telegramUserId, cancellationToken);
         DailyGameEvent? gameEvent = await store.GetTodayEventAsync(
             player.Id,
             DateTimeOffset.MinValue,

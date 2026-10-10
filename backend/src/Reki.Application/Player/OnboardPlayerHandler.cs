@@ -3,10 +3,12 @@ using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Social;
 using Reki.Domain.Player;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Player;
 
 public sealed class OnboardPlayerHandler(
+    ITelegramUserAccessor telegramUser,
     IGameStore store,
     GameBalance balance,
     GameDay gameDay,
@@ -17,13 +19,14 @@ public sealed class OnboardPlayerHandler(
         OnboardPlayerCommand request,
         CancellationToken cancellationToken)
     {
+        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         _ = StarCatalog.Require(request.World, request.Star);
         for (int attempt = 0; attempt < 3; attempt++)
         {
-            PlayerProfile? existing = await store.GetPlayerAsync(request.TelegramUserId, cancellationToken);
+            PlayerProfile? existing = await store.GetPlayerAsync(telegramUserId, cancellationToken);
             if (existing is null)
             {
-                PlayerProfile? inviter = await ResolveInviterAsync(request, cancellationToken);
+                PlayerProfile? inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
                 PlayerProfile? updatedInviter = inviter is null
                     ? null
                     : gameDay.Normalize(inviter.EnsureDefaults())
@@ -33,7 +36,7 @@ public sealed class OnboardPlayerHandler(
                     updatedInviter = null;
                 }
 
-                PlayerProfile created = CreatePlayer(request, gameDay.PeriodStart, balance.Growth.StartingSubscribers) with
+                PlayerProfile created = CreatePlayer(request, telegramUserId, gameDay.PeriodStart, balance.Growth.StartingSubscribers) with
                 {
                     InvitedBy = inviter?.Id,
                     InvitedAtUtc = inviter is null ? null : timeProvider.GetUtcNow(),
@@ -64,6 +67,7 @@ public sealed class OnboardPlayerHandler(
 
     private static PlayerProfile CreatePlayer(
         OnboardPlayerCommand request,
+        TelegramUserId telegramUserId,
         DateTimeOffset periodStart,
         long startingSubscribers)
     {
@@ -76,7 +80,7 @@ public sealed class OnboardPlayerHandler(
         var settings = new PlayerSettings("mid", "all", "22:00-09:00", "default", false);
         return new PlayerProfile(
             PlayerId.New(),
-            request.TelegramUserId,
+            telegramUserId,
             request.BirthGroup,
             request.Name,
             request.Handle,
@@ -141,6 +145,7 @@ public sealed class OnboardPlayerHandler(
 
     private async ValueTask<PlayerProfile?> ResolveInviterAsync(
         OnboardPlayerCommand request,
+        TelegramUserId telegramUserId,
         CancellationToken cancellationToken)
     {
         string? code = request.ReferralCode;
@@ -151,7 +156,7 @@ public sealed class OnboardPlayerHandler(
         }
 
         PlayerProfile? inviter = await store.GetPlayerAsync(PlayerId.From(code[4..]), cancellationToken);
-        return inviter is not null && inviter.TelegramUserId != request.TelegramUserId
+        return inviter is not null && inviter.TelegramUserId != telegramUserId
             ? inviter
             : null;
     }

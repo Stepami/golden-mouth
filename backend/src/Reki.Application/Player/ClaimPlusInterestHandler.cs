@@ -2,10 +2,12 @@ using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Domain.Player;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Player;
 
 public sealed class ClaimPlusInterestHandler(
+    ITelegramUserAccessor telegramUser,
     IGameStore store,
     GameBalance balance,
     GameDay gameDay,
@@ -15,9 +17,10 @@ public sealed class ClaimPlusInterestHandler(
         ClaimPlusInterestCommand request,
         CancellationToken cancellationToken)
     {
+        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         for (int attempt = 0; attempt < 3; attempt++)
         {
-            PlayerProfile storedPlayer = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
+            PlayerProfile storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
             PlayerProfile player = gameDay.Normalize(storedPlayer);
             int bonus = player.PlusInterestClaimed ? 0 : balance.PlusInterestBonus;
             PlayerProfile updated = player.ClaimPlusInterestBonus(balance.PlusInterestBonus) with

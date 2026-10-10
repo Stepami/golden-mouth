@@ -3,5 +3,5 @@ using Reki.Domain.Player;
 
 namespace Reki.Application.Social;
 
-public sealed record StartChallengeCommand(TelegramUserId TelegramUserId, PlayerId FriendId) : IRequest;
+public sealed record StartChallengeCommand(PlayerId FriendId) : IRequest;
 
