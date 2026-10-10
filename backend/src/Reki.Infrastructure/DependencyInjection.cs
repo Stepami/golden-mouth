@@ -7,6 +7,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using OpenAI;
+using OpenAI.Chat;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -22,8 +23,6 @@ namespace Reki.Infrastructure;
 
 public static class DependencyInjection
 {
-    internal const string LlmProviderKey = "llm-provider";
-
     private static readonly TimeSpan MongoServerSelectionTimeout = TimeSpan.FromSeconds(5);
 
     public static IServiceCollection AddInfrastructure(
@@ -64,7 +63,7 @@ public static class DependencyInjection
                 0.4f,
                 700);
         });
-        services.AddKeyedSingleton<IChatClient>(LlmProviderKey, (serviceProvider, _) =>
+        services.AddSingleton(serviceProvider =>
         {
             LlmOptions options = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
             var clientOptions = new OpenAIClientOptions
@@ -75,11 +74,11 @@ public static class DependencyInjection
                 RetryPolicy = new ClientRetryPolicy(),
             };
             var client = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
-            return client.GetChatClient(options.Model).AsIChatClient();
+            return client.GetChatClient(options.Model);
         });
 
         services.AddChatClient(serviceProvider =>
-                serviceProvider.GetRequiredKeyedService<IChatClient>(LlmProviderKey))
+                serviceProvider.GetRequiredService<ChatClient>().AsIChatClient())
             .UseOpenTelemetry(
                 sourceName: "Reki.GenAI",
                 configure: telemetry => telemetry.EnableSensitiveData = false)
