@@ -15,8 +15,6 @@ public sealed class ChallengeLifecycle(
     TimeProvider timeProvider,
     ProductTelemetry analytics)
 {
-    private const int ReplaceAttempts = 3;
-
     public async ValueTask StartOrAcceptAsync(
         PlayerProfile player,
         PlayerId friendId,
@@ -28,7 +26,7 @@ public sealed class ChallengeLifecycle(
         }
 
         PlayerProfile friend = (await store.GetPlayerAsync(friendId, cancellationToken)
-            ?? throw new ResourceNotFoundException("Friend not found.")).EnsureDefaults();
+                                ?? throw new ResourceNotFoundException("Friend not found.")).EnsureDefaults();
         GameChallenge? pending = await store.GetPendingChallengeAsync(
             player.Id,
             friendId,
@@ -102,8 +100,8 @@ public sealed class ChallengeLifecycle(
         }
 
         PlayerProfile rival = (await store.GetPlayerAsync(
-            challenge.GetRival(playerId),
-            cancellationToken) ?? throw new ResourceNotFoundException("Challenge rival not found."))
+                challenge.GetRival(playerId),
+                cancellationToken) ?? throw new ResourceNotFoundException("Challenge rival not found."))
             .EnsureDefaults();
         return new ChallengeView(playerId, challenge, rival, challenge.GetDay(periodStart));
     }
@@ -113,26 +111,23 @@ public sealed class ChallengeLifecycle(
         GamePost post,
         CancellationToken cancellationToken)
     {
-        for (int attempt = 0; attempt < ReplaceAttempts; attempt++)
+        GameChallenge? challenge = await store.GetActiveChallengeAsync(playerId, cancellationToken);
+        if (challenge is null)
         {
-            GameChallenge? challenge = await store.GetActiveChallengeAsync(playerId, cancellationToken);
-            if (challenge is null)
-            {
-                return;
-            }
+            return;
+        }
 
-            DateTimeOffset periodStart = gameDay.PeriodStart;
-            if (challenge.IsFinished(periodStart))
-            {
-                await FinalizeAsync(challenge, periodStart, cancellationToken);
-                return;
-            }
+        DateTimeOffset periodStart = gameDay.PeriodStart;
+        if (challenge.IsFinished(periodStart))
+        {
+            await FinalizeAsync(challenge, periodStart, cancellationToken);
+            return;
+        }
 
-            GameChallenge updated = challenge.RecordPost(playerId, post);
-            if (await store.TryReplaceChallengeAsync(updated, challenge.Version, cancellationToken))
-            {
-                return;
-            }
+        GameChallenge updated = challenge.RecordPost(playerId, post);
+        if (await store.TryReplaceChallengeAsync(updated, challenge.Version, cancellationToken))
+        {
+            return;
         }
 
         throw new RequestConflictException("The challenge score changed concurrently.");
@@ -195,17 +190,14 @@ public sealed class ChallengeLifecycle(
         Func<PlayerProfile, PlayerProfile> update,
         CancellationToken cancellationToken)
     {
-        for (int attempt = 0; attempt < ReplaceAttempts; attempt++)
+        PlayerProfile current = (await store.GetPlayerAsync(playerId, cancellationToken)
+                                 ?? throw new ResourceNotFoundException("Challenge player not found."))
+            .EnsureDefaults();
+        PlayerProfile updated = update(current);
+        if (ReferenceEquals(current, updated) ||
+            await store.TryReplacePlayerAsync(updated, current.Version, cancellationToken))
         {
-            PlayerProfile current = (await store.GetPlayerAsync(playerId, cancellationToken)
-                ?? throw new ResourceNotFoundException("Challenge player not found."))
-                .EnsureDefaults();
-            PlayerProfile updated = update(current);
-            if (ReferenceEquals(current, updated) ||
-                await store.TryReplacePlayerAsync(updated, current.Version, cancellationToken))
-            {
-                return;
-            }
+            return;
         }
 
         throw new RequestConflictException("The challenge reward could not be applied.");

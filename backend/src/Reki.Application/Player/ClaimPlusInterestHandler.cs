@@ -18,28 +18,24 @@ public sealed class ClaimPlusInterestHandler(
         CancellationToken cancellationToken)
     {
         TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        for (int attempt = 0; attempt < 3; attempt++)
+        PlayerProfile storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        PlayerProfile player = gameDay.Normalize(storedPlayer);
+        int bonus = player.PlusInterestClaimed ? 0 : balance.PlusInterestBonus;
+        PlayerProfile updated = player.ClaimPlusInterestBonus(balance.PlusInterestBonus) with
         {
-            PlayerProfile storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
-            PlayerProfile player = gameDay.Normalize(storedPlayer);
-            int bonus = player.PlusInterestClaimed ? 0 : balance.PlusInterestBonus;
-            PlayerProfile updated = player.ClaimPlusInterestBonus(balance.PlusInterestBonus) with
-            {
-                PlusNotifyRequested = player.PlusNotifyRequested || request.Interest,
-            };
-            if (updated == storedPlayer)
-            {
-                return 0;
-            }
+            PlusNotifyRequested = player.PlusNotifyRequested || request.Interest,
+        };
+        if (updated == storedPlayer)
+        {
+            return 0;
+        }
 
-            updated = updated with { Version = storedPlayer.Version + 1 };
-            if (await store.TryReplacePlayerAsync(updated, storedPlayer.Version, cancellationToken))
-            {
-                return bonus;
-            }
+        updated = updated with { Version = storedPlayer.Version + 1 };
+        if (await store.TryReplacePlayerAsync(updated, storedPlayer.Version, cancellationToken))
+        {
+            return bonus;
         }
 
         throw new RequestConflictException("The player changed while claiming the bonus. Retry the request.");
     }
 }
-

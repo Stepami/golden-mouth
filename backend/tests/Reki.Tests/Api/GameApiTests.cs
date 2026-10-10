@@ -343,16 +343,33 @@ public sealed class GameApiTests(ApiFactory factory)
         ReferralResponse referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
 
         // Act
-        PlayerResponse[] results = await Task.WhenAll(
-            OnboardAsync(friendApi, referralCode: referral.Code),
-            OnboardAsync(friendApi, referralCode: referral.Code));
+        PlayerResponse?[] results = await Task.WhenAll(
+            OnboardOrConflictAsync(),
+            OnboardOrConflictAsync());
         BsonDocument friend = await GetStoredPlayerAsync(8008);
         BsonDocument inviter = await GetStoredPlayerAsync(8007);
 
         // Assert
-        await Assert.That(results[0].Id).IsEqualTo(results[1].Id);
+        await Assert.That(results.Any(result => result is not null)).IsTrue();
+        foreach (PlayerResponse result in results.OfType<PlayerResponse>())
+        {
+            await Assert.That(result.Id).IsEqualTo(friend["_id"].AsString);
+        }
+
         await Assert.That(friend["InvitedBy"].AsString).IsEqualTo(referral.Code[4..]);
         await Assert.That(inviter["DailyBonus"].AsInt32).IsEqualTo(5);
+
+        async Task<PlayerResponse?> OnboardOrConflictAsync()
+        {
+            try
+            {
+                return await OnboardAsync(friendApi, referralCode: referral.Code);
+            }
+            catch (PlayerApiException exception) when (exception.StatusCode == StatusCodes.Status409Conflict)
+            {
+                return null;
+            }
+        }
     }
 
     [Test]
@@ -1613,20 +1630,32 @@ public sealed class GameApiTests(ApiFactory factory)
     [Test]
     public async Task PlusInterest_ConcurrentClaims_GrantExactlyOneBonusAsync()
     {
+        // Arrange
         using TestApiClient api = factory.CreateApiClient(8404);
         await OnboardAsync(api);
         using HttpClient http = factory.CreateClient();
         http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8404");
+
+        // Act
         Task<HttpResponseMessage>[] calls = Enumerable.Range(0, 2).Select(_ =>
             http.PostAsync("/plus-interest", null, CancellationToken.None)).ToArray();
         HttpResponseMessage[] results = await Task.WhenAll(calls);
+
+        // Assert
         int bonuses = 0;
         foreach (HttpResponseMessage result in results)
         {
             using (result)
             {
-                await Assert.That(result.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-                using JsonDocument data = JsonDocument.Parse(await result.Content.ReadAsStringAsync(CancellationToken.None));
+                await Assert.That(result.StatusCode is System.Net.HttpStatusCode.OK or
+                    System.Net.HttpStatusCode.Conflict).IsTrue();
+                if (result.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    continue;
+                }
+
+                using JsonDocument data =
+                    JsonDocument.Parse(await result.Content.ReadAsStringAsync(CancellationToken.None));
                 bonuses += data.RootElement.GetProperty("bonus").GetInt32();
             }
         }
