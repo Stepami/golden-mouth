@@ -36,7 +36,7 @@
                 "config": {
                   "query_label": "A",
                   "promql_legend": "rps",
-                  "step_value": "auto"
+                  "step_value": "60s"
                 }
               }
             ],
@@ -76,7 +76,7 @@
                 "config": {
                   "query_label": "A",
                   "promql_legend": "p95",
-                  "step_value": "auto"
+                  "step_value": "60s"
                 }
               }
             ],
@@ -92,7 +92,7 @@
             "id": "t-5xx",
             "type": "line",
             "title": "Ответы 5xx в секунду",
-            "description": "Частота серверных ошибок. Ноль в графике это норма.",
+            "description": "Частота серверных ошибок. Если серии 5xx отсутствуют, график не содержит данных.",
             "queryType": "promql",
             "config": {
               "show_legends": true
@@ -116,7 +116,7 @@
                 "config": {
                   "query_label": "A",
                   "promql_legend": "5xx",
-                  "step_value": "auto"
+                  "step_value": "60s"
                 }
               }
             ],
@@ -156,7 +156,7 @@
                 "config": {
                   "query_label": "A",
                   "promql_legend": "вызовы модели",
-                  "step_value": "auto"
+                  "step_value": "60s"
                 }
               }
             ],
@@ -196,7 +196,7 @@
                 "config": {
                   "query_label": "A",
                   "promql_legend": "токены",
-                  "step_value": "auto"
+                  "step_value": "60s"
                 }
               }
             ],
@@ -219,7 +219,7 @@
             },
             "queries": [
               {
-                "query": "SELECT histogram(_timestamp, '1 hour') AS ts, statuscode, count(*) AS n\nFROM \"backend\" WHERE statuscode IS NOT NULL\nGROUP BY ts, statuscode ORDER BY ts",
+                "query": "SELECT histogram(_timestamp, '1 hour') AS ts, cast(statuscode AS varchar) AS statuscode, count(*) AS n\nFROM \"backend\" WHERE sourcecontext = 'Serilog.AspNetCore.RequestLoggingMiddleware' AND statuscode IS NOT NULL\nGROUP BY ts, statuscode ORDER BY ts",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -235,15 +235,18 @@
                   ],
                   "y": [
                     {
-                      "label": "statuscode",
-                      "alias": "statuscode",
-                      "column": "statuscode",
-                      "type": "build"
-                    },
-                    {
                       "label": "n",
                       "alias": "n",
                       "column": "n",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [
+                    {
+                      "label": "statuscode",
+                      "alias": "statuscode",
+                      "column": "statuscode",
                       "type": "build"
                     }
                   ],
@@ -278,7 +281,7 @@
             },
             "queries": [
               {
-                "query": "SELECT histogram(_timestamp, '1 hour') AS ts, count(*) AS requests\nFROM \"backend\" WHERE sourcecontext = 'Microsoft.AspNetCore.Hosting.Diagnostics' AND path IS NOT NULL\nGROUP BY ts ORDER BY ts",
+                "query": "SELECT histogram(_timestamp, '1 hour') AS ts, count(*) AS requests\nFROM \"backend\" WHERE sourcecontext = 'Serilog.AspNetCore.RequestLoggingMiddleware' AND statuscode IS NOT NULL\nGROUP BY ts ORDER BY ts",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -300,6 +303,8 @@
                       "type": "build"
                     }
                   ],
+                  "z": [],
+                  "breakdown": [],
                   "filter": {
                     "filterType": "group",
                     "logicalOperator": "AND",
@@ -331,7 +336,7 @@
             },
             "queries": [
               {
-                "query": "SELECT histogram(_timestamp, '1 hour') AS ts, count(*) AS errors\nFROM \"backend\" WHERE statuscode >= 500\nGROUP BY ts ORDER BY ts",
+                "query": "SELECT histogram(_timestamp, '1 hour') AS ts, count(*) AS errors\nFROM \"backend\" WHERE sourcecontext = 'Serilog.AspNetCore.RequestLoggingMiddleware' AND statuscode BETWEEN 500 AND 599\nGROUP BY ts ORDER BY ts",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -353,6 +358,8 @@
                       "type": "build"
                     }
                   ],
+                  "z": [],
+                  "breakdown": [],
                   "filter": {
                     "filterType": "group",
                     "logicalOperator": "AND",
@@ -400,15 +407,18 @@
                   ],
                   "y": [
                     {
-                      "label": "severity",
-                      "alias": "severity",
-                      "column": "severity",
-                      "type": "build"
-                    },
-                    {
                       "label": "n",
                       "alias": "n",
                       "column": "n",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [
+                    {
+                      "label": "severity",
+                      "alias": "severity",
+                      "column": "severity",
                       "type": "build"
                     }
                   ],
@@ -465,6 +475,8 @@
                       "type": "build"
                     }
                   ],
+                  "z": [],
+                  "breakdown": [],
                   "filter": {
                     "filterType": "group",
                     "logicalOperator": "AND",
@@ -496,17 +508,17 @@
             },
             "queries": [
               {
-                "query": "SELECT db_query_summary, count(*) AS calls, avg(duration) AS avg_us, max(duration) AS max_us\nFROM \"backend\" WHERE db_system_name = 'mongodb'\nGROUP BY db_query_summary ORDER BY calls DESC",
+                "query": "SELECT coalesce(db_query_summary, db_operation_summary, db_operation_name, db_command_name, operation_name) AS operation, count(*) AS calls, avg(duration) AS avg_us, max(duration) AS max_us\nFROM \"backend\" WHERE db_system_name = 'mongodb'\nGROUP BY operation ORDER BY calls DESC",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
                   "stream": "backend",
-                  "stream_type": "logs",
+                  "stream_type": "traces",
                   "x": [
                     {
-                      "label": "db_query_summary",
-                      "alias": "db_query_summary",
-                      "column": "db_query_summary",
+                      "label": "operation",
+                      "alias": "operation",
+                      "column": "operation",
                       "type": "build"
                     }
                   ],
@@ -530,6 +542,8 @@
                       "type": "build"
                     }
                   ],
+                  "z": [],
+                  "breakdown": [],
                   "filter": {
                     "filterType": "group",
                     "logicalOperator": "AND",
@@ -566,7 +580,7 @@
                 "vrlFunctionQuery": "",
                 "fields": {
                   "stream": "backend",
-                  "stream_type": "logs",
+                  "stream_type": "traces",
                   "x": [
                     {
                       "label": "operation_name",
@@ -595,6 +609,8 @@
                       "type": "build"
                     }
                   ],
+                  "z": [],
+                  "breakdown": [],
                   "filter": {
                     "filterType": "group",
                     "logicalOperator": "AND",

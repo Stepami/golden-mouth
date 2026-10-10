@@ -77,19 +77,22 @@ def axis(name):
     return {"label": name, "alias": name, "column": name, "type": "build"}
 
 
-def fields_for(query, stream):
+def fields_for(query, stream, stream_type="logs", breakdown=None, values=None):
     names = columns(query)
     head, tail = (names[:1] or [""]), (names[1:] or [""])
     return {
         "stream": stream,
-        "stream_type": "logs",
+        "stream_type": stream_type,
         "x": [axis(n) for n in head],
-        "y": [axis(n) for n in tail],
+        "y": [axis(n) for n in (values or [n for n in tail if n != breakdown])],
+        "z": [],
+        "breakdown": [axis(breakdown)] if breakdown else [],
         "filter": {"filterType": "group", "logicalOperator": "AND", "conditions": []},
     }
 
 
-def sql_panel(panel_id, title, description, query, stream, layout, kind="line"):
+def sql_panel(panel_id, title, description, query, stream, layout, kind="line",
+              stream_type="logs", breakdown=None, values=None):
     return {
         "id": panel_id,
         "type": kind,
@@ -101,7 +104,7 @@ def sql_panel(panel_id, title, description, query, stream, layout, kind="line"):
             "query": query,
             "customQuery": True,
             "vrlFunctionQuery": "",
-            "fields": fields_for(query, stream),
+            "fields": fields_for(query, stream, stream_type, breakdown, values),
             "config": {"query_label": "A", "promql_legend": ""},
         }],
         "layout": layout,
@@ -125,7 +128,7 @@ def promql_panel(panel_id, title, description, query, legend, layout, kind="line
             "config": {
                 "query_label": "A",
                 "promql_legend": legend,
-                "step_value": "auto",
+                "step_value": "60s",
             },
         }],
         "layout": layout,
@@ -165,11 +168,11 @@ product_panels = [
     sql_panel(
         "p6", "Срез по платформе",
         "Как распределены игроки и события по платформам клиента.",
-        sql("product-p6-platform.sql"), "product", box(0, 26, 64, 8, 7), kind="pie"),
+        sql("product-p6-platform.sql"), "product", box(0, 26, 64, 8, 7), kind="pie", values=["players"]),
     sql_panel(
         "p7", "Срез по миру",
         "Образовательный мир, в котором играют.",
-        sql("product-p7-world.sql"), "product", box(64, 26, 64, 8, 8), kind="pie"),
+        sql("product-p7-world.sql"), "product", box(64, 26, 64, 8, 8), kind="pie", values=["players"]),
     sql_panel(
         "p8", "Срез по возрасту",
         "Возрастная группа игрока.",
@@ -203,7 +206,7 @@ tech_panels = [
         "p95", box(96, 0, 96, 8, 2)),
     promql_panel(
         "t-5xx", "Ответы 5xx в секунду",
-        "Частота серверных ошибок. Ноль в графике это норма.",
+        "Частота серверных ошибок. Если серии 5xx отсутствуют, график не содержит данных.",
         'sum(rate(http_server_request_duration_count{http_response_status_code=~"5.."}[5m]))',
         "5xx", box(0, 8, 96, 8, 3)),
     promql_panel(
@@ -219,7 +222,7 @@ tech_panels = [
     sql_panel(
         "t2", "Ответы по кодам",
         "Распределение кодов ответа по часам. Источник: логи приложения.",
-        sql("tech-t2-status.sql"), "backend", box(96, 16, 96, 8, 6), kind="bar"),
+        sql("tech-t2-status.sql"), "backend", box(96, 16, 96, 8, 6), kind="bar", breakdown="statuscode"),
     sql_panel(
         "t1", "Запросы по часам",
         "Число завершённых HTTP-запросов из логов.",
@@ -231,7 +234,7 @@ tech_panels = [
     sql_panel(
         "t4", "Ошибки и исключения",
         "Записи уровня Error, Critical и Fatal по часам.",
-        sql("tech-t4-severity.sql"), "backend", box(0, 32, 96, 8, 9)),
+        sql("tech-t4-severity.sql"), "backend", box(0, 32, 96, 8, 9), breakdown="severity"),
     sql_panel(
         "t5", "Где возникают ошибки",
         "Источник (класс) с наибольшим числом записей уровня ошибки.",
@@ -239,11 +242,11 @@ tech_panels = [
     sql_panel(
         "t6", "Операции MongoDB",
         "Вызовы базы: число, средняя и максимальная длительность в микросекундах.",
-        sql("tech-t6-mongo.sql"), "backend", box(0, 40, 96, 10, 11), kind="table"),
+        sql("tech-t6-mongo.sql"), "backend", box(0, 40, 96, 10, 11), kind="table", stream_type="traces"),
     sql_panel(
         "t7", "Вызовы языковой модели",
         "Обращения к модели: число, средняя и максимальная длительность в микросекундах.",
-        sql("tech-t7-llm.sql"), "backend", box(96, 40, 96, 8, 12), kind="table"),
+        sql("tech-t7-llm.sql"), "backend", box(96, 40, 96, 8, 12), kind="table", stream_type="traces"),
 ]
 
 tech = {
