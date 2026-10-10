@@ -11,11 +11,13 @@ using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
+using TgMiniAppAuth.AuthContext.User;
 using static Reki.Application.Common.AI.StarToolCallParser;
 
 namespace Reki.Application.Posts;
 
 public sealed class GeneratePublicationHandler(
+    ITelegramUserAccessor telegramUser,
     IGameStore store,
     GameBalance balance,
     TimeProvider timeProvider,
@@ -29,12 +31,13 @@ public sealed class GeneratePublicationHandler(
         GeneratePublicationCommand request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         if (!Guid.TryParse(request.Id, out _))
         {
             throw new RequestConflictException("The publication identifier is invalid.");
         }
 
-        PlayerProfile storedPlayer = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
+        PlayerProfile storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
         PlayerProfile player = gameDay.Normalize(storedPlayer);
         if (!ReferenceEquals(player, storedPlayer) && !await store.TryReplacePlayerAsync(
             player,

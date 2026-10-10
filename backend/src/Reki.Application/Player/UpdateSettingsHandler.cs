@@ -2,19 +2,23 @@ using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Domain.Player;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Player;
 
-public sealed class UpdateSettingsHandler(IGameStore store, PlayerReader playerReader)
+public sealed class UpdateSettingsHandler(
+    ITelegramUserAccessor telegramUser,
+    IGameStore store, PlayerReader playerReader)
     : IRequestHandler<UpdateSettingsCommand>
 {
     public async ValueTask<Unit> Handle(
         UpdateSettingsCommand request,
         CancellationToken cancellationToken)
     {
+        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         for (int attempt = 0; attempt < 3; attempt++)
         {
-            PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
+            PlayerProfile player = await playerReader.GetAsync(telegramUserId, cancellationToken);
             PlayerSettings settings = player.Settings with
             {
                 Drama = request.Drama ?? player.Settings.Drama,

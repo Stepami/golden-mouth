@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json;
+using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +10,7 @@ using MongoDB.Driver;
 using NSubstitute;
 using Reki.Api.Serialization;
 using Reki.Application.Common;
+using Reki.Application.Player;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
 using Reki.Contracts.Social;
@@ -86,6 +88,104 @@ public sealed class GameApiTests(ApiFactory factory)
         }
 
         await Assert.That(exception.StatusCode).IsEqualTo(StatusCodes.Status401Unauthorized);
+    }
+
+    [Test]
+    public async Task Onboarding_ConcurrentDifferentUsers_KeepsIdentityIsolatedAsync()
+    {
+        // Arrange
+        const long firstUserId = 9101;
+        const long secondUserId = 9102;
+        using TestApiClient firstApi = factory.CreateApiClient(firstUserId);
+        using TestApiClient secondApi = factory.CreateApiClient(secondUserId);
+
+        // Act
+        PlayerResponse[] onboarded = await Task.WhenAll(
+            OnboardAsync(firstApi, WorldId.Stream),
+            OnboardAsync(secondApi, WorldId.Academy));
+        PlayerResponse[] current = await Task.WhenAll(
+            firstApi.Player.GetCurrentPlayerAsync(CancellationToken.None),
+            secondApi.Player.GetCurrentPlayerAsync(CancellationToken.None));
+
+        // Assert
+        await Assert.That(onboarded[0].Id).IsNotEqualTo(onboarded[1].Id);
+        await Assert.That(current[0].Id).IsEqualTo(onboarded[0].Id);
+        await Assert.That(current[1].Id).IsEqualTo(onboarded[1].Id);
+        await Assert.That(current[0].World).IsEqualTo(WorldId.Stream);
+        await Assert.That(current[1].World).IsEqualTo(WorldId.Academy);
+        foreach ((long userId, PlayerResponse player) in new[]
+                 {
+                     (firstUserId, onboarded[0]),
+                     (secondUserId, onboarded[1]),
+                 })
+        {
+            BsonDocument persisted = await Database.GetCollection<BsonDocument>("players")
+                .Find(new BsonDocument("TelegramUserId", userId))
+                .SingleAsync(CancellationToken.None);
+            await Assert.That(persisted["_id"].AsString).IsEqualTo(player.Id);
+        }
+    }
+
+    [Test]
+    public async Task Onboarding_WithoutAuthentication_DoesNotCreatePlayerAsync()
+    {
+        // Arrange
+        using TestApiClient api = factory.CreateApiClient();
+        long before = await Database.GetCollection<BsonDocument>("players")
+            .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
+
+        // Act
+        PlayerApiException? exception = null;
+        try
+        {
+            await OnboardAsync(api);
+        }
+        catch (PlayerApiException caught)
+        {
+            exception = caught;
+        }
+
+        // Assert
+        await Assert.That(exception?.StatusCode).IsEqualTo(StatusCodes.Status401Unauthorized);
+        long after = await Database.GetCollection<BsonDocument>("players")
+            .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
+        await Assert.That(after).IsEqualTo(before);
+    }
+
+    [Test]
+    public async Task OnboardPlayer_WithoutHttpContext_DoesNotCreatePlayerAsync()
+    {
+        // Arrange
+        using IServiceScope scope = factory.Services.CreateScope();
+        ISender sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var command = new OnboardPlayerCommand(
+            "14-17",
+            Reki.Domain.Worlds.WorldId.From("stage"),
+            "creator",
+            "Player",
+            "player",
+            "default",
+            Reki.Domain.Social.StarId.From("sonya"),
+            null);
+        long before = await Database.GetCollection<BsonDocument>("players")
+            .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
+
+        // Act
+        InvalidOperationException? exception = null;
+        try
+        {
+            await sender.Send(command, CancellationToken.None);
+        }
+        catch (InvalidOperationException caught)
+        {
+            exception = caught;
+        }
+
+        // Assert
+        await Assert.That(exception?.Message).IsEqualTo("Failed to extract auth context from HTTP context");
+        long after = await Database.GetCollection<BsonDocument>("players")
+            .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
+        await Assert.That(after).IsEqualTo(before);
     }
 
     [Test]

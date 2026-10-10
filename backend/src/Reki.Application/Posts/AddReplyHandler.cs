@@ -4,10 +4,12 @@ using Reki.Application.Common.Exceptions;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Posts;
 
 public sealed class AddReplyHandler(
+    ITelegramUserAccessor telegramUser,
     IGameStore store,
     GameBalance balance,
     PlayerReader playerReader)
@@ -19,10 +21,11 @@ public sealed class AddReplyHandler(
         AddReplyCommand request,
         CancellationToken cancellationToken)
     {
+        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         for (int attempt = 0; attempt < MaxAttempts; attempt++)
         {
             PlayerProfile player = await playerReader.GetAsync(
-                request.TelegramUserId,
+                telegramUserId,
                 cancellationToken);
             GamePost post = await store.GetPostAsync(
                 player.Id,

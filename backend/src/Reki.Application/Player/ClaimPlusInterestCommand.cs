@@ -1,6 +1,5 @@
 using Mediator;
-using Reki.Domain.Player;
 
 namespace Reki.Application.Player;
 
-public sealed record ClaimPlusInterestCommand(TelegramUserId TelegramUserId, bool Interest) : IRequest<int>;
+public sealed record ClaimPlusInterestCommand(bool Interest) : IRequest<int>;

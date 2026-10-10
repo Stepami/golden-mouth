@@ -3,10 +3,12 @@ using Reki.Application.Common;
 using Reki.Application.Common.Safety;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Worlds;
 
 public sealed class SaveWorldRulesHandler(
+    ITelegramUserAccessor telegramUser,
     IGameStore store,
     PlayerReader playerReader,
     PlayerSafetyGuard safetyGuard)
@@ -16,7 +18,8 @@ public sealed class SaveWorldRulesHandler(
         SaveWorldRulesCommand request,
         CancellationToken cancellationToken)
     {
-        PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
+        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        PlayerProfile player = await playerReader.GetAsync(telegramUserId, cancellationToken);
         await safetyGuard.EnsureInputAllowedAsync(
             player,
             [request.Description, .. request.Rules.Select(rule => rule.Text)],

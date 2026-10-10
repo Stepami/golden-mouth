@@ -8,10 +8,12 @@ using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Posts;
 
 public sealed class PublishPostHandler(
+    ITelegramUserAccessor telegramUser,
     IGameStore store,
     GameBalance balance,
     TimeProvider timeProvider,
@@ -25,9 +27,10 @@ public sealed class PublishPostHandler(
         PublishPostCommand request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         Publication? publication = await store.GetPublicationAsync(request.PublicationId, cancellationToken);
         PlayerProfile storedPlayer = await playerReader.GetAsync(
-            request.TelegramUserId,
+            telegramUserId,
             cancellationToken);
         if (publication is null || publication.PlayerId != storedPlayer.Id)
         {

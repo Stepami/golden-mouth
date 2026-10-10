@@ -19,7 +19,6 @@
     <PackageReference Include="Riok.Mapperly" PrivateAssets="all" />
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
-    <PackageReference Include="TgMiniAppAuth" />
   </ItemGroup>
 
   <ItemGroup>
