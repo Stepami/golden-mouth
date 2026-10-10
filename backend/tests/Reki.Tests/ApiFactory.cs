@@ -2,11 +2,9 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
-using NSubstitute;
 using Testcontainers.MongoDb;
 using TUnit.AspNetCore;
 using TUnit.Core.Interfaces;
@@ -23,7 +21,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncIniti
 
     public string MongoConnectionString => _mongo.GetConnectionString();
 
-    public IChatClient ChatClient { get; } = Substitute.For<IChatClient>();
+    public OpenAiStub Llm { get; } = new();
 
     public TestApiClient CreateApiClient(long? telegramUserId = null)
     {
@@ -38,6 +36,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncIniti
     public override async ValueTask DisposeAsync()
     {
         await base.DisposeAsync();
+        Llm.Dispose();
         await _mongo.DisposeAsync();
     }
 
@@ -46,9 +45,12 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncIniti
         builder.UseEnvironment("Development");
         builder.UseSetting("Mongo:ConnectionString", MongoConnectionString);
         builder.UseSetting("Mongo:DatabaseName", DatabaseName);
-        builder.UseSetting("Llm:BaseUrl", "https://llm.invalid/v1");
+        builder.UseSetting("Llm:BaseUrl", Llm.BaseUrl);
         builder.UseSetting("Llm:ApiKey", "placeholder");
         builder.UseSetting("Llm:Model", "gigachat3.5-432b-a28b");
+        builder.UseSetting("Llm:Temperature", "0.25");
+        builder.UseSetting("Llm:MaxOutputTokens", "321");
+        builder.UseSetting("Llm:TimeoutSeconds", "1");
         builder.ConfigureServices(services =>
         {
             services.AddDataProtection().UseEphemeralDataProtectionProvider();

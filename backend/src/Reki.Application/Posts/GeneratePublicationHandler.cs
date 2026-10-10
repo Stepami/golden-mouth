@@ -198,7 +198,10 @@ public sealed class GeneratePublicationHandler(
         InvalidOperationException or
         OperationCanceledException or
         HttpRequestException or
-        TimeoutException;
+        TimeoutException ||
+        (exception is AggregateException aggregate &&
+         aggregate.InnerExceptions.Count > 0 &&
+         aggregate.InnerExceptions.All(IsGenerationFailure));
 
     private async ValueTask<StarPostContext> CreatePostContextAsync(
         GeneratePublicationCommand request,
