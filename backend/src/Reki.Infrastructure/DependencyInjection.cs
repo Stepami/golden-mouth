@@ -44,7 +44,7 @@ public static class DependencyInjection
         return services;
     }
 
-    internal static void AddLlmInfrastructure(this IServiceCollection services)
+    private static void AddLlmInfrastructure(this IServiceCollection services)
     {
         services
             .AddOptions<LlmOptions>()
