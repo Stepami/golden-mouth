@@ -1,8 +1,9 @@
+using Microsoft.Extensions.Options;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Common;
 
-public sealed class GameDay(TimeProvider timeProvider, GameBalance balance)
+public sealed class GameDay(TimeProvider timeProvider, IOptions<GameBalance> balance)
 {
     private static readonly TimeSpan MoscowOffset = TimeSpan.FromHours(3);
 
@@ -26,8 +27,8 @@ public sealed class GameDay(TimeProvider timeProvider, GameBalance balance)
         int skippedDays = player.LastPostAtUtc is null
             ? 0
             : GetSkippedDays(GetPeriodStart(player.LastPostAtUtc.Value), periodStart);
-        int restedPosts = skippedDays >= balance.Growth.RestedAfterSkippedDays
-            ? balance.Growth.RestedFirstPosts
+        int restedPosts = skippedDays >= balance.Value.Growth.RestedAfterSkippedDays
+            ? balance.Value.Growth.RestedFirstPosts
             : 0;
         return player.StartNewPeriod(periodStart, restedPosts);
     }
@@ -45,9 +46,9 @@ public sealed class GameDay(TimeProvider timeProvider, GameBalance balance)
             localNow.Year,
             localNow.Month,
             localNow.Day,
-            balance.PostsResetTimeMoscow.Hour,
-            balance.PostsResetTimeMoscow.Minute,
-            balance.PostsResetTimeMoscow.Second,
+            balance.Value.PostsResetTimeMoscow.Hour,
+            balance.Value.PostsResetTimeMoscow.Minute,
+            balance.Value.PostsResetTimeMoscow.Second,
             MoscowOffset);
 
         return (localNow < start ? start.AddDays(-1) : start).ToUniversalTime();

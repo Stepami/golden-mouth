@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Telemetry;
@@ -10,7 +11,7 @@ namespace Reki.Application.Social;
 
 public sealed class ChallengeLifecycle(
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     GameDay gameDay,
     TimeProvider timeProvider,
     ProductTelemetry analytics)
@@ -48,8 +49,8 @@ public sealed class ChallengeLifecycle(
                 player.Id,
                 friendId,
                 timeProvider.GetUtcNow(),
-                balance.Challenge.Days,
-                balance.Challenge.MinimumPosts);
+                balance.Value.Challenge.Days,
+                balance.Value.Challenge.MinimumPosts);
             if (!await store.TryInsertChallengeAsync(invitation, cancellationToken))
             {
                 throw new RequestConflictException("The challenge invitation could not be created.");
@@ -156,11 +157,11 @@ public sealed class ChallengeLifecycle(
 
         PlayerId winnerId = completed.WinnerId.Value;
         PlayerId loserId = completed.GetRival(winnerId);
-        DateTimeOffset bonusUntil = periodStart.AddDays(balance.ChallengeWinBonusDays);
+        DateTimeOffset bonusUntil = periodStart.AddDays(balance.Value.ChallengeWinBonusDays);
         await UpdatePlayerAsync(
             winnerId,
             profile => profile.ApplyChallengeWinBonus(
-                balance.ChallengeWinBonusPerDay,
+                balance.Value.ChallengeWinBonusPerDay,
                 bonusUntil),
             cancellationToken);
         await UpdatePlayerAsync(

@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
@@ -11,7 +12,7 @@ namespace Reki.Application.Posts;
 
 public sealed class StarTurnGenerator(
     IChatClient chatClient,
-    LlmTurnSettings settings)
+    IOptions<LlmTurnSettings> settings)
 {
     public async IAsyncEnumerable<ChatResponseUpdate> StreamPostTurnAsync(
         StarPostContext context,
@@ -141,9 +142,9 @@ public sealed class StarTurnGenerator(
     {
         return new ChatOptions
         {
-            ModelId = settings.Model,
-            Temperature = settings.Temperature,
-            MaxOutputTokens = settings.MaxOutputTokens,
+            ModelId = settings.Value.Model,
+            Temperature = settings.Value.Temperature,
+            MaxOutputTokens = settings.Value.MaxOutputTokens,
             Tools = [.. tools],
             ToolMode = toolMode,
             AllowMultipleToolCalls = true,

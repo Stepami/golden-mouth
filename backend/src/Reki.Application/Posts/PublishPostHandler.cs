@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Social;
@@ -15,7 +16,7 @@ namespace Reki.Application.Posts;
 public sealed class PublishPostHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     GameDay gameDay,
     PlayerReader playerReader,
@@ -65,7 +66,7 @@ public sealed class PublishPostHandler(
             throw new RequestConflictException("The player state changed while starting a new day.");
         }
 
-        int cap = player.GetPostsCap(balance.FreePostsPerDay, balance.PlusPostsPerDay);
+        int cap = player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
 
         if (player.PostsUsed >= cap)
         {
@@ -73,7 +74,7 @@ public sealed class PublishPostHandler(
         }
 
         GeneratedPostTurn turn = publication.AssembleTurn();
-        StarTurnPolicy.EnsurePostAllowed(turn, player.World, StarTurnPolicy.IsHateEnabled(player, balance, now));
+        StarTurnPolicy.EnsurePostAllowed(turn, player.World, StarTurnPolicy.IsHateEnabled(player, balance.Value, now));
 
         bool wantCompleted = wantId is not null && player.Wants.Any(want =>
             want.Id == wantId && !want.Done);
@@ -95,10 +96,10 @@ public sealed class PublishPostHandler(
             wantId,
             turn.StarId,
             now,
-            balance.Relations.Minimum,
-            balance.Relations.Maximum,
-            balance.Relations.MaxGainPerDay,
-            balance.Relations.StarCardAt);
+            balance.Value.Relations.Minimum,
+            balance.Value.Relations.Maximum,
+            balance.Value.Relations.MaxGainPerDay,
+            balance.Value.Relations.StarCardAt);
         PostId postId = PostId.New();
         var starComment = new GameComment(
             CommentId.New(),

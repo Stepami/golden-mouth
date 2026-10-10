@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Social;
@@ -10,7 +11,7 @@ namespace Reki.Application.Player;
 public sealed class OnboardPlayerHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     GameDay gameDay,
     PlayerReader playerReader,
     TimeProvider timeProvider) : IRequestHandler<OnboardPlayerCommand, PlayerView>
@@ -28,18 +29,18 @@ public sealed class OnboardPlayerHandler(
             PlayerProfile? updatedInviter = inviter is null
                 ? null
                 : gameDay.Normalize(inviter.EnsureDefaults())
-                    .GrantInviteBonus(balance.InviteBonusBoth, balance.InviteBonusMaxPerDay);
+                    .GrantInviteBonus(balance.Value.InviteBonusBoth, balance.Value.InviteBonusMaxPerDay);
             if (ReferenceEquals(updatedInviter, inviter))
             {
                 updatedInviter = null;
             }
 
             PlayerProfile created =
-                CreatePlayer(request, telegramUserId, gameDay.PeriodStart, balance.Growth.StartingSubscribers) with
+                CreatePlayer(request, telegramUserId, gameDay.PeriodStart, balance.Value.Growth.StartingSubscribers) with
                 {
                     InvitedBy = inviter?.Id,
                     InvitedAtUtc = inviter is null ? null : timeProvider.GetUtcNow(),
-                    FirstPostInviteBonus = inviter is null ? 0 : balance.InviteBonusBoth,
+                    FirstPostInviteBonus = inviter is null ? 0 : balance.Value.InviteBonusBoth,
                 };
             if (await store.TryCreatePlayerAsync(
                     created,

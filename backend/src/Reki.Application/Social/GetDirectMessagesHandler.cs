@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Domain.Player;
 using Reki.Domain.Social;
@@ -9,7 +10,7 @@ namespace Reki.Application.Social;
 public sealed class GetDirectMessagesHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     GameDay gameDay,
     PlayerReader playerReader) : IRequestHandler<GetDirectMessagesQuery, DirectMessageView>
 {
@@ -40,7 +41,7 @@ public sealed class GetDirectMessagesHandler(
 
         int repliesLeft = Math.Max(
             0,
-            balance.Relations.DirectMessageRepliesPerDay - conversation.RepliesUsed);
+            balance.Value.Relations.DirectMessageRepliesPerDay - conversation.RepliesUsed);
         int relation = player.StarRelations
             .FirstOrDefault(item => item.StarId == request.StarId)?.Value ?? 0;
         return new DirectMessageView(conversation, repliesLeft, relation, StarCatalog.Require(player.World, request.StarId));

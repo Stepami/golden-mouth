@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
@@ -14,7 +15,7 @@ namespace Reki.Application.Social;
 public sealed class SendDirectMessageHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     GameDay gameDay,
     PlayerReader playerReader,
     StarTurnGenerator turnGenerator) : IRequestHandler<SendDirectMessageCommand, SentDirectMessage>
@@ -43,7 +44,7 @@ public sealed class SendDirectMessageHandler(
             conversation = conversation with { RepliesUsed = 0, PeriodStartedAtUtc = periodStart };
         }
 
-        if (conversation.RepliesUsed >= balance.Relations.DirectMessageRepliesPerDay)
+        if (conversation.RepliesUsed >= balance.Value.Relations.DirectMessageRepliesPerDay)
         {
             throw new RequestConflictException("The daily direct-message limit has been reached.");
         }
@@ -90,6 +91,6 @@ public sealed class SendDirectMessageHandler(
         await store.SaveStarConversationAsync(updated, cancellationToken);
         return new SentDirectMessage(
             generated.Text,
-            balance.Relations.DirectMessageRepliesPerDay - updated.RepliesUsed);
+            balance.Value.Relations.DirectMessageRepliesPerDay - updated.RepliesUsed);
     }
 }

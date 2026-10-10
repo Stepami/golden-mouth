@@ -1,7 +1,6 @@
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -27,7 +26,6 @@ public static class DependencyInjection
 
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
-        IConfiguration configuration,
         bool initializeDatabase = true,
         bool initializeLlm = true)
     {
@@ -55,14 +53,11 @@ public static class DependencyInjection
                 "Llm:BaseUrl must be an absolute HTTP or HTTPS URI.")
             .ValidateOnStart();
 
-        services.AddSingleton(serviceProvider =>
-        {
-            LlmOptions options = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
-            return new LlmTurnSettings(
-                options.Model,
-                0.4f,
-                700);
-        });
+        services
+            .AddOptions<LlmTurnSettings>()
+            .BindConfiguration(LlmOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddSingleton(serviceProvider =>
         {
             LlmOptions options = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;

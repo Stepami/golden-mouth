@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Contracts.Posts;
@@ -11,7 +12,7 @@ namespace Reki.Application.Posts;
 public sealed class AddReplyHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     PlayerReader playerReader)
     : IRequestHandler<AddReplyCommand, ReplyResponse>
 {
@@ -47,9 +48,9 @@ public sealed class AddReplyHandler(
             CommentId.New(),
             request.TargetCommentId,
             player.Subscribers,
-            balance.Thread.BonusReplies,
-            balance.Thread.SubscriberBonus,
-            balance.Thread.BranchDepth);
+            balance.Value.Thread.BonusReplies,
+            balance.Value.Thread.SubscriberBonus,
+            balance.Value.Thread.BranchDepth);
         var comment = new GameComment(
             reply.CommentId,
             player.Name,
@@ -84,7 +85,7 @@ public sealed class AddReplyHandler(
             reply.CommentId.Value,
             reply.BonusAwarded,
             reply.AwardedReplies,
-            balance.Thread.BonusReplies,
+            balance.Value.Thread.BonusReplies,
             reply.SubscriberTotal,
             reply.Reaction);
 }

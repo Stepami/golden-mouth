@@ -9,6 +9,7 @@
     <PackageReference Include="TgMiniAppAuth" />
     <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="../../../frontend/src/api/personas.json" LogicalName="Reki.StarPersonas.json" />

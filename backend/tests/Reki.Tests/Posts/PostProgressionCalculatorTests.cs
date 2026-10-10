@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Posts;
 using Reki.Domain.Player;
@@ -12,7 +13,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         PlayerProfile tenthPostPlayer = TestGameData.CreatePlayer() with { PostsUsed = 9 };
         PlayerProfile eleventhPostPlayer = TestGameData.CreatePlayer() with { PostsUsed = 10 };
         GeneratedPostTurn turn = TestGameData.CreateTurn(1, 0.4, 0.2);
@@ -33,7 +34,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         GeneratedPostTurn turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
         // Act
@@ -60,7 +61,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         PlayerProfile player = TestGameData.CreatePlayer() with { PostsUsed = 3 };
         GeneratedPostTurn turn = TestGameData.CreateTurn(0.8, 0.9, 0.7);
 
@@ -78,7 +79,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         PlayerProfile player = TestGameData.CreatePlayer() with { PostsUsed = 3 };
         GeneratedPostTurn turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
@@ -95,7 +96,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         PlayerProfile player = TestGameData.CreatePlayer() with { PostsUsed = 3 };
         GeneratedPostTurn turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
@@ -112,7 +113,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         PlayerProfile player = TestGameData.CreatePlayer() with { PostsUsed = 3 };
         GeneratedPostTurn turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
@@ -131,7 +132,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         GeneratedPostTurn turn = TestGameData.CreateTurn();
 
         // Act
@@ -153,7 +154,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         GeneratedPostTurn turn = TestGameData.CreateTurn();
 
         // Act
@@ -178,7 +179,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         PlayerProfile player = TestGameData.CreatePlayer() with { PostsUsed = 3 };
         GeneratedPostTurn turn = TestGameData.CreateTurn();
 
@@ -195,7 +196,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         GeneratedPostTurn turn = TestGameData.CreateTurn();
 
         // Act
@@ -220,7 +221,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         PlayerProfile player = TestGameData.CreatePlayer() with
         {
             PostsUsed = 3,
@@ -246,7 +247,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         PlayerProfile player = TestGameData.CreatePlayer() with
         {
             PostsUsed = 3,
@@ -271,7 +272,7 @@ public sealed class PostProgressionCalculatorTests
     {
         // Arrange
         GameBalance balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         GeneratedPostTurn turn = TestGameData.CreateTurn();
 
         // Act
@@ -303,7 +304,7 @@ public sealed class PostProgressionCalculatorTests
                 [TestGameData.WorldId.Value] = new(1, 1, 1, long.MaxValue),
             },
         };
-        var calculator = new PostProgressionCalculator(balance);
+        var calculator = new PostProgressionCalculator(Options.Create(balance));
         GeneratedPostTurn turn = TestGameData.CreateTurn();
 
         // Act

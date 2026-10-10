@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Domain.Player;
 using TgMiniAppAuth.AuthContext.User;
@@ -8,7 +9,7 @@ namespace Reki.Application.Player;
 public sealed class ClaimPlusInterestHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     GameDay gameDay,
     PlayerReader playerReader) : IRequestHandler<ClaimPlusInterestCommand, int>
 {
@@ -34,7 +35,7 @@ public sealed class ClaimPlusInterestHandler(
             }
         }
 
-        PlayerProfile updated = player.ClaimPlusInterestBonus(balance.PlusInterestBonus);
+        PlayerProfile updated = player.ClaimPlusInterestBonus(balance.Value.PlusInterestBonus);
         if (ReferenceEquals(updated, player))
         {
             return 0;

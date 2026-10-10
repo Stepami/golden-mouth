@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Mediator;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Exceptions;
@@ -19,7 +20,7 @@ namespace Reki.Application.Posts;
 public sealed class GeneratePublicationHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     GameDay gameDay,
     PlayerReader playerReader,
@@ -56,7 +57,7 @@ public sealed class GeneratePublicationHandler(
             yield break;
         }
 
-        int cap = player.GetPostsCap(balance.FreePostsPerDay, balance.PlusPostsPerDay);
+        int cap = player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
         if (player.PostsUsed >= cap)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
@@ -212,7 +213,7 @@ public sealed class GeneratePublicationHandler(
             ? storedRules
             : WorldRulesDefaults.Create(player.Id, player.World);
         IReadOnlyList<GamePost> recentPosts = await store.GetRecentPostsAsync(player.Id, 3, cancellationToken);
-        bool hateEnabled = StarTurnPolicy.IsHateEnabled(player, balance, now);
+        bool hateEnabled = StarTurnPolicy.IsHateEnabled(player, balance.Value, now);
         return new StarPostContext(
             request.Text,
             new StarAgentProfile(
