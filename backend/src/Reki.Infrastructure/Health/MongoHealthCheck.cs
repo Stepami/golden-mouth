@@ -25,19 +25,9 @@ internal sealed class MongoHealthCheck(
 
             return HealthCheckResult.Healthy();
         }
-        catch (MongoException)
+        catch (Exception)
         {
-            return CreateUnhealthyResult();
+            return HealthCheckResult.Unhealthy("MongoDB did not answer the readiness probe.");
         }
-        catch (TimeoutException)
-        {
-            return CreateUnhealthyResult();
-        }
-    }
-
-    private static HealthCheckResult CreateUnhealthyResult()
-    {
-        return HealthCheckResult.Unhealthy(
-            "MongoDB did not answer the readiness probe.");
     }
 }

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.AI;
+using WireMock.Logging;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -10,13 +11,15 @@ namespace Reki.Tests;
 public sealed class OpenAiStub : IDisposable
 {
     private readonly WireMockServer _server = WireMockServer.Start();
+    private readonly HashSet<Guid> _mappingIds = [];
 
     public string BaseUrl => $"{_server.Url}/v1";
 
-    public int RequestCount => _server.LogEntries.Count(entry => entry.RequestMessage?.Path == "/v1/chat/completions");
+    public int RequestCount => _server.LogEntries.Count(IsCurrentRequest);
 
     public void Reset(Func<IReadOnlyList<ChatMessage>, ChatResponse> createResponse)
     {
+        _mappingIds.Clear();
         _server.ResetLogEntries();
         Respond(createResponse);
     }
@@ -28,8 +31,11 @@ public sealed class OpenAiStub : IDisposable
         _server.ResetMappings();
         foreach (var streaming in new[] { false, true })
         {
+            var mappingId = Guid.NewGuid();
+            _mappingIds.Add(mappingId);
             _server.Given(Request.Create().WithPath("/v1/chat/completions").UsingPost()
                     .WithBody((string? body) => body is not null && IsStreaming(body) == streaming))
+                .WithGuid(mappingId)
                 .RespondWith(Response.Create().WithStatusCode(200)
                     .WithHeader("Content-Type", streaming ? "text/event-stream" : "application/json")
                     .WithBody(request =>
@@ -44,13 +50,16 @@ public sealed class OpenAiStub : IDisposable
     public void RespondWithTimeout()
     {
         _server.ResetMappings();
+        var mappingId = Guid.NewGuid();
+        _mappingIds.Add(mappingId);
         _server.Given(Request.Create().WithPath("/v1/chat/completions").UsingPost())
+            .WithGuid(mappingId)
             .RespondWith(Response.Create().WithStatusCode(200).WithDelay(TimeSpan.FromSeconds(3)).WithBody(string.Empty));
     }
 
     public JsonElement GetLastRequest()
     {
-        var body = _server.LogEntries.Last(entry => entry.RequestMessage?.Path == "/v1/chat/completions")
+        var body = _server.LogEntries.Last(IsCurrentRequest)
             .RequestMessage?.Body ?? throw new InvalidOperationException("Missing AI request body.");
         using var document = JsonDocument.Parse(body);
         return document.RootElement.Clone();
@@ -124,4 +133,8 @@ public sealed class OpenAiStub : IDisposable
         };
         return streaming ? $"data: {completion.ToJsonString()}\n\ndata: [DONE]\n\n" : completion.ToJsonString();
     }
+
+    // Delayed responses from a previous test can be logged after ResetLogEntries.
+    private bool IsCurrentRequest(ILogEntry entry) =>
+        entry.MappingGuid is { } mappingId && _mappingIds.Contains(mappingId);
 }
