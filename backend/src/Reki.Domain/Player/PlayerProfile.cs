@@ -203,21 +203,6 @@ public sealed record PlayerProfile(
         };
     }
 
-    public PlayerProfile ClaimPlusInterestBonus(int bonus)
-    {
-        if (PlusInterestClaimed)
-        {
-            return this;
-        }
-
-        return this with
-        {
-            DailyBonus = DailyBonus + bonus,
-            PlusInterestClaimed = true,
-            Version = Version + 1,
-        };
-    }
-
     public PlayerProfile GrantInviteBonus(int bonus, int maxPerPeriod)
     {
         if (InviteBonusesEarnedInPeriod >= maxPerPeriod)

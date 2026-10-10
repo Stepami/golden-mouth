@@ -1,6 +1,5 @@
 using Mediator;
 using Reki.Application.Common;
-using Reki.Application.Common.Exceptions;
 using Reki.Domain.Player;
 using TgMiniAppAuth.AuthContext.User;
 
@@ -20,22 +19,11 @@ public sealed class ClaimPlusInterestHandler(
         TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         PlayerProfile storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
         PlayerProfile player = gameDay.Normalize(storedPlayer);
-        int bonus = player.PlusInterestClaimed ? 0 : balance.PlusInterestBonus;
-        PlayerProfile updated = player.ClaimPlusInterestBonus(balance.PlusInterestBonus) with
-        {
-            PlusNotifyRequested = player.PlusNotifyRequested || request.Interest,
-        };
-        if (updated == storedPlayer)
-        {
-            return 0;
-        }
-
-        updated = updated with { Version = storedPlayer.Version + 1 };
-        if (await store.TryReplacePlayerAsync(updated, storedPlayer.Version, cancellationToken))
-        {
-            return bonus;
-        }
-
-        throw new RequestConflictException("The player changed while claiming the bonus. Retry the request.");
+        return await store.ClaimPlusInterestAsync(
+            telegramUserId,
+            balance.PlusInterestBonus,
+            request.Interest,
+            player.PostsPeriodStartedAtUtc == storedPlayer.PostsPeriodStartedAtUtc ? null : player,
+            cancellationToken);
     }
 }

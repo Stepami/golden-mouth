@@ -1,3 +1,4 @@
+using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Domain.Events;
 using Reki.Domain.Player;
@@ -21,6 +22,18 @@ public interface IGameStore
         CancellationToken cancellationToken);
 
     ValueTask UpsertPlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
+
+    ValueTask<bool> UpdatePlayerSettingsAsync(
+        TelegramUserId telegramUserId,
+        UpdateSettingsCommand settings,
+        CancellationToken cancellationToken);
+
+    ValueTask<int> ClaimPlusInterestAsync(
+        TelegramUserId telegramUserId,
+        int bonus,
+        bool interest,
+        PlayerProfile? newPeriod,
+        CancellationToken cancellationToken);
 
     ValueTask<bool> TryReplacePlayerAsync(
         PlayerProfile player,

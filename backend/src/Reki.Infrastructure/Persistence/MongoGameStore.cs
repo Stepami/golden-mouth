@@ -1,6 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Common;
+using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Contracts.Posts;
 using Reki.Domain.Events;
@@ -107,6 +108,106 @@ internal sealed class MongoGameStore : IGameStore
             player,
             options,
             cancellationToken);
+    }
+
+    public async ValueTask<bool> UpdatePlayerSettingsAsync(
+        TelegramUserId telegramUserId,
+        UpdateSettingsCommand settings,
+        CancellationToken cancellationToken)
+    {
+        UpdateDefinition<PlayerProfile> update = Builders<PlayerProfile>.Update.Inc(player => player.Version, 1);
+        if (settings.Drama is { } drama)
+        {
+            update = update.Set(player => player.Settings.Drama, drama);
+        }
+
+        if (settings.Notifications is { } notifications)
+        {
+            update = update.Set(player => player.Settings.Notifications, notifications);
+        }
+
+        if (settings.Quiet is { } quiet)
+        {
+            update = update.Set(player => player.Settings.Quiet, quiet);
+        }
+
+        if (settings.Voice is { } voice)
+        {
+            update = update.Set(player => player.Settings.Voice, voice);
+        }
+
+        if (settings.Plus is { } plus)
+        {
+            update = update.Set(player => player.Settings.Plus, plus);
+        }
+
+        if (settings.Address is { } address)
+        {
+            update = update.Set(player => player.Address, address);
+        }
+
+        UpdateResult result = await _players.UpdateOneAsync(
+            player => player.TelegramUserId == telegramUserId,
+            update,
+            cancellationToken: cancellationToken);
+        return result.MatchedCount == 1;
+    }
+
+    public async ValueTask<int> ClaimPlusInterestAsync(
+        TelegramUserId telegramUserId,
+        int bonus,
+        bool interest,
+        PlayerProfile? newPeriod,
+        CancellationToken cancellationToken)
+    {
+        FilterDefinition<PlayerProfile> playerFilter = Builders<PlayerProfile>.Filter
+            .Eq(player => player.TelegramUserId, telegramUserId);
+        if (newPeriod is not null)
+        {
+            // Apply the domain-calculated day reset once, without replacing unrelated profile fields.
+            FilterDefinition<PlayerProfile> periodFilter = playerFilter & Builders<PlayerProfile>.Filter
+                .Ne(player => player.PostsPeriodStartedAtUtc, newPeriod.PostsPeriodStartedAtUtc);
+            UpdateDefinition<PlayerProfile> periodUpdate = Builders<PlayerProfile>.Update
+                .Set(player => player.PostsUsed, newPeriod.PostsUsed)
+                .Set(player => player.DailyBonus, newPeriod.DailyBonus)
+                .Set(player => player.InviteBonusesEarnedInPeriod, newPeriod.InviteBonusesEarnedInPeriod)
+                .Set(player => player.PostsPeriodStartedAtUtc, newPeriod.PostsPeriodStartedAtUtc)
+                .Set(player => player.RestedPostsRemaining, newPeriod.RestedPostsRemaining)
+                .Set(player => player.Wants, newPeriod.Wants)
+                .Set(player => player.StarRelations, newPeriod.StarRelations)
+                .Inc(player => player.Version, 1);
+            await _players.UpdateOneAsync(periodFilter, periodUpdate, cancellationToken: cancellationToken);
+        }
+
+        FilterDefinition<PlayerProfile> claimFilter = playerFilter & Builders<PlayerProfile>.Filter
+            .Ne(player => player.PlusInterestClaimed, true);
+        UpdateDefinition<PlayerProfile> claimUpdate = Builders<PlayerProfile>.Update
+            .Inc(player => player.DailyBonus, bonus)
+            .Set(player => player.PlusInterestClaimed, true)
+            .Inc(player => player.Version, 1);
+        if (interest)
+        {
+            claimUpdate = claimUpdate.Set(player => player.PlusNotifyRequested, true);
+        }
+
+        UpdateResult result =
+            await _players.UpdateOneAsync(claimFilter, claimUpdate, cancellationToken: cancellationToken);
+        if (result.ModifiedCount == 1)
+        {
+            return bonus;
+        }
+
+        if (interest)
+        {
+            FilterDefinition<PlayerProfile> notifyFilter = playerFilter & Builders<PlayerProfile>.Filter
+                .Ne(player => player.PlusNotifyRequested, true);
+            UpdateDefinition<PlayerProfile> notifyUpdate = Builders<PlayerProfile>.Update
+                .Set(player => player.PlusNotifyRequested, true)
+                .Inc(player => player.Version, 1);
+            await _players.UpdateOneAsync(notifyFilter, notifyUpdate, cancellationToken: cancellationToken);
+        }
+
+        return 0;
     }
 
     public async ValueTask<bool> TryReplacePlayerAsync(
