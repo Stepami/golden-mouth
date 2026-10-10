@@ -19,37 +19,37 @@ public sealed class StarTurnGenerator(
         PlayerProfile player,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        string recentPosts = context.RecentPosts.Count == 0
+        var recentPosts = context.RecentPosts.Count == 0
             ? "нет"
             : StarAgentInstructions.SerializeTexts(context.RecentPosts);
-        string turnPolicy = $$"""
-                              Для поста обязательно вызови comment ровно один раз и можешь вызвать react
-                              не более одного раза. Оцени текст по трём шкалам мира от 0 до 1.
-                              author — отображаемое поле name из каталога, НЕ id и НЕ ник.
-                              star_id — поле id того же персонажа. Например, для Миры: author=Мира, star_id=mira.
-                              Выбирай только персонажей текущего каталога; пример не добавляет Миру в другие миры.
-                              tone: support (поддержка), critique (критика текста) или hate (острая реакция на текст).
-                              Хейт разрешён сейчас: {{context.HateEnabled}}. Если false, tone=hate запрещён.
-                              """;
-        string userPrompt = $$"""
-                              Этап: {{context.Stage}}
-                              Последние посты:
-                              {{recentPosts}}
+        var turnPolicy = $$"""
+                           Для поста обязательно вызови comment ровно один раз и можешь вызвать react
+                           не более одного раза. Оцени текст по трём шкалам мира от 0 до 1.
+                           author — отображаемое поле name из каталога, НЕ id и НЕ ник.
+                           star_id — поле id того же персонажа. Например, для Миры: author=Мира, star_id=mira.
+                           Выбирай только персонажей текущего каталога; пример не добавляет Миру в другие миры.
+                           tone: support (поддержка), critique (критика текста) или hate (острая реакция на текст).
+                           Хейт разрешён сейчас: {{context.HateEnabled}}. Если false, tone=hate запрещён.
+                           """;
+        var userPrompt = $$"""
+                           Этап: {{context.Stage}}
+                           Последние посты:
+                           {{recentPosts}}
 
-                              Новый пост:
-                              {{context.Text}}
-                              """;
+                           Новый пост:
+                           {{context.Text}}
+                           """;
         List<ChatMessage> messages =
         [
             StarAgentInstructions.CreatePlatformPolicy(turnPolicy, context.Agent),
             StarAgentInstructions.CreatePlayerOwnedLayer(context.Agent),
             new(ChatRole.User, userPrompt),
         ];
-        ChatOptions options = CreateOptions(
+        var options = CreateOptions(
             ChatToolMode.RequireSpecific("comment"),
             new ChatInputSafetyContext(player, [context.Text]),
             StarToolSchemas.Post);
-        await foreach (ChatResponseUpdate update in chatClient
+        await foreach (var update in chatClient
                            .GetStreamingResponseAsync(messages, options, cancellationToken))
         {
             yield return update;
@@ -67,9 +67,9 @@ public sealed class StarTurnGenerator(
                                   чувствительные данные или содержание, которого игрок не сообщал. Личка всегда без хейта.
                                   star_id должен совпадать с единственным целевым персонажем каталога.
                                   """;
-        string userPrompt = $$"""
-                              Сообщение игрока: {{context.Text}}
-                              """;
+        var userPrompt = $$"""
+                           Сообщение игрока: {{context.Text}}
+                           """;
         if (context.Agent.StarId is not { } starId)
         {
             throw new AiServiceUnavailableException("A direct message requires a target star.");
@@ -85,7 +85,7 @@ public sealed class StarTurnGenerator(
             new ChatMessage(message.From == "star" ? ChatRole.Assistant : ChatRole.User, message.Text)));
         messages.Add(new ChatMessage(ChatRole.User, userPrompt));
 
-        IReadOnlyList<IStarAction> actions = await GetActionsAsync(
+        var actions = await GetActionsAsync(
             messages,
             ChatToolMode.RequireSpecific("dm"),
             new ChatInputSafetyContext(player, [context.Text]),
@@ -109,14 +109,14 @@ public sealed class StarTurnGenerator(
         ChatInputSafetyContext safetyContext,
         CancellationToken cancellationToken)
     {
-        ChatOptions options = CreateOptions(toolMode, safetyContext, StarToolSchemas.DirectMessage);
+        var options = CreateOptions(toolMode, safetyContext, StarToolSchemas.DirectMessage);
         try
         {
-            ChatResponse response = await chatClient.GetResponseAsync(
+            var response = await chatClient.GetResponseAsync(
                 messages,
                 options,
                 cancellationToken);
-            IEnumerable<FunctionCallContent> calls = response.Messages
+            var calls = response.Messages
                 .SelectMany(message => message.Contents)
                 .OfType<FunctionCallContent>();
             return StarToolCallParser.Parse(calls);
@@ -142,7 +142,6 @@ public sealed class StarTurnGenerator(
     {
         return new ChatOptions
         {
-            ModelId = settings.Value.Model,
             Temperature = settings.Value.Temperature,
             MaxOutputTokens = settings.Value.MaxOutputTokens,
             Tools = [.. tools],

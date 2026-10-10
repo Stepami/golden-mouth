@@ -34,17 +34,16 @@ internal static class Bootstrap
     {
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddTgMiniAppAuth(builder.Configuration);
+        builder.Services.AddApi();
         if (OpenApiGeneration.IsRunning)
         {
             builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
+            return;
         }
 
         builder.Services
             .AddApplication()
-            .AddInfrastructure(
-                initializeDatabase: !OpenApiGeneration.IsRunning,
-                initializeLlm: !OpenApiGeneration.IsRunning)
-            .AddApi();
+            .AddInfrastructure();
     }
 
     private static void ConfigureLogging(WebApplicationBuilder builder)

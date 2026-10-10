@@ -1,12 +1,8 @@
-using System.ClientModel;
-using System.ClientModel.Primitives;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using OpenAI;
-using OpenAI.Chat;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -25,18 +21,13 @@ public static class DependencyInjection
     private static readonly TimeSpan MongoServerSelectionTimeout = TimeSpan.FromSeconds(5);
 
     public static IServiceCollection AddInfrastructure(
-        this IServiceCollection services,
-        bool initializeDatabase = true,
-        bool initializeLlm = true)
+        this IServiceCollection services)
     {
         services.AddSingleton(TimeProvider.System);
         services.AddObservability();
         services.AddBaseHealthChecks();
-        services.AddMongoInfrastructure(initializeDatabase);
-        if (initializeLlm)
-        {
-            services.AddLlmInfrastructure();
-        }
+        services.AddMongoInfrastructure();
+        services.AddLlmInfrastructure();
 
         return services;
     }
@@ -48,7 +39,7 @@ public static class DependencyInjection
             .BindConfiguration(LlmOptions.SectionName)
             .ValidateDataAnnotations()
             .Validate(
-                options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out Uri? uri) &&
+                options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var uri) &&
                            uri.Scheme is "http" or "https",
                 "Llm:BaseUrl must be an absolute HTTP or HTTPS URI.")
             .ValidateOnStart();
@@ -58,22 +49,10 @@ public static class DependencyInjection
             .BindConfiguration(LlmOptions.SectionName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
-        services.AddSingleton(serviceProvider =>
-        {
-            LlmOptions options = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
-            var clientOptions = new OpenAIClientOptions
-            {
-                ClientLoggingOptions = new ClientLoggingOptions { EnableLogging = false },
-                Endpoint = new Uri(options.BaseUrl),
-                NetworkTimeout = TimeSpan.FromSeconds(options.TimeoutSeconds),
-                RetryPolicy = new ClientRetryPolicy(),
-            };
-            var client = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
-            return client.GetChatClient(options.Model);
-        });
 
-        services.AddChatClient(serviceProvider =>
-                serviceProvider.GetRequiredService<ChatClient>().AsIChatClient())
+        services
+            .AddSingleton<OpenAiRoutingChatClient>()
+            .AddChatClient(sp => sp.GetRequiredService<OpenAiRoutingChatClient>())
             .UseOpenTelemetry(
                 sourceName: "Reki.GenAI",
                 configure: telemetry => telemetry.EnableSensitiveData = false)
@@ -83,9 +62,7 @@ public static class DependencyInjection
                 serviceProvider.GetRequiredService<PlayerSafetyGuard>()));
     }
 
-    private static void AddMongoInfrastructure(
-        this IServiceCollection services,
-        bool initializeDatabase)
+    private static void AddMongoInfrastructure(this IServiceCollection services)
     {
         MongoClassMappings.Register();
         services
@@ -99,11 +76,11 @@ public static class DependencyInjection
 
         services.AddSingleton<IMongoClient>(serviceProvider =>
         {
-            MongoOptions options = serviceProvider
+            var options = serviceProvider
                 .GetRequiredService<IOptions<MongoOptions>>()
                 .Value;
 
-            MongoClientSettings settings = MongoClientSettings.FromConnectionString(
+            var settings = MongoClientSettings.FromConnectionString(
                 options.ConnectionString);
             settings.ServerSelectionTimeout = MongoServerSelectionTimeout;
 
@@ -112,18 +89,16 @@ public static class DependencyInjection
 
         services.AddSingleton(serviceProvider =>
         {
-            MongoOptions options = serviceProvider
+            var options = serviceProvider
                 .GetRequiredService<IOptions<MongoOptions>>()
                 .Value;
-            IMongoClient client = serviceProvider.GetRequiredService<IMongoClient>();
+            var client = serviceProvider.GetRequiredService<IMongoClient>();
             return client.GetDatabase(options.DatabaseName);
         });
         services.AddSingleton<IGameStore, MongoGameStore>();
         services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
-        if (initializeDatabase)
-        {
-            services.AddHostedService<MongoGameIndexes>();
-        }
+
+        services.AddHostedService<MongoGameIndexes>();
 
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);
     }
