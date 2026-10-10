@@ -1,6 +1,5 @@
 using Mediator;
 using Reki.Application.Common;
-using Reki.Application.Common.Exceptions;
 using Reki.Domain.Player;
 using TgMiniAppAuth.AuthContext.User;
 
@@ -18,28 +17,31 @@ public sealed class ClaimPlusInterestHandler(
         CancellationToken cancellationToken)
     {
         TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        for (int attempt = 0; attempt < 3; attempt++)
+        PlayerProfile storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        PlayerProfile player = gameDay.Normalize(storedPlayer);
+        if (!ReferenceEquals(player, storedPlayer))
         {
-            PlayerProfile storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
-            PlayerProfile player = gameDay.Normalize(storedPlayer);
-            int bonus = player.PlusInterestClaimed ? 0 : balance.PlusInterestBonus;
-            PlayerProfile updated = player.ClaimPlusInterestBonus(balance.PlusInterestBonus) with
-            {
-                PlusNotifyRequested = player.PlusNotifyRequested || request.Interest,
-            };
-            if (updated == storedPlayer)
-            {
-                return 0;
-            }
+            await store.StartPlayerPeriodAsync(storedPlayer, player, cancellationToken);
+        }
 
-            updated = updated with { Version = storedPlayer.Version + 1 };
-            if (await store.TryReplacePlayerAsync(updated, storedPlayer.Version, cancellationToken))
+        if (request.Interest)
+        {
+            PlayerProfile subscribed = player.RequestPlusNotification();
+            if (!ReferenceEquals(subscribed, player))
             {
-                return bonus;
+                await store.SavePlusNotificationAsync(player, subscribed, cancellationToken);
+                player = subscribed;
             }
         }
 
-        throw new RequestConflictException("The player changed while claiming the bonus. Retry the request.");
+        PlayerProfile updated = player.ClaimPlusInterestBonus(balance.PlusInterestBonus);
+        if (ReferenceEquals(updated, player))
+        {
+            return 0;
+        }
+
+        return await store.TryClaimPlusInterestAsync(player, updated, cancellationToken)
+            ? updated.DailyBonus - player.DailyBonus
+            : 0;
     }
 }
-

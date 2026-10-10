@@ -218,6 +218,13 @@ public sealed record PlayerProfile(
         };
     }
 
+    public PlayerProfile RequestPlusNotification()
+    {
+        return PlusNotifyRequested
+            ? this
+            : this with { PlusNotifyRequested = true, Version = Version + 1 };
+    }
+
     public PlayerProfile GrantInviteBonus(int bonus, int maxPerPeriod)
     {
         if (InviteBonusesEarnedInPeriod >= maxPerPeriod)

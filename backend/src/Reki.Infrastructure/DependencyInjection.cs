@@ -51,7 +51,7 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .Validate(
                 options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out Uri? uri) &&
-                    uri.Scheme is "http" or "https",
+                           uri.Scheme is "http" or "https",
                 "Llm:BaseUrl must be an absolute HTTP or HTTPS URI.")
             .ValidateOnStart();
 
@@ -61,8 +61,7 @@ public static class DependencyInjection
             return new LlmTurnSettings(
                 options.Model,
                 0.4f,
-                700,
-                TimeSpan.FromSeconds(options.TimeoutSeconds));
+                700);
         });
         services.AddSingleton<IChatClient>(serviceProvider =>
         {

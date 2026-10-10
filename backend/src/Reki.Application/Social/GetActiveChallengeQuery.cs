@@ -1,5 +1,4 @@
 using Mediator;
-using Reki.Domain.Social;
 
 namespace Reki.Application.Social;
 

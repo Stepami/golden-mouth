@@ -1,8 +1,6 @@
 using Mediator;
 using Reki.Application.Common;
-using Reki.Application.Common.Exceptions;
 using Reki.Domain.Player;
-using Reki.Domain.Social;
 using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Social;

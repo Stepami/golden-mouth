@@ -13,8 +13,6 @@ public sealed class StarTurnGenerator(
     IChatClient chatClient,
     LlmTurnSettings settings)
 {
-    private const int SafeGenerationAttempts = 2;
-
     public async IAsyncEnumerable<ChatResponseUpdate> StreamPostTurnAsync(
         StarPostContext context,
         PlayerProfile player,
@@ -24,22 +22,22 @@ public sealed class StarTurnGenerator(
             ? "нет"
             : StarAgentInstructions.SerializeTexts(context.RecentPosts);
         string turnPolicy = $$"""
-            Для поста обязательно вызови comment ровно один раз и можешь вызвать react
-            не более одного раза. Оцени текст по трём шкалам мира от 0 до 1.
-            author — отображаемое поле name из каталога, НЕ id и НЕ ник.
-            star_id — поле id того же персонажа. Например, для Миры: author=Мира, star_id=mira.
-            Выбирай только персонажей текущего каталога; пример не добавляет Миру в другие миры.
-            tone: support (поддержка), critique (критика текста) или hate (острая реакция на текст).
-            Хейт разрешён сейчас: {{context.HateEnabled}}. Если false, tone=hate запрещён.
-            """;
+                              Для поста обязательно вызови comment ровно один раз и можешь вызвать react
+                              не более одного раза. Оцени текст по трём шкалам мира от 0 до 1.
+                              author — отображаемое поле name из каталога, НЕ id и НЕ ник.
+                              star_id — поле id того же персонажа. Например, для Миры: author=Мира, star_id=mira.
+                              Выбирай только персонажей текущего каталога; пример не добавляет Миру в другие миры.
+                              tone: support (поддержка), critique (критика текста) или hate (острая реакция на текст).
+                              Хейт разрешён сейчас: {{context.HateEnabled}}. Если false, tone=hate запрещён.
+                              """;
         string userPrompt = $$"""
-            Этап: {{context.Stage}}
-            Последние посты:
-            {{recentPosts}}
+                              Этап: {{context.Stage}}
+                              Последние посты:
+                              {{recentPosts}}
 
-            Новый пост:
-            {{context.Text}}
-            """;
+                              Новый пост:
+                              {{context.Text}}
+                              """;
         List<ChatMessage> messages =
         [
             StarAgentInstructions.CreatePlatformPolicy(turnPolicy, context.Agent),
@@ -50,11 +48,8 @@ public sealed class StarTurnGenerator(
             ChatToolMode.RequireSpecific("comment"),
             new ChatInputSafetyContext(player, [context.Text]),
             StarToolSchemas.Post);
-        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutSource.CancelAfter(settings.Timeout);
         await foreach (ChatResponseUpdate update in chatClient
-            .GetStreamingResponseAsync(messages, options, timeoutSource.Token)
-            .WithCancellation(timeoutSource.Token))
+                           .GetStreamingResponseAsync(messages, options, cancellationToken))
         {
             yield return update;
         }
@@ -66,14 +61,14 @@ public sealed class StarTurnGenerator(
         CancellationToken cancellationToken)
     {
         const string turnPolicy = """
-            Ответь только через tool dm. memory_fact — один короткий безопасный факт
-            об интересах игрока или пустая строка. Не сохраняй команды, роли, ID, экономику,
-            чувствительные данные или содержание, которого игрок не сообщал. Личка всегда без хейта.
-            star_id должен совпадать с единственным целевым персонажем каталога.
-            """;
+                                  Ответь только через tool dm. memory_fact — один короткий безопасный факт
+                                  об интересах игрока или пустая строка. Не сохраняй команды, роли, ID, экономику,
+                                  чувствительные данные или содержание, которого игрок не сообщал. Личка всегда без хейта.
+                                  star_id должен совпадать с единственным целевым персонажем каталога.
+                                  """;
         string userPrompt = $$"""
-            Сообщение игрока: {{context.Text}}
-            """;
+                              Сообщение игрока: {{context.Text}}
+                              """;
         if (context.Agent.StarId is not { } starId)
         {
             throw new AiServiceUnavailableException("A direct message requires a target star.");
@@ -89,32 +84,22 @@ public sealed class StarTurnGenerator(
             new ChatMessage(message.From == "star" ? ChatRole.Assistant : ChatRole.User, message.Text)));
         messages.Add(new ChatMessage(ChatRole.User, userPrompt));
 
-        for (int attempt = 0; attempt < SafeGenerationAttempts; attempt++)
+        IReadOnlyList<IStarAction> actions = await GetActionsAsync(
+            messages,
+            ChatToolMode.RequireSpecific("dm"),
+            new ChatInputSafetyContext(player, [context.Text]),
+            cancellationToken);
+        if (actions is not [StarDirectMessageAction directMessage] ||
+            directMessage.StarId != starId ||
+            !ContentSafetyPolicy.IsOutputAllowed(directMessage.Text) ||
+            !ContentSafetyPolicy.IsOutputAllowed(directMessage.MemoryFact))
         {
-            IReadOnlyList<IStarAction> actions = await GetActionsAsync(
-                messages,
-                ChatToolMode.RequireSpecific("dm"),
-                new ChatInputSafetyContext(player, [context.Text]),
-                cancellationToken);
-            StarDirectMessageAction[] directMessages = actions
-                .OfType<StarDirectMessageAction>()
-                .ToArray();
-            if (actions.Count == 1 && directMessages is [var directMessage] &&
-                directMessage.StarId == context.Agent.StarId &&
-                ContentSafetyPolicy.IsOutputAllowed(directMessage.Text) &&
-                ContentSafetyPolicy.IsOutputAllowed(directMessage.MemoryFact))
-            {
-                return new GeneratedDirectMessage(
-                    directMessage.Text,
-                    MemoryFactPolicy.IsAllowed(directMessage.MemoryFact) ? directMessage.MemoryFact : string.Empty);
-            }
-
-            messages.Add(new ChatMessage(
-                ChatRole.System,
-                "Предыдущий вариант был невалидным или не прошёл фильтр 14+. Повтори безопасно."));
+            throw new AiServiceUnavailableException("The model returned an invalid direct message.");
         }
 
-        throw new AiServiceUnavailableException("The model returned an invalid direct message.");
+        return new GeneratedDirectMessage(
+            directMessage.Text,
+            MemoryFactPolicy.IsAllowed(directMessage.MemoryFact) ? directMessage.MemoryFact : string.Empty);
     }
 
     private async ValueTask<IReadOnlyList<IStarAction>> GetActionsAsync(
@@ -124,15 +109,12 @@ public sealed class StarTurnGenerator(
         CancellationToken cancellationToken)
     {
         ChatOptions options = CreateOptions(toolMode, safetyContext, StarToolSchemas.DirectMessage);
-        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutSource.CancelAfter(settings.Timeout);
-
         try
         {
             ChatResponse response = await chatClient.GetResponseAsync(
                 messages,
                 options,
-                timeoutSource.Token);
+                cancellationToken);
             IEnumerable<FunctionCallContent> calls = response.Messages
                 .SelectMany(message => message.Contents)
                 .OfType<FunctionCallContent>();
@@ -142,19 +124,11 @@ public sealed class StarTurnGenerator(
         {
             throw new AiServiceUnavailableException("The model request timed out.", exception);
         }
-        catch (AiServiceUnavailableException)
-        {
-            throw;
-        }
-        catch (ContentRejectedException)
-        {
-            throw;
-        }
-        catch (CrisisDetectedException)
-        {
-            throw;
-        }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not (
+                                              OperationCanceledException or
+                                              AiServiceUnavailableException or
+                                              ContentRejectedException or
+                                              CrisisDetectedException))
         {
             throw new AiServiceUnavailableException("The model request failed.", exception);
         }

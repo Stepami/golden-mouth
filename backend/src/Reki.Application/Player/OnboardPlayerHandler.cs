@@ -21,44 +21,42 @@ public sealed class OnboardPlayerHandler(
     {
         TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         _ = StarCatalog.Require(request.World, request.Star);
-        for (int attempt = 0; attempt < 3; attempt++)
+        PlayerProfile? existing = await store.GetPlayerAsync(telegramUserId, cancellationToken);
+        if (existing is null)
         {
-            PlayerProfile? existing = await store.GetPlayerAsync(telegramUserId, cancellationToken);
-            if (existing is null)
+            PlayerProfile? inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
+            PlayerProfile? updatedInviter = inviter is null
+                ? null
+                : gameDay.Normalize(inviter.EnsureDefaults())
+                    .GrantInviteBonus(balance.InviteBonusBoth, balance.InviteBonusMaxPerDay);
+            if (ReferenceEquals(updatedInviter, inviter))
             {
-                PlayerProfile? inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
-                PlayerProfile? updatedInviter = inviter is null
-                    ? null
-                    : gameDay.Normalize(inviter.EnsureDefaults())
-                        .GrantInviteBonus(balance.InviteBonusBoth, balance.InviteBonusMaxPerDay);
-                if (ReferenceEquals(updatedInviter, inviter))
-                {
-                    updatedInviter = null;
-                }
+                updatedInviter = null;
+            }
 
-                PlayerProfile created = CreatePlayer(request, telegramUserId, gameDay.PeriodStart, balance.Growth.StartingSubscribers) with
+            PlayerProfile created =
+                CreatePlayer(request, telegramUserId, gameDay.PeriodStart, balance.Growth.StartingSubscribers) with
                 {
                     InvitedBy = inviter?.Id,
                     InvitedAtUtc = inviter is null ? null : timeProvider.GetUtcNow(),
                     FirstPostInviteBonus = inviter is null ? 0 : balance.InviteBonusBoth,
                 };
-                if (await store.TryCreatePlayerAsync(
+            if (await store.TryCreatePlayerAsync(
                     created,
                     updatedInviter,
                     inviter?.Version ?? 0,
                     cancellationToken))
-                {
-                    return playerReader.CreateView(created);
-                }
-            }
-            else
             {
-                PlayerProfile normalized = gameDay.Normalize(existing.EnsureDefaults());
-                PlayerProfile updated = UpdatePlayer(normalized, request);
-                if (await store.TryReplacePlayerAsync(updated, existing.Version, cancellationToken))
-                {
-                    return playerReader.CreateView(updated);
-                }
+                return playerReader.CreateView(created);
+            }
+        }
+        else
+        {
+            PlayerProfile normalized = gameDay.Normalize(existing.EnsureDefaults());
+            PlayerProfile updated = UpdatePlayer(normalized, request);
+            if (await store.TryReplacePlayerAsync(updated, existing.Version, cancellationToken))
+            {
+                return playerReader.CreateView(updated);
             }
         }
 

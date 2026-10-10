@@ -343,16 +343,33 @@ public sealed class GameApiTests(ApiFactory factory)
         ReferralResponse referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
 
         // Act
-        PlayerResponse[] results = await Task.WhenAll(
-            OnboardAsync(friendApi, referralCode: referral.Code),
-            OnboardAsync(friendApi, referralCode: referral.Code));
+        PlayerResponse?[] results = await Task.WhenAll(
+            OnboardOrConflictAsync(),
+            OnboardOrConflictAsync());
         BsonDocument friend = await GetStoredPlayerAsync(8008);
         BsonDocument inviter = await GetStoredPlayerAsync(8007);
 
         // Assert
-        await Assert.That(results[0].Id).IsEqualTo(results[1].Id);
+        await Assert.That(results.Any(result => result is not null)).IsTrue();
+        foreach (PlayerResponse result in results.OfType<PlayerResponse>())
+        {
+            await Assert.That(result.Id).IsEqualTo(friend["_id"].AsString);
+        }
+
         await Assert.That(friend["InvitedBy"].AsString).IsEqualTo(referral.Code[4..]);
         await Assert.That(inviter["DailyBonus"].AsInt32).IsEqualTo(5);
+
+        async Task<PlayerResponse?> OnboardOrConflictAsync()
+        {
+            try
+            {
+                return await OnboardAsync(friendApi, referralCode: referral.Code);
+            }
+            catch (PlayerApiException exception) when (exception.StatusCode == StatusCodes.Status409Conflict)
+            {
+                return null;
+            }
+        }
     }
 
     [Test]
@@ -1613,20 +1630,27 @@ public sealed class GameApiTests(ApiFactory factory)
     [Test]
     public async Task PlusInterest_ConcurrentClaims_GrantExactlyOneBonusAsync()
     {
+        // Arrange
         using TestApiClient api = factory.CreateApiClient(8404);
         await OnboardAsync(api);
         using HttpClient http = factory.CreateClient();
         http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8404");
+
+        // Act
         Task<HttpResponseMessage>[] calls = Enumerable.Range(0, 2).Select(_ =>
             http.PostAsync("/plus-interest", null, CancellationToken.None)).ToArray();
         HttpResponseMessage[] results = await Task.WhenAll(calls);
+
+        // Assert
         int bonuses = 0;
         foreach (HttpResponseMessage result in results)
         {
             using (result)
             {
                 await Assert.That(result.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-                using JsonDocument data = JsonDocument.Parse(await result.Content.ReadAsStringAsync(CancellationToken.None));
+
+                using JsonDocument data =
+                    JsonDocument.Parse(await result.Content.ReadAsStringAsync(CancellationToken.None));
                 bonuses += data.RootElement.GetProperty("bonus").GetInt32();
             }
         }
@@ -1634,6 +1658,132 @@ public sealed class GameApiTests(ApiFactory factory)
         await Assert.That(bonuses).IsEqualTo(5);
         PlayerResponse current = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(current.PostsLeft).IsEqualTo(15);
+    }
+
+    [Test]
+    public async Task Settings_PartialUpdates_PreserveOtherFieldsAsync()
+    {
+        // Arrange
+        using TestApiClient api = factory.CreateApiClient(8410);
+        await OnboardAsync(api);
+        IGameStore store = factory.Services.GetRequiredService<IGameStore>();
+        TelegramUserId userId = TelegramUserId.From(8410);
+        PlayerProfile player = await store.GetPlayerAsync(userId, CancellationToken.None)
+                               ?? throw new InvalidOperationException("Missing player.");
+        await store.UpsertPlayerAsync(
+            player with
+            {
+                Subscribers = 1234,
+                DailyBonus = 7,
+                PostsUsed = 2,
+                Settings = player.Settings with { Plus = true, Voice = "Коротко и тепло" },
+            },
+            CancellationToken.None);
+
+        // Act
+        await Task.WhenAll(
+            api.Player.UpdateSettingsAsync(new UpdateSettingsRequest { Drama = Drama.Off }, CancellationToken.None),
+            api.Player.UpdateSettingsAsync(
+                new UpdateSettingsRequest { Address = Address.She },
+                CancellationToken.None));
+        await api.Player.UpdateSettingsAsync(new UpdateSettingsRequest { Plus = false }, CancellationToken.None);
+        await api.Player.UpdateSettingsAsync(new UpdateSettingsRequest(), CancellationToken.None);
+
+        // Assert
+        PlayerProfile saved = await store.GetPlayerAsync(userId, CancellationToken.None)
+                              ?? throw new InvalidOperationException("Missing player.");
+        await Assert.That(saved.Settings.Drama).IsEqualTo("off");
+        await Assert.That(saved.Address).IsEqualTo("she");
+        await Assert.That(saved.Settings.Plus).IsFalse();
+        await Assert.That(saved.Settings.Voice).IsEqualTo("Коротко и тепло");
+        await Assert.That(saved.Settings.Notifications).IsEqualTo(player.Settings.Notifications);
+        await Assert.That(saved.Settings.Quiet).IsEqualTo(player.Settings.Quiet);
+        await Assert.That(saved.Subscribers).IsEqualTo(1234);
+        await Assert.That(saved.DailyBonus).IsEqualTo(7);
+        await Assert.That(saved.PostsUsed).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task Settings_MissingPlayer_ReturnsNotFoundAsync()
+    {
+        // Arrange
+        using HttpClient http = CreateAuthenticatedHttpClient(8411);
+        using var body = new StringContent("{}", Encoding.UTF8, "application/json");
+
+        // Act
+        using HttpResponseMessage response = await http.PatchAsync("/settings", body, CancellationToken.None);
+
+        // Assert
+        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+        IGameStore store = factory.Services.GetRequiredService<IGameStore>();
+        await Assert.That(await store.GetPlayerAsync(TelegramUserId.From(8411), CancellationToken.None)).IsNull();
+    }
+
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task PlusInterest_NewPeriod_PreservesBonusRulesAsync(bool alreadyClaimed)
+    {
+        // Arrange
+        long userId = alreadyClaimed ? 8413 : 8412;
+        using TestApiClient api = factory.CreateApiClient(userId);
+        await OnboardAsync(api);
+        IGameStore store = factory.Services.GetRequiredService<IGameStore>();
+        PlayerProfile player = await store.GetPlayerAsync(TelegramUserId.From(userId), CancellationToken.None)
+                               ?? throw new InvalidOperationException("Missing player.");
+        await store.UpsertPlayerAsync(
+            player with
+            {
+                PostsPeriodStartedAtUtc = player.PostsPeriodStartedAtUtc.AddDays(-1),
+                PostsUsed = 8,
+                DailyBonus = 7,
+                InviteBonusesEarnedInPeriod = 2,
+                PlusInterestClaimed = alreadyClaimed,
+                PlusNotifyRequested = true,
+                Subscribers = 1234,
+                Wants = player.Wants.Select(want => want with { Done = true }).ToArray(),
+                StarRelations = player.StarRelations.Select(relation => relation with { GainedInPeriod = 3 }).ToArray(),
+            },
+            CancellationToken.None);
+        using HttpClient http = CreateAuthenticatedHttpClient(userId);
+
+        // Act
+        using var firstBody = new StringContent("{\"interest\":false}", Encoding.UTF8, "application/json");
+        using var secondBody = new StringContent("{\"interest\":false}", Encoding.UTF8, "application/json");
+        Task<HttpResponseMessage>[] calls =
+        [
+            http.PostAsync("/plus-interest", firstBody, CancellationToken.None),
+            http.PostAsync("/plus-interest", secondBody, CancellationToken.None),
+        ];
+        HttpResponseMessage[] results = await Task.WhenAll(calls);
+
+        // Assert
+        int bonuses = 0;
+        foreach (HttpResponseMessage result in results)
+        {
+            using (result)
+            {
+                await Assert.That(result.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+                using JsonDocument data =
+                    JsonDocument.Parse(await result.Content.ReadAsStringAsync(CancellationToken.None));
+                bonuses += data.RootElement.GetProperty("bonus").GetInt32();
+            }
+        }
+
+        await Assert.That(bonuses).IsEqualTo(alreadyClaimed ? 0 : 5);
+        PlayerProfile saved = await store.GetPlayerAsync(TelegramUserId.From(userId), CancellationToken.None)
+                              ?? throw new InvalidOperationException("Missing player.");
+        await Assert.That(saved.PlusInterestClaimed).IsTrue();
+        await Assert.That(saved.PlusNotifyRequested).IsTrue();
+        await Assert.That(saved.DailyBonus).IsEqualTo(alreadyClaimed ? 0 : 5);
+        await Assert.That(saved.PostsUsed).IsEqualTo(0);
+        await Assert.That(saved.InviteBonusesEarnedInPeriod).IsEqualTo(0);
+        await Assert.That(saved.PostsPeriodStartedAtUtc).IsEqualTo(player.PostsPeriodStartedAtUtc);
+        await Assert.That(saved.Wants.All(want => !want.Done)).IsTrue();
+        await Assert.That(saved.StarRelations.All(relation => relation.GainedInPeriod == 0 &&
+                                                              relation.PeriodStartedAtUtc ==
+                                                              player.PostsPeriodStartedAtUtc)).IsTrue();
+        await Assert.That(saved.Subscribers).IsEqualTo(1234);
     }
 
     private static JsonDocument ParsePlayerLayer(ChatMessage layer) =>
