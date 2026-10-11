@@ -13,7 +13,6 @@ using Reki.Domain.Player;
 
 namespace Reki.Tests.Api;
 
-[NotInParallel]
 [ClassDataSource<ApiFactory>]
 public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {

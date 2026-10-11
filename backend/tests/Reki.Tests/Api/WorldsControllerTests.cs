@@ -3,7 +3,6 @@ using Reki.Contracts.Worlds;
 
 namespace Reki.Tests.Api;
 
-[NotInParallel]
 [ClassDataSource<ApiFactory>]
 public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {

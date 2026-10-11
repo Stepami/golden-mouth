@@ -5,7 +5,6 @@ using MongoDB.Driver;
 
 namespace Reki.Tests.Api;
 
-[NotInParallel]
 [ClassDataSource<ApiFactory>]
 public sealed class StoryCardsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {

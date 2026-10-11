@@ -4,7 +4,6 @@ using Reki.Contracts.Telemetry;
 
 namespace Reki.Tests.Api;
 
-[NotInParallel]
 [ClassDataSource<ApiFactory>]
 public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {

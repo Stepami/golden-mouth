@@ -14,7 +14,6 @@ using Reki.Domain.Player;
 
 namespace Reki.Tests.Api;
 
-[NotInParallel]
 [ClassDataSource<ApiFactory>]
 public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {

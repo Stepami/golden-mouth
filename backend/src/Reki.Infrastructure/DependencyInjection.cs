@@ -64,7 +64,6 @@ public static class DependencyInjection
 
     private static void AddMongoInfrastructure(this IServiceCollection services)
     {
-        MongoClassMappings.Register();
         services
             .AddOptions<MongoOptions>()
             .BindConfiguration(MongoOptions.SectionName)

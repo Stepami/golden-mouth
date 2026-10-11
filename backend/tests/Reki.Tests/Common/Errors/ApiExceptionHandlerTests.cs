@@ -3,7 +3,6 @@ using Reki.Api.Serialization;
 
 namespace Reki.Tests.Common.Errors;
 
-[NotInParallel]
 [ClassDataSource<ApiFactory>]
 public sealed class ApiExceptionHandlerTests(ApiFactory factory)
 {
