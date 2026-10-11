@@ -82,6 +82,8 @@ public static class DependencyInjection
 
         services.AddSingleton<MongoCompositionRoot>();
         services.AddSingleton<IGameStore, MongoGameStore>();
+        services.AddMetrics();
+        services.AddHostedService<RegisteredPlayersMetrics>();
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);
 
         services
@@ -109,7 +111,7 @@ public static class DependencyInjection
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation())
             .WithMetrics(metrics => metrics
-                .AddMeter("Reki.GenAI")
+                .AddMeter("Reki.GenAI", "Reki.Product")
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation())

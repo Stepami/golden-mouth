@@ -8,6 +8,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
     private readonly int _maxAttributeLength = 64;
     private readonly HashSet<string> _events = new(StringComparer.Ordinal)
     {
+        "active_time",
         "app_hidden",
         "app_visible",
         "card_earned",
@@ -78,6 +79,13 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
     {
         foreach (var entry in submission.Events)
         {
+            if (entry.Name == "active_time" &&
+                (!entry.Properties.TryGetValue("ms", out var rawMs) ||
+                 !long.TryParse(rawMs, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var ms) || ms is <= 0 or > 30000))
+            {
+                continue;
+            }
+
             if (!_events.Contains(entry.Name))
             {
                 continue;
@@ -88,7 +96,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
             attributes["platform"] = submission.Platform;
             attributes["screen"] = entry.Screen;
             attributes["world"] = player.World.Value;
-            attributes["age_group"] = player.BirthGroup;
+            attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
             if (entry.PreviousScreen is not null)
             {
                 attributes["previous_screen"] = entry.PreviousScreen;
@@ -103,6 +111,20 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
             AddProperties(attributes, entry.Properties);
             Write(entry.Name, attributes);
         }
+    }
+
+    public void Track(PlayerProfile player, string eventName, IReadOnlyDictionary<string, string> properties)
+    {
+        if (!_events.Contains(eventName))
+        {
+            return;
+        }
+
+        var attributes = CreateAttributes(player.Id, eventName, timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
+        attributes["world"] = player.World.Value;
+        attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
+        AddProperties(attributes, properties);
+        Write(eventName, attributes);
     }
 
     public void Track(
