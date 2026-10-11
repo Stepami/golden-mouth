@@ -3,10 +3,10 @@ import { WORLD_CONTENT } from './worldContent'
 import type { Challenge, Dm, FeedItem, Friend, GameEvent, Player, Post, PostResult, ReplyResult, Star, World, WorldRules } from './types'
 
 export const worlds: World[] = [
-  { id: 'stage', title: 'Сцена', emoji: '🎤', description: 'Айдол-агентство: трейни, дебют, фансайты', difficulty: 1, summary: 'мало провалов · хейт с 5k · ценят смелость' },
-  { id: 'academy', title: 'Академия', emoji: '🌸', description: 'Аниме-школа: клубы, соперницы, фестиваль', difficulty: 2, summary: 'рост ×1,1 · хейт с 3k · ценят «в тему»' },
-  { id: 'it', title: 'Айти-тусовка', emoji: '💻', description: 'Блогеры, разоблачения, коалиции, курсы', difficulty: 3, summary: 'рост ×1,25 · хейт с 1k · больше риска' },
-  { id: 'stream', title: 'Стрим', emoji: '🎮', description: 'Стримеры, донаты, рейды, турниры', difficulty: 2, summary: 'рост ×1,1 · ценят юмор', lock: { skill: 'humor', level: 4 } },
+  { id: 'stage', title: 'Сцена', emoji: '🎤', description: 'Жизнь в агентстве: первые фанаты, звёзды и закулисье', difficulty: 1, summary: 'мало провалов · хейт с 5k · ценят смелость' },
+  { id: 'academy', title: 'Академия', emoji: '🌸', description: 'Твоя жизнь в аниме-академии: клубы, герои и фестиваль', difficulty: 2, summary: 'рост ×1,1 · хейт с 3k · ценят «в тему»' },
+  { id: 'it', title: 'Айти-тусовка', emoji: '💻', description: 'Твой техноблог: проекты, знакомства и стартап-драмы', difficulty: 3, summary: 'рост ×1,25 · хейт с 1k · больше риска' },
+  { id: 'stream', title: 'Стрим', emoji: '🎮', description: 'Жизнь стримера: зрители, герои эфиров и турниры', difficulty: 2, summary: 'рост ×1,1 · ценят юмор', lock: { skill: 'humor', level: 4 } },
 ]
 export const roles = ['🎤 Трейни', '📸 Фансайт', '💃 Хореограф', '🎧 Продюсер']
 

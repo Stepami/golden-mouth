@@ -14,11 +14,11 @@ export function TelegramLaunch() {
       <div className="telegram-launch__brand">реки</div>
       <section className="telegram-launch__content" aria-labelledby="telegram-launch-title">
         <div className="telegram-launch__icon"><TelegramMark /></div>
-        <h1 id="telegram-launch-title">Продолжим в Telegram</h1>
-        <p>«Реки» работают как мини-приложение. Открой игру в Telegram, чтобы войти и сохранить прогресс.</p>
+        <h1 id="telegram-launch-title">Примерь жизнь блогера</h1>
+        <p>«Реки» — симулятор жизни блогера в выдуманном мире. Пиши посты, собирай виртуальных фанатов и знакомься с персонажами.</p>
         <a className="telegram-launch__button" href={TELEGRAM_APP_URL}>Открыть в Telegram</a>
       </section>
-      <p className="telegram-launch__hint">В Telegram нажми «Старт», затем открой игру.</p>
+      <p className="telegram-launch__hint">Начинаешь со 120 подписчиков. Впереди — путь к миллиону. Можно просто примерить другую жизнь.</p>
     </main>
   )
 }
