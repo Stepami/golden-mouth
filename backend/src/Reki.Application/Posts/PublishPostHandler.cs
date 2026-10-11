@@ -177,6 +177,8 @@ public sealed class PublishPostHandler(
                 ["topic"] = turn.Topic.ToString("0.###", CultureInfo.InvariantCulture),
                 ["quality"] = post.Quality.ToString("0.###", CultureInfo.InvariantCulture),
                 ["post_index"] = after.PostsUsed.ToString(CultureInfo.InvariantCulture),
+                ["id"] = post.Id.Value,
+                ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
             });
 
         foreach ((var skillId, var progress) in after.Skills)

@@ -97,7 +97,10 @@ public sealed partial class ApiMapper
                 item.Timestamp,
                 item.Screen,
                 item.Prev,
-                SanitizeProperties(item.Props))).ToArray());
+                SanitizeProperties(item.Props))).ToArray())
+        {
+            LaunchSurface = source.LaunchSurface,
+        };
     }
 
     public partial SendDirectMessageResponse MapSentDirectMessage(SentDirectMessage source);

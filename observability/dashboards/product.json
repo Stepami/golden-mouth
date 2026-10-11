@@ -2,57 +2,266 @@
   "org_id": "default",
   "request_body": {
     "title": "Реки: продукт",
-    "description": "Аудитория, stickiness, время игры, посты на игрока, распределения активности и темп прогресса; возврат D1/D7 и недельная неактивность. Публикации подтверждаются сервером. Время и новые возраста требуют релиза приложения.",
+    "description": "Общие фильтры сегментов, текущие аккаунты, воронка регистрации, D1/D3/D7, stickiness, посты и прирост подписчиков. Календарные дни по Москве. Автообновление: refresh=1m. NULL означает отсутствие измерения.",
+    "variables": {
+      "list": [
+        {
+          "name": "days",
+          "label": "Период анализа · дней",
+          "type": "custom",
+          "multiSelect": false,
+          "value": "30",
+          "options": [
+            {
+              "label": "30",
+              "value": "30",
+              "selected": true
+            },
+            {
+              "label": "7",
+              "value": "7",
+              "selected": false
+            },
+            {
+              "label": "90",
+              "value": "90",
+              "selected": false
+            }
+          ],
+          "hideOnDashboard": false
+        },
+        {
+          "name": "cohort_origin",
+          "label": "База воронки и удержания",
+          "type": "custom",
+          "multiSelect": false,
+          "value": "registered",
+          "options": [
+            {
+              "label": "Подтверждённая регистрация",
+              "value": "registered",
+              "selected": true
+            },
+            {
+              "label": "Первое наблюдение · старые данные",
+              "value": "observed",
+              "selected": false
+            }
+          ],
+          "hideOnDashboard": false
+        },
+        {
+          "name": "world",
+          "label": "Мир",
+          "type": "custom",
+          "multiSelect": false,
+          "value": "all",
+          "options": [
+            {
+              "label": "Все",
+              "value": "all",
+              "selected": true
+            },
+            {
+              "label": "Сцена",
+              "value": "stage",
+              "selected": false
+            },
+            {
+              "label": "Академия",
+              "value": "academy",
+              "selected": false
+            },
+            {
+              "label": "Айти",
+              "value": "it",
+              "selected": false
+            },
+            {
+              "label": "Стрим",
+              "value": "stream",
+              "selected": false
+            },
+            {
+              "label": "Свой",
+              "value": "own",
+              "selected": false
+            },
+            {
+              "label": "Несколько миров · старая история",
+              "value": "multi-world",
+              "selected": false
+            },
+            {
+              "label": "Неизвестно",
+              "value": "unknown",
+              "selected": false
+            }
+          ],
+          "hideOnDashboard": false
+        },
+        {
+          "name": "age",
+          "label": "Возраст",
+          "type": "custom",
+          "multiSelect": false,
+          "value": "all",
+          "options": [
+            {
+              "label": "Все",
+              "value": "all",
+              "selected": true
+            },
+            {
+              "label": "14–17",
+              "value": "14-17",
+              "selected": false
+            },
+            {
+              "label": "18–24",
+              "value": "18-24",
+              "selected": false
+            },
+            {
+              "label": "25–34",
+              "value": "25-34",
+              "selected": false
+            },
+            {
+              "label": "35–44",
+              "value": "35-44",
+              "selected": false
+            },
+            {
+              "label": "45+",
+              "value": "45+",
+              "selected": false
+            },
+            {
+              "label": "18+ · старые данные",
+              "value": "18+",
+              "selected": false
+            },
+            {
+              "label": "Неизвестно",
+              "value": "unknown",
+              "selected": false
+            }
+          ],
+          "hideOnDashboard": false
+        },
+        {
+          "name": "source",
+          "label": "Регистрация",
+          "type": "custom",
+          "multiSelect": false,
+          "value": "all",
+          "options": [
+            {
+              "label": "Все",
+              "value": "all",
+              "selected": true
+            },
+            {
+              "label": "По приглашению",
+              "value": "referral",
+              "selected": false
+            },
+            {
+              "label": "Без приглашения",
+              "value": "direct",
+              "selected": false
+            },
+            {
+              "label": "Неизвестно",
+              "value": "unknown",
+              "selected": false
+            }
+          ],
+          "hideOnDashboard": false
+        },
+        {
+          "name": "compare",
+          "label": "Сравнить интенсивность по",
+          "type": "custom",
+          "multiSelect": false,
+          "value": "age",
+          "options": [
+            {
+              "label": "Возрасту",
+              "value": "age",
+              "selected": true
+            },
+            {
+              "label": "Миру",
+              "value": "world",
+              "selected": false
+            },
+            {
+              "label": "Источнику",
+              "value": "source",
+              "selected": false
+            },
+            {
+              "label": "Способу запуска",
+              "value": "surface",
+              "selected": false
+            }
+          ],
+          "hideOnDashboard": false
+        },
+        {
+          "name": "surface",
+          "label": "Способ запуска",
+          "type": "custom",
+          "multiSelect": false,
+          "value": "all",
+          "options": [
+            {
+              "label": "Все",
+              "value": "all",
+              "selected": true
+            },
+            {
+              "label": "Telegram Mini App",
+              "value": "telegram-mini-app",
+              "selected": false
+            },
+            {
+              "label": "Браузер",
+              "value": "browser",
+              "selected": false
+            },
+            {
+              "label": "Standalone/PWA",
+              "value": "standalone",
+              "selected": false
+            },
+            {
+              "label": "Несколько способов",
+              "value": "multi",
+              "selected": false
+            },
+            {
+              "label": "Неизвестно · старые данные",
+              "value": "unknown",
+              "selected": false
+            }
+          ],
+          "hideOnDashboard": false
+        }
+      ]
+    },
     "tabs": [
       {
         "tabId": "product",
-        "name": "Продукт",
+        "name": "Обзор",
         "panels": [
           {
-            "id": "registered",
+            "id": "accounts",
             "type": "metric",
-            "title": "Сейчас зарегистрировано профилей",
-            "description": "Прямой агрегат MongoDB, один профиль на Telegram-аккаунт. Обновление раз в минуту; данные появятся после релиза. Исторические ID ниже могут включать удалённые профили.",
-            "queryType": "promql",
-            "config": {
-              "show_legends": true
-            },
-            "queries": [
-              {
-                "query": "max(reki_players_registered)",
-                "customQuery": true,
-                "vrlFunctionQuery": "",
-                "fields": {
-                  "stream": "",
-                  "stream_type": "metrics",
-                  "x": [],
-                  "y": [],
-                  "filter": {
-                    "filterType": "group",
-                    "logicalOperator": "AND",
-                    "conditions": []
-                  }
-                },
-                "config": {
-                  "query_label": "A",
-                  "promql_legend": "Текущие профили",
-                  "step_value": "60s"
-                }
-              }
-            ],
-            "layout": {
-              "x": 0,
-              "y": 0,
-              "w": 192,
-              "h": 8,
-              "i": 1
-            }
-          },
-          {
-            "id": "summary",
-            "type": "table",
-            "title": "Исторические профили и stickiness",
-            "description": "Уникальные ID профилей в истории (90d), включая удалённые. Пересоздание профиля даёт новый ID; это не число людей. MAU30/WAU7; DAU UTC. Stickiness = DAU вчера / MAU за 30 полных дней до сегодня. История короче 30 дней → предварительная оценка.",
+            "title": "Всего аккаунтов сейчас",
+            "description": "Свежий полный снимок Mongo. Все фильтры применены. NULL — снимок отсутствует/старше 3 минут, это не ноль.",
             "queryType": "sql",
             "config": {
               "show_legends": false,
@@ -60,11 +269,12 @@
               "panel_time_range": {
                 "type": "relative",
                 "relativeTimePeriod": "90d"
-              }
+              },
+              "decimals": 0
             },
             "queries": [
               {
-                "query": "SELECT 'Все игроки' AS segment, count(DISTINCT player_id) AS observed_profiles_90d,\n to_timestamp_micros(min(_timestamp)) AS telemetry_since_utc,\n count(DISTINCT CASE WHEN _timestamp >= date_part('epoch', now()) * 1000000 - 30 * 86400000000 THEN player_id END) AS mau_30d,\n count(DISTINCT CASE WHEN _timestamp >= date_part('epoch', now()) * 1000000 - 7 * 86400000000 THEN player_id END) AS wau_7d,\n count(DISTINCT CASE WHEN floor(_timestamp / 86400000000) = floor(date_part('epoch', now()) * 1000000 / 86400000000) THEN player_id END) AS dau_today,\n count(DISTINCT CASE WHEN floor(_timestamp / 86400000000) = floor(date_part('epoch', now()) * 1000000 / 86400000000) - 1 THEN player_id END) AS dau_yesterday,\n round(100.0 * count(DISTINCT CASE WHEN floor(_timestamp / 86400000000) = floor(date_part('epoch', now()) * 1000000 / 86400000000) - 1 THEN player_id END) /\n nullif(count(DISTINCT CASE WHEN _timestamp >= (floor(date_part('epoch', now()) * 1000000 / 86400000000) - 30) * 86400000000 AND _timestamp < floor(date_part('epoch', now()) * 1000000 / 86400000000) * 86400000000 THEN player_id END), 0), 1) AS stickiness_yesterday_pct\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name NOT IN ('notification_sent', 'active_time')",
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\nSELECT 'Аккаунты' AS metric, CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE (SELECT count(*) FROM current_profiles) END AS accounts FROM latest l",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -72,53 +282,17 @@
                   "stream_type": "logs",
                   "x": [
                     {
-                      "label": "Сегмент",
-                      "alias": "segment",
-                      "column": "segment",
+                      "label": "metric",
+                      "alias": "metric",
+                      "column": "metric",
                       "type": "build"
                     }
                   ],
                   "y": [
                     {
-                      "label": "ID профилей в истории",
-                      "alias": "observed_profiles_90d",
-                      "column": "observed_profiles_90d",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Начало истории",
-                      "alias": "telemetry_since_utc",
-                      "column": "telemetry_since_utc",
-                      "type": "build"
-                    },
-                    {
-                      "label": "MAU · 30 дней",
-                      "alias": "mau_30d",
-                      "column": "mau_30d",
-                      "type": "build"
-                    },
-                    {
-                      "label": "WAU · 7 дней",
-                      "alias": "wau_7d",
-                      "column": "wau_7d",
-                      "type": "build"
-                    },
-                    {
-                      "label": "DAU · сегодня",
-                      "alias": "dau_today",
-                      "column": "dau_today",
-                      "type": "build"
-                    },
-                    {
-                      "label": "DAU · вчера",
-                      "alias": "dau_yesterday",
-                      "column": "dau_yesterday",
-                      "type": "build"
-                    },
-                    {
-                      "label": "DAU/MAU · вчера, %",
-                      "alias": "stickiness_yesterday_pct",
-                      "column": "stickiness_yesterday_pct",
+                      "label": "Аккаунтов в базе",
+                      "alias": "accounts",
+                      "column": "accounts",
                       "type": "build"
                     }
                   ],
@@ -138,24 +312,30 @@
             ],
             "layout": {
               "x": 0,
-              "y": 8,
-              "w": 192,
-              "h": 14,
-              "i": 2
+              "y": 0,
+              "w": 96,
+              "h": 8,
+              "i": 1
             }
           },
           {
-            "id": "p1",
-            "type": "line",
-            "title": "Возвращается ли аудитория: DAU",
-            "description": "Крайние дни диапазона неполные. Фоновые heartbeat и отправленные уведомления не считаются посещением.",
+            "id": "active-today",
+            "type": "metric",
+            "title": "Активных аккаунтов сегодня · МСК",
+            "description": "Только аккаунты, которые сейчас существуют. Уникальные ID с событиями игры с 00:00 МСК. Сегодня неполный день; это не онлайн.",
             "queryType": "sql",
             "config": {
-              "show_legends": true
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              },
+              "decimals": 0
             },
             "queries": [
               {
-                "query": "SELECT histogram(_timestamp, '1 day') AS day, count(DISTINCT player_id) AS dau\nFROM \"product\" WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name NOT IN ('notification_sent', 'active_time')\nGROUP BY day ORDER BY day",
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\nSELECT 'DAU' AS metric, CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE (SELECT count(DISTINCT p.player_id) FROM current_profiles p JOIN visits v ON p.player_id=v.player_id CROSS JOIN clock c WHERE v.day=c.today) END AS dau FROM latest l",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -163,15 +343,15 @@
                   "stream_type": "logs",
                   "x": [
                     {
-                      "label": "День",
-                      "alias": "day",
-                      "column": "day",
+                      "label": "metric",
+                      "alias": "metric",
+                      "column": "metric",
                       "type": "build"
                     }
                   ],
                   "y": [
                     {
-                      "label": "Активные профили",
+                      "label": "DAU · МСК",
                       "alias": "dau",
                       "column": "dau",
                       "type": "build"
@@ -192,18 +372,18 @@
               }
             ],
             "layout": {
-              "x": 0,
-              "y": 22,
-              "w": 192,
-              "h": 12,
-              "i": 3
+              "x": 96,
+              "y": 0,
+              "w": 96,
+              "h": 8,
+              "i": 2
             }
           },
           {
-            "id": "engagement",
-            "type": "table",
-            "title": "Сколько играют и публикуют: 7 полных дней",
-            "description": "Все/миры/возраст. Посты = серверный post_scored, не клики. Время — только active_time после нового релиза; NULL до измерений. Среднее/медиана минут на измеренный активный игроко-день, measured_player_days показывает покрытие.",
+            "id": "posts-today",
+            "type": "metric",
+            "title": "Завершённых постов сегодня · МСК",
+            "description": "Серверный post_scored. Повторы одного стабильного post_id считаются один раз; старые события без post_id используют исходное event_time. Попытки и ошибки не являются результатом.",
             "queryType": "sql",
             "config": {
               "show_legends": false,
@@ -211,11 +391,12 @@
               "panel_time_range": {
                 "type": "relative",
                 "relativeTimePeriod": "90d"
-              }
+              },
+              "decimals": 0
             },
             "queries": [
               {
-                "query": "WITH players AS (SELECT player_id, min(_timestamp) AS first_seen,\n CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,\n CASE WHEN count(DISTINCT CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END) > 1 THEN 'multi-age-group' ELSE coalesce(max(CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END), CASE WHEN max(age_group) = '18+' THEN '18+ (legacy)' ELSE 'unknown' END) END AS age_group,\n CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform' ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id), segments AS (\n SELECT 'all' AS dimension, 'all' AS segment, player_id FROM players UNION ALL SELECT 'world' AS dimension, world AS segment, player_id FROM players UNION ALL SELECT 'age_group' AS dimension, age_group AS segment, player_id FROM players),\n daily AS (SELECT player_id, floor(_timestamp / 86400000000) AS day,\n sum(CASE WHEN event_name = 'post_scored' THEN 1 ELSE 0 END) AS posts,\n sum(CASE WHEN event_name = 'active_time' THEN try_cast(prop_ms AS DOUBLE) END) AS active_ms,\n max(CASE WHEN event_name = 'level_up' THEN 1 ELSE 0 END) AS level_up,\n max(CASE WHEN event_name = 'card_earned' THEN 1 ELSE 0 END) AS card_earned\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND floor(_timestamp / 86400000000) >= floor(date_part('epoch', now()) * 1000000 / 86400000000) - 7 AND floor(_timestamp / 86400000000) < floor(date_part('epoch', now()) * 1000000 / 86400000000)\n AND event_name NOT IN ('notification_sent', 'active_time') GROUP BY player_id, day\n HAVING max(CASE WHEN event_name NOT IN ('notification_sent', 'active_time') THEN 1 ELSE 0 END) = 1),\n time_daily AS (SELECT player_id, floor(_timestamp / 86400000000) AS day, sum(try_cast(prop_ms AS DOUBLE)) AS active_ms\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name = 'active_time' AND floor(_timestamp / 86400000000) >= floor(date_part('epoch', now()) * 1000000 / 86400000000) - 7 AND floor(_timestamp / 86400000000) < floor(date_part('epoch', now()) * 1000000 / 86400000000) GROUP BY player_id, day),\n measured AS (SELECT d.player_id AS player_id, d.day AS day, d.posts AS posts, t.active_ms AS active_ms, d.level_up AS level_up, d.card_earned AS card_earned\n FROM daily d LEFT JOIN time_daily t ON d.player_id = t.player_id AND d.day = t.day)\nSELECT s.dimension AS dimension, s.segment AS segment, count(DISTINCT m.player_id) AS active_users,\n count(*) AS active_player_days, sum(m.posts) AS completed_posts,\n round(1.0 * sum(m.posts) / count(DISTINCT m.player_id), 2) AS posts_per_user_7d,\n round(1.0 * sum(m.posts) / count(*), 2) AS posts_per_active_day,\n count(m.active_ms) AS measured_player_days,\n round(avg(m.active_ms) / 60000.0, 2) AS avg_active_minutes,\n round(approx_percentile_cont(m.active_ms, 0.5) / 60000.0, 2) AS median_active_minutes\nFROM measured m JOIN segments s ON m.player_id = s.player_id GROUP BY s.dimension, s.segment ORDER BY s.dimension, active_users DESC",
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\nSELECT 'Посты' AS metric,count(*) AS posts FROM selected_posts p CROSS JOIN clock c WHERE floor((p.posted_at+10800000000)/86400000000)=c.today",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -223,65 +404,17 @@
                   "stream_type": "logs",
                   "x": [
                     {
-                      "label": "Разрез",
-                      "alias": "dimension",
-                      "column": "dimension",
+                      "label": "metric",
+                      "alias": "metric",
+                      "column": "metric",
                       "type": "build"
                     }
                   ],
                   "y": [
                     {
-                      "label": "Сегмент",
-                      "alias": "segment",
-                      "column": "segment",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Активные профили",
-                      "alias": "active_users",
-                      "column": "active_users",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Активные игроко-дни",
-                      "alias": "active_player_days",
-                      "column": "active_player_days",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Подтверждённые посты",
-                      "alias": "completed_posts",
-                      "column": "completed_posts",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Постов / профиль за 7 дней",
-                      "alias": "posts_per_user_7d",
-                      "column": "posts_per_user_7d",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Постов / активный день",
-                      "alias": "posts_per_active_day",
-                      "column": "posts_per_active_day",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Дней с замером времени",
-                      "alias": "measured_player_days",
-                      "column": "measured_player_days",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Среднее минут / активный день",
-                      "alias": "avg_active_minutes",
-                      "column": "avg_active_minutes",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Медиана минут / активный день",
-                      "alias": "median_active_minutes",
-                      "column": "median_active_minutes",
+                      "label": "Постов",
+                      "alias": "posts",
+                      "column": "posts",
                       "type": "build"
                     }
                   ],
@@ -301,102 +434,30 @@
             ],
             "layout": {
               "x": 0,
-              "y": 34,
-              "w": 192,
-              "h": 28,
-              "i": 4
-            }
-          },
-          {
-            "id": "posts-world",
-            "type": "stacked",
-            "title": "Интенсивность публикаций по мирам, %",
-            "description": "100% = активные игроко-дни мира за 7 полных UTC-дней. Нулевые публикации включены. Сравнивать вместе с числом игроков в таблице выше.",
-            "queryType": "sql",
-            "config": {
-              "show_legends": true,
-              "panel_time_enabled": true,
-              "panel_time_range": {
-                "type": "relative",
-                "relativeTimePeriod": "90d"
-              },
-              "unit": "percent",
-              "y_axis_min": 0,
-              "y_axis_max": 100
-            },
-            "queries": [
-              {
-                "query": "WITH players AS (SELECT player_id, min(_timestamp) AS first_seen,\n CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,\n CASE WHEN count(DISTINCT CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END) > 1 THEN 'multi-age-group' ELSE coalesce(max(CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END), CASE WHEN max(age_group) = '18+' THEN '18+ (legacy)' ELSE 'unknown' END) END AS age_group,\n CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform' ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id), segments AS (\n SELECT 'all' AS dimension, 'all' AS segment, player_id FROM players UNION ALL SELECT 'world' AS dimension, world AS segment, player_id FROM players UNION ALL SELECT 'age_group' AS dimension, age_group AS segment, player_id FROM players),\n daily AS (SELECT player_id, floor(_timestamp / 86400000000) AS day,\n sum(CASE WHEN event_name = 'post_scored' THEN 1 ELSE 0 END) AS posts,\n sum(CASE WHEN event_name = 'active_time' THEN try_cast(prop_ms AS DOUBLE) END) AS active_ms,\n max(CASE WHEN event_name = 'level_up' THEN 1 ELSE 0 END) AS level_up,\n max(CASE WHEN event_name = 'card_earned' THEN 1 ELSE 0 END) AS card_earned\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND floor(_timestamp / 86400000000) >= floor(date_part('epoch', now()) * 1000000 / 86400000000) - 7 AND floor(_timestamp / 86400000000) < floor(date_part('epoch', now()) * 1000000 / 86400000000)\n AND event_name NOT IN ('notification_sent', 'active_time') GROUP BY player_id, day\n HAVING max(CASE WHEN event_name NOT IN ('notification_sent', 'active_time') THEN 1 ELSE 0 END) = 1),\n time_daily AS (SELECT player_id, floor(_timestamp / 86400000000) AS day, sum(try_cast(prop_ms AS DOUBLE)) AS active_ms\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name = 'active_time' AND floor(_timestamp / 86400000000) >= floor(date_part('epoch', now()) * 1000000 / 86400000000) - 7 AND floor(_timestamp / 86400000000) < floor(date_part('epoch', now()) * 1000000 / 86400000000) GROUP BY player_id, day),\n measured AS (SELECT d.player_id AS player_id, d.day AS day, d.posts AS posts, t.active_ms AS active_ms, d.level_up AS level_up, d.card_earned AS card_earned\n FROM daily d LEFT JOIN time_daily t ON d.player_id = t.player_id AND d.day = t.day), buckets AS (SELECT s.segment AS segment, CASE WHEN m.posts = 0 THEN '0 постов' WHEN m.posts = 1 THEN '1 пост' WHEN m.posts < 5 THEN '2–4 поста' WHEN m.posts < 10 THEN '5–9 постов' ELSE '10+ постов' END AS activity_bucket, count(*) AS player_days\n FROM measured m JOIN segments s ON m.player_id = s.player_id WHERE s.dimension = 'world' GROUP BY s.segment, activity_bucket)\nSELECT segment, activity_bucket, round(100.0 * player_days / sum(player_days) OVER (PARTITION BY segment), 1) AS player_days_pct\nFROM buckets ORDER BY segment, activity_bucket",
-                "customQuery": true,
-                "vrlFunctionQuery": "",
-                "fields": {
-                  "stream": "product",
-                  "stream_type": "logs",
-                  "x": [
-                    {
-                      "label": "Сегмент",
-                      "alias": "segment",
-                      "column": "segment",
-                      "type": "build"
-                    }
-                  ],
-                  "y": [
-                    {
-                      "label": "Доля активных дней, %",
-                      "alias": "player_days_pct",
-                      "column": "player_days_pct",
-                      "type": "build"
-                    }
-                  ],
-                  "z": [],
-                  "breakdown": [
-                    {
-                      "label": "activity_bucket",
-                      "alias": "activity_bucket",
-                      "column": "activity_bucket",
-                      "type": "build"
-                    }
-                  ],
-                  "filter": {
-                    "filterType": "group",
-                    "logicalOperator": "AND",
-                    "conditions": []
-                  }
-                },
-                "config": {
-                  "query_label": "A",
-                  "promql_legend": ""
-                }
-              }
-            ],
-            "layout": {
-              "x": 0,
-              "y": 62,
+              "y": 8,
               "w": 96,
-              "h": 18,
-              "i": 5
+              "h": 8,
+              "i": 3
             }
           },
           {
-            "id": "posts-age",
-            "type": "stacked",
-            "title": "Интенсивность публикаций по возрасту, %",
-            "description": "100% = активные игроко-дни возрастного диапазона за 7 полных UTC-дней. 18+ (legacy) нельзя распределить задним числом.",
+            "id": "growth-today",
+            "type": "metric",
+            "title": "Измеренный прирост сегодня · МСК",
+            "description": "Сумма серверного delta после нового релиза, включая снижение. NULL — нет ни одного измеренного результата. Исторические события без delta не подменяются нулём; покрытие в таблице ниже.",
             "queryType": "sql",
             "config": {
-              "show_legends": true,
+              "show_legends": false,
               "panel_time_enabled": true,
               "panel_time_range": {
                 "type": "relative",
                 "relativeTimePeriod": "90d"
               },
-              "unit": "percent",
-              "y_axis_min": 0,
-              "y_axis_max": 100
+              "decimals": 0
             },
             "queries": [
               {
-                "query": "WITH players AS (SELECT player_id, min(_timestamp) AS first_seen,\n CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,\n CASE WHEN count(DISTINCT CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END) > 1 THEN 'multi-age-group' ELSE coalesce(max(CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END), CASE WHEN max(age_group) = '18+' THEN '18+ (legacy)' ELSE 'unknown' END) END AS age_group,\n CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform' ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id), segments AS (\n SELECT 'all' AS dimension, 'all' AS segment, player_id FROM players UNION ALL SELECT 'world' AS dimension, world AS segment, player_id FROM players UNION ALL SELECT 'age_group' AS dimension, age_group AS segment, player_id FROM players),\n daily AS (SELECT player_id, floor(_timestamp / 86400000000) AS day,\n sum(CASE WHEN event_name = 'post_scored' THEN 1 ELSE 0 END) AS posts,\n sum(CASE WHEN event_name = 'active_time' THEN try_cast(prop_ms AS DOUBLE) END) AS active_ms,\n max(CASE WHEN event_name = 'level_up' THEN 1 ELSE 0 END) AS level_up,\n max(CASE WHEN event_name = 'card_earned' THEN 1 ELSE 0 END) AS card_earned\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND floor(_timestamp / 86400000000) >= floor(date_part('epoch', now()) * 1000000 / 86400000000) - 7 AND floor(_timestamp / 86400000000) < floor(date_part('epoch', now()) * 1000000 / 86400000000)\n AND event_name NOT IN ('notification_sent', 'active_time') GROUP BY player_id, day\n HAVING max(CASE WHEN event_name NOT IN ('notification_sent', 'active_time') THEN 1 ELSE 0 END) = 1),\n time_daily AS (SELECT player_id, floor(_timestamp / 86400000000) AS day, sum(try_cast(prop_ms AS DOUBLE)) AS active_ms\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name = 'active_time' AND floor(_timestamp / 86400000000) >= floor(date_part('epoch', now()) * 1000000 / 86400000000) - 7 AND floor(_timestamp / 86400000000) < floor(date_part('epoch', now()) * 1000000 / 86400000000) GROUP BY player_id, day),\n measured AS (SELECT d.player_id AS player_id, d.day AS day, d.posts AS posts, t.active_ms AS active_ms, d.level_up AS level_up, d.card_earned AS card_earned\n FROM daily d LEFT JOIN time_daily t ON d.player_id = t.player_id AND d.day = t.day), buckets AS (SELECT s.segment AS segment, CASE WHEN m.posts = 0 THEN '0 постов' WHEN m.posts = 1 THEN '1 пост' WHEN m.posts < 5 THEN '2–4 поста' WHEN m.posts < 10 THEN '5–9 постов' ELSE '10+ постов' END AS activity_bucket, count(*) AS player_days\n FROM measured m JOIN segments s ON m.player_id = s.player_id WHERE s.dimension = 'age_group' GROUP BY s.segment, activity_bucket)\nSELECT segment, activity_bucket, round(100.0 * player_days / sum(player_days) OVER (PARTITION BY segment), 1) AS player_days_pct\nFROM buckets ORDER BY segment, activity_bucket",
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\nSELECT 'Прирост' AS metric,CASE WHEN count(*)=0 THEN 0 ELSE sum(p.delta) END AS subscriber_growth FROM selected_posts p CROSS JOIN clock c WHERE floor((p.posted_at+10800000000)/86400000000)=c.today",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -404,29 +465,22 @@
                   "stream_type": "logs",
                   "x": [
                     {
-                      "label": "Сегмент",
-                      "alias": "segment",
-                      "column": "segment",
+                      "label": "metric",
+                      "alias": "metric",
+                      "column": "metric",
                       "type": "build"
                     }
                   ],
                   "y": [
                     {
-                      "label": "Доля активных дней, %",
-                      "alias": "player_days_pct",
-                      "column": "player_days_pct",
+                      "label": "Прирост подписчиков",
+                      "alias": "subscriber_growth",
+                      "column": "subscriber_growth",
                       "type": "build"
                     }
                   ],
                   "z": [],
-                  "breakdown": [
-                    {
-                      "label": "activity_bucket",
-                      "alias": "activity_bucket",
-                      "column": "activity_bucket",
-                      "type": "build"
-                    }
-                  ],
+                  "breakdown": [],
                   "filter": {
                     "filterType": "group",
                     "logicalOperator": "AND",
@@ -441,17 +495,17 @@
             ],
             "layout": {
               "x": 96,
-              "y": 62,
+              "y": 8,
               "w": 96,
-              "h": 18,
-              "i": 6
+              "h": 8,
+              "i": 4
             }
           },
           {
-            "id": "stickiness",
+            "id": "current-audience",
             "type": "table",
-            "title": "Как часто возвращаются: DAU / MAU по сегментам",
-            "description": "Вчерашний DAU / MAU за 30 полных дней до сегодня. Не D1 retention. На короткой истории предварительно; знаменатель виден рядом.",
+            "title": "Текущая база: DAU / WAU / MAU и подписчики",
+            "description": "Текущие аккаунты, активные календарные дни МСК. WAU включает сегодня и 6 предыдущих дней, MAU — сегодня и 29. Подписчики — виртуальный баланс каналов, не люди. Смена фильтра меняет всю аудиторию.",
             "queryType": "sql",
             "config": {
               "show_legends": false,
@@ -459,11 +513,12 @@
               "panel_time_range": {
                 "type": "relative",
                 "relativeTimePeriod": "90d"
-              }
+              },
+              "decimals": 2
             },
             "queries": [
               {
-                "query": "WITH players AS (SELECT player_id, min(_timestamp) AS first_seen,\n CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,\n CASE WHEN count(DISTINCT CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END) > 1 THEN 'multi-age-group' ELSE coalesce(max(CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END), CASE WHEN max(age_group) = '18+' THEN '18+ (legacy)' ELSE 'unknown' END) END AS age_group,\n CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform' ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id), segments AS (SELECT 'all' AS dimension, 'all' AS segment, player_id FROM players UNION ALL SELECT 'world' AS dimension, world AS segment, player_id FROM players UNION ALL SELECT 'age_group' AS dimension, age_group AS segment, player_id FROM players),\n last_month AS (SELECT player_id, max(CASE WHEN floor(_timestamp / 86400000000) = floor(date_part('epoch', now()) * 1000000 / 86400000000) - 1 THEN 1 ELSE 0 END) AS yesterday\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND _timestamp >= (floor(date_part('epoch', now()) * 1000000 / 86400000000) - 30) * 86400000000 AND _timestamp < floor(date_part('epoch', now()) * 1000000 / 86400000000) * 86400000000\n AND event_name NOT IN ('notification_sent', 'active_time') GROUP BY player_id)\nSELECT s.dimension AS dimension, s.segment AS segment, count(*) AS mau_30d_yesterday,\n sum(m.yesterday) AS dau_yesterday, round(100.0 * sum(m.yesterday) / count(*), 1) AS stickiness_pct\nFROM last_month m JOIN segments s ON m.player_id = s.player_id GROUP BY s.dimension, s.segment ORDER BY s.dimension, s.segment",
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\nSELECT CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE count(DISTINCT p.player_id) END AS accounts,\n CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE count(DISTINCT CASE WHEN v.day=c.today THEN p.player_id END) END AS dau,\n CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE count(DISTINCT CASE WHEN v.day>=c.today-6 THEN p.player_id END) END AS wau,\n CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE count(DISTINCT CASE WHEN v.day>=c.today-29 THEN p.player_id END) END AS mau,\n (SELECT sum(subscribers) FROM current_profiles) AS channel_subscribers,\n to_timestamp_millis(l.snapshot_ms) AS snapshot_at\n FROM latest l CROSS JOIN clock c LEFT JOIN current_profiles p ON true LEFT JOIN visits v ON p.player_id=v.player_id\n GROUP BY l.snapshot_ms",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -471,33 +526,185 @@
                   "stream_type": "logs",
                   "x": [
                     {
-                      "label": "Разрез",
-                      "alias": "dimension",
-                      "column": "dimension",
+                      "label": "Аккаунтов в базе",
+                      "alias": "accounts",
+                      "column": "accounts",
                       "type": "build"
                     }
                   ],
                   "y": [
                     {
-                      "label": "Сегмент",
-                      "alias": "segment",
-                      "column": "segment",
+                      "label": "DAU · МСК",
+                      "alias": "dau",
+                      "column": "dau",
                       "type": "build"
                     },
                     {
-                      "label": "MAU · база вчера",
-                      "alias": "mau_30d_yesterday",
-                      "column": "mau_30d_yesterday",
+                      "label": "WAU · 7 дней",
+                      "alias": "wau",
+                      "column": "wau",
                       "type": "build"
                     },
                     {
-                      "label": "DAU · вчера",
-                      "alias": "dau_yesterday",
-                      "column": "dau_yesterday",
+                      "label": "MAU · 30 дней",
+                      "alias": "mau",
+                      "column": "mau",
                       "type": "build"
                     },
                     {
-                      "label": "DAU/MAU, %",
+                      "label": "Подписчиков на каналах",
+                      "alias": "channel_subscribers",
+                      "column": "channel_subscribers",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Снимок базы",
+                      "alias": "snapshot_at",
+                      "column": "snapshot_at",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 16,
+              "w": 192,
+              "h": 8,
+              "i": 5
+            }
+          },
+          {
+            "id": "dau",
+            "type": "bar",
+            "title": "DAU по дням · МСК",
+            "description": "Исторические ID выбранного сегмента, включая впоследствии удалённые. Последний день неполный. Столбцы вместо сглаженной линии. Дни без посещений показаны нулём только после начала наблюдений.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": true,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              },
+              "decimals": 2
+            },
+            "queries": [
+              {
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\n, offsets AS (SELECT n FROM (VALUES (0),(1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),(20),(21),(22),(23),(24),(25),(26),(27),(28),(29),(30),(31),(32),(33),(34),(35),(36),(37),(38),(39),(40),(41),(42),(43),(44),(45),(46),(47),(48),(49),(50),(51),(52),(53),(54),(55),(56),(57),(58),(59),(60),(61),(62),(63),(64),(65),(66),(67),(68),(69),(70),(71),(72),(73),(74),(75),(76),(77),(78),(79),(80),(81),(82),(83),(84),(85),(86),(87),(88),(89)) AS t(n)), calendar AS (SELECT c.today-o.n AS day FROM clock c CROSS JOIN offsets o WHERE o.n<cast('${days}' AS INT) AND c.today-o.n >= (SELECT floor((min(_timestamp)+10800000000)/86400000000) FROM raw)), selected_visits AS (SELECT v.* FROM visits v JOIN selected s ON v.player_id=s.player_id)\n SELECT to_timestamp_micros(d.day*86400000000-10800000000) AS day_at,count(DISTINCT v.player_id) AS active_profiles FROM calendar d LEFT JOIN selected_visits v ON d.day=v.day GROUP BY d.day ORDER BY d.day",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "День · МСК",
+                      "alias": "day_at",
+                      "column": "day_at",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "Активных ID",
+                      "alias": "active_profiles",
+                      "column": "active_profiles",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 24,
+              "w": 192,
+              "h": 14,
+              "i": 6
+            }
+          },
+          {
+            "id": "stickiness",
+            "type": "table",
+            "title": "Stickiness: средний DAU / MAU · полные дни",
+            "description": "Средний DAU по календарным дням / уникальные активные ID за то же окно. Максимум 30 завершённых дней МСК; первый неполный день истории исключён. observed_days < 30 — предварительная оценка. История ID, не текущая база.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              },
+              "decimals": 2
+            },
+            "queries": [
+              {
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\n, coverage AS (SELECT greatest(0,least(30,c.today-floor((min(r._timestamp)+10800000000)/86400000000)-1)) AS observed_days,c.today FROM raw r CROSS JOIN clock c GROUP BY c.today),\n stick AS (SELECT w.observed_days,count(DISTINCT v.player_id) AS mau,count(v.player_id) AS active_profile_days, sum(CASE WHEN v.player_id IS NOT NULL AND v.day>=w.today-7 THEN 1 ELSE 0 END) AS active_days_7d FROM coverage w LEFT JOIN (SELECT v.* FROM visits v JOIN selected s ON v.player_id=s.player_id) v ON v.day>=w.today-w.observed_days AND v.day<w.today GROUP BY w.observed_days)\n SELECT observed_days,mau,active_profile_days,round(1.0*active_profile_days/nullif(observed_days,0),2) AS mean_dau,round(1.0*active_days_7d/nullif(least(7,observed_days),0),2) AS mean_dau_7d,\n round(100.0*active_profile_days/nullif(observed_days*mau,0),1) AS stickiness_pct FROM stick",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "Полных дней измерено",
+                      "alias": "observed_days",
+                      "column": "observed_days",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "MAU · 30 дней",
+                      "alias": "mau",
+                      "column": "mau",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Активных профиле-дней",
+                      "alias": "active_profile_days",
+                      "column": "active_profile_days",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Средний DAU за окно",
+                      "alias": "mean_dau",
+                      "column": "mean_dau",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Средний DAU · 7 полных дней",
+                      "alias": "mean_dau_7d",
+                      "column": "mean_dau_7d",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Stickiness, %",
                       "alias": "stickiness_pct",
                       "column": "stickiness_pct",
                       "type": "build"
@@ -519,17 +726,17 @@
             ],
             "layout": {
               "x": 0,
-              "y": 80,
+              "y": 38,
               "w": 192,
-              "h": 26,
+              "h": 10,
               "i": 7
             }
           },
           {
-            "id": "progress-bars",
-            "type": "bar",
-            "title": "Доходят ли до 1 / 3 / 10 публикаций, %",
-            "description": "Доля наблюдаемых игроков за 90d. Столбцы — отдельные пороги, не складываются. Когорты разного возраста: это охват прогресса, не причинное сравнение.",
+            "id": "posts-daily",
+            "type": "stacked",
+            "title": "Посты пользователей по дням и мирам",
+            "description": "Сохранённые завершённые публикации, выбранный сегмент. Мир — в момент публикации; фильтр «Мир» в когорте — мир регистрации, для старых профилей известный мир истории.",
             "queryType": "sql",
             "config": {
               "show_legends": true,
@@ -538,13 +745,11 @@
                 "type": "relative",
                 "relativeTimePeriod": "90d"
               },
-              "unit": "percent",
-              "y_axis_min": 0,
-              "y_axis_max": 100
+              "decimals": 2
             },
             "queries": [
               {
-                "query": "WITH players AS (SELECT player_id, min(_timestamp) AS first_seen,\n CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,\n CASE WHEN count(DISTINCT CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END) > 1 THEN 'multi-age-group' ELSE coalesce(max(CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END), CASE WHEN max(age_group) = '18+' THEN '18+ (legacy)' ELSE 'unknown' END) END AS age_group,\n CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform' ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id), scored AS (SELECT player_id, count(*) AS posts FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name = 'post_scored' GROUP BY player_id), segments AS (SELECT 'all' AS dimension, 'all' AS segment, player_id FROM players UNION ALL SELECT 'world' AS dimension, world AS segment, player_id FROM players UNION ALL SELECT 'age_group' AS dimension, age_group AS segment, player_id FROM players), totals AS (\nSELECT s.dimension AS dimension, s.segment AS segment, count(*) AS users,\n sum(CASE WHEN c.posts >= 1 THEN 1 ELSE 0 END) AS reached_1,\n sum(CASE WHEN c.posts >= 3 THEN 1 ELSE 0 END) AS reached_3,\n sum(CASE WHEN c.posts >= 10 THEN 1 ELSE 0 END) AS reached_10\nFROM segments s LEFT JOIN scored c ON s.player_id = c.player_id GROUP BY s.dimension, s.segment)\nSELECT concat(dimension, ': ', segment) AS segment, '1 пост' AS milestone, round(100.0 * reached_1 / users, 1) AS users_pct FROM totals\nUNION ALL SELECT concat(dimension, ': ', segment) AS segment, '3 поста' AS milestone, round(100.0 * reached_3 / users, 1) AS users_pct FROM totals\nUNION ALL SELECT concat(dimension, ': ', segment) AS segment, '10 постов' AS milestone, round(100.0 * reached_10 / users, 1) AS users_pct FROM totals",
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\nSELECT to_timestamp_micros(floor((posted_at+10800000000)/86400000000)*86400000000-10800000000) AS day,post_world AS world,count(*) AS posts FROM selected_posts CROSS JOIN clock WHERE floor((posted_at+10800000000)/86400000000)>=today-cast('${days}' AS INT)+1 GROUP BY day,post_world ORDER BY day",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -552,26 +757,26 @@
                   "stream_type": "logs",
                   "x": [
                     {
-                      "label": "Сегмент",
-                      "alias": "segment",
-                      "column": "segment",
+                      "label": "День · МСК",
+                      "alias": "day",
+                      "column": "day",
                       "type": "build"
                     }
                   ],
                   "y": [
                     {
-                      "label": "Доля профилей, %",
-                      "alias": "users_pct",
-                      "column": "users_pct",
+                      "label": "Постов",
+                      "alias": "posts",
+                      "column": "posts",
                       "type": "build"
                     }
                   ],
                   "z": [],
                   "breakdown": [
                     {
-                      "label": "milestone",
-                      "alias": "milestone",
-                      "column": "milestone",
+                      "label": "world",
+                      "alias": "world",
+                      "column": "world",
                       "type": "build"
                     }
                   ],
@@ -589,29 +794,30 @@
             ],
             "layout": {
               "x": 0,
-              "y": 106,
+              "y": 48,
               "w": 192,
-              "h": 20,
+              "h": 14,
               "i": 8
             }
           },
           {
-            "id": "progress",
-            "type": "table",
-            "title": "Темп игры: публикации и первые награды",
-            "description": "Медиана часов от первого наблюдения до третьего серверного поста только среди дошедших. Доли и база рядом; level_up = любой навык, card = любая награда. Не завершение всей игры.",
+            "id": "growth-daily",
+            "type": "bar",
+            "title": "Прирост игровых подписчиков по мирам",
+            "description": "Чистый прирост по завершённым публикациям. Не охват и не реальная аудитория. Покрытие delta начинается с релиза; нет измерения — NULL.",
             "queryType": "sql",
             "config": {
-              "show_legends": false,
+              "show_legends": true,
               "panel_time_enabled": true,
               "panel_time_range": {
                 "type": "relative",
                 "relativeTimePeriod": "90d"
-              }
+              },
+              "decimals": 2
             },
             "queries": [
               {
-                "query": "WITH players AS (SELECT player_id, min(_timestamp) AS first_seen,\n CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,\n CASE WHEN count(DISTINCT CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END) > 1 THEN 'multi-age-group' ELSE coalesce(max(CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END), CASE WHEN max(age_group) = '18+' THEN '18+ (legacy)' ELSE 'unknown' END) END AS age_group,\n CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform' ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id), scored AS (SELECT player_id, _timestamp, row_number() OVER (PARTITION BY player_id ORDER BY _timestamp) AS post_number FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name = 'post_scored'),\n milestones AS (SELECT player_id, min(CASE WHEN post_number = 1 THEN _timestamp END) AS first_post, min(CASE WHEN post_number = 3 THEN _timestamp END) AS third_post FROM scored GROUP BY player_id),\n awards AS (SELECT player_id, min(CASE WHEN event_name = 'level_up' THEN _timestamp END) AS first_level,\n min(CASE WHEN event_name = 'card_earned' THEN _timestamp END) AS first_card FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id),\n segments AS (SELECT 'all' AS dimension, 'all' AS segment, player_id FROM players UNION ALL SELECT 'world' AS dimension, world AS segment, player_id FROM players UNION ALL SELECT 'age_group' AS dimension, age_group AS segment, player_id FROM players)\nSELECT s.dimension AS dimension, s.segment AS segment, count(*) AS observed_users,\n count(m.first_post) AS first_post_users, round(100.0 * count(m.first_post) / count(*), 1) AS first_post_pct,\n count(m.third_post) AS third_post_users, round(100.0 * count(m.third_post) / count(*), 1) AS third_post_pct,\n round(approx_percentile_cont((m.third_post - p.first_seen) / 3600000000.0, 0.5), 2) AS median_hours_to_3_posts,\n count(a.first_level) AS level_up_users, round(100.0 * count(a.first_level) / count(*), 1) AS level_up_pct,\n count(a.first_card) AS card_users, round(100.0 * count(a.first_card) / count(*), 1) AS card_pct\nFROM players p JOIN segments s ON p.player_id = s.player_id LEFT JOIN milestones m ON p.player_id = m.player_id LEFT JOIN awards a ON p.player_id = a.player_id\nGROUP BY s.dimension, s.segment ORDER BY s.dimension, s.segment",
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\nSELECT to_timestamp_micros(floor((posted_at+10800000000)/86400000000)*86400000000-10800000000) AS day,post_world AS world,sum(delta) AS subscriber_growth FROM selected_posts CROSS JOIN clock WHERE floor((posted_at+10800000000)/86400000000)>=today-cast('${days}' AS INT)+1 GROUP BY day,post_world ORDER BY day",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -619,77 +825,115 @@
                   "stream_type": "logs",
                   "x": [
                     {
-                      "label": "Разрез",
-                      "alias": "dimension",
-                      "column": "dimension",
+                      "label": "День · МСК",
+                      "alias": "day",
+                      "column": "day",
                       "type": "build"
                     }
                   ],
                   "y": [
                     {
-                      "label": "Сегмент",
-                      "alias": "segment",
-                      "column": "segment",
+                      "label": "Прирост подписчиков",
+                      "alias": "subscriber_growth",
+                      "column": "subscriber_growth",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [
+                    {
+                      "label": "world",
+                      "alias": "world",
+                      "column": "world",
+                      "type": "build"
+                    }
+                  ],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 62,
+              "w": 192,
+              "h": 14,
+              "i": 9
+            }
+          },
+          {
+            "id": "daily-results",
+            "type": "table",
+            "title": "Результаты игры: суммы, на профиль и покрытие",
+            "description": "Дни МСК, сегодня неполный. active_profiles — исторические активные ID сегмента. Posts_with_delta показывает полноту измерения прироста. Средние по всем активным профилям, не только авторам.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              },
+              "decimals": 2
+            },
+            "queries": [
+              {
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\n, days AS (SELECT v.day,count(DISTINCT v.player_id) AS active_profiles FROM visits v JOIN selected s ON v.player_id=s.player_id CROSS JOIN clock c WHERE v.day>=c.today-cast('${days}' AS INT)+1 GROUP BY v.day), results AS (\n SELECT floor((posted_at+10800000000)/86400000000) AS day,count(*) AS posts,count(delta) AS posts_with_delta,sum(delta) AS subscriber_growth FROM selected_posts GROUP BY day)\n SELECT to_timestamp_micros(d.day*86400000000-10800000000) AS day_at,d.active_profiles,coalesce(r.posts,0) AS posts,\n coalesce(r.posts_with_delta,0) AS posts_with_delta,r.subscriber_growth,\n round(1.0*coalesce(r.posts,0)/nullif(d.active_profiles,0),2) AS posts_per_active_profile,\n round(r.subscriber_growth/nullif(d.active_profiles,0),2) AS growth_per_active_profile FROM days d LEFT JOIN results r ON d.day=r.day ORDER BY d.day DESC",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "День · МСК",
+                      "alias": "day_at",
+                      "column": "day_at",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "d.active_profiles",
+                      "alias": "d.active_profiles",
+                      "column": "d.active_profiles",
                       "type": "build"
                     },
                     {
-                      "label": "ID профилей · база",
-                      "alias": "observed_users",
-                      "column": "observed_users",
+                      "label": "Постов",
+                      "alias": "posts",
+                      "column": "posts",
                       "type": "build"
                     },
                     {
-                      "label": "Дошли до 1 поста",
-                      "alias": "first_post_users",
-                      "column": "first_post_users",
+                      "label": "Постов с измеренным приростом",
+                      "alias": "posts_with_delta",
+                      "column": "posts_with_delta",
                       "type": "build"
                     },
                     {
-                      "label": "1 пост, %",
-                      "alias": "first_post_pct",
-                      "column": "first_post_pct",
+                      "label": "r.subscriber_growth",
+                      "alias": "r.subscriber_growth",
+                      "column": "r.subscriber_growth",
                       "type": "build"
                     },
                     {
-                      "label": "Дошли до 3 постов",
-                      "alias": "third_post_users",
-                      "column": "third_post_users",
+                      "label": "Постов на активный ID",
+                      "alias": "posts_per_active_profile",
+                      "column": "posts_per_active_profile",
                       "type": "build"
                     },
                     {
-                      "label": "3 поста, %",
-                      "alias": "third_post_pct",
-                      "column": "third_post_pct",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Медиана часов до 3 постов",
-                      "alias": "median_hours_to_3_posts",
-                      "column": "median_hours_to_3_posts",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Повысили навык",
-                      "alias": "level_up_users",
-                      "column": "level_up_users",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Повысили навык, %",
-                      "alias": "level_up_pct",
-                      "column": "level_up_pct",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Получили награду",
-                      "alias": "card_users",
-                      "column": "card_users",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Награда, %",
-                      "alias": "card_pct",
-                      "column": "card_pct",
+                      "label": "Прирост на активный ID",
+                      "alias": "growth_per_active_profile",
+                      "column": "growth_per_active_profile",
                       "type": "build"
                     }
                   ],
@@ -709,29 +953,38 @@
             ],
             "layout": {
               "x": 0,
-              "y": 126,
+              "y": 76,
               "w": 192,
-              "h": 28,
-              "i": 9
+              "h": 20,
+              "i": 10
             }
-          },
+          }
+        ]
+      },
+      {
+        "tabId": "activation",
+        "name": "Воронка и удержание",
+        "panels": [
           {
-            "id": "p4",
-            "type": "table",
-            "title": "Удержание когорт: D1 / D7",
-            "description": "Возврат в точный день после первого наблюдения. Незавершённые окна исключены; NULL — ещё рано измерять.",
+            "id": "funnel-bars",
+            "type": "h-bar",
+            "title": "Прохождение: конверсия от регистрации, %",
+            "description": "По умолчанию подтверждённые сервером регистрации. Переключатель базы позволяет смотреть старую историю по первому наблюдению; это приближение, не доказанная регистрация. Все этапы используют одну базу; это прохождение, не retention.",
             "queryType": "sql",
             "config": {
-              "show_legends": false,
+              "show_legends": true,
               "panel_time_enabled": true,
               "panel_time_range": {
                 "type": "relative",
                 "relativeTimePeriod": "90d"
-              }
+              },
+              "unit": "percent",
+              "x_axis_min": 0,
+              "x_axis_max": 100
             },
             "queries": [
               {
-                "query": "WITH players AS (SELECT player_id, min(_timestamp) AS first_seen,\n CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,\n CASE WHEN count(DISTINCT CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END) > 1 THEN 'multi-age-group' ELSE coalesce(max(CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END), CASE WHEN max(age_group) = '18+' THEN '18+ (legacy)' ELSE 'unknown' END) END AS age_group,\n CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform' ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name NOT IN ('notification_sent', 'active_time') GROUP BY player_id),\n activity AS (SELECT DISTINCT player_id, floor(_timestamp / 86400000000) AS day FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name NOT IN ('notification_sent', 'active_time')),\n watermark AS (SELECT floor(max(_timestamp) / 86400000000) AS day FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name NOT IN ('notification_sent', 'active_time'))\nSELECT to_timestamp_micros(floor(p.first_seen / 86400000000) * 86400000000) AS cohort_day,\n count(*) AS cohort_users,\n sum(CASE WHEN floor(p.first_seen / 86400000000) + 1 < w.day THEN 1 ELSE 0 END) AS eligible_d1,\n sum(CASE WHEN floor(p.first_seen / 86400000000) + 1 < w.day AND a1.player_id IS NOT NULL THEN 1 ELSE 0 END) AS returned_d1,\n round(100.0 * sum(CASE WHEN floor(p.first_seen / 86400000000) + 1 < w.day AND a1.player_id IS NOT NULL THEN 1 ELSE 0 END) /\n nullif(sum(CASE WHEN floor(p.first_seen / 86400000000) + 1 < w.day THEN 1 ELSE 0 END), 0), 1) AS retention_d1_pct,\n sum(CASE WHEN floor(p.first_seen / 86400000000) + 7 < w.day THEN 1 ELSE 0 END) AS eligible_d7,\n round(100.0 * sum(CASE WHEN floor(p.first_seen / 86400000000) + 7 < w.day AND a7.player_id IS NOT NULL THEN 1 ELSE 0 END) /\n nullif(sum(CASE WHEN floor(p.first_seen / 86400000000) + 7 < w.day THEN 1 ELSE 0 END), 0), 1) AS retention_d7_pct\nFROM players p CROSS JOIN watermark w\nLEFT JOIN activity a1 ON p.player_id = a1.player_id AND a1.day = floor(p.first_seen / 86400000000) + 1\nLEFT JOIN activity a7 ON p.player_id = a7.player_id AND a7.day = floor(p.first_seen / 86400000000) + 7\nGROUP BY cohort_day ORDER BY cohort_day",
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\n, progression AS (SELECT c.player_id,count(p.post_id) AS posts FROM cohort c LEFT JOIN posts p ON c.player_id=p.player_id GROUP BY c.player_id), stages AS (\n SELECT 0 AS ord,CASE WHEN '${cohort_origin}'='observed' THEN 'Первое наблюдение' ELSE 'Регистрация' END AS stage,count(*) AS users,count(*) AS base FROM progression UNION ALL\n SELECT 1,'Первый пост',count(CASE WHEN posts>=1 THEN 1 END),count(*) FROM progression UNION ALL\n SELECT 2,'Три поста',count(CASE WHEN posts>=3 THEN 1 END),count(*) FROM progression UNION ALL\n SELECT 3,'Десять постов',count(CASE WHEN posts>=10 THEN 1 END),count(*) FROM progression)\n SELECT stage,users,base,round(100.0*users/nullif(base,0),1) AS conversion_pct FROM stages ORDER BY ord",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -739,7 +992,141 @@
                   "stream_type": "logs",
                   "x": [
                     {
-                      "label": "День первого наблюдения",
+                      "label": "Этап",
+                      "alias": "stage",
+                      "column": "stage",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "Конверсия, %",
+                      "alias": "conversion_pct",
+                      "column": "conversion_pct",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "w": 96,
+              "h": 16,
+              "i": 1
+            }
+          },
+          {
+            "id": "funnel",
+            "type": "table",
+            "title": "Воронка: регистрация → 1 / 3 / 10 постов",
+            "description": "По умолчанию подтверждённые сервером регистрации. Переключатель базы позволяет смотреть старую историю по первому наблюдению; это приближение, не доказанная регистрация. Все этапы используют одну базу; это прохождение, не retention.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              },
+              "decimals": 2
+            },
+            "queries": [
+              {
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\n, progression AS (SELECT c.player_id,count(p.post_id) AS posts FROM cohort c LEFT JOIN posts p ON c.player_id=p.player_id GROUP BY c.player_id), stages AS (\n SELECT 0 AS ord,CASE WHEN '${cohort_origin}'='observed' THEN 'Первое наблюдение' ELSE 'Регистрация' END AS stage,count(*) AS users,count(*) AS base FROM progression UNION ALL\n SELECT 1,'Первый пост',count(CASE WHEN posts>=1 THEN 1 END),count(*) FROM progression UNION ALL\n SELECT 2,'Три поста',count(CASE WHEN posts>=3 THEN 1 END),count(*) FROM progression UNION ALL\n SELECT 3,'Десять постов',count(CASE WHEN posts>=10 THEN 1 END),count(*) FROM progression)\n SELECT stage,users,base,round(100.0*users/nullif(base,0),1) AS conversion_pct FROM stages ORDER BY ord",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "Этап",
+                      "alias": "stage",
+                      "column": "stage",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "Дошли",
+                      "alias": "users",
+                      "column": "users",
+                      "type": "build"
+                    },
+                    {
+                      "label": "База когорты",
+                      "alias": "base",
+                      "column": "base",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Конверсия, %",
+                      "alias": "conversion_pct",
+                      "column": "conversion_pct",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 96,
+              "y": 0,
+              "w": 96,
+              "h": 16,
+              "i": 2
+            }
+          },
+          {
+            "id": "retention",
+            "type": "table",
+            "title": "Возврат когорт: D1 / D3 / D7",
+            "description": "Когорты по дням МСК. Переключатель базы: подтверждённая регистрация или первое наблюдение для старой истории. Точный день возврата. Возвращение в день регистрации не D1. Текущий день исключён из eligible. Разные знаменатели показаны явно; не объединять в воронку.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              },
+              "decimals": 2
+            },
+            "queries": [
+              {
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\n, cohort_days AS (SELECT player_id,floor((cohort_at+10800000000)/86400000000) AS registered_day FROM cohort), returns AS (\n SELECT p.player_id,p.registered_day,c.today,max(CASE WHEN v.day=p.registered_day+1 THEN 1 ELSE 0 END) AS d1,\n max(CASE WHEN v.day=p.registered_day+3 THEN 1 ELSE 0 END) AS d3,max(CASE WHEN v.day=p.registered_day+7 THEN 1 ELSE 0 END) AS d7\n FROM cohort_days p CROSS JOIN clock c LEFT JOIN visits v ON p.player_id=v.player_id GROUP BY p.player_id,p.registered_day,c.today)\n SELECT to_timestamp_micros(registered_day*86400000000-10800000000) AS cohort_day,count(*) AS registered,\n sum(CASE WHEN registered_day+1<today THEN 1 ELSE 0 END) AS eligible_d1,\n sum(CASE WHEN registered_day+1<today THEN d1 ELSE 0 END) AS returned_d1,\n round(100.0*sum(CASE WHEN registered_day+1<today THEN d1 ELSE 0 END)/nullif(sum(CASE WHEN registered_day+1<today THEN 1 ELSE 0 END),0),1) AS d1_pct,\n sum(CASE WHEN registered_day+3<today THEN 1 ELSE 0 END) AS eligible_d3,\n sum(CASE WHEN registered_day+3<today THEN d3 ELSE 0 END) AS returned_d3,\n round(100.0*sum(CASE WHEN registered_day+3<today THEN d3 ELSE 0 END)/nullif(sum(CASE WHEN registered_day+3<today THEN 1 ELSE 0 END),0),1) AS d3_pct,\n sum(CASE WHEN registered_day+7<today THEN 1 ELSE 0 END) AS eligible_d7,\n sum(CASE WHEN registered_day+7<today THEN d7 ELSE 0 END) AS returned_d7,\n round(100.0*sum(CASE WHEN registered_day+7<today THEN d7 ELSE 0 END)/nullif(sum(CASE WHEN registered_day+7<today THEN 1 ELSE 0 END),0),1) AS d7_pct\n FROM returns GROUP BY registered_day ORDER BY registered_day",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "День когорты · МСК",
                       "alias": "cohort_day",
                       "column": "cohort_day",
                       "type": "build"
@@ -748,12 +1135,12 @@
                   "y": [
                     {
                       "label": "Профилей в когорте",
-                      "alias": "cohort_users",
-                      "column": "cohort_users",
+                      "alias": "registered",
+                      "column": "registered",
                       "type": "build"
                     },
                     {
-                      "label": "Готовая база D1",
+                      "label": "База D1",
                       "alias": "eligible_d1",
                       "column": "eligible_d1",
                       "type": "build"
@@ -766,20 +1153,44 @@
                     },
                     {
                       "label": "D1, %",
-                      "alias": "retention_d1_pct",
-                      "column": "retention_d1_pct",
+                      "alias": "d1_pct",
+                      "column": "d1_pct",
                       "type": "build"
                     },
                     {
-                      "label": "Готовая база D7",
+                      "label": "База D3",
+                      "alias": "eligible_d3",
+                      "column": "eligible_d3",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Вернулись D3",
+                      "alias": "returned_d3",
+                      "column": "returned_d3",
+                      "type": "build"
+                    },
+                    {
+                      "label": "D3, %",
+                      "alias": "d3_pct",
+                      "column": "d3_pct",
+                      "type": "build"
+                    },
+                    {
+                      "label": "База D7",
                       "alias": "eligible_d7",
                       "column": "eligible_d7",
                       "type": "build"
                     },
                     {
+                      "label": "Вернулись D7",
+                      "alias": "returned_d7",
+                      "column": "returned_d7",
+                      "type": "build"
+                    },
+                    {
                       "label": "D7, %",
-                      "alias": "retention_d7_pct",
-                      "column": "retention_d7_pct",
+                      "alias": "d7_pct",
+                      "column": "d7_pct",
                       "type": "build"
                     }
                   ],
@@ -799,17 +1210,17 @@
             ],
             "layout": {
               "x": 0,
-              "y": 154,
+              "y": 16,
               "w": 192,
-              "h": 22,
-              "i": 10
+              "h": 26,
+              "i": 3
             }
           },
           {
-            "id": "p9",
+            "id": "history-coverage",
             "type": "table",
-            "title": "Недельная неактивность: все и сегменты",
-            "description": "Активен в предыдущие 7 полных UTC-дней, отсутствует в последние 7. NULL до 14 дней истории / нулевой базы. Это не окончательный уход.",
+            "title": "Покрытие данных и старые профили",
+            "description": "Первое наблюдение ≠ регистрация. Для старых профилей источник неизвестен, если нет сохранённой серверной связи. Эта таблица показывает, что воронка исключила. Свежесть снимка ≤3 минуты нужна для текущих аккаунтов.",
             "queryType": "sql",
             "config": {
               "show_legends": false,
@@ -817,11 +1228,12 @@
               "panel_time_range": {
                 "type": "relative",
                 "relativeTimePeriod": "90d"
-              }
+              },
+              "decimals": 2
             },
             "queries": [
               {
-                "query": "WITH players AS (SELECT player_id, min(_timestamp) AS first_seen,\n CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,\n CASE WHEN count(DISTINCT CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END) > 1 THEN 'multi-age-group' ELSE coalesce(max(CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END), CASE WHEN max(age_group) = '18+' THEN '18+ (legacy)' ELSE 'unknown' END) END AS age_group,\n CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform' ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name NOT IN ('notification_sent', 'active_time') GROUP BY player_id), segments AS (\n SELECT 'all' AS dimension, 'all' AS segment, player_id FROM players\n UNION ALL SELECT 'world' AS dimension, world AS segment, player_id FROM players UNION ALL SELECT 'age_group' AS dimension, age_group AS segment, player_id FROM players),\n activity AS (SELECT player_id,\n max(CASE WHEN floor(_timestamp / 86400000000) >= floor(date_part('epoch', now()) * 1000000 / 86400000000) - 14 AND floor(_timestamp / 86400000000) < floor(date_part('epoch', now()) * 1000000 / 86400000000) - 7 THEN 1 ELSE 0 END) AS previous_week,\n max(CASE WHEN floor(_timestamp / 86400000000) >= floor(date_part('epoch', now()) * 1000000 / 86400000000) - 7 AND floor(_timestamp / 86400000000) < floor(date_part('epoch', now()) * 1000000 / 86400000000) THEN 1 ELSE 0 END) AS last_week\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name NOT IN ('notification_sent', 'active_time') GROUP BY player_id),\n coverage AS (SELECT min(_timestamp) AS first_event FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name NOT IN ('notification_sent', 'active_time'))\nSELECT s.dimension AS dimension, s.segment AS segment,\n CASE WHEN min(c.first_event) <= (floor(date_part('epoch', now()) * 1000000 / 86400000000) - 14) * 86400000000 THEN sum(a.previous_week) END AS eligible_users,\n CASE WHEN min(c.first_event) <= (floor(date_part('epoch', now()) * 1000000 / 86400000000) - 14) * 86400000000 THEN sum(CASE WHEN a.previous_week = 1 AND a.last_week = 0 THEN 1 ELSE 0 END) END AS inactive_users,\n CASE WHEN min(c.first_event) <= (floor(date_part('epoch', now()) * 1000000 / 86400000000) - 14) * 86400000000 THEN\n round(100.0 * sum(CASE WHEN a.previous_week = 1 AND a.last_week = 0 THEN 1 ELSE 0 END) / nullif(sum(a.previous_week), 0), 1) END AS weekly_churn_pct\nFROM segments s JOIN activity a ON s.player_id = a.player_id CROSS JOIN coverage c\nGROUP BY s.dimension, s.segment ORDER BY s.dimension, s.segment",
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\nSELECT count(*) AS observed_profiles,count(registered_at) AS confirmed_registrations,count(*)-count(registered_at) AS registration_unknown,to_timestamp_micros(min(first_seen)) AS first_observation FROM selected",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -829,35 +1241,29 @@
                   "stream_type": "logs",
                   "x": [
                     {
-                      "label": "Разрез",
-                      "alias": "dimension",
-                      "column": "dimension",
+                      "label": "ID в истории",
+                      "alias": "observed_profiles",
+                      "column": "observed_profiles",
                       "type": "build"
                     }
                   ],
                   "y": [
                     {
-                      "label": "Сегмент",
-                      "alias": "segment",
-                      "column": "segment",
+                      "label": "Подтверждённые регистрации",
+                      "alias": "confirmed_registrations",
+                      "column": "confirmed_registrations",
                       "type": "build"
                     },
                     {
-                      "label": "База прошлой недели",
-                      "alias": "eligible_users",
-                      "column": "eligible_users",
+                      "label": "Без даты регистрации",
+                      "alias": "registration_unknown",
+                      "column": "registration_unknown",
                       "type": "build"
                     },
                     {
-                      "label": "Не вернулись за неделю",
-                      "alias": "inactive_users",
-                      "column": "inactive_users",
-                      "type": "build"
-                    },
-                    {
-                      "label": "Неактивны, %",
-                      "alias": "weekly_churn_pct",
-                      "column": "weekly_churn_pct",
+                      "label": "Начало истории",
+                      "alias": "first_observation",
+                      "column": "first_observation",
                       "type": "build"
                     }
                   ],
@@ -877,10 +1283,306 @@
             ],
             "layout": {
               "x": 0,
-              "y": 176,
+              "y": 42,
               "w": 192,
-              "h": 28,
-              "i": 11
+              "h": 8,
+              "i": 4
+            }
+          }
+        ]
+      },
+      {
+        "tabId": "engagement",
+        "name": "Активность",
+        "panels": [
+          {
+            "id": "intensity",
+            "type": "stacked",
+            "title": "Интенсивность игры по сегментам, %",
+            "description": "100% — активные профиле-дни за 7 завершённых дней МСК. Включены посещения без публикаций. Фильтры общие; вместе с процентами смотреть размер выборки ниже.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": true,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              },
+              "decimals": 2,
+              "unit": "percent",
+              "y_axis_min": 0,
+              "y_axis_max": 100
+            },
+            "queries": [
+              {
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\n, player_days AS (SELECT v.player_id,v.day,CASE '${compare}' WHEN 'world' THEN s.world WHEN 'source' THEN s.registration_source WHEN 'surface' THEN s.launch_surface ELSE s.age_group END AS segment,count(p.post_id) AS posts FROM visits v JOIN selected s ON v.player_id=s.player_id CROSS JOIN clock c LEFT JOIN posts p ON p.player_id=v.player_id AND floor((p.posted_at+10800000000)/86400000000)=v.day WHERE v.day>=c.today-7 AND v.day<c.today GROUP BY v.player_id,v.day,segment), buckets AS (\n SELECT segment,CASE WHEN posts=0 THEN '0 постов' WHEN posts=1 THEN '1 пост' WHEN posts<=4 THEN '2–4 поста' WHEN posts<=9 THEN '5–9 постов' ELSE '10+ постов' END AS bucket,count(*) AS player_days FROM player_days GROUP BY segment,bucket), bases AS (SELECT segment,sum(player_days) AS base FROM buckets GROUP BY segment)\n SELECT b.segment,b.bucket,round(100.0*b.player_days/nullif(a.base,0),1) AS player_days_pct FROM buckets b JOIN bases a ON b.segment=a.segment ORDER BY b.segment,b.bucket",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "b.segment",
+                      "alias": "b.segment",
+                      "column": "b.segment",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "Доля профиле-дней, %",
+                      "alias": "player_days_pct",
+                      "column": "player_days_pct",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [
+                    {
+                      "label": "Постов за активный день",
+                      "alias": "bucket",
+                      "column": "bucket",
+                      "type": "build"
+                    }
+                  ],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "w": 192,
+              "h": 16,
+              "i": 1
+            }
+          },
+          {
+            "id": "engagement",
+            "type": "table",
+            "title": "Публикации и активное время · 7 полных дней",
+            "description": "Время — foreground после взаимодействия; не время открытого окна. Среднее только по измеренным профиле-дням, measured_days показывает покрытие. Нули публикаций включены. Дни МСК, сегодня исключено.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              },
+              "decimals": 2
+            },
+            "queries": [
+              {
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\n, player_days AS (SELECT v.player_id,v.day,CASE '${compare}' WHEN 'world' THEN s.world WHEN 'source' THEN s.registration_source WHEN 'surface' THEN s.launch_surface ELSE s.age_group END AS segment,count(p.post_id) AS posts FROM visits v JOIN selected s ON v.player_id=s.player_id CROSS JOIN clock c LEFT JOIN posts p ON p.player_id=v.player_id AND floor((p.posted_at+10800000000)/86400000000)=v.day WHERE v.day>=c.today-7 AND v.day<c.today GROUP BY v.player_id,v.day,segment), measured AS (\n SELECT player_id,floor((_timestamp+10800000000)/86400000000) AS day,sum(cast(prop_ms AS DOUBLE))/60000.0 AS minutes FROM raw WHERE event_name='active_time' GROUP BY player_id,day)\n SELECT p.segment,count(DISTINCT p.player_id) AS active_profiles,count(*) AS player_days,sum(p.posts) AS posts,round(1.0*sum(p.posts)/count(DISTINCT p.player_id),2) AS posts_per_profile,\n count(m.minutes) AS measured_days,round(avg(m.minutes),2) AS mean_active_minutes FROM player_days p LEFT JOIN measured m ON p.player_id=m.player_id AND p.day=m.day GROUP BY p.segment ORDER BY p.segment",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "p.segment",
+                      "alias": "p.segment",
+                      "column": "p.segment",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "Активных ID",
+                      "alias": "active_profiles",
+                      "column": "active_profiles",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Профиле-дней",
+                      "alias": "player_days",
+                      "column": "player_days",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Постов",
+                      "alias": "posts",
+                      "column": "posts",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Постов на профиль",
+                      "alias": "posts_per_profile",
+                      "column": "posts_per_profile",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Дней с измеренным временем",
+                      "alias": "measured_days",
+                      "column": "measured_days",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Среднее активное время, мин",
+                      "alias": "mean_active_minutes",
+                      "column": "mean_active_minutes",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 16,
+              "w": 192,
+              "h": 18,
+              "i": 2
+            }
+          },
+          {
+            "id": "launch",
+            "type": "table",
+            "title": "Способ запуска и устройства",
+            "description": "Способ запуска измеряется явно с нового релиза. iOS/Android/desktop — устройство Telegram, не самостоятельное приложение. Старые события — unknown. Standalone без авторизации пока не поддерживает игру; отсутствие строк не доказывает нулевую аудиторию.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              },
+              "decimals": 2
+            },
+            "queries": [
+              {
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\nSELECT coalesce(nullif(r.launch_surface,''),'unknown') AS launch_surface,coalesce(nullif(r.platform,''),'server') AS device,count(DISTINCT r.player_id) AS active_profiles FROM raw r JOIN selected s ON r.player_id=s.player_id CROSS JOIN clock c WHERE r.event_name IN ('session_start','screen_view','app_visible') AND floor((r._timestamp+10800000000)/86400000000)>=c.today-cast('${days}' AS INT)+1 GROUP BY coalesce(nullif(r.launch_surface,''),'unknown'),coalesce(nullif(r.platform,''),'server') ORDER BY active_profiles DESC",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "Способ запуска",
+                      "alias": "launch_surface",
+                      "column": "launch_surface",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "Устройство",
+                      "alias": "device",
+                      "column": "device",
+                      "type": "build"
+                    },
+                    {
+                      "label": "Активных ID",
+                      "alias": "active_profiles",
+                      "column": "active_profiles",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 34,
+              "w": 192,
+              "h": 16,
+              "i": 3
+            }
+          },
+          {
+            "id": "failed-posts",
+            "type": "bar",
+            "title": "Ошибки генерации по дням · сервер",
+            "description": "Подтверждённые сервером неуспешные генерации; повтор одного publication_id считается один раз. Не вычитаются из числа завершённых постов. Покрытие начинается с нового релиза.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": true,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              },
+              "decimals": 2
+            },
+            "queries": [
+              {
+                "query": "WITH clock AS (\n SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,\n date_part('epoch', now()) * 1000 AS now_ms),\nraw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\nidentities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw GROUP BY player_id),\nselected AS (SELECT * FROM identities WHERE\n ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')\n AND ('${source}' = 'all' OR registration_source = '${source}')\n AND ('${surface}' = 'all' OR launch_surface = '${surface}')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\nmarkers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product\n WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),\ncomplete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c\n WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000\n GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),\nlatest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),\ncurrent_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON\n p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms\n LEFT JOIN identities i ON p.player_id = i.player_id WHERE\n ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')\n AND ('${source}' = 'all' OR p.registration_source = '${source}')\n AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),\ncohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)\nSELECT to_timestamp_micros(floor((r._timestamp+10800000000)/86400000000)*86400000000-10800000000) AS day_at,count(DISTINCT r.prop_id) AS failed_publications FROM raw r JOIN selected s ON r.player_id=s.player_id CROSS JOIN clock c WHERE r.event_name='post_failed' AND floor((r._timestamp+10800000000)/86400000000)>=c.today-cast('${days}' AS INT)+1 GROUP BY 1 ORDER BY 1",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "День · МСК",
+                      "alias": "day_at",
+                      "column": "day_at",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "Неуспешных генераций",
+                      "alias": "failed_publications",
+                      "column": "failed_publications",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 50,
+              "w": 192,
+              "h": 14,
+              "i": 4
             }
           }
         ]
