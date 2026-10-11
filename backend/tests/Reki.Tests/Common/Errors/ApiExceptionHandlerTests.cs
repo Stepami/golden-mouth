@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Reki.Api.Serialization;
-using Reki.Tests.Generated;
 
 namespace Reki.Tests.Common.Errors;
 

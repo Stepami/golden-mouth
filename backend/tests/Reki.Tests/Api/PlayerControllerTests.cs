@@ -11,7 +11,6 @@ using Reki.Contracts.Player;
 using Reki.Contracts.Social;
 using Reki.Contracts.Telemetry;
 using Reki.Domain.Player;
-using Reki.Tests.Generated;
 
 namespace Reki.Tests.Api;
 

@@ -196,7 +196,7 @@ public sealed partial class GeneratePublicationHandler(
         _ => "new_line",
     };
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Publication generation failed.")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Publication generation failed")]
     private partial void GenerationFailed(Exception exception);
 
     private async ValueTask<StarPostContext> CreatePostContextAsync(

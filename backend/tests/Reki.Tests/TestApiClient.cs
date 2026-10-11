@@ -1,5 +1,3 @@
-using Reki.Tests.Generated;
-
 namespace Reki.Tests;
 
 public sealed class TestApiClient : IDisposable
