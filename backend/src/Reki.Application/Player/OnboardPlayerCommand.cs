@@ -12,8 +12,6 @@ public sealed record OnboardPlayerCommand(
     string Handle,
     string Address,
     StarId Star,
-    string? ReferralCode) : IRequest<PlayerView>
-{
-    public string? AgeBand { get; init; }
-}
+    string? ReferralCode,
+    string? AgeBand) : IRequest<PlayerView>;
 

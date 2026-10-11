@@ -116,6 +116,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             "player",
             "default",
             Reki.Domain.Social.StarId.From("sonya"),
+            null,
             null);
         var before = await Database.GetCollection<BsonDocument>("players")
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
