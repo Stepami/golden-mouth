@@ -110,7 +110,7 @@ internal static class StarToolSchemas
 
     private static AIFunctionDeclaration Create(string name, string description, string schema)
     {
-        using JsonDocument document = JsonDocument.Parse(schema);
+        using var document = JsonDocument.Parse(schema);
         return AIFunctionFactory.CreateDeclaration(
             name,
             description,

@@ -26,7 +26,7 @@ public sealed class PlayerProgressionTests
         ];
 
         // Act
-        IReadOnlyList<AchievementProgress> achievements =
+        var achievements =
             AchievementCatalog.Create(TestGameData.WorldId);
 
         // Assert
@@ -40,10 +40,10 @@ public sealed class PlayerProgressionTests
     public async Task PublishPost_FirstViral_UnlocksFirstViralAchievementAsync()
     {
         // Arrange
-        PlayerProfile player = TestGameData.CreatePlayer();
+        var player = TestGameData.CreatePlayer();
 
         // Act
-        PlayerProfile result = Publish(player, 1, true, player.Skills, null);
+        var result = Publish(player, 1, true, player.Skills, null);
 
         // Assert
         await Assert.That(IsOpen(result, AchievementCatalog.FirstViral)).IsTrue();
@@ -54,10 +54,10 @@ public sealed class PlayerProgressionTests
     public async Task PublishPost_ReachesTenThousandSubscribers_UnlocksTenThousandAchievementAsync()
     {
         // Arrange
-        PlayerProfile player = TestGameData.CreatePlayer() with { Subscribers = 9_999 };
+        var player = TestGameData.CreatePlayer() with { Subscribers = 9_999 };
 
         // Act
-        PlayerProfile result = Publish(player, 1, false, player.Skills, null);
+        var result = Publish(player, 1, false, player.Skills, null);
 
         // Assert
         await Assert.That(result.Subscribers).IsEqualTo(10_000);
@@ -73,10 +73,10 @@ public sealed class PlayerProgressionTests
         {
             [TestGameData.Brave] = new(3, 0, 20),
         };
-        PlayerProfile player = TestGameData.CreatePlayer();
+        var player = TestGameData.CreatePlayer();
 
         // Act
-        PlayerProfile result = Publish(player, 0, false, skills, null);
+        var result = Publish(player, 0, false, skills, null);
 
         // Assert
         await Assert.That(result.Skills[TestGameData.Brave].Level).IsEqualTo(3);
@@ -88,7 +88,7 @@ public sealed class PlayerProgressionTests
     public async Task PublishPost_TwoCompletedWantsInOnePeriod_GainsOnlyOneRelationPointAsync()
     {
         // Arrange
-        PlayerProfile player = TestGameData.CreatePlayer() with
+        var player = TestGameData.CreatePlayer() with
         {
             Wants =
             [
@@ -98,9 +98,9 @@ public sealed class PlayerProgressionTests
         };
 
         // Act
-        PlayerProfile afterFirst = Publish(player, 0, false, player.Skills, "want-one");
-        PlayerProfile afterSecond = Publish(afterFirst, 0, false, afterFirst.Skills, "want-two");
-        StarRelationProgress relation = afterSecond.StarRelations.Single();
+        var afterFirst = Publish(player, 0, false, player.Skills, "want-one");
+        var afterSecond = Publish(afterFirst, 0, false, afterFirst.Skills, "want-two");
+        var relation = afterSecond.StarRelations.Single();
 
         // Assert
         await Assert.That(afterSecond.Wants.All(want => want.Done)).IsTrue();

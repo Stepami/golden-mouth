@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
@@ -6,7 +7,6 @@ using Reki.Application.Posts;
 using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Social;
-using Reki.Domain.Worlds;
 using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Social;
@@ -14,7 +14,7 @@ namespace Reki.Application.Social;
 public sealed class SendDirectMessageHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     GameDay gameDay,
     PlayerReader playerReader,
     StarTurnGenerator turnGenerator) : IRequestHandler<SendDirectMessageCommand, SentDirectMessage>
@@ -23,11 +23,11 @@ public sealed class SendDirectMessageHandler(
         SendDirectMessageCommand request,
         CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        PlayerProfile player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
         _ = StarCatalog.Require(player.World, request.StarId);
-        DateTimeOffset periodStart = gameDay.PeriodStart;
-        StarConversation conversation = await store.GetStarConversationAsync(
+        var periodStart = gameDay.PeriodStart;
+        var conversation = await store.GetStarConversationAsync(
             player.Id,
             request.StarId,
             cancellationToken) ?? new StarConversation(
@@ -43,19 +43,19 @@ public sealed class SendDirectMessageHandler(
             conversation = conversation with { RepliesUsed = 0, PeriodStartedAtUtc = periodStart };
         }
 
-        if (conversation.RepliesUsed >= balance.Relations.DirectMessageRepliesPerDay)
+        if (conversation.RepliesUsed >= balance.Value.Relations.DirectMessageRepliesPerDay)
         {
             throw new RequestConflictException("The daily direct-message limit has been reached.");
         }
 
-        WorldRules? storedRules = await store.GetWorldRulesAsync(
+        var storedRules = await store.GetWorldRulesAsync(
             player.Id,
             player.World,
             cancellationToken);
-        WorldRules worldRules = player.World.Value == "own" && storedRules is not null
+        var worldRules = player.World.Value == "own" && storedRules is not null
             ? storedRules
             : WorldRulesDefaults.Create(player.Id, player.World);
-        GeneratedDirectMessage generated = await turnGenerator.GenerateDirectMessageAsync(
+        var generated = await turnGenerator.GenerateDirectMessageAsync(
             new StarDirectMessageContext(
                 new StarAgentProfile(
                     player.World,
@@ -77,11 +77,11 @@ public sealed class SendDirectMessageHandler(
             new DirectMessage("me", request.Text),
             new DirectMessage("star", generated.Text),
         ];
-        IReadOnlyList<string> memory = !MemoryFactPolicy.IsAllowed(generated.MemoryFact) ||
-            conversation.Memory.Contains(generated.MemoryFact, StringComparer.OrdinalIgnoreCase)
+        var memory = !MemoryFactPolicy.IsAllowed(generated.MemoryFact) ||
+                     conversation.Memory.Contains(generated.MemoryFact, StringComparer.OrdinalIgnoreCase)
             ? conversation.Memory
             : [.. conversation.Memory, generated.MemoryFact];
-        StarConversation updated = conversation with
+        var updated = conversation with
         {
             Messages = messages,
             Memory = memory,
@@ -90,6 +90,6 @@ public sealed class SendDirectMessageHandler(
         await store.SaveStarConversationAsync(updated, cancellationToken);
         return new SentDirectMessage(
             generated.Text,
-            balance.Relations.DirectMessageRepliesPerDay - updated.RepliesUsed);
+            balance.Value.Relations.DirectMessageRepliesPerDay - updated.RepliesUsed);
     }
 }

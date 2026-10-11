@@ -9,10 +9,10 @@ public sealed class PublicationContractTests
     [Test]
     public async Task LiveEvent_BaseTypeSerializesDerivedPayloadAsync()
     {
-        string json = JsonSerializer.Serialize(
+        var json = JsonSerializer.Serialize(
             (LiveEvent)new ViewsLiveEvent(48),
             ApiJsonSerializerContext.Default.LiveEvent);
-        using JsonDocument document = JsonDocument.Parse(json);
+        using var document = JsonDocument.Parse(json);
 
         await Assert.That(document.RootElement.GetProperty("type").GetString()).IsEqualTo("views");
         await Assert.That(document.RootElement.GetProperty("views").GetInt64()).IsEqualTo(48);
@@ -21,7 +21,7 @@ public sealed class PublicationContractTests
     [Test]
     public async Task PublicationStatus_DefaultContext_UsesSnakeCaseAsync()
     {
-        string json = JsonSerializer.Serialize(
+        var json = JsonSerializer.Serialize(
             PublicationStatus.ReadyForModeration,
             ApiJsonSerializerContext.Default.PublicationStatus);
 

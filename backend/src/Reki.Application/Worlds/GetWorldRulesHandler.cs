@@ -15,9 +15,9 @@ public sealed class GetWorldRulesHandler(
         GetWorldRulesQuery request,
         CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        PlayerProfile player = await playerReader.GetAsync(telegramUserId, cancellationToken);
-        WorldRules? stored = await store.GetWorldRulesAsync(
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var stored = await store.GetWorldRulesAsync(
             player.Id,
             request.WorldId,
             cancellationToken);

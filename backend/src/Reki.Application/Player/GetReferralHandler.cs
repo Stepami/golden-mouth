@@ -12,8 +12,8 @@ public sealed class GetReferralHandler(
 {
     public async ValueTask<ReferralResponse> Handle(GetReferralQuery request, CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        PlayerProfile player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
         return new ReferralResponse($"ref_{player.Id.Value}");
     }
 }

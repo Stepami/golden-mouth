@@ -18,14 +18,14 @@ public sealed class SaveWorldRulesHandler(
         SaveWorldRulesCommand request,
         CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        PlayerProfile player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
         await safetyGuard.EnsureInputAllowedAsync(
             player,
             [request.Description, .. request.Rules.Select(rule => rule.Text)],
             cancellationToken);
-        WorldId ownWorldId = WorldId.From("own");
-        WorldRules? existingRules = await store.GetWorldRulesAsync(
+        var ownWorldId = WorldId.From("own");
+        var existingRules = await store.GetWorldRulesAsync(
             player.Id,
             ownWorldId,
             cancellationToken);

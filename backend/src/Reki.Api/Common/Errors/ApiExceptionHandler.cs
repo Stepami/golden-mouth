@@ -14,7 +14,7 @@ internal sealed partial class ApiExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
-        ProblemDetails problemDetails = CreateProblemDetails(exception, httpContext.Request.Path);
+        var problemDetails = CreateProblemDetails(exception, httpContext.Request.Path);
         httpContext.Response.StatusCode = problemDetails.Status
             ?? StatusCodes.Status500InternalServerError;
 
@@ -46,7 +46,7 @@ internal sealed partial class ApiExceptionHandler(
         Exception exception,
         PathString instance)
     {
-        ProblemDetails problemDetails = exception switch
+        var problemDetails = exception switch
         {
             ResourceNotFoundException => new ProblemDetails
             {

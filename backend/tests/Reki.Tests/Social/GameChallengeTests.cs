@@ -14,10 +14,10 @@ public sealed class GameChallengeTests
     public async Task Score_TwoPosts_UsesSeventyPercentQualityPlusThirtyPercentReachRatioAsync()
     {
         // Arrange
-        ChallengePerformance initial = ChallengePerformance.Empty;
+        var initial = ChallengePerformance.Empty;
 
         // Act
-        ChallengePerformance result = initial.Add(0.8, 2).Add(0.6, 1);
+        var result = initial.Add(0.8, 2).Add(0.6, 1);
 
         // Assert
         await Assert.That(result.PostCount).IsEqualTo(2);
@@ -30,10 +30,10 @@ public sealed class GameChallengeTests
     public async Task Add_OutOfRangeMetrics_ClampsToDomainBoundsAsync()
     {
         // Arrange
-        ChallengePerformance initial = ChallengePerformance.Empty;
+        var initial = ChallengePerformance.Empty;
 
         // Act
-        ChallengePerformance result = initial.Add(1.5, -2);
+        var result = initial.Add(1.5, -2);
 
         // Assert
         await Assert.That(result.QualityTotal).IsEqualTo(1);
@@ -45,15 +45,15 @@ public sealed class GameChallengeTests
     public async Task RecordPost_DifferentAbsoluteReachOrSubscriberDelta_UsesNormalizedRatioOnlyAsync()
     {
         // Arrange
-        GameChallenge challenge = CreateActiveChallenge();
-        GamePost smallChannelPost = CreatePost(
+        var challenge = CreateActiveChallenge();
+        var smallChannelPost = CreatePost(
             InitiatorId,
             "Малый канал",
             120,
             12,
             0.8,
             1.2);
-        GamePost largeChannelPost = CreatePost(
+        var largeChannelPost = CreatePost(
             OpponentId,
             "Большой канал",
             120_000,
@@ -62,7 +62,7 @@ public sealed class GameChallengeTests
             1.2);
 
         // Act
-        GameChallenge result = challenge
+        var result = challenge
             .RecordPost(InitiatorId, smallChannelPost)
             .RecordPost(OpponentId, largeChannelPost);
 
@@ -77,12 +77,12 @@ public sealed class GameChallengeTests
     public async Task RecordPost_HigherNormalizedScore_TracksBestPostAsync()
     {
         // Arrange
-        GameChallenge challenge = CreateActiveChallenge();
-        GamePost lower = CreatePost(InitiatorId, "Первый", 100, 10, 0.4, 0.5);
-        GamePost higher = CreatePost(OpponentId, "Лучший", 80, 5, 0.9, 1.5);
+        var challenge = CreateActiveChallenge();
+        var lower = CreatePost(InitiatorId, "Первый", 100, 10, 0.4, 0.5);
+        var higher = CreatePost(OpponentId, "Лучший", 80, 5, 0.9, 1.5);
 
         // Act
-        GameChallenge result = challenge
+        var result = challenge
             .RecordPost(InitiatorId, lower)
             .RecordPost(OpponentId, higher);
 
@@ -121,7 +121,7 @@ public sealed class GameChallengeTests
     public async Task Accept_InitiatorAttemptsAcceptance_ThrowsInvalidOperationExceptionAsync()
     {
         // Arrange
-        GameChallenge pending = GameChallenge.CreatePending(
+        var pending = GameChallenge.CreatePending(
             InitiatorId,
             OpponentId,
             TestGameData.PeriodStart.AddHours(-1),
@@ -148,13 +148,13 @@ public sealed class GameChallengeTests
     public async Task GetDay_AtFinishBoundary_ReportsFinalDayThenFinishedAsync()
     {
         // Arrange
-        GameChallenge challenge = CreateActiveChallenge();
+        var challenge = CreateActiveChallenge();
 
         // Act
-        int firstDay = challenge.GetDay(TestGameData.PeriodStart);
-        int thirdDay = challenge.GetDay(TestGameData.PeriodStart.AddDays(2));
-        bool beforeFinish = challenge.IsFinished(TestGameData.PeriodStart.AddDays(2));
-        bool atFinish = challenge.IsFinished(TestGameData.PeriodStart.AddDays(3));
+        var firstDay = challenge.GetDay(TestGameData.PeriodStart);
+        var thirdDay = challenge.GetDay(TestGameData.PeriodStart.AddDays(2));
+        var beforeFinish = challenge.IsFinished(TestGameData.PeriodStart.AddDays(2));
+        var atFinish = challenge.IsFinished(TestGameData.PeriodStart.AddDays(3));
 
         // Assert
         await Assert.That(firstDay).IsEqualTo(1);
@@ -167,12 +167,12 @@ public sealed class GameChallengeTests
     public async Task Complete_OnlyOpponentHasFivePosts_SelectsEligibleOpponentAsync()
     {
         // Arrange
-        GameChallenge challenge = CreateActiveChallenge();
+        var challenge = CreateActiveChallenge();
         challenge = AddPosts(challenge, InitiatorId, 4, 1, 2);
         challenge = AddPosts(challenge, OpponentId, 5, 0.1, 0.1);
 
         // Act
-        GameChallenge result = challenge.Complete();
+        var result = challenge.Complete();
 
         // Assert
         await Assert.That(result.InitiatorPerformance.PostCount).IsEqualTo(4);
@@ -185,12 +185,12 @@ public sealed class GameChallengeTests
     public async Task Complete_BothHaveFivePosts_SelectsHigherNormalizedScoreAsync()
     {
         // Arrange
-        GameChallenge challenge = CreateActiveChallenge();
+        var challenge = CreateActiveChallenge();
         challenge = AddPosts(challenge, InitiatorId, 5, 0.9, 1.5);
         challenge = AddPosts(challenge, OpponentId, 5, 0.5, 0.5);
 
         // Act
-        GameChallenge result = challenge.Complete();
+        var result = challenge.Complete();
 
         // Assert
         await Assert.That(result.InitiatorPerformance.Score)
@@ -203,12 +203,12 @@ public sealed class GameChallengeTests
     public async Task Complete_NeitherHasFivePosts_LeavesWinnerEmptyAsync()
     {
         // Arrange
-        GameChallenge challenge = CreateActiveChallenge();
+        var challenge = CreateActiveChallenge();
         challenge = AddPosts(challenge, InitiatorId, 4, 1, 2);
         challenge = AddPosts(challenge, OpponentId, 4, 0.1, 0.1);
 
         // Act
-        GameChallenge result = challenge.Complete();
+        var result = challenge.Complete();
 
         // Assert
         await Assert.That(result.WinnerId).IsNull();
@@ -219,12 +219,12 @@ public sealed class GameChallengeTests
     public async Task Complete_EligibleScoresAreEqual_LeavesWinnerEmptyAsync()
     {
         // Arrange
-        GameChallenge challenge = CreateActiveChallenge();
+        var challenge = CreateActiveChallenge();
         challenge = AddPosts(challenge, InitiatorId, 5, 0.7, 1);
         challenge = AddPosts(challenge, OpponentId, 5, 0.7, 1);
 
         // Act
-        GameChallenge result = challenge.Complete();
+        var result = challenge.Complete();
 
         // Assert
         await Assert.That(result.InitiatorPerformance.Score)
@@ -250,8 +250,8 @@ public sealed class GameChallengeTests
         double quality,
         double reachRatio)
     {
-        GameChallenge current = challenge;
-        for (int index = 0; index < count; index++)
+        var current = challenge;
+        for (var index = 0; index < count; index++)
         {
             current = current.RecordPost(
                 playerId,

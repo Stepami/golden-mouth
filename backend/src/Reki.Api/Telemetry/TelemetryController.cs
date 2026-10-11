@@ -35,14 +35,14 @@ public sealed partial class TelemetryController(
         ClientLogBatchRequest request,
         CancellationToken cancellationToken)
     {
-        PlayerView player = await sender.Send(
+        var player = await sender.Send(
             new GetPlayerQuery(),
             cancellationToken);
-        foreach (ClientLogEntryRequest entry in request.Entries)
+        foreach (var entry in request.Entries)
         {
-            IReadOnlyDictionary<string, string> properties = mapper.SanitizeProperties(entry.Props);
-            properties.TryGetValue("status", out string? status);
-            properties.TryGetValue("path", out string? path);
+            var properties = mapper.SanitizeProperties(entry.Props);
+            properties.TryGetValue("status", out var status);
+            properties.TryGetValue("path", out var path);
             WriteClientLog(
                 entry.Level,
                 entry.Event,

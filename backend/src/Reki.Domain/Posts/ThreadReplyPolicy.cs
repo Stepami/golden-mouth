@@ -19,15 +19,15 @@ public static class ThreadReplyPolicy
         long subscriberBonus,
         int branchDepth)
     {
-        IReadOnlyList<ThreadReply> replies = post.GetThreadReplies();
-        int awardedSoFar = replies.Count == 0
+        var replies = post.GetThreadReplies();
+        var awardedSoFar = replies.Count == 0
             ? 0
             : replies.Max(item => item.AwardedReplies);
-        bool awards = awardedSoFar < bonusReplies;
-        long bonus = awards ? subscriberBonus : 0;
-        int awardedReplies = awards ? awardedSoFar + 1 : awardedSoFar;
-        int depth = 1;
-        string? reaction = depth + 1 == branchDepth ? CommenterReaction : null;
+        var awards = awardedSoFar < bonusReplies;
+        var bonus = awards ? subscriberBonus : 0;
+        var awardedReplies = awards ? awardedSoFar + 1 : awardedSoFar;
+        var depth = 1;
+        var reaction = depth + 1 == branchDepth ? CommenterReaction : null;
         return new ThreadReply(
             replyId,
             commentId,

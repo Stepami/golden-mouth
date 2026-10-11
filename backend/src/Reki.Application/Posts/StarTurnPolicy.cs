@@ -10,7 +10,7 @@ public static class StarTurnPolicy
 {
     public static bool IsHateEnabled(PlayerProfile player, GameBalance balance, DateTimeOffset now)
     {
-        return balance.Worlds.TryGetValue(player.World.Value, out WorldBalance? world) &&
+        return balance.Worlds.TryGetValue(player.World.Value, out var world) &&
             player.Subscribers >= world.HateFrom && player.Settings.Drama != "off" &&
             (player.HateDisabledUntilUtc is null || player.HateDisabledUntilUtc <= now);
     }

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
-using NSubstitute.Core;
 using Reki.Application.Telemetry;
 using Reki.Domain.Telemetry;
 using Reki.Tests.Common;
@@ -14,7 +13,7 @@ public sealed class ProductTelemetryTests
     public async Task TrackSubmission_ValidEvent_AddsSafeProductAttributesAsync()
     {
         // Arrange
-        ILogger<ProductTelemetry> logger = Substitute.For<ILogger<ProductTelemetry>>();
+        var logger = Substitute.For<ILogger<ProductTelemetry>>();
         var telemetry = new ProductTelemetry(logger, new FakeTimeProvider());
         var submission = new AnalyticsSubmission(
             SessionId.From("session-1"),
@@ -37,7 +36,7 @@ public sealed class ProductTelemetryTests
         telemetry.TrackSubmission(TestGameData.CreatePlayer(), submission);
 
         // Assert
-        ICall scopeCall = logger.ReceivedCalls().Single(call =>
+        var scopeCall = logger.ReceivedCalls().Single(call =>
             call.GetMethodInfo().Name == nameof(ILogger.BeginScope));
         var attributes = scopeCall.GetArguments()[0] as IReadOnlyDictionary<string, object?>
             ?? throw new InvalidOperationException("The product telemetry scope was not structured.");

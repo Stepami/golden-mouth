@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Contracts.Posts;
@@ -11,7 +12,7 @@ namespace Reki.Application.Posts;
 public sealed class AddReplyHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     PlayerReader playerReader)
     : IRequestHandler<AddReplyCommand, ReplyResponse>
 {
@@ -19,37 +20,37 @@ public sealed class AddReplyHandler(
         AddReplyCommand request,
         CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        PlayerProfile player = await playerReader.GetAsync(
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var player = await playerReader.GetAsync(
             telegramUserId,
             cancellationToken);
-        GamePost post = await store.GetPostAsync(
+        var post = await store.GetPostAsync(
             player.Id,
             request.PostId,
             cancellationToken) ?? throw new ResourceNotFoundException("Post not found.");
 
-        ThreadReply? existing = post.FindReply(request.ReplyId);
+        var existing = post.FindReply(request.ReplyId);
         if (existing is not null)
         {
             return Map(existing);
         }
 
-        bool targetExists = post.Comments.Any(comment =>
+        var targetExists = post.Comments.Any(comment =>
             comment.Id == request.TargetCommentId && !comment.Me);
         if (!targetExists)
         {
             throw new ResourceNotFoundException("Comment not found.");
         }
 
-        ThreadReply reply = ThreadReplyPolicy.CreateReply(
+        var reply = ThreadReplyPolicy.CreateReply(
             post,
             request.ReplyId,
             CommentId.New(),
             request.TargetCommentId,
             player.Subscribers,
-            balance.Thread.BonusReplies,
-            balance.Thread.SubscriberBonus,
-            balance.Thread.BranchDepth);
+            balance.Value.Thread.BonusReplies,
+            balance.Value.Thread.SubscriberBonus,
+            balance.Value.Thread.BranchDepth);
         var comment = new GameComment(
             reply.CommentId,
             player.Name,
@@ -59,10 +60,10 @@ public sealed class AddReplyHandler(
             false,
             true,
             false);
-        PlayerProfile? updated = reply.BonusAwarded > 0
+        var updated = reply.BonusAwarded > 0
             ? player.AwardThreadBonus(reply.BonusAwarded)
             : null;
-        bool added = await store.TryAddThreadReplyAsync(
+        var added = await store.TryAddThreadReplyAsync(
             player.Id,
             request.PostId,
             reply,
@@ -84,7 +85,7 @@ public sealed class AddReplyHandler(
             reply.CommentId.Value,
             reply.BonusAwarded,
             reply.AwardedReplies,
-            balance.Thread.BonusReplies,
+            balance.Value.Thread.BonusReplies,
             reply.SubscriberTotal,
             reply.Reaction);
 }

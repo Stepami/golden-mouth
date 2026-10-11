@@ -14,7 +14,7 @@ public sealed class GetFriendsHandler(
         GetFriendsQuery request,
         CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         _ = await playerReader.GetAsync(telegramUserId, cancellationToken);
         return [];
     }

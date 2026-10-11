@@ -31,7 +31,7 @@ public sealed class HealthController(HealthCheckService healthCheckService) : Co
         Func<HealthCheckRegistration, bool> predicate,
         CancellationToken cancellationToken)
     {
-        HealthReport report = await healthCheckService.CheckHealthAsync(
+        var report = await healthCheckService.CheckHealthAsync(
             predicate,
             cancellationToken);
 

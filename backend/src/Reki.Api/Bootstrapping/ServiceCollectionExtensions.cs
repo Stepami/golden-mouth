@@ -1,7 +1,7 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.Extensions.Options;
 using Reki.Api.Common.Errors;
 using Reki.Api.Mapping;
 using Reki.Api.OpenApi;
@@ -20,6 +20,8 @@ internal static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        services.AddOptions<GameBalance>().ValidateOnStart();
+        services.AddTransient<IOptionsFactory<GameBalance>, GameBalanceOptionsFactory>();
         services.AddMediator(options =>
         {
             options.Assemblies = [typeof(ApplicationAssemblyMarker)];
@@ -59,7 +61,7 @@ internal static class ServiceCollectionExtensions
     {
         IJsonTypeInfoResolver resolver = ApiJsonSerializerContext.Default;
         options.TypeInfoResolverChain.Insert(0, resolver);
-        foreach (JsonConverter converter in ApiJsonSerializerContext.Default.Options.Converters)
+        foreach (var converter in ApiJsonSerializerContext.Default.Options.Converters)
         {
             options.Converters.Add(converter);
         }

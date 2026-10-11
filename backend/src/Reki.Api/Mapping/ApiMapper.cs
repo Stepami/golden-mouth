@@ -25,7 +25,7 @@ public sealed partial class ApiMapper
 {
     public PlayerResponse MapPlayer(PlayerView source)
     {
-        PlayerProfile player = source.Player;
+        var player = source.Player;
         IReadOnlyDictionary<ContractSkillId, SkillResponse> skills = player.Skills.ToDictionary(
             item => Enum.Parse<ContractSkillId>(item.Key.Value, true),
             item => MapSkill(item.Value));
@@ -71,7 +71,7 @@ public sealed partial class ApiMapper
 
     public DmResponse MapDirectMessages(DirectMessageView view)
     {
-        StarPersona persona = view.Persona;
+        var persona = view.Persona;
         StarResponse star = new(persona.Id, persona.Name, persona.Role, persona.Trait, persona.About, view.Relation);
         return new DmResponse(
             star,

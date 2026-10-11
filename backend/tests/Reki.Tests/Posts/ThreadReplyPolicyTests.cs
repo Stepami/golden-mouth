@@ -13,10 +13,10 @@ public sealed class ThreadReplyPolicyTests
     public async Task CreateReply_FirstReply_ReturnsAwardedOutcomeAsync()
     {
         // Arrange
-        GamePost post = CreatePost([]);
+        var post = CreatePost([]);
 
         // Act
-        ThreadReply reply = ThreadReplyPolicy.CreateReply(post, "key", ReplyComment, Target, 100, 3, 9, 2);
+        var reply = ThreadReplyPolicy.CreateReply(post, "key", ReplyComment, Target, 100, 3, 9, 2);
 
         // Assert
         await Assert.That(reply.BonusAwarded).IsEqualTo(9);
@@ -29,7 +29,7 @@ public sealed class ThreadReplyPolicyTests
     public async Task CreateReply_AfterConfiguredLimit_ReturnsUnchangedProgressAsync()
     {
         // Arrange
-        GamePost post = CreatePost(
+        var post = CreatePost(
         [
             CreateStoredReply("a", 1),
             CreateStoredReply("b", 2),
@@ -37,7 +37,7 @@ public sealed class ThreadReplyPolicyTests
         ]);
 
         // Act
-        ThreadReply reply = ThreadReplyPolicy.CreateReply(post, "d", ReplyComment, Target, 130, 3, 9, 2);
+        var reply = ThreadReplyPolicy.CreateReply(post, "d", ReplyComment, Target, 130, 3, 9, 2);
 
         // Assert
         await Assert.That(reply.BonusAwarded).IsEqualTo(0);
@@ -49,10 +49,10 @@ public sealed class ThreadReplyPolicyTests
     public async Task CreateReply_WhenBranchDepthIsOne_ReturnsNoReactionAsync()
     {
         // Arrange
-        GamePost post = CreatePost([]);
+        var post = CreatePost([]);
 
         // Act
-        ThreadReply reply = ThreadReplyPolicy.CreateReply(post, "key", ReplyComment, Target, 100, 3, 9, 1);
+        var reply = ThreadReplyPolicy.CreateReply(post, "key", ReplyComment, Target, 100, 3, 9, 1);
 
         // Assert
         await Assert.That(reply.Reaction).IsNull();

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Telemetry;
@@ -10,7 +11,7 @@ namespace Reki.Application.Social;
 
 public sealed class ChallengeLifecycle(
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     GameDay gameDay,
     TimeProvider timeProvider,
     ProductTelemetry analytics)
@@ -25,9 +26,9 @@ public sealed class ChallengeLifecycle(
             throw new RequestConflictException("A player cannot challenge their own channel.");
         }
 
-        PlayerProfile friend = (await store.GetPlayerAsync(friendId, cancellationToken)
-                                ?? throw new ResourceNotFoundException("Friend not found.")).EnsureDefaults();
-        GameChallenge? pending = await store.GetPendingChallengeAsync(
+        var friend = (await store.GetPlayerAsync(friendId, cancellationToken)
+                      ?? throw new ResourceNotFoundException("Friend not found.")).EnsureDefaults();
+        var pending = await store.GetPendingChallengeAsync(
             player.Id,
             friendId,
             cancellationToken);
@@ -44,12 +45,12 @@ public sealed class ChallengeLifecycle(
 
         if (pending is null)
         {
-            GameChallenge invitation = GameChallenge.CreatePending(
+            var invitation = GameChallenge.CreatePending(
                 player.Id,
                 friendId,
                 timeProvider.GetUtcNow(),
-                balance.Challenge.Days,
-                balance.Challenge.MinimumPosts);
+                balance.Value.Challenge.Days,
+                balance.Value.Challenge.MinimumPosts);
             if (!await store.TryInsertChallengeAsync(invitation, cancellationToken))
             {
                 throw new RequestConflictException("The challenge invitation could not be created.");
@@ -58,7 +59,7 @@ public sealed class ChallengeLifecycle(
             return;
         }
 
-        GameChallenge active = pending.Accept(player.Id, gameDay.PeriodStart);
+        var active = pending.Accept(player.Id, gameDay.PeriodStart);
         if (!await store.TryReplaceChallengeAsync(active, pending.Version, cancellationToken))
         {
             throw new RequestConflictException("The challenge state changed while accepting it.");
@@ -86,20 +87,20 @@ public sealed class ChallengeLifecycle(
         PlayerId playerId,
         CancellationToken cancellationToken)
     {
-        GameChallenge? challenge = await store.GetActiveChallengeAsync(playerId, cancellationToken);
+        var challenge = await store.GetActiveChallengeAsync(playerId, cancellationToken);
         if (challenge is null)
         {
             return null;
         }
 
-        DateTimeOffset periodStart = gameDay.PeriodStart;
+        var periodStart = gameDay.PeriodStart;
         if (challenge.IsFinished(periodStart))
         {
             await FinalizeAsync(challenge, periodStart, cancellationToken);
             return null;
         }
 
-        PlayerProfile rival = (await store.GetPlayerAsync(
+        var rival = (await store.GetPlayerAsync(
                 challenge.GetRival(playerId),
                 cancellationToken) ?? throw new ResourceNotFoundException("Challenge rival not found."))
             .EnsureDefaults();
@@ -111,20 +112,20 @@ public sealed class ChallengeLifecycle(
         GamePost post,
         CancellationToken cancellationToken)
     {
-        GameChallenge? challenge = await store.GetActiveChallengeAsync(playerId, cancellationToken);
+        var challenge = await store.GetActiveChallengeAsync(playerId, cancellationToken);
         if (challenge is null)
         {
             return;
         }
 
-        DateTimeOffset periodStart = gameDay.PeriodStart;
+        var periodStart = gameDay.PeriodStart;
         if (challenge.IsFinished(periodStart))
         {
             await FinalizeAsync(challenge, periodStart, cancellationToken);
             return;
         }
 
-        GameChallenge updated = challenge.RecordPost(playerId, post);
+        var updated = challenge.RecordPost(playerId, post);
         if (await store.TryReplaceChallengeAsync(updated, challenge.Version, cancellationToken))
         {
             return;
@@ -138,8 +139,8 @@ public sealed class ChallengeLifecycle(
         DateTimeOffset periodStart,
         CancellationToken cancellationToken)
     {
-        GameChallenge completed = challenge.Complete();
-        bool replaced = await store.TryReplaceChallengeAsync(
+        var completed = challenge.Complete();
+        var replaced = await store.TryReplaceChallengeAsync(
             completed,
             challenge.Version,
             cancellationToken);
@@ -154,13 +155,13 @@ public sealed class ChallengeLifecycle(
             return;
         }
 
-        PlayerId winnerId = completed.WinnerId.Value;
-        PlayerId loserId = completed.GetRival(winnerId);
-        DateTimeOffset bonusUntil = periodStart.AddDays(balance.ChallengeWinBonusDays);
+        var winnerId = completed.WinnerId.Value;
+        var loserId = completed.GetRival(winnerId);
+        var bonusUntil = periodStart.AddDays(balance.Value.ChallengeWinBonusDays);
         await UpdatePlayerAsync(
             winnerId,
             profile => profile.ApplyChallengeWinBonus(
-                balance.ChallengeWinBonusPerDay,
+                balance.Value.ChallengeWinBonusPerDay,
                 bonusUntil),
             cancellationToken);
         await UpdatePlayerAsync(
@@ -190,10 +191,10 @@ public sealed class ChallengeLifecycle(
         Func<PlayerProfile, PlayerProfile> update,
         CancellationToken cancellationToken)
     {
-        PlayerProfile current = (await store.GetPlayerAsync(playerId, cancellationToken)
-                                 ?? throw new ResourceNotFoundException("Challenge player not found."))
+        var current = (await store.GetPlayerAsync(playerId, cancellationToken)
+                       ?? throw new ResourceNotFoundException("Challenge player not found."))
             .EnsureDefaults();
-        PlayerProfile updated = update(current);
+        var updated = update(current);
         if (ReferenceEquals(current, updated) ||
             await store.TryReplacePlayerAsync(updated, current.Version, cancellationToken))
         {

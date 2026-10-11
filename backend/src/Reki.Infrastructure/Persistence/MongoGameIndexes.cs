@@ -10,54 +10,55 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Persistence;
 
-internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
+internal sealed class MongoGameIndexes(MongoCompositionRoot compositionRoot) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        IMongoCollection<PlayerProfile> players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
-        IMongoCollection<GamePost> posts = database.GetCollection<GamePost>(MongoCollections.Posts);
-        IMongoCollection<Publication> publications = database.GetCollection<Publication>(MongoCollections.Publications);
-        IMongoCollection<StarConversation> memories = database.GetCollection<StarConversation>(MongoCollections.StarsMemory);
-        IMongoCollection<DailyGameEvent> events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
-        IMongoCollection<GameChallenge> challenges = database.GetCollection<GameChallenge>(MongoCollections.Challenges);
-        IMongoCollection<WorldRules> worlds = database.GetCollection<WorldRules>(MongoCollections.Worlds);
+        var database = compositionRoot.MongoDatabase;
+        var players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
+        var posts = database.GetCollection<GamePost>(MongoCollections.Posts);
+        var publications = database.GetCollection<Publication>(MongoCollections.Publications);
+        var memories = database.GetCollection<StarConversation>(MongoCollections.StarsMemory);
+        var events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
+        var challenges = database.GetCollection<GameChallenge>(MongoCollections.Challenges);
+        var worlds = database.GetCollection<WorldRules>(MongoCollections.Worlds);
 
-        IndexKeysDefinition<PlayerProfile> telegramKey = Builders<PlayerProfile>.IndexKeys
+        var telegramKey = Builders<PlayerProfile>.IndexKeys
             .Ascending(item => item.TelegramUserId);
-        IndexKeysDefinition<PlayerProfile> playerWorldKey = Builders<PlayerProfile>.IndexKeys
+        var playerWorldKey = Builders<PlayerProfile>.IndexKeys
             .Ascending(item => item.World);
-        IndexKeysDefinition<GamePost> postKeys = Builders<GamePost>.IndexKeys
+        var postKeys = Builders<GamePost>.IndexKeys
             .Ascending(item => item.PlayerId)
             .Descending(item => item.CreatedAtUtc);
-        IndexKeysDefinition<StarConversation> memoryKeys = Builders<StarConversation>.IndexKeys
+        var memoryKeys = Builders<StarConversation>.IndexKeys
             .Ascending(item => item.PlayerId)
             .Ascending(item => item.StarId);
-        IndexKeysDefinition<DailyGameEvent> eventKeys = Builders<DailyGameEvent>.IndexKeys
+        var eventKeys = Builders<DailyGameEvent>.IndexKeys
             .Ascending(item => item.PlayerId)
             .Descending(item => item.DayStartedAtUtc);
         await DropLegacyChallengeIndexAsync(challenges, cancellationToken);
-        IndexKeysDefinition<GameChallenge> challengeKey = Builders<GameChallenge>.IndexKeys
+        var challengeKey = Builders<GameChallenge>.IndexKeys
             .Ascending(item => item.Participants);
-        IndexKeysDefinition<WorldRules> worldKeys = Builders<WorldRules>.IndexKeys
+        var worldKeys = Builders<WorldRules>.IndexKeys
             .Ascending(item => item.PlayerId)
             .Ascending(item => item.WorldId);
 
-        CreateIndexModel<PlayerProfile> telegramIndex = IndexFactory.Create(
+        var telegramIndex = IndexFactory.Create(
             telegramKey,
             "ux_players_telegram_user",
             unique: true);
-        CreateIndexModel<PlayerProfile> playerWorldIndex = IndexFactory.Create(
+        var playerWorldIndex = IndexFactory.Create(
             playerWorldKey,
             "ix_players_world");
-        CreateIndexModel<GamePost> postIndex = IndexFactory.Create(postKeys, "ix_posts_player_created");
+        var postIndex = IndexFactory.Create(postKeys, "ix_posts_player_created");
         var publicationExpiryIndex = new CreateIndexModel<Publication>(
             Builders<Publication>.IndexKeys.Ascending(item => item.ExpiresAtUtc),
             new CreateIndexOptions { Name = "ix_publications_expiry", ExpireAfter = TimeSpan.Zero });
-        CreateIndexModel<StarConversation> memoryIndex = IndexFactory.Create(
+        var memoryIndex = IndexFactory.Create(
             memoryKeys,
             "ux_stars_memory_player_star",
             unique: true);
-        CreateIndexModel<DailyGameEvent> eventIndex = IndexFactory.Create(eventKeys, "ix_events_player_day");
+        var eventIndex = IndexFactory.Create(eventKeys, "ix_events_player_day");
         var challengeOptions = new CreateIndexOptions<GameChallenge>
         {
             Name = "ux_challenges_active_participants",
@@ -66,7 +67,7 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
                 .Eq(item => item.Status, ChallengeStatus.Active),
         };
         var challengeIndex = new CreateIndexModel<GameChallenge>(challengeKey, challengeOptions);
-        CreateIndexModel<WorldRules> worldIndex = IndexFactory.Create(
+        var worldIndex = IndexFactory.Create(
             worldKeys,
             "ux_worlds_player_world",
             unique: true);
@@ -116,10 +117,10 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
         IMongoCollection<GameChallenge> challenges,
         CancellationToken cancellationToken)
     {
-        using IAsyncCursor<BsonDocument> cursor = await challenges.Indexes.ListAsync(cancellationToken);
+        using var cursor = await challenges.Indexes.ListAsync(cancellationToken);
         IReadOnlyList<BsonDocument> indexes = await cursor.ToListAsync(cancellationToken);
         if (indexes.Any(index =>
-            index.TryGetValue("name", out BsonValue? name) &&
+            index.TryGetValue("name", out var name) &&
             name.AsString == "ux_challenges_active_player"))
         {
             await challenges.Indexes.DropOneAsync(
@@ -134,9 +135,9 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
         string indexName,
         CancellationToken cancellationToken)
     {
-        IMongoCollection<BsonDocument> collection = database.GetCollection<BsonDocument>(collectionName);
-        IndexKeysDefinition<BsonDocument> keys = Builders<BsonDocument>.IndexKeys.Ascending(field);
-        CreateIndexModel<BsonDocument> index = IndexFactory.Create(keys, indexName);
+        var collection = compositionRoot.MongoDatabase.GetCollection<BsonDocument>(collectionName);
+        var keys = Builders<BsonDocument>.IndexKeys.Ascending(field);
+        var index = IndexFactory.Create(keys, indexName);
         return collection.Indexes.CreateOneAsync(index, cancellationToken: cancellationToken);
     }
 

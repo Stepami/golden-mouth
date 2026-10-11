@@ -15,9 +15,9 @@ public sealed class GetPlayerHandler(
         GetPlayerQuery request,
         CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        PlayerProfile player = await playerReader.GetAsync(telegramUserId, cancellationToken);
-        PlayerProfile normalized = gameDay.Normalize(player);
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var normalized = gameDay.Normalize(player);
 
         if (!ReferenceEquals(player, normalized) && !await store.TryReplacePlayerAsync(
             normalized,

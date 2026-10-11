@@ -10,7 +10,7 @@ public static class WorldRulesDefaults
 
     public static WorldRules Create(PlayerId playerId, WorldId worldId)
     {
-        string title = worldId.Value switch
+        var title = worldId.Value switch
         {
             "stage" => "Сцена",
             "academy" => "Академия",
@@ -18,7 +18,7 @@ public static class WorldRulesDefaults
             "stream" => "Стрим",
             _ => "Свой мир",
         };
-        string description = worldId.Value switch
+        var description = worldId.Value switch
         {
             "stage" => "Айдол-агентство: трейни, дебют, камбэки и фансайты.",
             "academy" => "Школьная академия: клубы, соперники и фестиваль.",
@@ -27,7 +27,7 @@ public static class WorldRulesDefaults
             _ => "Мир, который создаёт игрок.",
         };
 
-        IReadOnlyList<WorldRule> rules = worldId.Value switch
+        var rules = worldId.Value switch
         {
             "stage" => Lock(
                 CreateStarRule(worldId),

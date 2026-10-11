@@ -52,8 +52,8 @@ internal static class StarToolCallParser
 
     private static IStarAction Parse(FunctionCallContent call)
     {
-        IDictionary<string, object?> arguments = call.Arguments
-            ?? throw new InvalidOperationException("Tool arguments are required.");
+        var arguments = call.Arguments
+                        ?? throw new InvalidOperationException("Tool arguments are required.");
         return call.Name switch
         {
             "react" => ParseReaction(arguments),
@@ -89,7 +89,7 @@ internal static class StarToolCallParser
 
     private static string GetTone(IDictionary<string, object?> arguments)
     {
-        string tone = GetString(arguments, "tone", 10, allowEmpty: false);
+        var tone = GetString(arguments, "tone", 10, allowEmpty: false);
         return tone is "support" or "critique" or "hate"
             ? tone
             : throw new InvalidOperationException("The model returned an invalid comment tone.");
@@ -115,7 +115,7 @@ internal static class StarToolCallParser
     private static StarEventAction ParseEvent(IDictionary<string, object?> arguments)
     {
         EnsureExactKeys(arguments, ["type", "text"]);
-        string type = GetString(arguments, "type", 20, allowEmpty: false);
+        var type = GetString(arguments, "type", 20, allowEmpty: false);
         if (type is not ("collab" or "rumor" or "chance" or "hate"))
         {
             throw new InvalidOperationException("The model returned an unknown event type.");
@@ -128,25 +128,25 @@ internal static class StarToolCallParser
         IDictionary<string, object?> arguments,
         string name)
     {
-        if (!arguments.TryGetValue(name, out object? value) ||
+        if (!arguments.TryGetValue(name, out var value) ||
             value is not JsonElement { ValueKind: JsonValueKind.Array } element)
         {
             throw new InvalidOperationException("The model returned invalid reasons.");
         }
 
         var reasons = new List<StarReason>();
-        foreach (JsonElement item in element.EnumerateArray())
+        foreach (var item in element.EnumerateArray())
         {
             if (item.ValueKind != JsonValueKind.Object)
             {
                 throw new InvalidOperationException("The model returned an invalid reason.");
             }
 
-            JsonProperty[] properties = item.EnumerateObject().ToArray();
+            var properties = item.EnumerateObject().ToArray();
             if (properties.Length != 2 ||
                 properties.Any(property => property.Name is not ("icon" or "label")) ||
-                !item.TryGetProperty("icon", out JsonElement iconElement) ||
-                !item.TryGetProperty("label", out JsonElement labelElement))
+                !item.TryGetProperty("icon", out var iconElement) ||
+                !item.TryGetProperty("label", out var labelElement))
             {
                 throw new InvalidOperationException("The model returned an invalid reason shape.");
             }
@@ -170,12 +170,12 @@ internal static class StarToolCallParser
         int maxLength,
         bool allowEmpty)
     {
-        if (!arguments.TryGetValue(name, out object? value))
+        if (!arguments.TryGetValue(name, out var value))
         {
             throw new InvalidOperationException("A required tool argument is missing.");
         }
 
-        string? text = value switch
+        var text = value switch
         {
             string stringValue => stringValue,
             JsonElement { ValueKind: JsonValueKind.String } element => element.GetString(),
@@ -186,7 +186,7 @@ internal static class StarToolCallParser
 
     private static string GetJsonString(JsonElement element, int maxLength, bool allowEmpty)
     {
-        string? text = element.ValueKind == JsonValueKind.String ? element.GetString() : null;
+        var text = element.ValueKind == JsonValueKind.String ? element.GetString() : null;
         return ValidateString(text, maxLength, allowEmpty);
     }
 
@@ -202,7 +202,7 @@ internal static class StarToolCallParser
 
     private static double GetScore(IDictionary<string, object?> arguments, string name)
     {
-        if (!arguments.TryGetValue(name, out object? value))
+        if (!arguments.TryGetValue(name, out var value))
         {
             throw new InvalidOperationException("A required score is missing.");
         }
@@ -212,7 +212,7 @@ internal static class StarToolCallParser
             double doubleValue => doubleValue,
             float floatValue => floatValue,
             decimal decimalValue => (double)decimalValue,
-            JsonElement { ValueKind: JsonValueKind.Number } element when element.TryGetDouble(out double number) => number,
+            JsonElement { ValueKind: JsonValueKind.Number } element when element.TryGetDouble(out var number) => number,
             _ => null,
         };
         if (score is null or < 0 or > 1 || double.IsNaN(score.Value))
@@ -225,7 +225,7 @@ internal static class StarToolCallParser
 
     private static bool GetBoolean(IDictionary<string, object?> arguments, string name)
     {
-        if (!arguments.TryGetValue(name, out object? value))
+        if (!arguments.TryGetValue(name, out var value))
         {
             throw new InvalidOperationException("A required boolean is missing.");
         }

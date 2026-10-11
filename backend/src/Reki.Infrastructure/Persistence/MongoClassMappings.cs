@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using MongoDB.Bson.Serialization;
 using Reki.Application.Posts;
 using Reki.Domain.Events;
@@ -11,6 +12,10 @@ namespace Reki.Infrastructure.Persistence;
 
 internal static class MongoClassMappings
 {
+    // BSON mappings must be registered once before any infrastructure code uses them.
+#pragma warning disable CA2255
+    [ModuleInitializer]
+#pragma warning restore CA2255
     public static void Register()
     {
         BsonSerializer.TryRegisterSerializer(

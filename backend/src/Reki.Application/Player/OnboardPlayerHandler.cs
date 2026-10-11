@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Social;
@@ -10,7 +11,7 @@ namespace Reki.Application.Player;
 public sealed class OnboardPlayerHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     GameDay gameDay,
     PlayerReader playerReader,
     TimeProvider timeProvider) : IRequestHandler<OnboardPlayerCommand, PlayerView>
@@ -19,27 +20,27 @@ public sealed class OnboardPlayerHandler(
         OnboardPlayerCommand request,
         CancellationToken cancellationToken)
     {
-        TelegramUserId telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         _ = StarCatalog.Require(request.World, request.Star);
-        PlayerProfile? existing = await store.GetPlayerAsync(telegramUserId, cancellationToken);
+        var existing = await store.GetPlayerAsync(telegramUserId, cancellationToken);
         if (existing is null)
         {
-            PlayerProfile? inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
-            PlayerProfile? updatedInviter = inviter is null
+            var inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
+            var updatedInviter = inviter is null
                 ? null
                 : gameDay.Normalize(inviter.EnsureDefaults())
-                    .GrantInviteBonus(balance.InviteBonusBoth, balance.InviteBonusMaxPerDay);
+                    .GrantInviteBonus(balance.Value.InviteBonusBoth, balance.Value.InviteBonusMaxPerDay);
             if (ReferenceEquals(updatedInviter, inviter))
             {
                 updatedInviter = null;
             }
 
-            PlayerProfile created =
-                CreatePlayer(request, telegramUserId, gameDay.PeriodStart, balance.Growth.StartingSubscribers) with
+            var created =
+                CreatePlayer(request, telegramUserId, gameDay.PeriodStart, balance.Value.Growth.StartingSubscribers) with
                 {
                     InvitedBy = inviter?.Id,
                     InvitedAtUtc = inviter is null ? null : timeProvider.GetUtcNow(),
-                    FirstPostInviteBonus = inviter is null ? 0 : balance.InviteBonusBoth,
+                    FirstPostInviteBonus = inviter is null ? 0 : balance.Value.InviteBonusBoth,
                 };
             if (await store.TryCreatePlayerAsync(
                     created,
@@ -52,8 +53,8 @@ public sealed class OnboardPlayerHandler(
         }
         else
         {
-            PlayerProfile normalized = gameDay.Normalize(existing.EnsureDefaults());
-            PlayerProfile updated = UpdatePlayer(normalized, request);
+            var normalized = gameDay.Normalize(existing.EnsureDefaults());
+            var updated = UpdatePlayer(normalized, request);
             if (await store.TryReplacePlayerAsync(updated, existing.Version, cancellationToken))
             {
                 return playerReader.CreateView(updated);
@@ -113,11 +114,11 @@ public sealed class OnboardPlayerHandler(
         PlayerProfile player,
         OnboardPlayerCommand request)
     {
-        IReadOnlyList<AchievementProgress> achievements = player.Achievements.Any(item =>
+        var achievements = player.Achievements.Any(item =>
             item.WorldId == request.World)
             ? player.Achievements
             : [.. player.Achievements, .. AchievementCatalog.Create(request.World)];
-        IReadOnlyList<StarRelationProgress> relations = player.StarRelations.Any(item =>
+        var relations = player.StarRelations.Any(item =>
             item.StarId == request.Star)
             ? player.StarRelations
             :
@@ -146,14 +147,14 @@ public sealed class OnboardPlayerHandler(
         TelegramUserId telegramUserId,
         CancellationToken cancellationToken)
     {
-        string? code = request.ReferralCode;
+        var code = request.ReferralCode;
         if (code is null || !code.StartsWith("ref_", StringComparison.Ordinal) ||
             !Guid.TryParseExact(code[4..], "N", out _))
         {
             return null;
         }
 
-        PlayerProfile? inviter = await store.GetPlayerAsync(PlayerId.From(code[4..]), cancellationToken);
+        var inviter = await store.GetPlayerAsync(PlayerId.From(code[4..]), cancellationToken);
         return inviter is not null && inviter.TelegramUserId != telegramUserId
             ? inviter
             : null;

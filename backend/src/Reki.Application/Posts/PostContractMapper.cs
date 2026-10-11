@@ -61,7 +61,7 @@ internal static class PostContractMapper
 
     public static IReadOnlyList<LiveEvent> MapLiveEvents(PublishedPost published)
     {
-        GameComment comment = published.Post.Comments[0];
+        var comment = published.Post.Comments[0];
         return
         [
             new ViewsLiveEvent(Math.Min(48, published.Post.Views)),
@@ -83,8 +83,8 @@ internal static class PostContractMapper
 
     private static PostResultResponse MapResult(PublishedPost source)
     {
-        GamePost post = source.Post;
-        GameComment? bestComment = post.Comments.FirstOrDefault();
+        var post = source.Post;
+        var bestComment = post.Comments.FirstOrDefault();
         return new PostResultResponse(
             post.Id.Value,
             post.SubscriberDelta,
