@@ -1,13 +1,10 @@
-WITH players AS (SELECT player_id, min(_timestamp) AS first_seen, max(_timestamp) AS last_seen,
+WITH players AS (SELECT player_id, min(_timestamp) AS first_seen,
  CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,
- CASE WHEN count(DISTINCT nullif(age_group, '')) > 1 THEN 'multi-age-group' ELSE coalesce(max(nullif(age_group, '')), 'unknown') END AS age_group,
- CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform'
- ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform,
- max(CASE WHEN event_name = 'post_publish' THEN 1 ELSE 0 END) AS published,
- max(CASE WHEN event_name = 'post_result' THEN 1 ELSE 0 END) AS saw_result
-FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id),
- activity AS (SELECT DISTINCT player_id, floor(_timestamp / 86400000000) AS day FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),
- watermark AS (SELECT floor(max(_timestamp) / 86400000000) AS day FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '')
+ CASE WHEN count(DISTINCT CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END) > 1 THEN 'multi-age-group' ELSE coalesce(max(CASE WHEN age_group = '18+' THEN NULL ELSE nullif(age_group, '') END), CASE WHEN max(age_group) = '18+' THEN '18+ (legacy)' ELSE 'unknown' END) END AS age_group,
+ CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform' ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform
+ FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name NOT IN ('notification_sent', 'active_time') GROUP BY player_id),
+ activity AS (SELECT DISTINCT player_id, floor(_timestamp / 86400000000) AS day FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name NOT IN ('notification_sent', 'active_time')),
+ watermark AS (SELECT floor(max(_timestamp) / 86400000000) AS day FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' AND event_name NOT IN ('notification_sent', 'active_time'))
 SELECT to_timestamp_micros(floor(p.first_seen / 86400000000) * 86400000000) AS cohort_day,
  count(*) AS cohort_users,
  sum(CASE WHEN floor(p.first_seen / 86400000000) + 1 < w.day THEN 1 ELSE 0 END) AS eligible_d1,

@@ -168,48 +168,84 @@ def history_panel(*args, **kwargs):
 
 product_panels = [
     history_panel(
-        "summary", "Пользователи: total / MAU / WAU / DAU",
-        "Наблюдаемые игроки за 90 дней; не размер базы аккаунтов. MAU = последние 30×24ч, WAU = 7×24ч, DAU = UTC сегодня (неполный день) и вчера.",
-        sql("product-summary.sql"), "product", box(0, 0, 192, 12, 1), kind="table"),
+        "summary", "Исторические профили и stickiness",
+        "Уникальные ID профилей в истории (90d), включая удалённые. Пересоздание профиля даёт новый ID; это не число людей. MAU30/WAU7; DAU UTC. Stickiness = DAU вчера / MAU за 30 полных дней до сегодня. История короче 30 дней → предварительная оценка.",
+        sql("product-summary.sql"), "product", box(0, 0, 192, 14, 1), kind="table"),
     sql_panel(
-        "p1", "DAU по дням (UTC)",
-        "Уникальные real player_id; крайние дни выбранного периода могут быть неполными.",
-        sql("product-p1-dau.sql"), "product", box(0, 12, 96, 10, 2), kind="line"),
-    sql_panel(
-        "p2", "Первое появление в выбранном периоде",
-        "Первое наблюдаемое событие в диапазоне; не регистрации новых аккаунтов.",
-        sql("product-p2-new.sql"), "product", box(96, 12, 96, 10, 3), kind="bar"),
+        "p1", "Возвращается ли аудитория: DAU",
+        "Крайние дни диапазона неполные. Фоновые heartbeat и отправленные уведомления не считаются посещением.",
+        sql("product-p1-dau.sql"), "product", box(0, 14, 192, 12, 2), kind="line"),
     history_panel(
-        "segments", "Пользователи и публикации по сегментам",
-        "90 дней. Сегмент игрока по непустым значениям; несколько значений → multi-world / multi-age-group / multi-platform. unknown сохраняется. Строки разных измерений не складывать.",
-        sql("product-segments.sql"), "product", box(0, 22, 192, 26, 4), kind="table"),
+        "engagement", "Сколько играют и публикуют: 7 полных дней",
+        "Все/миры/возраст. Посты = серверный post_scored, не клики. Время — только active_time после нового релиза; NULL до измерений. Среднее/медиана минут на измеренный активный игроко-день, measured_player_days показывает покрытие.",
+        sql("product-engagement.sql"), "product", box(0, 26, 192, 28, 3), kind="table"),
     history_panel(
-        "p4", "Когорты: D1 / D7",
-        "Первое появление в 90 днях, точный день возврата UTC. Только дни до последнего дня телеметрии. NULL = окно ещё не завершено.",
-        sql("product-p4-retention.sql"), "product", box(0, 48, 192, 22, 5), kind="table"),
+        "posts-world", "Интенсивность публикаций по мирам, %",
+        "100% = активные игроко-дни мира за 7 полных UTC-дней. Нулевые публикации включены. Сравнивать вместе с числом игроков в таблице выше.",
+        sql("product-posts-world.sql"), "product", box(0, 54, 96, 18, 4), kind="stacked", breakdown="activity_bucket", values=['player_days_pct']),
     history_panel(
-        "p9", "Недельный churn: все и сегменты",
-        "Прокси неактивности: активен в предыдущие полные 7 UTC-дней, отсутствует в последние полные 7. NULL до 14 дней истории или при нулевом знаменателе. Не отмена подписки.",
-        sql("product-p9-churn.sql"), "product", box(0, 70, 192, 28, 6), kind="table"),
+        "posts-age", "Интенсивность публикаций по возрасту, %",
+        "100% = активные игроко-дни возрастного диапазона за 7 полных UTC-дней. 18+ (legacy) нельзя распределить задним числом.",
+        sql("product-posts-age_group.sql"), "product", box(96, 54, 96, 18, 5), kind="stacked", breakdown="activity_bucket", values=['player_days_pct']),
     history_panel(
-        "activation", "Активация: публикация → результат",
-        "Игроки с post_publish и post_result среди наблюдаемых за 90 дней. Это охват событий, не упорядоченная воронка первой сессии.",
-        sql("product-activation.sql"), "product", box(0, 98, 192, 12, 7), kind="table"),
-    sql_panel(
-        "p3", "Сессии и события",
-        "По выбранному периоду. Не все серверные события имеют session_id.",
-        sql("product-p3-sessions.sql"), "product", box(0, 110, 192, 12, 8), kind="line"),
-    sql_panel(
-        "p5", "События и охват игроков",
-        "Проверка полноты событий и продуктовой активности.",
-        sql("product-p5-events.sql"), "product", box(0, 122, 192, 32, 9), kind="table"),
+        "stickiness", "Как часто возвращаются: DAU / MAU по сегментам",
+        "Вчерашний DAU / MAU за 30 полных дней до сегодня. Не D1 retention. На короткой истории предварительно; знаменатель виден рядом.",
+        sql("product-stickiness.sql"), "product", box(0, 72, 192, 26, 6), kind="table"),
+    history_panel(
+        "progress-bars", "Доходят ли до 1 / 3 / 10 публикаций, %",
+        "Доля наблюдаемых игроков за 90d. Столбцы — отдельные пороги, не складываются. Когорты разного возраста: это охват прогресса, не причинное сравнение.",
+        sql("product-progress-bars.sql"), "product", box(0, 98, 192, 20, 7), kind="bar", breakdown="milestone", values=['users_pct']),
+    history_panel(
+        "progress", "Темп игры: публикации и первые награды",
+        "Медиана часов от первого наблюдения до третьего серверного поста только среди дошедших. Доли и база рядом; level_up = любой навык, card = любая награда. Не завершение всей игры.",
+        sql("product-progress.sql"), "product", box(0, 118, 192, 28, 8), kind="table"),
+    history_panel(
+        "p4", "Удержание когорт: D1 / D7",
+        "Возврат в точный день после первого наблюдения. Незавершённые окна исключены; NULL — ещё рано измерять.",
+        sql("product-p4-retention.sql"), "product", box(0, 146, 192, 22, 9), kind="table"),
+    history_panel(
+        "p9", "Недельная неактивность: все и сегменты",
+        "Активен в предыдущие 7 полных UTC-дней, отсутствует в последние 7. NULL до 14 дней истории / нулевой базы. Это не окончательный уход.",
+        sql("product-p9-churn.sql"), "product", box(0, 168, 192, 28, 10), kind="table"),
 ]
 
-product = {"org_id": "default", "request_body": {
-    "title": "Реки: продукт",
-    "description": "Total observed (90d), rolling MAU/WAU, UTC DAU, cohort D1/D7, weekly inactivity churn and segments. Summary/cohort panels use 90d; trends use selected range. Small samples; NULL means not yet measurable.",
-    "tabs": [{"tabId": "product", "name": "Продукт", "panels": product_panels}],
-}}
+# Current accounts are a database gauge, separate from historical pseudonymous profiles.
+for panel in product_panels:
+    panel["layout"]["y"] += 8
+    panel["layout"]["i"] += 1
+product_panels.insert(0, promql_panel(
+    "registered", "Сейчас зарегистрировано профилей",
+    "Прямой агрегат MongoDB, один профиль на Telegram-аккаунт. Обновление раз в минуту; данные появятся после релиза. Исторические ID ниже могут включать удалённые профили.",
+    "max(reki_players_registered)", "Текущие профили", box(0, 0, 192, 8, 1), kind="metric"))
+
+for panel in product_panels:
+    if panel["type"] in ("stacked", "bar"):
+        panel["config"].update({"unit": "percent", "y_axis_min": 0, "y_axis_max": 100})
+
+PRODUCT_LABELS = {
+    "segment": "Сегмент", "dimension": "Разрез", "observed_profiles_90d": "ID профилей в истории",
+    "telemetry_since_utc": "Начало истории", "mau_30d": "MAU · 30 дней", "wau_7d": "WAU · 7 дней",
+    "dau_today": "DAU · сегодня", "dau_yesterday": "DAU · вчера", "stickiness_yesterday_pct": "DAU/MAU · вчера, %",
+    "active_users": "Активные профили", "active_player_days": "Активные игроко-дни", "completed_posts": "Подтверждённые посты",
+    "posts_per_user_7d": "Постов / профиль за 7 дней", "posts_per_active_day": "Постов / активный день",
+    "measured_player_days": "Дней с замером времени", "avg_active_minutes": "Среднее минут / активный день",
+    "median_active_minutes": "Медиана минут / активный день", "mau_30d_yesterday": "MAU · база вчера",
+    "stickiness_pct": "DAU/MAU, %", "player_days_pct": "Доля активных дней, %", "users_pct": "Доля профилей, %",
+    "observed_users": "ID профилей · база", "first_post_users": "Дошли до 1 поста", "first_post_pct": "1 пост, %",
+    "third_post_users": "Дошли до 3 постов", "third_post_pct": "3 поста, %", "median_hours_to_3_posts": "Медиана часов до 3 постов",
+    "level_up_users": "Повысили навык", "level_up_pct": "Повысили навык, %", "card_users": "Получили награду", "card_pct": "Награда, %",
+    "cohort_day": "День первого наблюдения", "cohort_users": "Профилей в когорте", "eligible_d1": "Готовая база D1",
+    "returned_d1": "Вернулись D1", "retention_d1_pct": "D1, %", "eligible_d7": "Готовая база D7", "retention_d7_pct": "D7, %",
+    "eligible_users": "База прошлой недели", "inactive_users": "Не вернулись за неделю", "weekly_churn_pct": "Неактивны, %",
+    "day": "День", "dau": "Активные профили",
+}
+for panel in product_panels:
+    for query in panel["queries"]:
+        for axis_fields in ("x", "y", "breakdown"):
+            for field in query["fields"].get(axis_fields, []):
+                field["label"] = PRODUCT_LABELS.get(field["column"], field["label"])
+
+product = {"org_id": "default", "request_body": {"title": "Реки: продукт", "description": "Аудитория, stickiness, время игры, посты на игрока, распределения активности и темп прогресса; возврат D1/D7 и недельная неактивность. Публикации подтверждаются сервером. Время и новые возраста требуют релиза приложения.", "tabs": [{"tabId": "product", "name": "Продукт", "panels": product_panels}]}}
 
 # --- Технический дашборд -----------------------------------------------------
 tech_panels = [

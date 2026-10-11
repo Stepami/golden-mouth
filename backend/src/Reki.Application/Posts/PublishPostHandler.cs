@@ -168,7 +168,7 @@ public sealed class PublishPostHandler(
         ProductTelemetry analytics)
     {
         analytics.Track(
-            after.Id,
+            after,
             "post_scored",
             new Dictionary<string, string>
             {
@@ -185,7 +185,7 @@ public sealed class PublishPostHandler(
             if (progress.Level > previousLevel)
             {
                 analytics.Track(
-                    after.Id,
+                    after,
                     "level_up",
                     new Dictionary<string, string>
                     {
@@ -201,7 +201,7 @@ public sealed class PublishPostHandler(
         foreach (var achievement in earned)
         {
             analytics.Track(
-                after.Id,
+                after,
                 "card_earned",
                 new Dictionary<string, string> { ["card"] = achievement.Id });
         }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
+import { ageBand, type AgeBand } from '../app/ageBand'
 import { worldOf, worlds } from '../api/mock'
 import { contentOf } from '../api/worldContent'
 import type { Address, Drama, Player, WorldId } from '../api/types'
@@ -49,7 +50,8 @@ function Invite() {
 // 01-2: год рождения, согласие не отмечено заранее; младше 14 → 01-2b
 function Age() {
   const nav = useNav()
-  const years = Array.from({ length: 30 }, (_, i) => 2016 - i)
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: 91 }, (_, i) => currentYear - 10 - i)
   const [year, setYear] = useState(2010)
   const [agree, setAgree] = useState(false)
   const wheel = useRef<HTMLDivElement>(null)
@@ -76,7 +78,7 @@ function Age() {
         </Card>
         {!agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
       </div>
-      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 14 }); nav.push(age < 14 ? '01-2b_under14' : '01-3_world', { group: age < 18 ? '14-17' : '18+' }) }} />
+      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 14 }); nav.push(age < 14 ? '01-2b_under14' : '01-3_world', { group: age < 18 ? '14-17' : '18+', ageBand: ageBand(age) }) }} />
     </div>
   )
 }
@@ -190,7 +192,7 @@ function FirstStar() {
     setSaving(true); setError('')
     const p = nav.params as Record<string, string>
     try {
-      const pl = created.current ?? await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', world: p.world ?? 'stage', role: p.role ?? profile.roles[0], name: p.name ?? profile.name, handle: p.handle ?? profile.handle, address: p.address ?? 'nick', star: pick, referralCode: pendingReferral() })
+      const pl = created.current ?? await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', ageBand: p.ageBand as AgeBand | undefined, world: p.world ?? 'stage', role: p.role ?? profile.roles[0], name: p.name ?? profile.name, handle: p.handle ?? profile.handle, address: p.address ?? 'nick', star: pick, referralCode: pendingReferral() })
       created.current = pl
       clearReferral()
       const settings = { voice: p.voice ?? profile.voices[0], drama: (p.drama as Drama) ?? profile.drama }
