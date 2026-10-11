@@ -5,7 +5,7 @@ using Reki.Tests.Generated;
 namespace Reki.Tests.Common.Errors;
 
 [NotInParallel]
-[ClassDataSource<ApiFactory>(Shared = SharedType.PerTestSession)]
+[ClassDataSource<ApiFactory>]
 public sealed class ApiExceptionHandlerTests(ApiFactory factory)
 {
     [Test]

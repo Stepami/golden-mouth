@@ -5,39 +5,32 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
-using Testcontainers.MongoDb;
+using MongoDB.Driver;
 using TUnit.AspNetCore;
-using TUnit.Core.Interfaces;
 
 namespace Reki.Tests;
 
-public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncInitializer
+public sealed class ApiFactory : TestWebApplicationFactory<Program>
 {
-    private readonly MongoDbContainer _mongo = new MongoDbBuilder("mongo:8.0.32-noble")
-        .WithReplicaSet()
-        .Build();
+    [ClassDataSource<MongoFixture>(Shared = SharedType.PerTestSession)]
+    public required MongoFixture Mongo { get; init; }
+
+    [ClassDataSource<OpenAiStub>]
+    public required OpenAiStub Llm { get; init; }
 
     public string DatabaseName { get; } = $"reki_tests_{Guid.NewGuid():N}";
 
-    public string MongoConnectionString => _mongo.GetConnectionString();
-
-    public OpenAiStub Llm { get; } = new();
+    public string MongoConnectionString => Mongo.ConnectionString;
 
     public TestApiClient CreateApiClient(long? telegramUserId = null)
     {
         return new TestApiClient(CreateClient(), telegramUserId);
     }
 
-    public Task InitializeAsync()
-    {
-        return _mongo.StartAsync();
-    }
-
     public override async ValueTask DisposeAsync()
     {
         await base.DisposeAsync();
-        Llm.Dispose();
-        await _mongo.DisposeAsync();
+        await new MongoClient(MongoConnectionString).DropDatabaseAsync(DatabaseName, CancellationToken.None);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
