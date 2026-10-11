@@ -42,21 +42,6 @@ public sealed class SkillProgressTests
     }
 
     [Test]
-    public async Task AddExperience_LegacyProgressWithoutExperience_InfersCurrentExperienceAsync()
-    {
-        // Arrange
-        var legacy = new SkillProgress(2, 0.5, 0);
-
-        // Act
-        var result = legacy.AddExperience(6, Thresholds);
-
-        // Assert
-        await Assert.That(result.Experience).IsEqualTo(20);
-        await Assert.That(result.Level).IsEqualTo(3);
-        await Assert.That(result.Progress).IsEqualTo(0);
-    }
-
-    [Test]
     public async Task AddExperience_AboveMaximumThreshold_CapsAtMaximumAsync()
     {
         // Arrange

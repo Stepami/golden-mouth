@@ -1,5 +1,3 @@
-using Reki.Domain.Worlds;
-
 namespace Reki.Domain.Player;
 
 public static class AchievementCatalog
@@ -17,22 +15,22 @@ public static class AchievementCatalog
     public const string Challenge = "challenge";
     public const string Rematch = "rematch";
 
-    public static IReadOnlyList<AchievementProgress> Create(WorldId worldId)
+    public static IReadOnlyList<AchievementProgress> Create()
     {
         return
         [
-            new(worldId, StarCard, "👑", "Карточка звезды", false),
-            new(worldId, StarStory, "💬", "История звезды", false),
-            new(worldId, FirstViral, "🌊", "Первый залёт", false),
-            new(worldId, HateSurvived, "🌩", "Хейт пережит", false),
-            new(worldId, Collaboration, "🎬", "Коллаб", false),
-            new(worldId, TenThousand, "⭐", "10k", false),
-            new(worldId, SkillMastery, "🎓", "Мастерство", false),
-            new(worldId, ProfileFrame, "🖼", "Рамка профиля", false),
-            new(worldId, Secret, "❔", "Тайная", false),
-            new(worldId, Duet, "🤝", "Дуэт", false),
-            new(worldId, Challenge, "⚔️", "Заруба", false),
-            new(worldId, Rematch, "🔁", "Реванш", false),
+            new(StarCard, "👑", "Карточка звезды", false),
+            new(StarStory, "💬", "История звезды", false),
+            new(FirstViral, "🌊", "Первый залёт", false),
+            new(HateSurvived, "🌩", "Хейт пережит", false),
+            new(Collaboration, "🎬", "Коллаб", false),
+            new(TenThousand, "⭐", "10k", false),
+            new(SkillMastery, "🎓", "Мастерство", false),
+            new(ProfileFrame, "🖼", "Рамка профиля", false),
+            new(Secret, "❔", "Тайная", false),
+            new(Duet, "🤝", "Дуэт", false),
+            new(Challenge, "⚔️", "Заруба", false),
+            new(Rematch, "🔁", "Реванш", false),
         ];
     }
 }

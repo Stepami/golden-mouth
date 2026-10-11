@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import { ageBand, type AgeBand } from '../app/ageBand'
-import { worldOf, worlds } from '../api/mock'
-import { contentOf } from '../api/worldContent'
+import { worldOf, worlds, worldDefinitionOf, contentOf } from '../api/worldContent'
 import type { Address, Drama, Player, WorldId } from '../api/types'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
@@ -187,13 +186,21 @@ function FirstStar() {
     setSaving(true); setError('')
     const p = nav.params as Record<string, string>
     try {
-      const pl = created.current ?? await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', ageBand: p.ageBand as AgeBand | undefined, world: p.world ?? 'stage', role: p.role ?? profile.roles[0], name: p.name ?? profile.name, handle: p.handle ?? profile.handle, address: p.address ?? 'nick', star: pick, referralCode: pendingReferral() })
+      const settings = { voice: p.voice ?? profile.voices[0], drama: (p.drama as Drama) ?? profile.drama }
+      const definition = {
+        ...((nav.params.definition as import('../api/types').WorldDefinition | undefined) ?? worldDefinitionOf((p.world as WorldId) ?? 'stage')),
+        name: p.name ?? profile.name, avatar: p.handle ?? profile.handle, role: p.role ?? profile.roles[0], ...settings,
+      }
+      if (!api.hasPlayer()) {
+        await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', ageBand: p.ageBand as AgeBand | undefined,
+          address: p.address ?? 'nick', referralCode: pendingReferral() })
+        clearReferral()
+      }
+      const pl = created.current ?? await api.createWorld(definition)
       created.current = pl
       clearReferral()
-      const settings = { voice: p.voice ?? profile.voices[0], drama: (p.drama as Drama) ?? profile.drama }
-      await api.settings(settings)
       try { localStorage.setItem(`reki:first-star:${pl.id}`, pick) } catch { /* optional storage */ }
-      track('onboarding_step', { step: 'done', star: pick }); setPlayer({ ...pl, settings: { ...pl.settings, ...settings } }); nav.replace('01-6_home')
+      track('onboarding_step', { step: 'done', star: pick }); setPlayer(pl); nav.replace('01-6_home')
     } catch { setError('Не получилось сохранить настройки. Попробуй ещё раз.') } finally { setSaving(false) }
   }
   return (

@@ -29,7 +29,8 @@ public sealed class PublishPostHandler(
     {
         var publication = await sender.Send(new GetPublicationQuery(request.PublicationId), cancellationToken);
         var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        if (publication is null || publication.PlayerId != storedPlayer.Id)
+        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
+        if (publication is null || publication.PlayerId != storedPlayer.Id || publication.WorldId != world.Id)
         {
             throw new ResourceNotFoundException("Publication not found.");
         }
@@ -70,9 +71,9 @@ public sealed class PublishPostHandler(
         }
 
         var turn = publication.AssembleTurn();
-        StarTurnPolicy.EnsurePostAllowed(turn, player.World, StarTurnPolicy.IsHateEnabled(player, balance.Value, now));
+        StarTurnPolicy.EnsurePostAllowed(turn, world, StarTurnPolicy.IsHateEnabled(player, world, balance.Value, now));
 
-        var wantCompleted = wantId is not null && player.Wants.Any(want =>
+        var wantCompleted = wantId is not null && world.Player.Wants.Any(want =>
             want.Id == wantId && !want.Done);
         if (wantId is not null && !wantCompleted)
         {
@@ -81,13 +82,14 @@ public sealed class PublishPostHandler(
 
         var progression = progressionCalculator.Calculate(
             player,
+            world,
             turn,
             ownWords,
-            wantCompleted);
-        var updated = player.PublishPost(
+            wantCompleted,
+            publication.Id);
+        var updatedWorld = world.PublishPost(
             progression.SubscriberDelta,
             progression.Viral,
-            progression.Flop,
             progression.Skills,
             wantId,
             turn.StarId,
@@ -96,6 +98,7 @@ public sealed class PublishPostHandler(
             balance.Value.Relations.Maximum,
             balance.Value.Relations.MaxGainPerDay,
             balance.Value.Relations.StarCardAt);
+        var updated = player.SpendPost(progression.Skills, world.Player.LastPostAtUtc is null);
         var postId = PostId.New();
         var starComment = new GameComment(
             CommentId.New(),
@@ -106,13 +109,14 @@ public sealed class PublishPostHandler(
             true,
             false,
             false);
-        var recentPosts = await sender.Send(new GetChannelPostsQuery(player.Id, 20), cancellationToken);
+        var recentPosts = await sender.Send(new GetChannelPostsQuery(world.Id, player.Id, 20), cancellationToken);
         var recentViews = recentPosts.Select(post => post.Views).ToArray();
-        var views = Math.Max(48, updated.Subscribers);
+        var views = Math.Max(48, updatedWorld.Player.Subscribers);
         var reachRatio = recentViews.Length == 0 ? 1 : views / GetMedian(recentViews);
         var post = new GamePost(
             postId,
             player.Id,
+            world.Id,
             text,
             views,
             [starComment],
@@ -129,6 +133,8 @@ public sealed class PublishPostHandler(
         var committed = await store.TryCommitPostAsync(
             updated,
             player.Version,
+            updatedWorld,
+            world.Version,
             published,
             request.PublicationId,
             cancellationToken);
@@ -138,7 +144,7 @@ public sealed class PublishPostHandler(
         }
 
         await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
-        TrackProgression(player, updated, post, turn, analytics);
+        TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
         foreach (var liveEvent in PostContractMapper.MapLiveEvents(published))
         {
             yield return liveEvent;
@@ -157,6 +163,8 @@ public sealed class PublishPostHandler(
     private static void TrackProgression(
         PlayerProfile before,
         PlayerProfile after,
+        Reki.Domain.Worlds.World beforeWorld,
+        Reki.Domain.Worlds.World afterWorld,
         GamePost post,
         GeneratedPostTurn turn,
         ProductTelemetry analytics)
@@ -166,6 +174,7 @@ public sealed class PublishPostHandler(
             "post_scored",
             new Dictionary<string, string>
             {
+                ["world"] = afterWorld.BalanceKey,
                 ["brave"] = turn.Brave.ToString("0.###", CultureInfo.InvariantCulture),
                 ["humor"] = turn.Humor.ToString("0.###", CultureInfo.InvariantCulture),
                 ["topic"] = turn.Topic.ToString("0.###", CultureInfo.InvariantCulture),
@@ -183,21 +192,22 @@ public sealed class PublishPostHandler(
                     "level_up",
                     new Dictionary<string, string>
                     {
+                        ["world"] = afterWorld.BalanceKey,
                         ["skill"] = skillId.Value,
                         ["level"] = progress.Level.ToString(CultureInfo.InvariantCulture),
                     });
             }
         }
 
-        var earned = after.Achievements.Where(item =>
-            item.IsOpen && !before.Achievements.Any(previous =>
-                previous.WorldId == item.WorldId && previous.Id == item.Id && previous.IsOpen));
+        var earned = afterWorld.Player.Achievements.Where(item =>
+            item.IsOpen && !beforeWorld.Player.Achievements.Any(previous =>
+                previous.Id == item.Id && previous.IsOpen));
         foreach (var achievement in earned)
         {
             analytics.Track(
                 after,
                 "card_earned",
-                new Dictionary<string, string> { ["card"] = achievement.Id });
+                new Dictionary<string, string> { ["card"] = achievement.Id, ["world"] = afterWorld.BalanceKey });
         }
     }
 }

@@ -85,11 +85,8 @@ internal sealed class GameBalanceOptionsFactory(
             new ViralBalance(
                 viral.GetValue<double>("base"),
                 viral.GetValue<double>("per_quality"),
-                viral.GetValue<int>("guaranteed_post"),
-                viral.GetValue<int>("pity_posts"),
                 viral.GetValue<double>("x")),
             new FlopBalance(
-                flop.GetValue<int>("max_in_row"),
                 flop.GetValue<double>("loss_x")),
             new SkillBalance(
                 levelThresholds,

@@ -12,7 +12,6 @@ public sealed class ContractEnumSerializationTests
 {
     [Test]
     [Arguments(SkillId.Brave, "\"brave\"")]
-    [Arguments(WorldId.Stage, "\"stage\"")]
     [Arguments(Address.Nick, "\"nick\"")]
     [Arguments(Drama.Soft, "\"soft\"")]
     [Arguments(BirthGroup.Teen, "\"14-17\"")]
@@ -38,7 +37,6 @@ public sealed class ContractEnumSerializationTests
     }
 
     [Test]
-    [Arguments(WorldId.Stage, "\"STAGE\"")]
     [Arguments(PublicationStatus.ReadyForModeration, "\"READYFORMODERATION\"")]
     [Arguments(PublicationStatus.ReadyForModeration, "1")]
     [Arguments(BirthGroup.Adult, "1")]

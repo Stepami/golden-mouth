@@ -15,11 +15,13 @@ public sealed class GetTodayEventHandler(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
         var periodStart = gameDay.PeriodStart;
         var existing = await store.GetTodayEventAsync(
             player.Id,
             periodStart,
-            cancellationToken);
+            cancellationToken,
+            world.Id);
         if (existing is not null)
         {
             return existing;
@@ -28,6 +30,7 @@ public sealed class GetTodayEventHandler(
         var gameEvent = new DailyGameEvent(
             EventId.New(),
             player.Id,
+            world.Id,
             "collab",
             "событие дня",
             "Зовут в коллаб",
@@ -41,4 +44,3 @@ public sealed class GetTodayEventHandler(
         return gameEvent;
     }
 }
-

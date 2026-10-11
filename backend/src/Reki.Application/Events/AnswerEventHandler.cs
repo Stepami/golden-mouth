@@ -15,10 +15,12 @@ public sealed class AnswerEventHandler(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
         var gameEvent = await store.GetTodayEventAsync(
             player.Id,
             DateTimeOffset.MinValue,
-            cancellationToken);
+            cancellationToken,
+            world.Id);
         if (gameEvent is null || gameEvent.Id != request.EventId)
         {
             throw new ResourceNotFoundException("Event not found.");
@@ -28,4 +30,3 @@ public sealed class AnswerEventHandler(
         return Unit.Value;
     }
 }
-

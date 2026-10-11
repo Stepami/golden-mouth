@@ -1,6 +1,5 @@
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Social;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 
@@ -8,16 +7,16 @@ namespace Reki.Application.Posts;
 
 public static class StarTurnPolicy
 {
-    public static bool IsHateEnabled(PlayerProfile player, GameBalance balance, DateTimeOffset now)
+    public static bool IsHateEnabled(PlayerProfile player, World gameWorld, GameBalance balance, DateTimeOffset now)
     {
-        return balance.Worlds.TryGetValue(player.World.Value, out var world) &&
-            player.Subscribers >= world.HateFrom && player.Settings.Drama != "off" &&
+        return balance.Worlds.TryGetValue(gameWorld.BalanceKey, out var world) &&
+            gameWorld.Player.Subscribers >= world.HateFrom && gameWorld.Player.Drama != Reki.Domain.Worlds.WorldDrama.Off &&
             (player.HateDisabledUntilUtc is null || player.HateDisabledUntilUtc <= now);
     }
 
-    public static void EnsurePostAllowed(GeneratedPostTurn turn, WorldId world, bool hateEnabled)
+    public static void EnsurePostAllowed(GeneratedPostTurn turn, World world, bool hateEnabled)
     {
-        if (!StarCatalog.Matches(world, turn.StarId, turn.StarName) ||
+        if (!world.HasStar(turn.StarId, turn.StarName) ||
             turn.Tone is not ("support" or "critique" or "hate") ||
             (turn.Tone == "hate" && !hateEnabled))
         {

@@ -1,8 +1,3 @@
 namespace Reki.Application.Common;
 
-public sealed record ViralBalance(
-    double BaseChance,
-    double ChancePerQuality,
-    int GuaranteedPost,
-    int PityPosts,
-    double Multiplier);
+public sealed record ViralBalance(double BaseChance, double ChancePerQuality, double Multiplier);

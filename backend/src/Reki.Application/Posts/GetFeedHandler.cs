@@ -15,9 +15,10 @@ public sealed class GetFeedHandler(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var posts = await sender.Send(new GetChannelPostsQuery(player.Id, FeedSize), cancellationToken);
+        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        var posts = await sender.Send(new GetChannelPostsQuery(world.Id, player.Id, FeedSize), cancellationToken);
         return posts
-            .Select(post => PostContractMapper.MapFeedItem(post, player, true))
+            .Select(post => PostContractMapper.MapFeedItem(post, world, true))
             .ToArray();
     }
 }

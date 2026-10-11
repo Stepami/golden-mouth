@@ -1,7 +1,6 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Common;
-using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Contracts.Posts;
 using Reki.Domain.Events;
@@ -21,7 +20,8 @@ internal sealed class MongoGameStore : IGameStore
     private readonly IMongoCollection<StarConversation> _starMemories;
     private readonly IMongoCollection<DailyGameEvent> _events;
     private readonly IMongoCollection<GameChallenge> _challenges;
-    private readonly IMongoCollection<WorldRules> _worlds;
+    private readonly IMongoCollection<World> _worlds;
+    private readonly IMongoCollection<World> _templates;
     private readonly IMongoCollection<BsonDocument> _threads;
     private readonly IMongoCollection<BsonDocument> _invites;
 
@@ -36,28 +36,17 @@ internal sealed class MongoGameStore : IGameStore
         _starMemories = database.GetCollection<StarConversation>(MongoCollections.StarsMemory);
         _events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
         _challenges = database.GetCollection<GameChallenge>(MongoCollections.Challenges);
-        _worlds = database.GetCollection<WorldRules>(MongoCollections.Worlds);
+        _worlds = database.GetCollection<World>(MongoCollections.Worlds);
+        _templates = database.GetCollection<World>(MongoCollections.WorldTemplates);
         _threads = database.GetCollection<BsonDocument>(MongoCollections.Threads);
         _invites = database.GetCollection<BsonDocument>(MongoCollections.Invites);
     }
 
-    public async ValueTask<PlayerProfile?> GetPlayerAsync(
-        TelegramUserId telegramUserId,
-        CancellationToken cancellationToken)
-    {
-        return await _players
-            .Find(player => player.TelegramUserId == telegramUserId)
-            .FirstOrDefaultAsync(cancellationToken);
-    }
+    public async ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken) =>
+        await _players.Find(item => item.TelegramUserId == telegramUserId).FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask<PlayerProfile?> GetPlayerAsync(
-        PlayerId playerId,
-        CancellationToken cancellationToken)
-    {
-        return await _players
-            .Find(player => player.Id == playerId)
-            .FirstOrDefaultAsync(cancellationToken);
-    }
+    public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
+        await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<bool> TryCreatePlayerAsync(
         PlayerProfile player,
@@ -67,24 +56,21 @@ internal sealed class MongoGameStore : IGameStore
     {
         try
         {
-            if (updatedInviter is null)
-            {
-                await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
-                return true;
-            }
-
             using var session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
             session.StartTransaction();
             await _players.InsertOneAsync(session, player, cancellationToken: cancellationToken);
-            var result = await _players.ReplaceOneAsync(
-                session,
-                item => item.Id == updatedInviter.Id && item.Version == expectedInviterVersion,
-                updatedInviter,
-                cancellationToken: cancellationToken);
-            if (result.ModifiedCount != 1)
+            if (updatedInviter is not null)
             {
-                await session.AbortTransactionAsync(cancellationToken);
-                return false;
+                var result = await _players.ReplaceOneAsync(
+                    session,
+                    item => item.Id == updatedInviter.Id && item.Version == expectedInviterVersion,
+                    updatedInviter,
+                    cancellationToken: cancellationToken);
+                if (result.ModifiedCount != 1)
+                {
+                    await session.AbortTransactionAsync(cancellationToken);
+                    return false;
+                }
             }
 
             await session.CommitTransactionAsync(cancellationToken);
@@ -100,79 +86,15 @@ internal sealed class MongoGameStore : IGameStore
         }
     }
 
-    public async ValueTask UpsertPlayerAsync(
-        PlayerProfile player,
-        CancellationToken cancellationToken)
+    public async ValueTask UpsertPlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
+        await _players.ReplaceOneAsync(item => item.Id == player.Id, player, new ReplaceOptions { IsUpsert = true }, cancellationToken);
+
+    public async ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken) =>
+        await _worlds.InsertOneAsync(world, cancellationToken: cancellationToken);
+
+    public async ValueTask StartPlayerPeriodAsync(PlayerProfile player, PlayerProfile updated, CancellationToken cancellationToken)
     {
-        var options = new ReplaceOptions { IsUpsert = true };
-        await _players.ReplaceOneAsync(
-            item => item.TelegramUserId == player.TelegramUserId,
-            player,
-            options,
-            cancellationToken);
-    }
-
-    public async ValueTask<bool> UpdatePlayerSettingsAsync(
-        TelegramUserId telegramUserId,
-        UpdateSettingsCommand settings,
-        CancellationToken cancellationToken)
-    {
-        var update = Builders<PlayerProfile>.Update.Inc(player => player.Version, 1);
-        if (settings.Drama is { } drama)
-        {
-            update = update.Set(player => player.Settings.Drama, drama);
-        }
-
-        if (settings.Notifications is { } notifications)
-        {
-            update = update.Set(player => player.Settings.Notifications, notifications);
-        }
-
-        if (settings.Quiet is { } quiet)
-        {
-            update = update.Set(player => player.Settings.Quiet, quiet);
-        }
-
-        if (settings.Voice is { } voice)
-        {
-            update = update.Set(player => player.Settings.Voice, voice);
-        }
-
-        if (settings.Plus is { } plus)
-        {
-            update = update.Set(player => player.Settings.Plus, plus);
-        }
-
-        if (settings.Address is { } address)
-        {
-            update = update.Set(player => player.Address, address);
-        }
-
-        var result = await _players.UpdateOneAsync(
-            player => player.TelegramUserId == telegramUserId,
-            update,
-            cancellationToken: cancellationToken);
-        return result.MatchedCount == 1;
-    }
-
-    public async ValueTask StartPlayerPeriodAsync(
-        PlayerProfile player,
-        PlayerProfile updated,
-        CancellationToken cancellationToken)
-    {
-        var filter = Builders<PlayerProfile>.Filter.And(
-            Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id),
-            Builders<PlayerProfile>.Filter.Ne(item => item.PostsPeriodStartedAtUtc, updated.PostsPeriodStartedAtUtc));
-        var update = Builders<PlayerProfile>.Update
-            .Set(item => item.PostsUsed, updated.PostsUsed)
-            .Set(item => item.DailyBonus, updated.DailyBonus)
-            .Set(item => item.InviteBonusesEarnedInPeriod, updated.InviteBonusesEarnedInPeriod)
-            .Set(item => item.PostsPeriodStartedAtUtc, updated.PostsPeriodStartedAtUtc)
-            .Set(item => item.RestedPostsRemaining, updated.RestedPostsRemaining)
-            .Set(item => item.Wants, updated.Wants)
-            .Set(item => item.StarRelations, updated.StarRelations)
-            .Inc(item => item.Version, updated.Version - player.Version);
-        await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+        _ = await TryReplacePlayerAsync(updated, player.Version, cancellationToken);
     }
 
     public async ValueTask SavePlusNotificationAsync(
@@ -205,22 +127,16 @@ internal sealed class MongoGameStore : IGameStore
         return result.ModifiedCount == 1;
     }
 
-    public async ValueTask<bool> TryReplacePlayerAsync(
-        PlayerProfile player,
-        int expectedVersion,
-        CancellationToken cancellationToken)
+    public async ValueTask<bool> TryReplacePlayerAsync(PlayerProfile player, int expectedVersion, CancellationToken cancellationToken)
     {
-        var telegramFilter = Builders<PlayerProfile>.Filter
-            .Eq(item => item.TelegramUserId, player.TelegramUserId);
-        var versionFilter = Builders<PlayerProfile>.Filter
-            .Eq(item => item.Version, expectedVersion);
-        var filter = Builders<PlayerProfile>.Filter
-            .And(telegramFilter, versionFilter);
-        var result = await _players.ReplaceOneAsync(
-            filter,
-            player,
-            cancellationToken: cancellationToken);
-        return result.ModifiedCount == 1;
+        var result = await _players.ReplaceOneAsync(item => item.Id == player.Id && item.Version == expectedVersion, player, cancellationToken: cancellationToken);
+        return result.MatchedCount == 1;
+    }
+
+    public async ValueTask<bool> TryReplaceWorldAsync(World world, int expectedVersion, CancellationToken cancellationToken)
+    {
+        var result = await _worlds.ReplaceOneAsync(item => item.Id == world.Id && item.Player.PlayerId == world.Player.PlayerId && item.Version == expectedVersion, world, cancellationToken: cancellationToken);
+        return result.MatchedCount == 1;
     }
 
     public async ValueTask DeletePlayerAsync(
@@ -243,7 +159,7 @@ internal sealed class MongoGameStore : IGameStore
         var challengeFilter = Builders<GameChallenge>.Filter
             .AnyEq(item => item.Participants, player.Id);
         Task deleteChallenges = _challenges.DeleteManyAsync(challengeFilter, cancellationToken);
-        Task deleteWorlds = _worlds.DeleteManyAsync(item => item.PlayerId == player.Id, cancellationToken);
+        Task deleteWorlds = _worlds.DeleteManyAsync(item => item.Player.PlayerId == player.Id, cancellationToken);
         Task deleteThreads = _threads.DeleteManyAsync(threadFilter, cancellationToken);
         Task deleteInvites = _invites.DeleteManyAsync(threadFilter, cancellationToken);
 
@@ -262,6 +178,8 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask<bool> TryCommitPostAsync(
         PlayerProfile updatedPlayer,
         int expectedPlayerVersion,
+        World updatedWorld,
+        int expectedWorldVersion,
         PublishedPost published,
         string publicationId,
         CancellationToken cancellationToken)
@@ -289,15 +207,8 @@ internal sealed class MongoGameStore : IGameStore
             return false;
         }
 
-        var playerFilter = Builders<PlayerProfile>.Filter.And(
-            Builders<PlayerProfile>.Filter.Eq(item => item.Id, updatedPlayer.Id),
-            Builders<PlayerProfile>.Filter.Eq(item => item.Version, expectedPlayerVersion));
-        var replaced = await _players.ReplaceOneAsync(
-            session,
-            playerFilter,
-            updatedPlayer,
-            cancellationToken: cancellationToken);
-        if (replaced.ModifiedCount != 1)
+        if ((await _players.ReplaceOneAsync(session, item => item.Id == updatedPlayer.Id && item.Version == expectedPlayerVersion, updatedPlayer, cancellationToken: cancellationToken)).MatchedCount != 1 ||
+            (await _worlds.ReplaceOneAsync(session, item => item.Id == updatedWorld.Id && item.Player.PlayerId == updatedPlayer.Id && item.Version == expectedWorldVersion, updatedWorld, cancellationToken: cancellationToken)).MatchedCount != 1)
         {
             await session.AbortTransactionAsync(cancellationToken);
             return false;
@@ -306,7 +217,7 @@ internal sealed class MongoGameStore : IGameStore
         await _posts.InsertOneAsync(session, post, cancellationToken: cancellationToken);
         await _threads.InsertOneAsync(
             session,
-            CreateThreadDocument(updatedPlayer.Id, post.Id, published.Hook, post.CreatedAtUtc),
+            CreateThreadDocument(updatedPlayer.Id, post.Id, updatedWorld.Id, published.Hook, post.CreatedAtUtc),
             cancellationToken: cancellationToken);
         await session.CommitTransactionAsync(cancellationToken);
         return true;
@@ -385,10 +296,11 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
         PlayerId playerId,
         int? limit,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        WorldId worldId)
     {
         IFindFluent<GamePost, GamePost> query = _posts
-            .Find(item => item.PlayerId == playerId)
+            .Find(item => item.PlayerId == playerId && item.WorldId == worldId)
             .SortByDescending(item => item.CreatedAtUtc);
         if (limit is { } count)
         {
@@ -414,8 +326,8 @@ internal sealed class MongoGameStore : IGameStore
         PostId postId,
         ThreadReply reply,
         GameComment comment,
-        PlayerProfile? updatedPlayer,
-        int expectedPlayerVersion,
+        World? updatedWorld,
+        int expectedWorldVersion,
         CancellationToken cancellationToken)
     {
         try
@@ -442,21 +354,11 @@ internal sealed class MongoGameStore : IGameStore
                 return false;
             }
 
-            if (updatedPlayer is not null)
+            if (updatedWorld is not null &&
+                (await _worlds.ReplaceOneAsync(session, item => item.Id == updatedWorld.Id && item.Player.PlayerId == playerId && item.Version == expectedWorldVersion, updatedWorld, cancellationToken: cancellationToken)).MatchedCount != 1)
             {
-                var playerFilter = Builders<PlayerProfile>.Filter.And(
-                    Builders<PlayerProfile>.Filter.Eq(item => item.Id, updatedPlayer.Id),
-                    Builders<PlayerProfile>.Filter.Eq(item => item.Version, expectedPlayerVersion));
-                var replaced = await _players.ReplaceOneAsync(
-                    session,
-                    playerFilter,
-                    updatedPlayer,
-                    cancellationToken: cancellationToken);
-                if (replaced.ModifiedCount != 1)
-                {
-                    await session.AbortTransactionAsync(cancellationToken);
-                    return false;
-                }
+                await session.AbortTransactionAsync(cancellationToken);
+                return false;
             }
 
             await session.CommitTransactionAsync(cancellationToken);
@@ -471,10 +373,11 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask<StarConversation?> GetStarConversationAsync(
         PlayerId playerId,
         StarId starId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        WorldId worldId)
     {
         return await _starMemories
-            .Find(item => item.PlayerId == playerId && item.StarId == starId)
+            .Find(item => item.PlayerId == playerId && item.StarId == starId && item.WorldId == worldId)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -484,7 +387,7 @@ internal sealed class MongoGameStore : IGameStore
     {
         var options = new ReplaceOptions { IsUpsert = true };
         await _starMemories.ReplaceOneAsync(
-            item => item.PlayerId == conversation.PlayerId && item.StarId == conversation.StarId,
+            item => item.PlayerId == conversation.PlayerId && item.WorldId == conversation.WorldId && item.StarId == conversation.StarId,
             conversation,
             options,
             cancellationToken);
@@ -493,10 +396,13 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask<DailyGameEvent?> GetTodayEventAsync(
         PlayerId playerId,
         DateTimeOffset dayStartedAtUtc,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        WorldId worldId)
     {
         var filter = Builders<DailyGameEvent>.Filter
-            .Eq(item => item.PlayerId, playerId);
+            .Eq(item => item.PlayerId, playerId)
+            & Builders<DailyGameEvent>.Filter.Eq(item => item.WorldId, worldId);
+
         if (dayStartedAtUtc != DateTimeOffset.MinValue)
         {
             var dayFilter = Builders<DailyGameEvent>.Filter
@@ -590,37 +496,33 @@ internal sealed class MongoGameStore : IGameStore
         }
     }
 
-    public async ValueTask<WorldRules?> GetWorldRulesAsync(
-        PlayerId playerId,
-        WorldId worldId,
-        CancellationToken cancellationToken)
+    public async ValueTask<World?> GetWorldAsync(PlayerId playerId, WorldId worldId, CancellationToken cancellationToken)
     {
-        return await _worlds
-            .Find(item => item.PlayerId == playerId && item.WorldId == worldId)
-            .FirstOrDefaultAsync(cancellationToken);
+        return await _worlds.Find(item => item.Player.PlayerId == playerId && item.Id == worldId).FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async ValueTask SaveWorldRulesAsync(
-        WorldRules rules,
-        CancellationToken cancellationToken)
+    public async ValueTask<IReadOnlyList<World>> GetWorldTemplatesAsync(CancellationToken cancellationToken)
     {
-        var options = new ReplaceOptions { IsUpsert = true };
-        await _worlds.ReplaceOneAsync(
-            item => item.PlayerId == rules.PlayerId && item.WorldId == rules.WorldId,
-            rules,
-            options,
-            cancellationToken);
+        var templateOwner = PlayerId.From("00000000000000000000000000000000");
+        return await _templates.Find(item => item.Player.PlayerId == templateOwner).ToListAsync(cancellationToken);
+    }
+
+    public async ValueTask<IReadOnlyList<World>> GetWorldsAsync(PlayerId playerId, CancellationToken cancellationToken)
+    {
+        return await _worlds.Find(item => item.Player.PlayerId == playerId).ToListAsync(cancellationToken);
     }
 
     private static BsonDocument CreateThreadDocument(
         PlayerId playerId,
         PostId postId,
+        WorldId worldId,
         string hook,
         DateTimeOffset createdAtUtc) =>
         new()
         {
             ["PlayerId"] = playerId.Value,
             ["PostId"] = postId.Value,
+            ["WorldId"] = worldId.Value,
             ["Hook"] = hook,
             ["CreatedAtUtc"] = createdAtUtc.UtcDateTime,
             ["Open"] = true,

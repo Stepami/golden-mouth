@@ -32,10 +32,11 @@ public sealed class SocialController(
     [ActionName("GetDirectMessages")]
     public async Task<Ok<DmResponse>> GetDirectMessagesAsync(
         string starId,
+        [FromQuery] string worldId,
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new GetDirectMessagesQuery(StarId.From(starId)),
+            new GetDirectMessagesQuery(StarId.From(starId), Reki.Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapDirectMessages(result));
     }
@@ -45,12 +46,14 @@ public sealed class SocialController(
     public async Task<Ok<SendDirectMessageResponse>> SendDirectMessageAsync(
         string starId,
         DirectMessageRequest request,
+        [FromQuery] string worldId,
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
             new SendDirectMessageCommand(
                 StarId.From(starId),
-                request.Text),
+                request.Text,
+                Reki.Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapSentDirectMessage(result));
     }
@@ -60,12 +63,14 @@ public sealed class SocialController(
     public async Task<Ok> ForgetStarMemoryAsync(
         string starId,
         ForgetMemoryRequest request,
+        [FromQuery] string worldId,
         CancellationToken cancellationToken)
     {
         await sender.Send(
             new ForgetStarMemoryCommand(
                 StarId.From(starId),
-                request.Fact),
+                request.Fact,
+                Reki.Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok();
     }
@@ -87,10 +92,10 @@ public sealed class SocialController(
                 "я",
                 new FriendResponse(
                     view.Rival.Id.Value,
-                    view.Rival.Name,
-                    view.Rival.Avatar,
-                    view.Rival.World.Value,
-                    view.Rival.Subscribers,
+                    view.RivalWorld.Player.Name,
+                    view.RivalWorld.Player.Avatar,
+                    view.RivalWorld.BalanceKey,
+                    view.RivalWorld.Player.Subscribers,
                     string.Empty,
                     rivalPronoun),
                 view.Day,

@@ -5,7 +5,6 @@ using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
 using Reki.Application.Player;
 using Reki.Application.Posts;
-using Reki.Application.Worlds;
 using Reki.Domain.Social;
 
 namespace Reki.Application.Social;
@@ -22,14 +21,17 @@ public sealed class SendDirectMessageHandler(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        _ = StarCatalog.Require(player.World, request.StarId);
+        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        _ = world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world.");
         var periodStart = gameDay.PeriodStart;
         var conversation = await store.GetStarConversationAsync(
             player.Id,
             request.StarId,
-            cancellationToken) ?? new StarConversation(
+            cancellationToken,
+            world.Id) ?? new StarConversation(
                 StarConversationId.New(),
                 player.Id,
+                world.Id,
                 request.StarId,
                 [],
                 [],
@@ -45,25 +47,9 @@ public sealed class SendDirectMessageHandler(
             throw new RequestConflictException("The daily direct-message limit has been reached.");
         }
 
-        var storedRules = await store.GetWorldRulesAsync(
-            player.Id,
-            player.World,
-            cancellationToken);
-        var worldRules = player.World.Value == "own" && storedRules is not null
-            ? storedRules
-            : WorldRulesDefaults.Create(player.Id, player.World);
         var generated = await turnGenerator.GenerateDirectMessageAsync(
             new StarDirectMessageContext(
-                new StarAgentProfile(
-                    player.World,
-                    worldRules.Title,
-                    worldRules.Description,
-                    worldRules.Rules,
-                    player.Settings.Drama,
-                    player.Settings.Voice,
-                    request.StarId,
-                    conversation.Memory,
-                    player.Address),
+                new StarAgentProfile(world, request.StarId, conversation.Memory, player.Address),
                 request.Text,
                 conversation.Messages.TakeLast(12).ToArray()),
             player,

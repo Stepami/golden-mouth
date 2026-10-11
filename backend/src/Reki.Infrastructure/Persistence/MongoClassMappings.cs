@@ -40,15 +40,13 @@ internal static class MongoClassMappings
             new BsonValueObjectConversions.TelegramUserIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.WorldIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.WorldRulesIdBsonSerializer());
         RegisterWithMongoId<PlayerProfile, PlayerId>(item => item.Id);
         RegisterWithMongoId<GamePost, PostId>(item => item.Id);
         RegisterWithMongoId<Publication, string>(item => item.Id);
         RegisterWithMongoId<StarConversation, StarConversationId>(item => item.Id);
         RegisterWithMongoId<DailyGameEvent, EventId>(item => item.Id);
         RegisterWithMongoId<GameChallenge, ChallengeId>(item => item.Id);
-        RegisterWithMongoId<WorldRules, WorldRulesId>(item => item.Id);
+        RegisterWithMongoId<World, WorldId>(item => item.Id);
     }
 
     private static void RegisterWithMongoId<TDocument, TId>(

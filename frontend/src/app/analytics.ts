@@ -4,7 +4,11 @@ import { apiBaseUrl as BASE } from './runtimeConfig'
 import { ActiveTime } from './activeTime'
 import { telegramAuthHeaders } from '../api/auth'
 type Props = Record<string, string | number | boolean | null>
-export interface AEvent { name: string; t: number; screen: string; prev: string | null; props?: Props }
+export interface AEvent { worldId?: string; name: string; t: number; screen: string; prev: string | null; props?: Props }
+
+let selectedWorld: string | undefined
+let selectedWorldId: string | undefined
+export function setAnalyticsWorld(worldId: string | undefined, world?: string) { selectedWorldId = worldId; selectedWorld = world }
 
 const activeTime = new ActiveTime(performance.now(), document.visibilityState === 'visible')
 let installed = false
@@ -24,7 +28,7 @@ export const setExperiments = (e: Record<string, string>) => { experiments = e }
 const clean = (p?: Props) => p && Object.fromEntries(Object.entries(p).map(([k, v]) => [k, typeof v === 'string' && v.length > 64 ? `len:${v.length}` : v]))
 
 export function event(name: string, props?: Props) {
-  q.push({ name, t: Date.now(), screen, prev, props: clean(props) })
+  q.push({ worldId: selectedWorldId, name, t: Date.now(), screen, prev, props: clean({ ...(selectedWorld ? { world: selectedWorld } : {}), ...props }) })
   if (!BASE && import.meta.env.DEV) console.debug('[event]', name, screen, props ?? '')
   if (q.length >= 25) flushEvents()
 }

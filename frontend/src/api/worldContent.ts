@@ -1,5 +1,4 @@
-import personas from './personas.json'
-import type { Drama, Star, Want, WorldId, WorldRules } from './types'
+import type { Drama, Star, Want, WorldId, WorldDocument, WorldDefinition, World } from './types'
 
 export interface WorldContent {
   where: string
@@ -19,72 +18,67 @@ export interface WorldContent {
   posts: string[]
 }
 
-const starsFor = (world: WorldId): Star[] => personas.filter(persona => persona.world === world).map(({ world: _world, voice: _voice, ...profile }) => ({ ...profile, relation: 0 }))
+const documents: Partial<Record<WorldId, WorldDocument>> = {}
+export const worlds: World[] = []
+const templateDocuments: Partial<Record<WorldId, WorldDocument>> = {}
 
-/** Вымышленные персонажи и оригинальные тексты для фронтенд-демо, а не цитаты реальных авторов. */
-export const WORLD_CONTENT: Record<WorldId, WorldContent> = {
-  stage: {
-    where: 'Сцене', roles: ['🎤 Трейни', '📸 Фансайт', '💃 Хореограф', '🎧 Продюсер'],
-    name: 'Мой дебют', handle: '@first.stage', avatarStyle: 'lorelei', avatarLabel: 'портрет',
-    stars: starsFor('stage'),
-    voices: ['коротко, с самоиронией', 'ярко, с эмодзи', 'честно, как в дневнике'], drama: 'soft',
-    description: 'Начни жизнь в айдол-агентстве: первые фанаты, внимание звёзд и истории за кулисами.',
-    rules: ['Звёзды ценят смелость, юмор и истории о Сцене.', 'Фанаты обсуждают музыку и репетиции. Критика относится к постам, а не к человеку.', 'События: прослушивания, камбэки и коллабы.'],
-    firstContext: 'Твой блог теперь часть жизни агентства. Начни с истории о музыке, репетициях или закулисье.',
-    firstPrompt: 'Что происходит сегодня в агентстве?',
-    ideas: ['Сегодня на репетиции до меня дошло, что…', 'Никто не предупреждал, что перед дебютом…', 'Моя самая смешная ошибка на сцене…'],
-    posts: ['На репетиции перепутали право и лево. Теперь это авторская хореография 🫠', 'Новый трек записали с первого дубля. Ладно, с первого после двадцатого.', 'Фансайт заметил новую деталь в тизере раньше самого агентства 👀', 'Перед выходом на сцену страшно всем. Просто у кого-то микрофон громче.', 'Сегодня учились поддерживать друг друга, когда сбивается ритм. Это тоже репетиция.'],
-  },
-  academy: {
-    where: 'Академии', roles: ['📚 Участник клуба', '🎨 Мангака', '🎭 Организатор фестиваля', '🔬 Изобретатель'],
-    name: 'Клуб после уроков', handle: '@after.class', avatarStyle: 'notionists', avatarLabel: 'рисованный персонаж',
-    stars: starsFor('academy'),
-    voices: ['как в дневнике клуба', 'с юмором и аниме-сравнениями', 'спокойно и по делу'], drama: 'mid',
-    description: 'Стань частью аниме-академии: найди свой клуб, знакомься с героями и готовься к фестивалю.',
-    rules: ['Посты о клубах, дружбе и проектах помогают найти своих читателей.', 'Разные клубы спорят об идеях, но не унижают участников.', 'События: выставки, соревнования и школьный фестиваль.'],
-    firstContext: 'Ты в Академии: вокруг клубы, проекты и подготовка к фестивалю. Расскажи свою первую историю.',
-    firstPrompt: 'Что случилось сегодня в Академии?',
-    ideas: ['Наш клуб готовился к фестивалю, но…', 'Сегодня на занятии мы придумали…', 'Самая неожиданная история после уроков…'],
-    posts: ['Наш клуб занял последнее место. Зато баннер теперь висит у входа 🎨', 'Газету распечатали вверх ногами. Читаем с новой точки зрения.', 'Изобретение работает! Правда, пока только как держатель для печенья.', 'На фестивале будет сцена для каждого клуба. Даже для клуба тихого чтения.', 'Манга о подготовке к экзаменам неожиданно превратилась в комедию.'],
-  },
-  it: {
-    where: 'Айти-тусовке', roles: ['🧑‍💻 Разработчик', '🤖 AI-энтузиаст', '🧪 Тестировщик', '🚀 Автор стартапа', '🤝 Эйчар'],
-    name: 'Деплой и мемы', handle: '@hello.deploy', avatarStyle: 'pixelArt', avatarLabel: 'пиксель-арт',
-    stars: starsFor('it'),
-    voices: ['коротко, с айти-самоиронией', 'с фактами и примерами', 'как заметки из лаборатории'], drama: 'mid',
-    description: 'Заведи техноблог: делись проектами, спорь с авторами каналов и попадай в стартап-драмы.',
-    rules: ['Ценятся опыт, проверяемые факты и шутки о технологиях.', 'Можно спорить о коде и обещаниях. Нельзя переходить на личность.', 'Персонажи — игровые адаптации, не настоящие авторы каналов.', 'События: релизы, хакатоны, эксперименты и коллабы.'],
-    firstContext: 'Твой техноблог открыт. Поделись наблюдением о проекте, технологии или жизни в айти.',
-    firstPrompt: 'О чём будет твой первый технопост?',
-    ideas: ['Сегодня мой код заработал, когда я…', 'Проверил обещание новой AI-модели и обнаружил…', 'Баг, который оказался фичей, пока…'],
-    posts: ['Стартап обещал заменить пять отделов. Пока заменил кнопку «Отправить» на «Спросить AI».', 'Релиз перенесли на понедельник. Самая полезная технология недели — календарь 🍔', 'Проверил модель на собственных тестах: красивое демо ещё не означает стабильный результат 🤖', 'Нашёл баг за пять минут. До этого три часа объяснял себе, почему это невозможно.', 'Цена подписки известна. Цена интеграции выясняется после первой встречи с легаси.'],
-  },
-  stream: {
-    where: 'Стриме', roles: ['🎮 Стример', '🎙 Комментатор', '🛡 Модератор', '🏆 Киберспортсмен'],
-    name: 'Ещё один раунд', handle: '@one.more.round', avatarStyle: 'thumbs', avatarLabel: 'стримерский персонаж',
-    stars: starsFor('stream'),
-    voices: ['энергично, как в чате', 'с юмором и игровыми сравнениями', 'спокойно, без капслока'], drama: 'mid',
-    description: 'Примерь жизнь стримера: собирай зрителей, знакомься с героями эфиров и обсуждай турниры.',
-    rules: ['Истории из игр и самоирония привлекают зрителей.', 'Спорим о матчах, а не о людях. Модераторы следят за границами.', 'События: совместные эфиры, рейды и турниры.'],
-    firstContext: 'Ты в мире эфиров, игровых чатов и турниров. Начни с истории, которую захочется обсудить.',
-    firstPrompt: 'Какую историю из мира стримов расскажешь?',
-    ideas: ['Первый эфир: три зрителя и…', 'Чат попросил ещё один раунд, но…', 'Самый смешной момент матча…'],
-    posts: ['Первый эфир: три зрителя. Один я, второй мой второй аккаунт, третий — легенда.', 'Чат голосовал за сложность. Босс голосовал за мой выход в меню.', 'Случайный рейд оказался самым тёплым вечером недели 🫶', 'Сегодня комментировал матч без голоса. Получился самый спокойный стрим.', 'Модераторы нашли новый способ победить токсичность: объяснить правила до матча.'],
-  },
-  own: {
-    where: 'своём мире', roles: ['✨ Рассказчик', '🧭 Исследователь', '🎨 Создатель', '📰 Хроникёр'],
-    name: 'Моя история', handle: '@my.story', avatarStyle: 'shapes', avatarLabel: 'абстрактный символ',
-    stars: starsFor('own'),
-    voices: ['как хроника приключения', 'с юмором и фантазией', 'как личный дневник'], drama: 'soft',
-    description: 'Придумай свою жизнь: выбери мир и роль, веди блог и знакомься с героями своей истории.',
-    rules: ['Мир следует твоему описанию.', 'Персонажи обсуждают события и идеи, а не внешность или личность.', 'Безопасность 14+ работает в любом мире.'],
-    firstContext: 'Это твой мир и твоя роль. Первый пост познакомит героев с твоей историей.',
-    firstPrompt: 'С какого события начнётся твоя история?',
-    ideas: ['В моём мире сегодня впервые…', 'Никто не ожидал, что главный герой…', 'Одна маленькая деталь изменила всё…'],
-    posts: ['Сегодня в городе появился новый маршрут. Все пошли искать, куда он ведёт.', 'Герой забыл план приключения. Кажется, так и начинаются лучшие истории.', 'Собрали совет жителей: у каждого была идея, и ни у кого не было печенья.', 'Новая глава началась с самого обычного вопроса: «А что, если?»', 'Маленькая деталь из первой истории вдруг оказалась самой важной.'],
-  },
+export function installWorldTemplates(templates: WorldDocument[]): void {
+  for (const template of templates) templateDocuments[template.balanceKey] = structuredClone(template)
+  installWorldContent(templates)
+  worlds.splice(0, worlds.length, ...templates.filter(world => world.balanceKey !== 'own').map(world => ({
+    id: world.balanceKey, title: world.title, emoji: world.emoji, description: world.description,
+    difficulty: world.difficulty, summary: world.summary,
+    ...(world.unlockSkill && world.unlockLevel ? { lock: { skill: world.unlockSkill, level: world.unlockLevel } } : {}),
+  })))
 }
 
-export const contentOf = (world: string): WorldContent => WORLD_CONTENT[world as WorldId] ?? WORLD_CONTENT.stage
-export const wantsFor = (world: string): Want[] => contentOf(world).ideas.map((text, i) => ({ id: `demo-${world}-want-${i}`, text: text.replace('…', ''), reward: 'опыт ×1,3', done: false }))
-export const rulesFor = (world: string): WorldRules => ({ title: contentOf(world).where, presets: [], description: contentOf(world).description, rules: [...contentOf(world).rules, 'Без тем 18+ и травли по внешности.'].map(text => ({ text, locked: true })) })
+const serverContent: Partial<Record<WorldId, WorldContent>> = {}
+const traitNames = ['Дерзкость', 'Поддержка', 'Загадка', 'Воображение', 'Любопытство', 'Энергия', 'Ирония и расчёт', 'Сухой юмор', 'Самоирония', 'Азарт', 'Внимание']
+export function installWorldContent(worlds: WorldDocument[]): void {
+  for (const world of worlds) {
+    documents[world.balanceKey] = world
+    serverContent[world.balanceKey] = {
+      where: world.where, roles: world.roles, name: world.name, handle: world.avatar,
+      avatarStyle: world.avatarStyle as WorldContent['avatarStyle'], avatarLabel: 'аватар канала',
+      stars: world.stars.map(star => ({ ...star, trait: traitNames[star.trait] ?? '' })),
+      voices: world.voices, drama: world.drama, description: world.description,
+      rules: world.rules.map(rule => rule.text), firstContext: world.firstContext, firstPrompt: world.firstPrompt,
+      ideas: world.postIdeas, posts: world.demoPosts,
+    }
+  }
+}
+
+export function contentOf(world: string): WorldContent {
+  const content = serverContent[world as WorldId]
+  if (!content) throw new Error('World content has not been loaded')
+  return content
+}
+
+export function wantsFor(world: string): Want[] {
+  const document = documents[world as WorldId]
+  if (!document) throw new Error('World wants have not been loaded')
+  return structuredClone(document.wants)
+}
+export function worldDocumentOf(world: string): WorldDocument {
+  const document = documents[world as WorldId]
+  if (!document) throw new Error('World has not been loaded')
+  return structuredClone(document)
+}
+
+const WORLD_FORMS: Record<string, { gen: string; acc: string }> = {
+  stage: { gen: 'Сцены', acc: 'Сцену' }, academy: { gen: 'Академии', acc: 'Академию' }, it: { gen: 'Айти-тусовки', acc: 'Айти-тусовку' },
+  stream: { gen: 'Стрима', acc: 'Стрим' }, own: { gen: 'своего мира', acc: 'свой мир' },
+}
+export function worldOf(id: string) {
+  const world = documents[id as WorldId]
+  if (!world) throw new Error('World has not been loaded')
+  return { ...world, id: world.balanceKey, ...(WORLD_FORMS[world.balanceKey] ?? { gen: world.title, acc: world.title }) }
+}
+
+/** Выбор шаблона заполняет форму; сервер получает только описание нового мира. */
+export function worldDefinitionOf(world: WorldId): WorldDefinition {
+  const template = templateDocuments[world]
+  if (!template) throw new Error('World template has not been loaded')
+  const { id: _id, subscribers: _subscribers, lock: _lock, ...definition } = structuredClone(template)
+  return definition
+}

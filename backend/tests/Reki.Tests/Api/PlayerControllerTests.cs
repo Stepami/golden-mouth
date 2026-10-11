@@ -27,7 +27,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         const long telegramUserId = 8414;
         using var api = Factory.CreateApiClient(telegramUserId);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
         var store = Factory.Services.GetRequiredService<IGameStore>();
         var player = await store.GetPlayerAsync(TelegramUserId.From(telegramUserId), CancellationToken.None)
                      ?? throw new InvalidOperationException("Missing player.");
@@ -85,8 +85,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Act
         var onboarded = await Task.WhenAll(
-            OnboardAsync(firstApi, WorldId.Stream),
-            OnboardAsync(secondApi, WorldId.Academy));
+            CreatePlayerWithWorldAsync(firstApi, WorldId.Stream),
+            CreatePlayerWithWorldAsync(secondApi, WorldId.Academy));
         var current = await Task.WhenAll(
             firstApi.Player.GetCurrentPlayerAsync(CancellationToken.None),
             secondApi.Player.GetCurrentPlayerAsync(CancellationToken.None));
@@ -95,8 +95,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(onboarded[0].Id).IsNotEqualTo(onboarded[1].Id);
         await Assert.That(current[0].Id).IsEqualTo(onboarded[0].Id);
         await Assert.That(current[1].Id).IsEqualTo(onboarded[1].Id);
-        await Assert.That(current[0].World).IsEqualTo(WorldId.Stream);
-        await Assert.That(current[1].World).IsEqualTo(WorldId.Academy);
+        await Assert.That((await firstApi.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().BalanceKey).IsEqualTo("stream");
+        await Assert.That((await secondApi.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().BalanceKey).IsEqualTo("academy");
         foreach ((var userId, var player) in new[]
                  {
                      (firstUserId, onboarded[0]),
@@ -122,7 +122,13 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         PlayerApiException? exception = null;
         try
         {
-            await OnboardAsync(api);
+            await api.Player.CompleteOnboardingAsync(
+                new OnboardingRequest
+                {
+                    BirthGroup = BirthGroup.Teen,
+                    Address = Address.Nick,
+                },
+                CancellationToken.None);
         }
         catch (PlayerApiException caught)
         {
@@ -144,12 +150,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var command = new OnboardPlayerCommand(
             "14-17",
-            Reki.Domain.Worlds.WorldId.From("stage"),
-            "creator",
-            "Player",
-            "player",
             "default",
-            Reki.Domain.Social.StarId.From("sonya"),
             null,
             null);
         var before = await Database.GetCollection<BsonDocument>("players")
@@ -183,12 +184,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             {
                 BirthGroup = BirthGroup.Adult,
                 AgeBand = "45+",
-                World = WorldId.Stage,
-                Role = "creator",
-                Name = "player",
-                Handle = "player",
                 Address = Address.Nick,
-                Star = "mira",
             },
             CancellationToken.None);
         var profile = await GetStoredPlayerAsync(userId);
@@ -202,11 +198,18 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         const long telegramUserId = 1001;
         using var api = Factory.CreateApiClient(telegramUserId);
 
-        var response = await OnboardAsync(api);
+        var response = await api.Player.CompleteOnboardingAsync(
+            new OnboardingRequest
+            {
+                BirthGroup = BirthGroup.Teen,
+                Address = Address.Nick,
+            },
+            CancellationToken.None);
 
         await Assert.That(response.PostsCap).IsEqualTo(10);
         await Assert.That(response.PostsLeft).IsEqualTo(10);
-        await Assert.That(response.World).IsEqualTo(WorldId.Stage);
+        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Id).IsEqualTo(response.Id);
+        await Assert.That((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Count).IsEqualTo(0);
 
         var player = await Database
             .GetCollection<BsonDocument>("players")
@@ -214,30 +217,28 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             .SingleAsync();
         await Assert.That(player["_id"].BsonType).IsEqualTo(BsonType.String);
         await Assert.That(player["TelegramUserId"].BsonType).IsEqualTo(BsonType.Int64);
-        await Assert.That(player["World"].AsString).IsEqualTo("stage");
+        await Assert.That(player.Contains("World")).IsFalse();
         await Assert.That(player["Skills"].AsBsonDocument.Names)
             .IsEquivalentTo(["brave", "humor", "topic"]);
         await Assert.That(player["BirthGroup"].AsString).IsEqualTo("14-17");
-        await Assert.That(player["Avatar"].AsString).IsEqualTo("player");
         await Assert.That(player.Names.Any(name => name.Contains("year", StringComparison.OrdinalIgnoreCase)))
             .IsFalse();
     }
 
     [Test]
-    public async Task Referral_NewPlayerFromCode_PreservesFirstInviterAsync()
+    public async Task Referral_NewPlayerFromCode_AppliesInviteAsync()
     {
         // Arrange
         using var inviterApi = Factory.CreateApiClient(8001);
         using var otherApi = Factory.CreateApiClient(8002);
         using var friendApi = Factory.CreateApiClient(8003);
-        await OnboardAsync(inviterApi);
-        await OnboardAsync(otherApi);
+        await CreatePlayerWithWorldAsync(inviterApi);
+        await CreatePlayerWithWorldAsync(otherApi);
         var first = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
         var other = await otherApi.Player.GetReferralCodeAsync(CancellationToken.None);
 
         // Act
-        await OnboardAsync(friendApi, referralCode: first.Code);
-        await OnboardAsync(friendApi, referralCode: other.Code);
+        await CreatePlayerWithWorldAsync(friendApi, referralCode: first.Code);
         var repeated = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
         var friend = await GetStoredPlayerAsync(8003);
         var inviter = await GetStoredPlayerAsync(8001);
@@ -259,18 +260,14 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         using var unknownApi = Factory.CreateApiClient(8004);
         using var malformedApi = Factory.CreateApiClient(8005);
-        using var selfApi = Factory.CreateApiClient(8006);
-        await OnboardAsync(selfApi);
-        var own = await selfApi.Player.GetReferralCodeAsync(CancellationToken.None);
 
         // Act
-        await OnboardAsync(unknownApi, referralCode: $"ref_{Guid.NewGuid():N}");
-        await OnboardAsync(malformedApi, referralCode: "invalid-code");
-        await OnboardAsync(selfApi, referralCode: own.Code);
+        await CreatePlayerWithWorldAsync(unknownApi, referralCode: $"ref_{Guid.NewGuid():N}");
+        await CreatePlayerWithWorldAsync(malformedApi, referralCode: "invalid-code");
         await PublishAsync(8004, "первый пост без пригласителя");
 
         // Assert
-        foreach (var userId in new long[] { 8004, 8005, 8006 })
+        foreach (var userId in new long[] { 8004, 8005 })
         {
             var player = await GetStoredPlayerAsync(userId);
             await Assert.That(player["InvitedBy"].IsBsonNull).IsTrue();
@@ -289,7 +286,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         using var inviterApi = Factory.CreateApiClient(8007);
         using var friendApi = Factory.CreateApiClient(8008);
-        await OnboardAsync(inviterApi);
+        await CreatePlayerWithWorldAsync(inviterApi);
         var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
 
         // Act
@@ -313,7 +310,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         {
             try
             {
-                return await OnboardAsync(friendApi, referralCode: referral.Code);
+                return await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
             }
             catch (PlayerApiException exception) when (exception.StatusCode == StatusCodes.Status409Conflict)
             {
@@ -329,12 +326,12 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         const long inviterUserId = 8017;
         using var inviterApi = Factory.CreateApiClient(inviterUserId);
         using var friendApi = Factory.CreateApiClient(8018);
-        await OnboardAsync(inviterApi);
+        await CreatePlayerWithWorldAsync(inviterApi);
         await PublishAsync(inviterUserId, "пост пригласителя");
         var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
 
         // Act
-        var friend = await OnboardAsync(friendApi, referralCode: referral.Code);
+        var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
         var inviter = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Assert
@@ -351,9 +348,9 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         const long friendUserId = 8011;
         using var inviterApi = Factory.CreateApiClient(inviterUserId);
         using var friendApi = Factory.CreateApiClient(friendUserId);
-        await OnboardAsync(inviterApi);
+        await CreatePlayerWithWorldAsync(inviterApi);
         var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
-        var onboarded = await OnboardAsync(friendApi, referralCode: referral.Code);
+        var onboarded = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
         var inviterAfterOnboarding = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Act
@@ -384,14 +381,14 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         const long inviterUserId = 8012;
         using var inviterApi = Factory.CreateApiClient(inviterUserId);
-        await OnboardAsync(inviterApi);
+        await CreatePlayerWithWorldAsync(inviterApi);
         var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
 
         // Act
         for (long friendUserId = 8013; friendUserId <= 8016; friendUserId++)
         {
             using var friendApi = Factory.CreateApiClient(friendUserId);
-            await OnboardAsync(friendApi, referralCode: referral.Code);
+            await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
         }
 
         await PublishAsync(8016, "первый пост четвёртого друга");
@@ -409,7 +406,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Settings_WhenPlusIsEnabled_UsesPlusDailyLimitAsync()
     {
         using var api = Factory.CreateApiClient(1005);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
 
         await api.Player.UpdateSettingsAsync(
             new UpdateSettingsRequest { Plus = true },
@@ -426,7 +423,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         const long telegramUserId = 1004;
         using var api = Factory.CreateApiClient(telegramUserId);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
 
         var players = Database.GetCollection<BsonDocument>("players");
         var player = await players
@@ -473,7 +470,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                      "worlds",
                  })
         {
-            await AssertCollectionHasNoPlayerAsync(collection, new BsonDocument("PlayerId", playerId));
+            await AssertCollectionHasNoPlayerAsync(collection, new BsonDocument(collection == "worlds" ? "Player.PlayerId" : "PlayerId", playerId));
         }
     }
 
@@ -481,16 +478,18 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Settings_PlayerPreferences_PersistAsync()
     {
         using var api = Factory.CreateApiClient(8400);
-        await OnboardAsync(api);
+        await api.Player.CompleteOnboardingAsync(
+            new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick },
+            CancellationToken.None);
         foreach (var address in new[] { Address.She, Address.He, Address.Nick })
         {
             await api.Player.UpdateSettingsAsync(
                 new UpdateSettingsRequest
-            {
-                Address = address,
-                Notifications = "important",
-                Quiet = "21:30-08:15",
-            },
+                {
+                    Address = address,
+                    Notifications = "important",
+                    Quiet = "21:30-08:15",
+                },
                 CancellationToken.None);
             var saved = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
             await Assert.That(saved.Address).IsEqualTo(address);
@@ -499,7 +498,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         }
 
         await api.Player.UpdateSettingsAsync(new UpdateSettingsRequest { Address = Address.She }, CancellationToken.None);
-        await api.Social.SendDirectMessageAsync("sonya", new DirectMessageRequest { Text = "Привет" }, CancellationToken.None);
+        await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
+        await api.Social.SendDirectMessageAsync("sonya", await GetWorldIdAsync(api), new DirectMessageRequest { Text = "Привет" }, CancellationToken.None);
         using var profile = ParsePlayerLayer(GetCapturedChatMessages()[1]);
         await Assert.That(profile.RootElement.GetProperty("address").GetString()).IsEqualTo("she");
     }
@@ -508,11 +508,11 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Settings_InvalidAddress_ReturnsBadRequestAsync()
     {
         using var api = Factory.CreateApiClient(8401);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
         using var http = Factory.CreateClient();
         http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8401");
         using var content = new StringContent("{\"address\":\"wizard\"}", Encoding.UTF8, "application/json");
-        using var result = await http.PatchAsync("/settings", content, CancellationToken.None);
+        using var result = await http.PatchAsync(await WorldPathAsync(http, "/settings"), content, CancellationToken.None);
         await Assert.That(result.StatusCode).IsEqualTo(System.Net.HttpStatusCode.BadRequest);
         var saved = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(saved.Address).IsEqualTo(Address.Nick);
@@ -522,7 +522,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task PlusInterest_BonusOnlyThenNotify_DoesNotRepeatBonusAsync()
     {
         using var api = Factory.CreateApiClient(8402);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
         var store = Factory.Services.GetRequiredService<IGameStore>();
         using var http = Factory.CreateClient();
         http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8402");
@@ -541,7 +541,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         }
 
         using var legacyApi = Factory.CreateApiClient(8403);
-        await OnboardAsync(legacyApi);
+        await CreatePlayerWithWorldAsync(legacyApi);
         http.DefaultRequestHeaders.Remove(TestAuthenticationHandler.UserIdHeaderName);
         http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8403");
         using var legacy = await http.PostAsync("/plus-interest", null, CancellationToken.None);
@@ -556,7 +556,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         // Arrange
         using var api = Factory.CreateApiClient(8404);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
         using var http = Factory.CreateClient();
         http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8404");
 
@@ -589,7 +589,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         // Arrange
         using var api = Factory.CreateApiClient(8410);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
         var store = Factory.Services.GetRequiredService<IGameStore>();
         var userId = TelegramUserId.From(8410);
         var player = await store.GetPlayerAsync(userId, CancellationToken.None)
@@ -597,16 +597,29 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await store.UpsertPlayerAsync(
             player with
             {
-                Subscribers = 1234,
                 DailyBonus = 7,
                 PostsUsed = 2,
-                Settings = player.Settings with { Plus = true, Voice = "Коротко и тепло" },
+                Settings = player.Settings with { Plus = true },
             },
+            CancellationToken.None);
+
+        var world = (await store.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
+        await store.TryReplaceWorldAsync(
+            world with
+        {
+            Version = world.Version + 1,
+            Player = world.Player with
+            {
+                Subscribers = 1234,
+                Voice = "Коротко и тепло",
+            },
+        },
+            world.Version,
             CancellationToken.None);
 
         // Act
         await Task.WhenAll(
-            api.Player.UpdateSettingsAsync(new UpdateSettingsRequest { Drama = Drama.Off }, CancellationToken.None),
+            api.Worlds.UpdateWorldAsync(await GetWorldIdAsync(api), new Reki.Contracts.Worlds.UpdateWorldRequest { Drama = Drama.Off }, CancellationToken.None),
             api.Player.UpdateSettingsAsync(
                 new UpdateSettingsRequest { Address = Address.She },
                 CancellationToken.None));
@@ -616,13 +629,14 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Assert
         var saved = await store.GetPlayerAsync(userId, CancellationToken.None)
                               ?? throw new InvalidOperationException("Missing player.");
-        await Assert.That(saved.Settings.Drama).IsEqualTo("off");
+        var savedWorld = (await store.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
+        await Assert.That(savedWorld.Player.Drama).IsEqualTo(Reki.Domain.Worlds.WorldDrama.Off);
         await Assert.That(saved.Address).IsEqualTo("she");
         await Assert.That(saved.Settings.Plus).IsFalse();
-        await Assert.That(saved.Settings.Voice).IsEqualTo("Коротко и тепло");
+        await Assert.That(savedWorld.Player.Voice).IsEqualTo("Коротко и тепло");
         await Assert.That(saved.Settings.Notifications).IsEqualTo(player.Settings.Notifications);
         await Assert.That(saved.Settings.Quiet).IsEqualTo(player.Settings.Quiet);
-        await Assert.That(saved.Subscribers).IsEqualTo(1234);
+        await Assert.That(savedWorld.Player.Subscribers).IsEqualTo(1234);
         await Assert.That(saved.DailyBonus).IsEqualTo(7);
         await Assert.That(saved.PostsUsed).IsEqualTo(2);
     }
@@ -635,7 +649,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         using var body = new StringContent("{}", Encoding.UTF8, "application/json");
 
         // Act
-        using var response = await http.PatchAsync("/settings", body, CancellationToken.None);
+        using var response = await http.PatchAsync(await WorldPathAsync(http, "/settings"), body, CancellationToken.None);
 
         // Assert
         await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
@@ -651,7 +665,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         long userId = alreadyClaimed ? 8413 : 8412;
         using var api = Factory.CreateApiClient(userId);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
         var store = Factory.Services.GetRequiredService<IGameStore>();
         var player = await store.GetPlayerAsync(TelegramUserId.From(userId), CancellationToken.None)
                                ?? throw new InvalidOperationException("Missing player.");
@@ -664,10 +678,22 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                 InviteBonusesEarnedInPeriod = 2,
                 PlusInterestClaimed = alreadyClaimed,
                 PlusNotifyRequested = true,
-                Subscribers = 1234,
-                Wants = player.Wants.Select(want => want with { Done = true }).ToArray(),
-                StarRelations = player.StarRelations.Select(relation => relation with { GainedInPeriod = 3 }).ToArray(),
             },
+            CancellationToken.None);
+        var world = (await store.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
+        await store.TryReplaceWorldAsync(
+            world with
+            {
+                Stars = world.Stars.Select(star => star with { RelationGainedInPeriod = 3 }).ToArray(),
+                Version = world.Version + 1,
+                Player = world.Player with
+                {
+                    Subscribers = 1234,
+                    PeriodStartedAtUtc = player.PostsPeriodStartedAtUtc.AddDays(-1),
+                    Wants = world.Player.Wants.Select(want => want with { Done = true }).ToArray(),
+                },
+            },
+            world.Version,
             CancellationToken.None);
         using var http = CreateAuthenticatedHttpClient(userId);
 
@@ -703,10 +729,12 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(saved.PostsUsed).IsEqualTo(0);
         await Assert.That(saved.InviteBonusesEarnedInPeriod).IsEqualTo(0);
         await Assert.That(saved.PostsPeriodStartedAtUtc).IsEqualTo(player.PostsPeriodStartedAtUtc);
-        await Assert.That(saved.Wants.All(want => !want.Done)).IsTrue();
-        await Assert.That(saved.StarRelations.All(relation => relation.GainedInPeriod == 0 &&
-                                                              relation.PeriodStartedAtUtc ==
+        _ = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id == world.Id.Value);
+        var savedWorld = (await store.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
+        await Assert.That(savedWorld.Player.Wants.All(want => !want.Done)).IsTrue();
+        await Assert.That(savedWorld.Stars.All(relation => relation.RelationGainedInPeriod == 0 &&
+                                                              relation.RelationPeriodStartedAtUtc ==
                                                               player.PostsPeriodStartedAtUtc)).IsTrue();
-        await Assert.That(saved.Subscribers).IsEqualTo(1234);
+        await Assert.That(savedWorld.Player.Subscribers).IsEqualTo(1234);
     }
 }

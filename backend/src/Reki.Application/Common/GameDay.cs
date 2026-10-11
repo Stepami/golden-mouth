@@ -24,13 +24,20 @@ public sealed class GameDay(TimeProvider timeProvider, IOptions<GameBalance> bal
             return player;
         }
 
-        var skippedDays = player.LastPostAtUtc is null
-            ? 0
-            : GetSkippedDays(GetPeriodStart(player.LastPostAtUtc.Value), periodStart);
-        var restedPosts = skippedDays >= balance.Value.Growth.RestedAfterSkippedDays
-            ? balance.Value.Growth.RestedFirstPosts
-            : 0;
-        return player.StartNewPeriod(periodStart, restedPosts);
+        return player.StartNewPeriod(periodStart);
+    }
+
+    public Reki.Domain.Worlds.World Normalize(Reki.Domain.Worlds.World world)
+    {
+        var periodStart = PeriodStart;
+        if (world.Player.PeriodStartedAtUtc == periodStart)
+        {
+            return world;
+        }
+
+        var skippedDays = world.Player.LastPostAtUtc is null ? 0 : GetSkippedDays(GetPeriodStart(world.Player.LastPostAtUtc.Value), periodStart);
+        var restedPosts = skippedDays >= balance.Value.Growth.RestedAfterSkippedDays ? balance.Value.Growth.RestedFirstPosts : 0;
+        return world.StartNewPeriod(periodStart, restedPosts);
     }
 
     private static int GetSkippedDays(DateTimeOffset lastPostPeriod, DateTimeOffset currentPeriod)
@@ -54,4 +61,3 @@ public sealed class GameDay(TimeProvider timeProvider, IOptions<GameBalance> bal
         return (localNow < start ? start.AddDays(-1) : start).ToUniversalTime();
     }
 }
-

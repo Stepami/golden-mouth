@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
+using Reki.Application.Common.Exceptions;
 using Reki.Application.Player;
 using Reki.Domain.Social;
 
@@ -17,14 +18,17 @@ public sealed class GetDirectMessagesHandler(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        _ = StarCatalog.Require(player.World, request.StarId);
+        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        _ = world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world.");
         var periodStart = gameDay.PeriodStart;
         var conversation = await store.GetStarConversationAsync(
             player.Id,
             request.StarId,
-            cancellationToken) ?? new StarConversation(
+            cancellationToken,
+            world.Id) ?? new StarConversation(
                 StarConversationId.New(),
                 player.Id,
+                world.Id,
                 request.StarId,
                 [],
                 [],
@@ -39,9 +43,8 @@ public sealed class GetDirectMessagesHandler(
         var repliesLeft = Math.Max(
             0,
             balance.Value.Relations.DirectMessageRepliesPerDay - conversation.RepliesUsed);
-        var relation = player.StarRelations
-            .FirstOrDefault(item => item.StarId == request.StarId)?.Value ?? 0;
-        return new DirectMessageView(conversation, repliesLeft, relation, StarCatalog.Require(player.World, request.StarId));
+        var relation = world.Stars
+            .FirstOrDefault(item => item.Id == request.StarId)?.Relation ?? 0;
+        return new DirectMessageView(conversation, repliesLeft, relation, world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world."));
     }
 }
-

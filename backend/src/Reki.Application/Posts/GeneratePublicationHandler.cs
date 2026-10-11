@@ -9,7 +9,6 @@ using Reki.Application.Common;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Player;
-using Reki.Application.Worlds;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using static Reki.Application.Common.AI.StarToolCallParser;
@@ -37,6 +36,7 @@ public sealed partial class GeneratePublicationHandler(
         }
 
         var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
         var player = gameDay.Normalize(storedPlayer);
         if (!ReferenceEquals(player, storedPlayer) && !await store.TryReplacePlayerAsync(
             player,
@@ -46,7 +46,7 @@ public sealed partial class GeneratePublicationHandler(
             throw new RequestConflictException("The player state changed while starting a new day.");
         }
 
-        var requestHash = ComputeRequestHash(request);
+        var requestHash = ComputeRequestHash(request with { WorldId = world.Id });
         var existing = await sender.Send(new GetPublicationQuery(request.Id), cancellationToken);
         if (existing is not null)
         {
@@ -71,7 +71,8 @@ public sealed partial class GeneratePublicationHandler(
             PublicationStatus.Pending,
             [],
             null,
-            timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime);
+            timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime,
+            world.Id);
         if (!await store.TryCreatePublicationAsync(publication, cancellationToken))
         {
             existing = await sender.Send(new GetPublicationQuery(request.Id), cancellationToken)
@@ -89,7 +90,7 @@ public sealed partial class GeneratePublicationHandler(
             StarPostContext? context = null;
             try
             {
-                context = await CreatePostContextAsync(request, player, cancellationToken);
+                context = await CreatePostContextAsync(request, player, world, cancellationToken);
             }
             catch (Exception exception)
             {
@@ -182,7 +183,7 @@ public sealed partial class GeneratePublicationHandler(
 
     private static string ComputeRequestHash(GeneratePublicationCommand request)
     {
-        var payload = $"{request.Text.Length}:{request.Text}:{request.OwnWords}:{request.WantId}";
+        var payload = $"{request.WorldId.Value}:{request.Text.Length}:{request.Text}:{request.OwnWords}:{request.WantId}";
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
     }
 
@@ -200,28 +201,16 @@ public sealed partial class GeneratePublicationHandler(
     private async ValueTask<StarPostContext> CreatePostContextAsync(
         GeneratePublicationCommand request,
         PlayerProfile player,
+        Reki.Domain.Worlds.World world,
         CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
-        var storedRules = await store.GetWorldRulesAsync(player.Id, player.World, cancellationToken);
-        var worldRules = player.World.Value == "own" && storedRules is not null
-            ? storedRules
-            : WorldRulesDefaults.Create(player.Id, player.World);
-        var recentPosts = await sender.Send(new GetChannelPostsQuery(player.Id, 3), cancellationToken);
-        var hateEnabled = StarTurnPolicy.IsHateEnabled(player, balance.Value, now);
+        var recentPosts = await sender.Send(new GetChannelPostsQuery(world.Id, player.Id, 3), cancellationToken);
+        var hateEnabled = StarTurnPolicy.IsHateEnabled(player, world, balance.Value, now);
         return new StarPostContext(
             request.Text,
-            new StarAgentProfile(
-                player.World,
-                worldRules.Title,
-                worldRules.Description,
-                worldRules.Rules,
-                player.Settings.Drama,
-                player.Settings.Voice,
-                null,
-                [],
-                player.Address),
-            GetStage(player.Subscribers),
+            new StarAgentProfile(world, null, [], player.Address),
+            GetStage(world.Player.Subscribers),
             recentPosts.Select(post => post.Text).ToArray(),
             hateEnabled);
     }
@@ -257,7 +246,7 @@ public sealed partial class GeneratePublicationHandler(
             };
             if (part.Comment is { } generated)
             {
-                StarTurnPolicy.EnsurePostAllowed(generated, context.Agent.WorldId, context.HateEnabled);
+                StarTurnPolicy.EnsurePostAllowed(generated, context.Agent.World, context.HateEnabled);
             }
 
             await store.AppendPublicationPartAsync(publicationId, part, cancellationToken);

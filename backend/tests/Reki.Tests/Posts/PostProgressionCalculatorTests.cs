@@ -18,8 +18,8 @@ public sealed class PostProgressionCalculatorTests
         var turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
         // Act
-        var tenth = calculator.Calculate(tenthPostPlayer, turn, false, false);
-        var eleventh = calculator.Calculate(eleventhPostPlayer, turn, false, false);
+        var tenth = calculator.Calculate(tenthPostPlayer, TestGameData.CreateWorld(), turn, false, false, "publication-test");
+        var eleventh = calculator.Calculate(eleventhPostPlayer, TestGameData.CreateWorld(), turn, false, false, "publication-test");
 
         // Assert
         await Assert.That(tenth.Skills[TestGameData.Brave].Experience).IsEqualTo(1);
@@ -39,14 +39,18 @@ public sealed class PostProgressionCalculatorTests
         // Act
         var third = calculator.Calculate(
             TestGameData.CreatePlayer() with { PostsUsed = 2 },
+            TestGameData.CreateWorld(),
             turn,
             false,
-            false);
+            false,
+            "publication-test");
         var fourth = calculator.Calculate(
             TestGameData.CreatePlayer() with { PostsUsed = 3 },
+            TestGameData.CreateWorld(),
             turn,
             false,
-            false);
+            false,
+            "publication-test");
 
         // Assert
         await Assert.That(third.Skills[TestGameData.Brave].Experience).IsEqualTo(2);
@@ -65,7 +69,7 @@ public sealed class PostProgressionCalculatorTests
         var turn = TestGameData.CreateTurn(0.8, 0.9, 0.7);
 
         // Act
-        var result = calculator.Calculate(player, turn, false, false);
+        var result = calculator.Calculate(player, TestGameData.CreateWorld(), turn, false, false, "publication-test");
 
         // Assert
         await Assert.That(result.Skills[TestGameData.Humor].Experience).IsEqualTo(1);
@@ -83,7 +87,7 @@ public sealed class PostProgressionCalculatorTests
         var turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
         // Act
-        var result = calculator.Calculate(player, turn, true, false);
+        var result = calculator.Calculate(player, TestGameData.CreateWorld(), turn, true, false, "publication-test");
 
         // Assert
         await Assert.That(result.Skills[TestGameData.Brave].Experience).IsEqualTo(1.3);
@@ -100,7 +104,7 @@ public sealed class PostProgressionCalculatorTests
         var turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
         // Act
-        var result = calculator.Calculate(player, turn, false, true);
+        var result = calculator.Calculate(player, TestGameData.CreateWorld(), turn, false, true, "publication-test");
 
         // Assert
         await Assert.That(result.Skills[TestGameData.Brave].Experience).IsEqualTo(1.3);
@@ -117,7 +121,7 @@ public sealed class PostProgressionCalculatorTests
         var turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
         // Act
-        var result = calculator.Calculate(player, turn, true, true);
+        var result = calculator.Calculate(player, TestGameData.CreateWorld(), turn, true, true, "publication-test");
 
         // Assert
         await Assert.That(Math.Round(result.Skills[TestGameData.Brave].Experience, 4))
@@ -136,11 +140,26 @@ public sealed class PostProgressionCalculatorTests
 
         // Act
         var fifth = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 4 }, turn, false, false).SubscriberDelta;
+            TestGameData.CreatePlayer() with { PostsUsed = 4 },
+            TestGameData.CreateWorld(),
+            turn,
+            false,
+            false,
+            "publication-test").SubscriberDelta;
         var sixth = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 5 }, turn, false, false).SubscriberDelta;
+            TestGameData.CreatePlayer() with { PostsUsed = 5 },
+            TestGameData.CreateWorld(),
+            turn,
+            false,
+            false,
+            "publication-test").SubscriberDelta;
         var eleventh = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 10 }, turn, false, false).SubscriberDelta;
+            TestGameData.CreatePlayer() with { PostsUsed = 10 },
+            TestGameData.CreateWorld(),
+            turn,
+            false,
+            false,
+            "publication-test").SubscriberDelta;
 
         // Assert
         await Assert.That(fifth).IsEqualTo(100);
@@ -158,15 +177,31 @@ public sealed class PostProgressionCalculatorTests
 
         // Act
         var belowThreshold = calculator.Calculate(
-            TestGameData.CreatePlayer() with { Subscribers = 999, PostsUsed = 3 },
+            TestGameData.CreatePlayer() with { PostsUsed = 3 },
+            TestGameData.CreateWorld() with
+            {
+                Player = TestGameData.CreateWorld().Player with
+                {
+                    Subscribers = 999,
+                },
+            },
             turn,
             false,
-            false).SubscriberDelta;
+            false,
+            "publication-test").SubscriberDelta;
         var atThreshold = calculator.Calculate(
-            TestGameData.CreatePlayer() with { Subscribers = 1000, PostsUsed = 3 },
+            TestGameData.CreatePlayer() with { PostsUsed = 3 },
+            TestGameData.CreateWorld() with
+            {
+                Player = TestGameData.CreateWorld().Player with
+                {
+                    Subscribers = 1000,
+                },
+            },
             turn,
             false,
-            false).SubscriberDelta;
+            false,
+            "publication-test").SubscriberDelta;
 
         // Assert
         await Assert.That(belowThreshold).IsEqualTo(200);
@@ -183,7 +218,7 @@ public sealed class PostProgressionCalculatorTests
         var turn = TestGameData.CreateTurn();
 
         // Act
-        var result = calculator.Calculate(player, turn, true, false);
+        var result = calculator.Calculate(player, TestGameData.CreateWorld(), turn, true, false, "publication-test");
 
         // Assert
         await Assert.That(result.SubscriberDelta).IsEqualTo(130);
@@ -200,15 +235,31 @@ public sealed class PostProgressionCalculatorTests
 
         // Act
         var third = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 2, RestedPostsRemaining = 1 },
+            TestGameData.CreatePlayer() with { PostsUsed = 2 },
+            TestGameData.CreateWorld() with
+            {
+                Player = TestGameData.CreateWorld().Player with
+                {
+                    RestedPostsRemaining = 1,
+                },
+            },
             turn,
             false,
-            false).SubscriberDelta;
+            false,
+            "publication-test").SubscriberDelta;
         var fourth = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 3, RestedPostsRemaining = 1 },
+            TestGameData.CreatePlayer() with { PostsUsed = 3 },
+            TestGameData.CreateWorld() with
+            {
+                Player = TestGameData.CreateWorld().Player with
+                {
+                    RestedPostsRemaining = 1,
+                },
+            },
             turn,
             false,
-            false).SubscriberDelta;
+            false,
+            "publication-test").SubscriberDelta;
 
         // Assert
         await Assert.That(third).IsEqualTo(200);
@@ -216,113 +267,35 @@ public sealed class PostProgressionCalculatorTests
     }
 
     [Test]
-    public async Task Calculate_ThirdPublishedPost_AppliesGuaranteedViralMultiplierAsync()
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task Calculate_RepeatedPublications_UsesOnlyConfiguredProbabilitiesAsync(bool viral)
     {
-        // Arrange
-        var balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(Options.Create(balance));
-        var player = TestGameData.CreatePlayer() with
+        var baseline = CreateDeterministicBalance();
+        var balance = baseline with
         {
-            PostsUsed = 3,
-            TotalPostsPublished = 2,
-            PostsSinceViral = 2,
-        };
-
-        // Act
-        var result = calculator.Calculate(
-            player,
-            TestGameData.CreateTurn(),
-            false,
-            false);
-
-        // Assert
-        await Assert.That(result.Viral).IsTrue();
-        await Assert.That(result.Flop).IsFalse();
-        await Assert.That(result.SubscriberDelta).IsEqualTo(300);
-    }
-
-    [Test]
-    public async Task Calculate_ThirdPublishedPostAfterEarlierViral_DoesNotRepeatGuaranteeAsync()
-    {
-        // Arrange
-        var balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(Options.Create(balance));
-        var player = TestGameData.CreatePlayer() with
-        {
-            PostsUsed = 3,
-            TotalPostsPublished = 2,
-            PostsSinceViral = 0,
-        };
-
-        // Act
-        var result = calculator.Calculate(
-            player,
-            TestGameData.CreateTurn(),
-            false,
-            false);
-
-        // Assert
-        await Assert.That(result.Viral).IsFalse();
-        await Assert.That(result.SubscriberDelta).IsEqualTo(100);
-    }
-
-    [Test]
-    public async Task Calculate_AtPityBoundary_GuaranteesViralOnlyOnFifteenthPostAsync()
-    {
-        // Arrange
-        var balance = CreateDeterministicBalance();
-        var calculator = new PostProgressionCalculator(Options.Create(balance));
-        var turn = TestGameData.CreateTurn();
-
-        // Act
-        var beforeBoundary = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 3, PostsSinceViral = 13 },
-            turn,
-            false,
-            false).Viral;
-        var atBoundary = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 3, PostsSinceViral = 14 },
-            turn,
-            false,
-            false).Viral;
-
-        // Assert
-        await Assert.That(beforeBoundary).IsFalse();
-        await Assert.That(atBoundary).IsTrue();
-    }
-
-    [Test]
-    public async Task Calculate_AfterTwoConsecutiveFlops_PreventsThirdFlopAsync()
-    {
-        // Arrange
-        var baseBalance = CreateDeterministicBalance();
-        var balance = baseBalance with
-        {
+            Growth = baseline.Growth with { StarterMultiplier = 1 },
+            Viral = baseline.Viral with { BaseChance = viral ? 1 : 0 },
             Worlds = new Dictionary<string, WorldBalance>
             {
-                [TestGameData.WorldId.Value] = new(1, 1, 1, long.MaxValue),
+                ["stage"] = new(1, 1, 1, long.MaxValue),
             },
         };
         var calculator = new PostProgressionCalculator(Options.Create(balance));
-        var turn = TestGameData.CreateTurn();
-
-        // Act
-        var secondFlop = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 3, ConsecutiveFlops = 1 },
-            turn,
-            false,
-            false);
-        var preventedThird = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 3, ConsecutiveFlops = 2 },
-            turn,
-            false,
-            false);
-
-        // Assert
-        await Assert.That(secondFlop.Flop).IsTrue();
-        await Assert.That(secondFlop.SubscriberDelta).IsEqualTo(-30);
-        await Assert.That(preventedThird.Flop).IsFalse();
-        await Assert.That(preventedThird.SubscriberDelta).IsEqualTo(100);
+        var player = TestGameData.CreatePlayer();
+        var world = TestGameData.CreateWorld();
+        for (var index = 0; index < 20; index++)
+        {
+            var publicationId = $"probability-{index}";
+            var result = calculator.Calculate(player, world, TestGameData.CreateTurn(), false, false, publicationId);
+            var repeated = calculator.Calculate(player, world, TestGameData.CreateTurn(), false, false, publicationId);
+            await Assert.That(result.Viral).IsEqualTo(viral);
+            await Assert.That(result.Flop).IsEqualTo(!viral);
+            await Assert.That(result.SubscriberDelta).IsEqualTo(viral ? 300L : -30L);
+            await Assert.That(repeated.Viral).IsEqualTo(result.Viral);
+            await Assert.That(repeated.Flop).IsEqualTo(result.Flop);
+            world = world.PublishPost(result.SubscriberDelta, result.Viral, result.Skills, null, TestGameData.StarId, TestGameData.PeriodStart.AddMinutes(index), -5, 5, 1, 3);
+        }
     }
 
     private static GameBalance CreateDeterministicBalance()

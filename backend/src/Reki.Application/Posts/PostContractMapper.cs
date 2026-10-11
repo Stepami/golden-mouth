@@ -1,6 +1,5 @@
 using System.Globalization;
 using Reki.Contracts.Posts;
-using Reki.Domain.Player;
 using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts;
@@ -15,19 +14,19 @@ public static class PostContractMapper
 
     public static FeedItemResponse MapFeedItem(
         GamePost post,
-        PlayerProfile author,
+        Reki.Domain.Worlds.World author,
         bool canReply) =>
         new(
             FeedItemKind.Post,
             post.Id.Value,
-            author.Name,
-            author.Avatar,
-            author.Role,
+            author.Player.Name,
+            author.Player.Avatar,
+            author.Player.Role,
             post.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             post.Text,
             CreateReactions(post),
             post.Views,
-            post.GetComments().Count,
+            post.Comments.Count,
             null,
             canReply);
 
@@ -38,7 +37,7 @@ public static class PostContractMapper
             post.CreatedAtUtc,
             post.Views,
             CreateReactions(post),
-            post.GetComments().Count);
+            post.Comments.Count);
 
     public static IReadOnlyList<ReactionResponse> CreateReactions(GamePost post) =>
         [new ReactionResponse("🔥", post.Viral ? 3 : 1)];

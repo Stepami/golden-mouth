@@ -62,6 +62,7 @@ public sealed class ThreadReplyPolicyTests
         new(
             PostId.From("post-one"),
             PlayerId.From("player-one"),
+            TestGameData.CreateWorld().Id,
             "текст поста",
             10,
             [],

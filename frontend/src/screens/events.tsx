@@ -1,6 +1,7 @@
+import { worldOf } from '../api/worldContent'
 import { useState } from 'react'
 import { api } from '../api/client'
-import { events, worldOf } from '../api/mock'
+import { events } from '../api/mock'
 import type { GameEvent } from '../api/types'
 import { useNav } from '../app/nav'
 import { useApi } from '../app/useApi'

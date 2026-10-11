@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { copyTextToClipboard, shareURL } from '@telegram-apps/sdk-react'
 import { api } from '../api/client'
-import { worldOf } from '../api/mock'
+import { worldOf } from '../api/worldContent'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'

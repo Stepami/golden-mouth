@@ -21,6 +21,7 @@ public sealed class ProductTelemetryTests
             new Dictionary<string, string> { ["plus_offer"] = "10" },
             [
                 new AnalyticsEntry(
+                    TestGameData.CreateWorld().Id,
                     "screen_view",
                     123,
                     "feed",
@@ -28,6 +29,7 @@ public sealed class ProductTelemetryTests
                     new Dictionary<string, string>
                     {
                         ["id"] = "cta_main",
+                        ["world"] = "academy",
                         ["message"] = "must not be exported",
                     }),
             ]);
@@ -46,6 +48,8 @@ public sealed class ProductTelemetryTests
             .IsEqualTo(TestGameData.CreatePlayer().Id.Value);
         await Assert.That(attributes["session_id"]).IsEqualTo("session-1");
         await Assert.That(attributes["prop_id"]).IsEqualTo("cta_main");
+        await Assert.That(attributes["world"]).IsEqualTo("academy");
+        await Assert.That(attributes["world_id"]).IsEqualTo(TestGameData.CreateWorld().Id.Value);
         await Assert.That(attributes.ContainsKey("prop_message")).IsFalse();
     }
 
@@ -56,7 +60,7 @@ public sealed class ProductTelemetryTests
         var telemetry = new ProductTelemetry(logger, new FakeTimeProvider());
         var player = TestGameData.CreatePlayer() with { AgeBand = "25-34" };
         var entries = new[] { "15000", "30001", "-1", "0", "text" }
-            .Select(ms => new AnalyticsEntry("active_time", 123, "feed", null, new Dictionary<string, string> { ["ms"] = ms })).ToArray();
+            .Select(ms => new AnalyticsEntry(null, "active_time", 123, "feed", null, new Dictionary<string, string> { ["ms"] = ms })).ToArray();
         telemetry.TrackSubmission(player, new AnalyticsSubmission(SessionId.From("session-1"), "ios", new Dictionary<string, string>(), entries));
         var call = logger.ReceivedCalls().Single(item => item.GetMethodInfo().Name == nameof(ILogger.BeginScope));
         var attributes = call.GetArguments()[0] as IReadOnlyDictionary<string, object?>

@@ -92,10 +92,15 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
             }
 
             var attributes = CreateAttributes(player.Id, entry.Name, entry.Timestamp);
+            if (entry.WorldId is { } worldId)
+            {
+                attributes["world_id"] = worldId.Value;
+            }
+
             attributes["session_id"] = submission.Session.Value;
             attributes["platform"] = submission.Platform;
             attributes["screen"] = entry.Screen;
-            attributes["world"] = player.World.Value;
+            attributes["world"] = ReadWorldKey(entry.Properties);
             attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
             if (entry.PreviousScreen is not null)
             {
@@ -121,7 +126,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         }
 
         var attributes = CreateAttributes(player.Id, eventName, timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
-        attributes["world"] = player.World.Value;
+        attributes["world"] = ReadWorldKey(properties);
         attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
         AddProperties(attributes, properties);
         Write(eventName, attributes);
@@ -144,6 +149,10 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         AddProperties(attributes, properties);
         Write(eventName, attributes);
     }
+
+    private static string ReadWorldKey(IReadOnlyDictionary<string, string> properties) =>
+        properties.TryGetValue("world", out var world) && world is "stage" or "academy" or "it" or "stream" or "own"
+            ? world : "unknown";
 
     private Dictionary<string, object?> CreateAttributes(
         PlayerId playerId,

@@ -44,8 +44,10 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(SendDirectMessageResponse))]
 [JsonSerializable(typeof(ChallengeResponse))]
 [JsonSerializable(typeof(GameEventResponse))]
-[JsonSerializable(typeof(WorldRulesResponse))]
-[JsonSerializable(typeof(UpdateWorldRulesRequest))]
+[JsonSerializable(typeof(WorldResponse))]
+[JsonSerializable(typeof(IReadOnlyList<WorldResponse>))]
+[JsonSerializable(typeof(CreateWorldRequest))]
+[JsonSerializable(typeof(UpdateWorldRequest))]
 [JsonSerializable(typeof(PlusInterestRequest))]
 [JsonSerializable(typeof(PlusInterestResponse))]
 [JsonSerializable(typeof(ViewsLiveEvent))]
@@ -60,7 +62,6 @@ namespace Reki.Api.Serialization;
     Converters =
     [
         typeof(CamelCaseEnumConverter<SkillId>),
-        typeof(CamelCaseEnumConverter<WorldId>),
         typeof(CamelCaseEnumConverter<Address>),
         typeof(CamelCaseEnumConverter<Drama>),
         typeof(CamelCaseEnumConverter<BirthGroup>),

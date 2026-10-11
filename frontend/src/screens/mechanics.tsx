@@ -1,7 +1,8 @@
+import { worldOf } from '../api/worldContent'
 import { useState } from 'react'
 import { shareURL } from '@telegram-apps/sdk-react'
 import { api } from '../api/client'
-import { challenge as challengeMock, worldOf } from '../api/mock'
+import { challenge as challengeMock } from '../api/mock'
 import { useApi } from '../app/useApi'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
@@ -71,7 +72,7 @@ function Duel() {
 // 05-9: голос канала: стиль игрока для «Подскажи»
 function Voice() {
   const nav = useNav(); const p = usePlayer(); const { patch } = useStore()
-  const [v, setV] = useState(p.settings.voice.replace(/[«»]/g, ''))
+  const [v, setV] = useState(p.voice.replace(/[«»]/g, ''))
   const presets = contentOf(p.world).voices
   return (
     <div className="screen no-tab">
@@ -84,8 +85,8 @@ function Voice() {
       </div>
       <BottomCTA main="Сохранить" onMain={async () => {
         const voice = v.trim()
-        await api.settings({ voice })
-        patch({ settings: { ...p.settings, voice } })
+        await api.updateWorld({ voice })
+        patch({ voice })
         nav.back()
       }} />
     </div>

@@ -14,7 +14,6 @@ RUN dotnet restore src/Reki.Api/Reki.Api.csproj
 FROM restore AS publish
 COPY backend/. .
 COPY docs/config/balance.json /src/docs/config/balance.json
-COPY frontend/src/api/personas.json /src/frontend/src/api/personas.json
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*

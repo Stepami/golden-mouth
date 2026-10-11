@@ -1,40 +1,37 @@
-using Reki.Domain.Social;
-using Reki.Domain.Worlds;
-
 namespace Reki.Domain.Player;
 
-public sealed record PlayerProfile(
-    PlayerId Id,
-    TelegramUserId TelegramUserId,
-    string BirthGroup,
-    string Name,
-    string Handle,
-    string Role,
-    string Avatar,
-    string Address,
-    WorldId World,
-    long Subscribers,
-    int PostsUsed,
-    int DailyBonus,
-    DateTimeOffset PostsPeriodStartedAtUtc,
-    bool PlusInterestClaimed,
-    int StreakDays,
-    PlayerSettings Settings,
-    IReadOnlyDictionary<SkillId, SkillProgress> Skills,
-    DateTimeOffset? PausedAtUtc,
-    DateTimeOffset? HateDisabledUntilUtc,
-    int Version,
-    IReadOnlyList<DailyWant> Wants,
-    IReadOnlyList<AchievementProgress> Achievements,
-    IReadOnlyList<StarRelationProgress> StarRelations,
-    DateTimeOffset? LastPostAtUtc,
-    int RestedPostsRemaining,
-    int TotalPostsPublished,
-    int PostsSinceViral,
-    int ConsecutiveFlops,
-    int ChallengeDailyBonus,
-    DateTimeOffset? ChallengeBonusUntilUtc)
+public sealed record PlayerProfile
 {
+    public required PlayerId Id { get; init; }
+
+    public required TelegramUserId TelegramUserId { get; init; }
+
+    public required string BirthGroup { get; init; }
+
+    public required string Address { get; init; }
+
+    public int PostsUsed { get; init; }
+
+    public int DailyBonus { get; init; }
+
+    public DateTimeOffset PostsPeriodStartedAtUtc { get; init; }
+
+    public bool PlusInterestClaimed { get; init; }
+
+    public int StreakDays { get; init; }
+
+    public required IReadOnlyDictionary<SkillId, SkillProgress> Skills { get; init; }
+
+    public DateTimeOffset? PausedAtUtc { get; init; }
+
+    public DateTimeOffset? HateDisabledUntilUtc { get; init; }
+
+    public int Version { get; init; }
+
+    public int ChallengeDailyBonus { get; init; }
+
+    public DateTimeOffset? ChallengeBonusUntilUtc { get; init; }
+
     public bool PlusNotifyRequested { get; init; }
 
     public PlayerId? InvitedBy { get; init; }
@@ -49,33 +46,7 @@ public sealed record PlayerProfile(
 
     public string? AgeBand { get; init; }
 
-    public PlayerProfile EnsureDefaults()
-    {
-        // Mongo can hydrate null for fields absent from legacy documents despite the domain contract.
-
-        // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
-        var wants = Wants ?? DailyWantCatalog.Create();
-
-        // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
-        var achievements = Achievements ?? [];
-        if (!achievements.Any(item => item.WorldId == World))
-        {
-            achievements = [.. achievements, .. AchievementCatalog.Create(World)];
-        }
-
-        // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
-        var relations = StarRelations ?? [];
-        return ReferenceEquals(wants, Wants) &&
-            ReferenceEquals(achievements, Achievements) &&
-            ReferenceEquals(relations, StarRelations)
-            ? this
-            : this with
-            {
-                Wants = wants,
-                Achievements = achievements,
-                StarRelations = relations,
-            };
-    }
+    public required PlayerSettings Settings { get; init; }
 
     public int GetPostsCap(int freePerDay, int plusPerDay)
     {
@@ -84,113 +55,6 @@ public sealed record PlayerProfile(
             ? ChallengeDailyBonus
             : 0;
         return baseLimit + DailyBonus + challengeBonus;
-    }
-
-    public PlayerProfile StartNewPeriod(DateTimeOffset periodStartedAtUtc, int restedPosts)
-    {
-        return this with
-        {
-            PostsUsed = 0,
-            DailyBonus = 0,
-            InviteBonusesEarnedInPeriod = 0,
-            PostsPeriodStartedAtUtc = periodStartedAtUtc,
-            RestedPostsRemaining = restedPosts,
-            Wants = Wants.Select(want => want with { Done = false }).ToArray(),
-            StarRelations = StarRelations
-                .Select(relation => relation with
-                {
-                    GainedInPeriod = 0,
-                    PeriodStartedAtUtc = periodStartedAtUtc,
-                })
-                .ToArray(),
-            Version = Version + 1,
-        };
-    }
-
-    public PlayerProfile PublishPost(
-        long subscriberDelta,
-        bool viral,
-        bool flop,
-        IReadOnlyDictionary<SkillId, SkillProgress> skills,
-        string? completedWantId,
-        StarId starId,
-        DateTimeOffset now,
-        int relationMinimum,
-        int relationMaximum,
-        int relationMaxGainPerDay,
-        int starCardAt)
-    {
-        var completedWant = !string.IsNullOrWhiteSpace(completedWantId) &&
-                            Wants.Any(want => want.Id == completedWantId && !want.Done);
-        var wants = completedWant
-            ? Wants.Select(want => want.Id == completedWantId ? want with { Done = true } : want).ToArray()
-            : Wants;
-        var relations = completedWant
-            ? GainStarRelation(
-                starId,
-                relationMinimum,
-                relationMaximum,
-                relationMaxGainPerDay)
-            : StarRelations;
-        var subscribers = Math.Max(0, Subscribers + subscriberDelta);
-        var achievements = Achievements;
-        if (viral)
-        {
-            achievements = Unlock(achievements, World, AchievementCatalog.FirstViral);
-        }
-
-        if (subscribers >= 10_000)
-        {
-            achievements = Unlock(achievements, World, AchievementCatalog.TenThousand);
-        }
-
-        if (skills.Values.Any(skill => skill.Level >= 3))
-        {
-            achievements = Unlock(achievements, World, AchievementCatalog.SkillMastery);
-        }
-
-        if (relations.Any(relation => relation.StarId == starId && relation.Value >= starCardAt))
-        {
-            achievements = Unlock(achievements, World, AchievementCatalog.StarCard);
-        }
-
-        return this with
-        {
-            Subscribers = subscribers,
-            PostsUsed = PostsUsed + 1,
-            DailyBonus = DailyBonus + (TotalPostsPublished == 0 && !FirstPostInviteBonusUsed
-                ? FirstPostInviteBonus
-                : 0),
-            FirstPostInviteBonusUsed = FirstPostInviteBonusUsed ||
-                (TotalPostsPublished == 0 && FirstPostInviteBonus > 0),
-            Skills = skills,
-            Wants = wants,
-            Achievements = achievements,
-            StarRelations = relations,
-            LastPostAtUtc = now,
-            RestedPostsRemaining = Math.Max(0, RestedPostsRemaining - 1),
-            TotalPostsPublished = TotalPostsPublished + 1,
-            PostsSinceViral = viral ? 0 : PostsSinceViral + 1,
-            ConsecutiveFlops = flop ? ConsecutiveFlops + 1 : 0,
-            Version = Version + 1,
-        };
-    }
-
-    public PlayerProfile UnlockAchievement(string achievementId)
-    {
-        var updated = Unlock(Achievements, World, achievementId);
-        return ReferenceEquals(updated, Achievements)
-            ? this
-            : this with { Achievements = updated, Version = Version + 1 };
-    }
-
-    public PlayerProfile AwardThreadBonus(long bonus)
-    {
-        return this with
-        {
-            Subscribers = Math.Max(0, Subscribers + bonus),
-            Version = Version + 1,
-        };
     }
 
     public PlayerProfile ApplyChallengeWinBonus(
@@ -252,46 +116,27 @@ public sealed record PlayerProfile(
         };
     }
 
-    private IReadOnlyList<StarRelationProgress> GainStarRelation(
-        StarId starId,
-        int minimum,
-        int maximum,
-        int maxGainPerDay)
+    public PlayerProfile StartNewPeriod(DateTimeOffset periodStartedAtUtc)
     {
-        var current = StarRelations.FirstOrDefault(item => item.StarId == starId);
-        current ??= new StarRelationProgress(starId, 0, 0, PostsPeriodStartedAtUtc);
-        var gained = current.PeriodStartedAtUtc == PostsPeriodStartedAtUtc
-            ? current.GainedInPeriod
-            : 0;
-        var available = Math.Max(0, maxGainPerDay - gained);
-        var increase = Math.Min(1, available);
-        var updated = current with
+        return this with
         {
-            Value = Math.Clamp(current.Value + increase, minimum, maximum),
-            GainedInPeriod = gained + increase,
-            PeriodStartedAtUtc = PostsPeriodStartedAtUtc,
+            PostsUsed = 0,
+            DailyBonus = 0,
+            InviteBonusesEarnedInPeriod = 0,
+            PostsPeriodStartedAtUtc = periodStartedAtUtc,
+            Version = Version + 1,
         };
-        return
-        [
-            .. StarRelations.Where(item => item.StarId != starId),
-            updated,
-        ];
     }
 
-    private static IReadOnlyList<AchievementProgress> Unlock(
-        IReadOnlyList<AchievementProgress> achievements,
-        WorldId worldId,
-        string achievementId)
+    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, bool firstPost)
     {
-        var target = achievements.FirstOrDefault(item =>
-            item.WorldId == worldId && item.Id == achievementId);
-        if (target is null || target.IsOpen)
+        return this with
         {
-            return achievements;
-        }
-
-        return achievements
-            .Select(item => item == target ? item with { IsOpen = true } : item)
-            .ToArray();
+            PostsUsed = PostsUsed + 1,
+            Skills = skills,
+            DailyBonus = DailyBonus + (firstPost && !FirstPostInviteBonusUsed ? FirstPostInviteBonus : 0),
+            FirstPostInviteBonusUsed = FirstPostInviteBonusUsed || (firstPost && FirstPostInviteBonus > 0),
+            Version = Version + 1,
+        };
     }
 }

@@ -1,4 +1,3 @@
-using Reki.Domain.Player;
 using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts;
@@ -13,11 +12,11 @@ public sealed record StoryCardData(
     long SubscriberDelta,
     bool Viral)
 {
-    public static StoryCardData From(PlayerProfile player, GamePost post) => new(
+    public static StoryCardData From(Reki.Domain.Worlds.World player, GamePost post) => new(
         post.Id,
-        player.Name,
-        player.Handle,
-        player.Subscribers,
+        player.Player.Name,
+        player.Player.Avatar,
+        player.Player.Subscribers,
         post.Text,
         post.Views,
         post.SubscriberDelta,

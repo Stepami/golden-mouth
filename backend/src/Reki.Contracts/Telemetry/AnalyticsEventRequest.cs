@@ -5,6 +5,10 @@ namespace Reki.Contracts.Telemetry;
 
 public sealed record AnalyticsEventRequest
 {
+    // Идентификатор экземпляра мира; отсутствует у событий до создания мира.
+    [MaxLength(64)]
+    public string? WorldId { get; init; }
+
     [Required]
     [MaxLength(64)]
     public required string Name { get; init; }
@@ -20,4 +24,3 @@ public sealed record AnalyticsEventRequest
 
     public IReadOnlyDictionary<string, JsonElement>? Props { get; init; }
 }
-

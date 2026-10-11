@@ -19,5 +19,4 @@ namespace Reki.Infrastructure.Persistence;
 [BsonSerializer<StarConversationId>]
 [BsonSerializer<TelegramUserId>]
 [BsonSerializer<WorldId>]
-[BsonSerializer<WorldRulesId>]
 internal partial class BsonValueObjectConversions;

@@ -1,0 +1,36 @@
+using Mediator;
+using Microsoft.Extensions.Options;
+using Reki.Application.Common;
+using Reki.Application.Common.Exceptions;
+using Reki.Application.Common.Safety;
+using Reki.Application.Player;
+using Reki.Domain.Worlds;
+
+namespace Reki.Application.Worlds;
+
+public sealed class CreateWorldHandler(IGameStore store, ISender sender, GameDay gameDay, PlayerSafetyGuard safetyGuard, IOptions<GameBalance> balance)
+    : IRequestHandler<CreateWorldCommand, World>
+{
+    public async ValueTask<World> Handle(CreateWorldCommand request, CancellationToken cancellationToken)
+    {
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var source = request.Definition;
+        if (source.Stars.Count == 0 || source.Stars.Any(star => !Enum.IsDefined(star.Trait)) ||
+            source.Stars.Select(star => star.Id).Distinct().Count() != source.Stars.Count)
+        {
+            throw new ContentRejectedException();
+        }
+
+        var instance = source.Instantiate(player.Id, gameDay.PeriodStart);
+        var world = instance with
+        {
+            Player = instance.Player with { Subscribers = balance.Value.Growth.StartingSubscribers },
+        };
+        await safetyGuard.EnsureInputAllowedAsync(
+            player,
+            [world.Interface.Title, world.Interface.Description, world.Player.Name, .. world.Rules.Select(rule => rule.Text), .. world.Stars.Select(star => star.About)],
+            cancellationToken);
+        await store.InsertWorldAsync(world, cancellationToken);
+        return world;
+    }
+}

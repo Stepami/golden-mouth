@@ -1,26 +1,33 @@
 using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
-using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Player;
 
-public sealed class UpdateSettingsHandler(
-    ITelegramUserAccessor telegramUser,
-    IGameStore store)
-    : IRequestHandler<UpdateSettingsCommand>
+public sealed class UpdateSettingsHandler(IGameStore store, ISender sender) : IRequestHandler<UpdateSettingsCommand>
 {
-    public async ValueTask<Unit> Handle(
-        UpdateSettingsCommand request,
-        CancellationToken cancellationToken)
+    public async ValueTask<Unit> Handle(UpdateSettingsCommand request, CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        if (await store.UpdatePlayerSettingsAsync(telegramUserId, request, cancellationToken))
+        for (var attempt = 0; attempt < 3; attempt++)
         {
-            return Unit.Value;
+            var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+            var updated = player with
+            {
+                Settings = player.Settings with
+                {
+                    Notifications = request.Notifications ?? player.Settings.Notifications,
+                    Quiet = request.Quiet ?? player.Settings.Quiet,
+                    Plus = request.Plus ?? player.Settings.Plus,
+                },
+                Address = request.Address ?? player.Address,
+                Version = player.Version + 1,
+            };
+            if (await store.TryReplacePlayerAsync(updated, player.Version, cancellationToken))
+            {
+                return Unit.Value;
+            }
         }
 
-        throw new ResourceNotFoundException("Player not found.");
+        throw new RequestConflictException("Settings changed concurrently.");
     }
 }

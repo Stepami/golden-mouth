@@ -13,7 +13,7 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
     public async Task ClientLogs_InDevelopment_AreNotWrittenToMongoAsync()
     {
         using var api = Factory.CreateApiClient(1003);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
 
         await api.Telemetry.SubmitClientLogsAsync(
             new ClientLogBatchRequest

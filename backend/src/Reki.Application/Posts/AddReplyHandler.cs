@@ -19,7 +19,8 @@ public sealed class AddReplyHandler(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var post = await sender.Send(new GetPostQuery(request.PostId, player.Id), cancellationToken);
+        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        var post = await sender.Send(new GetPostQuery(request.PostId, player.Id, world.Id), cancellationToken);
 
         var existing = post.FindReply(request.ReplyId);
         if (existing is not null)
@@ -39,21 +40,21 @@ public sealed class AddReplyHandler(
             request.ReplyId,
             CommentId.New(),
             request.TargetCommentId,
-            player.Subscribers,
+            world.Player.Subscribers,
             balance.Value.Thread.BonusReplies,
             balance.Value.Thread.SubscriberBonus,
             balance.Value.Thread.BranchDepth);
         var comment = new GameComment(
             reply.CommentId,
-            player.Name,
-            player.Avatar,
-            player.Handle,
+            world.Player.Name,
+            world.Player.Avatar,
+            world.Player.Avatar,
             request.Text,
             false,
             true,
             false);
         var updated = reply.BonusAwarded > 0
-            ? player.AwardThreadBonus(reply.BonusAwarded)
+            ? world.AwardThreadBonus(reply.BonusAwarded)
             : null;
         var added = await store.TryAddThreadReplyAsync(
             player.Id,
@@ -61,7 +62,7 @@ public sealed class AddReplyHandler(
             reply,
             comment,
             updated,
-            player.Version,
+            world.Version,
             cancellationToken);
         if (added)
         {

@@ -18,10 +18,11 @@ public sealed class EventsController(
     [HttpGet("today", Name = "GetTodayEvent")]
     [ActionName("GetTodayEvent")]
     public async Task<Ok<GameEventResponse>> GetTodayEventAsync(
+        [FromQuery] string worldId,
         CancellationToken cancellationToken)
     {
         var gameEvent = await sender.Send(
-            new GetTodayEventQuery(),
+            new GetTodayEventQuery(Reki.Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapEvent(gameEvent));
     }
@@ -31,12 +32,14 @@ public sealed class EventsController(
     public async Task<Ok> AnswerEventAsync(
         string eventId,
         AnswerEventRequest request,
+        [FromQuery] string worldId,
         CancellationToken cancellationToken)
     {
         await sender.Send(
             new AnswerEventCommand(
                 DomainEventId.From(eventId),
-                request.Text),
+                request.Text,
+                Reki.Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok();
     }

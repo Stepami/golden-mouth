@@ -1,6 +1,7 @@
+import { contentOf, worldOf } from '../api/worldContent'
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
-import { dm as dmMock, friends as friendsMock, worldOf } from '../api/mock'
+import { dm as dmMock, friends as friendsMock } from '../api/mock'
 import type { ChannelPost, DmMessage, Drama, FeedItem } from '../api/types'
 import { useNav } from '../app/nav'
 import { useApi, cachedApi, saveApiCache } from '../app/useApi'
@@ -21,7 +22,8 @@ function postDate(value: string) {
 // 03-1: личка со звездой; память видна и правится; ~5 ответов звезды в день
 function Dm() {
   const nav = useNav(); const p = usePlayer()
-  const d = useApi(() => api.dm('mira'), dmMock)
+  const star = contentOf(p.world).stars[0]
+  const d = useApi(() => api.dm(star.id), { ...dmMock, star }, [star.id], `dm:${p.worldInstanceId}:${star.id}`)
   const [msgs, setMsgs] = useState<DmMessage[]>(d.messages)
   const [left, setLeft] = useState(d.repliesLeft)
   useEffect(() => { setMsgs(d.messages); setMemory(d.memory); setLeft(d.repliesLeft) }, [d])
@@ -275,7 +277,7 @@ function Me() {
 // 05-8: настройки: градус драмы, голос канала, обращение, данные, удалить аккаунт
 function Settings() {
   const nav = useNav(); const p = usePlayer(); const { patch } = useStore()
-  const [drama, setDrama] = useState<Drama>(p.settings.drama)
+  const [drama, setDrama] = useState<Drama>(p.drama)
   const [del, setDel] = useState(false)
   const [panel, setPanel] = useState<'notifications' | 'quiet' | 'support' | 'data' | 'address' | null>(null)
   const [notifications, setNotifications] = useState(p.settings.notifications === 'off' ? 'off' : p.settings.notifications === 'important' ? 'important' : 'all')
@@ -295,7 +297,13 @@ function Settings() {
     catch { setError('Не получилось сохранить. Попробуй ещё раз.'); return false }
     finally { setSaving(false) }
   }
-  const setD = async (d: Drama) => { if (await save({ drama: d })) setDrama(d) }
+  const setD = async (d: Drama) => {
+    if (saving) return
+    setSaving(true); setError('')
+    try { await api.updateWorld({ drama: d }); patch({ drama: d }); setDrama(d); setPanel(null) }
+    catch { setError('Не получилось сохранить. Попробуй ещё раз.') }
+    finally { setSaving(false) }
+  }
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Настройки" />
@@ -306,7 +314,7 @@ function Settings() {
             <Segmented value={drama} onChange={setD} options={[{ id: 'soft', label: 'мягко' }, { id: 'mid', label: 'средне' }, { id: 'hot', label: 'остро' }, { id: 'off', label: 'без хейта' }]} /></div>
         </Card>
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
-          {row('🎙 Голос канала', `${p.settings.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`, false, () => openPanel('address'))}
+          {row('🎙 Голос канала', `${p.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`, false, () => openPanel('address'))}
           {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📜 Как устроен мир', '›', false, () => nav.push('05-11_world_rules'))}{row('🔒 Мои данные и правила', 'скоро ›', false, () => openPanel('data'))}{row('✉ Поддержка', 'скоро ›', true, () => openPanel('support'))}
         </Card>
         <button onClick={() => setDel(true)} className="card" style={{ width: '100%', textAlign: 'center', color: 'var(--accent)', background: 'transparent', border: '1px solid #FF6B8B55' }}>Удалить аккаунт и всё</button>

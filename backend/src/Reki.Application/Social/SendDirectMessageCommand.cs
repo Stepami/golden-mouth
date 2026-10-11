@@ -1,8 +1,8 @@
 using Mediator;
 using Reki.Domain.Social;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Social;
 
-public sealed record SendDirectMessageCommand(StarId StarId, string Text)
+public sealed record SendDirectMessageCommand(StarId StarId, string Text, WorldId WorldId)
     : IRequest<SentDirectMessage>;
-

@@ -1,5 +1,6 @@
 using Mediator;
 using Reki.Application.Common;
+using Reki.Application.Common.Exceptions;
 using Reki.Application.Player;
 
 namespace Reki.Application.Social;
@@ -14,11 +15,13 @@ public sealed class ForgetStarMemoryHandler(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        _ = StarCatalog.Require(player.World, request.StarId);
+        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        _ = world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world.");
         var conversation = await store.GetStarConversationAsync(
             player.Id,
             request.StarId,
-            cancellationToken);
+            cancellationToken,
+            world.Id);
         if (conversation is not null)
         {
             await store.SaveStarConversationAsync(
@@ -34,4 +37,3 @@ public sealed class ForgetStarMemoryHandler(
         return Unit.Value;
     }
 }
-

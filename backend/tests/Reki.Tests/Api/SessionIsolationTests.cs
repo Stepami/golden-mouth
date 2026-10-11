@@ -16,7 +16,7 @@ public sealed class SessionIsolationTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         const long telegramUserId = 9301;
         using var api = Factory.CreateApiClient(telegramUserId);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
         var generation = await GenerateAsync(telegramUserId, "пост для проверки изоляции");
         await Assert.That(generation.Body).Contains("\"type\":\"ready_for_moderation\"");
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(1);
@@ -34,7 +34,7 @@ public sealed class SessionIsolationTests(ApiFactory factory) : GameApiTestBase(
         var historyCount = await migrations.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
         await migrationLocks.InsertOneAsync(new BsonDocument("_id", "cleanup-probe"), cancellationToken: CancellationToken.None);
         var lockCount = await migrationLocks.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(2L);
+        await Assert.That(historyCount).IsEqualTo(6L);
         await Assert.That(lockCount).IsEqualTo(1L);
 
         // Act
@@ -61,7 +61,7 @@ public sealed class SessionIsolationTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(clock.GetUtcNow()).IsEqualTo(Factory.Session.Clock.Start);
         await migrationLocks.DeleteOneAsync(new BsonDocument("_id", "cleanup-probe"), CancellationToken.None);
         using var secondApi = Factory.CreateApiClient(telegramUserId);
-        await OnboardAsync(secondApi);
+        await CreatePlayerWithWorldAsync(secondApi);
         await Assert.That(ReferenceEquals(Factory.Server, server)).IsTrue();
         await Assert.That(ReferenceEquals(Factory.Llm, stub)).IsTrue();
     }

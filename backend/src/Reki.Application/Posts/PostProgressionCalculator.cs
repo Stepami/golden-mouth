@@ -15,18 +15,20 @@ public sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
 
     public PostProgression Calculate(
         PlayerProfile player,
+        Reki.Domain.Worlds.World gameWorld,
         GeneratedPostTurn turn,
         bool ownWords,
-        bool wantCompleted)
+        bool wantCompleted,
+        string publicationId)
     {
-        var world = balance.Value.Worlds.TryGetValue(player.World.Value, out var value)
+        var world = balance.Value.Worlds.TryGetValue(gameWorld.BalanceKey, out var value)
             ? value
-            : throw new InvalidOperationException($"World balance is missing for '{player.World.Value}'.");
+            : throw new InvalidOperationException($"World balance is missing for '{gameWorld.BalanceKey}'.");
         var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
         var postIndex = player.PostsUsed + 1;
-        var multiplier = GetGrowthMultiplier(player, postIndex, ownWords);
-        var viral = IsViral(player, quality, world);
-        var flop = !viral && IsFlop(player, world);
+        var multiplier = GetGrowthMultiplier(gameWorld, postIndex, ownWords);
+        var viral = IsViral(publicationId, quality, world);
+        var flop = !viral && IsFlop(publicationId, world);
         if (viral)
         {
             multiplier *= balance.Value.Viral.Multiplier * world.ViralMultiplier;
@@ -37,7 +39,7 @@ public sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
             .Multiplier;
         var growth = balance.Value.Growth.Coefficient * world.GrowthCoefficient *
                      (0.5 + quality) *
-                     Math.Pow(Math.Max(1, player.Subscribers), balance.Value.Growth.Power) *
+                     Math.Pow(Math.Max(1, gameWorld.Player.Subscribers), balance.Value.Growth.Power) *
                      decay *
                      multiplier;
         var subscriberDelta = flop
@@ -62,18 +64,21 @@ public sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
         return turn.Humor >= turn.Topic ? Humor : Topic;
     }
 
-    private static double StableRoll(PlayerProfile player, int postNumber, string purpose)
+    private static double StableRoll(string publicationId, string purpose)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(
-            $"{player.Id.Value}:{postNumber}:{purpose}"));
+            $"{publicationId}:{purpose}"));
         var value = BinaryPrimitives.ReadUInt64LittleEndian(hash);
         return value / (double)ulong.MaxValue;
     }
 
-    private double GetGrowthMultiplier(PlayerProfile player, int postIndex, bool ownWords)
+    private static bool IsFlop(string publicationId, WorldBalance world) =>
+        StableRoll(publicationId, "flop") < world.FlopChance;
+
+    private double GetGrowthMultiplier(Reki.Domain.Worlds.World gameWorld, int postIndex, bool ownWords)
     {
         double multiplier = 1;
-        if (player.Subscribers < balance.Value.Growth.StarterBelowSubscribers)
+        if (gameWorld.Player.Subscribers < balance.Value.Growth.StarterBelowSubscribers)
         {
             multiplier *= balance.Value.Growth.StarterMultiplier;
         }
@@ -83,7 +88,7 @@ public sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
             multiplier *= balance.Value.Growth.OwnWordsMultiplier;
         }
 
-        if (player.RestedPostsRemaining > 0 && postIndex <= balance.Value.Growth.RestedFirstPosts)
+        if (gameWorld.Player.RestedPostsRemaining > 0 && postIndex <= balance.Value.Growth.RestedFirstPosts)
         {
             multiplier *= balance.Value.Growth.RestedMultiplier;
         }
@@ -91,29 +96,11 @@ public sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
         return multiplier;
     }
 
-    private bool IsViral(PlayerProfile player, double quality, WorldBalance world)
+    private bool IsViral(string publicationId, double quality, WorldBalance world)
     {
-        var nextPost = player.TotalPostsPublished + 1;
-        var hasNeverGoneViral = player.TotalPostsPublished == player.PostsSinceViral;
-        if ((hasNeverGoneViral && nextPost == balance.Value.Viral.GuaranteedPost) ||
-            player.PostsSinceViral + 1 >= balance.Value.Viral.PityPosts)
-        {
-            return true;
-        }
-
         var chance = (balance.Value.Viral.BaseChance + (balance.Value.Viral.ChancePerQuality * quality)) *
                      world.ViralMultiplier;
-        return StableRoll(player, nextPost, "viral") < Math.Clamp(chance, 0, 1);
-    }
-
-    private bool IsFlop(PlayerProfile player, WorldBalance world)
-    {
-        if (player.ConsecutiveFlops >= balance.Value.Flop.MaxInRow)
-        {
-            return false;
-        }
-
-        return StableRoll(player, player.TotalPostsPublished + 1, "flop") < world.FlopChance;
+        return StableRoll(publicationId, "viral") < Math.Clamp(chance, 0, 1);
     }
 
     private IReadOnlyDictionary<SkillId, SkillProgress> AddSkillExperience(

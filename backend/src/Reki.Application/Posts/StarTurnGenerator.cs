@@ -4,7 +4,6 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
-using Reki.Application.Social;
 using Reki.Domain.Player;
 using static Reki.Application.Common.AI.StarToolCallParser;
 
@@ -75,7 +74,11 @@ public sealed class StarTurnGenerator(
             throw new AiServiceUnavailableException("A direct message requires a target star.");
         }
 
-        _ = StarCatalog.Require(context.Agent.WorldId, starId);
+        if (context.Agent.World.FindStar(starId) is null)
+        {
+            throw new AiServiceUnavailableException("The star does not belong to this world.");
+        }
+
         List<ChatMessage> messages =
         [
             StarAgentInstructions.CreatePlatformPolicy(turnPolicy, context.Agent),

@@ -36,6 +36,6 @@ public sealed class GetPlayerHandler(
         var player = request.PlayerId is { } playerId
             ? await store.GetPlayerAsync(playerId, cancellationToken)
             : await store.GetPlayerAsync(TelegramUserId.From(telegramUser.User.Id), cancellationToken);
-        return (player ?? throw new ResourceNotFoundException("Player not found.")).EnsureDefaults();
+        return player ?? throw new ResourceNotFoundException("Player not found.");
     }
 }
