@@ -13,7 +13,8 @@ public sealed class AddReplyHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
     IOptions<GameBalance> balance,
-    PlayerReader playerReader)
+    PlayerReader playerReader,
+    ISender sender)
     : IRequestHandler<AddReplyCommand, ReplyResponse>
 {
     public async ValueTask<ReplyResponse> Handle(
@@ -24,10 +25,7 @@ public sealed class AddReplyHandler(
         var player = await playerReader.GetAsync(
             telegramUserId,
             cancellationToken);
-        var post = await store.GetPostAsync(
-            request.PostId,
-            player.Id,
-            cancellationToken) ?? throw new ResourceNotFoundException("Post not found.");
+        var post = await sender.Send(new GetPostQuery(request.PostId, player.Id), cancellationToken);
 
         var existing = post.FindReply(request.ReplyId);
         if (existing is not null)

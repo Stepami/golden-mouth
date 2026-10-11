@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Reki.Api.Mapping;
 using Reki.Application.Posts;
 using Reki.Contracts.Posts;
 using Reki.Domain.Posts;
@@ -11,7 +12,8 @@ namespace Reki.Api.Posts;
 [Produces("application/json")]
 [Route("/")]
 public sealed class PostsController(
-    ISender sender) : ControllerBase
+    ISender sender,
+    ApiMapper mapper) : ControllerBase
 {
     [HttpPost("posts/publications", Name = "GeneratePublication")]
     [ActionName("GeneratePublication")]
@@ -101,6 +103,6 @@ public sealed class PostsController(
         var result = await sender.Send(
             new GetPostQuery(PostId.From(postId)),
             cancellationToken);
-        return TypedResults.Ok(result);
+        return TypedResults.Ok(mapper.MapPostDetail(result));
     }
 }

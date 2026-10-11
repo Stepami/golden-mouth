@@ -1,25 +1,19 @@
 using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
-using Reki.Contracts.Posts;
-using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
+using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts;
 
-public sealed class GetPostHandler(
-    ITelegramUserAccessor telegramUser,
-    IGameStore store, PlayerReader playerReader)
-    : IRequestHandler<GetPostQuery, PostDetailResponse>
+public sealed class GetPostHandler(IGameStore store)
+    : IRequestHandler<GetPostQuery, GamePost>
 {
-    public async ValueTask<PostDetailResponse> Handle(
+    public async ValueTask<GamePost> Handle(
         GetPostQuery request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
-        var post = await store.GetPostAsync(request.PostId, player.Id, cancellationToken)
+        var post = await store.GetPostAsync(request.PostId, request.PlayerId, cancellationToken)
                    ?? throw new ResourceNotFoundException("Post not found.");
-        return PostContractMapper.MapPostDetail(post, canReply: true);
+        return post;
     }
 }

@@ -5,7 +5,7 @@ using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts;
 
-internal static class PostContractMapper
+public static class PostContractMapper
 {
     public static PublicationStatusResponse MapPublication(Publication publication) =>
         new(
@@ -40,24 +40,8 @@ internal static class PostContractMapper
             CreateReactions(post),
             post.GetComments().Count);
 
-    public static PostDetailResponse MapPostDetail(GamePost post, bool canReply) =>
-        new(
-            post.Id.Value,
-            post.Text,
-            post.Views,
-            CreateReactions(post),
-            post.GetComments()
-                .Select(comment => new CommentResponse(
-                    comment.Id.Value,
-                    comment.Author,
-                    comment.Avatar,
-                    comment.Handle,
-                    comment.Text,
-                    comment.Star,
-                    canReply && comment.Me,
-                    comment.Hidden))
-                .ToArray(),
-            canReply);
+    public static IReadOnlyList<ReactionResponse> CreateReactions(GamePost post) =>
+        [new ReactionResponse("🔥", post.Viral ? 3 : 1)];
 
     public static IReadOnlyList<LiveEvent> MapLiveEvents(PublishedPost published)
     {
@@ -99,7 +83,4 @@ internal static class PostContractMapper
             post.Views,
             source.Hook);
     }
-
-    private static ReactionResponse[] CreateReactions(GamePost post) =>
-        [new ReactionResponse("🔥", post.Viral ? 3 : 1)];
 }
