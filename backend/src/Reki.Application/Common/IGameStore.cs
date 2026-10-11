@@ -72,27 +72,14 @@ public interface IGameStore
         DateTime expiresAtUtc,
         CancellationToken cancellationToken);
 
-    ValueTask<IReadOnlyList<GamePost>> GetRecentPostsAsync(
-        PlayerId playerId,
-        int count,
-        CancellationToken cancellationToken);
-
     ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
         PlayerId playerId,
-        CancellationToken cancellationToken);
-
-    ValueTask<IReadOnlyList<long>> GetRecentPostViewsAsync(
-        PlayerId playerId,
-        int count,
-        CancellationToken cancellationToken);
-
-    ValueTask<GamePost?> FindPostAsync(
-        PostId postId,
+        int? limit,
         CancellationToken cancellationToken);
 
     ValueTask<GamePost?> GetPostAsync(
-        PlayerId playerId,
         PostId postId,
+        PlayerId? playerId,
         CancellationToken cancellationToken);
 
     ValueTask<bool> TryAddThreadReplyAsync(

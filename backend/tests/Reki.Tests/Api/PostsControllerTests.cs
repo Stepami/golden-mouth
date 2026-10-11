@@ -10,6 +10,7 @@ using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
 using Reki.Contracts.Worlds;
 using Reki.Domain.Player;
+using Reki.Domain.Posts;
 
 namespace Reki.Tests.Api;
 
@@ -18,6 +19,84 @@ namespace Reki.Tests.Api;
 [NotInParallel("ApiState")]
 public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
+    [Test]
+    public async Task Feed_WithMoreThanTwentyOwnPosts_ReturnsLatestOwnPostsAsync()
+    {
+        // Arrange
+        const long telegramUserId = 1036;
+        using var api = Factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        var player = await GetStoredPlayerAsync(telegramUserId);
+        var ownerId = PlayerId.From(player["_id"].AsString);
+        var otherId = PlayerId.New();
+        var start = new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero);
+        var posts = Enumerable.Range(0, 46).Select(index => new GamePost(
+            PostId.New(),
+            index < 21 ? ownerId : otherId,
+            $"post-{index}",
+            index + 1,
+            [],
+            [],
+            start.AddMinutes(index),
+            0,
+            0,
+            1,
+            false,
+            false)).ToArray();
+        await Database.GetCollection<GamePost>("posts").InsertManyAsync(posts);
+
+        // Act
+        var feed = await api.Posts.GetFeedAsync(CancellationToken.None);
+        var channel = await api.Posts.GetChannelPostsAsync(CancellationToken.None);
+        var feedItems = feed.ToArray();
+        var channelPosts = channel.ToArray();
+
+        // Assert
+        await Assert.That(feed.Count).IsEqualTo(20);
+        await Assert.That(channel.Count).IsEqualTo(21);
+        for (var index = 0; index < feed.Count; index++)
+        {
+            await Assert.That(feedItems[index].PostId).IsEqualTo(posts[20 - index].Id.Value);
+        }
+
+        await Assert.That(channelPosts[^1].PostId).IsEqualTo(posts[0].Id.Value);
+    }
+
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task GetPost_WithOptionalOwner_EnforcesOwnerFilterAsync(bool filterByOwner)
+    {
+        // Arrange
+        using var http = Factory.CreateClient();
+        var store = Factory.Services.GetRequiredService<IGameStore>();
+        var ownerId = PlayerId.New();
+        var post = new GamePost(
+            PostId.New(),
+            ownerId,
+            "stored post",
+            48,
+            [],
+            [],
+            new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero),
+            0,
+            0,
+            1,
+            false,
+            false);
+        await Database.GetCollection<GamePost>("posts").InsertOneAsync(post);
+
+        // Act
+        var found = await store.GetPostAsync(post.Id, filterByOwner ? ownerId : null, CancellationToken.None);
+        var wrongOwner = await store.GetPostAsync(post.Id, PlayerId.New(), CancellationToken.None);
+        var missing = await store.GetPostAsync(PostId.New(), filterByOwner ? ownerId : null, CancellationToken.None);
+
+        // Assert
+        await Assert.That(found?.Id).IsEqualTo(post.Id);
+        await Assert.That(wrongOwner).IsNull();
+        await Assert.That(missing).IsNull();
+    }
+
     [Test]
     public async Task Feed_UsesPlayerProfileForPostAuthorAsync()
     {
@@ -165,7 +244,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task Post_ForForeignSameWorldPost_ReturnsReadOnlyDetailAsync()
+    public async Task Post_ForForeignSameWorldPost_ReturnsNotFoundAsync()
     {
         // Arrange
         const long ownerUserId = 1032;
@@ -174,15 +253,13 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await ReplyAsync(ownerUserId, postId, commentId, "detail-owner-reply", "ответ владельца");
         using var viewerApi = Factory.CreateApiClient(viewerUserId);
         await OnboardAsync(viewerApi);
+        using var http = CreateAuthenticatedHttpClient(viewerUserId);
 
         // Act
-        var detail = await viewerApi.Posts.GetPostAsync(postId, CancellationToken.None);
+        using var response = await http.GetAsync($"/posts/{postId}", CancellationToken.None);
 
         // Assert
-        await Assert.That(detail.PostId).IsEqualTo(postId);
-        await Assert.That(detail.CanReply).IsFalse();
-        await Assert.That(detail.Comments.Any(comment => comment.Text == "ответ владельца")).IsTrue();
-        await Assert.That(detail.Comments.All(comment => !comment.Me)).IsTrue();
+        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
     }
 
     [Test]

@@ -19,7 +19,7 @@ public sealed class GetFeedHandler(
     {
         var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
-        var posts = await store.GetRecentPostsAsync(
+        var posts = await store.GetPostsAsync(
             player.Id,
             FeedSize,
             cancellationToken);

@@ -382,57 +382,36 @@ internal sealed class MongoGameStore : IGameStore
             cancellationToken: cancellationToken);
     }
 
-    public async ValueTask<IReadOnlyList<GamePost>> GetRecentPostsAsync(
-        PlayerId playerId,
-        int count,
-        CancellationToken cancellationToken)
-    {
-        return await _posts
-            .Find(item => item.PlayerId == playerId)
-            .SortByDescending(item => item.CreatedAtUtc)
-            .Limit(count)
-            .ToListAsync(cancellationToken);
-    }
-
     public async ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
         PlayerId playerId,
+        int? limit,
         CancellationToken cancellationToken)
     {
-        return await _posts
+        IFindFluent<GamePost, GamePost> query = _posts
             .Find(item => item.PlayerId == playerId)
-            .SortByDescending(item => item.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
-    }
+            .SortByDescending(item => item.CreatedAtUtc);
+        if (limit is { } count)
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
+            query = query.Limit(count);
+        }
 
-    public async ValueTask<IReadOnlyList<long>> GetRecentPostViewsAsync(
-        PlayerId playerId,
-        int count,
-        CancellationToken cancellationToken)
-    {
-        return await _posts
-            .Find(item => item.PlayerId == playerId)
-            .SortByDescending(item => item.CreatedAtUtc)
-            .Limit(count)
-            .Project(item => item.Views)
-            .ToListAsync(cancellationToken);
-    }
-
-    public async ValueTask<GamePost?> FindPostAsync(
-        PostId postId,
-        CancellationToken cancellationToken)
-    {
-        return await _posts
-            .Find(item => item.Id == postId)
-            .FirstOrDefaultAsync(cancellationToken);
+        return await query.ToListAsync(cancellationToken);
     }
 
     public async ValueTask<GamePost?> GetPostAsync(
-        PlayerId playerId,
         PostId postId,
+        PlayerId? playerId,
         CancellationToken cancellationToken)
     {
+        var filter = Builders<GamePost>.Filter.Eq(item => item.Id, postId);
+        if (playerId is { } ownerId)
+        {
+            filter &= Builders<GamePost>.Filter.Eq(item => item.PlayerId, ownerId);
+        }
+
         return await _posts
-            .Find(item => item.PlayerId == playerId && item.Id == postId)
+            .Find(filter)
             .FirstOrDefaultAsync(cancellationToken);
     }
 

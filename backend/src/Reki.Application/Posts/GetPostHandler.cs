@@ -18,19 +18,8 @@ public sealed class GetPostHandler(
     {
         var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
-        var post = await store.FindPostAsync(request.PostId, cancellationToken)
+        var post = await store.GetPostAsync(request.PostId, player.Id, cancellationToken)
                    ?? throw new ResourceNotFoundException("Post not found.");
-        var canReply = post.PlayerId == player.Id;
-        if (!canReply)
-        {
-            var author = await store.GetPlayerAsync(post.PlayerId, cancellationToken)
-                         ?? throw new ResourceNotFoundException("Post not found.");
-            if (author.World != player.World)
-            {
-                throw new ResourceNotFoundException("Post not found.");
-            }
-        }
-
-        return PostContractMapper.MapPostDetail(post, canReply);
+        return PostContractMapper.MapPostDetail(post, canReply: true);
     }
 }

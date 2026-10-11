@@ -13,7 +13,7 @@ public sealed class GetPublicStoryCardHandler(IGameStore store)
     {
         var player = await store.GetPlayerAsync(request.PlayerId, cancellationToken)
                      ?? throw new ResourceNotFoundException("Player not found.");
-        var post = await store.GetPostAsync(player.Id, request.PostId, cancellationToken)
+        var post = await store.GetPostAsync(request.PostId, player.Id, cancellationToken)
                    ?? throw new ResourceNotFoundException("Post not found.");
 
         return StoryCardData.From(player.EnsureDefaults(), post);

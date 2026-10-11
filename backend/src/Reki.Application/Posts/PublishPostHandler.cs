@@ -110,12 +110,13 @@ public sealed class PublishPostHandler(
             true,
             false,
             false);
-        var recentViews = await store.GetRecentPostViewsAsync(
+        var recentPosts = await store.GetPostsAsync(
             player.Id,
             20,
             cancellationToken);
+        var recentViews = recentPosts.Select(post => post.Views).ToArray();
         var views = Math.Max(48, updated.Subscribers);
-        var reachRatio = recentViews.Count == 0 ? 1 : views / GetMedian(recentViews);
+        var reachRatio = recentViews.Length == 0 ? 1 : views / GetMedian(recentViews);
         var post = new GamePost(
             postId,
             player.Id,

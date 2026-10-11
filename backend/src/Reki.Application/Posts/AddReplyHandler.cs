@@ -25,8 +25,8 @@ public sealed class AddReplyHandler(
             telegramUserId,
             cancellationToken);
         var post = await store.GetPostAsync(
-            player.Id,
             request.PostId,
+            player.Id,
             cancellationToken) ?? throw new ResourceNotFoundException("Post not found.");
 
         var existing = post.FindReply(request.ReplyId);

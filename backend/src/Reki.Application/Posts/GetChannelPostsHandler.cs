@@ -19,6 +19,7 @@ public sealed class GetChannelPostsHandler(
         var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
         var posts = await store.GetPostsAsync(
             player.Id,
+            null,
             cancellationToken);
         return posts.Select(PostContractMapper.MapChannelPost).ToArray();
     }

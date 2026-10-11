@@ -209,7 +209,7 @@ public sealed partial class GeneratePublicationHandler(
         var worldRules = player.World.Value == "own" && storedRules is not null
             ? storedRules
             : WorldRulesDefaults.Create(player.Id, player.World);
-        var recentPosts = await store.GetRecentPostsAsync(player.Id, 3, cancellationToken);
+        var recentPosts = await store.GetPostsAsync(player.Id, 3, cancellationToken);
         var hateEnabled = StarTurnPolicy.IsHateEnabled(player, balance.Value, now);
         return new StarPostContext(
             request.Text,
