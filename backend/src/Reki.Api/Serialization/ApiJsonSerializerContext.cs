@@ -57,7 +57,19 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(AnalyticsBatchRequest))]
 [JsonSerializable(typeof(ClientLogBatchRequest))]
 [JsonSourceGenerationOptions(
-    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
-    Converters = new[] { typeof(ContractEnumConverterFactory) },
-    UseStringEnumConverter = true)]
+    Converters =
+    [
+        typeof(CamelCaseEnumConverter<SkillId>),
+        typeof(CamelCaseEnumConverter<WorldId>),
+        typeof(CamelCaseEnumConverter<Address>),
+        typeof(CamelCaseEnumConverter<Drama>),
+        typeof(CamelCaseEnumConverter<BirthGroup>),
+        typeof(CamelCaseEnumConverter<FeedItemKind>),
+        typeof(CamelCaseEnumConverter<DirectMessageAuthor>),
+        typeof(CamelCaseEnumConverter<GameEventKind>),
+        typeof(CamelCaseEnumConverter<LiveEventType>),
+        typeof(CamelCaseEnumConverter<ClientLogLevel>),
+        typeof(SnakeCaseEnumConverter<PublicationStatus>)
+    ],
+    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 public sealed partial class ApiJsonSerializerContext : JsonSerializerContext;
