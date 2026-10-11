@@ -1,15 +1,18 @@
 using System.Text.Json;
 using Reki.Api.Serialization;
+using Reki.Tests.Api;
 
 namespace Reki.Tests.Common.Errors;
 
-[ClassDataSource<ApiFactory>]
-public sealed class ApiExceptionHandlerTests(ApiFactory factory)
+[ClassDataSource<ApiFactory>(Shared = SharedType.PerTestSession)]
+[ParallelGroup("Api", Order = 1)]
+[NotInParallel("ApiState")]
+public sealed class ApiExceptionHandlerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
     public async Task ExceptionHandler_WhenCustomExceptionIsThrown_ReturnsSafeProblemDetailsAsync()
     {
-        using var api = factory.CreateApiClient(2001);
+        using var api = Factory.CreateApiClient(2001);
         PlayerApiException? exception = null;
         try
         {

@@ -50,6 +50,36 @@ Stop the stack without deleting its volume:
 docker compose down
 ```
 
+## MongoDB migrations
+
+Startup runs versioned migrations before serving requests (except during build-time OpenAPI generation). Version `1.0.0`
+creates the ten current game indexes. MongoDB accepts identical existing definitions without rebuilding them, so a
+deployed database with player data needs no manual baseline or migration-history entries. Missing indexes are created;
+conflicting definitions or duplicate values for a unique index fail startup without changing player documents.
+
+Version `1.1.0` removes `ux_challenges_active_player` only after checking its original unique `PlayerId` definition and
+the active-participants replacement. It verifies the old index is absent after removal. An absent legacy index is
+accepted; an unexpected definition is preserved and stops startup for investigation.
+
+Index DDL runs outside transactions under the migrator's database lock. Each step can be retried after interruption or
+an operator resolves a conflict; successful versions are recorded and skipped on subsequent starts. These migrations
+reject rollback because adopted indexes and current player data cannot safely be reverted to the old uniqueness
+constraints.
+
+## Test infrastructure
+
+API component tests share one `ApiFactory`, WireMock server and MongoDB database per test session. `TestSessionFixture` owns the MongoDB container/client, WireMock and resettable clock; TUnit disposes the dependent API factory before these resources at session end. The host starts lazily for the first API test and applies startup migrations once.
+
+Migration tests belong to `ParallelGroup("Migrations", Order = 0)` and use isolated temporary databases on the same MongoDB container. API tests belong to `ParallelGroup("Api", Order = 1)` and share `NotInParallel("ApiState")`, so their setup, execution and teardown do not overlap. Unit tests keep the default parallel execution. A filtered API test also works independently of the migration-test group.
+
+`GameApiTestBase` uses separate `[After(Test)]` hooks to clear application documents and reset WireMock mappings/request logs/scenarios and the clock, including after test failures. Collections, indexes and migration history/lock collections are retained between tests. The API database is dropped only at session end. New API test classes must use:
+
+```csharp
+[ClassDataSource<ApiFactory>(Shared = SharedType.PerTestSession)]
+[ParallelGroup("Api", Order = 1)]
+[NotInParallel("ApiState")]
+```
+
 ## Verify
 
 ```powershell

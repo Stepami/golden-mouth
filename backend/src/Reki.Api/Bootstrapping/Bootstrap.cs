@@ -50,8 +50,7 @@ internal static class Bootstrap
 
         builder.Services
             .AddApplication()
-            .AddInfrastructure()
-            .AddMongoIndexInitialization();
+            .AddInfrastructure();
     }
 
     private static void ConfigureLogging(WebApplicationBuilder builder)

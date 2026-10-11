@@ -4,33 +4,24 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Time.Testing;
-using MongoDB.Driver;
 using TUnit.AspNetCore;
 
 namespace Reki.Tests;
 
 public sealed class ApiFactory : TestWebApplicationFactory<Program>
 {
-    [ClassDataSource<MongoFixture>(Shared = SharedType.PerTestSession)]
-    public required MongoFixture Mongo { get; init; }
+    [ClassDataSource<TestSessionFixture>(Shared = SharedType.PerTestSession)]
+    public required TestSessionFixture Session { get; init; }
 
-    [ClassDataSource<OpenAiStub>]
-    public required OpenAiStub Llm { get; init; }
+    public OpenAiStub Llm => Session.Llm;
 
-    public string DatabaseName { get; } = $"reki_tests_{Guid.NewGuid():N}";
+    public string DatabaseName => Session.DatabaseName;
 
-    public string MongoConnectionString => Mongo.ConnectionString;
+    public string MongoConnectionString => Session.ConnectionString;
 
     public TestApiClient CreateApiClient(long? telegramUserId = null)
     {
         return new TestApiClient(CreateClient(), telegramUserId);
-    }
-
-    public override async ValueTask DisposeAsync()
-    {
-        await base.DisposeAsync();
-        await new MongoClient(MongoConnectionString).DropDatabaseAsync(DatabaseName, CancellationToken.None);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -46,9 +37,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.ConfigureServices(services =>
         {
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
-            services.RemoveAll<TimeProvider>();
-            services.AddSingleton<TimeProvider>(new FakeTimeProvider(
-                new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero)));
+            services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
 
             services
                 .AddAuthentication(options =>

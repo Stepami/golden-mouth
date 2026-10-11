@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Hosting;
+using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Posts;
@@ -8,13 +8,19 @@ using Reki.Domain.Posts;
 using Reki.Domain.Social;
 using Reki.Domain.Worlds;
 
-namespace Reki.Infrastructure.Persistence;
+namespace Reki.Infrastructure.Persistence.Migrations;
 
-internal sealed class MongoGameIndexes(MongoCompositionRoot compositionRoot) : IHostedService
+internal sealed class InitialGameIndexes : RekiMigrationBase
 {
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public override DatabaseVersion Version => new(1, 0, 0);
+
+    public override async Task UpAsync(
+        IMongoDatabase db,
+        IClientSessionHandle session,
+        CancellationToken cancellationToken)
     {
-        var database = compositionRoot.MongoDatabase;
+        // createIndexes adopts identical existing indexes and rejects conflicting definitions.
+        var database = db;
         var players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
         var posts = database.GetCollection<GamePost>(MongoCollections.Posts);
         var publications = database.GetCollection<Publication>(MongoCollections.Publications);
@@ -36,7 +42,6 @@ internal sealed class MongoGameIndexes(MongoCompositionRoot compositionRoot) : I
         var eventKeys = Builders<DailyGameEvent>.IndexKeys
             .Ascending(item => item.PlayerId)
             .Descending(item => item.DayStartedAtUtc);
-        await DropLegacyChallengeIndexAsync(challenges, cancellationToken);
         var challengeKey = Builders<GameChallenge>.IndexKeys
             .Ascending(item => item.Participants);
         var worldKeys = Builders<WorldRules>.IndexKeys
@@ -85,11 +90,13 @@ internal sealed class MongoGameIndexes(MongoCompositionRoot compositionRoot) : I
         Task challengeTask = challenges.Indexes.CreateOneAsync(challengeIndex, cancellationToken: cancellationToken);
         Task worldTask = worlds.Indexes.CreateOneAsync(worldIndex, cancellationToken: cancellationToken);
         Task threadTask = CreateDocumentIndexAsync(
+            database,
             MongoCollections.Threads,
             "PlayerId",
             "ix_threads_player",
             cancellationToken);
         Task inviteTask = CreateDocumentIndexAsync(
+            database,
             MongoCollections.Invites,
             "PlayerId",
             "ix_invites_player",
@@ -108,34 +115,22 @@ internal sealed class MongoGameIndexes(MongoCompositionRoot compositionRoot) : I
             inviteTask);
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
-
-    private static async Task DropLegacyChallengeIndexAsync(
-        IMongoCollection<GameChallenge> challenges,
+    public override Task DownAsync(
+        IMongoDatabase db,
+        IClientSessionHandle session,
         CancellationToken cancellationToken)
     {
-        using var cursor = await challenges.Indexes.ListAsync(cancellationToken);
-        IReadOnlyList<BsonDocument> indexes = await cursor.ToListAsync(cancellationToken);
-        if (indexes.Any(index =>
-            index.TryGetValue("name", out var name) &&
-            name.AsString == "ux_challenges_active_player"))
-        {
-            await challenges.Indexes.DropOneAsync(
-                "ux_challenges_active_player",
-                cancellationToken);
-        }
+        throw new NotSupportedException("The adopted game indexes cannot be safely rolled back.");
     }
 
-    private Task<string> CreateDocumentIndexAsync(
+    private static Task<string> CreateDocumentIndexAsync(
+        IMongoDatabase database,
         string collectionName,
         string field,
         string indexName,
         CancellationToken cancellationToken)
     {
-        var collection = compositionRoot.MongoDatabase.GetCollection<BsonDocument>(collectionName);
+        var collection = database.GetCollection<BsonDocument>(collectionName);
         var keys = Builders<BsonDocument>.IndexKeys.Ascending(field);
         var index = IndexFactory.Create(keys, indexName);
         return collection.Indexes.CreateOneAsync(index, cancellationToken: cancellationToken);

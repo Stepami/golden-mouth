@@ -9,7 +9,9 @@ using Reki.Domain.Player;
 
 namespace Reki.Tests.Api;
 
-[ClassDataSource<ApiFactory>]
+[ClassDataSource<ApiFactory>(Shared = SharedType.PerTestSession)]
+[ParallelGroup("Api", Order = 1)]
+[NotInParallel("ApiState")]
 public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]

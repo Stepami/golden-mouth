@@ -33,12 +33,6 @@ public static class DependencyInjection
         return services;
     }
 
-    public static IServiceCollection AddMongoIndexInitialization(this IServiceCollection services)
-    {
-        services.AddHostedService<MongoGameIndexes>();
-        return services;
-    }
-
     private static void AddLlmInfrastructure(this IServiceCollection services)
     {
         services

@@ -1,4 +1,4 @@
-﻿using Kot.MongoDB.Migrations;
+using Kot.MongoDB.Migrations;
 using Microsoft.Extensions.Options;
 
 namespace Reki.Infrastructure.Persistence;

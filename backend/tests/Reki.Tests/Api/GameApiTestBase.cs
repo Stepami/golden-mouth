@@ -13,14 +13,20 @@ public abstract class GameApiTestBase(ApiFactory factory)
 {
     protected ApiFactory Factory { get; } = factory;
 
-    protected IMongoDatabase Database => new MongoClient(Factory.MongoConnectionString)
-        .GetDatabase(Factory.DatabaseName);
+    protected IMongoDatabase Database => Factory.Session.Database;
 
     [Before(Test)]
     public void ConfigureChatClient()
     {
         Factory.Llm.Respond(CreateChatResponse);
     }
+
+    [After(Test)]
+    public Task ClearGameDataAsync(CancellationToken cancellationToken) =>
+        Factory.Session.ClearGameDataAsync(cancellationToken);
+
+    [After(Test)]
+    public void ResetExternalState() => Factory.Session.ResetExternalState();
 
     protected static JsonDocument ParsePlayerLayer(ChatMessage layer) =>
         JsonDocument.Parse(layer.Text[(layer.Text.IndexOf("DATA_JSON:", StringComparison.Ordinal) + "DATA_JSON:".Length)..].Trim());
