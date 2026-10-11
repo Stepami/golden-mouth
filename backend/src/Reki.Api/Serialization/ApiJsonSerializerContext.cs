@@ -12,7 +12,7 @@ namespace Reki.Api.Serialization;
 
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]
-[JsonSerializable(typeof(SseItem<LiveEvent>))]
+[JsonSerializable(typeof(IReadOnlyList<LiveEvent>))]
 [JsonSerializable(typeof(SseItem<PublicationStatusLiveEvent>))]
 [JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(HttpValidationProblemDetails))]

@@ -213,7 +213,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task Publication_StreamingModeration_ExposesCommittedRecoveryStatusAsync()
+    public async Task Publication_JsonModeration_ExposesCommittedRecoveryStatusAsync()
     {
         const long telegramUserId = 1020;
         using var api = Factory.CreateApiClient(telegramUserId);
@@ -261,19 +261,21 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             await WorldPathAsync(http, $"/posts/publications/{publicationId}/moderation"),
             null,
             CancellationToken.None);
-        var moderationSse = await moderation.Content.ReadAsStringAsync(CancellationToken.None);
+        var moderationJson = await moderation.Content.ReadAsStringAsync(CancellationToken.None);
         await Assert.That(moderation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        await Assert.That(moderation.Content.Headers.ContentType?.MediaType).IsEqualTo("text/event-stream");
-        await Assert.That(moderationSse).Contains("\"type\":\"views\"");
-        await Assert.That(moderationSse).Contains("\"views\":");
-        await Assert.That(moderationSse).Contains("\"type\":\"react\"");
-        await Assert.That(moderationSse).Contains("\"emoji\":");
-        await Assert.That(moderationSse).Contains("\"type\":\"comment\"");
-        await Assert.That(moderationSse).Contains("\"comment\":");
-        await Assert.That(moderationSse).Contains("\"type\":\"typing\"");
-        await Assert.That(moderationSse).Contains("\"who\":");
-        await Assert.That(moderationSse).Contains("\"type\":\"result\"");
-        await Assert.That(moderationSse).Contains("\"result\":");
+        await Assert.That(moderation.Content.Headers.ContentType?.MediaType).IsEqualTo("application/json");
+        using var events = JsonDocument.Parse(moderationJson);
+        await Assert.That(events.RootElement.ValueKind).IsEqualTo(JsonValueKind.Array);
+        await Assert.That(events.RootElement.GetArrayLength()).IsEqualTo(5);
+        await Assert.That(events.RootElement[0].GetProperty("type").GetString()).IsEqualTo("views");
+        await Assert.That(events.RootElement[0].GetProperty("views").GetInt64()).IsEqualTo(48);
+        await Assert.That(events.RootElement[1].GetProperty("type").GetString()).IsEqualTo("react");
+        await Assert.That(events.RootElement[1].GetProperty("emoji").GetString()).IsNotNull();
+        await Assert.That(events.RootElement[2].GetProperty("type").GetString()).IsEqualTo("comment");
+        await Assert.That(events.RootElement[2].GetProperty("comment").GetProperty("star").GetBoolean()).IsTrue();
+        await Assert.That(events.RootElement[3].GetProperty("type").GetString()).IsEqualTo("typing");
+        await Assert.That(events.RootElement[3].GetProperty("who").GetString()).IsEqualTo("Соня");
+        await Assert.That(events.RootElement[4].GetProperty("type").GetString()).IsEqualTo("result");
 
         using var status = await http.GetAsync(
             $"/posts/publications/{publicationId}",
@@ -281,11 +283,16 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var statusJson = await status.Content.ReadAsStringAsync(CancellationToken.None);
         await Assert.That(statusJson).Contains("\"status\":\"completed\"");
         await Assert.That(statusJson).Contains("\"result\":{");
-        using var duplicateModeration = await http.PostAsync(
-            await WorldPathAsync(http, $"/posts/publications/{publicationId}/moderation"),
-            null,
-            CancellationToken.None);
-        await Assert.That(duplicateModeration.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        var duplicateEvents = await api.Posts.ModeratePublicationAsync(
+            publicationId, await GetWorldIdAsync(api), CancellationToken.None);
+        await Assert.That(duplicateEvents.Count).IsEqualTo(5);
+        await Assert.That(duplicateEvents[0]).IsTypeOf<ViewsLiveEvent>();
+        var duplicateResult = (ResultLiveEvent)duplicateEvents[4];
+        await Assert.That(duplicateResult.Result.PostId)
+            .IsEqualTo(events.RootElement[4].GetProperty("result").GetProperty("postId").GetString());
+        using var savedStatus = JsonDocument.Parse(statusJson);
+        await Assert.That(events.RootElement[4].GetProperty("result").GetRawText())
+            .IsEqualTo(savedStatus.RootElement.GetProperty("result").GetRawText());
         var player = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(player.PostsLeft).IsEqualTo(9);
         var storedPlayer = await Database.GetCollection<BsonDocument>("players")

@@ -6,7 +6,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
-using Reki.Application.Common.AI;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Player;
 using Reki.Application.Telemetry;

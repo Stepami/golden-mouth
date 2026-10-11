@@ -50,15 +50,15 @@ public sealed class PostsController(
 
     [HttpPost("posts/publications/{publicationId}/moderation", Name = "ModeratePublication")]
     [ActionName("ModeratePublication")]
-    public ServerSentEventsResult<LiveEvent> ModeratePublication(
+    public async Task<Ok<IReadOnlyList<LiveEvent>>> ModeratePublicationAsync(
         string publicationId,
         [FromQuery] string worldId,
         CancellationToken cancellationToken)
     {
-        var result = sender.CreateStream(
+        var result = await sender.Send(
             new PublishPostCommand(publicationId, Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
-        return TypedResults.ServerSentEvents(result);
+        return TypedResults.Ok(result);
     }
 
     [HttpPost("posts/{postId}/replies", Name = "ReplyToPost")]
