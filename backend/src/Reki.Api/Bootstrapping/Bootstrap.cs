@@ -28,8 +28,12 @@ internal static class Bootstrap
 
         var app = builder.Build();
         ConfigurePipeline(app);
-        var migrator = app.Services.GetRequiredService<IMigrator>();
-        await migrator.MigrateAsync();
+        if (!OpenApiGeneration.IsRunning)
+        {
+            var migrator = app.Services.GetRequiredService<IMigrator>();
+            await migrator.MigrateAsync();
+        }
+
         await app.RunAsync();
     }
 
