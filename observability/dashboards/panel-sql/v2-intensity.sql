@@ -1,6 +1,6 @@
 WITH clock AS (
- SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,
- date_part('epoch', now()) * 1000 AS now_ms),
+ SELECT floor((max(date_part('epoch', now())) * 1000000 + 10800000000) / 86400000000) AS today,
+ max(date_part('epoch', now())) * 1000 AS now_ms, count(*) AS stream_rows FROM product),
 raw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),
 identities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,
  min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,

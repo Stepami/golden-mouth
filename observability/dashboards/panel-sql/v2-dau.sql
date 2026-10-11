@@ -1,6 +1,6 @@
 WITH clock AS (
- SELECT floor((date_part('epoch', now()) * 1000000 + 10800000000) / 86400000000) AS today,
- date_part('epoch', now()) * 1000 AS now_ms),
+ SELECT floor((max(date_part('epoch', now())) * 1000000 + 10800000000) / 86400000000) AS today,
+ max(date_part('epoch', now())) * 1000 AS now_ms, count(*) AS stream_rows FROM product),
 raw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),
 identities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,
  min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,
@@ -35,5 +35,5 @@ current_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers 
  AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),
 cohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL
  AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)
-, offsets AS (SELECT n FROM (VALUES (0),(1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),(20),(21),(22),(23),(24),(25),(26),(27),(28),(29),(30),(31),(32),(33),(34),(35),(36),(37),(38),(39),(40),(41),(42),(43),(44),(45),(46),(47),(48),(49),(50),(51),(52),(53),(54),(55),(56),(57),(58),(59),(60),(61),(62),(63),(64),(65),(66),(67),(68),(69),(70),(71),(72),(73),(74),(75),(76),(77),(78),(79),(80),(81),(82),(83),(84),(85),(86),(87),(88),(89)) AS t(n)), calendar AS (SELECT c.today-o.n AS day FROM clock c CROSS JOIN offsets o WHERE o.n<cast('${days}' AS INT) AND c.today-o.n >= (SELECT floor((min(_timestamp)+10800000000)/86400000000) FROM raw)), selected_visits AS (SELECT v.* FROM visits v JOIN selected s ON v.player_id=s.player_id)
+, all_days AS (SELECT floor((max(date_part('epoch',now()))*1000000+10800000000)/86400000000)-unnest(range(0,cast('${days}' AS BIGINT))) AS day FROM product), calendar AS (SELECT day FROM all_days WHERE day >= (SELECT floor((min(_timestamp)+10800000000)/86400000000) FROM raw)), selected_visits AS (SELECT v.* FROM visits v JOIN selected s ON v.player_id=s.player_id)
  SELECT to_timestamp_micros(d.day*86400000000-10800000000) AS day_at,count(DISTINCT v.player_id) AS active_profiles FROM calendar d LEFT JOIN selected_visits v ON d.day=v.day GROUP BY d.day ORDER BY d.day
