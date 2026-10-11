@@ -15,7 +15,7 @@ export function TelegramLaunch() {
       <section className="telegram-launch__content" aria-labelledby="telegram-launch-title">
         <div className="telegram-launch__icon"><TelegramMark /></div>
         <h1 id="telegram-launch-title">Примерь жизнь блогера</h1>
-        <p>«Реки» — симулятор жизни блогера в выдуманном мире. Пиши посты, собирай виртуальных фанатов и знакомься с персонажами.</p>
+        <p>«Реки» — симулятор жизни блогера в выдуманном мире. Пиши посты, собирай виртуальных фанатов и знакомься со звёздами своего мира.</p>
         <a className="telegram-launch__button" href={TELEGRAM_APP_URL}>Открыть в Telegram</a>
       </section>
       <p className="telegram-launch__hint">Начинаешь со 120 подписчиков. Впереди — путь к миллиону. Можно просто примерить другую жизнь.</p>
