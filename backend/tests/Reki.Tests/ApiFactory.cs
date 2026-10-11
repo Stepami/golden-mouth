@@ -42,7 +42,6 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Llm:ApiKey", "placeholder");
         builder.UseSetting("Llm:Model", "gigachat3.5-432b-a28b");
         builder.UseSetting("Llm:Temperature", "0.25");
-        builder.UseSetting("Llm:MaxOutputTokens", "321");
         builder.UseSetting("Llm:TimeoutSeconds", "1");
         builder.ConfigureServices(services =>
         {

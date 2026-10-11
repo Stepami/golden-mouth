@@ -143,7 +143,6 @@ public sealed class StarTurnGenerator(
         return new ChatOptions
         {
             Temperature = settings.Value.Temperature,
-            MaxOutputTokens = settings.Value.MaxOutputTokens,
             Tools = [.. tools],
             ToolMode = toolMode,
             AllowMultipleToolCalls = true,
