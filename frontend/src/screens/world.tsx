@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../api/client'
+import { withWorldTemplates } from '../app/withWorldTemplates'
 import { worldDocumentOf, worldDefinitionOf } from '../api/worldContent'
 import type { Drama } from '../api/types'
 import { usePlayer, useStore } from '../app/store'
@@ -51,7 +52,7 @@ function OwnWorld() {
   )
 }
 
-register({ '05-7b_own_world': { component: OwnWorld, title: 'Свой мир' } })
+register({ '05-7b_own_world': { component: withWorldTemplates(OwnWorld), title: 'Свой мир' } })
 
 /** 05-11: правила готового мира видны игроку (Кумен: AI не прячет, по каким правилам играет).
  *  В готовом мире правится только градус драмы; свой мир правится целиком на 05-7b. */

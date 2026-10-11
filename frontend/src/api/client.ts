@@ -2,7 +2,7 @@
 // Во фронте НЕТ секретов: runtime config виден в браузере. Ключи LLM и токен бота живут только на бэкенде.
 import * as mock from './mock'
 import { error, warn } from '../app/log'
-import { setAnalyticsWorld } from '../app/analytics'
+import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics'
 import { apiBaseUrl as BASE, runtimeConfig } from '../app/runtimeConfig'
 import { addDemoComment, demoChannelPosts, demoFeed, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, shuffle, withDemoComments } from './demo'
 import { contentOf, installWorldContent, installWorldTemplates, worldDocumentOf, wantsFor } from './worldContent'
@@ -13,11 +13,12 @@ import type { PlayerDocument, Challenge, ChannelPost, Dm, FeedItem, Friend, Game
 let sessionPlayer: Player | undefined
 let sessionIdentity: PlayerDocument | undefined
 let templates: WorldDocument[] = []
+let templatesRequest: Promise<void> | undefined
 const inWorld = (path: string): string => {
   if (!sessionPlayer?.worldInstanceId) throw new Error('World must be loaded before this request')
   return `${path}?worldId=${encodeURIComponent(sessionPlayer.worldInstanceId)}`
 }
-async function loadTemplates(): Promise<void> {
+async function fetchTemplates(): Promise<void> {
   try {
     const loaded = await call<WorldDocument[]>('/worlds/templates', undefined, false)
     if (!loaded.length) throw new Error('No world templates returned')
@@ -28,7 +29,11 @@ async function loadTemplates(): Promise<void> {
     throw new Error('Unable to load world templates', { cause })
   }
 }
-function rememberPlayer(player: Player): Player { sessionIdentity = { ...player, experiments: player.experiments ?? {} }; sessionPlayer = player; setAnalyticsWorld(player.worldInstanceId, player.world); return player }
+function loadTemplates(): Promise<void> {
+  if (templates.length) return Promise.resolve()
+  return templatesRequest ??= fetchTemplates().finally(() => { templatesRequest = undefined })
+}
+function rememberPlayer(player: Player): Player { setTelemetryPlayerAvailable(true); sessionIdentity = { ...player, experiments: player.experiments ?? {} }; sessionPlayer = player; setAnalyticsWorld(player.worldInstanceId, player.world); return player }
 
 export class ApiError extends Error {
   constructor(public readonly status: number, method: string, path: string) {
@@ -39,7 +44,7 @@ export class ApiError extends Error {
 
 async function call<T>(path: string, init?: RequestInit, authenticated = true): Promise<T> {
   const r = await fetch(`${BASE ?? runtimeConfig.apiBaseUrl}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...(authenticated ? telegramAuthHeaders() : {}), ...init?.headers } })
-  if (!r.ok) { const e = new ApiError(r.status, init?.method ?? 'GET', path); if (r.status >= 500) error('api_error', e, { status: r.status }); else warn('api_error', { status: r.status, msg: e.message }); throw e }
+  if (!r.ok) { const e = new ApiError(r.status, init?.method ?? 'GET', path); if (r.status >= 500) error('api_error', e, { status: r.status }); else if (r.status !== 404 || path !== '/me') warn('api_error', { status: r.status, msg: e.message }); throw e }
   const body = await r.text()
   return body ? JSON.parse(body) as T : undefined as T
 }
@@ -70,21 +75,37 @@ async function publicationState(id: string): Promise<PublicationState> {
   return call(`/posts/publications/${encodeURIComponent(id)}`)
 }
 
+const playerRequests = new Map<string, Promise<Player>>()
+async function loadPlayer(worldId?: string): Promise<Player> {
+  if (!BASE) {
+    // Demo worlds use template content because they have no server-side instances.
+    await loadTemplates()
+    installWorldContent(templates)
+    return rememberPlayer(await laterLazy(demoPlayer))
+  }
+  const player = await call<PlayerDocument>('/me')
+  sessionIdentity = player
+  setTelemetryPlayerAvailable(true)
+  const ownedWorlds = await call<WorldDocument[]>('/worlds')
+  const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId)) ?? ownedWorlds[0]
+  if (!world) throw new ApiError(404, 'GET', '/worlds')
+  installWorldContent([world])
+  return rememberPlayer({ ...player, worldInstanceId: world.id, avatarStyle: world.avatarStyle,
+    world: world.balanceKey, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
+    wants: world.wants, collection: world.achievements, bio: '', type: 'свой голос',
+    voice: world.voice, drama: world.drama,
+  })
+}
+
 export const api = {
-  me: async (worldId?: string): Promise<Player> => {
-    if (templates.length === 0) await loadTemplates()
-    if (!BASE) return rememberPlayer(await laterLazy(demoPlayer))
-    const player = await call<PlayerDocument>('/me')
-    sessionIdentity = player
-    const ownedWorlds = await call<WorldDocument[]>('/worlds')
-    const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId)) ?? ownedWorlds[0]
-    if (!world) throw new ApiError(404, 'GET', '/worlds')
-    installWorldContent([world])
-    return rememberPlayer({ ...player, worldInstanceId: world.id, avatarStyle: world.avatarStyle,
-      world: world.balanceKey, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
-      wants: world.wants, collection: world.achievements, bio: '', type: 'свой голос',
-      voice: world.voice, drama: world.drama,
-    })
+  loadWorldTemplates: loadTemplates,
+  me: (worldId?: string): Promise<Player> => {
+    const key = worldId ?? sessionPlayer?.worldInstanceId ?? ''
+    const pending = playerRequests.get(key)
+    if (pending) return pending
+    const request = loadPlayer(worldId).finally(() => { playerRequests.delete(key) })
+    playerRequests.set(key, request)
+    return request
   },
   hasPlayer: (): boolean => sessionIdentity !== undefined,
   onboarding: async (body: { birthGroup: '14-17' | '18+'; ageBand?: AgeBand; address: string; referralCode?: string }): Promise<PlayerDocument> => {
@@ -97,6 +118,7 @@ export const api = {
         skills: { brave: { level: 1, progress: 0 }, humor: { level: 1, progress: 0 }, topic: { level: 1, progress: 0 } },
         settings: { notifications: 'all', quiet: '22:00-09:00', plus: false }, experiments: {},
       })
+    setTelemetryPlayerAvailable(true)
     return sessionIdentity
   },
   createWorld: async (definition: WorldDefinition): Promise<Player> => {
@@ -271,5 +293,5 @@ export const api = {
       if (!BASE) saveDemoPlayer(sessionPlayer)
     }
   },
-  deleteAccount: async () => { if (BASE) await call('/me', { method: 'DELETE' }); resetDemoPlayer(sessionPlayer?.id); sessionPlayer = undefined; sessionIdentity = undefined; setAnalyticsWorld(undefined) },
+  deleteAccount: async () => { if (BASE) await call('/me', { method: 'DELETE' }); resetDemoPlayer(sessionPlayer?.id); sessionPlayer = undefined; sessionIdentity = undefined; setTelemetryPlayerAvailable(false); setAnalyticsWorld(undefined) },
 }

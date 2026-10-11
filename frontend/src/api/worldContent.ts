@@ -24,7 +24,6 @@ const templateDocuments: Partial<Record<WorldId, WorldDocument>> = {}
 
 export function installWorldTemplates(templates: WorldDocument[]): void {
   for (const template of templates) templateDocuments[template.balanceKey] = structuredClone(template)
-  installWorldContent(templates)
   worlds.splice(0, worlds.length, ...templates.filter(world => world.balanceKey !== 'own').map(world => ({
     id: world.balanceKey, title: world.title, emoji: world.emoji, description: world.description,
     difficulty: world.difficulty, summary: world.summary,
@@ -37,15 +36,25 @@ const traitNames = ['Дерзкость', 'Поддержка', 'Загадка'
 export function installWorldContent(worlds: WorldDocument[]): void {
   for (const world of worlds) {
     documents[world.balanceKey] = world
-    serverContent[world.balanceKey] = {
-      where: world.where, roles: world.roles, name: world.name, handle: world.avatar,
-      avatarStyle: world.avatarStyle as WorldContent['avatarStyle'], avatarLabel: 'аватар канала',
-      stars: world.stars.map(star => ({ ...star, trait: traitNames[star.trait] ?? '' })),
-      voices: world.voices, drama: world.drama, description: world.description,
-      rules: world.rules.map(rule => rule.text), firstContext: world.firstContext, firstPrompt: world.firstPrompt,
-      ideas: world.postIdeas, posts: world.demoPosts,
-    }
+    serverContent[world.balanceKey] = toWorldContent(world)
   }
+}
+
+function toWorldContent(world: WorldDocument): WorldContent {
+  return {
+    where: world.where, roles: world.roles, name: world.name, handle: world.avatar,
+    avatarStyle: world.avatarStyle as WorldContent['avatarStyle'], avatarLabel: 'аватар канала',
+    stars: world.stars.map(star => ({ ...star, trait: traitNames[star.trait] ?? '' })),
+    voices: world.voices, drama: world.drama, description: world.description,
+    rules: world.rules.map(rule => rule.text), firstContext: world.firstContext, firstPrompt: world.firstPrompt,
+    ideas: world.postIdeas, posts: world.demoPosts,
+  }
+}
+
+export function templateContentOf(world: string): WorldContent {
+  const template = templateDocuments[world as WorldId]
+  if (!template) throw new Error('World template has not been loaded')
+  return toWorldContent(template)
 }
 
 export function contentOf(world: string): WorldContent {
@@ -70,7 +79,7 @@ const WORLD_FORMS: Record<string, { gen: string; acc: string }> = {
   stream: { gen: 'Стрима', acc: 'Стрим' }, own: { gen: 'своего мира', acc: 'свой мир' },
 }
 export function worldOf(id: string) {
-  const world = documents[id as WorldId]
+  const world = documents[id as WorldId] ?? templateDocuments[id as WorldId]
   if (!world) throw new Error('World has not been loaded')
   return { ...world, id: world.balanceKey, ...(WORLD_FORMS[world.balanceKey] ?? { gen: world.title, acc: world.title }) }
 }

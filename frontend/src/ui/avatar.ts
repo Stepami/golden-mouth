@@ -2,7 +2,7 @@ import { createAvatar } from '@dicebear/core'
 import { lorelei, notionists, pixelArt, thumbs, shapes } from '@dicebear/collection'
 import { createContext } from 'react'
 import type { WorldId } from '../api/types'
-import { contentOf } from '../api/worldContent'
+import { worldOf } from '../api/worldContent'
 
 /** Мир определяет стиль; сид определяет персонажа. */
 export const AvatarWorld = createContext<WorldId>('stage')
@@ -15,11 +15,11 @@ const cache = new Map<string, string>()
  * в ленте на экране десятки аватарок, и пересобирать каждую на каждый рендер незачем.
  */
 export function avatarUri(seed: string, world: WorldId = 'stage'): string {
-  const key = `${world}:${seed}`
+  const style = worldOf(world).avatarStyle
+  const key = `${world}:${style}:${seed}`
   const got = cache.get(key)
   if (got) return got
   const options = { seed, size: 96, radius: 50 }
-  const style = contentOf(world).avatarStyle
   const avatar = style === 'pixelArt' ? createAvatar(pixelArt, options)
     : style === 'notionists' ? createAvatar(notionists, options)
     : style === 'thumbs' ? createAvatar(thumbs, options)
