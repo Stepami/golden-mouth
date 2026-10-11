@@ -32,6 +32,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         "post_publish",
         "post_result",
         "post_scored",
+        "post_failed",
         "report",
         "screen_leave",
         "screen_view",
@@ -86,7 +87,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
                 continue;
             }
 
-            if (!_events.Contains(entry.Name))
+            if (entry.Name is "post_scored" or "player_created" or "level_up" or "card_earned" or "post_failed" || !_events.Contains(entry.Name))
             {
                 continue;
             }
@@ -94,9 +95,11 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
             var attributes = CreateAttributes(player.Id, entry.Name, entry.Timestamp);
             attributes["session_id"] = submission.Session.Value;
             attributes["platform"] = submission.Platform;
+            attributes["launch_surface"] = submission.LaunchSurface is "telegram-mini-app" or "browser" or "standalone" ? submission.LaunchSurface : "unknown";
             attributes["screen"] = entry.Screen;
             attributes["world"] = player.World.Value;
             attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
+            attributes["registration_source"] = player.InvitedBy is null ? "direct" : "referral";
             if (entry.PreviousScreen is not null)
             {
                 attributes["previous_screen"] = entry.PreviousScreen;
@@ -123,6 +126,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         var attributes = CreateAttributes(player.Id, eventName, timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
         attributes["world"] = player.World.Value;
         attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
+        attributes["registration_source"] = player.InvitedBy is null ? "direct" : "referral";
         AddProperties(attributes, properties);
         Write(eventName, attributes);
     }

@@ -6,4 +6,7 @@ public sealed record AnalyticsSubmission(
     SessionId Session,
     string Platform,
     IReadOnlyDictionary<string, string> Experiments,
-    IReadOnlyList<AnalyticsEntry> Events);
+    IReadOnlyList<AnalyticsEntry> Events)
+{
+    public string? LaunchSurface { get; init; }
+}

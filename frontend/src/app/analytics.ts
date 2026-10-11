@@ -2,6 +2,7 @@
 // Таксономия, воронки и вопросы: docs/analytics.md. Приватность: только обезличенный id, без текстов, ников, initData.
 import { apiBaseUrl as BASE } from './runtimeConfig'
 import { ActiveTime } from './activeTime'
+import { inTelegram } from '../telegram'
 import { telegramAuthHeaders } from '../api/auth'
 type Props = Record<string, string | number | boolean | null>
 export interface AEvent { name: string; t: number; screen: string; prev: string | null; props?: Props }
@@ -41,7 +42,7 @@ export const tap = (id: string, props?: Props) => event('tap', { id, ...props })
 
 export function flushEvents() {
   if (!BASE || !q.length) return
-  const body = JSON.stringify({ session, platform, experiments, events: q.splice(0) })
+  const body = JSON.stringify({ session, platform, launchSurface: inTelegram ? 'telegram-mini-app' : window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser', experiments, events: q.splice(0) })
   fetch(`${BASE}/events`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...telegramAuthHeaders() }, body, keepalive: true }).catch(() => {})
 }
 

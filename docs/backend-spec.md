@@ -173,3 +173,9 @@ Production-настройки LLM (`Llm__BaseUrl`, `Llm__ApiKey`, `Llm__Model`),
 ### Настройки и Реки+ (#104)
 
 PATCH /settings принимает optional address (she/he/nick); POST /plus-interest принимает optional {interest: bool}, без тела interest=true для совместимости. PlusNotifyRequested отделён от однократного бонуса PlusInterestClaimed; запрос bonus-only не включает уведомление. Обе записи используют CAS по версии профиля с ограниченным повтором. Оплата и бот-рассылка этим API не реализуются. Сохранённые notifications/quiet являются предпочтениями будущей доставки. Проверки: [settings audit](audits/settings-2026-10-08.md).
+
+### Расширение аналитики #127
+
+`POST /events` принимает optional `launchSurface` (`telegram-mini-app`, `browser`, `standalone`), старые клиенты остаются совместимы. Серверные события результата не принимаются из клиентского batch. `post_scored` экспортирует непрозрачный ID сохранённого поста и подписанный `SubscriberDelta`; после неуспешной генерации сервер пишет `post_failed` с ID попытки. Размеры наград и игровой баланс не меняются.
+
+Текущую аудиторию для аналитики формирует минутный минимальный снимок профилей Mongo и маркер полного набора; snapshot имеет `activity_kind=inventory` и не используется как активность. Подробная семантика, свежесть и поля — [analytics.md](analytics.md#продуктовый-дашборд-v2--127).
