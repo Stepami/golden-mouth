@@ -34,7 +34,7 @@ current_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers 
  AND ('${source}' = 'all' OR p.registration_source = '${source}')
  AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),
 cohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL
- AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT))
+ AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)
 , cohort_days AS (SELECT player_id,floor((cohort_at+10800000000)/86400000000) AS registered_day FROM cohort), returns AS (
  SELECT p.player_id,p.registered_day,c.today,max(CASE WHEN v.day=p.registered_day+1 THEN 1 ELSE 0 END) AS d1,
  max(CASE WHEN v.day=p.registered_day+3 THEN 1 ELSE 0 END) AS d3,max(CASE WHEN v.day=p.registered_day+7 THEN 1 ELSE 0 END) AS d7

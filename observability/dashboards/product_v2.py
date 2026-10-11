@@ -42,7 +42,7 @@ current_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers 
  AND ('${source}' = 'all' OR p.registration_source = '${source}')
  AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),
 cohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL
- AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT))
+ AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)
 """
 
 
@@ -88,8 +88,8 @@ def make(sql_panel, box):
  SELECT to_timestamp_micros(d.day*86400000000-10800000000) AS day_at,count(DISTINCT v.player_id) AS active_profiles FROM calendar d LEFT JOIN selected_visits v ON d.day=v.day GROUP BY d.day ORDER BY d.day""",20,14,'bar')
  add('stickiness','Stickiness: средний DAU / MAU · полные дни','Средний DAU по календарным дням / уникальные активные ID за то же окно. Максимум 30 завершённых дней МСК; первый неполный день истории исключён. observed_days < 30 — предварительная оценка. История ID, не текущая база.',
  """, coverage AS (SELECT greatest(0,least(30,c.today-floor((min(r._timestamp)+10800000000)/86400000000)-1)) AS observed_days,c.today FROM raw r CROSS JOIN clock c GROUP BY c.today),
- stick AS (SELECT w.observed_days,count(DISTINCT v.player_id) AS mau,count(v.player_id) AS active_profile_days FROM coverage w LEFT JOIN (SELECT v.* FROM visits v JOIN selected s ON v.player_id=s.player_id) v ON v.day>=w.today-w.observed_days AND v.day<w.today GROUP BY w.observed_days)
- SELECT observed_days,mau,active_profile_days,round(1.0*active_profile_days/nullif(observed_days,0),2) AS mean_dau,
+ stick AS (SELECT w.observed_days,count(DISTINCT v.player_id) AS mau,count(v.player_id) AS active_profile_days, sum(CASE WHEN v.player_id IS NOT NULL AND v.day>=w.today-7 THEN 1 ELSE 0 END) AS active_days_7d FROM coverage w LEFT JOIN (SELECT v.* FROM visits v JOIN selected s ON v.player_id=s.player_id) v ON v.day>=w.today-w.observed_days AND v.day<w.today GROUP BY w.observed_days)
+ SELECT observed_days,mau,active_profile_days,round(1.0*active_profile_days/nullif(observed_days,0),2) AS mean_dau,round(1.0*active_days_7d/nullif(least(7,observed_days),0),2) AS mean_dau_7d,
  round(100.0*active_profile_days/nullif(observed_days*mau,0),1) AS stickiness_pct FROM stick""",34,12)
  add('funnel','Воронка: регистрация → 1 / 3 / 10 постов','По умолчанию подтверждённые сервером регистрации. Переключатель базы позволяет смотреть старую историю по первому наблюдению; это приближение, не доказанная регистрация. Все этапы используют одну базу; это прохождение, не retention.',
  """, progression AS (SELECT c.player_id,count(p.post_id) AS posts FROM cohort c LEFT JOIN posts p ON c.player_id=p.player_id GROUP BY c.player_id), stages AS (

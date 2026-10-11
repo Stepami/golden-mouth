@@ -34,5 +34,5 @@ current_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers 
  AND ('${source}' = 'all' OR p.registration_source = '${source}')
  AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),
 cohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL
- AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT))
+ AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)
 SELECT count(*) AS observed_profiles,count(registered_at) AS confirmed_registrations,count(*)-count(registered_at) AS registration_unknown,to_timestamp_micros(min(first_seen)) AS first_observation FROM selected

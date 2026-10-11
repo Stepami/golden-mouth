@@ -34,7 +34,7 @@ current_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers 
  AND ('${source}' = 'all' OR p.registration_source = '${source}')
  AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),
 cohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL
- AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT))
+ AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)
 , player_days AS (SELECT v.player_id,v.day,CASE '${compare}' WHEN 'world' THEN s.world WHEN 'source' THEN s.registration_source WHEN 'surface' THEN s.launch_surface ELSE s.age_group END AS segment,count(p.post_id) AS posts FROM visits v JOIN selected s ON v.player_id=s.player_id CROSS JOIN clock c LEFT JOIN posts p ON p.player_id=v.player_id AND floor((p.posted_at+10800000000)/86400000000)=v.day WHERE v.day>=c.today-7 AND v.day<c.today GROUP BY v.player_id,v.day,segment), measured AS (
  SELECT player_id,floor((_timestamp+10800000000)/86400000000) AS day,sum(cast(prop_ms AS DOUBLE))/60000.0 AS minutes FROM raw WHERE event_name='active_time' GROUP BY player_id,day)
  SELECT p.segment,count(DISTINCT p.player_id) AS active_profiles,count(*) AS player_days,sum(p.posts) AS posts,round(1.0*sum(p.posts)/count(DISTINCT p.player_id),2) AS posts_per_profile,

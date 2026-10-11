@@ -34,5 +34,5 @@ current_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers 
  AND ('${source}' = 'all' OR p.registration_source = '${source}')
  AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),
 cohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL
- AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT))
+ AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)
 SELECT coalesce(nullif(r.launch_surface,''),'unknown') AS launch_surface,coalesce(nullif(r.platform,''),'server') AS device,count(DISTINCT r.player_id) AS active_profiles FROM raw r JOIN selected s ON r.player_id=s.player_id CROSS JOIN clock c WHERE r.event_name IN ('session_start','screen_view','app_visible') AND floor((r._timestamp+10800000000)/86400000000)>=c.today-cast('${days}' AS INT)+1 GROUP BY coalesce(nullif(r.launch_surface,''),'unknown'),coalesce(nullif(r.platform,''),'server') ORDER BY active_profiles DESC

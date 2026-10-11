@@ -34,7 +34,7 @@ current_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers 
  AND ('${source}' = 'all' OR p.registration_source = '${source}')
  AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),
 cohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL
- AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT))
+ AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)
 , days AS (SELECT v.day,count(DISTINCT v.player_id) AS active_profiles FROM visits v JOIN selected s ON v.player_id=s.player_id CROSS JOIN clock c WHERE v.day>=c.today-cast('${days}' AS INT)+1 GROUP BY v.day), results AS (
  SELECT floor((posted_at+10800000000)/86400000000) AS day,count(*) AS posts,count(delta) AS posts_with_delta,sum(delta) AS subscriber_growth FROM selected_posts GROUP BY day)
  SELECT to_timestamp_micros(d.day*86400000000-10800000000) AS day_at,d.active_profiles,coalesce(r.posts,0) AS posts,
