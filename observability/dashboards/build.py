@@ -212,11 +212,19 @@ product_panels = [
 # Current accounts are a database gauge, separate from historical pseudonymous profiles.
 for panel in product_panels:
     panel["layout"]["y"] += 8
-    panel["layout"]["i"] += 1
+    panel["layout"]["i"] += 2
 product_panels.insert(0, promql_panel(
-    "registered", "Сейчас зарегистрировано профилей",
-    "Прямой агрегат MongoDB, один профиль на Telegram-аккаунт. Обновление раз в минуту; данные появятся после релиза. Исторические ID ниже могут включать удалённые профили.",
-    "max(reki_players_registered)", "Текущие профили", box(0, 0, 192, 8, 1), kind="metric"))
+    "registered", "Аккаунтов сейчас в базе",
+    "Прямой агрегат MongoDB, один профиль на Telegram-аккаунт. Счётчик собирается раз в минуту. Экран обновляется только при включённом автообновлении или нажатии «Обновить». Исторические ID ниже могут включать удалённые профили.",
+    "max(reki_players_registered)", "Текущие профили", box(0, 0, 96, 8, 1), kind="metric"))
+
+product_panels.insert(1, history_panel(
+    "dau-today", "Активных профилей сегодня · UTC",
+    "Уникальные ID профилей с подтверждёнными событиями игры за текущую UTC-дату (03:00–03:00 МСК). Повторные входы одного профиля считаются один раз. Удаление и пересоздание даёт новый ID. Открытие только чата с ботом не является входом в игру. Включите автообновление 1m; при «Выкл» значение на экране устаревает.",
+    sql("product-dau-today.sql"), "product", box(96, 0, 96, 8, 2), kind="metric"))
+for panel in product_panels:
+    if panel["type"] == "metric":
+        panel["config"].update({"decimals": 0})
 
 for panel in product_panels:
     if panel["type"] in ("stacked", "bar"):
@@ -225,7 +233,7 @@ for panel in product_panels:
 PRODUCT_LABELS = {
     "segment": "Сегмент", "dimension": "Разрез", "observed_profiles_90d": "ID профилей в истории",
     "telemetry_since_utc": "Начало истории", "mau_30d": "MAU · 30 дней", "wau_7d": "WAU · 7 дней",
-    "dau_today": "DAU · сегодня", "dau_yesterday": "DAU · вчера", "stickiness_yesterday_pct": "DAU/MAU · вчера, %",
+    "dau_today": "DAU · сегодня UTC", "dau_yesterday": "DAU · вчера UTC", "stickiness_yesterday_pct": "DAU/MAU · вчера, %",
     "active_users": "Активные профили", "active_player_days": "Активные игроко-дни", "completed_posts": "Подтверждённые посты",
     "posts_per_user_7d": "Постов / профиль за 7 дней", "posts_per_active_day": "Постов / активный день",
     "measured_player_days": "Дней с замером времени", "avg_active_minutes": "Среднее минут / активный день",

@@ -11,11 +11,12 @@
           {
             "id": "registered",
             "type": "metric",
-            "title": "Сейчас зарегистрировано профилей",
-            "description": "Прямой агрегат MongoDB, один профиль на Telegram-аккаунт. Обновление раз в минуту; данные появятся после релиза. Исторические ID ниже могут включать удалённые профили.",
+            "title": "Аккаунтов сейчас в базе",
+            "description": "Прямой агрегат MongoDB, один профиль на Telegram-аккаунт. Счётчик собирается раз в минуту. Экран обновляется только при включённом автообновлении или нажатии «Обновить». Исторические ID ниже могут включать удалённые профили.",
             "queryType": "promql",
             "config": {
-              "show_legends": true
+              "show_legends": true,
+              "decimals": 0
             },
             "queries": [
               {
@@ -43,9 +44,70 @@
             "layout": {
               "x": 0,
               "y": 0,
-              "w": 192,
+              "w": 96,
               "h": 8,
               "i": 1
+            }
+          },
+          {
+            "id": "dau-today",
+            "type": "metric",
+            "title": "Активных профилей сегодня · UTC",
+            "description": "Уникальные ID профилей с подтверждёнными событиями игры за текущую UTC-дату (03:00–03:00 МСК). Повторные входы одного профиля считаются один раз. Удаление и пересоздание даёт новый ID. Открытие только чата с ботом не является входом в игру. Включите автообновление 1m; при «Выкл» значение на экране устаревает.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              },
+              "decimals": 0
+            },
+            "queries": [
+              {
+                "query": "SELECT count(DISTINCT player_id) AS dau_today\nFROM product\nWHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''\n AND event_name NOT IN ('notification_sent', 'active_time')\n AND _timestamp >= floor(date_part('epoch', now()) * 1000000 / 86400000000) * 86400000000\n AND _timestamp < (floor(date_part('epoch', now()) * 1000000 / 86400000000) + 1) * 86400000000",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "DAU · сегодня UTC",
+                      "alias": "dau_today",
+                      "column": "dau_today",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "",
+                      "alias": "",
+                      "column": "",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 96,
+              "y": 0,
+              "w": 96,
+              "h": 8,
+              "i": 2
             }
           },
           {
@@ -104,13 +166,13 @@
                       "type": "build"
                     },
                     {
-                      "label": "DAU · сегодня",
+                      "label": "DAU · сегодня UTC",
                       "alias": "dau_today",
                       "column": "dau_today",
                       "type": "build"
                     },
                     {
-                      "label": "DAU · вчера",
+                      "label": "DAU · вчера UTC",
                       "alias": "dau_yesterday",
                       "column": "dau_yesterday",
                       "type": "build"
@@ -141,7 +203,7 @@
               "y": 8,
               "w": 192,
               "h": 14,
-              "i": 2
+              "i": 3
             }
           },
           {
@@ -196,7 +258,7 @@
               "y": 22,
               "w": 192,
               "h": 12,
-              "i": 3
+              "i": 4
             }
           },
           {
@@ -304,7 +366,7 @@
               "y": 34,
               "w": 192,
               "h": 28,
-              "i": 4
+              "i": 5
             }
           },
           {
@@ -374,7 +436,7 @@
               "y": 62,
               "w": 96,
               "h": 18,
-              "i": 5
+              "i": 6
             }
           },
           {
@@ -444,7 +506,7 @@
               "y": 62,
               "w": 96,
               "h": 18,
-              "i": 6
+              "i": 7
             }
           },
           {
@@ -491,7 +553,7 @@
                       "type": "build"
                     },
                     {
-                      "label": "DAU · вчера",
+                      "label": "DAU · вчера UTC",
                       "alias": "dau_yesterday",
                       "column": "dau_yesterday",
                       "type": "build"
@@ -522,7 +584,7 @@
               "y": 80,
               "w": 192,
               "h": 26,
-              "i": 7
+              "i": 8
             }
           },
           {
@@ -592,7 +654,7 @@
               "y": 106,
               "w": 192,
               "h": 20,
-              "i": 8
+              "i": 9
             }
           },
           {
@@ -712,7 +774,7 @@
               "y": 126,
               "w": 192,
               "h": 28,
-              "i": 9
+              "i": 10
             }
           },
           {
@@ -802,7 +864,7 @@
               "y": 154,
               "w": 192,
               "h": 22,
-              "i": 10
+              "i": 11
             }
           },
           {
@@ -880,7 +942,7 @@
               "y": 176,
               "w": 192,
               "h": 28,
-              "i": 11
+              "i": 12
             }
           }
         ]
