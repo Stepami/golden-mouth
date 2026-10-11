@@ -32,8 +32,8 @@ function Invite() {
         <div className="brand" style={{ fontSize: 28 }}>Реки</div>
         <div className="small muted" style={{ marginTop: 8 }}>Симулятор жизни блогера 🎮</div>
         <H1>Примерь жизнь блогера, которого обсуждают все</H1>
-        <p className="muted">Пиши посты, собирай виртуальных фанатов, знакомься с персонажами и попадай в интриги 👀</p>
-        <Card><b>120 подписчиков — начало твоей истории</b><p className="small muted">Впереди — путь к миллиону в выдуманном мире. Каждый пост вызывает реакции персонажей.</p></Card>
+        <p className="muted">Пиши посты, собирай виртуальных фанатов, знакомься со звёздами своего мира и попадай в интриги 👀</p>
+        <Card><b>120 подписчиков — начало твоей истории</b><p className="small muted">Впереди — путь к миллиону в выдуманном мире. Каждый пост вызывает реакции звёзд.</p></Card>
         <p className="small muted">Только думаешь о первом посте, уже ведёшь блог или просто хочешь примерить другую жизнь? Здесь можно попробовать любой образ.</p>
         <div className="small muted">Посты остаются в игре — публиковать их в настоящих соцсетях не нужно.</div>
       </div>
@@ -240,7 +240,7 @@ export function Home() {
       <div className="pad">
         <div className="small muted" style={{ marginBottom: 10 }}>Твой блог. Твои знакомства. Твой путь к миллиону.</div>
         <div className="card" style={{ padding: 18, border: '1px solid #FF6B8B66', background: 'linear-gradient(160deg,#2A1A2E,#181821)' }}>
-          <div className="row" style={{ marginBottom: 12 }}><Avatar seed={star.id} size={44} /><div><b>Тебя заметил персонаж: {star.name} 👀</b><div className="small muted">{star.role} · подписка на твой блог</div></div></div>
+          <div className="row" style={{ marginBottom: 12 }}><Avatar seed={star.id} size={44} /><div><b>{star.name} — первая звезда в твоих подписчиках 👀</b><div className="small muted">{star.role} · подписка на твой блог</div></div></div>
           <p className="small muted">{profile.firstContext}</p>
           <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>{profile.firstPrompt}</div>
           {(p?.firstPostInviteBonus ?? 0) > 0 && <div className="gift" style={{ marginBottom: 12 }}>🎁 Первый пост даст ещё {p?.firstPostInviteBonus} ходов. Начни с любой идеи!</div>}
