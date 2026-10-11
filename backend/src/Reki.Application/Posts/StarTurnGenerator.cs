@@ -122,7 +122,7 @@ public sealed class StarTurnGenerator(
             var calls = response.Messages
                 .SelectMany(message => message.Contents)
                 .OfType<FunctionCallContent>();
-            return StarToolCallParser.Parse(calls);
+            return Parse(calls);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {

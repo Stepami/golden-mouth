@@ -134,7 +134,7 @@ export const api = {
       subs: 120, wants: definition.wants, collection: definition.achievements,
     })))
   },
-  /** Генерация, затем модерация и поток реакции; при обрыве сверяем сохранённый статус. */
+  /** Генерация, затем модерация и анимация массива реакций; при обрыве сверяем сохранённый статус. */
   publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown') => void, onStatus?: (status: PublicationStatus) => void): () => void {
     if (BASE) {
       const ctrl = new AbortController()
@@ -155,21 +155,23 @@ export const api = {
       }
       const moderation = async () => {
         const r = await fetch(`${BASE}${inWorld(`/posts/publications/${encodeURIComponent(publicationId)}/moderation`)}`, {
-          method: 'POST', signal: ctrl.signal, headers: { Accept: 'text/event-stream', ...telegramAuthHeaders() },
+          method: 'POST', signal: ctrl.signal, headers: { Accept: 'application/json', ...telegramAuthHeaders() },
         })
         if (!r.ok) throw new ApiError(r.status, 'POST', '/posts/publications/:id/moderation')
+        const events = await r.json() as LiveEvent[]
         let lastShownAt = 0
         const minimumGap: Record<LiveEvent['type'], number> = {
-          views: 650, react: 700, comment: 850, typing: 850, result: 1200,
+          views: 750, react: 800, comment: 950, typing: 950, result: 1300,
         }
-        await readSse<LiveEvent>(r, async event => {
+        for (const event of events) {
+          if (ctrl.signal.aborted) throw new DOMException('Aborted', 'AbortError')
           const remaining = minimumGap[event.type] - (performance.now() - lastShownAt)
           if (lastShownAt && remaining > 0) await pause(remaining)
           lastShownAt = performance.now()
           if (event.type === 'result') deliveredResult = true
           onEvent(event)
-        })
-        if (!deliveredResult) throw new Error('Post event stream ended before result')
+        }
+        if (!deliveredResult) throw new Error('Post response has no result')
       }
       const recover = async (): Promise<void> => {
         let state: PublicationState
@@ -224,7 +226,7 @@ export const api = {
         sessionPlayer = saveDemoPlayer({ ...sessionPlayer, subs: sessionPlayer.subs + result.delta, postsLeft: Math.max(0, sessionPlayer.postsLeft - 1) })
       }
       onEvent(e)
-    }, ms))
+    }, ms * 1.1))
     return () => timers.forEach(clearTimeout)
   },
   reply: (postId: string, commentId: string, replyId: string, text: string): Promise<ReplyResult> =>

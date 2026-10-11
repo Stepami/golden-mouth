@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
@@ -21,28 +20,23 @@ public sealed class PublishPostHandler(
     ISender sender,
     ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
-    ProductTelemetry analytics) : IStreamRequestHandler<PublishPostCommand, LiveEvent>
+    ProductTelemetry analytics) : IRequestHandler<PublishPostCommand, IReadOnlyList<LiveEvent>>
 {
-    public async IAsyncEnumerable<LiveEvent> Handle(
+    public async ValueTask<IReadOnlyList<LiveEvent>> Handle(
         PublishPostCommand request,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         var publication = await sender.Send(new GetPublicationQuery(request.PublicationId), cancellationToken);
         var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
+        var world = await sender.Send(new Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
         if (publication is null || publication.PlayerId != storedPlayer.Id || publication.WorldId != world.Id)
         {
             throw new ResourceNotFoundException("Publication not found.");
         }
 
-        if (publication.Status == PublicationStatus.Completed && publication.Result is not null)
+        if (publication is { Status: PublicationStatus.Completed, Result: not null })
         {
-            foreach (var liveEvent in PostContractMapper.MapLiveEvents(publication.Result))
-            {
-                yield return liveEvent;
-            }
-
-            yield break;
+            return PostContractMapper.MapLiveEvents(publication.Result);
         }
 
         if (publication.Status != PublicationStatus.ReadyForModeration)
@@ -145,10 +139,7 @@ public sealed class PublishPostHandler(
 
         await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
         TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
-        foreach (var liveEvent in PostContractMapper.MapLiveEvents(published))
-        {
-            yield return liveEvent;
-        }
+        return PostContractMapper.MapLiveEvents(published);
     }
 
     private static double GetMedian(IReadOnlyList<long> values)

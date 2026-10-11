@@ -30,7 +30,7 @@ public sealed class PostsController(
                 request.Text,
                 request.OwnWords,
                 request.WantId,
-                Reki.Domain.Worlds.WorldId.From(worldId)),
+                Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.ServerSentEvents(result);
     }
@@ -50,15 +50,15 @@ public sealed class PostsController(
 
     [HttpPost("posts/publications/{publicationId}/moderation", Name = "ModeratePublication")]
     [ActionName("ModeratePublication")]
-    public ServerSentEventsResult<LiveEvent> ModeratePublication(
+    public async Task<Ok<IReadOnlyList<LiveEvent>>> ModeratePublicationAsync(
         string publicationId,
         [FromQuery] string worldId,
         CancellationToken cancellationToken)
     {
-        var result = sender.CreateStream(
-            new PublishPostCommand(publicationId, Reki.Domain.Worlds.WorldId.From(worldId)),
+        var result = await sender.Send(
+            new PublishPostCommand(publicationId, Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
-        return TypedResults.ServerSentEvents(result);
+        return TypedResults.Ok(result);
     }
 
     [HttpPost("posts/{postId}/replies", Name = "ReplyToPost")]
@@ -75,7 +75,7 @@ public sealed class PostsController(
                 CommentId.From(request.CommentId),
                 request.ReplyId,
                 request.Text,
-                Reki.Domain.Worlds.WorldId.From(worldId)),
+                Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok(result);
     }
@@ -87,7 +87,7 @@ public sealed class PostsController(
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new GetFeedQuery(Reki.Domain.Worlds.WorldId.From(worldId)),
+            new GetFeedQuery(Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok(result);
     }
@@ -99,7 +99,7 @@ public sealed class PostsController(
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new GetChannelPostsQuery(Reki.Domain.Worlds.WorldId.From(worldId)),
+            new GetChannelPostsQuery(Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         IReadOnlyList<ChannelPostResponse> response = result.Select(PostContractMapper.MapChannelPost).ToArray();
         return TypedResults.Ok(response);
@@ -114,7 +114,7 @@ public sealed class PostsController(
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var result = await sender.Send(
-            new GetPostQuery(PostId.From(postId), player.Id, Reki.Domain.Worlds.WorldId.From(worldId)),
+            new GetPostQuery(PostId.From(postId), player.Id, Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapPostDetail(result));
     }

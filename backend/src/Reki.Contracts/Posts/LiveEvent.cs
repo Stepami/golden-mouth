@@ -2,10 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace Reki.Contracts.Posts;
 
-[JsonPolymorphic]
-[JsonDerivedType(typeof(ViewsLiveEvent))]
-[JsonDerivedType(typeof(ReactionLiveEvent))]
-[JsonDerivedType(typeof(CommentLiveEvent))]
-[JsonDerivedType(typeof(TypingLiveEvent))]
-[JsonDerivedType(typeof(ResultLiveEvent))]
-public abstract record LiveEvent(LiveEventType Type);
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(ViewsLiveEvent), "views")]
+[JsonDerivedType(typeof(ReactionLiveEvent), "react")]
+[JsonDerivedType(typeof(CommentLiveEvent), "comment")]
+[JsonDerivedType(typeof(TypingLiveEvent), "typing")]
+[JsonDerivedType(typeof(ResultLiveEvent), "result")]
+public abstract record LiveEvent([property: JsonIgnore] LiveEventType Type);

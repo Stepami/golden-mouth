@@ -169,7 +169,7 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         var player = await store.GetPlayerAsync(TelegramUserId.From(8370), CancellationToken.None)
             ?? throw new InvalidOperationException("Missing player.");
         var conversation = await store.GetStarConversationAsync(
-            player.Id, Reki.Domain.Social.StarId.From("sonya"), CancellationToken.None, Reki.Domain.Worlds.WorldId.From(await GetWorldIdAsync(api)))
+            player.Id, Domain.Social.StarId.From("sonya"), CancellationToken.None, Domain.Worlds.WorldId.From(await GetWorldIdAsync(api)))
             ?? throw new InvalidOperationException("Missing conversation.");
         var prepared = conversation with
         {

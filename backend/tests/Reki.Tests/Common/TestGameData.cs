@@ -75,7 +75,7 @@ internal static class TestGameData
 
     internal static World CreateWorld() => new()
     {
-        Id = Reki.Domain.Worlds.WorldId.From("world-one"),
+        Id = WorldId.From("world-one"),
         BalanceKey = "stage",
         Interface = new(),
         Stars = [new WorldStar(StarId, "Мира", "лидер BLESK", StarTrait.Boldness, "Ценит смелость", "коротко", "mira", 0, 0, PeriodStart)],

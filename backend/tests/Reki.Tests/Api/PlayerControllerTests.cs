@@ -622,7 +622,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Act
         await Task.WhenAll(
-            api.Worlds.UpdateWorldAsync(await GetWorldIdAsync(api), new Reki.Contracts.Worlds.UpdateWorldRequest { Drama = Drama.Off }, CancellationToken.None),
+            api.Worlds.UpdateWorldAsync(await GetWorldIdAsync(api), new Contracts.Worlds.UpdateWorldRequest { Drama = Drama.Off }, CancellationToken.None),
             api.Player.UpdateSettingsAsync(
                 new UpdateSettingsRequest { Address = Address.She },
                 CancellationToken.None));
@@ -633,7 +633,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var saved = await store.GetPlayerAsync(userId, CancellationToken.None)
                               ?? throw new InvalidOperationException("Missing player.");
         var savedWorld = (await store.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
-        await Assert.That(savedWorld.Player.Drama).IsEqualTo(Reki.Domain.Worlds.WorldDrama.Off);
+        await Assert.That(savedWorld.Player.Drama).IsEqualTo(Domain.Worlds.WorldDrama.Off);
         await Assert.That(saved.Address).IsEqualTo("she");
         await Assert.That(saved.Settings.Plus).IsFalse();
         await Assert.That(savedWorld.Player.Voice).IsEqualTo("Коротко и тепло");

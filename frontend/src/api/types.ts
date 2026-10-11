@@ -49,7 +49,7 @@ export interface PostResult {
   viral: boolean; flop: boolean; views: number
   hook?: string                                 // нить: на постах 1–9 закрывается через 1–3 хода
 }
-/** Поток живой реакции (SSE из POST /posts/publications/{id}/moderation) */
+/** Элемент массива живой реакции (JSON из POST /posts/publications/{id}/moderation) */
 export type LiveEvent = { type: 'views'; views: number } | { type: 'react'; emoji: string } | { type: 'comment'; comment: CommentT } | { type: 'typing'; who: string } | { type: 'result'; result: PostResult }
 export type PublicationStatus = 'pending' | 'ready_for_moderation' | 'completed' | 'failed'
 export interface PublicationState { publicationId: string; status: PublicationStatus; result: PostResult | null }
