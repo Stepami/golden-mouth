@@ -170,39 +170,39 @@ product_panels = [
     history_panel(
         "summary", "Пользователи: total / MAU / WAU / DAU",
         "Наблюдаемые игроки за 90 дней; не размер базы аккаунтов. MAU = последние 30×24ч, WAU = 7×24ч, DAU = UTC сегодня (неполный день) и вчера.",
-        sql("product-summary.sql"), "product", box(0, 0, 192, 7, 1), kind="table"),
+        sql("product-summary.sql"), "product", box(0, 0, 192, 12, 1), kind="table"),
     sql_panel(
         "p1", "DAU по дням (UTC)",
         "Уникальные real player_id; крайние дни выбранного периода могут быть неполными.",
-        sql("product-p1-dau.sql"), "product", box(0, 7, 96, 8, 2), kind="line"),
+        sql("product-p1-dau.sql"), "product", box(0, 12, 96, 10, 2), kind="line"),
     sql_panel(
         "p2", "Первое появление в выбранном периоде",
         "Первое наблюдаемое событие в диапазоне; не регистрации новых аккаунтов.",
-        sql("product-p2-new.sql"), "product", box(96, 7, 96, 8, 3), kind="bar"),
+        sql("product-p2-new.sql"), "product", box(96, 12, 96, 10, 3), kind="bar"),
     history_panel(
         "segments", "Пользователи и публикации по сегментам",
         "90 дней. Сегмент игрока по непустым значениям; несколько значений → multi-world / multi-age-group / multi-platform. unknown сохраняется. Строки разных измерений не складывать.",
-        sql("product-segments.sql"), "product", box(0, 15, 192, 10, 4), kind="table"),
+        sql("product-segments.sql"), "product", box(0, 22, 192, 26, 4), kind="table"),
     history_panel(
         "p4", "Когорты: D1 / D7",
         "Первое появление в 90 днях, точный день возврата UTC. Только дни до последнего дня телеметрии. NULL = окно ещё не завершено.",
-        sql("product-p4-retention.sql"), "product", box(0, 25, 192, 9, 5), kind="table"),
+        sql("product-p4-retention.sql"), "product", box(0, 48, 192, 22, 5), kind="table"),
     history_panel(
         "p9", "Недельный churn: все и сегменты",
         "Прокси неактивности: активен в предыдущие полные 7 UTC-дней, отсутствует в последние полные 7. NULL до 14 дней истории или при нулевом знаменателе. Не отмена подписки.",
-        sql("product-p9-churn.sql"), "product", box(0, 34, 192, 10, 6), kind="table"),
+        sql("product-p9-churn.sql"), "product", box(0, 70, 192, 28, 6), kind="table"),
     history_panel(
         "activation", "Активация: публикация → результат",
         "Игроки с post_publish и post_result среди наблюдаемых за 90 дней. Это охват событий, не упорядоченная воронка первой сессии.",
-        sql("product-activation.sql"), "product", box(0, 44, 192, 7, 7), kind="table"),
+        sql("product-activation.sql"), "product", box(0, 98, 192, 12, 7), kind="table"),
     sql_panel(
         "p3", "Сессии и события",
         "По выбранному периоду. Не все серверные события имеют session_id.",
-        sql("product-p3-sessions.sql"), "product", box(0, 51, 96, 8, 8), kind="line"),
+        sql("product-p3-sessions.sql"), "product", box(0, 110, 192, 12, 8), kind="line"),
     sql_panel(
         "p5", "События и охват игроков",
         "Проверка полноты событий и продуктовой активности.",
-        sql("product-p5-events.sql"), "product", box(96, 51, 96, 10, 9), kind="table"),
+        sql("product-p5-events.sql"), "product", box(0, 122, 192, 32, 9), kind="table"),
 ]
 
 product = {"org_id": "default", "request_body": {
