@@ -12,6 +12,7 @@
         <FrameworkReference Include="Microsoft.AspNetCore.App"/>
         <PackageReference Include="Microsoft.Extensions.AI"/>
         <PackageReference Include="Microsoft.Extensions.AI.OpenAI"/>
+        <PackageReference Include="MongoDB.Analyzer" />
         <PackageReference Include="MongoDB.Driver"/>
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"/>
         <PackageReference Include="OpenTelemetry.Extensions.Hosting"/>
