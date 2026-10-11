@@ -10,10 +10,11 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Persistence;
 
-internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
+internal sealed class MongoGameIndexes(MongoCompositionRoot compositionRoot) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        var database = compositionRoot.MongoDatabase;
         var players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
         var posts = database.GetCollection<GamePost>(MongoCollections.Posts);
         var publications = database.GetCollection<Publication>(MongoCollections.Publications);
@@ -134,7 +135,7 @@ internal sealed class MongoGameIndexes(IMongoDatabase database) : IHostedService
         string indexName,
         CancellationToken cancellationToken)
     {
-        var collection = database.GetCollection<BsonDocument>(collectionName);
+        var collection = compositionRoot.MongoDatabase.GetCollection<BsonDocument>(collectionName);
         var keys = Builders<BsonDocument>.IndexKeys.Ascending(field);
         var index = IndexFactory.Create(keys, indexName);
         return collection.Indexes.CreateOneAsync(index, cancellationToken: cancellationToken);

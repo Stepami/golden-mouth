@@ -1,7 +1,6 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
@@ -18,8 +17,6 @@ namespace Reki.Infrastructure;
 
 public static class DependencyInjection
 {
-    private static readonly TimeSpan MongoServerSelectionTimeout = TimeSpan.FromSeconds(5);
-
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services)
     {
@@ -80,27 +77,7 @@ public static class DependencyInjection
                 "Mongo:ConnectionString must be an absolute MongoDB URI.")
             .ValidateOnStart();
 
-        services.AddSingleton<IMongoClient>(serviceProvider =>
-        {
-            var options = serviceProvider
-                .GetRequiredService<IOptions<MongoOptions>>()
-                .Value;
-
-            var settings = MongoClientSettings.FromConnectionString(
-                options.ConnectionString);
-            settings.ServerSelectionTimeout = MongoServerSelectionTimeout;
-
-            return new MongoClient(settings);
-        });
-
-        services.AddSingleton(serviceProvider =>
-        {
-            var options = serviceProvider
-                .GetRequiredService<IOptions<MongoOptions>>()
-                .Value;
-            var client = serviceProvider.GetRequiredService<IMongoClient>();
-            return client.GetDatabase(options.DatabaseName);
-        });
+        services.AddSingleton<MongoCompositionRoot>();
         services.AddSingleton<IGameStore, MongoGameStore>();
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);
     }

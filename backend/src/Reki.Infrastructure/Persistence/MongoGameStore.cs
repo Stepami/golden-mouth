@@ -25,9 +25,11 @@ internal sealed class MongoGameStore : IGameStore
     private readonly IMongoCollection<BsonDocument> _threads;
     private readonly IMongoCollection<BsonDocument> _invites;
 
-    public MongoGameStore(IMongoClient client, IMongoDatabase database)
+    public MongoGameStore(MongoCompositionRoot compositionRoot)
     {
-        _client = client;
+        _client = compositionRoot.MongoClient;
+        var database = compositionRoot.MongoDatabase;
+
         _players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
         _posts = database.GetCollection<GamePost>(MongoCollections.Posts);
         _publications = database.GetCollection<Publication>(MongoCollections.Publications);

@@ -1,11 +1,10 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Bson;
-using MongoDB.Driver;
+using Reki.Infrastructure.Persistence;
 
 namespace Reki.Infrastructure.Health;
 
-internal sealed class MongoHealthCheck(IMongoDatabase database)
-    : IHealthCheck
+internal sealed class MongoHealthCheck(MongoCompositionRoot compositionRoot) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
@@ -14,7 +13,7 @@ internal sealed class MongoHealthCheck(IMongoDatabase database)
         try
         {
             var command = new BsonDocument("ping", 1);
-            await database.RunCommandAsync<BsonDocument>(
+            await compositionRoot.MongoDatabase.RunCommandAsync<BsonDocument>(
                 command,
                 cancellationToken: cancellationToken);
 
