@@ -27,27 +27,17 @@ public sealed class OnboardPlayerHandler(
         }
 
         var inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
-        var updatedInviter = inviter is null
-            ? null
-            : gameDay.Normalize(inviter)
-                .GrantInviteBonus(balance.Value.InviteBonusBoth, balance.Value.InviteBonusMaxPerDay);
-        if (ReferenceEquals(updatedInviter, inviter))
-        {
-            updatedInviter = null;
-        }
-
         var createdPlayer = CreatePlayer(request, telegramUserId, gameDay.PeriodStart);
         var created = createdPlayer with
         {
             AgeBand = request.AgeBand,
-            InvitedBy = inviter?.Id,
-            InvitedAtUtc = inviter is null ? null : timeProvider.GetUtcNow(),
-            FirstPostInviteBonus = inviter is null ? 0 : balance.Value.InviteBonusBoth,
+            ReferralBenefits = inviter is null ? ReferralBenefits.Empty : new(0, balance.Value.InviteBonusBoth, true),
         };
         if (await store.TryCreatePlayerAsync(
                 created,
-                updatedInviter,
-                inviter?.Version ?? 0,
+                inviter?.Id,
+                timeProvider.GetUtcNow(),
+                balance.Value.InviteBonusBoth,
                 cancellationToken))
         {
             analytics.Track(created, "player_created", new Dictionary<string, string>());

@@ -41,6 +41,7 @@ internal sealed partial class RegisteredPlayersMetrics(
         await foreach (var player in store.GetPlayersAsync(stoppingToken))
         {
             var worlds = await store.GetWorldsAsync(player.Id, stoppingToken);
+            var invites = await store.GetInviteStateAsync(player.Id, player.PostsPeriodStartedAtUtc, stoppingToken);
             var worldKeys = worlds.Select(world => world.BalanceKey).Distinct().ToArray();
             using var scope = logger.BeginScope(new Dictionary<string, object?>
             {
@@ -56,7 +57,7 @@ internal sealed partial class RegisteredPlayersMetrics(
                     _ => "multi-world",
                 },
                 ["age_group"] = player.AgeBand ?? player.BirthGroup,
-                ["registration_source"] = player.InvitedBy is null ? "direct" : "referral",
+                ["registration_source"] = invites.HasAttribution ? "referral" : "direct",
                 ["launch_surface"] = "unknown",
                 ["subscriber_total"] = worlds.Sum(world => world.Player.Subscribers),
             });

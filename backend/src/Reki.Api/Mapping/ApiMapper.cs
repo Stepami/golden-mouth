@@ -31,7 +31,7 @@ public sealed partial class ApiMapper
             Enum.Parse<Address>(player.Address, true),
             Math.Max(0, postsCap - player.PostsUsed),
             postsCap,
-            player.FirstPostInviteBonusUsed ? 0 : player.FirstPostInviteBonus,
+            player.ReferralBenefits.FirstPostBonus,
             new StreakResponse(player.StreakDays, Enumerable.Range(0, 7).Select(day => day < Math.Min(7, player.StreakDays)).ToArray(), "ещё день — и бонус"),
             player.Skills.ToDictionary(item => Enum.Parse<ContractSkillId>(item.Key.Value, true), item => MapSkill(item.Value)),
             new PlayerSettingsResponse(player.Settings.Notifications, player.Settings.Quiet, player.Settings.Plus),

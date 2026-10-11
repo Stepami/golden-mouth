@@ -1,3 +1,4 @@
+using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Domain.Events;
 using Reki.Domain.Player;
@@ -17,8 +18,14 @@ public interface IGameStore
 
     ValueTask<bool> TryCreatePlayerAsync(
         PlayerProfile player,
-        PlayerProfile? updatedInviter,
-        int expectedInviterVersion,
+        PlayerId? inviterId,
+        DateTimeOffset createdAtUtc,
+        int inviteBonus,
+        CancellationToken cancellationToken);
+
+    ValueTask<InviteState> GetInviteStateAsync(
+        PlayerId playerId,
+        DateTimeOffset periodStart,
         CancellationToken cancellationToken);
 
     ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken);
