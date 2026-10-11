@@ -26,10 +26,27 @@ def columns(query):
     """Псевдонимы колонок верхнего SELECT: ими заполняются fields.x и fields.y."""
     text = " ".join(query.split())
     upper = text.upper()
-    start = upper.find("SELECT ")
+    # CTEs contain their own SELECT: chart fields must come from the outer query.
+    depth, quoted, start = 0, False, -1
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char == "'":
+            if quoted and index + 1 < len(text) and text[index + 1] == "'":
+                index += 2
+                continue
+            quoted = not quoted
+        elif not quoted:
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+            elif depth == 0 and upper.startswith("SELECT ", index):
+                start = index + len("SELECT ")
+                break
+        index += 1
     if start < 0:
         return []
-    start += len("SELECT ")
 
     depth = 0
     end = start
@@ -140,57 +157,59 @@ def box(x, y, w, h, i):
 
 
 # --- Продуктовый дашборд -----------------------------------------------------
+def history_panel(*args, **kwargs):
+    panel = sql_panel(*args, **kwargs)
+    panel["config"].update({
+        "panel_time_enabled": True,
+        "panel_time_range": {"type": "relative", "relativeTimePeriod": "90d"},
+    })
+    return panel
+
+
 product_panels = [
+    history_panel(
+        "summary", "Пользователи: total / MAU / WAU / DAU",
+        "Наблюдаемые игроки за 90 дней; не размер базы аккаунтов. MAU = последние 30×24ч, WAU = 7×24ч, DAU = UTC сегодня (неполный день) и вчера.",
+        sql("product-summary.sql"), "product", box(0, 0, 192, 7, 1), kind="table"),
     sql_panel(
-        "p1", "DAU по дням",
-        "Уникальные игроки за календарный день. activity_kind = real отсекает служебные события.",
-        sql("product-p1-dau.sql"), "product", box(0, 0, 96, 8, 1)),
+        "p1", "DAU по дням (UTC)",
+        "Уникальные real player_id; крайние дни выбранного периода могут быть неполными.",
+        sql("product-p1-dau.sql"), "product", box(0, 7, 96, 8, 2), kind="line"),
     sql_panel(
-        "p2", "Новые игроки",
-        "Первый день, в который игрок вообще появился в событиях.",
-        sql("product-p2-new.sql"), "product", box(96, 0, 96, 8, 2), kind="bar"),
+        "p2", "Первое появление в выбранном периоде",
+        "Первое наблюдаемое событие в диапазоне; не регистрации новых аккаунтов.",
+        sql("product-p2-new.sql"), "product", box(96, 7, 96, 8, 3), kind="bar"),
+    history_panel(
+        "segments", "Пользователи и публикации по сегментам",
+        "90 дней. Сегмент игрока по непустым значениям; несколько значений → multi-world / multi-age-group / multi-platform. unknown сохраняется. Строки разных измерений не складывать.",
+        sql("product-segments.sql"), "product", box(0, 15, 192, 10, 4), kind="table"),
+    history_panel(
+        "p4", "Когорты: D1 / D7",
+        "Первое появление в 90 днях, точный день возврата UTC. Только дни до последнего дня телеметрии. NULL = окно ещё не завершено.",
+        sql("product-p4-retention.sql"), "product", box(0, 25, 192, 9, 5), kind="table"),
+    history_panel(
+        "p9", "Недельный churn: все и сегменты",
+        "Прокси неактивности: активен в предыдущие полные 7 UTC-дней, отсутствует в последние полные 7. NULL до 14 дней истории или при нулевом знаменателе. Не отмена подписки.",
+        sql("product-p9-churn.sql"), "product", box(0, 34, 192, 10, 6), kind="table"),
+    history_panel(
+        "activation", "Активация: публикация → результат",
+        "Игроки с post_publish и post_result среди наблюдаемых за 90 дней. Это охват событий, не упорядоченная воронка первой сессии.",
+        sql("product-activation.sql"), "product", box(0, 44, 192, 7, 7), kind="table"),
     sql_panel(
         "p3", "Сессии и события",
-        "Число сессий и общее число событий за день. Помогает понять, растёт ли глубина, а не только охват.",
-        sql("product-p3-sessions.sql"), "product", box(0, 8, 96, 8, 3)),
-    sql_panel(
-        "p4", "Возврат D1",
-        "Сколько игроков из дня вернулись на следующий день. Знаменатель это DAU того дня.",
-        sql("product-p4-retention.sql"), "product", box(96, 8, 96, 8, 4), kind="table"),
-    sql_panel(
-        "p9", "Churn D1",
-        "Churn = 100% - возврат D1. churned это игроки дня, не пришедшие на следующий.",
-        sql("product-p9-churn.sql"), "product", box(0, 16, 96, 8, 5)),
+        "По выбранному периоду. Не все серверные события имеют session_id.",
+        sql("product-p3-sessions.sql"), "product", box(0, 51, 96, 8, 8), kind="line"),
     sql_panel(
         "p5", "События и охват игроков",
-        "Какие события вообще происходят и сколько уникальных игроков в каждом.",
-        sql("product-p5-events.sql"), "product", box(96, 16, 96, 10, 6), kind="table"),
-    sql_panel(
-        "p6", "Срез по платформе",
-        "Как распределены игроки и события по платформам клиента.",
-        sql("product-p6-platform.sql"), "product", box(0, 26, 64, 8, 7), kind="pie", values=["players"]),
-    sql_panel(
-        "p7", "Срез по миру",
-        "Образовательный мир, в котором играют.",
-        sql("product-p7-world.sql"), "product", box(64, 26, 64, 8, 8), kind="pie", values=["players"]),
-    sql_panel(
-        "p8", "Срез по возрасту",
-        "Возрастная группа игрока.",
-        sql("product-p8-age.sql"), "product", box(128, 26, 64, 8, 9), kind="table"),
+        "Проверка полноты событий и продуктовой активности.",
+        sql("product-p5-events.sql"), "product", box(96, 51, 96, 10, 9), kind="table"),
 ]
 
-product = {
-    "org_id": "default",
-    "request_body": {
-        "title": "Реки: продукт",
-        "description": "DAU, новые игроки, возврат и churn D1, события и срезы. Источник: поток product.",
-        "tabs": [{
-            "tabId": "product",
-            "name": "Продукт",
-            "panels": product_panels,
-        }],
-    },
-}
+product = {"org_id": "default", "request_body": {
+    "title": "Реки: продукт",
+    "description": "Total observed (90d), rolling MAU/WAU, UTC DAU, cohort D1/D7, weekly inactivity churn and segments. Summary/cohort panels use 90d; trends use selected range. Small samples; NULL means not yet measurable.",
+    "tabs": [{"tabId": "product", "name": "Продукт", "panels": product_panels}],
+}}
 
 # --- Технический дашборд -----------------------------------------------------
 tech_panels = [
@@ -262,9 +281,14 @@ tech = {
     },
 }
 
-for name, body in (("product", product), ("load-and-llm", tech)):
-    path = os.path.join(HERE, name + ".json")
-    with open(path, "w", encoding="utf-8") as fh:
-        json.dump(body, fh, ensure_ascii=False, indent=2)
-        fh.write("\n")
-    print(path, "| панелей:", len(body["request_body"]["tabs"][0]["panels"]))
+def main():
+    for name, body in (("product", product), ("load-and-llm", tech)):
+        path = os.path.join(HERE, name + ".json")
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(body, fh, ensure_ascii=False, indent=2)
+            fh.write("\n")
+        print(path, "| панелей:", len(body["request_body"]["tabs"][0]["panels"]))
+
+
+if __name__ == "__main__":
+    main()

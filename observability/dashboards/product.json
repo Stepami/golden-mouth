@@ -2,24 +2,114 @@
   "org_id": "default",
   "request_body": {
     "title": "Реки: продукт",
-    "description": "DAU, новые игроки, возврат и churn D1, события и срезы. Источник: поток product.",
+    "description": "Total observed (90d), rolling MAU/WAU, UTC DAU, cohort D1/D7, weekly inactivity churn and segments. Summary/cohort panels use 90d; trends use selected range. Small samples; NULL means not yet measurable.",
     "tabs": [
       {
         "tabId": "product",
         "name": "Продукт",
         "panels": [
           {
+            "id": "summary",
+            "type": "table",
+            "title": "Пользователи: total / MAU / WAU / DAU",
+            "description": "Наблюдаемые игроки за 90 дней; не размер базы аккаунтов. MAU = последние 30×24ч, WAU = 7×24ч, DAU = UTC сегодня (неполный день) и вчера.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              }
+            },
+            "queries": [
+              {
+                "query": "SELECT 'Все игроки' AS segment,\n count(DISTINCT player_id) AS observed_users,\n to_timestamp_micros(min(_timestamp)) AS telemetry_since_utc,\n count(DISTINCT CASE WHEN _timestamp >= date_part('epoch', now()) * 1000000 - 30 * 86400000000 THEN player_id END) AS mau_30d,\n count(DISTINCT CASE WHEN _timestamp >= date_part('epoch', now()) * 1000000 - 7 * 86400000000 THEN player_id END) AS wau_7d,\n count(DISTINCT CASE WHEN floor(_timestamp / 86400000000) = floor(date_part('epoch', now()) * 1000000 / 86400000000) THEN player_id END) AS dau_today,\n count(DISTINCT CASE WHEN floor(_timestamp / 86400000000) = floor(date_part('epoch', now()) * 1000000 / 86400000000) - 1 THEN player_id END) AS dau_yesterday\nFROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "segment",
+                      "alias": "segment",
+                      "column": "segment",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "observed_users",
+                      "alias": "observed_users",
+                      "column": "observed_users",
+                      "type": "build"
+                    },
+                    {
+                      "label": "telemetry_since_utc",
+                      "alias": "telemetry_since_utc",
+                      "column": "telemetry_since_utc",
+                      "type": "build"
+                    },
+                    {
+                      "label": "mau_30d",
+                      "alias": "mau_30d",
+                      "column": "mau_30d",
+                      "type": "build"
+                    },
+                    {
+                      "label": "wau_7d",
+                      "alias": "wau_7d",
+                      "column": "wau_7d",
+                      "type": "build"
+                    },
+                    {
+                      "label": "dau_today",
+                      "alias": "dau_today",
+                      "column": "dau_today",
+                      "type": "build"
+                    },
+                    {
+                      "label": "dau_yesterday",
+                      "alias": "dau_yesterday",
+                      "column": "dau_yesterday",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 0,
+              "w": 192,
+              "h": 7,
+              "i": 1
+            }
+          },
+          {
             "id": "p1",
             "type": "line",
-            "title": "DAU по дням",
-            "description": "Уникальные игроки за календарный день. activity_kind = real отсекает служебные события.",
+            "title": "DAU по дням (UTC)",
+            "description": "Уникальные real player_id; крайние дни выбранного периода могут быть неполными.",
             "queryType": "sql",
             "config": {
               "show_legends": true
             },
             "queries": [
               {
-                "query": "SELECT histogram(_timestamp, '1 day') AS day, count(DISTINCT player_id) AS dau\nFROM \"product\" WHERE activity_kind = 'real'\nGROUP BY day ORDER BY day",
+                "query": "SELECT histogram(_timestamp, '1 day') AS day, count(DISTINCT player_id) AS dau\nFROM \"product\" WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''\nGROUP BY day ORDER BY day",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -57,24 +147,24 @@
             ],
             "layout": {
               "x": 0,
-              "y": 0,
+              "y": 7,
               "w": 96,
               "h": 8,
-              "i": 1
+              "i": 2
             }
           },
           {
             "id": "p2",
             "type": "bar",
-            "title": "Новые игроки",
-            "description": "Первый день, в который игрок вообще появился в событиях.",
+            "title": "Первое появление в выбранном периоде",
+            "description": "Первое наблюдаемое событие в диапазоне; не регистрации новых аккаунтов.",
             "queryType": "sql",
             "config": {
               "show_legends": true
             },
             "queries": [
               {
-                "query": "SELECT histogram(first_seen, '1 day') AS day, count(*) AS new_players\nFROM (SELECT player_id, min(_timestamp) AS first_seen FROM \"product\" WHERE activity_kind = 'real' GROUP BY player_id)\nGROUP BY day ORDER BY day",
+                "query": "SELECT histogram(first_seen, '1 day') AS day, count(*) AS new_players\nFROM (SELECT player_id, min(_timestamp) AS first_seen FROM \"product\" WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id)\nGROUP BY day ORDER BY day",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -112,24 +202,372 @@
             ],
             "layout": {
               "x": 96,
-              "y": 0,
+              "y": 7,
               "w": 96,
               "h": 8,
-              "i": 2
+              "i": 3
+            }
+          },
+          {
+            "id": "segments",
+            "type": "table",
+            "title": "Пользователи и публикации по сегментам",
+            "description": "90 дней. Сегмент игрока по непустым значениям; несколько значений → multi-world / multi-age-group / multi-platform. unknown сохраняется. Строки разных измерений не складывать.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              }
+            },
+            "queries": [
+              {
+                "query": "WITH players AS (SELECT player_id, min(_timestamp) AS first_seen, max(_timestamp) AS last_seen,\n CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,\n CASE WHEN count(DISTINCT nullif(age_group, '')) > 1 THEN 'multi-age-group' ELSE coalesce(max(nullif(age_group, '')), 'unknown') END AS age_group,\n CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform'\n ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform,\n max(CASE WHEN event_name = 'post_publish' THEN 1 ELSE 0 END) AS published,\n max(CASE WHEN event_name = 'post_result' THEN 1 ELSE 0 END) AS saw_result\nFROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id), segments AS (SELECT 'world' AS dimension, world AS segment, player_id, first_seen, last_seen, published, saw_result FROM players UNION ALL SELECT 'age_group' AS dimension, age_group AS segment, player_id, first_seen, last_seen, published, saw_result FROM players UNION ALL SELECT 'platform' AS dimension, platform AS segment, player_id, first_seen, last_seen, published, saw_result FROM players)\nSELECT dimension, segment, count(*) AS observed_users,\n sum(CASE WHEN last_seen >= date_part('epoch', now()) * 1000000 - 30 * 86400000000 THEN 1 ELSE 0 END) AS mau_30d,\n sum(CASE WHEN last_seen >= date_part('epoch', now()) * 1000000 - 7 * 86400000000 THEN 1 ELSE 0 END) AS wau_7d,\n sum(CASE WHEN floor(last_seen / 86400000000) = floor(date_part('epoch', now()) * 1000000 / 86400000000) THEN 1 ELSE 0 END) AS dau_today,\n sum(published) AS publishers, round(100.0 * sum(published) / count(*), 1) AS publish_pct\nFROM segments GROUP BY dimension, segment ORDER BY dimension, observed_users DESC",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "dimension",
+                      "alias": "dimension",
+                      "column": "dimension",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "segment",
+                      "alias": "segment",
+                      "column": "segment",
+                      "type": "build"
+                    },
+                    {
+                      "label": "observed_users",
+                      "alias": "observed_users",
+                      "column": "observed_users",
+                      "type": "build"
+                    },
+                    {
+                      "label": "mau_30d",
+                      "alias": "mau_30d",
+                      "column": "mau_30d",
+                      "type": "build"
+                    },
+                    {
+                      "label": "wau_7d",
+                      "alias": "wau_7d",
+                      "column": "wau_7d",
+                      "type": "build"
+                    },
+                    {
+                      "label": "dau_today",
+                      "alias": "dau_today",
+                      "column": "dau_today",
+                      "type": "build"
+                    },
+                    {
+                      "label": "publishers",
+                      "alias": "publishers",
+                      "column": "publishers",
+                      "type": "build"
+                    },
+                    {
+                      "label": "publish_pct",
+                      "alias": "publish_pct",
+                      "column": "publish_pct",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 15,
+              "w": 192,
+              "h": 10,
+              "i": 4
+            }
+          },
+          {
+            "id": "p4",
+            "type": "table",
+            "title": "Когорты: D1 / D7",
+            "description": "Первое появление в 90 днях, точный день возврата UTC. Только дни до последнего дня телеметрии. NULL = окно ещё не завершено.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              }
+            },
+            "queries": [
+              {
+                "query": "WITH players AS (SELECT player_id, min(_timestamp) AS first_seen, max(_timestamp) AS last_seen,\n CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,\n CASE WHEN count(DISTINCT nullif(age_group, '')) > 1 THEN 'multi-age-group' ELSE coalesce(max(nullif(age_group, '')), 'unknown') END AS age_group,\n CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform'\n ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform,\n max(CASE WHEN event_name = 'post_publish' THEN 1 ELSE 0 END) AS published,\n max(CASE WHEN event_name = 'post_result' THEN 1 ELSE 0 END) AS saw_result\nFROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id),\n activity AS (SELECT DISTINCT player_id, floor(_timestamp / 86400000000) AS day FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),\n watermark AS (SELECT floor(max(_timestamp) / 86400000000) AS day FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '')\nSELECT to_timestamp_micros(floor(p.first_seen / 86400000000) * 86400000000) AS cohort_day,\n count(*) AS cohort_users,\n sum(CASE WHEN floor(p.first_seen / 86400000000) + 1 < w.day THEN 1 ELSE 0 END) AS eligible_d1,\n sum(CASE WHEN floor(p.first_seen / 86400000000) + 1 < w.day AND a1.player_id IS NOT NULL THEN 1 ELSE 0 END) AS returned_d1,\n round(100.0 * sum(CASE WHEN floor(p.first_seen / 86400000000) + 1 < w.day AND a1.player_id IS NOT NULL THEN 1 ELSE 0 END) /\n nullif(sum(CASE WHEN floor(p.first_seen / 86400000000) + 1 < w.day THEN 1 ELSE 0 END), 0), 1) AS retention_d1_pct,\n sum(CASE WHEN floor(p.first_seen / 86400000000) + 7 < w.day THEN 1 ELSE 0 END) AS eligible_d7,\n round(100.0 * sum(CASE WHEN floor(p.first_seen / 86400000000) + 7 < w.day AND a7.player_id IS NOT NULL THEN 1 ELSE 0 END) /\n nullif(sum(CASE WHEN floor(p.first_seen / 86400000000) + 7 < w.day THEN 1 ELSE 0 END), 0), 1) AS retention_d7_pct\nFROM players p CROSS JOIN watermark w\nLEFT JOIN activity a1 ON p.player_id = a1.player_id AND a1.day = floor(p.first_seen / 86400000000) + 1\nLEFT JOIN activity a7 ON p.player_id = a7.player_id AND a7.day = floor(p.first_seen / 86400000000) + 7\nGROUP BY cohort_day ORDER BY cohort_day",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "cohort_day",
+                      "alias": "cohort_day",
+                      "column": "cohort_day",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "cohort_users",
+                      "alias": "cohort_users",
+                      "column": "cohort_users",
+                      "type": "build"
+                    },
+                    {
+                      "label": "eligible_d1",
+                      "alias": "eligible_d1",
+                      "column": "eligible_d1",
+                      "type": "build"
+                    },
+                    {
+                      "label": "returned_d1",
+                      "alias": "returned_d1",
+                      "column": "returned_d1",
+                      "type": "build"
+                    },
+                    {
+                      "label": "retention_d1_pct",
+                      "alias": "retention_d1_pct",
+                      "column": "retention_d1_pct",
+                      "type": "build"
+                    },
+                    {
+                      "label": "eligible_d7",
+                      "alias": "eligible_d7",
+                      "column": "eligible_d7",
+                      "type": "build"
+                    },
+                    {
+                      "label": "retention_d7_pct",
+                      "alias": "retention_d7_pct",
+                      "column": "retention_d7_pct",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 25,
+              "w": 192,
+              "h": 9,
+              "i": 5
+            }
+          },
+          {
+            "id": "p9",
+            "type": "table",
+            "title": "Недельный churn: все и сегменты",
+            "description": "Прокси неактивности: активен в предыдущие полные 7 UTC-дней, отсутствует в последние полные 7. NULL до 14 дней истории или при нулевом знаменателе. Не отмена подписки.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              }
+            },
+            "queries": [
+              {
+                "query": "WITH players AS (SELECT player_id, min(_timestamp) AS first_seen, max(_timestamp) AS last_seen,\n CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,\n CASE WHEN count(DISTINCT nullif(age_group, '')) > 1 THEN 'multi-age-group' ELSE coalesce(max(nullif(age_group, '')), 'unknown') END AS age_group,\n CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform'\n ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform,\n max(CASE WHEN event_name = 'post_publish' THEN 1 ELSE 0 END) AS published,\n max(CASE WHEN event_name = 'post_result' THEN 1 ELSE 0 END) AS saw_result\nFROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id), segments AS (\n SELECT 'all' AS dimension, 'all' AS segment, player_id FROM players\n UNION ALL SELECT 'world' AS dimension, world AS segment, player_id FROM players UNION ALL SELECT 'age_group' AS dimension, age_group AS segment, player_id FROM players UNION ALL SELECT 'platform' AS dimension, platform AS segment, player_id FROM players),\n activity AS (SELECT player_id,\n max(CASE WHEN floor(_timestamp / 86400000000) >= floor(date_part('epoch', now()) * 1000000 / 86400000000) - 14 AND floor(_timestamp / 86400000000) < floor(date_part('epoch', now()) * 1000000 / 86400000000) - 7 THEN 1 ELSE 0 END) AS previous_week,\n max(CASE WHEN floor(_timestamp / 86400000000) >= floor(date_part('epoch', now()) * 1000000 / 86400000000) - 7 AND floor(_timestamp / 86400000000) < floor(date_part('epoch', now()) * 1000000 / 86400000000) THEN 1 ELSE 0 END) AS last_week\n FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id),\n coverage AS (SELECT min(_timestamp) AS first_event FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '')\nSELECT s.dimension AS dimension, s.segment AS segment,\n CASE WHEN min(c.first_event) <= (floor(date_part('epoch', now()) * 1000000 / 86400000000) - 14) * 86400000000 THEN sum(a.previous_week) END AS eligible_users,\n CASE WHEN min(c.first_event) <= (floor(date_part('epoch', now()) * 1000000 / 86400000000) - 14) * 86400000000 THEN sum(CASE WHEN a.previous_week = 1 AND a.last_week = 0 THEN 1 ELSE 0 END) END AS inactive_users,\n CASE WHEN min(c.first_event) <= (floor(date_part('epoch', now()) * 1000000 / 86400000000) - 14) * 86400000000 THEN\n round(100.0 * sum(CASE WHEN a.previous_week = 1 AND a.last_week = 0 THEN 1 ELSE 0 END) / nullif(sum(a.previous_week), 0), 1) END AS weekly_churn_pct\nFROM segments s JOIN activity a ON s.player_id = a.player_id CROSS JOIN coverage c\nGROUP BY s.dimension, s.segment ORDER BY s.dimension, s.segment",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "dimension",
+                      "alias": "dimension",
+                      "column": "dimension",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "segment",
+                      "alias": "segment",
+                      "column": "segment",
+                      "type": "build"
+                    },
+                    {
+                      "label": "eligible_users",
+                      "alias": "eligible_users",
+                      "column": "eligible_users",
+                      "type": "build"
+                    },
+                    {
+                      "label": "inactive_users",
+                      "alias": "inactive_users",
+                      "column": "inactive_users",
+                      "type": "build"
+                    },
+                    {
+                      "label": "weekly_churn_pct",
+                      "alias": "weekly_churn_pct",
+                      "column": "weekly_churn_pct",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 34,
+              "w": 192,
+              "h": 10,
+              "i": 6
+            }
+          },
+          {
+            "id": "activation",
+            "type": "table",
+            "title": "Активация: публикация → результат",
+            "description": "Игроки с post_publish и post_result среди наблюдаемых за 90 дней. Это охват событий, не упорядоченная воронка первой сессии.",
+            "queryType": "sql",
+            "config": {
+              "show_legends": false,
+              "panel_time_enabled": true,
+              "panel_time_range": {
+                "type": "relative",
+                "relativeTimePeriod": "90d"
+              }
+            },
+            "queries": [
+              {
+                "query": "SELECT 'Наблюдаемые игроки' AS population, count(*) AS observed_users,\n sum(published) AS publishers, sum(saw_result) AS result_users,\n round(100.0 * sum(published) / nullif(count(*), 0), 1) AS publish_pct,\n round(100.0 * sum(saw_result) / nullif(count(*), 0), 1) AS result_pct\nFROM (SELECT player_id, min(_timestamp) AS first_seen, max(_timestamp) AS last_seen,\n CASE WHEN count(DISTINCT nullif(world, '')) > 1 THEN 'multi-world' ELSE coalesce(max(nullif(world, '')), 'unknown') END AS world,\n CASE WHEN count(DISTINCT nullif(age_group, '')) > 1 THEN 'multi-age-group' ELSE coalesce(max(nullif(age_group, '')), 'unknown') END AS age_group,\n CASE WHEN count(DISTINCT nullif(platform, '')) > 1 THEN 'multi-platform'\n ELSE coalesce(max(nullif(platform, '')), 'unknown') END AS platform,\n max(CASE WHEN event_name = 'post_publish' THEN 1 ELSE 0 END) AS published,\n max(CASE WHEN event_name = 'post_result' THEN 1 ELSE 0 END) AS saw_result\nFROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> '' GROUP BY player_id)",
+                "customQuery": true,
+                "vrlFunctionQuery": "",
+                "fields": {
+                  "stream": "product",
+                  "stream_type": "logs",
+                  "x": [
+                    {
+                      "label": "population",
+                      "alias": "population",
+                      "column": "population",
+                      "type": "build"
+                    }
+                  ],
+                  "y": [
+                    {
+                      "label": "observed_users",
+                      "alias": "observed_users",
+                      "column": "observed_users",
+                      "type": "build"
+                    },
+                    {
+                      "label": "publishers",
+                      "alias": "publishers",
+                      "column": "publishers",
+                      "type": "build"
+                    },
+                    {
+                      "label": "result_users",
+                      "alias": "result_users",
+                      "column": "result_users",
+                      "type": "build"
+                    },
+                    {
+                      "label": "publish_pct",
+                      "alias": "publish_pct",
+                      "column": "publish_pct",
+                      "type": "build"
+                    },
+                    {
+                      "label": "result_pct",
+                      "alias": "result_pct",
+                      "column": "result_pct",
+                      "type": "build"
+                    }
+                  ],
+                  "z": [],
+                  "breakdown": [],
+                  "filter": {
+                    "filterType": "group",
+                    "logicalOperator": "AND",
+                    "conditions": []
+                  }
+                },
+                "config": {
+                  "query_label": "A",
+                  "promql_legend": ""
+                }
+              }
+            ],
+            "layout": {
+              "x": 0,
+              "y": 44,
+              "w": 192,
+              "h": 7,
+              "i": 7
             }
           },
           {
             "id": "p3",
             "type": "line",
             "title": "Сессии и события",
-            "description": "Число сессий и общее число событий за день. Помогает понять, растёт ли глубина, а не только охват.",
+            "description": "По выбранному периоду. Не все серверные события имеют session_id.",
             "queryType": "sql",
             "config": {
               "show_legends": true
             },
             "queries": [
               {
-                "query": "SELECT histogram(_timestamp, '1 day') AS day, count(DISTINCT session_id) AS sessions, count(*) AS events\nFROM \"product\" WHERE activity_kind = 'real'\nGROUP BY day ORDER BY day",
+                "query": "SELECT histogram(_timestamp, '1 day') AS day, count(DISTINCT session_id) AS sessions, count(*) AS events\nFROM \"product\" WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''\nGROUP BY day ORDER BY day",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -173,158 +611,24 @@
             ],
             "layout": {
               "x": 0,
-              "y": 8,
+              "y": 51,
               "w": 96,
               "h": 8,
-              "i": 3
-            }
-          },
-          {
-            "id": "p4",
-            "type": "table",
-            "title": "Возврат D1",
-            "description": "Сколько игроков из дня вернулись на следующий день. Знаменатель это DAU того дня.",
-            "queryType": "sql",
-            "config": {
-              "show_legends": false
-            },
-            "queries": [
-              {
-                "query": "SELECT to_timestamp_micros(a.day_index * 86400000000) AS day,\n       count(DISTINCT a.player_id) AS dau,\n       count(DISTINCT b.player_id) AS returned_d1\nFROM (SELECT DISTINCT player_id, floor(_timestamp / 86400000000) AS day_index FROM \"product\" WHERE activity_kind = 'real') a\nLEFT JOIN (SELECT DISTINCT player_id, floor(_timestamp / 86400000000) AS day_index FROM \"product\" WHERE activity_kind = 'real') b\n  ON b.player_id = a.player_id AND b.day_index = a.day_index + 1\nGROUP BY a.day_index ORDER BY a.day_index",
-                "customQuery": true,
-                "vrlFunctionQuery": "",
-                "fields": {
-                  "stream": "product",
-                  "stream_type": "logs",
-                  "x": [
-                    {
-                      "label": "day",
-                      "alias": "day",
-                      "column": "day",
-                      "type": "build"
-                    }
-                  ],
-                  "y": [
-                    {
-                      "label": "dau",
-                      "alias": "dau",
-                      "column": "dau",
-                      "type": "build"
-                    },
-                    {
-                      "label": "returned_d1",
-                      "alias": "returned_d1",
-                      "column": "returned_d1",
-                      "type": "build"
-                    }
-                  ],
-                  "z": [],
-                  "breakdown": [],
-                  "filter": {
-                    "filterType": "group",
-                    "logicalOperator": "AND",
-                    "conditions": []
-                  }
-                },
-                "config": {
-                  "query_label": "A",
-                  "promql_legend": ""
-                }
-              }
-            ],
-            "layout": {
-              "x": 96,
-              "y": 8,
-              "w": 96,
-              "h": 8,
-              "i": 4
-            }
-          },
-          {
-            "id": "p9",
-            "type": "line",
-            "title": "Churn D1",
-            "description": "Churn = 100% - возврат D1. churned это игроки дня, не пришедшие на следующий.",
-            "queryType": "sql",
-            "config": {
-              "show_legends": true
-            },
-            "queries": [
-              {
-                "query": "SELECT to_timestamp_micros(a.day_index * 86400000000) AS day,\n       count(DISTINCT a.player_id) AS dau,\n       count(DISTINCT b.player_id) AS returned_d1,\n       count(DISTINCT a.player_id) - count(DISTINCT b.player_id) AS churned,\n       round(100.0 * (count(DISTINCT a.player_id) - count(DISTINCT b.player_id)) / count(DISTINCT a.player_id), 1) AS churn_pct\nFROM (SELECT DISTINCT player_id, floor(_timestamp / 86400000000) AS day_index FROM \"product\" WHERE activity_kind = 'real') a\nLEFT JOIN (SELECT DISTINCT player_id, floor(_timestamp / 86400000000) AS day_index FROM \"product\" WHERE activity_kind = 'real') b\n  ON b.player_id = a.player_id AND b.day_index = a.day_index + 1\nGROUP BY a.day_index ORDER BY a.day_index",
-                "customQuery": true,
-                "vrlFunctionQuery": "",
-                "fields": {
-                  "stream": "product",
-                  "stream_type": "logs",
-                  "x": [
-                    {
-                      "label": "day",
-                      "alias": "day",
-                      "column": "day",
-                      "type": "build"
-                    }
-                  ],
-                  "y": [
-                    {
-                      "label": "dau",
-                      "alias": "dau",
-                      "column": "dau",
-                      "type": "build"
-                    },
-                    {
-                      "label": "returned_d1",
-                      "alias": "returned_d1",
-                      "column": "returned_d1",
-                      "type": "build"
-                    },
-                    {
-                      "label": "churned",
-                      "alias": "churned",
-                      "column": "churned",
-                      "type": "build"
-                    },
-                    {
-                      "label": "churn_pct",
-                      "alias": "churn_pct",
-                      "column": "churn_pct",
-                      "type": "build"
-                    }
-                  ],
-                  "z": [],
-                  "breakdown": [],
-                  "filter": {
-                    "filterType": "group",
-                    "logicalOperator": "AND",
-                    "conditions": []
-                  }
-                },
-                "config": {
-                  "query_label": "A",
-                  "promql_legend": ""
-                }
-              }
-            ],
-            "layout": {
-              "x": 0,
-              "y": 16,
-              "w": 96,
-              "h": 8,
-              "i": 5
+              "i": 8
             }
           },
           {
             "id": "p5",
             "type": "table",
             "title": "События и охват игроков",
-            "description": "Какие события вообще происходят и сколько уникальных игроков в каждом.",
+            "description": "Проверка полноты событий и продуктовой активности.",
             "queryType": "sql",
             "config": {
               "show_legends": false
             },
             "queries": [
               {
-                "query": "SELECT event_name, count(DISTINCT player_id) AS players, count(*) AS events\nFROM \"product\" WHERE activity_kind = 'real'\nGROUP BY event_name ORDER BY events DESC",
+                "query": "SELECT event_name, count(DISTINCT player_id) AS players, count(*) AS events\nFROM \"product\" WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''\nGROUP BY event_name ORDER BY events DESC",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -368,180 +672,9 @@
             ],
             "layout": {
               "x": 96,
-              "y": 16,
+              "y": 51,
               "w": 96,
               "h": 10,
-              "i": 6
-            }
-          },
-          {
-            "id": "p6",
-            "type": "pie",
-            "title": "Срез по платформе",
-            "description": "Как распределены игроки и события по платформам клиента.",
-            "queryType": "sql",
-            "config": {
-              "show_legends": true
-            },
-            "queries": [
-              {
-                "query": "SELECT platform, count(DISTINCT player_id) AS players, count(*) AS events\nFROM \"product\" WHERE activity_kind = 'real'\nGROUP BY platform ORDER BY players DESC",
-                "customQuery": true,
-                "vrlFunctionQuery": "",
-                "fields": {
-                  "stream": "product",
-                  "stream_type": "logs",
-                  "x": [
-                    {
-                      "label": "platform",
-                      "alias": "platform",
-                      "column": "platform",
-                      "type": "build"
-                    }
-                  ],
-                  "y": [
-                    {
-                      "label": "players",
-                      "alias": "players",
-                      "column": "players",
-                      "type": "build"
-                    }
-                  ],
-                  "z": [],
-                  "breakdown": [],
-                  "filter": {
-                    "filterType": "group",
-                    "logicalOperator": "AND",
-                    "conditions": []
-                  }
-                },
-                "config": {
-                  "query_label": "A",
-                  "promql_legend": ""
-                }
-              }
-            ],
-            "layout": {
-              "x": 0,
-              "y": 26,
-              "w": 64,
-              "h": 8,
-              "i": 7
-            }
-          },
-          {
-            "id": "p7",
-            "type": "pie",
-            "title": "Срез по миру",
-            "description": "Образовательный мир, в котором играют.",
-            "queryType": "sql",
-            "config": {
-              "show_legends": true
-            },
-            "queries": [
-              {
-                "query": "SELECT world, count(DISTINCT player_id) AS players, count(*) AS events\nFROM \"product\" WHERE activity_kind = 'real'\nGROUP BY world ORDER BY players DESC",
-                "customQuery": true,
-                "vrlFunctionQuery": "",
-                "fields": {
-                  "stream": "product",
-                  "stream_type": "logs",
-                  "x": [
-                    {
-                      "label": "world",
-                      "alias": "world",
-                      "column": "world",
-                      "type": "build"
-                    }
-                  ],
-                  "y": [
-                    {
-                      "label": "players",
-                      "alias": "players",
-                      "column": "players",
-                      "type": "build"
-                    }
-                  ],
-                  "z": [],
-                  "breakdown": [],
-                  "filter": {
-                    "filterType": "group",
-                    "logicalOperator": "AND",
-                    "conditions": []
-                  }
-                },
-                "config": {
-                  "query_label": "A",
-                  "promql_legend": ""
-                }
-              }
-            ],
-            "layout": {
-              "x": 64,
-              "y": 26,
-              "w": 64,
-              "h": 8,
-              "i": 8
-            }
-          },
-          {
-            "id": "p8",
-            "type": "table",
-            "title": "Срез по возрасту",
-            "description": "Возрастная группа игрока.",
-            "queryType": "sql",
-            "config": {
-              "show_legends": false
-            },
-            "queries": [
-              {
-                "query": "SELECT age_group, count(DISTINCT player_id) AS players, count(*) AS events\nFROM \"product\" WHERE activity_kind = 'real'\nGROUP BY age_group ORDER BY players DESC",
-                "customQuery": true,
-                "vrlFunctionQuery": "",
-                "fields": {
-                  "stream": "product",
-                  "stream_type": "logs",
-                  "x": [
-                    {
-                      "label": "age_group",
-                      "alias": "age_group",
-                      "column": "age_group",
-                      "type": "build"
-                    }
-                  ],
-                  "y": [
-                    {
-                      "label": "players",
-                      "alias": "players",
-                      "column": "players",
-                      "type": "build"
-                    },
-                    {
-                      "label": "events",
-                      "alias": "events",
-                      "column": "events",
-                      "type": "build"
-                    }
-                  ],
-                  "z": [],
-                  "breakdown": [],
-                  "filter": {
-                    "filterType": "group",
-                    "logicalOperator": "AND",
-                    "conditions": []
-                  }
-                },
-                "config": {
-                  "query_label": "A",
-                  "promql_legend": ""
-                }
-              }
-            ],
-            "layout": {
-              "x": 128,
-              "y": 26,
-              "w": 64,
-              "h": 8,
               "i": 9
             }
           }
