@@ -4,22 +4,21 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Player;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Posts;
 
 public sealed class PublishPostHandler(
-    ITelegramUserAccessor telegramUser,
     IGameStore store,
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     GameDay gameDay,
-    PlayerReader playerReader,
+    ISender sender,
     ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
     ProductTelemetry analytics) : IStreamRequestHandler<PublishPostCommand, LiveEvent>
@@ -28,11 +27,8 @@ public sealed class PublishPostHandler(
         PublishPostCommand request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        var publication = await store.GetPublicationAsync(request.PublicationId, cancellationToken);
-        var storedPlayer = await playerReader.GetAsync(
-            telegramUserId,
-            cancellationToken);
+        var publication = await sender.Send(new GetPublicationQuery(request.PublicationId), cancellationToken);
+        var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
         if (publication is null || publication.PlayerId != storedPlayer.Id)
         {
             throw new ResourceNotFoundException("Publication not found.");
@@ -110,10 +106,7 @@ public sealed class PublishPostHandler(
             true,
             false,
             false);
-        var recentPosts = await store.GetPostsAsync(
-            player.Id,
-            20,
-            cancellationToken);
+        var recentPosts = await sender.Send(new GetChannelPostsQuery(player.Id, 20), cancellationToken);
         var recentViews = recentPosts.Select(post => post.Views).ToArray();
         var views = Math.Max(48, updated.Subscribers);
         var reachRatio = recentViews.Length == 0 ? 1 : views / GetMedian(recentViews);

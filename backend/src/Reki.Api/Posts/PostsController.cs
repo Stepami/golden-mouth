@@ -2,6 +2,8 @@ using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
+using Reki.Application.Common.Exceptions;
+using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Contracts.Posts;
 using Reki.Domain.Posts;
@@ -37,10 +39,11 @@ public sealed class PostsController(
         string publicationId,
         CancellationToken cancellationToken)
     {
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var result = await sender.Send(
-            new GetPublicationQuery(publicationId),
-            cancellationToken);
-        return TypedResults.Ok(result);
+            new GetPublicationQuery(publicationId, player.Id),
+            cancellationToken) ?? throw new ResourceNotFoundException("Publication not found.");
+        return TypedResults.Ok(PostContractMapper.MapPublication(result));
     }
 
     [HttpPost("posts/publications/{publicationId}/moderation", Name = "ModeratePublication")]
@@ -91,7 +94,8 @@ public sealed class PostsController(
         var result = await sender.Send(
             new GetChannelPostsQuery(),
             cancellationToken);
-        return TypedResults.Ok(result);
+        IReadOnlyList<ChannelPostResponse> response = result.Select(PostContractMapper.MapChannelPost).ToArray();
+        return TypedResults.Ok(response);
     }
 
     [HttpGet("posts/{postId}", Name = "GetPost")]
@@ -100,8 +104,9 @@ public sealed class PostsController(
         string postId,
         CancellationToken cancellationToken)
     {
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var result = await sender.Send(
-            new GetPostQuery(PostId.From(postId)),
+            new GetPostQuery(PostId.From(postId), player.Id),
             cancellationToken);
         return TypedResults.Ok(mapper.MapPostDetail(result));
     }

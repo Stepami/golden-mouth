@@ -2,18 +2,15 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Player;
 using Reki.Contracts.Posts;
-using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Posts;
 
 public sealed class AddReplyHandler(
-    ITelegramUserAccessor telegramUser,
     IGameStore store,
     IOptions<GameBalance> balance,
-    PlayerReader playerReader,
     ISender sender)
     : IRequestHandler<AddReplyCommand, ReplyResponse>
 {
@@ -21,10 +18,7 @@ public sealed class AddReplyHandler(
         AddReplyCommand request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        var player = await playerReader.GetAsync(
-            telegramUserId,
-            cancellationToken);
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var post = await sender.Send(new GetPostQuery(request.PostId, player.Id), cancellationToken);
 
         var existing = post.FindReply(request.ReplyId);

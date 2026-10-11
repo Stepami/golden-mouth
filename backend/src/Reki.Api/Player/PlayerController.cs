@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Mapping;
+using Reki.Application.Common;
 using Reki.Application.Player;
 using Reki.Contracts.Player;
 using Reki.Domain.Social;
@@ -15,16 +16,17 @@ namespace Reki.Api.Player;
 [Route("/")]
 public sealed class PlayerController(
     ISender sender,
-    ApiMapper mapper) : ControllerBase
+    ApiMapper mapper,
+    PlayerReader playerReader) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new GetPlayerQuery(),
+            new GetPlayerQuery(NormalizeDay: true),
             cancellationToken);
-        return TypedResults.Ok(mapper.MapPlayer(result));
+        return TypedResults.Ok(mapper.MapPlayer(playerReader.CreateView(result)));
     }
 
     [HttpPost("onboarding", Name = "CompleteOnboarding")]

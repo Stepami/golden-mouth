@@ -36,7 +36,7 @@ public sealed partial class TelemetryController(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(
-            new GetPlayerQuery(),
+            new GetPlayerQuery(NormalizeDay: true),
             cancellationToken);
         foreach (var entry in request.Entries)
         {
@@ -46,7 +46,7 @@ public sealed partial class TelemetryController(
             WriteClientLog(
                 entry.Level,
                 entry.Event,
-                player.Player.Id.Value,
+                player.Id.Value,
                 entry.Screen ?? string.Empty,
                 status ?? string.Empty,
                 path ?? string.Empty);

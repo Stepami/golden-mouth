@@ -8,21 +8,20 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Player;
 using Reki.Application.Worlds;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
 using static Reki.Application.Common.AI.StarToolCallParser;
 
 namespace Reki.Application.Posts;
 
 public sealed partial class GeneratePublicationHandler(
-    ITelegramUserAccessor telegramUser,
     IGameStore store,
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     GameDay gameDay,
-    PlayerReader playerReader,
+    ISender sender,
     StarTurnGenerator generator,
     ILogger<GeneratePublicationHandler> logger) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatusLiveEvent>
 {
@@ -32,13 +31,12 @@ public sealed partial class GeneratePublicationHandler(
         GeneratePublicationCommand request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         if (!Guid.TryParse(request.Id, out _))
         {
             throw new RequestConflictException("The publication identifier is invalid.");
         }
 
-        var storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var player = gameDay.Normalize(storedPlayer);
         if (!ReferenceEquals(player, storedPlayer) && !await store.TryReplacePlayerAsync(
             player,
@@ -49,7 +47,7 @@ public sealed partial class GeneratePublicationHandler(
         }
 
         var requestHash = ComputeRequestHash(request);
-        var existing = await store.GetPublicationAsync(request.Id, cancellationToken);
+        var existing = await sender.Send(new GetPublicationQuery(request.Id), cancellationToken);
         if (existing is not null)
         {
             EnsureSameRequest(existing, player, requestHash);
@@ -76,7 +74,7 @@ public sealed partial class GeneratePublicationHandler(
             timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime);
         if (!await store.TryCreatePublicationAsync(publication, cancellationToken))
         {
-            existing = await store.GetPublicationAsync(request.Id, cancellationToken)
+            existing = await sender.Send(new GetPublicationQuery(request.Id), cancellationToken)
                 ?? throw new RequestConflictException("The publication changed concurrently.");
             EnsureSameRequest(existing, player, requestHash);
             yield return new PublicationStatusLiveEvent(existing.Status, request.Id);
@@ -144,7 +142,7 @@ public sealed partial class GeneratePublicationHandler(
             {
                 try
                 {
-                    var complete = await store.GetPublicationAsync(request.Id, cancellationToken)
+                    var complete = await sender.Send(new GetPublicationQuery(request.Id), cancellationToken)
                                    ?? throw new InvalidOperationException("The publication disappeared during generation.");
                     _ = complete.AssembleTurn();
                     await store.MarkPublicationReadyAsync(request.Id, cancellationToken);
@@ -209,7 +207,7 @@ public sealed partial class GeneratePublicationHandler(
         var worldRules = player.World.Value == "own" && storedRules is not null
             ? storedRules
             : WorldRulesDefaults.Create(player.Id, player.World);
-        var recentPosts = await store.GetPostsAsync(player.Id, 3, cancellationToken);
+        var recentPosts = await sender.Send(new GetChannelPostsQuery(player.Id, 3), cancellationToken);
         var hateEnabled = StarTurnPolicy.IsHateEnabled(player, balance.Value, now);
         return new StarPostContext(
             request.Text,

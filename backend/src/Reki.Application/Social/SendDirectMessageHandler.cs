@@ -3,28 +3,25 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
+using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Application.Worlds;
-using Reki.Domain.Player;
 using Reki.Domain.Social;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Social;
 
 public sealed class SendDirectMessageHandler(
-    ITelegramUserAccessor telegramUser,
     IGameStore store,
     IOptions<GameBalance> balance,
     GameDay gameDay,
-    PlayerReader playerReader,
+    ISender sender,
     StarTurnGenerator turnGenerator) : IRequestHandler<SendDirectMessageCommand, SentDirectMessage>
 {
     public async ValueTask<SentDirectMessage> Handle(
         SendDirectMessageCommand request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         _ = StarCatalog.Require(player.World, request.StarId);
         var periodStart = gameDay.PeriodStart;
         var conversation = await store.GetStarConversationAsync(

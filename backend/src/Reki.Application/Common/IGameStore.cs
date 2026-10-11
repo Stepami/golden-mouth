@@ -79,7 +79,7 @@ public interface IGameStore
 
     ValueTask<GamePost?> GetPostAsync(
         PostId postId,
-        PlayerId? playerId,
+        PlayerId playerId,
         CancellationToken cancellationToken);
 
     ValueTask<bool> TryAddThreadReplyAsync(

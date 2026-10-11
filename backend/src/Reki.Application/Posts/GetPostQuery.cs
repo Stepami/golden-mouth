@@ -6,5 +6,5 @@ namespace Reki.Application.Posts;
 
 public sealed record GetPostQuery(
     PostId PostId,
-    PlayerId? PlayerId = null)
+    PlayerId PlayerId)
     : IRequest<GamePost>;

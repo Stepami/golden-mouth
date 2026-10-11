@@ -1,24 +1,20 @@
 using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
-using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Player;
 
 public sealed class ClaimPlusInterestHandler(
-    ITelegramUserAccessor telegramUser,
     IGameStore store,
     IOptions<GameBalance> balance,
     GameDay gameDay,
-    PlayerReader playerReader) : IRequestHandler<ClaimPlusInterestCommand, int>
+    ISender sender) : IRequestHandler<ClaimPlusInterestCommand, int>
 {
     public async ValueTask<int> Handle(
         ClaimPlusInterestCommand request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        var storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var player = gameDay.Normalize(storedPlayer);
         if (!ReferenceEquals(player, storedPlayer))
         {

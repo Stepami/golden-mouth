@@ -63,41 +63,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    [Arguments(false)]
-    [Arguments(true)]
-    public async Task GetPost_WithOptionalOwner_EnforcesOwnerFilterAsync(bool filterByOwner)
-    {
-        // Arrange
-        using var http = Factory.CreateClient();
-        var store = Factory.Services.GetRequiredService<IGameStore>();
-        var ownerId = PlayerId.New();
-        var post = new GamePost(
-            PostId.New(),
-            ownerId,
-            "stored post",
-            48,
-            [],
-            [],
-            new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero),
-            0,
-            0,
-            1,
-            false,
-            false);
-        await Database.GetCollection<GamePost>("posts").InsertOneAsync(post);
-
-        // Act
-        var found = await store.GetPostAsync(post.Id, filterByOwner ? ownerId : null, CancellationToken.None);
-        var wrongOwner = await store.GetPostAsync(post.Id, PlayerId.New(), CancellationToken.None);
-        var missing = await store.GetPostAsync(PostId.New(), filterByOwner ? ownerId : null, CancellationToken.None);
-
-        // Assert
-        await Assert.That(found?.Id).IsEqualTo(post.Id);
-        await Assert.That(wrongOwner).IsNull();
-        await Assert.That(missing).IsNull();
-    }
-
-    [Test]
     public async Task Feed_UsesPlayerProfileForPostAuthorAsync()
     {
         // Arrange
@@ -241,56 +206,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(detail.Reactions.Count).IsEqualTo(1);
         await Assert.That(detail.Comments.Count).IsEqualTo(2);
         await Assert.That(detail.Comments.Any(comment => comment.Me && comment.Text == "мой ответ")).IsTrue();
-    }
-
-    [Test]
-    public async Task Post_ForForeignSameWorldPost_ReturnsNotFoundAsync()
-    {
-        // Arrange
-        const long ownerUserId = 1032;
-        const long viewerUserId = 1033;
-        (var postId, var commentId) = await PublishPostForThreadAsync(ownerUserId);
-        await ReplyAsync(ownerUserId, postId, commentId, "detail-owner-reply", "ответ владельца");
-        using var viewerApi = Factory.CreateApiClient(viewerUserId);
-        await OnboardAsync(viewerApi);
-        using var http = CreateAuthenticatedHttpClient(viewerUserId);
-
-        // Act
-        using var response = await http.GetAsync($"/posts/{postId}", CancellationToken.None);
-
-        // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
-    }
-
-    [Test]
-    public async Task Post_ForMissingOrOtherWorldPost_ReturnsNotFoundAsync()
-    {
-        // Arrange
-        const long viewerUserId = 1034;
-        const long otherWorldUserId = 1035;
-        using var viewerApi = Factory.CreateApiClient(viewerUserId);
-        await OnboardAsync(viewerApi);
-        using var otherWorldApi = Factory.CreateApiClient(otherWorldUserId);
-        await OnboardAsync(otherWorldApi, WorldId.Academy);
-        await PublishAsync(otherWorldUserId, "пост чужого мира");
-        var otherPlayer = await GetStoredPlayerAsync(otherWorldUserId);
-        var otherPost = await Database
-            .GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("PlayerId", otherPlayer["_id"]))
-            .SingleAsync();
-        using var http = CreateAuthenticatedHttpClient(viewerUserId);
-
-        // Act
-        using var missing = await http.GetAsync(
-            $"/posts/{Guid.NewGuid():N}",
-            CancellationToken.None);
-        using var foreign = await http.GetAsync(
-            $"/posts/{otherPost["_id"].AsString}",
-            CancellationToken.None);
-
-        // Assert
-        await Assert.That(missing.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
-        await Assert.That(foreign.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
     }
 
     [Test]

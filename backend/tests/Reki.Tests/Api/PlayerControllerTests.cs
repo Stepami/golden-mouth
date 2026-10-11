@@ -20,6 +20,38 @@ namespace Reki.Tests.Api;
 public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task GetPlayer_WithExplicitNormalization_PreservesReadSemanticsAsync(bool normalizeDay)
+    {
+        // Arrange
+        const long telegramUserId = 8414;
+        using var api = Factory.CreateApiClient(telegramUserId);
+        await OnboardAsync(api);
+        var store = Factory.Services.GetRequiredService<IGameStore>();
+        var player = await store.GetPlayerAsync(TelegramUserId.From(telegramUserId), CancellationToken.None)
+                     ?? throw new InvalidOperationException("Missing player.");
+        var oldPeriod = player.PostsPeriodStartedAtUtc.AddDays(-1);
+        await store.UpsertPlayerAsync(
+            player with { PostsPeriodStartedAtUtc = oldPeriod, PostsUsed = 8 },
+            CancellationToken.None);
+        using var scope = Factory.Services.CreateScope();
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+
+        // Act
+        var result = await sender.Send(new GetPlayerQuery(player.Id, normalizeDay), CancellationToken.None);
+
+        // Assert
+        var saved = await store.GetPlayerAsync(player.Id, CancellationToken.None)
+                    ?? throw new InvalidOperationException("Missing player.");
+        await Assert.That(result.Id).IsEqualTo(player.Id);
+        await Assert.That(result.PostsUsed).IsEqualTo(normalizeDay ? 0 : 8);
+        await Assert.That(saved.PostsUsed).IsEqualTo(result.PostsUsed);
+        await Assert.That(saved.PostsPeriodStartedAtUtc)
+            .IsEqualTo(normalizeDay ? player.PostsPeriodStartedAtUtc : oldPeriod);
+    }
+
+    [Test]
     public async Task Me_WithoutTelegramAuthentication_ReturnsUnauthorizedAsync()
     {
         using var api = Factory.CreateApiClient();

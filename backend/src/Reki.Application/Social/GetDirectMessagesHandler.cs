@@ -1,25 +1,22 @@
 using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
-using Reki.Domain.Player;
+using Reki.Application.Player;
 using Reki.Domain.Social;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Social;
 
 public sealed class GetDirectMessagesHandler(
-    ITelegramUserAccessor telegramUser,
     IGameStore store,
     IOptions<GameBalance> balance,
     GameDay gameDay,
-    PlayerReader playerReader) : IRequestHandler<GetDirectMessagesQuery, DirectMessageView>
+    ISender sender) : IRequestHandler<GetDirectMessagesQuery, DirectMessageView>
 {
     public async ValueTask<DirectMessageView> Handle(
         GetDirectMessagesQuery request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         _ = StarCatalog.Require(player.World, request.StarId);
         var periodStart = gameDay.PeriodStart;
         var conversation = await store.GetStarConversationAsync(

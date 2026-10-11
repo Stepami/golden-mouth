@@ -1,23 +1,20 @@
 using Mediator;
 using Reki.Application.Common;
+using Reki.Application.Player;
 using Reki.Domain.Events;
-using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Events;
 
 public sealed class GetTodayEventHandler(
-    ITelegramUserAccessor telegramUser,
     IGameStore store,
     GameDay gameDay,
-    PlayerReader playerReader) : IRequestHandler<GetTodayEventQuery, DailyGameEvent>
+    ISender sender) : IRequestHandler<GetTodayEventQuery, DailyGameEvent>
 {
     public async ValueTask<DailyGameEvent> Handle(
         GetTodayEventQuery request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var periodStart = gameDay.PeriodStart;
         var existing = await store.GetTodayEventAsync(
             player.Id,

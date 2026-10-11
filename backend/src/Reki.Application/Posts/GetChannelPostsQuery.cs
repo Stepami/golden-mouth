@@ -1,7 +1,8 @@
 using Mediator;
-using Reki.Contracts.Posts;
+using Reki.Domain.Player;
+using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts;
 
-public sealed record GetChannelPostsQuery()
-    : IRequest<IReadOnlyList<ChannelPostResponse>>;
+public sealed record GetChannelPostsQuery(PlayerId? PlayerId = null, int? Limit = null)
+    : IRequest<IReadOnlyList<GamePost>>;

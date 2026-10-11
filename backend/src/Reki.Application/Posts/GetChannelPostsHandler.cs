@@ -1,26 +1,18 @@
 using Mediator;
 using Reki.Application.Common;
-using Reki.Contracts.Posts;
-using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
+using Reki.Application.Player;
+using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts;
 
-public sealed class GetChannelPostsHandler(
-    ITelegramUserAccessor telegramUser,
-    IGameStore store, PlayerReader playerReader)
-    : IRequestHandler<GetChannelPostsQuery, IReadOnlyList<ChannelPostResponse>>
+public sealed class GetChannelPostsHandler(IGameStore store, ISender sender)
+    : IRequestHandler<GetChannelPostsQuery, IReadOnlyList<GamePost>>
 {
-    public async ValueTask<IReadOnlyList<ChannelPostResponse>> Handle(
+    public async ValueTask<IReadOnlyList<GamePost>> Handle(
         GetChannelPostsQuery request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
-        var posts = await store.GetPostsAsync(
-            player.Id,
-            null,
-            cancellationToken);
-        return posts.Select(PostContractMapper.MapChannelPost).ToArray();
+        var playerId = request.PlayerId ?? (await sender.Send(new GetPlayerQuery(), cancellationToken)).Id;
+        return await store.GetPostsAsync(playerId, request.Limit, cancellationToken);
     }
 }

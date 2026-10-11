@@ -401,17 +401,11 @@ internal sealed class MongoGameStore : IGameStore
 
     public async ValueTask<GamePost?> GetPostAsync(
         PostId postId,
-        PlayerId? playerId,
+        PlayerId playerId,
         CancellationToken cancellationToken)
     {
-        var filter = Builders<GamePost>.Filter.Eq(item => item.Id, postId);
-        if (playerId is { } ownerId)
-        {
-            filter &= Builders<GamePost>.Filter.Eq(item => item.PlayerId, ownerId);
-        }
-
         return await _posts
-            .Find(filter)
+            .Find(item => item.Id == postId && item.PlayerId == playerId)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
