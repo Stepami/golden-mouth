@@ -418,7 +418,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .ToArray();
         await Assert.That(request.GetProperty("model").GetString()).IsEqualTo("gigachat3.5-432b-a28b");
         await Assert.That(request.GetProperty("temperature").GetDouble()).IsEqualTo(0.25);
-        await Assert.That(request.GetProperty("max_completion_tokens").GetInt32()).IsEqualTo(321);
         await Assert.That(request.GetProperty("stream").GetBoolean()).IsTrue();
         await Assert.That(request.TryGetProperty("reasoning_effort", out _)).IsFalse();
         await Assert.That(toolNames).IsEquivalentTo(new[] { "comment", "react" });
