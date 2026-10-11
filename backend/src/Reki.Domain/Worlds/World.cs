@@ -78,7 +78,7 @@ public sealed record World
         IReadOnlyDictionary<SkillId,
         SkillProgress> skills,
         string? completedWantId,
-        Reki.Domain.Social.StarId starId,
+        StarId starId,
         DateTimeOffset now,
         int relationMinimum,
         int relationMaximum,

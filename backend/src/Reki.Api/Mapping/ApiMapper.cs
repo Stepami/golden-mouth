@@ -63,7 +63,7 @@ public sealed partial class ApiMapper
                 item => item.Key,
                 item => SanitizeJsonString(item.Value, 64)),
             source.Events.Select(item => new AnalyticsEntry(
-                item.WorldId is null ? null : Reki.Domain.Worlds.WorldId.From(item.WorldId),
+                item.WorldId is null ? null : Domain.Worlds.WorldId.From(item.WorldId),
                 item.Name,
                 item.Timestamp,
                 item.Screen,
@@ -118,7 +118,7 @@ public sealed partial class ApiMapper
 
     public World MapWorldDefinition(CreateWorldRequest source) => new()
     {
-        Id = Reki.Domain.Worlds.WorldId.New(),
+        Id = Domain.Worlds.WorldId.New(),
         BalanceKey = source.BalanceKey,
         Roles = source.Roles,
         Voices = source.Voices,

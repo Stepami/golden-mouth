@@ -14,13 +14,13 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var api = Factory.CreateApiClient(1022);
         var player = await CreatePlayerWithWorldAsync(api);
-        var firstId = Reki.Domain.Worlds.WorldId.From(await GetWorldIdAsync(api));
+        var firstId = Domain.Worlds.WorldId.From(await GetWorldIdAsync(api));
         var second = await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
-        var secondId = Reki.Domain.Worlds.WorldId.From(second.Id);
-        var owner = Reki.Domain.Player.PlayerId.From(player.Id);
+        var secondId = Domain.Worlds.WorldId.From(second.Id);
+        var owner = Domain.Player.PlayerId.From(player.Id);
         var store = Factory.Services.GetRequiredService<Reki.Application.Common.IGameStore>();
         var posts = new[] { firstId, secondId }.Select(worldId => new Reki.Domain.Posts.GamePost(
-            Reki.Domain.Posts.PostId.New(),
+            Domain.Posts.PostId.New(),
             owner,
             worldId,
             worldId.Value,
@@ -34,11 +34,11 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             false,
             false)).ToArray();
         await Database.GetCollection<Reki.Domain.Posts.GamePost>("posts").InsertManyAsync(posts);
-        var starId = Reki.Domain.Social.StarId.From("mira");
+        var starId = Domain.Social.StarId.From("mira");
         foreach (var worldId in new[] { firstId, secondId })
         {
             var conversation = new Reki.Domain.Social.StarConversation(
-                Reki.Domain.Social.StarConversationId.New(),
+                Domain.Social.StarConversationId.New(),
                 owner,
                 worldId,
                 starId,
@@ -134,18 +134,18 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         using var api = Factory.CreateApiClient(1021);
         var firstPlayer = await CreatePlayerWithWorldAsync(api);
         var firstId = await GetWorldIdAsync(api);
-        Reki.Tests.Generated.PlayerApiException? exception = null;
+        PlayerApiException? exception = null;
         try
         {
             await api.Player.CompleteOnboardingAsync(
                 new Reki.Contracts.Player.OnboardingRequest
                 {
-                    BirthGroup = Reki.Contracts.Player.BirthGroup.Teen,
-                    Address = Reki.Contracts.Player.Address.Nick,
+                    BirthGroup = Contracts.Player.BirthGroup.Teen,
+                    Address = Contracts.Player.Address.Nick,
                 },
                 CancellationToken.None);
         }
-        catch (Reki.Tests.Generated.PlayerApiException caught)
+        catch (PlayerApiException caught)
         {
             exception = caught;
         }
@@ -164,7 +164,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task UpdateWorld_WithoutLockedSafetyRule_RestoresRuleAsync()
     {
         using var api = Factory.CreateApiClient(1011);
-        await CreatePlayerWithWorldAsync(api, Reki.Contracts.Player.WorldId.Own);
+        await CreatePlayerWithWorldAsync(api, Contracts.Player.WorldId.Own);
         var request = new UpdateWorldRequest
         {
             Title = "Мой мир",
@@ -201,7 +201,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         using var api = Factory.CreateApiClient(1015);
         var player = await CreatePlayerWithWorldAsync(api);
         var firstId = await GetWorldIdAsync(api);
-        var request = (await CreateWorldDefinitionAsync(api, Reki.Contracts.Player.WorldId.Academy)) with
+        var request = (await CreateWorldDefinitionAsync(api, Contracts.Player.WorldId.Academy)) with
         {
             Name = "Второй канал",
             Avatar = "second",

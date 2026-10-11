@@ -38,7 +38,7 @@ public sealed partial class GeneratePublicationHandler(
         }
 
         var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
+        var world = await sender.Send(new Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
         var player = gameDay.Normalize(storedPlayer);
         if (!ReferenceEquals(player, storedPlayer) && !await store.TryReplacePlayerAsync(
             player,
@@ -226,7 +226,7 @@ public sealed partial class GeneratePublicationHandler(
     {
         foreach (var call in update.Contents.OfType<FunctionCallContent>())
         {
-            var action = StarToolCallParser.Parse([call]).Single();
+            var action = Parse([call]).Single();
             var part = action switch
             {
                 StarCommentAction comment => new PublicationPart(

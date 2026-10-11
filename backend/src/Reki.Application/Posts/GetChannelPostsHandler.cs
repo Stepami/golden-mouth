@@ -13,7 +13,7 @@ public sealed class GetChannelPostsHandler(IGameStore store, ISender sender)
         CancellationToken cancellationToken)
     {
         var playerId = request.PlayerId ?? (await sender.Send(new GetPlayerQuery(), cancellationToken)).Id;
-        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(playerId, request.WorldId), cancellationToken);
+        var world = await sender.Send(new Worlds.GetWorldQuery(playerId, request.WorldId), cancellationToken);
         return await store.GetPostsAsync(playerId, request.Limit, cancellationToken, world.Id);
     }
 }

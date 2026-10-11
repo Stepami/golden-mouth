@@ -36,7 +36,7 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new GetDirectMessagesQuery(StarId.From(starId), Reki.Domain.Worlds.WorldId.From(worldId)),
+            new GetDirectMessagesQuery(StarId.From(starId), Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapDirectMessages(result));
     }
@@ -53,7 +53,7 @@ public sealed class SocialController(
             new SendDirectMessageCommand(
                 StarId.From(starId),
                 request.Text,
-                Reki.Domain.Worlds.WorldId.From(worldId)),
+                Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapSentDirectMessage(result));
     }
@@ -70,7 +70,7 @@ public sealed class SocialController(
             new ForgetStarMemoryCommand(
                 StarId.From(starId),
                 request.Fact,
-                Reki.Domain.Worlds.WorldId.From(worldId)),
+                Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok();
     }

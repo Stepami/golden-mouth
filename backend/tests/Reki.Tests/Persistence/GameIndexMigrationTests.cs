@@ -24,7 +24,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         try
         {
             using var session = await mongo.MongoClient.StartSessionAsync();
-            var source = Reki.Tests.Common.TestGameData.CreateWorld();
+            var source = Common.TestGameData.CreateWorld();
             var expected = source with
             {
                 Interface = source.Interface with { Title = "Свой мир", Difficulty = WorldDifficulty.Hard },
@@ -342,7 +342,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await Assert.That(world.Interface.AvatarStyle).IsEqualTo(template.Interface.AvatarStyle);
             var savedEvent = await database.GetCollection<BsonDocument>(MongoCollections.Events)
                 .Find(new BsonDocument("_id", "legacy-event")).SingleAsync();
-            await Assert.That(BsonSerializer.Deserialize<Reki.Domain.Events.DailyGameEvent>(savedEvent).WorldId).IsEqualTo(world.Id);
+            await Assert.That(BsonSerializer.Deserialize<Domain.Events.DailyGameEvent>(savedEvent).WorldId).IsEqualTo(world.Id);
             var savedPlayer = await database.GetCollection<BsonDocument>(MongoCollections.Players)
                 .Find(new BsonDocument("_id", "legacy-player")).SingleAsync();
             await Assert.That(savedPlayer.Contains("World")).IsFalse();

@@ -29,7 +29,7 @@ public sealed class PublishPostHandler(
     {
         var publication = await sender.Send(new GetPublicationQuery(request.PublicationId), cancellationToken);
         var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
+        var world = await sender.Send(new Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
         if (publication is null || publication.PlayerId != storedPlayer.Id || publication.WorldId != world.Id)
         {
             throw new ResourceNotFoundException("Publication not found.");

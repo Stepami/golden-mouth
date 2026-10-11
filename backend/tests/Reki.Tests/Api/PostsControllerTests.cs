@@ -34,7 +34,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var posts = Enumerable.Range(0, 46).Select(index => new GamePost(
             PostId.New(),
             index < 21 ? ownerId : otherId,
-            Reki.Domain.Worlds.WorldId.From(world["_id"].AsString),
+            Domain.Worlds.WorldId.From(world["_id"].AsString),
             $"post-{index}",
             index + 1,
             [],
@@ -762,7 +762,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                 Player = world.Player with
                 {
                     Subscribers = sample.Subs,
-                    Drama = Enum.Parse<Reki.Domain.Worlds.WorldDrama>(sample.Drama, true),
+                    Drama = Enum.Parse<Domain.Worlds.WorldDrama>(sample.Drama, true),
                 },
             },
                 world.Version,

@@ -15,7 +15,7 @@ public sealed class AnswerEventHandler(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var world = await sender.Send(new Reki.Application.Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        var world = await sender.Send(new Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
         var gameEvent = await store.GetTodayEventAsync(
             player.Id,
             DateTimeOffset.MinValue,
