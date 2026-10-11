@@ -24,11 +24,18 @@ public static class DependencyInjection
         this IServiceCollection services)
     {
         services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
         services.AddObservability();
         services.AddBaseHealthChecks();
         services.AddMongoInfrastructure();
         services.AddLlmInfrastructure();
 
+        return services;
+    }
+
+    public static IServiceCollection AddMongoIndexInitialization(this IServiceCollection services)
+    {
+        services.AddHostedService<MongoGameIndexes>();
         return services;
     }
 
@@ -95,10 +102,6 @@ public static class DependencyInjection
             return client.GetDatabase(options.DatabaseName);
         });
         services.AddSingleton<IGameStore, MongoGameStore>();
-        services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
-
-        services.AddHostedService<MongoGameIndexes>();
-
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);
     }
 
