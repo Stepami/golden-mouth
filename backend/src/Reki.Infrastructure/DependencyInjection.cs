@@ -1,5 +1,8 @@
+using Kot.MongoDB.Migrations;
+using Kot.MongoDB.Migrations.DI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Driver;
 using OpenTelemetry;
@@ -80,6 +83,12 @@ public static class DependencyInjection
         services.AddSingleton<MongoCompositionRoot>();
         services.AddSingleton<IGameStore, MongoGameStore>();
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);
+
+        services
+            .AddMongoMigrations(
+                new MigrationOptions("mongodb"),
+                locationConfig => locationConfig.LoadMigrationsFromAssembly(typeof(DependencyInjection).Assembly))
+            .Replace(ServiceDescriptor.Singleton<IMigrator, RekiMigrator>());
     }
 
     private static void AddBaseHealthChecks(this IServiceCollection services)

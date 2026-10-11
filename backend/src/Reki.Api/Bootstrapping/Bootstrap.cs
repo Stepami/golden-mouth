@@ -1,3 +1,4 @@
+using Kot.MongoDB.Migrations;
 using Microsoft.AspNetCore.DataProtection;
 using Reki.Infrastructure;
 using Serilog;
@@ -27,6 +28,8 @@ internal static class Bootstrap
 
         var app = builder.Build();
         ConfigurePipeline(app);
+        var migrator = app.Services.GetRequiredService<IMigrator>();
+        await migrator.MigrateAsync();
         await app.RunAsync();
     }
 
