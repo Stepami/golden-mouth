@@ -68,4 +68,32 @@ public sealed class ProductTelemetryTests
         await Assert.That(attributes["age_group"]).IsEqualTo("25-34");
         await Assert.That(attributes["prop_ms"]).IsEqualTo("15000");
     }
+
+    [Test]
+    public async Task TrackSubmission_RejectsClientFabricatedServerResultsAsync()
+    {
+        var logger = Substitute.For<ILogger<ProductTelemetry>>();
+        var telemetry = new ProductTelemetry(logger, new FakeTimeProvider());
+        var entries = new[] { "player_created", "post_scored", "level_up", "card_earned" }
+            .Select(name => new AnalyticsEntry(name, 123, "feed", null, new Dictionary<string, string>())).ToArray();
+        telemetry.TrackSubmission(TestGameData.CreatePlayer(), new AnalyticsSubmission(SessionId.From("session-1"), "ios", new Dictionary<string, string>(), entries));
+        await Assert.That(logger.ReceivedCalls().Any(call => call.GetMethodInfo().Name == nameof(ILogger.BeginScope))).IsFalse();
+    }
+
+    [Test]
+    public async Task TrackSubmission_ExportsLaunchContextAsync()
+    {
+        var logger = Substitute.For<ILogger<ProductTelemetry>>();
+        var telemetry = new ProductTelemetry(logger, new FakeTimeProvider());
+        var submission = new AnalyticsSubmission(SessionId.From("session-1"), "ios", new Dictionary<string, string>(), [new AnalyticsEntry("screen_view", 123, "feed", null, new Dictionary<string, string>())])
+        {
+            LaunchSurface = "telegram-mini-app",
+        };
+        telemetry.TrackSubmission(TestGameData.CreatePlayer(), submission);
+        var scope = logger.ReceivedCalls().Single(call => call.GetMethodInfo().Name == nameof(ILogger.BeginScope));
+        var attributes = scope.GetArguments()[0] as IReadOnlyDictionary<string, object?>
+            ?? throw new InvalidOperationException("Telemetry was not structured.");
+        await Assert.That(attributes["launch_surface"]).IsEqualTo("telegram-mini-app");
+        await Assert.That(attributes["registration_source"]).IsEqualTo("direct");
+    }
 }

@@ -9,6 +9,7 @@ using Reki.Application.Common;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Player;
+using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using static Reki.Application.Common.AI.StarToolCallParser;
@@ -22,7 +23,8 @@ public sealed partial class GeneratePublicationHandler(
     GameDay gameDay,
     ISender sender,
     StarTurnGenerator generator,
-    ILogger<GeneratePublicationHandler> logger) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatusLiveEvent>
+    ILogger<GeneratePublicationHandler> logger,
+    ProductTelemetry analytics) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatusLiveEvent>
 {
     private static readonly TimeSpan FailedRetention = TimeSpan.FromDays(1);
 
@@ -162,6 +164,7 @@ public sealed partial class GeneratePublicationHandler(
             {
                 var expiresAtUtc = timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime;
                 await store.MarkPublicationFailedAsync(request.Id, expiresAtUtc, CancellationToken.None);
+                analytics.Track(player, "post_failed", new Dictionary<string, string> { ["id"] = request.Id });
             }
         }
 
