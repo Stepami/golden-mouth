@@ -1,5 +1,6 @@
 // Тестовые данные = тексты и числа из макетов docs/screens. Пока бэкенд (#10) не готов, экраны живут на них.
-import type { Challenge, Dm, FeedItem, Friend, GameEvent, Player, Post, PostResult, Star, World, WorldRules } from './types'
+import { WORLD_CONTENT } from './worldContent'
+import type { Challenge, Dm, FeedItem, Friend, GameEvent, Player, Post, PostResult, ReplyResult, Star, World, WorldRules } from './types'
 
 export const worlds: World[] = [
   { id: 'stage', title: 'Сцена', emoji: '🎤', description: 'Айдол-агентство: трейни, дебют, фансайты', difficulty: 1, summary: 'мало провалов · хейт с 5k · ценят смелость' },
@@ -8,17 +9,12 @@ export const worlds: World[] = [
   { id: 'stream', title: 'Стрим', emoji: '🎮', description: 'Стримеры, донаты, рейды, турниры', difficulty: 2, summary: 'рост ×1,1 · ценят юмор', lock: { skill: 'humor', level: 4 } },
 ]
 export const roles = ['🎤 Трейни', '📸 Фансайт', '💃 Хореограф', '🎧 Продюсер']
-export const avatarChoices = ['pick0', 'pick4', 'pick7', 'pick8', 'pick10']
 
-export const stars: Star[] = [
-  { id: 'mira', name: 'Мира', role: 'лидер BLESK', trait: 'Дерзкая', about: 'Говорит, что думает. Может раскритиковать, может сделать звездой', relation: 2 },
-  { id: 'sonya', name: 'Соня', role: 'вокал BLESK', trait: 'Добрая', about: 'Поддержит любой пост и придёт с фанатами', relation: 0 },
-  { id: 'eva', name: 'Ева', role: 'солистка NOIR', trait: 'Загадочная', about: 'Пишет редко. Если написала, это событие', relation: 0 },
-]
+export const stars: Star[] = WORLD_CONTENT.stage.stars.map(profile => ({ ...profile, relation: profile.id === 'mira' ? 2 : 0 }))
 
 export const player: Player = {
-  id: 'p1', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', avatar: 'liza', address: 'she',
-  world: 'stage', subs: 120, postsLeft: 10, postsCap: 10,
+  id: '00000000000000000000000000000001', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', address: 'she',
+  world: 'stage', subs: 120, postsLeft: 10, postsCap: 10, firstPostInviteBonus: 0,
   streak: { days: 4, week: [true, true, true, true, false, false, false], nextReward: '7 дней: карточка «Неделя в эфире»' },
   skills: { brave: { level: 6, progress: .4 }, humor: { level: 5, progress: .7 }, topic: { level: 4, progress: .3 } },
   wants: [
@@ -38,23 +34,66 @@ export const player: Player = {
 
 export const firstPost: Post = {
   id: 'post1', text: 'первый день трейни: перепутала право и лево три раза. хореограф сказал «зато уверенно» 🫠', views: 312,
-  reactions: [{ emoji: '😂', count: 48 }, { emoji: '🫶', count: 21 }, { emoji: '💀', count: 9 }], at: 'только что',
+  reactions: [{ emoji: '😂', count: 48 }, { emoji: '🫶', count: 21 }, { emoji: '💀', count: 9 }], at: 'только что', canReply: true,
   comments: [
     { id: 'k1', author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'я на первой репетиции упала со сцены. «уверенно» это комплимент, поверь', star: true },
-    { id: 'k2', author: 'Лиза · трейни', avatar: 'liza', handle: '', text: 'серьёзно? со сцены?? 😳', me: true },
+    { id: 'k2', author: 'Лиза · трейни', avatar: '@liza.trainee', handle: '', text: 'серьёзно? со сцены?? 😳', me: true },
     { id: 'k3', author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'прямо в оркестровую яму. потом расскажу 🙃', star: true },
     { id: 'k4', author: 'stan_critic', avatar: 'critic', handle: '', text: 'трейни пишет про ошибки? ну такое…' },
   ],
 }
+
+export const channelPosts = [{
+  postId: firstPost.id,
+  text: firstPost.text,
+  createdAtUtc: '2026-10-07T06:09:02Z',
+  views: firstPost.views,
+  reactions: firstPost.reactions,
+  commentCount: firstPost.comments.length,
+}]
 export const liveComment = { id: 'k0', author: 'kpop_dasha', avatar: 'dasha', handle: 'фанатка', text: 'ЗАТО УВЕРЕННО 😭 это теперь мой девиз' }
+
+/** Чужой пост того же мира (03-3 → 02-6): читается, но `canReply: false` — ответы только под своими постами. */
+export const foreignPost: Post = {
+  id: 'post-eva', text: 'иногда самый громкий пост это тот, который так и не выложен. 🖤', views: 14000,
+  reactions: [{ emoji: '🖤', count: 14000 }, { emoji: '🌙', count: 3200 }], at: '2 ч назад', canReply: false,
+  comments: [
+    { id: 'fe1', author: 'Ева', avatar: 'eva', handle: 'солистка NOIR', text: 'набросала в черновик и оставила. пусть живёт', star: true },
+    { id: 'fe2', author: 'stan_critic', avatar: 'critic', handle: '', text: 'загадочно. или просто лень?' },
+  ],
+}
+
+const postsById: Record<string, Post> = { [firstPost.id]: firstPost, [foreignPost.id]: foreignPost }
+/** Пост по стабильному id для GET /posts/:id в mock-режиме; неизвестный id = 404. */
+export const post = (postId: string): Post => {
+  const found = postsById[postId]
+  if (!found) throw Object.assign(new Error(`post ${postId} not found`), { status: 404 })
+  return structuredClone(found)
+}
+
+// Тред (02-6): +9 за первые 3 ответа из макета; в mock-режиме просто считаем ответы в сессии.
+let mockReplies = 0
+const mockThreadReplies = new Map<string, ReplyResult>()
+export const threadReply = (replyId: string): ReplyResult => {
+  const existing = mockThreadReplies.get(replyId)
+  if (existing) return existing
+  const subscriberBonus = mockReplies < 3 ? 9 : 0
+  if (subscriberBonus > 0) mockReplies += 1
+  const result = {
+    replyId, commentId: crypto.randomUUID(), subscriberBonus,
+    awardedReplies: mockReplies, replyLimit: 3, subscriberTotal: player.subs + mockReplies * 9, reaction: '🔥',
+  }
+  mockThreadReplies.set(replyId, result)
+  return result
+}
 
 export const results: Record<'normal' | 'flop' | 'viral', PostResult> = {
   normal: { postId: 'post1', delta: 38, headline: 'Тебя заметили: первый мем уже есть', views: 312, viral: false, flop: false,
-    whys: [{ icon: '😂', label: 'смешно', value: '+12' }, { icon: '🔥', label: 'смело', value: '+8' }, { icon: '✍️', label: 'своими словами', value: '×1,3' }],
+    whys: [{ icon: '😂', label: 'смешно', value: '+28' }, { icon: '🔥', label: 'смело', value: '+10' }],
     ribbons: [{ icon: '🌊', title: 'Пост почти залетел в Реки', sub: 'не хватило 12 репостов: смелее, и залетит' }, { icon: '👑', title: 'Мира: отношения +1' }],
     bestComment: { avatar: 'mira', text: '„уверенно“ это комплимент, поверь' }, hook: 'Соня пишет ответ…' },
   flop: { postId: 'post2', delta: -4, headline: 'Агентство сделало вид, что не видело этот пост', views: 640, viral: false, flop: true,
-    whys: [{ icon: '🎤', label: 'не про Сцену', value: '−6' }, { icon: '😂', label: 'смешно', value: '+3' }],
+    whys: [{ icon: '🎤', label: 'мимо темы мира', value: '−7' }, { icon: '😂', label: 'смешно', value: '+3' }],
     ribbons: [{ icon: '💪', title: 'Провал тоже опыт: опыт смелости +1', sub: 'серия дней не сгорает' }],
     bestComment: { avatar: 'critic', text: 'а при чём тут Сцена?' } },
   viral: { postId: 'post1', delta: 620, headline: 'Мира сделала репост. Фанаты BLESK пошли смотреть, кто такая Лиза', views: 48000, viral: true, flop: false,
@@ -73,8 +112,8 @@ export const dm: Dm = {
 
 export const feed: FeedItem[] = [
   { kind: 'news', text: 'BLESK объявили камбэк. Трейни, у кого лучший пост недели, позовут на съёмки тизера 👀' },
-  { kind: 'post', author: 'Ева', avatar: 'eva', role: 'солистка NOIR', ago: '2 ч назад', text: 'иногда самый громкий пост это тот, который так и не выложен. 🖤', reactions: [{ emoji: '🖤', count: 14000 }, { emoji: '🌙', count: 3200 }] },
-  { kind: 'post', author: 'Мира', avatar: 'mira', role: 'лидер BLESK', ago: '12 мин назад', text: 'репостнула к себе. трейни, учитесь 😏', repost: 'первый день трейни: перепутала право и лево…', reactions: [{ emoji: '🔥', count: 2100 }, { emoji: '😂', count: 840 }] },
+  { kind: 'post', postId: foreignPost.id, canReply: false, author: 'Ева', avatar: 'eva', role: 'солистка NOIR', ago: '2026-10-07T04:09:02Z', text: foreignPost.text, reactions: foreignPost.reactions, views: foreignPost.views, commentCount: foreignPost.comments.length },
+  { kind: 'post', postId: firstPost.id, canReply: true, author: 'Мира', avatar: 'mira', role: 'лидер BLESK', ago: channelPosts[0].createdAtUtc, text: 'репостнула к себе. трейни, учитесь 😏', repost: 'первый день трейни: перепутала право и лево…', reactions: [{ emoji: '🔥', count: 2100 }, { emoji: '😂', count: 840 }], views: firstPost.views, commentCount: firstPost.comments.length },
 ]
 
 export const friends: Friend[] = [
@@ -110,4 +149,4 @@ export const WORLD_FORMS: Record<string, { gen: string; acc: string }> = {
   stage: { gen: 'Сцены', acc: 'Сцену' }, academy: { gen: 'Академии', acc: 'Академию' }, it: { gen: 'Айти-тусовки', acc: 'Айти-тусовку' },
   stream: { gen: 'Стрима', acc: 'Стрим' }, own: { gen: 'своего мира', acc: 'свой мир' },
 }
-export const worldOf = (id: string) => { const w = worlds.find(x => x.id === id) ?? worlds[0]; return { ...w, ...(WORLD_FORMS[w.id] ?? WORLD_FORMS.stage) } }
+export const worldOf = (id: string) => { const w = worlds.find(x => x.id === id) ?? (id === 'own' ? { ...worlds[0], id: 'own', title: 'Свой мир', emoji: '✨' } : worlds[0]); return { ...w, ...(WORLD_FORMS[w.id] ?? WORLD_FORMS.stage) } }

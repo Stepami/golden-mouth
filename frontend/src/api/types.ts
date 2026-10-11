@@ -15,8 +15,8 @@ export interface Want { id: string; text: string; reward: string; done: boolean 
 export interface CollectionCard { id: string; emoji: string; title: string; open: boolean }
 
 export interface Player {
-  id: string; name: string; handle: string; role: string; avatar: string; address: Address
-  world: WorldId; subs: number; postsLeft: number; postsCap: number
+  id: string; name: string; handle: string; role: string; address: Address
+  world: WorldId; subs: number; postsLeft: number; postsCap: number; firstPostInviteBonus: number
   streak: { days: number; week: boolean[]; nextReward: string }
   skills: Record<SkillId, Skill>; wants: Want[]; collection: CollectionCard[]
   bio: string; type: string                     // «дерзкая с самоиронией»
@@ -28,7 +28,16 @@ export interface Player {
 
 export interface Reaction { emoji: string; count: number }
 export interface CommentT { id: string; author: string; avatar: string; handle: string; text: string; star?: boolean; me?: boolean; hidden?: boolean }
-export interface Post { id: string; text: string; views: number; reactions: Reaction[]; comments: CommentT[]; inRivers?: boolean; at: string }
+/** Пост канала. `canReply` есть только при загрузке с сервера (GET /posts/:id): отвечать можно лишь под своими постами. */
+export interface Post { id: string; text: string; views: number; reactions: Reaction[]; comments: CommentT[]; inRivers?: boolean; at?: string; canReply?: boolean; demoComments?: boolean }
+/** Wire-контракт GET /posts/:id: сервер называет идентификатор postId. */
+export interface PostDetailResponse extends Omit<Post, 'id'> { postId: string }
+export interface ChannelPost { postId: string; text: string; createdAtUtc: string; views: number; reactions: Reaction[]; commentCount: number }
+/** Ответ на комментарий (02-6). Идемпотентен по replyId: повтор возвращает тот же сохранённый итог. */
+export interface ReplyResult {
+  replyId: string; commentId: string; subscriberBonus: number
+  awardedReplies: number; replyLimit: number; subscriberTotal: number; reaction?: string
+}
 
 export interface Why { icon: string; label: string; value: string }
 export interface PostResult {
@@ -48,5 +57,6 @@ export interface Challenge { id: string; me: string; rival: Friend; day: number;
 export interface GameEvent { id: string; kind: 'collab' | 'hate' | 'gossip' | 'brand'; badge: string; title: string; text: string; ideas: string[]; reward: string; note: string }
 export interface DmMessage { from: 'star' | 'me'; text: string }
 export interface Dm { star: Star; status: string; memory: string[]; messages: DmMessage[]; ideas: string[]; repliesLeft: number }
-export interface FeedItem { kind: 'news' | 'post'; author?: string; avatar?: string; role?: string; ago?: string; text: string; reactions?: Reaction[]; repost?: string }
+/** Карточка ленты 03-3. У постов стабильный `postId`; `canReply` открывает ответ только под своими. Новости без `postId` не открываются. */
+export interface FeedItem { kind: 'news' | 'post'; postId?: string; canReply?: boolean; author?: string; avatar?: string; role?: string; ago?: string; text: string; reactions?: Reaction[]; views?: number; commentCount?: number; repost?: string; demo?: boolean; starId?: string; world?: WorldId }
 export interface WorldRules { title: string; presets: string[]; description: string; rules: { text: string; locked?: boolean }[] }

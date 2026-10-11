@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Social;
@@ -8,12 +9,14 @@ using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Posts;
 
 public sealed class PublishPostHandler(
+    ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     GameDay gameDay,
     PlayerReader playerReader,
@@ -25,9 +28,10 @@ public sealed class PublishPostHandler(
         PublishPostCommand request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        Publication? publication = await store.GetPublicationAsync(request.PublicationId, cancellationToken);
-        PlayerProfile storedPlayer = await playerReader.GetAsync(
-            request.TelegramUserId,
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var publication = await store.GetPublicationAsync(request.PublicationId, cancellationToken);
+        var storedPlayer = await playerReader.GetAsync(
+            telegramUserId,
             cancellationToken);
         if (publication is null || publication.PlayerId != storedPlayer.Id)
         {
@@ -36,7 +40,7 @@ public sealed class PublishPostHandler(
 
         if (publication.Status == PublicationStatus.Completed && publication.Result is not null)
         {
-            foreach (LiveEvent liveEvent in PostContractMapper.MapLiveEvents(publication.Result))
+            foreach (var liveEvent in PostContractMapper.MapLiveEvents(publication.Result))
             {
                 yield return liveEvent;
             }
@@ -49,11 +53,11 @@ public sealed class PublishPostHandler(
             throw new RequestConflictException("The publication is not ready for moderation.");
         }
 
-        string text = publication.Text;
-        bool ownWords = publication.OwnWords;
-        string? wantId = publication.WantId;
-        DateTimeOffset now = timeProvider.GetUtcNow();
-        PlayerProfile player = gameDay.Normalize(storedPlayer);
+        var text = publication.Text;
+        var ownWords = publication.OwnWords;
+        var wantId = publication.WantId;
+        var now = timeProvider.GetUtcNow();
+        var player = gameDay.Normalize(storedPlayer);
         if (!ReferenceEquals(player, storedPlayer) && !await store.TryReplacePlayerAsync(
             player,
             storedPlayer.Version,
@@ -62,28 +66,29 @@ public sealed class PublishPostHandler(
             throw new RequestConflictException("The player state changed while starting a new day.");
         }
 
-        int cap = player.GetPostsCap(balance.FreePostsPerDay, balance.PlusPostsPerDay);
+        var cap = player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
 
         if (player.PostsUsed >= cap)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }
 
-        GeneratedPostTurn turn = publication.AssembleTurn();
+        var turn = publication.AssembleTurn();
+        StarTurnPolicy.EnsurePostAllowed(turn, player.World, StarTurnPolicy.IsHateEnabled(player, balance.Value, now));
 
-        bool wantCompleted = wantId is not null && player.Wants.Any(want =>
+        var wantCompleted = wantId is not null && player.Wants.Any(want =>
             want.Id == wantId && !want.Done);
         if (wantId is not null && !wantCompleted)
         {
             throw new RequestConflictException("The selected daily want is unavailable.");
         }
 
-        PostProgression progression = progressionCalculator.Calculate(
+        var progression = progressionCalculator.Calculate(
             player,
             turn,
             ownWords,
             wantCompleted);
-        PlayerProfile updated = player.PublishPost(
+        var updated = player.PublishPost(
             progression.SubscriberDelta,
             progression.Viral,
             progression.Flop,
@@ -91,11 +96,11 @@ public sealed class PublishPostHandler(
             wantId,
             turn.StarId,
             now,
-            balance.Relations.Minimum,
-            balance.Relations.Maximum,
-            balance.Relations.MaxGainPerDay,
-            balance.Relations.StarCardAt);
-        PostId postId = PostId.New();
+            balance.Value.Relations.Minimum,
+            balance.Value.Relations.Maximum,
+            balance.Value.Relations.MaxGainPerDay,
+            balance.Value.Relations.StarCardAt);
+        var postId = PostId.New();
         var starComment = new GameComment(
             CommentId.New(),
             turn.StarName,
@@ -105,28 +110,29 @@ public sealed class PublishPostHandler(
             true,
             false,
             false);
-        IReadOnlyList<long> recentViews = await store.GetRecentPostViewsAsync(
+        var recentViews = await store.GetRecentPostViewsAsync(
             player.Id,
             20,
             cancellationToken);
-        long views = Math.Max(48, updated.Subscribers);
-        double reachRatio = recentViews.Count == 0 ? 1 : views / GetMedian(recentViews);
+        var views = Math.Max(48, updated.Subscribers);
+        var reachRatio = recentViews.Count == 0 ? 1 : views / GetMedian(recentViews);
         var post = new GamePost(
             postId,
             player.Id,
             text,
             views,
             [starComment],
+            [],
             now,
             progression.SubscriberDelta,
             progression.Quality,
             reachRatio,
             progression.Viral,
             progression.Flop);
-        string hook = turn.Hook;
+        var hook = turn.Hook;
 
         var published = new PublishedPost(post, hook, turn.StarName, turn.Reaction, turn.Reasons);
-        bool committed = await store.TryCommitPostAsync(
+        var committed = await store.TryCommitPostAsync(
             updated,
             player.Version,
             published,
@@ -139,7 +145,7 @@ public sealed class PublishPostHandler(
 
         await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
         TrackProgression(player, updated, post, turn, analytics);
-        foreach (LiveEvent liveEvent in PostContractMapper.MapLiveEvents(published))
+        foreach (var liveEvent in PostContractMapper.MapLiveEvents(published))
         {
             yield return liveEvent;
         }
@@ -147,8 +153,8 @@ public sealed class PublishPostHandler(
 
     private static double GetMedian(IReadOnlyList<long> values)
     {
-        long[] ordered = values.Order().ToArray();
-        int middle = ordered.Length / 2;
+        var ordered = values.Order().ToArray();
+        var middle = ordered.Length / 2;
         return ordered.Length % 2 == 0
             ? Math.Max(1, (ordered[middle - 1] + ordered[middle]) / 2.0)
             : Math.Max(1, ordered[middle]);
@@ -173,9 +179,9 @@ public sealed class PublishPostHandler(
                 ["post_index"] = after.PostsUsed.ToString(CultureInfo.InvariantCulture),
             });
 
-        foreach ((SkillId skillId, SkillProgress progress) in after.Skills)
+        foreach ((var skillId, var progress) in after.Skills)
         {
-            int previousLevel = before.Skills[skillId].Level;
+            var previousLevel = before.Skills[skillId].Level;
             if (progress.Level > previousLevel)
             {
                 analytics.Track(
@@ -189,10 +195,10 @@ public sealed class PublishPostHandler(
             }
         }
 
-        IEnumerable<AchievementProgress> earned = after.Achievements.Where(item =>
+        var earned = after.Achievements.Where(item =>
             item.IsOpen && !before.Achievements.Any(previous =>
                 previous.WorldId == item.WorldId && previous.Id == item.Id && previous.IsOpen));
-        foreach (AchievementProgress achievement in earned)
+        foreach (var achievement in earned)
         {
             analytics.Track(
                 after.Id,

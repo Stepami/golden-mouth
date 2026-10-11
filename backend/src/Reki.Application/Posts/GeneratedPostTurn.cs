@@ -13,4 +13,5 @@ public sealed record GeneratedPostTurn(
     double Humor,
     double Topic,
     IReadOnlyList<StarReason> Reasons,
-    bool OnTopic);
+    bool OnTopic,
+    string Tone = "support");

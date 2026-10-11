@@ -6,7 +6,7 @@
 
 | Вопрос | Как смотрим |
 |---|---|
-| Где бросают онбординг? | воронка `onboarding_step`: age → world → channel → done (звезда) → первый `post_publish` |
+| Где бросают онбординг? | воронка `onboarding_step`: age → world → channel → world_settings → done (звезда) → первый `post_publish` |
 | Доходят ли до первого поста и итога за первую минуту? | время от `session_start` до первого `post_result` |
 | Затягивает ли ход? Сколько постов за сессию, на каком бросают? | `post_publish` по номеру поста за день; последний экран перед `app_hidden` |
 | Пишут ли сами или берут «Подскажи»? Когда переходят на своё? | доля `own_words` по номеру поста и дню игры |
@@ -35,7 +35,7 @@
 | `session_start`, `app_hidden`, `app_visible` | открытие, сворачивание, возврат | platform, ms_on_screen |
 | `screen_view`, `screen_leave` | смена экрана | screen, prev, ms (время на экране) |
 | `tap` | вкладка, главная / вторая кнопка экрана | id (`tab`, `cta_main`, `cta_second`), to |
-| `onboarding_step` | шаги онбординга | step (age / world / channel / done), ok, world, address, star |
+| `onboarding_step` | шаги онбординга | step (age / world / channel / world_settings / done), ok, world, address, star |
 | `post_publish`, `post_result` | пост и его итог | len, own_words; delta, viral, flop |
 | `limit_reached` | упёрся в лимит | |
 | `plus_interest`, `plus_bonus_only` | 04-2 | |

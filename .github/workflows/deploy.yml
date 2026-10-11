@@ -65,6 +65,7 @@ jobs:
       LLM_PAT: ${{ secrets.LLM_PAT }}
       LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
       LLM_MODEL: ${{ secrets.LLM_MODEL }}
+      LLM_PROXY_IP: ${{ secrets.LLM_PROXY_IP }}
       OPENOBSERVE_EMAIL: ${{ secrets.OPENOBSERVE_EMAIL }}
       OPENOBSERVE_PASSWORD: ${{ secrets.OPENOBSERVE_PASSWORD }}
 

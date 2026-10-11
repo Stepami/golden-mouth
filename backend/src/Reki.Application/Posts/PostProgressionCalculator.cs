@@ -1,12 +1,13 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Posts;
 
-public sealed class PostProgressionCalculator(GameBalance balance)
+public sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
 {
     private static readonly SkillId Brave = SkillId.From("brave");
     private static readonly SkillId Humor = SkillId.From("humor");
@@ -18,31 +19,31 @@ public sealed class PostProgressionCalculator(GameBalance balance)
         bool ownWords,
         bool wantCompleted)
     {
-        WorldBalance world = balance.Worlds.TryGetValue(player.World.Value, out WorldBalance? value)
+        var world = balance.Value.Worlds.TryGetValue(player.World.Value, out var value)
             ? value
             : throw new InvalidOperationException($"World balance is missing for '{player.World.Value}'.");
-        double quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
-        int postIndex = player.PostsUsed + 1;
-        double multiplier = GetGrowthMultiplier(player, postIndex, ownWords);
-        bool viral = IsViral(player, quality, world);
-        bool flop = !viral && IsFlop(player, world);
+        var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
+        var postIndex = player.PostsUsed + 1;
+        var multiplier = GetGrowthMultiplier(player, postIndex, ownWords);
+        var viral = IsViral(player, quality, world);
+        var flop = !viral && IsFlop(player, world);
         if (viral)
         {
-            multiplier *= balance.Viral.Multiplier * world.ViralMultiplier;
+            multiplier *= balance.Value.Viral.Multiplier * world.ViralMultiplier;
         }
 
-        double decay = balance.Growth.Decay
+        var decay = balance.Value.Growth.Decay
             .First(item => postIndex >= item.From && postIndex <= item.To)
             .Multiplier;
-        double growth = balance.Growth.Coefficient * world.GrowthCoefficient *
-            (0.5 + quality) *
-            Math.Pow(Math.Max(1, player.Subscribers), balance.Growth.Power) *
-            decay *
-            multiplier;
-        long subscriberDelta = flop
-            ? Math.Min(-1, (long)Math.Round(growth * balance.Flop.LossMultiplier))
+        var growth = balance.Value.Growth.Coefficient * world.GrowthCoefficient *
+                     (0.5 + quality) *
+                     Math.Pow(Math.Max(1, player.Subscribers), balance.Value.Growth.Power) *
+                     decay *
+                     multiplier;
+        var subscriberDelta = flop
+            ? Math.Min(-1, (long)Math.Round(growth * balance.Value.Flop.LossMultiplier))
             : Math.Max(1, (long)Math.Round(growth));
-        IReadOnlyDictionary<SkillId, SkillProgress> skills = AddSkillExperience(
+        var skills = AddSkillExperience(
             player,
             turn,
             postIndex,
@@ -63,28 +64,28 @@ public sealed class PostProgressionCalculator(GameBalance balance)
 
     private static double StableRoll(PlayerProfile player, int postNumber, string purpose)
     {
-        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(
             $"{player.Id.Value}:{postNumber}:{purpose}"));
-        ulong value = BinaryPrimitives.ReadUInt64LittleEndian(hash);
+        var value = BinaryPrimitives.ReadUInt64LittleEndian(hash);
         return value / (double)ulong.MaxValue;
     }
 
     private double GetGrowthMultiplier(PlayerProfile player, int postIndex, bool ownWords)
     {
         double multiplier = 1;
-        if (player.Subscribers < balance.Growth.StarterBelowSubscribers)
+        if (player.Subscribers < balance.Value.Growth.StarterBelowSubscribers)
         {
-            multiplier *= balance.Growth.StarterMultiplier;
+            multiplier *= balance.Value.Growth.StarterMultiplier;
         }
 
         if (ownWords)
         {
-            multiplier *= balance.Growth.OwnWordsMultiplier;
+            multiplier *= balance.Value.Growth.OwnWordsMultiplier;
         }
 
-        if (player.RestedPostsRemaining > 0 && postIndex <= balance.Growth.RestedFirstPosts)
+        if (player.RestedPostsRemaining > 0 && postIndex <= balance.Value.Growth.RestedFirstPosts)
         {
-            multiplier *= balance.Growth.RestedMultiplier;
+            multiplier *= balance.Value.Growth.RestedMultiplier;
         }
 
         return multiplier;
@@ -92,22 +93,22 @@ public sealed class PostProgressionCalculator(GameBalance balance)
 
     private bool IsViral(PlayerProfile player, double quality, WorldBalance world)
     {
-        int nextPost = player.TotalPostsPublished + 1;
-        bool hasNeverGoneViral = player.TotalPostsPublished == player.PostsSinceViral;
-        if ((hasNeverGoneViral && nextPost == balance.Viral.GuaranteedPost) ||
-            player.PostsSinceViral + 1 >= balance.Viral.PityPosts)
+        var nextPost = player.TotalPostsPublished + 1;
+        var hasNeverGoneViral = player.TotalPostsPublished == player.PostsSinceViral;
+        if ((hasNeverGoneViral && nextPost == balance.Value.Viral.GuaranteedPost) ||
+            player.PostsSinceViral + 1 >= balance.Value.Viral.PityPosts)
         {
             return true;
         }
 
-        double chance = (balance.Viral.BaseChance + (balance.Viral.ChancePerQuality * quality)) *
-            world.ViralMultiplier;
+        var chance = (balance.Value.Viral.BaseChance + (balance.Value.Viral.ChancePerQuality * quality)) *
+                     world.ViralMultiplier;
         return StableRoll(player, nextPost, "viral") < Math.Clamp(chance, 0, 1);
     }
 
     private bool IsFlop(PlayerProfile player, WorldBalance world)
     {
-        if (player.ConsecutiveFlops >= balance.Flop.MaxInRow)
+        if (player.ConsecutiveFlops >= balance.Value.Flop.MaxInRow)
         {
             return false;
         }
@@ -122,30 +123,30 @@ public sealed class PostProgressionCalculator(GameBalance balance)
         bool ownWords,
         bool wantCompleted)
     {
-        if (postIndex > balance.Skills.ExperiencePostLimit)
+        if (postIndex > balance.Value.Skills.ExperiencePostLimit)
         {
             return player.Skills;
         }
 
-        SkillId main = GetMainSkill(turn);
-        double multiplier = postIndex <= balance.Skills.FirstPostsCount
-            ? balance.Skills.FirstPostsMultiplier
+        var main = GetMainSkill(turn);
+        var multiplier = postIndex <= balance.Value.Skills.FirstPostsCount
+            ? balance.Value.Skills.FirstPostsMultiplier
             : 1;
         if (ownWords)
         {
-            multiplier *= balance.Skills.OwnWordsMultiplier;
+            multiplier *= balance.Value.Skills.OwnWordsMultiplier;
         }
 
         if (wantCompleted)
         {
-            multiplier *= balance.Skills.WantDoneMultiplier;
+            multiplier *= balance.Value.Skills.WantDoneMultiplier;
         }
 
         return player.Skills.ToDictionary(
             item => item.Key,
             item => item.Value.AddExperience(
-                (item.Key == main ? balance.Skills.MainExperience : balance.Skills.SideExperience) *
+                (item.Key == main ? balance.Value.Skills.MainExperience : balance.Value.Skills.SideExperience) *
                     multiplier,
-                balance.Skills.LevelThresholds));
+                balance.Value.Skills.LevelThresholds));
     }
 }

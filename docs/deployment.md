@@ -1,6 +1,6 @@
 # Развёртывание в production
 
-Production разворачивается на self-hosted GitHub Actions runner, установленном на VDS. Push в `master` запускает проверки бэкенда, фронтенда и секретов. Затем GitVersion вычисляет версию, workflow создаёт тег и выкатывает соответствующий коммит. Если сообщение коммита не содержит `[skip-release]`, после успешного deployment создаётся и публикуется GitHub Release.
+Production разворачивается на self-hosted GitHub Actions runner, установленном на VDS. Push в `master` запускает проверки бэкенда, фронтенда и секретов. Затем GitVersion вычисляет версию, workflow создаёт тег и выкатывает соответствующий коммит. GitHub Release для уже развёрнутого тега создаётся отдельно ручным workflow `GitHub Release`.
 
 ## Одноразовая настройка сервера
 
@@ -268,7 +268,7 @@ sudo ./svc.sh status
 
 ## Подготовка релиза
 
-GitReleaseManager формирует описание релиза из GitHub issues, включённых в milestone. Перед push в `master`, если сообщение коммита не содержит `[skip-release]`:
+GitReleaseManager формирует описание релиза из GitHub issues, включённых в milestone. Перед ручным запуском workflow `GitHub Release`:
 
 1. Создай milestone с именем будущей версии, например `0.1.0`.
 2. Добавь в него завершённые issues этого релиза.
@@ -283,18 +283,19 @@ Issues без одного из этих четырёх labels не попада
 
 Тег без префикса `v` (например, `0.1.0`) создаётся автоматически. Конфигурация GitVersion находится в `GitVersion.yml`; вычисленная версия используется только как тег и значение `REKI_VERSION` для Docker Compose.
 
-Release workflow выполняет следующие стадии:
+Автоматический workflow `Release` выполняет следующие стадии:
 
 1. Параллельно запускает полные backend и frontend проверки и сканирование секретов на GitHub-hosted runners.
 2. Вычисляет версию через GitVersion и отправляет тег текущего коммита.
 3. Передаёт версию в `deploy.yml`. Тот проверяет формат и существование тега, на self-hosted runner собирает images `reki-backend:0.1.0` и `reki-frontend:0.1.0`, запускает Compose и ждёт healthy-состояния всех сервисов.
-4. Если сообщение коммита содержит `[skip-release]`, на этом процесс заканчивается. Иначе GitReleaseManager после успешного deployment создаёт draft release, публикует его и закрывает milestone. Отсутствующий milestone или issues с подходящими labels останавливают публикацию уже после deployment.
+
+После успешного deployment открой **Actions → GitHub Release → Run workflow**, введи существующий тег версии и запусти workflow. Он проверит формат версии, создаст draft release через GitReleaseManager, опубликует его и закроет одноимённый milestone. Отсутствующий milestone или issues с подходящими labels останавливают публикацию, но не влияют на уже выполненный deployment.
 
 Healthcheck сервисов выполняется каждые 10 секунд при запуске контейнера и каждые 5 минут после перехода в healthy. Это сохраняет быстрое ожидание готовности при деплое, но уменьшает регулярную телеметрию от проверок.
 
 Для атомарного сохранения публикации MongoDB работает как single-node replica set `rs0`. `mongo-init` однократно инициирует его на существующем томе и ждёт primary до запуска backend. Перед первым развёртыванием этой версии сделай резервную копию тома MongoDB и останови запись на время переключения; один узел даёт транзакции, но не отказоустойчивость. Если задана внешняя `MONGO_CONNECTION_STRING`, она должна указывать на MongoDB с поддержкой транзакций.
 
-Для повторной выкладки открой **Actions → Deploy → Run workflow**, введи существующий тег версии и запусти workflow. Ручной запуск проверяет тег, собирает и разворачивает Docker images из соответствующего коммита. Он не запускает backend/frontend проверки и сканирование секретов, не создаёт новый тег или GitHub Release и не закрывает milestone.
+Для повторной выкладки открой **Actions → Deploy → Run workflow**, введи существующий тег версии и запусти workflow. Ручной запуск проверяет тег, собирает и разворачивает Docker images из соответствующего коммита. Он не запускает backend/frontend проверки и сканирование секретов и не создаёт новый тег. Создание GitHub Release и закрытие milestone выполняет отдельный ручной workflow `GitHub Release`.
 
 Публичная точка входа — `https://reki-app.ru`; HTTP перенаправляется на HTTPS. Production использует тот же `frontend/public/runtime-config/config.js`, что и локальный Compose. Перед релизом установи в нём `apiMode: 'backend'`, чтобы фронтенд обращался к backend по same-origin адресу `/api/v1`.
 

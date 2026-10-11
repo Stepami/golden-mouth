@@ -1,10 +1,10 @@
 using Reki.Api.Bootstrapping;
 using Serilog;
 
-Serilog.ILogger bootstrapLogger = Bootstrap.CreateInitialLogger();
-using ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
+var bootstrapLogger = Bootstrap.CreateInitialLogger();
+using var loggerFactory = LoggerFactory.Create(builder =>
     builder.AddSerilog(bootstrapLogger, dispose: true));
-ILogger<ApplicationRunner> applicationLogger = loggerFactory
+var applicationLogger = loggerFactory
     .CreateLogger<ApplicationRunner>();
 var applicationRunner = new ApplicationRunner(applicationLogger);
 

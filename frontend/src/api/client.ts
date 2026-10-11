@@ -2,9 +2,14 @@
 // Во фронте НЕТ секретов: runtime config виден в браузере. Ключи LLM и токен бота живут только на бэкенде.
 import * as mock from './mock'
 import { error, warn } from '../app/log'
-import { apiBaseUrl as BASE } from '../app/runtimeConfig'
+import { apiBaseUrl as BASE, runtimeConfig } from '../app/runtimeConfig'
+import { addDemoComment, demoChannelPosts, demoFeed, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, shuffle, withDemoComments } from './demo'
+import { contentOf, rulesFor, wantsFor } from './worldContent'
 import { telegramAuthHeaders } from './auth'
-import type { Challenge, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, PostResult, PublicationState, PublicationStatus, WorldRules } from './types'
+import type { Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, ReplyResult, WorldId, WorldRules } from './types'
+
+let sessionPlayer: Player | undefined
+function rememberPlayer(player: Player): Player { sessionPlayer = player; return player }
 
 export class ApiError extends Error {
   constructor(public readonly status: number, method: string, path: string) {
@@ -20,6 +25,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return body ? JSON.parse(body) as T : undefined as T
 }
 const later = <T,>(v: T, ms = 150) => new Promise<T>(res => setTimeout(() => res(structuredClone(v)), ms))
+const laterLazy = <T,>(load: () => T, ms = 150) => new Promise<T>((resolve, reject) => setTimeout(() => { try { resolve(structuredClone(load())) } catch (e) { reject(e) } }, ms))
 
 async function readSse<T>(response: Response, onEvent: (event: T) => void | Promise<void>): Promise<void> {
   if (!response.body) throw new Error('Response has no event stream')
@@ -46,9 +52,13 @@ async function publicationState(id: string): Promise<PublicationState> {
 }
 
 export const api = {
-  me: (): Promise<Player> => BASE ? call('/me') : later(mock.player),
-  onboarding: (body: { birthGroup: '14-17' | '18+'; world: string; role: string; avatar: string; name: string; handle: string; address: string; star: string }): Promise<Player> =>
-    BASE ? call('/onboarding', { method: 'POST', body: JSON.stringify(body) }) : later({ ...mock.player, subs: 120, postsLeft: 10 }),
+  me: (): Promise<Player> => (BASE ? call<Player>('/me') : laterLazy(demoPlayer)).then(rememberPlayer),
+  onboarding: (body: { birthGroup: '14-17' | '18+'; world: string; role: string; name: string; handle: string; address: string; star: string; referralCode?: string }): Promise<Player> =>
+    (BASE ? call<Player>('/onboarding', { method: 'POST', body: JSON.stringify(body) }) : laterLazy(() => saveDemoPlayer({
+      ...structuredClone(mock.player), ...body, world: body.world as WorldId, address: body.address as Player['address'],
+      id: crypto.randomUUID().replaceAll('-', ''), bio: '', type: 'автор своего канала', subs: 120, postsLeft: 10, wants: wantsFor(body.world),
+      skills: { brave: { level: 1, progress: 0 }, humor: { level: 1, progress: 0 }, topic: { level: 1, progress: 0 } },
+    }))).then(rememberPlayer),
   /** Генерация, затем модерация и поток реакции; при обрыве сверяем сохранённый статус. */
   publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown') => void, onStatus?: (status: PublicationStatus) => void): () => void {
     if (BASE) {
@@ -125,26 +135,79 @@ export const api = {
       return () => { clearTimeout(start); ctrl.abort() }
     }
     onStatus?.('pending')
-    const steps: [number, LiveEvent][] = [[250, { type: 'views', views: 48 }], [650, { type: 'react', emoji: '😂' }], [1100, { type: 'comment', comment: mock.liveComment }],
-      [1450, { type: 'views', views: 190 }], [1800, { type: 'react', emoji: '🫶' }], [2250, { type: 'typing', who: 'Соня' }], [2650, { type: 'react', emoji: '🔥' }],
-      [3000, { type: 'views', views: 312 }], [3900, { type: 'result', result: mock.results.normal as PostResult }]]
-    const timers = steps.map(([ms, e]) => setTimeout(() => onEvent(e), ms))
+    const profile = contentOf(sessionPlayer?.world ?? 'stage')
+    const star = profile.stars[0]
+    const comment = { ...mock.liveComment, id: crypto.randomUUID(), author: star.name, avatar: star.id, handle: star.role, text: 'Вот это история! Расскажешь, что было дальше?', star: true }
+    const result = { ...mock.results.normal, postId: publicationId, headline: `${star.name} замечает твой пост`,
+      bestComment: { avatar: star.id, text: comment.text }, hook: `${profile.stars[1].name} готовит ответ…` }
+    const steps: [number, LiveEvent][] = [[250, { type: 'views', views: 48 }], [650, { type: 'react', emoji: '😂' }], [1100, { type: 'comment', comment }],
+      [1450, { type: 'views', views: 190 }], [1800, { type: 'react', emoji: '🫶' }], [2250, { type: 'typing', who: profile.stars[1].name }], [2650, { type: 'react', emoji: '🔥' }],
+      [3000, { type: 'views', views: 312 }], [3900, { type: 'result', result }]]
+    const timers = steps.map(([ms, e]) => setTimeout(() => {
+      if (e.type === 'result' && sessionPlayer) {
+        saveDemoPost(sessionPlayer.id, { id: publicationId, text, views: result.views, reactions: [{ emoji: '😂', count: 1 }, { emoji: '🫶', count: 1 }, { emoji: '🔥', count: 1 }], comments: [comment], canReply: false, demoComments: true, at: new Date().toISOString() })
+        sessionPlayer = saveDemoPlayer({ ...sessionPlayer, subs: sessionPlayer.subs + result.delta, postsLeft: Math.max(0, sessionPlayer.postsLeft - 1) })
+      }
+      onEvent(e)
+    }, ms))
     return () => timers.forEach(clearTimeout)
   },
-  reply: (postId: string, text: string) => BASE ? call(`/posts/${postId}/replies`, { method: 'POST', body: JSON.stringify({ text }) }) : later({ ok: true }),
+  reply: (postId: string, commentId: string, replyId: string, text: string): Promise<ReplyResult> =>
+    BASE
+      ? call(`/posts/${postId}/replies`, { method: 'POST', body: JSON.stringify({ commentId, replyId, text }) })
+      : later(mock.threadReply(replyId)),
   report: (commentId: string, reason: string) => BASE ? call('/reports', { method: 'POST', body: JSON.stringify({ commentId, reason }) }) : later({ ok: true }),
-  plusInterest: () => BASE ? call('/plus-interest', { method: 'POST' }) : later({ bonus: 5 }),
-  settings: (patch: Partial<Player['settings']>) => BASE ? call('/settings', { method: 'PATCH', body: JSON.stringify(patch) }) : later({ ok: true }),
-  feed: (): Promise<FeedItem[]> => BASE ? call('/feed') : later(mock.feed),
+  plusInterest: async (interest = true): Promise<{ bonus: number }> => {
+    if (BASE) return call('/plus-interest', { method: 'POST', body: JSON.stringify({ interest }) })
+    const key = `reki:demo-plus-claimed:${sessionPlayer?.id}`
+    const claimed = localStorage.getItem(key) === 'true'
+    const bonus = claimed ? 0 : 5
+    if (!claimed && sessionPlayer) { sessionPlayer = saveDemoPlayer({ ...sessionPlayer, postsLeft: sessionPlayer.postsLeft + bonus, postsCap: sessionPlayer.postsCap + bonus }); localStorage.setItem(key, 'true') }
+    return later({ bonus })
+  },
+  referral: (): Promise<{ code: string }> => BASE ? call('/referral') : laterLazy(() => ({ code: `ref_${sessionPlayer!.id === 'p1' ? mock.player.id : sessionPlayer!.id.replaceAll('-', '')}` })),
+  settings: async (patch: Partial<Player['settings']> & { address?: Player['address'] }) => {
+    if (BASE) await call('/settings', { method: 'PATCH', body: JSON.stringify(patch) })
+    if (sessionPlayer) {
+      const { address, ...settings } = patch
+      sessionPlayer = { ...sessionPlayer, address: address ?? sessionPlayer.address, settings: { ...sessionPlayer.settings, ...settings } }
+      if (!BASE) saveDemoPlayer(sessionPlayer)
+    }
+  },
+  feed: async (world: WorldId = sessionPlayer?.world ?? 'stage'): Promise<FeedItem[]> => {
+    const remote: FeedItem[] = BASE ? await call<FeedItem[]>('/feed') : demoOwnPosts(sessionPlayer?.id ?? '').slice(0, 20).map(post => ({
+      kind: 'post', postId: post.id, canReply: true, author: sessionPlayer?.name, avatar: sessionPlayer?.handle, role: sessionPlayer?.role,
+      ago: post.at, text: post.text, reactions: post.reactions, views: post.views,
+      commentCount: withDemoComments(post, sessionPlayer?.id ?? '').comments.length,
+    }))
+    const demos = runtimeConfig.features.mockFeed ? demoFeed(world).map(item => ({ ...item,
+      commentCount: withDemoComments(demoPost(item.postId!)!, sessionPlayer?.id ?? '').comments.length })) : []
+    return runtimeConfig.features.mockFeed ? shuffle([...remote, ...demos]) : remote
+  },
+  channelPosts: (): Promise<ChannelPost[]> => BASE ? call('/posts/mine') : laterLazy(() => demoChannelPosts(sessionPlayer?.id ?? '')),
+  post: async (postId: string): Promise<Post> => {
+    const demo = runtimeConfig.features.mockFeed ? demoPost(postId) : undefined
+    const post = demo ?? (BASE
+      ? await call<PostDetailResponse>(`/posts/${encodeURIComponent(postId)}`).then(({ postId: id, ...detail }) => ({ ...detail, id }))
+      : await laterLazy(() => demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) ?? mock.post(postId)))
+    if (!post) throw { status: 404 }
+    return runtimeConfig.features.mockFeed
+      ? withDemoComments({ ...post, demoComments: post.demoComments || !post.canReply }, sessionPlayer?.id ?? '') : post
+  },
+  demoComment: (postId: string, player: Player, text: string, replyId: string) => laterLazy(() => addDemoComment(postId, player, text, replyId)),
   friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),
-  dm: (starId: string): Promise<Dm> => BASE ? call(`/dm/${starId}`) : later(mock.dm),
+  dm: (starId: string): Promise<Dm> => BASE ? call(`/dm/${starId}`) : laterLazy(() => {
+    const star = contentOf(sessionPlayer?.world ?? 'stage').stars.find(profile => profile.id === starId)
+    if (!star) throw new ApiError(404, 'GET', `/dm/${starId}`)
+    return { ...mock.dm, star }
+  }),
   dmSend: (starId: string, text: string): Promise<{ reply?: string; repliesLeft: number }> => BASE ? call(`/dm/${starId}`, { method: 'POST', body: JSON.stringify({ text }) }) : later({ repliesLeft: 2 }),
   forget: (starId: string, fact: string) => BASE ? call(`/stars/${starId}/memory`, { method: 'DELETE', body: JSON.stringify({ fact }) }) : later({ ok: true }),
   eventToday: (): Promise<GameEvent> => BASE ? call('/events/today') : later(mock.events.collab),
   answerEvent: (id: string, text: string) => BASE ? call(`/events/${id}/answer`, { method: 'POST', body: JSON.stringify({ text }) }) : later({ ok: true }),
   challenge: (): Promise<Challenge | null> => BASE ? call('/challenges/active') : later(mock.challenge),
   startChallenge: (friendId: string) => BASE ? call('/challenges', { method: 'POST', body: JSON.stringify({ friendId }) }) : later({ ok: true }),
-  worldRules: (worldId: string): Promise<WorldRules> => BASE ? call(`/worlds/${worldId}/rules`) : later(worldId === 'own' ? mock.ownWorld : mock.presetRules),
+  worldRules: (worldId: string): Promise<WorldRules> => BASE ? call(`/worlds/${worldId}/rules`) : later(rulesFor(worldId)),
   saveWorld: (rules: WorldRules) => BASE ? call('/worlds/own', { method: 'PUT', body: JSON.stringify(rules) }) : later({ ok: true }),
-  deleteAccount: () => BASE ? call('/me', { method: 'DELETE' }) : later({ ok: true }),
+  deleteAccount: async () => { if (BASE) await call('/me', { method: 'DELETE' }); resetDemoPlayer(sessionPlayer?.id); sessionPlayer = undefined },
 }

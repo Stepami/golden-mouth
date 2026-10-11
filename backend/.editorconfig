@@ -97,25 +97,20 @@ dotnet_diagnostic.SA1601.severity = none
 dotnet_diagnostic.SA1602.severity = none
 dotnet_diagnostic.SA1633.severity = none
 dotnet_diagnostic.IDE0003.severity = error
+dotnet_diagnostic.IDE0005.severity = error
+dotnet_diagnostic.IDE0007.severity = error
 
 # loosen rules
+dotnet_diagnostic.AV1210.severity = none
 dotnet_diagnostic.SA1309.severity = none
 dotnet_diagnostic.AV1500.severity = none
 dotnet_diagnostic.AV1561.severity = none
 dotnet_diagnostic.AV1564.severity = none
 dotnet_diagnostic.AV1580.severity = none
 
-[src/Reki.Api/Bootstrapping/ApplicationRunner.cs]
-# The process boundary must log any startup or host failure before returning.
-dotnet_diagnostic.AV1210.severity = none
-
 [src/Reki.Application/**/*Handler.cs]
 # Mediator fixes the asynchronous interface member name as Handle; handlers cannot append Async.
 dotnet_diagnostic.AV1755.severity = none
-
-[src/Reki.Application/Posts/StarTurnGenerator.cs]
-# The provider boundary maps arbitrary IChatClient failures to one safe application error.
-dotnet_diagnostic.AV1210.severity = none
 
 [src/Reki.Application/Common/AI/StarToolCallParser.cs]
 # Tool action records stay nested so the strict parser and its internal result types form one unit.
@@ -125,7 +120,7 @@ dotnet_diagnostic.SA1201.severity = none
 # API mappings are injected as one Mapperly-backed service, including handwritten composition mappings.
 dotnet_diagnostic.S2325.severity = none
 
-[tests/Reki.Tests/Api/GameApiTests.cs]
+[tests/Reki.Tests/Api/GameApiTestBase.cs]
 # Keep the HTTP test DSL instance-based so it can evolve with fixture state.
 dotnet_diagnostic.S2325.severity = none
 

@@ -1,13 +1,16 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Domain.Player;
 using Reki.Domain.Social;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Social;
 
 public sealed class GetDirectMessagesHandler(
+    ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     GameDay gameDay,
     PlayerReader playerReader) : IRequestHandler<GetDirectMessagesQuery, DirectMessageView>
 {
@@ -15,9 +18,11 @@ public sealed class GetDirectMessagesHandler(
         GetDirectMessagesQuery request,
         CancellationToken cancellationToken)
     {
-        PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        DateTimeOffset periodStart = gameDay.PeriodStart;
-        StarConversation conversation = await store.GetStarConversationAsync(
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        _ = StarCatalog.Require(player.World, request.StarId);
+        var periodStart = gameDay.PeriodStart;
+        var conversation = await store.GetStarConversationAsync(
             player.Id,
             request.StarId,
             cancellationToken) ?? new StarConversation(
@@ -34,12 +39,12 @@ public sealed class GetDirectMessagesHandler(
             await store.SaveStarConversationAsync(conversation, cancellationToken);
         }
 
-        int repliesLeft = Math.Max(
+        var repliesLeft = Math.Max(
             0,
-            balance.Relations.DirectMessageRepliesPerDay - conversation.RepliesUsed);
-        int relation = player.StarRelations
+            balance.Value.Relations.DirectMessageRepliesPerDay - conversation.RepliesUsed);
+        var relation = player.StarRelations
             .FirstOrDefault(item => item.StarId == request.StarId)?.Value ?? 0;
-        return new DirectMessageView(conversation, repliesLeft, relation);
+        return new DirectMessageView(conversation, repliesLeft, relation, StarCatalog.Require(player.World, request.StarId));
     }
 }
 

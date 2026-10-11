@@ -1,15 +1,18 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useContext, type CSSProperties, type ReactNode } from 'react'
 import { tap } from '../app/analytics'
+import { avatarUri, AvatarWorld } from './avatar'
+import type { WorldId } from '../api/types'
 
-const AVATARS: Record<string, string> = {
-  liza: 'pick0', mira: 'mira', sonya: 'sonya', eva: 'eva', yuna: 'yuna', katya: 'katya', dima: 'dima', dasha: 'dasha', critic: 'critic',
-  pick0: 'pick0', pick4: 'pick4', pick7: 'pick7', pick8: 'pick8', pick10: 'pick10',
-}
-
-export function Avatar({ id, size = 40, style }: { id: string; size?: number; style?: CSSProperties }) {
-  const file = AVATARS[id]
-  if (!file) return <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--grad)', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.4, ...style }}>{id.slice(0, 1).toUpperCase()}</div>
-  return <img src={`${import.meta.env.BASE_URL}avatars/${file}.svg`} alt="" width={size} height={size} style={{ borderRadius: '50%', flex: 'none', objectFit: 'cover', display: 'block', ...style }} />
+/**
+ * Круглая аватарка. seed это устойчивый признак того, кто на картинке:
+ * у персонажа id из справочника, у игрока ник. Картинка собирается из него на месте,
+ * поэтому отдельного файла или ссылки на аватар нигде не нужно.
+ * Без сида рисуем букву — так показывается бот.
+ */
+export function Avatar({ seed, label, size = 40, style, world }: { seed?: string; label?: string; size?: number; style?: CSSProperties; world?: WorldId }) {
+  const currentWorld = useContext(AvatarWorld)
+  if (!seed) return <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--grad)', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.4, ...style }}>{(label ?? '?').slice(0, 1).toUpperCase()}</div>
+  return <img src={avatarUri(seed, world ?? currentWorld)} alt="" width={size} height={size} style={{ borderRadius: '50%', flex: 'none', display: 'block', ...style }} />
 }
 
 export function Button({ children, secondary, onClick, disabled, style }: { children: ReactNode; secondary?: boolean; onClick?: () => void; disabled?: boolean; style?: CSSProperties }) {
@@ -17,9 +20,9 @@ export function Button({ children, secondary, onClick, disabled, style }: { chil
 }
 
 /** Кнопки внизу экрана: главная последней, вторичная над ней (как в макетах). */
-export function BottomCTA({ main, onMain, second, onSecond, disabled }: { main: ReactNode; onMain?: () => void; second?: ReactNode; onSecond?: () => void; disabled?: boolean }) {
+export function BottomCTA({ main, onMain, second, onSecond, disabled, secondDisabled }: { main: ReactNode; onMain?: () => void; second?: ReactNode; onSecond?: () => void; disabled?: boolean; secondDisabled?: boolean }) {
   // id кнопки для аналитики: main / second на текущем экране (экран добавит analytics.ts)
-  return <div className="bottom-cta">{second && <Button secondary onClick={() => { tap('cta_second'); onSecond?.() }}>{second}</Button>}<Button onClick={() => { tap('cta_main'); onMain?.() }} disabled={disabled}>{main}</Button></div>
+  return <div className="bottom-cta">{second && <Button secondary disabled={secondDisabled} onClick={() => { tap('cta_second'); onSecond?.() }}>{second}</Button>}<Button onClick={() => { tap('cta_main'); onMain?.() }} disabled={disabled}>{main}</Button></div>
 }
 
 export function TopBar({ title, onBack, right, children }: { title?: ReactNode; onBack?: () => void; right?: ReactNode; children?: ReactNode }) {
@@ -65,10 +68,10 @@ export function Ribbon({ icon, title, sub, onClick }: { icon: string; title: Rea
 }
 
 /** Подсказка звезды: фиолетовый пузырь с аватаркой. */
-export function Whisper({ star = 'mira', name = 'Мира', children }: { star?: string; name?: string; children: ReactNode }) {
+export function Whisper({ seed = 'mira', name = 'Мира', children }: { seed?: string; name?: string; children: ReactNode }) {
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', margin: '8px 0 10px' }}>
-      <Avatar id={star} size={30} />
+      <Avatar seed={seed} size={30} />
       <div style={{ background: '#251E33', border: '1px solid #9B6BFF77', borderRadius: '14px 14px 14px 4px', padding: '8px 11px', fontSize: 13, lineHeight: 1.35 }}>
         <div style={{ color: 'var(--lilac)', fontSize: 11, marginBottom: 2 }}>{name} подсказывает</div>{children}
       </div>
@@ -76,10 +79,10 @@ export function Whisper({ star = 'mira', name = 'Мира', children }: { star?:
   )
 }
 
-export function Comment({ avatar, name, handle, text, star, me, onMore }: { avatar: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
+export function Comment({ seed, name, handle, text, star, me, onMore }: { seed: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
   return (
     <div style={{ display: 'flex', gap: 10, marginBottom: 13 }}>
-      <Avatar id={avatar} size={34} />
+      <Avatar seed={seed} size={34} />
       <div style={{ flex: 1 }}>
         <div className="row" style={{ gap: 6 }}><b>{name}</b><span className="muted small">{handle}</span>{star && <span className="small" style={{ color: 'var(--accent)' }}>★ звезда</span>}{me && <span className="small muted">ты</span>}
           {onMore && <button onClick={onMore} aria-label="Пожаловаться" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>}</div>

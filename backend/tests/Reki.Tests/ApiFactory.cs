@@ -2,45 +2,35 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
-using NSubstitute;
-using Reki.Application.Common.Safety;
-using Reki.Infrastructure.AI;
-using Testcontainers.MongoDb;
+using MongoDB.Driver;
 using TUnit.AspNetCore;
-using TUnit.Core.Interfaces;
 
 namespace Reki.Tests;
 
-public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncInitializer
+public sealed class ApiFactory : TestWebApplicationFactory<Program>
 {
-    private readonly MongoDbContainer _mongo = new MongoDbBuilder("mongo:8.0.32-noble")
-        .WithReplicaSet("rs0")
-        .Build();
+    [ClassDataSource<MongoFixture>(Shared = SharedType.PerTestSession)]
+    public required MongoFixture Mongo { get; init; }
+
+    [ClassDataSource<OpenAiStub>]
+    public required OpenAiStub Llm { get; init; }
 
     public string DatabaseName { get; } = $"reki_tests_{Guid.NewGuid():N}";
 
-    public string MongoConnectionString => _mongo.GetConnectionString();
-
-    public IChatClient ChatClient { get; } = Substitute.For<IChatClient>();
+    public string MongoConnectionString => Mongo.ConnectionString;
 
     public TestApiClient CreateApiClient(long? telegramUserId = null)
     {
         return new TestApiClient(CreateClient(), telegramUserId);
     }
 
-    public Task InitializeAsync()
-    {
-        return _mongo.StartAsync();
-    }
-
     public override async ValueTask DisposeAsync()
     {
         await base.DisposeAsync();
-        await _mongo.DisposeAsync();
+        await new MongoClient(MongoConnectionString).DropDatabaseAsync(DatabaseName, CancellationToken.None);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -48,19 +38,18 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>, IAsyncIniti
         builder.UseEnvironment("Development");
         builder.UseSetting("Mongo:ConnectionString", MongoConnectionString);
         builder.UseSetting("Mongo:DatabaseName", DatabaseName);
-        builder.UseSetting("Llm:BaseUrl", "https://llm.invalid/v1");
+        builder.UseSetting("Llm:BaseUrl", Llm.BaseUrl);
         builder.UseSetting("Llm:ApiKey", "placeholder");
         builder.UseSetting("Llm:Model", "gigachat3.5-432b-a28b");
+        builder.UseSetting("Llm:Temperature", "0.25");
+        builder.UseSetting("Llm:TimeoutSeconds", "1");
         builder.ConfigureServices(services =>
         {
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.RemoveAll<TimeProvider>();
-            services.RemoveAll<IChatClient>();
             services.AddSingleton<TimeProvider>(new FakeTimeProvider(
                 new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero)));
-            services.AddSingleton<IChatClient>(provider => new PlayerSafetyChatClient(
-                ChatClient,
-                provider.GetRequiredService<PlayerSafetyGuard>()));
+
             services
                 .AddAuthentication(options =>
                 {

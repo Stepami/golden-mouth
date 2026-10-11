@@ -3,6 +3,8 @@ issue-labels-include:
   - BackEnd
   - FrontEnd
   - CI-CD
+  - bug-BackEnd
+  - bug-FrontEnd
 
 issue-labels-alias:
   - name: bug
@@ -10,13 +12,19 @@ issue-labels-alias:
     plural: Bug fixes
   - name: BackEnd
     header: "API, данные, AI"
-    plural: "API, данные, AI"
+    plural: "Фичи - API, данные, AI"
+  - name: bug-BackEnd
+    header: "Исправление ошибки API"
+    plural: "Исправление ошибок API"
   - name: FrontEnd
     header: "Telegram Mini App"
-    plural: "Telegram Mini App"
+    plural: "Фичи для Telegram Mini App"
+  - name: bug-FrontEnd
+    header: "Исправление ошибки Telegram Mini App"
+    plural: "Исправление ошибок Telegram Mini App"
   - name: CI-CD
-    header: CI/CD
-    plural: CI/CD
+    header: CI/CD изменение
+    plural: CI/CD изменения
 
 create:
   include-sha-section: false

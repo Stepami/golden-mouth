@@ -19,11 +19,11 @@ public sealed record Publication(
 {
     public GeneratedPostTurn AssembleTurn()
     {
-        GeneratedPostTurn[] comments = Parts
+        var comments = Parts
             .Select(part => part.Comment)
             .OfType<GeneratedPostTurn>()
             .ToArray();
-        string[] reactions = Parts
+        var reactions = Parts
             .Select(part => part.Reaction)
             .OfType<string>()
             .ToArray();
@@ -32,7 +32,7 @@ public sealed record Publication(
             throw new AiServiceUnavailableException("The model returned an invalid action set.");
         }
 
-        GeneratedPostTurn comment = comments[0];
+        var comment = comments[0];
         if (!ContentSafetyPolicy.IsOutputAllowed(comment.Comment) ||
             !ContentSafetyPolicy.IsOutputAllowed(comment.Hook))
         {

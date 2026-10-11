@@ -1,22 +1,17 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.Extensions.Options;
 using Reki.Api.Common.Errors;
 using Reki.Api.Mapping;
+using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Application;
 using Reki.Application.Common;
-using Reki.Application.Common.AI;
 using Reki.Application.Common.Safety;
 using Reki.Application.Posts;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
-using Reki.Contracts.Events;
-using Reki.Contracts.Player;
-using Reki.Contracts.Posts;
-using Reki.Contracts.Social;
-using Reki.Contracts.Telemetry;
 using TgMiniAppAuth;
 
 namespace Reki.Api.Bootstrapping;
@@ -25,10 +20,12 @@ internal static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        services.AddOptions<GameBalance>().ValidateOnStart();
+        services.AddTransient<IOptionsFactory<GameBalance>, GameBalanceOptionsFactory>();
         services.AddMediator(options =>
         {
             options.Assemblies = [typeof(ApplicationAssemblyMarker)];
-            options.ServiceLifetime = ServiceLifetime.Singleton;
+            options.ServiceLifetime = ServiceLifetime.Scoped;
         });
         services.AddSingleton<GameDay>();
         services.AddSingleton<PlayerReader>();
@@ -45,27 +42,11 @@ internal static class ServiceCollectionExtensions
     {
         services.AddExceptionHandler<ApiExceptionHandler>();
         services.AddProblemDetails();
-        services.AddOpenApi(options => options.AddOperationTransformer((operation, context, _) =>
+        services.AddOpenApi(options =>
         {
-            var routeValues = context.Description.ActionDescriptor.RouteValues;
-
-            if (routeValues.TryGetValue("controller", out var controller) &&
-                routeValues.TryGetValue("action", out var action))
-            {
-                operation.OperationId = $"{controller}_{action}";
-            }
-
-            if (operation.Responses is { } responses &&
-                responses.TryGetValue("200", out var response) &&
-                response is { Content: { } content } &&
-                content.TryGetValue("text/event-stream", out var stream))
-            {
-                stream.Schema = null;
-                content.Remove("application/json");
-            }
-
-            return Task.CompletedTask;
-        }));
+            options.AddOperationTransformer<OperationMetadataTransformer>();
+            options.AddDocumentTransformer<TelegramMiniAppSecurityTransformer>();
+        });
         services
             .AddControllers(options => options.Filters.Add(
                 new AuthorizeFilter(TgMiniAppAuthConstants.AuthenticationScheme)))
@@ -80,7 +61,7 @@ internal static class ServiceCollectionExtensions
     {
         IJsonTypeInfoResolver resolver = ApiJsonSerializerContext.Default;
         options.TypeInfoResolverChain.Insert(0, resolver);
-        foreach (JsonConverter converter in ApiJsonSerializerContext.Default.Options.Converters)
+        foreach (var converter in ApiJsonSerializerContext.Default.Options.Converters)
         {
             options.Converters.Add(converter);
         }

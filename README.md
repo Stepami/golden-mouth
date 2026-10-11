@@ -23,7 +23,8 @@ Telegram Mini App 14+: ведёшь канал блогера в вымышле�
 
 - push в рабочую ветку запускает проверки только затронутой части проекта;
 - pull request и push в `master` запускают проверку секретов во всех отслеживаемых файлах;
-- тег семантической версии запускает полный CI, создаёт GitHub Release через GitReleaseManager и разворачивает версию на self-hosted runner.
+- push в `master` запускает полный CI, создаёт тег и разворачивает версию на self-hosted runner;
+- GitHub Release создаётся отдельно ручным workflow для уже существующего тега.
 
 Docker images собираются только во время deployment на VDS.
 

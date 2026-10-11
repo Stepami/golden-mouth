@@ -1,36 +1,72 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
+using Reki.Application.Common.Exceptions;
+using Reki.Application.Social;
 using Reki.Domain.Player;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Player;
 
 public sealed class OnboardPlayerHandler(
+    ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     GameDay gameDay,
-    PlayerReader playerReader) : IRequestHandler<OnboardPlayerCommand, PlayerView>
+    PlayerReader playerReader,
+    TimeProvider timeProvider) : IRequestHandler<OnboardPlayerCommand, PlayerView>
 {
     public async ValueTask<PlayerView> Handle(
         OnboardPlayerCommand request,
         CancellationToken cancellationToken)
     {
-        DateTimeOffset periodStart = gameDay.PeriodStart;
-        PlayerProfile? existing = await store.GetPlayerAsync(
-            request.TelegramUserId,
-            cancellationToken);
-        PlayerProfile? normalized = existing is null
-            ? null
-            : gameDay.Normalize(existing.EnsureDefaults());
-        PlayerProfile player = normalized is null
-            ? CreatePlayer(request, periodStart, balance.Growth.StartingSubscribers)
-            : UpdatePlayer(normalized, request);
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        _ = StarCatalog.Require(request.World, request.Star);
+        var existing = await store.GetPlayerAsync(telegramUserId, cancellationToken);
+        if (existing is null)
+        {
+            var inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
+            var updatedInviter = inviter is null
+                ? null
+                : gameDay.Normalize(inviter.EnsureDefaults())
+                    .GrantInviteBonus(balance.Value.InviteBonusBoth, balance.Value.InviteBonusMaxPerDay);
+            if (ReferenceEquals(updatedInviter, inviter))
+            {
+                updatedInviter = null;
+            }
 
-        await store.UpsertPlayerAsync(player, cancellationToken);
-        return playerReader.CreateView(player);
+            var created =
+                CreatePlayer(request, telegramUserId, gameDay.PeriodStart, balance.Value.Growth.StartingSubscribers) with
+                {
+                    InvitedBy = inviter?.Id,
+                    InvitedAtUtc = inviter is null ? null : timeProvider.GetUtcNow(),
+                    FirstPostInviteBonus = inviter is null ? 0 : balance.Value.InviteBonusBoth,
+                };
+            if (await store.TryCreatePlayerAsync(
+                    created,
+                    updatedInviter,
+                    inviter?.Version ?? 0,
+                    cancellationToken))
+            {
+                return playerReader.CreateView(created);
+            }
+        }
+        else
+        {
+            var normalized = gameDay.Normalize(existing.EnsureDefaults());
+            var updated = UpdatePlayer(normalized, request);
+            if (await store.TryReplacePlayerAsync(updated, existing.Version, cancellationToken))
+            {
+                return playerReader.CreateView(updated);
+            }
+        }
+
+        throw new RequestConflictException("Player changed while onboarding. Retry the request.");
     }
 
     private static PlayerProfile CreatePlayer(
         OnboardPlayerCommand request,
+        TelegramUserId telegramUserId,
         DateTimeOffset periodStart,
         long startingSubscribers)
     {
@@ -43,12 +79,12 @@ public sealed class OnboardPlayerHandler(
         var settings = new PlayerSettings("mid", "all", "22:00-09:00", "default", false);
         return new PlayerProfile(
             PlayerId.New(),
-            request.TelegramUserId,
+            telegramUserId,
             request.BirthGroup,
             request.Name,
             request.Handle,
             request.Role,
-            request.Avatar,
+            request.Handle,
             request.Address,
             request.World,
             startingSubscribers,
@@ -78,11 +114,11 @@ public sealed class OnboardPlayerHandler(
         PlayerProfile player,
         OnboardPlayerCommand request)
     {
-        IReadOnlyList<AchievementProgress> achievements = player.Achievements.Any(item =>
+        var achievements = player.Achievements.Any(item =>
             item.WorldId == request.World)
             ? player.Achievements
             : [.. player.Achievements, .. AchievementCatalog.Create(request.World)];
-        IReadOnlyList<StarRelationProgress> relations = player.StarRelations.Any(item =>
+        var relations = player.StarRelations.Any(item =>
             item.StarId == request.Star)
             ? player.StarRelations
             :
@@ -97,12 +133,30 @@ public sealed class OnboardPlayerHandler(
             Name = request.Name,
             Handle = request.Handle,
             Role = request.Role,
-            Avatar = request.Avatar,
+            Avatar = request.Handle,
             Address = request.Address,
             World = request.World,
             Achievements = achievements,
             StarRelations = relations,
             Version = player.Version + 1,
         };
+    }
+
+    private async ValueTask<PlayerProfile?> ResolveInviterAsync(
+        OnboardPlayerCommand request,
+        TelegramUserId telegramUserId,
+        CancellationToken cancellationToken)
+    {
+        var code = request.ReferralCode;
+        if (code is null || !code.StartsWith("ref_", StringComparison.Ordinal) ||
+            !Guid.TryParseExact(code[4..], "N", out _))
+        {
+            return null;
+        }
+
+        var inviter = await store.GetPlayerAsync(PlayerId.From(code[4..]), cancellationToken);
+        return inviter is not null && inviter.TelegramUserId != telegramUserId
+            ? inviter
+            : null;
     }
 }

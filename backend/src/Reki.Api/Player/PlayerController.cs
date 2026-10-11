@@ -1,12 +1,11 @@
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Mapping;
 using Reki.Application.Player;
 using Reki.Contracts.Player;
-using Reki.Domain.Player;
 using Reki.Domain.Social;
-using TgMiniAppAuth.AuthContext.User;
 using DomainWorldId = Reki.Domain.Worlds.WorldId;
 
 namespace Reki.Api.Player;
@@ -16,15 +15,14 @@ namespace Reki.Api.Player;
 [Route("/")]
 public sealed class PlayerController(
     ISender sender,
-    ITelegramUserAccessor telegramUser,
     ApiMapper mapper) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
-        PlayerView result = await sender.Send(
-            new GetPlayerQuery(TelegramUserId.From(telegramUser.User.Id)),
+        var result = await sender.Send(
+            new GetPlayerQuery(),
             cancellationToken);
         return TypedResults.Ok(mapper.MapPlayer(result));
     }
@@ -35,19 +33,28 @@ public sealed class PlayerController(
         OnboardingRequest request,
         CancellationToken cancellationToken)
     {
-        PlayerView result = await sender.Send(
+        var result = await sender.Send(
             new OnboardPlayerCommand(
-                TelegramUserId.From(telegramUser.User.Id),
                 ToStorageValue(request.BirthGroup),
                 DomainWorldId.From(request.World.ToString()),
                 request.Role,
-                request.Avatar,
                 request.Name,
                 request.Handle,
                 request.Address.ToString().ToLowerInvariant(),
-                StarId.From(request.Star)),
+                StarId.From(request.Star),
+                request.ReferralCode),
             cancellationToken);
         return TypedResults.Ok(mapper.MapPlayer(result));
+    }
+
+    [HttpGet("referral", Name = "GetReferralCode")]
+    [ActionName("GetReferralCode")]
+    public async Task<Ok<ReferralResponse>> GetReferralCodeAsync(CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new GetReferralQuery(),
+            cancellationToken);
+        return TypedResults.Ok(result);
     }
 
     [HttpPatch("settings", Name = "UpdateSettings")]
@@ -58,12 +65,12 @@ public sealed class PlayerController(
     {
         await sender.Send(
             new UpdateSettingsCommand(
-                TelegramUserId.From(telegramUser.User.Id),
                 request.Drama?.ToString().ToLowerInvariant(),
                 request.Notifications,
                 request.Quiet,
                 request.Voice,
-                request.Plus),
+                request.Plus,
+                request.Address?.ToString().ToLowerInvariant()),
             cancellationToken);
         return TypedResults.Ok();
     }
@@ -71,10 +78,11 @@ public sealed class PlayerController(
     [HttpPost("plus-interest", Name = "ClaimPlusInterest")]
     [ActionName("ClaimPlusInterest")]
     public async Task<Ok<PlusInterestResponse>> ClaimPlusInterestAsync(
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] PlusInterestRequest? request,
         CancellationToken cancellationToken)
     {
-        int bonus = await sender.Send(
-            new ClaimPlusInterestCommand(TelegramUserId.From(telegramUser.User.Id)),
+        var bonus = await sender.Send(
+            new ClaimPlusInterestCommand(request?.Interest ?? true),
             cancellationToken);
         return TypedResults.Ok(new PlusInterestResponse(bonus));
     }
@@ -85,7 +93,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new DeletePlayerCommand(TelegramUserId.From(telegramUser.User.Id)),
+            new DeletePlayerCommand(),
             cancellationToken);
         return TypedResults.Ok();
     }

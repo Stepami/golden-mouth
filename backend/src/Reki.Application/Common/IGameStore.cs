@@ -1,9 +1,9 @@
+using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Domain.Events;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Social;
-using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Common;
@@ -14,7 +14,33 @@ public interface IGameStore
 
     ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
 
+    ValueTask<bool> TryCreatePlayerAsync(
+        PlayerProfile player,
+        PlayerProfile? updatedInviter,
+        int expectedInviterVersion,
+        CancellationToken cancellationToken);
+
     ValueTask UpsertPlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
+
+    ValueTask<bool> UpdatePlayerSettingsAsync(
+        TelegramUserId telegramUserId,
+        UpdateSettingsCommand settings,
+        CancellationToken cancellationToken);
+
+    ValueTask StartPlayerPeriodAsync(
+        PlayerProfile player,
+        PlayerProfile updated,
+        CancellationToken cancellationToken);
+
+    ValueTask SavePlusNotificationAsync(
+        PlayerProfile player,
+        PlayerProfile updated,
+        CancellationToken cancellationToken);
+
+    ValueTask<bool> TryClaimPlusInterestAsync(
+        PlayerProfile player,
+        PlayerProfile updated,
+        CancellationToken cancellationToken);
 
     ValueTask<bool> TryReplacePlayerAsync(
         PlayerProfile player,
@@ -22,8 +48,6 @@ public interface IGameStore
         CancellationToken cancellationToken);
 
     ValueTask DeletePlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
-
-    ValueTask AddPostAsync(GamePost post, CancellationToken cancellationToken);
 
     ValueTask<bool> TryCommitPostAsync(
         PlayerProfile updatedPlayer,
@@ -53,9 +77,17 @@ public interface IGameStore
         int count,
         CancellationToken cancellationToken);
 
+    ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
+        PlayerId playerId,
+        CancellationToken cancellationToken);
+
     ValueTask<IReadOnlyList<long>> GetRecentPostViewsAsync(
         PlayerId playerId,
         int count,
+        CancellationToken cancellationToken);
+
+    ValueTask<GamePost?> FindPostAsync(
+        PostId postId,
         CancellationToken cancellationToken);
 
     ValueTask<GamePost?> GetPostAsync(
@@ -63,10 +95,13 @@ public interface IGameStore
         PostId postId,
         CancellationToken cancellationToken);
 
-    ValueTask<bool> AddReplyAsync(
+    ValueTask<bool> TryAddThreadReplyAsync(
         PlayerId playerId,
         PostId postId,
-        GameComment reply,
+        ThreadReply reply,
+        GameComment comment,
+        PlayerProfile? updatedPlayer,
+        int expectedPlayerVersion,
         CancellationToken cancellationToken);
 
     ValueTask<StarConversation?> GetStarConversationAsync(
@@ -109,11 +144,4 @@ public interface IGameStore
         CancellationToken cancellationToken);
 
     ValueTask SaveWorldRulesAsync(WorldRules rules, CancellationToken cancellationToken);
-
-    ValueTask AppendThreadAsync(
-        PlayerId playerId,
-        PostId postId,
-        string hook,
-        DateTimeOffset createdAtUtc,
-        CancellationToken cancellationToken);
 }

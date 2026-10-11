@@ -3,9 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Application.Posts;
 using Reki.Contracts.Posts;
-using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Api.Posts;
 
@@ -13,8 +11,7 @@ namespace Reki.Api.Posts;
 [Produces("application/json")]
 [Route("/")]
 public sealed class PostsController(
-    ISender sender,
-    ITelegramUserAccessor telegramUser) : ControllerBase
+    ISender sender) : ControllerBase
 {
     [HttpPost("posts/publications", Name = "GeneratePublication")]
     [ActionName("GeneratePublication")]
@@ -22,10 +19,9 @@ public sealed class PostsController(
         StartPublicationRequest request,
         CancellationToken cancellationToken)
     {
-        IAsyncEnumerable<PublicationStatusLiveEvent> result = sender.CreateStream(
+        var result = sender.CreateStream(
             new GeneratePublicationCommand(
                 request.PublicationId,
-                TelegramUserId.From(telegramUser.User.Id),
                 request.Text,
                 request.OwnWords,
                 request.WantId),
@@ -39,8 +35,8 @@ public sealed class PostsController(
         string publicationId,
         CancellationToken cancellationToken)
     {
-        PublicationStatusResponse result = await sender.Send(
-            new GetPublicationQuery(TelegramUserId.From(telegramUser.User.Id), publicationId),
+        var result = await sender.Send(
+            new GetPublicationQuery(publicationId),
             cancellationToken);
         return TypedResults.Ok(result);
     }
@@ -51,28 +47,27 @@ public sealed class PostsController(
         string publicationId,
         CancellationToken cancellationToken)
     {
-        IAsyncEnumerable<LiveEvent> result = sender.CreateStream(
-            new PublishPostCommand(
-                TelegramUserId.From(telegramUser.User.Id),
-                publicationId),
+        var result = sender.CreateStream(
+            new PublishPostCommand(publicationId),
             cancellationToken);
         return TypedResults.ServerSentEvents(result);
     }
 
     [HttpPost("posts/{postId}/replies", Name = "ReplyToPost")]
     [ActionName("ReplyToPost")]
-    public async Task<Ok> ReplyToPostAsync(
+    public async Task<Ok<ReplyResponse>> ReplyToPostAsync(
         string postId,
         ReplyRequest request,
         CancellationToken cancellationToken)
     {
-        await sender.Send(
+        var result = await sender.Send(
             new AddReplyCommand(
-                TelegramUserId.From(telegramUser.User.Id),
                 PostId.From(postId),
+                CommentId.From(request.CommentId),
+                request.ReplyId,
                 request.Text),
             cancellationToken);
-        return TypedResults.Ok();
+        return TypedResults.Ok(result);
     }
 
     [HttpGet("feed", Name = "GetFeed")]
@@ -80,8 +75,31 @@ public sealed class PostsController(
     public async Task<Ok<IReadOnlyList<FeedItemResponse>>> GetFeedAsync(
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<FeedItemResponse> result = await sender.Send(
-            new GetFeedQuery(TelegramUserId.From(telegramUser.User.Id)),
+        var result = await sender.Send(
+            new GetFeedQuery(),
+            cancellationToken);
+        return TypedResults.Ok(result);
+    }
+
+    [HttpGet("posts/mine", Name = "GetChannelPosts")]
+    [ActionName("GetChannelPosts")]
+    public async Task<Ok<IReadOnlyList<ChannelPostResponse>>> GetChannelPostsAsync(
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new GetChannelPostsQuery(),
+            cancellationToken);
+        return TypedResults.Ok(result);
+    }
+
+    [HttpGet("posts/{postId}", Name = "GetPost")]
+    [ActionName("GetPost")]
+    public async Task<Ok<PostDetailResponse>> GetPostAsync(
+        string postId,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new GetPostQuery(PostId.From(postId)),
             cancellationToken);
         return TypedResults.Ok(result);
     }

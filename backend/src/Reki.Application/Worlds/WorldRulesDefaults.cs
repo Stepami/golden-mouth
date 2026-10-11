@@ -1,3 +1,4 @@
+using Reki.Application.Social;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 
@@ -9,7 +10,7 @@ public static class WorldRulesDefaults
 
     public static WorldRules Create(PlayerId playerId, WorldId worldId)
     {
-        string title = worldId.Value switch
+        var title = worldId.Value switch
         {
             "stage" => "Сцена",
             "academy" => "Академия",
@@ -17,7 +18,7 @@ public static class WorldRulesDefaults
             "stream" => "Стрим",
             _ => "Свой мир",
         };
-        string description = worldId.Value switch
+        var description = worldId.Value switch
         {
             "stage" => "Айдол-агентство: трейни, дебют, камбэки и фансайты.",
             "academy" => "Школьная академия: клубы, соперники и фестиваль.",
@@ -26,31 +27,31 @@ public static class WorldRulesDefaults
             _ => "Мир, который создаёт игрок.",
         };
 
-        IReadOnlyList<WorldRule> rules = worldId.Value switch
+        var rules = worldId.Value switch
         {
             "stage" => Lock(
-                "Звёзды: Мира — дерзкая лидер BLESK, Соня — добрая вокалистка BLESK, Ева — загадочная солистка NOIR, Юна — трейни-соперница",
+                CreateStarRule(worldId),
                 "Фанаты: фансайты BLESK и NOIR, любят камбэки и честность",
-                "Тон: поддержка до 1k, честная критика с 1k, хейт-волны с 5k",
+                "Тон: поддержка и честная критика поста; хейт только после серверного порога мира",
                 "События: коллабы с брендами, слухи фансайтов, прослушивания и хейт-волны"),
             "academy" => Lock(
-                "Звёзды: Рин — дерзкая капитан клуба кендо, Хана — добрая староста, Кира — загадочная новенькая, Мэй — глава клуба-конкурента",
+                CreateStarRule(worldId),
                 "Фанаты: школьные клубы и чат параллели, ценят участие в жизни академии",
                 "Тон: клубное соперничество, поддержка друзей и безопасная школьная драма",
                 "События: фестиваль, слух о записке, приглашение в клуб и хейт в чате параллели"),
             "it" => Lock(
-                "Звёзды: Дэн — дерзкий автор разоблачений, Ольга — добрая тимлид-ментор, X — загадочный канал с инсайдами, Макс «Прогрев» — соперник",
+                CreateStarRule(worldId),
                 "Фанаты: разработчики, основатели и читатели техноканалов, ценят конкретику",
                 "Тон: профессиональная ирония, аргументы и критика только опубликованных идей",
-                "События: реклама курса, слух о канале X, оффер от стартапа и разоблачение поста"),
+                "События: реклама курса, слух о релизе, оффер от стартапа и разоблачение поста"),
             "stream" => Lock(
-                "Звёзды: Ник — дерзкий про-игрок, Лора — добрая уютная стримерша, Тень — загадочный стример без лица, Вайпер — соперник",
+                CreateStarRule(worldId),
                 "Фанаты: чаты стримеров, зрители турниров и участники рейдов",
                 "Тон: живые реакции, игровой юмор и критика только контента",
-                "События: спонсор железа, рейд, турнир и токсичная реакция чата на пост"),
+                "События: спонсор железа, рейд, турнир и критика опубликованного игрового контента"),
             _ =>
             [
-                new WorldRule("Звёзды: герои и соперники этого мира", false),
+                new WorldRule(CreateStarRule(worldId), false),
                 new WorldRule("Фанаты: аудитория и сообщества этого мира", false),
                 new WorldRule("Тон: стиль реакций и общения в этом мире", false),
                 new WorldRule("События: коллабы, слухи, шансы и хейт-волны", false),
@@ -67,6 +68,9 @@ public static class WorldRulesDefaults
             description,
             rules);
     }
+
+    private static string CreateStarRule(WorldId worldId) =>
+        "Звёзды: " + string.Join("; ", StarCatalog.ForWorld(worldId).Select(star => $"{star.Name} ({star.Id}) — {star.Role}. {star.About}"));
 
     private static IReadOnlyList<WorldRule> Lock(params string[] rules)
     {

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Reki.Application.Common;
 
@@ -12,10 +13,10 @@ public sealed class GameDayTests
     {
         var beforeReset = new GameDay(
             new FakeTimeProvider(new DateTimeOffset(2026, 10, 5, 5, 59, 0, TimeSpan.Zero)),
-            Balance);
+            Options.Create(Balance));
         var atReset = new GameDay(
             new FakeTimeProvider(new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero)),
-            Balance);
+            Options.Create(Balance));
 
         await Assert.That(beforeReset.PeriodStart)
             .IsEqualTo(new DateTimeOffset(2026, 10, 4, 6, 0, 0, TimeSpan.Zero));

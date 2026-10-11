@@ -14,7 +14,7 @@ internal sealed class PlayerSafetyChatClient(
         ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        ChatOptions providerOptions = await CheckInputAsync(options, cancellationToken);
+        var providerOptions = await CheckInputAsync(options, cancellationToken);
         return await base.GetResponseAsync(messages, providerOptions, cancellationToken);
     }
 
@@ -23,8 +23,8 @@ internal sealed class PlayerSafetyChatClient(
         ChatOptions? options = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        ChatOptions providerOptions = await CheckInputAsync(options, cancellationToken);
-        await foreach (ChatResponseUpdate update in base.GetStreamingResponseAsync(
+        var providerOptions = await CheckInputAsync(options, cancellationToken);
+        await foreach (var update in base.GetStreamingResponseAsync(
             messages,
             providerOptions,
             cancellationToken))
@@ -39,14 +39,14 @@ internal sealed class PlayerSafetyChatClient(
     {
         if (options?.AdditionalProperties?.TryGetValue(
             ChatInputSafetyContext.OptionKey,
-            out object? contextValue) is not true ||
+            out var contextValue) is not true ||
             contextValue is not ChatInputSafetyContext context)
         {
             throw new InvalidOperationException("The chat request is missing input safety context.");
         }
 
         await safetyGuard.EnsureInputAllowedAsync(context.Player, context.Texts, cancellationToken);
-        ChatOptions providerOptions = options.Clone();
+        var providerOptions = options.Clone();
         providerOptions.AdditionalProperties?.Remove(ChatInputSafetyContext.OptionKey);
         return providerOptions;
     }

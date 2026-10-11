@@ -3,25 +3,28 @@ using System.Security.Cryptography;
 using System.Text;
 using Mediator;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Worlds;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
-using Reki.Domain.Posts;
-using Reki.Domain.Worlds;
+using TgMiniAppAuth.AuthContext.User;
 using static Reki.Application.Common.AI.StarToolCallParser;
 
 namespace Reki.Application.Posts;
 
-public sealed class GeneratePublicationHandler(
+public sealed partial class GeneratePublicationHandler(
+    ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     GameDay gameDay,
     PlayerReader playerReader,
-    StarTurnGenerator generator) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatusLiveEvent>
+    StarTurnGenerator generator,
+    ILogger<GeneratePublicationHandler> logger) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatusLiveEvent>
 {
     private static readonly TimeSpan FailedRetention = TimeSpan.FromDays(1);
 
@@ -29,13 +32,14 @@ public sealed class GeneratePublicationHandler(
         GeneratePublicationCommand request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
         if (!Guid.TryParse(request.Id, out _))
         {
             throw new RequestConflictException("The publication identifier is invalid.");
         }
 
-        PlayerProfile storedPlayer = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        PlayerProfile player = gameDay.Normalize(storedPlayer);
+        var storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var player = gameDay.Normalize(storedPlayer);
         if (!ReferenceEquals(player, storedPlayer) && !await store.TryReplacePlayerAsync(
             player,
             storedPlayer.Version,
@@ -44,8 +48,8 @@ public sealed class GeneratePublicationHandler(
             throw new RequestConflictException("The player state changed while starting a new day.");
         }
 
-        string requestHash = ComputeRequestHash(request);
-        Publication? existing = await store.GetPublicationAsync(request.Id, cancellationToken);
+        var requestHash = ComputeRequestHash(request);
+        var existing = await store.GetPublicationAsync(request.Id, cancellationToken);
         if (existing is not null)
         {
             EnsureSameRequest(existing, player, requestHash);
@@ -53,7 +57,7 @@ public sealed class GeneratePublicationHandler(
             yield break;
         }
 
-        int cap = player.GetPostsCap(balance.FreePostsPerDay, balance.PlusPostsPerDay);
+        var cap = player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
         if (player.PostsUsed >= cap)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
@@ -80,8 +84,8 @@ public sealed class GeneratePublicationHandler(
         }
 
         yield return new PublicationStatusLiveEvent(PublicationStatus.Pending, request.Id);
-        bool failed = false;
-        bool ready = false;
+        var failed = false;
+        var ready = false;
         try
         {
             StarPostContext? context = null;
@@ -89,8 +93,9 @@ public sealed class GeneratePublicationHandler(
             {
                 context = await CreatePostContextAsync(request, player, cancellationToken);
             }
-            catch (Exception exception) when (IsGenerationFailure(exception))
+            catch (Exception exception)
             {
+                GenerationFailed(exception);
                 failed = true;
             }
 
@@ -101,27 +106,28 @@ public sealed class GeneratePublicationHandler(
 
             if (!failed && context is not null)
             {
-                await using IAsyncEnumerator<ChatResponseUpdate> updates = generator
+                await using var updates = generator
                     .StreamPostTurnAsync(context, player, cancellationToken)
                     .GetAsyncEnumerator(cancellationToken);
                 while (!failed)
                 {
-                    bool hasUpdate = false;
+                    var hasUpdate = false;
                     try
                     {
                         hasUpdate = await updates.MoveNextAsync();
                         if (hasUpdate)
                         {
-                            ChatResponseUpdate update = updates.Current;
+                            var update = updates.Current;
                             await store.AppendPublicationPartAsync(
                                 request.Id,
                                 new PublicationPart(update.Text, null, null),
                                 cancellationToken);
-                            await PersistActionsAsync(request.Id, update, cancellationToken);
+                            await PersistActionsAsync(request.Id, update, context, cancellationToken);
                         }
                     }
-                    catch (Exception exception) when (IsGenerationFailure(exception))
+                    catch (Exception exception)
                     {
+                        GenerationFailed(exception);
                         failed = true;
                     }
 
@@ -138,14 +144,15 @@ public sealed class GeneratePublicationHandler(
             {
                 try
                 {
-                    Publication complete = await store.GetPublicationAsync(request.Id, cancellationToken)
-                        ?? throw new InvalidOperationException("The publication disappeared during generation.");
+                    var complete = await store.GetPublicationAsync(request.Id, cancellationToken)
+                                   ?? throw new InvalidOperationException("The publication disappeared during generation.");
                     _ = complete.AssembleTurn();
                     await store.MarkPublicationReadyAsync(request.Id, cancellationToken);
                     ready = true;
                 }
-                catch (Exception exception) when (IsGenerationFailure(exception))
+                catch (Exception exception)
                 {
+                    GenerationFailed(exception);
                     failed = true;
                 }
             }
@@ -154,7 +161,7 @@ public sealed class GeneratePublicationHandler(
         {
             if (!ready)
             {
-                DateTime expiresAtUtc = timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime;
+                var expiresAtUtc = timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime;
                 await store.MarkPublicationFailedAsync(request.Id, expiresAtUtc, CancellationToken.None);
             }
         }
@@ -177,7 +184,7 @@ public sealed class GeneratePublicationHandler(
 
     private static string ComputeRequestHash(GeneratePublicationCommand request)
     {
-        string payload = $"{request.Text.Length}:{request.Text}:{request.OwnWords}:{request.WantId}";
+        var payload = $"{request.Text.Length}:{request.Text}:{request.OwnWords}:{request.WantId}";
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
     }
 
@@ -189,26 +196,21 @@ public sealed class GeneratePublicationHandler(
         _ => "new_line",
     };
 
-    private static bool IsGenerationFailure(Exception exception) => exception is
-        AiServiceUnavailableException or
-        ContentRejectedException or
-        CrisisDetectedException or
-        InvalidOperationException or
-        OperationCanceledException or
-        HttpRequestException or
-        TimeoutException;
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Publication generation failed")]
+    private partial void GenerationFailed(Exception exception);
 
     private async ValueTask<StarPostContext> CreatePostContextAsync(
         GeneratePublicationCommand request,
         PlayerProfile player,
         CancellationToken cancellationToken)
     {
-        DateTimeOffset now = timeProvider.GetUtcNow();
-        WorldRules? storedRules = await store.GetWorldRulesAsync(player.Id, player.World, cancellationToken);
-        WorldRules worldRules = storedRules ?? WorldRulesDefaults.Create(player.Id, player.World);
-        IReadOnlyList<GamePost> recentPosts = await store.GetRecentPostsAsync(player.Id, 3, cancellationToken);
-        bool hateEnabled = player.Settings.Drama != "off" &&
-            (player.HateDisabledUntilUtc is null || player.HateDisabledUntilUtc <= now);
+        var now = timeProvider.GetUtcNow();
+        var storedRules = await store.GetWorldRulesAsync(player.Id, player.World, cancellationToken);
+        var worldRules = player.World.Value == "own" && storedRules is not null
+            ? storedRules
+            : WorldRulesDefaults.Create(player.Id, player.World);
+        var recentPosts = await store.GetRecentPostsAsync(player.Id, 3, cancellationToken);
+        var hateEnabled = StarTurnPolicy.IsHateEnabled(player, balance.Value, now);
         return new StarPostContext(
             request.Text,
             new StarAgentProfile(
@@ -219,7 +221,8 @@ public sealed class GeneratePublicationHandler(
                 player.Settings.Drama,
                 player.Settings.Voice,
                 null,
-                []),
+                [],
+                player.Address),
             GetStage(player.Subscribers),
             recentPosts.Select(post => post.Text).ToArray(),
             hateEnabled);
@@ -228,12 +231,13 @@ public sealed class GeneratePublicationHandler(
     private async ValueTask PersistActionsAsync(
         string publicationId,
         ChatResponseUpdate update,
+        StarPostContext context,
         CancellationToken cancellationToken)
     {
-        foreach (FunctionCallContent call in update.Contents.OfType<FunctionCallContent>())
+        foreach (var call in update.Contents.OfType<FunctionCallContent>())
         {
-            IStarAction action = StarToolCallParser.Parse([call]).Single();
-            PublicationPart part = action switch
+            var action = StarToolCallParser.Parse([call]).Single();
+            var part = action switch
             {
                 StarCommentAction comment => new PublicationPart(
                     null,
@@ -247,11 +251,17 @@ public sealed class GeneratePublicationHandler(
                         comment.Humor,
                         comment.Topic,
                         comment.Reasons,
-                        comment.OnTopic),
+                        comment.OnTopic,
+                        comment.Tone),
                     null),
                 StarReactionAction reaction => new PublicationPart(null, null, reaction.Emoji),
                 _ => throw new AiServiceUnavailableException("The model returned an unsupported action."),
             };
+            if (part.Comment is { } generated)
+            {
+                StarTurnPolicy.EnsurePostAllowed(generated, context.Agent.WorldId, context.HateEnabled);
+            }
+
             await store.AppendPublicationPartAsync(publicationId, part, cancellationToken);
         }
     }

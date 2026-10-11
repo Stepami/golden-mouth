@@ -1,8 +1,6 @@
 using Mediator;
-using Reki.Domain.Player;
-using Reki.Domain.Social;
 
 namespace Reki.Application.Social;
 
-public sealed record GetActiveChallengeQuery(TelegramUserId TelegramUserId) : IRequest<ChallengeView?>;
+public sealed record GetActiveChallengeQuery() : IRequest<ChallengeView?>;
 

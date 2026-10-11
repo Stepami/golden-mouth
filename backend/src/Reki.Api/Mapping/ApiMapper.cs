@@ -1,18 +1,15 @@
 using System.Text.Json;
 using Reki.Application.Player;
-using Reki.Application.Posts;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
 using Reki.Contracts.Events;
 using Reki.Contracts.Player;
-using Reki.Contracts.Posts;
 using Reki.Contracts.Social;
 using Reki.Contracts.Telemetry;
 using Reki.Contracts.Worlds;
 using Reki.Domain.Events;
 using Reki.Domain.Player;
-using Reki.Domain.Posts;
 using Reki.Domain.Social;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
@@ -28,7 +25,7 @@ public sealed partial class ApiMapper
 {
     public PlayerResponse MapPlayer(PlayerView source)
     {
-        PlayerProfile player = source.Player;
+        var player = source.Player;
         IReadOnlyDictionary<ContractSkillId, SkillResponse> skills = player.Skills.ToDictionary(
             item => Enum.Parse<ContractSkillId>(item.Key.Value, true),
             item => MapSkill(item.Value));
@@ -41,12 +38,12 @@ public sealed partial class ApiMapper
             player.Name,
             player.Handle,
             player.Role,
-            player.Avatar,
             Enum.Parse<Address>(player.Address, true),
             Enum.Parse<ContractWorldId>(player.World.Value, true),
             player.Subscribers,
             source.PostsLeft,
             source.PostsCap,
+            player.FirstPostInviteBonusUsed ? 0 : player.FirstPostInviteBonus,
             new StreakResponse(player.StreakDays, week, "ещё день — и бонус"),
             skills,
             player.Wants
@@ -72,9 +69,10 @@ public sealed partial class ApiMapper
             new Dictionary<string, string>());
     }
 
-    public DmResponse MapDirectMessages(DirectMessageView view, string starId)
+    public DmResponse MapDirectMessages(DirectMessageView view)
     {
-        StarResponse star = CreateStar(starId, view.Relation);
+        var persona = view.Persona;
+        StarResponse star = new(persona.Id, persona.Name, persona.Role, persona.Trait, persona.About, view.Relation);
         return new DmResponse(
             star,
             "на связи",
@@ -119,12 +117,9 @@ public sealed partial class ApiMapper
     [MapperIgnoreSource(nameof(WorldRules.WorldId))]
     public partial WorldRulesResponse MapWorldRules(WorldRules source);
 
-    public SaveWorldRulesCommand MapWorldRulesRequest(
-        UpdateWorldRulesRequest source,
-        TelegramUserId telegramUserId)
+    public SaveWorldRulesCommand MapWorldRulesRequest(UpdateWorldRulesRequest source)
     {
         return new SaveWorldRulesCommand(
-            telegramUserId,
             source.Title,
             source.Presets,
             source.Description,
@@ -142,17 +137,6 @@ public sealed partial class ApiMapper
         return properties
             .Where(item => item.Key.Length <= 64)
             .ToDictionary(item => item.Key, item => SanitizeElement(item.Value));
-    }
-
-    private static StarResponse CreateStar(string starId, int relation)
-    {
-        return new StarResponse(
-            starId,
-            starId.Equals("mira", StringComparison.OrdinalIgnoreCase) ? "Мира" : "Соня",
-            "звезда мира",
-            "слышит свой голос",
-            "Реагирует на развитие канала.",
-            relation);
     }
 
     private static DirectMessageAuthor MapDirectMessageAuthor(string source)

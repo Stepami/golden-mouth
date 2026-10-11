@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Reki.Application.Common;
@@ -16,21 +17,21 @@ public sealed class ChallengeLifecycleTests
     public async Task StartOrAcceptAsync_ReciprocalInvitation_ActivatesChallengeForBothPlayersAsync()
     {
         // Arrange
-        PlayerId initiatorId = PlayerId.From("initiator");
-        PlayerId opponentId = PlayerId.From("opponent");
-        PlayerProfile initiator = TestGameData.CreatePlayer() with { Id = initiatorId };
-        PlayerProfile opponent = TestGameData.CreatePlayer() with
+        var initiatorId = PlayerId.From("initiator");
+        var opponentId = PlayerId.From("opponent");
+        var initiator = TestGameData.CreatePlayer() with { Id = initiatorId };
+        var opponent = TestGameData.CreatePlayer() with
         {
             Id = opponentId,
             TelegramUserId = TelegramUserId.From(2),
         };
-        GameChallenge pending = GameChallenge.CreatePending(
+        var pending = GameChallenge.CreatePending(
             initiatorId,
             opponentId,
             TestGameData.PeriodStart.AddHours(-1),
             3,
             5);
-        IGameStore store = Substitute.For<IGameStore>();
+        var store = Substitute.For<IGameStore>();
         store.GetPlayerAsync(initiatorId, Arg.Any<CancellationToken>()).Returns(initiator);
         store.GetPlayerAsync(opponentId, Arg.Any<CancellationToken>()).Returns(opponent);
         store.GetPendingChallengeAsync(
@@ -54,19 +55,19 @@ public sealed class ChallengeLifecycleTests
                 Arg.Any<int>(),
                 Arg.Any<CancellationToken>())
             .Returns(true);
-        GameBalance balance = TestGameData.CreateBalance();
+        var balance = TestGameData.CreateBalance();
         var timeProvider = new FakeTimeProvider(TestGameData.PeriodStart.AddHours(2));
-        var gameDay = new GameDay(timeProvider, balance);
+        var gameDay = new GameDay(timeProvider, Options.Create(balance));
         var analytics = new ProductTelemetry(
             Substitute.For<ILogger<ProductTelemetry>>(),
             timeProvider);
-        var lifecycle = new ChallengeLifecycle(store, balance, gameDay, timeProvider, analytics);
+        var lifecycle = new ChallengeLifecycle(store, Options.Create(balance), gameDay, timeProvider, analytics);
 
         // Act
         await lifecycle.StartOrAcceptAsync(opponent, initiatorId, CancellationToken.None);
 
         // Assert
-        GameChallenge active = storedChallenge ?? throw new InvalidOperationException(
+        var active = storedChallenge ?? throw new InvalidOperationException(
             "The accepted challenge was not persisted.");
         await Assert.That(active.Status).IsEqualTo(ChallengeStatus.Active);
         await Assert.That(active.StartedAtUtc).IsEqualTo(TestGameData.PeriodStart);

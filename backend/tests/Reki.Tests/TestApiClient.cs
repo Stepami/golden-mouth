@@ -1,5 +1,3 @@
-using Reki.Tests.Generated;
-
 namespace Reki.Tests;
 
 public sealed class TestApiClient : IDisposable
@@ -18,7 +16,6 @@ public sealed class TestApiClient : IDisposable
         Player = new PlayerClient(httpClient);
         Posts = new PostsClient(httpClient);
         Social = new SocialClient(httpClient);
-        StoryCards = new StoryCardsClient(httpClient);
         Telemetry = new TelemetryClient(httpClient);
         Worlds = new WorldsClient(httpClient);
     }
@@ -30,8 +27,6 @@ public sealed class TestApiClient : IDisposable
     public PostsClient Posts { get; }
 
     public SocialClient Social { get; }
-
-    public StoryCardsClient StoryCards { get; }
 
     public TelemetryClient Telemetry { get; }
 

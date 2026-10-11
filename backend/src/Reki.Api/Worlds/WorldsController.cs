@@ -4,9 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
 using Reki.Application.Worlds;
 using Reki.Contracts.Worlds;
-using Reki.Domain.Player;
 using Reki.Domain.Worlds;
-using TgMiniAppAuth.AuthContext.User;
 using ContractWorldId = Reki.Contracts.Player.WorldId;
 
 namespace Reki.Api.Worlds;
@@ -16,7 +14,6 @@ namespace Reki.Api.Worlds;
 [Route("worlds")]
 public sealed class WorldsController(
     ISender sender,
-    ITelegramUserAccessor telegramUser,
     ApiMapper mapper) : ControllerBase
 {
     [HttpGet("{worldId}/rules", Name = "GetWorldRules")]
@@ -25,10 +22,8 @@ public sealed class WorldsController(
         ContractWorldId worldId,
         CancellationToken cancellationToken)
     {
-        WorldRules result = await sender.Send(
-            new GetWorldRulesQuery(
-                TelegramUserId.From(telegramUser.User.Id),
-                WorldId.From(worldId.ToString())),
+        var result = await sender.Send(
+            new GetWorldRulesQuery(WorldId.From(worldId.ToString())),
             cancellationToken);
         return TypedResults.Ok(mapper.MapWorldRules(result));
     }
@@ -39,9 +34,8 @@ public sealed class WorldsController(
         UpdateWorldRulesRequest request,
         CancellationToken cancellationToken)
     {
-        SaveWorldRulesCommand command = mapper.MapWorldRulesRequest(
-            request,
-            TelegramUserId.From(telegramUser.User.Id));
+        var command = mapper.MapWorldRulesRequest(
+            request);
         await sender.Send(command, cancellationToken);
         return TypedResults.Ok();
     }

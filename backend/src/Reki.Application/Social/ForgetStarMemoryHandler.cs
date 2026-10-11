@@ -1,19 +1,23 @@
 using Mediator;
 using Reki.Application.Common;
 using Reki.Domain.Player;
-using Reki.Domain.Social;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Social;
 
-public sealed class ForgetStarMemoryHandler(IGameStore store, PlayerReader playerReader)
+public sealed class ForgetStarMemoryHandler(
+    ITelegramUserAccessor telegramUser,
+    IGameStore store, PlayerReader playerReader)
     : IRequestHandler<ForgetStarMemoryCommand>
 {
     public async ValueTask<Unit> Handle(
         ForgetStarMemoryCommand request,
         CancellationToken cancellationToken)
     {
-        PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        StarConversation? conversation = await store.GetStarConversationAsync(
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        _ = StarCatalog.Require(player.World, request.StarId);
+        var conversation = await store.GetStarConversationAsync(
             player.Id,
             request.StarId,
             cancellationToken);

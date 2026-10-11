@@ -14,7 +14,7 @@ public sealed class PlayerSafetyGuard(
         IEnumerable<string> texts,
         CancellationToken cancellationToken)
     {
-        SafetyDecision decision = texts
+        var decision = texts
             .Select(ContentSafetyPolicy.CheckInput)
             .OrderByDescending(item => item)
             .FirstOrDefault();
@@ -28,9 +28,9 @@ public sealed class PlayerSafetyGuard(
             throw new ContentRejectedException();
         }
 
-        DateTimeOffset now = timeProvider.GetUtcNow();
-        PlayerProfile paused = player.StartCrisisPause(now, HateCooldown);
-        bool replaced = await store.TryReplacePlayerAsync(paused, player.Version, cancellationToken);
+        var now = timeProvider.GetUtcNow();
+        var paused = player.StartCrisisPause(now, HateCooldown);
+        var replaced = await store.TryReplacePlayerAsync(paused, player.Version, cancellationToken);
         if (!replaced)
         {
             throw new RequestConflictException("The player state changed while applying crisis safety.");

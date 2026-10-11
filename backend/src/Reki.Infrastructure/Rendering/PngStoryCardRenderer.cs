@@ -35,15 +35,15 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
                 Height,
                 SKColorType.Rgba8888,
                 SKAlphaType.Premul));
-            SKCanvas canvas = surface.Canvas;
+            var canvas = surface.Canvas;
             DrawBackground(canvas);
             DrawCard(canvas, card);
             canvas.Flush();
 
-            using SKImage image = surface.Snapshot();
-            using SKData encoded = image.Encode(SKEncodedImageFormat.Png, 92)
+            using var image = surface.Snapshot();
+            using var encoded = image.Encode(SKEncodedImageFormat.Png, 92)
                 ?? throw new InvalidOperationException("Unable to encode the story card as PNG.");
-            using Stream encodedStream = encoded.AsStream();
+            using var encodedStream = encoded.AsStream();
             await encodedStream.CopyToAsync(target, cancellationToken);
         }
         finally
@@ -64,7 +64,7 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
 
     private static SKTypeface LoadTypeface(string fileName)
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "fonts", fileName);
+        var path = Path.Combine(AppContext.BaseDirectory, "fonts", fileName);
         return File.Exists(path) ? SKTypeface.FromFile(path) : SKTypeface.Default;
     }
 
@@ -119,12 +119,12 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
         int maxLines,
         float lineHeight)
     {
-        string[] words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var line = new List<string>();
-        int lineNumber = 0;
-        foreach (string word in words)
+        var lineNumber = 0;
+        foreach (var word in words)
         {
-            string candidate = line.Count == 0 ? word : $"{string.Join(' ', line)} {word}";
+            var candidate = line.Count == 0 ? word : $"{string.Join(' ', line)} {word}";
             if (font.MeasureText(candidate) <= maxWidth)
             {
                 line.Add(word);
@@ -143,7 +143,7 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
 
         if (line.Count > 0 && lineNumber < maxLines)
         {
-            string value = string.Join(' ', line);
+            var value = string.Join(' ', line);
             if (lineNumber == maxLines - 1 && words.Length > line.Count)
             {
                 value += "…";
@@ -161,7 +161,7 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
 
     private void DrawBackground(SKCanvas canvas)
     {
-        using SKShader shader = SKShader.CreateLinearGradient(
+        using var shader = SKShader.CreateLinearGradient(
             new SKPoint(0, 0),
             new SKPoint(Width, Height),
             [new SKColor(42, 18, 54), new SKColor(14, 14, 19), new SKColor(18, 32, 58)],

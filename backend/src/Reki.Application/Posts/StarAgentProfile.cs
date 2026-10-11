@@ -11,4 +11,5 @@ public sealed record StarAgentProfile(
     string Drama,
     string Voice,
     StarId? StarId,
-    IReadOnlyList<string> Memory);
+    IReadOnlyList<string> Memory,
+    string Address);

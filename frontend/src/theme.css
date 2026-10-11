@@ -32,6 +32,7 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
 }
 .screen { flex: 1; display: flex; flex-direction: column; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .screen.no-tab { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+.screen.channel-screen { padding-bottom: calc(180px + env(safe-area-inset-bottom)); }
 .pad { padding: 14px 16px; }
 
 .top { display: flex; align-items: center; gap: 10px; padding: 10px 16px 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 5; }
@@ -44,6 +45,7 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
 .btn { border: none; border-radius: 14px; padding: 14px; font-weight: 700; font-size: 16px; width: 100%; color: #fff; background: var(--grad); }
 .btn.secondary { background: #22222D; color: var(--text); }
 .btn:disabled { opacity: .45; }
+.thread-reply-input:disabled, .thread-reply-send:disabled { opacity: .45; cursor: default; }
 .chip { display: inline-block; border: none; border-radius: 20px; padding: 8px 14px; background: var(--card2); margin: 0 6px 8px 0; font-size: 14px; color: var(--text); }
 .chip.on { background: var(--grad); color: #fff; font-weight: 600; }
 .chip.idea { border: 1px solid #9B6BFF88; background: #1F1A2B; }
@@ -92,3 +94,17 @@ html.shot .pop { opacity: 1; animation: none; }
 .confetti i { position: absolute; top: -10px; width: 7px; height: 12px; border-radius: 2px; animation: fall 1.6s ease-in forwards; }
 @keyframes fall { to { transform: translateY(560px) rotate(540deg); opacity: 0 } }
 @media (prefers-reduced-motion: reduce) { .pop { opacity: 1; animation: none } .confetti, .float-react { display: none } .live-current span { left: 0; width: 100%; animation: none } }
+
+.star-choice { width:100%; text-align:left; color:inherit; font:inherit; cursor:pointer; }
+.star-choice:focus-visible, .text-button:focus-visible { outline:2px solid var(--lilac); outline-offset:3px; }
+.text-button { background:none; border:0; color:var(--lilac); font:inherit; cursor:pointer; padding:4px; }
+
+/* Emulator panel is disabled in vite.config; do not let its collapsed control cover Back. */
+#tma-panel { display:none; }
+
+.quiet-toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.quiet-toggle input { width: 20px; height: 20px; flex: 0 0 20px; margin: 0; }
+.quiet-toggle span { flex: 1; min-width: 0; }
+.quiet-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.quiet-times label { min-width: 0; }
+.quiet-times input { display: block; min-width: 0; max-width: 100%; margin-top: 6px; padding: 10px; border-radius: 10px; background: var(--line2); }

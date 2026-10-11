@@ -2,23 +2,29 @@ using Mediator;
 using Reki.Application.Common;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
-using Reki.Domain.Posts;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Posts;
 
-public sealed class GetFeedHandler(IGameStore store, PlayerReader playerReader)
+public sealed class GetFeedHandler(
+    ITelegramUserAccessor telegramUser,
+    IGameStore store, PlayerReader playerReader)
     : IRequestHandler<GetFeedQuery, IReadOnlyList<FeedItemResponse>>
 {
+    private const int FeedSize = 20;
+
     public async ValueTask<IReadOnlyList<FeedItemResponse>> Handle(
         GetFeedQuery request,
         CancellationToken cancellationToken)
     {
-        PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        IReadOnlyList<GamePost> posts = await store.GetRecentPostsAsync(
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var posts = await store.GetRecentPostsAsync(
             player.Id,
-            20,
+            FeedSize,
             cancellationToken);
-        return posts.Select(post => PostContractMapper.MapFeedItem(post, player)).ToArray();
+        return posts
+            .Select(post => PostContractMapper.MapFeedItem(post, player, true))
+            .ToArray();
     }
 }
-

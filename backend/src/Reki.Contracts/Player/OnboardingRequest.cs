@@ -4,6 +4,9 @@ namespace Reki.Contracts.Player;
 
 public sealed record OnboardingRequest
 {
+    [MaxLength(64)]
+    public string? ReferralCode { get; init; }
+
     public required BirthGroup BirthGroup { get; init; }
 
     public required WorldId World { get; init; }
@@ -11,10 +14,6 @@ public sealed record OnboardingRequest
     [Required]
     [MaxLength(80)]
     public required string Role { get; init; }
-
-    [Required]
-    [MaxLength(64)]
-    public required string Avatar { get; init; }
 
     [Required]
     [MaxLength(80)]
@@ -30,4 +29,3 @@ public sealed record OnboardingRequest
     [MaxLength(64)]
     public required string Star { get; init; }
 }
-

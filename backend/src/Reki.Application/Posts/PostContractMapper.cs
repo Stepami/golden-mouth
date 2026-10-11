@@ -13,20 +13,55 @@ internal static class PostContractMapper
             publication.Status,
             publication.Result is null ? null : MapResult(publication.Result));
 
-    public static FeedItemResponse MapFeedItem(GamePost post, PlayerProfile player) =>
+    public static FeedItemResponse MapFeedItem(
+        GamePost post,
+        PlayerProfile author,
+        bool canReply) =>
         new(
             FeedItemKind.Post,
-            player.Name,
-            player.Avatar,
-            player.Role,
+            post.Id.Value,
+            author.Name,
+            author.Avatar,
+            author.Role,
             post.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             post.Text,
-            [new ReactionResponse("🔥", post.Viral ? 3 : 1)],
-            null);
+            CreateReactions(post),
+            post.Views,
+            post.GetComments().Count,
+            null,
+            canReply);
+
+    public static ChannelPostResponse MapChannelPost(GamePost post) =>
+        new(
+            post.Id.Value,
+            post.Text,
+            post.CreatedAtUtc,
+            post.Views,
+            CreateReactions(post),
+            post.GetComments().Count);
+
+    public static PostDetailResponse MapPostDetail(GamePost post, bool canReply) =>
+        new(
+            post.Id.Value,
+            post.Text,
+            post.Views,
+            CreateReactions(post),
+            post.GetComments()
+                .Select(comment => new CommentResponse(
+                    comment.Id.Value,
+                    comment.Author,
+                    comment.Avatar,
+                    comment.Handle,
+                    comment.Text,
+                    comment.Star,
+                    canReply && comment.Me,
+                    comment.Hidden))
+                .ToArray(),
+            canReply);
 
     public static IReadOnlyList<LiveEvent> MapLiveEvents(PublishedPost published)
     {
-        GameComment comment = published.Post.Comments[0];
+        var comment = published.Post.Comments[0];
         return
         [
             new ViewsLiveEvent(Math.Min(48, published.Post.Views)),
@@ -48,8 +83,8 @@ internal static class PostContractMapper
 
     private static PostResultResponse MapResult(PublishedPost source)
     {
-        GamePost post = source.Post;
-        GameComment? bestComment = post.Comments.FirstOrDefault();
+        var post = source.Post;
+        var bestComment = post.Comments.FirstOrDefault();
         return new PostResultResponse(
             post.Id.Value,
             post.SubscriberDelta,
@@ -64,4 +99,7 @@ internal static class PostContractMapper
             post.Views,
             source.Hook);
     }
+
+    private static ReactionResponse[] CreateReactions(GamePost post) =>
+        [new ReactionResponse("🔥", post.Viral ? 3 : 1)];
 }

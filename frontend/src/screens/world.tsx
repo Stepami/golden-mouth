@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../api/client'
-import { ownWorld, presetRules } from '../api/mock'
+import { ownWorld } from '../api/mock'
+import { rulesFor } from '../api/worldContent'
 import type { Drama } from '../api/types'
 import { usePlayer, useStore } from '../app/store'
 import { useApi } from '../app/useApi'
@@ -60,12 +61,12 @@ register({ '05-7b_own_world': { component: OwnWorld, title: 'Свой мир' } 
  *  В готовом мире правится только градус драмы; свой мир правится целиком на 05-7b. */
 function WorldRulesScreen() {
   const nav = useNav(); const p = usePlayer(); const { patch } = useStore()
-  const r = useApi(() => api.worldRules(p.world), presetRules)
+  const r = useApi(() => api.worldRules(p.world), rulesFor(p.world), [p.world], `rules:${p.world}`)
   const [drama, setDrama] = useState<Drama>(p.settings.drama)
   const setD = (d: Drama) => { setDrama(d); patch({ settings: { ...p.settings, drama: d } }); api.settings({ drama: d }) }
   return (
     <div className="screen no-tab">
-      <TopBar onBack={nav.back} title={`Как устроена ${r.title === 'Сцена' ? 'Сцена' : r.title}`} />
+      <TopBar onBack={nav.back} title="Как устроен мир" />
       <div className="pad">
         <div className="muted" style={{ marginBottom: 12 }}>Звёзды, фанаты и события следуют этим правилам. Ничего скрытого: это всё, что знает AI о мире</div>
         <div className="card" style={{ marginBottom: 12 }}>

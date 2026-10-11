@@ -58,64 +58,9 @@ jobs:
 
   deploy:
     name: Deploy to production
+    if: ${{ !contains(github.event.head_commit.message, '[skip-deploy]') }}
     needs: version
     uses: ./.github/workflows/deploy.yml
     with:
       version: ${{ needs.version.outputs.version }}
     secrets: inherit
-
-  create-release:
-    name: Create draft release
-    if: ${{ !contains(github.event.head_commit.message, '[skip-release]') }}
-    needs: [version, deploy]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: read
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Set up GitReleaseManager
-        uses: gittools/actions/gitreleasemanager/setup@v4
-        with:
-          versionSpec: "0.20.x"
-
-      - name: Create draft release with GitReleaseManager
-        uses: gittools/actions/gitreleasemanager/create@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          milestone: ${{ needs.version.outputs.version }}
-          name: ${{ needs.version.outputs.version }}
-
-  publish-release:
-    name: Publish release
-    needs: [version, create-release]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-
-    steps:
-      - name: Set up GitReleaseManager
-        uses: gittools/actions/gitreleasemanager/setup@v4
-        with:
-          versionSpec: "0.20.x"
-
-      - name: Publish release with GitReleaseManager
-        uses: gittools/actions/gitreleasemanager/publish@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          milestone: ${{ needs.version.outputs.version }}
-
-      - name: Close milestone with GitReleaseManager
-        uses: gittools/actions/gitreleasemanager/close@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
-          milestone: ${{ needs.version.outputs.version }}

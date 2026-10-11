@@ -24,6 +24,8 @@ internal static class TestGameData
             new TimeOnly(9, 0),
             5,
             3,
+            5,
+            3,
             3,
             new GrowthBalance(
                 0.6,
@@ -49,9 +51,10 @@ internal static class TestGameData
                 1.3),
             new RelationBalance(-5, 5, 1, 3, 5),
             new ChallengeBalance(3, 5),
+            new ThreadBalance(3, 9, 2),
             new Dictionary<string, WorldBalance>
             {
-                [WorldId.Value] = new(1, 0.1, 1),
+                [WorldId.Value] = new(1, 0.1, 1, long.MaxValue),
             });
     }
 

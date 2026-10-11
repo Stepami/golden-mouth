@@ -32,21 +32,19 @@ internal sealed class DeepSeekThinkingChatClient(IChatClient innerClient) : Dele
 
     private ChatOptions? WithThinkingDisabled(ChatOptions? options)
     {
-        string? modelId = options?.ModelId ?? this.GetService<ChatClientMetadata>()?.DefaultModelId;
+        var modelId = options?.ModelId ?? this.GetService<ChatClientMetadata>()?.DefaultModelId;
         if (modelId is null || !Models.Contains(modelId))
         {
             return options;
         }
 
-        ChatOptions patched = options?.Clone() ?? new ChatOptions();
-        Func<IChatClient, object?>? rawFactory = patched.RawRepresentationFactory;
+        var patched = options?.Clone() ?? new ChatOptions();
+        var rawFactory = patched.RawRepresentationFactory;
         patched.RawRepresentationFactory = client =>
         {
-            ChatCompletionOptions completionOptions =
+            var completionOptions =
                 rawFactory?.Invoke(client) as ChatCompletionOptions ?? new ChatCompletionOptions();
-#pragma warning disable SCME0001 // JsonPatch экспериментальный, другого способа передать поле вне схемы OpenAI нет.
             completionOptions.Patch.Set("$.thinking"u8, BinaryData.FromString("""{"type":"disabled"}"""));
-#pragma warning restore SCME0001
             return completionOptions;
         };
         return patched;

@@ -1,12 +1,15 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Domain.Player;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Player;
 
 public sealed class ClaimPlusInterestHandler(
+    ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameBalance balance,
+    IOptions<GameBalance> balance,
     GameDay gameDay,
     PlayerReader playerReader) : IRequestHandler<ClaimPlusInterestCommand, int>
 {
@@ -14,11 +17,32 @@ public sealed class ClaimPlusInterestHandler(
         ClaimPlusInterestCommand request,
         CancellationToken cancellationToken)
     {
-        PlayerProfile player = await playerReader.GetAsync(request.TelegramUserId, cancellationToken);
-        player = gameDay.Normalize(player);
-        PlayerProfile updated = player.ClaimPlusInterestBonus(balance.PlusInterestBonus);
-        await store.UpsertPlayerAsync(updated, cancellationToken);
-        return updated == player ? 0 : balance.PlusInterestBonus;
+        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var storedPlayer = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var player = gameDay.Normalize(storedPlayer);
+        if (!ReferenceEquals(player, storedPlayer))
+        {
+            await store.StartPlayerPeriodAsync(storedPlayer, player, cancellationToken);
+        }
+
+        if (request.Interest)
+        {
+            var subscribed = player.RequestPlusNotification();
+            if (!ReferenceEquals(subscribed, player))
+            {
+                await store.SavePlusNotificationAsync(player, subscribed, cancellationToken);
+                player = subscribed;
+            }
+        }
+
+        var updated = player.ClaimPlusInterestBonus(balance.Value.PlusInterestBonus);
+        if (ReferenceEquals(updated, player))
+        {
+            return 0;
+        }
+
+        return await store.TryClaimPlusInterestAsync(player, updated, cancellationToken)
+            ? updated.DailyBonus - player.DailyBonus
+            : 0;
     }
 }
-
