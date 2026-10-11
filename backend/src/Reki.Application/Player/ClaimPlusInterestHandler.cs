@@ -18,7 +18,7 @@ public sealed class ClaimPlusInterestHandler(
         var player = gameDay.Normalize(storedPlayer);
         if (!ReferenceEquals(player, storedPlayer))
         {
-            await store.StartPlayerPeriodAsync(storedPlayer, player, cancellationToken);
+            await store.TryReplacePlayerAsync(player, storedPlayer.Version, cancellationToken);
         }
 
         if (request.Interest)

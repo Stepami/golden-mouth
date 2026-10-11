@@ -70,6 +70,7 @@ namespace Reki.Api.Serialization;
         typeof(CamelCaseEnumConverter<GameEventKind>),
         typeof(CamelCaseEnumConverter<LiveEventType>),
         typeof(CamelCaseEnumConverter<ClientLogLevel>),
+        typeof(KebabCaseEnumConverter<LaunchSurface>),
         typeof(SnakeCaseEnumConverter<PublicationStatus>)
     ],
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]

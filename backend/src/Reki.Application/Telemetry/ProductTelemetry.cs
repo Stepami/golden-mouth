@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Reki.Contracts.Telemetry;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Telemetry;
@@ -100,7 +101,13 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
 
             attributes["session_id"] = submission.Session.Value;
             attributes["platform"] = submission.Platform;
-            attributes["launch_surface"] = submission.LaunchSurface is "telegram-mini-app" or "browser" or "standalone" ? submission.LaunchSurface : "unknown";
+            attributes["launch_surface"] = submission.LaunchSurface switch
+            {
+                LaunchSurface.TelegramMiniApp => "telegram-mini-app",
+                LaunchSurface.Browser => "browser",
+                LaunchSurface.Standalone => "standalone",
+                _ => "unknown",
+            };
             attributes["screen"] = entry.Screen;
             attributes["world"] = ReadWorldKey(entry.Properties);
             attributes["age_group"] = player.AgeBand ?? player.BirthGroup;

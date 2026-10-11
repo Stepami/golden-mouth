@@ -9,6 +9,8 @@ namespace Reki.Application.Common;
 
 public interface IGameStore
 {
+    IAsyncEnumerable<PlayerProfile> GetPlayersAsync(CancellationToken cancellationToken);
+
     ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken);
 
     ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
@@ -19,14 +21,7 @@ public interface IGameStore
         int expectedInviterVersion,
         CancellationToken cancellationToken);
 
-    ValueTask UpsertPlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
-
     ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken);
-
-    ValueTask StartPlayerPeriodAsync(
-        PlayerProfile player,
-        PlayerProfile updated,
-        CancellationToken cancellationToken);
 
     ValueTask SavePlusNotificationAsync(
         PlayerProfile player,

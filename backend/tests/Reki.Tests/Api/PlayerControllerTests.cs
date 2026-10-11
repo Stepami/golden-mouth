@@ -32,9 +32,10 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var player = await store.GetPlayerAsync(TelegramUserId.From(telegramUserId), CancellationToken.None)
                      ?? throw new InvalidOperationException("Missing player.");
         var oldPeriod = player.PostsPeriodStartedAtUtc.AddDays(-1);
-        await store.UpsertPlayerAsync(
+        await Database.GetCollection<PlayerProfile>("players").ReplaceOneAsync(
+            item => item.Id == player.Id,
             player with { PostsPeriodStartedAtUtc = oldPeriod, PostsUsed = 8 },
-            CancellationToken.None);
+            cancellationToken: CancellationToken.None);
         using var scope = Factory.Services.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
@@ -82,6 +83,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         const long secondUserId = 9102;
         using var firstApi = Factory.CreateApiClient(firstUserId);
         using var secondApi = Factory.CreateApiClient(secondUserId);
+        var store = Factory.Services.GetRequiredService<IGameStore>();
+        var before = await store.GetPlayersAsync(CancellationToken.None).CountAsync(CancellationToken.None);
 
         // Act
         var onboarded = await Task.WhenAll(
@@ -92,6 +95,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             secondApi.Player.GetCurrentPlayerAsync(CancellationToken.None));
 
         // Assert
+        await Assert.That(await store.GetPlayersAsync(CancellationToken.None).CountAsync(CancellationToken.None)).IsEqualTo(before + 2);
         await Assert.That(onboarded[0].Id).IsNotEqualTo(onboarded[1].Id);
         await Assert.That(current[0].Id).IsEqualTo(onboarded[0].Id);
         await Assert.That(current[1].Id).IsEqualTo(onboarded[1].Id);
@@ -115,8 +119,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         // Arrange
         using var api = Factory.CreateApiClient();
-        var before = await Database.GetCollection<BsonDocument>("players")
-            .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
+        var store = Factory.Services.GetRequiredService<IGameStore>();
+        var before = await store.GetPlayersAsync(CancellationToken.None).CountAsync(CancellationToken.None);
 
         // Act
         PlayerApiException? exception = null;
@@ -137,8 +141,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Assert
         await Assert.That(exception?.StatusCode).IsEqualTo(StatusCodes.Status401Unauthorized);
-        var after = await Database.GetCollection<BsonDocument>("players")
-            .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
+        var after = await store.GetPlayersAsync(CancellationToken.None).CountAsync(CancellationToken.None);
         await Assert.That(after).IsEqualTo(before);
     }
 
@@ -153,8 +156,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             "default",
             null,
             null);
-        var before = await Database.GetCollection<BsonDocument>("players")
-            .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
+        var store = Factory.Services.GetRequiredService<IGameStore>();
+        var before = await store.GetPlayersAsync(CancellationToken.None).CountAsync(CancellationToken.None);
 
         // Act
         InvalidOperationException? exception = null;
@@ -169,8 +172,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Assert
         await Assert.That(exception?.Message).IsEqualTo("Failed to extract auth context from HTTP context");
-        var after = await Database.GetCollection<BsonDocument>("players")
-            .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
+        var after = await store.GetPlayersAsync(CancellationToken.None).CountAsync(CancellationToken.None);
         await Assert.That(after).IsEqualTo(before);
     }
 
@@ -594,14 +596,15 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var userId = TelegramUserId.From(8410);
         var player = await store.GetPlayerAsync(userId, CancellationToken.None)
                                ?? throw new InvalidOperationException("Missing player.");
-        await store.UpsertPlayerAsync(
+        await Database.GetCollection<PlayerProfile>("players").ReplaceOneAsync(
+            item => item.Id == player.Id,
             player with
             {
                 DailyBonus = 7,
                 PostsUsed = 2,
                 Settings = player.Settings with { Plus = true },
             },
-            CancellationToken.None);
+            cancellationToken: CancellationToken.None);
 
         var world = (await store.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
         await store.TryReplaceWorldAsync(
@@ -669,7 +672,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var store = Factory.Services.GetRequiredService<IGameStore>();
         var player = await store.GetPlayerAsync(TelegramUserId.From(userId), CancellationToken.None)
                                ?? throw new InvalidOperationException("Missing player.");
-        await store.UpsertPlayerAsync(
+        await Database.GetCollection<PlayerProfile>("players").ReplaceOneAsync(
+            item => item.Id == player.Id,
             player with
             {
                 PostsPeriodStartedAtUtc = player.PostsPeriodStartedAtUtc.AddDays(-1),
@@ -679,7 +683,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                 PlusInterestClaimed = alreadyClaimed,
                 PlusNotifyRequested = true,
             },
-            CancellationToken.None);
+            cancellationToken: CancellationToken.None);
         var world = (await store.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
         await store.TryReplaceWorldAsync(
             world with

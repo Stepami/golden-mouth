@@ -58,6 +58,7 @@ public sealed partial class ApiMapper
         return new AnalyticsSubmission(
             SessionId.From(source.Session),
             source.Platform,
+            source.LaunchSurface,
             source.Experiments.ToDictionary(
                 item => item.Key,
                 item => SanitizeJsonString(item.Value, 64)),
@@ -67,10 +68,7 @@ public sealed partial class ApiMapper
                 item.Timestamp,
                 item.Screen,
                 item.Prev,
-                SanitizeProperties(item.Props))).ToArray())
-        {
-            LaunchSurface = source.LaunchSurface,
-        };
+                SanitizeProperties(item.Props))).ToArray());
     }
 
     public partial SendDirectMessageResponse MapSentDirectMessage(SentDirectMessage source);

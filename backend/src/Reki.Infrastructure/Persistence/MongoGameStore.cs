@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Common;
@@ -41,6 +42,9 @@ internal sealed class MongoGameStore : IGameStore
         _threads = database.GetCollection<BsonDocument>(MongoCollections.Threads);
         _invites = database.GetCollection<BsonDocument>(MongoCollections.Invites);
     }
+
+    public IAsyncEnumerable<PlayerProfile> GetPlayersAsync(CancellationToken cancellationToken) =>
+        GetPlayerBatchesAsync(cancellationToken).SelectMany(batch => batch);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken) =>
         await _players.Find(item => item.TelegramUserId == telegramUserId).FirstOrDefaultAsync(cancellationToken);
@@ -86,16 +90,8 @@ internal sealed class MongoGameStore : IGameStore
         }
     }
 
-    public async ValueTask UpsertPlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
-        await _players.ReplaceOneAsync(item => item.Id == player.Id, player, new ReplaceOptions { IsUpsert = true }, cancellationToken);
-
     public async ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken) =>
         await _worlds.InsertOneAsync(world, cancellationToken: cancellationToken);
-
-    public async ValueTask StartPlayerPeriodAsync(PlayerProfile player, PlayerProfile updated, CancellationToken cancellationToken)
-    {
-        _ = await TryReplacePlayerAsync(updated, player.Version, cancellationToken);
-    }
 
     public async ValueTask SavePlusNotificationAsync(
         PlayerProfile player,
@@ -503,8 +499,7 @@ internal sealed class MongoGameStore : IGameStore
 
     public async ValueTask<IReadOnlyList<World>> GetWorldTemplatesAsync(CancellationToken cancellationToken)
     {
-        var templateOwner = PlayerId.From("00000000000000000000000000000000");
-        return await _templates.Find(item => item.Player.PlayerId == templateOwner).ToListAsync(cancellationToken);
+        return await _templates.Find(FilterDefinition<World>.Empty).ToListAsync(cancellationToken);
     }
 
     public async ValueTask<IReadOnlyList<World>> GetWorldsAsync(PlayerId playerId, CancellationToken cancellationToken)
@@ -527,4 +522,14 @@ internal sealed class MongoGameStore : IGameStore
             ["CreatedAtUtc"] = createdAtUtc.UtcDateTime,
             ["Open"] = true,
         };
+
+    private async IAsyncEnumerable<IEnumerable<PlayerProfile>> GetPlayerBatchesAsync(
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        using var cursor = await _players.FindAsync(FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken);
+        while (await cursor.MoveNextAsync(cancellationToken))
+        {
+            yield return cursor.Current;
+        }
+    }
 }

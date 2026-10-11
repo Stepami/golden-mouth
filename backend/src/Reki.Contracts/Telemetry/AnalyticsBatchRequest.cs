@@ -12,8 +12,8 @@ public sealed record AnalyticsBatchRequest
     [MaxLength(64)]
     public required string Platform { get; init; }
 
-    [RegularExpression("^(telegram-mini-app|browser|standalone)$")]
-    public string? LaunchSurface { get; init; }
+    [EnumDataType(typeof(LaunchSurface))]
+    public LaunchSurface LaunchSurface { get; init; }
 
     public IReadOnlyDictionary<string, string> Experiments { get; init; }
         = new Dictionary<string, string>();
