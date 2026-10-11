@@ -38,7 +38,6 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: backend/global.json
-          check-latest: false
 
       - name: Restore local tools
         run: dotnet tool restore
