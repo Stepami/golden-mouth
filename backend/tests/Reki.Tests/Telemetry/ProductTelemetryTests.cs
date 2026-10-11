@@ -48,4 +48,20 @@ public sealed class ProductTelemetryTests
         await Assert.That(attributes["prop_id"]).IsEqualTo("cta_main");
         await Assert.That(attributes.ContainsKey("prop_message")).IsFalse();
     }
+
+    [Test]
+    public async Task TrackSubmission_ActiveTime_ExportsOnlyValidChunksAsync()
+    {
+        var logger = Substitute.For<ILogger<ProductTelemetry>>();
+        var telemetry = new ProductTelemetry(logger, new FakeTimeProvider());
+        var player = TestGameData.CreatePlayer() with { AgeBand = "25-34" };
+        var entries = new[] { "15000", "30001", "-1", "0", "text" }
+            .Select(ms => new AnalyticsEntry("active_time", 123, "feed", null, new Dictionary<string, string> { ["ms"] = ms })).ToArray();
+        telemetry.TrackSubmission(player, new AnalyticsSubmission(SessionId.From("session-1"), "ios", new Dictionary<string, string>(), entries));
+        var call = logger.ReceivedCalls().Single(item => item.GetMethodInfo().Name == nameof(ILogger.BeginScope));
+        var attributes = call.GetArguments()[0] as IReadOnlyDictionary<string, object?>
+            ?? throw new InvalidOperationException("Telemetry was not structured.");
+        await Assert.That(attributes["age_group"]).IsEqualTo("25-34");
+        await Assert.That(attributes["prop_ms"]).IsEqualTo("15000");
+    }
 }

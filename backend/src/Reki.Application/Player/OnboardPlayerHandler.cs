@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Social;
+using Reki.Application.Telemetry;
 using Reki.Domain.Player;
 using TgMiniAppAuth.AuthContext.User;
 
@@ -14,7 +15,8 @@ public sealed class OnboardPlayerHandler(
     IOptions<GameBalance> balance,
     GameDay gameDay,
     PlayerReader playerReader,
-    TimeProvider timeProvider) : IRequestHandler<OnboardPlayerCommand, PlayerView>
+    TimeProvider timeProvider,
+    ProductTelemetry analytics) : IRequestHandler<OnboardPlayerCommand, PlayerView>
 {
     public async ValueTask<PlayerView> Handle(
         OnboardPlayerCommand request,
@@ -38,6 +40,7 @@ public sealed class OnboardPlayerHandler(
             var created =
                 CreatePlayer(request, telegramUserId, gameDay.PeriodStart, balance.Value.Growth.StartingSubscribers) with
                 {
+                    AgeBand = request.AgeBand,
                     InvitedBy = inviter?.Id,
                     InvitedAtUtc = inviter is null ? null : timeProvider.GetUtcNow(),
                     FirstPostInviteBonus = inviter is null ? 0 : balance.Value.InviteBonusBoth,
@@ -48,6 +51,7 @@ public sealed class OnboardPlayerHandler(
                     inviter?.Version ?? 0,
                     cancellationToken))
             {
+                analytics.Track(created, "player_created", new Dictionary<string, string>());
                 return playerReader.CreateView(created);
             }
         }
@@ -130,6 +134,7 @@ public sealed class OnboardPlayerHandler(
         return player with
         {
             BirthGroup = request.BirthGroup,
+            AgeBand = request.AgeBand ?? (player.BirthGroup == request.BirthGroup ? player.AgeBand : null),
             Name = request.Name,
             Handle = request.Handle,
             Role = request.Role,

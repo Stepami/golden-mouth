@@ -6,6 +6,7 @@ import { apiBaseUrl as BASE, runtimeConfig } from '../app/runtimeConfig'
 import { addDemoComment, demoChannelPosts, demoFeed, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, shuffle, withDemoComments } from './demo'
 import { contentOf, rulesFor, wantsFor } from './worldContent'
 import { telegramAuthHeaders } from './auth'
+import type { AgeBand } from '../app/ageBand'
 import type { Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, ReplyResult, WorldId, WorldRules } from './types'
 
 let sessionPlayer: Player | undefined
@@ -53,7 +54,7 @@ async function publicationState(id: string): Promise<PublicationState> {
 
 export const api = {
   me: (): Promise<Player> => (BASE ? call<Player>('/me') : laterLazy(demoPlayer)).then(rememberPlayer),
-  onboarding: (body: { birthGroup: '14-17' | '18+'; world: string; role: string; name: string; handle: string; address: string; star: string; referralCode?: string }): Promise<Player> =>
+  onboarding: (body: { birthGroup: '14-17' | '18+'; ageBand?: AgeBand; world: string; role: string; name: string; handle: string; address: string; star: string; referralCode?: string }): Promise<Player> =>
     (BASE ? call<Player>('/onboarding', { method: 'POST', body: JSON.stringify(body) }) : laterLazy(() => saveDemoPlayer({
       ...structuredClone(mock.player), ...body, world: body.world as WorldId, address: body.address as Player['address'],
       id: crypto.randomUUID().replaceAll('-', ''), bio: '', type: 'автор своего канала', subs: 120, postsLeft: 10, wants: wantsFor(body.world),

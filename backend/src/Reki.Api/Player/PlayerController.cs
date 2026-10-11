@@ -42,7 +42,10 @@ public sealed class PlayerController(
                 request.Handle,
                 request.Address.ToString().ToLowerInvariant(),
                 StarId.From(request.Star),
-                request.ReferralCode),
+                request.ReferralCode)
+            {
+                AgeBand = request.AgeBand,
+            },
             cancellationToken);
         return TypedResults.Ok(mapper.MapPlayer(result));
     }
