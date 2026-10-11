@@ -47,6 +47,8 @@ public sealed record PlayerProfile(
 
     public int InviteBonusesEarnedInPeriod { get; init; }
 
+    public string? AgeBand { get; init; }
+
     public PlayerProfile EnsureDefaults()
     {
         // Mongo can hydrate null for fields absent from legacy documents despite the domain contract.

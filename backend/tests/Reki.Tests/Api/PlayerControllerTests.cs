@@ -139,6 +139,29 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     }
 
     [Test]
+    public async Task Onboarding_WithAgeBand_PersistsCoarseBandAsync()
+    {
+        const long userId = 10101;
+        using var api = Factory.CreateApiClient(userId);
+        await api.Player.CompleteOnboardingAsync(
+            new OnboardingRequest
+            {
+                BirthGroup = BirthGroup.Adult,
+                AgeBand = "45+",
+                World = WorldId.Stage,
+                Role = "creator",
+                Name = "player",
+                Handle = "player",
+                Address = Address.Nick,
+                Star = "mira",
+            },
+            CancellationToken.None);
+        var profile = await GetStoredPlayerAsync(userId);
+        await Assert.That(profile["AgeBand"].AsString).IsEqualTo("45+");
+        await Assert.That(profile["BirthGroup"].AsString).IsEqualTo("18+");
+    }
+
+    [Test]
     public async Task Onboarding_WithEnumContracts_PersistsAgeGroupWithoutBirthYearAsync()
     {
         const long telegramUserId = 1001;
