@@ -189,7 +189,7 @@ function Thread() {
   const readDraft = (): Draft => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as Draft | null
-      if (saved && typeof saved.requestId === 'string' && saved.requestId.length <= 64 && typeof saved.text === 'string' && saved.text.length <= 1000 && (saved.commentId === null || typeof saved.commentId === 'string')) return { ...saved, submitted: saved.submitted === true }
+      if (saved && typeof saved.requestId === 'string' && saved.requestId.length > 0 && saved.requestId.length <= 64 && typeof saved.text === 'string' && saved.text.length <= 1000 && (saved.commentId === null || typeof saved.commentId === 'string')) return { ...saved, submitted: saved.submitted === true }
     } catch { /* Хранилище может быть недоступно. */ }
     return fresh()
   }
@@ -232,7 +232,11 @@ function Thread() {
   const canReply = !apiBaseUrl ? post?.canReply !== false : post?.canReply === true || (!!publishedPost && !post?.demoComments)
   const target = post?.comments.find(comment => comment.id === draft.commentId)
   const edit = (change: Partial<Pick<Draft, 'text' | 'commentId'>>) => {
-    setDraft(current => ({ ...current, ...change, requestId: crypto.randomUUID(), submitted: false }))
+    setDraft(current => {
+      const next = { ...current, ...change }
+      return next.text === current.text && next.commentId === current.commentId
+        ? current : { ...next, requestId: crypto.randomUUID(), submitted: false }
+    })
     setReplyError('')
   }
   const send = async () => {

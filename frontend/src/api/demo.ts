@@ -31,7 +31,7 @@ export function resetDemoPlayer(playerId = currentPlayer?.id) {
   if (playerId) {
     try {
       for (const key of Object.keys(localStorage)) {
-        if (key === `reki:demo-posts:${playerId}` || key === `reki:first-star:${playerId}` || key.startsWith(`reki:demo-comments:${playerId}:`)) localStorage.removeItem(key)
+        if (key === `reki:demo-posts:${playerId}` || key === `reki:first-star:${playerId}` || key.startsWith(`reki:demo-comments:${playerId}:`) || key.startsWith(`reki:reply-draft:${playerId}:`)) localStorage.removeItem(key)
       }
     } catch { /* optional storage */ }
   }
