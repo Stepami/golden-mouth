@@ -2,7 +2,6 @@ using System.Globalization;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using Reki.Domain.Social;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
@@ -18,13 +17,15 @@ public static class PostContractMapper
     public static FeedItemResponse MapFeedItem(
         GamePost post,
         Reki.Domain.Worlds.World author,
-        bool canReply) =>
-        new(
+        bool canReply)
+    {
+        var resolved = ResolveAuthor(post.AuthorId, author);
+        return new(
             FeedItemKind.Post,
             post.Id.Value,
-            ResolveAuthor(post.AuthorId, author).Name,
-            ResolveAuthor(post.AuthorId, author).Avatar,
-            ResolveAuthor(post.AuthorId, author).Role,
+            resolved.Name,
+            resolved.Avatar,
+            resolved.Role,
             post.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             post.Text,
             CreateReactions(post),
@@ -32,6 +33,7 @@ public static class PostContractMapper
             post.Comments.Count,
             null,
             canReply);
+    }
 
     public static ChannelPostResponse MapChannelPost(GamePost post) =>
         new(
@@ -78,12 +80,12 @@ public static class PostContractMapper
             author.Avatar,
             author.Handle,
             comment.Text,
-            comment.AuthorId.Kind == AuthorKind.Star,
+            author.Star,
             comment.AuthorId == playerId.ToAuthorId(),
             comment.Hidden,
             comment.ParentCommentId?.Value,
             comment.RequestId,
-            comment.AuthorId.Id,
+            author.Id,
             author.Role,
             post.GetBranch(comment.Id).Count - 1,
             reactions);
@@ -93,25 +95,25 @@ public static class PostContractMapper
     {
         var owner = ResolveAuthor(reaction.AuthorId, world);
         return new CommentReactionResponse(
-            reaction.AuthorId.Id,
+            owner.Id,
             owner.Name,
             owner.Avatar,
-            reaction.AuthorId.Kind == AuthorKind.Star,
+            owner.Star,
             reaction.AuthorId == playerId.ToAuthorId(),
             reaction.Emoji);
     }
 
-    private static (string Name, string Avatar, string Role, string Handle) ResolveAuthor(AuthorId id, World world)
+    private static (string Id, string Name, string Avatar, string Role, string Handle, bool Star) ResolveAuthor(AuthorId id, World world)
     {
         if (id == world.Player.PlayerId.ToAuthorId())
         {
-            return (world.Player.Name, world.Player.Avatar, world.Player.Role, world.Player.Avatar);
+            return (world.Player.PlayerId.Value, world.Player.Name, world.Player.Avatar, world.Player.Role, world.Player.Avatar, false);
         }
 
-        var star = id.Kind == AuthorKind.Star ? world.FindStar(StarId.From(id.Id)) : null;
+        var star = world.FindStar(id);
         return star is null
             ? throw new InvalidOperationException("The author does not belong to the world.")
-            : (star.Name, star.AvatarSeed, star.Role, $"@{star.Id.Value}");
+            : (star.Id.Value, star.Name, star.AvatarSeed, star.Role, $"@{star.Id.Value}", true);
     }
 
     private static PostResultResponse MapResult(PublishedPost source, World world)

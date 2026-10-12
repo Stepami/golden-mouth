@@ -741,7 +741,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var beforePlayer = await GetStoredPlayerAsync(user);
         var world = await Database.GetCollection<World>("worlds").Find(FilterDefinition<World>.Empty).SingleAsync();
         var original = await GetStoredPostAsync(postId);
-        var selected = AuthorId.From(original["Comments"][0]["AuthorId"].AsString).Id;
+        var selected = (world.FindStar(AuthorId.From(original["Comments"][0]["AuthorId"].AsString))
+            ?? throw new InvalidOperationException("Missing selected star.")).Id.Value;
         var other = world.Stars.First(star => star.Id.Value != selected);
         Factory.Llm.Respond(CreateReplyTurnResponse(selected, args =>
         {
@@ -914,7 +915,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var before = await GetStoredPostAsync(postId);
         var player = await GetStoredPlayerAsync(user);
         var world = await GetStoredWorldAsync(user);
-        var selected = AuthorId.From(before["Comments"][0]["AuthorId"].AsString).Id;
+        var selected = world["Stars"].AsBsonArray.Single(star =>
+            StarId.From(star["_id"].AsString).ToAuthorId().Value == before["Comments"][0]["AuthorId"].AsString)["_id"].AsString;
         var response = CreateReplyTurnResponse(selected, args =>
         {
             switch (violation)
@@ -1116,11 +1118,13 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Arrange
         const long user = 8708;
         var (postId, targetId) = await PublishPostForThreadAsync(user);
-        var selected = AuthorId.From((await GetStoredPostAsync(postId))["Comments"][0]["AuthorId"].AsString).Id;
-        Factory.Llm.Respond(CreateReplyTurnResponse(selected, args => args["emoji"] = "💡"));
-        await ReplyAsync(user, postId, targetId, "metadata", "мой ответ");
         var worlds = Database.GetCollection<World>("worlds");
         var world = await worlds.Find(FilterDefinition<World>.Empty).SingleAsync();
+        var storedPost = await GetStoredPostAsync(postId);
+        var selected = (world.FindStar(AuthorId.From(storedPost["Comments"][0]["AuthorId"].AsString))
+            ?? throw new InvalidOperationException("Missing selected star.")).Id.Value;
+        Factory.Llm.Respond(CreateReplyTurnResponse(selected, args => args["emoji"] = "💡"));
+        await ReplyAsync(user, postId, targetId, "metadata", "мой ответ");
         var updated = world with
         {
             Player = world.Player with { Name = "Новое имя", Avatar = "new-avatar", Role = "new-role" },
@@ -1363,7 +1367,10 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         }
         else
         {
-            var response = CreateReplyTurnResponse(post.Comments[0].AuthorId.Id);
+            var world = await Database.GetCollection<World>("worlds").Find(item => item.Id == post.WorldId).SingleAsync();
+            var selected = world.FindStar(post.Comments[0].AuthorId)
+                ?? throw new InvalidOperationException("Missing selected star.");
+            var response = CreateReplyTurnResponse(selected.Id.Value);
             var call = response.Messages[0].Contents.OfType<FunctionCallContent>().Single();
             response.Messages[0].Contents.Add(new FunctionCallContent("duplicate", call.Name, call.Arguments));
             Factory.Llm.Respond(response);

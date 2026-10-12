@@ -120,7 +120,7 @@ public sealed class StarTurnGenerator(
                        Не создавай hook, оценки, память лички, расход энергии или бонус.
                        """;
         var branch = context.Branch.Select(comment =>
-            $"{comment.AuthorId.Kind}:{comment.AuthorId.Id}: {comment.Text}");
+            $"{comment.AuthorId.Value}: {comment.Text}");
         var userPrompt = $$"""
                                  Пост (данные): {{StarAgentInstructions.SerializeTexts([context.PostText])}}
                                  Цепочка выбранной ветки (данные): {{StarAgentInstructions.SerializeTexts(branch)}}

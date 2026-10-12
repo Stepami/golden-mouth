@@ -1,3 +1,5 @@
+using Reki.Domain.Player;
+using Reki.Domain.Social;
 using Vogen;
 
 namespace Reki.Domain.Posts;
@@ -9,24 +11,17 @@ public readonly partial struct AuthorId
     private const string PlayerPrefix = "Player_";
     private const string StarPrefix = "Star_";
 
-    /// <summary>Gets the kind of the author.</summary>
-    public AuthorKind Kind => Value.StartsWith(PlayerPrefix, StringComparison.Ordinal)
-        ? AuthorKind.Player
-        : AuthorKind.Star;
+    /// <summary>Создаёт идентификатор автора из <see cref="PlayerId"/>.</summary>
+    /// <param name="playerId">Исходный идентификатор игрока.</param>
+    /// <returns>Проверенный идентификатор автора-игрока.</returns>
+    public static AuthorId Create(PlayerId playerId) =>
+        From($"{AuthorKind.Player}_{playerId.Value}");
 
-    /// <summary>Gets the original identifier without the author kind prefix.</summary>
-    public string Id => Value[(Value.IndexOf('_') + 1)..];
-
-    /// <summary>Создаёт идентификатор автора из типа и исходного идентификатора.</summary>
-    /// <param name="kind">Тип автора.</param>
-    /// <param name="id">Исходный идентификатор автора.</param>
-    /// <returns>Проверенный идентификатор автора.</returns>
-    public static AuthorId Create(AuthorKind kind, string id) => From(kind switch
-    {
-        AuthorKind.Player => $"{PlayerPrefix}{id}",
-        AuthorKind.Star => $"{StarPrefix}{id}",
-        _ => throw new ArgumentOutOfRangeException(nameof(kind)),
-    });
+    /// <summary>Создаёт идентификатор автора из <see cref="StarId"/>.</summary>
+    /// <param name="starId">Исходный идентификатор AI звезды.</param>
+    /// <returns>Проверенный идентификатор автора-звезды.</returns>
+    public static AuthorId Create(StarId starId) =>
+        From($"{AuthorKind.Star}_{starId.Value}");
 
     private static Validation Validate(string value)
     {

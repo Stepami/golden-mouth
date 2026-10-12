@@ -9,7 +9,7 @@ public readonly partial struct StarId
 {
     /// <summary>Преобразует идентификатор звезды в идентификатор автора.</summary>
     /// <returns>Идентификатор автора с типом звезды.</returns>
-    public AuthorId ToAuthorId() => AuthorId.Create(AuthorKind.Star, Value);
+    public AuthorId ToAuthorId() => AuthorId.Create(this);
 
     private static string NormalizeInput(string value) => value.Trim().ToLowerInvariant();
 

@@ -10,7 +10,6 @@ using Reki.Application.Player;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using Reki.Domain.Social;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
@@ -38,7 +37,7 @@ public sealed partial class AddReplyStreamHandler(
         var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var world = await sender.Send(new Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
         var post = await sender.Send(new GetPostQuery(request.PostId, storedPlayer.Id, world.Id), cancellationToken);
-        var target = ValidateTarget(post, world, request.TargetCommentId);
+        var (target, star) = ValidateTarget(post, world, request.TargetCommentId);
         await safety.EnsureInputAllowedAsync(storedPlayer, [request.Text], cancellationToken);
         var player = gameDay.Normalize(storedPlayer);
         var cap = await GetCapAsync(player, cancellationToken);
@@ -52,7 +51,7 @@ public sealed partial class AddReplyStreamHandler(
         EnsureEnergy(player, cap);
         var context = new StarReplyContext(
             new StarAgentProfile(world, null, [], player.Address),
-            StarId.From(target.AuthorId.Id),
+            star.Id,
             post.Text,
             post.GetBranch(target.Id),
             request.Text,
@@ -146,22 +145,19 @@ public sealed partial class AddReplyStreamHandler(
         }
     }
 
-    private GameComment ValidateTarget(GamePost post, World world, CommentId targetId)
+    private (GameComment Comment, WorldStar Star) ValidateTarget(GamePost post, World world, CommentId targetId)
     {
         var target = post.Comments.FirstOrDefault(comment => comment.Id == targetId && !comment.Hidden)
                      ?? throw new ResourceNotFoundException("Comment not found.");
-        if (target.AuthorId.Kind != AuthorKind.Star ||
-            world.FindStar(StarId.From(target.AuthorId.Id)) is null)
-        {
-            throw new RequestConflictException("The target is not a star of this world.");
-        }
+        var star = world.FindStar(target.AuthorId)
+                   ?? throw new RequestConflictException("The target is not a star of this world.");
 
         if (post.GetBranch(targetId).Count + 1 > balance.Value.Thread.BranchDepth)
         {
             throw new RequestConflictException("The maximum branch depth has been reached.");
         }
 
-        return target;
+        return (target, star);
     }
 
     private async ValueTask<ReplyLiveEvent> CommitAsync(AddReplyCommand request, GeneratedReplyTurn turn, PlayerId playerId, CancellationToken cancellationToken)
@@ -181,7 +177,7 @@ public sealed partial class AddReplyStreamHandler(
                 return await ReplayAsync(request, playerId, cancellationToken);
             }
 
-            var target = ValidateTarget(post, world, request.TargetCommentId);
+            var (target, _) = ValidateTarget(post, world, request.TargetCommentId);
             if (target.AuthorId != turn.StarId.ToAuthorId() ||
                 (turn.AdditionalStarId is { } other && world.FindStar(other) is null))
             {
