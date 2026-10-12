@@ -42,169 +42,72 @@ internal sealed class UnifyPostContent : RekiMigrationBase
         await worlds.UpdateManyAsync(session, new BsonDocument("Version", BsonNull.Value), Builders<BsonDocument>.Update.Set("Version", 0), cancellationToken: cancellationToken);
     }
 
-    private static async Task<BsonDocument> FindWorldAsync(IMongoCollection<BsonDocument> worlds, IClientSessionHandle session, BsonDocument post, CancellationToken cancellationToken)
-    {
-        var worldId = post.GetValue("WorldId", BsonNull.Value);
-        if (!worldId.IsString || string.IsNullOrWhiteSpace(worldId.AsString))
-        {
-            throw InvalidLegacyContent();
-        }
-
-        return await worlds.Find(session, new BsonDocument("_id", worldId)).SingleOrDefaultAsync(cancellationToken)
-            ?? throw InvalidLegacyContent();
-    }
+    private static Task<BsonDocument> FindWorldAsync(IMongoCollection<BsonDocument> worlds, IClientSessionHandle session, BsonDocument post, CancellationToken cancellationToken) =>
+        worlds.Find(session, new BsonDocument("_id", post["WorldId"])).SingleAsync(cancellationToken);
 
     private static BsonDocument MigratePost(BsonDocument source, BsonDocument world)
     {
         var post = source.DeepClone().AsBsonDocument;
-        var owner = world["Player"].AsBsonDocument["PlayerId"].AsString;
         var comments = ReadArray(post, "Comments").Select(value => MigrateComment(value.AsBsonDocument, world)).ToArray();
-        if (comments.Select(comment => comment["_id"]).Distinct().Count() != comments.Length)
-        {
-            throw InvalidLegacyContent();
-        }
-
         foreach (var reply in ReadArray(post, "ThreadReplies").Select(entry => entry.AsBsonDocument))
         {
-            var comment = comments.SingleOrDefault(item => item["_id"] == reply["CommentId"]) ?? throw InvalidLegacyContent();
-            var target = comments.SingleOrDefault(item => item["_id"] == reply["TargetCommentId"]) ?? throw InvalidLegacyContent();
-            if (comment["AuthorId"] != Author(AuthorKind.Player, owner) || !IsStarAuthor(ReadAuthor(target["AuthorId"]), world))
-            {
-                throw InvalidLegacyContent();
-            }
-
+            var comment = comments.Single(item => item["_id"] == reply["CommentId"]);
             comment["ParentCommentId"] = reply["TargetCommentId"];
-            var request = reply.GetValue("ReplyId", BsonNull.Value);
-            if (!request.IsString || string.IsNullOrWhiteSpace(request.AsString))
+            comment["RequestId"] = reply["ReplyId"];
+            var reaction = reply["Reaction"].AsString;
+            if (reaction.Length > 0)
             {
-                throw InvalidLegacyContent();
-            }
-
-            comment["RequestId"] = request;
-            var reaction = reply.GetValue("Reaction", BsonNull.Value);
-            if (!reaction.IsBsonNull && reaction.AsString.Length > 0)
-            {
+                var target = comments.Single(item => item["_id"] == reply["TargetCommentId"]);
                 comment["Reactions"].AsBsonArray.Add(new BsonDocument
                 {
-                    ["AuthorId"] = target["AuthorId"].DeepClone(),
+                    ["AuthorId"] = target["AuthorId"],
                     ["Emoji"] = reaction,
                 });
             }
         }
 
-        ValidateBranches(comments);
-        if (post.TryGetValue("AuthorId", out var author))
-        {
-            post["AuthorId"] = ValidateAuthor(author, world);
-        }
-        else
-        {
-            var playerId = post.GetValue("PlayerId", BsonNull.Value);
-            if (!playerId.IsString || playerId.AsString != owner)
-            {
-                throw InvalidLegacyContent();
-            }
-
-            post["AuthorId"] = Author(AuthorKind.Player, owner);
-        }
-
+        post["AuthorId"] = Author(AuthorKind.Player, post["PlayerId"].AsString);
         post["Comments"] = new BsonArray(comments);
-        post["Version"] = ReadVersion(post);
+        post["Version"] = 0;
         post.Remove("PlayerId");
         post.Remove("ThreadReplies");
         return post;
     }
 
-    private static BsonDocument MigrateComment(BsonDocument source, BsonDocument world)
+    private static BsonDocument MigrateComment(BsonDocument source, BsonDocument world) => new()
     {
-        var author = source.TryGetValue("AuthorId", out var saved)
-            ? ValidateAuthor(saved, world)
-            : ResolveLegacyAuthor(source, world);
-        var reactions = ReadArray(source, "Reactions").Select(value =>
+        ["_id"] = source["_id"],
+        ["ParentCommentId"] = BsonNull.Value,
+        ["RequestId"] = BsonNull.Value,
+        ["AuthorId"] = ResolveLegacyAuthor(source, world),
+        ["Text"] = source["Text"],
+        ["Hidden"] = source.GetValue("Hidden", false),
+        ["Reactions"] = new BsonArray(ReadArray(source, "Reactions").Select(value =>
         {
             var reaction = value.AsBsonDocument;
-            var reactionAuthor = reaction.TryGetValue("AuthorId", out var existing)
-                ? ValidateAuthor(existing, world)
-                : ResolveLegacyAuthor(reaction, world);
-            return new BsonDocument { ["AuthorId"] = reactionAuthor, ["Emoji"] = reaction["Emoji"] };
-        });
-        return new BsonDocument
-        {
-            ["_id"] = source.GetValue("_id", source.GetValue("Id", BsonNull.Value)),
-            ["ParentCommentId"] = source.GetValue("ParentCommentId", BsonNull.Value),
-            ["RequestId"] = source.GetValue("RequestId", BsonNull.Value),
-            ["AuthorId"] = author,
-            ["Text"] = source["Text"],
-            ["Hidden"] = source.GetValue("Hidden", false),
-            ["Reactions"] = new BsonArray(reactions),
-        };
-    }
+            return new BsonDocument
+            {
+                ["AuthorId"] = ResolveLegacyAuthor(reaction, world),
+                ["Emoji"] = reaction["Emoji"],
+            };
+        })),
+    };
 
     private static BsonString ResolveLegacyAuthor(BsonDocument source, BsonDocument world)
     {
         if (source.GetValue("Me", false).AsBoolean)
         {
-            return Author(AuthorKind.Player, world["Player"].AsBsonDocument["PlayerId"].AsString);
+            return Author(AuthorKind.Player, world["Player"]["PlayerId"].AsString);
         }
 
-        var stars = ReadArray(world, "Stars").Select(value => value.AsBsonDocument).ToArray();
+        var stars = world["Stars"].AsBsonArray.Select(value => value.AsBsonDocument).ToArray();
         var stable = stars.Where(star =>
-            source.GetValue("StarId", BsonNull.Value) == ReadStarId(star) ||
-            source.GetValue("Avatar", BsonNull.Value) == ReadStarId(star) ||
-            source.GetValue("Handle", BsonNull.Value) == $"@{ReadStarId(star)}").ToArray();
+            source.GetValue("Avatar", BsonNull.Value) == star["_id"] ||
+            source.GetValue("Handle", BsonNull.Value) == $"@{star["_id"].AsString}").ToArray();
         var candidates = stable.Length > 0 ? stable : stars.Where(star => source.GetValue("Author", BsonNull.Value) == star["Name"]).ToArray();
-        return candidates is [var resolved] ? Author(AuthorKind.Star, ReadStarId(resolved)) : throw InvalidLegacyContent();
-    }
-
-    private static BsonString ValidateAuthor(BsonValue source, BsonDocument world)
-    {
-        var author = ReadAuthor(source);
-        if (author.Value == Author(AuthorKind.Player, world["Player"]["PlayerId"].AsString).AsString ||
-            IsStarAuthor(author, world))
-        {
-            return new BsonString(author.Value);
-        }
-
-        throw InvalidLegacyContent();
-    }
-
-    private static bool IsStarAuthor(AuthorId author, BsonDocument world) =>
-        ReadArray(world, "Stars").Any(star => author.Value == Author(AuthorKind.Star, ReadStarId(star.AsBsonDocument)).AsString);
-
-    private static AuthorId ReadAuthor(BsonValue source)
-    {
-        if (source.IsString && AuthorId.TryFrom(source.AsString, out var author))
-        {
-            return author;
-        }
-
-        if (source.IsBsonDocument)
-        {
-            var document = source.AsBsonDocument;
-            if (document.TryGetValue("Kind", out var kind) && kind.IsInt32 &&
-                document.TryGetValue("Id", out var id) && id.IsString &&
-                kind.AsInt32 is (int)AuthorKind.Player or (int)AuthorKind.Star &&
-                !string.IsNullOrWhiteSpace(id.AsString))
-            {
-                return AuthorId.From($"{(AuthorKind)kind.AsInt32}_{id.AsString}");
-            }
-        }
-
-        throw InvalidLegacyContent();
-    }
-
-    private static void ValidateBranches(IReadOnlyList<BsonDocument> comments)
-    {
-        var requests = comments.Select(comment => comment["RequestId"]).Where(value => !value.IsBsonNull).ToArray();
-        if (requests.Distinct().Count() != requests.Length)
-        {
-            throw InvalidLegacyContent();
-        }
-
-        foreach (var comment in comments)
-        {
-            ValidateBranch(comment, comments);
-        }
+        return candidates is [var resolved]
+            ? Author(AuthorKind.Star, resolved["_id"].AsString)
+            : throw new InvalidOperationException("Legacy comment author cannot be resolved. Resolve the source data before rerunning migration 2.2.0.");
     }
 
     private static async Task MigratePublicationResultsAsync(IMongoDatabase db, IClientSessionHandle session, IMongoCollection<BsonDocument> worlds, CancellationToken cancellationToken)
@@ -252,36 +155,10 @@ internal sealed class UnifyPostContent : RekiMigrationBase
     {
         foreach (var player in batch)
         {
-            if (player.TryGetValue("PostsUsed", out var used) && player.TryGetValue("EnergyUsed", out var energy) && used != energy)
-            {
-                throw InvalidLegacyContent();
-            }
-
-            var update = Builders<BsonDocument>.Update.Set("EnergyUsed", player.GetValue("EnergyUsed", player.GetValue("PostsUsed", 0)))
+            var update = Builders<BsonDocument>.Update.Set("EnergyUsed", player.GetValue("PostsUsed", 0))
                 .Set("Version", ReadVersion(player)).Unset("PostsUsed");
             await players.UpdateOneAsync(session, new BsonDocument("_id", player["_id"]), update, cancellationToken: cancellationToken);
         }
-    }
-
-    private static void ValidateBranch(BsonDocument comment, IReadOnlyList<BsonDocument> comments)
-    {
-        var seen = new HashSet<BsonValue> { comment["_id"] };
-        var parent = comment["ParentCommentId"];
-        while (!parent.IsBsonNull)
-        {
-            if (!seen.Add(parent))
-            {
-                throw InvalidLegacyContent();
-            }
-
-            parent = (comments.SingleOrDefault(item => item["_id"] == parent) ?? throw InvalidLegacyContent())["ParentCommentId"];
-        }
-    }
-
-    private static string ReadStarId(BsonDocument star)
-    {
-        var id = star.GetValue("_id", star.GetValue("Id", BsonNull.Value));
-        return id.IsString && !string.IsNullOrWhiteSpace(id.AsString) ? id.AsString : throw InvalidLegacyContent();
     }
 
     private static BsonValue ReadVersion(BsonDocument document) =>
@@ -290,16 +167,5 @@ internal sealed class UnifyPostContent : RekiMigrationBase
     private static BsonArray ReadArray(BsonDocument document, string field) =>
         document.TryGetValue(field, out var value) && !value.IsBsonNull ? value.AsBsonArray : [];
 
-    private static BsonString Author(AuthorKind kind, string id)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            throw InvalidLegacyContent();
-        }
-
-        return new BsonString(AuthorId.From($"{kind}_{id}").Value);
-    }
-
-    private static InvalidOperationException InvalidLegacyContent() =>
-        new("Legacy content has an unresolved author, world, request or parent. Resolve the source data before rerunning migration 2.2.0.");
+    private static BsonString Author(AuthorKind kind, string id) => new(AuthorId.From($"{kind}_{id}").Value);
 }
