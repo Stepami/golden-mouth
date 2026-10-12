@@ -4,11 +4,11 @@ import * as mock from './mock'
 import { error, warn } from '../app/log'
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics'
 import { apiBaseUrl as BASE, runtimeConfig } from '../app/runtimeConfig'
-import { addDemoComment, demoChannelPosts, demoFeed, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, shuffle, withDemoComments } from './demo'
+import { demoChannelPosts, demoFeed, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, shuffle, withDemoComments } from './demo'
 import { contentOf, installWorldContent, installWorldTemplates, worldDocumentOf, wantsFor } from './worldContent'
 import { telegramAuthHeaders } from './auth'
 import type { AgeBand } from '../app/ageBand'
-import type { PlayerDocument, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, ReplyResult, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types'
+import type { PlayerDocument, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, ReplyLiveEvent, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types'
 
 let sessionPlayer: Player | undefined
 let sessionIdentity: PlayerDocument | undefined
@@ -229,10 +229,69 @@ export const api = {
     }, ms * 1.1))
     return () => timers.forEach(clearTimeout)
   },
-  reply: (postId: string, commentId: string, replyId: string, text: string): Promise<ReplyResult> =>
-    BASE
-      ? call(inWorld(`/posts/${postId}/replies`), { method: 'POST', body: JSON.stringify({ commentId, replyId, text }) })
-      : later(mock.threadReply(replyId)),
+  reply: async (postId: string, commentId: string, requestId: string, text: string,
+    options: { signal?: AbortSignal; onEvent?: (event: ReplyLiveEvent) => void } = {}): Promise<ReplyLiveEvent> => {
+    const signal = options.signal
+    const path = BASE ? inWorld(`/posts/${encodeURIComponent(postId)}/replies`) : ''
+    const player = sessionPlayer
+    if (!player) throw new Error('Player must be loaded')
+    const update = (event: ReplyLiveEvent) => {
+      options.onEvent?.(event)
+      if (event.status === 'completed' && event.energyLeft != null && event.subscribers != null && sessionPlayer?.id === player.id && sessionPlayer.worldInstanceId === player.worldInstanceId) {
+        sessionPlayer = { ...sessionPlayer, postsLeft: event.energyLeft, subs: event.subscribers }
+        if (!BASE) saveDemoPlayer(sessionPlayer)
+      }
+    }
+    if (!BASE) {
+      const post = await api.post(postId)
+      const existing = post.comments.find(comment => comment.requestId === requestId)
+      if (existing && (existing.text !== text || existing.parentCommentId !== commentId)) throw new ApiError(409, 'POST', '/posts/:id/replies')
+      if (existing) {
+        const event: ReplyLiveEvent = { status: 'completed', requestId, post: { ...post, postId: post.id }, energyLeft: player.postsLeft, subscribers: player.subs }
+        update(event); return event
+      }
+      if (player.postsLeft < 1) throw new ApiError(409, 'POST', '/posts/:id/replies')
+      const target = post.comments.find(comment => comment.id === commentId && comment.star && !comment.hidden)
+      if (!target || (target.depth ?? 0) + 2 > 2) throw new ApiError(409, 'POST', '/posts/:id/replies')
+      update({ status: 'generating', requestId })
+      await later(undefined, 650)
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+      const responseText = `Интересная мысль! Теперь хочется узнать продолжение.`
+      update({ status: 'generating', requestId, text: responseText })
+      const id = crypto.randomUUID()
+      const saved: Post = { ...post, comments: [...post.comments,
+        { id, parentCommentId: target.id, requestId, authorId: player.id, author: player.name, avatar: player.handle, handle: player.handle, text, me: true, depth: (target.depth ?? 0) + 1, reactions: [] },
+        { id: crypto.randomUUID(), parentCommentId: id, authorId: target.authorId ?? target.avatar, author: target.author, avatar: target.avatar, handle: target.handle, text: responseText, star: true, depth: (target.depth ?? 0) + 2, reactions: [] }] }
+      const bonus = post.comments.filter(comment => comment.me && comment.parentCommentId).length < 3 ? 9 : 0
+      saveDemoPost(player.id, saved)
+      const event: ReplyLiveEvent = { status: 'completed', requestId, post: { ...saved, postId: saved.id }, energyLeft: player.postsLeft - 1, subscribers: player.subs + bonus }
+      update(event); return event
+    }
+    let completed: ReplyLiveEvent | undefined
+    try {
+      const response = await fetch(`${BASE}${path}`, { method: 'POST', signal,
+        headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', ...telegramAuthHeaders() },
+        body: JSON.stringify({ requestId, commentId, text }) })
+      if (!response.ok) throw new ApiError(response.status, 'POST', '/posts/:id/replies')
+      await readSse<ReplyLiveEvent>(response, event => {
+        update(event)
+        if (event.status === 'failed') throw new Error('Reply generation failed')
+        if (event.status === 'completed' && event.post && event.energyLeft != null && event.subscribers != null) completed = event
+      })
+      if (!completed) throw new Error('Reply stream ended before completion')
+      return completed
+    } catch (cause) {
+      if (signal?.aborted || (cause instanceof ApiError && cause.status >= 400 && cause.status < 500)) throw cause
+      // A lost final SSE event does not imply that the transaction failed.
+      const query = path.slice(path.indexOf('?'))
+      const post = await call<PostDetailResponse>(`/posts/${encodeURIComponent(postId)}${query}`)
+      const saved = post.comments.find(comment => comment.requestId === requestId && comment.parentCommentId === commentId && comment.text === text)
+      if (!saved) throw cause
+      const [identity, world] = await Promise.all([call<PlayerDocument>('/me'), call<WorldDocument>(`/worlds/${encodeURIComponent(player.worldInstanceId ?? '')}`)])
+      const event: ReplyLiveEvent = { status: 'completed', requestId, post, energyLeft: identity.postsLeft, subscribers: world.subscribers }
+      update(event); return event
+    }
+  },
   report: (commentId: string, reason: string) => BASE ? call('/reports', { method: 'POST', body: JSON.stringify({ commentId, reason }) }) : later({ ok: true }),
   plusInterest: async (interest = true): Promise<{ bonus: number }> => {
     if (BASE) return call('/plus-interest', { method: 'POST', body: JSON.stringify({ interest }) })
@@ -264,14 +323,14 @@ export const api = {
   channelPosts: (): Promise<ChannelPost[]> => BASE ? call(inWorld('/posts/mine')) : laterLazy(() => demoChannelPosts(sessionPlayer?.id ?? '')),
   post: async (postId: string): Promise<Post> => {
     const demo = runtimeConfig.features.mockFeed ? demoPost(postId) : undefined
-    const post = demo ?? (BASE
+    const local = !BASE ? demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) : undefined
+    const post = local ?? demo ?? (BASE
       ? await call<PostDetailResponse>(inWorld(`/posts/${encodeURIComponent(postId)}`)).then(({ postId: id, ...detail }) => ({ ...detail, id }))
       : await laterLazy(() => demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) ?? mock.post(postId)))
     if (!post) throw { status: 404 }
     return runtimeConfig.features.mockFeed
       ? withDemoComments({ ...post, demoComments: post.demoComments || !post.canReply }, sessionPlayer?.id ?? '') : post
   },
-  demoComment: (postId: string, player: Player, text: string, replyId: string) => laterLazy(() => addDemoComment(postId, player, text, replyId)),
   friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),
   dm: (starId: string): Promise<Dm> => BASE ? call(inWorld(`/dm/${starId}`)) : laterLazy(() => {
     const star = contentOf(sessionPlayer?.world ?? 'stage').stars.find(profile => profile.id === starId)

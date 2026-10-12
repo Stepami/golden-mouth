@@ -29,16 +29,20 @@ export interface Player {
 }
 
 export interface Reaction { emoji: string; count: number }
-export interface CommentT { id: string; author: string; avatar: string; handle: string; text: string; star?: boolean; me?: boolean; hidden?: boolean }
+export interface CommentReaction { authorId: string; author: string; avatar: string; star: boolean; me: boolean; emoji: string }
+export interface CommentT {
+  id: string; author: string; avatar: string; handle: string; text: string; star?: boolean; me?: boolean; hidden?: boolean
+  authorId?: string; role?: string; parentCommentId?: string | null; requestId?: string | null; depth?: number; reactions?: CommentReaction[]
+}
 /** Пост канала. `canReply` есть только при загрузке с сервера (GET /posts/:id): отвечать можно лишь под своими постами. */
 export interface Post { id: string; text: string; views: number; reactions: Reaction[]; comments: CommentT[]; inRivers?: boolean; at?: string; canReply?: boolean; demoComments?: boolean }
 /** Wire-контракт GET /posts/:id: сервер называет идентификатор postId. */
 export interface PostDetailResponse extends Omit<Post, 'id'> { postId: string }
 export interface ChannelPost { postId: string; text: string; createdAtUtc: string; views: number; reactions: Reaction[]; commentCount: number }
-/** Ответ на комментарий (02-6). Идемпотентен по replyId: повтор возвращает тот же сохранённый итог. */
-export interface ReplyResult {
-  replyId: string; commentId: string; subscriberBonus: number
-  awardedReplies: number; replyLimit: number; subscriberTotal: number; reaction?: string
+/** SSE одного ответа: промежуточный текст не опубликован; completed подтверждает транзакцию. */
+export interface ReplyLiveEvent {
+  status: 'generating' | 'completed' | 'failed'; requestId: string
+  text?: string | null; post?: PostDetailResponse | null; energyLeft?: number | null; subscribers?: number | null; code?: string | null
 }
 
 export interface Why { icon: string; label: string; value: string }

@@ -136,6 +136,7 @@ public sealed class StarTurnGenerator(
             ChatToolMode.RequireSpecific("thread_reply"),
             new ChatInputSafetyContext(player, [context.PlayerText]),
             StarToolSchemas.ThreadReply);
+        options.MaxOutputTokens = 1200;
         await foreach (var update in chatClient.GetStreamingResponseAsync(messages, options, cancellationToken))
         {
             yield return update;

@@ -22,6 +22,14 @@ internal sealed class GameBalanceOptionsFactory(
         var relations = configuration.GetRequiredSection("relations");
         var challenge = configuration.GetRequiredSection("challenge");
         var thread = configuration.GetRequiredSection("thread");
+        var energy = configuration.GetRequiredSection("energy");
+        var postCost = energy.GetValue<int>("post_cost");
+        var commentCost = energy.GetValue<int>("comment_cost");
+        if (postCost <= 0 || commentCost <= 0)
+        {
+            throw new InvalidOperationException("Energy costs must be positive.");
+        }
+
         var resetValue = posts["reset_time_msk"]
                          ?? throw new InvalidOperationException("posts.reset_time_msk is required.");
         if (!TimeOnly.TryParseExact(
@@ -109,7 +117,9 @@ internal sealed class GameBalanceOptionsFactory(
             new ThreadBalance(
                 thread.GetValue<int>("bonus_replies"),
                 thread.GetValue<int>("subscriber_bonus"),
-                thread.GetValue<int>("branch_depth")),
-            worlds);
+                thread.GetValue<int>("branch_depth"),
+                commentCost),
+            worlds,
+            postCost);
     }
 }

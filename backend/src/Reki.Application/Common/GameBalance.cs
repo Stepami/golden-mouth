@@ -16,4 +16,5 @@ public sealed record GameBalance(
     RelationBalance Relations,
     ChallengeBalance Challenge,
     ThreadBalance Thread,
-    IReadOnlyDictionary<string, WorldBalance> Worlds);
+    IReadOnlyDictionary<string, WorldBalance> Worlds,
+    int PostEnergyCost = 1);

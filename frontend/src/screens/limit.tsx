@@ -26,17 +26,17 @@ function Limit() {
       <div style={{ padding: '14px 20px', textAlign: 'center' }}>
         <Avatar seed="mira" size={72} style={{ margin: '2px auto 10px' }} />
         <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Мира ответит утром</div>
-        <div className="muted" style={{ marginBottom: 14 }}>Она сказала «надо подумать 👀». Посты на сегодня всё, звёзды отдыхают. В 9:00 будут новые</div>
-        <Card style={{ textAlign: 'left', marginBottom: 12 }}><div className="small" style={{ color: 'var(--soft)', marginBottom: 4 }}>А пока бесплатно</div>отвечать на комментарии к своим постам · комментировать друзей · листать ленту</Card>
-        <Gift style={{ textAlign: 'left', fontSize: 15, padding: '12px 14px' }}>Позови друга: +5 постов вам обоим прямо сегодня<div style={{ fontWeight: 600, fontSize: 12, marginTop: 2 }}>как только он сделает первый пост · до 3 друзей в день</div></Gift>
-        <button onClick={() => nav.push('04-2_fake_door')} style={{ marginTop: 14, fontSize: 14, color: 'var(--muted2)', background: 'none', border: 'none' }}>Реки+: +10 постов и все миры ›</button>
+        <div className="muted" style={{ marginBottom: 14 }}>Она сказала «надо подумать 👀». Энергия на сегодня закончилась. В 9:00 запас обновится</div>
+        <Card style={{ textAlign: 'left', marginBottom: 12 }}><div className="small" style={{ color: 'var(--soft)', marginBottom: 4 }}>А пока бесплатно</div>читать треды · комментировать друзей · листать ленту</Card>
+        <Gift style={{ textAlign: 'left', fontSize: 15, padding: '12px 14px' }}>Позови друга: +5 энергии вам обоим прямо сегодня<div style={{ fontWeight: 600, fontSize: 12, marginTop: 2 }}>как только он сделает первый пост · до 3 друзей в день</div></Gift>
+        <button onClick={() => nav.push('04-2_fake_door')} style={{ marginTop: 14, fontSize: 14, color: 'var(--muted2)', background: 'none', border: 'none' }}>Реки+: +10 энергии и все миры ›</button>
       </div>
       <BottomCTA main="Позвать друга" onMain={() => nav.push('04-3_invite')} />
     </div>
   )
 }
 
-// 04-2: Реки+ тарифом; платёжки нет, «Хочу» пишет интерес и даёт +5 постов
+// 04-2: Реки+ тарифом; платёжки нет, «Хочу» пишет интерес и даёт +5 энергии
 function FakeDoor() {
   const nav = useNav(); const p = usePlayer(); const { setPlayer } = useStore()
   const [sent, setSent] = useState(false)
@@ -51,7 +51,7 @@ function FakeDoor() {
       const result = await api.plusInterest(interest)
       setPlayer(await api.me())
       track(interest ? 'plus_interest' : 'plus_bonus_only')
-      setMessage(result.bonus > 0 ? `+${result.bonus} постов уже у тебя` : 'Бонус уже был получен — повторно не начисляется')
+      setMessage(result.bonus > 0 ? `+${result.bonus} энергии уже у тебя` : 'Бонус уже был получен — повторно не начисляется')
       setSent(true)
     } catch { setError('Не получилось подтвердить бонус. Попробуй ещё раз.') }
     finally { setBusy(false) }
@@ -66,16 +66,16 @@ function FakeDoor() {
     <div className="screen no-tab">
       <ChannelHead />
       <div className="sheet-bg"><div className="sheet" style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>✨ Реки+</div><div className="muted small" style={{ marginBottom: 14 }}>Для тех, кому 10 постов в день мало</div>
+        <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>✨ Реки+</div><div className="muted small" style={{ marginBottom: 14 }}>Для тех, кому 10 энергии в день мало</div>
         <div style={{ display: 'flex', gap: 8, textAlign: 'left', marginBottom: 12 }}>
-          {plan('Бесплатно', '0 ₽', [['10 постов в день', true], ['+5 за друга', true], ['свой стиль канала', false], ['все миры сразу', false]])}
-          {plan('Реки+', '349 ₽/мес', [['20 постов в день', true], ['+5 за друга', true], ['свой стиль канала', true], ['все миры сразу', true]], true)}
+          {plan('Бесплатно', '0 ₽', [['10 энергии в день', true], ['+5 за друга', true], ['свой стиль канала', false], ['все миры сразу', false]])}
+          {plan('Реки+', '349 ₽/мес', [['20 энергии в день', true], ['+5 за друга', true], ['свой стиль канала', true], ['все миры сразу', true]], true)}
         </div>
         <div className="muted small" style={{ marginBottom: 12 }}>Реки+ ещё в работе, деньги не списываются. Можно оставить интерес к запуску. Рассылка в боте появится позже</div>
-        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#1F2A26,#1A1A24)', border: '1px solid #6BFFB855' }}><b className="up">{sent ? message : 'Можно получить +5 постов один раз'}</b></Card>
+        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#1F2A26,#1A1A24)', border: '1px solid #6BFFB855' }}><b className="up">{sent ? message : 'Можно получить +5 энергии один раз'}</b></Card>
         {error && <p className="small" role="alert">{error}</p>}
         <Button onClick={() => take(true)} disabled={sent || busy} style={{ marginBottom: 8 }}>Хочу Реки+</Button>
-        <button className="muted small" onClick={() => take(false)} disabled={sent || busy} style={{ background: 'none', border: 'none' }}>Забрать только +5 постов</button>
+        <button className="muted small" onClick={() => take(false)} disabled={sent || busy} style={{ background: 'none', border: 'none' }}>Забрать только +5 энергии</button>
         <Button secondary onClick={close} style={{ marginTop: 12 }}>Не сейчас</Button>
       </div></div>
     </div>
@@ -89,7 +89,7 @@ function PlusPush() {
       <div className="top" style={{ background: '#0E1621', borderColor: '#1A2533' }}><span style={{ fontSize: 22, color: '#8CC8FF' }}>‹</span><Avatar label="R" size={36} /><div><b>Реки</b><div className="small" style={{ color: '#6C8EA8' }}>бот</div></div></div>
       <div style={{ padding: 16 }}>
         <div className="small" style={{ textAlign: 'center', color: '#6C8EA8', marginBottom: 10 }}>сегодня</div>
-        <div className="tgb">✨ <b>Реки+ открыт.</b> Обещали сказать тебе первым делом<br /><br />✍️ +10 постов в день<br />🎨 свой стиль канала: фон, рамка аватарки, шрифт<br />🌍 все миры сразу, без прокачки<br /><br />Первая неделя 99 ₽, дальше 349 ₽ в месяц. Отменить можно в настройках</div>
+        <div className="tgb">✨ <b>Реки+ открыт.</b> Обещали сказать тебе первым делом<br /><br />✍️ +10 энергии в день<br />🎨 свой стиль канала: фон, рамка аватарки, шрифт<br />🌍 все миры сразу, без прокачки<br /><br />Первая неделя 99 ₽, дальше 349 ₽ в месяц. Отменить можно в настройках</div>
         <button className="tgbtn">Подключить Реки+</button><button className="tgbtn">Не сейчас</button>
         <div className="small" style={{ color: '#6C8EA8', marginTop: 8 }}>12:10</div>
       </div>
@@ -134,7 +134,7 @@ function FriendJoined() {
         <div className="row" style={{ justifyContent: 'center', gap: 0, marginBottom: 12 }}><Avatar seed={p.handle} size={64} style={{ border: '3px solid #1A1A24' }} /><Avatar seed="katya" size={64} style={{ marginLeft: -14, border: '3px solid #1A1A24' }} /></div>
         <div style={{ fontSize: 22, fontWeight: 900 }}>Катя пришла по твоей карточке!</div>
         <div className="muted" style={{ margin: '6px 0 16px' }}>Она завела канал в Академии и сделала первый пост</div>
-        <Gift style={{ fontSize: 20, padding: 14 }}>+5 постов тебе и ей</Gift>
+        <Gift style={{ fontSize: 20, padding: 14 }}>+5 энергии тебе и ей</Gift>
         <div className="small muted" style={{ marginTop: 12 }}>Вернётся завтра: откроется карточка «Дуэт»</div>
         <Button style={{ marginTop: 16 }} onClick={() => nav.replace('03-4b_friend_channel')}>К каналу Кати</Button>
       </div></div>

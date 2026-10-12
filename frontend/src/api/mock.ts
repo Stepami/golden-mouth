@@ -1,5 +1,5 @@
 // Демо-посты и фикстуры экранов. Миры и звёзды загружаются из API.
-import type { Challenge, Dm, FeedItem, Friend, GameEvent, Player, Post, PostResult, ReplyResult } from './types'
+import type { Challenge, Dm, FeedItem, Friend, GameEvent, Player, Post, PostResult } from './types'
 
 export const player: Player = {
   id: '00000000000000000000000000000001', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', address: 'she',
@@ -26,10 +26,9 @@ export const firstPost: Post = {
   id: 'post1', text: 'первый день трейни: перепутала право и лево три раза. хореограф сказал «зато уверенно» 🫠', views: 312,
   reactions: [{ emoji: '😂', count: 48 }, { emoji: '🫶', count: 21 }, { emoji: '💀', count: 9 }], at: 'только что', canReply: true,
   comments: [
-    { id: 'k1', author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'я на первой репетиции упала со сцены. «уверенно» это комплимент, поверь', star: true },
-    { id: 'k2', author: 'Лиза · трейни', avatar: '@liza.trainee', handle: '', text: 'серьёзно? со сцены?? 😳', me: true },
-    { id: 'k3', author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'прямо в оркестровую яму. потом расскажу 🙃', star: true },
-    { id: 'k4', author: 'stan_critic', avatar: 'critic', handle: '', text: 'трейни пишет про ошибки? ну такое…' },
+    { id: 'k1', authorId: 'mira', depth: 0, parentCommentId: null, author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'я на первой репетиции упала со сцены. «уверенно» это комплимент, поверь', star: true },
+    { id: 'k2', parentCommentId: 'k1', authorId: player.id, depth: 1, reactions: [{ authorId: 'mira', author: 'Мира', avatar: 'mira', star: true, me: false, emoji: '💛' }], author: 'Лиза · трейни', avatar: '@liza.trainee', handle: '', text: 'серьёзно? со сцены?? 😳', me: true },
+    { id: 'k3', authorId: 'mira', parentCommentId: 'k2', depth: 2, author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'прямо в оркестровую яму. потом расскажу 🙃', star: true },
   ],
 }
 
@@ -49,7 +48,6 @@ export const foreignPost: Post = {
   reactions: [{ emoji: '🖤', count: 14000 }, { emoji: '🌙', count: 3200 }], at: '2 ч назад', canReply: false,
   comments: [
     { id: 'fe1', author: 'Ева', avatar: 'eva', handle: 'солистка NOIR', text: 'набросала в черновик и оставила. пусть живёт', star: true },
-    { id: 'fe2', author: 'stan_critic', avatar: 'critic', handle: '', text: 'загадочно. или просто лень?' },
   ],
 }
 
@@ -59,22 +57,6 @@ export const post = (postId: string): Post => {
   const found = postsById[postId]
   if (!found) throw Object.assign(new Error(`post ${postId} not found`), { status: 404 })
   return structuredClone(found)
-}
-
-// Тред (02-6): +9 за первые 3 ответа из макета; в mock-режиме просто считаем ответы в сессии.
-let mockReplies = 0
-const mockThreadReplies = new Map<string, ReplyResult>()
-export const threadReply = (replyId: string): ReplyResult => {
-  const existing = mockThreadReplies.get(replyId)
-  if (existing) return existing
-  const subscriberBonus = mockReplies < 3 ? 9 : 0
-  if (subscriberBonus > 0) mockReplies += 1
-  const result = {
-    replyId, commentId: crypto.randomUUID(), subscriberBonus,
-    awardedReplies: mockReplies, replyLimit: 3, subscriberTotal: player.subs + mockReplies * 9, reaction: '🔥',
-  }
-  mockThreadReplies.set(replyId, result)
-  return result
 }
 
 export const results: Record<'normal' | 'flop' | 'viral', PostResult> = {

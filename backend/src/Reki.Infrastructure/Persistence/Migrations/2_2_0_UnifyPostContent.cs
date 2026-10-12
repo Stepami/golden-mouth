@@ -39,7 +39,7 @@ internal sealed class UnifyPostContent : RekiMigrationBase
 
         await MigratePublicationResultsAsync(db, session, worlds, cancellationToken);
         await MigratePlayersAsync(db, session, cancellationToken);
-        await worlds.UpdateManyAsync(session, new BsonDocument("Version", new BsonDocument("$exists", false)), Builders<BsonDocument>.Update.Set("Version", 0), cancellationToken: cancellationToken);
+        await worlds.UpdateManyAsync(session, new BsonDocument("Version", BsonNull.Value), Builders<BsonDocument>.Update.Set("Version", 0), cancellationToken: cancellationToken);
     }
 
     private static async Task<BsonDocument> FindWorldAsync(IMongoCollection<BsonDocument> worlds, IClientSessionHandle session, BsonDocument post, CancellationToken cancellationToken)
@@ -109,7 +109,7 @@ internal sealed class UnifyPostContent : RekiMigrationBase
         }
 
         post["Comments"] = new BsonArray(comments);
-        post["Version"] = post.GetValue("Version", 0);
+        post["Version"] = ReadVersion(post);
         post.Remove("PlayerId");
         post.Remove("ThreadReplies");
         return post;
@@ -238,7 +238,7 @@ internal sealed class UnifyPostContent : RekiMigrationBase
             }
 
             var update = Builders<BsonDocument>.Update.Set("EnergyUsed", player.GetValue("EnergyUsed", player.GetValue("PostsUsed", 0)))
-                .Set("Version", player.GetValue("Version", 0)).Unset("PostsUsed");
+                .Set("Version", ReadVersion(player)).Unset("PostsUsed");
             await players.UpdateOneAsync(session, new BsonDocument("_id", player["_id"]), update, cancellationToken: cancellationToken);
         }
     }
@@ -257,6 +257,9 @@ internal sealed class UnifyPostContent : RekiMigrationBase
             parent = (comments.SingleOrDefault(item => item["_id"] == parent) ?? throw InvalidLegacyContent())["ParentCommentId"];
         }
     }
+
+    private static BsonValue ReadVersion(BsonDocument document) =>
+        document.TryGetValue("Version", out var value) && !value.IsBsonNull ? value : new BsonInt32(0);
 
     private static BsonArray ReadArray(BsonDocument document, string field) =>
         document.TryGetValue(field, out var value) && !value.IsBsonNull ? value.AsBsonArray : [];

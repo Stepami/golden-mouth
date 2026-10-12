@@ -102,15 +102,11 @@ public sealed record PlayerProfile
         };
     }
 
-    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills)
-    {
-        return this with
-        {
-            EnergyUsed = EnergyUsed + 1,
-            Skills = skills,
-            Version = Version + 1,
-        };
-    }
+    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills) =>
+        SpendPost(skills, 1, int.MaxValue);
+
+    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, int cost, int cap) =>
+        SpendEnergy(cost, cap) with { Skills = skills };
 
     public PlayerProfile SpendEnergy(int cost, int cap)
     {

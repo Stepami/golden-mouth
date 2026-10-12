@@ -73,7 +73,7 @@ function HateResult() {
           <Card style={{ flex: 1 }}><div style={{ fontSize: 24, fontWeight: 800 }} className="up">+12</div><div className="small muted">опыта смелости</div></Card>
         </div>
         <Card style={{ textAlign: 'left', border: '1px solid #FFB86B66', marginBottom: 12 }}><span className="badge">НОВАЯ КАРТОЧКА</span><div style={{ marginTop: 6 }}><b>Хейт пережит</b><div className="small muted">4/12 в коллекции</div></div></Card>
-        <Gift>Покажи друзьям, как держать удар: друг зайдёт = +5 постов вам обоим</Gift>
+        <Gift>Покажи друзьям, как держать удар: друг зайдёт = +5 энергии вам обоим</Gift>
       </div>
       <BottomCTA second="Дальше" onSecond={() => nav.replace('03-5_stage')} main="Поделиться" onMain={() => nav.push('02-7_share')} />
     </div>
