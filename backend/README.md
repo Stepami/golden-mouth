@@ -66,6 +66,12 @@ an operator resolves a conflict; successful versions are recorded and skipped on
 reject rollback because adopted indexes and current player data cannot safely be reverted to the old uniqueness
 constraints.
 
+Version `2.1.0` adds a unique `InviteeId` index and an `InviterId` lookup index to the existing `invites` collection.
+`Invitation` is an independent document with a Vogen `InvitationId`, the two player IDs, creation time and separate
+bonus-use flags. Domain methods change these flags; `IGameStore` persists each side with a conditional `$set`.
+The document uses the same BSON ID mapping as the other aggregates. This migration prepares its storage;
+onboarding and publication integration remain separate work.
+
 ## Test infrastructure
 
 API component tests share one `ApiFactory`, WireMock server and MongoDB database per test session. `TestSessionFixture` owns the MongoDB container/client, WireMock and resettable clock; TUnit disposes the dependent API factory before these resources at session end. The host starts lazily for the first API test and applies startup migrations once.

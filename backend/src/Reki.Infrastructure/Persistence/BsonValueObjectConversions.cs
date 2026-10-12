@@ -1,4 +1,5 @@
 using Reki.Domain.Events;
+using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Social;
@@ -11,6 +12,7 @@ namespace Reki.Infrastructure.Persistence;
 [BsonSerializer<ChallengeId>]
 [BsonSerializer<CommentId>]
 [BsonSerializer<EventId>]
+[BsonSerializer<InvitationId>]
 [BsonSerializer<PlayerId>]
 [BsonSerializer<PostId>]
 [BsonSerializer<SessionId>]

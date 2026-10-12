@@ -5,6 +5,7 @@ using Reki.Application.Common;
 using Reki.Application.Posts;
 using Reki.Contracts.Posts;
 using Reki.Domain.Events;
+using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Social;
@@ -24,7 +25,7 @@ internal sealed class MongoGameStore : IGameStore
     private readonly IMongoCollection<World> _worlds;
     private readonly IMongoCollection<World> _templates;
     private readonly IMongoCollection<BsonDocument> _threads;
-    private readonly IMongoCollection<BsonDocument> _invites;
+    private readonly IMongoCollection<Invitation> _invites;
 
     public MongoGameStore(MongoCompositionRoot compositionRoot)
     {
@@ -40,7 +41,7 @@ internal sealed class MongoGameStore : IGameStore
         _worlds = database.GetCollection<World>(MongoCollections.Worlds);
         _templates = database.GetCollection<World>(MongoCollections.WorldTemplates);
         _threads = database.GetCollection<BsonDocument>(MongoCollections.Threads);
-        _invites = database.GetCollection<BsonDocument>(MongoCollections.Invites);
+        _invites = database.GetCollection<Invitation>(MongoCollections.Invites);
     }
 
     public IAsyncEnumerable<PlayerProfile> GetPlayersAsync(CancellationToken cancellationToken) =>
@@ -51,6 +52,43 @@ internal sealed class MongoGameStore : IGameStore
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
         await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
+
+    public async ValueTask<bool> TryCreateInviteAsync(Invitation invite, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _invites.InsertOneAsync(invite, cancellationToken: cancellationToken);
+            return true;
+        }
+        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
+    }
+
+    public async ValueTask<Invitation?> GetInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken) =>
+        await _invites.Find(item => item.InviteeId == inviteeId).FirstOrDefaultAsync(cancellationToken);
+
+    public async ValueTask<IReadOnlyList<Invitation>> GetInvitesByInviterAsync(PlayerId inviterId, CancellationToken cancellationToken) =>
+        await _invites.Find(item => item.InviterId == inviterId).ToListAsync(cancellationToken);
+
+    public async ValueTask<bool> TrySaveInviterBonusAsync(Invitation invite, CancellationToken cancellationToken)
+    {
+        var filter = Builders<Invitation>.Filter.Where(item =>
+            item.Id == invite.Id && !item.InviterBonusUsed);
+        var update = Builders<Invitation>.Update.Set(item => item.InviterBonusUsed, invite.InviterBonusUsed);
+        var result = await _invites.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+        return result.ModifiedCount == 1;
+    }
+
+    public async ValueTask<bool> TrySaveInviteeBonusAsync(Invitation invite, CancellationToken cancellationToken)
+    {
+        var filter = Builders<Invitation>.Filter.Where(item =>
+            item.Id == invite.Id && !item.InviteeBonusUsed);
+        var update = Builders<Invitation>.Update.Set(item => item.InviteeBonusUsed, invite.InviteeBonusUsed);
+        var result = await _invites.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+        return result.ModifiedCount == 1;
+    }
 
     public async ValueTask<bool> TryCreatePlayerAsync(
         PlayerProfile player,
@@ -157,7 +195,11 @@ internal sealed class MongoGameStore : IGameStore
         Task deleteChallenges = _challenges.DeleteManyAsync(challengeFilter, cancellationToken);
         Task deleteWorlds = _worlds.DeleteManyAsync(item => item.Player.PlayerId == player.Id, cancellationToken);
         Task deleteThreads = _threads.DeleteManyAsync(threadFilter, cancellationToken);
-        Task deleteInvites = _invites.DeleteManyAsync(threadFilter, cancellationToken);
+        var inviteFilter = Builders<Invitation>.Filter.Or(
+            Builders<Invitation>.Filter.Eq(item => item.InviterId, player.Id),
+            Builders<Invitation>.Filter.Eq(item => item.InviteeId, player.Id),
+            new BsonDocument("PlayerId", player.Id.Value));
+        Task deleteInvites = _invites.DeleteManyAsync(inviteFilter, cancellationToken);
 
         await Task.WhenAll(
             deletePlayer,

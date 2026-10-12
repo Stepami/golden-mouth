@@ -1,5 +1,6 @@
 using Reki.Application.Posts;
 using Reki.Domain.Events;
+using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Social;
@@ -14,6 +15,16 @@ public interface IGameStore
     ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken);
 
     ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
+
+    ValueTask<bool> TryCreateInviteAsync(Invitation invite, CancellationToken cancellationToken);
+
+    ValueTask<Invitation?> GetInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken);
+
+    ValueTask<IReadOnlyList<Invitation>> GetInvitesByInviterAsync(PlayerId inviterId, CancellationToken cancellationToken);
+
+    ValueTask<bool> TrySaveInviterBonusAsync(Invitation invite, CancellationToken cancellationToken);
+
+    ValueTask<bool> TrySaveInviteeBonusAsync(Invitation invite, CancellationToken cancellationToken);
 
     ValueTask<bool> TryCreatePlayerAsync(
         PlayerProfile player,
