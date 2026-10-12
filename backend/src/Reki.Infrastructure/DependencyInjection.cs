@@ -52,6 +52,7 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         services
+            .AddSingleton<LlmSpendPolicy>()
             .AddSingleton<OpenAiRoutingChatClient>()
             .AddChatClient(sp => sp.GetRequiredService<OpenAiRoutingChatClient>())
             .UseOpenTelemetry(
@@ -60,7 +61,8 @@ public static class DependencyInjection
             .Use(innerClient => new DeepSeekThinkingChatClient(innerClient))
             .Use((innerClient, serviceProvider) => new PlayerSafetyChatClient(
                 innerClient,
-                serviceProvider.GetRequiredService<PlayerSafetyGuard>()));
+                serviceProvider.GetRequiredService<PlayerSafetyGuard>()))
+            .Use(client => new LlmSpendChatClient(client));
     }
 
     private static void AddMongoInfrastructure(this IServiceCollection services)
