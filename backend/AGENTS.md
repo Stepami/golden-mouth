@@ -55,7 +55,7 @@ Reki.Contracts/<Feature>/Request.cs, Response.cs
 Reki.Application/<Feature>/<UseCase>/Command.cs|Query.cs, Handler.cs, Mapper.cs
 Reki.Domain/<Feature>/... aggregates, entities, value objects, domain events
 Reki.Infrastructure/<Feature>/... repositories, BSON mappings, external adapters
-Reki.Tests/<Feature>/<UseCase>/... component and domain tests
+Reki.Tests/<Feature>/<UseCase>/... component tests
 ```
 
 - Один use case хранит рядом свои command/query, handler, validation, result и ports, если они не переиспользуются другим use case.
@@ -177,10 +177,12 @@ Reki.Tests/<Feature>/<UseCase>/... component and domain tests
 
 ## Тесты
 
-- Единственный проект `Reki.Tests` содержит component tests полного HTTP pipeline и небольшое число unit tests для сложных domain rules.
+- Единственный проект `Reki.Tests` содержит компонентные тесты бизнес-сценариев полного HTTP pipeline и интеграционные проверки Mongo-миграций. Unit-тесты доменных типов, handlers, serializers, парсинга и инфраструктурных wrappers не создавай.
+- Все Mongo-миграции проверяются в `Persistence/GameIndexMigrationTests.cs` с общим lifecycle БД/session/cleanup; отдельные классы на миграцию не создавай.
+- Мелкий рефакторинг без изменения бизнес-поведения не требует новых тестов. Сначала используй существующий компонентный сценарий; расширяй его только для нового наблюдаемого бизнес-результата или найденной регрессии. Не дублируй сценарии и не тестируй генераторы/конвертеры ради технического покрытия.
 - Component tests используют `TUnit.AspNetCore` `TestWebApplicationFactory<Program>`/`WebApplicationTest`, реальный MongoDB в Testcontainers и сгенерированный NSwag client.
 - Mongo container можно разделять на test session, но данные каждого теста изолируются уникальной БД/префиксом и очищаются. Тесты должны быть безопасны при параллельном запуске.
-- Все зависимости с underlying `HttpClient` заменяются WireMock.Net. NSubstitute используется для object-level ports в unit tests, но не для `HttpClient`, Mongo driver и component-test pipeline.
+- Все внешние зависимости с underlying `HttpClient` заменяются WireMock.Net. MongoDB и HTTP pipeline настоящие; handlers и Mediator не подменяются моками. NSubstitute остаётся доступным для точечных подмен внешних object-level зависимостей через DI, если этого требует бизнес-сценарий.
 - AutoFixture создаёт Vogen value objects через общие customizations и публичные `From`/`TryFrom`, никогда через reflection, uninitialized object или `default`. Не используй случайность там, где от неё зависит смысл сценария.
 - Каждый тест имеет визуально разделённые `// Arrange`, `// Act`, `// Assert`; имя — `MethodName_Scenario_ExpectedBehavior` по Roy Osherove.
 - Проверяй observable behavior: HTTP status/body/headers, persisted Mongo document и emitted integration event. Не проверяй внутренние вызовы без необходимости.

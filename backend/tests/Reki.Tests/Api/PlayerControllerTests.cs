@@ -1,13 +1,11 @@
 using System.Text;
 using System.Text.Json;
-using Mediator;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Common;
-using Reki.Application.Player;
 using Reki.Contracts.Player;
 using Reki.Contracts.Social;
 using Reki.Contracts.Telemetry;
@@ -21,39 +19,6 @@ namespace Reki.Tests.Api;
 [NotInParallel("ApiState")]
 public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
-    [Test]
-    [Arguments(false)]
-    [Arguments(true)]
-    public async Task GetPlayer_WithExplicitNormalization_PreservesReadSemanticsAsync(bool normalizeDay)
-    {
-        // Arrange
-        const long telegramUserId = 8414;
-        using var api = Factory.CreateApiClient(telegramUserId);
-        await CreatePlayerWithWorldAsync(api);
-        var store = Factory.Services.GetRequiredService<IGameStore>();
-        var player = await store.GetPlayerAsync(TelegramUserId.From(telegramUserId), CancellationToken.None)
-                     ?? throw new InvalidOperationException("Missing player.");
-        var oldPeriod = player.PostsPeriodStartedAtUtc.AddDays(-1);
-        await Database.GetCollection<PlayerProfile>("players").ReplaceOneAsync(
-            item => item.Id == player.Id,
-            player with { PostsPeriodStartedAtUtc = oldPeriod, EnergyUsed = 8 },
-            cancellationToken: CancellationToken.None);
-        using var scope = Factory.Services.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-
-        // Act
-        var result = await sender.Send(new GetPlayerQuery(player.Id, normalizeDay), CancellationToken.None);
-
-        // Assert
-        var saved = await store.GetPlayerAsync(player.Id, CancellationToken.None)
-                    ?? throw new InvalidOperationException("Missing player.");
-        await Assert.That(result.Id).IsEqualTo(player.Id);
-        await Assert.That(result.EnergyUsed).IsEqualTo(normalizeDay ? 0 : 8);
-        await Assert.That(saved.EnergyUsed).IsEqualTo(result.EnergyUsed);
-        await Assert.That(saved.PostsPeriodStartedAtUtc)
-            .IsEqualTo(normalizeDay ? player.PostsPeriodStartedAtUtc : oldPeriod);
-    }
-
     [Test]
     public async Task Me_WithoutTelegramAuthentication_ReturnsUnauthorizedAsync()
     {
@@ -146,37 +111,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Assert
         await Assert.That(exception?.StatusCode).IsEqualTo(StatusCodes.Status401Unauthorized);
-        var after = await store.GetPlayersAsync(CancellationToken.None).CountAsync(CancellationToken.None);
-        await Assert.That(after).IsEqualTo(before);
-    }
-
-    [Test]
-    public async Task OnboardPlayer_WithoutHttpContext_DoesNotCreatePlayerAsync()
-    {
-        // Arrange
-        using var scope = Factory.Services.CreateScope();
-        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var command = new OnboardPlayerCommand(
-            "14-17",
-            "default",
-            null,
-            null);
-        var store = Factory.Services.GetRequiredService<IGameStore>();
-        var before = await store.GetPlayersAsync(CancellationToken.None).CountAsync(CancellationToken.None);
-
-        // Act
-        InvalidOperationException? exception = null;
-        try
-        {
-            await sender.Send(command, CancellationToken.None);
-        }
-        catch (InvalidOperationException caught)
-        {
-            exception = caught;
-        }
-
-        // Assert
-        await Assert.That(exception?.Message).IsEqualTo("Failed to extract auth context from HTTP context");
         var after = await store.GetPlayersAsync(CancellationToken.None).CountAsync(CancellationToken.None);
         await Assert.That(after).IsEqualTo(before);
     }
