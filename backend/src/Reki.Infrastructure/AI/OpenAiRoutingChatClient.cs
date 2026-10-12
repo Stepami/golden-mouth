@@ -6,7 +6,7 @@ using OpenAI;
 
 namespace Reki.Infrastructure.AI;
 
-internal class OpenAiRoutingChatClient(IOptions<LlmOptions> options, LlmCostPolicy costPolicy) : RoutingChatClient
+internal class OpenAiRoutingChatClient(IOptions<LlmOptions> options, LlmSpendPolicy costPolicy) : RoutingChatClient
 {
     /// <summary>
     /// Обёрткам нужны метаданные модели до вызова SelectClientAsync.
@@ -39,7 +39,7 @@ internal class OpenAiRoutingChatClient(IOptions<LlmOptions> options, LlmCostPoli
         return ValueTask.FromResult(client);
     }
 
-    private static OpenAIClientOptions CreateClientOptions(LlmOptions options, LlmCostPolicy costPolicy)
+    private static OpenAIClientOptions CreateClientOptions(LlmOptions options, LlmSpendPolicy costPolicy)
     {
         var clientOptions = new OpenAIClientOptions
         {

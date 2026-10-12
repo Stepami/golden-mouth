@@ -1,10 +1,10 @@
-using System.Net.Http.Headers;
 using Kot.MongoDB.Migrations;
 using Kot.MongoDB.Migrations.DI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using OpenTelemetry;
@@ -58,10 +58,13 @@ public static class DependencyInjection
             {
                 var options = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
                 client.BaseAddress = new Uri(options.BaseUrl);
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
                 client.Timeout = TimeSpan.FromSeconds(options.SpendLookupTimeoutSeconds);
             })
-            .UseSocketsHttpHandler((handler, _) => handler.AllowAutoRedirect = false)
+            .UseSocketsHttpHandler((handler, _) =>
+            {
+                handler.AllowAutoRedirect = false;
+                handler.PooledConnectionLifetime = TimeSpan.FromMinutes(2);
+            })
             .AddStandardResilienceHandler(resilience =>
             {
                 resilience.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(3);
@@ -71,8 +74,7 @@ public static class DependencyInjection
             });
 
         services
-            .AddSingleton<LlmCostPolicy>()
-            .AddSingleton<LlmSpendReader>()
+            .AddSingleton<LlmSpendPolicy>()
             .AddSingleton<OpenAiRoutingChatClient>()
             .AddChatClient(sp => sp.GetRequiredService<OpenAiRoutingChatClient>())
             .UseOpenTelemetry(
@@ -80,7 +82,9 @@ public static class DependencyInjection
                 configure: telemetry => telemetry.EnableSensitiveData = false)
             .Use((innerClient, serviceProvider) => new LlmSpendChatClient(
                 innerClient,
-                serviceProvider.GetRequiredService<LlmSpendReader>()))
+                serviceProvider.GetRequiredService<ILlmSpendApi>(),
+                serviceProvider.GetRequiredService<IOptions<LlmOptions>>(),
+                serviceProvider.GetRequiredService<ILogger<LlmSpendChatClient>>()))
             .Use(innerClient => new DeepSeekThinkingChatClient(innerClient))
             .Use((innerClient, serviceProvider) => new PlayerSafetyChatClient(
                 innerClient,

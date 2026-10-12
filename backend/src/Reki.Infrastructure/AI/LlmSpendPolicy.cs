@@ -5,31 +5,20 @@ using System.Globalization;
 namespace Reki.Infrastructure.AI;
 
 /// <summary>Enriches the existing GenAI span with gateway-reported ruble costs.</summary>
-internal sealed class LlmCostPolicy : PipelinePolicy
+internal sealed class LlmSpendPolicy : PipelinePolicy
 {
     public override void Process(PipelineMessage message, IReadOnlyList<PipelinePolicy> pipeline, int currentIndex)
     {
-        var activity = FindChatActivity();
+        var activity = LlmSpendWriter.FindChatActivity();
         ProcessNext(message, pipeline, currentIndex);
         RecordCost(message.Response, activity);
     }
 
     public override async ValueTask ProcessAsync(PipelineMessage message, IReadOnlyList<PipelinePolicy> pipeline, int currentIndex)
     {
-        var activity = FindChatActivity();
+        var activity = LlmSpendWriter.FindChatActivity();
         await ProcessNextAsync(message, pipeline, currentIndex).ConfigureAwait(false);
         RecordCost(message.Response, activity);
-    }
-
-    internal static Activity? FindChatActivity()
-    {
-        var activity = Activity.Current;
-        while (activity is not null && activity.Source.Name != "Reki.GenAI")
-        {
-            activity = activity.Parent;
-        }
-
-        return activity;
     }
 
     private static double? ReadCost(PipelineResponseHeaders headers, string name)
@@ -61,17 +50,11 @@ internal sealed class LlmCostPolicy : PipelinePolicy
             return;
         }
 
-        activity?.SetTag("gen_ai.usage.cost", total.Value);
-        activity?.SetTag("gen_ai.usage.cost.currency", "RUB");
-        activity?.SetTag("gen_ai.usage.cost.source", "gateway");
-        if (ReadCost(response.Headers, "X-Litellm-Response-Cost-Input") is { } input)
-        {
-            activity?.SetTag("gen_ai.usage.cost.input", input);
-        }
-
-        if (ReadCost(response.Headers, "X-Litellm-Response-Cost-Output") is { } output)
-        {
-            activity?.SetTag("gen_ai.usage.cost.output", output);
-        }
+        LlmSpendWriter.Write(
+            activity,
+            total.Value,
+            "headers",
+            ReadCost(response.Headers, "X-Litellm-Response-Cost-Input"),
+            ReadCost(response.Headers, "X-Litellm-Response-Cost-Output"));
     }
 }
