@@ -52,7 +52,7 @@ public sealed partial class AddReplyStreamHandler(
         EnsureEnergy(player, cap);
         var context = new StarReplyContext(
             new StarAgentProfile(world, null, [], player.Address),
-            StarId.From(target.AuthorId.Value.Item2),
+            StarId.From(target.AuthorId.Id),
             post.Text,
             post.GetBranch(target.Id),
             request.Text,
@@ -150,8 +150,8 @@ public sealed partial class AddReplyStreamHandler(
     {
         var target = post.Comments.FirstOrDefault(comment => comment.Id == targetId && !comment.Hidden)
                      ?? throw new ResourceNotFoundException("Comment not found.");
-        if (target.AuthorId.Value.Item1 != AuthorKind.Star ||
-            world.FindStar(StarId.From(target.AuthorId.Value.Item2)) is null)
+        if (target.AuthorId.Kind != AuthorKind.Star ||
+            world.FindStar(StarId.From(target.AuthorId.Id)) is null)
         {
             throw new RequestConflictException("The target is not a star of this world.");
         }

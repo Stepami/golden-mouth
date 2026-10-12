@@ -68,7 +68,7 @@ internal sealed class UnifyPostContent : RekiMigrationBase
         {
             var comment = comments.SingleOrDefault(item => item["_id"] == reply["CommentId"]) ?? throw InvalidLegacyContent();
             var target = comments.SingleOrDefault(item => item["_id"] == reply["TargetCommentId"]) ?? throw InvalidLegacyContent();
-            if (comment["AuthorId"].AsBsonDocument != Author(AuthorKind.Player, owner) || target["AuthorId"].AsBsonDocument["Kind"] != (int)AuthorKind.Star)
+            if (comment["AuthorId"] != Author(AuthorKind.Player, owner) || ReadAuthor(target["AuthorId"]).Kind != AuthorKind.Star)
             {
                 throw InvalidLegacyContent();
             }
@@ -95,7 +95,7 @@ internal sealed class UnifyPostContent : RekiMigrationBase
         ValidateBranches(comments);
         if (post.TryGetValue("AuthorId", out var author))
         {
-            post["AuthorId"] = ValidateAuthor(author.AsBsonDocument, world);
+            post["AuthorId"] = ValidateAuthor(author, world);
         }
         else
         {
@@ -118,13 +118,13 @@ internal sealed class UnifyPostContent : RekiMigrationBase
     private static BsonDocument MigrateComment(BsonDocument source, BsonDocument world)
     {
         var author = source.TryGetValue("AuthorId", out var saved)
-            ? ValidateAuthor(saved.AsBsonDocument, world)
+            ? ValidateAuthor(saved, world)
             : ResolveLegacyAuthor(source, world);
         var reactions = ReadArray(source, "Reactions").Select(value =>
         {
             var reaction = value.AsBsonDocument;
             var reactionAuthor = reaction.TryGetValue("AuthorId", out var existing)
-                ? ValidateAuthor(existing.AsBsonDocument, world)
+                ? ValidateAuthor(existing, world)
                 : ResolveLegacyAuthor(reaction, world);
             return new BsonDocument { ["AuthorId"] = reactionAuthor, ["Emoji"] = reaction["Emoji"] };
         });
@@ -140,7 +140,7 @@ internal sealed class UnifyPostContent : RekiMigrationBase
         };
     }
 
-    private static BsonDocument ResolveLegacyAuthor(BsonDocument source, BsonDocument world)
+    private static BsonString ResolveLegacyAuthor(BsonDocument source, BsonDocument world)
     {
         if (source.GetValue("Me", false).AsBoolean)
         {
@@ -156,18 +156,39 @@ internal sealed class UnifyPostContent : RekiMigrationBase
         return candidates is [var resolved] ? Author(AuthorKind.Star, ReadStarId(resolved)) : throw InvalidLegacyContent();
     }
 
-    private static BsonDocument ValidateAuthor(BsonDocument source, BsonDocument world)
+    private static BsonString ValidateAuthor(BsonValue source, BsonDocument world)
     {
-        var kind = source["Kind"].AsInt32;
-        var id = source["Id"].AsString;
-        if (kind == (int)AuthorKind.Player && id == world["Player"].AsBsonDocument["PlayerId"].AsString)
+        var author = ReadAuthor(source);
+        if (author.Kind == AuthorKind.Player && author.Id == world["Player"].AsBsonDocument["PlayerId"].AsString)
         {
-            return Author(AuthorKind.Player, id);
+            return new BsonString(author.Value);
         }
 
-        if (kind == (int)AuthorKind.Star && ReadArray(world, "Stars").Any(star => ReadStarId(star.AsBsonDocument) == id))
+        if (author.Kind == AuthorKind.Star && ReadArray(world, "Stars").Any(star => ReadStarId(star.AsBsonDocument) == author.Id))
         {
-            return Author(AuthorKind.Star, id);
+            return new BsonString(author.Value);
+        }
+
+        throw InvalidLegacyContent();
+    }
+
+    private static AuthorId ReadAuthor(BsonValue source)
+    {
+        if (source.IsString && AuthorId.TryFrom(source.AsString, out var author))
+        {
+            return author;
+        }
+
+        if (source.IsBsonDocument)
+        {
+            var document = source.AsBsonDocument;
+            if (document.TryGetValue("Kind", out var kind) && kind.IsInt32 &&
+                document.TryGetValue("Id", out var id) && id.IsString &&
+                kind.AsInt32 is (int)AuthorKind.Player or (int)AuthorKind.Star &&
+                !string.IsNullOrWhiteSpace(id.AsString))
+            {
+                return AuthorId.Create((AuthorKind)kind.AsInt32, id.AsString);
+            }
         }
 
         throw InvalidLegacyContent();
@@ -270,10 +291,14 @@ internal sealed class UnifyPostContent : RekiMigrationBase
     private static BsonArray ReadArray(BsonDocument document, string field) =>
         document.TryGetValue(field, out var value) && !value.IsBsonNull ? value.AsBsonArray : [];
 
-    private static BsonDocument Author(AuthorKind kind, string id)
+    private static BsonString Author(AuthorKind kind, string id)
     {
-        _ = AuthorId.From((kind, id));
-        return new BsonDocument { ["Kind"] = (int)kind, ["Id"] = id };
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            throw InvalidLegacyContent();
+        }
+
+        return new BsonString(AuthorId.Create(kind, id).Value);
     }
 
     private static InvalidOperationException InvalidLegacyContent() =>

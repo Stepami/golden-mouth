@@ -78,12 +78,12 @@ public static class PostContractMapper
             author.Avatar,
             author.Handle,
             comment.Text,
-            comment.AuthorId.Value.Item1 == AuthorKind.Star,
+            comment.AuthorId.Kind == AuthorKind.Star,
             comment.AuthorId == playerId.ToAuthorId(),
             comment.Hidden,
             comment.ParentCommentId?.Value,
             comment.RequestId,
-            comment.AuthorId.Value.Item2,
+            comment.AuthorId.Id,
             author.Role,
             post.GetBranch(comment.Id).Count - 1,
             reactions);
@@ -93,10 +93,10 @@ public static class PostContractMapper
     {
         var owner = ResolveAuthor(reaction.AuthorId, world);
         return new CommentReactionResponse(
-            reaction.AuthorId.Value.Item2,
+            reaction.AuthorId.Id,
             owner.Name,
             owner.Avatar,
-            reaction.AuthorId.Value.Item1 == AuthorKind.Star,
+            reaction.AuthorId.Kind == AuthorKind.Star,
             reaction.AuthorId == playerId.ToAuthorId(),
             reaction.Emoji);
     }
@@ -108,7 +108,7 @@ public static class PostContractMapper
             return (world.Player.Name, world.Player.Avatar, world.Player.Role, world.Player.Avatar);
         }
 
-        var star = id.Value.Item1 == AuthorKind.Star ? world.FindStar(StarId.From(id.Value.Item2)) : null;
+        var star = id.Kind == AuthorKind.Star ? world.FindStar(StarId.From(id.Id)) : null;
         return star is null
             ? throw new InvalidOperationException("The author does not belong to the world.")
             : (star.Name, star.AvatarSeed, star.Role, $"@{star.Id.Value}");

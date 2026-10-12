@@ -19,7 +19,6 @@ internal static class MongoClassMappings
 #pragma warning restore CA2255
     public static void Register()
     {
-        BsonSerializer.TryRegisterSerializer(new AuthorValueBsonSerializer());
         BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.AuthorIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.ChallengeIdBsonSerializer());
