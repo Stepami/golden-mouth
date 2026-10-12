@@ -149,11 +149,11 @@ internal sealed class UnifyPostContent : RekiMigrationBase
 
         var stars = ReadArray(world, "Stars").Select(value => value.AsBsonDocument).ToArray();
         var stable = stars.Where(star =>
-            source.GetValue("StarId", BsonNull.Value) == star["Id"] ||
-            source.GetValue("Avatar", BsonNull.Value) == star["Id"] ||
-            source.GetValue("Handle", BsonNull.Value) == $"@{star["Id"].AsString}").ToArray();
+            source.GetValue("StarId", BsonNull.Value) == ReadStarId(star) ||
+            source.GetValue("Avatar", BsonNull.Value) == ReadStarId(star) ||
+            source.GetValue("Handle", BsonNull.Value) == $"@{ReadStarId(star)}").ToArray();
         var candidates = stable.Length > 0 ? stable : stars.Where(star => source.GetValue("Author", BsonNull.Value) == star["Name"]).ToArray();
-        return candidates is [var resolved] ? Author(AuthorKind.Star, resolved["Id"].AsString) : throw InvalidLegacyContent();
+        return candidates is [var resolved] ? Author(AuthorKind.Star, ReadStarId(resolved)) : throw InvalidLegacyContent();
     }
 
     private static BsonDocument ValidateAuthor(BsonDocument source, BsonDocument world)
@@ -165,7 +165,7 @@ internal sealed class UnifyPostContent : RekiMigrationBase
             return Author(AuthorKind.Player, id);
         }
 
-        if (kind == (int)AuthorKind.Star && ReadArray(world, "Stars").Any(star => star.AsBsonDocument["Id"] == id))
+        if (kind == (int)AuthorKind.Star && ReadArray(world, "Stars").Any(star => ReadStarId(star.AsBsonDocument) == id))
         {
             return Author(AuthorKind.Star, id);
         }
@@ -256,6 +256,12 @@ internal sealed class UnifyPostContent : RekiMigrationBase
 
             parent = (comments.SingleOrDefault(item => item["_id"] == parent) ?? throw InvalidLegacyContent())["ParentCommentId"];
         }
+    }
+
+    private static string ReadStarId(BsonDocument star)
+    {
+        var id = star.GetValue("_id", star.GetValue("Id", BsonNull.Value));
+        return id.IsString && !string.IsNullOrWhiteSpace(id.AsString) ? id.AsString : throw InvalidLegacyContent();
     }
 
     private static BsonValue ReadVersion(BsonDocument document) =>
