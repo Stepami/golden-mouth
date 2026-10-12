@@ -53,18 +53,14 @@ docker compose down
 ## MongoDB migrations
 
 Startup runs versioned migrations before serving requests (except during build-time OpenAPI generation). Version `1.0.0`
-creates the ten current game indexes. MongoDB accepts identical existing definitions without rebuilding them, so a
-deployed database with player data needs no manual baseline or migration-history entries. Missing indexes are created;
-conflicting definitions or duplicate values for a unique index fail startup without changing player documents.
+creates the ten initial game indexes. MongoDB accepts identical existing definitions without rebuilding them, so a
+deployed database with player data needs no manual baseline or migration-history entries. Missing indexes are created.
 
-Version `1.1.0` removes `ux_challenges_active_player` only after checking its original unique `PlayerId` definition and
-the active-participants replacement. It verifies the old index is absent after removal. An absent legacy index is
-accepted; an unexpected definition is preserved and stops startup for investigation.
+Version `1.1.0` removes `ux_challenges_active_player` when present. Index definitions are owned by migrations;
+there are no additional checks for manually changed definitions.
 
-Index DDL runs outside transactions under the migrator's database lock. Each step can be retried after interruption or
-an operator resolves a conflict; successful versions are recorded and skipped on subsequent starts. These migrations
-reject rollback because adopted indexes and current player data cannot safely be reverted to the old uniqueness
-constraints.
+Index DDL runs outside transactions under the migrator's database lock. Successful versions are recorded and skipped
+on subsequent starts. The inherited `DownAsync` completes without changing documents or indexes.
 
 Version `2.1.0` moves referral attribution and bonus usage from player profiles to independent `invites`
 documents with a Vogen `InvitationId`, the two player IDs, creation time, and separate usage flags/times.
@@ -75,9 +71,10 @@ invitation usage in the current game day and cap inviter credits at the configur
 
 The migration preserves previously issued inviter credits and used invitee bonuses, removes their old contribution
 from `DailyBonus`, and unsets the replaced profile fields. Historical first-post lookup is confined to this migration.
-Incomplete legacy attribution stops migration before removing source fields. An already-used invitee bonus without
+Missing invitation creation time defaults to the player period or Unix epoch. Inconsistent referral counters lose
+the credits that cannot be reconstructed. An already-used invitee bonus without
 a surviving post keeps its old daily credit until reset and cannot be granted again. Repeated migration does not
-subtract credits twice. Rollback requires restoring a database backup; removed profile state cannot be reconstructed.
+subtract credits twice.
 
 ## Test infrastructure
 

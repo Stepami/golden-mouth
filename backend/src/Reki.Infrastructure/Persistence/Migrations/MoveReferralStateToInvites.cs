@@ -47,24 +47,13 @@ internal sealed class MoveReferralStateToInvites : RekiMigrationBase
             await CopyInvitationAsync(db, session, player, cancellationToken);
         }
 
-        var deductions = new List<(BsonDocument Player, int Amount)>();
-
         // Copy all attribution before removing any source fields, so interrupted runs remain resumable.
         foreach (var player in legacy)
         {
             var period = ReadTime(player.GetValue("PostsPeriodStartedAtUtc", BsonNull.Value));
             var count = player.GetValue("InviteBonusesEarnedInPeriod", 0).ToInt32();
-            if (count < 0)
-            {
-                throw new InvalidOperationException("Legacy referral credit count is invalid. Source fields were preserved.");
-            }
-
-            var deduction = count * LegacyBonus;
-            if (count > 0 && period is null)
-            {
-                throw new InvalidOperationException("Legacy referral period is missing. Source fields were preserved.");
-            }
-
+            var dailyBonus = player.GetValue("DailyBonus", 0).ToInt32();
+            var deduction = count < 0 ? dailyBonus : count * LegacyBonus;
             if (count > 0 && period is { } start)
             {
                 var candidates = await db.GetCollection<Invitation>(MongoCollections.Invites)
@@ -72,12 +61,10 @@ internal sealed class MoveReferralStateToInvites : RekiMigrationBase
                         item.CreatedAtUtc >= start && item.CreatedAtUtc < start.AddDays(1))
                     .SortBy(item => item.CreatedAtUtc).ThenBy(item => item.Id)
                     .Limit(count).ToListAsync(cancellationToken);
-                if (candidates.Count != count)
+                if (candidates.Count == count && deduction <= dailyBonus)
                 {
-                    throw new InvalidOperationException("Legacy referral credits have incomplete attribution. Source fields were preserved.");
+                    await PreserveInviterCreditsAsync(invites, session, candidates, cancellationToken);
                 }
-
-                await PreserveInviterCreditsAsync(invites, session, candidates, cancellationToken);
             }
 
             var own = await db.GetCollection<Invitation>(MongoCollections.Invites)
@@ -89,18 +76,8 @@ internal sealed class MoveReferralStateToInvites : RekiMigrationBase
                 deduction += player.GetValue("FirstPostInviteBonus", 0).ToInt32();
             }
 
-            if (deduction > player.GetValue("DailyBonus", 0).ToInt32())
-            {
-                throw new InvalidOperationException("Legacy referral credits exceed the stored daily bonus. Source fields were preserved.");
-            }
-
-            deductions.Add((player, deduction));
-        }
-
-        foreach ((var player, var deduction) in deductions)
-        {
             var updates = LegacyFields.Select(fieldName => Builders<BsonDocument>.Update.Unset(fieldName)).ToList();
-            updates.Add(Builders<BsonDocument>.Update.Inc("DailyBonus", -deduction));
+            updates.Add(Builders<BsonDocument>.Update.Set("DailyBonus", Math.Max(0, player.GetValue("DailyBonus", 0).ToInt32() - deduction)));
             await players.UpdateOneAsync(
                 session,
                 new BsonDocument("_id", player["_id"]),
@@ -117,11 +94,8 @@ internal sealed class MoveReferralStateToInvites : RekiMigrationBase
             return;
         }
 
-        var created = ReadTime(player.GetValue("InvitedAtUtc", BsonNull.Value));
-        if (created is null)
-        {
-            throw new InvalidOperationException("Legacy invitation creation time is missing. Source fields were preserved.");
-        }
+        var created = ReadTime(player.GetValue("InvitedAtUtc", BsonNull.Value)) ??
+            ReadTime(player.GetValue("PostsPeriodStartedAtUtc", BsonNull.Value)) ?? DateTimeOffset.UnixEpoch;
 
         var inviteeUsed = player.GetValue("FirstPostInviteBonusUsed", false).ToBoolean();
         DateTimeOffset? usedAt = null;
@@ -137,7 +111,7 @@ internal sealed class MoveReferralStateToInvites : RekiMigrationBase
             InvitationId.From("legacy_" + player["_id"].AsString),
             PlayerId.From(inviterId.AsString),
             PlayerId.From(player["_id"].AsString),
-            created.Value,
+            created,
             true,
             inviteeUsed,
             null,

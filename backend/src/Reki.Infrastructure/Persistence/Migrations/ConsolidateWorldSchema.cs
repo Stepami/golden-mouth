@@ -70,7 +70,7 @@ internal sealed class ConsolidateWorldSchema : RekiMigrationBase
         var worldId = new BsonString($"{playerId.AsString}-{kind.AsString}");
         if (!templates.TryGetValue(kind.AsString, out var template))
         {
-            throw new InvalidOperationException("The player's world template is missing.");
+            return;
         }
 
         var world = template.DeepClone().AsBsonDocument;

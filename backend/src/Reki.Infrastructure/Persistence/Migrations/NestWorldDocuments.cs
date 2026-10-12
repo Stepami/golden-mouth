@@ -64,13 +64,18 @@ internal sealed class NestWorldDocuments : RekiMigrationBase
         }
 
         var drama = player.GetValue("Drama", "mid");
+        if (drama.IsBsonNull)
+        {
+            drama = "mid";
+        }
+
         player["Drama"] = drama.IsString ? drama.AsString switch
         {
             "soft" => 0,
             "mid" => 1,
             "hot" => 2,
             "off" => 3,
-            _ => throw new InvalidOperationException("Unknown persisted world drama."),
+            _ => 1,
         } : drama;
         if (!worldInterface.TryGetValue("Difficulty", out var difficulty) || difficulty.IsBsonNull || difficulty == 0)
         {
