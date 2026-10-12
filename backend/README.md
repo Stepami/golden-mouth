@@ -66,11 +66,18 @@ an operator resolves a conflict; successful versions are recorded and skipped on
 reject rollback because adopted indexes and current player data cannot safely be reverted to the old uniqueness
 constraints.
 
-Version `2.1.0` adds a unique `InviteeId` index and an `InviterId` lookup index to the existing `invites` collection.
-`Invitation` is an independent document with a Vogen `InvitationId`, the two player IDs, creation time and separate
-bonus-use flags. Domain methods change these flags; `IGameStore` persists each side with a conditional `$set`.
-The document uses the same BSON ID mapping as the other aggregates. This migration prepares its storage;
-onboarding and publication integration remain separate work.
+Version `2.1.0` moves referral attribution and bonus usage from player profiles to independent `invites`
+documents with a Vogen `InvitationId`, the two player IDs, creation time, and separate usage flags/times.
+It creates a unique `InviteeId` index and an `InviterId` lookup index. Registration creates the invitation without
+changing the inviter's profile. The invitee's first successful publication marks both bonuses inside the existing
+publication transaction; failures and repeated moderation do not consume or duplicate them. Daily post limits read
+invitation usage in the current game day and cap inviter credits at the configured maximum.
+
+The migration preserves previously issued inviter credits and used invitee bonuses, removes their old contribution
+from `DailyBonus`, and unsets the replaced profile fields. Historical first-post lookup is confined to this migration.
+Incomplete legacy attribution stops migration before removing source fields. An already-used invitee bonus without
+a surviving post keeps its old daily credit until reset and cannot be granted again. Repeated migration does not
+subtract credits twice. Rollback requires restoring a database backup; removed profile state cannot be reconstructed.
 
 ## Test infrastructure
 

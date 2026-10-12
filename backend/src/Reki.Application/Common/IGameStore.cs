@@ -28,8 +28,6 @@ public interface IGameStore
 
     ValueTask<bool> TryCreatePlayerAsync(
         PlayerProfile player,
-        PlayerProfile? updatedInviter,
-        int expectedInviterVersion,
         CancellationToken cancellationToken);
 
     ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken);
@@ -58,6 +56,7 @@ public interface IGameStore
         int expectedWorldVersion,
         PublishedPost published,
         string publicationId,
+        Invitation? updatedInvite,
         CancellationToken cancellationToken);
 
     ValueTask<Publication?> GetPublicationAsync(string id, CancellationToken cancellationToken);

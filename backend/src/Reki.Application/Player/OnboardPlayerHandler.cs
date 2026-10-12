@@ -1,8 +1,8 @@
 using Mediator;
-using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Telemetry;
+using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using TgMiniAppAuth.AuthContext.User;
 
@@ -11,7 +11,6 @@ namespace Reki.Application.Player;
 public sealed class OnboardPlayerHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
-    IOptions<GameBalance> balance,
     GameDay gameDay,
     TimeProvider timeProvider,
     ProductTelemetry analytics) : IRequestHandler<OnboardPlayerCommand, PlayerProfile>
@@ -27,30 +26,22 @@ public sealed class OnboardPlayerHandler(
         }
 
         var inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
-        var updatedInviter = inviter is null
-            ? null
-            : gameDay.Normalize(inviter)
-                .GrantInviteBonus(balance.Value.InviteBonusBoth, balance.Value.InviteBonusMaxPerDay);
-        if (ReferenceEquals(updatedInviter, inviter))
-        {
-            updatedInviter = null;
-        }
-
-        var createdPlayer = CreatePlayer(request, telegramUserId, gameDay.PeriodStart);
-        var created = createdPlayer with
+        var created = CreatePlayer(request, telegramUserId, gameDay.PeriodStart) with
         {
             AgeBand = request.AgeBand,
-            InvitedBy = inviter?.Id,
-            InvitedAtUtc = inviter is null ? null : timeProvider.GetUtcNow(),
-            FirstPostInviteBonus = inviter is null ? 0 : balance.Value.InviteBonusBoth,
         };
-        if (await store.TryCreatePlayerAsync(
-                created,
-                updatedInviter,
-                inviter?.Version ?? 0,
-                cancellationToken))
+        if (inviter is not null)
         {
-            analytics.Track(created, "player_created", new Dictionary<string, string>());
+            var invite = Invitation.Create(inviter.Id, created.Id, timeProvider.GetUtcNow());
+            if (!await store.TryCreateInviteAsync(invite, cancellationToken))
+            {
+                throw new RequestConflictException("Invitation already exists.");
+            }
+        }
+
+        if (await store.TryCreatePlayerAsync(created, cancellationToken))
+        {
+            analytics.TrackPlayer(created, "player_created", new Dictionary<string, string>(), inviter is not null);
             return created;
         }
 

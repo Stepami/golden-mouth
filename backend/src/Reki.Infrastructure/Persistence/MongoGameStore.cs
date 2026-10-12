@@ -76,7 +76,8 @@ internal sealed class MongoGameStore : IGameStore
     {
         var filter = Builders<Invitation>.Filter.Where(item =>
             item.Id == invite.Id && !item.InviterBonusUsed);
-        var update = Builders<Invitation>.Update.Set(item => item.InviterBonusUsed, invite.InviterBonusUsed);
+        var update = Builders<Invitation>.Update.Set(item => item.InviterBonusUsed, invite.InviterBonusUsed)
+            .Set(item => item.InviterBonusUsedAtUtc, invite.InviterBonusUsedAtUtc);
         var result = await _invites.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
         return result.ModifiedCount == 1;
     }
@@ -85,45 +86,25 @@ internal sealed class MongoGameStore : IGameStore
     {
         var filter = Builders<Invitation>.Filter.Where(item =>
             item.Id == invite.Id && !item.InviteeBonusUsed);
-        var update = Builders<Invitation>.Update.Set(item => item.InviteeBonusUsed, invite.InviteeBonusUsed);
+        var update = Builders<Invitation>.Update.Set(item => item.InviteeBonusUsed, invite.InviteeBonusUsed)
+            .Set(item => item.InviteeBonusUsedAtUtc, invite.InviteeBonusUsedAtUtc);
         var result = await _invites.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
         return result.ModifiedCount == 1;
     }
 
     public async ValueTask<bool> TryCreatePlayerAsync(
         PlayerProfile player,
-        PlayerProfile? updatedInviter,
-        int expectedInviterVersion,
         CancellationToken cancellationToken)
     {
         try
         {
-            using var session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
-            session.StartTransaction();
-            await _players.InsertOneAsync(session, player, cancellationToken: cancellationToken);
-            if (updatedInviter is not null)
-            {
-                var result = await _players.ReplaceOneAsync(
-                    session,
-                    item => item.Id == updatedInviter.Id && item.Version == expectedInviterVersion,
-                    updatedInviter,
-                    cancellationToken: cancellationToken);
-                if (result.ModifiedCount != 1)
-                {
-                    await session.AbortTransactionAsync(cancellationToken);
-                    return false;
-                }
-            }
-
-            await session.CommitTransactionAsync(cancellationToken);
+            await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
             return true;
         }
         catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            return false;
-        }
-        catch (MongoException exception) when (exception.HasErrorLabel("TransientTransactionError"))
-        {
+            // The invite was prepared for this new ID; a Telegram uniqueness conflict leaves no player owning it.
+            await _invites.DeleteOneAsync(item => item.InviteeId == player.Id, cancellationToken);
             return false;
         }
     }
@@ -220,6 +201,7 @@ internal sealed class MongoGameStore : IGameStore
         int expectedWorldVersion,
         PublishedPost published,
         string publicationId,
+        Invitation? updatedInvite,
         CancellationToken cancellationToken)
     {
         var post = published.Post;
@@ -250,6 +232,25 @@ internal sealed class MongoGameStore : IGameStore
         {
             await session.AbortTransactionAsync(cancellationToken);
             return false;
+        }
+
+        if (updatedInvite is not null)
+        {
+            var inviteUpdate = Builders<Invitation>.Update
+                .Set(item => item.InviterBonusUsed, updatedInvite.InviterBonusUsed)
+                .Set(item => item.InviteeBonusUsed, updatedInvite.InviteeBonusUsed)
+                .Set(item => item.InviterBonusUsedAtUtc, updatedInvite.InviterBonusUsedAtUtc)
+                .Set(item => item.InviteeBonusUsedAtUtc, updatedInvite.InviteeBonusUsedAtUtc);
+            var inviteResult = await _invites.UpdateOneAsync(
+                session,
+                item => item.Id == updatedInvite.Id && !item.InviteeBonusUsed,
+                inviteUpdate,
+                cancellationToken: cancellationToken);
+            if (inviteResult.ModifiedCount != 1)
+            {
+                await session.AbortTransactionAsync(cancellationToken);
+                return false;
+            }
         }
 
         await _posts.InsertOneAsync(session, post, cancellationToken: cancellationToken);

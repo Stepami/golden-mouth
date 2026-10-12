@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Reki.Domain.Invites;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Common;
@@ -14,6 +15,18 @@ public sealed class GameDay(TimeProvider timeProvider, IOptions<GameBalance> bal
             var utcNow = timeProvider.GetUtcNow();
             return GetPeriodStart(utcNow);
         }
+    }
+
+    public int GetPostsCap(PlayerProfile player, Invitation? invite, IReadOnlyList<Invitation> invited)
+    {
+        var start = player.PostsPeriodStartedAtUtc;
+        var end = start.AddDays(1);
+        var inviterUses = invited.Count(item => item.InviterBonusUsed &&
+            item.InviterBonusUsedAtUtc >= start && item.InviterBonusUsedAtUtc < end);
+        var inviteeUse = invite is { InviteeBonusUsed: true } &&
+            invite.InviteeBonusUsedAtUtc >= start && invite.InviteeBonusUsedAtUtc < end ? 1 : 0;
+        return player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay) +
+            (balance.Value.InviteBonusBoth * (Math.Min(balance.Value.InviteBonusMaxPerDay, inviterUses) + inviteeUse));
     }
 
     public PlayerProfile Normalize(PlayerProfile player)

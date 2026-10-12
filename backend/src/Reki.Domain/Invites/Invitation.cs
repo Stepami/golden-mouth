@@ -8,7 +8,9 @@ public sealed record Invitation(
     PlayerId InviteeId,
     DateTimeOffset CreatedAtUtc,
     bool InviterBonusUsed,
-    bool InviteeBonusUsed)
+    bool InviteeBonusUsed,
+    DateTimeOffset? InviterBonusUsedAtUtc = null,
+    DateTimeOffset? InviteeBonusUsedAtUtc = null)
 {
     public static Invitation Create(PlayerId inviterId, PlayerId inviteeId, DateTimeOffset createdAtUtc)
     {
@@ -20,7 +22,9 @@ public sealed record Invitation(
         return new Invitation(InvitationId.New(), inviterId, inviteeId, createdAtUtc.ToUniversalTime(), false, false);
     }
 
-    public Invitation UseInviterBonus() => InviterBonusUsed ? this : this with { InviterBonusUsed = true };
+    public Invitation UseInviterBonus(DateTimeOffset now) =>
+        InviterBonusUsed ? this : this with { InviterBonusUsed = true, InviterBonusUsedAtUtc = now.ToUniversalTime() };
 
-    public Invitation UseInviteeBonus() => InviteeBonusUsed ? this : this with { InviteeBonusUsed = true };
+    public Invitation UseInviteeBonus(DateTimeOffset now) =>
+        InviteeBonusUsed ? this : this with { InviteeBonusUsed = true, InviteeBonusUsedAtUtc = now.ToUniversalTime() };
 }

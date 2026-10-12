@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -445,6 +446,172 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await client.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName, CancellationToken.None);
         }
     }
+
+    [Test]
+    public async Task MoveReferralState_LegacyCredits_PreservesAttributionWithoutDoubleCountingAsync()
+    {
+        // Arrange
+        var database = mongo.MongoClient.GetDatabase($"referral_migration_{Guid.NewGuid():N}");
+        try
+        {
+            var period = new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero);
+            var players = database.GetCollection<BsonDocument>("players");
+            var inviter = CreateLegacyReferralPlayer("inviter", null, period, 12, 2, false);
+            var first = CreateLegacyReferralPlayer("first", "inviter", period.AddHours(1), 13, 1, true);
+            var second = CreateLegacyReferralPlayer("second", "inviter", period.AddHours(2), 3, 0, false);
+            var third = CreateLegacyReferralPlayer("third", "inviter", period.AddHours(3), 0, 0, false);
+            var child = CreateLegacyReferralPlayer("first-child", "first", period.AddHours(6), 0, 0, false);
+            await players.InsertManyAsync([inviter, first, second, third, child]);
+            await database.GetCollection<BsonDocument>("posts").InsertManyAsync([
+                new BsonDocument { ["_id"] = "later", ["PlayerId"] = "first", ["CreatedAtUtc"] = ReferralTimestamp(period.AddHours(5)) },
+                new BsonDocument { ["_id"] = "earlier", ["PlayerId"] = "first", ["CreatedAtUtc"] = ReferralTimestamp(period.AddHours(4)) }]);
+            using var session = await mongo.MongoClient.StartSessionAsync();
+            var migration = new MoveReferralStateToInvites();
+
+            // Act
+            await migration.UpAsync(database, session, CancellationToken.None);
+            await migration.UpAsync(database, session, CancellationToken.None);
+
+            // Assert
+            var saved = await players.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            var legacyFields = new[] { "InvitedBy", "InvitedAtUtc", "FirstPostInviteBonus", "FirstPostInviteBonusUsed", "InviteBonusesEarnedInPeriod" };
+            foreach (var containsLegacyField in saved.SelectMany(player => legacyFields.Select(player.Contains)))
+            {
+                await Assert.That(containsLegacyField).IsFalse();
+            }
+
+            await Assert.That(saved.Single(item => item["_id"] == "inviter")["DailyBonus"].AsInt32).IsEqualTo(2);
+            await Assert.That(saved.Single(item => item["_id"] == "first")["DailyBonus"].AsInt32).IsEqualTo(3);
+            await Assert.That(saved.Single(item => item["_id"] == "second")["DailyBonus"].AsInt32).IsEqualTo(3);
+            var invitations = database.GetCollection<Invitation>("invites");
+            await Assert.That(await invitations.CountDocumentsAsync(FilterDefinition<Invitation>.Empty)).IsEqualTo(4L);
+            var childInvite = await invitations.Find(item => item.InviteeId == PlayerId.From("first-child")).SingleAsync();
+            await Assert.That(childInvite.InviterId.Value).IsEqualTo("first");
+            await Assert.That(childInvite.InviterBonusUsedAtUtc).IsEqualTo(period.AddHours(6));
+            var invites = await invitations.Find(item => item.InviterId == PlayerId.From("inviter"))
+                .SortBy(item => item.CreatedAtUtc).ToListAsync();
+            await Assert.That(invites.Count).IsEqualTo(3);
+            var expectedIds = new[] { "first", "second", "third" };
+            for (var index = 0; index < invites.Count; index++)
+            {
+                var invite = invites[index];
+                var expectedId = expectedIds[index];
+                await Assert.That(invite.Id.Value).IsEqualTo($"legacy_{expectedId}");
+                await Assert.That(invite.InviteeId.Value).IsEqualTo(expectedId);
+                await Assert.That(invite.InviterId.Value).IsEqualTo("inviter");
+                await Assert.That(invite.CreatedAtUtc).IsEqualTo(period.AddHours(index + 1));
+                await Assert.That(invite.InviterBonusUsed).IsTrue();
+                await Assert.That(invite.InviterBonusUsedAtUtc).IsEqualTo(index < 2 ? period.AddHours(index + 1) : (DateTimeOffset?)null);
+                await Assert.That(invite.InviteeBonusUsed).IsEqualTo(index == 0);
+                await Assert.That(invite.InviteeBonusUsedAtUtc).IsEqualTo(index == 0 ? period.AddHours(4) : (DateTimeOffset?)null);
+            }
+        }
+        finally
+        {
+            await mongo.MongoClient.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+        }
+    }
+
+    [Test]
+    [Arguments("attribution")]
+    [Arguments("period")]
+    [Arguments("created")]
+    [Arguments("negative")]
+    [Arguments("daily")]
+    public async Task MoveReferralState_IncompleteLegacyHistory_PreservesSourceFieldsAsync(string missing)
+    {
+        // Arrange
+        var database = mongo.MongoClient.GetDatabase($"referral_invalid_{Guid.NewGuid():N}");
+        try
+        {
+            var period = new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero);
+            var inviter = CreateLegacyReferralPlayer("inviter", null, period, missing == "daily" ? 9 : 12, missing == "negative" ? -1 : 2, false);
+            var first = CreateLegacyReferralPlayer("first", "inviter", period.AddHours(1), 0, 0, false);
+            var second = CreateLegacyReferralPlayer("second", "inviter", period.AddHours(2), 0, 0, false);
+            if (missing == "period")
+            {
+                inviter["PostsPeriodStartedAtUtc"] = BsonNull.Value;
+            }
+
+            if (missing == "created")
+            {
+                first["InvitedAtUtc"] = BsonNull.Value;
+            }
+
+            var source = missing == "attribution" ? new[] { inviter, first } : new[] { inviter, first, second };
+            var players = database.GetCollection<BsonDocument>("players");
+            await players.InsertManyAsync(source);
+            using var session = await mongo.MongoClient.StartSessionAsync();
+            var migration = new MoveReferralStateToInvites();
+
+            // Act
+            Func<Task> migrate = () => migration.UpAsync(database, session, CancellationToken.None);
+
+            // Assert
+            await Assert.That(migrate).Throws<InvalidOperationException>();
+            foreach (var original in source)
+            {
+                var saved = await players.Find(new BsonDocument("_id", original["_id"])).SingleAsync();
+                await Assert.That(saved).IsEqualTo(original);
+            }
+        }
+        finally
+        {
+            await mongo.MongoClient.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+        }
+    }
+
+    [Test]
+    public async Task MoveReferralState_UnknownFirstPostDate_PreservesHistoricalBonusUntilResetAsync()
+    {
+        // Arrange
+        var database = mongo.MongoClient.GetDatabase($"referral_unknown_{Guid.NewGuid():N}");
+        try
+        {
+            var period = new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero);
+            var players = database.GetCollection<BsonDocument>("players");
+            await players.InsertOneAsync(CreateLegacyReferralPlayer("friend", "inviter", period.AddHours(1), 8, 0, true));
+            using var session = await mongo.MongoClient.StartSessionAsync();
+            var migration = new MoveReferralStateToInvites();
+
+            // Act
+            await migration.UpAsync(database, session, CancellationToken.None);
+            await migration.UpAsync(database, session, CancellationToken.None);
+
+            // Assert
+            var saved = await players.Find(new BsonDocument("_id", "friend")).SingleAsync();
+            await Assert.That(saved["DailyBonus"].AsInt32).IsEqualTo(8);
+            await Assert.That(saved.Contains("FirstPostInviteBonusUsed")).IsFalse();
+            var invitation = await database.GetCollection<Invitation>("invites")
+                .Find(item => item.InviteeId == PlayerId.From("friend")).SingleAsync();
+            await Assert.That(invitation.InviterBonusUsed).IsTrue();
+            await Assert.That(invitation.InviterBonusUsedAtUtc).IsNull();
+            await Assert.That(invitation.InviteeBonusUsed).IsTrue();
+            await Assert.That(invitation.InviteeBonusUsedAtUtc).IsNull();
+            var profile = Common.TestGameData.CreatePlayer() with { DailyBonus = saved["DailyBonus"].AsInt32 };
+            await Assert.That(profile.StartNewPeriod(period.AddDays(1)).DailyBonus).IsEqualTo(0);
+        }
+        finally
+        {
+            await mongo.MongoClient.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+        }
+    }
+
+    private static BsonDocument CreateLegacyReferralPlayer(string id, string? inviter, DateTimeOffset createdAt, int dailyBonus, int count, bool used) => new()
+    {
+        ["_id"] = id,
+        ["DailyBonus"] = dailyBonus,
+        ["PostsPeriodStartedAtUtc"] = ReferralTimestamp(new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero)),
+        ["InvitedBy"] = inviter is null ? BsonNull.Value : inviter,
+        ["InvitedAtUtc"] = inviter is null ? BsonNull.Value : ReferralTimestamp(createdAt),
+        ["FirstPostInviteBonus"] = inviter is null ? 0 : 5,
+        ["FirstPostInviteBonusUsed"] = used,
+        ["InviteBonusesEarnedInPeriod"] = count,
+    };
+
+    private static BsonValue ReferralTimestamp(DateTimeOffset value) =>
+        Invitation.Create(PlayerId.From("timestamp-inviter"), PlayerId.From("timestamp-friend"), value)
+            .ToBsonDocument()["CreatedAtUtc"];
 
     private static async Task AssertDocumentArraysAsync(IMongoDatabase database, string collectionName, IReadOnlyList<string> fields)
     {

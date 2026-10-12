@@ -56,7 +56,9 @@ public sealed partial class GeneratePublicationHandler(
             yield break;
         }
 
-        var cap = player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
+        var invite = await store.GetInviteAsync(player.Id, cancellationToken);
+        var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);
+        var cap = gameDay.GetPostsCap(player, invite, invited);
         if (player.PostsUsed >= cap)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
@@ -163,7 +165,7 @@ public sealed partial class GeneratePublicationHandler(
             {
                 var expiresAtUtc = timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime;
                 await store.MarkPublicationFailedAsync(request.Id, expiresAtUtc, CancellationToken.None);
-                analytics.Track(player, "post_failed", new Dictionary<string, string> { ["id"] = request.Id });
+                analytics.TrackPlayer(player, "post_failed", new Dictionary<string, string> { ["id"] = request.Id }, invite is not null);
             }
         }
 

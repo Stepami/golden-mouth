@@ -19,21 +19,47 @@ public sealed class InvitationTests(TestSessionFixture mongo)
     {
         // Arrange
         var original = CreateInvitation("friend");
+        var now = new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.FromHours(3));
 
         // Act
-        var used = inviter ? original.UseInviterBonus() : original.UseInviteeBonus();
-        var repeated = inviter ? used.UseInviterBonus() : used.UseInviteeBonus();
+        var used = inviter ? original.UseInviterBonus(now) : original.UseInviteeBonus(now);
+        var repeated = inviter ? used.UseInviterBonus(now.AddDays(1)) : used.UseInviteeBonus(now.AddDays(1));
 
         // Assert
         await Assert.That(original.InviterBonusUsed).IsFalse();
         await Assert.That(original.InviteeBonusUsed).IsFalse();
         await Assert.That(used.InviterBonusUsed).IsEqualTo(inviter);
         await Assert.That(used.InviteeBonusUsed).IsEqualTo(!inviter);
+        await Assert.That(original.InviterBonusUsedAtUtc).IsNull();
+        await Assert.That(original.InviteeBonusUsedAtUtc).IsNull();
+        await Assert.That(used.InviterBonusUsedAtUtc).IsEqualTo(inviter ? now.ToUniversalTime() : (DateTimeOffset?)null);
+        await Assert.That(used.InviteeBonusUsedAtUtc).IsEqualTo(inviter ? (DateTimeOffset?)null : now.ToUniversalTime());
+        await Assert.That((inviter ? used.InviterBonusUsedAtUtc : used.InviteeBonusUsedAtUtc)?.Offset).IsEqualTo(TimeSpan.Zero);
         await Assert.That(ReferenceEquals(used, repeated)).IsTrue();
         await Assert.That(used.Id).IsEqualTo(original.Id);
         await Assert.That(used.InviterId).IsEqualTo(original.InviterId);
         await Assert.That(used.InviteeId).IsEqualTo(original.InviteeId);
         await Assert.That(used.CreatedAtUtc).IsEqualTo(original.CreatedAtUtc);
+    }
+
+    [Test]
+    [Arguments(-3)]
+    [Arguments(3)]
+    public async Task Create_NonUtcTimestamp_NormalizesCreationTimeAsync(int offsetHours)
+    {
+        // Arrange
+        var createdAt = new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.FromHours(offsetHours));
+
+        // Act
+        var invitation = Invitation.Create(PlayerId.From("inviter"), PlayerId.From("friend"), createdAt);
+
+        // Assert
+        await Assert.That(invitation.CreatedAtUtc).IsEqualTo(new DateTimeOffset(2026, 10, 5, 12 - offsetHours, 0, 0, TimeSpan.Zero));
+        await Assert.That(invitation.CreatedAtUtc.Offset).IsEqualTo(TimeSpan.Zero);
+        await Assert.That(invitation.InviterBonusUsed).IsFalse();
+        await Assert.That(invitation.InviteeBonusUsed).IsFalse();
+        await Assert.That(invitation.InviterBonusUsedAtUtc).IsNull();
+        await Assert.That(invitation.InviteeBonusUsedAtUtc).IsNull();
     }
 
     [Test]
@@ -104,22 +130,29 @@ public sealed class InvitationTests(TestSessionFixture mongo)
             var store = new MongoGameStore(root);
             var original = CreateInvitation("friend");
             await store.TryCreateInviteAsync(original, CancellationToken.None);
+            var inviterAt = DateTimeOffset.UnixEpoch.AddHours(1);
+            var inviteeAt = DateTimeOffset.UnixEpoch.AddHours(2);
 
             // Act
             var first = inviterFirst
-                ? await store.TrySaveInviterBonusAsync(original.UseInviterBonus(), CancellationToken.None)
-                : await store.TrySaveInviteeBonusAsync(original.UseInviteeBonus(), CancellationToken.None);
+                ? await store.TrySaveInviterBonusAsync(original.UseInviterBonus(inviterAt), CancellationToken.None)
+                : await store.TrySaveInviteeBonusAsync(original.UseInviteeBonus(inviteeAt), CancellationToken.None);
             var second = inviterFirst
-                ? await store.TrySaveInviteeBonusAsync(original.UseInviteeBonus(), CancellationToken.None)
-                : await store.TrySaveInviterBonusAsync(original.UseInviterBonus(), CancellationToken.None);
-            var repeated = await store.TrySaveInviterBonusAsync(original.UseInviterBonus(), CancellationToken.None);
+                ? await store.TrySaveInviteeBonusAsync(original.UseInviteeBonus(inviteeAt), CancellationToken.None)
+                : await store.TrySaveInviterBonusAsync(original.UseInviterBonus(inviterAt), CancellationToken.None);
+            var repeated = await store.TrySaveInviterBonusAsync(original.UseInviterBonus(inviterAt.AddDays(1)), CancellationToken.None);
+            var repeatInvitee = await store.TrySaveInviteeBonusAsync(
+                original.UseInviteeBonus(inviteeAt.AddDays(1)), CancellationToken.None);
             var saved = await store.GetInviteAsync(original.InviteeId, CancellationToken.None);
 
             // Assert
             await Assert.That(first).IsTrue();
             await Assert.That(second).IsTrue();
             await Assert.That(repeated).IsFalse();
-            await Assert.That(saved).IsEqualTo(original.UseInviterBonus().UseInviteeBonus());
+            await Assert.That(repeatInvitee).IsFalse();
+            await Assert.That(saved).IsEqualTo(original.UseInviterBonus(inviterAt).UseInviteeBonus(inviteeAt));
+            await Assert.That(saved?.InviterBonusUsedAtUtc).IsEqualTo(inviterAt);
+            await Assert.That(saved?.InviteeBonusUsedAtUtc).IsEqualTo(inviteeAt);
         }
         finally
         {
@@ -133,7 +166,7 @@ public sealed class InvitationTests(TestSessionFixture mongo)
     private static async Task CreateIndexesAsync(MongoCompositionRoot root)
     {
         using var session = await root.MongoClient.StartSessionAsync();
-        var migration = new CreateInviteIndexes();
+        var migration = new MoveReferralStateToInvites();
         await migration.UpAsync(root.MongoDatabase, session, CancellationToken.None);
         await migration.UpAsync(root.MongoDatabase, session, CancellationToken.None);
     }
