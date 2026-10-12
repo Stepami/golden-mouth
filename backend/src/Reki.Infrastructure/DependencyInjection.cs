@@ -52,6 +52,7 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         services
+            .AddSingleton<LlmCostPolicy>()
             .AddSingleton<OpenAiRoutingChatClient>()
             .AddChatClient(sp => sp.GetRequiredService<OpenAiRoutingChatClient>())
             .UseOpenTelemetry(

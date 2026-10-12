@@ -6,7 +6,7 @@ using OpenAI;
 
 namespace Reki.Infrastructure.AI;
 
-internal class OpenAiRoutingChatClient(IOptions<LlmOptions> options) : RoutingChatClient
+internal class OpenAiRoutingChatClient(IOptions<LlmOptions> options, LlmCostPolicy costPolicy) : RoutingChatClient
 {
     /// <summary>
     /// Обёрткам нужны метаданные модели до вызова SelectClientAsync.
@@ -16,13 +16,7 @@ internal class OpenAiRoutingChatClient(IOptions<LlmOptions> options) : RoutingCh
 
     private readonly OpenAIClient _openAiClient = new(
         new ApiKeyCredential(options.Value.ApiKey),
-        new OpenAIClientOptions
-        {
-            ClientLoggingOptions = new ClientLoggingOptions { EnableLogging = false },
-            Endpoint = new Uri(options.Value.BaseUrl),
-            NetworkTimeout = TimeSpan.FromSeconds(options.Value.TimeoutSeconds),
-            RetryPolicy = new ClientRetryPolicy(),
-        });
+        CreateClientOptions(options.Value, costPolicy));
 
     public override object? GetService(Type serviceType, object? serviceKey = null)
     {
@@ -43,5 +37,20 @@ internal class OpenAiRoutingChatClient(IOptions<LlmOptions> options) : RoutingCh
             .AsIChatClient();
 
         return ValueTask.FromResult(client);
+    }
+
+    private static OpenAIClientOptions CreateClientOptions(LlmOptions options, LlmCostPolicy costPolicy)
+    {
+        var clientOptions = new OpenAIClientOptions
+        {
+            ClientLoggingOptions = new ClientLoggingOptions { EnableLogging = false },
+            Endpoint = new Uri(options.BaseUrl),
+            NetworkTimeout = TimeSpan.FromSeconds(options.TimeoutSeconds),
+            RetryPolicy = new ClientRetryPolicy(),
+        };
+
+        // Per-call runs outside retries and records only the final response, also for streaming.
+        clientOptions.AddPolicy(costPolicy, PipelinePosition.PerCall);
+        return clientOptions;
     }
 }
