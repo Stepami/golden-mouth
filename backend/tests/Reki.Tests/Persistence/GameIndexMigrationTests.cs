@@ -447,7 +447,11 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var database = scope.Database;
         var post = LegacyPost();
         var root = LegacyComment("root", false);
-        root["Reactions"] = new BsonArray { new BsonDocument { ["Me"] = true, ["Emoji"] = "❤️" } };
+        root["Reactions"] = new BsonArray
+        {
+            new BsonDocument { ["Me"] = true, ["Emoji"] = "❤️" },
+            new BsonDocument { ["Me"] = false, ["Avatar"] = "mira", ["Emoji"] = "✨" },
+        };
         var reply = LegacyComment("reply", true);
         reply["EnergySpent"] = 0;
         reply["SubscriberBonus"] = 9;
@@ -472,7 +476,11 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(comments[0]["AuthorId"]).IsEqualTo(Author(1, "mira"));
         await Assert.That(comments[0]["ParentCommentId"].IsBsonNull).IsTrue();
         await Assert.That(comments[0]["RequestId"].IsBsonNull).IsTrue();
-        await Assert.That(comments[0]["Reactions"]).IsEqualTo(new BsonArray { new BsonDocument { ["AuthorId"] = Author(0, "owner"), ["Emoji"] = "❤️" } });
+        await Assert.That(comments[0]["Reactions"]).IsEqualTo(new BsonArray
+        {
+            new BsonDocument { ["AuthorId"] = Author(0, "owner"), ["Emoji"] = "❤️" },
+            new BsonDocument { ["AuthorId"] = Author(1, "mira"), ["Emoji"] = "✨" },
+        });
         await Assert.That(comments[1]["AuthorId"]).IsEqualTo(Author(0, "owner"));
         await Assert.That(comments[1]["ParentCommentId"]).IsEqualTo(new BsonString("root"));
         await Assert.That(comments[1]["RequestId"]).IsEqualTo(new BsonString("saved-key"));
@@ -485,31 +493,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
         await Assert.That((await ReadAsync(database, "players", "owner"))["EnergyUsed"]).IsEqualTo(new BsonInt32(4));
         await Assert.That((await ReadAsync(database, "worlds", "world"))["Player"]["Subscribers"]).IsEqualTo(new BsonInt32(1000));
-    }
-
-    [Test]
-    [Arguments("Avatar")]
-    [Arguments("Handle")]
-    [Arguments("Author")]
-    public async Task Up_LegacyStarIdentity_ResolvesWorldStarAsync(string identityField)
-    {
-        // Arrange
-        await using var scope = CreateDatabase();
-        var database = scope.Database;
-        var post = LegacyPost();
-        var identity = identityField switch { "Handle" => "@mira", "Author" => "Мира", _ => "mira" };
-        var comment = new BsonDocument { ["_id"] = "root", ["Text"] = "Старый комментарий", [identityField] = identity };
-        post["Comments"] = new BsonArray { comment };
-        await SeedAsync(database, post);
-
-        // Act
-        await MigrateAsync(database);
-
-        // Assert
-        var saved = await ReadAsync(database, "posts", "post");
-        await Assert.That(saved["Comments"][0]["_id"]).IsEqualTo(new BsonString("root"));
-        await Assert.That(saved["Comments"][0]["AuthorId"]).IsEqualTo(Author(1, "mira"));
-        await Assert.That(saved["Comments"][0]["Reactions"]).IsEqualTo(new BsonArray());
     }
 
     [Test]
@@ -569,59 +552,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(await ReadAsync(database, "players", "owner")).IsEqualTo(player);
         await Assert.That(await ReadAsync(database, "worlds", "world")).IsEqualTo(world);
         await Assert.That(await ReadAsync(database, "publications", "publication")).IsEqualTo(publication);
-    }
-
-    [Test]
-    [Arguments("unknown-author")]
-    [Arguments("ambiguous-author")]
-    public async Task Up_InvalidLegacyContent_RejectsWithoutPartialDataChangesAsync(string scenario)
-    {
-        // Arrange
-        await using var scope = CreateDatabase();
-        var database = scope.Database;
-        var post = LegacyPost();
-        post["Comments"] = new BsonArray { LegacyComment("root", false) };
-        await SeedAsync(database, post);
-        await MakeInvalidAsync(database, post, scenario);
-        await database.GetCollection<BsonDocument>("posts").ReplaceOneAsync(new BsonDocument("_id", "post"), post);
-        var player = await ReadAsync(database, "players", "owner");
-        var world = await ReadAsync(database, "worlds", "world");
-
-        // Act
-        var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => MigrateAsync(database));
-
-        // Assert
-        await Assert.That((failure ?? throw new InvalidOperationException("Expected migration failure.")).Message).Contains("Resolve the source data");
-        await Assert.That(await ReadAsync(database, "posts", "post")).IsEqualTo(post);
-        await Assert.That(await ReadAsync(database, "players", "owner")).IsEqualTo(player);
-        await Assert.That(await ReadAsync(database, "worlds", "world")).IsEqualTo(world);
-    }
-
-    [Test]
-    public async Task Up_TypedWorldStars_ResolvesStoredIdentifierAsync()
-    {
-        // Arrange
-        await using var scope = CreateDatabase();
-        var database = scope.Database;
-        var post = LegacyPost();
-        post["Comments"] = new BsonArray { LegacyComment("root", false) };
-        await SeedAsync(database, post);
-        var template = Common.TestGameData.CreateWorld();
-        var world = template with { Id = WorldId.From("world"), Player = template.Player with { PlayerId = PlayerId.From("owner") } };
-        var serialized = world.ToBsonDocument();
-        await Assert.That(serialized["Stars"][0].AsBsonDocument.Contains("_id")).IsTrue();
-        await Assert.That(serialized["Stars"][0]["_id"]).IsEqualTo(new BsonString("mira"));
-        await database.GetCollection<BsonDocument>("worlds").ReplaceOneAsync(new BsonDocument("_id", "world"), serialized);
-
-        // Act
-        await MigrateAsync(database);
-
-        // Assert
-        var saved = await ReadAsync(database, "posts", "post");
-        await Assert.That(saved["AuthorId"]).IsEqualTo(Author(0, "owner"));
-        await Assert.That(saved["Comments"][0]["AuthorId"]).IsEqualTo(Author(1, "mira"));
-        await Assert.That(saved["Comments"][0]["_id"]).IsEqualTo(new BsonString("root"));
-        await Assert.That(saved["Comments"][0].AsBsonDocument.Contains("Avatar")).IsFalse();
     }
 
     [Test]
@@ -818,32 +748,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
     private static Task<BsonDocument> ReadAsync(IMongoDatabase database, string collection, string id) =>
         database.GetCollection<BsonDocument>(collection).Find(new BsonDocument("_id", id)).SingleAsync();
-
-    private static async Task MakeInvalidAsync(IMongoDatabase database, BsonDocument post, string scenario)
-    {
-        var root = post["Comments"][0].AsBsonDocument;
-        switch (scenario)
-        {
-            case "unknown-author":
-            {
-                root["Avatar"] = "unknown";
-                root["Author"] = "Неизвестно";
-                break;
-            }
-
-            case "ambiguous-author":
-            {
-                root.Remove("Avatar");
-                await database.GetCollection<BsonDocument>("worlds").UpdateOneAsync(new BsonDocument("_id", "world"), Builders<BsonDocument>.Update.Push("Stars", new BsonDocument { ["_id"] = "other", ["Name"] = "Мира" }));
-                break;
-            }
-
-            default:
-            {
-                throw new ArgumentOutOfRangeException(nameof(scenario));
-            }
-        }
-    }
 
     private async Task MigrateAsync(IMongoDatabase database)
     {

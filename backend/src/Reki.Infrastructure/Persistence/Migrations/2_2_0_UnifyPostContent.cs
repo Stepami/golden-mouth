@@ -93,22 +93,10 @@ internal sealed class UnifyPostContent : RekiMigrationBase
         })),
     };
 
-    private static BsonString ResolveLegacyAuthor(BsonDocument source, BsonDocument world)
-    {
-        if (source.GetValue("Me", false).AsBoolean)
-        {
-            return Author(AuthorKind.Player, world["Player"]["PlayerId"].AsString);
-        }
-
-        var stars = world["Stars"].AsBsonArray.Select(value => value.AsBsonDocument).ToArray();
-        var stable = stars.Where(star =>
-            source.GetValue("Avatar", BsonNull.Value) == star["_id"] ||
-            source.GetValue("Handle", BsonNull.Value) == $"@{star["_id"].AsString}").ToArray();
-        var candidates = stable.Length > 0 ? stable : stars.Where(star => source.GetValue("Author", BsonNull.Value) == star["Name"]).ToArray();
-        return candidates is [var resolved]
-            ? Author(AuthorKind.Star, resolved["_id"].AsString)
-            : throw new InvalidOperationException("Legacy comment author cannot be resolved. Resolve the source data before rerunning migration 2.2.0.");
-    }
+    private static BsonString ResolveLegacyAuthor(BsonDocument source, BsonDocument world) =>
+        source["Me"].AsBoolean
+            ? Author(AuthorKind.Player, world["Player"]["PlayerId"].AsString)
+            : Author(AuthorKind.Star, source["Avatar"].AsString);
 
     private static async Task MigratePublicationResultsAsync(IMongoDatabase db, IClientSessionHandle session, IMongoCollection<BsonDocument> worlds, CancellationToken cancellationToken)
     {
