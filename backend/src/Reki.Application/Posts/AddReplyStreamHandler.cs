@@ -73,6 +73,7 @@ public sealed partial class AddReplyStreamHandler(
                     calls.AddRange(updates.Current.Contents.OfType<FunctionCallContent>());
                 }
             }
+
             // Provider exceptions after SSE headers need a safe terminal event; cancellation and
             // critical runtime failures propagate instead of being presented as a model error.
             catch (Exception exception) when (exception is not (OutOfMemoryException or AccessViolationException) &&
