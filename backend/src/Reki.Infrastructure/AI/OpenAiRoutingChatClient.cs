@@ -36,10 +36,7 @@ internal class OpenAiRoutingChatClient(
     {
         var client = _openAiClient
             .GetChatClient(options.Value.Model)
-            .AsIChatClient()
-            .AsBuilder()
-            .Use(client => new LlmSpendChatClient(client))
-            .Build();
+            .AsIChatClient();
 
         return ValueTask.FromResult(client);
     }
