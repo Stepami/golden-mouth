@@ -25,7 +25,7 @@ public sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
             ? value
             : throw new InvalidOperationException($"World balance is missing for '{gameWorld.BalanceKey}'.");
         var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
-        var postIndex = player.PostsUsed + 1;
+        var postIndex = player.EnergyUsed + 1;
         var multiplier = GetGrowthMultiplier(gameWorld, postIndex, ownWords);
         var viral = IsViral(publicationId, quality, world);
         var flop = !viral && IsFlop(publicationId, world);

@@ -61,7 +61,7 @@ public sealed class PublishPostHandler(
         var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);
         var cap = gameDay.GetPostsCap(player, invite, invited);
 
-        if (player.PostsUsed >= cap)
+        if (player.EnergyUsed >= cap)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }
@@ -177,7 +177,7 @@ public sealed class PublishPostHandler(
                 ["humor"] = turn.Humor.ToString("0.###", CultureInfo.InvariantCulture),
                 ["topic"] = turn.Topic.ToString("0.###", CultureInfo.InvariantCulture),
                 ["quality"] = post.Quality.ToString("0.###", CultureInfo.InvariantCulture),
-                ["post_index"] = after.PostsUsed.ToString(CultureInfo.InvariantCulture),
+                ["post_index"] = after.EnergyUsed.ToString(CultureInfo.InvariantCulture),
                 ["id"] = post.Id.Value,
                 ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
             },

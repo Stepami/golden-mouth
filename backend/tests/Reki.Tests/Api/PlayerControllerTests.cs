@@ -36,7 +36,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var oldPeriod = player.PostsPeriodStartedAtUtc.AddDays(-1);
         await Database.GetCollection<PlayerProfile>("players").ReplaceOneAsync(
             item => item.Id == player.Id,
-            player with { PostsPeriodStartedAtUtc = oldPeriod, PostsUsed = 8 },
+            player with { PostsPeriodStartedAtUtc = oldPeriod, EnergyUsed = 8 },
             cancellationToken: CancellationToken.None);
         using var scope = Factory.Services.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
@@ -48,8 +48,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var saved = await store.GetPlayerAsync(player.Id, CancellationToken.None)
                     ?? throw new InvalidOperationException("Missing player.");
         await Assert.That(result.Id).IsEqualTo(player.Id);
-        await Assert.That(result.PostsUsed).IsEqualTo(normalizeDay ? 0 : 8);
-        await Assert.That(saved.PostsUsed).IsEqualTo(result.PostsUsed);
+        await Assert.That(result.EnergyUsed).IsEqualTo(normalizeDay ? 0 : 8);
+        await Assert.That(saved.EnergyUsed).IsEqualTo(result.EnergyUsed);
         await Assert.That(saved.PostsPeriodStartedAtUtc)
             .IsEqualTo(normalizeDay ? player.PostsPeriodStartedAtUtc : oldPeriod);
     }
@@ -598,7 +598,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             player with
             {
                 DailyBonus = 7,
-                PostsUsed = 2,
+                EnergyUsed = 2,
                 Settings = player.Settings with { Plus = true },
             },
             cancellationToken: CancellationToken.None);
@@ -638,7 +638,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(saved.Settings.Quiet).IsEqualTo(player.Settings.Quiet);
         await Assert.That(savedWorld.Player.Subscribers).IsEqualTo(1234);
         await Assert.That(saved.DailyBonus).IsEqualTo(7);
-        await Assert.That(saved.PostsUsed).IsEqualTo(2);
+        await Assert.That(saved.EnergyUsed).IsEqualTo(2);
     }
 
     [Test]
@@ -674,7 +674,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             player with
             {
                 PostsPeriodStartedAtUtc = player.PostsPeriodStartedAtUtc.AddDays(-1),
-                PostsUsed = 8,
+                EnergyUsed = 8,
                 DailyBonus = 7,
                 PlusInterestClaimed = alreadyClaimed,
                 PlusNotifyRequested = true,
@@ -726,7 +726,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(saved.PlusInterestClaimed).IsTrue();
         await Assert.That(saved.PlusNotifyRequested).IsTrue();
         await Assert.That(saved.DailyBonus).IsEqualTo(alreadyClaimed ? 0 : 5);
-        await Assert.That(saved.PostsUsed).IsEqualTo(0);
+        await Assert.That(saved.EnergyUsed).IsEqualTo(0);
         await Assert.That(saved.PostsPeriodStartedAtUtc).IsEqualTo(player.PostsPeriodStartedAtUtc);
         _ = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id == world.Id.Value);
         var savedWorld = (await store.GetWorldsAsync(player.Id, CancellationToken.None)).Single();

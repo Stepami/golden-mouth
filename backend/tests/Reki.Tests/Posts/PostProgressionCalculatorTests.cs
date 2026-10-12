@@ -13,8 +13,8 @@ public sealed class PostProgressionCalculatorTests
         // Arrange
         var balance = CreateDeterministicBalance();
         var calculator = new PostProgressionCalculator(Options.Create(balance));
-        var tenthPostPlayer = TestGameData.CreatePlayer() with { PostsUsed = 9 };
-        var eleventhPostPlayer = TestGameData.CreatePlayer() with { PostsUsed = 10 };
+        var tenthPostPlayer = TestGameData.CreatePlayer() with { EnergyUsed = 9 };
+        var eleventhPostPlayer = TestGameData.CreatePlayer() with { EnergyUsed = 10 };
         var turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
         // Act
@@ -38,14 +38,14 @@ public sealed class PostProgressionCalculatorTests
 
         // Act
         var third = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 2 },
+            TestGameData.CreatePlayer() with { EnergyUsed = 2 },
             TestGameData.CreateWorld(),
             turn,
             false,
             false,
             "publication-test");
         var fourth = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 3 },
+            TestGameData.CreatePlayer() with { EnergyUsed = 3 },
             TestGameData.CreateWorld(),
             turn,
             false,
@@ -65,7 +65,7 @@ public sealed class PostProgressionCalculatorTests
         // Arrange
         var balance = CreateDeterministicBalance();
         var calculator = new PostProgressionCalculator(Options.Create(balance));
-        var player = TestGameData.CreatePlayer() with { PostsUsed = 3 };
+        var player = TestGameData.CreatePlayer() with { EnergyUsed = 3 };
         var turn = TestGameData.CreateTurn(0.8, 0.9, 0.7);
 
         // Act
@@ -83,7 +83,7 @@ public sealed class PostProgressionCalculatorTests
         // Arrange
         var balance = CreateDeterministicBalance();
         var calculator = new PostProgressionCalculator(Options.Create(balance));
-        var player = TestGameData.CreatePlayer() with { PostsUsed = 3 };
+        var player = TestGameData.CreatePlayer() with { EnergyUsed = 3 };
         var turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
         // Act
@@ -100,7 +100,7 @@ public sealed class PostProgressionCalculatorTests
         // Arrange
         var balance = CreateDeterministicBalance();
         var calculator = new PostProgressionCalculator(Options.Create(balance));
-        var player = TestGameData.CreatePlayer() with { PostsUsed = 3 };
+        var player = TestGameData.CreatePlayer() with { EnergyUsed = 3 };
         var turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
         // Act
@@ -117,7 +117,7 @@ public sealed class PostProgressionCalculatorTests
         // Arrange
         var balance = CreateDeterministicBalance();
         var calculator = new PostProgressionCalculator(Options.Create(balance));
-        var player = TestGameData.CreatePlayer() with { PostsUsed = 3 };
+        var player = TestGameData.CreatePlayer() with { EnergyUsed = 3 };
         var turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
         // Act
@@ -140,21 +140,21 @@ public sealed class PostProgressionCalculatorTests
 
         // Act
         var fifth = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 4 },
+            TestGameData.CreatePlayer() with { EnergyUsed = 4 },
             TestGameData.CreateWorld(),
             turn,
             false,
             false,
             "publication-test").SubscriberDelta;
         var sixth = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 5 },
+            TestGameData.CreatePlayer() with { EnergyUsed = 5 },
             TestGameData.CreateWorld(),
             turn,
             false,
             false,
             "publication-test").SubscriberDelta;
         var eleventh = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 10 },
+            TestGameData.CreatePlayer() with { EnergyUsed = 10 },
             TestGameData.CreateWorld(),
             turn,
             false,
@@ -177,7 +177,7 @@ public sealed class PostProgressionCalculatorTests
 
         // Act
         var belowThreshold = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 3 },
+            TestGameData.CreatePlayer() with { EnergyUsed = 3 },
             TestGameData.CreateWorld() with
             {
                 Player = TestGameData.CreateWorld().Player with
@@ -190,7 +190,7 @@ public sealed class PostProgressionCalculatorTests
             false,
             "publication-test").SubscriberDelta;
         var atThreshold = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 3 },
+            TestGameData.CreatePlayer() with { EnergyUsed = 3 },
             TestGameData.CreateWorld() with
             {
                 Player = TestGameData.CreateWorld().Player with
@@ -214,7 +214,7 @@ public sealed class PostProgressionCalculatorTests
         // Arrange
         var balance = CreateDeterministicBalance();
         var calculator = new PostProgressionCalculator(Options.Create(balance));
-        var player = TestGameData.CreatePlayer() with { PostsUsed = 3 };
+        var player = TestGameData.CreatePlayer() with { EnergyUsed = 3 };
         var turn = TestGameData.CreateTurn();
 
         // Act
@@ -235,7 +235,7 @@ public sealed class PostProgressionCalculatorTests
 
         // Act
         var third = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 2 },
+            TestGameData.CreatePlayer() with { EnergyUsed = 2 },
             TestGameData.CreateWorld() with
             {
                 Player = TestGameData.CreateWorld().Player with
@@ -248,7 +248,7 @@ public sealed class PostProgressionCalculatorTests
             false,
             "publication-test").SubscriberDelta;
         var fourth = calculator.Calculate(
-            TestGameData.CreatePlayer() with { PostsUsed = 3 },
+            TestGameData.CreatePlayer() with { EnergyUsed = 3 },
             TestGameData.CreateWorld() with
             {
                 Player = TestGameData.CreateWorld().Player with

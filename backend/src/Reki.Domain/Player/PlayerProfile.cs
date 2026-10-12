@@ -10,7 +10,7 @@ public sealed record PlayerProfile
 
     public required string Address { get; init; }
 
-    public int PostsUsed { get; init; }
+    public int EnergyUsed { get; init; }
 
     public int DailyBonus { get; init; }
 
@@ -95,7 +95,7 @@ public sealed record PlayerProfile
     {
         return this with
         {
-            PostsUsed = 0,
+            EnergyUsed = 0,
             DailyBonus = 0,
             PostsPeriodStartedAtUtc = periodStartedAtUtc,
             Version = Version + 1,
@@ -106,9 +106,20 @@ public sealed record PlayerProfile
     {
         return this with
         {
-            PostsUsed = PostsUsed + 1,
+            EnergyUsed = EnergyUsed + 1,
             Skills = skills,
             Version = Version + 1,
         };
+    }
+
+    public PlayerProfile SpendEnergy(int cost, int cap)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(cost);
+        if (EnergyUsed > cap - cost)
+        {
+            throw new InvalidOperationException("Insufficient energy.");
+        }
+
+        return this with { EnergyUsed = EnergyUsed + cost, Version = Version + 1 };
     }
 }
