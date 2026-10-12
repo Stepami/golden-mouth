@@ -11,13 +11,13 @@ public readonly partial struct AuthorId
     /// <summary>Создаёт идентификатор автора из <see cref="PlayerId"/>.</summary>
     /// <param name="playerId">Исходный идентификатор игрока.</param>
     /// <returns>Проверенный идентификатор автора-игрока.</returns>
-    public static AuthorId Create(PlayerId playerId) =>
+    internal static AuthorId From(PlayerId playerId) =>
         From($"{AuthorKind.Player}_{playerId.Value}");
 
     /// <summary>Создаёт идентификатор автора из <see cref="StarId"/>.</summary>
     /// <param name="starId">Исходный идентификатор AI звезды.</param>
     /// <returns>Проверенный идентификатор автора-звезды.</returns>
-    public static AuthorId Create(StarId starId) =>
+    internal static AuthorId From(StarId starId) =>
         From($"{AuthorKind.Star}_{starId.Value}");
 
     private static Validation Validate(string value)

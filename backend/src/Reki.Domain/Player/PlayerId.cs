@@ -11,7 +11,7 @@ public readonly partial struct PlayerId
 
     /// <summary>Преобразует идентификатор игрока в идентификатор автора.</summary>
     /// <returns>Идентификатор автора с типом игрока.</returns>
-    public AuthorId ToAuthorId() => AuthorId.Create(this);
+    public AuthorId ToAuthorId() => AuthorId.From(this);
 
     private static Validation Validate(string value) => IdentifierValidation.String(value);
 }
