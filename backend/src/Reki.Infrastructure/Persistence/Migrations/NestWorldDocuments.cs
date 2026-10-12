@@ -34,9 +34,6 @@ internal sealed class NestWorldDocuments : RekiMigrationBase
         await MigrateCollectionAsync(db, session, MongoCollections.WorldTemplates, cancellationToken);
     }
 
-    public override Task DownAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("Removed world counters cannot be restored.");
-
     private static async Task MigrateCollectionAsync(IMongoDatabase db, IClientSessionHandle session, string name, CancellationToken cancellationToken)
     {
         var collection = db.GetCollection<BsonDocument>(name);

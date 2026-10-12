@@ -35,9 +35,6 @@ internal sealed class MoveReferralStateToInvites : RekiMigrationBase
         await MoveLegacyStateAsync(db, session, cancellationToken);
     }
 
-    public override Task DownAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("Moved referral state cannot be safely rolled back.");
-
     private static async Task MoveLegacyStateAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken)
     {
         var players = db.GetCollection<BsonDocument>(MongoCollections.Players);

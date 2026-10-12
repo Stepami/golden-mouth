@@ -113,14 +113,6 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
             inviteTask);
     }
 
-    public override Task DownAsync(
-        IMongoDatabase db,
-        IClientSessionHandle session,
-        CancellationToken cancellationToken)
-    {
-        throw new NotSupportedException("The adopted game indexes cannot be safely rolled back.");
-    }
-
     private static Task<string> CreateDocumentIndexAsync(
         IMongoDatabase database,
         string collectionName,

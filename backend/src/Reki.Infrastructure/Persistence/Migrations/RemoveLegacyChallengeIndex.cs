@@ -57,13 +57,4 @@ internal sealed class RemoveLegacyChallengeIndex : RekiMigrationBase
             throw new InvalidOperationException("The legacy challenge index still exists after removal.");
         }
     }
-
-    public override Task DownAsync(
-        IMongoDatabase db,
-        IClientSessionHandle session,
-        CancellationToken cancellationToken)
-    {
-        throw new NotSupportedException(
-            "The obsolete unique challenge index cannot be safely restored over current player data.");
-    }
 }
