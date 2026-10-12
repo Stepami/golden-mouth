@@ -34,7 +34,15 @@ public sealed record PlayerProfile
 
     public bool PlusNotifyRequested { get; init; }
 
-    public ReferralBenefits ReferralBenefits { get; init; } = ReferralBenefits.Empty;
+    public PlayerId? InvitedBy { get; init; }
+
+    public DateTimeOffset? InvitedAtUtc { get; init; }
+
+    public int FirstPostInviteBonus { get; init; }
+
+    public bool FirstPostInviteBonusUsed { get; init; }
+
+    public int InviteBonusesEarnedInPeriod { get; init; }
 
     public string? AgeBand { get; init; }
 
@@ -46,7 +54,7 @@ public sealed record PlayerProfile
         var challengeBonus = ChallengeBonusUntilUtc > PostsPeriodStartedAtUtc
             ? ChallengeDailyBonus
             : 0;
-        return baseLimit + DailyBonus + challengeBonus + ReferralBenefits.DailyPosts;
+        return baseLimit + DailyBonus + challengeBonus;
     }
 
     public PlayerProfile ApplyChallengeWinBonus(
@@ -83,6 +91,21 @@ public sealed record PlayerProfile
             : this with { PlusNotifyRequested = true, Version = Version + 1 };
     }
 
+    public PlayerProfile GrantInviteBonus(int bonus, int maxPerPeriod)
+    {
+        if (InviteBonusesEarnedInPeriod >= maxPerPeriod)
+        {
+            return this;
+        }
+
+        return this with
+        {
+            DailyBonus = DailyBonus + bonus,
+            InviteBonusesEarnedInPeriod = InviteBonusesEarnedInPeriod + 1,
+            Version = Version + 1,
+        };
+    }
+
     public PlayerProfile StartCrisisPause(DateTimeOffset now, TimeSpan hateCooldown)
     {
         return this with
@@ -99,17 +122,20 @@ public sealed record PlayerProfile
         {
             PostsUsed = 0,
             DailyBonus = 0,
+            InviteBonusesEarnedInPeriod = 0,
             PostsPeriodStartedAtUtc = periodStartedAtUtc,
             Version = Version + 1,
         };
     }
 
-    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills)
+    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, bool firstPost)
     {
         return this with
         {
             PostsUsed = PostsUsed + 1,
             Skills = skills,
+            DailyBonus = DailyBonus + (firstPost && !FirstPostInviteBonusUsed ? FirstPostInviteBonus : 0),
+            FirstPostInviteBonusUsed = FirstPostInviteBonusUsed || (firstPost && FirstPostInviteBonus > 0),
             Version = Version + 1,
         };
     }

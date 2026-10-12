@@ -92,7 +92,7 @@ public sealed class PublishPostHandler(
             balance.Value.Relations.Maximum,
             balance.Value.Relations.MaxGainPerDay,
             balance.Value.Relations.StarCardAt);
-        var updated = player.SpendPost(progression.Skills);
+        var updated = player.SpendPost(progression.Skills, world.Player.LastPostAtUtc is null);
         var postId = PostId.New();
         var starComment = new GameComment(
             CommentId.New(),

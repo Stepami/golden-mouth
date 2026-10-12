@@ -12,7 +12,7 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Persistence;
 
-internal sealed partial class MongoGameStore : IGameStore
+internal sealed class MongoGameStore : IGameStore
 {
     private readonly IMongoClient _client;
     private readonly IMongoCollection<PlayerProfile> _players;
@@ -46,47 +46,45 @@ internal sealed partial class MongoGameStore : IGameStore
     public IAsyncEnumerable<PlayerProfile> GetPlayersAsync(CancellationToken cancellationToken) =>
         GetPlayerBatchesAsync(cancellationToken).SelectMany(batch => batch);
 
-    public async ValueTask<PlayerProfile?> GetPlayerAsync(
-        TelegramUserId telegramUserId,
-        CancellationToken cancellationToken)
-    {
-        await RecoverOnboardingAsync(
-            new BsonDocument("PendingTelegramUserId", telegramUserId.Value),
-            cancellationToken);
-        return await _players.Find(item => item.TelegramUserId == telegramUserId)
-            .FirstOrDefaultAsync(cancellationToken);
-    }
+    public async ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken) =>
+        await _players.Find(item => item.TelegramUserId == telegramUserId).FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken)
-    {
-        await RecoverOnboardingAsync(new BsonDocument("InviteeId", playerId.Value), cancellationToken);
-        return await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
-    }
+    public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
+        await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<bool> TryCreatePlayerAsync(
         PlayerProfile player,
-        PlayerId? inviterId,
-        DateTimeOffset createdAtUtc,
-        int inviteBonus,
+        PlayerProfile? updatedInviter,
+        int expectedInviterVersion,
         CancellationToken cancellationToken)
     {
         try
         {
-            if (inviterId is { } inviter)
+            using var session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
+            session.StartTransaction();
+            await _players.InsertOneAsync(session, player, cancellationToken: cancellationToken);
+            if (updatedInviter is not null)
             {
-                await _invites.InsertOneAsync(
-                    CreateInviteDocument(player, inviter, createdAtUtc, inviteBonus),
+                var result = await _players.ReplaceOneAsync(
+                    session,
+                    item => item.Id == updatedInviter.Id && item.Version == expectedInviterVersion,
+                    updatedInviter,
                     cancellationToken: cancellationToken);
-                await RecoverOnboardingAsync(new BsonDocument("InviteeId", player.Id.Value), cancellationToken);
-                var saved = await _players.Find(item => item.TelegramUserId == player.TelegramUserId)
-                    .FirstOrDefaultAsync(cancellationToken);
-                return saved?.Id == player.Id;
+                if (result.ModifiedCount != 1)
+                {
+                    await session.AbortTransactionAsync(cancellationToken);
+                    return false;
+                }
             }
 
-            await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
+            await session.CommitTransactionAsync(cancellationToken);
             return true;
         }
         catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return false;
+        }
+        catch (MongoException exception) when (exception.HasErrorLabel("TransientTransactionError"))
         {
             return false;
         }
@@ -159,11 +157,7 @@ internal sealed partial class MongoGameStore : IGameStore
         Task deleteChallenges = _challenges.DeleteManyAsync(challengeFilter, cancellationToken);
         Task deleteWorlds = _worlds.DeleteManyAsync(item => item.Player.PlayerId == player.Id, cancellationToken);
         Task deleteThreads = _threads.DeleteManyAsync(threadFilter, cancellationToken);
-        var inviteFilter = Builders<BsonDocument>.Filter.Or(
-            Builders<BsonDocument>.Filter.Eq("InviterId", player.Id.Value),
-            Builders<BsonDocument>.Filter.Eq("InviteeId", player.Id.Value),
-            threadFilter);
-        Task deleteInvites = _invites.DeleteManyAsync(inviteFilter, cancellationToken);
+        Task deleteInvites = _invites.DeleteManyAsync(threadFilter, cancellationToken);
 
         await Task.WhenAll(
             deletePlayer,

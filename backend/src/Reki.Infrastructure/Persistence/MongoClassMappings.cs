@@ -60,11 +60,6 @@ internal static class MongoClassMappings
         BsonClassMap.RegisterClassMap<TDocument>(classMap =>
         {
             classMap.AutoMap();
-            if (typeof(TDocument) == typeof(PlayerProfile))
-            {
-                classMap.UnmapProperty(nameof(PlayerProfile.ReferralBenefits));
-            }
-
             classMap.MapIdMember(idExpression);
         });
     }

@@ -165,7 +165,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
             var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
                 .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-            await Assert.That(historyCount).IsEqualTo(7L);
+            await Assert.That(historyCount).IsEqualTo(6L);
         }
         finally
         {
@@ -485,9 +485,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         yield return ("events", "ix_events_world_day", new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "DayStartedAtUtc", 1 } }, false);
         yield return ("threads", "ix_threads_player", new BsonDocument("PlayerId", 1), false);
         yield return ("invites", "ix_invites_player", new BsonDocument("PlayerId", 1), false);
-        yield return ("invites", "ux_invites_invitee", new BsonDocument("InviteeId", 1), true);
-        yield return ("invites", "ix_invites_inviter", new BsonDocument("InviterId", 1), false);
-        yield return ("invites", "ux_invites_pending_telegram", new BsonDocument("PendingTelegramUserId", 1), true);
     }
 
     private static async Task SeedCurrentIndexesAsync(IMongoDatabase database)
@@ -514,16 +511,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         if (name == "ux_challenges_active_participants")
         {
             options.PartialFilterExpression = new BsonDocument("Status", 1);
-        }
-
-        if (name == "ux_invites_invitee")
-        {
-            options.PartialFilterExpression = new BsonDocument("InviteeId", new BsonDocument("$type", "string"));
-        }
-
-        if (name == "ux_invites_pending_telegram")
-        {
-            options.PartialFilterExpression = new BsonDocument("PendingTelegramUserId", new BsonDocument("$type", "long"));
         }
 
         return database.GetCollection<BsonDocument>(collection).Indexes.CreateOneAsync(

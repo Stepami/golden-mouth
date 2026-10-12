@@ -111,7 +111,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
             attributes["screen"] = entry.Screen;
             attributes["world"] = ReadWorldKey(entry.Properties);
             attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
-            attributes["registration_source"] = player.ReferralBenefits.HasAttribution ? "referral" : "direct";
+            attributes["registration_source"] = player.InvitedBy is null ? "direct" : "referral";
             if (entry.PreviousScreen is not null)
             {
                 attributes["previous_screen"] = entry.PreviousScreen;
@@ -138,7 +138,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         var attributes = CreateAttributes(player.Id, eventName, timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
         attributes["world"] = ReadWorldKey(properties);
         attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
-        attributes["registration_source"] = player.ReferralBenefits.HasAttribution ? "referral" : "direct";
+        attributes["registration_source"] = player.InvitedBy is null ? "direct" : "referral";
         AddProperties(attributes, properties);
         Write(eventName, attributes);
     }
