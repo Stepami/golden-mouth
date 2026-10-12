@@ -142,10 +142,10 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var owner = await GetStoredPlayerAsync(ownerUserId);
         var posts = Database.GetCollection<BsonDocument>("posts");
         await posts.UpdateOneAsync(
-            new BsonDocument { ["AuthorId.Id"] = owner["_id"], ["Text"] = "старый пост канала" },
+            new BsonDocument { ["AuthorId"] = $"Player_{owner["_id"].AsString}", ["Text"] = "старый пост канала" },
             new BsonDocument("$set", new BsonDocument("CreatedAtUtc", new BsonDateTime(new DateTime(2026, 10, 7, 6, 0, 0, DateTimeKind.Utc)))));
         await posts.UpdateOneAsync(
-            new BsonDocument { ["AuthorId.Id"] = owner["_id"], ["Text"] = "новый пост канала" },
+            new BsonDocument { ["AuthorId"] = $"Player_{owner["_id"].AsString}", ["Text"] = "новый пост канала" },
             new BsonDocument("$set", new BsonDocument("CreatedAtUtc", new BsonDateTime(new DateTime(2026, 10, 7, 7, 0, 0, DateTimeKind.Utc)))));
 
         // Act
@@ -192,7 +192,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var player = await GetStoredPlayerAsync(telegramUserId);
         var post = await Database
             .GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("AuthorId.Id", player["_id"]))
+            .Find(new BsonDocument("AuthorId", $"Player_{player["_id"]}"))
             .SingleAsync();
         var postId = post["_id"].AsString;
         var commentId = post["Comments"].AsBsonArray[0]["_id"].AsString;
@@ -298,7 +298,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .Find(new BsonDocument("TelegramUserId", telegramUserId))
             .SingleAsync();
         var postCount = await Database.GetCollection<BsonDocument>("posts")
-            .CountDocumentsAsync(new BsonDocument("AuthorId.Id", storedPlayer["_id"]));
+            .CountDocumentsAsync(new BsonDocument("AuthorId", $"Player_{storedPlayer["_id"]}"));
         await Assert.That(postCount).IsEqualTo(1);
     }
 
@@ -393,7 +393,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .SingleAsync();
         var postCount = await Database
             .GetCollection<BsonDocument>("posts")
-            .CountDocumentsAsync(new BsonDocument("AuthorId.Id", player["_id"]));
+            .CountDocumentsAsync(new BsonDocument("AuthorId", $"Player_{player["_id"]}"));
 
         await Assert.That(generation).Contains("\"type\":\"failed\"");
         var publication = await Database.GetCollection<BsonDocument>("publications")

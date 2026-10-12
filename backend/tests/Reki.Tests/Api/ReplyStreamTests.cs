@@ -30,7 +30,7 @@ public sealed class ReplyStreamTests(ApiFactory factory) : GameApiTestBase(facto
         var beforePlayer = await GetStoredPlayerAsync(user);
         var world = await Database.GetCollection<World>("worlds").Find(FilterDefinition<World>.Empty).SingleAsync();
         var original = await GetStoredPostAsync(postId);
-        var selected = original["Comments"][0]["AuthorId"]["Id"].AsString;
+        var selected = AuthorId.From(original["Comments"][0]["AuthorId"].AsString).Id;
         var other = world.Stars.First(star => star.Id.Value != selected);
         Factory.Llm.Respond(CreateReplyTurnResponse(selected, args =>
         {
@@ -70,6 +70,29 @@ public sealed class ReplyStreamTests(ApiFactory factory) : GameApiTestBase(facto
         await Assert.That(starReply.RequestId).IsNull();
         await Assert.That(starReply.Me).IsFalse();
         await Assert.That(starReply.Depth).IsEqualTo(2);
+        var selectedProfile = world.Stars.Single(star => star.Id.Value == selected);
+        await Assert.That(playerReply.AuthorId).IsEqualTo(world.Player.PlayerId.Value);
+        await Assert.That(playerReply.Author).IsEqualTo(world.Player.Name);
+        await Assert.That(playerReply.Avatar).IsEqualTo(world.Player.Avatar);
+        await Assert.That(playerReply.Role).IsEqualTo(world.Player.Role);
+        await Assert.That(starReply.Author).IsEqualTo(selectedProfile.Name);
+        await Assert.That(starReply.Avatar).IsEqualTo(selectedProfile.AvatarSeed);
+        await Assert.That(starReply.Role).IsEqualTo(selectedProfile.Role);
+        await Assert.That(starReply.Star).IsTrue();
+        var finalPost = completed.Post ?? throw new InvalidOperationException("Missing completed post.");
+        var finalPlayer = finalPost.Comments.Single(comment => comment.Id == playerReply.Id);
+        var finalStar = finalPost.Comments.Single(comment => comment.Id == starReply.Id);
+        await Assert.That(finalPlayer.AuthorId).IsEqualTo(world.Player.PlayerId.Value);
+        await Assert.That(finalPlayer.Author).IsEqualTo(world.Player.Name);
+        await Assert.That(finalPlayer.Avatar).IsEqualTo(world.Player.Avatar);
+        await Assert.That(finalPlayer.Role).IsEqualTo(world.Player.Role);
+        await Assert.That(finalPlayer.Me).IsTrue();
+        await Assert.That(finalStar.AuthorId).IsEqualTo(selected);
+        await Assert.That(finalStar.Author).IsEqualTo(selectedProfile.Name);
+        await Assert.That(finalStar.Avatar).IsEqualTo(selectedProfile.AvatarSeed);
+        await Assert.That(finalStar.Role).IsEqualTo(selectedProfile.Role);
+        await Assert.That(finalStar.Me).IsFalse();
+
         await Assert.That(playerReply.Reactions.Count).IsEqualTo(reaction ? 1 : 0);
         if (optional)
         {
@@ -92,16 +115,16 @@ public sealed class ReplyStreamTests(ApiFactory factory) : GameApiTestBase(facto
         await Assert.That(player["EnergyUsed"].AsInt32).IsEqualTo(beforePlayer["EnergyUsed"].AsInt32 + 1);
         await Assert.That(completed.EnergyLeft).IsEqualTo(8);
         var storedOwn = stored["Comments"].AsBsonArray.Single(item => item["RequestId"].IsString && item["RequestId"].AsString == "valid-turn");
-        await Assert.That(storedOwn["AuthorId"]["Kind"].AsInt32).IsEqualTo(0);
-        await Assert.That(storedOwn["AuthorId"]["Id"]).IsEqualTo(beforePlayer["_id"]);
+        await Assert.That(storedOwn["AuthorId"].BsonType).IsEqualTo(BsonType.String);
+        await Assert.That(storedOwn["AuthorId"].AsString).IsEqualTo($"Player_{beforePlayer["_id"].AsString}");
         var storedStar = stored["Comments"].AsBsonArray.Single(item => item["ParentCommentId"].IsString && item["ParentCommentId"].AsString == storedOwn["_id"].AsString);
-        await Assert.That(storedStar["AuthorId"]["Kind"].AsInt32).IsEqualTo(1);
-        await Assert.That(storedStar["AuthorId"]["Id"].AsString).IsEqualTo(selected);
+        await Assert.That(storedStar["AuthorId"].BsonType).IsEqualTo(BsonType.String);
+        await Assert.That(storedStar["AuthorId"].AsString).IsEqualTo($"Star_{selected}");
         await Assert.That(stored["Version"].AsInt32).IsEqualTo(1);
         await Assert.That(stored.Contains("ThreadReplies")).IsFalse();
         foreach (var comment in stored["Comments"].AsBsonArray.Select(value => value.AsBsonDocument))
         {
-            await Assert.That(comment["AuthorId"].AsBsonDocument.Contains("Id")).IsTrue();
+            await Assert.That(comment["AuthorId"].BsonType).IsEqualTo(BsonType.String);
             await Assert.That(comment.Contains("EnergySpent") || comment.Contains("SubscriberBonus") || comment.Contains("Me") || comment.Contains("Star") || comment.Contains("Author") || comment.Contains("Avatar") || comment.Contains("Handle") || comment.Contains("OriginCommentId")).IsFalse();
         }
     }
@@ -180,7 +203,7 @@ public sealed class ReplyStreamTests(ApiFactory factory) : GameApiTestBase(facto
         var before = await GetStoredPostAsync(postId);
         var player = await GetStoredPlayerAsync(user);
         var world = await GetStoredWorldAsync(user);
-        var selected = before["Comments"][0]["AuthorId"]["Id"].AsString;
+        var selected = AuthorId.From(before["Comments"][0]["AuthorId"].AsString).Id;
         var response = CreateReplyTurnResponse(selected, args =>
         {
             switch (violation)
@@ -306,8 +329,8 @@ public sealed class ReplyStreamTests(ApiFactory factory) : GameApiTestBase(facto
         if (scenario is "player-target" or "unknown-star")
         {
             var author = scenario == "player-target"
-                ? new BsonDocument { ["Kind"] = 0, ["Id"] = (await GetStoredPlayerAsync(user))["_id"] }
-                : new BsonDocument { ["Kind"] = 1, ["Id"] = "unknown-star" };
+                ? $"Player_{(await GetStoredPlayerAsync(user))["_id"].AsString}"
+                : "Star_unknown-star";
             await Database.GetCollection<BsonDocument>("posts").UpdateOneAsync(new BsonDocument("_id", postId), new BsonDocument("$set", new BsonDocument("Comments.0.AuthorId", author)));
         }
 
@@ -402,7 +425,7 @@ public sealed class ReplyStreamTests(ApiFactory factory) : GameApiTestBase(facto
         // Arrange
         const long user = 8708;
         var (postId, targetId) = await PublishPostForThreadAsync(user);
-        var selected = (await GetStoredPostAsync(postId))["Comments"][0]["AuthorId"]["Id"].AsString;
+        var selected = AuthorId.From((await GetStoredPostAsync(postId))["Comments"][0]["AuthorId"].AsString).Id;
         Factory.Llm.Respond(CreateReplyTurnResponse(selected, args => args["emoji"] = "💡"));
         await ReplyAsync(user, postId, targetId, "metadata", "мой ответ");
         var worlds = Database.GetCollection<World>("worlds");
@@ -522,7 +545,7 @@ public sealed class ReplyStreamTests(ApiFactory factory) : GameApiTestBase(facto
         // Arrange
         const long user = 8712;
         var (postId, targetId) = await PublishPostForThreadAsync(user);
-        var selected = (await GetStoredPostAsync(postId))["Comments"][0]["AuthorId"]["Id"].AsString;
+        var selected = AuthorId.From((await GetStoredPostAsync(postId))["Comments"][0]["AuthorId"].AsString).Id;
         var text = new string('а', 500);
         const string emoji = "💡💡💡💡";
         Factory.Llm.Respond(CreateReplyTurnResponse(selected, args =>

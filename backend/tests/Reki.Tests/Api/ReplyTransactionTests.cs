@@ -284,7 +284,7 @@ public sealed class ReplyTransactionTests(ApiFactory factory) : GameApiTestBase(
             {
                 Hidden = scenario == "hidden",
                 AuthorId = scenario == "kind"
-                    ? AuthorId.From((AuthorKind.Player, post.Comments[0].AuthorId.Value.Item2))
+                    ? AuthorId.Create(AuthorKind.Player, post.Comments[0].AuthorId.Id)
                     : post.Comments[0].AuthorId,
             };
             post = post with { Comments = [target] };
@@ -296,7 +296,7 @@ public sealed class ReplyTransactionTests(ApiFactory factory) : GameApiTestBase(
         }
         else
         {
-            var response = CreateReplyTurnResponse(post.Comments[0].AuthorId.Value.Item2);
+            var response = CreateReplyTurnResponse(post.Comments[0].AuthorId.Id);
             var call = response.Messages[0].Contents.OfType<FunctionCallContent>().Single();
             response.Messages[0].Contents.Add(new FunctionCallContent("duplicate", call.Name, call.Arguments));
             Factory.Llm.Respond(response);
@@ -497,7 +497,7 @@ public sealed class ReplyTransactionTests(ApiFactory factory) : GameApiTestBase(
         var (postId, targetId) = await PublishPostForThreadAsync(user);
         var post = await ReadPostAsync(postId);
         var world = await ReadWorldAsync(post.WorldId.Value);
-        var selected = post.Comments[0].AuthorId.Value.Item2;
+        var selected = post.Comments[0].AuthorId.Id;
         var other = world.Stars.First(star => star.Id.Value != selected);
         Factory.Llm.Respond(CreateReplyTurnResponse(selected, arguments =>
         {

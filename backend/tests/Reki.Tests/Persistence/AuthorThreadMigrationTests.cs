@@ -113,7 +113,7 @@ public sealed class AuthorThreadMigrationTests(TestSessionFixture mongo)
             if (existingVersions)
             {
                 post["Version"] = 7;
-                post["AuthorId"] = Author(1, "mira");
+                post["AuthorId"] = NestedAuthor(1, "mira");
                 post.Remove("PlayerId");
             }
 
@@ -244,7 +244,242 @@ public sealed class AuthorThreadMigrationTests(TestSessionFixture mongo)
         }
     }
 
-    private static BsonDocument Author(int kind, string id) => new() { ["Kind"] = kind, ["Id"] = id };
+    [Test]
+    [Arguments("legacy")]
+    [Arguments("nested")]
+    [Arguments("canonical")]
+    public async Task Up_MixedAuthorFormats_PreservesCanonicalValuesAcrossRerunAsync(string postFormat)
+    {
+        // Arrange
+        var database = mongo.MongoClient.GetDatabase($"author_formats_{Guid.NewGuid():N}");
+        try
+        {
+            const string starId = "mira_Star_ suffix ";
+            var post = LegacyPost();
+            post["Sentinel"] = new BsonDocument("Untouched", 42);
+            post["Version"] = 7;
+            if (postFormat != "legacy")
+            {
+                post["AuthorId"] = postFormat == "nested" ? NestedAuthor(0, "owner") : Author(0, "owner");
+            }
+
+            var root = LegacyComment("root", false);
+            root["Avatar"] = starId;
+            root["Reactions"] = new BsonArray
+            {
+                new BsonDocument { ["Me"] = true, ["Emoji"] = "❤️" },
+                new BsonDocument { ["AuthorId"] = NestedAuthor(1, starId), ["Emoji"] = "👏" },
+                new BsonDocument { ["AuthorId"] = Author(1, starId), ["Emoji"] = "✨" },
+            };
+            var reply = LegacyComment("reply", true);
+            reply["AuthorId"] = NestedAuthor(0, "owner");
+            reply["ParentCommentId"] = "root";
+            reply["RequestId"] = "saved-key";
+            var followup = LegacyComment("followup", false);
+            followup["AuthorId"] = Author(1, starId);
+            followup["ParentCommentId"] = "reply";
+            followup["Hidden"] = true;
+            post["Comments"] = new BsonArray { root, reply, followup };
+            await SeedAsync(database, post);
+            await database.GetCollection<BsonDocument>("worlds").UpdateOneAsync(
+                new BsonDocument("_id", "world"),
+                Builders<BsonDocument>.Update
+                    .Set("Stars", new BsonArray { new BsonDocument { ["_id"] = starId, ["Name"] = "Мира" } })
+                    .Set("Version", 9));
+            await database.GetCollection<BsonDocument>("publications").InsertOneAsync(new BsonDocument
+            {
+                ["_id"] = "publication",
+                ["Sentinel"] = "envelope",
+                ["Result"] = new BsonDocument { ["Post"] = post.DeepClone(), ["Subscribers"] = 1234 },
+            });
+            var expected = post.DeepClone().AsBsonDocument;
+            expected.Remove("PlayerId");
+            expected["AuthorId"] = Author(0, "owner");
+            expected["Comments"] = new BsonArray
+            {
+                ExpectedComment("root", BsonNull.Value, BsonNull.Value, Author(1, starId), false, new BsonArray
+                {
+                    new BsonDocument { ["AuthorId"] = Author(0, "owner"), ["Emoji"] = "❤️" },
+                    new BsonDocument { ["AuthorId"] = Author(1, starId), ["Emoji"] = "👏" },
+                    new BsonDocument { ["AuthorId"] = Author(1, starId), ["Emoji"] = "✨" },
+                }),
+                ExpectedComment("reply", "root", "saved-key", Author(0, "owner"), false, []),
+                ExpectedComment("followup", "reply", BsonNull.Value, Author(1, starId), true, []),
+            };
+
+            // Act
+            await MigrateAsync(database);
+            var saved = await ReadAsync(database, "posts", "post");
+            var publication = await ReadAsync(database, "publications", "publication");
+            var player = await ReadAsync(database, "players", "owner");
+            var world = await ReadAsync(database, "worlds", "world");
+            await MigrateAsync(database);
+
+            // Assert
+            await Assert.That(saved).IsEqualTo(expected);
+            await Assert.That(publication["Result"]["Post"]).IsEqualTo(expected);
+            await Assert.That(publication["Result"]["Subscribers"]).IsEqualTo(new BsonInt32(1234));
+            await Assert.That(publication["Sentinel"]).IsEqualTo(new BsonString("envelope"));
+            await Assert.That(player["EnergyUsed"]).IsEqualTo(new BsonInt32(4));
+            await Assert.That(world["Version"]).IsEqualTo(new BsonInt32(9));
+            await Assert.That(world["Player"]["Subscribers"]).IsEqualTo(new BsonInt32(1000));
+            await Assert.That(await ReadAsync(database, "posts", "post")).IsEqualTo(saved);
+            await Assert.That(await ReadAsync(database, "publications", "publication")).IsEqualTo(publication);
+            await Assert.That(await ReadAsync(database, "players", "owner")).IsEqualTo(player);
+            await Assert.That(await ReadAsync(database, "worlds", "world")).IsEqualTo(world);
+        }
+        finally
+        {
+            await mongo.MongoClient.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+        }
+    }
+
+    [Test]
+    [Arguments("post", "unknown-prefix")]
+    [Arguments("comment", "numeric-prefix")]
+    [Arguments("reaction", "lowercase-prefix")]
+    [Arguments("publication-post", "blank-suffix")]
+    [Arguments("publication-comment", "null")]
+    [Arguments("publication-reaction", "invalid-type")]
+    [Arguments("post", "nested-kind")]
+    [Arguments("comment", "nested-missing-id")]
+    [Arguments("reaction", "nested-id-type")]
+    [Arguments("publication-post", "nested-blank-id")]
+    [Arguments("publication-comment", "nested-kind-type")]
+    [Arguments("post", "foreign-player")]
+    [Arguments("comment", "foreign-star")]
+    [Arguments("reaction", "foreign-player")]
+    [Arguments("publication-post", "foreign-star")]
+    [Arguments("publication-comment", "foreign-player")]
+    [Arguments("publication-reaction", "foreign-star")]
+    [Arguments("comment", "malformed-world-star")]
+    public async Task Up_InvalidAuthorLocation_RollsBackAllDocumentsAsync(
+        string location,
+        string scenario)
+    {
+        // Arrange
+        var database = mongo.MongoClient.GetDatabase($"author_rollback_{Guid.NewGuid():N}");
+        try
+        {
+            var valid = LegacyPost();
+            await SeedAsync(database, valid);
+            var invalid = LegacyPost();
+            invalid["_id"] = "later";
+            var root = LegacyComment("root", false);
+            root["AuthorId"] = Author(1, "mira");
+            root["Reactions"] = new BsonArray
+                { new BsonDocument { ["AuthorId"] = Author(0, "owner"), ["Emoji"] = "❤️" } };
+            invalid["Comments"] = new BsonArray { root };
+            invalid["AuthorId"] = Author(0, "owner");
+            var invalidAuthor = InvalidAuthor(scenario);
+            if (location.EndsWith("post", StringComparison.Ordinal))
+            {
+                invalid["AuthorId"] = invalidAuthor;
+            }
+            else if (location.EndsWith("comment", StringComparison.Ordinal))
+            {
+                root["AuthorId"] = invalidAuthor;
+            }
+            else
+            {
+                root["Reactions"][0]["AuthorId"] = invalidAuthor;
+            }
+
+            await database.GetCollection<BsonDocument>("publications").InsertOneAsync(new BsonDocument
+            {
+                ["_id"] = "earlier",
+                ["Result"] = new BsonDocument("Post", valid.DeepClone()),
+            });
+            if (location.StartsWith("publication", StringComparison.Ordinal))
+            {
+                await database.GetCollection<BsonDocument>("publications").InsertOneAsync(new BsonDocument
+                {
+                    ["_id"] = "later",
+                    ["Result"] = new BsonDocument("Post", invalid),
+                });
+            }
+            else
+            {
+                await database.GetCollection<BsonDocument>("posts").InsertOneAsync(invalid);
+            }
+
+            if (scenario == "malformed-world-star")
+            {
+                await database.GetCollection<BsonDocument>("worlds").UpdateOneAsync(
+                    new BsonDocument("_id", "world"),
+                    Builders<BsonDocument>.Update.Set(
+                        "Stars",
+                        new BsonArray { new BsonDocument { ["_id"] = 42, ["Name"] = "Мира" } }));
+            }
+
+            var before = await SnapshotAsync(database);
+
+            // Act
+            var failure = await Assert.ThrowsAsync<InvalidOperationException>(() => MigrateAsync(database));
+
+            // Assert
+            await Assert.That((failure ?? throw new InvalidOperationException("Expected migration failure.")).Message)
+                .Contains("Resolve the source data");
+            await Assert.That(await SnapshotAsync(database)).IsEqualTo(before);
+        }
+        finally
+        {
+            await mongo.MongoClient.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+        }
+    }
+
+    private static BsonDocument ExpectedComment(
+        string id,
+        BsonValue parent,
+        BsonValue request,
+        BsonString author,
+        bool hidden,
+        BsonArray reactions) => new()
+        {
+            ["_id"] = id,
+            ["ParentCommentId"] = parent,
+            ["RequestId"] = request,
+            ["AuthorId"] = author,
+            ["Text"] = "Комментарий",
+            ["Hidden"] = hidden,
+            ["Reactions"] = reactions,
+        };
+
+    private static BsonValue InvalidAuthor(string scenario) => scenario switch
+    {
+        "unknown-prefix" => new BsonString("Other_owner"),
+        "numeric-prefix" => new BsonString("1_mira"),
+        "lowercase-prefix" => new BsonString("player_owner"),
+        "blank-suffix" => new BsonString("Player_   "),
+        "null" => BsonNull.Value,
+        "invalid-type" => new BsonInt32(42),
+        "nested-kind" => NestedAuthor(2, "owner"),
+        "nested-missing-id" => new BsonDocument("Kind", 1),
+        "nested-id-type" => new BsonDocument { ["Kind"] = 1, ["Id"] = 42 },
+        "nested-blank-id" => NestedAuthor(0, "   "),
+        "nested-kind-type" => new BsonDocument { ["Kind"] = "Star", ["Id"] = "mira" },
+        "foreign-player" => Author(0, "other-player"),
+        "foreign-star" => Author(1, "other-star"),
+        "malformed-world-star" => Author(1, "mira"),
+        _ => throw new ArgumentOutOfRangeException(nameof(scenario)),
+    };
+
+    private static async Task<BsonDocument> SnapshotAsync(IMongoDatabase database)
+    {
+        var snapshot = new BsonDocument();
+        foreach (var collection in new[] { "posts", "publications", "players", "worlds" })
+        {
+            var documents = await database.GetCollection<BsonDocument>(collection)
+                .Find(FilterDefinition<BsonDocument>.Empty).Sort(new BsonDocument("_id", 1)).ToListAsync();
+            snapshot[collection] = new BsonArray(documents.Select(document => document.DeepClone()));
+        }
+
+        return snapshot;
+    }
+
+    private static BsonDocument NestedAuthor(int kind, string id) => new() { ["Kind"] = kind, ["Id"] = id };
+
+    private static BsonString Author(int kind, string id) => new($"{(kind == 0 ? "Player" : "Star")}_{id}");
 
     private static BsonDocument LegacyPost() => new() { ["_id"] = "post", ["WorldId"] = "world", ["PlayerId"] = "owner", ["Text"] = "Пост" };
 

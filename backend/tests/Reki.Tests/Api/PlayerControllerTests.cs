@@ -476,10 +476,10 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             var ownerField = collection switch
             {
                 "worlds" => "Player.PlayerId",
-                "posts" => "AuthorId.Id",
+                "posts" => "AuthorId",
                 _ => "PlayerId",
             };
-            await AssertCollectionHasNoPlayerAsync(collection, new BsonDocument(ownerField, playerId));
+            await AssertCollectionHasNoPlayerAsync(collection, new BsonDocument(ownerField, collection == "posts" ? $"Player_{playerId}" : playerId));
         }
     }
 
@@ -795,7 +795,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(invite.InviterBonusUsedAtUtc).IsEqualTo(usedAt);
         await Assert.That(invite.InviteeBonusUsedAtUtc).IsEqualTo(usedAt);
         await Assert.That(await Database.GetCollection<BsonDocument>("posts").CountDocumentsAsync(
-            new BsonDocument("AuthorId.Id", friend.Id))).IsEqualTo(1L);
+            new BsonDocument("AuthorId", $"Player_{friend.Id}"))).IsEqualTo(1L);
         Factory.Session.Clock.SetUtcNow(usedAt.AddDays(1));
         await friendApi.Posts.ModeratePublicationAsync(generation.PublicationId, worldId, CancellationToken.None);
         var saved = await Database.GetCollection<Invitation>("invites")
@@ -875,7 +875,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(invite.InviterBonusUsedAtUtc).IsNull();
         await Assert.That(invite.InviteeBonusUsedAtUtc).IsNull();
         await Assert.That(await Database.GetCollection<BsonDocument>("posts").CountDocumentsAsync(
-            new BsonDocument("AuthorId.Id", friend.Id))).IsEqualTo(0L);
+            new BsonDocument("AuthorId", $"Player_{friend.Id}"))).IsEqualTo(0L);
         Factory.Llm.Respond(CreateChatResponse);
         await PublishAsync(8531, "успешный первый пост");
         await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).PostsCap)

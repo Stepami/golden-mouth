@@ -15,11 +15,11 @@ public sealed class AuthorIdTests
         const string identifier = "shared-identity";
 
         // Act
-        var author = AuthorId.From((kind, identifier));
+        var author = AuthorId.Create(kind, identifier);
 
         // Assert
-        await Assert.That(author.Value.Item1).IsEqualTo(kind);
-        await Assert.That(author.Value.Item2).IsEqualTo(identifier);
+        await Assert.That(author.Kind).IsEqualTo(kind);
+        await Assert.That(author.Id).IsEqualTo(identifier);
     }
 
     [Test]
@@ -30,9 +30,7 @@ public sealed class AuthorIdTests
     public async Task TryFrom_InvalidKindOrIdentifier_RejectsValueAsync(AuthorKind kind, string? identifier)
     {
         // Arrange
-#pragma warning disable NX0001 // Null is intentional invalid input for the value object's runtime validation.
-        var input = (kind, identifier!);
-#pragma warning restore NX0001
+        var input = $"{kind}_{identifier}";
 
         // Act
         var accepted = AuthorId.TryFrom(input, out _);
@@ -53,10 +51,10 @@ public sealed class AuthorIdTests
         var starAuthor = star.ToAuthorId();
 
         // Assert
-        await Assert.That(playerAuthor.Value.Item1).IsEqualTo(AuthorKind.Player);
-        await Assert.That(starAuthor.Value.Item1).IsEqualTo(AuthorKind.Star);
-        await Assert.That(playerAuthor.Value.Item2).IsEqualTo("same-id");
-        await Assert.That(starAuthor.Value.Item2).IsEqualTo("same-id");
+        await Assert.That(playerAuthor.Kind).IsEqualTo(AuthorKind.Player);
+        await Assert.That(starAuthor.Kind).IsEqualTo(AuthorKind.Star);
+        await Assert.That(playerAuthor.Id).IsEqualTo("same-id");
+        await Assert.That(starAuthor.Id).IsEqualTo("same-id");
         await Assert.That(playerAuthor == starAuthor).IsFalse();
     }
 }

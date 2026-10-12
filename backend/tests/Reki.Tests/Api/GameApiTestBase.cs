@@ -206,7 +206,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         var player = await GetStoredPlayerAsync(telegramUserId);
         var post = await Database
             .GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("AuthorId.Id", player["_id"]))
+            .Find(new BsonDocument("AuthorId", $"Player_{player["_id"]}"))
             .SingleAsync();
         return (post["_id"].AsString, post["Comments"].AsBsonArray[0]["_id"].AsString);
     }
