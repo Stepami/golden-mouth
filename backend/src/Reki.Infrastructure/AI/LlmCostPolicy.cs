@@ -21,7 +21,7 @@ internal sealed class LlmCostPolicy : PipelinePolicy
         RecordCost(message.Response, activity);
     }
 
-    private static Activity? FindChatActivity()
+    internal static Activity? FindChatActivity()
     {
         var activity = Activity.Current;
         while (activity is not null && activity.Source.Name != "Reki.GenAI")
@@ -44,6 +44,13 @@ internal sealed class LlmCostPolicy : PipelinePolicy
     private static void RecordCost(PipelineResponse? response, Activity? activity)
     {
         if (response is null || response.Status is < 200 or >= 300)
+        {
+            return;
+        }
+
+        // Streaming headers are sent before actual spend is known; the completed response uses spend logs.
+        if (response.Headers.TryGetValue("Content-Type", out var contentType) &&
+            contentType?.StartsWith("text/event-stream", StringComparison.OrdinalIgnoreCase) is true)
         {
             return;
         }

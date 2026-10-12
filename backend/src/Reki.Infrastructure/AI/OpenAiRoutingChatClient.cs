@@ -49,7 +49,7 @@ internal class OpenAiRoutingChatClient(IOptions<LlmOptions> options, LlmCostPoli
             RetryPolicy = new ClientRetryPolicy(),
         };
 
-        // Per-call runs outside retries and records only the final response, also for streaming.
+        // Per-call runs outside retries and records the final non-streaming response.
         clientOptions.AddPolicy(costPolicy, PipelinePosition.PerCall);
         return clientOptions;
     }
