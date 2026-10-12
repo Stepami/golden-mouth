@@ -19,7 +19,7 @@ public sealed class PlayerController(
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
-        return TypedResults.Ok(await gameDay.GetPlayerAsync(sender, cancellationToken));
+        return TypedResults.Ok(await gameDay.GetPlayerAsync(cancellationToken));
     }
 
     [HttpPost("onboarding", Name = "CompleteOnboarding")]
@@ -35,7 +35,7 @@ public sealed class PlayerController(
                 request.ReferralCode,
                 request.AgeBand),
             cancellationToken);
-        return TypedResults.Ok(await gameDay.GetPlayerAsync(sender, cancellationToken));
+        return TypedResults.Ok(await gameDay.GetPlayerAsync(cancellationToken));
     }
 
     [HttpGet("referral", Name = "GetReferralCode")]

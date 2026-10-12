@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
@@ -76,7 +77,7 @@ public sealed class ChallengeLifecycleTests
             .Returns(true);
         var balance = TestGameData.CreateBalance();
         var timeProvider = new FakeTimeProvider(TestGameData.PeriodStart.AddHours(2));
-        var gameDay = new GameDay(timeProvider, Options.Create(balance), store);
+        var gameDay = new GameDay(timeProvider, Options.Create(balance), store, Substitute.For<ISender>());
         var analytics = new ProductTelemetry(
             Substitute.For<ILogger<ProductTelemetry>>(),
             timeProvider);

@@ -10,7 +10,7 @@ using ContractSkillId = Reki.Contracts.Player.SkillId;
 namespace Reki.Application.Common;
 
 [Mapper]
-public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBalance> balance, IGameStore store)
+public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBalance> balance, IGameStore store, ISender sender)
 {
     private static readonly TimeSpan MoscowOffset = TimeSpan.FromHours(3);
 
@@ -23,7 +23,7 @@ public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBala
         }
     }
 
-    public async ValueTask<PlayerResponse> GetPlayerAsync(ISender sender, CancellationToken cancellationToken)
+    public async ValueTask<PlayerResponse> GetPlayerAsync(CancellationToken cancellationToken)
     {
         var player = await sender.Send(new GetPlayerQuery(NormalizeDay: true), cancellationToken);
         var invite = await store.GetInviteAsync(player.Id, cancellationToken);
