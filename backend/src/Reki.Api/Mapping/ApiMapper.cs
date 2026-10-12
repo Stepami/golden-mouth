@@ -1,17 +1,14 @@
 using System.Text.Json;
-using Reki.Application.Posts;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
 using Reki.Contracts.Events;
 using Reki.Contracts.Player;
-using Reki.Contracts.Posts;
 using Reki.Contracts.Social;
 using Reki.Contracts.Telemetry;
 using Reki.Contracts.Worlds;
 using Reki.Domain.Events;
 using Reki.Domain.Player;
-using Reki.Domain.Posts;
 using Reki.Domain.Social;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
@@ -172,26 +169,6 @@ public sealed partial class ApiMapper
             .Where(item => item.Key.Length <= 64)
             .ToDictionary(item => item.Key, item => SanitizeElement(item.Value));
     }
-
-    public PostDetailResponse MapPostDetail(GamePost post) =>
-        new(
-            post.Id.Value,
-            post.Text,
-            post.Views,
-            PostContractMapper.CreateReactions(post),
-            [
-                .. post.Comments
-                    .Select(comment => new CommentResponse(
-                        comment.Id.Value,
-                        comment.Author,
-                        comment.Avatar,
-                        comment.Handle,
-                        comment.Text,
-                        comment.Star,
-                        comment.Me,
-                        comment.Hidden))
-            ],
-            true);
 
     private static WorldDifficulty MapWorldDifficulty(int source) => source switch
     {

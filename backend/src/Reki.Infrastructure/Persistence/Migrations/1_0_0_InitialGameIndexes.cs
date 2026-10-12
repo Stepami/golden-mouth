@@ -31,7 +31,7 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
         var playerWorldKey = Builders<BsonDocument>.IndexKeys
             .Ascending("World");
         var postKeys = Builders<GamePost>.IndexKeys
-            .Ascending(item => item.PlayerId)
+            .Ascending("PlayerId")
             .Descending(item => item.CreatedAtUtc);
         var memoryKeys = Builders<StarConversation>.IndexKeys
             .Ascending(item => item.PlayerId)

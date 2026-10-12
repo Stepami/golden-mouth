@@ -1,4 +1,5 @@
 using Reki.Domain.Player;
+using Reki.Domain.Posts;
 using Reki.Domain.Social;
 
 namespace Reki.Domain.Worlds;
@@ -57,6 +58,8 @@ public sealed record World
     }
 
     public WorldStar? FindStar(StarId starId) => Stars.SingleOrDefault(star => star.Id == starId);
+
+    public WorldStar? FindStar(AuthorId authorId) => Stars.SingleOrDefault(star => star.Id.ToAuthorId() == authorId);
 
     public bool HasStar(StarId starId, string name) => Stars.Any(star => star.Id == starId && star.Name == name);
 

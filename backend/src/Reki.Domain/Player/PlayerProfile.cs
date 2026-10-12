@@ -10,7 +10,7 @@ public sealed record PlayerProfile
 
     public required string Address { get; init; }
 
-    public int PostsUsed { get; init; }
+    public int EnergyUsed { get; init; }
 
     public int DailyBonus { get; init; }
 
@@ -95,20 +95,27 @@ public sealed record PlayerProfile
     {
         return this with
         {
-            PostsUsed = 0,
+            EnergyUsed = 0,
             DailyBonus = 0,
             PostsPeriodStartedAtUtc = periodStartedAtUtc,
             Version = Version + 1,
         };
     }
 
-    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills)
+    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills) =>
+        SpendPost(skills, 1, int.MaxValue);
+
+    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, int cost, int cap) =>
+        SpendEnergy(cost, cap) with { Skills = skills };
+
+    public PlayerProfile SpendEnergy(int cost, int cap)
     {
-        return this with
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(cost);
+        if (EnergyUsed > cap - cost)
         {
-            PostsUsed = PostsUsed + 1,
-            Skills = skills,
-            Version = Version + 1,
-        };
+            throw new InvalidOperationException("Insufficient energy.");
+        }
+
+        return this with { EnergyUsed = EnergyUsed + cost, Version = Version + 1 };
     }
 }

@@ -33,7 +33,7 @@ public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBala
         return new PlayerResponse(
             player.Id.Value,
             Enum.Parse<Address>(player.Address, true),
-            Math.Max(0, postsCap - player.PostsUsed),
+            Math.Max(0, postsCap - player.EnergyUsed),
             postsCap,
             firstPostInviteBonus,
             new StreakResponse(player.StreakDays, Enumerable.Range(0, 7).Select(day => day < Math.Min(7, player.StreakDays)).ToArray(), "ещё день — и бонус"),

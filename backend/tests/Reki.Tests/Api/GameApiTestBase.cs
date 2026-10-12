@@ -34,6 +34,15 @@ public abstract class GameApiTestBase(ApiFactory factory)
 
     protected static ChatResponse CreateChatResponse(IEnumerable<ChatMessage> messages)
     {
+        var threadReply = messages.Any(message => message.Text.Contains("Вызови thread_reply", StringComparison.Ordinal));
+        if (threadReply)
+        {
+            var policy = messages.First(message => message.Role == ChatRole.System).Text;
+            const string marker = "Ответь выбранной звездой ";
+            var selected = policy[(policy.IndexOf(marker, StringComparison.Ordinal) + marker.Length)..];
+            return CreateReplyTurnResponse(selected[..selected.IndexOf('.')]);
+        }
+
         var directMessage = messages.Any(message => message.Text.Contains(
             "tool dm",
             StringComparison.Ordinal));
@@ -87,6 +96,24 @@ public abstract class GameApiTestBase(ApiFactory factory)
 
         var call = new FunctionCallContent("test-call", "comment", arguments);
         return new ChatResponse(new ChatMessage(ChatRole.Assistant, [call]));
+    }
+
+    protected static ChatResponse CreateReplyTurnResponse(string starId, Action<IDictionary<string, object?>>? customize = null)
+    {
+        var arguments = new Dictionary<string, object?>
+        {
+            ["star_id"] = starId,
+            ["text"] = "Спасибо за ответ. Продолжим обсуждение.",
+            ["tone"] = "support",
+            ["emoji"] = string.Empty,
+            ["additional_star_id"] = string.Empty,
+            ["additional_text"] = string.Empty,
+            ["additional_tone"] = string.Empty,
+        };
+        customize?.Invoke(arguments);
+        return new ChatResponse(new ChatMessage(
+            ChatRole.Assistant,
+            [new FunctionCallContent("test-reply-call", "thread_reply", arguments)]));
     }
 
     protected static ChatResponse CreateDirectMessageResponse()
@@ -155,6 +182,11 @@ public abstract class GameApiTestBase(ApiFactory factory)
         };
     }
 
+    protected static IReadOnlyList<ReplyLiveEvent> ParseReplyEvents(string body) =>
+        body.Split('\n').Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
+            .Select(line => JsonSerializer.Deserialize(line[6..], ApiJsonSerializerContext.Default.ReplyLiveEvent)
+                ?? throw new InvalidOperationException("The reply event was empty.")).ToArray();
+
     protected async Task<string> WorldPathAsync(HttpClient http, string path)
     {
         var user = http.DefaultRequestHeaders.TryGetValues(TestAuthenticationHandler.UserIdHeaderName, out var values)
@@ -174,7 +206,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         var player = await GetStoredPlayerAsync(telegramUserId);
         var post = await Database
             .GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("PlayerId", player["_id"]))
+            .Find(new BsonDocument("AuthorId", $"Player_{player["_id"]}"))
             .SingleAsync();
         return (post["_id"].AsString, post["Comments"].AsBsonArray[0]["_id"].AsString);
     }
@@ -191,7 +223,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             .Find(new BsonDocument("_id", postId))
             .SingleAsync();
 
-    protected async Task<ReplyResponse> ReplyAsync(
+    protected async Task<ReplyLiveEvent> ReplyAsync(
         long telegramUserId,
         string postId,
         string commentId,
@@ -202,7 +234,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         var request = new ReplyRequest
         {
             CommentId = commentId,
-            ReplyId = replyId,
+            RequestId = replyId,
             Text = text,
         };
         using var body = new StringContent(
@@ -215,8 +247,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             CancellationToken.None);
         await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
         var json = await response.Content.ReadAsStringAsync(CancellationToken.None);
-        return JsonSerializer.Deserialize(json, ApiJsonSerializerContext.Default.ReplyResponse)
-            ?? throw new InvalidOperationException("The reply response was empty.");
+        return ParseReplyEvents(json).Last(item => item.Status == ReplyStatus.Completed);
     }
 
     protected IReadOnlyList<ChatMessage> GetCapturedChatMessages()

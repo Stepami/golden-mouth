@@ -568,14 +568,14 @@
             "id": "t7",
             "type": "table",
             "title": "Вызовы языковой модели",
-            "description": "Обращения к модели: число, средняя и максимальная длительность в микросекундах.",
+            "description": "Завершённые chat-спаны, включая ошибки, за выбранный период. Модель: request → response → имя спана → unknown. Средняя и максимальная длительность в микросекундах. Незавершённые или не доставленные спаны не учитываются.",
             "queryType": "sql",
             "config": {
               "show_legends": false
             },
             "queries": [
               {
-                "query": "SELECT operation_name, count(*) AS calls, avg(duration) AS avg_us, max(duration) AS max_us\nFROM \"backend\" WHERE operation_name LIKE 'chat %'\nGROUP BY operation_name ORDER BY calls DESC",
+                "query": "SELECT concat('chat ', coalesce(nullif(gen_ai_request_model, ''), nullif(gen_ai_response_model, ''),\n       CASE WHEN operation_name LIKE 'chat %' THEN nullif(substr(operation_name, 6), '') END,\n       'unknown')) AS operation,\n       count(*) AS calls, avg(duration) AS avg_us, max(duration) AS max_us\nFROM \"backend\"\nWHERE gen_ai_operation_name = 'chat' OR operation_name = 'chat' OR operation_name LIKE 'chat %'\nGROUP BY operation ORDER BY calls DESC",
                 "customQuery": true,
                 "vrlFunctionQuery": "",
                 "fields": {
@@ -583,9 +583,9 @@
                   "stream_type": "traces",
                   "x": [
                     {
-                      "label": "operation_name",
-                      "alias": "operation_name",
-                      "column": "operation_name",
+                      "label": "operation",
+                      "alias": "operation",
+                      "column": "operation",
                       "type": "build"
                     }
                   ],

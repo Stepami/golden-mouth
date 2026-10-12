@@ -31,7 +31,7 @@ export function resetDemoPlayer(playerId = currentPlayer?.id) {
   if (playerId) {
     try {
       for (const key of Object.keys(localStorage)) {
-        if (key === `reki:demo-posts:${playerId}` || key === `reki:first-star:${playerId}` || key.startsWith(`reki:demo-comments:${playerId}:`)) localStorage.removeItem(key)
+        if (key === `reki:demo-posts:${playerId}` || key === `reki:first-star:${playerId}` || key.startsWith(`reki:demo-comments:${playerId}:`) || key.startsWith(`reki:reply-draft:${playerId}:`)) localStorage.removeItem(key)
       }
     } catch { /* optional storage */ }
   }
@@ -42,7 +42,7 @@ export function resetDemoPlayer(playerId = currentPlayer?.id) {
 export const demoOwnPosts = (playerId: string): Post[] => read<Post[]>(`reki:demo-posts:${playerId}`) ?? []
 export const demoChannelPosts = (playerId: string): ChannelPost[] => demoOwnPosts(playerId).map(post => ({ postId: post.id, text: post.text,
   createdAtUtc: post.at ?? '', views: post.views, reactions: post.reactions, commentCount: withDemoComments(post, playerId).comments.length }))
-export function saveDemoPost(playerId: string, post: Post) { save(`reki:demo-posts:${playerId}`, [post, ...demoOwnPosts(playerId)]) }
+export function saveDemoPost(playerId: string, post: Post) { save(`reki:demo-posts:${playerId}`, [post, ...demoOwnPosts(playerId).filter(item => item.id !== post.id)]) }
 export const demoPost = (id: string): Post | undefined => {
   const world = /^demo-(stage|academy|it|stream|own)-[0-4]$/.exec(id)?.[1] as WorldId | undefined
   if (world && !posts.has(id)) demoFeed(world)
@@ -82,15 +82,4 @@ export function withDemoComments(post: Post, playerId: string): Post {
   const saved = comments.get(key) ?? read<CommentT[]>(key) ?? []
   comments.set(key, saved)
   return { ...post, comments: [...post.comments, ...saved] }
-}
-export function addDemoComment(postId: string, player: Player, text: string, replyId: string): CommentT {
-  const key = commentKey(postId, player.id)
-  const saved = comments.get(key) ?? read<CommentT[]>(key) ?? []
-  const existing = saved.find(comment => comment.id === replyId)
-  if (existing) return existing
-  const comment: CommentT = { id: replyId, author: player.name, avatar: player.handle, handle: player.handle, text: text.trim(), me: true }
-  const next = [...saved, comment]
-  comments.set(key, next)
-  save(key, next)
-  return comment
 }

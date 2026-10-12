@@ -20,7 +20,9 @@ public interface IGameStore
 
     ValueTask<Invitation?> GetInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken);
 
-    ValueTask<IReadOnlyList<Invitation>> GetInvitesByInviterAsync(PlayerId inviterId, CancellationToken cancellationToken);
+    ValueTask<IReadOnlyList<Invitation>> GetInvitesByInviterAsync(
+        PlayerId inviterId,
+        CancellationToken cancellationToken);
 
     ValueTask CreatePlayerAsync(
         PlayerProfile player,
@@ -82,12 +84,13 @@ public interface IGameStore
         PlayerId playerId,
         CancellationToken cancellationToken);
 
-    ValueTask<bool> TryAddThreadReplyAsync(
-        PlayerId playerId,
-        PostId postId,
-        ThreadReply reply,
-        GameComment comment,
-        World? updatedWorld,
+    ValueTask<bool> TryCommitReplyAsync(
+        GamePost updatedPost,
+        int expectedPostVersion,
+        string requestId,
+        PlayerProfile updatedPlayer,
+        int expectedPlayerVersion,
+        World updatedWorld,
         int expectedWorldVersion,
         CancellationToken cancellationToken);
 

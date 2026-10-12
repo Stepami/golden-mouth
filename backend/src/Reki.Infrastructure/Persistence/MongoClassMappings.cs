@@ -13,12 +13,15 @@ namespace Reki.Infrastructure.Persistence;
 
 internal static class MongoClassMappings
 {
-    // BSON mappings must be registered once before any infrastructure code uses them.
+    /// <summary>
+    /// BSON mappings must be registered once before any infrastructure code uses them.
+    /// </summary>
 #pragma warning disable CA2255
     [ModuleInitializer]
 #pragma warning restore CA2255
     public static void Register()
     {
+        BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.AuthorIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.ChallengeIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(

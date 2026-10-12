@@ -8,6 +8,6 @@ namespace Reki.Application.Posts;
 public sealed record AddReplyCommand(
     PostId PostId,
     CommentId TargetCommentId,
-    string ReplyId,
+    string RequestId,
     string Text,
-    WorldId WorldId) : IRequest<ReplyResponse>;
+    WorldId WorldId) : IStreamRequest<ReplyLiveEvent>;

@@ -36,7 +36,7 @@ public sealed class PublishPostHandler(
 
         if (publication is { Status: PublicationStatus.Completed, Result: not null })
         {
-            return PostContractMapper.MapLiveEvents(publication.Result);
+            return PostContractMapper.MapLiveEvents(publication.Result, world, storedPlayer.Id);
         }
 
         if (publication.Status != PublicationStatus.ReadyForModeration)
@@ -50,9 +50,9 @@ public sealed class PublishPostHandler(
         var now = timeProvider.GetUtcNow();
         var player = gameDay.Normalize(storedPlayer);
         if (!ReferenceEquals(player, storedPlayer) && !await store.TryReplacePlayerAsync(
-            player,
-            storedPlayer.Version,
-            cancellationToken))
+                player,
+                storedPlayer.Version,
+                cancellationToken))
         {
             throw new RequestConflictException("The player state changed while starting a new day.");
         }
@@ -61,7 +61,7 @@ public sealed class PublishPostHandler(
         var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);
         var cap = gameDay.GetPostsCap(player, invite, invited);
 
-        if (player.PostsUsed >= cap)
+        if (player.EnergyUsed > cap - balance.Value.PostEnergyCost)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }
@@ -94,29 +94,27 @@ public sealed class PublishPostHandler(
             balance.Value.Relations.Maximum,
             balance.Value.Relations.MaxGainPerDay,
             balance.Value.Relations.StarCardAt);
-        var updated = player.SpendPost(progression.Skills);
+        var updated = player.SpendPost(progression.Skills, balance.Value.PostEnergyCost, cap);
         var postId = PostId.New();
         var starComment = new GameComment(
             CommentId.New(),
-            turn.StarName,
-            turn.StarId.Value,
-            $"@{turn.StarId.Value}",
+            null,
+            null,
+            turn.StarId.ToAuthorId(),
             turn.Comment,
-            true,
             false,
-            false);
+            []);
         var recentPosts = await sender.Send(new GetChannelPostsQuery(world.Id, player.Id, 20), cancellationToken);
         var recentViews = recentPosts.Select(post => post.Views).ToArray();
         var views = Math.Max(48, updatedWorld.Player.Subscribers);
         var reachRatio = recentViews.Length == 0 ? 1 : views / GetMedian(recentViews);
         var post = new GamePost(
             postId,
-            player.Id,
+            player.Id.ToAuthorId(),
             world.Id,
             text,
             views,
             [starComment],
-            [],
             now,
             progression.SubscriberDelta,
             progression.Quality,
@@ -145,7 +143,7 @@ public sealed class PublishPostHandler(
 
         await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
         TrackProgression(player, updated, world, updatedWorld, post, turn, analytics, invite is not null);
-        return PostContractMapper.MapLiveEvents(published);
+        return PostContractMapper.MapLiveEvents(published, updatedWorld, player.Id);
     }
 
     private static double GetMedian(IReadOnlyList<long> values)
@@ -177,7 +175,7 @@ public sealed class PublishPostHandler(
                 ["humor"] = turn.Humor.ToString("0.###", CultureInfo.InvariantCulture),
                 ["topic"] = turn.Topic.ToString("0.###", CultureInfo.InvariantCulture),
                 ["quality"] = post.Quality.ToString("0.###", CultureInfo.InvariantCulture),
-                ["post_index"] = after.PostsUsed.ToString(CultureInfo.InvariantCulture),
+                ["post_index"] = after.EnergyUsed.ToString(CultureInfo.InvariantCulture),
                 ["id"] = post.Id.Value,
                 ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
             },

@@ -6,7 +6,9 @@ namespace Reki.Infrastructure.Persistence.Migrations;
 
 internal sealed class RepairLegacyDocuments : RekiMigrationBase
 {
-    // Freeze the 2.0.1 skill thresholds so later balance changes cannot alter this migration.
+    /// <summary>
+    /// Freeze the 2.0.1 skill thresholds so later balance changes cannot alter this migration.
+    /// </summary>
     private static readonly double[] SkillThresholds = [0, 8, 20, 36, 56, 80, 110, 150, 200, 270];
     private static readonly string[] WorldArrays =
         ["Roles", "Voices", "Presets", "PostIdeas", "DemoPosts", "Rules", "Stars", "Wants", "Achievements"];

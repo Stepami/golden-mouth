@@ -59,7 +59,7 @@ public sealed partial class GeneratePublicationHandler(
         var invite = await store.GetInviteAsync(player.Id, cancellationToken);
         var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);
         var cap = gameDay.GetPostsCap(player, invite, invited);
-        if (player.PostsUsed >= cap)
+        if (player.EnergyUsed > cap - balance.Value.PostEnergyCost)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }
