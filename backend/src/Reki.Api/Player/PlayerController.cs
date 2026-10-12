@@ -2,12 +2,9 @@ using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.Extensions.Options;
-using Reki.Api.Mapping;
 using Reki.Application.Common;
 using Reki.Application.Player;
 using Reki.Contracts.Player;
-using Reki.Domain.Player;
 
 namespace Reki.Api.Player;
 
@@ -16,19 +13,13 @@ namespace Reki.Api.Player;
 [Route("/")]
 public sealed class PlayerController(
     ISender sender,
-    IGameStore store,
-    GameDay gameDay,
-    ApiMapper mapper,
-    IOptions<GameBalance> balance) : ControllerBase
+    GameDay gameDay) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
-        var result = await sender.Send(
-            new GetPlayerQuery(NormalizeDay: true),
-            cancellationToken);
-        return TypedResults.Ok(await MapPlayerAsync(result, cancellationToken));
+        return TypedResults.Ok(await gameDay.GetPlayerAsync(sender, cancellationToken));
     }
 
     [HttpPost("onboarding", Name = "CompleteOnboarding")]
@@ -37,14 +28,14 @@ public sealed class PlayerController(
         OnboardingRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await sender.Send(
+        await sender.Send(
             new OnboardPlayerCommand(
                 ToStorageValue(request.BirthGroup),
                 request.Address.ToString().ToLowerInvariant(),
                 request.ReferralCode,
                 request.AgeBand),
             cancellationToken);
-        return TypedResults.Ok(await MapPlayerAsync(result, cancellationToken));
+        return TypedResults.Ok(await gameDay.GetPlayerAsync(sender, cancellationToken));
     }
 
     [HttpGet("referral", Name = "GetReferralCode")]
@@ -104,14 +95,5 @@ public sealed class PlayerController(
             BirthGroup.Adult => "18+",
             _ => throw new ArgumentOutOfRangeException(nameof(birthGroup)),
         };
-    }
-
-    private async Task<PlayerResponse> MapPlayerAsync(PlayerProfile player, CancellationToken cancellationToken)
-    {
-        var invite = await store.GetInviteAsync(player.Id, cancellationToken);
-        var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);
-        var cap = gameDay.GetPostsCap(player, invite, invited);
-        var firstPostBonus = invite is { InviteeBonusUsed: false } ? balance.Value.InviteBonusBoth : 0;
-        return mapper.MapPlayer(player, cap, firstPostBonus);
     }
 }

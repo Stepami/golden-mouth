@@ -76,7 +76,7 @@ public sealed class ChallengeLifecycleTests
             .Returns(true);
         var balance = TestGameData.CreateBalance();
         var timeProvider = new FakeTimeProvider(TestGameData.PeriodStart.AddHours(2));
-        var gameDay = new GameDay(timeProvider, Options.Create(balance));
+        var gameDay = new GameDay(timeProvider, Options.Create(balance), store);
         var analytics = new ProductTelemetry(
             Substitute.For<ILogger<ProductTelemetry>>(),
             timeProvider);

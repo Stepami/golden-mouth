@@ -1,10 +1,16 @@
+using Mediator;
 using Microsoft.Extensions.Options;
+using Reki.Application.Player;
+using Reki.Contracts.Player;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
+using Riok.Mapperly.Abstractions;
+using ContractSkillId = Reki.Contracts.Player.SkillId;
 
 namespace Reki.Application.Common;
 
-public sealed class GameDay(TimeProvider timeProvider, IOptions<GameBalance> balance)
+[Mapper]
+public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBalance> balance, IGameStore store)
 {
     private static readonly TimeSpan MoscowOffset = TimeSpan.FromHours(3);
 
@@ -15,6 +21,25 @@ public sealed class GameDay(TimeProvider timeProvider, IOptions<GameBalance> bal
             var utcNow = timeProvider.GetUtcNow();
             return GetPeriodStart(utcNow);
         }
+    }
+
+    public async ValueTask<PlayerResponse> GetPlayerAsync(ISender sender, CancellationToken cancellationToken)
+    {
+        var player = await sender.Send(new GetPlayerQuery(NormalizeDay: true), cancellationToken);
+        var invite = await store.GetInviteAsync(player.Id, cancellationToken);
+        var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);
+        var postsCap = GetPostsCap(player, invite, invited);
+        var firstPostInviteBonus = invite is { InviteeBonusUsed: false } ? balance.Value.InviteBonusBoth : 0;
+        return new PlayerResponse(
+            player.Id.Value,
+            Enum.Parse<Address>(player.Address, true),
+            Math.Max(0, postsCap - player.PostsUsed),
+            postsCap,
+            firstPostInviteBonus,
+            new StreakResponse(player.StreakDays, Enumerable.Range(0, 7).Select(day => day < Math.Min(7, player.StreakDays)).ToArray(), "ещё день — и бонус"),
+            player.Skills.ToDictionary(item => Enum.Parse<ContractSkillId>(item.Key.Value, true), item => MapSkill(item.Value)),
+            new PlayerSettingsResponse(player.Settings.Notifications, player.Settings.Quiet, player.Settings.Plus),
+            new Dictionary<string, string>());
     }
 
     public int GetPostsCap(PlayerProfile player, Invitation? invite, IReadOnlyList<Invitation> invited)
@@ -58,6 +83,9 @@ public sealed class GameDay(TimeProvider timeProvider, IOptions<GameBalance> bal
         var elapsedPeriods = Math.Max(0, (int)(currentPeriod - lastPostPeriod).TotalDays);
         return Math.Max(0, elapsedPeriods - 1);
     }
+
+    [MapperIgnoreSource(nameof(SkillProgress.Experience))]
+    private partial SkillResponse MapSkill(SkillProgress source);
 
     private DateTimeOffset GetPeriodStart(DateTimeOffset utcNow)
     {
