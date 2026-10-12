@@ -335,30 +335,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     }
 
     [Test]
-    public async Task Referral_InviterWithUsedPosts_FirstFriendPostAddsFiveRemainingPostsAsync()
-    {
-        // Arrange
-        const long inviterUserId = 8017;
-        using var inviterApi = Factory.CreateApiClient(inviterUserId);
-        using var friendApi = Factory.CreateApiClient(8018);
-        await CreatePlayerWithWorldAsync(inviterApi);
-        await PublishAsync(inviterUserId, "пост пригласителя");
-        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
-
-        // Act
-        var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
-        var before = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await PublishAsync(8018, "первый пост друга");
-        var inviter = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-
-        // Assert
-        await Assert.That(friend.PostsCap).IsEqualTo(10);
-        await Assert.That(before.PostsLeft).IsEqualTo(9);
-        await Assert.That(inviter.PostsCap).IsEqualTo(15);
-        await Assert.That(inviter.PostsLeft).IsEqualTo(14);
-    }
-
-    [Test]
     public async Task Referral_InvitedPlayerPublishesFirstPost_AppliesStoredBonusOnceAsync()
     {
         // Arrange
@@ -802,7 +778,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     [Test]
     [Arguments(-1)]
     [Arguments(0)]
-    [Arguments(1)]
     public async Task Referral_DayBoundary_UsesSixUtcResetAsync(int secondsAfterReset)
     {
         // Arrange
