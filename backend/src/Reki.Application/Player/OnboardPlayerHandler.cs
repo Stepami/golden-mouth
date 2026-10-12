@@ -30,22 +30,15 @@ public sealed class OnboardPlayerHandler(
         {
             AgeBand = request.AgeBand,
         };
+        await store.CreatePlayerAsync(created, cancellationToken);
         if (inviter is not null)
         {
             var invite = Invitation.Create(inviter.Id, created.Id, timeProvider.GetUtcNow());
-            if (!await store.TryCreateInviteAsync(invite, cancellationToken))
-            {
-                throw new RequestConflictException("Invitation already exists.");
-            }
+            await store.CreateInviteAsync(invite, cancellationToken);
         }
 
-        if (await store.TryCreatePlayerAsync(created, cancellationToken))
-        {
-            analytics.TrackPlayer(created, "player_created", new Dictionary<string, string>(), inviter is not null);
-            return created;
-        }
-
-        throw new RequestConflictException("Player changed while onboarding. Retry the request.");
+        analytics.TrackPlayer(created, "player_created", new Dictionary<string, string>(), inviter is not null);
+        return created;
     }
 
     private static PlayerProfile CreatePlayer(

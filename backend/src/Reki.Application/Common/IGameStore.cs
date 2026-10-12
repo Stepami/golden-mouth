@@ -16,17 +16,13 @@ public interface IGameStore
 
     ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
 
-    ValueTask<bool> TryCreateInviteAsync(Invitation invite, CancellationToken cancellationToken);
+    ValueTask CreateInviteAsync(Invitation invite, CancellationToken cancellationToken);
 
     ValueTask<Invitation?> GetInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken);
 
     ValueTask<IReadOnlyList<Invitation>> GetInvitesByInviterAsync(PlayerId inviterId, CancellationToken cancellationToken);
 
-    ValueTask<bool> TrySaveInviterBonusAsync(Invitation invite, CancellationToken cancellationToken);
-
-    ValueTask<bool> TrySaveInviteeBonusAsync(Invitation invite, CancellationToken cancellationToken);
-
-    ValueTask<bool> TryCreatePlayerAsync(
+    ValueTask CreatePlayerAsync(
         PlayerProfile player,
         CancellationToken cancellationToken);
 

@@ -26,7 +26,7 @@ public sealed class InvitationTests(TestSessionFixture mongo)
     }
 
     [Test]
-    public async Task TryCreateInvite_MultipleFriends_StoresIndependentAttributionAsync()
+    public async Task CreateInvite_MultipleFriends_StoresIndependentAttributionAsync()
     {
         // Arrange
         var root = CreateRoot();
@@ -39,17 +39,15 @@ public sealed class InvitationTests(TestSessionFixture mongo)
             var duplicate = Invitation.Create(PlayerId.From("other-inviter"), first.InviteeId, first.CreatedAtUtc);
 
             // Act
-            var createdFirst = await store.TryCreateInviteAsync(first, CancellationToken.None);
-            var createdSecond = await store.TryCreateInviteAsync(second, CancellationToken.None);
-            var createdDuplicate = await store.TryCreateInviteAsync(duplicate, CancellationToken.None);
+            await store.CreateInviteAsync(first, CancellationToken.None);
+            await store.CreateInviteAsync(second, CancellationToken.None);
+            Func<Task> createDuplicate = () => store.CreateInviteAsync(duplicate, CancellationToken.None).AsTask();
             var saved = await store.GetInviteAsync(first.InviteeId, CancellationToken.None);
             var invitations = await store.GetInvitesByInviterAsync(first.InviterId, CancellationToken.None);
             var missing = await store.GetInviteAsync(PlayerId.From("missing"), CancellationToken.None);
 
             // Assert
-            await Assert.That(createdFirst).IsTrue();
-            await Assert.That(createdSecond).IsTrue();
-            await Assert.That(createdDuplicate).IsFalse();
+            await Assert.That(createDuplicate).Throws<MongoWriteException>();
             await Assert.That(saved).IsEqualTo(first);
             var document = await root.MongoDatabase.GetCollection<BsonDocument>("invites")
                 .Find(new BsonDocument("InviteeId", first.InviteeId.Value)).SingleAsync();

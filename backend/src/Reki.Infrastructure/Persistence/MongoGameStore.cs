@@ -53,18 +53,8 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
         await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask<bool> TryCreateInviteAsync(Invitation invite, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _invites.InsertOneAsync(invite, cancellationToken: cancellationToken);
-            return true;
-        }
-        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
-        {
-            return false;
-        }
-    }
+    public async ValueTask CreateInviteAsync(Invitation invite, CancellationToken cancellationToken) =>
+        await _invites.InsertOneAsync(invite, cancellationToken: cancellationToken);
 
     public async ValueTask<Invitation?> GetInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken) =>
         await _invites.Find(item => item.InviteeId == inviteeId).FirstOrDefaultAsync(cancellationToken);
@@ -72,42 +62,8 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask<IReadOnlyList<Invitation>> GetInvitesByInviterAsync(PlayerId inviterId, CancellationToken cancellationToken) =>
         await _invites.Find(item => item.InviterId == inviterId).ToListAsync(cancellationToken);
 
-    public async ValueTask<bool> TrySaveInviterBonusAsync(Invitation invite, CancellationToken cancellationToken)
-    {
-        var filter = Builders<Invitation>.Filter.Where(item =>
-            item.Id == invite.Id && !item.InviterBonusUsed);
-        var update = Builders<Invitation>.Update.Set(item => item.InviterBonusUsed, invite.InviterBonusUsed)
-            .Set(item => item.InviterBonusUsedAtUtc, invite.InviterBonusUsedAtUtc);
-        var result = await _invites.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
-        return result.ModifiedCount == 1;
-    }
-
-    public async ValueTask<bool> TrySaveInviteeBonusAsync(Invitation invite, CancellationToken cancellationToken)
-    {
-        var filter = Builders<Invitation>.Filter.Where(item =>
-            item.Id == invite.Id && !item.InviteeBonusUsed);
-        var update = Builders<Invitation>.Update.Set(item => item.InviteeBonusUsed, invite.InviteeBonusUsed)
-            .Set(item => item.InviteeBonusUsedAtUtc, invite.InviteeBonusUsedAtUtc);
-        var result = await _invites.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
-        return result.ModifiedCount == 1;
-    }
-
-    public async ValueTask<bool> TryCreatePlayerAsync(
-        PlayerProfile player,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
-            return true;
-        }
-        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
-        {
-            // The invite was prepared for this new ID; a Telegram uniqueness conflict leaves no player owning it.
-            await _invites.DeleteOneAsync(item => item.InviteeId == player.Id, cancellationToken);
-            return false;
-        }
-    }
+    public async ValueTask CreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
+        await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
 
     public async ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken) =>
         await _worlds.InsertOneAsync(world, cancellationToken: cancellationToken);
