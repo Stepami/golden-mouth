@@ -34,7 +34,7 @@
     "unlocks": { "brave": { "3": "hater_reply", "6": "hot_post", "9": "exposé" }, "humor": { "3": "meme", "6": "parody", "9": "meme_to_feed" }, "topic": { "3": "insider", "6": "collab_request", "9": "event_exclusive" } }
   },
   "relations": { "min": -5, "max": 5, "max_gain_per_day": 1, "star_card_at": 3, "dm_star_replies_per_day": 5 },
-  "thread": { "bonus_replies": 3, "subscriber_bonus": 9, "branch_depth": 2 },
+  "thread": { "bonus_replies": 3, "subscriber_bonus": 9 },
   "stages": [{ "id": "mask", "from": 120 }, { "id": "views", "from": 1000 }, { "id": "strike", "from": 5000 }, { "id": "new_line", "from": 10000 }],
   "worlds": {
     "stage":   { "difficulty": 1, "k": 1.0,  "flop": 0.10, "viral_x": 1.0, "hate_from": 5000, "hate_every_days": [4, 5], "unlock": null },

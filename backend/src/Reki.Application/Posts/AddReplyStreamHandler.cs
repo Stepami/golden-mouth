@@ -147,17 +147,12 @@ public sealed partial class AddReplyStreamHandler(
         }
     }
 
-    private (GameComment Comment, WorldStar Star) ValidateTarget(GamePost post, World world, CommentId targetId)
+    private static (GameComment Comment, WorldStar Star) ValidateTarget(GamePost post, World world, CommentId targetId)
     {
         var target = post.Comments.FirstOrDefault(comment => comment.Id == targetId && !comment.Hidden)
                      ?? throw new ResourceNotFoundException("Comment not found.");
         var star = world.FindStar(target.AuthorId)
                    ?? throw new RequestConflictException("The target is not a star of this world.");
-
-        if (post.GetBranch(targetId).Count + 1 > balance.Value.Thread.BranchDepth)
-        {
-            throw new RequestConflictException("The maximum branch depth has been reached.");
-        }
 
         return (target, star);
     }

@@ -539,9 +539,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Act
         var first = await ReplyAsync(telegramUserId, postId, commentId, "thread-key-1", "первый ответ");
-        var second = await ReplyAsync(telegramUserId, postId, commentId, "thread-key-2", "второй ответ");
-        var third = await ReplyAsync(telegramUserId, postId, commentId, "thread-key-3", "третий ответ");
-        var fourth = await ReplyAsync(telegramUserId, postId, commentId, "thread-key-4", "четвёртый ответ");
+        var second = await ReplyAsync(telegramUserId, postId, (first.Post ?? throw new InvalidOperationException("Missing reply post.")).Comments.Single(comment => comment.Depth == 2).Id, "thread-key-2", "второй ответ");
+        var third = await ReplyAsync(telegramUserId, postId, (second.Post ?? throw new InvalidOperationException("Missing reply post.")).Comments.Single(comment => comment.Depth == 4).Id, "thread-key-3", "третий ответ");
+        var fourth = await ReplyAsync(telegramUserId, postId, (third.Post ?? throw new InvalidOperationException("Missing reply post.")).Comments.Single(comment => comment.Depth == 6).Id, "thread-key-4", "четвёртый ответ");
 
         // Assert
         await Assert.That(first.Subscribers).IsEqualTo(beforeWorld["Player"]["Subscribers"].ToInt64() + 9);
@@ -549,6 +549,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(third.Subscribers).IsEqualTo(second.Subscribers + 9);
         await Assert.That(fourth.Subscribers).IsEqualTo(third.Subscribers);
         await Assert.That(fourth.EnergyLeft).IsEqualTo(first.EnergyLeft - 3);
+        await Assert.That((fourth.Post ?? throw new InvalidOperationException("Missing reply post.")).Comments.Select(comment => comment.Depth)).IsEquivalentTo(Enumerable.Range(0, 9));
         var stored = await GetStoredPostAsync(postId);
         await Assert.That(stored["Comments"].AsBsonArray.Count).IsEqualTo(9);
         await Assert.That(stored["Version"].AsInt32).IsEqualTo(4);
@@ -1030,10 +1031,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     [Arguments("missing-world")]
     [Arguments("player-target")]
     [Arguments("unknown-star")]
-    [Arguments("depth")]
     [Arguments("energy")]
     [Arguments("energy-over")]
-    [Arguments("depth-adjacent")]
     public async Task AddReply_InvalidInput_RejectsBeforeGenerationAsync(string scenario)
     {
         // Arrange
@@ -1047,21 +1046,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                 ? $"Player_{(await GetStoredPlayerAsync(user))["_id"].AsString}"
                 : "Star_unknown-star";
             await Database.GetCollection<BsonDocument>("posts").UpdateOneAsync(new BsonDocument("_id", postId), new BsonDocument("$set", new BsonDocument("Comments.0.AuthorId", author)));
-        }
-
-        if (scenario == "depth")
-        {
-            var reply = await ReplyAsync(user, postId, targetId, "depth-seed", "первый ответ");
-            targetId = (reply.Post ?? throw new InvalidOperationException("Missing reply post.")).Comments.Single(comment => comment.Depth == 2).Id;
-        }
-
-        if (scenario == "depth-adjacent")
-        {
-            var posts = Database.GetCollection<GamePost>("posts");
-            var post = await posts.Find(item => item.Id == PostId.From(postId)).SingleAsync();
-            var nested = post.Comments[0] with { Id = CommentId.New(), ParentCommentId = post.Comments[0].Id };
-            await posts.ReplaceOneAsync(item => item.Id == post.Id, post with { Comments = [.. post.Comments, nested] });
-            targetId = nested.Id.Value;
         }
 
         if (scenario is "energy" or "energy-over")

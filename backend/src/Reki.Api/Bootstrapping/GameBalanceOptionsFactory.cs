@@ -117,7 +117,6 @@ internal sealed class GameBalanceOptionsFactory(
             new ThreadBalance(
                 thread.GetValue<int>("bonus_replies"),
                 thread.GetValue<int>("subscriber_bonus"),
-                thread.GetValue<int>("branch_depth"),
                 commentCost),
             worlds,
             postCost);

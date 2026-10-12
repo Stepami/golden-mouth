@@ -252,7 +252,7 @@ export const api = {
       }
       if (player.postsLeft < 1) throw new ApiError(409, 'POST', '/posts/:id/replies')
       const target = post.comments.find(comment => comment.id === commentId && comment.star && !comment.hidden)
-      if (!target || (target.depth ?? 0) + 2 > 2) throw new ApiError(409, 'POST', '/posts/:id/replies')
+      if (!target) throw new ApiError(409, 'POST', '/posts/:id/replies')
       update({ status: 'generating', requestId })
       await later(undefined, 650)
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
