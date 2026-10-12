@@ -37,7 +37,4 @@ internal static class LlmSpendWriter
             activity.SetTag("gen_ai.usage.cost.output", outputCost);
         }
     }
-
-    public static void WriteLookupStatus(Activity activity, string status) =>
-        activity.SetTag("gen_ai.usage.cost.lookup_status", status);
 }

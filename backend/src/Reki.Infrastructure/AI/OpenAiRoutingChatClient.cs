@@ -1,12 +1,16 @@
 ﻿using System.ClientModel;
 using System.ClientModel.Primitives;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OpenAI;
 
 namespace Reki.Infrastructure.AI;
 
-internal class OpenAiRoutingChatClient(IOptions<LlmOptions> options, LlmSpendPolicy costPolicy) : RoutingChatClient
+internal class OpenAiRoutingChatClient(
+    IOptions<LlmOptions> options,
+    LlmSpendPolicy costPolicy,
+    IServiceScopeFactory serviceScopeFactory) : RoutingChatClient
 {
     /// <summary>
     /// Обёрткам нужны метаданные модели до вызова SelectClientAsync.
@@ -34,7 +38,10 @@ internal class OpenAiRoutingChatClient(IOptions<LlmOptions> options, LlmSpendPol
     {
         var client = _openAiClient
             .GetChatClient(options.Value.Model)
-            .AsIChatClient();
+            .AsIChatClient()
+            .AsBuilder()
+            .Use(client => new LlmSpendChatClient(client, serviceScopeFactory))
+            .Build();
 
         return ValueTask.FromResult(client);
     }
@@ -45,7 +52,7 @@ internal class OpenAiRoutingChatClient(IOptions<LlmOptions> options, LlmSpendPol
         {
             ClientLoggingOptions = new ClientLoggingOptions { EnableLogging = false },
             Endpoint = new Uri(options.BaseUrl),
-            NetworkTimeout = TimeSpan.FromSeconds(options.TimeoutSeconds),
+            NetworkTimeout = TimeSpan.FromSeconds(20),
             RetryPolicy = new ClientRetryPolicy(),
         };
 

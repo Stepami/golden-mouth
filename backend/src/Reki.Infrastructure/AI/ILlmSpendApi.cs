@@ -9,6 +9,5 @@ public interface ILlmSpendApi
     [RawReturn(EnsureSuccessStatusCode = false)]
     Task<HttpResponseMessage> GetLogsAsync(
         string requestId,
-        [Header("Authorization")] string authorization,
         CancellationToken cancellationToken);
 }

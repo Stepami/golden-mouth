@@ -14,10 +14,4 @@ internal sealed class LlmOptions
 
     [Required]
     public string Model { get; init; } = string.Empty;
-
-    [Range(1, 120)]
-    public int TimeoutSeconds { get; init; } = 20;
-
-    [Range(1, 10)]
-    public int SpendLookupTimeoutSeconds { get; init; } = 3;
 }

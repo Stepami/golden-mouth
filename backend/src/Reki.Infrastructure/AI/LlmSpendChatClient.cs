@@ -1,20 +1,15 @@
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Polly.CircuitBreaker;
-using Polly.Timeout;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Reki.Infrastructure.AI;
 
 /// <summary>Reads gateway spend once the streaming response has completed.</summary>
 internal sealed partial class LlmSpendChatClient(
     IChatClient innerClient,
-    ILlmSpendApi spendApi,
-    IOptions<LlmOptions> llmOptions,
-    ILogger<LlmSpendChatClient> logger) : DelegatingChatClient(innerClient)
+    IServiceScopeFactory serviceScopeFactory) : DelegatingChatClient(innerClient)
 {
     public override async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
         IEnumerable<ChatMessage> messages,
@@ -36,45 +31,35 @@ internal sealed partial class LlmSpendChatClient(
 
         try
         {
-            using var response = await spendApi.GetLogsAsync(
-                responseId, $"Bearer {llmOptions.Value.ApiKey}", cancellationToken);
+            using var scope = serviceScopeFactory.CreateScope();
+            using var response = await scope.ServiceProvider.GetRequiredService<ILlmSpendApi>()
+                .GetLogsAsync(
+                    responseId,
+                    cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                LlmSpendWriter.WriteLookupStatus(activity, "unavailable");
-                LogLookupRejected((int)response.StatusCode);
                 yield break;
             }
 
             var logs = await response.Content.ReadFromJsonAsync(
-                LlmSpendJsonContext.Default.LlmSpendLogArray, cancellationToken);
+                LlmSpendJsonContext.Default.LlmSpendLogArray,
+                cancellationToken);
             var matches = logs?.Where(log => log is not null && log.RequestId == responseId).ToArray();
-            if (matches is [var entry] && entry.Spend is { } spend && double.IsFinite(spend) && spend >= 0)
+            if (matches is [{ Spend: { } spend }] && double.IsFinite(spend) && spend >= 0)
             {
                 LlmSpendWriter.Write(activity, spend, "spend_logs");
-                LlmSpendWriter.WriteLookupStatus(activity, "recorded");
-            }
-            else
-            {
-                LlmSpendWriter.WriteLookupStatus(activity, "missing");
-                LogSpendMissing();
             }
         }
-        catch (Exception exception) when (exception is HttpRequestException or IOException or OperationCanceledException or
-                                         JsonException or BrokenCircuitException or TimeoutRejectedException)
+        catch (Exception)
         {
-            LlmSpendWriter.WriteLookupStatus(activity, "unavailable");
-
-            // Exception messages and response bodies can contain credentials or user content.
-            LogLookupFailed(exception.GetType().Name);
+            // Cost telemetry must not fail an already completed model response.
         }
     }
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Gateway spend lookup returned HTTP {StatusCode}")]
-    private partial void LogLookupRejected(int statusCode);
+    private sealed record LlmSpendLog(
+        [property: JsonPropertyName("request_id")] string? RequestId,
+        [property: JsonPropertyName("spend")] double? Spend);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Gateway spend log is missing or invalid")]
-    private partial void LogSpendMissing();
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Gateway spend lookup unavailable ({FailureType})")]
-    private partial void LogLookupFailed(string failureType);
+    [JsonSerializable(typeof(LlmSpendLog[]))]
+    private sealed partial class LlmSpendJsonContext : JsonSerializerContext;
 }
