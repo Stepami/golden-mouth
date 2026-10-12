@@ -1,15 +1,12 @@
-using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
+using OpenAI.Chat;
+using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
 namespace Reki.Infrastructure.AI;
 
-/// <summary>Reads gateway spend once the streaming response has completed.</summary>
-internal sealed partial class LlmSpendChatClient(
-    IChatClient innerClient,
-    IServiceScopeFactory serviceScopeFactory) : DelegatingChatClient(innerClient)
+/// <summary>Requests streaming usage and records gateway cost from the final usage chunk.</summary>
+internal sealed class LlmSpendChatClient(IChatClient innerClient) : DelegatingChatClient(innerClient)
 {
     public override async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
         IEnumerable<ChatMessage> messages,
@@ -17,49 +14,28 @@ internal sealed partial class LlmSpendChatClient(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var activity = LlmSpendWriter.FindChatActivity();
-        string? responseId = null;
-        await foreach (var update in base.GetStreamingResponseAsync(messages, options, cancellationToken))
+        await foreach (var update in base.GetStreamingResponseAsync(messages, WithUsageIncluded(options), cancellationToken))
         {
-            responseId = update.ResponseId ?? responseId;
+            if (update.RawRepresentation is StreamingChatCompletionUpdate { Usage: { } usage } &&
+                usage.Patch.TryGetValue("$.cost"u8, out double cost))
+            {
+                LlmSpendWriter.Write(activity, cost, "stream_usage");
+            }
+
             yield return update;
-        }
-
-        if (activity?.IsAllDataRequested is not true || string.IsNullOrEmpty(responseId))
-        {
-            yield break;
-        }
-
-        try
-        {
-            using var scope = serviceScopeFactory.CreateScope();
-            using var response = await scope.ServiceProvider.GetRequiredService<ILlmSpendApi>()
-                .GetLogsAsync(
-                    responseId,
-                    cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                yield break;
-            }
-
-            var logs = await response.Content.ReadFromJsonAsync(
-                LlmSpendJsonContext.Default.LlmSpendLogArray,
-                cancellationToken);
-            var matches = logs?.Where(log => log is not null && log.RequestId == responseId).ToArray();
-            if (matches is [{ Spend: { } spend }] && double.IsFinite(spend) && spend >= 0)
-            {
-                LlmSpendWriter.Write(activity, spend, "spend_logs");
-            }
-        }
-        catch (Exception)
-        {
-            // Cost telemetry must not fail an already completed model response.
         }
     }
 
-    private sealed record LlmSpendLog(
-        [property: JsonPropertyName("request_id")] string? RequestId,
-        [property: JsonPropertyName("spend")] double? Spend);
-
-    [JsonSerializable(typeof(LlmSpendLog[]))]
-    private sealed partial class LlmSpendJsonContext : JsonSerializerContext;
+    private static ChatOptions WithUsageIncluded(ChatOptions? options)
+    {
+        var patched = options?.Clone() ?? new ChatOptions();
+        var rawFactory = patched.RawRepresentationFactory;
+        patched.RawRepresentationFactory = client =>
+        {
+            var completionOptions = rawFactory?.Invoke(client) as ChatCompletionOptions ?? new ChatCompletionOptions();
+            completionOptions.Patch.Set("$.stream_options.include_usage"u8, true);
+            return completionOptions;
+        };
+        return patched;
+    }
 }

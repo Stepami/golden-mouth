@@ -13,7 +13,6 @@
         <PackageReference Include="Kot.MongoDB.Migrations.DI" />
         <PackageReference Include="Microsoft.Extensions.AI"/>
         <PackageReference Include="Microsoft.Extensions.AI.OpenAI"/>
-        <PackageReference Include="Microsoft.Extensions.Http.Resilience"/>
         <PackageReference Include="MongoDB.Analyzer" />
         <PackageReference Include="MongoDB.Driver"/>
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"/>
@@ -24,7 +23,6 @@
         <PackageReference Include="SkiaSharp"/>
         <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies"/>
         <PackageReference Include="Vogen"/>
-        <PackageReference Include="WebApiClientCore"/>
     </ItemGroup>
 
     <ItemGroup>

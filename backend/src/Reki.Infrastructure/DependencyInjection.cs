@@ -1,11 +1,9 @@
-using System.Net.Http.Headers;
 using Kot.MongoDB.Migrations;
 using Kot.MongoDB.Migrations.DI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
@@ -52,22 +50,6 @@ public static class DependencyInjection
             .BindConfiguration(LlmOptions.SectionName)
             .ValidateDataAnnotations()
             .ValidateOnStart();
-
-        services.AddHttpApi<ILlmSpendApi>()
-            .ConfigureHttpClient((serviceProvider, client) =>
-            {
-                var options = serviceProvider.GetRequiredService<IOptions<LlmOptions>>().Value;
-                client.BaseAddress = new Uri(options.BaseUrl);
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
-                client.Timeout = TimeSpan.FromSeconds(3);
-            })
-            .AddStandardResilienceHandler(resilience =>
-            {
-                resilience.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(3);
-                resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(1);
-                resilience.Retry.MaxRetryAttempts = 1;
-                resilience.Retry.Delay = TimeSpan.FromMilliseconds(200);
-            });
 
         services
             .AddSingleton<LlmSpendPolicy>()
