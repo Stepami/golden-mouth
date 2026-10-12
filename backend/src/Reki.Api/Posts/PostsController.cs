@@ -1,9 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Api.Mapping;
-using Reki.Application.Common.Exceptions;
-using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Contracts.Posts;
 using Reki.Domain.Posts;
@@ -13,9 +10,7 @@ namespace Reki.Api.Posts;
 [ApiController]
 [Produces("application/json")]
 [Route("/")]
-public sealed class PostsController(
-    ISender sender,
-    ApiMapper mapper) : ControllerBase
+public sealed class PostsController(ISender sender) : ControllerBase
 {
     [HttpPost("posts/publications", Name = "GeneratePublication")]
     [ActionName("GeneratePublication")]
@@ -41,11 +36,9 @@ public sealed class PostsController(
         string publicationId,
         CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var result = await sender.Send(
-            new GetPublicationQuery(publicationId, player.Id),
-            cancellationToken) ?? throw new ResourceNotFoundException("Publication not found.");
-        return TypedResults.Ok(PostContractMapper.MapPublication(result));
+            new GetPublicationStatusQuery(publicationId), cancellationToken);
+        return TypedResults.Ok(result);
     }
 
     [HttpPost("posts/publications/{publicationId}/moderation", Name = "ModeratePublication")]
@@ -63,21 +56,21 @@ public sealed class PostsController(
 
     [HttpPost("posts/{postId}/replies", Name = "ReplyToPost")]
     [ActionName("ReplyToPost")]
-    public async Task<Ok<ReplyResponse>> ReplyToPostAsync(
+    public ServerSentEventsResult<ReplyLiveEvent> ReplyToPost(
         string postId,
         ReplyRequest request,
         [FromQuery] string worldId,
         CancellationToken cancellationToken)
     {
-        var result = await sender.Send(
+        var result = sender.CreateStream(
             new AddReplyCommand(
                 PostId.From(postId),
                 CommentId.From(request.CommentId),
-                request.ReplyId,
+                request.RequestId,
                 request.Text,
                 Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
-        return TypedResults.Ok(result);
+        return TypedResults.ServerSentEvents(result);
     }
 
     [HttpGet("feed", Name = "GetFeed")]
@@ -112,10 +105,9 @@ public sealed class PostsController(
         [FromQuery] string worldId,
         CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var result = await sender.Send(
-            new GetPostQuery(PostId.From(postId), player.Id, Domain.Worlds.WorldId.From(worldId)),
+            new GetPostDetailQuery(PostId.From(postId), Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
-        return TypedResults.Ok(mapper.MapPostDetail(result));
+        return TypedResults.Ok(result);
     }
 }

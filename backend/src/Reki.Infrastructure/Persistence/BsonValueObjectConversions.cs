@@ -9,6 +9,7 @@ using Vogen;
 
 namespace Reki.Infrastructure.Persistence;
 
+[BsonSerializer<AuthorId>]
 [BsonSerializer<ChallengeId>]
 [BsonSerializer<CommentId>]
 [BsonSerializer<EventId>]
