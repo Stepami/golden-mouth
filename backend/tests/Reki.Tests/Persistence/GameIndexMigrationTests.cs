@@ -519,10 +519,17 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await database.GetCollection<BsonDocument>("worlds").UpdateOneAsync(new BsonDocument("_id", "world"), Builders<BsonDocument>.Update.Set("Version", BsonNull.Value));
         }
 
+        var snapshot = post.DeepClone().AsBsonDocument;
+        if (!existingVersions)
+        {
+            snapshot.Remove("WorldId");
+        }
+
         await database.GetCollection<BsonDocument>("publications").InsertOneAsync(new BsonDocument
         {
             ["_id"] = "publication",
-            ["Result"] = new BsonDocument { ["Post"] = post.DeepClone(), ["Subscribers"] = 1234 },
+            ["WorldId"] = "world",
+            ["Result"] = new BsonDocument { ["Post"] = snapshot, ["Subscribers"] = 1234 },
         });
         if (existingVersions)
         {
@@ -546,7 +553,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(player["Version"]).IsEqualTo(new BsonInt32(existingVersions ? 8 : 0));
         await Assert.That(world["Version"]).IsEqualTo(new BsonInt32(existingVersions ? 9 : 0));
         await Assert.That(world["Player"]["Subscribers"]).IsEqualTo(new BsonInt32(1000));
-        await Assert.That(publication["Result"]["Post"]).IsEqualTo(saved);
+        await Assert.That(new BsonDocument(publication["Result"]["Post"].AsBsonDocument.Elements.OrderBy(field => field.Name, StringComparer.Ordinal)))
+            .IsEqualTo(new BsonDocument(saved.Elements.OrderBy(field => field.Name, StringComparer.Ordinal)));
         await Assert.That(publication["Result"]["Subscribers"]).IsEqualTo(new BsonInt32(1234));
         await Assert.That(await ReadAsync(database, "posts", "post")).IsEqualTo(saved);
         await Assert.That(await ReadAsync(database, "players", "owner")).IsEqualTo(player);

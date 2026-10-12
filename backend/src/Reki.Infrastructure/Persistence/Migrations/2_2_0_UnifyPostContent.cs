@@ -133,6 +133,9 @@ internal sealed class UnifyPostContent : RekiMigrationBase
         foreach (var publication in batch)
         {
             var post = publication["Result"].AsBsonDocument["Post"].AsBsonDocument;
+
+            // Миграция 2.0.0 заполняла WorldId публикации, но не её сохранённого снимка поста.
+            post["WorldId"] = publication["WorldId"];
             var world = await FindWorldAsync(worlds, session, post, cancellationToken);
             var migrated = MigratePost(post, world);
             await publications.UpdateOneAsync(session, new BsonDocument("_id", publication["_id"]), Builders<BsonDocument>.Update.Set("Result.Post", migrated), cancellationToken: cancellationToken);
