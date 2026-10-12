@@ -139,7 +139,7 @@ public sealed partial class AddReplyStreamHandler(
 
     private static void EnsureSameRequest(GameComment comment, AddReplyCommand request, PlayerId playerId)
     {
-        if (comment.AuthorId != playerId.ToAuthor() || comment.ParentCommentId != request.TargetCommentId ||
+        if (comment.AuthorId != playerId.ToAuthorId() || comment.ParentCommentId != request.TargetCommentId ||
             !string.Equals(comment.Text, request.Text, StringComparison.Ordinal))
         {
             throw new RequestConflictException("The request identifier belongs to another reply.");
@@ -182,7 +182,7 @@ public sealed partial class AddReplyStreamHandler(
             }
 
             var target = ValidateTarget(post, world, request.TargetCommentId);
-            if (target.AuthorId != turn.StarId.ToAuthor() ||
+            if (target.AuthorId != turn.StarId.ToAuthorId() ||
                 (turn.AdditionalStarId is { } other && world.FindStar(other) is null))
             {
                 throw new RequestConflictException("The world changed during generation.");
@@ -196,7 +196,7 @@ public sealed partial class AddReplyStreamHandler(
 
             EnsureEnergy(player, cap);
             var bonus = post.Comments.Count(comment =>
-                            comment.AuthorId == playerId.ToAuthor() && comment.ParentCommentId is not null)
+                            comment.AuthorId == playerId.ToAuthorId() && comment.ParentCommentId is not null)
                         < balance.Value.Thread.BonusReplies
                 ? balance.Value.Thread.SubscriberBonus
                 : 0;
@@ -204,18 +204,18 @@ public sealed partial class AddReplyStreamHandler(
                 CommentId.New(),
                 target.Id,
                 request.RequestId,
-                playerId.ToAuthor(),
+                playerId.ToAuthorId(),
                 request.Text,
                 false,
-                turn.Emoji is { } emoji ? [new CommentReaction(turn.StarId.ToAuthor(), emoji)] : []);
+                turn.Emoji is { } emoji ? [new CommentReaction(turn.StarId.ToAuthorId(), emoji)] : []);
             List<GameComment> comments =
             [
                 playerComment,
-                new GameComment(CommentId.New(), playerComment.Id, null, turn.StarId.ToAuthor(), turn.Text, false, [])
+                new GameComment(CommentId.New(), playerComment.Id, null, turn.StarId.ToAuthorId(), turn.Text, false, [])
             ];
             if (turn.AdditionalStarId is { } additional && turn.AdditionalText is { } text)
             {
-                comments.Add(new GameComment(CommentId.New(), null, null, additional.ToAuthor(), text, false, []));
+                comments.Add(new GameComment(CommentId.New(), null, null, additional.ToAuthorId(), text, false, []));
             }
 
             var updatedPost = post.AddComments(comments);

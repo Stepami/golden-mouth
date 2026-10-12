@@ -79,7 +79,7 @@ public static class PostContractMapper
             author.Handle,
             comment.Text,
             comment.AuthorId.Value.Item1 == AuthorKind.Star,
-            comment.AuthorId == playerId.ToAuthor(),
+            comment.AuthorId == playerId.ToAuthorId(),
             comment.Hidden,
             comment.ParentCommentId?.Value,
             comment.RequestId,
@@ -97,13 +97,13 @@ public static class PostContractMapper
             owner.Name,
             owner.Avatar,
             reaction.AuthorId.Value.Item1 == AuthorKind.Star,
-            reaction.AuthorId == playerId.ToAuthor(),
+            reaction.AuthorId == playerId.ToAuthorId(),
             reaction.Emoji);
     }
 
     private static (string Name, string Avatar, string Role, string Handle) ResolveAuthor(AuthorId id, World world)
     {
-        if (id == world.Player.PlayerId.ToAuthor())
+        if (id == world.Player.PlayerId.ToAuthorId())
         {
             return (world.Player.Name, world.Player.Avatar, world.Player.Role, world.Player.Avatar);
         }

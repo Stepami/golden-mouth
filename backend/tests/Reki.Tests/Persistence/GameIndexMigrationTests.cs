@@ -313,7 +313,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
             var post = new GamePost(
                 PostId.From("hydrated-post"),
-                PlayerId.From("player").ToAuthor(),
+                PlayerId.From("player").ToAuthorId(),
                 WorldId.From("world"),
                 "post",
                 10,

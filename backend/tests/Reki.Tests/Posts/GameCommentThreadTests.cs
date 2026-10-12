@@ -15,7 +15,7 @@ public sealed class GameCommentThreadTests
     {
         // Arrange
         var root = Comment(RootId, null);
-        var reply = Comment(ReplyId, RootId, "request-one", PlayerId.From("player-one").ToAuthor());
+        var reply = Comment(ReplyId, RootId, "request-one", PlayerId.From("player-one").ToAuthorId());
         var followUp = Comment(StarReplyId, ReplyId);
         var post = Post([followUp, root, reply]);
 
@@ -62,8 +62,8 @@ public sealed class GameCommentThreadTests
     public async Task AddComments_CompleteTurn_PreservesCanonicalTurnAsync()
     {
         // Arrange
-        var playerAuthor = PlayerId.From("player-one").ToAuthor();
-        var starAuthor = TestGameData.StarId.ToAuthor();
+        var playerAuthor = PlayerId.From("player-one").ToAuthorId();
+        var starAuthor = TestGameData.StarId.ToAuthorId();
         var reaction = new CommentReaction(starAuthor, "✨");
         var playerReply = Comment(ReplyId, RootId, "request-one", playerAuthor) with { Reactions = [reaction] };
         var starReply = Comment(StarReplyId, ReplyId);
@@ -128,10 +128,10 @@ public sealed class GameCommentThreadTests
     }
 
     private static GameComment Comment(CommentId id, CommentId? parent) =>
-        Comment(id, parent, null, TestGameData.StarId.ToAuthor());
+        Comment(id, parent, null, TestGameData.StarId.ToAuthorId());
 
     private static GameComment Comment(CommentId id, CommentId? parent, string requestId) =>
-        Comment(id, parent, requestId, TestGameData.StarId.ToAuthor());
+        Comment(id, parent, requestId, TestGameData.StarId.ToAuthorId());
 
     private static GameComment Comment(CommentId id, CommentId? parent, string? requestId, AuthorId author) =>
         new(id, parent, requestId, author, "Comment", false, []);
@@ -139,7 +139,7 @@ public sealed class GameCommentThreadTests
     private static GamePost Post(IReadOnlyList<GameComment> comments) =>
         new(
             PostId.From("post-one"),
-            PlayerId.From("player-one").ToAuthor(),
+            PlayerId.From("player-one").ToAuthorId(),
             TestGameData.CreateWorld().Id,
             "Post",
             10,

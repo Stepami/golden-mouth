@@ -383,7 +383,7 @@ public sealed class ReplyStreamTests(ApiFactory factory) : GameApiTestBase(facto
         var (postId, targetId) = await PublishPostForThreadAsync(user);
         var player = await GetStoredPlayerAsync(user);
         var post = await Database.GetCollection<GamePost>("posts").Find(item => item.Id == PostId.From(postId)).SingleAsync();
-        var historical = Enumerable.Range(0, 3).Select(index => new GameComment(CommentId.New(), CommentId.From(targetId), null, PlayerId.From(player["_id"].AsString).ToAuthor(), $"исторический ответ {index}", false, [])).ToArray();
+        var historical = Enumerable.Range(0, 3).Select(index => new GameComment(CommentId.New(), CommentId.From(targetId), null, PlayerId.From(player["_id"].AsString).ToAuthorId(), $"исторический ответ {index}", false, [])).ToArray();
         await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(item => item.Id == post.Id, post with { Comments = [.. post.Comments, .. historical] });
         var before = await GetStoredWorldAsync(user);
 
@@ -415,7 +415,7 @@ public sealed class ReplyStreamTests(ApiFactory factory) : GameApiTestBase(facto
         await worlds.ReplaceOneAsync(item => item.Id == world.Id, updated);
         var posts = Database.GetCollection<GamePost>("posts");
         var post = await posts.Find(item => item.Id == PostId.From(postId)).SingleAsync();
-        await posts.ReplaceOneAsync(item => item.Id == post.Id, post with { AuthorId = StarId.From(selected).ToAuthor() });
+        await posts.ReplaceOneAsync(item => item.Id == post.Id, post with { AuthorId = StarId.From(selected).ToAuthorId() });
         using var api = Factory.CreateApiClient(user);
 
         // Act

@@ -100,7 +100,7 @@ public sealed class PublishPostHandler(
             CommentId.New(),
             null,
             null,
-            turn.StarId.ToAuthor(),
+            turn.StarId.ToAuthorId(),
             turn.Comment,
             false,
             []);
@@ -110,7 +110,7 @@ public sealed class PublishPostHandler(
         var reachRatio = recentViews.Length == 0 ? 1 : views / GetMedian(recentViews);
         var post = new GamePost(
             postId,
-            player.Id.ToAuthor(),
+            player.Id.ToAuthorId(),
             world.Id,
             text,
             views,

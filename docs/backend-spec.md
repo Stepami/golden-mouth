@@ -37,7 +37,7 @@
 
 ### Тред: авторы, AI-контекст и энергия
 
-- `AuthorKind`: Player / Star. `AuthorId` — Vogen над `(AuthorKind, string)`; Mongo хранит `{ Kind, Id }`. Валидация отвергает неизвестный тип и пустой ID. `PlayerId.ToAuthor()` и `StarId.ToAuthor()` создают тип явно.
+- `AuthorKind`: Player / Star. `AuthorId` — Vogen над `(AuthorKind, string)`; Mongo хранит `{ Kind, Id }`. Валидация отвергает неизвестный тип и пустой ID. `PlayerId.ToAuthorId()` и `StarId.ToAuthorId()` создают тип явно.
 - `GamePost`: обязательный `WorldId`, `AuthorId`, `Version` и единственный массив `Comments`. Доступ определяется владельцем мира, авторство проверяется отдельно. `ThreadReplies`, `ThreadReply` и `CommentOperation` отсутствуют.
 - `GameComment`: `Id`, nullable `ParentCommentId`, nullable `RequestId`, `AuthorId`, `Text`, `Hidden`, `Reactions`. `CommentReaction`: `AuthorId`, `Emoji`. Имена, аватары, роли, `Star`, `Me`, глубина, расход энергии и сумма бонуса в комментариях не хранятся. API разрешает автора из `World.Player` / `World.Stars`, вычисляет `Me` относительно текущего игрока и глубину по цепочке родителей.
 - Корень — глубина 0. Игрок отвечает выбранному комментарию (1), выбранная звезда отвечает игроку (2). Реакция ставится на комментарий игрока. Дополнительная реплика другой звезды — новый корень. Сервер проверяет `thread.branch_depth`, принадлежность обеих звёзд миру и 14+.

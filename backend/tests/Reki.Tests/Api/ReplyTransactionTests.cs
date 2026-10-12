@@ -44,7 +44,7 @@ public sealed class ReplyTransactionTests(ApiFactory factory) : GameApiTestBase(
         if (conflict == "request")
         {
             post = post.AddComments([
-                new GameComment(CommentId.New(), CommentId.From(targetId), requestId, player.Id.ToAuthor(), "Сохранённый ответ", false, [])
+                new GameComment(CommentId.New(), CommentId.From(targetId), requestId, player.Id.ToAuthorId(), "Сохранённый ответ", false, [])
             ]);
             await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(item => item.Id == post.Id, post);
         }
@@ -243,7 +243,7 @@ public sealed class ReplyTransactionTests(ApiFactory factory) : GameApiTestBase(
         var player = await ReadPlayerAsync(user);
         var post = await ReadPostAsync(postId);
         var earlier = Enumerable.Range(0, balance.Thread.BonusReplies - 1)
-            .Select(index => new GameComment(CommentId.New(), CommentId.From(targetId), $"earlier-{index}", player.Id.ToAuthor(), "Исторический ответ", false, [])).ToArray();
+            .Select(index => new GameComment(CommentId.New(), CommentId.From(targetId), $"earlier-{index}", player.Id.ToAuthorId(), "Исторический ответ", false, [])).ToArray();
         post = post.AddComments(earlier);
         await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(item => item.Id == post.Id, post);
         using var scope = Factory.Services.CreateScope();
@@ -514,7 +514,7 @@ public sealed class ReplyTransactionTests(ApiFactory factory) : GameApiTestBase(
         await MoveToPreviewAsync(updates);
         if (scenario == "selected")
         {
-            var changed = post with { Comments = [post.Comments[0] with { AuthorId = other.Id.ToAuthor() }], Version = post.Version + 1 };
+            var changed = post with { Comments = [post.Comments[0] with { AuthorId = other.Id.ToAuthorId() }], Version = post.Version + 1 };
             await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(item => item.Id == post.Id, changed);
         }
         else

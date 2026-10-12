@@ -33,7 +33,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var start = new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero);
         var posts = Enumerable.Range(0, 46).Select(index => new GamePost(
             PostId.New(),
-            (index < 21 ? ownerId : otherId).ToAuthor(),
+            (index < 21 ? ownerId : otherId).ToAuthorId(),
             Domain.Worlds.WorldId.From(index < 21 ? world["_id"].AsString : "other-world"),
             $"post-{index}",
             index + 1,

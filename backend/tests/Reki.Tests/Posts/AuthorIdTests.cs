@@ -42,15 +42,15 @@ public sealed class AuthorIdTests
     }
 
     [Test]
-    public async Task ToAuthor_EqualUnderlyingIds_KeepsKindsDistinctAsync()
+    public async Task ToAuthorId_EqualUnderlyingIds_KeepsKindsDistinctAsync()
     {
         // Arrange
         var player = PlayerId.From("same-id");
         var star = StarId.From("same-id");
 
         // Act
-        var playerAuthor = player.ToAuthor();
-        var starAuthor = star.ToAuthor();
+        var playerAuthor = player.ToAuthorId();
+        var starAuthor = star.ToAuthorId();
 
         // Assert
         await Assert.That(playerAuthor.Value.Item1).IsEqualTo(AuthorKind.Player);
