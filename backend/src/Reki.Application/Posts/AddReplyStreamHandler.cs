@@ -45,7 +45,7 @@ public sealed partial class AddReplyStreamHandler(
         if (post.FindRequest(request.RequestId) is { } existing)
         {
             EnsureSameRequest(existing, request, player.Id);
-            yield return Completed(request, post, world, player, cap);
+            yield return await ReplayAsync(request, player.Id, cancellationToken);
             yield break;
         }
 
@@ -73,8 +73,10 @@ public sealed partial class AddReplyStreamHandler(
                     calls.AddRange(updates.Current.Contents.OfType<FunctionCallContent>());
                 }
             }
-            catch (Exception exception) when (exception is not OperationCanceledException ||
-                                              !cancellationToken.IsCancellationRequested)
+            // Provider exceptions after SSE headers need a safe terminal event; cancellation and
+            // critical runtime failures propagate instead of being presented as a model error.
+            catch (Exception exception) when (exception is not (OutOfMemoryException or AccessViolationException) &&
+                                              (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested))
             {
                 GenerationFailed();
                 hasUpdate = false;
@@ -175,7 +177,7 @@ public sealed partial class AddReplyStreamHandler(
             if (post.FindRequest(request.RequestId) is { } existing)
             {
                 EnsureSameRequest(existing, request, playerId);
-                return Completed(request, post, world, player, cap);
+                return await ReplayAsync(request, playerId, cancellationToken);
             }
 
             var target = ValidateTarget(post, world, request.TargetCommentId);
@@ -225,6 +227,20 @@ public sealed partial class AddReplyStreamHandler(
         }
 
         throw new RequestConflictException("The reply changed concurrently.");
+    }
+
+    private async ValueTask<ReplyLiveEvent> ReplayAsync(AddReplyCommand request, PlayerId playerId, CancellationToken cancellationToken)
+    {
+        // Seeing the saved request proves that its energy and bonus transaction has committed.
+        // Read the dependent state afterwards rather than returning the preflight snapshot.
+        var post = await sender.Send(new GetPostQuery(request.PostId, playerId, request.WorldId), cancellationToken);
+        var storedPlayer = await store.GetPlayerAsync(playerId, cancellationToken)
+            ?? throw new ResourceNotFoundException("Player not found.");
+        var player = gameDay.Normalize(storedPlayer);
+        var world = await sender.Send(new Worlds.GetWorldQuery(playerId, post.WorldId), cancellationToken);
+        var existing = post.FindRequest(request.RequestId) ?? throw new RequestConflictException("The saved reply disappeared.");
+        EnsureSameRequest(existing, request, playerId);
+        return Completed(request, post, world, player, await GetCapAsync(player, cancellationToken));
     }
 
     private void EnsureEnergy(PlayerProfile player, int cap)
