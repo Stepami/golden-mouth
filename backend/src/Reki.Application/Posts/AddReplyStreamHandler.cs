@@ -223,10 +223,12 @@ public sealed partial class AddReplyStreamHandler(
         throw new RequestConflictException("The reply changed concurrently.");
     }
 
+    /// <summary>
+    /// Seeing the saved request proves that its energy and bonus transaction has committed.
+    /// Read the dependent state afterwards rather than returning the preflight snapshot.
+    /// </summary>
     private async ValueTask<ReplyLiveEvent> ReplayAsync(AddReplyCommand request, PlayerId playerId, CancellationToken cancellationToken)
     {
-        // Seeing the saved request proves that its energy and bonus transaction has committed.
-        // Read the dependent state afterwards rather than returning the preflight snapshot.
         var post = await sender.Send(new GetPostQuery(request.PostId, playerId, request.WorldId), cancellationToken);
         var storedPlayer = await store.GetPlayerAsync(playerId, cancellationToken)
             ?? throw new ResourceNotFoundException("Player not found.");

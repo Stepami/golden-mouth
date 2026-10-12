@@ -8,7 +8,9 @@ namespace Reki.Infrastructure.AI;
 
 internal class OpenAiRoutingChatClient(IOptions<LlmOptions> options) : RoutingChatClient
 {
-    // Обёрткам нужны метаданные модели до вызова SelectClientAsync.
+    /// <summary>
+    /// Обёрткам нужны метаданные модели до вызова SelectClientAsync.
+    /// </summary>
     private readonly ChatClientMetadata _metadata = new(
         defaultModelId: options.Value.Model);
 

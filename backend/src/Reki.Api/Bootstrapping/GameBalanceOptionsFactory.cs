@@ -11,7 +11,9 @@ internal sealed class GameBalanceOptionsFactory(
     IEnumerable<IValidateOptions<GameBalance>> validations)
     : OptionsFactory<GameBalance>(setups, postConfigures, validations)
 {
-    // The JSON structure differs from the immutable GameBalance record.
+    /// <summary>
+    /// The JSON structure differs from the immutable GameBalance record.
+    /// </summary>
     protected override GameBalance CreateInstance(string name)
     {
         var posts = configuration.GetRequiredSection("posts");

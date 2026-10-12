@@ -10,7 +10,9 @@ namespace Reki.Infrastructure.Persistence.Migrations;
 
 internal sealed class MoveReferralStateToInvites : RekiMigrationBase
 {
-    // Freeze the already-issued bonus amount; later balance edits must not change historical credits.
+    /// <summary>
+    /// Freeze the already-issued bonus amount; later balance edits must not change historical credits.
+    /// </summary>
     private const int LegacyBonus = 5;
     private static readonly string[] LegacyFields =
         ["InvitedBy", "InvitedAtUtc", "FirstPostInviteBonus", "FirstPostInviteBonusUsed", "InviteBonusesEarnedInPeriod"];
