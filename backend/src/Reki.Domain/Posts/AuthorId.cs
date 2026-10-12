@@ -8,9 +8,6 @@ namespace Reki.Domain.Posts;
 [ValueObject<string>(comparison: ComparisonGeneration.Omit)]
 public readonly partial struct AuthorId
 {
-    private const string PlayerPrefix = "Player_";
-    private const string StarPrefix = "Star_";
-
     /// <summary>Создаёт идентификатор автора из <see cref="PlayerId"/>.</summary>
     /// <param name="playerId">Исходный идентификатор игрока.</param>
     /// <returns>Проверенный идентификатор автора-игрока.</returns>
@@ -26,8 +23,8 @@ public readonly partial struct AuthorId
     private static Validation Validate(string value)
     {
         if (string.IsNullOrWhiteSpace(value) ||
-            (!value.StartsWith(PlayerPrefix, StringComparison.Ordinal) &&
-             !value.StartsWith(StarPrefix, StringComparison.Ordinal)) ||
+            (!value.StartsWith(nameof(AuthorKind.Player), StringComparison.Ordinal) &&
+             !value.StartsWith(nameof(AuthorKind.Star), StringComparison.Ordinal)) ||
             string.IsNullOrWhiteSpace(value[(value.IndexOf('_') + 1)..]))
         {
             return Validation.Invalid("Author kind and identifier are required.");
