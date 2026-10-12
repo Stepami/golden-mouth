@@ -1,14 +1,11 @@
 using Mediator;
-using Reki.Application.Common;
+using Reki.Application.Player;
 using Reki.Contracts.Posts;
-using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Posts;
 
 public sealed class GetFeedHandler(
-    ITelegramUserAccessor telegramUser,
-    IGameStore store, PlayerReader playerReader)
+    ISender sender)
     : IRequestHandler<GetFeedQuery, IReadOnlyList<FeedItemResponse>>
 {
     private const int FeedSize = 20;
@@ -17,14 +14,11 @@ public sealed class GetFeedHandler(
         GetFeedQuery request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
-        var posts = await store.GetRecentPostsAsync(
-            player.Id,
-            FeedSize,
-            cancellationToken);
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var world = await sender.Send(new Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        var posts = await sender.Send(new GetChannelPostsQuery(world.Id, player.Id, FeedSize), cancellationToken);
         return posts
-            .Select(post => PostContractMapper.MapFeedItem(post, player, true))
+            .Select(post => PostContractMapper.MapFeedItem(post, world, true))
             .ToArray();
     }
 }

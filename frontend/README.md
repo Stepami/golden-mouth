@@ -2,7 +2,7 @@
 
 Telegram Mini App игры «Реки». Правила для агента и людей: [AGENTS.md](AGENTS.md). Навыки агента: [apm.yml](apm.yml).
 
-Источник данных задаётся в единственном `public/runtime-config/config.js`. `apiMode: 'mock'` использует локальные данные, `apiMode: 'backend'` направляет запросы на same-origin `apiBaseUrl`; сейчас файл настроен на backend. Local Compose запускает Vite dev server и проксирует `/api` в backend.
+Источник данных задаётся в единственном `public/runtime-config/config.js`. `apiMode: 'mock'` использует локальные игровые данные, но шаблоны миров загружает с сервера, `apiMode: 'backend'` направляет запросы на same-origin `apiBaseUrl`; сейчас файл настроен на backend. Local Compose запускает Vite dev server и проксирует `/api` в backend.
 
 В local Compose Vite-плагин читает общий `TG_PAT`, даёт `@telegram-apps/sdk` вымышленного игрока и свежий HMAC-подписанный `initData`. Compose передаёт тот же `TG_PAT` в настройку `TgMiniAppAuth` backend; отключения auth для development нет. Production build и nginx не включают эмулятор.
 
@@ -16,4 +16,4 @@ Telegram Mini App игры «Реки». Правила для агента и �
 
 Проверка #92: сборка TypeScript/Vite; браузерный проход Сцены, Академии и IT; сохранение голоса/драмы; повтор settings после ошибки без дублирования onboarding; смешанная лента (1 серверный + 3 демо); сохранение комментария после повторного открытия; отсутствие вызова серверного replies для чужого поста; справка навыков; положительный/отрицательный итог и публикация в mock mode. Если числовые причины ответа API не суммируются в итог, карточка показывает их текст без ошибочного разложения прироста.
 
-Каталог звёзд: `src/api/personas.json` — общий источник для frontend, mock-лички и embedded backend. При изменении личности проверять сборку backend, поскольку Docker копирует этот JSON отдельно.
+Шаблоны миров, их правила и каталог звёзд приходят из `GET /worlds/templates`; данные мира игрока — из `GET /worlds/{worldId}`. Демо-лента сохранена.

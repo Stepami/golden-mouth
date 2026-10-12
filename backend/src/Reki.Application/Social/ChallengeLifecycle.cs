@@ -26,8 +26,8 @@ public sealed class ChallengeLifecycle(
             throw new RequestConflictException("A player cannot challenge their own channel.");
         }
 
-        var friend = (await store.GetPlayerAsync(friendId, cancellationToken)
-                      ?? throw new ResourceNotFoundException("Friend not found.")).EnsureDefaults();
+        var friend = await store.GetPlayerAsync(friendId, cancellationToken)
+                      ?? throw new ResourceNotFoundException("Friend not found.");
         var pending = await store.GetPendingChallengeAsync(
             player.Id,
             friendId,
@@ -65,11 +65,11 @@ public sealed class ChallengeLifecycle(
             throw new RequestConflictException("The challenge state changed while accepting it.");
         }
 
-        await UpdatePlayerAsync(
+        await UpdateWorldAsync(
             player.Id,
             profile => profile.UnlockAchievement(AchievementCatalog.Challenge),
             cancellationToken);
-        await UpdatePlayerAsync(
+        await UpdateWorldAsync(
             friend.Id,
             profile => profile.UnlockAchievement(AchievementCatalog.Challenge),
             cancellationToken);
@@ -100,11 +100,14 @@ public sealed class ChallengeLifecycle(
             return null;
         }
 
-        var rival = (await store.GetPlayerAsync(
+        var rival = await store.GetPlayerAsync(
                 challenge.GetRival(playerId),
-                cancellationToken) ?? throw new ResourceNotFoundException("Challenge rival not found."))
-            .EnsureDefaults();
-        return new ChallengeView(playerId, challenge, rival, challenge.GetDay(periodStart));
+                cancellationToken) ?? throw new ResourceNotFoundException("Challenge rival not found.")
+            ;
+        var rivalWorlds = await store.GetWorldsAsync(rival.Id, cancellationToken);
+        var rivalWorld = rivalWorlds.SingleOrDefault()
+            ?? throw new ResourceNotFoundException("Challenge rival world not found.");
+        return new ChallengeView(playerId, challenge, rival, rivalWorld, challenge.GetDay(periodStart));
     }
 
     public async ValueTask RecordPostAsync(
@@ -164,7 +167,7 @@ public sealed class ChallengeLifecycle(
                 balance.Value.ChallengeWinBonusPerDay,
                 bonusUntil),
             cancellationToken);
-        await UpdatePlayerAsync(
+        await UpdateWorldAsync(
             loserId,
             profile => profile.UnlockAchievement(AchievementCatalog.Rematch),
             cancellationToken);
@@ -191,9 +194,9 @@ public sealed class ChallengeLifecycle(
         Func<PlayerProfile, PlayerProfile> update,
         CancellationToken cancellationToken)
     {
-        var current = (await store.GetPlayerAsync(playerId, cancellationToken)
-                       ?? throw new ResourceNotFoundException("Challenge player not found."))
-            .EnsureDefaults();
+        var current = await store.GetPlayerAsync(playerId, cancellationToken)
+                       ?? throw new ResourceNotFoundException("Challenge player not found.")
+            ;
         var updated = update(current);
         if (ReferenceEquals(current, updated) ||
             await store.TryReplacePlayerAsync(updated, current.Version, cancellationToken))
@@ -202,5 +205,21 @@ public sealed class ChallengeLifecycle(
         }
 
         throw new RequestConflictException("The challenge reward could not be applied.");
+    }
+
+    private async ValueTask UpdateWorldAsync(PlayerId playerId, Func<Reki.Domain.Worlds.World, Reki.Domain.Worlds.World> update, CancellationToken cancellationToken)
+    {
+        var worlds = await store.GetWorldsAsync(playerId, cancellationToken);
+        if (worlds.Count != 1)
+        {
+            throw new RequestConflictException("The challenge world must be specified.");
+        }
+
+        var world = worlds[0];
+        var updated = update(world) with { Version = world.Version + 1 };
+        if (!await store.TryReplaceWorldAsync(updated, world.Version, cancellationToken))
+        {
+            throw new RequestConflictException("World changed concurrently.");
+        }
     }
 }

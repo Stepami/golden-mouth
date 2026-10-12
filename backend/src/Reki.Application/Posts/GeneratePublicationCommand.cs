@@ -1,5 +1,6 @@
 using Mediator;
 using Reki.Contracts.Posts;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
 
@@ -7,4 +8,5 @@ public sealed record GeneratePublicationCommand(
     string Id,
     string Text,
     bool OwnWords,
-    string? WantId) : IStreamRequest<PublicationStatusLiveEvent>;
+    string? WantId,
+    WorldId WorldId) : IStreamRequest<PublicationStatusLiveEvent>;

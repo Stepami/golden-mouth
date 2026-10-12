@@ -1,19 +1,18 @@
 import { useState } from 'react'
 import { api } from '../api/client'
-import { ownWorld } from '../api/mock'
-import { rulesFor } from '../api/worldContent'
+import { withWorldTemplates } from '../app/withWorldTemplates'
+import { worldDocumentOf, worldDefinitionOf } from '../api/worldContent'
 import type { Drama } from '../api/types'
 import { usePlayer, useStore } from '../app/store'
-import { useApi } from '../app/useApi'
 import { useNav } from '../app/nav'
-import { BottomCTA, Chip, Segmented, TopBar } from '../ui'
+import { BottomCTA, Segmented, TopBar } from '../ui'
 import { register } from '.'
 
 /** 05-7b: свой мир. Игрок описывает мир голосом или текстом, AI собирает правила, игрок правит любое.
  *  Правило «без тем 18+» видно, но не правится (слой безопасности в коде, #9). */
 function OwnWorld() {
   const nav = useNav()
-  const [preset, setPreset] = useState(ownWorld.presets[0])
+  const ownWorld = worldDefinitionOf('own')
   const [desc, setDesc] = useState(ownWorld.description)
   const [rules, setRules] = useState(ownWorld.rules)
   const [edit, setEdit] = useState<number | null>(null)
@@ -30,8 +29,6 @@ function OwnWorld() {
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Свой мир" right="открыт · 10k" />
       <div className="pad">
-        <div className="label">Начни с готового</div>
-        <div style={{ marginBottom: 10 }}>{ownWorld.presets.map(p => <Chip key={p} idea={p === preset} onClick={() => setPreset(p)}>{p}</Chip>)}</div>
         <div className="card row" style={{ marginBottom: 10 }}>
           <textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3} style={{ flex: 1, fontSize: 15, lineHeight: 1.4 }} maxLength={600} />
           <button onClick={voice} aria-label="Надиктовать" style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: listening ? '#2E9E6F' : 'var(--grad)', fontSize: 20, flex: 'none' }}>🎙</button>
@@ -50,20 +47,20 @@ function OwnWorld() {
         </div>
         <div className="small muted" style={{ textAlign: 'center' }}>Можно дописать голосом: «пусть физрук будет главным злодеем»</div>
       </div>
-      <BottomCTA main="Создать мир" disabled={!desc.trim()} onMain={async () => { await api.saveWorld({ ...ownWorld, description: desc, rules }); nav.replace('01-5_first_star') }} />
+      <BottomCTA main="Создать мир" disabled={!desc.trim()} onMain={async () => { nav.replace('01-5_first_star', { world: 'own', definition: { ...worldDefinitionOf('own'), description: desc, rules } }) }} />
     </div>
   )
 }
 
-register({ '05-7b_own_world': { component: OwnWorld, title: 'Свой мир' } })
+register({ '05-7b_own_world': { component: withWorldTemplates(OwnWorld), title: 'Свой мир' } })
 
 /** 05-11: правила готового мира видны игроку (Кумен: AI не прячет, по каким правилам играет).
  *  В готовом мире правится только градус драмы; свой мир правится целиком на 05-7b. */
-function WorldRulesScreen() {
+function WorldDetailsScreen() {
   const nav = useNav(); const p = usePlayer(); const { patch } = useStore()
-  const r = useApi(() => api.worldRules(p.world), rulesFor(p.world), [p.world], `rules:${p.world}`)
-  const [drama, setDrama] = useState<Drama>(p.settings.drama)
-  const setD = (d: Drama) => { setDrama(d); patch({ settings: { ...p.settings, drama: d } }); api.settings({ drama: d }) }
+  const r = worldDocumentOf(p.world)
+  const [drama, setDrama] = useState<Drama>(p.drama)
+  const setD = (d: Drama) => { setDrama(d); patch({ drama: d }); api.updateWorld({ drama: d }) }
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Как устроен мир" />
@@ -81,4 +78,4 @@ function WorldRulesScreen() {
     </div>
   )
 }
-register({ '05-11_world_rules': { component: WorldRulesScreen, title: 'Как устроен мир' } })
+register({ '05-11_world_rules': { component: WorldDetailsScreen, title: 'Как устроен мир' } })

@@ -15,6 +15,10 @@ public sealed class OpenAiStub : IDisposable
 
     public int RequestCount => _server.LogEntries.Count;
 
+    public int MappingCount => _server.MappingModels.Count();
+
+    public void Reset() => _server.Reset();
+
     public void Respond(ChatResponse response) => Respond(_ => response);
 
     public void Respond(Func<IReadOnlyList<ChatMessage>, ChatResponse> createResponse)

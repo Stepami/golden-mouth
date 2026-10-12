@@ -15,13 +15,15 @@ export interface Want { id: string; text: string; reward: string; done: boolean 
 export interface CollectionCard { id: string; emoji: string; title: string; open: boolean }
 
 export interface Player {
+  worldInstanceId?: string; avatarStyle?: string
   id: string; name: string; handle: string; role: string; address: Address
   world: WorldId; subs: number; postsLeft: number; postsCap: number; firstPostInviteBonus: number
   streak: { days: number; week: boolean[]; nextReward: string }
   skills: Record<SkillId, Skill>; wants: Want[]; collection: CollectionCard[]
   bio: string; type: string                     // «дерзкая с самоиронией»
   nextWorld?: { id: WorldId; title: string; need: string }
-  settings: { drama: Drama; notifications: string; quiet: string; voice: string; plus: boolean }
+  drama: Drama; voice: string
+  settings: { notifications: string; quiet: string; plus: boolean }
   /** A/B-флаги, например { plus_offer: '10' } — аналитика прикладывает их к каждому событию */
   experiments?: Record<string, string>
 }
@@ -47,7 +49,7 @@ export interface PostResult {
   viral: boolean; flop: boolean; views: number
   hook?: string                                 // нить: на постах 1–9 закрывается через 1–3 хода
 }
-/** Поток живой реакции (SSE из POST /posts/publications/{id}/moderation) */
+/** Элемент массива живой реакции (JSON из POST /posts/publications/{id}/moderation) */
 export type LiveEvent = { type: 'views'; views: number } | { type: 'react'; emoji: string } | { type: 'comment'; comment: CommentT } | { type: 'typing'; who: string } | { type: 'result'; result: PostResult }
 export type PublicationStatus = 'pending' | 'ready_for_moderation' | 'completed' | 'failed'
 export interface PublicationState { publicationId: string; status: PublicationStatus; result: PostResult | null }
@@ -59,4 +61,24 @@ export interface DmMessage { from: 'star' | 'me'; text: string }
 export interface Dm { star: Star; status: string; memory: string[]; messages: DmMessage[]; ideas: string[]; repliesLeft: number }
 /** Карточка ленты 03-3. У постов стабильный `postId`; `canReply` открывает ответ только под своими. Новости без `postId` не открываются. */
 export interface FeedItem { kind: 'news' | 'post'; postId?: string; canReply?: boolean; author?: string; avatar?: string; role?: string; ago?: string; text: string; reactions?: Reaction[]; views?: number; commentCount?: number; repost?: string; demo?: boolean; starId?: string; world?: WorldId }
-export interface WorldRules { title: string; presets: string[]; description: string; rules: { text: string; locked?: boolean }[] }
+export type WorldUpdate = Partial<Pick<WorldDocument, 'title' | 'description' | 'rules' | 'drama' | 'voice'>>
+
+/** Шаблон или экземпляр мира из MongoDB; ID экземпляра отличается от ключа баланса. */
+export interface WorldDocument extends Omit<World, 'id'> {
+  id: string; balanceKey: WorldId; avatarStyle: string; where: string
+  name: string; avatar: string; role: string; subscribers: number; voice: string; drama: Drama
+  roles: string[]; voices: string[]; postIdeas: string[]; demoPosts: string[]
+  firstContext: string; firstPrompt: string
+  rules: { text: string; locked?: boolean }[]; wants: Want[]; achievements: CollectionCard[]
+  stars: (Omit<Star, 'trait'> & { trait: number; voice: string; avatarSeed: string })[]
+  unlockSkill?: SkillId; unlockLevel?: number
+}
+
+/** Полное описание для создания нового экземпляра; источник может быть шаблоном. */
+export type WorldDefinition = Omit<WorldDocument, 'id' | 'subscribers' | 'lock'>
+
+export interface PlayerDocument {
+  id: string; address: Address; postsLeft: number; postsCap: number; firstPostInviteBonus: number
+  streak: Player['streak']; skills: Player['skills']; experiments: Record<string, string>
+  settings: { notifications: string; quiet: string; plus: boolean }
+}

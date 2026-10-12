@@ -2,32 +2,25 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Player;
 using Reki.Contracts.Posts;
-using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Posts;
 
 public sealed class AddReplyHandler(
-    ITelegramUserAccessor telegramUser,
     IGameStore store,
     IOptions<GameBalance> balance,
-    PlayerReader playerReader)
+    ISender sender)
     : IRequestHandler<AddReplyCommand, ReplyResponse>
 {
     public async ValueTask<ReplyResponse> Handle(
         AddReplyCommand request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        var player = await playerReader.GetAsync(
-            telegramUserId,
-            cancellationToken);
-        var post = await store.GetPostAsync(
-            player.Id,
-            request.PostId,
-            cancellationToken) ?? throw new ResourceNotFoundException("Post not found.");
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var world = await sender.Send(new Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        var post = await sender.Send(new GetPostQuery(request.PostId, player.Id, world.Id), cancellationToken);
 
         var existing = post.FindReply(request.ReplyId);
         if (existing is not null)
@@ -47,21 +40,21 @@ public sealed class AddReplyHandler(
             request.ReplyId,
             CommentId.New(),
             request.TargetCommentId,
-            player.Subscribers,
+            world.Player.Subscribers,
             balance.Value.Thread.BonusReplies,
             balance.Value.Thread.SubscriberBonus,
             balance.Value.Thread.BranchDepth);
         var comment = new GameComment(
             reply.CommentId,
-            player.Name,
-            player.Avatar,
-            player.Handle,
+            world.Player.Name,
+            world.Player.Avatar,
+            world.Player.Avatar,
             request.Text,
             false,
             true,
             false);
         var updated = reply.BonusAwarded > 0
-            ? player.AwardThreadBonus(reply.BonusAwarded)
+            ? world.AwardThreadBonus(reply.BonusAwarded)
             : null;
         var added = await store.TryAddThreadReplyAsync(
             player.Id,
@@ -69,7 +62,7 @@ public sealed class AddReplyHandler(
             reply,
             comment,
             updated,
-            player.Version,
+            world.Version,
             cancellationToken);
         if (added)
         {

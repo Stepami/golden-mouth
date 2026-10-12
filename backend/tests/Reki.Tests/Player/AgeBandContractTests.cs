@@ -21,12 +21,7 @@ public sealed class AgeBandContractTests
         {
             AgeBand = band,
             BirthGroup = group,
-            World = WorldId.Stage,
-            Role = "role",
-            Name = "player",
-            Handle = "player",
             Address = Address.Nick,
-            Star = "katya",
         };
         var results = new List<ValidationResult>();
         var valid = Validator.TryValidateObject(request, new ValidationContext(request), results, true);

@@ -278,6 +278,7 @@ public sealed class GameChallengeTests
         return new GamePost(
             PostId.New(),
             playerId,
+            TestGameData.CreateWorld().Id,
             text,
             views,
             [],

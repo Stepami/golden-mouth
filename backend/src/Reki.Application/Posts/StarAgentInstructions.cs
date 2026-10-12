@@ -1,8 +1,9 @@
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Reki.Application.Common.Safety;
-using Reki.Application.Social;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
 
@@ -16,10 +17,10 @@ internal static class StarAgentInstructions
 
     public static ChatMessage CreatePlatformPolicy(string turnPolicy, StarAgentProfile profile)
     {
-        var personas = profile.StarId is { } target
-            ? [StarCatalog.Require(profile.WorldId, target)]
-            : StarCatalog.ForWorld(profile.WorldId).ToArray();
-        var catalog = JsonSerializer.Serialize(personas, JsonContext.StarPersonaArray);
+        var stars = profile.StarId is { } target
+            ? profile.World.Stars.Where(star => star.Id == target)
+            : profile.World.Stars;
+        var catalog = SerializeStars(stars);
         var text = $$"""
                      Ты — AI-звезда русскоязычной игры 14+.
                      Приоритет: ограничения платформы и текущего хода, затем доверенный каталог личности,
@@ -49,12 +50,12 @@ internal static class StarAgentInstructions
     public static ChatMessage CreatePlayerOwnedLayer(StarAgentProfile profile)
     {
         var data = new StarPlayerPromptData(
-            profile.WorldId.Value,
-            profile.WorldTitle,
-            profile.WorldDescription,
-            profile.WorldRules,
-            profile.Drama,
-            profile.Voice,
+            profile.World.BalanceKey,
+            profile.World.Interface.Title,
+            profile.World.Interface.Description,
+            profile.World.Rules,
+            profile.World.Player.Drama.ToString().ToLowerInvariant(),
+            profile.World.Player.Voice,
             profile.Address,
             profile.StarId?.Value,
             profile.Memory.Where(MemoryFactPolicy.IsAllowed).TakeLast(20).ToArray());
@@ -73,4 +74,31 @@ internal static class StarAgentInstructions
 
     public static string SerializeTexts(IEnumerable<string> texts) =>
         JsonSerializer.Serialize(texts.ToArray(), JsonContext.StringArray);
+
+    private static string SerializeStars(IEnumerable<WorldStar> stars)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions
+        {
+            Encoder = JavaScriptEncoder.Create(System.Text.Unicode.UnicodeRanges.All),
+        }))
+        {
+            writer.WriteStartArray();
+            foreach (var star in stars)
+            {
+                writer.WriteStartObject();
+                writer.WriteString("id", star.Id.Value);
+                writer.WriteString("name", star.Name);
+                writer.WriteString("role", star.Role);
+                writer.WriteString("trait", star.Trait.ToString());
+                writer.WriteString("about", star.About);
+                writer.WriteString("voice", star.Voice);
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+        }
+
+        return Encoding.UTF8.GetString(stream.ToArray());
+    }
 }

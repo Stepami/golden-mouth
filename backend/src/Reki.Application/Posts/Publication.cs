@@ -2,6 +2,7 @@ using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
 
@@ -15,7 +16,8 @@ public sealed record Publication(
     PublicationStatus Status,
     IReadOnlyList<PublicationPart> Parts,
     PublishedPost? Result,
-    DateTime? ExpiresAtUtc)
+    DateTime? ExpiresAtUtc,
+    WorldId WorldId)
 {
     public GeneratedPostTurn AssembleTurn()
     {

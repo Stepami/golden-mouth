@@ -1,21 +1,21 @@
 using System.Text.Json;
-using Reki.Application.Player;
+using Reki.Application.Posts;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
 using Reki.Contracts.Events;
 using Reki.Contracts.Player;
+using Reki.Contracts.Posts;
 using Reki.Contracts.Social;
 using Reki.Contracts.Telemetry;
 using Reki.Contracts.Worlds;
 using Reki.Domain.Events;
 using Reki.Domain.Player;
+using Reki.Domain.Posts;
 using Reki.Domain.Social;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 using Riok.Mapperly.Abstractions;
-using ContractSkillId = Reki.Contracts.Player.SkillId;
-using ContractWorldId = Reki.Contracts.Player.WorldId;
 using DomainEventId = Reki.Domain.Events.EventId;
 
 namespace Reki.Api.Mapping;
@@ -23,56 +23,10 @@ namespace Reki.Api.Mapping;
 [Mapper]
 public sealed partial class ApiMapper
 {
-    public PlayerResponse MapPlayer(PlayerView source)
-    {
-        var player = source.Player;
-        IReadOnlyDictionary<ContractSkillId, SkillResponse> skills = player.Skills.ToDictionary(
-            item => Enum.Parse<ContractSkillId>(item.Key.Value, true),
-            item => MapSkill(item.Value));
-        var week = Enumerable.Range(0, 7)
-            .Select(day => day < Math.Min(7, player.StreakDays))
-            .ToArray();
-
-        return new PlayerResponse(
-            player.Id.Value,
-            player.Name,
-            player.Handle,
-            player.Role,
-            Enum.Parse<Address>(player.Address, true),
-            Enum.Parse<ContractWorldId>(player.World.Value, true),
-            player.Subscribers,
-            source.PostsLeft,
-            source.PostsCap,
-            player.FirstPostInviteBonusUsed ? 0 : player.FirstPostInviteBonus,
-            new StreakResponse(player.StreakDays, week, "ещё день — и бонус"),
-            skills,
-            player.Wants
-                .Select(want => new WantResponse(want.Id, want.Text, want.Reward, want.Done))
-                .ToArray(),
-            player.Achievements
-                .Where(item => item.WorldId == player.World)
-                .Select(item => new CollectionCardResponse(
-                    item.Id,
-                    item.Emoji,
-                    item.Title,
-                    item.IsOpen))
-                .ToArray(),
-            string.Empty,
-            "свой голос",
-            null,
-            new PlayerSettingsResponse(
-                Enum.Parse<Drama>(player.Settings.Drama, true),
-                player.Settings.Notifications,
-                player.Settings.Quiet,
-                player.Settings.Voice,
-                player.Settings.Plus),
-            new Dictionary<string, string>());
-    }
-
     public DmResponse MapDirectMessages(DirectMessageView view)
     {
-        var persona = view.Persona;
-        StarResponse star = new(persona.Id, persona.Name, persona.Role, persona.Trait, persona.About, view.Relation);
+        var persona = view.Star;
+        StarResponse star = new(persona.Id.Value, persona.Name, persona.Role, persona.Trait.ToString(), persona.About, view.Relation);
         return new DmResponse(
             star,
             "на связи",
@@ -89,18 +43,17 @@ public sealed partial class ApiMapper
         return new AnalyticsSubmission(
             SessionId.From(source.Session),
             source.Platform,
+            source.LaunchSurface,
             source.Experiments.ToDictionary(
                 item => item.Key,
                 item => SanitizeJsonString(item.Value, 64)),
             source.Events.Select(item => new AnalyticsEntry(
+                item.WorldId is null ? null : Domain.Worlds.WorldId.From(item.WorldId),
                 item.Name,
                 item.Timestamp,
                 item.Screen,
                 item.Prev,
-                SanitizeProperties(item.Props))).ToArray())
-        {
-            LaunchSurface = source.LaunchSurface,
-        };
+                SanitizeProperties(item.Props))).ToArray());
     }
 
     public partial SendDirectMessageResponse MapSentDirectMessage(SentDirectMessage source);
@@ -113,20 +66,98 @@ public sealed partial class ApiMapper
     [MapperIgnoreSource(nameof(DailyGameEvent.PlayerId))]
     [MapperIgnoreSource(nameof(DailyGameEvent.DayStartedAtUtc))]
     [MapperIgnoreSource(nameof(DailyGameEvent.Answer))]
+    [MapperIgnoreSource(nameof(DailyGameEvent.WorldId))]
     public partial GameEventResponse MapEvent(DailyGameEvent source);
 
-    [MapperIgnoreSource(nameof(WorldRules.Id))]
-    [MapperIgnoreSource(nameof(WorldRules.PlayerId))]
-    [MapperIgnoreSource(nameof(WorldRules.WorldId))]
-    public partial WorldRulesResponse MapWorldRules(WorldRules source);
-
-    public SaveWorldRulesCommand MapWorldRulesRequest(UpdateWorldRulesRequest source)
+    public WorldResponse MapWorld(World source) => new()
     {
-        return new SaveWorldRulesCommand(
+        Id = source.Id.Value,
+        BalanceKey = source.BalanceKey,
+        Title = source.Interface.Title,
+        Description = source.Interface.Description,
+        AvatarStyle = source.Interface.AvatarStyle,
+        Emoji = source.Interface.Emoji,
+        Summary = source.Interface.Summary,
+        Difficulty = Convert.ToInt32(source.Interface.Difficulty),
+        UnlockSkill = source.Interface.UnlockSkill,
+        UnlockLevel = source.Interface.UnlockLevel,
+        Where = source.Interface.Where,
+        FirstContext = source.Interface.FirstContext,
+        FirstPrompt = source.Interface.FirstPrompt,
+        Roles = source.Roles,
+        Voices = source.Voices,
+        PostIdeas = source.PostIdeas,
+        DemoPosts = source.DemoPosts,
+        Rules = source.Rules.Select(rule => new WorldRuleResponse(rule.Text, rule.Locked)).ToArray(),
+        Stars = source.Stars.Select(star => new WorldStarResponse(
+            star.Id.Value, star.Name, star.Role, Convert.ToInt32(star.Trait), star.About, star.Voice, star.AvatarSeed, star.Relation)).ToArray(),
+        Name = source.Player.Name,
+        Role = source.Player.Role,
+        Avatar = source.Player.Avatar,
+        Voice = source.Player.Voice,
+        Drama = MapDrama(source.Player.Drama),
+        Subscribers = source.Player.Subscribers,
+        Wants = source.Player.Wants.Select(want => new WantResponse(want.Id, want.Text, want.Reward, want.Done)).ToArray(),
+        Achievements = source.Player.Achievements.Select(item => new CollectionCardResponse(item.Id, item.Emoji, item.Title, item.IsOpen)).ToArray(),
+    };
+
+    public World MapWorldDefinition(CreateWorldRequest source) => new()
+    {
+        Id = Domain.Worlds.WorldId.New(),
+        BalanceKey = source.BalanceKey,
+        Roles = source.Roles,
+        Voices = source.Voices,
+        PostIdeas = source.PostIdeas,
+        DemoPosts = source.DemoPosts,
+        Rules = [.. source.Rules.Where(rule => rule.Text != "Без тем 18+ и травли по внешности")
+            .Select(rule => new WorldRule(rule.Text, rule.Locked)), new WorldRule("Без тем 18+ и травли по внешности", true)],
+        Stars = source.Stars.Select(star => new WorldStar(
+                    StarId.From(star.Id),
+                    star.Name,
+                    star.Role,
+                    MapStarTrait(star.Trait),
+                    star.About,
+                    star.Voice,
+                    star.AvatarSeed,
+                    0,
+                    0,
+                    DateTimeOffset.UnixEpoch)).ToArray(),
+        Interface = new()
+        {
+            Title = source.Title,
+            Description = source.Description,
+            AvatarStyle = source.AvatarStyle,
+            Where = source.Where,
+            FirstContext = source.FirstContext,
+            FirstPrompt = source.FirstPrompt,
+            Emoji = source.Emoji,
+            Summary = source.Summary,
+            Difficulty = MapWorldDifficulty(source.Difficulty),
+            UnlockSkill = source.UnlockSkill,
+            UnlockLevel = source.UnlockLevel,
+        },
+        Player = new()
+        {
+            PlayerId = PlayerId.From("00000000000000000000000000000000"),
+            Name = source.Name,
+            Avatar = source.Avatar,
+            Role = source.Role,
+            Voice = source.Voice,
+            Drama = MapDrama(source.Drama),
+            Wants = source.Wants.Select(want => new DailyWant(want.Id, want.Text, want.Reward, false)).ToArray(),
+            Achievements = source.Achievements.Select(item => new AchievementProgress(item.Id, item.Emoji, item.Title, false)).ToArray(),
+        },
+    };
+
+    public UpdateWorldCommand MapWorldUpdateRequest(UpdateWorldRequest source, Reki.Domain.Worlds.WorldId worldId)
+    {
+        return new UpdateWorldCommand(
             source.Title,
-            source.Presets,
             source.Description,
-            source.Rules.Select(MapWorldRule).ToArray());
+            source.Rules?.Select(MapWorldRule).ToArray(),
+            source.Drama is { } drama ? MapDrama(drama) : null,
+            source.Voice,
+            worldId);
     }
 
     public IReadOnlyDictionary<string, string> SanitizeProperties(
@@ -141,6 +172,37 @@ public sealed partial class ApiMapper
             .Where(item => item.Key.Length <= 64)
             .ToDictionary(item => item.Key, item => SanitizeElement(item.Value));
     }
+
+    public PostDetailResponse MapPostDetail(GamePost post) =>
+        new(
+            post.Id.Value,
+            post.Text,
+            post.Views,
+            PostContractMapper.CreateReactions(post),
+            [
+                .. post.Comments
+                    .Select(comment => new CommentResponse(
+                        comment.Id.Value,
+                        comment.Author,
+                        comment.Avatar,
+                        comment.Handle,
+                        comment.Text,
+                        comment.Star,
+                        comment.Me,
+                        comment.Hidden))
+            ],
+            true);
+
+    private static WorldDifficulty MapWorldDifficulty(int source) => source switch
+    {
+        1 => WorldDifficulty.Easy,
+        2 => WorldDifficulty.Normal,
+        3 => WorldDifficulty.Hard,
+        _ => throw new ArgumentOutOfRangeException(nameof(source)),
+    };
+
+    private static StarTrait MapStarTrait(int source) =>
+        Enum.Parse<StarTrait>(source.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
     private static DirectMessageAuthor MapDirectMessageAuthor(string source)
     {
@@ -174,8 +236,11 @@ public sealed partial class ApiMapper
         return value.Length <= maxLength ? value : $"len:{value.Length}";
     }
 
-    [MapperIgnoreSource(nameof(SkillProgress.Experience))]
-    private partial SkillResponse MapSkill(SkillProgress source);
+    [MapEnum(EnumMappingStrategy.ByName)]
+    private partial WorldDrama MapDrama(Drama source);
+
+    [MapEnum(EnumMappingStrategy.ByName)]
+    private partial Drama MapDrama(WorldDrama source);
 
     private partial DirectMessageResponse MapDirectMessage(DirectMessage source);
 

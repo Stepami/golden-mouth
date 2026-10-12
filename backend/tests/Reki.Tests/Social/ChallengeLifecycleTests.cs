@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
@@ -7,6 +8,7 @@ using Reki.Application.Social;
 using Reki.Application.Telemetry;
 using Reki.Domain.Player;
 using Reki.Domain.Social;
+using Reki.Domain.Worlds;
 using Reki.Tests.Common;
 
 namespace Reki.Tests.Social;
@@ -49,15 +51,33 @@ public sealed class ChallengeLifecycleTests
                 pending.Version,
                 Arg.Any<CancellationToken>())
             .Returns(true);
-        var storedPlayers = new List<PlayerProfile>();
-        store.TryReplacePlayerAsync(
-                Arg.Do<PlayerProfile>(player => storedPlayers.Add(player)),
+        store.GetWorldsAsync(initiatorId, Arg.Any<CancellationToken>()).Returns([
+            TestGameData.CreateWorld() with
+            {
+                Player = TestGameData.CreateWorld().Player with
+                {
+                    PlayerId = initiatorId,
+                },
+            }
+        ]);
+        store.GetWorldsAsync(opponentId, Arg.Any<CancellationToken>()).Returns([
+            TestGameData.CreateWorld() with
+            {
+                Player = TestGameData.CreateWorld().Player with
+                {
+                    PlayerId = opponentId,
+                },
+            }
+        ]);
+        var storedPlayers = new List<World>();
+        store.TryReplaceWorldAsync(
+                Arg.Do<World>(player => storedPlayers.Add(player)),
                 Arg.Any<int>(),
                 Arg.Any<CancellationToken>())
             .Returns(true);
         var balance = TestGameData.CreateBalance();
         var timeProvider = new FakeTimeProvider(TestGameData.PeriodStart.AddHours(2));
-        var gameDay = new GameDay(timeProvider, Options.Create(balance));
+        var gameDay = new GameDay(timeProvider, Options.Create(balance), store, Substitute.For<ISender>());
         var analytics = new ProductTelemetry(
             Substitute.For<ILogger<ProductTelemetry>>(),
             timeProvider);
@@ -73,9 +93,9 @@ public sealed class ChallengeLifecycleTests
         await Assert.That(active.StartedAtUtc).IsEqualTo(TestGameData.PeriodStart);
         await Assert.That(active.Version).IsEqualTo(1);
         await Assert.That(storedPlayers.Count).IsEqualTo(2);
-        await Assert.That(storedPlayers.Select(player => player.Id))
+        await Assert.That(storedPlayers.Select(player => player.Player.PlayerId))
             .IsEquivalentTo([initiatorId, opponentId]);
-        await Assert.That(storedPlayers.All(player => player.Achievements
+        await Assert.That(storedPlayers.All(player => player.Player.Achievements
             .Single(achievement => achievement.Id == AchievementCatalog.Challenge)
             .IsOpen)).IsTrue();
     }

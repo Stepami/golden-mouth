@@ -2,7 +2,7 @@ import type { ChannelPost, CommentT, FeedItem, Player, Post, WorldId } from './t
 import { contentOf, wantsFor } from './worldContent'
 import { player as examplePlayer } from './mock'
 
-const PLAYER_KEY = 'reki:demo-player:v1'
+const PLAYER_KEY = 'reki:demo-player:v2'
 const comments = new Map<string, CommentT[]>()
 const posts = new Map<string, Post>()
 function read<T>(key: string): T | undefined {
@@ -18,7 +18,7 @@ export function demoPlayer(): Player {
   if (query.has('screen') || query.has('gallery')) {
     const world = (query.get('world') ?? 'stage') as WorldId
     const profile = contentOf(world)
-    return { ...structuredClone(examplePlayer), world, name: profile.name, handle: profile.handle, role: profile.roles[0], bio: '', type: 'автор своего канала', wants: wantsFor(world), settings: { ...examplePlayer.settings, voice: profile.voices[0], drama: profile.drama } }
+    return { ...structuredClone(examplePlayer), world, name: profile.name, handle: profile.handle, role: profile.roles[0], bio: '', type: 'автор своего канала', wants: wantsFor(world), voice: profile.voices[0], drama: profile.drama }
   }
   throw Object.assign(new Error('Player not found'), { status: 404 })
 }

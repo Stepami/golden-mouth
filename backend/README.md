@@ -50,6 +50,46 @@ Stop the stack without deleting its volume:
 docker compose down
 ```
 
+## MongoDB migrations
+
+Startup runs versioned migrations before serving requests (except during build-time OpenAPI generation). Version `1.0.0`
+creates the ten initial game indexes. MongoDB accepts identical existing definitions without rebuilding them, so a
+deployed database with player data needs no manual baseline or migration-history entries. Missing indexes are created.
+
+Version `1.1.0` removes `ux_challenges_active_player` when present. Index definitions are owned by migrations;
+there are no additional checks for manually changed definitions.
+
+Index DDL runs outside transactions under the migrator's database lock. Successful versions are recorded and skipped
+on subsequent starts. The inherited `DownAsync` completes without changing documents or indexes.
+
+Version `2.1.0` moves referral attribution and bonus usage from player profiles to independent `invites`
+documents with a Vogen `InvitationId`, the two player IDs, creation time, and separate usage flags/times.
+It creates a unique `InviteeId` index and an `InviterId` lookup index. Registration creates the invitation without
+changing the inviter's profile. The invitee's first successful publication marks both bonuses inside the existing
+publication transaction; failures and repeated moderation do not consume or duplicate them. Daily post limits read
+invitation usage in the current game day and cap inviter credits at the configured maximum.
+
+The migration preserves previously issued inviter credits and used invitee bonuses, removes their old contribution
+from `DailyBonus`, and unsets the replaced profile fields. Historical first-post lookup is confined to this migration.
+Missing invitation creation time defaults to the player period or Unix epoch. Inconsistent referral counters lose
+the credits that cannot be reconstructed. An already-used invitee bonus without
+a surviving post keeps its old daily credit until reset and cannot be granted again. Repeated migration does not
+subtract credits twice.
+
+## Test infrastructure
+
+API component tests share one `ApiFactory`, WireMock server and MongoDB database per test session. `TestSessionFixture` owns the MongoDB container/client, WireMock and resettable clock; TUnit disposes the dependent API factory before these resources at session end. The host starts lazily for the first API test and applies startup migrations once.
+
+Migration tests belong to `ParallelGroup("Migrations", Order = 0)` and use isolated temporary databases on the same MongoDB container. API tests belong to `ParallelGroup("Api", Order = 1)` and share `NotInParallel("ApiState")`, so their setup, execution and teardown do not overlap. Unit tests keep the default parallel execution. A filtered API test also works independently of the migration-test group.
+
+`GameApiTestBase` uses separate `[After(Test)]` hooks to clear application documents and reset WireMock mappings/request logs/scenarios and the clock, including after test failures. Collections, indexes and migration history/lock collections are retained between tests. The API database is dropped only at session end. New API test classes must use:
+
+```csharp
+[ClassDataSource<ApiFactory>(Shared = SharedType.PerTestSession)]
+[ParallelGroup("Api", Order = 1)]
+[NotInParallel("ApiState")]
+```
+
 ## Verify
 
 ```powershell

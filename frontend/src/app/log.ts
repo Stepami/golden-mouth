@@ -2,7 +2,7 @@
 // - никаких текстов игрока, имён, ников и initData: только коды экранов, id, числа, длины;
 // - события копятся и уходят пачкой (POST /logs, fetch keepalive при закрытии), в mock mode пишутся в консоль в dev;
 // - ошибки ловятся глобально и в ErrorBoundary; повтор одной ошибки не чаще раза в минуту.
-import { event } from './analytics'
+import { event, canSendTelemetry } from './analytics'
 import { apiBaseUrl as BASE } from './runtimeConfig'
 import { telegramAuthHeaders } from '../api/auth'
 const DEV = import.meta.env.DEV
@@ -30,12 +30,13 @@ function push(level: Level, event: string, props?: LogEntry['props']) {
   const e: LogEntry = { t: Date.now(), level, event, screen, props: clean(props) }
   if (DEV || !BASE) (level === 'error' ? console.error : console.debug)('[log]', e)
   if (!BASE) return
+  if (queue.length >= 100) queue.shift()
   queue.push(e)
   if (queue.length >= 20 || level === 'error') flush()
 }
 
 export function flush() {
-  if (!BASE || !queue.length) return
+  if (!BASE || !canSendTelemetry() || !queue.length) return
   const body = JSON.stringify({ session, entries: queue.splice(0) })
   fetch(`${BASE}/logs`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...telegramAuthHeaders() }, body, keepalive: true }).catch(() => {})
 }

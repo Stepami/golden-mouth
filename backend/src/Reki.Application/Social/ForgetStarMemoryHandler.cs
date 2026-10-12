@@ -1,26 +1,27 @@
 using Mediator;
 using Reki.Application.Common;
-using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
+using Reki.Application.Common.Exceptions;
+using Reki.Application.Player;
 
 namespace Reki.Application.Social;
 
 public sealed class ForgetStarMemoryHandler(
-    ITelegramUserAccessor telegramUser,
-    IGameStore store, PlayerReader playerReader)
+    IGameStore store,
+    ISender sender)
     : IRequestHandler<ForgetStarMemoryCommand>
 {
     public async ValueTask<Unit> Handle(
         ForgetStarMemoryCommand request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
-        _ = StarCatalog.Require(player.World, request.StarId);
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var world = await sender.Send(new Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        _ = world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world.");
         var conversation = await store.GetStarConversationAsync(
             player.Id,
             request.StarId,
-            cancellationToken);
+            cancellationToken,
+            world.Id);
         if (conversation is not null)
         {
             await store.SaveStarConversationAsync(
@@ -36,4 +37,3 @@ public sealed class ForgetStarMemoryHandler(
         return Unit.Value;
     }
 }
-

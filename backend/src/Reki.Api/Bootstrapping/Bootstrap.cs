@@ -1,3 +1,4 @@
+using Kot.MongoDB.Migrations;
 using Microsoft.AspNetCore.DataProtection;
 using Reki.Infrastructure;
 using Serilog;
@@ -27,6 +28,12 @@ internal static class Bootstrap
 
         var app = builder.Build();
         ConfigurePipeline(app);
+        if (!OpenApiGeneration.IsRunning)
+        {
+            var migrator = app.Services.GetRequiredService<IMigrator>();
+            await migrator.MigrateAsync();
+        }
+
         await app.RunAsync();
     }
 
@@ -43,8 +50,7 @@ internal static class Bootstrap
 
         builder.Services
             .AddApplication()
-            .AddInfrastructure()
-            .AddMongoIndexInitialization();
+            .AddInfrastructure();
     }
 
     private static void ConfigureLogging(WebApplicationBuilder builder)

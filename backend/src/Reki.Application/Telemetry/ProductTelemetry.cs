@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Reki.Contracts.Telemetry;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Telemetry;
@@ -76,7 +77,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         "world",
     };
 
-    public void TrackSubmission(PlayerProfile player, AnalyticsSubmission submission)
+    public void TrackSubmission(PlayerProfile player, AnalyticsSubmission submission, bool referred = false)
     {
         foreach (var entry in submission.Events)
         {
@@ -93,13 +94,24 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
             }
 
             var attributes = CreateAttributes(player.Id, entry.Name, entry.Timestamp);
+            if (entry.WorldId is { } worldId)
+            {
+                attributes["world_id"] = worldId.Value;
+            }
+
             attributes["session_id"] = submission.Session.Value;
             attributes["platform"] = submission.Platform;
-            attributes["launch_surface"] = submission.LaunchSurface is "telegram-mini-app" or "browser" or "standalone" ? submission.LaunchSurface : "unknown";
+            attributes["launch_surface"] = submission.LaunchSurface switch
+            {
+                LaunchSurface.TelegramMiniApp => "telegram-mini-app",
+                LaunchSurface.Browser => "browser",
+                LaunchSurface.Standalone => "standalone",
+                _ => "unknown",
+            };
             attributes["screen"] = entry.Screen;
-            attributes["world"] = player.World.Value;
+            attributes["world"] = ReadWorldKey(entry.Properties);
             attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
-            attributes["registration_source"] = player.InvitedBy is null ? "direct" : "referral";
+            attributes["registration_source"] = referred ? "referral" : "direct";
             if (entry.PreviousScreen is not null)
             {
                 attributes["previous_screen"] = entry.PreviousScreen;
@@ -116,7 +128,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         }
     }
 
-    public void Track(PlayerProfile player, string eventName, IReadOnlyDictionary<string, string> properties)
+    public void TrackPlayer(PlayerProfile player, string eventName, IReadOnlyDictionary<string, string> properties, bool referred = false)
     {
         if (!_events.Contains(eventName))
         {
@@ -124,9 +136,9 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         }
 
         var attributes = CreateAttributes(player.Id, eventName, timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
-        attributes["world"] = player.World.Value;
+        attributes["world"] = ReadWorldKey(properties);
         attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
-        attributes["registration_source"] = player.InvitedBy is null ? "direct" : "referral";
+        attributes["registration_source"] = referred ? "referral" : "direct";
         AddProperties(attributes, properties);
         Write(eventName, attributes);
     }
@@ -148,6 +160,10 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         AddProperties(attributes, properties);
         Write(eventName, attributes);
     }
+
+    private static string ReadWorldKey(IReadOnlyDictionary<string, string> properties) =>
+        properties.TryGetValue("world", out var world) && world is "stage" or "academy" or "it" or "stream" or "own"
+            ? world : "unknown";
 
     private Dictionary<string, object?> CreateAttributes(
         PlayerId playerId,

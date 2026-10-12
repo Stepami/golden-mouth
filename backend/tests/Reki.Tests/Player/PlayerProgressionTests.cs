@@ -1,4 +1,5 @@
 using Reki.Domain.Player;
+using Reki.Domain.Worlds;
 using Reki.Tests.Common;
 
 namespace Reki.Tests.Player;
@@ -27,12 +28,11 @@ public sealed class PlayerProgressionTests
 
         // Act
         var achievements =
-            AchievementCatalog.Create(TestGameData.WorldId);
+            AchievementCatalog.Create();
 
         // Assert
         await Assert.That(achievements.Count).IsEqualTo(12);
         await Assert.That(achievements.Select(item => item.Id)).IsEquivalentTo(expectedIds);
-        await Assert.That(achievements.All(item => item.WorldId == TestGameData.WorldId)).IsTrue();
         await Assert.That(achievements.All(item => !item.IsOpen)).IsTrue();
     }
 
@@ -40,10 +40,10 @@ public sealed class PlayerProgressionTests
     public async Task PublishPost_FirstViral_UnlocksFirstViralAchievementAsync()
     {
         // Arrange
-        var player = TestGameData.CreatePlayer();
+        var player = TestGameData.CreateWorld();
 
         // Act
-        var result = Publish(player, 1, true, player.Skills, null);
+        var result = Publish(player, 1, true, TestGameData.CreateSkills(), null);
 
         // Assert
         await Assert.That(IsOpen(result, AchievementCatalog.FirstViral)).IsTrue();
@@ -54,13 +54,19 @@ public sealed class PlayerProgressionTests
     public async Task PublishPost_ReachesTenThousandSubscribers_UnlocksTenThousandAchievementAsync()
     {
         // Arrange
-        var player = TestGameData.CreatePlayer() with { Subscribers = 9_999 };
+        var player = TestGameData.CreateWorld() with
+        {
+            Player = TestGameData.CreateWorld().Player with
+            {
+                Subscribers = 9_999,
+            },
+        };
 
         // Act
-        var result = Publish(player, 1, false, player.Skills, null);
+        var result = Publish(player, 1, false, TestGameData.CreateSkills(), null);
 
         // Assert
-        await Assert.That(result.Subscribers).IsEqualTo(10_000);
+        await Assert.That(result.Player.Subscribers).IsEqualTo(10_000);
         await Assert.That(IsOpen(result, AchievementCatalog.TenThousand)).IsTrue();
         await Assert.That(IsOpen(result, AchievementCatalog.FirstViral)).IsFalse();
     }
@@ -73,13 +79,13 @@ public sealed class PlayerProgressionTests
         {
             [TestGameData.Brave] = new(3, 0, 20),
         };
-        var player = TestGameData.CreatePlayer();
+        var player = TestGameData.CreateWorld();
 
         // Act
         var result = Publish(player, 0, false, skills, null);
 
         // Assert
-        await Assert.That(result.Skills[TestGameData.Brave].Level).IsEqualTo(3);
+        await Assert.That(skills[TestGameData.Brave].Level).IsEqualTo(3);
         await Assert.That(IsOpen(result, AchievementCatalog.SkillMastery)).IsTrue();
         await Assert.That(IsOpen(result, AchievementCatalog.TenThousand)).IsFalse();
     }
@@ -88,29 +94,31 @@ public sealed class PlayerProgressionTests
     public async Task PublishPost_TwoCompletedWantsInOnePeriod_GainsOnlyOneRelationPointAsync()
     {
         // Arrange
-        var player = TestGameData.CreatePlayer() with
+        var player = TestGameData.CreateWorld() with
         {
-            Wants =
-            [
+            Player = TestGameData.CreateWorld().Player with
+            {
+                Wants = [
                 new DailyWant("want-one", "Первое желание", "+1", false),
                 new DailyWant("want-two", "Второе желание", "+1", false),
             ],
+            },
         };
 
         // Act
-        var afterFirst = Publish(player, 0, false, player.Skills, "want-one");
-        var afterSecond = Publish(afterFirst, 0, false, afterFirst.Skills, "want-two");
-        var relation = afterSecond.StarRelations.Single();
+        var afterFirst = Publish(player, 0, false, TestGameData.CreateSkills(), "want-one");
+        var afterSecond = Publish(afterFirst, 0, false, TestGameData.CreateSkills(), "want-two");
+        var relation = afterSecond.Stars.Single();
 
         // Assert
-        await Assert.That(afterSecond.Wants.All(want => want.Done)).IsTrue();
-        await Assert.That(relation.Value).IsEqualTo(1);
-        await Assert.That(relation.GainedInPeriod).IsEqualTo(1);
-        await Assert.That(relation.PeriodStartedAtUtc).IsEqualTo(TestGameData.PeriodStart);
+        await Assert.That(afterSecond.Player.Wants.All(want => want.Done)).IsTrue();
+        await Assert.That(relation.Relation).IsEqualTo(1);
+        await Assert.That(relation.RelationGainedInPeriod).IsEqualTo(1);
+        await Assert.That(relation.RelationPeriodStartedAtUtc).IsEqualTo(TestGameData.PeriodStart);
     }
 
-    private static PlayerProfile Publish(
-        PlayerProfile player,
+    private static World Publish(
+        World player,
         long subscriberDelta,
         bool viral,
         IReadOnlyDictionary<SkillId, SkillProgress> skills,
@@ -119,7 +127,6 @@ public sealed class PlayerProgressionTests
         return player.PublishPost(
             subscriberDelta,
             viral,
-            false,
             skills,
             completedWantId,
             TestGameData.StarId,
@@ -130,8 +137,8 @@ public sealed class PlayerProgressionTests
             3);
     }
 
-    private static bool IsOpen(PlayerProfile player, string achievementId)
+    private static bool IsOpen(World player, string achievementId)
     {
-        return player.Achievements.Single(item => item.Id == achievementId).IsOpen;
+        return player.Player.Achievements.Single(item => item.Id == achievementId).IsOpen;
     }
 }

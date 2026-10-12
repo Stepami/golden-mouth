@@ -1,32 +1,35 @@
-using Microsoft.Extensions.Hosting;
+using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Posts;
 using Reki.Domain.Events;
-using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Social;
-using Reki.Domain.Worlds;
 
-namespace Reki.Infrastructure.Persistence;
+namespace Reki.Infrastructure.Persistence.Migrations;
 
-internal sealed class MongoGameIndexes(MongoCompositionRoot compositionRoot) : IHostedService
+internal sealed class InitialGameIndexes : RekiMigrationBase
 {
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public override DatabaseVersion Version => new(1, 0, 0);
+
+    public override async Task UpAsync(
+        IMongoDatabase db,
+        IClientSessionHandle session,
+        CancellationToken cancellationToken)
     {
-        var database = compositionRoot.MongoDatabase;
-        var players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
+        var database = db;
+        var players = database.GetCollection<BsonDocument>(MongoCollections.Players);
         var posts = database.GetCollection<GamePost>(MongoCollections.Posts);
         var publications = database.GetCollection<Publication>(MongoCollections.Publications);
         var memories = database.GetCollection<StarConversation>(MongoCollections.StarsMemory);
         var events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
         var challenges = database.GetCollection<GameChallenge>(MongoCollections.Challenges);
-        var worlds = database.GetCollection<WorldRules>(MongoCollections.Worlds);
+        var worlds = database.GetCollection<BsonDocument>(MongoCollections.Worlds);
 
-        var telegramKey = Builders<PlayerProfile>.IndexKeys
-            .Ascending(item => item.TelegramUserId);
-        var playerWorldKey = Builders<PlayerProfile>.IndexKeys
-            .Ascending(item => item.World);
+        var telegramKey = Builders<BsonDocument>.IndexKeys
+            .Ascending("TelegramUserId");
+        var playerWorldKey = Builders<BsonDocument>.IndexKeys
+            .Ascending("World");
         var postKeys = Builders<GamePost>.IndexKeys
             .Ascending(item => item.PlayerId)
             .Descending(item => item.CreatedAtUtc);
@@ -36,12 +39,11 @@ internal sealed class MongoGameIndexes(MongoCompositionRoot compositionRoot) : I
         var eventKeys = Builders<DailyGameEvent>.IndexKeys
             .Ascending(item => item.PlayerId)
             .Descending(item => item.DayStartedAtUtc);
-        await DropLegacyChallengeIndexAsync(challenges, cancellationToken);
         var challengeKey = Builders<GameChallenge>.IndexKeys
             .Ascending(item => item.Participants);
-        var worldKeys = Builders<WorldRules>.IndexKeys
-            .Ascending(item => item.PlayerId)
-            .Ascending(item => item.WorldId);
+        var worldKeys = Builders<BsonDocument>.IndexKeys
+            .Ascending("PlayerId")
+            .Ascending("WorldId");
 
         var telegramIndex = IndexFactory.Create(
             telegramKey,
@@ -85,11 +87,13 @@ internal sealed class MongoGameIndexes(MongoCompositionRoot compositionRoot) : I
         Task challengeTask = challenges.Indexes.CreateOneAsync(challengeIndex, cancellationToken: cancellationToken);
         Task worldTask = worlds.Indexes.CreateOneAsync(worldIndex, cancellationToken: cancellationToken);
         Task threadTask = CreateDocumentIndexAsync(
+            database,
             MongoCollections.Threads,
             "PlayerId",
             "ix_threads_player",
             cancellationToken);
         Task inviteTask = CreateDocumentIndexAsync(
+            database,
             MongoCollections.Invites,
             "PlayerId",
             "ix_invites_player",
@@ -108,34 +112,14 @@ internal sealed class MongoGameIndexes(MongoCompositionRoot compositionRoot) : I
             inviteTask);
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
-
-    private static async Task DropLegacyChallengeIndexAsync(
-        IMongoCollection<GameChallenge> challenges,
-        CancellationToken cancellationToken)
-    {
-        using var cursor = await challenges.Indexes.ListAsync(cancellationToken);
-        IReadOnlyList<BsonDocument> indexes = await cursor.ToListAsync(cancellationToken);
-        if (indexes.Any(index =>
-            index.TryGetValue("name", out var name) &&
-            name.AsString == "ux_challenges_active_player"))
-        {
-            await challenges.Indexes.DropOneAsync(
-                "ux_challenges_active_player",
-                cancellationToken);
-        }
-    }
-
-    private Task<string> CreateDocumentIndexAsync(
+    private static Task<string> CreateDocumentIndexAsync(
+        IMongoDatabase database,
         string collectionName,
         string field,
         string indexName,
         CancellationToken cancellationToken)
     {
-        var collection = compositionRoot.MongoDatabase.GetCollection<BsonDocument>(collectionName);
+        var collection = database.GetCollection<BsonDocument>(collectionName);
         var keys = Builders<BsonDocument>.IndexKeys.Ascending(field);
         var index = IndexFactory.Create(keys, indexName);
         return collection.Indexes.CreateOneAsync(index, cancellationToken: cancellationToken);

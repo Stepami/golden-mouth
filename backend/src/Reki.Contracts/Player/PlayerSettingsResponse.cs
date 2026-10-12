@@ -1,9 +1,3 @@
 namespace Reki.Contracts.Player;
 
-public sealed record PlayerSettingsResponse(
-    Drama Drama,
-    string Notifications,
-    string Quiet,
-    string Voice,
-    bool Plus);
-
+public sealed record PlayerSettingsResponse(string Notifications, string Quiet, bool Plus);

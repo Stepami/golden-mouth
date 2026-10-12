@@ -2,11 +2,9 @@ using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Reki.Api.Mapping;
+using Reki.Application.Common;
 using Reki.Application.Player;
 using Reki.Contracts.Player;
-using Reki.Domain.Social;
-using DomainWorldId = Reki.Domain.Worlds.WorldId;
 
 namespace Reki.Api.Player;
 
@@ -15,16 +13,13 @@ namespace Reki.Api.Player;
 [Route("/")]
 public sealed class PlayerController(
     ISender sender,
-    ApiMapper mapper) : ControllerBase
+    GameDay gameDay) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
-        var result = await sender.Send(
-            new GetPlayerQuery(),
-            cancellationToken);
-        return TypedResults.Ok(mapper.MapPlayer(result));
+        return TypedResults.Ok(await gameDay.GetPlayerAsync(cancellationToken));
     }
 
     [HttpPost("onboarding", Name = "CompleteOnboarding")]
@@ -33,21 +28,14 @@ public sealed class PlayerController(
         OnboardingRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await sender.Send(
+        await sender.Send(
             new OnboardPlayerCommand(
                 ToStorageValue(request.BirthGroup),
-                DomainWorldId.From(request.World.ToString()),
-                request.Role,
-                request.Name,
-                request.Handle,
                 request.Address.ToString().ToLowerInvariant(),
-                StarId.From(request.Star),
-                request.ReferralCode)
-            {
-                AgeBand = request.AgeBand,
-            },
+                request.ReferralCode,
+                request.AgeBand),
             cancellationToken);
-        return TypedResults.Ok(mapper.MapPlayer(result));
+        return TypedResults.Ok(await gameDay.GetPlayerAsync(cancellationToken));
     }
 
     [HttpGet("referral", Name = "GetReferralCode")]
@@ -68,10 +56,8 @@ public sealed class PlayerController(
     {
         await sender.Send(
             new UpdateSettingsCommand(
-                request.Drama?.ToString().ToLowerInvariant(),
                 request.Notifications,
                 request.Quiet,
-                request.Voice,
                 request.Plus,
                 request.Address?.ToString().ToLowerInvariant()),
             cancellationToken);

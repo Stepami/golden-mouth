@@ -5,7 +5,19 @@ import { ActiveTime } from './activeTime'
 import { inTelegram } from '../telegram'
 import { telegramAuthHeaders } from '../api/auth'
 type Props = Record<string, string | number | boolean | null>
-export interface AEvent { name: string; t: number; screen: string; prev: string | null; props?: Props }
+export interface AEvent { worldId?: string; name: string; t: number; screen: string; prev: string | null; props?: Props }
+
+let playerAvailable = false
+export const canSendTelemetry = () => playerAvailable
+export function setTelemetryPlayerAvailable(available: boolean) {
+  playerAvailable = available
+  if (available) flushEvents()
+  else q.length = 0
+}
+
+let selectedWorld: string | undefined
+let selectedWorldId: string | undefined
+export function setAnalyticsWorld(worldId: string | undefined, world?: string) { selectedWorldId = worldId; selectedWorld = world }
 
 const activeTime = new ActiveTime(performance.now(), document.visibilityState === 'visible')
 let installed = false
@@ -25,7 +37,8 @@ export const setExperiments = (e: Record<string, string>) => { experiments = e }
 const clean = (p?: Props) => p && Object.fromEntries(Object.entries(p).map(([k, v]) => [k, typeof v === 'string' && v.length > 64 ? `len:${v.length}` : v]))
 
 export function event(name: string, props?: Props) {
-  q.push({ name, t: Date.now(), screen, prev, props: clean(props) })
+  if (q.length >= 100) q.shift()
+  q.push({ worldId: selectedWorldId, name, t: Date.now(), screen, prev, props: clean({ ...(selectedWorld ? { world: selectedWorld } : {}), ...props }) })
   if (!BASE && import.meta.env.DEV) console.debug('[event]', name, screen, props ?? '')
   if (q.length >= 25) flushEvents()
 }
@@ -41,7 +54,7 @@ export function screenView(next: string) {
 export const tap = (id: string, props?: Props) => event('tap', { id, ...props })
 
 export function flushEvents() {
-  if (!BASE || !q.length) return
+  if (!BASE || !playerAvailable || !q.length) return
   const body = JSON.stringify({ session, platform, launchSurface: inTelegram ? 'telegram-mini-app' : window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser', experiments, events: q.splice(0) })
   fetch(`${BASE}/events`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...telegramAuthHeaders() }, body, keepalive: true }).catch(() => {})
 }

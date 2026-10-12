@@ -12,7 +12,7 @@ namespace Reki.Api.Serialization;
 
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]
-[JsonSerializable(typeof(SseItem<LiveEvent>))]
+[JsonSerializable(typeof(IReadOnlyList<LiveEvent>))]
 [JsonSerializable(typeof(SseItem<PublicationStatusLiveEvent>))]
 [JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(HttpValidationProblemDetails))]
@@ -44,8 +44,10 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(SendDirectMessageResponse))]
 [JsonSerializable(typeof(ChallengeResponse))]
 [JsonSerializable(typeof(GameEventResponse))]
-[JsonSerializable(typeof(WorldRulesResponse))]
-[JsonSerializable(typeof(UpdateWorldRulesRequest))]
+[JsonSerializable(typeof(WorldResponse))]
+[JsonSerializable(typeof(IReadOnlyList<WorldResponse>))]
+[JsonSerializable(typeof(CreateWorldRequest))]
+[JsonSerializable(typeof(UpdateWorldRequest))]
 [JsonSerializable(typeof(PlusInterestRequest))]
 [JsonSerializable(typeof(PlusInterestResponse))]
 [JsonSerializable(typeof(ViewsLiveEvent))]
@@ -60,7 +62,6 @@ namespace Reki.Api.Serialization;
     Converters =
     [
         typeof(CamelCaseEnumConverter<SkillId>),
-        typeof(CamelCaseEnumConverter<WorldId>),
         typeof(CamelCaseEnumConverter<Address>),
         typeof(CamelCaseEnumConverter<Drama>),
         typeof(CamelCaseEnumConverter<BirthGroup>),
@@ -69,6 +70,7 @@ namespace Reki.Api.Serialization;
         typeof(CamelCaseEnumConverter<GameEventKind>),
         typeof(CamelCaseEnumConverter<LiveEventType>),
         typeof(CamelCaseEnumConverter<ClientLogLevel>),
+        typeof(KebabCaseEnumConverter<LaunchSurface>),
         typeof(SnakeCaseEnumConverter<PublicationStatus>)
     ],
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]

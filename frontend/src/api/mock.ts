@@ -1,16 +1,5 @@
-// Тестовые данные = тексты и числа из макетов docs/screens. Пока бэкенд (#10) не готов, экраны живут на них.
-import { WORLD_CONTENT } from './worldContent'
-import type { Challenge, Dm, FeedItem, Friend, GameEvent, Player, Post, PostResult, ReplyResult, Star, World, WorldRules } from './types'
-
-export const worlds: World[] = [
-  { id: 'stage', title: 'Сцена', emoji: '🎤', description: 'Жизнь в агентстве: первые фанаты, звёзды и закулисье', difficulty: 1, summary: 'мало провалов · хейт с 5k · ценят смелость' },
-  { id: 'academy', title: 'Академия', emoji: '🌸', description: 'Твоя жизнь в аниме-академии: клубы, герои и фестиваль', difficulty: 2, summary: 'рост ×1,1 · хейт с 3k · ценят «в тему»' },
-  { id: 'it', title: 'Айти-тусовка', emoji: '💻', description: 'Твой техноблог: проекты, знакомства и стартап-драмы', difficulty: 3, summary: 'рост ×1,25 · хейт с 1k · больше риска' },
-  { id: 'stream', title: 'Стрим', emoji: '🎮', description: 'Жизнь стримера: зрители, герои эфиров и турниры', difficulty: 2, summary: 'рост ×1,1 · ценят юмор', lock: { skill: 'humor', level: 4 } },
-]
-export const roles = ['🎤 Трейни', '📸 Фансайт', '💃 Хореограф', '🎧 Продюсер']
-
-export const stars: Star[] = WORLD_CONTENT.stage.stars.map(profile => ({ ...profile, relation: profile.id === 'mira' ? 2 : 0 }))
+// Демо-посты и фикстуры экранов. Миры и звёзды загружаются из API.
+import type { Challenge, Dm, FeedItem, Friend, GameEvent, Player, Post, PostResult, ReplyResult } from './types'
 
 export const player: Player = {
   id: '00000000000000000000000000000001', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', address: 'she',
@@ -29,7 +18,8 @@ export const player: Player = {
   ],
   bio: 'первый год в агентстве. путаю право и лево, но очень стараюсь ✨', type: 'дерзкая с самоиронией',
   nextWorld: { id: 'stream', title: 'Стрим', need: '😂 юмор 4' },
-  settings: { drama: 'mid', notifications: 'до 3 в день', quiet: '22:00–9:00', voice: '«коротко, с самоиронией»', plus: false },
+  drama: 'mid', voice: '«коротко, с самоиронией»',
+  settings: { notifications: 'до 3 в день', quiet: '22:00–9:00', plus: false },
 }
 
 export const firstPost: Post = {
@@ -104,8 +94,7 @@ export const results: Record<'normal' | 'flop' | 'viral', PostResult> = {
 
 export const ideas = ['«Сегодня на репетиции до меня дошло, что…»', '«Никто не предупреждал, что трейни…»']
 
-export const dm: Dm = {
-  star: stars[0], status: 'заинтригована', memory: ['хореография', '«зато уверенно»'], repliesLeft: 3,
+export const dm: Omit<Dm, 'star'> = { status: 'заинтригована', memory: ['хореография', '«зато уверенно»'], repliesLeft: 3,
   messages: [{ from: 'star', text: 'твой пост про «уверенно» разлетелся по агентству 😏' }, { from: 'me', text: 'я сама в шоке' }, { from: 'star', text: 'снимем вместе разбор моей самой позорной репетиции? ты комментируешь' }],
   ideas: ['«а если я опозорюсь?»', '«только если покажешь падение»'],
 }
@@ -128,25 +117,3 @@ export const events: Record<'collab' | 'hate', GameEvent> = {
   hate: { id: 'e2', kind: 'hate', badge: 'ЭТАП: УДАР · с 5k', title: 'Событие дня: хейт-волна', text: 'Фансайт BLESK: «трейни пиарится на Мире». Хейт только про посты, никогда про тебя. Как ответишь?',
     ideas: ['«я тут ради сцены, а не ради Миры»', '«спасибо за охват 💅»', 'промолчать'], reward: 'Пережить волну: карточка момента и бонус к подписчикам', note: 'Ответ уйдёт постом в твой канал · лимит не тратит' },
 }
-
-export const ownWorld: WorldRules = {
-  title: 'Свой мир', presets: ['🏫 моя школа', '💻 IT-драма', '🏰 фэнтези-академия', '⚽ футбольный клуб'],
-  description: 'школа как наша, но все учителя ведут блоги, а директор тайно стример. я новенькая в 9Б',
-  rules: [{ text: 'Звёзды: завуч-блогерша, директор-стример, отличница-сплетница' }, { text: 'Фанаты: весь чат параллели, обожают драму' }, { text: 'Тон: смешно и по-доброму' },
-    { text: 'События: контрольная, дискотека, слив переписки' }, { text: 'Без тем 18+ и травли по внешности', locked: true }],
-}
-
-/** Правила готового мира: видны игроку, правится только градус драмы (подход Кумена, #9). */
-export const presetRules: WorldRules = {
-  title: 'Сцена', presets: [], description: 'Айдол-агентство: трейни, дебют, камбэки, фансайты',
-  rules: [{ text: 'Звёзды: Мира (дерзкая, ценит смелость), Соня (добрая, ценит юмор), Ева (загадочная, ценит «в тему»)', locked: true },
-    { text: 'Фанаты: фансайты BLESK и NOIR, любят камбэки и честность', locked: true }, { text: 'Тон: поддержка до 1k, честная критика с 1k, хейт-волны с 5k', locked: true },
-    { text: 'События: коллабы с брендами, слухи фансайтов, прослушивания, хейт-волны', locked: true }, { text: 'Без тем 18+ и травли по внешности', locked: true }],
-}
-
-/** Мир игрока с падежами для заголовков: «Лента Сцены», «В Академию». */
-export const WORLD_FORMS: Record<string, { gen: string; acc: string }> = {
-  stage: { gen: 'Сцены', acc: 'Сцену' }, academy: { gen: 'Академии', acc: 'Академию' }, it: { gen: 'Айти-тусовки', acc: 'Айти-тусовку' },
-  stream: { gen: 'Стрима', acc: 'Стрим' }, own: { gen: 'своего мира', acc: 'свой мир' },
-}
-export const worldOf = (id: string) => { const w = worlds.find(x => x.id === id) ?? (id === 'own' ? { ...worlds[0], id: 'own', title: 'Свой мир', emoji: '✨' } : worlds[0]); return { ...w, ...(WORLD_FORMS[w.id] ?? WORLD_FORMS.stage) } }

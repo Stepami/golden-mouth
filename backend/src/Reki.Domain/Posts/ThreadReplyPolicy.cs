@@ -19,7 +19,7 @@ public static class ThreadReplyPolicy
         long subscriberBonus,
         int branchDepth)
     {
-        var replies = post.GetThreadReplies();
+        var replies = post.ThreadReplies;
         var awardedSoFar = replies.Count == 0
             ? 0
             : replies.Max(item => item.AwardedReplies);

@@ -5,7 +5,9 @@ using MongoDB.Driver;
 
 namespace Reki.Tests.Api;
 
-[ClassDataSource<ApiFactory>]
+[ClassDataSource<ApiFactory>(Shared = SharedType.PerTestSession)]
+[ParallelGroup("Api", Order = 1)]
+[NotInParallel("ApiState")]
 public sealed class StoryCardsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
@@ -16,8 +18,8 @@ public sealed class StoryCardsControllerTests(ApiFactory factory) : GameApiTestB
         const long otherTelegramId = 1203;
         using var ownerApi = Factory.CreateApiClient(ownerTelegramId);
         using var otherApi = Factory.CreateApiClient(otherTelegramId);
-        await OnboardAsync(ownerApi);
-        await OnboardAsync(otherApi);
+        await CreatePlayerWithWorldAsync(ownerApi);
+        await CreatePlayerWithWorldAsync(otherApi);
         await PublishAsync(ownerTelegramId, "публичная карточка");
 
         var owner = await Database.GetCollection<BsonDocument>("players")

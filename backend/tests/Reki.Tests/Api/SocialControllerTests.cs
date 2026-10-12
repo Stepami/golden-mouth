@@ -9,7 +9,9 @@ using Reki.Domain.Player;
 
 namespace Reki.Tests.Api;
 
-[ClassDataSource<ApiFactory>]
+[ClassDataSource<ApiFactory>(Shared = SharedType.PerTestSession)]
+[ParallelGroup("Api", Order = 1)]
+[NotInParallel("ApiState")]
 public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
@@ -19,15 +21,17 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         const long telegramUserId = 1013;
         const string currentMessage = "Напомни, какой формат мне лучше продолжать";
         using var api = Factory.CreateApiClient(telegramUserId);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
         await api.Social.SendDirectMessageAsync(
             "sonya",
+            await GetWorldIdAsync(api),
             new DirectMessageRequest { Text = "Мне нравятся короткие посты" },
             CancellationToken.None);
 
         // Act
         await api.Social.SendDirectMessageAsync(
             "sonya",
+            await GetWorldIdAsync(api),
             new DirectMessageRequest { Text = currentMessage },
             CancellationToken.None);
 
@@ -72,8 +76,8 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         {
             var persona = personas[index];
             using var api = Factory.CreateApiClient(8300 + index);
-            await OnboardAsync(api, persona.World);
-            var dm = await api.Social.GetDirectMessagesAsync(persona.Id, CancellationToken.None);
+            await CreatePlayerWithWorldAsync(api, persona.World);
+            var dm = await api.Social.GetDirectMessagesAsync(persona.Id, await GetWorldIdAsync(api), CancellationToken.None);
             await Assert.That(dm.Star.Id).IsEqualTo(persona.Id);
             await Assert.That(dm.Star.Name).IsEqualTo(persona.Name);
             if (persona.Id == "ren")
@@ -88,16 +92,16 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         // Arrange
         using var api = Factory.CreateApiClient(8320);
-        await OnboardAsync(api, WorldId.It);
+        await CreatePlayerWithWorldAsync(api, WorldId.It);
         using var http = Factory.CreateClient();
         http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8320");
 
         // Act / Assert
         foreach (var star in new[] { "mira", "unknown" })
         {
-            using var get = await http.GetAsync($"/dm/{star}", CancellationToken.None);
+            using var get = await http.GetAsync(await WorldPathAsync(http, $"/dm/{star}"), CancellationToken.None);
             using var body = new StringContent("{\"text\":\"Привет\"}", Encoding.UTF8, "application/json");
-            using var post = await http.PostAsync($"/dm/{star}", body, CancellationToken.None);
+            using var post = await http.PostAsync(await WorldPathAsync(http, $"/dm/{star}"), body, CancellationToken.None);
             await Assert.That(get.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
             await Assert.That(post.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
         }
@@ -114,7 +118,7 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         // Arrange
         using var api = Factory.CreateApiClient(8340);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
         var response = CreateDirectMessageResponse();
         response.Messages[0].Contents.Add(new FunctionCallContent("extra", "react", new Dictionary<string, object?> { ["emoji"] = "🔥" }));
         Factory.Llm.Respond(response);
@@ -123,8 +127,8 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         using var body = new StringContent("{\"text\":\"Привет\"}", Encoding.UTF8, "application/json");
 
         // Act
-        using var post = await http.PostAsync("/dm/sonya", body, CancellationToken.None);
-        var dm = await api.Social.GetDirectMessagesAsync("sonya", CancellationToken.None);
+        using var post = await http.PostAsync(await WorldPathAsync(http, "/dm/sonya"), body, CancellationToken.None);
+        var dm = await api.Social.GetDirectMessagesAsync("sonya", await GetWorldIdAsync(api), CancellationToken.None);
 
         // Assert
         await Assert.That(post.StatusCode).IsEqualTo(System.Net.HttpStatusCode.ServiceUnavailable);
@@ -137,7 +141,7 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         // Arrange
         using var api = Factory.CreateApiClient(8341);
-        await OnboardAsync(api);
+        await CreatePlayerWithWorldAsync(api);
         var response = CreateDirectMessageResponse();
         var arguments = response.Messages[0].Contents.OfType<FunctionCallContent>().Single().Arguments
             ?? throw new InvalidOperationException("Missing arguments.");
@@ -145,13 +149,13 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         Factory.Llm.Respond(response);
 
         // Act
-        await api.Social.SendDirectMessageAsync("sonya", new DirectMessageRequest { Text = "Мне нравится робототехника" }, CancellationToken.None);
-        var dm = await api.Social.GetDirectMessagesAsync("sonya", CancellationToken.None);
+        await api.Social.SendDirectMessageAsync("sonya", await GetWorldIdAsync(api), new DirectMessageRequest { Text = "Мне нравится робототехника" }, CancellationToken.None);
+        var dm = await api.Social.GetDirectMessagesAsync("sonya", await GetWorldIdAsync(api), CancellationToken.None);
 
         // Assert
         await Assert.That(dm.Memory).IsEmpty();
         await Assert.That(dm.Messages.Count).IsEqualTo(2);
-        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Subs).IsEqualTo(120);
+        await Assert.That((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().Subscribers).IsEqualTo(120);
     }
 
     [Test]
@@ -159,13 +163,13 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         // Arrange
         using var api = Factory.CreateApiClient(8370);
-        await OnboardAsync(api);
-        await api.Social.SendDirectMessageAsync("sonya", new DirectMessageRequest { Text = "Первое сообщение" }, CancellationToken.None);
+        await CreatePlayerWithWorldAsync(api);
+        await api.Social.SendDirectMessageAsync("sonya", await GetWorldIdAsync(api), new DirectMessageRequest { Text = "Первое сообщение" }, CancellationToken.None);
         var store = Factory.Services.GetRequiredService<IGameStore>();
         var player = await store.GetPlayerAsync(TelegramUserId.From(8370), CancellationToken.None)
             ?? throw new InvalidOperationException("Missing player.");
         var conversation = await store.GetStarConversationAsync(
-            player.Id, Reki.Domain.Social.StarId.From("sonya"), CancellationToken.None)
+            player.Id, Domain.Social.StarId.From("sonya"), CancellationToken.None, Domain.Worlds.WorldId.From(await GetWorldIdAsync(api)))
             ?? throw new InvalidOperationException("Missing conversation.");
         var prepared = conversation with
         {
@@ -176,7 +180,7 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         await store.SaveStarConversationAsync(prepared, CancellationToken.None);
 
         // Act
-        await api.Social.SendDirectMessageAsync("sonya", new DirectMessageRequest { Text = "Текущий ход" }, CancellationToken.None);
+        await api.Social.SendDirectMessageAsync("sonya", await GetWorldIdAsync(api), new DirectMessageRequest { Text = "Текущий ход" }, CancellationToken.None);
         var messages = GetCapturedChatMessages();
         using var profile = ParsePlayerLayer(messages[1]);
 

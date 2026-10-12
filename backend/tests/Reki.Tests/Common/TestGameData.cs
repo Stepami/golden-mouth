@@ -38,8 +38,8 @@ internal static class TestGameData
                 3,
                 2,
                 120),
-            new ViralBalance(0.03, 0.06, 3, 15, 3),
-            new FlopBalance(2, -0.3),
+            new ViralBalance(0.03, 0.06, 3),
+            new FlopBalance(-0.3),
             new SkillBalance(
                 [0, 8, 20, 36, 56, 80, 110, 150, 200, 270],
                 1,
@@ -60,38 +60,38 @@ internal static class TestGameData
 
     internal static PlayerProfile CreatePlayer()
     {
-        return new PlayerProfile(
-            PlayerId.From("player-one"),
-            TelegramUserId.From(1),
-            "18+",
-            "Канал",
-            "channel",
-            "creator",
-            "avatar",
-            "address",
-            WorldId,
-            1000,
-            0,
-            0,
-            PeriodStart,
-            false,
-            1,
-            new PlayerSettings("mid", "on", "off", "neutral", false),
-            CreateSkills(),
-            null,
-            null,
-            0,
-            [new DailyWant("want-one", "Сделать пост", "+1", false)],
-            AchievementCatalog.Create(WorldId),
-            [],
-            null,
-            0,
-            10,
-            0,
-            0,
-            0,
-            null);
+        return new PlayerProfile
+        {
+            Id = PlayerId.From("player-one"),
+            TelegramUserId = TelegramUserId.From(1),
+            BirthGroup = "18+",
+            Address = "nick",
+            PostsPeriodStartedAtUtc = PeriodStart,
+            StreakDays = 1,
+            Skills = CreateSkills(),
+            Settings = new PlayerSettings("on", "off", false),
+        };
     }
+
+    internal static World CreateWorld() => new()
+    {
+        Id = WorldId.From("world-one"),
+        BalanceKey = "stage",
+        Interface = new(),
+        Stars = [new WorldStar(StarId, "Мира", "лидер BLESK", StarTrait.Boldness, "Ценит смелость", "коротко", "mira", 0, 0, PeriodStart)],
+        Player = new()
+        {
+            PlayerId = PlayerId.From("player-one"),
+            Name = "Канал",
+            Role = "creator",
+            Avatar = "avatar",
+            Subscribers = 1000,
+            Drama = WorldDrama.Mid,
+            Voice = "neutral",
+            Wants = [new DailyWant("want-one", "Сделать пост", "+1", false)],
+            Achievements = AchievementCatalog.Create(),
+        },
+    };
 
     internal static IReadOnlyDictionary<SkillId, SkillProgress> CreateSkills()
     {

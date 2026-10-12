@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
+import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand, type AgeBand } from '../app/ageBand'
-import { worldOf, worlds } from '../api/mock'
-import { contentOf } from '../api/worldContent'
+import { worldOf, worlds, worldDefinitionOf, contentOf, templateContentOf } from '../api/worldContent'
 import type { Address, Drama, Player, WorldId } from '../api/types'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
@@ -123,7 +123,7 @@ function World() {
 function Channel() {
   const nav = useNav()
   const world = (nav.params.world as WorldId) ?? 'stage'
-  const profile = contentOf(world)
+  const profile = templateContentOf(world)
   const [role, setRole] = useState(0)
   const [name, setName] = useState(profile.name)
   const [handle, setHandle] = useState(profile.handle)
@@ -152,7 +152,7 @@ function Channel() {
 
 function WorldSetup() {
   const nav = useNav()
-  const profile = contentOf((nav.params.world as string) ?? 'stage')
+  const profile = templateContentOf((nav.params.world as string) ?? 'stage')
   const [voice, setVoice] = useState((nav.params.voice as string) ?? profile.voices[0])
   const [drama, setDrama] = useState<Drama>((nav.params.drama as Drama) ?? profile.drama)
   return <div className="screen no-tab">
@@ -175,7 +175,7 @@ function WorldSetup() {
 function FirstStar() {
   const nav = useNav()
   const { setPlayer } = useStore()
-  const profile = contentOf((nav.params.world as string) ?? 'stage')
+  const profile = templateContentOf((nav.params.world as string) ?? 'stage')
   const stars = profile.stars
   const [pick, setPick] = useState(stars[0].id)
   const [saving, setSaving] = useState(false)
@@ -187,13 +187,21 @@ function FirstStar() {
     setSaving(true); setError('')
     const p = nav.params as Record<string, string>
     try {
-      const pl = created.current ?? await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', ageBand: p.ageBand as AgeBand | undefined, world: p.world ?? 'stage', role: p.role ?? profile.roles[0], name: p.name ?? profile.name, handle: p.handle ?? profile.handle, address: p.address ?? 'nick', star: pick, referralCode: pendingReferral() })
+      const settings = { voice: p.voice ?? profile.voices[0], drama: (p.drama as Drama) ?? profile.drama }
+      const definition = {
+        ...((nav.params.definition as import('../api/types').WorldDefinition | undefined) ?? worldDefinitionOf((p.world as WorldId) ?? 'stage')),
+        name: p.name ?? profile.name, avatar: p.handle ?? profile.handle, role: p.role ?? profile.roles[0], ...settings,
+      }
+      if (!api.hasPlayer()) {
+        await api.onboarding({ birthGroup: (p.group as '14-17' | '18+') ?? '14-17', ageBand: p.ageBand as AgeBand | undefined,
+          address: p.address ?? 'nick', referralCode: pendingReferral() })
+        clearReferral()
+      }
+      const pl = created.current ?? await api.createWorld(definition)
       created.current = pl
       clearReferral()
-      const settings = { voice: p.voice ?? profile.voices[0], drama: (p.drama as Drama) ?? profile.drama }
-      await api.settings(settings)
       try { localStorage.setItem(`reki:first-star:${pl.id}`, pick) } catch { /* optional storage */ }
-      track('onboarding_step', { step: 'done', star: pick }); setPlayer({ ...pl, settings: { ...pl.settings, ...settings } }); nav.replace('01-6_home')
+      track('onboarding_step', { step: 'done', star: pick }); setPlayer(pl); nav.replace('01-6_home')
     } catch { setError('Не получилось сохранить настройки. Попробуй ещё раз.') } finally { setSaving(false) }
   }
   return (
@@ -259,9 +267,9 @@ register({
   '01-1_invite': { component: Invite, title: 'Приглашение от друга' },
   '01-2_age': { component: Age, title: 'Год рождения и согласие' },
   '01-2b_under14': { component: Under14, title: 'Младше 14' },
-  '01-3_world': { component: World, title: 'Выбор мира' },
-  '01-4_channel': { component: Channel, title: 'Канал' },
-  '01-4b_world_setup': { component: WorldSetup, title: 'Мир, голос канала и драма' },
-  '01-5_first_star': { component: FirstStar, title: 'Первая звезда' },
+  '01-3_world': { component: withWorldTemplates(World), title: 'Выбор мира' },
+  '01-4_channel': { component: withWorldTemplates(Channel), title: 'Канал' },
+  '01-4b_world_setup': { component: withWorldTemplates(WorldSetup), title: 'Мир, голос канала и драма' },
+  '01-5_first_star': { component: withWorldTemplates(FirstStar), title: 'Первая звезда' },
   '01-6_home': { component: Home, title: 'Первый экран' },
 }, { '01-6_home': 0 })

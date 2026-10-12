@@ -21,8 +21,8 @@
     "rested_after_skip_days": 2, "rested_first_posts": 3, "rested_x": 2.0,
     "start_subs": 120, "subs_never_decrease_on_new_world": true
   },
-  "viral": { "base": 0.03, "per_quality": 0.06, "guaranteed_post": 3, "pity_posts": 15, "pity_sessions": 3, "x": 3, "near_miss_band": 0.15 },
-  "flop": { "max_in_row": 2, "loss_x": -0.3 },
+  "viral": { "base": 0.03, "per_quality": 0.06, "x": 3, "near_miss_band": 0.15 },
+  "flop": { "loss_x": -0.3 },
   "skills": {
     "ids": ["brave", "humor", "topic"],
     "levels_xp": [0, 8, 20, 36, 56, 80, 110, 150, 200, 270],

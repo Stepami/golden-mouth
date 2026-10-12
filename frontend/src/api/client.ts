@@ -2,15 +2,38 @@
 // Во фронте НЕТ секретов: runtime config виден в браузере. Ключи LLM и токен бота живут только на бэкенде.
 import * as mock from './mock'
 import { error, warn } from '../app/log'
+import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics'
 import { apiBaseUrl as BASE, runtimeConfig } from '../app/runtimeConfig'
 import { addDemoComment, demoChannelPosts, demoFeed, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, shuffle, withDemoComments } from './demo'
-import { contentOf, rulesFor, wantsFor } from './worldContent'
+import { contentOf, installWorldContent, installWorldTemplates, worldDocumentOf, wantsFor } from './worldContent'
 import { telegramAuthHeaders } from './auth'
 import type { AgeBand } from '../app/ageBand'
-import type { Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, ReplyResult, WorldId, WorldRules } from './types'
+import type { PlayerDocument, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, ReplyResult, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types'
 
 let sessionPlayer: Player | undefined
-function rememberPlayer(player: Player): Player { sessionPlayer = player; return player }
+let sessionIdentity: PlayerDocument | undefined
+let templates: WorldDocument[] = []
+let templatesRequest: Promise<void> | undefined
+const inWorld = (path: string): string => {
+  if (!sessionPlayer?.worldInstanceId) throw new Error('World must be loaded before this request')
+  return `${path}?worldId=${encodeURIComponent(sessionPlayer.worldInstanceId)}`
+}
+async function fetchTemplates(): Promise<void> {
+  try {
+    const loaded = await call<WorldDocument[]>('/worlds/templates', undefined, false)
+    if (!loaded.length) throw new Error('No world templates returned')
+    installWorldTemplates(loaded)
+    templates = loaded
+  } catch (cause) {
+    // A template 404 is a configuration failure, not a missing player.
+    throw new Error('Unable to load world templates', { cause })
+  }
+}
+function loadTemplates(): Promise<void> {
+  if (templates.length) return Promise.resolve()
+  return templatesRequest ??= fetchTemplates().finally(() => { templatesRequest = undefined })
+}
+function rememberPlayer(player: Player): Player { setTelemetryPlayerAvailable(true); sessionIdentity = { ...player, experiments: player.experiments ?? {} }; sessionPlayer = player; setAnalyticsWorld(player.worldInstanceId, player.world); return player }
 
 export class ApiError extends Error {
   constructor(public readonly status: number, method: string, path: string) {
@@ -19,9 +42,9 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(`${BASE}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...telegramAuthHeaders(), ...init?.headers } })
-  if (!r.ok) { const e = new ApiError(r.status, init?.method ?? 'GET', path); if (r.status >= 500) error('api_error', e, { status: r.status }); else warn('api_error', { status: r.status, msg: e.message }); throw e }
+async function call<T>(path: string, init?: RequestInit, authenticated = true): Promise<T> {
+  const r = await fetch(`${BASE ?? runtimeConfig.apiBaseUrl}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...(authenticated ? telegramAuthHeaders() : {}), ...init?.headers } })
+  if (!r.ok) { const e = new ApiError(r.status, init?.method ?? 'GET', path); if (r.status >= 500) error('api_error', e, { status: r.status }); else if (r.status !== 404 || path !== '/me') warn('api_error', { status: r.status, msg: e.message }); throw e }
   const body = await r.text()
   return body ? JSON.parse(body) as T : undefined as T
 }
@@ -52,15 +75,66 @@ async function publicationState(id: string): Promise<PublicationState> {
   return call(`/posts/publications/${encodeURIComponent(id)}`)
 }
 
+const playerRequests = new Map<string, Promise<Player>>()
+async function loadPlayer(worldId?: string): Promise<Player> {
+  if (!BASE) {
+    // Demo worlds use template content because they have no server-side instances.
+    await loadTemplates()
+    installWorldContent(templates)
+    return rememberPlayer(await laterLazy(demoPlayer))
+  }
+  const player = await call<PlayerDocument>('/me')
+  sessionIdentity = player
+  setTelemetryPlayerAvailable(true)
+  const ownedWorlds = await call<WorldDocument[]>('/worlds')
+  const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId)) ?? ownedWorlds[0]
+  if (!world) throw new ApiError(404, 'GET', '/worlds')
+  installWorldContent([world])
+  return rememberPlayer({ ...player, worldInstanceId: world.id, avatarStyle: world.avatarStyle,
+    world: world.balanceKey, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
+    wants: world.wants, collection: world.achievements, bio: '', type: 'свой голос',
+    voice: world.voice, drama: world.drama,
+  })
+}
+
 export const api = {
-  me: (): Promise<Player> => (BASE ? call<Player>('/me') : laterLazy(demoPlayer)).then(rememberPlayer),
-  onboarding: (body: { birthGroup: '14-17' | '18+'; ageBand?: AgeBand; world: string; role: string; name: string; handle: string; address: string; star: string; referralCode?: string }): Promise<Player> =>
-    (BASE ? call<Player>('/onboarding', { method: 'POST', body: JSON.stringify(body) }) : laterLazy(() => saveDemoPlayer({
-      ...structuredClone(mock.player), ...body, world: body.world as WorldId, address: body.address as Player['address'],
-      id: crypto.randomUUID().replaceAll('-', ''), bio: '', type: 'автор своего канала', subs: 120, postsLeft: 10, wants: wantsFor(body.world),
-      skills: { brave: { level: 1, progress: 0 }, humor: { level: 1, progress: 0 }, topic: { level: 1, progress: 0 } },
-    }))).then(rememberPlayer),
-  /** Генерация, затем модерация и поток реакции; при обрыве сверяем сохранённый статус. */
+  loadWorldTemplates: loadTemplates,
+  me: (worldId?: string): Promise<Player> => {
+    const key = worldId ?? sessionPlayer?.worldInstanceId ?? ''
+    const pending = playerRequests.get(key)
+    if (pending) return pending
+    const request = loadPlayer(worldId).finally(() => { playerRequests.delete(key) })
+    playerRequests.set(key, request)
+    return request
+  },
+  hasPlayer: (): boolean => sessionIdentity !== undefined,
+  onboarding: async (body: { birthGroup: '14-17' | '18+'; ageBand?: AgeBand; address: string; referralCode?: string }): Promise<PlayerDocument> => {
+    if (sessionIdentity) throw new Error('Onboarding has already been completed')
+    sessionIdentity = BASE
+      ? await call<PlayerDocument>('/onboarding', { method: 'POST', body: JSON.stringify(body) })
+      : await later({
+        id: crypto.randomUUID().replaceAll('-', ''), address: body.address as Player['address'],
+        postsLeft: 10, postsCap: 10, firstPostInviteBonus: 0, streak: { days: 1, week: [true, false, false, false, false, false, false], nextReward: 'ещё день — и бонус' },
+        skills: { brave: { level: 1, progress: 0 }, humor: { level: 1, progress: 0 }, topic: { level: 1, progress: 0 } },
+        settings: { notifications: 'all', quiet: '22:00-09:00', plus: false }, experiments: {},
+      })
+    setTelemetryPlayerAvailable(true)
+    return sessionIdentity
+  },
+  createWorld: async (definition: WorldDefinition): Promise<Player> => {
+    if (BASE) {
+      const world = await call<WorldDocument>('/worlds', { method: 'POST', body: JSON.stringify(definition) })
+      return api.me(world.id)
+    }
+    if (!sessionIdentity) throw new Error('Player must be loaded before creating a world')
+    return rememberPlayer(await laterLazy(() => saveDemoPlayer({
+      ...structuredClone(mock.player), ...sessionIdentity!, worldInstanceId: crypto.randomUUID().replaceAll('-', ''), world: definition.balanceKey,
+      name: definition.name, handle: definition.avatar, role: definition.role, avatarStyle: definition.avatarStyle,
+      voice: definition.voice, drama: definition.drama,
+      subs: 120, wants: definition.wants, collection: definition.achievements,
+    })))
+  },
+  /** Генерация, затем модерация и анимация массива реакций; при обрыве сверяем сохранённый статус. */
   publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown') => void, onStatus?: (status: PublicationStatus) => void): () => void {
     if (BASE) {
       const ctrl = new AbortController()
@@ -80,22 +154,24 @@ export const api = {
         })
       }
       const moderation = async () => {
-        const r = await fetch(`${BASE}/posts/publications/${encodeURIComponent(publicationId)}/moderation`, {
-          method: 'POST', signal: ctrl.signal, headers: { Accept: 'text/event-stream', ...telegramAuthHeaders() },
+        const r = await fetch(`${BASE}${inWorld(`/posts/publications/${encodeURIComponent(publicationId)}/moderation`)}`, {
+          method: 'POST', signal: ctrl.signal, headers: { Accept: 'application/json', ...telegramAuthHeaders() },
         })
         if (!r.ok) throw new ApiError(r.status, 'POST', '/posts/publications/:id/moderation')
+        const events = await r.json() as LiveEvent[]
         let lastShownAt = 0
         const minimumGap: Record<LiveEvent['type'], number> = {
-          views: 650, react: 700, comment: 850, typing: 850, result: 1200,
+          views: 750, react: 800, comment: 950, typing: 950, result: 1300,
         }
-        await readSse<LiveEvent>(r, async event => {
+        for (const event of events) {
+          if (ctrl.signal.aborted) throw new DOMException('Aborted', 'AbortError')
           const remaining = minimumGap[event.type] - (performance.now() - lastShownAt)
           if (lastShownAt && remaining > 0) await pause(remaining)
           lastShownAt = performance.now()
           if (event.type === 'result') deliveredResult = true
           onEvent(event)
-        })
-        if (!deliveredResult) throw new Error('Post event stream ended before result')
+        }
+        if (!deliveredResult) throw new Error('Post response has no result')
       }
       const recover = async (): Promise<void> => {
         let state: PublicationState
@@ -114,7 +190,7 @@ export const api = {
       // Defer the request so that probe does not create an abandoned publication.
       const start = setTimeout(() => { void (async () => {
         try {
-          const r = await fetch(`${BASE}/posts/publications`, {
+          const r = await fetch(`${BASE}${inWorld("/posts/publications")}`, {
             method: 'POST', signal: ctrl.signal,
             headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', ...telegramAuthHeaders() },
             body: JSON.stringify({ publicationId, text }),
@@ -150,12 +226,12 @@ export const api = {
         sessionPlayer = saveDemoPlayer({ ...sessionPlayer, subs: sessionPlayer.subs + result.delta, postsLeft: Math.max(0, sessionPlayer.postsLeft - 1) })
       }
       onEvent(e)
-    }, ms))
+    }, ms * 1.1))
     return () => timers.forEach(clearTimeout)
   },
   reply: (postId: string, commentId: string, replyId: string, text: string): Promise<ReplyResult> =>
     BASE
-      ? call(`/posts/${postId}/replies`, { method: 'POST', body: JSON.stringify({ commentId, replyId, text }) })
+      ? call(inWorld(`/posts/${postId}/replies`), { method: 'POST', body: JSON.stringify({ commentId, replyId, text }) })
       : later(mock.threadReply(replyId)),
   report: (commentId: string, reason: string) => BASE ? call('/reports', { method: 'POST', body: JSON.stringify({ commentId, reason }) }) : later({ ok: true }),
   plusInterest: async (interest = true): Promise<{ bonus: number }> => {
@@ -176,7 +252,7 @@ export const api = {
     }
   },
   feed: async (world: WorldId = sessionPlayer?.world ?? 'stage'): Promise<FeedItem[]> => {
-    const remote: FeedItem[] = BASE ? await call<FeedItem[]>('/feed') : demoOwnPosts(sessionPlayer?.id ?? '').slice(0, 20).map(post => ({
+    const remote: FeedItem[] = BASE ? await call<FeedItem[]>(inWorld('/feed')) : demoOwnPosts(sessionPlayer?.id ?? '').slice(0, 20).map(post => ({
       kind: 'post', postId: post.id, canReply: true, author: sessionPlayer?.name, avatar: sessionPlayer?.handle, role: sessionPlayer?.role,
       ago: post.at, text: post.text, reactions: post.reactions, views: post.views,
       commentCount: withDemoComments(post, sessionPlayer?.id ?? '').comments.length,
@@ -185,11 +261,11 @@ export const api = {
       commentCount: withDemoComments(demoPost(item.postId!)!, sessionPlayer?.id ?? '').comments.length })) : []
     return runtimeConfig.features.mockFeed ? shuffle([...remote, ...demos]) : remote
   },
-  channelPosts: (): Promise<ChannelPost[]> => BASE ? call('/posts/mine') : laterLazy(() => demoChannelPosts(sessionPlayer?.id ?? '')),
+  channelPosts: (): Promise<ChannelPost[]> => BASE ? call(inWorld('/posts/mine')) : laterLazy(() => demoChannelPosts(sessionPlayer?.id ?? '')),
   post: async (postId: string): Promise<Post> => {
     const demo = runtimeConfig.features.mockFeed ? demoPost(postId) : undefined
     const post = demo ?? (BASE
-      ? await call<PostDetailResponse>(`/posts/${encodeURIComponent(postId)}`).then(({ postId: id, ...detail }) => ({ ...detail, id }))
+      ? await call<PostDetailResponse>(inWorld(`/posts/${encodeURIComponent(postId)}`)).then(({ postId: id, ...detail }) => ({ ...detail, id }))
       : await laterLazy(() => demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) ?? mock.post(postId)))
     if (!post) throw { status: 404 }
     return runtimeConfig.features.mockFeed
@@ -197,18 +273,27 @@ export const api = {
   },
   demoComment: (postId: string, player: Player, text: string, replyId: string) => laterLazy(() => addDemoComment(postId, player, text, replyId)),
   friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),
-  dm: (starId: string): Promise<Dm> => BASE ? call(`/dm/${starId}`) : laterLazy(() => {
+  dm: (starId: string): Promise<Dm> => BASE ? call(inWorld(`/dm/${starId}`)) : laterLazy(() => {
     const star = contentOf(sessionPlayer?.world ?? 'stage').stars.find(profile => profile.id === starId)
     if (!star) throw new ApiError(404, 'GET', `/dm/${starId}`)
     return { ...mock.dm, star }
   }),
-  dmSend: (starId: string, text: string): Promise<{ reply?: string; repliesLeft: number }> => BASE ? call(`/dm/${starId}`, { method: 'POST', body: JSON.stringify({ text }) }) : later({ repliesLeft: 2 }),
-  forget: (starId: string, fact: string) => BASE ? call(`/stars/${starId}/memory`, { method: 'DELETE', body: JSON.stringify({ fact }) }) : later({ ok: true }),
-  eventToday: (): Promise<GameEvent> => BASE ? call('/events/today') : later(mock.events.collab),
-  answerEvent: (id: string, text: string) => BASE ? call(`/events/${id}/answer`, { method: 'POST', body: JSON.stringify({ text }) }) : later({ ok: true }),
+  dmSend: (starId: string, text: string): Promise<{ reply?: string; repliesLeft: number }> => BASE ? call(inWorld(`/dm/${starId}`), { method: 'POST', body: JSON.stringify({ text }) }) : later({ repliesLeft: 2 }),
+  forget: (starId: string, fact: string) => BASE ? call(inWorld(`/stars/${starId}/memory`), { method: 'DELETE', body: JSON.stringify({ fact }) }) : later({ ok: true }),
+  eventToday: (): Promise<GameEvent> => BASE ? call(inWorld('/events/today')) : later(mock.events.collab),
+  answerEvent: (id: string, text: string) => BASE ? call(inWorld(`/events/${id}/answer`), { method: 'POST', body: JSON.stringify({ text }) }) : later({ ok: true }),
   challenge: (): Promise<Challenge | null> => BASE ? call('/challenges/active') : later(mock.challenge),
   startChallenge: (friendId: string) => BASE ? call('/challenges', { method: 'POST', body: JSON.stringify({ friendId }) }) : later({ ok: true }),
-  worldRules: (worldId: string): Promise<WorldRules> => BASE ? call(`/worlds/${worldId}/rules`) : later(rulesFor(worldId)),
-  saveWorld: (rules: WorldRules) => BASE ? call('/worlds/own', { method: 'PUT', body: JSON.stringify(rules) }) : later({ ok: true }),
-  deleteAccount: async () => { if (BASE) await call('/me', { method: 'DELETE' }); resetDemoPlayer(sessionPlayer?.id); sessionPlayer = undefined },
+  updateWorld: async (patch: WorldUpdate) => {
+    if (BASE) {
+      if (!sessionPlayer?.worldInstanceId) throw new Error('World must be loaded before this request')
+      await call(`/worlds/${encodeURIComponent(sessionPlayer.worldInstanceId)}`, { method: 'PATCH', body: JSON.stringify(patch) })
+    }
+    if (sessionPlayer) {
+      installWorldContent([{ ...worldDocumentOf(sessionPlayer.world), ...patch }])
+      sessionPlayer = { ...sessionPlayer, drama: patch.drama ?? sessionPlayer.drama, voice: patch.voice ?? sessionPlayer.voice }
+      if (!BASE) saveDemoPlayer(sessionPlayer)
+    }
+  },
+  deleteAccount: async () => { if (BASE) await call('/me', { method: 'DELETE' }); resetDemoPlayer(sessionPlayer?.id); sessionPlayer = undefined; sessionIdentity = undefined; setTelemetryPlayerAvailable(false); setAnalyticsWorld(undefined) },
 }

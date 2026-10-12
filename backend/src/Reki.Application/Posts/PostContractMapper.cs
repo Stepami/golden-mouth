@@ -1,11 +1,10 @@
 using System.Globalization;
 using Reki.Contracts.Posts;
-using Reki.Domain.Player;
 using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts;
 
-internal static class PostContractMapper
+public static class PostContractMapper
 {
     public static PublicationStatusResponse MapPublication(Publication publication) =>
         new(
@@ -15,19 +14,19 @@ internal static class PostContractMapper
 
     public static FeedItemResponse MapFeedItem(
         GamePost post,
-        PlayerProfile author,
+        Reki.Domain.Worlds.World author,
         bool canReply) =>
         new(
             FeedItemKind.Post,
             post.Id.Value,
-            author.Name,
-            author.Avatar,
-            author.Role,
+            author.Player.Name,
+            author.Player.Avatar,
+            author.Player.Role,
             post.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             post.Text,
             CreateReactions(post),
             post.Views,
-            post.GetComments().Count,
+            post.Comments.Count,
             null,
             canReply);
 
@@ -38,26 +37,10 @@ internal static class PostContractMapper
             post.CreatedAtUtc,
             post.Views,
             CreateReactions(post),
-            post.GetComments().Count);
+            post.Comments.Count);
 
-    public static PostDetailResponse MapPostDetail(GamePost post, bool canReply) =>
-        new(
-            post.Id.Value,
-            post.Text,
-            post.Views,
-            CreateReactions(post),
-            post.GetComments()
-                .Select(comment => new CommentResponse(
-                    comment.Id.Value,
-                    comment.Author,
-                    comment.Avatar,
-                    comment.Handle,
-                    comment.Text,
-                    comment.Star,
-                    canReply && comment.Me,
-                    comment.Hidden))
-                .ToArray(),
-            canReply);
+    public static IReadOnlyList<ReactionResponse> CreateReactions(GamePost post) =>
+        [new ReactionResponse("🔥", post.Viral ? 3 : 1)];
 
     public static IReadOnlyList<LiveEvent> MapLiveEvents(PublishedPost published)
     {
@@ -99,7 +82,4 @@ internal static class PostContractMapper
             post.Views,
             source.Hook);
     }
-
-    private static ReactionResponse[] CreateReactions(GamePost post) =>
-        [new ReactionResponse("🔥", post.Viral ? 3 : 1)];
 }

@@ -1,12 +1,12 @@
 using Reki.Domain.Common;
 using Vogen;
 
-namespace Reki.Domain.Worlds;
+namespace Reki.Domain.Invites;
 
 [ValueObject<string>(comparison: ComparisonGeneration.Omit)]
-public readonly partial struct WorldRulesId
+public readonly partial struct InvitationId
 {
-    public static WorldRulesId New() => From(Guid.NewGuid().ToString("N"));
+    public static InvitationId New() => From(Guid.NewGuid().ToString("N"));
 
     private static Validation Validate(string value) => IdentifierValidation.String(value);
 }

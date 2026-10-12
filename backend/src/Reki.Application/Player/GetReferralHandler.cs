@@ -1,19 +1,14 @@
 using Mediator;
-using Reki.Application.Common;
 using Reki.Contracts.Player;
-using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Player;
 
 public sealed class GetReferralHandler(
-    ITelegramUserAccessor telegramUser,
-    PlayerReader playerReader) : IRequestHandler<GetReferralQuery, ReferralResponse>
+    ISender sender) : IRequestHandler<GetReferralQuery, ReferralResponse>
 {
     public async ValueTask<ReferralResponse> Handle(GetReferralQuery request, CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
-        var player = await playerReader.GetAsync(telegramUserId, cancellationToken);
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         return new ReferralResponse($"ref_{player.Id.Value}");
     }
 }
