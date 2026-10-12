@@ -42,6 +42,7 @@ internal sealed partial class RegisteredPlayersMetrics(
         {
             var worlds = await store.GetWorldsAsync(player.Id, stoppingToken);
             var worldKeys = worlds.Select(world => world.BalanceKey).Distinct().ToArray();
+            var invite = await store.GetInviteAsync(player.Id, stoppingToken);
             using var scope = logger.BeginScope(new Dictionary<string, object?>
             {
                 ["reki.stream"] = "product",
@@ -56,7 +57,7 @@ internal sealed partial class RegisteredPlayersMetrics(
                     _ => "multi-world",
                 },
                 ["age_group"] = player.AgeBand ?? player.BirthGroup,
-                ["registration_source"] = player.InvitedBy is null ? "direct" : "referral",
+                ["registration_source"] = invite is null ? "direct" : "referral",
                 ["launch_surface"] = "unknown",
                 ["subscriber_total"] = worlds.Sum(world => world.Player.Subscribers),
             });

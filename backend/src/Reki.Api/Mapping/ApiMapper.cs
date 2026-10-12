@@ -16,7 +16,6 @@ using Reki.Domain.Social;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 using Riok.Mapperly.Abstractions;
-using ContractSkillId = Reki.Contracts.Player.SkillId;
 using DomainEventId = Reki.Domain.Events.EventId;
 
 namespace Reki.Api.Mapping;
@@ -24,20 +23,6 @@ namespace Reki.Api.Mapping;
 [Mapper]
 public sealed partial class ApiMapper
 {
-    public PlayerResponse MapPlayer(PlayerProfile player, int postsCap)
-    {
-        return new PlayerResponse(
-            player.Id.Value,
-            Enum.Parse<Address>(player.Address, true),
-            Math.Max(0, postsCap - player.PostsUsed),
-            postsCap,
-            player.FirstPostInviteBonusUsed ? 0 : player.FirstPostInviteBonus,
-            new StreakResponse(player.StreakDays, Enumerable.Range(0, 7).Select(day => day < Math.Min(7, player.StreakDays)).ToArray(), "ещё день — и бонус"),
-            player.Skills.ToDictionary(item => Enum.Parse<ContractSkillId>(item.Key.Value, true), item => MapSkill(item.Value)),
-            new PlayerSettingsResponse(player.Settings.Notifications, player.Settings.Quiet, player.Settings.Plus),
-            new Dictionary<string, string>());
-    }
-
     public DmResponse MapDirectMessages(DirectMessageView view)
     {
         var persona = view.Star;
@@ -256,9 +241,6 @@ public sealed partial class ApiMapper
 
     [MapEnum(EnumMappingStrategy.ByName)]
     private partial Drama MapDrama(WorldDrama source);
-
-    [MapperIgnoreSource(nameof(SkillProgress.Experience))]
-    private partial SkillResponse MapSkill(SkillProgress source);
 
     private partial DirectMessageResponse MapDirectMessage(DirectMessage source);
 

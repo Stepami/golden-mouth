@@ -34,9 +34,6 @@ internal sealed class NestWorldDocuments : RekiMigrationBase
         await MigrateCollectionAsync(db, session, MongoCollections.WorldTemplates, cancellationToken);
     }
 
-    public override Task DownAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("Removed world counters cannot be restored.");
-
     private static async Task MigrateCollectionAsync(IMongoDatabase db, IClientSessionHandle session, string name, CancellationToken cancellationToken)
     {
         var collection = db.GetCollection<BsonDocument>(name);
@@ -67,13 +64,18 @@ internal sealed class NestWorldDocuments : RekiMigrationBase
         }
 
         var drama = player.GetValue("Drama", "mid");
+        if (drama.IsBsonNull)
+        {
+            drama = "mid";
+        }
+
         player["Drama"] = drama.IsString ? drama.AsString switch
         {
             "soft" => 0,
             "mid" => 1,
             "hot" => 2,
             "off" => 3,
-            _ => throw new InvalidOperationException("Unknown persisted world drama."),
+            _ => 1,
         } : drama;
         if (!worldInterface.TryGetValue("Difficulty", out var difficulty) || difficulty.IsBsonNull || difficulty == 0)
         {

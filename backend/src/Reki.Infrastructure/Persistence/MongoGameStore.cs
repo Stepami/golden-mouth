@@ -5,6 +5,7 @@ using Reki.Application.Common;
 using Reki.Application.Posts;
 using Reki.Contracts.Posts;
 using Reki.Domain.Events;
+using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Social;
@@ -24,7 +25,7 @@ internal sealed class MongoGameStore : IGameStore
     private readonly IMongoCollection<World> _worlds;
     private readonly IMongoCollection<World> _templates;
     private readonly IMongoCollection<BsonDocument> _threads;
-    private readonly IMongoCollection<BsonDocument> _invites;
+    private readonly IMongoCollection<Invitation> _invites;
 
     public MongoGameStore(MongoCompositionRoot compositionRoot)
     {
@@ -40,7 +41,7 @@ internal sealed class MongoGameStore : IGameStore
         _worlds = database.GetCollection<World>(MongoCollections.Worlds);
         _templates = database.GetCollection<World>(MongoCollections.WorldTemplates);
         _threads = database.GetCollection<BsonDocument>(MongoCollections.Threads);
-        _invites = database.GetCollection<BsonDocument>(MongoCollections.Invites);
+        _invites = database.GetCollection<Invitation>(MongoCollections.Invites);
     }
 
     public IAsyncEnumerable<PlayerProfile> GetPlayersAsync(CancellationToken cancellationToken) =>
@@ -52,43 +53,17 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
         await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask<bool> TryCreatePlayerAsync(
-        PlayerProfile player,
-        PlayerProfile? updatedInviter,
-        int expectedInviterVersion,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
-            session.StartTransaction();
-            await _players.InsertOneAsync(session, player, cancellationToken: cancellationToken);
-            if (updatedInviter is not null)
-            {
-                var result = await _players.ReplaceOneAsync(
-                    session,
-                    item => item.Id == updatedInviter.Id && item.Version == expectedInviterVersion,
-                    updatedInviter,
-                    cancellationToken: cancellationToken);
-                if (result.ModifiedCount != 1)
-                {
-                    await session.AbortTransactionAsync(cancellationToken);
-                    return false;
-                }
-            }
+    public async ValueTask CreateInviteAsync(Invitation invite, CancellationToken cancellationToken) =>
+        await _invites.InsertOneAsync(invite, cancellationToken: cancellationToken);
 
-            await session.CommitTransactionAsync(cancellationToken);
-            return true;
-        }
-        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
-        {
-            return false;
-        }
-        catch (MongoException exception) when (exception.HasErrorLabel("TransientTransactionError"))
-        {
-            return false;
-        }
-    }
+    public async ValueTask<Invitation?> GetInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken) =>
+        await _invites.Find(item => item.InviteeId == inviteeId).FirstOrDefaultAsync(cancellationToken);
+
+    public async ValueTask<IReadOnlyList<Invitation>> GetInvitesByInviterAsync(PlayerId inviterId, CancellationToken cancellationToken) =>
+        await _invites.Find(item => item.InviterId == inviterId).ToListAsync(cancellationToken);
+
+    public async ValueTask CreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
+        await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
 
     public async ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken) =>
         await _worlds.InsertOneAsync(world, cancellationToken: cancellationToken);
@@ -157,7 +132,11 @@ internal sealed class MongoGameStore : IGameStore
         Task deleteChallenges = _challenges.DeleteManyAsync(challengeFilter, cancellationToken);
         Task deleteWorlds = _worlds.DeleteManyAsync(item => item.Player.PlayerId == player.Id, cancellationToken);
         Task deleteThreads = _threads.DeleteManyAsync(threadFilter, cancellationToken);
-        Task deleteInvites = _invites.DeleteManyAsync(threadFilter, cancellationToken);
+        var inviteFilter = Builders<Invitation>.Filter.Or(
+            Builders<Invitation>.Filter.Eq(item => item.InviterId, player.Id),
+            Builders<Invitation>.Filter.Eq(item => item.InviteeId, player.Id),
+            new BsonDocument("PlayerId", player.Id.Value));
+        Task deleteInvites = _invites.DeleteManyAsync(inviteFilter, cancellationToken);
 
         await Task.WhenAll(
             deletePlayer,
@@ -178,6 +157,7 @@ internal sealed class MongoGameStore : IGameStore
         int expectedWorldVersion,
         PublishedPost published,
         string publicationId,
+        Invitation? updatedInvite,
         CancellationToken cancellationToken)
     {
         var post = published.Post;
@@ -208,6 +188,25 @@ internal sealed class MongoGameStore : IGameStore
         {
             await session.AbortTransactionAsync(cancellationToken);
             return false;
+        }
+
+        if (updatedInvite is not null)
+        {
+            var inviteUpdate = Builders<Invitation>.Update
+                .Set(item => item.InviterBonusUsed, updatedInvite.InviterBonusUsed)
+                .Set(item => item.InviteeBonusUsed, updatedInvite.InviteeBonusUsed)
+                .Set(item => item.InviterBonusUsedAtUtc, updatedInvite.InviterBonusUsedAtUtc)
+                .Set(item => item.InviteeBonusUsedAtUtc, updatedInvite.InviteeBonusUsedAtUtc);
+            var inviteResult = await _invites.UpdateOneAsync(
+                session,
+                item => item.Id == updatedInvite.Id && !item.InviteeBonusUsed,
+                inviteUpdate,
+                cancellationToken: cancellationToken);
+            if (inviteResult.ModifiedCount != 1)
+            {
+                await session.AbortTransactionAsync(cancellationToken);
+                return false;
+            }
         }
 
         await _posts.InsertOneAsync(session, post, cancellationToken: cancellationToken);

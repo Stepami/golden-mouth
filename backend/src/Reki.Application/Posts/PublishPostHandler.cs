@@ -57,7 +57,9 @@ public sealed class PublishPostHandler(
             throw new RequestConflictException("The player state changed while starting a new day.");
         }
 
-        var cap = player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
+        var invite = await store.GetInviteAsync(player.Id, cancellationToken);
+        var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);
+        var cap = gameDay.GetPostsCap(player, invite, invited);
 
         if (player.PostsUsed >= cap)
         {
@@ -92,7 +94,7 @@ public sealed class PublishPostHandler(
             balance.Value.Relations.Maximum,
             balance.Value.Relations.MaxGainPerDay,
             balance.Value.Relations.StarCardAt);
-        var updated = player.SpendPost(progression.Skills, world.Player.LastPostAtUtc is null);
+        var updated = player.SpendPost(progression.Skills);
         var postId = PostId.New();
         var starComment = new GameComment(
             CommentId.New(),
@@ -124,6 +126,9 @@ public sealed class PublishPostHandler(
         var hook = turn.Hook;
 
         var published = new PublishedPost(post, hook, turn.StarName, turn.Reaction, turn.Reasons);
+        var updatedInvite = invite is { InviteeBonusUsed: false }
+            ? invite.UseInviteeBonus(now).UseInviterBonus(now)
+            : null;
         var committed = await store.TryCommitPostAsync(
             updated,
             player.Version,
@@ -131,6 +136,7 @@ public sealed class PublishPostHandler(
             world.Version,
             published,
             request.PublicationId,
+            updatedInvite,
             cancellationToken);
         if (!committed)
         {
@@ -138,7 +144,7 @@ public sealed class PublishPostHandler(
         }
 
         await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
-        TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
+        TrackProgression(player, updated, world, updatedWorld, post, turn, analytics, invite is not null);
         return PostContractMapper.MapLiveEvents(published);
     }
 
@@ -158,9 +164,10 @@ public sealed class PublishPostHandler(
         Reki.Domain.Worlds.World afterWorld,
         GamePost post,
         GeneratedPostTurn turn,
-        ProductTelemetry analytics)
+        ProductTelemetry analytics,
+        bool referred)
     {
-        analytics.Track(
+        analytics.TrackPlayer(
             after,
             "post_scored",
             new Dictionary<string, string>
@@ -173,14 +180,15 @@ public sealed class PublishPostHandler(
                 ["post_index"] = after.PostsUsed.ToString(CultureInfo.InvariantCulture),
                 ["id"] = post.Id.Value,
                 ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
-            });
+            },
+            referred);
 
         foreach ((var skillId, var progress) in after.Skills)
         {
             var previousLevel = before.Skills[skillId].Level;
             if (progress.Level > previousLevel)
             {
-                analytics.Track(
+                analytics.TrackPlayer(
                     after,
                     "level_up",
                     new Dictionary<string, string>
@@ -188,7 +196,8 @@ public sealed class PublishPostHandler(
                         ["world"] = afterWorld.BalanceKey,
                         ["skill"] = skillId.Value,
                         ["level"] = progress.Level.ToString(CultureInfo.InvariantCulture),
-                    });
+                    },
+                    referred);
             }
         }
 
@@ -197,10 +206,11 @@ public sealed class PublishPostHandler(
                 previous.Id == item.Id && previous.IsOpen));
         foreach (var achievement in earned)
         {
-            analytics.Track(
+            analytics.TrackPlayer(
                 after,
                 "card_earned",
-                new Dictionary<string, string> { ["card"] = achievement.Id, ["world"] = afterWorld.BalanceKey });
+                new Dictionary<string, string> { ["card"] = achievement.Id, ["world"] = afterWorld.BalanceKey },
+                referred);
         }
     }
 }

@@ -27,9 +27,9 @@ internal static class ServiceCollectionExtensions
             options.Assemblies = [typeof(ApplicationAssemblyMarker)];
             options.ServiceLifetime = ServiceLifetime.Scoped;
         });
-        services.AddSingleton<GameDay>();
+        services.AddScoped<GameDay>();
         services.AddSingleton<PlayerSafetyGuard>();
-        services.AddSingleton<ChallengeLifecycle>();
+        services.AddScoped<ChallengeLifecycle>();
         services.AddSingleton<PostProgressionCalculator>();
         services.AddSingleton<ProductTelemetry>();
         services.AddSingleton<StarTurnGenerator>();

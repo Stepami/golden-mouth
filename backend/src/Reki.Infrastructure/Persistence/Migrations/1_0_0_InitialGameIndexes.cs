@@ -17,7 +17,6 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
         IClientSessionHandle session,
         CancellationToken cancellationToken)
     {
-        // createIndexes adopts identical existing indexes and rejects conflicting definitions.
         var database = db;
         var players = database.GetCollection<BsonDocument>(MongoCollections.Players);
         var posts = database.GetCollection<GamePost>(MongoCollections.Posts);
@@ -111,14 +110,6 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
             worldTask,
             threadTask,
             inviteTask);
-    }
-
-    public override Task DownAsync(
-        IMongoDatabase db,
-        IClientSessionHandle session,
-        CancellationToken cancellationToken)
-    {
-        throw new NotSupportedException("The adopted game indexes cannot be safely rolled back.");
     }
 
     private static Task<string> CreateDocumentIndexAsync(

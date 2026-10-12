@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Driver;
 using Reki.Application.Common.Exceptions;
 
 namespace Reki.Api.Common.Errors;
@@ -20,6 +21,7 @@ internal sealed partial class ApiExceptionHandler(
 
         if (exception is ResourceNotFoundException or
             RequestConflictException or
+            MongoWriteException { WriteError.Category: ServerErrorCategory.DuplicateKey } or
             ContentRejectedException or
             CrisisDetectedException or
             AiServiceUnavailableException)
@@ -55,7 +57,7 @@ internal sealed partial class ApiExceptionHandler(
                 Type = "urn:reki:problem:resource-not-found",
                 Detail = "The requested resource was not found.",
             },
-            RequestConflictException => new ProblemDetails
+            RequestConflictException or MongoWriteException { WriteError.Category: ServerErrorCategory.DuplicateKey } => new ProblemDetails
             {
                 Status = StatusCodes.Status409Conflict,
                 Title = "Request conflict",

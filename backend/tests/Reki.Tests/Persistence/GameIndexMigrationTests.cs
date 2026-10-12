@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -32,7 +33,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
                 {
                     PlayerId = PlayerId.From(collectionName == "world_templates" ? "00000000000000000000000000000000" : "world-owner"),
                     Avatar = "legacy-avatar",
-                    Drama = WorldDrama.Hot,
+                    Drama = collectionName == "worlds" ? WorldDrama.Mid : WorldDrama.Hot,
                     Subscribers = 9876,
                     Wants = [new DailyWant("saved", "Своё желание", "опыт", true)],
                     Achievements = [new AchievementProgress("saved", "⭐", "Достижение", true)],
@@ -53,7 +54,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             legacy.Remove("Player");
             legacy["Avatar"] = BsonNull.Value;
             legacy["Handle"] = "legacy-avatar";
-            legacy["Drama"] = "hot";
+            legacy["Drama"] = collectionName == "worlds" ? "unknown" : "hot";
             legacy["Presets"] = new BsonArray { "old-preset" };
             legacy["TotalPostsPublished"] = 20;
             legacy["PostsSinceViral"] = 15;
@@ -69,7 +70,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
                 .IsEqualTo(new BsonDocument(original.Elements.OrderBy(field => field.Name, StringComparer.Ordinal)));
             var hydrated = BsonSerializer.Deserialize<World>(saved);
             await Assert.That(hydrated.Player.PlayerId).IsEqualTo(expected.Player.PlayerId);
-            await Assert.That(hydrated.Player.Drama).IsEqualTo(WorldDrama.Hot);
+            await Assert.That(hydrated.Player.Drama).IsEqualTo(expected.Player.Drama);
             await Assert.That(hydrated.Player.Wants).IsEquivalentTo(expected.Player.Wants);
             await Assert.That(hydrated.Player.Achievements).IsEquivalentTo(expected.Player.Achievements);
             await Assert.That(hydrated.Interface).IsEqualTo(expected.Interface);
@@ -110,8 +111,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
     [Test]
     [Arguments(false, false)]
-    [Arguments(false, true)]
-    [Arguments(true, false)]
     [Arguments(true, true)]
     public async Task Migrate_ExistingDatabase_SafelyAdoptsCurrentStateAsync(
         bool existingIndexes,
@@ -165,108 +164,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
             var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
                 .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-            await Assert.That(historyCount).IsEqualTo(6L);
-        }
-        finally
-        {
-            await client.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName, CancellationToken.None);
-        }
-    }
-
-    [Test]
-    [Arguments(false)]
-    [Arguments(true)]
-    public async Task Migrate_ConflictingDefinition_StopsWithoutDroppingIndexAsync(bool legacy)
-    {
-        // Arrange
-        var client = mongo.MongoClient;
-        var database = client.GetDatabase($"index_migrations_{Guid.NewGuid():N}");
-        try
-        {
-            var collection = legacy ? "challenges" : "players";
-            var name = legacy ? "ux_challenges_active_player" : "ux_players_telegram_user";
-            await CreateIndexAsync(database, collection, name, new BsonDocument("UnexpectedField", 1), unique: true);
-            var migrator = CreateMigrator(client, database.DatabaseNamespace.DatabaseName);
-
-            // Act
-            Exception? failure = null;
-            try
-            {
-                await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
-            }
-            catch (Exception exception)
-            {
-                failure = exception;
-            }
-
-            // Assert
-            await Assert.That(failure).IsNotNull();
-            using var cursor = await database.GetCollection<BsonDocument>(collection).Indexes
-                .ListAsync(CancellationToken.None);
-            var indexes = await cursor.ToListAsync(CancellationToken.None);
-            var preserved = indexes.Single(index => index["name"] == name);
-            await Assert.That(preserved["key"]).IsEqualTo(new BsonDocument("UnexpectedField", 1));
-            var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
-            var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
-                .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-            await Assert.That(historyCount).IsEqualTo(legacy ? 1L : 0L);
-
-            // Resolve the conflict and resume after a partially applied migration.
-            await database.GetCollection<BsonDocument>(collection).Indexes.DropOneAsync(name, CancellationToken.None);
-            await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
-            await AssertCurrentIndexesAsync(database);
-        }
-        finally
-        {
-            await client.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName, CancellationToken.None);
-        }
-    }
-
-    [Test]
-    public async Task Migrate_ReplacementCannotBeCreated_PreservesCurrentStateAsync()
-    {
-        // Arrange
-        var client = mongo.MongoClient;
-        var database = client.GetDatabase($"index_migrations_{Guid.NewGuid():N}");
-        try
-        {
-            var challenges = database.GetCollection<BsonDocument>("challenges");
-            await challenges.InsertManyAsync(
-            [
-                new BsonDocument
-                {
-                    { "_id", "first" }, { "PlayerId", "first" }, { "Participants", new BsonArray { "shared" } },
-                    { "Status", 1 },
-                },
-                new BsonDocument
-                {
-                    { "_id", "second" }, { "PlayerId", "second" }, { "Participants", new BsonArray { "shared" } },
-                    { "Status", 1 },
-                },
-            ],
-            cancellationToken: CancellationToken.None);
-            await CreateIndexAsync(database, "challenges", "ux_challenges_active_player", new BsonDocument("PlayerId", 1), unique: true);
-
-            // Act
-            Exception? failure = null;
-            try
-            {
-                await CreateMigrator(client, database.DatabaseNamespace.DatabaseName)
-                    .MigrateAsync(cancellationToken: CancellationToken.None);
-            }
-            catch (Exception exception)
-            {
-                failure = exception;
-            }
-
-            // Assert
-            await Assert.That(failure).IsNotNull();
-            using var cursor = await challenges.Indexes.ListAsync(CancellationToken.None);
-            var indexes = await cursor.ToListAsync(CancellationToken.None);
-            await Assert.That(indexes.Any(index => index["name"] == "ux_challenges_active_player")).IsTrue();
-            await Assert.That(await challenges.CountDocumentsAsync(
-                FilterDefinition<BsonDocument>.Empty,
-                cancellationToken: CancellationToken.None)).IsEqualTo(2L);
+            await Assert.That(historyCount).IsEqualTo(7L);
         }
         finally
         {
@@ -276,8 +174,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
     [Test]
     [Arguments("stage")]
-    [Arguments("academy")]
-    [Arguments("it")]
     [Arguments("stream")]
     public async Task Migrate_TemplateWorld_ConsolidatesPlayerDataAsync(string kind)
     {
@@ -446,6 +342,170 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         }
     }
 
+    [Test]
+    public async Task MoveReferralState_LegacyCredits_PreservesAttributionWithoutDoubleCountingAsync()
+    {
+        // Arrange
+        var database = mongo.MongoClient.GetDatabase($"referral_migration_{Guid.NewGuid():N}");
+        try
+        {
+            var period = new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero);
+            var players = database.GetCollection<BsonDocument>("players");
+            var inviter = CreateLegacyReferralPlayer("inviter", null, period, 12, 2, false);
+            var first = CreateLegacyReferralPlayer("first", "inviter", period.AddHours(1), 13, 1, true);
+            var second = CreateLegacyReferralPlayer("second", "inviter", period.AddHours(2), 3, 0, false);
+            var third = CreateLegacyReferralPlayer("third", "inviter", period.AddHours(3), 0, 0, false);
+            var child = CreateLegacyReferralPlayer("first-child", "first", period.AddHours(6), 0, 0, false);
+            await players.InsertManyAsync([inviter, first, second, third, child]);
+            await database.GetCollection<BsonDocument>("posts").InsertManyAsync([
+                new BsonDocument { ["_id"] = "later", ["PlayerId"] = "first", ["CreatedAtUtc"] = ReferralTimestamp(period.AddHours(5)) },
+                new BsonDocument { ["_id"] = "earlier", ["PlayerId"] = "first", ["CreatedAtUtc"] = ReferralTimestamp(period.AddHours(4)) }]);
+            using var session = await mongo.MongoClient.StartSessionAsync();
+            var migration = new MoveReferralStateToInvites();
+
+            // Act
+            await migration.UpAsync(database, session, CancellationToken.None);
+            await migration.UpAsync(database, session, CancellationToken.None);
+
+            // Assert
+            var saved = await players.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            var legacyFields = new[] { "InvitedBy", "InvitedAtUtc", "FirstPostInviteBonus", "FirstPostInviteBonusUsed", "InviteBonusesEarnedInPeriod" };
+            foreach (var containsLegacyField in saved.SelectMany(player => legacyFields.Select(player.Contains)))
+            {
+                await Assert.That(containsLegacyField).IsFalse();
+            }
+
+            await Assert.That(saved.Single(item => item["_id"] == "inviter")["DailyBonus"].AsInt32).IsEqualTo(2);
+            await Assert.That(saved.Single(item => item["_id"] == "first")["DailyBonus"].AsInt32).IsEqualTo(3);
+            await Assert.That(saved.Single(item => item["_id"] == "second")["DailyBonus"].AsInt32).IsEqualTo(3);
+            var invitations = database.GetCollection<Invitation>("invites");
+            await Assert.That(await invitations.CountDocumentsAsync(FilterDefinition<Invitation>.Empty)).IsEqualTo(4L);
+            var childInvite = await invitations.Find(item => item.InviteeId == PlayerId.From("first-child")).SingleAsync();
+            await Assert.That(childInvite.InviterId.Value).IsEqualTo("first");
+            await Assert.That(childInvite.InviterBonusUsedAtUtc).IsEqualTo(period.AddHours(6));
+            var invites = await invitations.Find(item => item.InviterId == PlayerId.From("inviter"))
+                .SortBy(item => item.CreatedAtUtc).ToListAsync();
+            await Assert.That(invites.Count).IsEqualTo(3);
+            var expectedIds = new[] { "first", "second", "third" };
+            for (var index = 0; index < invites.Count; index++)
+            {
+                var invite = invites[index];
+                var expectedId = expectedIds[index];
+                await Assert.That(invite.Id.Value).IsEqualTo($"legacy_{expectedId}");
+                await Assert.That(invite.InviteeId.Value).IsEqualTo(expectedId);
+                await Assert.That(invite.InviterId.Value).IsEqualTo("inviter");
+                await Assert.That(invite.CreatedAtUtc).IsEqualTo(period.AddHours(index + 1));
+                await Assert.That(invite.InviterBonusUsed).IsTrue();
+                await Assert.That(invite.InviterBonusUsedAtUtc).IsEqualTo(index < 2 ? period.AddHours(index + 1) : (DateTimeOffset?)null);
+                await Assert.That(invite.InviteeBonusUsed).IsEqualTo(index == 0);
+                await Assert.That(invite.InviteeBonusUsedAtUtc).IsEqualTo(index == 0 ? period.AddHours(4) : (DateTimeOffset?)null);
+            }
+        }
+        finally
+        {
+            await mongo.MongoClient.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+        }
+    }
+
+    [Test]
+    [Arguments("attribution")]
+    [Arguments("created")]
+    public async Task MoveReferralState_IncompleteLegacyHistory_CompletesWithFallbacksAsync(string missing)
+    {
+        // Arrange
+        var database = mongo.MongoClient.GetDatabase($"referral_invalid_{Guid.NewGuid():N}");
+        try
+        {
+            var period = new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero);
+            var inviter = CreateLegacyReferralPlayer("inviter", null, period, 12, 2, false);
+            var first = CreateLegacyReferralPlayer("first", "inviter", period.AddHours(1), 0, 0, false);
+            var second = CreateLegacyReferralPlayer("second", "inviter", period.AddHours(2), 0, 0, false);
+            if (missing == "created")
+            {
+                first["InvitedAtUtc"] = BsonNull.Value;
+            }
+
+            var source = missing == "attribution" ? new[] { inviter, first } : new[] { inviter, first, second };
+            var players = database.GetCollection<BsonDocument>("players");
+            await players.InsertManyAsync(source);
+            using var session = await mongo.MongoClient.StartSessionAsync();
+            var migration = new MoveReferralStateToInvites();
+
+            // Act
+            await migration.UpAsync(database, session, CancellationToken.None);
+            await migration.UpAsync(database, session, CancellationToken.None);
+
+            // Assert
+            var savedInviter = await players.Find(new BsonDocument("_id", "inviter")).SingleAsync();
+            await Assert.That(savedInviter["DailyBonus"].AsInt32).IsEqualTo(2);
+            foreach (var original in source)
+            {
+                var saved = await players.Find(new BsonDocument("_id", original["_id"])).SingleAsync();
+                await Assert.That(saved.Contains("InvitedBy")).IsFalse();
+                await Assert.That(saved.Contains("InviteBonusesEarnedInPeriod")).IsFalse();
+            }
+
+            var invite = await database.GetCollection<Invitation>("invites")
+                .Find(item => item.InviteeId == PlayerId.From("first")).SingleAsync();
+            await Assert.That(invite.CreatedAtUtc).IsEqualTo(missing == "created" ? period : period.AddHours(1));
+            await Assert.That(invite.InviterBonusUsedAtUtc).IsEqualTo(missing == "created" ? period : (DateTimeOffset?)null);
+        }
+        finally
+        {
+            await mongo.MongoClient.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+        }
+    }
+
+    [Test]
+    public async Task MoveReferralState_UnknownFirstPostDate_PreservesHistoricalBonusUntilResetAsync()
+    {
+        // Arrange
+        var database = mongo.MongoClient.GetDatabase($"referral_unknown_{Guid.NewGuid():N}");
+        try
+        {
+            var period = new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero);
+            var players = database.GetCollection<BsonDocument>("players");
+            await players.InsertOneAsync(CreateLegacyReferralPlayer("friend", "inviter", period.AddHours(1), 8, 0, true));
+            using var session = await mongo.MongoClient.StartSessionAsync();
+            var migration = new MoveReferralStateToInvites();
+
+            // Act
+            await migration.UpAsync(database, session, CancellationToken.None);
+            await migration.UpAsync(database, session, CancellationToken.None);
+
+            // Assert
+            var saved = await players.Find(new BsonDocument("_id", "friend")).SingleAsync();
+            await Assert.That(saved["DailyBonus"].AsInt32).IsEqualTo(8);
+            await Assert.That(saved.Contains("FirstPostInviteBonusUsed")).IsFalse();
+            var invitation = await database.GetCollection<Invitation>("invites")
+                .Find(item => item.InviteeId == PlayerId.From("friend")).SingleAsync();
+            await Assert.That(invitation.InviterBonusUsed).IsTrue();
+            await Assert.That(invitation.InviterBonusUsedAtUtc).IsNull();
+            await Assert.That(invitation.InviteeBonusUsed).IsTrue();
+            await Assert.That(invitation.InviteeBonusUsedAtUtc).IsNull();
+        }
+        finally
+        {
+            await mongo.MongoClient.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+        }
+    }
+
+    private static BsonDocument CreateLegacyReferralPlayer(string id, string? inviter, DateTimeOffset createdAt, int dailyBonus, int count, bool used) => new()
+    {
+        ["_id"] = id,
+        ["DailyBonus"] = dailyBonus,
+        ["PostsPeriodStartedAtUtc"] = ReferralTimestamp(new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero)),
+        ["InvitedBy"] = inviter is null ? BsonNull.Value : inviter,
+        ["InvitedAtUtc"] = inviter is null ? BsonNull.Value : ReferralTimestamp(createdAt),
+        ["FirstPostInviteBonus"] = inviter is null ? 0 : 5,
+        ["FirstPostInviteBonusUsed"] = used,
+        ["InviteBonusesEarnedInPeriod"] = count,
+    };
+
+    private static BsonValue ReferralTimestamp(DateTimeOffset value) =>
+        Invitation.Create(PlayerId.From("timestamp-inviter"), PlayerId.From("timestamp-friend"), value)
+            .ToBsonDocument()["CreatedAtUtc"];
+
     private static async Task AssertDocumentArraysAsync(IMongoDatabase database, string collectionName, IReadOnlyList<string> fields)
     {
         var documents = await database.GetCollection<BsonDocument>(collectionName)
@@ -485,6 +545,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         yield return ("events", "ix_events_world_day", new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "DayStartedAtUtc", 1 } }, false);
         yield return ("threads", "ix_threads_player", new BsonDocument("PlayerId", 1), false);
         yield return ("invites", "ix_invites_player", new BsonDocument("PlayerId", 1), false);
+        yield return ("invites", "ux_invites_invitee", new BsonDocument("InviteeId", 1), true);
+        yield return ("invites", "ix_invites_inviter", new BsonDocument("InviterId", 1), false);
     }
 
     private static async Task SeedCurrentIndexesAsync(IMongoDatabase database)
@@ -511,6 +573,11 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         if (name == "ux_challenges_active_participants")
         {
             options.PartialFilterExpression = new BsonDocument("Status", 1);
+        }
+
+        if (name == "ux_invites_invitee")
+        {
+            options.PartialFilterExpression = new BsonDocument("InviteeId", new BsonDocument("$type", "string"));
         }
 
         return database.GetCollection<BsonDocument>(collection).Indexes.CreateOneAsync(

@@ -19,7 +19,4 @@ internal sealed partial class SeedWorldTemplates : RekiMigrationBase
             }
         }
     }
-
-    public override Task DownAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("Seeded templates may have been edited.");
 }

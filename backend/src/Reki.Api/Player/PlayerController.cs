@@ -2,8 +2,6 @@ using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.Extensions.Options;
-using Reki.Api.Mapping;
 using Reki.Application.Common;
 using Reki.Application.Player;
 using Reki.Contracts.Player;
@@ -15,17 +13,13 @@ namespace Reki.Api.Player;
 [Route("/")]
 public sealed class PlayerController(
     ISender sender,
-    ApiMapper mapper,
-    IOptions<GameBalance> balance) : ControllerBase
+    GameDay gameDay) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
-        var result = await sender.Send(
-            new GetPlayerQuery(NormalizeDay: true),
-            cancellationToken);
-        return TypedResults.Ok(mapper.MapPlayer(result, result.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay)));
+        return TypedResults.Ok(await gameDay.GetPlayerAsync(cancellationToken));
     }
 
     [HttpPost("onboarding", Name = "CompleteOnboarding")]
@@ -34,14 +28,14 @@ public sealed class PlayerController(
         OnboardingRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await sender.Send(
+        await sender.Send(
             new OnboardPlayerCommand(
                 ToStorageValue(request.BirthGroup),
                 request.Address.ToString().ToLowerInvariant(),
                 request.ReferralCode,
                 request.AgeBand),
             cancellationToken);
-        return TypedResults.Ok(mapper.MapPlayer(result, result.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay)));
+        return TypedResults.Ok(await gameDay.GetPlayerAsync(cancellationToken));
     }
 
     [HttpGet("referral", Name = "GetReferralCode")]

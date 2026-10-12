@@ -24,9 +24,6 @@ internal sealed class RepairLegacyDocuments : RekiMigrationBase
         await RepairSkillExperienceAsync(db, session, cancellationToken);
     }
 
-    public override Task DownAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("Repaired legacy values cannot be distinguished from original values.");
-
     private static async Task RepairSkillExperienceAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken)
     {
         var players = db.GetCollection<BsonDocument>(MongoCollections.Players);

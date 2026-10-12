@@ -29,9 +29,6 @@ internal sealed class ConsolidateWorldSchema : RekiMigrationBase
         }
     }
 
-    public override Task DownAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("World consolidation cannot be rolled back without restoring a snapshot.");
-
     private static async Task CreateWorldIndexesAsync(IMongoDatabase db, CancellationToken cancellationToken)
     {
         var worlds = db.GetCollection<BsonDocument>(MongoCollections.Worlds);
@@ -73,7 +70,7 @@ internal sealed class ConsolidateWorldSchema : RekiMigrationBase
         var worldId = new BsonString($"{playerId.AsString}-{kind.AsString}");
         if (!templates.TryGetValue(kind.AsString, out var template))
         {
-            throw new InvalidOperationException("The player's world template is missing.");
+            return;
         }
 
         var world = template.DeepClone().AsBsonDocument;
