@@ -26,6 +26,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(PublicationStatus))]
 [JsonSerializable(typeof(LiveEventType))]
 [JsonSerializable(typeof(ReplyRequest))]
+[JsonSerializable(typeof(ReplyStatus))]
 [JsonSerializable(typeof(ReplyLiveEvent))]
 [JsonSerializable(typeof(SseItem<ReplyLiveEvent>))]
 [JsonSerializable(typeof(DirectMessageRequest))]
@@ -70,6 +71,7 @@ namespace Reki.Api.Serialization;
         typeof(CamelCaseEnumConverter<DirectMessageAuthor>),
         typeof(CamelCaseEnumConverter<GameEventKind>),
         typeof(CamelCaseEnumConverter<LiveEventType>),
+        typeof(CamelCaseEnumConverter<ReplyStatus>),
         typeof(CamelCaseEnumConverter<ClientLogLevel>),
         typeof(KebabCaseEnumConverter<LaunchSurface>),
         typeof(SnakeCaseEnumConverter<PublicationStatus>)

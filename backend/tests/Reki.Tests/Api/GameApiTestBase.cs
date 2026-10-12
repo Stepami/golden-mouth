@@ -247,7 +247,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             CancellationToken.None);
         await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
         var json = await response.Content.ReadAsStringAsync(CancellationToken.None);
-        return ParseReplyEvents(json).Last(item => item.Status == "completed");
+        return ParseReplyEvents(json).Last(item => item.Status == ReplyStatus.Completed);
     }
 
     protected IReadOnlyList<ChatMessage> GetCapturedChatMessages()

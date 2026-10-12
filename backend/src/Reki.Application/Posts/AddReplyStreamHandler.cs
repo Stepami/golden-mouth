@@ -56,7 +56,7 @@ public sealed partial class AddReplyStreamHandler(
             post.GetBranch(target.Id),
             request.Text,
             StarTurnPolicy.IsHateEnabled(player, world, balance.Value, timeProvider.GetUtcNow()));
-        yield return new ReplyLiveEvent("generating", request.RequestId);
+        yield return new ReplyLiveEvent(ReplyStatus.Generating, request.RequestId, null, null, null, null, null);
         var calls = new List<FunctionCallContent>();
         await using var updates = generator.StreamReplyTurnAsync(context, player, cancellationToken)
             .GetAsyncEnumerator(cancellationToken);
@@ -85,7 +85,7 @@ public sealed partial class AddReplyStreamHandler(
 
             if (failed)
             {
-                yield return new ReplyLiveEvent("failed", request.RequestId) { Code = "ai_unavailable" };
+                yield return new ReplyLiveEvent(ReplyStatus.Failed, request.RequestId, null, null, null, null, "ai_unavailable");
                 yield break;
             }
 
@@ -94,7 +94,7 @@ public sealed partial class AddReplyStreamHandler(
                 break;
             }
 
-            yield return new ReplyLiveEvent("generating", request.RequestId);
+            yield return new ReplyLiveEvent(ReplyStatus.Generating, request.RequestId, null, null, null, null, null);
         }
 
         GeneratedReplyTurn? turn = null;
@@ -109,12 +109,12 @@ public sealed partial class AddReplyStreamHandler(
 
         if (turn is null)
         {
-            yield return new ReplyLiveEvent("failed", request.RequestId) { Code = "ai_unavailable" };
+            yield return new ReplyLiveEvent(ReplyStatus.Failed, request.RequestId, null, null, null, null, "ai_unavailable");
             yield break;
         }
 
         // The preview is safe but remains unpublished until the transaction succeeds.
-        yield return new ReplyLiveEvent("generating", request.RequestId) { Text = turn.Text };
+        yield return new ReplyLiveEvent(ReplyStatus.Generating, request.RequestId, turn.Text, null, null, null, null);
         ReplyLiveEvent outcome;
         try
         {
@@ -122,19 +122,21 @@ public sealed partial class AddReplyStreamHandler(
         }
         catch (RequestConflictException)
         {
-            outcome = new ReplyLiveEvent("failed", request.RequestId) { Code = "request_conflict" };
+            outcome = new ReplyLiveEvent(ReplyStatus.Failed, request.RequestId, null, null, null, null, "request_conflict");
         }
 
         yield return outcome;
     }
 
     private static ReplyLiveEvent Completed(AddReplyCommand request, GamePost post, World world, PlayerProfile player, int cap) =>
-        new("completed", request.RequestId)
-        {
-            Post = PostContractMapper.MapPost(post, world, player.Id),
-            EnergyLeft = Math.Max(0, cap - player.EnergyUsed),
-            Subscribers = world.Player.Subscribers,
-        };
+        new(
+            ReplyStatus.Completed,
+            request.RequestId,
+            Text: null,
+            Post: PostContractMapper.MapPost(post, world, player.Id),
+            EnergyLeft: Math.Max(0, cap - player.EnergyUsed),
+            Subscribers: world.Player.Subscribers,
+            Code: null);
 
     private static void EnsureSameRequest(GameComment comment, AddReplyCommand request, PlayerId playerId)
     {

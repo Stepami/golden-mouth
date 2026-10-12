@@ -766,9 +766,11 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Assert
         await Assert.That(response.Status).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(response.MediaType).IsEqualTo("text/event-stream");
-        await Assert.That(events[0].Status).IsEqualTo("generating");
-        await Assert.That(events.Any(item => item.Status == "generating" && item.Text == "Спасибо за ответ. Продолжим обсуждение.")).IsTrue();
-        await Assert.That(completed.Status).IsEqualTo("completed");
+        await Assert.That(response.Body).Contains("\"status\":\"generating\"");
+        await Assert.That(response.Body).Contains("\"status\":\"completed\"");
+        await Assert.That(events[0].Status).IsEqualTo(ReplyStatus.Generating);
+        await Assert.That(events.Any(item => item.Status == ReplyStatus.Generating && item.Text == "Спасибо за ответ. Продолжим обсуждение.")).IsTrue();
+        await Assert.That(completed.Status).IsEqualTo(ReplyStatus.Completed);
         await Assert.That(completed.RequestId).IsEqualTo("valid-turn");
         await Assert.That((completed.Post ?? throw new InvalidOperationException("Missing completed post.")).Comments.Count).IsEqualTo(optional ? 4 : 3);
         await Assert.That(detail.Comments.Select(comment => comment.Id)).IsEquivalentTo((completed.Post ?? throw new InvalidOperationException("Missing completed post.")).Comments.Select(comment => comment.Id));
@@ -1010,7 +1012,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var terminal = ParseReplyEvents(result.Body)[^1];
 
         // Assert
-        await Assert.That(terminal.Status).IsEqualTo("failed");
+        await Assert.That(terminal.Status).IsEqualTo(ReplyStatus.Failed);
         await Assert.That(terminal.Code).IsEqualTo("ai_unavailable");
         await Assert.That(terminal.Post).IsNull();
         await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(before);
@@ -1152,7 +1154,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(feed.Single().Author).IsEqualTo("Новое имя звезды");
         await Assert.That(feed.Single().Role).IsEqualTo("star-role");
         await Assert.That(detail.CanReply).IsTrue();
-        await Assert.That(turn.Status).IsEqualTo("completed");
+        await Assert.That(turn.Status).IsEqualTo(ReplyStatus.Completed);
     }
 
     [Test]
@@ -1208,7 +1210,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var completed = ParseReplyEvents(response.Body)[^1];
 
         // Assert
-        await Assert.That(completed.Status).IsEqualTo("completed");
+        await Assert.That(completed.Status).IsEqualTo(ReplyStatus.Completed);
         await Assert.That(completed.EnergyLeft).IsEqualTo(7);
         await Assert.That((await GetStoredPlayerAsync(user))["EnergyUsed"].AsInt32).IsEqualTo(3);
         await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(3);
@@ -1298,7 +1300,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Assert
         await Assert.That(responses.Count(response =>
-                response.Status == HttpStatusCode.OK && ParseReplyEvents(response.Body)[^1].Status == "completed"))
+                response.Status == HttpStatusCode.OK && ParseReplyEvents(response.Body)[^1].Status == ReplyStatus.Completed))
             .IsEqualTo(1);
         await Assert.That(savedPosts.Select(post => post["Comments"].AsBsonArray.Count).Order())
             .IsEquivalentTo(new[] { 1, 3 });
@@ -1330,7 +1332,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Assert
         await Assert.That(responses.Count(response =>
-                response.Status == HttpStatusCode.OK && ParseReplyEvents(response.Body)[^1].Status == "completed"))
+                response.Status == HttpStatusCode.OK && ParseReplyEvents(response.Body)[^1].Status == ReplyStatus.Completed))
             .IsEqualTo(1);
         await Assert.That(saved.Comments.Count).IsEqualTo(3);
         var playerReply = saved.Comments.Single(comment => comment.RequestId == "contested-key");
@@ -1395,9 +1397,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         {
             await Assert.That(result.Status).IsEqualTo(HttpStatusCode.OK);
             var events = ParseReplyEvents(result.Body);
-            await Assert.That(events[^1].Status).IsEqualTo("failed");
+            await Assert.That(events[^1].Status).IsEqualTo(ReplyStatus.Failed);
             await Assert.That(events[^1].Code).IsEqualTo("ai_unavailable");
-            await Assert.That(events.Any(item => item.Status == "completed" || item.Text is not null)).IsFalse();
+            await Assert.That(events.Any(item => item.Status == ReplyStatus.Completed || item.Text is not null)).IsFalse();
         }
 
         await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(beforePost);
