@@ -10,19 +10,43 @@ namespace Reki.Tests;
 public sealed class OpenAiStub : IDisposable
 {
     private readonly WireMockServer _server = WireMockServer.Start();
+    private readonly Lock _requestGate = new();
+    private int _generation;
+    private int _requestCount;
+    private string? _lastRequest;
 
     public string BaseUrl => $"{_server.Url}/v1";
 
-    public int RequestCount => _server.LogEntries.Count;
+    public int RequestCount
+    {
+        get
+        {
+            lock (_requestGate)
+            {
+                return _requestCount;
+            }
+        }
+    }
 
     public int MappingCount => _server.MappingModels.Count();
 
-    public void Reset() => _server.Reset();
+    public void Reset()
+    {
+        lock (_requestGate)
+        {
+            _generation++;
+            _requestCount = 0;
+            _lastRequest = null;
+        }
+
+        _server.Reset();
+    }
 
     public void Respond(ChatResponse response) => Respond(_ => response);
 
     public void Respond(Func<IReadOnlyList<ChatMessage>, ChatResponse> createResponse)
     {
+        var generation = GetGeneration();
         _server.ResetMappings();
         foreach (var streaming in new[] { false, true })
         {
@@ -32,6 +56,7 @@ public sealed class OpenAiStub : IDisposable
                     .WithHeader("Content-Type", streaming ? "text/event-stream" : "application/json")
                     .WithBody(request =>
                     {
+                        RecordRequest(generation, request.Body);
                         using var document = JsonDocument.Parse(request.Body ?? throw new InvalidOperationException("Missing AI request body."));
                         var response = createResponse(ReadMessages(document.RootElement));
                         return CreateResponseBody(response, document.RootElement.GetProperty("model").GetString(), streaming);
@@ -41,15 +66,24 @@ public sealed class OpenAiStub : IDisposable
 
     public void RespondWithTimeout()
     {
+        var generation = GetGeneration();
         _server.ResetMappings();
         _server.Given(Request.Create().WithPath("/v1/chat/completions").UsingPost())
-            .RespondWith(Response.Create().WithStatusCode(200).WithDelay(TimeSpan.FromSeconds(3)).WithBody(string.Empty));
+            .RespondWith(Response.Create().WithStatusCode(200).WithDelay(TimeSpan.FromSeconds(3)).WithBody(request =>
+            {
+                RecordRequest(generation, request.Body);
+                return string.Empty;
+            }));
     }
 
     public JsonElement GetLastRequest()
     {
-        var body = _server.LogEntries[^1]
-            .RequestMessage?.Body ?? throw new InvalidOperationException("Missing AI request body.");
+        string body;
+        lock (_requestGate)
+        {
+            body = _lastRequest ?? throw new InvalidOperationException("Missing AI request body.");
+        }
+
         using var document = JsonDocument.Parse(body);
         return document.RootElement.Clone();
     }
@@ -57,6 +91,18 @@ public sealed class OpenAiStub : IDisposable
     public IReadOnlyList<ChatMessage> GetLastMessages() => ReadMessages(GetLastRequest());
 
     public void Dispose() => _server.Dispose();
+
+    public void RespondWithHttpError()
+    {
+        var generation = GetGeneration();
+        _server.ResetMappings();
+        _server.Given(Request.Create().WithPath("/v1/chat/completions").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(500).WithBody(request =>
+            {
+                RecordRequest(generation, request.Body);
+                return string.Empty;
+            }));
+    }
 
     private static bool IsStreaming(string body)
     {
@@ -121,5 +167,26 @@ public sealed class OpenAiStub : IDisposable
             }),
         };
         return streaming ? $"data: {completion.ToJsonString()}\n\ndata: [DONE]\n\n" : completion.ToJsonString();
+    }
+
+    private int GetGeneration()
+    {
+        lock (_requestGate)
+        {
+            return _generation;
+        }
+    }
+
+    private void RecordRequest(int generation, string? body)
+    {
+        lock (_requestGate)
+        {
+            // Late responses from a timed-out previous test cannot affect this test's observations.
+            if (generation == _generation)
+            {
+                _requestCount++;
+                _lastRequest = body;
+            }
+        }
     }
 }

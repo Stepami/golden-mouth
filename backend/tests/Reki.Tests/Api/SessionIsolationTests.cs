@@ -34,7 +34,7 @@ public sealed class SessionIsolationTests(ApiFactory factory) : GameApiTestBase(
         var historyCount = await migrations.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
         await migrationLocks.InsertOneAsync(new BsonDocument("_id", "cleanup-probe"), cancellationToken: CancellationToken.None);
         var lockCount = await migrationLocks.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(7L);
+        await Assert.That(historyCount).IsEqualTo(8L);
         await Assert.That(lockCount).IsEqualTo(1L);
 
         // Act

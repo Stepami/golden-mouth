@@ -31,7 +31,7 @@ public sealed class StoryCardsControllerTests(ApiFactory factory) : GameApiTestB
         var ownerId = owner["_id"].AsString;
         var otherId = other["_id"].AsString;
         var post = await Database.GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("PlayerId", ownerId))
+            .Find(new BsonDocument("AuthorId.Id", ownerId))
             .SingleAsync();
         var postId = post["_id"].AsString;
         using var anonymous = Factory.CreateClient();

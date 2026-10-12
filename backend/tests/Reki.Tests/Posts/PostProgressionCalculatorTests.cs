@@ -18,8 +18,20 @@ public sealed class PostProgressionCalculatorTests
         var turn = TestGameData.CreateTurn(1, 0.4, 0.2);
 
         // Act
-        var tenth = calculator.Calculate(tenthPostPlayer, TestGameData.CreateWorld(), turn, false, false, "publication-test");
-        var eleventh = calculator.Calculate(eleventhPostPlayer, TestGameData.CreateWorld(), turn, false, false, "publication-test");
+        var tenth = calculator.Calculate(
+            tenthPostPlayer,
+            TestGameData.CreateWorld(),
+            turn,
+            false,
+            false,
+            "publication-test");
+        var eleventh = calculator.Calculate(
+            eleventhPostPlayer,
+            TestGameData.CreateWorld(),
+            turn,
+            false,
+            false,
+            "publication-test");
 
         // Assert
         await Assert.That(tenth.Skills[TestGameData.Brave].Experience).IsEqualTo(1);
@@ -294,8 +306,48 @@ public sealed class PostProgressionCalculatorTests
             await Assert.That(result.SubscriberDelta).IsEqualTo(viral ? 300L : -30L);
             await Assert.That(repeated.Viral).IsEqualTo(result.Viral);
             await Assert.That(repeated.Flop).IsEqualTo(result.Flop);
-            world = world.PublishPost(result.SubscriberDelta, result.Viral, result.Skills, null, TestGameData.StarId, TestGameData.PeriodStart.AddMinutes(index), -5, 5, 1, 3);
+            world = world.PublishPost(
+                result.SubscriberDelta,
+                result.Viral,
+                result.Skills,
+                null,
+                TestGameData.StarId,
+                TestGameData.PeriodStart.AddMinutes(index),
+                -5,
+                5,
+                1,
+                3);
         }
+    }
+
+    [Test]
+    [Arguments(2, 100L, 100L, 2.0, 1.0)]
+    [Arguments(4, 100L, 70L, 1.0, 1.0)]
+    [Arguments(9, 70L, 25L, 1.0, 0.0)]
+    public async Task Calculate_CommentConsumesThresholdEnergy_ChangesNextPostProgressionAsync(
+        int used,
+        long growthBefore,
+        long growthAfter,
+        double experienceBefore,
+        double experienceAfter)
+    {
+        // Arrange
+        var calculator = new PostProgressionCalculator(Options.Create(CreateDeterministicBalance()));
+        var player = TestGameData.CreatePlayer() with { EnergyUsed = used };
+        var world = TestGameData.CreateWorld();
+        var turn = TestGameData.CreateTurn();
+
+        // Act
+        var before = calculator.Calculate(player, world, turn, false, false, "publication-test");
+        var afterComment = player.SpendEnergy(1, 20);
+        var after = calculator.Calculate(afterComment, world, turn, false, false, "publication-test");
+
+        // Assert
+        await Assert.That(before.SubscriberDelta).IsEqualTo(growthBefore);
+        await Assert.That(after.SubscriberDelta).IsEqualTo(growthAfter);
+        await Assert.That(before.Skills[TestGameData.Brave].Experience).IsEqualTo(experienceBefore);
+        await Assert.That(after.Skills[TestGameData.Brave].Experience).IsEqualTo(experienceAfter);
+        await Assert.That(afterComment.Skills[TestGameData.Brave].Experience).IsEqualTo(0);
     }
 
     private static GameBalance CreateDeterministicBalance()

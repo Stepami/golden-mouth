@@ -33,11 +33,10 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var start = new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero);
         var posts = Enumerable.Range(0, 46).Select(index => new GamePost(
             PostId.New(),
-            index < 21 ? ownerId : otherId,
-            Domain.Worlds.WorldId.From(world["_id"].AsString),
+            (index < 21 ? ownerId : otherId).ToAuthor(),
+            Domain.Worlds.WorldId.From(index < 21 ? world["_id"].AsString : "other-world"),
             $"post-{index}",
             index + 1,
-            [],
             [],
             start.AddMinutes(index),
             0,
@@ -143,10 +142,10 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var owner = await GetStoredPlayerAsync(ownerUserId);
         var posts = Database.GetCollection<BsonDocument>("posts");
         await posts.UpdateOneAsync(
-            new BsonDocument { ["PlayerId"] = owner["_id"], ["Text"] = "старый пост канала" },
+            new BsonDocument { ["AuthorId.Id"] = owner["_id"], ["Text"] = "старый пост канала" },
             new BsonDocument("$set", new BsonDocument("CreatedAtUtc", new BsonDateTime(new DateTime(2026, 10, 7, 6, 0, 0, DateTimeKind.Utc)))));
         await posts.UpdateOneAsync(
-            new BsonDocument { ["PlayerId"] = owner["_id"], ["Text"] = "новый пост канала" },
+            new BsonDocument { ["AuthorId.Id"] = owner["_id"], ["Text"] = "новый пост канала" },
             new BsonDocument("$set", new BsonDocument("CreatedAtUtc", new BsonDateTime(new DateTime(2026, 10, 7, 7, 0, 0, DateTimeKind.Utc)))));
 
         // Act
@@ -193,7 +192,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var player = await GetStoredPlayerAsync(telegramUserId);
         var post = await Database
             .GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("PlayerId", player["_id"]))
+            .Find(new BsonDocument("AuthorId.Id", player["_id"]))
             .SingleAsync();
         var postId = post["_id"].AsString;
         var commentId = post["Comments"].AsBsonArray[0]["_id"].AsString;
@@ -208,7 +207,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(detail.CanReply).IsTrue();
         await Assert.That(detail.Views).IsGreaterThanOrEqualTo(48);
         await Assert.That(detail.Reactions.Count).IsEqualTo(1);
-        await Assert.That(detail.Comments.Count).IsEqualTo(2);
+        await Assert.That(detail.Comments.Count).IsEqualTo(3);
         await Assert.That(detail.Comments.Any(comment => comment.Me && comment.Text == "мой ответ")).IsTrue();
     }
 
@@ -299,7 +298,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .Find(new BsonDocument("TelegramUserId", telegramUserId))
             .SingleAsync();
         var postCount = await Database.GetCollection<BsonDocument>("posts")
-            .CountDocumentsAsync(new BsonDocument("PlayerId", storedPlayer["_id"]));
+            .CountDocumentsAsync(new BsonDocument("AuthorId.Id", storedPlayer["_id"]));
         await Assert.That(postCount).IsEqualTo(1);
     }
 
@@ -394,14 +393,14 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .SingleAsync();
         var postCount = await Database
             .GetCollection<BsonDocument>("posts")
-            .CountDocumentsAsync(new BsonDocument("PlayerId", player["_id"]));
+            .CountDocumentsAsync(new BsonDocument("AuthorId.Id", player["_id"]));
 
         await Assert.That(generation).Contains("\"type\":\"failed\"");
         var publication = await Database.GetCollection<BsonDocument>("publications")
             .Find(new BsonDocument("_id", publicationId))
             .SingleAsync();
         await Assert.That(publication["ExpiresAtUtc"].BsonType).IsEqualTo(BsonType.DateTime);
-        await Assert.That(player["PostsUsed"].AsInt32).IsEqualTo(0);
+        await Assert.That(player["EnergyUsed"].AsInt32).IsEqualTo(0);
         await Assert.That(postCount).IsEqualTo(0);
     }
 
@@ -446,7 +445,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .SingleAsync();
 
         await Assert.That(generation).Contains("\"type\":\"failed\"");
-        await Assert.That(player["PostsUsed"].AsInt32).IsEqualTo(0);
+        await Assert.That(player["EnergyUsed"].AsInt32).IsEqualTo(0);
     }
 
     [Test]
@@ -464,7 +463,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .SingleAsync();
 
         await Assert.That(generation).Contains("\"type\":\"failed\"");
-        await Assert.That(player["PostsUsed"].AsInt32).IsEqualTo(0);
+        await Assert.That(player["EnergyUsed"].AsInt32).IsEqualTo(0);
         await Assert.That(player["PausedAtUtc"].AsBsonDocument["DateTime"].ToUniversalTime())
             .IsEqualTo(new DateTime(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc));
         await Assert.That(player["HateDisabledUntilUtc"].AsBsonDocument["DateTime"].ToUniversalTime())
@@ -526,11 +525,12 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task ThreadReply_FirstThreeRepliesAwardBonusThenLaterRepliesDoNotAsync()
+    public async Task AddReply_FirstThreeRepliesAwardBonusThenLaterRepliesDoNotAsync()
     {
         // Arrange
         const long telegramUserId = 1101;
         (var postId, var commentId) = await PublishPostForThreadAsync(telegramUserId);
+        var beforeWorld = await GetStoredWorldAsync(telegramUserId);
 
         // Act
         var first = await ReplyAsync(telegramUserId, postId, commentId, "thread-key-1", "первый ответ");
@@ -539,27 +539,23 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var fourth = await ReplyAsync(telegramUserId, postId, commentId, "thread-key-4", "четвёртый ответ");
 
         // Assert
-        await Assert.That(first.SubscriberBonus).IsEqualTo(9);
-        await Assert.That(first.AwardedReplies).IsEqualTo(1);
-        await Assert.That(first.ReplyLimit).IsEqualTo(3);
-        await Assert.That(first.Reaction).IsEqualTo("🔥");
-        await Assert.That(second.SubscriberBonus).IsEqualTo(9);
-        await Assert.That(second.SubscriberTotal).IsEqualTo(first.SubscriberTotal + second.SubscriberBonus);
-        await Assert.That(third.SubscriberBonus).IsEqualTo(9);
-        await Assert.That(third.AwardedReplies).IsEqualTo(3);
-        await Assert.That(fourth.SubscriberBonus).IsEqualTo(0);
-        await Assert.That(fourth.AwardedReplies).IsEqualTo(3);
-        await Assert.That(fourth.SubscriberTotal).IsEqualTo(third.SubscriberTotal);
-
+        await Assert.That(first.Subscribers).IsEqualTo(beforeWorld["Player"]["Subscribers"].ToInt64() + 9);
+        await Assert.That(second.Subscribers).IsEqualTo(first.Subscribers + 9);
+        await Assert.That(third.Subscribers).IsEqualTo(second.Subscribers + 9);
+        await Assert.That(fourth.Subscribers).IsEqualTo(third.Subscribers);
+        await Assert.That(fourth.EnergyLeft).IsEqualTo(first.EnergyLeft - 3);
         var stored = await GetStoredPostAsync(postId);
-        await Assert.That(stored["Comments"].AsBsonArray.Count).IsEqualTo(5);
-        await Assert.That(stored["ThreadReplies"].AsBsonArray.Count).IsEqualTo(4);
+        await Assert.That(stored["Comments"].AsBsonArray.Count).IsEqualTo(9);
+        await Assert.That(stored["Version"].AsInt32).IsEqualTo(4);
+        await Assert.That(stored.Contains("ThreadReplies")).IsFalse();
+        var player = await GetStoredPlayerAsync(telegramUserId);
+        await Assert.That(player["EnergyUsed"].AsInt32).IsEqualTo(5);
         var world = await GetStoredWorldAsync(telegramUserId);
-        await Assert.That(world["Player"]["Subscribers"].ToInt64()).IsEqualTo(fourth.SubscriberTotal);
+        await Assert.That(world["Player"]["Subscribers"].ToInt64()).IsEqualTo(fourth.Subscribers ?? throw new InvalidOperationException("Missing subscribers."));
     }
 
     [Test]
-    public async Task ThreadReply_RetryWithSameReplyId_ReturnsSavedOutcomeWithoutNewCommentOrBonusAsync()
+    public async Task AddReply_RetryWithSameRequestId_ReturnsSavedOutcomeWithoutNewCommentOrBonusAsync()
     {
         // Arrange
         const long telegramUserId = 1102;
@@ -568,23 +564,24 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Act
         var first = await ReplyAsync(telegramUserId, postId, commentId, replyId, "ответ");
-        var retry = await ReplyAsync(telegramUserId, postId, commentId, replyId, "другой текст");
+        var retry = await ReplyAsync(telegramUserId, postId, commentId, replyId, "ответ");
 
         // Assert
-        await Assert.That(retry.CommentId).IsEqualTo(first.CommentId);
-        await Assert.That(retry.SubscriberBonus).IsEqualTo(first.SubscriberBonus);
-        await Assert.That(retry.SubscriberTotal).IsEqualTo(first.SubscriberTotal);
-        await Assert.That(retry.Reaction).IsEqualTo(first.Reaction);
-
+        var retryPost = retry.Post ?? throw new InvalidOperationException("Missing retry post.");
+        var firstPost = first.Post ?? throw new InvalidOperationException("Missing saved post.");
+        await Assert.That(retryPost.Comments.Select(comment => comment.Id))
+            .IsEquivalentTo(firstPost.Comments.Select(comment => comment.Id));
+        await Assert.That(retry.Subscribers).IsEqualTo(first.Subscribers);
+        await Assert.That(retry.EnergyLeft).IsEqualTo(first.EnergyLeft);
         var stored = await GetStoredPostAsync(postId);
-        await Assert.That(stored["Comments"].AsBsonArray.Count).IsEqualTo(2);
-        await Assert.That(stored["ThreadReplies"].AsBsonArray.Count).IsEqualTo(1);
+        await Assert.That(stored["Comments"].AsBsonArray.Count).IsEqualTo(3);
+        await Assert.That(stored["Version"].AsInt32).IsEqualTo(1);
         var world = await GetStoredWorldAsync(telegramUserId);
-        await Assert.That(world["Player"]["Subscribers"].ToInt64()).IsEqualTo(first.SubscriberTotal);
+        await Assert.That(world["Player"]["Subscribers"].ToInt64()).IsEqualTo(first.Subscribers ?? throw new InvalidOperationException("Missing subscribers."));
     }
 
     [Test]
-    public async Task ThreadReply_UnknownTargetComment_ReturnsNotFoundAsync()
+    public async Task AddReply_UnknownTargetComment_ReturnsNotFoundAsync()
     {
         // Arrange
         const long telegramUserId = 1103;
@@ -593,7 +590,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var request = new ReplyRequest
         {
             CommentId = Guid.NewGuid().ToString("N"),
-            ReplyId = "thread-missing-target",
+            RequestId = "thread-missing-target",
             Text = "ответ в пустоту",
         };
         using var body = new StringContent(
@@ -612,7 +609,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task ThreadReply_OnAnotherPlayerPost_ReturnsNotFoundAsync()
+    public async Task AddReply_OnAnotherPlayerPost_ReturnsNotFoundAsync()
     {
         // Arrange
         const long ownerUserId = 1104;
@@ -624,7 +621,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var request = new ReplyRequest
         {
             CommentId = commentId,
-            ReplyId = "thread-foreign-post",
+            RequestId = "thread-foreign-post",
             Text = "чужой пост",
         };
         using var body = new StringContent(

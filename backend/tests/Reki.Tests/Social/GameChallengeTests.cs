@@ -277,11 +277,10 @@ public sealed class GameChallengeTests
     {
         return new GamePost(
             PostId.New(),
-            playerId,
+            playerId.ToAuthor(),
             TestGameData.CreateWorld().Id,
             text,
             views,
-            [],
             [],
             TestGameData.PeriodStart,
             subscriberDelta,

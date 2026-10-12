@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Reki.Contracts.Worlds;
+using Reki.Domain.Posts;
 
 namespace Reki.Tests.Api;
 
@@ -21,11 +22,10 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         var store = Factory.Services.GetRequiredService<Reki.Application.Common.IGameStore>();
         var posts = new[] { firstId, secondId }.Select(worldId => new Reki.Domain.Posts.GamePost(
             Domain.Posts.PostId.New(),
-            owner,
+            owner.ToAuthor(),
             worldId,
             worldId.Value,
             1,
-            [],
             [],
             DateTimeOffset.UnixEpoch,
             0,
