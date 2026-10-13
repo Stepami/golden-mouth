@@ -39,7 +39,7 @@ public sealed class GenerateStarFeedPostJob(
             return;
         }
 
-        var recent = await store.GetPostsAsync(20, cancellationToken, worldId);
+        var recent = await store.GetPostsAsync(20, worldId, null, cancellationToken);
         var star = world.Stars[(int)((uint)context.Id.GetHashCode() % (uint)world.Stars.Count)];
         var profile = new StarAgentProfile(world, star.Id, [], player.Address);
         var history = recent.Select(post =>
@@ -70,7 +70,6 @@ public sealed class GenerateStarFeedPostJob(
             new ChatOptions
             {
                 Temperature = settings.Value.Temperature,
-                MaxOutputTokens = 800,
                 AdditionalProperties = new AdditionalPropertiesDictionary
                 {
                     [ChatInputSafetyContext.OptionKey] = new ChatInputSafetyContext(player, []),

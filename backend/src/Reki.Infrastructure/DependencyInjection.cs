@@ -46,11 +46,18 @@ public static class DependencyInjection
     {
         services.AddOptions<JobsOptions>().BindConfiguration(JobsOptions.SectionName);
         services.AddSingleton<IStarFeedScheduler, StarFeedScheduler>();
-        services.MapTicker<GenerateStarFeedPostJob, StarFeedRequest>().WithMaxConcurrency(2);
+
         var jobs = configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
         var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ?? throw new InvalidOperationException("Mongo configuration is required.");
-        services.MapTicker<ResetGameDayJob>().WithCron("0 0 9 * * *").WithMaxConcurrency(1);
-        services.MapTicker<RefreshRegisteredPlayersJob>(ServiceLifetime.Singleton).WithCron("0 * * * * *").WithMaxConcurrency(1);
+
+        services.MapTicker<GenerateStarFeedPostJob, StarFeedRequest>()
+            .WithMaxConcurrency(2);
+        services.MapTicker<ResetGameDayJob>(ServiceLifetime.Singleton)
+            .WithCron("0 0 9 * * *")
+            .WithMaxConcurrency(1);
+        services.MapTicker<RefreshRegisteredPlayersJob>(ServiceLifetime.Singleton)
+            .WithCron("0 * * * * *")
+            .WithMaxConcurrency(1);
         services.AddTickerQ<RekiTimeTicker, CronTickerEntity>(options =>
         {
             options.ConfigureScheduler(scheduler => scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));

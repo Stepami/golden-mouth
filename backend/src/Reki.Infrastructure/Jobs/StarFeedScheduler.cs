@@ -32,6 +32,6 @@ public sealed partial class StarFeedScheduler(
             ? ScheduleAsync(playerId, worldId)
             : ValueTask.CompletedTask;
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Star feed scheduling did not succeed.")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Star feed scheduling did not succeed")]
     private partial void SchedulingFailed();
 }

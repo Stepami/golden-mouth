@@ -314,11 +314,18 @@ internal sealed class MongoGameStore : IGameStore
 
     public async ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
         int? limit,
-        CancellationToken cancellationToken,
-        WorldId worldId)
+        WorldId worldId,
+        AuthorId? authorId,
+        CancellationToken cancellationToken)
     {
+        var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId);
+        if (authorId is { } author)
+        {
+            filter &= Builders<GamePost>.Filter.Eq(item => item.AuthorId, author);
+        }
+
         IFindFluent<GamePost, GamePost> query = _posts
-            .Find(item => item.WorldId == worldId)
+            .Find(filter)
             .SortByDescending(item => item.CreatedAtUtc);
         if (limit is { } count)
         {

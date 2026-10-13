@@ -75,8 +75,9 @@ public interface IGameStore
     /// </summary>
     ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
         int? limit,
-        CancellationToken cancellationToken,
-        WorldId worldId);
+        WorldId worldId,
+        AuthorId? authorId,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Reads a post only in the world whose ownership the application has already verified.

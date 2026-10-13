@@ -51,7 +51,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         foreach (var worldId in new[] { firstId, secondId })
         {
-            var worldPosts = await store.GetPostsAsync(null, CancellationToken.None, worldId);
+            var worldPosts = await store.GetPostsAsync(null, worldId, null, CancellationToken.None);
             var conversation = await store.GetStarConversationAsync(owner, starId, CancellationToken.None, worldId)
                 ?? throw new InvalidOperationException("Missing conversation.");
             await Assert.That(worldPosts.Single().WorldId).IsEqualTo(worldId);
