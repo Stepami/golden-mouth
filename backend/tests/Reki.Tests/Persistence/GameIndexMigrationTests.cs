@@ -787,6 +787,38 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(result.Where(player => player["HitOwnWorldMilestone"].AsBoolean).Select(player => player["_id"].AsString)).IsEquivalentTo(["threshold", "referral"]);
     }
 
+    [Test]
+    public async Task ReleaseCatalog_UpgradesDatabasePastDevVersionsAndPreservesUnlockedAccessAsync()
+    {
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        await CreateMigrator(mongo.MongoClient, database.DatabaseNamespace.DatabaseName, false)
+            .MigrateAsync(cancellationToken: CancellationToken.None);
+        var templates = database.GetCollection<BsonDocument>("world_templates");
+        var it = await templates.Find(new BsonDocument("_id", "it")).SingleAsync();
+        var players = database.GetCollection<BsonDocument>("players");
+        await players.InsertManyAsync([
+            new BsonDocument { { "_id", "already" }, { "HitOwnWorldMilestone", true } },
+            new BsonDocument { { "_id", "threshold" } },
+            new BsonDocument { { "_id", "locked" } },
+        ]);
+        var existing = Common.TestGameData.CreateWorld().ToBsonDocument();
+        existing["Player"]["PlayerId"] = "threshold";
+        existing["Player"]["Subscribers"] = 500;
+        var worlds = database.GetCollection<BsonDocument>("worlds");
+        await worlds.InsertOneAsync(existing);
+        var migrator = CreateMigrator(mongo.MongoClient, database.DatabaseNamespace.DatabaseName);
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
+        var catalog = await templates.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        await Assert.That(catalog.Select(item => item["_id"].AsString)).IsEquivalentTo(["it", "evening", "sorcerers", "houses"]);
+        await Assert.That(catalog.Single(item => item["_id"] == "it")).IsEqualTo(it);
+        await Assert.That(await worlds.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(existing);
+        var result = await players.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        await Assert.That(result.Where(player => player["HitOwnWorldMilestone"].AsBoolean).Select(player => player["_id"].AsString))
+            .IsEquivalentTo(["already", "threshold"]);
+    }
+
     private static GameBalance CreateEnergyBalance() => new(10, 20, new TimeOnly(9, 0), 5, 3, 5, 3, 3, new GrowthBalance(1, 1, [], 0, 1, 1, 2, 3, 2, 1000), new ViralBalance(0, 0, 1), new FlopBalance(1), new SkillBalance([], 1, 1, 10, 2, 3, 1, 1), new RelationBalance(0, 10, 3, 5, 3), new ChallengeBalance(3, 1), new ThreadBalance(3, 9), new Dictionary<string, WorldBalance>());
 
     private static BsonDocument CreateLegacyReferralPlayer(string id, string? inviter, DateTimeOffset createdAt, int dailyBonus, int count, bool used) => new()
@@ -820,12 +852,24 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         }
     }
 
-    private static IMigrator CreateMigrator(IMongoClient client, string databaseName)
+    private static IMigrator CreateMigrator(IMongoClient client, string databaseName, bool includeRelease = true)
     {
         var options = new RekiMigrationOptions(Options.Create(new MongoOptions { DatabaseName = databaseName }));
-        return MigratorBuilder.FromMongoClient(client, options)
-            .LoadMigrations([new InitialGameIndexes(), new RemoveLegacyChallengeIndex(), new SeedWorldTemplates(), new ConsolidateWorldSchema(), new RepairLegacyDocuments(), new NestWorldDocuments(), new MoveReferralStateToInvites(), new UnifyPostContent(), new RefreshWorldPresets(), new UnlockOwnWorld(), new CreateGameDayIndexes(), new StoreRemainingEnergy(Options.Create(CreateEnergyBalance())), new AddBonusAmountToInvite(Options.Create(CreateEnergyBalance()))])
-            .Build();
+        var migrations = new List<RekiMigrationBase>
+        {
+            new InitialGameIndexes(), new RemoveLegacyChallengeIndex(), new SeedWorldTemplates(), new ConsolidateWorldSchema(),
+            new RepairLegacyDocuments(), new NestWorldDocuments(), new MoveReferralStateToInvites(), new UnifyPostContent(),
+            new CreateGameDayIndexes(), new StoreRemainingEnergy(Options.Create(CreateEnergyBalance())),
+            new AddBonusAmountToInvite(Options.Create(CreateEnergyBalance())),
+        };
+        if (includeRelease)
+        {
+            migrations.Add(new RefreshWorldPresets());
+            migrations.Add(new UnlockOwnWorld());
+            migrations.Add(new ReleaseWorldCatalog());
+        }
+
+        return MigratorBuilder.FromMongoClient(client, options).LoadMigrations(migrations).Build();
     }
 
     private static IEnumerable<(string Collection, string Name, BsonDocument Keys, bool Unique)> ExpectedIndexes()
