@@ -324,6 +324,7 @@ exec(open(os.path.join(D, 'journey_v19.py'), encoding='utf-8').read())  # DEV qu
 
 exec(open(os.path.join(D, 'journey_v20.py'), encoding='utf-8').read())  # Compact DEV frontend
 exec(open(os.path.join(D, 'journey_v21.py'), encoding='utf-8').read())  # Follow-up DEV review
+exec(open(os.path.join(D, 'journey_v22.py'), encoding='utf-8').read())  # Story art and clearer actions
 
 CH = os.environ.get('CHROME_BIN') or shutil.which('google-chrome') or shutil.which('chrome')
 if not CH and os.name == 'nt':

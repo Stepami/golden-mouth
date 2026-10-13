@@ -51,6 +51,7 @@ export interface PostResult {
   ribbons: { icon: string; title: string; sub?: string }[]
   bestComment?: { avatar: string; text: string }
   viral: boolean; flop: boolean; views: number
+  completedWants?: { id: string; text: string; reward: string }[] // Frontend-only: confirmed done transition after publication.
   hook?: string                                 // нить: на постах 1–9 закрывается через 1–3 хода
 }
 /** Элемент массива живой реакции (JSON из POST /posts/publications/{id}/moderation) */

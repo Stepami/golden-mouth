@@ -81,15 +81,17 @@ function Live() {
       completePostDraft(draftKey(p), publicationId, text)
       track('post_result', { delta: e.result.delta, viral: e.result.viral, flop: e.result.flop })
       void (async () => {
+        let confirmedResult = e.result
         if (apiBaseUrl) {
           const latest = await refresh()
+          if (latest) confirmedResult = { ...e.result, completedWants: latest.wants.filter(want => want.done && p.wants.some(before => before.id === want.id && !before.done)).map(({ id, text, reward }) => ({ id, text, reward })) }
           if (!p.hitOwnWorldMilestone && latest?.hitOwnWorldMilestone) {
             selectDraftOwner(p.id); setWorldDraft({ definition: blankWorld(), previewOnly: true, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand, reason: 'Создание своего мира открыто — можно придумать свою историю' })
             nav.replace('05-7b_own_world', { world: 'own' }); return
           }
         }
         else patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + e.result.delta) })
-        nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: e.result, post })
+        nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: confirmedResult, post })
       })()
     }
   }, (state, reason) => { if (state === 'failed') { const saved = readPostDraft(draftKey(p)); if (saved.publicationId === publicationId) savePostDraft(draftKey(p), { text: saved.text, ownWords: saved.ownWords }) }; if (reason?.code === 'crisis') { nav.replace(p.ageBand === '14-17' || !p.ageBand ? '06-2_crisis' : '06-3_crisis_adult'); return }; nav.replace('02-2b_publish_error', { text, publicationId, ownWords: nav.params.ownWords, reason, uncertain: state === 'unknown' }) }, status => {
@@ -182,8 +184,8 @@ function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'nor
           <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{r.headline}</div>
           {viral && <div className="confetti" aria-hidden>{Array.from({ length: 18 }, (_, i) => <i key={i} style={{ left: `${(i * 53) % 100}%`, animationDelay: `${(i % 6) * 0.12}s`, background: ['#FF6B8B', '#9B6BFF', '#FFD66B', '#6BFFB8'][i % 4] }} />)}</div>}
           {r.whys[0] && <div className="result-reason"><div className="small eyebrow">{contentOf(playerWorld).stars.find(star => star.avatarSeed === r.bestComment?.avatar)?.name ?? "Реакция героя"}</div><p>{r.whys[0].label}</p></div>}
-          <details className="result-details"><summary>Подробнее об итоге</summary>          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[w.icon] ?? w.icon} {w.label} {(!/^[+−-]/.test(w.value) || explainsDelta) && <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b>}</span>)}</div>
-          {(runtimeConfig.features.collection ? r.ribbons : []).map(x => <Ribbon key={x.title} icon={x.icon} title={x.title} sub={x.sub} />)}
+          <div className="result-awards" aria-live="polite">{r.completedWants?.map(want => <div className="result-task" key={want.id}><span>✅</span><div><b>Задание выполнено</b><p>{want.text}</p><span className="small">{want.reward}</span></div></div>)}{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
+          <details className="result-details"><summary>За что этот результат?</summary>          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[w.icon] ?? w.icon} {w.label} {(!/^[+−-]/.test(w.value) || explainsDelta) && <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b>}</span>)}</div>
           {r.bestComment && <div className="row" style={{ margin: '8px 0 12px' }}><Avatar seed={r.bestComment.avatar} size={28} /><span className="small">«{r.bestComment.text}»</span></div>}
           </details>
           {viral ? <>
@@ -318,11 +320,11 @@ function Thread() {
   post.comments.forEach(append)
   return (
     <div className="screen no-tab">
-      <TopBar onBack={goBack} title="Реакции" right={<button className="text-link" onClick={() => nav.replace('03-3_feed')}>В ленту →</button>} />
+      <TopBar onBack={goBack} title="Реакции" rightPlain right={<button className="thread-exit" onClick={() => nav.replace('03-3_feed')}>В ленту →</button>} />
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div></div>
-        {canReply && showHelp && <div className="card thread-help"><b>Продолжи разговор</b><p>Спроси героя о находке или расскажи свою версию. Он ответит — история продолжится.</p><p className="small muted">Ответ стоит 1 энергию. Можно пропустить и перейти в ленту.</p><button className="text-link" onClick={dismissHelp}>Понятно</button></div>}
-        {canReply ? <div className="small muted" style={{ marginBottom: 16 }}>Ответ · 1 энергия</div> : <div className="small muted" style={{ marginBottom: 12 }}>Этот тред доступен для чтения.</div>}
+        {canReply && showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>Герой ждёт ответа</b><p>Нажми «Ответить» под репликой и продолжи историю.</p><span className="small muted">Ответ · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
+        {canReply ? (!showHelp && <div className="small muted" style={{ marginBottom: 16 }}>Ответ · 1 энергия</div>) : <div className="small muted" style={{ marginBottom: 12 }}>Этот тред доступен для чтения.</div>}
         {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>
           <Comment seed={comment.avatar} profile={comment.star && comment.appearanceProfile ? { address: comment.appearanceProfile === 'masculine' ? 'he' : comment.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: comment.ageBand } : undefined} name={comment.author} handle={comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} />
           {!!comment.reactions?.length && <div className="small" style={{ margin: '-6px 0 12px 44px' }}>{comment.reactions.map(reaction => <span key={`${reaction.authorId}:${reaction.emoji}`} title={reaction.author} className="react">{reaction.emoji} {reaction.author}</span>)}</div>}

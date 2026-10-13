@@ -7,6 +7,7 @@ import { useStore } from '../app/store'
 import { Avatar, BottomCTA, Card, fmt } from '../ui'
 import { track } from '../app/log'
 import { register } from '.'
+import { worldArt } from '../app/worldPrototype'
 import { WorldOverview, WorldPrototypePreview } from './worldQuick'
 import { ChooseWorld as World, ChannelSetup as Channel, VoiceSetup as WorldSetup, StarsSetup as FirstStar } from './worldWizard'
 
@@ -28,10 +29,10 @@ function Invite() {
     <div className="brand">реки</div><h1>Твой пост может<br />взорвать ленту.</h1>
     <p className="muted">Собери фанатов, попади в драму и стань главным героем своей истории.</p>
     <div className="welcome-post card" aria-label="Пример игрового поста">
-      <div className="row"><div className="welcome-avatar">✦</div><div><b>Твой канал</b><div className="small muted">пример игры</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
+      <div className="row"><img className="welcome-avatar welcome-photo" src="/portraits/masha-v1.png" alt="Маша" /><div><b>Маша в тридевятом царстве</b><div className="small muted">пример игры</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
       <p>На моей фотографии появилась улица, которой вчера не было. Кто-нибудь узнаёт эти окна? 🌲</p>
       <div className="row"><span className="react">🔥 2,4k</span><span className="react">💀 890</span><span className="small muted">🫶 1,2k</span></div>
-      <div className="welcome-reply"><b>Герой мира</b><div>Я помню этот дом. Но на карте его нет уже сорок лет.</div></div>
+      <div className="welcome-reply"><b>Эдуард · хранитель кинотеатра</b><div>Я помню этот дом. Но на карте его нет уже сорок лет.</div></div>
     </div>
     <p className="small muted">Фанаты и события виртуальные. Посты остаются внутри игры.</p>
   </div><BottomCTA main="Начать играть" onMain={() => nav.push('01-2_age')} /></div>
@@ -101,8 +102,8 @@ export function ChannelHead() {
 export function Home() {
   const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world)
   return <div className="screen"><ChannelHead /><div className="pad">
-    <div className="card first-story"><div className="small eyebrow">Твоя история начинается</div><p className="first-story-context">{profile.firstContext}</p>
-      {p.firstPostInviteBonus > 0 && <p>🎁 Первый пост даст ещё {p.firstPostInviteBonus} ходов</p>}
+    <div className="card first-story">{worldArt[p.world] && <img className="first-story-cover" src={worldArt[p.world].cover} alt={`Мир «${worldOf(p.world).title}»`} />}<div className="small eyebrow">Твоя история начинается</div><p className="first-story-context">{profile.firstContext}</p>
+      {p.firstPostInviteBonus > 0 && <p>🎁 Первый пост даст ещё {p.firstPostInviteBonus} энергии</p>}
       <button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button>
     </div><p className="small muted first-story-footer">Твои посты меняют историю</p>
   </div></div>

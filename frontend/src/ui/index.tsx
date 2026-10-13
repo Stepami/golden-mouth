@@ -26,12 +26,12 @@ export function BottomCTA({ main, onMain, second, onSecond, disabled, secondDisa
   return <div className="bottom-cta">{second && <Button secondary disabled={secondDisabled} onClick={() => { tap('cta_second'); onSecond?.() }}>{second}</Button>}<Button onClick={() => { tap('cta_main'); onMain?.() }} disabled={disabled}>{main}</Button></div>
 }
 
-export function TopBar({ title, onBack, right, children }: { title?: ReactNode; onBack?: () => void; right?: ReactNode; children?: ReactNode }) {
+export function TopBar({ title, onBack, right, rightPlain = false, children }: { title?: ReactNode; onBack?: () => void; right?: ReactNode; rightPlain?: boolean; children?: ReactNode }) {
   return (
     <div className="top">
       {onBack && <button className="back" onClick={onBack} aria-label="Назад">‹</button>}
       {children ?? <b style={{ fontSize: 17 }}>{title}</b>}
-      {right !== undefined && <div className="pill">{right}</div>}
+      {right !== undefined && <div className={rightPlain ? "top-action" : "pill"}>{right}</div>}
     </div>
   )
 }
