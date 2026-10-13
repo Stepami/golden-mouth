@@ -8,7 +8,7 @@ import { demoChannelPosts, demoFeed, demoOwnPosts, demoPlayer, demoPost, resetDe
 import { contentOf, installWorldContent, installWorldTemplates, worldDocumentOf, wantsFor } from './worldContent'
 import { telegramAuthHeaders } from './auth'
 import type { AgeBand } from '../app/ageBand'
-import type { PlayerDocument, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, ReplyLiveEvent, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types'
+import type { PlayerDocument, Invitation, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, ReplyLiveEvent, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types'
 
 let sessionPlayer: Player | undefined
 let sessionIdentity: PlayerDocument | undefined
@@ -114,7 +114,7 @@ export const api = {
       ? await call<PlayerDocument>('/onboarding', { method: 'POST', body: JSON.stringify(body) })
       : await later({
         id: crypto.randomUUID().replaceAll('-', ''), address: body.address as Player['address'],
-        postsLeft: 10, postsCap: 10, firstPostInviteBonus: 0, streak: { days: 1, week: [true, false, false, false, false, false, false], nextReward: 'ещё день — и бонус' },
+        energy: 10, streak: { days: 1, week: [true, false, false, false, false, false, false], nextReward: 'ещё день — и бонус' },
         skills: { brave: { level: 1, progress: 0 }, humor: { level: 1, progress: 0 }, topic: { level: 1, progress: 0 } },
         settings: { notifications: 'all', quiet: '22:00-09:00', plus: false }, experiments: {},
       })
@@ -223,7 +223,7 @@ export const api = {
     const timers = steps.map(([ms, e]) => setTimeout(() => {
       if (e.type === 'result' && sessionPlayer) {
         saveDemoPost(sessionPlayer.id, { id: publicationId, text, views: result.views, reactions: [{ emoji: '😂', count: 1 }, { emoji: '🫶', count: 1 }, { emoji: '🔥', count: 1 }], comments: [comment], canReply: false, demoComments: true, at: new Date().toISOString() })
-        sessionPlayer = saveDemoPlayer({ ...sessionPlayer, subs: sessionPlayer.subs + result.delta, postsLeft: Math.max(0, sessionPlayer.postsLeft - 1) })
+        sessionPlayer = saveDemoPlayer({ ...sessionPlayer, subs: sessionPlayer.subs + result.delta, energy: Math.max(0, sessionPlayer.energy - 1) })
       }
       onEvent(e)
     }, ms * 1.1))
@@ -238,7 +238,7 @@ export const api = {
     const update = (event: ReplyLiveEvent) => {
       options.onEvent?.(event)
       if (event.status === 'completed' && event.energyLeft != null && event.subscribers != null && sessionPlayer?.id === player.id && sessionPlayer.worldInstanceId === player.worldInstanceId) {
-        sessionPlayer = { ...sessionPlayer, postsLeft: event.energyLeft, subs: event.subscribers }
+        sessionPlayer = { ...sessionPlayer, energy: event.energyLeft, subs: event.subscribers }
         if (!BASE) saveDemoPlayer(sessionPlayer)
       }
     }
@@ -247,10 +247,10 @@ export const api = {
       const existing = post.comments.find(comment => comment.requestId === requestId)
       if (existing && (existing.text !== text || existing.parentCommentId !== commentId)) throw new ApiError(409, 'POST', '/posts/:id/replies')
       if (existing) {
-        const event: ReplyLiveEvent = { status: 'completed', requestId, post: { ...post, postId: post.id }, energyLeft: player.postsLeft, subscribers: player.subs }
+        const event: ReplyLiveEvent = { status: 'completed', requestId, post: { ...post, postId: post.id }, energyLeft: player.energy, subscribers: player.subs }
         update(event); return event
       }
-      if (player.postsLeft < 1) throw new ApiError(409, 'POST', '/posts/:id/replies')
+      if (player.energy < 1) throw new ApiError(409, 'POST', '/posts/:id/replies')
       const target = post.comments.find(comment => comment.id === commentId && comment.star && !comment.hidden)
       if (!target) throw new ApiError(409, 'POST', '/posts/:id/replies')
       update({ status: 'generating', requestId })
@@ -264,7 +264,7 @@ export const api = {
         { id: crypto.randomUUID(), parentCommentId: id, authorId: target.authorId ?? target.avatar, author: target.author, avatar: target.avatar, handle: target.handle, text: responseText, star: true, depth: (target.depth ?? 0) + 2, reactions: [] }] }
       const bonus = post.comments.filter(comment => comment.me && comment.parentCommentId).length < 3 ? 9 : 0
       saveDemoPost(player.id, saved)
-      const event: ReplyLiveEvent = { status: 'completed', requestId, post: { ...saved, postId: saved.id }, energyLeft: player.postsLeft - 1, subscribers: player.subs + bonus }
+      const event: ReplyLiveEvent = { status: 'completed', requestId, post: { ...saved, postId: saved.id }, energyLeft: player.energy - 1, subscribers: player.subs + bonus }
       update(event); return event
     }
     let completed: ReplyLiveEvent | undefined
@@ -288,7 +288,7 @@ export const api = {
       const saved = post.comments.find(comment => comment.requestId === requestId && comment.parentCommentId === commentId && comment.text === text)
       if (!saved) throw cause
       const [identity, world] = await Promise.all([call<PlayerDocument>('/me'), call<WorldDocument>(`/worlds/${encodeURIComponent(player.worldInstanceId ?? '')}`)])
-      const event: ReplyLiveEvent = { status: 'completed', requestId, post, energyLeft: identity.postsLeft, subscribers: world.subscribers }
+      const event: ReplyLiveEvent = { status: 'completed', requestId, post, energyLeft: identity.energy, subscribers: world.subscribers }
       update(event); return event
     }
   },
@@ -298,17 +298,29 @@ export const api = {
     const key = `reki:demo-plus-claimed:${sessionPlayer?.id}`
     const claimed = localStorage.getItem(key) === 'true'
     const bonus = claimed ? 0 : 5
-    if (!claimed && sessionPlayer) { sessionPlayer = saveDemoPlayer({ ...sessionPlayer, postsLeft: sessionPlayer.postsLeft + bonus, postsCap: sessionPlayer.postsCap + bonus }); localStorage.setItem(key, 'true') }
+    if (!claimed && sessionPlayer) { sessionPlayer = saveDemoPlayer({ ...sessionPlayer, energy: sessionPlayer.energy + bonus }); localStorage.setItem(key, 'true') }
     return later({ bonus })
   },
+  invitation: (): Promise<Invitation> => BASE ? call('/invitation') : later({ bonus: 0 }),
   referral: (): Promise<{ code: string }> => BASE ? call('/referral') : laterLazy(() => ({ code: `ref_${sessionPlayer!.id === 'p1' ? mock.player.id : sessionPlayer!.id.replaceAll('-', '')}` })),
   settings: async (patch: Partial<Player['settings']> & { address?: Player['address'] }) => {
     if (BASE) await call('/settings', { method: 'PATCH', body: JSON.stringify(patch) })
     if (sessionPlayer) {
       const { address, ...settings } = patch
-      sessionPlayer = { ...sessionPlayer, address: address ?? sessionPlayer.address, settings: { ...sessionPlayer.settings, ...settings } }
+      const activatedPlus = patch.plus === true && !sessionPlayer.settings.plus
+      let energy = sessionPlayer.energy
+      if (activatedPlus) {
+        if (BASE) {
+          sessionIdentity = await call<PlayerDocument>('/me')
+          energy = sessionIdentity.energy
+        } else {
+          energy += 10
+        }
+      }
+      sessionPlayer = { ...sessionPlayer, energy, address: address ?? sessionPlayer.address, settings: { ...sessionPlayer.settings, ...settings } }
       if (!BASE) saveDemoPlayer(sessionPlayer)
     }
+    return sessionPlayer?.energy
   },
   feed: async (world: WorldId = sessionPlayer?.world ?? 'stage'): Promise<FeedItem[]> => {
     const remote: FeedItem[] = BASE ? await call<FeedItem[]>(inWorld('/feed')) : demoOwnPosts(sessionPlayer?.id ?? '').slice(0, 20).map(post => ({

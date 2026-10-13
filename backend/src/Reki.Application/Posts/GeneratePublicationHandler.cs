@@ -19,7 +19,6 @@ public sealed partial class GeneratePublicationHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
-    GameDay gameDay,
     ISender sender,
     StarTurnGenerator generator,
     ILogger<GeneratePublicationHandler> logger,
@@ -38,14 +37,7 @@ public sealed partial class GeneratePublicationHandler(
 
         var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var world = await sender.Send(new Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
-        var player = gameDay.Normalize(storedPlayer);
-        if (!ReferenceEquals(player, storedPlayer) && !await store.TryReplacePlayerAsync(
-            player,
-            storedPlayer.Version,
-            cancellationToken))
-        {
-            throw new RequestConflictException("The player state changed while starting a new day.");
-        }
+        var player = storedPlayer;
 
         var requestHash = ComputeRequestHash(request with { WorldId = world.Id });
         var existing = await sender.Send(new GetPublicationQuery(request.Id), cancellationToken);
@@ -56,10 +48,7 @@ public sealed partial class GeneratePublicationHandler(
             yield break;
         }
 
-        var invite = await store.GetInviteAsync(player.Id, cancellationToken);
-        var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);
-        var cap = gameDay.GetPostsCap(player, invite, invited);
-        if (player.EnergyUsed > cap - balance.Value.PostEnergyCost)
+        if (player.Energy < balance.Value.PostEnergyCost)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }

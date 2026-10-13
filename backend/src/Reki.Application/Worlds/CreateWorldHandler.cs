@@ -9,7 +9,7 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Worlds;
 
-public sealed class CreateWorldHandler(IGameStore store, ISender sender, GameDay gameDay, PlayerSafetyGuard safetyGuard, IOptions<GameBalance> balance, ProductTelemetry telemetry)
+public sealed class CreateWorldHandler(IGameStore store, ISender sender, GameDayPeriod gameDayPeriod, PlayerSafetyGuard safetyGuard, IOptions<GameBalance> balance, ProductTelemetry telemetry)
     : IRequestHandler<CreateWorldCommand, World>
 {
     public async ValueTask<World> Handle(CreateWorldCommand request, CancellationToken cancellationToken)
@@ -22,7 +22,7 @@ public sealed class CreateWorldHandler(IGameStore store, ISender sender, GameDay
             throw new ContentRejectedException();
         }
 
-        var instance = source.Instantiate(player.Id, gameDay.PeriodStart);
+        var instance = source.Instantiate(player.Id, gameDayPeriod.PeriodStart);
         var world = instance with
         {
             Player = instance.Player with { Subscribers = balance.Value.Growth.StartingSubscribers },

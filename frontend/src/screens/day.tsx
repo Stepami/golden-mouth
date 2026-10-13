@@ -30,7 +30,7 @@ function Dm() {
   const [text, setText] = useState('')
   const [memory, setMemory] = useState<string[]>(d.memory)
   const [showMem, setShowMem] = useState(false)
-  const closed = p.postsLeft <= 0
+  const closed = p.energy <= 0
   const send = async (t: string) => {
     if (!t.trim() || closed || left <= 0) return
     setMsgs(m => [...m, { from: 'me', text: t }]); setText('')
@@ -235,7 +235,7 @@ function Stage() {
         {load === 'error' && <Card><div className="small">Не получилось загрузить канал.</div><Button style={{ marginTop: 12 }} onClick={() => setReloadToken(token => token + 1)}>Попробовать снова</Button></Card>}
         {load === 'ready' && posts.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
       </div>
-      <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
+      <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.energy > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
     </div>
   )
@@ -253,7 +253,7 @@ function Me() {
       <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b><div className="muted small">{worldOf(p.world).emoji} {worldOf(p.world).title} · типаж: {p.type}</div></div>
       <div className="pad">
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          {[[`✍️ ${p.postsLeft}`, 'постов осталось'], [`🎯 ${p.wants.filter(w => w.done).length}/${p.wants.length}`, 'желаний дня'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ flex: 1, padding: 10, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
+          {[[`✍️ ${p.energy}`, 'постов осталось'], [`🎯 ${p.wants.filter(w => w.done).length}/${p.wants.length}`, 'желаний дня'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ flex: 1, padding: 10, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
         </div>
         <Card style={{ marginBottom: 10 }}>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Серия {p.streak.days} дня</b><span className="small" style={{ color: 'var(--gift)' }}>{p.streak.nextReward}</span></div>
@@ -293,7 +293,7 @@ function Settings() {
   const save = async (value: Partial<typeof p.settings>) => {
     if (saving) return
     setSaving(true); setError('')
-    try { await api.settings(value); patch({ settings: { ...p.settings, ...value } }); setPanel(null); return true }
+    try { const energy = await api.settings(value); patch({ settings: { ...p.settings, ...value }, ...(energy !== undefined ? { energy } : {}) }); setPanel(null); return true }
     catch { setError('Не получилось сохранить. Попробуй ещё раз.'); return false }
     finally { setSaving(false) }
   }

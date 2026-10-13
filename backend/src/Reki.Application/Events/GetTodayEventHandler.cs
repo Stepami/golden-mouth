@@ -7,7 +7,7 @@ namespace Reki.Application.Events;
 
 public sealed class GetTodayEventHandler(
     IGameStore store,
-    GameDay gameDay,
+    GameDayPeriod gameDayPeriod,
     ISender sender) : IRequestHandler<GetTodayEventQuery, DailyGameEvent>
 {
     public async ValueTask<DailyGameEvent> Handle(
@@ -16,7 +16,7 @@ public sealed class GetTodayEventHandler(
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var world = await sender.Send(new Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
-        var periodStart = gameDay.PeriodStart;
+        var periodStart = gameDayPeriod.PeriodStart;
         var existing = await store.GetTodayEventAsync(
             player.Id,
             periodStart,

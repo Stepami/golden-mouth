@@ -5,13 +5,13 @@ using Microsoft.Extensions.Options;
 using Reki.Api.Common.Errors;
 using Reki.Api.Mapping;
 using Reki.Api.OpenApi;
-using Reki.Api.Serialization;
 using Reki.Application;
 using Reki.Application.Common;
 using Reki.Application.Common.Safety;
 using Reki.Application.Posts;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
+using Reki.Infrastructure.Serialization;
 using TgMiniAppAuth;
 
 namespace Reki.Api.Bootstrapping;
@@ -27,7 +27,7 @@ internal static class ServiceCollectionExtensions
             options.Assemblies = [typeof(ApplicationAssemblyMarker)];
             options.ServiceLifetime = ServiceLifetime.Scoped;
         });
-        services.AddScoped<GameDay>();
+        services.AddSingleton<GameDayPeriod>();
         services.AddSingleton<PlayerSafetyGuard>();
         services.AddScoped<ChallengeLifecycle>();
         services.AddSingleton<PostProgressionCalculator>();

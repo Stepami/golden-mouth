@@ -11,7 +11,15 @@ function read<T>(key: string): T | undefined {
 function save(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* Демо работает и без хранилища браузера. */ }
 }
-let currentPlayer = read<Player>(PLAYER_KEY)
+function readSavedPlayer(): Player | undefined {
+  const player = read<Player & { postsLeft?: number; postsCap?: number }>(PLAYER_KEY)
+  if (!player) return undefined
+  player.energy ??= player.postsLeft ?? examplePlayer.energy
+  delete player.postsLeft
+  delete player.postsCap
+  return player
+}
+let currentPlayer = readSavedPlayer()
 export function demoPlayer(): Player {
   if (currentPlayer) return structuredClone(currentPlayer)
   const query = new URLSearchParams(location.search)

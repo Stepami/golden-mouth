@@ -47,7 +47,7 @@ function Shell() {
     if (playerState !== 'ready' || explicitStart || top.id !== '01-1_invite') return
     let current = true
     api.channelPosts()
-      .then(posts => { if (current) setStack([{ id: posts.length === 0 ? '01-6_home' : '03-5_stage', params: {} }]) })
+      .then(posts => { if (current) setStack([{ id: posts.length === 0 ? '01-6_home' : '03-5_stage', params: { channelEmpty: posts.length === 0 } }]) })
       .catch(() => { if (current) setStack([{ id: '03-5_stage', params: {} }]) })
     return () => { current = false }
   }, [explicitStart, playerState, top.id])

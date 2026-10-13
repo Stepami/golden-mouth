@@ -18,6 +18,8 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
 
     public ILogger<ProductTelemetry> ProductLogger { get; } = Substitute.For<ILogger<ProductTelemetry>>();
 
+    public bool UseProductionAuthentication { get; init; }
+
     public OpenAiStub Llm => Session.Llm;
 
     public string DatabaseName => Session.DatabaseName;
@@ -32,6 +34,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        builder.UseSetting("Jobs:ExecutionEnabled", "false");
         builder.UseSetting("Mongo:ConnectionString", MongoConnectionString);
         builder.UseSetting("Mongo:DatabaseName", DatabaseName);
         builder.UseSetting("Llm:BaseUrl", Llm.BaseUrl);
@@ -46,20 +49,23 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
 
-            services
-                .AddAuthentication(options =>
-                {
-                    options.DefaultAuthenticateScheme = TestAuthenticationHandler.SchemeName;
-                    options.DefaultChallengeScheme = TestAuthenticationHandler.SchemeName;
-                })
-                .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
-                    TestAuthenticationHandler.SchemeName,
-                    _ => { });
-            services.AddAuthorization(options => options.AddPolicy(
-                "TMiniApp",
-                new AuthorizationPolicyBuilder(TestAuthenticationHandler.SchemeName)
-                    .RequireAuthenticatedUser()
-                    .Build()));
+            if (!UseProductionAuthentication)
+            {
+                services
+                    .AddAuthentication(options =>
+                    {
+                        options.DefaultAuthenticateScheme = TestAuthenticationHandler.SchemeName;
+                        options.DefaultChallengeScheme = TestAuthenticationHandler.SchemeName;
+                    })
+                    .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                        TestAuthenticationHandler.SchemeName,
+                        _ => { });
+                services.AddAuthorization(options => options.AddPolicy(
+                    "TMiniApp",
+                    new AuthorizationPolicyBuilder(TestAuthenticationHandler.SchemeName)
+                        .RequireAuthenticatedUser()
+                        .Build()));
+            }
         });
     }
 }

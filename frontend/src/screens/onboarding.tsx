@@ -201,7 +201,7 @@ function FirstStar() {
       created.current = pl
       clearReferral()
       try { localStorage.setItem(`reki:first-star:${pl.id}`, pick) } catch { /* optional storage */ }
-      track('onboarding_step', { step: 'done', star: pick }); setPlayer(pl); nav.replace('01-6_home')
+      track('onboarding_step', { step: 'done', star: pick }); setPlayer(pl); nav.replace('01-6_home', { channelEmpty: true })
     } catch { setError('Не получилось сохранить настройки. Попробуй ещё раз.') } finally { setSaving(false) }
   }
   return (
@@ -231,7 +231,7 @@ export function ChannelHead() {
     <div className="top">
       <Avatar seed={p.handle} size={36} />
       <div><b>{p.name}</b><div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div>
-      <div className="pill">✍️ осталось {p.postsLeft}</div>
+      <div className="pill">✍️ осталось {p.energy}</div>
     </div>
   )
 }
@@ -239,6 +239,21 @@ export function Home() {
   const nav = useNav()
   const { player: p } = useStore()
   const profile = contentOf(p?.world ?? 'stage')
+  const channelEmpty = nav.params.channelEmpty === true
+  const [inviteBonus, setInviteBonus] = useState(0)
+  useEffect(() => {
+    let active = true
+    setInviteBonus(0)
+    if (!p) return
+    const load = async () => {
+      if (!channelEmpty && (await api.channelPosts()).length > 0) return
+      if (!active) return
+      const invitation = await api.invitation()
+      if (active) setInviteBonus(invitation.bonus)
+    }
+    void load().catch(() => { /* Подсказка не блокирует первый пост. */ })
+    return () => { active = false }
+  }, [p?.id, p?.worldInstanceId, channelEmpty])
   let selected = profile.stars[0].id
   try { selected = localStorage.getItem(`reki:first-star:${p?.id}`) ?? selected } catch { /* optional storage */ }
   const star = profile.stars.find(value => value.id === selected) ?? profile.stars[0]
@@ -251,7 +266,7 @@ export function Home() {
           <div className="row" style={{ marginBottom: 12 }}><Avatar seed={star.id} size={44} /><div><b>{star.name} — первая звезда в твоих подписчиках 👀</b><div className="small muted">{star.role} · подписка на твой блог</div></div></div>
           <p className="small muted">{profile.firstContext}</p>
           <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 16 }}>{profile.firstPrompt}</div>
-          {(p?.firstPostInviteBonus ?? 0) > 0 && <div className="gift" style={{ marginBottom: 12 }}>🎁 Первый пост даст ещё {p?.firstPostInviteBonus} ходов. Начни с любой идеи!</div>}
+          {inviteBonus > 0 && <div className="gift" style={{ marginBottom: 12 }}>🎁 Первый пост даст ещё {inviteBonus} ходов. Начни с любой идеи!</div>}
           <button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button>
           <div style={{ textAlign: 'center', marginTop: 10, fontSize: 14, color: 'var(--lilac)' }}>Не знаешь, что написать? Начни с подсказки ✨</div>
         </div>

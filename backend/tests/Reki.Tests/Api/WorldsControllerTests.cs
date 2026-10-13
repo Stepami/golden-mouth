@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Reki.Contracts.Worlds;
+using Reki.Infrastructure.Serialization;
 
 namespace Reki.Tests.Api;
 
@@ -83,7 +84,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             ],
         };
         using var content = new StringContent(
-            System.Text.Json.JsonSerializer.Serialize(batch, Reki.Api.Serialization.ApiJsonSerializerContext.Default.AnalyticsBatchRequest),
+            System.Text.Json.JsonSerializer.Serialize(batch, ApiJsonSerializerContext.Default.AnalyticsBatchRequest),
             System.Text.Encoding.UTF8,
             "application/json");
 

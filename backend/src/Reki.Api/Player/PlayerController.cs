@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Player;
 using Reki.Contracts.Player;
@@ -13,13 +14,15 @@ namespace Reki.Api.Player;
 [Route("/")]
 public sealed class PlayerController(
     ISender sender,
-    GameDay gameDay) : ControllerBase
+    IGameStore store,
+    IOptions<GameBalance> balance) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
-        return TypedResults.Ok(await gameDay.GetPlayerAsync(cancellationToken));
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        return TypedResults.Ok(player.ToResponse());
     }
 
     [HttpPost("onboarding", Name = "CompleteOnboarding")]
@@ -28,14 +31,23 @@ public sealed class PlayerController(
         OnboardingRequest request,
         CancellationToken cancellationToken)
     {
-        await sender.Send(
+        var player = await sender.Send(
             new OnboardPlayerCommand(
                 ToStorageValue(request.BirthGroup),
                 request.Address.ToString().ToLowerInvariant(),
                 request.ReferralCode,
                 request.AgeBand),
             cancellationToken);
-        return TypedResults.Ok(await gameDay.GetPlayerAsync(cancellationToken));
+        return TypedResults.Ok(player.ToResponse());
+    }
+
+    [HttpGet("invitation", Name = "GetInvitation")]
+    [ActionName("GetInvitation")]
+    public async Task<Ok<InvitationResponse>> GetInvitationAsync(CancellationToken cancellationToken)
+    {
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var invitation = await store.GetPendingInviteAsync(player.Id, cancellationToken);
+        return TypedResults.Ok(new InvitationResponse(invitation is null ? 0 : balance.Value.InviteBonusBoth));
     }
 
     [HttpGet("referral", Name = "GetReferralCode")]
