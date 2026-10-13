@@ -1,17 +1,20 @@
 using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Persistence.Migrations;
 
 /// <summary>Updates deployments that already passed the earlier DEV migration versions.</summary>
-internal sealed class ReleaseWorldCatalog : RekiMigrationBase
+internal sealed partial class ReleaseWorldCatalog : RekiMigrationBase
 {
     public override DatabaseVersion Version => new(2, 4, 2);
 
     public override async Task UpAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken)
     {
-        await new RefreshWorldPresets().UpAsync(db, session, cancellationToken);
+        var templates = db.GetCollection<World>(MongoCollections.WorldTemplates);
+        await templates.DeleteManyAsync(session, Builders<World>.Filter.Ne(item => item.Id, WorldId.From("it")), cancellationToken: cancellationToken);
+        await templates.InsertManyAsync(session, CreateReleaseTemplates(), cancellationToken: cancellationToken);
         var players = db.GetCollection<BsonDocument>(MongoCollections.Players);
         await players.UpdateManyAsync(
             session,

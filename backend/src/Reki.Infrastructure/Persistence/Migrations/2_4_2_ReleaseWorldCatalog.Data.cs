@@ -4,7 +4,7 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Persistence.Migrations;
 
-internal sealed partial class RefreshWorldPresets
+internal sealed partial class ReleaseWorldCatalog
 {
     private static IReadOnlyList<World> CreateReleaseTemplates() =>
     [
