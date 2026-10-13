@@ -145,7 +145,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(item.Avatar).IsEqualTo("player");
         await Assert.That(item.Role).IsEqualTo("creator");
         await Assert.That(item.PostId).IsNotNull();
-        await Assert.That(item.CanReply).IsTrue();
         var postId = item.PostId ?? throw new InvalidOperationException("The feed post has no id.");
         var post = await api.Posts.GetPostAsync(postId, await GetWorldIdAsync(api), CancellationToken.None);
         await Assert.That(item.Views).IsEqualTo(post.Views);
@@ -180,7 +179,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Assert
         var own = feed.Single(feedItem => feedItem.Text == "пост зрителя");
         await Assert.That(own.PostId).IsNotNull();
-        await Assert.That(own.CanReply).IsTrue();
         await Assert.That(feed.Any(feedItem => feedItem.Text == "пост соседа")).IsFalse();
         await Assert.That(feed.Any(feedItem => feedItem.Text == "пост другого мира")).IsFalse();
     }

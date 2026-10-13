@@ -87,7 +87,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
             cancellationToken);
         var worlds = await rekiContext.Worlds;
         IReadOnlyList<FeedItemResponse> response =
-            [.. result.Select(post => PostContractMapper.MapFeedItem(post, worlds[post.WorldId], true))];
+            [.. result.Select(post => PostContractMapper.MapFeedItem(post, worlds[post.WorldId]))];
         return TypedResults.Ok(response);
     }
 
