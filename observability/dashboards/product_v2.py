@@ -10,7 +10,7 @@ COMMON = """WITH clock AS (
  SELECT floor((max(date_part('epoch', now())) * 1000000 + 10800000000) / 86400000000) AS today,
  max(date_part('epoch', now())) * 1000 AS now_ms, count(*) AS stream_rows FROM product),
 world_ranked AS (SELECT player_id, world_id, world, subscriber_total,
- row_number() OVER (PARTITION BY player_id, world_id ORDER BY world_version DESC, _timestamp DESC) AS state_rank
+ row_number() OVER (PARTITION BY player_id, world_id ORDER BY _timestamp DESC) AS state_rank
  FROM product WHERE event_name = 'world_audience_updated' AND world_id IS NOT NULL),
 world_audience AS (SELECT player_id, sum(subscriber_total) AS subscribers,
  CASE WHEN count(DISTINCT world) > 1 THEN 'multi-world' ELSE max(world) END AS world

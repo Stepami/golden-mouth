@@ -178,7 +178,6 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         attributes["activity_kind"] = "inventory";
         attributes["world_id"] = world.Id.Value;
         attributes["world"] = world.BalanceKey;
-        attributes["world_version"] = world.Version;
         attributes["subscriber_total"] = world.Player.Subscribers;
         Write("world_audience_updated", attributes);
     }
