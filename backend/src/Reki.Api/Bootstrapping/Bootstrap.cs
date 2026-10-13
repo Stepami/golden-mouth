@@ -1,5 +1,6 @@
 using Kot.MongoDB.Migrations;
 using Microsoft.AspNetCore.DataProtection;
+using Reki.Api.Serialization;
 using Reki.Infrastructure;
 using Serilog;
 using TgMiniAppAuth;
@@ -28,12 +29,15 @@ internal static class Bootstrap
         ConfigureLogging(builder);
 
         var app = builder.Build();
-        ConfigurePipeline(app);
         if (!OpenApiGeneration.IsRunning)
         {
+            ConfigurePipeline(app);
             var migrator = app.Services.GetRequiredService<IMigrator>();
             await migrator.MigrateAsync();
         }
+
+        MapApiDocumentation(app);
+        app.MapControllers();
 
         await app.RunAsync();
     }
@@ -51,7 +55,7 @@ internal static class Bootstrap
 
         builder.Services
             .AddApplication()
-            .AddInfrastructure(builder.Configuration);
+            .AddInfrastructure(builder.Configuration, ApiJsonSerializerContext.Default);
     }
 
     private static void ConfigureLogging(WebApplicationBuilder builder)
@@ -78,16 +82,10 @@ internal static class Bootstrap
         app.UseExceptionHandler();
         app.UseStatusCodePages();
         app.UseSerilogRequestLogging();
-        if (!OpenApiGeneration.IsRunning)
-        {
-            app.UseTickerQ();
-        }
+        app.UseTickerQ();
 
         app.UseAuthentication();
         app.UseAuthorization();
-
-        MapApiDocumentation(app);
-        app.MapControllers();
     }
 
     private static void MapApiDocumentation(WebApplication app)

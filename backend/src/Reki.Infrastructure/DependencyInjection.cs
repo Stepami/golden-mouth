@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization.Metadata;
 using Kot.MongoDB.Migrations;
 using Kot.MongoDB.Migrations.DI;
 using Microsoft.Extensions.AI;
@@ -27,7 +28,7 @@ namespace Reki.Infrastructure;
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
-        this IServiceCollection services, IConfiguration configuration)
+        this IServiceCollection services, IConfiguration configuration, IJsonTypeInfoResolver jsonContext)
     {
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
@@ -35,25 +36,25 @@ public static class DependencyInjection
         services.AddBaseHealthChecks();
         services.AddMongoInfrastructure();
         services.AddLlmInfrastructure();
-        services.AddGameJobs(configuration);
+        services.AddGameJobs(configuration, jsonContext);
 
         return services;
     }
 
-    private static void AddGameJobs(this IServiceCollection services, IConfiguration configuration)
+    private static void AddGameJobs(this IServiceCollection services, IConfiguration configuration, IJsonTypeInfoResolver jsonContext)
     {
         services.AddOptions<JobsOptions>().BindConfiguration(JobsOptions.SectionName)
             .Validate(options => !string.IsNullOrWhiteSpace(options.DashboardUsername) && !string.IsNullOrWhiteSpace(options.DashboardPassword), "Jobs dashboard requires a username and password.")
             .ValidateOnStart();
         var jobs = configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
         var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ?? throw new InvalidOperationException("Mongo configuration is required.");
-        var functions = services.MapTickerGroup(string.Empty);
-        functions.MapTicker<ResetGameDayJob>("reset-game-day").WithCron("0 0 9 * * *").WithMaxConcurrency(1);
-        services.MapTickerGroup(string.Empty).WithLifetime(ServiceLifetime.Singleton).MapTicker<RefreshRegisteredPlayersJob>("refresh-registered-players").WithCron("0 * * * * *").WithMaxConcurrency(1);
+        services.MapTicker<ResetGameDayJob>().WithCron("0 0 9 * * *").WithMaxConcurrency(1);
+        services.MapTicker<RefreshRegisteredPlayersJob>(ServiceLifetime.Singleton).WithCron("0 * * * * *").WithMaxConcurrency(1);
         services.AddTickerQ(options =>
         {
             options.ConfigureScheduler(scheduler => scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
             options.AddOperationalStore(store => store.UseExistingMongoClient(mongo.DatabaseName));
+            options.WithJsonContext(jsonContext);
             options.AddOpenTelemetryInstrumentation();
             options.SetExceptionHandler<JobsExceptionHandler>();
             if (!jobs.ExecutionEnabled)

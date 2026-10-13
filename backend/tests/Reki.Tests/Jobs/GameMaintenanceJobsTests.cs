@@ -215,8 +215,8 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
 
         await Assert.That(accepted.StatusCode).IsEqualTo(HttpStatusCode.OK);
         var body = await accepted.Content.ReadAsStringAsync(CancellationToken.None);
-        await Assert.That(body).Contains("reset-game-day");
-        await Assert.That(body).Contains("refresh-registered-players");
+        await Assert.That(body).Contains(nameof(ResetGameDayJob));
+        await Assert.That(body).Contains(nameof(RefreshRegisteredPlayersJob));
     }
 
     [Test]
@@ -228,8 +228,8 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
             .Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
 
         await Assert.That(schedules.Count).IsEqualTo(2);
-        var reset = schedules.Single(item => item["Function"].AsString == "reset-game-day");
-        var count = schedules.Single(item => item["Function"].AsString == "refresh-registered-players");
+        var reset = schedules.Single(item => item["Function"].AsString == nameof(ResetGameDayJob));
+        var count = schedules.Single(item => item["Function"].AsString == nameof(RefreshRegisteredPlayersJob));
         await Assert.That(reset["Expression"].AsString).IsEqualTo("0 0 9 * * *");
         await Assert.That(count["Expression"].AsString).IsEqualTo("0 * * * * *");
     }
@@ -277,6 +277,6 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         using var accepted = await http.GetAsync(path, CancellationToken.None);
 
         await Assert.That(accepted.StatusCode).IsEqualTo(HttpStatusCode.OK);
-        await Assert.That(await accepted.Content.ReadAsStringAsync(CancellationToken.None)).Contains("reset-game-day");
+        await Assert.That(await accepted.Content.ReadAsStringAsync(CancellationToken.None)).Contains(nameof(ResetGameDayJob));
     }
 }
