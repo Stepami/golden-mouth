@@ -1,6 +1,7 @@
 // Клиент API. Runtime config выбирает backend или тестовые данные (mock.ts).
 // Во фронте НЕТ секретов: runtime config виден в браузере. Ключи LLM и токен бота живут только на бэкенде.
 import { clearPlayerDrafts } from '../app/postDraft'
+import { clearApiCache } from '../app/useApi'
 import * as mock from './mock'
 import { error, warn } from '../app/log'
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics'
@@ -225,7 +226,7 @@ export const api = {
     onStatus?.('pending')
     const profile = contentOf(sessionPlayer?.world ?? 'stage')
     const star = profile.stars[0]
-    const comment = { ...mock.liveComment, id: crypto.randomUUID(), author: star.name, avatar: star.avatarSeed, handle: `@${star.avatarSeed.replace(/^@+/, '')}`, text: 'Вот это история! Расскажешь, что было дальше?', star: true }
+    const comment = { ...mock.liveComment, id: crypto.randomUUID(), authorId: star.id, author: star.name, avatar: star.avatarSeed, handle: `@${star.avatarSeed.replace(/^@+/, '')}`, text: 'Вот это история! Расскажешь, что было дальше?', star: true }
     const result = { ...mock.results.normal, postId: publicationId, headline: `${star.name} замечает твой пост`,
       bestComment: { avatar: star.avatarSeed, text: comment.text }, hook: `${profile.stars[1].name} готовит ответ…` }
     const steps: [number, LiveEvent][] = [[250, { type: 'views', views: 48 }], [650, { type: 'react', emoji: '😂' }], [1100, { type: 'comment', comment }],
@@ -361,9 +362,11 @@ export const api = {
   saveWorld: async (worldId: string, definition: WorldDefinition): Promise<Player> => {
     if (BASE) {
       await call(`/worlds/${encodeURIComponent(worldId)}`, { method: 'PUT', body: JSON.stringify(definition) })
+      clearApiCache()
       return api.me(worldId)
     }
     installWorldContent([{ ...definition, id: worldId, subscribers: sessionPlayer?.subs ?? 120 }])
+    clearApiCache()
     return rememberPlayer({ ...sessionPlayer!, name: definition.name, handle: definition.avatar, role: definition.role, voice: definition.voice, drama: definition.drama })
   },
   updateWorld: async (patch: WorldUpdate) => {

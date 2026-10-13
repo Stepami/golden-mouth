@@ -12,4 +12,17 @@ public sealed record WorldStar(
     string AvatarSeed,
     int Relation,
     int RelationGainedInPeriod,
-    DateTimeOffset RelationPeriodStartedAtUtc);
+    DateTimeOffset RelationPeriodStartedAtUtc)
+{
+    public static readonly WorldStar DeletedAccount = new(
+        StarId.From("deleted"),
+        "Удалённый аккаунт",
+        string.Empty,
+        default,
+        string.Empty,
+        string.Empty,
+        string.Empty,
+        0,
+        0,
+        DateTimeOffset.MinValue);
+}

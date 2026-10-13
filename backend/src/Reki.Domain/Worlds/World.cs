@@ -26,8 +26,6 @@ public sealed record World
 
     public IReadOnlyList<WorldStar> Stars { get; init; } = [];
 
-    public IReadOnlyList<WorldStar> ArchivedStars { get; init; } = [];
-
     public int Version { get; init; }
 
     public World Instantiate(PlayerId owner, DateTimeOffset periodStart)
@@ -61,7 +59,7 @@ public sealed record World
 
     public WorldStar? FindStar(StarId starId) => Stars.SingleOrDefault(star => star.Id == starId);
 
-    public WorldStar? FindStar(AuthorId authorId) => Stars.Concat(ArchivedStars).FirstOrDefault(star => star.Id.ToAuthorId() == authorId);
+    public WorldStar? FindStar(AuthorId authorId) => Stars.FirstOrDefault(star => star.Id.ToAuthorId() == authorId);
 
     public bool HasStar(StarId starId, string name) => Stars.Any(star => star.Id == starId && star.Name == name);
 

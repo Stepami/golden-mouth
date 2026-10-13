@@ -19,8 +19,7 @@ internal sealed class RemoveStarAppearanceFields : RekiMigrationBase
             {
                 "Stars.AppearanceProfile",
                 "Stars.AgeBand",
-                "ArchivedStars.AppearanceProfile",
-                "ArchivedStars.AgeBand",
+                "ArchivedStars",
             }),
         });
         await db.GetCollection<BsonDocument>(MongoCollections.WorldTemplates).UpdateManyAsync(
@@ -52,7 +51,15 @@ internal sealed class RemoveStarAppearanceFields : RekiMigrationBase
         ];
         foreach (var replacement in replacements)
         {
-            await UpdateStarAvatarAsync(collection, session, replacement, cancellationToken);
+            await collection.UpdateManyAsync(
+                session,
+                new BsonDocument
+                {
+                    { "BalanceKey", replacement.World },
+                    { "Stars", new BsonDocument("$elemMatch", new BsonDocument { { "_id", replacement.StarId }, { "AvatarSeed", replacement.StarId } }) },
+                },
+                Builders<BsonDocument>.Update.Set("Stars.$.AvatarSeed", replacement.AvatarSeed),
+                cancellationToken: cancellationToken);
         }
 
         await collection.UpdateManyAsync(
@@ -60,25 +67,5 @@ internal sealed class RemoveStarAppearanceFields : RekiMigrationBase
             new BsonDocument { { "BalanceKey", "houses" }, { "Interface.AvatarStyle", "thumbs" } },
             Builders<BsonDocument>.Update.Set("Interface.AvatarStyle", "adventurer"),
             cancellationToken: cancellationToken);
-    }
-
-    private static async Task UpdateStarAvatarAsync(
-        IMongoCollection<BsonDocument> collection,
-        IClientSessionHandle session,
-        (string World, string StarId, string AvatarSeed) replacement,
-        CancellationToken cancellationToken)
-    {
-        foreach (var field in new[] { "Stars", "ArchivedStars" })
-        {
-            await collection.UpdateManyAsync(
-                session,
-                new BsonDocument
-                {
-                    { "BalanceKey", replacement.World },
-                    { field, new BsonDocument("$elemMatch", new BsonDocument { { "_id", replacement.StarId }, { "AvatarSeed", replacement.StarId } }) },
-                },
-                Builders<BsonDocument>.Update.Set($"{field}.$.AvatarSeed", replacement.AvatarSeed),
-                cancellationToken: cancellationToken);
-        }
     }
 }

@@ -29,11 +29,9 @@ public sealed class UpdateWorldHandler(IGameStore store, IRekiContextAccessor co
             Id = world.Id,
             Version = world.Version + 1,
             BalanceKey = world.BalanceKey,
-            ArchivedStars = world.ArchivedStars.Concat(world.Stars)
-                .Where(star => !definition.Stars.Any(value => value.Id == star.Id)).DistinctBy(star => star.Id).ToArray(),
             Stars = definition.Stars.Select(star =>
             {
-                var previous = world.Stars.Concat(world.ArchivedStars).FirstOrDefault(value => value.Id == star.Id);
+                var previous = world.FindStar(star.Id);
                 return star with
                 {
                     Relation = previous?.Relation ?? 0,

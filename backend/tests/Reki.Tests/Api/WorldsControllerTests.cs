@@ -324,7 +324,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             await Assert.That(updated.Stars.All(star => star.Relation == 3)).IsTrue();
             await Assert.That(updated.Player.Wants.All(want => want.Done)).IsTrue();
             await Assert.That(updated.Player.Achievements.All(item => item.IsOpen)).IsTrue();
-            await Assert.That(updated.FindStar(removed.Id.ToAuthorId())?.Name).IsEqualTo(removed.Name);
+            await Assert.That(updated.FindStar(removed.Id.ToAuthorId())).IsNull();
             await Assert.That(updated.Interface.Title).IsEqualTo(request.Title);
             await Assert.That(updated.PostIdeas).IsEquivalentTo(request.PostIdeas);
         }
