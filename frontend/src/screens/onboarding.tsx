@@ -29,10 +29,10 @@ function Invite() {
     <div className="brand">реки</div><h1>Твой пост может<br />взорвать ленту.</h1>
     <p className="muted">Собери фанатов, попади в драму и стань главным героем своей истории.</p>
     <div className="welcome-post card" aria-label="Пример игрового поста">
-      <div className="row"><img className="welcome-avatar welcome-photo" src="/portraits/masha-v1.png" alt="Маша" /><div><b>Маша в тридевятом царстве</b><div className="small muted">пример игры</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
-      <p>На моей фотографии появилась улица, которой вчера не было. Кто-нибудь узнаёт эти окна? 🌲</p>
+      <div className="row"><img className="welcome-avatar welcome-photo" src="/portraits/masha-v1.png" alt="Маша" /><div><b>Маша в тридевятом царстве</b><div className="small muted">только что</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
+      <p>Выложила фото с бала. Все обсуждают парня рядом со мной. Вообще-то я пришла одна 👀</p>
       <div className="row"><span className="react">🔥 2,4k</span><span className="react">💀 890</span><span className="small muted">🫶 1,2k</span></div>
-      <div className="welcome-reply"><b>Эдуард · хранитель кинотеатра</b><div>Я помню этот дом. Но на карте его нет уже сорок лет.</div></div>
+      <div className="welcome-reply"><b>Джеймс · рыцарь великого дома</b><div>Ты всё-таки заметила меня. Оставишь мне первый танец на следующем балу?</div></div>
     </div>
     <p className="small muted">Фанаты и события виртуальные. Посты остаются внутри игры.</p>
   </div><BottomCTA main="Начать играть" onMain={() => nav.push('01-2_age')} /></div>
