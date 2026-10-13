@@ -108,3 +108,22 @@ html.shot .pop { opacity: 1; animation: none; }
 .quiet-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .quiet-times label { min-width: 0; }
 .quiet-times input { display: block; min-width: 0; max-width: 100%; margin-top: 6px; padding: 10px; border-radius: 10px; background: var(--line2); }
+
+/* Миры и общий редактор: элементы остаются доступны при клавиатуре и крупном шрифте. */
+.world-choice { width: 100%; display: flex; text-align: left; gap: 12px; align-items: flex-start; margin: 10px 0; color: var(--text); border: 1px solid var(--line2); }
+.text-field { margin: 12px 0; }
+.text-field textarea, select { display: block; width: 100%; margin-top: 8px; background: #171720; border: 1px solid var(--line2); border-radius: 12px; padding: 12px; color: var(--text); font: inherit; font-weight: 400; letter-spacing: normal; text-transform: none; }
+.text-field textarea { resize: vertical; min-height: 70px; }
+button:disabled { opacity: .4; cursor: default; }
+details.card { margin: 12px 0; }
+summary { cursor: pointer; padding: 6px 0; font-weight: 700; }
+.welcome { background: radial-gradient(ellipse at 90% 20%, #322143 0, transparent 48%), var(--bg); }
+.welcome .pad { padding: 30px 22px; }
+.welcome h1 { font-size: clamp(34px, 9vw, 44px); line-height: 1.05; letter-spacing: -.04em; margin: 34px 0 18px; }
+.welcome-post { margin-top: 30px; border: 1px solid #9b6bff66; box-shadow: 0 12px 32px #09090c77; transform: rotate(-1deg); }
+.welcome-post p { font-size: 16px; line-height: 1.55; }
+.welcome-avatar { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: var(--grad); font-size: 24px; }
+.welcome-reply { margin: 16px 0 0 16px; border-left: 2px solid var(--lilac); padding-left: 12px; font-size: 13px; color: var(--soft); }
+.sheet { max-height: 85dvh; overflow-y: auto; }
+
+.world-choice .small { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

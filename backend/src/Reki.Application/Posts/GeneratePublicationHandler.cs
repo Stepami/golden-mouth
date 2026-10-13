@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Common.Safety;
 using Reki.Application.Player;
 using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
@@ -23,7 +24,8 @@ public sealed partial class GeneratePublicationHandler(
     ISender sender,
     StarTurnGenerator generator,
     ILogger<GeneratePublicationHandler> logger,
-    ProductTelemetry analytics) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatusLiveEvent>
+    ProductTelemetry analytics,
+    PlayerSafetyGuard safety) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatusLiveEvent>
 {
     private static readonly TimeSpan FailedRetention = TimeSpan.FromDays(1);
 
@@ -52,7 +54,7 @@ public sealed partial class GeneratePublicationHandler(
         if (existing is not null)
         {
             EnsureSameRequest(existing, player, requestHash);
-            yield return new PublicationStatusLiveEvent(existing.Status, request.Id);
+            yield return new PublicationStatusLiveEvent(existing.Status, request.Id) { Failure = existing.Failure };
             yield break;
         }
 
@@ -81,11 +83,12 @@ public sealed partial class GeneratePublicationHandler(
             existing = await sender.Send(new GetPublicationQuery(request.Id), cancellationToken)
                 ?? throw new RequestConflictException("The publication changed concurrently.");
             EnsureSameRequest(existing, player, requestHash);
-            yield return new PublicationStatusLiveEvent(existing.Status, request.Id);
+            yield return new PublicationStatusLiveEvent(existing.Status, request.Id) { Failure = existing.Failure };
             yield break;
         }
 
         yield return new PublicationStatusLiveEvent(PublicationStatus.Pending, request.Id);
+        var failure = new PublicationFailure("technical_failure", "uncertain", PublicationSafetyPolicy.Version);
         var failed = false;
         var ready = false;
         try
@@ -129,6 +132,7 @@ public sealed partial class GeneratePublicationHandler(
                     }
                     catch (Exception exception)
                     {
+                        failure = FailureOf(exception);
                         GenerationFailed(exception);
                         failed = true;
                     }
@@ -148,12 +152,14 @@ public sealed partial class GeneratePublicationHandler(
                 {
                     var complete = await sender.Send(new GetPublicationQuery(request.Id), cancellationToken)
                                    ?? throw new InvalidOperationException("The publication disappeared during generation.");
-                    _ = complete.AssembleTurn();
+                    var turn = complete.AssembleTurn();
+                    await safety.EnsureOutputAllowedAsync(player, [turn.Comment, turn.Hook], cancellationToken);
                     await store.MarkPublicationReadyAsync(request.Id, cancellationToken);
                     ready = true;
                 }
                 catch (Exception exception)
                 {
+                    failure = FailureOf(exception);
                     GenerationFailed(exception);
                     failed = true;
                 }
@@ -164,15 +170,23 @@ public sealed partial class GeneratePublicationHandler(
             if (!ready)
             {
                 var expiresAtUtc = timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime;
-                await store.MarkPublicationFailedAsync(request.Id, expiresAtUtc, CancellationToken.None);
+                await store.MarkPublicationFailedAsync(request.Id, expiresAtUtc, failure, CancellationToken.None);
                 analytics.TrackPlayer(player, "post_failed", new Dictionary<string, string> { ["id"] = request.Id });
             }
         }
 
         yield return new PublicationStatusLiveEvent(
             failed ? PublicationStatus.Failed : PublicationStatus.ReadyForModeration,
-            request.Id);
+            request.Id) { Failure = failed ? failure : null };
     }
+
+    private static PublicationFailure FailureOf(Exception exception) => exception switch
+    {
+        ContentRejectedException rejected => new("content_rejected", rejected.Category, PublicationSafetyPolicy.Version),
+        UnsafeGeneratedContentException rejected => new("unsafe_generated_content", rejected.Category, PublicationSafetyPolicy.Version),
+        CrisisDetectedException => new("crisis", "crisis", PublicationSafetyPolicy.Version),
+        _ => new("technical_failure", "uncertain", PublicationSafetyPolicy.Version),
+    };
 
     private static void EnsureSameRequest(
         Publication publication,

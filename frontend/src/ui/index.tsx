@@ -1,6 +1,6 @@
 import { useContext, type CSSProperties, type ReactNode } from 'react'
 import { tap } from '../app/analytics'
-import { avatarUri, AvatarWorld } from './avatar'
+import { avatarUri, AvatarWorld, AvatarPeople, type AvatarProfile } from './avatar'
 import type { WorldId } from '../api/types'
 
 /**
@@ -9,10 +9,11 @@ import type { WorldId } from '../api/types'
  * поэтому отдельного файла или ссылки на аватар нигде не нужно.
  * Без сида рисуем букву — так показывается бот.
  */
-export function Avatar({ seed, label, size = 40, style, world }: { seed?: string; label?: string; size?: number; style?: CSSProperties; world?: WorldId }) {
+export function Avatar({ seed, label, size = 40, style, world, profile, avatarStyle }: { seed?: string; label?: string; size?: number; style?: CSSProperties; world?: WorldId; profile?: AvatarProfile; avatarStyle?: string }) {
   const currentWorld = useContext(AvatarWorld)
+  const people = useContext(AvatarPeople)
   if (!seed) return <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--grad)', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.4, ...style }}>{(label ?? '?').slice(0, 1).toUpperCase()}</div>
-  return <img src={avatarUri(seed, world ?? currentWorld)} alt="" width={size} height={size} style={{ borderRadius: '50%', flex: 'none', display: 'block', ...style }} />
+  return <img src={avatarUri(seed, world ?? currentWorld, profile ?? people[seed], avatarStyle)} alt="" width={size} height={size} style={{ borderRadius: '50%', flex: 'none', display: 'block', ...style }} />
 }
 
 export function Button({ children, secondary, onClick, disabled, style }: { children: ReactNode; secondary?: boolean; onClick?: () => void; disabled?: boolean; style?: CSSProperties }) {
@@ -79,10 +80,10 @@ export function Whisper({ seed = 'mira', name = 'Мира', children }: { seed?:
   )
 }
 
-export function Comment({ seed, name, handle, text, star, me, onMore }: { seed: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
+export function Comment({ seed, name, handle, text, star, me, onMore, profile }: { profile?: AvatarProfile; seed: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
   return (
     <div style={{ display: 'flex', gap: 10, marginBottom: 13 }}>
-      <Avatar seed={seed} size={34} />
+      <Avatar seed={seed} size={34} profile={profile} />
       <div style={{ flex: 1 }}>
         <div className="row" style={{ gap: 6 }}><b>{name}</b><span className="muted small">{handle}</span>{star && <span className="small" style={{ color: 'var(--accent)' }}>★ звезда</span>}{me && <span className="small muted">ты</span>}
           {onMore && <button onClick={onMore} aria-label="Пожаловаться" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>}</div>

@@ -16,6 +16,11 @@ public sealed class CreateWorldHandler(IGameStore store, ISender sender, GameDay
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var source = request.Definition;
+        if (source.BalanceKey == "own" && !player.HitOwnWorldMilestone)
+        {
+            throw new RequestConflictException("Creating a world from scratch is not unlocked.");
+        }
+
         if (source.Stars.Count == 0 || source.Stars.Any(star => !Enum.IsDefined(star.Trait)) ||
             source.Stars.Select(star => star.Id).Distinct().Count() != source.Stars.Count)
         {
@@ -29,7 +34,7 @@ public sealed class CreateWorldHandler(IGameStore store, ISender sender, GameDay
         };
         await safetyGuard.EnsureInputAllowedAsync(
             player,
-            [world.Interface.Title, world.Interface.Description, world.Player.Name, .. world.Rules.Select(rule => rule.Text), .. world.Stars.Select(star => star.About)],
+            WorldSafetyInputs.From(world),
             cancellationToken);
         await store.InsertWorldAsync(world, cancellationToken);
         telemetry.TrackPlayer(player, "world_created", new Dictionary<string, string> { ["world"] = world.BalanceKey }, world.Id);

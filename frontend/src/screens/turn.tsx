@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { hapticFeedback, shareStory, shareURL } from '@telegram-apps/sdk-react'
 import { api } from '../api/client'
 import { firstPost, results } from '../api/mock'
-import type { CommentT, Post, PostResult } from '../api/types'
+import type { CommentT, Post, PostResult, PublicationFailure } from '../api/types'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
@@ -13,21 +13,36 @@ import { contentOf } from '../api/worldContent'
 import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
+import { TextField } from '../ui/TextField'
+import { completePostDraft, draftKey, readPostDraft, savePostDraft } from '../app/postDraft'
+import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 
 
 // 02-1: пост, желания дня, «Подскажи» дописывает черновик
 function Compose() {
   const nav = useNav(); const p = usePlayer()
   const ideas = contentOf(p.world).ideas
-  const [text, setText] = useState(() => typeof nav.params.text === 'string' ? nav.params.text : '')
+  const key = draftKey(p)
+  const [draft, setDraft] = useState(() => {
+    const saved = readPostDraft(key)
+    return saved.text.length || saved.publicationId ? saved : { text: typeof nav.params.text === 'string' ? nav.params.text : '', ownWords: true }
+  })
+  const text = draft.text
+  const [durable, setDurable] = useState(true)
+  const edit = (value: string, fromIdea = false) => {
+    const next = { ...draft, text: value, ownWords: fromIdea ? false : draft.ownWords || value !== draft.text }
+    setDraft(next); setDurable(savePostDraft(key, next))
+  }
+  useEffect(() => { setDurable(savePostDraft(key, draft)) }, [key, draft])
   const done = p.wants.filter(w => w.done).length
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Новый пост" right={`✍️ осталось ${p.postsLeft} на сегодня`} />
       <div className="pad">
-        <div className="card" style={{ minHeight: 104, marginBottom: 6 }}>
-          <textarea value={text} onChange={e => setText(e.target.value)} rows={4} placeholder="Как прошёл день?" maxLength={500} />
-        </div>
+        <TextField label="Текст поста" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={4} placeholder="Как прошёл день?" ideas={ideas} />
+        {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
+        {draft.publicationId && <div className="card"><p>У предыдущей публикации ещё нет подтверждённого результата.</p><button className="btn" onClick={() => nav.replace('02-2_live', { text: draft.submittedText, publicationId: draft.publicationId, ownWords: draft.submittedOwnWords })}>Проверить статус</button></div>}
+        <button className="chip" onClick={() => nav.push('06-4_rules')}>Правила публикаций</button>
         <Whisper>Не знаешь, что писать? Возьми идею и допиши по-своему. Своими словами подписчиков приходит на треть больше</Whisper>
         <div className="card" style={{ padding: '6px 14px', margin: '6px 0 10px' }}>
           <div className="small muted" style={{ paddingTop: 6 }}>ЖЕЛАНИЯ ДНЯ · {done} из {p.wants.length}</div>
@@ -37,10 +52,9 @@ function Compose() {
             </div>
           ))}
         </div>
-        <div className="small muted" style={{ margin: '4px 0 8px' }}>💡 ПОДСКАЖИ</div>
-        {ideas.map(i => <button key={i} className="opt" onClick={() => setText(i.replace(/[«»]/g, '').replace('…', ' '))}>{i}</button>)}
+
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: !ideas.some(i => text.startsWith(i.replace(/[«»…]/g, '').trim())) }); nav.replace('02-2_live', { text, publicationId: crypto.randomUUID() }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
+      <BottomCTA main="Опубликовать" disabled={!text.trim() || !!draft.publicationId} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords }); const publicationId = crypto.randomUUID(); savePostDraft(key, { ...draft, publicationId, submittedText: text, submittedOwnWords: draft.ownWords }); nav.replace('02-2_live', { text, publicationId, ownWords: draft.ownWords }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
     </div>
   )
 }
@@ -54,7 +68,6 @@ function Live() {
   const [floats, setFloats] = useState<{ id: number; emoji: string; x: number }[]>([])
   const [comments, setComments] = useState<CommentT[]>([])
   const [typing, setTyping] = useState<string | null>(null)
-  const [toastComment, setToastComment] = useState<CommentT | null>(null)
   const [phase, setPhase] = useState<'generating' | 'moderating' | 'reacting'>('generating')
   const commentsRef = useRef<CommentT[]>([])
   const reactionsRef = useRef<string[]>([])
@@ -62,26 +75,33 @@ function Live() {
     setPhase('reacting')
     if (e.type === 'views') setViews(e.views)
     if (e.type === 'react') { reactionsRef.current.push(e.emoji); setFloats(f => [...f, { id: Date.now() + Math.random(), emoji: e.emoji, x: 10 + Math.random() * 70 }]) }
-    if (e.type === 'comment') { commentsRef.current.push(e.comment); setComments(c => [...c, e.comment]); setToastComment(e.comment) }
+    if (e.type === 'comment') { commentsRef.current.push(e.comment); setComments(c => [...c, e.comment]) }
     if (e.type === 'typing') setTyping(e.who)
     if (e.type === 'result') {
       const post: Post = { id: e.result.postId, text, views: e.result.views,
         reactions: [...new Set(reactionsRef.current)].map(emoji => ({ emoji, count: reactionsRef.current.filter(value => value === emoji).length })),
         comments: commentsRef.current, at: 'только что' }
+      completePostDraft(draftKey(p), publicationId, text)
       track('post_result', { delta: e.result.delta, viral: e.result.viral, flop: e.result.flop })
       void (async () => {
-        if (apiBaseUrl) await refresh()
+        if (apiBaseUrl) {
+          const latest = await refresh()
+          if (!p.hitOwnWorldMilestone && latest?.hitOwnWorldMilestone) {
+            selectDraftOwner(p.id); setWorldDraft({ definition: blankWorld(), address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand, reason: 'В твоём мире уже 500 подписчиков — теперь можно создать мир с нуля' })
+            nav.replace('01-4_channel', { world: 'own' }); return
+          }
+        }
         else patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + e.result.delta) })
         nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: e.result, post })
       })()
     }
-  }, state => nav.replace('02-2b_publish_error', { text, publicationId, uncertain: state === 'unknown' }), status => {
+  }, (state, reason) => { if (state === 'failed') { const saved = readPostDraft(draftKey(p)); if (saved.publicationId === publicationId) savePostDraft(draftKey(p), { text: saved.text, ownWords: saved.ownWords }) }; if (reason?.code === 'crisis') { nav.replace(p.ageBand === '14-17' || !p.ageBand ? '06-2_crisis' : '06-3_crisis_adult'); return }; nav.replace('02-2b_publish_error', { text, publicationId, ownWords: nav.params.ownWords, reason, uncertain: state === 'unknown' }) }, status => {
     if (status === 'ready_for_moderation') setPhase('moderating')
-  }), []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, nav.params.ownWords !== false), []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="screen">
       <ChannelHead />
-      {toastComment && <div className="toast"><Avatar seed={toastComment.avatar} size={32} /><div className="small"><b>Новый комментарий от {toastComment.author}</b><div style={{ color: 'var(--soft)' }}>«{toastComment.text}»</div></div></div>}
+
       <div className="pad" style={{ position: 'relative' }}>
         <div className="card" style={{ boxShadow: '0 0 0 2px rgba(255,107,139,.6),0 0 44px rgba(255,107,139,.35)', marginBottom: 12 }}>
           <div className="small" style={{ color: 'var(--accent)', marginBottom: 6 }} aria-live="polite">{phase === 'generating' ? 'готовим публикацию' : phase === 'moderating' ? 'проверяем публикацию' : 'только что опубликовано'}</div>{text}
@@ -92,7 +112,7 @@ function Live() {
         <div style={{ position: 'absolute', right: 14, top: 120, width: 120, height: 200, pointerEvents: 'none' }}>
           {floats.map(f => <span key={f.id} className="float-react" style={{ left: `${f.x}%`, bottom: 0, fontSize: 24 }}>{f.emoji}</span>)}
         </div>
-        {comments.map(c => <Comment key={c.id} seed={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} onMore={() => nav.push('06-1_report', { id: c.id })} />)}
+        {comments.map(c => <Comment key={c.id} seed={c.avatar} profile={c.star && c.appearanceProfile ? { address: c.appearanceProfile === 'masculine' ? 'he' : c.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: c.ageBand } : undefined} name={c.author} handle={c.handle} text={c.text} star={c.star} onMore={() => nav.push('06-1_report', { id: c.id })} />)}
         {typing && <div className="muted small row" style={{ gap: 8 }}>{typing} печатает…</div>}
       </div>
       <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }} aria-live="polite">{phase === 'generating' ? 'звезда готовит ответ' : phase === 'moderating' ? 'скоро появятся реакции' : 'реакции ещё идут · итог через пару секунд'}</div>
@@ -104,6 +124,15 @@ function PublishError() {
   const nav = useNav()
   const text = typeof nav.params.text === 'string' ? nav.params.text : firstPost.text.replace(' 🫠', '')
   const uncertain = nav.params.uncertain === true
+  const reason = nav.params.reason as PublicationFailure | undefined
+  const explanations: Record<string, string> = {
+    harassment: 'В тексте есть оскорбления или угрозы. Обсуждай поступки и идеи без нападок на человека.',
+    age_restricted_topic: 'В тексте есть тема, недоступная для выбранной возрастной группы. Убери взрослые подробности и попробуй снова.',
+    explicit_content: 'Убери откровенные или жестокие подробности и попробуй снова.',
+    hate: 'Обсуждай идеи и поступки без разжигания ненависти.',
+    dangerous_instructions: 'Убери опасные инструкции и призывы причинить вред.',
+  }
+  const explanation = uncertain ? 'Связь прервалась. Проверь статус: новый пост создавать не нужно.' : reason?.code === 'unsafe_generated_content' ? 'Ответ игры не прошёл проверку безопасности. Твой текст сохранён, доступный пост не списан.' : reason?.code === 'limit_reached' ? 'Энергия закончилась. Новая появится в 9:00. Черновик сохранён.' : reason?.code === 'technical_failure' ? 'Не получилось подготовить публикацию. Твой текст сохранён, попробуй позже.' : reason?.code === 'content_rejected' ? explanations[reason.category] ?? 'Публикация не прошла проверку. Измени текст и попробуй снова.' : 'Не получилось подтвердить публикацию. Текст сохранён.'
   const publicationId = typeof nav.params.publicationId === 'string' ? nav.params.publicationId : undefined
   return (
     <div className="screen no-tab">
@@ -111,10 +140,11 @@ function PublishError() {
       <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">не опубликовано</div>{text}</div></div>
       <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.65)' }}>
         <div className="sheet" role="alert" aria-live="assertive">
-          <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{uncertain ? 'Проверим публикацию' : 'Пост не вышел'}</div>
-          <div className="muted" style={{ marginBottom: 20 }}>{uncertain ? 'Связь прервалась. Текст сохранён; проверь статус, когда будешь готов.' : 'Текст сохранён. Публикация не списала доступный пост.'}</div>
-          {uncertain && publicationId && <Button onClick={() => nav.replace('02-2_live', { text, publicationId })}>Проверить статус</Button>}
-          <Button onClick={() => nav.replace('02-1_compose', { text })}>Вернуться в редактор</Button>
+          <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{uncertain ? 'Проверим публикацию' : 'Пост не опубликован'}</div>
+          <div className="muted" style={{ marginBottom: 20 }}>{explanation}</div>
+          {uncertain && publicationId && <Button onClick={() => nav.replace('02-2_live', { text, publicationId, ownWords: nav.params.ownWords })}>Проверить статус</Button>}
+          <Button onClick={() => nav.replace('02-1_compose', { text })}>Изменить текст</Button>
+          <Button secondary onClick={() => nav.push('06-4_rules')}>Правила публикаций</Button>
         </div>
       </div>
     </div>
@@ -290,7 +320,7 @@ function Thread() {
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div></div>
         {canReply ? <div className="small" style={{ color: 'var(--gift)', marginBottom: 12 }}>💬 Ответ — 1 энергия · первые 3 ответа дают +9 подписчиков</div> : <div className="small muted" style={{ marginBottom: 12 }}>Этот тред доступен для чтения.</div>}
         {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>
-          <Comment seed={comment.avatar} name={comment.author} handle={comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} onMore={comment.me ? undefined : () => nav.push('06-1_report', { id: comment.id })} />
+          <Comment seed={comment.avatar} profile={comment.star && comment.appearanceProfile ? { address: comment.appearanceProfile === 'masculine' ? 'he' : comment.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: comment.ageBand } : undefined} name={comment.author} handle={comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} onMore={comment.me ? undefined : () => nav.push('06-1_report', { id: comment.id })} />
           {!!comment.reactions?.length && <div className="small" style={{ margin: '-6px 0 12px 44px' }}>{comment.reactions.map(reaction => <span key={`${reaction.authorId}:${reaction.emoji}`} title={reaction.author} className="react">{reaction.emoji} {reaction.author}</span>)}</div>}
           {canReply && comment.star && !comment.hidden && <button className="small" disabled={sending} onClick={() => edit({ commentId: comment.id })} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: draft.commentId === comment.id ? 'var(--accent)' : 'var(--lilac)' }}>{draft.commentId === comment.id ? 'Отвечаешь этому комментарию' : 'Ответить'}</button>}
         </div>)}

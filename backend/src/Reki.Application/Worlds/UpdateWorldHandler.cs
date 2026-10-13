@@ -3,47 +3,59 @@ using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
 using Reki.Application.Player;
-using Reki.Domain.Worlds;
 
 namespace Reki.Application.Worlds;
 
-public sealed class UpdateWorldHandler(
-    IGameStore store,
-    ISender sender,
-    PlayerSafetyGuard safetyGuard)
+public sealed class UpdateWorldHandler(IGameStore store, ISender sender, PlayerSafetyGuard safetyGuard)
     : IRequestHandler<UpdateWorldCommand>
 {
-    public async ValueTask<Unit> Handle(
-        UpdateWorldCommand request,
-        CancellationToken cancellationToken)
+    public async ValueTask<Unit> Handle(UpdateWorldCommand request, CancellationToken cancellationToken)
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        if (request.Description is not null || request.Rules is not null)
+        var world = await sender.Send(new GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        var definition = request.Definition;
+        if (definition.Stars.Count == 0 || definition.Stars.Any(star => !Enum.IsDefined(star.Trait)) ||
+            definition.Stars.Select(star => star.Id).Distinct().Count() != definition.Stars.Count)
         {
-            await safetyGuard.EnsureInputAllowedAsync(
-                player,
-                [request.Description ?? string.Empty, .. (request.Rules ?? []).Select(rule => rule.Text)],
-                cancellationToken);
+            throw new ContentRejectedException();
         }
 
-        var world = await sender.Send(new GetWorldQuery(player.Id, request.WorldId), cancellationToken);
-        var updated = world with
+        await safetyGuard.EnsureInputAllowedAsync(
+            player,
+            WorldSafetyInputs.From(definition),
+            cancellationToken);
+        var updated = definition with
         {
+            Id = world.Id,
             Version = world.Version + 1,
-            Rules = request.Rules is null ? world.Rules :
-            [
-                .. request.Rules.Where(rule => !rule.Locked && rule.Text != "Без тем 18+ и травли по внешности"),
-                new WorldRule("Без тем 18+ и травли по внешности", true),
-            ],
-            Interface = world.Interface with
+            BalanceKey = world.BalanceKey,
+            ArchivedStars = world.ArchivedStars.Concat(world.Stars)
+                .Where(star => !definition.Stars.Any(value => value.Id == star.Id)).DistinctBy(star => star.Id).ToArray(),
+            Stars = definition.Stars.Select(star =>
             {
-                Title = request.Title ?? world.Interface.Title,
-                Description = request.Description ?? world.Interface.Description,
-            },
+                var previous = world.Stars.Concat(world.ArchivedStars).FirstOrDefault(value => value.Id == star.Id);
+                return star with
+                {
+                    Relation = previous?.Relation ?? 0,
+                    RelationGainedInPeriod = previous?.RelationGainedInPeriod ?? 0,
+                    RelationPeriodStartedAtUtc = previous?.RelationPeriodStartedAtUtc ?? world.Player.PeriodStartedAtUtc,
+                };
+            }).ToArray(),
             Player = world.Player with
             {
-                Drama = request.Drama ?? world.Player.Drama,
-                Voice = request.Voice ?? world.Player.Voice,
+                Name = definition.Player.Name,
+                Avatar = definition.Player.Avatar,
+                Role = definition.Player.Role,
+                Voice = definition.Player.Voice,
+                Drama = definition.Player.Drama,
+                Wants = definition.Player.Wants.Select(want => want with
+                {
+                    Done = world.Player.Wants.FirstOrDefault(value => value.Id == want.Id)?.Done ?? false,
+                }).ToArray(),
+                Achievements = definition.Player.Achievements.Select(item => item with
+                {
+                    IsOpen = world.Player.Achievements.FirstOrDefault(value => value.Id == item.Id)?.IsOpen ?? false,
+                }).ToArray(),
             },
         };
         if (!await store.TryReplaceWorldAsync(updated, world.Version, cancellationToken))

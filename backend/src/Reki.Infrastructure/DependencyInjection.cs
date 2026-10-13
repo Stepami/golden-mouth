@@ -54,6 +54,7 @@ public static class DependencyInjection
         services
             .AddSingleton<LlmSpendPolicy>()
             .AddSingleton<OpenAiRoutingChatClient>()
+            .AddSingleton<IContentModerator, ContentModerator>()
             .AddChatClient(sp => sp.GetRequiredService<OpenAiRoutingChatClient>())
             .UseOpenTelemetry(
                 sourceName: "Reki.GenAI",

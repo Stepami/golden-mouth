@@ -1,6 +1,6 @@
 // Контракт фронт ↔ бэкенд (issue #10). Бэкенд может уточнить поля: меняем здесь и в mock.ts.
 export type SkillId = 'brave' | 'humor' | 'topic'
-export type WorldId = 'stage' | 'academy' | 'it' | 'stream' | 'own'
+export type WorldId = 'stage' | 'academy' | 'it' | 'stream' | 'own' | 'evening' | 'sorcerers' | 'houses'
 export type Address = 'she' | 'he' | 'nick'
 export type Drama = 'soft' | 'mid' | 'hot' | 'off'
 
@@ -15,7 +15,7 @@ export interface Want { id: string; text: string; reward: string; done: boolean 
 export interface CollectionCard { id: string; emoji: string; title: string; open: boolean }
 
 export interface Player {
-  worldInstanceId?: string; avatarStyle?: string
+  worldInstanceId?: string; avatarStyle?: string; hitOwnWorldMilestone?: boolean; ageBand?: import('../app/ageBand').AgeBand
   id: string; name: string; handle: string; role: string; address: Address
   world: WorldId; subs: number; postsLeft: number; postsCap: number; firstPostInviteBonus: number
   streak: { days: number; week: boolean[]; nextReward: string }
@@ -32,7 +32,7 @@ export interface Reaction { emoji: string; count: number }
 export interface CommentReaction { authorId: string; author: string; avatar: string; star: boolean; me: boolean; emoji: string }
 export interface CommentT {
   id: string; author: string; avatar: string; handle: string; text: string; star?: boolean; me?: boolean; hidden?: boolean
-  authorId?: string; role?: string; parentCommentId?: string | null; requestId?: string | null; depth?: number; reactions?: CommentReaction[]
+  appearanceProfile?: 'masculine' | 'feminine' | 'neutral'; ageBand?: import('../app/ageBand').AgeBand; authorId?: string; role?: string; parentCommentId?: string | null; requestId?: string | null; depth?: number; reactions?: CommentReaction[]
 }
 /** Пост канала. `canReply` есть только при загрузке с сервера (GET /posts/:id): отвечать можно лишь под своими постами. */
 export interface Post { id: string; text: string; views: number; reactions: Reaction[]; comments: CommentT[]; inRivers?: boolean; at?: string; canReply?: boolean; demoComments?: boolean }
@@ -56,7 +56,8 @@ export interface PostResult {
 /** Элемент массива живой реакции (JSON из POST /posts/publications/{id}/moderation) */
 export type LiveEvent = { type: 'views'; views: number } | { type: 'react'; emoji: string } | { type: 'comment'; comment: CommentT } | { type: 'typing'; who: string } | { type: 'result'; result: PostResult }
 export type PublicationStatus = 'pending' | 'ready_for_moderation' | 'completed' | 'failed'
-export interface PublicationState { publicationId: string; status: PublicationStatus; result: PostResult | null }
+export interface PublicationFailure { code: string; category: string; policyVersion: string }
+export interface PublicationState { failure?: PublicationFailure; publicationId: string; status: PublicationStatus; result: PostResult | null }
 
 export interface Friend { id: string; name: string; avatar: string; world: string; subs: number; lastPost: string; pronoun: 'её' | 'его' }
 export interface Challenge { id: string; me: string; rival: Friend; day: number; days: number; myScore: number; rivalScore: number; bestPost: string }
@@ -74,7 +75,7 @@ export interface WorldDocument extends Omit<World, 'id'> {
   roles: string[]; voices: string[]; postIdeas: string[]; demoPosts: string[]
   firstContext: string; firstPrompt: string
   rules: { text: string; locked?: boolean }[]; wants: Want[]; achievements: CollectionCard[]
-  stars: (Omit<Star, 'trait'> & { trait: number; voice: string; avatarSeed: string })[]
+  stars: (Omit<Star, 'trait'> & { trait: number; voice: string; avatarSeed: string; appearanceProfile?: 'masculine' | 'feminine' | 'neutral'; ageBand?: import('../app/ageBand').AgeBand })[]
   unlockSkill?: SkillId; unlockLevel?: number
 }
 
@@ -82,7 +83,7 @@ export interface WorldDocument extends Omit<World, 'id'> {
 export type WorldDefinition = Omit<WorldDocument, 'id' | 'subscribers' | 'lock'>
 
 export interface PlayerDocument {
-  id: string; address: Address; postsLeft: number; postsCap: number; firstPostInviteBonus: number
+  id: string; address: Address; hitOwnWorldMilestone?: boolean; ageBand?: import('../app/ageBand').AgeBand; postsLeft: number; postsCap: number; firstPostInviteBonus: number
   streak: Player['streak']; skills: Player['skills']; experiments: Record<string, string>
   settings: { notifications: string; quiet: string; plus: boolean }
 }

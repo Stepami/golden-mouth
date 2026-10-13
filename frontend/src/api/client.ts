@@ -1,5 +1,6 @@
 // Клиент API. Runtime config выбирает backend или тестовые данные (mock.ts).
 // Во фронте НЕТ секретов: runtime config виден в браузере. Ключи LLM и токен бота живут только на бэкенде.
+import { clearPlayerDrafts } from '../app/postDraft'
 import * as mock from './mock'
 import { error, warn } from '../app/log'
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics'
@@ -8,7 +9,7 @@ import { demoChannelPosts, demoFeed, demoOwnPosts, demoPlayer, demoPost, resetDe
 import { contentOf, installWorldContent, installWorldTemplates, worldDocumentOf, wantsFor } from './worldContent'
 import { telegramAuthHeaders } from './auth'
 import type { AgeBand } from '../app/ageBand'
-import type { PlayerDocument, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, ReplyLiveEvent, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types'
+import type { PlayerDocument, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, PublicationFailure, ReplyLiveEvent, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types'
 
 let sessionPlayer: Player | undefined
 let sessionIdentity: PlayerDocument | undefined
@@ -33,10 +34,11 @@ function loadTemplates(): Promise<void> {
   if (templates.length) return Promise.resolve()
   return templatesRequest ??= fetchTemplates().finally(() => { templatesRequest = undefined })
 }
-function rememberPlayer(player: Player): Player { setTelemetryPlayerAvailable(true); sessionIdentity = { ...player, experiments: player.experiments ?? {} }; sessionPlayer = player; setAnalyticsWorld(player.worldInstanceId, player.world); return player }
+function rememberPlayer(player: Player): Player {
+  try { if (player.worldInstanceId) localStorage.setItem(`reki:selected-world:${player.id}`, player.worldInstanceId) } catch { /* memory fallback */ } setTelemetryPlayerAvailable(true); sessionIdentity = { ...player, experiments: player.experiments ?? {} }; sessionPlayer = player; setAnalyticsWorld(player.worldInstanceId, player.world); return player }
 
 export class ApiError extends Error {
-  constructor(public readonly status: number, method: string, path: string) {
+  constructor(public readonly status: number, method: string, path: string, public readonly failure?: PublicationFailure) {
     super(`${method} ${path.replace(/\/[\w-]{16,}/g, '/:id')} ${status}`)
     this.name = 'ApiError'
   }
@@ -44,7 +46,7 @@ export class ApiError extends Error {
 
 async function call<T>(path: string, init?: RequestInit, authenticated = true): Promise<T> {
   const r = await fetch(`${BASE ?? runtimeConfig.apiBaseUrl}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...(authenticated ? telegramAuthHeaders() : {}), ...init?.headers } })
-  if (!r.ok) { const e = new ApiError(r.status, init?.method ?? 'GET', path); if (r.status >= 500) error('api_error', e, { status: r.status }); else if (r.status !== 404 || path !== '/me') warn('api_error', { status: r.status, msg: e.message }); throw e }
+  if (!r.ok) { let failure: PublicationFailure | undefined; try { failure = (await r.json() as { failure?: PublicationFailure }).failure } catch { /* untyped transport error */ }; const e = new ApiError(r.status, init?.method ?? 'GET', path, failure); if (r.status >= 500) error('api_error', e, { status: r.status }); else if (r.status !== 404 || path !== '/me') warn('api_error', { status: r.status, msg: e.message }); throw e }
   const body = await r.text()
   return body ? JSON.parse(body) as T : undefined as T
 }
@@ -87,7 +89,9 @@ async function loadPlayer(worldId?: string): Promise<Player> {
   sessionIdentity = player
   setTelemetryPlayerAvailable(true)
   const ownedWorlds = await call<WorldDocument[]>('/worlds')
-  const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId)) ?? ownedWorlds[0]
+  let selected: string | undefined
+  try { selected = localStorage.getItem(`reki:selected-world:${player.id}`) ?? undefined } catch { /* memory fallback */ }
+  const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)) ?? ownedWorlds[0]
   if (!world) throw new ApiError(404, 'GET', '/worlds')
   installWorldContent([world])
   return rememberPlayer({ ...player, worldInstanceId: world.id, avatarStyle: world.avatarStyle,
@@ -107,6 +111,7 @@ export const api = {
     playerRequests.set(key, request)
     return request
   },
+  playerId: (): string | undefined => sessionIdentity?.id,
   hasPlayer: (): boolean => sessionIdentity !== undefined,
   onboarding: async (body: { birthGroup: '14-17' | '18+'; ageBand?: AgeBand; address: string; referralCode?: string }): Promise<PlayerDocument> => {
     if (sessionIdentity) throw new Error('Onboarding has already been completed')
@@ -135,7 +140,7 @@ export const api = {
     })))
   },
   /** Генерация, затем модерация и анимация массива реакций; при обрыве сверяем сохранённый статус. */
-  publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown') => void, onStatus?: (status: PublicationStatus) => void): () => void {
+  publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true): () => void {
     if (BASE) {
       const ctrl = new AbortController()
       let deliveredResult = false
@@ -181,7 +186,7 @@ export const api = {
         } else if (state.status === 'ready_for_moderation') {
           onError('unknown')
         } else if (state.status === 'failed') {
-          onError('failed')
+          onError('failed', state.failure)
         } else {
           onError('unknown')
         }
@@ -193,19 +198,21 @@ export const api = {
           const r = await fetch(`${BASE}${inWorld("/posts/publications")}`, {
             method: 'POST', signal: ctrl.signal,
             headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', ...telegramAuthHeaders() },
-            body: JSON.stringify({ publicationId, text }),
+            body: JSON.stringify({ publicationId, text, ownWords }),
           })
-          if (!r.ok) throw new ApiError(r.status, 'POST', '/posts/publications')
+          if (!r.ok) { let failure: PublicationFailure | undefined; try { failure = (await r.json() as { failure?: PublicationFailure }).failure } catch { /* transport */ }; throw new ApiError(r.status, 'POST', '/posts/publications', failure) }
           let lastStatus: PublicationStatus | null = null
-          await readSse<{ type: PublicationStatus; publicationId: string }>(r, event => { lastStatus = event.type; onStatus?.(event.type) })
-          if (lastStatus === 'failed') { onError('failed'); return }
+          let failure: PublicationFailure | undefined
+          await readSse<{ type: PublicationStatus; publicationId: string; failure?: PublicationFailure }>(r, event => { lastStatus = event.type; failure = event.failure; onStatus?.(event.type) })
+          if (lastStatus === 'failed') { onError('failed', failure); return }
           if (lastStatus === 'completed') { await recover(); return }
           if (lastStatus !== 'ready_for_moderation') { await recover(); return }
           await moderation()
         } catch (e) {
           if ((e as Error).name === 'AbortError') return
           error('sse_error', e)
-          if (e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 409) onError('failed')
+          if (e instanceof ApiError && e.failure) onError('failed', e.failure)
+          else if (e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 409) onError('failed')
           else await recover()
         }
       })() }, 0)
@@ -287,7 +294,9 @@ export const api = {
       const post = await call<PostDetailResponse>(`/posts/${encodeURIComponent(postId)}${query}`)
       const saved = post.comments.find(comment => comment.requestId === requestId && comment.parentCommentId === commentId && comment.text === text)
       if (!saved) throw cause
-      const [identity, world] = await Promise.all([call<PlayerDocument>('/me'), call<WorldDocument>(`/worlds/${encodeURIComponent(player.worldInstanceId ?? '')}`)])
+      const [identity, worlds] = await Promise.all([call<PlayerDocument>('/me'), call<WorldDocument[]>('/worlds')])
+      const world = worlds.find(value => value.id === player.worldInstanceId)
+      if (!world) throw cause
       const event: ReplyLiveEvent = { status: 'completed', requestId, post, energyLeft: identity.postsLeft, subscribers: world.subscribers }
       update(event); return event
     }
@@ -343,16 +352,21 @@ export const api = {
   answerEvent: (id: string, text: string) => BASE ? call(inWorld(`/events/${id}/answer`), { method: 'POST', body: JSON.stringify({ text }) }) : later({ ok: true }),
   challenge: (): Promise<Challenge | null> => BASE ? call('/challenges/active') : later(mock.challenge),
   startChallenge: (friendId: string) => BASE ? call('/challenges', { method: 'POST', body: JSON.stringify({ friendId }) }) : later({ ok: true }),
-  updateWorld: async (patch: WorldUpdate) => {
+  ownedWorlds: (): Promise<WorldDocument[]> => BASE ? call('/worlds') : later(sessionPlayer ? [worldDocumentOf(sessionPlayer.world)] : []),
+  saveWorld: async (worldId: string, definition: WorldDefinition): Promise<Player> => {
     if (BASE) {
-      if (!sessionPlayer?.worldInstanceId) throw new Error('World must be loaded before this request')
-      await call(`/worlds/${encodeURIComponent(sessionPlayer.worldInstanceId)}`, { method: 'PATCH', body: JSON.stringify(patch) })
+      await call(`/worlds/${encodeURIComponent(worldId)}`, { method: 'PUT', body: JSON.stringify(definition) })
+      return api.me(worldId)
     }
-    if (sessionPlayer) {
-      installWorldContent([{ ...worldDocumentOf(sessionPlayer.world), ...patch }])
-      sessionPlayer = { ...sessionPlayer, drama: patch.drama ?? sessionPlayer.drama, voice: patch.voice ?? sessionPlayer.voice }
-      if (!BASE) saveDemoPlayer(sessionPlayer)
-    }
+    installWorldContent([{ ...definition, id: worldId, subscribers: sessionPlayer?.subs ?? 120 }])
+    return rememberPlayer({ ...sessionPlayer!, name: definition.name, handle: definition.avatar, role: definition.role, voice: definition.voice, drama: definition.drama })
   },
-  deleteAccount: async () => { if (BASE) await call('/me', { method: 'DELETE' }); resetDemoPlayer(sessionPlayer?.id); sessionPlayer = undefined; sessionIdentity = undefined; setTelemetryPlayerAvailable(false); setAnalyticsWorld(undefined) },
+  updateWorld: async (patch: WorldUpdate) => {
+    if (!sessionPlayer?.worldInstanceId) throw new Error('World must be loaded before this request')
+    const current = (await api.ownedWorlds()).find(world => world.id === sessionPlayer!.worldInstanceId)
+    if (!current) throw new Error('World not found')
+    const { id, subscribers: _subs, lock: _lock, ...definition } = current
+    return api.saveWorld(id, { ...definition, ...patch })
+  },
+  deleteAccount: async () => { if (BASE) await call('/me', { method: 'DELETE' }); if (sessionIdentity) { clearPlayerDrafts(sessionIdentity.id); try { localStorage.removeItem(`reki:selected-world:${sessionIdentity.id}`) } catch { /* optional storage */ } } resetDemoPlayer(sessionPlayer?.id); sessionPlayer = undefined; sessionIdentity = undefined; setTelemetryPlayerAvailable(false); setAnalyticsWorld(undefined) },
 }

@@ -12,6 +12,7 @@ import { track } from '../app/log'
 import { telegramStartUrl } from '../app/telegramLinks'
 import { contentOf } from '../api/worldContent'
 import { register } from '.'
+import { TextField } from '../ui/TextField'
 
 // 03-4c: заруба на 3 дня. Счёт = 0,7 × оценка постов по шкалам мира + 0,3 × рост к своей медиане (считает бэкенд)
 function Challenge() {
@@ -79,8 +80,7 @@ function Voice() {
       <TopBar onBack={nav.back} title="Голос канала" />
       <div className="pad">
         <div className="muted" style={{ marginBottom: 12 }}>Как ты пишешь. «Подскажи» дописывает твои черновики в этом стиле, а не в общем AI-стиле</div>
-        <div className="card" style={{ marginBottom: 10 }}><textarea value={v} onChange={e => setV(e.target.value)} rows={3} maxLength={200} /></div>
-        {presets.map(x => <Chip key={x} idea={x === v} onClick={() => setV(x)}>{x}</Chip>)}
+        <TextField label="Голос канала" value={v} onChange={setV} maxLength={200} ideas={presets} />
         <Card style={{ marginTop: 10, background: '#20202B' }}><div className="small muted" style={{ marginBottom: 4 }}>ПРИМЕР ПОДСКАЗКИ</div>{contentOf(p.world).ideas[0]}</Card>
       </div>
       <BottomCTA main="Сохранить" onMain={async () => {

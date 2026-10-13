@@ -22,7 +22,7 @@ function Report() {
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Реакции" />
       <div className="pad" style={{ filter: 'blur(1px)', opacity: .5 }}>
-        {firstPost.comments.slice(0, 1).map(c => <Comment key={c.id} seed={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} />)}
+        {firstPost.comments.slice(0, 1).map(c => <Comment key={c.id} seed={c.avatar} profile={c.star && c.appearanceProfile ? { address: c.appearanceProfile === 'masculine' ? 'he' : c.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: c.ageBand } : undefined} name={c.author} handle={c.handle} text={c.text} star={c.star} />)}
         <Comment seed="critic" name="stan_critic" handle="" text={<span className="muted">[реплика скрыта]</span>} />
       </div>
       <div className="sheet-bg"><div className="sheet">
@@ -65,7 +65,17 @@ function Crisis({ adult }: { adult: boolean }) {
   )
 }
 
+function PublicationRules() {
+  const nav = useNav()
+  return <div className="screen no-tab"><TopBar onBack={nav.back} title="Правила публикаций" /><div className="pad">
+    <h1>Истории без вреда</h1><p>Выбранная возрастная группа влияет на ограничения. Обсуждать чувства, здоровье, книги и сложные события можно без откровенных подробностей.</p>
+    <p>Не публикуй сексуальные сцены, угрозы, травлю, инструкции по причинению вреда и употреблению веществ. Для 14–17 также недоступны сексуализированный контент и продвижение алкоголя или азартных игр.</p>
+    <p>Проверяем и текст, и ответ игры. Если проверка отклонит публикацию, доступный пост не списывается, а черновик остаётся.</p>
+    <Button onClick={nav.back}>Вернуться</Button>
+  </div></div>
+}
 register({
+  '06-4_rules': { component: PublicationRules, title: 'Правила публикаций' },
   '06-1_report': { component: Report, title: 'Жалоба на реплику' },
   '06-2_crisis': { component: () => <Crisis adult={false} />, title: 'Кризис 14–17' },
   '06-3_crisis_adult': { component: () => <Crisis adult />, title: 'Кризис 18+' },

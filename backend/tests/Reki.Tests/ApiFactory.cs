@@ -43,6 +43,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         {
             ProductLogger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
             services.AddSingleton(ProductLogger);
+            services.Replace(ServiceDescriptor.Singleton<Reki.Application.Common.Safety.IContentModerator, TestContentModerator>());
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
 

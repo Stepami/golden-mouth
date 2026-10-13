@@ -8,7 +8,8 @@ import { TelegramLaunch } from './app/TelegramLaunch'
 import { inTelegram, syncBackButton } from './telegram'
 import { api } from './api/client'
 import { runtimeConfig } from './app/runtimeConfig'
-import { AvatarWorld } from './ui/avatar'
+import { AvatarWorld, AvatarPeople } from './ui/avatar'
+import { worldDocumentOf } from './api/worldContent'
 import type { WorldId } from './api/types'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
@@ -58,11 +59,17 @@ function Shell() {
   const resolvingExistingPlayer = playerState === 'ready' && !explicitStart && top.id === '01-1_invite'
   if (!Screen || playerState === 'loading' || resolvingExistingPlayer) return <div className="app"><div className="screen"><div className="pad" role="status">Загружаем твою игру…</div></div></div>
   if (playerState === 'failed') return <div className="app"><div className="screen"><div className="pad"><p>Не получилось загрузить игру.</p><button className="btn" onClick={() => location.reload()}>Попробовать снова</button></div></div></div>
+  const people: React.ContextType<typeof AvatarPeople> = {}
+  if (player) {
+    people[player.handle] = { address: player.address, ageBand: player.ageBand }
+    people[player.id] = people[player.handle]
+    try { for (const star of worldDocumentOf(player.world).stars) { const profile = { address: star.appearanceProfile === 'masculine' ? 'he' as const : star.appearanceProfile === 'feminine' ? 'she' as const : 'nick' as const, ageBand: star.ageBand }; people[star.id] = profile; people[star.avatarSeed] = profile } } catch { /* templates may still be loading */ }
+  }
   const tab = TAB_OF[top.id]
   return (
     <NavContext.Provider value={nav}>
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'stage'}>
-      <div className="app">
+      <AvatarPeople.Provider value={people}><div className="app">
         <Screen />
         {tab !== undefined && (
           <nav className="tabbar">
@@ -70,7 +77,7 @@ function Shell() {
           </nav>
         )}
       </div>
-      </AvatarWorld.Provider>
+      </AvatarPeople.Provider></AvatarWorld.Provider>
     </NavContext.Provider>
   )
 }

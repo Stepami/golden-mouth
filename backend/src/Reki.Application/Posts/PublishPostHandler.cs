@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Common.Safety;
 using Reki.Application.Player;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
@@ -20,7 +21,8 @@ public sealed class PublishPostHandler(
     ISender sender,
     ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
-    ProductTelemetry analytics) : IRequestHandler<PublishPostCommand, IReadOnlyList<LiveEvent>>
+    ProductTelemetry analytics,
+    PlayerSafetyGuard safety) : IRequestHandler<PublishPostCommand, IReadOnlyList<LiveEvent>>
 {
     public async ValueTask<IReadOnlyList<LiveEvent>> Handle(
         PublishPostCommand request,
@@ -67,6 +69,19 @@ public sealed class PublishPostHandler(
         }
 
         var turn = publication.AssembleTurn();
+        try
+        {
+            await safety.EnsureInputAllowedAsync(player, [publication.Text], cancellationToken);
+            await safety.EnsureOutputAllowedAsync(player, [turn.Comment, turn.Hook], cancellationToken);
+        }
+        catch (Exception exception) when (exception is ContentRejectedException or UnsafeGeneratedContentException)
+        {
+            var category = exception is ContentRejectedException rejected ? rejected.Category : ((UnsafeGeneratedContentException)exception).Category;
+            var failure = new PublicationFailure(exception is ContentRejectedException ? "content_rejected" : "unsafe_generated_content", category, PublicationSafetyPolicy.Version);
+            await store.MarkPublicationFailedAsync(publication.Id, now.AddDays(1).UtcDateTime, failure, cancellationToken);
+            throw;
+        }
+
         StarTurnPolicy.EnsurePostAllowed(turn, world, StarTurnPolicy.IsHateEnabled(player, world, balance.Value, now));
 
         var wantCompleted = wantId is not null && world.Player.Wants.Any(want =>
@@ -94,7 +109,10 @@ public sealed class PublishPostHandler(
             balance.Value.Relations.Maximum,
             balance.Value.Relations.MaxGainPerDay,
             balance.Value.Relations.StarCardAt);
-        var updated = player.SpendPost(progression.Skills, balance.Value.PostEnergyCost, cap);
+        var updated = player.SpendPost(progression.Skills, balance.Value.PostEnergyCost, cap) with
+        {
+            HitOwnWorldMilestone = player.HitOwnWorldMilestone || updatedWorld.Player.Subscribers >= balance.Value.OwnWorldSubscribers,
+        };
         var postId = PostId.New();
         var starComment = new GameComment(
             CommentId.New(),

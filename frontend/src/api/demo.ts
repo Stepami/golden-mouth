@@ -1,5 +1,5 @@
 import type { ChannelPost, CommentT, FeedItem, Player, Post, WorldId } from './types'
-import { contentOf, wantsFor } from './worldContent'
+import { contentOf, wantsFor, worlds } from './worldContent'
 import { player as examplePlayer } from './mock'
 
 const PLAYER_KEY = 'reki:demo-player:v2'
@@ -16,7 +16,7 @@ export function demoPlayer(): Player {
   if (currentPlayer) return structuredClone(currentPlayer)
   const query = new URLSearchParams(location.search)
   if (query.has('screen') || query.has('gallery')) {
-    const world = (query.get('world') ?? 'stage') as WorldId
+    const world = (query.get('world') ?? worlds[0]?.id ?? 'it') as WorldId
     const profile = contentOf(world)
     return { ...structuredClone(examplePlayer), world, name: profile.name, handle: profile.handle, role: profile.roles[0], bio: '', type: 'автор своего канала', wants: wantsFor(world), voice: profile.voices[0], drama: profile.drama }
   }
@@ -44,7 +44,7 @@ export const demoChannelPosts = (playerId: string): ChannelPost[] => demoOwnPost
   createdAtUtc: post.at ?? '', views: post.views, reactions: post.reactions, commentCount: withDemoComments(post, playerId).comments.length }))
 export function saveDemoPost(playerId: string, post: Post) { save(`reki:demo-posts:${playerId}`, [post, ...demoOwnPosts(playerId).filter(item => item.id !== post.id)]) }
 export const demoPost = (id: string): Post | undefined => {
-  const world = /^demo-(stage|academy|it|stream|own)-[0-4]$/.exec(id)?.[1] as WorldId | undefined
+  const world = /^demo-(stage|academy|it|stream|own|evening|sorcerers|houses)-[0-4]$/.exec(id)?.[1] as WorldId | undefined
   if (world && !posts.has(id)) demoFeed(world)
   return posts.has(id) ? structuredClone(posts.get(id)!) : undefined
 }

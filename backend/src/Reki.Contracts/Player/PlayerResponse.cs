@@ -9,4 +9,6 @@ public sealed record PlayerResponse(
     StreakResponse Streak,
     IReadOnlyDictionary<SkillId, SkillResponse> Skills,
     PlayerSettingsResponse Settings,
-    IReadOnlyDictionary<string, string> Experiments);
+    IReadOnlyDictionary<string, string> Experiments,
+    bool HitOwnWorldMilestone = false,
+    string AgeBand = "");

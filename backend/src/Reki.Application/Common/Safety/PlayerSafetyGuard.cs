@@ -5,19 +5,27 @@ namespace Reki.Application.Common.Safety;
 
 public sealed class PlayerSafetyGuard(
     IGameStore store,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    IContentModerator moderator)
 {
     private static readonly TimeSpan HateCooldown = TimeSpan.FromDays(7);
+
+    public async ValueTask EnsureOutputAllowedAsync(PlayerProfile player, IEnumerable<string> texts, CancellationToken cancellationToken)
+    {
+        var review = await moderator.ReviewAsync(player, texts.ToArray(), cancellationToken);
+        if (review.Decision != SafetyDecision.Allowed)
+        {
+            throw new UnsafeGeneratedContentException(review.Category);
+        }
+    }
 
     public async ValueTask EnsureInputAllowedAsync(
         PlayerProfile player,
         IEnumerable<string> texts,
         CancellationToken cancellationToken)
     {
-        var decision = texts
-            .Select(ContentSafetyPolicy.CheckInput)
-            .OrderByDescending(item => item)
-            .FirstOrDefault();
+        var review = await moderator.ReviewAsync(player, texts.ToArray(), cancellationToken);
+        var decision = review.Decision;
         if (decision == SafetyDecision.Allowed)
         {
             return;
@@ -25,7 +33,7 @@ public sealed class PlayerSafetyGuard(
 
         if (decision == SafetyDecision.Rejected)
         {
-            throw new ContentRejectedException();
+            throw new ContentRejectedException(review.Category);
         }
 
         var now = timeProvider.GetUtcNow();

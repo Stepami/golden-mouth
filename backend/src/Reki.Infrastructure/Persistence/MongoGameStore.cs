@@ -214,6 +214,15 @@ internal sealed class MongoGameStore : IGameStore
             }
         }
 
+        if (updatedInvite is { InviterBonusUsed: true })
+        {
+            await _players.UpdateOneAsync(
+                session,
+                item => item.Id == updatedInvite.InviterId,
+                Builders<PlayerProfile>.Update.Set(item => item.HitOwnWorldMilestone, true).Inc(item => item.Version, 1),
+                cancellationToken: cancellationToken);
+        }
+
         await _posts.InsertOneAsync(session, post, cancellationToken: cancellationToken);
         await _threads.InsertOneAsync(
             session,
@@ -280,10 +289,12 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask MarkPublicationFailedAsync(
         string id,
         DateTime expiresAtUtc,
+        PublicationFailure failure,
         CancellationToken cancellationToken)
     {
         var update = Builders<Publication>.Update
             .Set(item => item.Status, PublicationStatus.Failed)
+            .Set(item => item.Failure, failure)
             .Set(item => item.Text, string.Empty)
             .Set(item => item.Parts, [])
             .Set(item => item.ExpiresAtUtc, expiresAtUtc);

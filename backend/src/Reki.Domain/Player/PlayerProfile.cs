@@ -10,6 +10,8 @@ public sealed record PlayerProfile
 
     public required string Address { get; init; }
 
+    public bool HitOwnWorldMilestone { get; init; }
+
     public int EnergyUsed { get; init; }
 
     public int DailyBonus { get; init; }

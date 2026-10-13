@@ -11,6 +11,7 @@ import { usePlayer, useStore } from '../app/store'
 import { Avatar, Bubble, Button, Card, Chip, Gift, Segmented, SkillBar, Sheet, TopBar, fmt, short } from '../ui'
 import { ChannelHead, Home } from './onboarding'
 import { register } from '.'
+import { TextField } from '../ui/TextField'
 
 const SKILL_NAMES = { brave: 'смелость', humor: 'юмор', topic: 'в тему' } as const
 
@@ -49,7 +50,7 @@ function Dm() {
         {msgs.map((m, i) => <div key={i} style={{ position: 'relative' }}><Bubble me={m.from === 'me'}>{m.text}</Bubble>{m.from === 'star' && <button onClick={() => nav.push('06-1_report', { text: m.text })} aria-label="Пожаловаться" style={{ position: 'absolute', right: 0, top: 6, background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>}</div>)}
         {closed ? <Card style={{ marginTop: 10, textAlign: 'center' }}><span className="muted small">Мира ушла на репетицию. Ответит утром, в 9:00</span></Card> : <>
           <div className="small muted" style={{ margin: '10px 0 8px' }}>💡 ИДЕИ ИЛИ СВОИМИ СЛОВАМИ · бесплатно · Мира ответит ещё {left} {left === 1 ? 'раз' : 'раза'} сегодня</div>
-          {d.ideas.map(i => <Chip key={i} idea onClick={() => send(i.replace(/[«»]/g, ''))}>{i}</Chip>)}
+          <TextField label="Сообщение" value={text} onChange={setText} ideas={d.ideas} maxLength={300} />
         </>}
       </div>
       {!closed && <div className="bottom-cta" style={{ flexDirection: 'row', bottom: 78 }}>
@@ -116,7 +117,7 @@ function Feed() {
   const nav = useNav()
   const p = usePlayer(); const w = worldOf(p.world)
   const [portion, setPortion] = useState(0)
-  const key = `feed:${p.id}:${p.world}`
+  const key = `feed:${p.id}:${p.worldInstanceId ?? p.world}`
   const [items, setItems] = useState<FeedItem[]>(() => cachedApi<FeedItem[]>(key) ?? [])
   const [feedState, setFeedState] = useState<'loading' | 'ready' | 'error'>(() => cachedApi(key) ? 'ready' : 'loading')
   useEffect(() => {
@@ -198,7 +199,7 @@ function FriendChannel() {
 function Stage() {
   const nav = useNav(); const p = usePlayer()
   const [skillHelp, setSkillHelp] = useState(false)
-  const cacheKey = `channel:${p.id}:${p.world}`
+  const cacheKey = `channel:${p.id}:${p.worldInstanceId ?? p.world}`
   const [banner, setBanner] = useState(true)
   const [posts, setPosts] = useState<ChannelPost[]>(() => cachedApi<ChannelPost[]>(cacheKey) ?? [])
   const [load, setLoad] = useState<'loading' | 'ready' | 'error'>(() => cachedApi(cacheKey) ? 'ready' : 'loading')
@@ -315,7 +316,7 @@ function Settings() {
         </Card>
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
           {row('🎙 Голос канала', `${p.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`, false, () => openPanel('address'))}
-          {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📜 Как устроен мир', '›', false, () => nav.push('05-11_world_rules'))}{row('🔒 Мои данные и правила', 'скоро ›', false, () => openPanel('data'))}{row('✉ Поддержка', 'скоро ›', true, () => openPanel('support'))}
+          {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📜 Как устроен мир', '›', false, () => nav.push('05-11_world_rules'))}{row('📋 Правила публикаций', '›', false, () => nav.push('06-4_rules'))}{row('🔒 Мои данные и правила', 'скоро ›', false, () => openPanel('data'))}{row('✉ Поддержка', 'скоро ›', true, () => openPanel('support'))}
         </Card>
         <button onClick={() => setDel(true)} className="card" style={{ width: '100%', textAlign: 'center', color: 'var(--accent)', background: 'transparent', border: '1px solid #FF6B8B55' }}>Удалить аккаунт и всё</button>
         <div className="small muted" style={{ textAlign: 'center', marginTop: 8 }}>Удалим канал, переписку и коллекцию. Вернуть будет нельзя</div>

@@ -131,7 +131,12 @@ public abstract class GameApiTestBase(ApiFactory factory)
     protected static async Task<string> GetWorldIdAsync(TestApiClient api) =>
         (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().Id;
 
-    protected static async Task<PlayerResponse> CreatePlayerWithWorldAsync(
+    protected static IReadOnlyList<ReplyLiveEvent> ParseReplyEvents(string body) =>
+        body.Split('\n').Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
+            .Select(line => JsonSerializer.Deserialize(line[6..], ApiJsonSerializerContext.Default.ReplyLiveEvent)
+                ?? throw new InvalidOperationException("The reply event was empty.")).ToArray();
+
+    protected async Task<PlayerResponse> CreatePlayerWithWorldAsync(
         TestApiClient api,
         WorldId world = WorldId.Stage,
         string referralCode = "")
@@ -144,15 +149,41 @@ public abstract class GameApiTestBase(ApiFactory factory)
                 ReferralCode = referralCode,
             },
             CancellationToken.None);
+        if (world == WorldId.Own)
+        {
+            // Compatibility fixtures represent an already unlocked, historical owner.
+            await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(
+                new BsonDocument("_id", player.Id),
+                new BsonDocument("$set", new BsonDocument("HitOwnWorldMilestone", true)));
+        }
+
         await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api, world), CancellationToken.None);
         return player;
     }
 
-    protected static async Task<CreateWorldRequest> CreateWorldDefinitionAsync(TestApiClient api, WorldId world = WorldId.Stage)
+    protected async Task<CreateWorldRequest> CreateWorldDefinitionAsync(TestApiClient api, WorldId world = WorldId.Stage)
     {
-        var template = (await api.Worlds.GetWorldTemplatesAsync(CancellationToken.None))
-            .Single(item => item.BalanceKey == world.ToString().ToLowerInvariant());
-        return new CreateWorldRequest
+        // Keep historical-world tests independent of the current public catalog.
+        var name = $"legacy_fixture_{Guid.NewGuid():N}";
+        var database = Factory.Session.MongoClient.GetDatabase(name);
+        Domain.Worlds.World legacy;
+        try
+        {
+            using var session = await Factory.Session.MongoClient.StartSessionAsync();
+            await new Infrastructure.Persistence.Migrations.SeedWorldTemplates().UpAsync(database, session, CancellationToken.None);
+            legacy = await database.GetCollection<Domain.Worlds.World>("world_templates")
+                .Find(item => item.BalanceKey == world.ToString().ToLowerInvariant()).SingleAsync();
+        }
+        finally
+        {
+            await Factory.Session.MongoClient.DropDatabaseAsync(name);
+        }
+
+        var template = new Reki.Api.Mapping.ApiMapper().MapWorld(legacy);
+        return DefinitionOf(template);
+    }
+
+    protected CreateWorldRequest DefinitionOf(WorldResponse template) => new()
         {
             BalanceKey = template.BalanceKey,
             Title = template.Title,
@@ -180,12 +211,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
             Voice = template.Voice,
             Drama = template.Drama,
         };
-    }
-
-    protected static IReadOnlyList<ReplyLiveEvent> ParseReplyEvents(string body) =>
-        body.Split('\n').Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
-            .Select(line => JsonSerializer.Deserialize(line[6..], ApiJsonSerializerContext.Default.ReplyLiveEvent)
-                ?? throw new InvalidOperationException("The reply event was empty.")).ToArray();
 
     protected async Task<string> WorldPathAsync(HttpClient http, string path)
     {
@@ -255,11 +280,14 @@ public abstract class GameApiTestBase(ApiFactory factory)
         return Factory.Llm.GetLastMessages();
     }
 
-    protected async Task<(System.Net.HttpStatusCode StatusCode, string Body, string PublicationId)> GenerateAsync(
+    protected Task<(System.Net.HttpStatusCode StatusCode, string Body, string PublicationId)> GenerateAsync(long telegramUserId, string text) =>
+        GenerateWithIdAsync(telegramUserId, text, Guid.NewGuid().ToString());
+
+    protected async Task<(System.Net.HttpStatusCode StatusCode, string Body, string PublicationId)> GenerateWithIdAsync(
         long telegramUserId,
-        string text)
+        string text,
+        string publicationId)
     {
-        var publicationId = Guid.NewGuid().ToString();
         using var http = CreateAuthenticatedHttpClient(telegramUserId);
         var request = new StartPublicationRequest
         {
@@ -280,10 +308,13 @@ public abstract class GameApiTestBase(ApiFactory factory)
             publicationId);
     }
 
-    protected async Task PublishAsync(long telegramUserId, string text)
+    protected Task PublishAsync(long telegramUserId, string text) =>
+        PublishWithIdAsync(telegramUserId, text, Guid.NewGuid().ToString());
+
+    protected async Task PublishWithIdAsync(long telegramUserId, string text, string requestedPublicationId)
     {
         (var statusCode, var generation, var publicationId) =
-            await GenerateAsync(telegramUserId, text);
+            await GenerateWithIdAsync(telegramUserId, text, requestedPublicationId);
         await Assert.That(statusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
         await Assert.That(generation).Contains("\"type\":\"ready_for_moderation\"");
         using var http = CreateAuthenticatedHttpClient(telegramUserId);
