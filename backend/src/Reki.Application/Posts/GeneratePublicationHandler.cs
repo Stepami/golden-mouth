@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Player;
 using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
@@ -20,6 +19,7 @@ public sealed partial class GeneratePublicationHandler(
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     ISender sender,
+    IRekiContextAccessor rekiContextAccessor,
     StarTurnGenerator generator,
     ILogger<GeneratePublicationHandler> logger,
     ProductTelemetry analytics) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatusLiveEvent>
@@ -35,8 +35,10 @@ public sealed partial class GeneratePublicationHandler(
             throw new RequestConflictException("The publication identifier is invalid.");
         }
 
-        var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var world = await sender.Send(new Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
+        var rekiContext = rekiContextAccessor.Context;
+        var storedPlayer = await rekiContext.Player;
+        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
         var player = storedPlayer;
 
         var requestHash = ComputeRequestHash(request with { WorldId = world.Id });
@@ -198,7 +200,7 @@ public sealed partial class GeneratePublicationHandler(
         CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
-        var recentPosts = await sender.Send(new GetChannelPostsQuery(world.Id, player.Id, 3), cancellationToken);
+        var recentPosts = await sender.Send(new GetChannelPostsQuery(world.Id, 3), cancellationToken);
         var hateEnabled = StarTurnPolicy.IsHateEnabled(player, world, balance.Value, now);
         return new StarPostContext(
             request.Text,

@@ -126,6 +126,11 @@ Reki.Tests/<Feature>/<UseCase>/... component tests
 - Domain events отделяют побочные эффекты внутри bounded context; integration events между contexts не должны выдавать внутреннюю domain model.
 - Используй `TimeProvider`, а не `DateTime.UtcNow`, и передавай `CancellationToken` во все async I/O операции.
 - `Mediator.SourceGenerator` подключается в outermost executable project один раз; `Mediator.Abstractions` — в Application, где объявлены messages и handlers. Ограничивай сканирование marker-типом Application assembly. Не добавляй MediatR.
+- Mediator и его handlers имеют singleton lifetime. `ChallengeLifecycle` и `GameDayPeriod` также singleton. В singleton-конструкторах не должно быть scoped-зависимостей, в частности `ITelegramUserAccessor` и `IRekiContext`.
+- Пользовательское состояние читается через singleton `IRekiContextAccessor`: внутри каждого `Handle` получи `Context` в локальную переменную. Конкретный `IRekiContext` зарегистрирован scoped; контекст, задачи и данные игрока не сохраняются в полях singleton-handler.
+- `Player` и `Worlds` лениво переиспользуют загрузки в пределах HTTP-запроса. После LLM, когда требуется свежесть перед коммитом, вызови существующий `Reload()` и заново получи обе задачи; посты и переписку перечитывай отдельно. Проверки версий и транзакции сохраняются.
+- Промежуточные `GetPlayerQuery`, `GetOwnedWorldsQuery` и `GetWorldQuery` не возвращать. Свой мир выбирается из `Context.Worlds` с проверкой наличия; чтение постов через store допускается только для проверенного `WorldId`, отдельный пост ограничивается этим же миром.
+- Онбординг получает проверенный `TelegramUserId` в command из HTTP-границы. Публичные карточки, соперники, приглашения и фоновые jobs читают store по явным ID и сохраняют свои проверки доступа; пользовательский контекст им не обязателен. Ежедневная подготовка состояния остаётся в jobs, не дублируется в контексте.
 - Validly применяй для compile-time validation request/command моделей. Типы с `[Validatable]` должны быть `partial`. Ошибки границы переводятся в единый `ValidationProblem`; это не заменяет доменные инварианты.
 - Mapperly применяй на границах Domain/Application/API. Mapper-классы `partial`; unmapped members не игнорируй молча. Не добавляй AutoMapper и reflection-based mapping.
 

@@ -106,7 +106,6 @@ public static class DependencyInjection
 
         services.AddSingleton<MongoCompositionRoot>();
         services.AddSingleton<IGameStore, MongoGameStore>();
-        services.AddMetrics();
         services.AddSingleton<IMongoClient>(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoClient);
         services.AddSingleton<IMongoDatabase>(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoDatabase);
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);
@@ -130,6 +129,7 @@ public static class DependencyInjection
 
     private static void AddObservability(this IServiceCollection services)
     {
+        services.AddMetrics();
         services.AddOpenTelemetry()
             .WithTracing(tracing => tracing
                 .AddSource(MongoTelemetry.ActivitySourceName, "Reki.GenAI", "TickerQ")

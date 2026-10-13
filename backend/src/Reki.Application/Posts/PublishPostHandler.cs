@@ -3,7 +3,6 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Player;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
@@ -17,6 +16,7 @@ public sealed class PublishPostHandler(
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     ISender sender,
+    IRekiContextAccessor rekiContextAccessor,
     ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
     ProductTelemetry analytics) : IRequestHandler<PublishPostCommand, IReadOnlyList<LiveEvent>>
@@ -26,8 +26,10 @@ public sealed class PublishPostHandler(
         CancellationToken cancellationToken)
     {
         var publication = await sender.Send(new GetPublicationQuery(request.PublicationId), cancellationToken);
-        var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var world = await sender.Send(new Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
+        var storedPlayer = await rekiContextAccessor.Context.Player;
+        var worlds = await rekiContextAccessor.Context.Worlds;
+        var world = worlds.GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
         if (publication is null || publication.PlayerId != storedPlayer.Id || publication.WorldId != world.Id)
         {
             throw new ResourceNotFoundException("Publication not found.");
@@ -92,7 +94,7 @@ public sealed class PublishPostHandler(
             turn.Comment,
             false,
             []);
-        var recentPosts = await sender.Send(new GetChannelPostsQuery(world.Id, player.Id, 20), cancellationToken);
+        var recentPosts = await sender.Send(new GetChannelPostsQuery(world.Id, 20), cancellationToken);
         var recentViews = recentPosts.Select(post => post.Views).ToArray();
         var views = Math.Max(48, updatedWorld.Player.Subscribers);
         var reachRatio = recentViews.Length == 0 ? 1 : views / GetMedian(recentViews);
@@ -113,13 +115,8 @@ public sealed class PublishPostHandler(
 
         var published = new PublishedPost(post, hook, turn.StarName, turn.Reaction, turn.Reasons);
         var invite = await store.GetPendingInviteAsync(player.Id, cancellationToken);
-        var updatedInvite = invite is not null
-            ? invite.UseInviteeBonus(now).UseInviterBonus(now)
-            : null;
-        if (updatedInvite is not null)
-        {
-            updated = updated with { Energy = updated.Energy + balance.Value.InviteBonusBoth };
-        }
+        var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
+        updated = updated with { Energy = updated.Energy + (updatedInvite?.BonusAmount ?? 0) };
 
         var committed = await store.TryCommitPostAsync(
             updated,
@@ -129,7 +126,6 @@ public sealed class PublishPostHandler(
             published,
             request.PublicationId,
             updatedInvite,
-            balance.Value.InviteBonusBoth,
             balance.Value.InviteBonusMaxPerDay,
             cancellationToken);
         if (!committed)

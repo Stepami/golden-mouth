@@ -1,17 +1,17 @@
 using Mediator;
-using Reki.Application.Player;
+using Reki.Application.Common;
 
 namespace Reki.Application.Social;
 
 public sealed class GetFriendsHandler(
-    ISender sender)
+    IRekiContextAccessor rekiContextAccessor)
     : IRequestHandler<GetFriendsQuery, IReadOnlyList<FriendSummary>>
 {
     public async ValueTask<IReadOnlyList<FriendSummary>> Handle(
         GetFriendsQuery request,
         CancellationToken cancellationToken)
     {
-        _ = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        _ = await rekiContextAccessor.Context.Player;
         return [];
     }
 }

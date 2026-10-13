@@ -49,7 +49,6 @@ public interface IGameStore
         PublishedPost published,
         string publicationId,
         Invitation? updatedInvite,
-        int inviteBonus,
         int inviteBonusMaxPerDay,
         CancellationToken cancellationToken);
 
@@ -69,13 +68,26 @@ public interface IGameStore
         DateTime expiresAtUtc,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Reads posts in a world whose ownership the application has already verified.
+    /// </summary>
     ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
-        PlayerId playerId,
         int? limit,
         CancellationToken cancellationToken,
         WorldId worldId);
 
+    /// <summary>
+    /// Reads a post only in the world whose ownership the application has already verified.
+    /// </summary>
     ValueTask<GamePost?> GetPostAsync(
+        PostId postId,
+        WorldId worldId,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads a public story post after verifying the explicitly supplied world's owner.
+    /// </summary>
+    ValueTask<GamePost?> GetPublicStoryPostAsync(
         PostId postId,
         PlayerId playerId,
         CancellationToken cancellationToken);

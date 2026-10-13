@@ -1,11 +1,13 @@
 using Mediator;
-using Reki.Application.Player;
+using Reki.Application.Common;
+using Reki.Application.Common.Exceptions;
 using Reki.Contracts.Posts;
 
 namespace Reki.Application.Posts;
 
 public sealed class GetFeedHandler(
-    ISender sender)
+    ISender sender,
+    IRekiContextAccessor rekiContextAccessor)
     : IRequestHandler<GetFeedQuery, IReadOnlyList<FeedItemResponse>>
 {
     private const int FeedSize = 20;
@@ -14,11 +16,10 @@ public sealed class GetFeedHandler(
         GetFeedQuery request,
         CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var world = await sender.Send(new Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
-        var posts = await sender.Send(new GetChannelPostsQuery(world.Id, player.Id, FeedSize), cancellationToken);
-        return posts
-            .Select(post => PostContractMapper.MapFeedItem(post, world, true))
-            .ToArray();
+        var worlds = await rekiContextAccessor.Context.Worlds;
+        var world = worlds.GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
+        var posts = await sender.Send(new GetChannelPostsQuery(world.Id, FeedSize), cancellationToken);
+        return [.. posts.Select(post => PostContractMapper.MapFeedItem(post, world, true))];
     }
 }

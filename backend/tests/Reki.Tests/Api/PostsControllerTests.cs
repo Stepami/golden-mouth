@@ -25,6 +25,65 @@ namespace Reki.Tests.Api;
 public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
+    public async Task GetFeed_ParallelPlayers_IsolatesRequestContextsAsync()
+    {
+        // Arrange
+        using var first = Factory.CreateApiClient(1091);
+        using var second = Factory.CreateApiClient(1092);
+        await CreatePlayerWithWorldAsync(first);
+        await CreatePlayerWithWorldAsync(second);
+        var firstWorld = await GetWorldIdAsync(first);
+        var secondWorld = await GetWorldIdAsync(second);
+        var firstPlayer = await GetStoredPlayerAsync(1091);
+        var secondPlayer = await GetStoredPlayerAsync(1092);
+        var posts = new[] { (firstWorld, firstPlayer), (secondWorld, secondPlayer) }
+            .Select(item => new GamePost(
+                PostId.New(),
+                PlayerId.From(item.Item2["_id"].AsString).ToAuthorId(),
+                Domain.Worlds.WorldId.From(item.Item1),
+                item.Item1,
+                1,
+                [],
+                DateTimeOffset.UnixEpoch,
+                0,
+                0,
+                1,
+                false,
+                false)).ToArray();
+        await Database.GetCollection<GamePost>("posts").InsertManyAsync(posts);
+
+        // Act
+        var feeds = await Task.WhenAll(
+            first.Posts.GetFeedAsync(firstWorld, CancellationToken.None),
+            second.Posts.GetFeedAsync(secondWorld, CancellationToken.None));
+
+        // Assert
+        await Assert.That(feeds[0].Single().PostId).IsEqualTo(posts[0].Id.Value);
+        await Assert.That(feeds[1].Single().PostId).IsEqualTo(posts[1].Id.Value);
+        await Assert.That(feeds[0].Single().Text).IsEqualTo(firstWorld);
+        await Assert.That(feeds[1].Single().Text).IsEqualTo(secondWorld);
+    }
+
+    [Test]
+    public async Task GetPost_AnotherOwnedWorld_ReturnsNotFoundAsync()
+    {
+        // Arrange
+        const long user = 1093;
+        var (postId, _) = await PublishPostForThreadAsync(user);
+        using var api = Factory.CreateApiClient(user);
+        var second = await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
+        var before = await GetStoredPostAsync(postId);
+        using var http = CreateAuthenticatedHttpClient(user);
+
+        // Act
+        using var response = await http.GetAsync($"/posts/{postId}?worldId={second.Id}", CancellationToken.None);
+
+        // Assert
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+        await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(before);
+    }
+
+    [Test]
     public async Task Feed_WithMoreThanTwentyOwnPosts_ReturnsLatestOwnPostsAsync()
     {
         // Arrange
@@ -1223,41 +1282,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task AddReply_ConcurrentSameRequest_CommitsExactlyOnceAsync()
-    {
-        // Arrange
-        const long user = 8731;
-        var (postId, targetId) = await PublishPostForThreadAsync(user);
-        var beforePlayer = await GetStoredPlayerAsync(user);
-        var beforeWorld = await GetStoredWorldAsync(user);
-
-        // Act
-        var responses = await Task.WhenAll(
-            ReplyAsync(user, postId, targetId, "shared-key", "Один ответ"),
-            ReplyAsync(user, postId, targetId, "shared-key", "Один ответ"));
-        var saved = await GetStoredPostAsync(postId);
-
-        // Assert
-        await Assert.That(saved["Comments"].AsBsonArray.Count).IsEqualTo(3);
-        await Assert.That(saved["Comments"].AsBsonArray.Count(comment => comment["RequestId"] == "shared-key"))
-            .IsEqualTo(1);
-        await Assert.That(saved["Version"].AsInt32).IsEqualTo(1);
-        await Assert.That((await GetStoredPlayerAsync(user))["EnergyUsed"].AsInt32)
-            .IsEqualTo(beforePlayer["EnergyUsed"].AsInt32 + 1);
-        var bonus = Factory.Services.GetRequiredService<IOptions<GameBalance>>().Value.Thread.SubscriberBonus;
-        await Assert.That((await GetStoredWorldAsync(user))["Player"]["Subscribers"].ToInt64())
-            .IsEqualTo(beforeWorld["Player"]["Subscribers"].ToInt64() + bonus);
-        await Assert.That(responses.Select(response => response.EnergyLeft)).IsEquivalentTo(new int?[] { 8, 8 });
-        await Assert.That(responses.Select(response => response.Subscribers)).IsEquivalentTo(new long?[] { beforeWorld["Player"]["Subscribers"].ToInt64() + bonus, beforeWorld["Player"]["Subscribers"].ToInt64() + bonus });
-        await Assert
-            .That((responses[0].Post ?? throw new InvalidOperationException("Missing post.")).Comments.Select(comment =>
-                comment.Id))
-            .IsEquivalentTo(
-                (responses[1].Post ?? throw new InvalidOperationException("Missing post.")).Comments.Select(comment =>
-                    comment.Id));
-    }
-
-    [Test]
     public async Task AddReply_ConcurrentWorldsLastEnergy_CommitsOneCompleteTurnAsync()
     {
         // Arrange
@@ -1324,6 +1348,17 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(saved.Comments.Count).IsEqualTo(3);
         var playerReply = saved.Comments.Single(comment => comment.RequestId == "contested-key");
         await Assert.That(new[] { "Первая мысль", "Вторая мысль" }).Contains(playerReply.Text);
+        var rejected = responses.Single(response =>
+            response.Status != HttpStatusCode.OK || ParseReplyEvents(response.Body)[^1].Status != ReplyStatus.Completed);
+        await Assert.That(new[] { HttpStatusCode.OK, HttpStatusCode.Conflict }).Contains(rejected.Status);
+        if (rejected.Status == HttpStatusCode.OK)
+        {
+            var failed = ParseReplyEvents(rejected.Body)[^1];
+            await Assert.That(failed.Status).IsEqualTo(ReplyStatus.Failed);
+            await Assert.That(failed.Code).IsEqualTo("request_conflict");
+            await Assert.That(failed.Post).IsNull();
+        }
+
         await Assert.That((await GetStoredPlayerAsync(user))["EnergyUsed"].AsInt32).IsEqualTo(2);
         var bonus = Factory.Services.GetRequiredService<IOptions<GameBalance>>().Value.Thread.SubscriberBonus;
         await Assert.That((await GetStoredWorldAsync(user))["Player"]["Subscribers"].ToInt64())

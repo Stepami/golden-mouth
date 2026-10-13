@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.Options;
+using Reki.Api.Common;
 using Reki.Api.Common.Errors;
 using Reki.Api.Mapping;
 using Reki.Api.OpenApi;
@@ -25,14 +26,17 @@ internal static class ServiceCollectionExtensions
         services.AddMediator(options =>
         {
             options.Assemblies = [typeof(ApplicationAssemblyMarker)];
-            options.ServiceLifetime = ServiceLifetime.Scoped;
+            options.ServiceLifetime = ServiceLifetime.Singleton;
         });
         services.AddSingleton<GameDayPeriod>();
         services.AddSingleton<PlayerSafetyGuard>();
-        services.AddScoped<ChallengeLifecycle>();
+        services.AddSingleton<ChallengeLifecycle>();
         services.AddSingleton<PostProgressionCalculator>();
         services.AddSingleton<ProductTelemetry>();
         services.AddSingleton<StarTurnGenerator>();
+
+        services.AddSingleton<IRekiContextAccessor, HttpRekiContextAccessor>();
+        services.AddScoped<IRekiContext, RekiContext>();
 
         return services;
     }

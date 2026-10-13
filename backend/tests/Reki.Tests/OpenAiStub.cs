@@ -44,7 +44,10 @@ public sealed class OpenAiStub : IDisposable
 
     public void Respond(ChatResponse response) => Respond(_ => response);
 
-    public void Respond(Func<IReadOnlyList<ChatMessage>, ChatResponse> createResponse)
+    public void Respond(Func<IReadOnlyList<ChatMessage>, ChatResponse> createResponse) =>
+        Respond(messages => Task.FromResult(createResponse(messages)));
+
+    public void Respond(Func<IReadOnlyList<ChatMessage>, Task<ChatResponse>> createResponse)
     {
         var generation = GetGeneration();
         _server.ResetMappings();
@@ -54,11 +57,11 @@ public sealed class OpenAiStub : IDisposable
                     .WithBody((string? body) => body is not null && IsStreaming(body) == streaming))
                 .RespondWith(Response.Create().WithStatusCode(200)
                     .WithHeader("Content-Type", streaming ? "text/event-stream" : "application/json")
-                    .WithBody(request =>
+                    .WithBody(async request =>
                     {
                         RecordRequest(generation, request.Body);
                         using var document = JsonDocument.Parse(request.Body ?? throw new InvalidOperationException("Missing AI request body."));
-                        var response = createResponse(ReadMessages(document.RootElement));
+                        var response = await createResponse(ReadMessages(document.RootElement));
                         return CreateResponseBody(response, document.RootElement.GetProperty("model").GetString(), streaming);
                     }));
         }

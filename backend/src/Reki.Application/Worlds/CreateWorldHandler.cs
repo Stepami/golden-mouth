@@ -3,18 +3,23 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
-using Reki.Application.Player;
 using Reki.Application.Telemetry;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Worlds;
 
-public sealed class CreateWorldHandler(IGameStore store, ISender sender, GameDayPeriod gameDayPeriod, PlayerSafetyGuard safetyGuard, IOptions<GameBalance> balance, ProductTelemetry telemetry)
+public sealed class CreateWorldHandler(
+    IGameStore store,
+    IRekiContextAccessor rekiContextAccessor,
+    GameDayPeriod gameDayPeriod,
+    PlayerSafetyGuard safetyGuard,
+    IOptions<GameBalance> balance,
+    ProductTelemetry telemetry)
     : IRequestHandler<CreateWorldCommand, World>
 {
     public async ValueTask<World> Handle(CreateWorldCommand request, CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var player = await rekiContextAccessor.Context.Player;
         var source = request.Definition;
         if (source.Stars.Count == 0 || source.Stars.Any(star => !Enum.IsDefined(star.Trait)) ||
             source.Stars.Select(star => star.Id).Distinct().Count() != source.Stars.Count)

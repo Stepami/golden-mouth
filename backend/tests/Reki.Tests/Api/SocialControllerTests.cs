@@ -15,6 +15,44 @@ namespace Reki.Tests.Api;
 public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
+    public async Task DirectMessage_MemoryChangedDuringGeneration_PreservesFreshConversationAsync()
+    {
+        // Arrange
+        const long user = 8391;
+        using var api = Factory.CreateApiClient(user);
+        await CreatePlayerWithWorldAsync(api);
+        var worldId = await GetWorldIdAsync(api);
+        await api.Social.SendDirectMessageAsync(
+            "sonya", worldId, new DirectMessageRequest { Text = "Первый ход" }, CancellationToken.None);
+        var store = Factory.Services.GetRequiredService<IGameStore>();
+        var player = await store.GetPlayerAsync(TelegramUserId.From(user), CancellationToken.None)
+            ?? throw new InvalidOperationException("Missing player.");
+        var conversation = await store.GetStarConversationAsync(
+            player.Id, Domain.Social.StarId.From("sonya"), CancellationToken.None, Domain.Worlds.WorldId.From(worldId))
+            ?? throw new InvalidOperationException("Missing conversation.");
+        var changed = conversation with { Memory = [] };
+        Factory.Llm.Respond(async messages =>
+        {
+            await store.SaveStarConversationAsync(changed, CancellationToken.None);
+            return CreateChatResponse(messages);
+        });
+        using var http = CreateAuthenticatedHttpClient(user);
+        using var body = new StringContent("{\"text\":\"Новый ход\"}", Encoding.UTF8, "application/json");
+
+        // Act
+        using var response = await http.PostAsync($"/dm/sonya?worldId={worldId}", body, CancellationToken.None);
+        var after = await api.Social.GetDirectMessagesAsync("sonya", worldId, CancellationToken.None);
+
+        // Assert
+        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.Conflict);
+        await Assert.That(after.Memory).IsEmpty();
+        await Assert.That(after.Messages.Count).IsEqualTo(conversation.Messages.Count);
+        await Assert.That(after.Messages.Select(message => message.Text))
+            .IsEquivalentTo(conversation.Messages.Select(message => message.Text));
+        await Assert.That(after.RepliesLeft).IsEqualTo(4);
+    }
+
+    [Test]
     public async Task SendDirectMessage_UsesStarMemorySystemLayerWithCurrentUserMessageAsync()
     {
         // Arrange

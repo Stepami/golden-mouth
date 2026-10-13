@@ -2,10 +2,11 @@ using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Player;
 using Reki.Contracts.Player;
+using Reki.Domain.Player;
+using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Api.Player;
 
@@ -13,15 +14,15 @@ namespace Reki.Api.Player;
 [Produces("application/json")]
 [Route("/")]
 public sealed class PlayerController(
-    ISender sender,
+    IRekiContext rekiContext,
     IGameStore store,
-    IOptions<GameBalance> balance) : ControllerBase
+    ISender sender) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var player = await rekiContext.Player;
         return TypedResults.Ok(player.ToResponse());
     }
 
@@ -29,10 +30,12 @@ public sealed class PlayerController(
     [ActionName("CompleteOnboarding")]
     public async Task<Ok<PlayerResponse>> CompleteOnboardingAsync(
         OnboardingRequest request,
+        [FromServices] ITelegramUserAccessor telegramUser,
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(
             new OnboardPlayerCommand(
+                TelegramUserId.From(telegramUser.User.Id),
                 ToStorageValue(request.BirthGroup),
                 request.Address.ToString().ToLowerInvariant(),
                 request.ReferralCode,
@@ -45,9 +48,9 @@ public sealed class PlayerController(
     [ActionName("GetInvitation")]
     public async Task<Ok<InvitationResponse>> GetInvitationAsync(CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var player = await rekiContext.Player;
         var invitation = await store.GetPendingInviteAsync(player.Id, cancellationToken);
-        return TypedResults.Ok(new InvitationResponse(invitation is null ? 0 : balance.Value.InviteBonusBoth));
+        return TypedResults.Ok(new InvitationResponse(invitation?.BonusAmount ?? 0));
     }
 
     [HttpGet("referral", Name = "GetReferralCode")]

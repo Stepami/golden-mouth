@@ -4,6 +4,7 @@ using Reki.Domain.Player;
 namespace Reki.Application.Player;
 
 public sealed record OnboardPlayerCommand(
+    TelegramUserId TelegramUserId,
     string BirthGroup,
     string Address,
     string? ReferralCode,

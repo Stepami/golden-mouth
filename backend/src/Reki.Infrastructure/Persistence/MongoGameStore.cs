@@ -155,7 +155,6 @@ internal sealed class MongoGameStore : IGameStore
         PublishedPost published,
         string publicationId,
         Invitation? updatedInvite,
-        int inviteBonus,
         int inviteBonusMaxPerDay,
         CancellationToken cancellationToken)
     {
@@ -205,7 +204,7 @@ internal sealed class MongoGameStore : IGameStore
                 if (inviterUses < inviteBonusMaxPerDay)
                 {
                     var inviterUpdate = Builders<PlayerProfile>.Update
-                        .Inc(item => item.Energy, inviteBonus)
+                        .Inc(item => item.Energy, updatedInvite.BonusAmount)
                         .Inc(item => item.Version, 1);
                     await _players.UpdateOneAsync(
                         transactionSession,
@@ -311,16 +310,10 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
-        PlayerId playerId,
         int? limit,
         CancellationToken cancellationToken,
         WorldId worldId)
     {
-        if (await GetWorldAsync(playerId, worldId, cancellationToken) is null)
-        {
-            return [];
-        }
-
         IFindFluent<GamePost, GamePost> query = _posts
             .Find(item => item.WorldId == worldId)
             .SortByDescending(item => item.CreatedAtUtc);
@@ -334,6 +327,13 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<GamePost?> GetPostAsync(
+        PostId postId,
+        WorldId worldId,
+        CancellationToken cancellationToken) =>
+        await _posts.Find(item => item.Id == postId && item.WorldId == worldId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    public async ValueTask<GamePost?> GetPublicStoryPostAsync(
         PostId postId,
         PlayerId playerId,
         CancellationToken cancellationToken)

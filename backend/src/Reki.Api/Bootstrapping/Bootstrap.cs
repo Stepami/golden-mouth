@@ -20,6 +20,11 @@ internal static class Bootstrap
     public static async Task RunAsync(string[] arguments)
     {
         var builder = WebApplication.CreateBuilder(arguments);
+        builder.Host.UseDefaultServiceProvider(options =>
+        {
+            options.ValidateScopes = true;
+            options.ValidateOnBuild = true;
+        });
         builder.Configuration.AddJsonFile(
             Path.Combine(AppContext.BaseDirectory, "config", "balance.json"),
             optional: false,
