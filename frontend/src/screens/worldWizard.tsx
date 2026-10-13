@@ -5,7 +5,7 @@ import { worldDefinitionOf, worlds } from '../api/worldContent'
 import type { WorldDocument, WorldId } from '../api/types'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
-import { blankWorld, getWorldDraft, savedWorldDraft, selectDraftOwner, setWorldDraft, updateWorldDraft, useWorldDraft } from '../app/worldDraft'
+import { blankWorld, clearWorldDrafts, getWorldDraft, savedWorldDraft, selectDraftOwner, setWorldDraft, updateWorldDraft, useWorldDraft } from '../app/worldDraft'
 import { pendingReferral, clearReferral } from '../app/referral'
 import { Avatar, BottomCTA, Button, Card, Segmented, TopBar } from '../ui'
 import { WorldAdvanced } from './worldAdvanced'
@@ -76,7 +76,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
     if (draft.previewOnly) { nav.push('05-7c_world_preview'); return }
     setSaving(true); setError('')
     try {
-      if (!api.hasPlayer()) { const identity = await api.onboarding({ birthGroup: draft.group, ageBand: draft.ageBand, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); selectDraftOwner(identity.id); setWorldDraft(draft) }
+      if (!api.hasPlayer()) { const identity = await api.onboarding({ birthGroup: draft.group, ageBand: draft.ageBand, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); clearWorldDrafts('onboarding'); selectDraftOwner(identity.id); setWorldDraft(draft) }
       await api.settings({ address: draft.address })
       const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d)
       setWorldDraft(null); setPlayer(player); nav.replace('03-5_stage')
