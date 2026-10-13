@@ -798,9 +798,9 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var it = await templates.Find(new BsonDocument("_id", "it")).SingleAsync();
         var players = database.GetCollection<BsonDocument>("players");
         await players.InsertManyAsync([
-            new BsonDocument { { "_id", "already" }, { "HitOwnWorldMilestone", true } },
-            new BsonDocument { { "_id", "threshold" } },
-            new BsonDocument { { "_id", "locked" } },
+            new BsonDocument { { "_id", "already" }, { "TelegramUserId", 10001L }, { "HitOwnWorldMilestone", true } },
+            new BsonDocument { { "_id", "threshold" }, { "TelegramUserId", 10002L } },
+            new BsonDocument { { "_id", "locked" }, { "TelegramUserId", 10003L } },
         ]);
         var existing = Common.TestGameData.CreateWorld().ToBsonDocument();
         existing["Player"]["PlayerId"] = "threshold";
