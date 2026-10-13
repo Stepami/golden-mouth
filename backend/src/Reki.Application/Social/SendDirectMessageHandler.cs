@@ -12,7 +12,7 @@ namespace Reki.Application.Social;
 public sealed class SendDirectMessageHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
-    GameDay gameDay,
+    GameDayPeriod gameDayPeriod,
     ISender sender,
     StarTurnGenerator turnGenerator) : IRequestHandler<SendDirectMessageCommand, SentDirectMessage>
 {
@@ -23,7 +23,7 @@ public sealed class SendDirectMessageHandler(
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var world = await sender.Send(new Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
         _ = world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world.");
-        var periodStart = gameDay.PeriodStart;
+        var periodStart = gameDayPeriod.PeriodStart;
         var conversation = await store.GetStarConversationAsync(
             player.Id,
             request.StarId,

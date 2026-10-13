@@ -1,6 +1,4 @@
 using MongoDB.Bson;
-using MongoDB.Bson.IO;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using Reki.Application.Common;
 using Reki.Application.Posts;
@@ -44,51 +42,6 @@ internal sealed class MongoGameStore : IGameStore
         _threads = database.GetCollection<BsonDocument>(MongoCollections.Threads);
         _invites = database.GetCollection<Invitation>(MongoCollections.Invites);
     }
-
-    public async Task<GameDayResetResult> ResetGameDayAsync(DateTimeOffset periodStart, DateTimeOffset restedBefore, int restedPosts, CancellationToken cancellationToken)
-    {
-        var playerResult = await _players.UpdateManyAsync(
-            Builders<PlayerProfile>.Filter.Lt(player => player.PostsPeriodStartedAtUtc, periodStart),
-            Builders<PlayerProfile>.Update
-                .Set(player => player.EnergyUsed, 0)
-                .Set(player => player.DailyBonus, 0)
-                .Set(player => player.PostsPeriodStartedAtUtc, periodStart)
-                .Inc(player => player.Version, 1),
-            cancellationToken: cancellationToken);
-        var period = SerializeDate(periodStart);
-        var cutoff = SerializeDate(restedBefore);
-        var rested = new BsonDocument("$cond", new BsonArray
-        {
-            new BsonDocument("$and", new BsonArray
-            {
-                new BsonDocument("$ne", new BsonArray { "$Player.LastPostAtUtc", BsonNull.Value }),
-                new BsonDocument("$lt", new BsonArray { "$Player.LastPostAtUtc", new BsonDocument("$literal", cutoff) }),
-            }),
-            restedPosts,
-            0,
-        });
-        var starChanges = new BsonDocument
-        {
-            { "RelationGainedInPeriod", 0 },
-            { "RelationPeriodStartedAtUtc", new BsonDocument("$literal", period) },
-        };
-        var update = new BsonDocument("$set", new BsonDocument
-        {
-            { "Player.PeriodStartedAtUtc", new BsonDocument("$literal", period) },
-            { "Player.RestedPostsRemaining", rested },
-            { "Player.Wants", MapArray("$Player.Wants", new BsonDocument("Done", false)) },
-            { "Stars", MapArray("$Stars", starChanges) },
-            { "Version", new BsonDocument("$add", new BsonArray { "$Version", 1 }) },
-        });
-        var worldResult = await _worlds.UpdateManyAsync(
-            Builders<World>.Filter.Lt(world => world.Player.PeriodStartedAtUtc, periodStart),
-            Builders<World>.Update.Pipeline(new[] { update }),
-            cancellationToken: cancellationToken);
-        return new GameDayResetResult(playerResult.ModifiedCount, worldResult.ModifiedCount);
-    }
-
-    public async ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken) =>
-        await _players.CountDocumentsAsync(FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
         TelegramUserId telegramUserId,
@@ -561,24 +514,6 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask<IReadOnlyList<World>> GetWorldsAsync(PlayerId playerId, CancellationToken cancellationToken)
     {
         return await _worlds.Find(item => item.Player.PlayerId == playerId).ToListAsync(cancellationToken);
-    }
-
-    private static BsonDocument MapArray(string field, BsonDocument changes) => new("$map", new BsonDocument
-    {
-        { "input", field },
-        { "as", "item" },
-        { "in", new BsonDocument("$mergeObjects", new BsonArray { "$$item", changes }) },
-    });
-
-    private static BsonValue SerializeDate(DateTimeOffset value)
-    {
-        var document = new BsonDocument();
-        using var writer = new BsonDocumentWriter(document);
-        writer.WriteStartDocument();
-        writer.WriteName("value");
-        BsonSerializer.LookupSerializer<DateTimeOffset>().Serialize(BsonSerializationContext.CreateRoot(writer), value);
-        writer.WriteEndDocument();
-        return document["value"];
     }
 
     private static BsonDocument CreateThreadDocument(

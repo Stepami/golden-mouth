@@ -11,7 +11,7 @@ namespace Reki.Application.Player;
 public sealed class OnboardPlayerHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameDay gameDay,
+    GameDayPeriod gameDayPeriod,
     TimeProvider timeProvider,
     ProductTelemetry analytics) : IRequestHandler<OnboardPlayerCommand, PlayerProfile>
 {
@@ -26,7 +26,7 @@ public sealed class OnboardPlayerHandler(
         }
 
         var inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
-        var created = CreatePlayer(request, telegramUserId, gameDay.PeriodStart) with
+        var created = CreatePlayer(request, telegramUserId, gameDayPeriod.PeriodStart) with
         {
             AgeBand = request.AgeBand,
         };

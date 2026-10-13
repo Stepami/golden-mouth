@@ -51,8 +51,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         const long secondUserId = 9102;
         using var firstApi = Factory.CreateApiClient(firstUserId);
         using var secondApi = Factory.CreateApiClient(secondUserId);
-        var store = Factory.Services.GetRequiredService<IGameStore>();
-        var before = await store.CountPlayersAsync(CancellationToken.None);
+        var players = Database.GetCollection<BsonDocument>("players");
+        var before = await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
 
         // Act
         var onboarded = await Task.WhenAll(
@@ -63,7 +63,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             secondApi.Player.GetCurrentPlayerAsync(CancellationToken.None));
 
         // Assert
-        await Assert.That(await store.CountPlayersAsync(CancellationToken.None))
+        await Assert.That(await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None))
             .IsEqualTo(before + 2);
         await Assert.That(onboarded[0].Id).IsNotEqualTo(onboarded[1].Id);
         await Assert.That(current[0].Id).IsEqualTo(onboarded[0].Id);
@@ -90,8 +90,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         // Arrange
         using var api = Factory.CreateApiClient();
-        var store = Factory.Services.GetRequiredService<IGameStore>();
-        var before = await store.CountPlayersAsync(CancellationToken.None);
+        var players = Database.GetCollection<BsonDocument>("players");
+        var before = await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
 
         // Act
         PlayerApiException? exception = null;
@@ -112,7 +112,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Assert
         await Assert.That(exception?.StatusCode).IsEqualTo(StatusCodes.Status401Unauthorized);
-        var after = await store.CountPlayersAsync(CancellationToken.None);
+        var after = await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
         await Assert.That(after).IsEqualTo(before);
     }
 
@@ -390,10 +390,9 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Database.GetCollection<BsonDocument>("invites").InsertOneAsync(
             new BsonDocument("PlayerId", playerId));
 
-        var store = Factory.Services.GetRequiredService<IGameStore>();
-        var before = await store.CountPlayersAsync(CancellationToken.None);
+        var before = await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
         await api.Player.DeleteCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(await store.CountPlayersAsync(CancellationToken.None)).IsEqualTo(before - 1);
+        await Assert.That(await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None)).IsEqualTo(before - 1);
         var deletion = Factory.ProductLogger.ReceivedCalls()
             .Where(call => call.GetMethodInfo().Name == "BeginScope")
             .Select(call => call.GetArguments()[0])

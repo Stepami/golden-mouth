@@ -12,7 +12,7 @@ namespace Reki.Application.Social;
 public sealed class ChallengeLifecycle(
     IGameStore store,
     IOptions<GameBalance> balance,
-    GameDay gameDay,
+    GameDayPeriod gameDayPeriod,
     TimeProvider timeProvider,
     ProductTelemetry analytics)
 {
@@ -59,7 +59,7 @@ public sealed class ChallengeLifecycle(
             return;
         }
 
-        var active = pending.Accept(player.Id, gameDay.PeriodStart);
+        var active = pending.Accept(player.Id, gameDayPeriod.PeriodStart);
         if (!await store.TryReplaceChallengeAsync(active, pending.Version, cancellationToken))
         {
             throw new RequestConflictException("The challenge state changed while accepting it.");
@@ -93,7 +93,7 @@ public sealed class ChallengeLifecycle(
             return null;
         }
 
-        var periodStart = gameDay.PeriodStart;
+        var periodStart = gameDayPeriod.PeriodStart;
         if (challenge.IsFinished(periodStart))
         {
             await FinalizeAsync(challenge, periodStart, cancellationToken);
@@ -121,7 +121,7 @@ public sealed class ChallengeLifecycle(
             return;
         }
 
-        var periodStart = gameDay.PeriodStart;
+        var periodStart = gameDayPeriod.PeriodStart;
         if (challenge.IsFinished(periodStart))
         {
             await FinalizeAsync(challenge, periodStart, cancellationToken);

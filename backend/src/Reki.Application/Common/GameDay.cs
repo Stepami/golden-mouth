@@ -10,19 +10,8 @@ using ContractSkillId = Reki.Contracts.Player.SkillId;
 namespace Reki.Application.Common;
 
 [Mapper]
-public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBalance> balance, IGameStore store, ISender sender)
+public sealed partial class GameDay(IOptions<GameBalance> balance, IGameStore store, ISender sender)
 {
-    private static readonly TimeSpan MoscowOffset = TimeSpan.FromHours(3);
-
-    public DateTimeOffset PeriodStart
-    {
-        get
-        {
-            var utcNow = timeProvider.GetUtcNow();
-            return GetPeriodStart(utcNow);
-        }
-    }
-
     public async ValueTask<PlayerResponse> GetPlayerAsync(CancellationToken cancellationToken)
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
@@ -42,16 +31,6 @@ public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBala
             new Dictionary<string, string>());
     }
 
-    public Task<GameDayResetResult> ResetAsync(CancellationToken cancellationToken)
-    {
-        var periodStart = PeriodStart;
-        return store.ResetGameDayAsync(
-            periodStart,
-            periodStart.AddDays(-balance.Value.Growth.RestedAfterSkippedDays),
-            balance.Value.Growth.RestedFirstPosts,
-            cancellationToken);
-    }
-
     public int GetPostsCap(PlayerProfile player, Invitation? invite, IReadOnlyList<Invitation> invited)
     {
         var start = player.PostsPeriodStartedAtUtc;
@@ -66,19 +45,4 @@ public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBala
 
     [MapperIgnoreSource(nameof(SkillProgress.Experience))]
     private partial SkillResponse MapSkill(SkillProgress source);
-
-    private DateTimeOffset GetPeriodStart(DateTimeOffset utcNow)
-    {
-        var localNow = utcNow.ToOffset(MoscowOffset);
-        var start = new DateTimeOffset(
-            localNow.Year,
-            localNow.Month,
-            localNow.Day,
-            balance.Value.PostsResetTimeMoscow.Hour,
-            balance.Value.PostsResetTimeMoscow.Minute,
-            balance.Value.PostsResetTimeMoscow.Second,
-            MoscowOffset);
-
-        return (localNow < start ? start.AddDays(-1) : start).ToUniversalTime();
-    }
 }

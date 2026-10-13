@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Application.Common;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
@@ -195,7 +194,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         listener.RecordObservableInstruments();
 
         await Assert.That(count).IsEqualTo(1L);
-        await Assert.That(await Factory.Services.GetRequiredService<IGameStore>().CountPlayersAsync(CancellationToken.None)).IsEqualTo(1L);
+        await Assert.That(await Database.GetCollection<PlayerProfile>("players").CountDocumentsAsync(FilterDefinition<PlayerProfile>.Empty, cancellationToken: CancellationToken.None)).IsEqualTo(1L);
     }
 
     [Test]

@@ -49,7 +49,7 @@ public static class DependencyInjection
         var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ?? throw new InvalidOperationException("Mongo configuration is required.");
         var functions = services.MapTickerGroup(string.Empty);
         functions.MapTicker<ResetGameDayJob>("reset-game-day").WithCron("0 0 9 * * *").WithMaxConcurrency(1);
-        functions.MapTicker<RefreshRegisteredPlayersJob>("refresh-registered-players").WithCron("0 * * * * *").WithMaxConcurrency(1);
+        services.MapTickerGroup(string.Empty).WithLifetime(ServiceLifetime.Singleton).MapTicker<RefreshRegisteredPlayersJob>("refresh-registered-players").WithCron("0 * * * * *").WithMaxConcurrency(1);
         services.AddTickerQ(options =>
         {
             options.ConfigureScheduler(scheduler => scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
@@ -115,7 +115,6 @@ public static class DependencyInjection
         services.AddSingleton<MongoCompositionRoot>();
         services.AddSingleton<IGameStore, MongoGameStore>();
         services.AddMetrics();
-        services.AddSingleton<RegisteredPlayersMetrics>();
         services.AddSingleton<IMongoClient>(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoClient);
         services.AddSingleton<IMongoDatabase>(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoDatabase);
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);

@@ -28,6 +28,7 @@ internal static class ServiceCollectionExtensions
             options.ServiceLifetime = ServiceLifetime.Scoped;
         });
         services.AddScoped<GameDay>();
+        services.AddSingleton<GameDayPeriod>();
         services.AddSingleton<PlayerSafetyGuard>();
         services.AddScoped<ChallengeLifecycle>();
         services.AddSingleton<PostProgressionCalculator>();
