@@ -5,7 +5,7 @@ import * as mock from './mock'
 import { error, warn } from '../app/log'
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics'
 import { apiBaseUrl as BASE, runtimeConfig } from '../app/runtimeConfig'
-import { demoChannelPosts, demoFeed, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, shuffle, withDemoComments } from './demo'
+import { demoChannelPosts, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, withDemoComments } from './demo'
 import { contentOf, installWorldContent, installWorldTemplates, worldDocumentOf, wantsFor } from './worldContent'
 import { telegramAuthHeaders } from './auth'
 import type { AgeBand } from '../app/ageBand'
@@ -35,7 +35,7 @@ function loadTemplates(): Promise<void> {
   return templatesRequest ??= fetchTemplates().finally(() => { templatesRequest = undefined })
 }
 function rememberPlayer(player: Player): Player {
-  try { if (player.worldInstanceId) localStorage.setItem(`reki:selected-world:${player.id}`, player.worldInstanceId) } catch { /* memory fallback */ } setTelemetryPlayerAvailable(true); sessionIdentity = { ...player, experiments: player.experiments ?? {} }; sessionPlayer = player; setAnalyticsWorld(player.worldInstanceId, player.world); return player }
+  try { if (player.worldInstanceId) localStorage.setItem(`reki:selected-world:${player.id}`, player.worldInstanceId) } catch { /* memory fallback */ } setTelemetryPlayerAvailable(true); sessionIdentity = { ...player, energy: player.postsLeft, experiments: player.experiments ?? {} }; sessionPlayer = player; setAnalyticsWorld(player.worldInstanceId, player.world); return player }
 
 export class ApiError extends Error {
   constructor(public readonly status: number, method: string, path: string, public readonly failure?: PublicationFailure) {
@@ -94,7 +94,8 @@ async function loadPlayer(worldId?: string): Promise<Player> {
   const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)) ?? ownedWorlds[0]
   if (!world) throw new ApiError(404, 'GET', '/worlds')
   installWorldContent([world])
-  return rememberPlayer({ ...player, worldInstanceId: world.id, avatarStyle: world.avatarStyle,
+  const invitation = await call<{ bonus: number }>('/invitation')
+  return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, avatarStyle: world.avatarStyle,
     world: world.balanceKey, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
     wants: world.wants, collection: world.achievements, bio: '', type: 'свой голос',
     voice: world.voice, drama: world.drama,
@@ -119,7 +120,7 @@ export const api = {
       ? await call<PlayerDocument>('/onboarding', { method: 'POST', body: JSON.stringify(body) })
       : await later({
         id: crypto.randomUUID().replaceAll('-', ''), address: body.address as Player['address'],
-        postsLeft: 10, postsCap: 10, firstPostInviteBonus: 0, streak: { days: 1, week: [true, false, false, false, false, false, false], nextReward: 'ещё день — и бонус' },
+        energy: 10, streak: { days: 1, week: [true, false, false, false, false, false, false], nextReward: 'ещё день — и бонус' },
         skills: { brave: { level: 1, progress: 0 }, humor: { level: 1, progress: 0 }, topic: { level: 1, progress: 0 } },
         settings: { notifications: 'all', quiet: '22:00-09:00', plus: false }, experiments: {},
       })
@@ -297,7 +298,7 @@ export const api = {
       const [identity, worlds] = await Promise.all([call<PlayerDocument>('/me'), call<WorldDocument[]>('/worlds')])
       const world = worlds.find(value => value.id === player.worldInstanceId)
       if (!world) throw cause
-      const event: ReplyLiveEvent = { status: 'completed', requestId, post, energyLeft: identity.postsLeft, subscribers: world.subscribers }
+      const event: ReplyLiveEvent = { status: 'completed', requestId, post, energyLeft: identity.energy, subscribers: world.subscribers }
       update(event); return event
     }
   },
@@ -325,19 +326,17 @@ export const api = {
       ago: post.at, text: post.text, reactions: post.reactions, views: post.views,
       commentCount: withDemoComments(post, sessionPlayer?.id ?? '').comments.length,
     }))
-    const demos = runtimeConfig.features.mockFeed ? demoFeed(world).map(item => ({ ...item,
-      commentCount: withDemoComments(demoPost(item.postId!)!, sessionPlayer?.id ?? '').comments.length })) : []
-    return runtimeConfig.features.mockFeed ? shuffle([...remote, ...demos]) : remote
+    return remote
   },
   channelPosts: (): Promise<ChannelPost[]> => BASE ? call(inWorld('/posts/mine')) : laterLazy(() => demoChannelPosts(sessionPlayer?.id ?? '')),
   post: async (postId: string): Promise<Post> => {
-    const demo = runtimeConfig.features.mockFeed ? demoPost(postId) : undefined
+    const demo = !BASE ? demoPost(postId) : undefined
     const local = !BASE ? demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) : undefined
     const post = local ?? demo ?? (BASE
       ? await call<PostDetailResponse>(inWorld(`/posts/${encodeURIComponent(postId)}`)).then(({ postId: id, ...detail }) => ({ ...detail, id }))
       : await laterLazy(() => demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) ?? mock.post(postId)))
     if (!post) throw { status: 404 }
-    return runtimeConfig.features.mockFeed
+    return !BASE
       ? withDemoComments({ ...post, demoComments: post.demoComments || !post.canReply }, sessionPlayer?.id ?? '') : post
   },
   friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),

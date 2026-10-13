@@ -7,7 +7,7 @@ export interface WorldContent {
   handle: string
   avatarStyle: 'lorelei' | 'notionists' | 'pixelArt' | 'thumbs' | 'shapes'
   avatarLabel: string
-  stars: Star[]
+  stars: (Star & { avatarSeed: string })[]
   voices: string[]
   drama: Drama
   description: string
@@ -15,7 +15,6 @@ export interface WorldContent {
   firstContext: string
   firstPrompt: string
   ideas: string[]
-  posts: string[]
 }
 
 const documents: Partial<Record<WorldId, WorldDocument>> = {}
@@ -48,7 +47,7 @@ function toWorldContent(world: WorldDocument): WorldContent {
     stars: world.stars.map(star => ({ ...star, trait: traitNames[star.trait] ?? '' })),
     voices: world.voices, drama: world.drama, description: world.description,
     rules: world.rules.map(rule => rule.text), firstContext: world.firstContext, firstPrompt: world.firstPrompt,
-    ideas: world.postIdeas, posts: world.demoPosts,
+    ideas: world.postIdeas,
   }
 }
 

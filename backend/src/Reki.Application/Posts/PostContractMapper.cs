@@ -16,8 +16,7 @@ public static class PostContractMapper
 
     public static FeedItemResponse MapFeedItem(
         GamePost post,
-        Reki.Domain.Worlds.World author,
-        bool canReply)
+        World author)
     {
         var resolved = ResolveAuthor(post.AuthorId, author);
         return new(
@@ -31,8 +30,7 @@ public static class PostContractMapper
             CreateReactions(post),
             post.Views,
             post.Comments.Count,
-            null,
-            canReply);
+            null);
     }
 
     public static ChannelPostResponse MapChannelPost(GamePost post) =>

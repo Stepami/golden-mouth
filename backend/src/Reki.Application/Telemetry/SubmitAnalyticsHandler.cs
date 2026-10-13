@@ -1,22 +1,24 @@
 using Mediator;
-using Reki.Application.Player;
-using Reki.Application.Worlds;
+using Reki.Application.Common;
+using Reki.Application.Common.Exceptions;
 
 namespace Reki.Application.Telemetry;
 
 public sealed class SubmitAnalyticsHandler(
     ProductTelemetry telemetry,
-    ISender sender)
+    IRekiContextAccessor rekiContextAccessor)
     : IRequestHandler<SubmitAnalyticsCommand>
 {
     public async ValueTask<Unit> Handle(
         SubmitAnalyticsCommand request,
         CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var rekiContext = rekiContextAccessor.Context;
+        var player = await rekiContext.Player;
         foreach (var worldId in request.Submission.Events.Select(entry => entry.WorldId).OfType<Reki.Domain.Worlds.WorldId>().Distinct())
         {
-            _ = await sender.Send(new GetWorldQuery(player.Id, worldId), cancellationToken);
+            _ = (await rekiContext.Worlds).GetValueOrDefault(worldId)
+            ?? throw new ResourceNotFoundException("World not found.");
         }
 
         telemetry.TrackSubmission(player, request.Submission);

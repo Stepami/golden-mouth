@@ -44,7 +44,10 @@ public sealed class OpenAiStub : IDisposable
 
     public void Respond(ChatResponse response) => Respond(_ => response);
 
-    public void Respond(Func<IReadOnlyList<ChatMessage>, ChatResponse> createResponse)
+    public void Respond(Func<IReadOnlyList<ChatMessage>, ChatResponse> createResponse) =>
+        Respond(messages => Task.FromResult(createResponse(messages)));
+
+    public void Respond(Func<IReadOnlyList<ChatMessage>, Task<ChatResponse>> createResponse)
     {
         var generation = GetGeneration();
         _server.ResetMappings();
@@ -54,11 +57,11 @@ public sealed class OpenAiStub : IDisposable
                     .WithBody((string? body) => body is not null && IsStreaming(body) == streaming))
                 .RespondWith(Response.Create().WithStatusCode(200)
                     .WithHeader("Content-Type", streaming ? "text/event-stream" : "application/json")
-                    .WithBody(request =>
+                    .WithBody(async request =>
                     {
                         RecordRequest(generation, request.Body);
                         using var document = JsonDocument.Parse(request.Body ?? throw new InvalidOperationException("Missing AI request body."));
-                        var response = createResponse(ReadMessages(document.RootElement));
+                        var response = await createResponse(ReadMessages(document.RootElement));
                         return CreateResponseBody(response, document.RootElement.GetProperty("model").GetString(), streaming);
                     }));
         }
@@ -152,7 +155,17 @@ public sealed class OpenAiStub : IDisposable
             calls.Add(tool);
         }
 
-        var message = new JsonObject { ["role"] = "assistant", ["tool_calls"] = calls };
+        var message = new JsonObject { ["role"] = "assistant" };
+        if (calls.Count > 0)
+        {
+            message["tool_calls"] = calls;
+        }
+
+        if (!string.IsNullOrEmpty(response.Text))
+        {
+            message["content"] = response.Text;
+        }
+
         var completion = new JsonObject
         {
             ["id"] = "test-completion",
@@ -163,7 +176,7 @@ public sealed class OpenAiStub : IDisposable
             {
                 ["index"] = 0,
                 [streaming ? "delta" : "message"] = message,
-                ["finish_reason"] = "tool_calls",
+                ["finish_reason"] = calls.Count > 0 ? "tool_calls" : "stop",
             }),
         };
         return streaming ? $"data: {completion.ToJsonString()}\n\ndata: [DONE]\n\n" : completion.ToJsonString();

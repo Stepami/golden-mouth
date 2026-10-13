@@ -83,7 +83,7 @@ export interface WorldDocument extends Omit<World, 'id'> {
 export type WorldDefinition = Omit<WorldDocument, 'id' | 'subscribers' | 'lock'>
 
 export interface PlayerDocument {
-  id: string; address: Address; hitOwnWorldMilestone?: boolean; ageBand?: import('../app/ageBand').AgeBand; postsLeft: number; postsCap: number; firstPostInviteBonus: number
+  id: string; address: Address; hitOwnWorldMilestone?: boolean; ageBand?: import('../app/ageBand').AgeBand; energy: number
   streak: Player['streak']; skills: Player['skills']; experiments: Record<string, string>
   settings: { notifications: string; quiet: string; plus: boolean }
 }

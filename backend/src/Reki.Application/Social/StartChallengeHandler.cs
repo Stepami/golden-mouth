@@ -1,10 +1,10 @@
 using Mediator;
-using Reki.Application.Player;
+using Reki.Application.Common;
 
 namespace Reki.Application.Social;
 
 public sealed class StartChallengeHandler(
-    ISender sender,
+    IRekiContextAccessor rekiContextAccessor,
     ChallengeLifecycle challengeLifecycle)
     : IRequestHandler<StartChallengeCommand>
 {
@@ -12,7 +12,7 @@ public sealed class StartChallengeHandler(
         StartChallengeCommand request,
         CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var player = await rekiContextAccessor.Context.Player;
         await challengeLifecycle.StartOrAcceptAsync(player, request.FriendId, cancellationToken);
         return Unit.Value;
     }

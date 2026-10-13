@@ -1,5 +1,5 @@
 // Демо-посты и фикстуры экранов. Миры и звёзды загружаются из API.
-import type { Challenge, Dm, FeedItem, Friend, GameEvent, Player, Post, PostResult } from './types'
+import type { Challenge, Dm, Friend, GameEvent, Player, Post, PostResult } from './types'
 
 export const player: Player = {
   id: '00000000000000000000000000000001', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', address: 'she',
@@ -42,16 +42,7 @@ export const channelPosts = [{
 }]
 export const liveComment = { id: 'k0', author: 'kpop_dasha', avatar: 'dasha', handle: 'фанатка', text: 'ЗАТО УВЕРЕННО 😭 это теперь мой девиз' }
 
-/** Чужой пост того же мира (03-3 → 02-6): читается, но `canReply: false` — ответы только под своими постами. */
-export const foreignPost: Post = {
-  id: 'post-eva', text: 'иногда самый громкий пост это тот, который так и не выложен. 🖤', views: 14000,
-  reactions: [{ emoji: '🖤', count: 14000 }, { emoji: '🌙', count: 3200 }], at: '2 ч назад', canReply: false,
-  comments: [
-    { id: 'fe1', author: 'Ева', avatar: 'eva', handle: 'солистка NOIR', text: 'набросала в черновик и оставила. пусть живёт', star: true },
-  ],
-}
-
-const postsById: Record<string, Post> = { [firstPost.id]: firstPost, [foreignPost.id]: foreignPost }
+const postsById: Record<string, Post> = { [firstPost.id]: firstPost }
 /** Пост по стабильному id для GET /posts/:id в mock-режиме; неизвестный id = 404. */
 export const post = (postId: string): Post => {
   const found = postsById[postId]
@@ -80,12 +71,6 @@ export const dm: Omit<Dm, 'star'> = { status: 'заинтригована', memo
   messages: [{ from: 'star', text: 'твой пост про «уверенно» разлетелся по агентству 😏' }, { from: 'me', text: 'я сама в шоке' }, { from: 'star', text: 'снимем вместе разбор моей самой позорной репетиции? ты комментируешь' }],
   ideas: ['«а если я опозорюсь?»', '«только если покажешь падение»'],
 }
-
-export const feed: FeedItem[] = [
-  { kind: 'news', text: 'BLESK объявили камбэк. Трейни, у кого лучший пост недели, позовут на съёмки тизера 👀' },
-  { kind: 'post', postId: foreignPost.id, canReply: false, author: 'Ева', avatar: 'eva', role: 'солистка NOIR', ago: '2026-10-07T04:09:02Z', text: foreignPost.text, reactions: foreignPost.reactions, views: foreignPost.views, commentCount: foreignPost.comments.length },
-  { kind: 'post', postId: firstPost.id, canReply: true, author: 'Мира', avatar: 'mira', role: 'лидер BLESK', ago: channelPosts[0].createdAtUtc, text: 'репостнула к себе. трейни, учитесь 😏', repost: 'первый день трейни: перепутала право и лево…', reactions: [{ emoji: '🔥', count: 2100 }, { emoji: '😂', count: 840 }], views: firstPost.views, commentCount: firstPost.comments.length },
-]
 
 export const friends: Friend[] = [
   { id: 'katya', name: 'Катя · ахаха', avatar: 'katya', world: '🌸 Академия', subs: 5120, lastPost: 'на фестивале мой клуб занял последнее место. зато лучший баннер', pronoun: 'её' },

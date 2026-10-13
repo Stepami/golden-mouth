@@ -2,7 +2,7 @@ using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
-using Reki.Application.Player;
+using Reki.Application.Common;
 using Reki.Application.Telemetry;
 using Reki.Contracts.Telemetry;
 using Reki.Domain.Posts;
@@ -14,6 +14,7 @@ namespace Reki.Api.Telemetry;
 [Route("/")]
 public sealed partial class TelemetryController(
     ISender sender,
+    IRekiContext rekiContext,
     ApiMapper mapper,
     ILogger<TelemetryController> logger) : ControllerBase
 {
@@ -35,9 +36,7 @@ public sealed partial class TelemetryController(
         ClientLogBatchRequest request,
         CancellationToken cancellationToken)
     {
-        var player = await sender.Send(
-            new GetPlayerQuery(NormalizeDay: true),
-            cancellationToken);
+        var player = await rekiContext.Player;
         foreach (var entry in request.Entries)
         {
             var properties = mapper.SanitizeProperties(entry.Props);
@@ -80,22 +79,22 @@ public sealed partial class TelemetryController(
         switch (level)
         {
             case ClientLogLevel.Error:
-            {
-                LogClientError(eventName, playerId, screen, status, path);
-                break;
-            }
+                {
+                    LogClientError(eventName, playerId, screen, status, path);
+                    break;
+                }
 
             case ClientLogLevel.Warn:
-            {
-                LogClientWarning(eventName, playerId, screen, status, path);
-                break;
-            }
+                {
+                    LogClientWarning(eventName, playerId, screen, status, path);
+                    break;
+                }
 
             default:
-            {
-                LogClientInformation(eventName, playerId, screen, status, path);
-                break;
-            }
+                {
+                    LogClientInformation(eventName, playerId, screen, status, path);
+                    break;
+                }
         }
     }
 

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
+using Reki.Application.Common;
 using Reki.Application.Worlds;
 using Reki.Contracts.Worlds;
 using Reki.Domain.Worlds;
@@ -14,6 +15,7 @@ namespace Reki.Api.Worlds;
 [Route("worlds")]
 public sealed class WorldsController(
     ISender sender,
+    IRekiContext rekiContext,
     ApiMapper mapper) : ControllerBase
 {
     [AllowAnonymous]
@@ -22,15 +24,15 @@ public sealed class WorldsController(
     public async Task<Ok<IReadOnlyList<WorldResponse>>> GetWorldTemplatesAsync(CancellationToken cancellationToken)
     {
         var worlds = await sender.Send(new GetWorldTemplatesQuery(), cancellationToken);
-        return TypedResults.Ok<IReadOnlyList<WorldResponse>>(worlds.Select(mapper.MapWorld).ToArray());
+        return TypedResults.Ok<IReadOnlyList<WorldResponse>>([.. worlds.Select(mapper.MapWorld)]);
     }
 
     [HttpGet(Name = "GetOwnedWorlds")]
     [ActionName("GetOwnedWorlds")]
     public async Task<Ok<IReadOnlyList<WorldResponse>>> GetOwnedWorldsAsync(CancellationToken cancellationToken)
     {
-        var worlds = await sender.Send(new GetOwnedWorldsQuery(), cancellationToken);
-        return TypedResults.Ok<IReadOnlyList<WorldResponse>>(worlds.Select(mapper.MapWorld).ToArray());
+        var worlds = await rekiContext.Worlds;
+        return TypedResults.Ok<IReadOnlyList<WorldResponse>>([.. worlds.Values.Select(mapper.MapWorld)]);
     }
 
     [HttpPost(Name = "CreateWorld")]

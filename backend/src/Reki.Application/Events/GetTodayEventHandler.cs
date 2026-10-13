@@ -1,22 +1,23 @@
 using Mediator;
 using Reki.Application.Common;
-using Reki.Application.Player;
+using Reki.Application.Common.Exceptions;
 using Reki.Domain.Events;
 
 namespace Reki.Application.Events;
 
 public sealed class GetTodayEventHandler(
     IGameStore store,
-    GameDay gameDay,
-    ISender sender) : IRequestHandler<GetTodayEventQuery, DailyGameEvent>
+    GameDayPeriod gameDayPeriod,
+    IRekiContextAccessor rekiContextAccessor) : IRequestHandler<GetTodayEventQuery, DailyGameEvent>
 {
     public async ValueTask<DailyGameEvent> Handle(
         GetTodayEventQuery request,
         CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var world = await sender.Send(new Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
-        var periodStart = gameDay.PeriodStart;
+        var player = await rekiContextAccessor.Context.Player;
+        var world = (await rekiContextAccessor.Context.Worlds).GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
+        var periodStart = gameDayPeriod.PeriodStart;
         var existing = await store.GetTodayEventAsync(
             player.Id,
             periodStart,

@@ -1,12 +1,14 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Api.Serialization;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
 using Reki.Contracts.Worlds;
+using Reki.Infrastructure.Jobs;
+using Reki.Infrastructure.Serialization;
 
 namespace Reki.Tests.Api;
 
@@ -211,6 +213,12 @@ public abstract class GameApiTestBase(ApiFactory factory)
             Voice = template.Voice,
             Drama = template.Drama,
         };
+
+    protected async Task ResetGameDayAsync()
+    {
+        await using var scope = Factory.Services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<ResetGameDayJob>().ExecuteAsync(new(), CancellationToken.None);
+    }
 
     protected async Task<string> WorldPathAsync(HttpClient http, string path)
     {

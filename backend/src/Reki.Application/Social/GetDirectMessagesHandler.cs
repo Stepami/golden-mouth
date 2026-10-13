@@ -2,7 +2,6 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Player;
 using Reki.Domain.Social;
 
 namespace Reki.Application.Social;
@@ -10,17 +9,19 @@ namespace Reki.Application.Social;
 public sealed class GetDirectMessagesHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
-    GameDay gameDay,
-    ISender sender) : IRequestHandler<GetDirectMessagesQuery, DirectMessageView>
+    GameDayPeriod gameDayPeriod,
+    IRekiContextAccessor rekiContextAccessor) : IRequestHandler<GetDirectMessagesQuery, DirectMessageView>
 {
     public async ValueTask<DirectMessageView> Handle(
         GetDirectMessagesQuery request,
         CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var world = await sender.Send(new Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        var rekiContext = rekiContextAccessor.Context;
+        var player = await rekiContext.Player;
+        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
         _ = world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world.");
-        var periodStart = gameDay.PeriodStart;
+        var periodStart = gameDayPeriod.PeriodStart;
         var conversation = await store.GetStarConversationAsync(
             player.Id,
             request.StarId,

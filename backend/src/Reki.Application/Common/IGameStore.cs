@@ -10,7 +10,7 @@ namespace Reki.Application.Common;
 
 public interface IGameStore
 {
-    ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
+    ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken);
 
     ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken);
 
@@ -18,11 +18,7 @@ public interface IGameStore
 
     ValueTask CreateInviteAsync(Invitation invite, CancellationToken cancellationToken);
 
-    ValueTask<Invitation?> GetInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken);
-
-    ValueTask<IReadOnlyList<Invitation>> GetInvitesByInviterAsync(
-        PlayerId inviterId,
-        CancellationToken cancellationToken);
+    ValueTask<Invitation?> GetPendingInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken);
 
     ValueTask CreatePlayerAsync(
         PlayerProfile player,
@@ -55,6 +51,7 @@ public interface IGameStore
         PublishedPost published,
         string publicationId,
         Invitation? updatedInvite,
+        int inviteBonusMaxPerDay,
         CancellationToken cancellationToken);
 
     ValueTask<Publication?> GetPublicationAsync(string id, CancellationToken cancellationToken);
@@ -74,13 +71,27 @@ public interface IGameStore
         Reki.Contracts.Posts.PublicationFailure failure,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Reads posts in a world whose ownership the application has already verified.
+    /// </summary>
     ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
-        PlayerId playerId,
         int? limit,
-        CancellationToken cancellationToken,
-        WorldId worldId);
+        WorldId worldId,
+        AuthorId? authorId,
+        CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Reads a post only in the world whose ownership the application has already verified.
+    /// </summary>
     ValueTask<GamePost?> GetPostAsync(
+        PostId postId,
+        WorldId worldId,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads a public story post after verifying the explicitly supplied world's owner.
+    /// </summary>
+    ValueTask<GamePost?> GetPublicStoryPostAsync(
         PostId postId,
         PlayerId playerId,
         CancellationToken cancellationToken);

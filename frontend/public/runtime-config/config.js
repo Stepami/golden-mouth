@@ -5,6 +5,5 @@ window.__REKI_CONFIG__ = Object.freeze({
     dm: false,
     friends: false,
     collection: false,
-    mockFeed: true,
   }),
 })

@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Reki.Application.Common;
 using Reki.Application.Posts;
 using Reki.Contracts.Posts;
 using Reki.Domain.Posts;
@@ -77,12 +78,17 @@ public sealed class PostsController(ISender sender) : ControllerBase
     [ActionName("GetFeed")]
     public async Task<Ok<IReadOnlyList<FeedItemResponse>>> GetFeedAsync(
         [FromQuery] string worldId,
+        [FromServices] IRekiContext rekiContext,
         CancellationToken cancellationToken)
     {
+        const int feedSize = 20;
         var result = await sender.Send(
-            new GetFeedQuery(Domain.Worlds.WorldId.From(worldId)),
+            new GetChannelPostsQuery(Domain.Worlds.WorldId.From(worldId), feedSize, Feed: true),
             cancellationToken);
-        return TypedResults.Ok(result);
+        var worlds = await rekiContext.Worlds;
+        IReadOnlyList<FeedItemResponse> response =
+            [.. result.Select(post => PostContractMapper.MapFeedItem(post, worlds[post.WorldId]))];
+        return TypedResults.Ok(response);
     }
 
     [HttpGet("posts/mine", Name = "GetChannelPosts")]

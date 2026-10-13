@@ -15,6 +15,9 @@
         <PackageReference Include="Microsoft.Extensions.AI.OpenAI"/>
         <PackageReference Include="MongoDB.Analyzer" />
         <PackageReference Include="MongoDB.Driver"/>
+        <PackageReference Include="TickerQ" />
+        <PackageReference Include="TickerQ.Instrumentation.OpenTelemetry" />
+        <PackageReference Include="alexjamesbrown.TickerQ.MongoDB" />
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"/>
         <PackageReference Include="OpenTelemetry.Extensions.Hosting"/>
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore"/>

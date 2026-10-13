@@ -1,17 +1,17 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Telemetry;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Player;
 
 public sealed class OnboardPlayerHandler(
-    ITelegramUserAccessor telegramUser,
     IGameStore store,
-    GameDay gameDay,
+    GameDayPeriod gameDayPeriod,
+    IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     ProductTelemetry analytics) : IRequestHandler<OnboardPlayerCommand, PlayerProfile>
 {
@@ -19,21 +19,22 @@ public sealed class OnboardPlayerHandler(
         OnboardPlayerCommand request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var telegramUserId = request.TelegramUserId;
         if (await store.GetPlayerAsync(telegramUserId, cancellationToken) is not null)
         {
             throw new RequestConflictException("Onboarding has already been completed.");
         }
 
         var inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
-        var created = CreatePlayer(request, telegramUserId, gameDay.PeriodStart) with
+        var created = CreatePlayer(request, telegramUserId, gameDayPeriod.PeriodStart) with
         {
             AgeBand = request.AgeBand,
+            Energy = balance.Value.FreePostsPerDay,
         };
         await store.CreatePlayerAsync(created, cancellationToken);
         if (inviter is not null)
         {
-            var invite = Invitation.Create(inviter.Id, created.Id, timeProvider.GetUtcNow());
+            var invite = Invitation.Create(inviter.Id, created.Id, timeProvider.GetUtcNow(), balance.Value.InviteBonusBoth);
             await store.CreateInviteAsync(invite, cancellationToken);
         }
 

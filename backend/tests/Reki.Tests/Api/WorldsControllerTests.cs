@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Reki.Contracts.Worlds;
+using Reki.Infrastructure.Serialization;
 
 namespace Reki.Tests.Api;
 
@@ -50,7 +51,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         foreach (var worldId in new[] { firstId, secondId })
         {
-            var worldPosts = await store.GetPostsAsync(owner, null, CancellationToken.None, worldId);
+            var worldPosts = await store.GetPostsAsync(null, worldId, null, CancellationToken.None);
             var conversation = await store.GetStarConversationAsync(owner, starId, CancellationToken.None, worldId)
                 ?? throw new InvalidOperationException("Missing conversation.");
             await Assert.That(worldPosts.Single().WorldId).IsEqualTo(worldId);
@@ -83,7 +84,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             ],
         };
         using var content = new StringContent(
-            System.Text.Json.JsonSerializer.Serialize(batch, Reki.Api.Serialization.ApiJsonSerializerContext.Default.AnalyticsBatchRequest),
+            System.Text.Json.JsonSerializer.Serialize(batch, ApiJsonSerializerContext.Default.AnalyticsBatchRequest),
             System.Text.Encoding.UTF8,
             "application/json");
 
