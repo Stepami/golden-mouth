@@ -57,10 +57,9 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask<Invitation?> GetInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken) =>
         await _invites.Find(item => item.InviteeId == inviteeId).FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask<IReadOnlyList<Invitation>> GetInvitesByInviterAsync(
-        PlayerId inviterId,
-        CancellationToken cancellationToken) =>
-        await _invites.Find(item => item.InviterId == inviterId).ToListAsync(cancellationToken);
+    public async ValueTask<Invitation?> GetPendingInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken) =>
+        await _invites.Find(item => item.InviteeId == inviteeId && !item.InviteeBonusUsed)
+            .FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask CreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
         await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
@@ -159,65 +158,89 @@ internal sealed class MongoGameStore : IGameStore
         PublishedPost published,
         string publicationId,
         Invitation? updatedInvite,
+        int inviteBonus,
+        int inviteBonusMaxPerDay,
         CancellationToken cancellationToken)
     {
         var post = published.Post;
         using var session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
-        session.StartTransaction();
-        var readyFilter = Builders<Publication>.Filter.And(
-            Builders<Publication>.Filter.Eq(item => item.Id, publicationId),
-            Builders<Publication>.Filter.Eq(item => item.PlayerId, updatedPlayer.Id),
-            Builders<Publication>.Filter.Eq(item => item.Status, PublicationStatus.ReadyForModeration));
-        var complete = Builders<Publication>.Update
-            .Set(item => item.Status, PublicationStatus.Completed)
-            .Set(item => item.Result, published)
-            .Set(item => item.Text, string.Empty)
-            .Set(item => item.Parts, []);
-        var publicationResult = await _publications.UpdateOneAsync(
-            session,
-            readyFilter,
-            complete,
-            cancellationToken: cancellationToken);
-        if (publicationResult.ModifiedCount != 1)
-        {
-            await session.AbortTransactionAsync(cancellationToken);
-            return false;
-        }
+        return await session.WithTransactionAsync(CommitAsync, cancellationToken: cancellationToken);
 
-        if ((await _players.ReplaceOneAsync(session, item => item.Id == updatedPlayer.Id && item.Version == expectedPlayerVersion, updatedPlayer, cancellationToken: cancellationToken)).MatchedCount != 1 ||
-            (await _worlds.ReplaceOneAsync(session, item => item.Id == updatedWorld.Id && item.Player.PlayerId == updatedPlayer.Id && item.Version == expectedWorldVersion, updatedWorld, cancellationToken: cancellationToken))
-            .MatchedCount != 1)
+        async Task<bool> CommitAsync(IClientSessionHandle transactionSession, CancellationToken transactionCancellationToken)
         {
-            await session.AbortTransactionAsync(cancellationToken);
-            return false;
-        }
-
-        if (updatedInvite is not null)
-        {
-            var inviteUpdate = Builders<Invitation>.Update
-                .Set(item => item.InviterBonusUsed, updatedInvite.InviterBonusUsed)
-                .Set(item => item.InviteeBonusUsed, updatedInvite.InviteeBonusUsed)
-                .Set(item => item.InviterBonusUsedAtUtc, updatedInvite.InviterBonusUsedAtUtc)
-                .Set(item => item.InviteeBonusUsedAtUtc, updatedInvite.InviteeBonusUsedAtUtc);
-            var inviteResult = await _invites.UpdateOneAsync(
-                session,
-                item => item.Id == updatedInvite.Id && !item.InviteeBonusUsed,
-                inviteUpdate,
-                cancellationToken: cancellationToken);
-            if (inviteResult.ModifiedCount != 1)
+            var readyFilter = Builders<Publication>.Filter.And(
+                Builders<Publication>.Filter.Eq(item => item.Id, publicationId),
+                Builders<Publication>.Filter.Eq(item => item.PlayerId, updatedPlayer.Id),
+                Builders<Publication>.Filter.Eq(item => item.Status, PublicationStatus.ReadyForModeration));
+            var complete = Builders<Publication>.Update
+                .Set(item => item.Status, PublicationStatus.Completed)
+                .Set(item => item.Result, published)
+                .Set(item => item.Text, string.Empty)
+                .Set(item => item.Parts, []);
+            var publicationResult = await _publications.UpdateOneAsync(
+                transactionSession,
+                readyFilter,
+                complete,
+                cancellationToken: transactionCancellationToken);
+            if (publicationResult.ModifiedCount != 1)
             {
-                await session.AbortTransactionAsync(cancellationToken);
+                await transactionSession.AbortTransactionAsync(transactionCancellationToken);
                 return false;
             }
-        }
 
-        await _posts.InsertOneAsync(session, post, cancellationToken: cancellationToken);
-        await _threads.InsertOneAsync(
-            session,
-            CreateThreadDocument(updatedPlayer.Id, post.Id, updatedWorld.Id, published.Hook, post.CreatedAtUtc),
-            cancellationToken: cancellationToken);
-        await session.CommitTransactionAsync(cancellationToken);
-        return true;
+            if ((await _players.ReplaceOneAsync(transactionSession, item => item.Id == updatedPlayer.Id && item.Version == expectedPlayerVersion, updatedPlayer, cancellationToken: transactionCancellationToken)).MatchedCount != 1 ||
+                (await _worlds.ReplaceOneAsync(transactionSession, item => item.Id == updatedWorld.Id && item.Player.PlayerId == updatedPlayer.Id && item.Version == expectedWorldVersion, updatedWorld, cancellationToken: transactionCancellationToken))
+                .MatchedCount != 1)
+            {
+                await transactionSession.AbortTransactionAsync(transactionCancellationToken);
+                return false;
+            }
+
+            if (updatedInvite is not null)
+            {
+                var start = updatedPlayer.PostsPeriodStartedAtUtc;
+                var end = start.AddDays(1);
+                var inviterUses = await _invites.CountDocumentsAsync(
+                    transactionSession,
+                    item => item.InviterId == updatedInvite.InviterId && item.InviterBonusUsed &&
+                            item.InviterBonusUsedAtUtc >= start && item.InviterBonusUsedAtUtc < end,
+                    cancellationToken: transactionCancellationToken);
+                if (inviterUses < inviteBonusMaxPerDay)
+                {
+                    var inviterUpdate = Builders<PlayerProfile>.Update
+                        .Inc(item => item.DailyBonus, inviteBonus)
+                        .Inc(item => item.Version, 1);
+                    await _players.UpdateOneAsync(
+                        transactionSession,
+                        item => item.Id == updatedInvite.InviterId,
+                        inviterUpdate,
+                        cancellationToken: transactionCancellationToken);
+                }
+
+                var inviteUpdate = Builders<Invitation>.Update
+                    .Set(item => item.InviterBonusUsed, updatedInvite.InviterBonusUsed)
+                    .Set(item => item.InviteeBonusUsed, updatedInvite.InviteeBonusUsed)
+                    .Set(item => item.InviterBonusUsedAtUtc, updatedInvite.InviterBonusUsedAtUtc)
+                    .Set(item => item.InviteeBonusUsedAtUtc, updatedInvite.InviteeBonusUsedAtUtc);
+                var inviteResult = await _invites.UpdateOneAsync(
+                    transactionSession,
+                    item => item.Id == updatedInvite.Id && !item.InviteeBonusUsed,
+                    inviteUpdate,
+                    cancellationToken: transactionCancellationToken);
+                if (inviteResult.ModifiedCount != 1)
+                {
+                    await transactionSession.AbortTransactionAsync(transactionCancellationToken);
+                    return false;
+                }
+            }
+
+            await _posts.InsertOneAsync(transactionSession, post, cancellationToken: transactionCancellationToken);
+            await _threads.InsertOneAsync(
+                transactionSession,
+                CreateThreadDocument(updatedPlayer.Id, post.Id, updatedWorld.Id, published.Hook, post.CreatedAtUtc),
+                cancellationToken: transactionCancellationToken);
+            return true;
+        }
     }
 
     public async ValueTask<Publication?> GetPublicationAsync(

@@ -16,7 +16,6 @@ public sealed class PublishPostHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
-    GameDay gameDay,
     ISender sender,
     ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
@@ -50,9 +49,7 @@ public sealed class PublishPostHandler(
         var now = timeProvider.GetUtcNow();
         var player = storedPlayer;
 
-        var invite = await store.GetInviteAsync(player.Id, cancellationToken);
-        var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);
-        var cap = gameDay.GetPostsCap(player, invite, invited);
+        var cap = player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
 
         if (player.EnergyUsed > cap - balance.Value.PostEnergyCost)
         {
@@ -117,9 +114,15 @@ public sealed class PublishPostHandler(
         var hook = turn.Hook;
 
         var published = new PublishedPost(post, hook, turn.StarName, turn.Reaction, turn.Reasons);
-        var updatedInvite = invite is { InviteeBonusUsed: false }
+        var invite = await store.GetPendingInviteAsync(player.Id, cancellationToken);
+        var updatedInvite = invite is not null
             ? invite.UseInviteeBonus(now).UseInviterBonus(now)
             : null;
+        if (updatedInvite is not null)
+        {
+            updated = updated with { DailyBonus = updated.DailyBonus + balance.Value.InviteBonusBoth };
+        }
+
         var committed = await store.TryCommitPostAsync(
             updated,
             player.Version,
@@ -128,6 +131,8 @@ public sealed class PublishPostHandler(
             published,
             request.PublicationId,
             updatedInvite,
+            balance.Value.InviteBonusBoth,
+            balance.Value.InviteBonusMaxPerDay,
             cancellationToken);
         if (!committed)
         {

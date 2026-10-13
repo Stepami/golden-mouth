@@ -302,8 +302,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(friend.PostsCap).IsEqualTo(15);
         await Assert.That(friend.PostsLeft).IsEqualTo(14);
         await Assert.That(friend.FirstPostInviteBonus).IsEqualTo(0);
-        await Assert.That(storedInviter["DailyBonus"].AsInt32).IsEqualTo(0);
-        await Assert.That(storedFriend["DailyBonus"].AsInt32).IsEqualTo(0);
+        await Assert.That(storedInviter["DailyBonus"].AsInt32).IsEqualTo(5);
+        await Assert.That(storedFriend["DailyBonus"].AsInt32).IsEqualTo(5);
         var invite = await GetStoredInviteAsync(storedFriend["_id"].AsString);
         await Assert.That(invite["InviterBonusUsed"].AsBoolean).IsTrue();
         await Assert.That(invite["InviteeBonusUsed"].AsBoolean).IsTrue();
@@ -334,10 +334,75 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Assert
         await Assert.That(inviter.PostsCap).IsEqualTo(25);
         await Assert.That(storedInviter.Contains("InviteBonusesEarnedInPeriod")).IsFalse();
-        await Assert.That(fourthFriend["DailyBonus"].AsInt32).IsEqualTo(0);
+        await Assert.That(storedInviter["DailyBonus"].AsInt32).IsEqualTo(15);
+        await Assert.That(fourthFriend["DailyBonus"].AsInt32).IsEqualTo(5);
         using var fourthApi = Factory.CreateApiClient(8016);
         await Assert.That((await fourthApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).PostsCap)
             .IsEqualTo(15);
+    }
+
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task Referral_ExistingDailyBonus_AddsOnlyForUnusedInviteAsync(bool alreadyUsed)
+    {
+        using var inviterApi = Factory.CreateApiClient(8560);
+        using var friendApi = Factory.CreateApiClient(8561);
+        var inviter = await CreatePlayerWithWorldAsync(inviterApi);
+        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
+        var players = Database.GetCollection<BsonDocument>("players");
+        await players.UpdateManyAsync(
+            Builders<BsonDocument>.Filter.In("_id", new[] { inviter.Id, friend.Id }),
+            Builders<BsonDocument>.Update.Set("DailyBonus", 7));
+        if (alreadyUsed)
+        {
+            var now = Factory.Session.Clock.GetUtcNow();
+            await Database.GetCollection<Invitation>("invites").UpdateOneAsync(
+                item => item.InviteeId == PlayerId.From(friend.Id),
+                Builders<Invitation>.Update
+                    .Set(item => item.InviteeBonusUsed, true)
+                    .Set(item => item.InviterBonusUsed, true)
+                    .Set(item => item.InviteeBonusUsedAtUtc, now)
+                    .Set(item => item.InviterBonusUsedAtUtc, now));
+        }
+
+        await PublishAsync(8561, "пост с существующим бонусом");
+
+        var expectedBonus = alreadyUsed ? 7 : 12;
+        await Assert.That((await GetStoredPlayerAsync(8560))["DailyBonus"].AsInt32).IsEqualTo(expectedBonus);
+        await Assert.That((await GetStoredPlayerAsync(8561))["DailyBonus"].AsInt32).IsEqualTo(expectedBonus);
+        await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).PostsCap)
+            .IsEqualTo(10 + expectedBonus);
+        await Assert.That((await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).PostsLeft)
+            .IsEqualTo(9 + expectedBonus);
+    }
+
+    [Test]
+    public async Task Referral_ConcurrentFirstPosts_AppliesPerPlayerBonusesAsync()
+    {
+        using var inviterApi = Factory.CreateApiClient(8570);
+        await CreatePlayerWithWorldAsync(inviterApi);
+        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        long[] friendIds = [8571, 8572, 8573, 8574];
+        foreach (var friendId in friendIds)
+        {
+            using var friendApi = Factory.CreateApiClient(friendId);
+            await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
+        }
+
+        await Task.WhenAll(friendIds.Select(friendId => PublishAsync(friendId, "одновременный первый пост")));
+
+        await Assert.That((await GetStoredPlayerAsync(8570))["DailyBonus"].AsInt32).IsEqualTo(15);
+        foreach (var friendId in friendIds)
+        {
+            var friend = await GetStoredPlayerAsync(friendId);
+            await Assert.That(friend["DailyBonus"].AsInt32).IsEqualTo(5);
+            await Assert.That(friend["EnergyUsed"].AsInt32).IsEqualTo(1);
+            var invite = await GetStoredInviteAsync(friend["_id"].AsString);
+            await Assert.That(invite["InviteeBonusUsed"].AsBoolean).IsTrue();
+            await Assert.That(invite["InviterBonusUsed"].AsBoolean).IsTrue();
+        }
     }
 
     [Test]

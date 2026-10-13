@@ -18,9 +18,7 @@ public interface IGameStore
 
     ValueTask<Invitation?> GetInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken);
 
-    ValueTask<IReadOnlyList<Invitation>> GetInvitesByInviterAsync(
-        PlayerId inviterId,
-        CancellationToken cancellationToken);
+    ValueTask<Invitation?> GetPendingInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken);
 
     ValueTask CreatePlayerAsync(
         PlayerProfile player,
@@ -53,6 +51,8 @@ public interface IGameStore
         PublishedPost published,
         string publicationId,
         Invitation? updatedInvite,
+        int inviteBonus,
+        int inviteBonusMaxPerDay,
         CancellationToken cancellationToken);
 
     ValueTask<Publication?> GetPublicationAsync(string id, CancellationToken cancellationToken);

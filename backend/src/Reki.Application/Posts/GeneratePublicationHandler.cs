@@ -19,7 +19,6 @@ public sealed partial class GeneratePublicationHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
-    GameDay gameDay,
     ISender sender,
     StarTurnGenerator generator,
     ILogger<GeneratePublicationHandler> logger,
@@ -49,9 +48,7 @@ public sealed partial class GeneratePublicationHandler(
             yield break;
         }
 
-        var invite = await store.GetInviteAsync(player.Id, cancellationToken);
-        var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);
-        var cap = gameDay.GetPostsCap(player, invite, invited);
+        var cap = player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
         if (player.EnergyUsed > cap - balance.Value.PostEnergyCost)
         {
             throw new RequestConflictException("The daily post limit has been reached.");

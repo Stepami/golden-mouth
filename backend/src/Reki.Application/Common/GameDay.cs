@@ -2,7 +2,6 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Player;
 using Reki.Contracts.Player;
-using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Riok.Mapperly.Abstractions;
 using ContractSkillId = Reki.Contracts.Player.SkillId;
@@ -16,8 +15,7 @@ public sealed partial class GameDay(IOptions<GameBalance> balance, IGameStore st
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var invite = await store.GetInviteAsync(player.Id, cancellationToken);
-        var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);
-        var postsCap = GetPostsCap(player, invite, invited);
+        var postsCap = player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
         var firstPostInviteBonus = invite is { InviteeBonusUsed: false } ? balance.Value.InviteBonusBoth : 0;
         return new PlayerResponse(
             player.Id.Value,
@@ -29,18 +27,6 @@ public sealed partial class GameDay(IOptions<GameBalance> balance, IGameStore st
             player.Skills.ToDictionary(item => Enum.Parse<ContractSkillId>(item.Key.Value, true), item => MapSkill(item.Value)),
             new PlayerSettingsResponse(player.Settings.Notifications, player.Settings.Quiet, player.Settings.Plus),
             new Dictionary<string, string>());
-    }
-
-    public int GetPostsCap(PlayerProfile player, Invitation? invite, IReadOnlyList<Invitation> invited)
-    {
-        var start = player.PostsPeriodStartedAtUtc;
-        var end = start.AddDays(1);
-        var inviterUses = invited.Count(item => item.InviterBonusUsed &&
-            item.InviterBonusUsedAtUtc >= start && item.InviterBonusUsedAtUtc < end);
-        var inviteeUse = invite is { InviteeBonusUsed: true } &&
-            invite.InviteeBonusUsedAtUtc >= start && invite.InviteeBonusUsedAtUtc < end ? 1 : 0;
-        return player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay) +
-            (balance.Value.InviteBonusBoth * (Math.Min(balance.Value.InviteBonusMaxPerDay, inviterUses) + inviteeUse));
     }
 
     [MapperIgnoreSource(nameof(SkillProgress.Experience))]

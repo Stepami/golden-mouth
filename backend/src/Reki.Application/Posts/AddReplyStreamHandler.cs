@@ -19,7 +19,6 @@ public sealed partial class AddReplyStreamHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
     ISender sender,
-    GameDay gameDay,
     TimeProvider timeProvider,
     PlayerSafetyGuard safety,
     StarTurnGenerator generator,
@@ -42,7 +41,7 @@ public sealed partial class AddReplyStreamHandler(
         var (target, star) = ValidateTarget(post, world, request.TargetCommentId);
         await safety.EnsureInputAllowedAsync(storedPlayer, [request.Text], cancellationToken);
         var player = storedPlayer;
-        var cap = await GetCapAsync(player, cancellationToken);
+        var cap = GetCap(player);
         if (post.FindRequest(request.RequestId) is { } existing)
         {
             EnsureSameRequest(existing, request, player.Id);
@@ -169,7 +168,7 @@ public sealed partial class AddReplyStreamHandler(
             var player = storedPlayer;
             var world = await sender.Send(new Worlds.GetWorldQuery(playerId, request.WorldId), cancellationToken);
             var post = await sender.Send(new GetPostQuery(request.PostId, playerId, world.Id), cancellationToken);
-            var cap = await GetCapAsync(player, cancellationToken);
+            var cap = GetCap(player);
             if (post.FindRequest(request.RequestId) is { } existing)
             {
                 EnsureSameRequest(existing, request, playerId);
@@ -239,7 +238,7 @@ public sealed partial class AddReplyStreamHandler(
         var world = await sender.Send(new Worlds.GetWorldQuery(playerId, post.WorldId), cancellationToken);
         var existing = post.FindRequest(request.RequestId) ?? throw new RequestConflictException("The saved reply disappeared.");
         EnsureSameRequest(existing, request, playerId);
-        return Completed(request, post, world, player, await GetCapAsync(player, cancellationToken));
+        return Completed(request, post, world, player, GetCap(player));
     }
 
     private void EnsureEnergy(PlayerProfile player, int cap)
@@ -250,8 +249,8 @@ public sealed partial class AddReplyStreamHandler(
         }
     }
 
-    private async ValueTask<int> GetCapAsync(PlayerProfile player, CancellationToken cancellationToken) =>
-        gameDay.GetPostsCap(player, await store.GetInviteAsync(player.Id, cancellationToken), await store.GetInvitesByInviterAsync(player.Id, cancellationToken));
+    private int GetCap(PlayerProfile player) =>
+        player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Thread generation failed")]
     private partial void GenerationFailed();
