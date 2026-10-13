@@ -32,7 +32,7 @@ export function ChooseWorld() {
     const previous = getWorldDraft()
     if (!confirmed && previous && (previous.definition.balanceKey !== (world ?? 'own') || previous.editingId)) { setPending({ world, previewOnly }); return }
     const restored = savedWorldDraft(world ?? 'own')
-    if (restored && restored.previewOnly === previewOnly) { setWorldDraft(restored); nav.push(world ? '01-3b_world_overview' : '05-7b_own_world', { world: restored.definition.balanceKey }); return }
+    if (restored && !!restored.previewOnly === previewOnly) { setWorldDraft(restored); nav.push(world ? '01-3b_world_overview' : '05-7b_own_world', { world: restored.definition.balanceKey }); return }
     const definition = world ? worldDefinitionOf(world) : blankWorld()
     setWorldDraft({ definition, heroOrder: definition.stars.map(star => star.id), advanced: !world && !previewOnly, previewOnly, address: player?.address ?? 'nick', group: player?.ageBand ? (player.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: player?.ageBand ?? nav.params.ageBand as AgeBand | undefined })
     nav.push(world ? '01-3b_world_overview' : '05-7b_own_world', { world: definition.balanceKey })
