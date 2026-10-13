@@ -224,7 +224,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         var noInviter = await unknownApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(noInviter.Energy).IsEqualTo(9);
-        await Assert.That(noInviter.FirstPostInviteBonus).IsEqualTo(0);
+        await Assert.That((await unknownApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
     }
 
     [Test]
@@ -282,6 +282,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await CreatePlayerWithWorldAsync(inviterApi);
         var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
         var onboarded = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
+        var pendingInvite = await friendApi.Player.GetInvitationAsync(CancellationToken.None);
         var inviterAfterOnboarding = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Act
@@ -294,11 +295,11 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Assert
         await Assert.That(onboarded.Energy).IsEqualTo(10);
-        await Assert.That(onboarded.FirstPostInviteBonus).IsEqualTo(5);
+        await Assert.That(pendingInvite.Bonus).IsEqualTo(5);
         await Assert.That(inviterAfterOnboarding.Energy).IsEqualTo(10);
         await Assert.That(inviter.Energy).IsEqualTo(15);
         await Assert.That(friend.Energy).IsEqualTo(14);
-        await Assert.That(friend.FirstPostInviteBonus).IsEqualTo(0);
+        await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
         await Assert.That(storedInviter["Energy"].AsInt32).IsEqualTo(15);
         await Assert.That(storedFriend["Energy"].AsInt32).IsEqualTo(13);
         var invite = await GetStoredInviteAsync(storedFriend["_id"].AsString);
@@ -841,7 +842,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Assert
         await Assert.That(currentInviter.Energy).IsEqualTo(secondsAfterReset < 0 ? 15 : 10);
         await Assert.That(currentFriend.Energy).IsEqualTo(secondsAfterReset < 0 ? 14 : 10);
-        await Assert.That(currentFriend.FirstPostInviteBonus).IsEqualTo(0);
+        await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
         var invite = await Database.GetCollection<Invitation>("invites")
             .Find(item => item.InviteeId == PlayerId.From(friend.Id)).SingleAsync();
         await Assert.That(invite.InviterBonusUsed).IsTrue();
@@ -874,7 +875,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             .IsEqualTo(10);
         var pending = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(pending.Energy).IsEqualTo(10);
-        await Assert.That(pending.FirstPostInviteBonus).IsEqualTo(5);
+        await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(5);
         var invite = await Database.GetCollection<Invitation>("invites")
             .Find(item => item.InviteeId == PlayerId.From(friend.Id)).SingleAsync();
         await Assert.That(invite.InviterBonusUsed).IsFalse();
@@ -889,7 +890,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             .IsEqualTo(15);
         var success = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(success.Energy).IsEqualTo(14);
-        await Assert.That(success.FirstPostInviteBonus).IsEqualTo(0);
+        await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
     }
 
     [Test]
@@ -999,6 +1000,23 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(body.RootElement.GetProperty("energy").GetInt32()).IsEqualTo(7);
         await Assert.That(body.RootElement.TryGetProperty("postsLeft", out _)).IsFalse();
         await Assert.That(body.RootElement.TryGetProperty("postsCap", out _)).IsFalse();
+        await Assert.That(body.RootElement.TryGetProperty("firstPostInviteBonus", out _)).IsFalse();
+    }
+
+    [Test]
+    public async Task Invitation_WithoutAuthentication_ReturnsUnauthorizedAsync()
+    {
+        using var http = Factory.CreateClient();
+        using var response = await http.GetAsync("/invitation", CancellationToken.None);
+        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.Unauthorized);
+    }
+
+    [Test]
+    public async Task Invitation_BeforeOnboarding_ReturnsNotFoundAsync()
+    {
+        using var http = CreateAuthenticatedHttpClient(8583);
+        using var response = await http.GetAsync("/invitation", CancellationToken.None);
+        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
     }
 
     private Task<BsonDocument> GetStoredInviteAsync(string inviteeId) =>

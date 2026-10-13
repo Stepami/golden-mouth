@@ -127,7 +127,7 @@
 
 | Метод | Ответ | Экран |
 |---|---|---|
-| `GET /me` | `Player` (с обезличенным `id`, `experiments` и вычисляемым `firstPostInviteBonus`: 0 при отсутствии бонуса или после его использования) | все |
+| `GET /me` | `Player` (с обезличенным `id`, `experiments` и сохранённым остатком `energy`, без чтений инвайтов) | все |
 | `POST /onboarding` | `Player`; optional `referralCode` (`ref_` + 32 hex символа непрозрачного PlayerId); однократное создание сохраняет атрибуцию отдельным документом `invites` (пара InviterId/InviteeId, CreatedAtUtc, независимые флаги и время использования бонусов), для существующего игрока возвращает 409 без изменений; неизвестный/свой код игнорируется, переход не даёт наград. Аватар игрока детерминированно строится frontend из `handle`, отдельного поля `avatar` в запросе и ответе нет; затем frontend отдельно создаёт мир через `POST /worlds` с выбранными voice/drama | 01-5 |
 | `POST /posts/publications` (SSE) | `{ publicationId, text, ownWords?, wantId? }`; статусы `pending` → `ready_for_moderation` либо `failed`; 409 при лимите или конфликте ключа | 02-2, 02-2b |
 | `POST /posts/publications/:id/moderation` (JSON) | массив `LiveEvent[]` со строчными `type`, последним `result: PostResult`; повтор завершённой публикации не списывает пост снова | 02-2, 02-3 |
@@ -135,6 +135,7 @@
 | `POST /posts/:id/replies?worldId=…` `{ requestId, commentId, text }` (SSE) | `{ status: generating/completed/failed, requestId, text?, post?, energyLeft?, subscribers?, code? }`; `completed` подтверждает сохранение; повтор без AI и списания | 02-6 |
 | `GET /posts/:id?worldId=…` | `PostDetail`: текст, просмотры, реакции, готовые авторы комментариев, `parentCommentId`, `requestId`, `depth`, реакции комментария, `canReply`; доступ через владельца мира, иначе 404 | 02-6 |
 | `GET /posts/mine` | `ChannelPost[]`: сохранённые посты текущего игрока, newest-first; стабильный `postId`, текст, время, просмотры, реакции и число комментариев | 03-5 |
+| `GET /invitation` | `{ bonus }`: бонус за первый пост по неиспользованному инвайту, либо 0. Отдельный метод PlayerController; фронтенд запрашивает только для пустого канала, ошибка подсказки не блокирует публикацию | 01-6 |
 | `GET /referral` | `{ code }`: стабильный уникальный `ref_<PlayerId>` текущего авторизованного игрока; без Telegram ID и секретов, lookup через существующий `_id` | 04-3, 02-7 |
 | `GET /feed` | `FeedItem[]`: последние 20 постов экземпляра мира (проверка владельца мира и фильтр WorldId до limit); автор может быть игроком или звездой мира; frontend добавляет демо-звёзд текущего мира; у постов стабильный `postId`, явный `canReply`, время публикации в `ago` (ISO 8601), `views` и `commentCount`; новости без `postId` не открываются | 03-3 |
 | `GET /friends` | `Friend[]` | 03-4 |

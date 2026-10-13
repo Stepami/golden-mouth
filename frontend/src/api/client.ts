@@ -8,7 +8,7 @@ import { demoChannelPosts, demoFeed, demoOwnPosts, demoPlayer, demoPost, resetDe
 import { contentOf, installWorldContent, installWorldTemplates, worldDocumentOf, wantsFor } from './worldContent'
 import { telegramAuthHeaders } from './auth'
 import type { AgeBand } from '../app/ageBand'
-import type { PlayerDocument, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, ReplyLiveEvent, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types'
+import type { PlayerDocument, Invitation, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, ReplyLiveEvent, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types'
 
 let sessionPlayer: Player | undefined
 let sessionIdentity: PlayerDocument | undefined
@@ -114,7 +114,7 @@ export const api = {
       ? await call<PlayerDocument>('/onboarding', { method: 'POST', body: JSON.stringify(body) })
       : await later({
         id: crypto.randomUUID().replaceAll('-', ''), address: body.address as Player['address'],
-        energy: 10, firstPostInviteBonus: 0, streak: { days: 1, week: [true, false, false, false, false, false, false], nextReward: 'ещё день — и бонус' },
+        energy: 10, streak: { days: 1, week: [true, false, false, false, false, false, false], nextReward: 'ещё день — и бонус' },
         skills: { brave: { level: 1, progress: 0 }, humor: { level: 1, progress: 0 }, topic: { level: 1, progress: 0 } },
         settings: { notifications: 'all', quiet: '22:00-09:00', plus: false }, experiments: {},
       })
@@ -301,6 +301,7 @@ export const api = {
     if (!claimed && sessionPlayer) { sessionPlayer = saveDemoPlayer({ ...sessionPlayer, energy: sessionPlayer.energy + bonus }); localStorage.setItem(key, 'true') }
     return later({ bonus })
   },
+  invitation: (): Promise<Invitation> => BASE ? call('/invitation') : later({ bonus: 0 }),
   referral: (): Promise<{ code: string }> => BASE ? call('/referral') : laterLazy(() => ({ code: `ref_${sessionPlayer!.id === 'p1' ? mock.player.id : sessionPlayer!.id.replaceAll('-', '')}` })),
   settings: async (patch: Partial<Player['settings']> & { address?: Player['address'] }) => {
     if (BASE) await call('/settings', { method: 'PATCH', body: JSON.stringify(patch) })

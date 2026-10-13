@@ -16,8 +16,6 @@ public interface IGameStore
 
     ValueTask CreateInviteAsync(Invitation invite, CancellationToken cancellationToken);
 
-    ValueTask<Invitation?> GetInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken);
-
     ValueTask<Invitation?> GetPendingInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken);
 
     ValueTask CreatePlayerAsync(

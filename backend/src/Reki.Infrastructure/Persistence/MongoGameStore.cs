@@ -54,9 +54,6 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask CreateInviteAsync(Invitation invite, CancellationToken cancellationToken) =>
         await _invites.InsertOneAsync(invite, cancellationToken: cancellationToken);
 
-    public async ValueTask<Invitation?> GetInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken) =>
-        await _invites.Find(item => item.InviteeId == inviteeId).FirstOrDefaultAsync(cancellationToken);
-
     public async ValueTask<Invitation?> GetPendingInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken) =>
         await _invites.Find(item => item.InviteeId == inviteeId && !item.InviteeBonusUsed)
             .FirstOrDefaultAsync(cancellationToken);
