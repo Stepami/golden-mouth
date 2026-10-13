@@ -49,7 +49,6 @@ public interface IGameStore
         PublishedPost published,
         string publicationId,
         Invitation? updatedInvite,
-        int inviteBonus,
         int inviteBonusMaxPerDay,
         CancellationToken cancellationToken);
 

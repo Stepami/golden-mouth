@@ -155,7 +155,6 @@ internal sealed class MongoGameStore : IGameStore
         PublishedPost published,
         string publicationId,
         Invitation? updatedInvite,
-        int inviteBonus,
         int inviteBonusMaxPerDay,
         CancellationToken cancellationToken)
     {
@@ -205,7 +204,7 @@ internal sealed class MongoGameStore : IGameStore
                 if (inviterUses < inviteBonusMaxPerDay)
                 {
                     var inviterUpdate = Builders<PlayerProfile>.Update
-                        .Inc(item => item.Energy, inviteBonus)
+                        .Inc(item => item.Energy, updatedInvite.BonusAmount)
                         .Inc(item => item.Version, 1);
                     await _players.UpdateOneAsync(
                         transactionSession,

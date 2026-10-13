@@ -115,13 +115,8 @@ public sealed class PublishPostHandler(
 
         var published = new PublishedPost(post, hook, turn.StarName, turn.Reaction, turn.Reasons);
         var invite = await store.GetPendingInviteAsync(player.Id, cancellationToken);
-        var updatedInvite = invite is not null
-            ? invite.UseInviteeBonus(now).UseInviterBonus(now)
-            : null;
-        if (updatedInvite is not null)
-        {
-            updated = updated with { Energy = updated.Energy + balance.Value.InviteBonusBoth };
-        }
+        var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
+        updated = updated with { Energy = updated.Energy + (updatedInvite?.BonusAmount ?? 0) };
 
         var committed = await store.TryCommitPostAsync(
             updated,
@@ -131,7 +126,6 @@ public sealed class PublishPostHandler(
             published,
             request.PublicationId,
             updatedInvite,
-            balance.Value.InviteBonusBoth,
             balance.Value.InviteBonusMaxPerDay,
             cancellationToken);
         if (!committed)

@@ -34,7 +34,7 @@ public sealed class OnboardPlayerHandler(
         await store.CreatePlayerAsync(created, cancellationToken);
         if (inviter is not null)
         {
-            var invite = Invitation.Create(inviter.Id, created.Id, timeProvider.GetUtcNow());
+            var invite = Invitation.Create(inviter.Id, created.Id, timeProvider.GetUtcNow(), balance.Value.InviteBonusBoth);
             await store.CreateInviteAsync(invite, cancellationToken);
         }
 

@@ -150,7 +150,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
         var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(10L);
+        await Assert.That(historyCount).IsEqualTo(11L);
     }
 
     [Test]
@@ -685,6 +685,48 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(saved.Contains("ChallengeDailyBonus")).IsFalse();
     }
 
+    [Test]
+    [Arguments(0)]
+    [Arguments(3)]
+    public async Task AddBonusAmountToInvite_RepeatedMigration_SetsConfiguredAmountForAllInvitesAsync(int inviteCount)
+    {
+        // Arrange
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        var invites = database.GetCollection<BsonDocument>(MongoCollections.Invites);
+        var originals = Enumerable.Range(0, inviteCount).Select(index => new BsonDocument
+        {
+            ["_id"] = $"invite-{index}",
+            ["InviterId"] = "inviter",
+            ["InviteeId"] = $"invitee-{index}",
+            ["InviterBonusUsed"] = index > 0,
+            ["InviteeBonusUsed"] = index > 1,
+        }).ToArray();
+        if (originals.Length > 0)
+        {
+            originals[^1]["BonusAmount"] = 99;
+            await invites.InsertManyAsync(originals, cancellationToken: CancellationToken.None);
+        }
+
+        var migration = new AddBonusAmountToInvite(Options.Create(CreateEnergyBalance() with { InviteBonusBoth = 17 }));
+
+        // Act
+        await migration.UpAsync(database, session, CancellationToken.None);
+        await migration.UpAsync(database, session, CancellationToken.None);
+
+        // Assert
+        var saved = await invites.Find(FilterDefinition<BsonDocument>.Empty)
+            .SortBy(document => document["_id"]).ToListAsync(CancellationToken.None);
+        await Assert.That(saved.Count).IsEqualTo(inviteCount);
+        for (var index = 0; index < originals.Length; index++)
+        {
+            var expected = originals[index].DeepClone().AsBsonDocument;
+            expected["BonusAmount"] = 17;
+            await Assert.That(saved[index]).IsEqualTo(expected);
+        }
+    }
+
     private static GameBalance CreateEnergyBalance() => new(10, 20, new TimeOnly(9, 0), 5, 3, 5, 3, 3, new GrowthBalance(1, 1, [], 0, 1, 1, 2, 3, 2, 1000), new ViralBalance(0, 0, 1), new FlopBalance(1), new SkillBalance([], 1, 1, 10, 2, 3, 1, 1), new RelationBalance(0, 10, 3, 5, 3), new ChallengeBalance(3, 1), new ThreadBalance(3, 9), new Dictionary<string, WorldBalance>());
 
     private static BsonDocument CreateLegacyReferralPlayer(string id, string? inviter, DateTimeOffset createdAt, int dailyBonus, int count, bool used) => new()
@@ -700,7 +742,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     };
 
     private static BsonValue ReferralTimestamp(DateTimeOffset value) =>
-        Invitation.Create(PlayerId.From("timestamp-inviter"), PlayerId.From("timestamp-friend"), value)
+        Invitation.Create(PlayerId.From("timestamp-inviter"), PlayerId.From("timestamp-friend"), value, 0)
             .ToBsonDocument()["CreatedAtUtc"];
 
     private static async Task AssertDocumentArraysAsync(IMongoDatabase database, string collectionName, IReadOnlyList<string> fields)
@@ -722,7 +764,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     {
         var options = new RekiMigrationOptions(Options.Create(new MongoOptions { DatabaseName = databaseName }));
         return MigratorBuilder.FromMongoClient(client, options)
-            .LoadMigrations([new InitialGameIndexes(), new RemoveLegacyChallengeIndex(), new SeedWorldTemplates(), new ConsolidateWorldSchema(), new RepairLegacyDocuments(), new NestWorldDocuments(), new MoveReferralStateToInvites(), new UnifyPostContent(), new CreateGameDayIndexes(), new StoreRemainingEnergy(Options.Create(CreateEnergyBalance()))])
+            .LoadMigrations([new InitialGameIndexes(), new RemoveLegacyChallengeIndex(), new SeedWorldTemplates(), new ConsolidateWorldSchema(), new RepairLegacyDocuments(), new NestWorldDocuments(), new MoveReferralStateToInvites(), new UnifyPostContent(), new CreateGameDayIndexes(), new StoreRemainingEnergy(Options.Create(CreateEnergyBalance())), new AddBonusAmountToInvite(Options.Create(CreateEnergyBalance()))])
             .Build();
     }
 

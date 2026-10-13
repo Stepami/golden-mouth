@@ -116,6 +116,7 @@ internal sealed class MoveReferralStateToInvites : RekiMigrationBase
             created,
             true,
             inviteeUsed,
+            0,
             null,
             usedAt);
         var document = invite.ToBsonDocument();
