@@ -1,11 +1,13 @@
 using Mediator;
 using Reki.Application.Common;
+using Reki.Application.Telemetry;
 
 namespace Reki.Application.Player;
 
 public sealed class DeletePlayerHandler(
     IGameStore store,
-    ISender sender)
+    ISender sender,
+    ProductTelemetry telemetry)
     : IRequestHandler<DeletePlayerCommand>
 {
     public async ValueTask<Unit> Handle(
@@ -14,6 +16,7 @@ public sealed class DeletePlayerHandler(
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         await store.DeletePlayerAsync(player, cancellationToken);
+        telemetry.Track(player.Id, "player_deleted", new Dictionary<string, string>());
         return Unit.Value;
     }
 }

@@ -7,6 +7,7 @@ using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
 using Reki.Application.Player;
+using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
@@ -22,7 +23,8 @@ public sealed partial class AddReplyStreamHandler(
     TimeProvider timeProvider,
     PlayerSafetyGuard safety,
     StarTurnGenerator generator,
-    ILogger<AddReplyStreamHandler> logger) : IStreamRequestHandler<AddReplyCommand, ReplyLiveEvent>
+    ILogger<AddReplyStreamHandler> logger,
+    ProductTelemetry telemetry) : IStreamRequestHandler<AddReplyCommand, ReplyLiveEvent>
 {
     public async IAsyncEnumerable<ReplyLiveEvent> Handle(
         AddReplyCommand request,
@@ -216,6 +218,7 @@ public sealed partial class AddReplyStreamHandler(
             var updatedWorld = world.AwardThreadBonus(bonus);
             if (await store.TryCommitReplyAsync(updatedPost, post.Version, request.RequestId, updatedPlayer, storedPlayer.Version, updatedWorld, world.Version, cancellationToken))
             {
+                telemetry.TrackWorldAudience(updatedWorld);
                 return Completed(request, updatedPost, updatedWorld, updatedPlayer, cap);
             }
         }

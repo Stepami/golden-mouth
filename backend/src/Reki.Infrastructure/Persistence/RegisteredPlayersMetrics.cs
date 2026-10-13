@@ -9,8 +9,7 @@ namespace Reki.Infrastructure.Persistence;
 internal sealed partial class RegisteredPlayersMetrics(
     IGameStore store,
     IMeterFactory meters,
-    ILogger<RegisteredPlayersMetrics> logger,
-    TimeProvider timeProvider) : BackgroundService
+    ILogger<RegisteredPlayersMetrics> logger) : BackgroundService
 {
     private long _count = -1;
 
@@ -23,7 +22,7 @@ internal sealed partial class RegisteredPlayersMetrics(
         {
             try
             {
-                await RefreshSnapshotAsync(stoppingToken);
+                await RefreshCountAsync(stoppingToken);
             }
             catch (MongoException)
             {
@@ -34,49 +33,9 @@ internal sealed partial class RegisteredPlayersMetrics(
         while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
-    private async Task RefreshSnapshotAsync(CancellationToken stoppingToken)
+    private async Task RefreshCountAsync(CancellationToken stoppingToken)
     {
-        var snapshot = timeProvider.GetUtcNow().ToUnixTimeMilliseconds();
-        long count = 0;
-        await foreach (var player in store.GetPlayersAsync(stoppingToken))
-        {
-            var worlds = await store.GetWorldsAsync(player.Id, stoppingToken);
-            var worldKeys = worlds.Select(world => world.BalanceKey).Distinct().ToArray();
-            var invite = await store.GetInviteAsync(player.Id, stoppingToken);
-            using var scope = logger.BeginScope(new Dictionary<string, object?>
-            {
-                ["reki.stream"] = "product",
-                ["activity_kind"] = "inventory",
-                ["event_name"] = "profile_snapshot",
-                ["snapshot_time_unix_ms"] = snapshot,
-                ["player_id"] = player.Id.Value,
-                ["world"] = worldKeys.Length switch
-                {
-                    0 => "unknown",
-                    1 => worldKeys[0],
-                    _ => "multi-world",
-                },
-                ["age_group"] = player.AgeBand ?? player.BirthGroup,
-                ["registration_source"] = invite is null ? "direct" : "referral",
-                ["launch_surface"] = "unknown",
-                ["subscriber_total"] = worlds.Sum(world => world.Player.Subscribers),
-            });
-            LogProfileSnapshot();
-            count++;
-        }
-
-        using (logger.BeginScope(new Dictionary<string, object?>
-        {
-            ["reki.stream"] = "product",
-            ["activity_kind"] = "inventory",
-            ["event_name"] = "profiles_snapshot_complete",
-            ["snapshot_time_unix_ms"] = snapshot,
-            ["registered_count"] = count,
-        }))
-        {
-            LogSnapshotComplete();
-        }
-
+        var count = await store.CountPlayersAsync(stoppingToken);
         Interlocked.Exchange(ref _count, count);
     }
 
@@ -85,12 +44,6 @@ internal sealed partial class RegisteredPlayersMetrics(
         var count = Interlocked.Read(ref _count);
         return count < 0 ? [] : [new Measurement<long>(count)];
     }
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Profile inventory snapshot")]
-    private partial void LogProfileSnapshot();
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Profile inventory snapshot complete")]
-    private partial void LogSnapshotComplete();
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Unable to refresh registered-profile count")]
     private partial void LogRefreshFailed();

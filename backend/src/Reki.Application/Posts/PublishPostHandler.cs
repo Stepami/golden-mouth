@@ -142,7 +142,8 @@ public sealed class PublishPostHandler(
         }
 
         await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
-        TrackProgression(player, updated, world, updatedWorld, post, turn, analytics, invite is not null);
+        analytics.TrackWorldAudience(updatedWorld);
+        TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
         return PostContractMapper.MapLiveEvents(published, updatedWorld, player.Id);
     }
 
@@ -162,8 +163,7 @@ public sealed class PublishPostHandler(
         Reki.Domain.Worlds.World afterWorld,
         GamePost post,
         GeneratedPostTurn turn,
-        ProductTelemetry analytics,
-        bool referred)
+        ProductTelemetry analytics)
     {
         analytics.TrackPlayer(
             after,
@@ -178,8 +178,7 @@ public sealed class PublishPostHandler(
                 ["post_index"] = after.EnergyUsed.ToString(CultureInfo.InvariantCulture),
                 ["id"] = post.Id.Value,
                 ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
-            },
-            referred);
+            });
 
         foreach ((var skillId, var progress) in after.Skills)
         {
@@ -194,8 +193,7 @@ public sealed class PublishPostHandler(
                         ["world"] = afterWorld.BalanceKey,
                         ["skill"] = skillId.Value,
                         ["level"] = progress.Level.ToString(CultureInfo.InvariantCulture),
-                    },
-                    referred);
+                    });
             }
         }
 
@@ -207,8 +205,7 @@ public sealed class PublishPostHandler(
             analytics.TrackPlayer(
                 after,
                 "card_earned",
-                new Dictionary<string, string> { ["card"] = achievement.Id, ["world"] = afterWorld.BalanceKey },
-                referred);
+                new Dictionary<string, string> { ["card"] = achievement.Id, ["world"] = afterWorld.BalanceKey });
         }
     }
 }

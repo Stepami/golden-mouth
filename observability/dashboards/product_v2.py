@@ -9,15 +9,24 @@ SHIFT = 10800000000
 COMMON = """WITH clock AS (
  SELECT floor((max(date_part('epoch', now())) * 1000000 + 10800000000) / 86400000000) AS today,
  max(date_part('epoch', now())) * 1000 AS now_ms, count(*) AS stream_rows FROM product),
-raw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),
-identities AS (SELECT player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,
+world_ranked AS (SELECT player_id, world_id, world, subscriber_total,
+ row_number() OVER (PARTITION BY player_id, world_id ORDER BY _timestamp DESC) AS state_rank
+ FROM product WHERE event_name = 'world_audience_updated' AND world_id IS NOT NULL),
+world_audience AS (SELECT player_id, sum(subscriber_total) AS subscribers,
+ CASE WHEN count(DISTINCT world) > 1 THEN 'multi-world' ELSE max(world) END AS world
+ FROM world_ranked WHERE state_rank = 1 GROUP BY player_id),
+deleted_players AS (SELECT DISTINCT player_id FROM product
+ WHERE event_name = 'player_deleted' AND player_id IS NOT NULL),
+raw AS (SELECT p.* FROM product p WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''
+ AND NOT EXISTS (SELECT 1 FROM deleted_players d WHERE d.player_id = p.player_id)),
+identities AS (SELECT r.player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,
  min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,
- coalesce(max(CASE WHEN event_name = 'player_created' THEN nullif(world, '') END), CASE WHEN count(DISTINCT nullif(world, ''))>1 THEN 'multi-world' ELSE max(nullif(world, '')) END, 'unknown') AS world,
+ coalesce(max(w.world), CASE WHEN count(DISTINCT nullif(nullif(r.world, ''), 'unknown'))>1 THEN 'multi-world' ELSE max(nullif(nullif(r.world, ''), 'unknown')) END, 'unknown') AS world,
  coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,
  coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,
  CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'
  ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface
- FROM raw GROUP BY player_id),
+ FROM raw r LEFT JOIN world_audience w ON r.player_id = w.player_id GROUP BY r.player_id),
 selected AS (SELECT * FROM identities WHERE
  ('${world}' = 'all' OR world = '${world}') AND ('${age}' = 'all' OR age_group = '${age}')
  AND ('${source}' = 'all' OR registration_source = '${source}')
@@ -28,19 +37,8 @@ posts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':le
  max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,
  max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),
 selected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),
-markers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product
- WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),
-complete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON
- p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c
- WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000
- GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),
-latest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),
-current_profiles AS (SELECT p.player_id, max(p.subscriber_total) AS subscribers FROM product p JOIN latest l ON
- p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms
- LEFT JOIN identities i ON p.player_id = i.player_id WHERE
- ('${world}' = 'all' OR p.world = '${world}') AND ('${age}' = 'all' OR p.age_group = '${age}')
- AND ('${source}' = 'all' OR p.registration_source = '${source}')
- AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),
+current_profiles AS (SELECT s.player_id, w.subscribers FROM selected s
+ LEFT JOIN world_audience w ON s.player_id = w.player_id),
 cohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL
  AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)
 """
@@ -52,7 +50,7 @@ def variable(name, label, options):
          "hideOnDashboard": False}
 
 
-def make(sql_panel, box):
+def make(sql_panel, box, promql_panel):
  variables = {"list": [
  variable('days', 'Период анализа · дней', [('30', '30'), ('7', '7'), ('90', '90')]),
  variable('cohort_origin', 'База воронки и удержания', [('Подтверждённая регистрация','registered'),('Первое наблюдение · старые данные','observed')]),
@@ -70,20 +68,20 @@ def make(sql_panel, box):
   p['config'].update({'panel_time_enabled':True,'panel_time_range':{'type':'relative','relativeTimePeriod':'90d'},'decimals':0 if kind=='metric' else 2})
   panels.append(p)
   return p
- add('accounts','Всего аккаунтов сейчас','Свежий полный снимок Mongo. Все фильтры применены. NULL — снимок отсутствует/старше 3 минут, это не ноль.',
- "SELECT 'Аккаунты' AS metric, CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE (SELECT count(*) FROM current_profiles) END AS accounts FROM latest l",0,8,'metric',w=96)
- add('active-today','Активных аккаунтов сегодня · МСК','Только аккаунты, которые сейчас существуют. Уникальные ID с событиями игры с 00:00 МСК. Сегодня неполный день; это не онлайн.',
- "SELECT 'DAU' AS metric, CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE (SELECT count(DISTINCT p.player_id) FROM current_profiles p JOIN visits v ON p.player_id=v.player_id CROSS JOIN clock c WHERE v.day=c.today) END AS dau FROM latest l",0,8,'metric',x=96,w=96)
- add('current-audience','Текущая база: DAU / WAU / MAU и подписчики','Текущие аккаунты, активные календарные дни МСК. WAU включает сегодня и 6 предыдущих дней, MAU — сегодня и 29. Подписчики — виртуальный баланс каналов, не люди. Смена фильтра меняет всю аудиторию.',
- """SELECT CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE count(DISTINCT p.player_id) END AS accounts,
- CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE count(DISTINCT CASE WHEN v.day=c.today THEN p.player_id END) END AS dau,
- CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE count(DISTINCT CASE WHEN v.day>=c.today-6 THEN p.player_id END) END AS wau,
- CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE count(DISTINCT CASE WHEN v.day>=c.today-29 THEN p.player_id END) END AS mau,
+ panels.append(promql_panel('accounts', 'Всего аккаунтов в Mongo',
+ 'Точное количество профилей из CountDocumentsAsync; обновляется раз в минуту. Фильтры сегментов не применяются. Отсутствие метрики не означает ноль.',
+ 'max(reki_players_registered)', 'Аккаунты', box(0,0,96,8,len(panels)+1), kind='metric'))
+ add('active-today','Активных аккаунтов сегодня · МСК','Наблюдаемые ID выбранного сегмента без доставленного player_deleted. С 00:00 МСК; это не онлайн.',
+ "SELECT 'DAU' AS metric, count(DISTINCT p.player_id) AS dau FROM current_profiles p JOIN visits v ON p.player_id=v.player_id CROSS JOIN clock c WHERE v.day=c.today",0,8,'metric',x=96,w=96)
+ add('current-audience','Наблюдаемая аудитория: DAU / WAU / MAU и подписчики','Доставленные события выбранного сегмента без удалённых ID. Общий точный счётчик Mongo расположен отдельно. Подписчики — последнее доставленное состояние миров; audience_known_accounts показывает покрытие. Старые удаления без события неизвестны.',
+ """SELECT count(DISTINCT p.player_id) AS accounts,
+ count(DISTINCT CASE WHEN v.day=c.today THEN p.player_id END) AS dau,
+ count(DISTINCT CASE WHEN v.day>=c.today-6 THEN p.player_id END) AS wau,
+ count(DISTINCT CASE WHEN v.day>=c.today-29 THEN p.player_id END) AS mau,
  (SELECT sum(subscribers) FROM current_profiles) AS channel_subscribers,
- to_timestamp_millis(l.snapshot_ms) AS snapshot_at
- FROM latest l CROSS JOIN clock c LEFT JOIN current_profiles p ON true LEFT JOIN visits v ON p.player_id=v.player_id
- GROUP BY l.snapshot_ms""",8,12)
- add('dau','DAU по дням · МСК','Исторические ID выбранного сегмента, включая впоследствии удалённые. Последний день неполный. Столбцы вместо сглаженной линии. Дни без посещений показаны нулём только после начала наблюдений.',
+ (SELECT count(subscribers) FROM current_profiles) AS audience_known_accounts
+ FROM clock c LEFT JOIN current_profiles p ON true LEFT JOIN visits v ON p.player_id=v.player_id""",8,12)
+ add('dau','DAU по дням · МСК','Наблюдаемые ID выбранного сегмента, исключая доставленные удаления. Последний день неполный. Столбцы вместо сглаженной линии. Дни без посещений показаны нулём только после начала наблюдений.',
  """, all_days AS (SELECT floor((max(date_part('epoch',now()))*1000000+10800000000)/86400000000)-unnest(range(0,cast('${days}' AS BIGINT))) AS day FROM product), calendar AS (SELECT day FROM all_days WHERE day >= (SELECT floor((min(_timestamp)+10800000000)/86400000000) FROM raw)), selected_visits AS (SELECT v.* FROM visits v JOIN selected s ON v.player_id=s.player_id)
  SELECT to_timestamp_micros(d.day*86400000000-10800000000) AS day_at,count(DISTINCT v.player_id) AS active_profiles FROM calendar d LEFT JOIN selected_visits v ON d.day=v.day GROUP BY d.day ORDER BY d.day""",20,14,'bar')
  add('stickiness','Stickiness: средний DAU / MAU · полные дни','Средний DAU по календарным дням / уникальные активные ID за то же окно. Максимум 30 завершённых дней МСК; первый неполный день истории исключён. observed_days < 30 — предварительная оценка. История ID, не текущая база.',
@@ -118,7 +116,7 @@ def make(sql_panel, box):
  "SELECT 'Посты' AS metric,count(*) AS posts FROM selected_posts p CROSS JOIN clock c WHERE floor((p.posted_at+10800000000)/86400000000)=c.today",86,8,'metric',w=96)
  add('growth-today','Измеренный прирост сегодня · МСК','Сумма серверного delta после нового релиза, включая снижение. NULL — нет ни одного измеренного результата. Исторические события без delta не подменяются нулём; покрытие в таблице ниже.',
  "SELECT 'Прирост' AS metric,CASE WHEN count(*)=0 THEN 0 ELSE sum(p.delta) END AS subscriber_growth FROM selected_posts p CROSS JOIN clock c WHERE floor((p.posted_at+10800000000)/86400000000)=c.today",86,8,'metric',x=96,w=96)
- add('posts-daily','Посты пользователей по дням и мирам','Сохранённые завершённые публикации, выбранный сегмент. Мир — в момент публикации; фильтр «Мир» в когорте — мир регистрации, для старых профилей известный мир истории.',
+ add('posts-daily','Посты пользователей по дням и мирам','Сохранённые завершённые публикации, выбранный сегмент. Мир — в момент публикации; фильтр «Мир» для профиля — последние доставленные состояния миров, затем известный мир истории.',
  "SELECT to_timestamp_micros(floor((posted_at+10800000000)/86400000000)*86400000000-10800000000) AS day,post_world AS world,count(*) AS posts FROM selected_posts CROSS JOIN clock WHERE floor((posted_at+10800000000)/86400000000)>=today-cast('${days}' AS INT)+1 GROUP BY day,post_world ORDER BY day",94,14,'stacked',breakdown='world',values=['posts'])
  add('growth-daily','Прирост игровых подписчиков по мирам','Чистый прирост по завершённым публикациям. Не охват и не реальная аудитория. Покрытие delta начинается с релиза; нет измерения — NULL.',
  "SELECT to_timestamp_micros(floor((posted_at+10800000000)/86400000000)*86400000000-10800000000) AS day,post_world AS world,sum(delta) AS subscriber_growth FROM selected_posts CROSS JOIN clock WHERE floor((posted_at+10800000000)/86400000000)>=today-cast('${days}' AS INT)+1 GROUP BY day,post_world ORDER BY day",108,14,'bar',breakdown='world',values=['subscriber_growth'])
@@ -131,7 +129,7 @@ def make(sql_panel, box):
  round(r.subscriber_growth/nullif(d.active_profiles,0),2) AS growth_per_active_profile FROM days d LEFT JOIN results r ON d.day=r.day ORDER BY d.day DESC""",122,24)
  add('launch','Способ запуска и устройства','Способ запуска измеряется явно с нового релиза. iOS/Android/desktop — устройство Telegram, не самостоятельное приложение. Старые события — unknown. Standalone без авторизации пока не поддерживает игру; отсутствие строк не доказывает нулевую аудиторию.',
  "SELECT coalesce(nullif(r.launch_surface,''),'unknown') AS launch_surface,coalesce(nullif(r.platform,''),'server') AS device,count(DISTINCT r.player_id) AS active_profiles FROM raw r JOIN selected s ON r.player_id=s.player_id CROSS JOIN clock c WHERE r.event_name IN ('session_start','screen_view','app_visible') AND floor((r._timestamp+10800000000)/86400000000)>=c.today-cast('${days}' AS INT)+1 GROUP BY coalesce(nullif(r.launch_surface,''),'unknown'),coalesce(nullif(r.platform,''),'server') ORDER BY active_profiles DESC",146,18)
- add('history-coverage','Покрытие данных и старые профили','Первое наблюдение ≠ регистрация. Для старых профилей источник неизвестен, если нет сохранённой серверной связи. Эта таблица показывает, что воронка исключила. Свежесть снимка ≤3 минуты нужна для текущих аккаунтов.',
+ add('history-coverage','Покрытие данных и старые профили','Первое наблюдение ≠ регистрация. Для старых профилей источник неизвестен, если нет сохранённой серверной связи. Эта таблица показывает, что воронка исключила. ID с доставленным player_deleted исключены. Старые удаления без события неизвестны.',
  "SELECT count(*) AS observed_profiles,count(registered_at) AS confirmed_registrations,count(*)-count(registered_at) AS registration_unknown,to_timestamp_micros(min(first_seen)) AS first_observation FROM selected",164,12)
  add('intensity','Интенсивность игры по сегментам, %','100% — активные профиле-дни за 7 завершённых дней МСК. Включены посещения без публикаций. Фильтры общие; вместе с процентами смотреть размер выборки ниже.',
  """, player_days AS (SELECT v.player_id,v.day,CASE '${compare}' WHEN 'world' THEN s.world WHEN 'source' THEN s.registration_source WHEN 'surface' THEN s.launch_surface ELSE s.age_group END AS segment,count(p.post_id) AS posts FROM visits v JOIN selected s ON v.player_id=s.player_id CROSS JOIN clock c LEFT JOIN posts p ON p.player_id=v.player_id AND floor((p.posted_at+10800000000)/86400000000)=v.day WHERE v.day>=c.today-7 AND v.day<c.today GROUP BY v.player_id,v.day,segment), buckets AS (

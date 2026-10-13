@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Common;
@@ -44,8 +43,8 @@ internal sealed class MongoGameStore : IGameStore
         _invites = database.GetCollection<Invitation>(MongoCollections.Invites);
     }
 
-    public IAsyncEnumerable<PlayerProfile> GetPlayersAsync(CancellationToken cancellationToken) =>
-        GetPlayerBatchesAsync(cancellationToken).SelectMany(batch => batch);
+    public async ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken) =>
+        await _players.CountDocumentsAsync(FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
         TelegramUserId telegramUserId,
@@ -120,9 +119,6 @@ internal sealed class MongoGameStore : IGameStore
     {
         var threadFilter = Builders<BsonDocument>.Filter
             .Eq("PlayerId", player.Id.Value);
-        Task deletePlayer = _players.DeleteOneAsync(
-            item => item.TelegramUserId == player.TelegramUserId,
-            cancellationToken);
         var ownedWorldIds = await _worlds.Find(item => item.Player.PlayerId == player.Id)
             .Project(item => item.Id).ToListAsync(cancellationToken);
         Task deletePosts = _posts.DeleteManyAsync(
@@ -147,7 +143,6 @@ internal sealed class MongoGameStore : IGameStore
         Task deleteInvites = _invites.DeleteManyAsync(inviteFilter, cancellationToken);
 
         await Task.WhenAll(
-            deletePlayer,
             deletePosts,
             deletePublications,
             deleteMemories,
@@ -156,6 +151,7 @@ internal sealed class MongoGameStore : IGameStore
             deleteWorlds,
             deleteThreads,
             deleteInvites);
+        await _players.DeleteOneAsync(item => item.Id == player.Id, cancellationToken);
     }
 
     public async ValueTask<bool> TryCommitPostAsync(
@@ -538,15 +534,4 @@ internal sealed class MongoGameStore : IGameStore
             ["CreatedAtUtc"] = createdAtUtc.UtcDateTime,
             ["Open"] = true,
         };
-
-    private async IAsyncEnumerable<IEnumerable<PlayerProfile>> GetPlayerBatchesAsync(
-        [EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        using var cursor =
-            await _players.FindAsync(FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken);
-        while (await cursor.MoveNextAsync(cancellationToken))
-        {
-            yield return cursor.Current;
-        }
-    }
 }

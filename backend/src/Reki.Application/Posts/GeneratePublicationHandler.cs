@@ -165,7 +165,7 @@ public sealed partial class GeneratePublicationHandler(
             {
                 var expiresAtUtc = timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime;
                 await store.MarkPublicationFailedAsync(request.Id, expiresAtUtc, CancellationToken.None);
-                analytics.TrackPlayer(player, "post_failed", new Dictionary<string, string> { ["id"] = request.Id }, invite is not null);
+                analytics.TrackPlayer(player, "post_failed", new Dictionary<string, string> { ["id"] = request.Id });
             }
         }
 
