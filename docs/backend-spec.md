@@ -146,9 +146,9 @@
 | `POST /events/:id/answer` | 200 без тела | 05-0, 05-2 |
 | `GET /challenges/active` | `Challenge \| null` | 03-4c |
 | `POST /challenges` `{ friendId }` | 200 без тела | 03-4 |
-| `PATCH /worlds/:worldId` `{ title?, presets?, description?, rules?, drama?, voice? }` | 200 без тела; изменяет только переданные поля принадлежащего игроку мира | 05-7b, 05-9, 05-11 |
+| `PUT /worlds/:worldId` `CreateWorldRequest` | Полный текущий контракт мира; сохраняет ID, владельца, balanceKey и прогресс принадлежащего игроку экземпляра | 05-7b, 05-9, 05-11 |
 | `PATCH /settings` `{ address?, notifications?, quiet?, plus? }` | 200 без тела; настройки игрока, без `worldId` | 05-8 |
-| `POST /reports` `{ commentId, reason }` | 200 без тела | 06-1 |
+| `POST /reports` `{ commentId, reason }` | Текущий обработчик пишет telemetry, полноценная жалоба/очередь ещё не реализованы (#151); UI скрыт | 06-1 (недоступен) |
 | `POST /plus-interest` | `{ bonus: 5 }` | 04-2 |
 | `DELETE /me` | 200 без тела | 05-8 |
 | `GET /cards/story/:playerId/:postId.png` | публичная картинка 9:16 для Telegram Stories, без TMA-авторизации | 02-7 |
