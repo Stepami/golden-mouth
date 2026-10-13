@@ -5,19 +5,21 @@ using Reki.Contracts.Posts;
 
 namespace Reki.Application.Posts;
 
-public sealed class GetPublicationStatusHandler(ISender sender, IRekiContextAccessor contextAccessor)
+public sealed class GetPublicationStatusHandler(
+    ISender sender,
+    IRekiContextAccessor rekiContextAccessor)
     : IRequestHandler<GetPublicationStatusQuery, PublicationStatusResponse>
 {
     public async ValueTask<PublicationStatusResponse> Handle(
         GetPublicationStatusQuery request,
         CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
-        var player = await rekiContext.Player;
+        var player = await rekiContextAccessor.Context.Player;
         var publication =
             await sender.Send(new GetPublicationQuery(request.PublicationId, player.Id), cancellationToken)
             ?? throw new ResourceNotFoundException("Publication not found.");
-        var world = (await rekiContext.Worlds).GetValueOrDefault(publication.WorldId)
+        var worlds = await rekiContextAccessor.Context.Worlds;
+        var world = worlds.GetValueOrDefault(publication.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         return PostContractMapper.MapPublication(publication, world);
     }

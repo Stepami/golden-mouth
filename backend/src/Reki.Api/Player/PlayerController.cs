@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Reki.Application.Common;
 using Reki.Application.Player;
 using Reki.Contracts.Player;
 using Reki.Domain.Player;
@@ -12,14 +13,17 @@ namespace Reki.Api.Player;
 [ApiController]
 [Produces("application/json")]
 [Route("/")]
-public sealed class PlayerController(ISender sender) : ControllerBase
+public sealed class PlayerController(
+    IRekiContext rekiContext,
+    IGameStore store,
+    ISender sender) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
-        var response = await sender.Send(new GetCurrentPlayerQuery(), cancellationToken);
-        return TypedResults.Ok(response);
+        var player = await rekiContext.Player;
+        return TypedResults.Ok(player.ToResponse());
     }
 
     [HttpPost("onboarding", Name = "CompleteOnboarding")]
@@ -44,8 +48,9 @@ public sealed class PlayerController(ISender sender) : ControllerBase
     [ActionName("GetInvitation")]
     public async Task<Ok<InvitationResponse>> GetInvitationAsync(CancellationToken cancellationToken)
     {
-        var response = await sender.Send(new GetInvitationQuery(), cancellationToken);
-        return TypedResults.Ok(response);
+        var player = await rekiContext.Player;
+        var invitation = await store.GetPendingInviteAsync(player.Id, cancellationToken);
+        return TypedResults.Ok(new InvitationResponse(invitation?.BonusAmount ?? 0));
     }
 
     [HttpGet("referral", Name = "GetReferralCode")]

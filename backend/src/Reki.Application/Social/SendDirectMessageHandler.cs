@@ -12,14 +12,14 @@ public sealed class SendDirectMessageHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
     GameDayPeriod gameDayPeriod,
-    IRekiContextAccessor contextAccessor,
+    IRekiContextAccessor rekiContextAccessor,
     StarTurnGenerator turnGenerator) : IRequestHandler<SendDirectMessageCommand, SentDirectMessage>
 {
     public async ValueTask<SentDirectMessage> Handle(
         SendDirectMessageCommand request,
         CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
+        var rekiContext = rekiContextAccessor.Context;
         var player = await rekiContext.Player;
         var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");

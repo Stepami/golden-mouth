@@ -3,4 +3,4 @@ using Reki.Contracts.Player;
 
 namespace Reki.Application.Player;
 
-public sealed record GetReferralQuery() : IRequest<ReferralResponse>;
+public sealed record GetReferralQuery : IRequest<ReferralResponse>;

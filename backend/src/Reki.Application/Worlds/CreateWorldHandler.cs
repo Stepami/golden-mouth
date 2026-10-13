@@ -8,13 +8,18 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Worlds;
 
-public sealed class CreateWorldHandler(IGameStore store, IRekiContextAccessor contextAccessor, GameDayPeriod gameDayPeriod, PlayerSafetyGuard safetyGuard, IOptions<GameBalance> balance, ProductTelemetry telemetry)
+public sealed class CreateWorldHandler(
+    IGameStore store,
+    IRekiContextAccessor rekiContextAccessor,
+    GameDayPeriod gameDayPeriod,
+    PlayerSafetyGuard safetyGuard,
+    IOptions<GameBalance> balance,
+    ProductTelemetry telemetry)
     : IRequestHandler<CreateWorldCommand, World>
 {
     public async ValueTask<World> Handle(CreateWorldCommand request, CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
-        var player = await rekiContext.Player;
+        var player = await rekiContextAccessor.Context.Player;
         var source = request.Definition;
         if (source.Stars.Count == 0 || source.Stars.Any(star => !Enum.IsDefined(star.Trait)) ||
             source.Stars.Select(star => star.Id).Distinct().Count() != source.Stars.Count)

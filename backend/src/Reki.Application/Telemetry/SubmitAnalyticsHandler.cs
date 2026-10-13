@@ -6,14 +6,14 @@ namespace Reki.Application.Telemetry;
 
 public sealed class SubmitAnalyticsHandler(
     ProductTelemetry telemetry,
-    IRekiContextAccessor contextAccessor)
+    IRekiContextAccessor rekiContextAccessor)
     : IRequestHandler<SubmitAnalyticsCommand>
 {
     public async ValueTask<Unit> Handle(
         SubmitAnalyticsCommand request,
         CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
+        var rekiContext = rekiContextAccessor.Context;
         var player = await rekiContext.Player;
         foreach (var worldId in request.Submission.Events.Select(entry => entry.WorldId).OfType<Reki.Domain.Worlds.WorldId>().Distinct())
         {

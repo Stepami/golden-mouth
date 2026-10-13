@@ -7,14 +7,13 @@ namespace Reki.Application.Player;
 
 public sealed class UpdateSettingsHandler(
     IGameStore store,
-    IRekiContextAccessor contextAccessor,
+    IRekiContextAccessor rekiContextAccessor,
     IOptions<GameBalance> balance)
     : IRequestHandler<UpdateSettingsCommand>
 {
     public async ValueTask<Unit> Handle(UpdateSettingsCommand request, CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
-        var player = await rekiContext.Player;
+        var player = await rekiContextAccessor.Context.Player;
         var updated = player with
         {
             Settings = new PlayerSettings(

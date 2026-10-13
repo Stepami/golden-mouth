@@ -6,16 +6,15 @@ namespace Reki.Application.Events;
 
 public sealed class AnswerEventHandler(
     IGameStore store,
-    IRekiContextAccessor contextAccessor)
+    IRekiContextAccessor rekiContextAccessor)
     : IRequestHandler<AnswerEventCommand>
 {
     public async ValueTask<Unit> Handle(
         AnswerEventCommand request,
         CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
-        var player = await rekiContext.Player;
-        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+        var player = await rekiContextAccessor.Context.Player;
+        var world = (await rekiContextAccessor.Context.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var gameEvent = await store.GetTodayEventAsync(
             player.Id,

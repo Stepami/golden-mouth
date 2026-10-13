@@ -18,7 +18,7 @@ public sealed partial class AddReplyStreamHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
     ISender sender,
-    IRekiContextAccessor contextAccessor,
+    IRekiContextAccessor rekiContextAccessor,
     TimeProvider timeProvider,
     PlayerSafetyGuard safety,
     StarTurnGenerator generator,
@@ -35,7 +35,7 @@ public sealed partial class AddReplyStreamHandler(
             throw new RequestConflictException("The reply request is invalid.");
         }
 
-        var rekiContext = contextAccessor.Context;
+        var rekiContext = rekiContextAccessor.Context;
         var storedPlayer = await rekiContext.Player;
         var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
@@ -171,7 +171,7 @@ public sealed partial class AddReplyStreamHandler(
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var rekiContext = contextAccessor.Context;
+        var rekiContext = rekiContextAccessor.Context;
         rekiContext.Reload();
         var storedPlayer = await rekiContext.Player;
         var player = storedPlayer;
@@ -252,7 +252,7 @@ public sealed partial class AddReplyStreamHandler(
         CancellationToken cancellationToken)
     {
         var post = await sender.Send(new GetPostQuery(request.PostId, request.WorldId), cancellationToken);
-        var rekiContext = contextAccessor.Context;
+        var rekiContext = rekiContextAccessor.Context;
         rekiContext.Reload();
         var storedPlayer = await rekiContext.Player;
         var player = storedPlayer;

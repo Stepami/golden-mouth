@@ -16,7 +16,7 @@ public sealed class PublishPostHandler(
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     ISender sender,
-    IRekiContextAccessor contextAccessor,
+    IRekiContextAccessor rekiContextAccessor,
     ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
     ProductTelemetry analytics) : IRequestHandler<PublishPostCommand, IReadOnlyList<LiveEvent>>
@@ -25,10 +25,10 @@ public sealed class PublishPostHandler(
         PublishPostCommand request,
         CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
         var publication = await sender.Send(new GetPublicationQuery(request.PublicationId), cancellationToken);
-        var storedPlayer = await rekiContext.Player;
-        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+        var storedPlayer = await rekiContextAccessor.Context.Player;
+        var worlds = await rekiContextAccessor.Context.Worlds;
+        var world = worlds.GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         if (publication is null || publication.PlayerId != storedPlayer.Id || publication.WorldId != world.Id)
         {

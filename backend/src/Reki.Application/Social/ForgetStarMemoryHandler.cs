@@ -6,14 +6,14 @@ namespace Reki.Application.Social;
 
 public sealed class ForgetStarMemoryHandler(
     IGameStore store,
-    IRekiContextAccessor contextAccessor)
+    IRekiContextAccessor rekiContextAccessor)
     : IRequestHandler<ForgetStarMemoryCommand>
 {
     public async ValueTask<Unit> Handle(
         ForgetStarMemoryCommand request,
         CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
+        var rekiContext = rekiContextAccessor.Context;
         var player = await rekiContext.Player;
         var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");

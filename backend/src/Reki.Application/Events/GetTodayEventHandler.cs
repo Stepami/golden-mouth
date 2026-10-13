@@ -8,15 +8,14 @@ namespace Reki.Application.Events;
 public sealed class GetTodayEventHandler(
     IGameStore store,
     GameDayPeriod gameDayPeriod,
-    IRekiContextAccessor contextAccessor) : IRequestHandler<GetTodayEventQuery, DailyGameEvent>
+    IRekiContextAccessor rekiContextAccessor) : IRequestHandler<GetTodayEventQuery, DailyGameEvent>
 {
     public async ValueTask<DailyGameEvent> Handle(
         GetTodayEventQuery request,
         CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
-        var player = await rekiContext.Player;
-        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+        var player = await rekiContextAccessor.Context.Player;
+        var world = (await rekiContextAccessor.Context.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var periodStart = gameDayPeriod.PeriodStart;
         var existing = await store.GetTodayEventAsync(

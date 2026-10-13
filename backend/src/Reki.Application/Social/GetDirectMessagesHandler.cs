@@ -10,13 +10,13 @@ public sealed class GetDirectMessagesHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
     GameDayPeriod gameDayPeriod,
-    IRekiContextAccessor contextAccessor) : IRequestHandler<GetDirectMessagesQuery, DirectMessageView>
+    IRekiContextAccessor rekiContextAccessor) : IRequestHandler<GetDirectMessagesQuery, DirectMessageView>
 {
     public async ValueTask<DirectMessageView> Handle(
         GetDirectMessagesQuery request,
         CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
+        var rekiContext = rekiContextAccessor.Context;
         var player = await rekiContext.Player;
         var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");

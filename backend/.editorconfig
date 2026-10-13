@@ -112,6 +112,7 @@ dotnet_diagnostic.VSTHRD103.severity = none
 dotnet_diagnostic.SA1611.severity = none
 dotnet_diagnostic.SA1615.severity = none
 dotnet_diagnostic.SA1623.severity = none
+dotnet_diagnostic.S6960.severity = none
 
 [src/Reki.Application/**/*Handler.cs]
 # Mediator fixes the asynchronous interface member name as Handle; handlers cannot append Async.

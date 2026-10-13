@@ -8,7 +8,7 @@ namespace Reki.Application.Worlds;
 
 public sealed class UpdateWorldHandler(
     IGameStore store,
-    IRekiContextAccessor contextAccessor,
+    IRekiContextAccessor rekiContextAccessor,
     PlayerSafetyGuard safetyGuard)
     : IRequestHandler<UpdateWorldCommand>
 {
@@ -16,7 +16,7 @@ public sealed class UpdateWorldHandler(
         UpdateWorldCommand request,
         CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
+        var rekiContext = rekiContextAccessor.Context;
         var player = await rekiContext.Player;
         if (request.Description is not null || request.Rules is not null)
         {

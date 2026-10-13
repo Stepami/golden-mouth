@@ -19,7 +19,7 @@ public sealed partial class GeneratePublicationHandler(
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     ISender sender,
-    IRekiContextAccessor contextAccessor,
+    IRekiContextAccessor rekiContextAccessor,
     StarTurnGenerator generator,
     ILogger<GeneratePublicationHandler> logger,
     ProductTelemetry analytics) : IStreamRequestHandler<GeneratePublicationCommand, PublicationStatusLiveEvent>
@@ -35,7 +35,7 @@ public sealed partial class GeneratePublicationHandler(
             throw new RequestConflictException("The publication identifier is invalid.");
         }
 
-        var rekiContext = contextAccessor.Context;
+        var rekiContext = rekiContextAccessor.Context;
         var storedPlayer = await rekiContext.Player;
         var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");

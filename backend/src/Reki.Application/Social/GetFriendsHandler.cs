@@ -4,15 +4,14 @@ using Reki.Application.Common;
 namespace Reki.Application.Social;
 
 public sealed class GetFriendsHandler(
-    IRekiContextAccessor contextAccessor)
+    IRekiContextAccessor rekiContextAccessor)
     : IRequestHandler<GetFriendsQuery, IReadOnlyList<FriendSummary>>
 {
     public async ValueTask<IReadOnlyList<FriendSummary>> Handle(
         GetFriendsQuery request,
         CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
-        _ = await rekiContext.Player;
+        _ = await rekiContextAccessor.Context.Player;
         return [];
     }
 }

@@ -4,13 +4,14 @@ using Reki.Contracts.Player;
 
 namespace Reki.Application.Player;
 
-public sealed class GetReferralHandler(
-    IRekiContextAccessor contextAccessor) : IRequestHandler<GetReferralQuery, ReferralResponse>
+public sealed class GetReferralHandler(IRekiContextAccessor rekiContextAccessor) :
+    IRequestHandler<GetReferralQuery, ReferralResponse>
 {
-    public async ValueTask<ReferralResponse> Handle(GetReferralQuery request, CancellationToken cancellationToken)
+    public async ValueTask<ReferralResponse> Handle(
+        GetReferralQuery request,
+        CancellationToken cancellationToken)
     {
-        var rekiContext = contextAccessor.Context;
-        var player = await rekiContext.Player;
+        var player = await rekiContextAccessor.Context.Player;
         return new ReferralResponse($"ref_{player.Id.Value}");
     }
 }
