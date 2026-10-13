@@ -12,10 +12,9 @@ export function WorldOverview() {
   const d = draft.definition; const art = worldArt[d.balanceKey]
   return <div className="screen no-tab"><TopBar title="Обзор мира" onBack={nav.back} />
     {art && <img className="world-hero" src={art.cover} alt={`Обложка мира «${d.title}»`} />}
-    <div className="pad"><div className="small eyebrow">{art?.genre}</div><h1>{d.emoji} {d.title}</h1><p className="muted">{d.description}</p>
-      <Card><div className="small eyebrow">Первая завязка</div><p>{d.firstContext}</p></Card>
+    <div className="pad"><div className="small eyebrow">{art?.genre}</div><h1>{d.emoji} {d.title}</h1><p className="muted">{art?.pitch ?? d.description}</p>
       <h2>Кого встретишь</h2><div className="world-people">{d.stars.map(star => <div key={star.id}><Avatar seed={star.avatarSeed} world={d.balanceKey} avatarStyle={d.avatarStyle} profile={{ address: star.appearanceProfile === 'masculine' ? 'he' : star.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: star.ageBand }} size={44} /><b>{star.name}</b><span className="small muted">{star.role}</span></div>)}</div>
-      <p className="small muted">Пиши в ленту, получай реакции героев и меняй ход истории. Можно играть за своего персонажа или выбрать готового.</p>
+
     </div><BottomCTA main="Выбрать персонажа" onMain={() => nav.push('01-4_channel')} /></div>
 }
 export function QuickWorldForm({ draft }: { draft: WorldDraft }) {
@@ -33,17 +32,18 @@ export function QuickChannelForm({ draft }: { draft: WorldDraft }) {
   const nav = useNav(); const d = draft.definition; const selected = draft.persona
   const choose = (star?: WorldDefinition['stars'][number]) => {
     const previous = draft.persona
+    const heroOrder = draft.heroOrder ?? [...d.stars, ...(previous ? [previous.star] : [])].map(value => value.id)
     const restored = { ...d, stars: [...d.stars, ...(previous ? [previous.star] : [])], description: previous?.description ?? d.description, name: previous?.name ?? d.name, avatar: previous?.avatar ?? d.avatar, role: previous?.role ?? d.role }
-    if (!star) { setWorldDraft({ ...draft, persona: undefined, definition: restored }); return }
-    setWorldDraft({ ...draft, persona: { star, description: restored.description, name: restored.name, avatar: restored.avatar, role: restored.role }, definition: { ...restored, name: star.name, avatar: star.avatarSeed, role: star.role, description: `${restored.description}\nПерсона игрока: ${star.name}. ${star.about}`.slice(0, 2000), stars: restored.stars.filter(value => value.id !== star.id) } })
+    if (!star) { setWorldDraft({ ...draft, heroOrder, persona: undefined, definition: restored }); return }
+    setWorldDraft({ ...draft, heroOrder, persona: { star, description: restored.description, name: restored.name, avatar: restored.avatar, role: restored.role }, definition: { ...restored, name: star.name, avatar: star.avatarSeed, role: star.role, description: `${restored.description}\nПерсона игрока: ${star.name}. ${star.about}`.slice(0, 2000), stars: restored.stars.filter(value => value.id !== star.id) } })
   }
-  const heroes = [...d.stars, ...(selected ? [selected.star] : [])]
+  const heroes = [...d.stars, ...(selected ? [selected.star] : [])].sort((a, b) => (draft.heroOrder?.indexOf(a.id) ?? 0) - (draft.heroOrder?.indexOf(b.id) ?? 0))
   return <div className="screen no-tab"><TopBar title={`Персонаж · ${d.balanceKey === 'own' ? '2 / 3' : '1 / 2'}`} onBack={nav.back} /><div className="pad"><h1>Кем ты будешь в этой истории?</h1><p className="muted">Свой персонаж или герой мира — история будет идти от твоего лица.</p>
     <button className={`persona-option ${!selected ? 'selected' : ''}`} aria-pressed={!selected} onClick={() => choose()}><span>✦</span><div><b>Свой персонаж</b><div className="small muted">Твоё имя, твоя роль в истории</div></div><span>{!selected ? '✓' : ''}</span></button>
     {heroes.length > 1 && heroes.map(star => <button className={`persona-option ${selected?.star.id === star.id ? 'selected' : ''}`} aria-pressed={selected?.star.id === star.id} key={star.id} onClick={() => choose(star)}><Avatar seed={star.avatarSeed} avatarStyle={d.avatarStyle} world={d.balanceKey} profile={{ address: star.appearanceProfile === 'masculine' ? 'he' : star.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: star.ageBand }} /><div><b>{star.name}</b><div className="small muted">{star.role}</div></div><span>{selected?.star.id === star.id ? '✓' : ''}</span></button>)}
-    {selected ? <Card><p>{selected.star.about}</p><p className="small muted">Остальные герои будут реагировать на твои посты. Второй копии твоего персонажа в ленте не будет.</p></Card> : <div className="quick-personal"><label className="label">Имя персонажа<input aria-label="Имя персонажа" value={d.name} maxLength={80} onChange={e => updateWorldDraft({ name: e.target.value })} /></label><label className="label">Кто ты в этом мире<input aria-label="Кто ты в этом мире" value={d.role} maxLength={80} onChange={e => updateWorldDraft({ role: e.target.value })} /></label></div>}
+    {selected ? <Card><p>{selected.star.about}</p></Card> : <div className="quick-personal"><label className="label">Имя персонажа<input aria-label="Имя персонажа" value={d.name} maxLength={80} onChange={e => updateWorldDraft({ name: e.target.value })} /></label><label className="label">Кто ты в этом мире<input aria-label="Кто ты в этом мире" value={d.role} maxLength={80} onChange={e => updateWorldDraft({ role: e.target.value })} /></label></div>}
     <div className="label">Как к тебе обращаться</div><Segmented value={draft.address} onChange={(address: Address) => setWorldDraft({ ...draft, address })} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} />
-    <details className="card"><summary>Ник и аватар</summary><label className="label">Ник<input aria-label="Ник" value={d.avatar} maxLength={80} onChange={e => updateWorldDraft({ avatar: e.target.value })} /></label><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand }} size={56} /></details>
+    <details className="card profile-preview"><summary><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand }} size={40} /><span><b>{d.name || "Твой персонаж"}</b><span className="small muted">@{d.avatar}</span></span><span className="small">Изменить</span></summary><label className="label">Ник<input aria-label="Ник" value={d.avatar} maxLength={80} onChange={e => updateWorldDraft({ avatar: e.target.value })} /></label><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand }} size={56} /></details>
   </div><BottomCTA main="Выбрать градус драмы" disabled={!d.name.trim() || !d.role.trim() || !d.avatar.trim()} onMain={() => nav.push('01-4b_world_setup')} /></div>
 }
 export function DramaPicker({ definition: d }: { definition: WorldDefinition }) {

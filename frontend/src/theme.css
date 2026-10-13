@@ -225,3 +225,30 @@ summary { cursor: pointer; padding: 6px 0; font-weight: 700; }
 .thread-help p { margin: 12px 0; line-height: 1.5; }
 .compose-context { line-height: 1.5; margin: 4px 0 20px; }
 @media (max-width: 350px) { .editor-section-head, .editor-section-body { padding-left: 14px; padding-right: 14px; } .first-story { padding: 20px; } .top .pill { font-size: 12px; padding: 8px; } }
+
+/* Compact story flow: selection stays in place and optional controls stay quiet. */
+.persona-option.selected { background: #302440; border-color: var(--lilac); box-shadow: inset 4px 0 0 var(--lilac); }
+.persona-option:focus-visible { outline: 2px solid var(--lilac); outline-offset: 3px; }
+.profile-preview summary { display: flex; align-items: center; gap: 12px; }
+.profile-preview summary > span:nth-child(2) { flex: 1; min-width: 0; }
+.profile-preview summary b, .profile-preview summary .muted { display: block; overflow-wrap: anywhere; }
+.profile-preview summary > span:last-child { color: var(--lilac); }
+.world-hero { object-fit: cover; }
+.world-people { margin: 20px 0 28px; }
+.unlock-path { padding: 18px 0; }
+.unlock-path + .unlock-path { border-top: 1px solid var(--line2); }
+.unlock-path p { margin: 8px 0; }
+progress { width: 100%; height: 8px; accent-color: #b389ff; margin: 10px 0; }
+.energy-help { margin: 4px 0 20px; text-align: center; }
+.compose-topic { padding: 16px; border-radius: 18px; background: #251d32; margin: 0 0 20px; }
+.compose-topic p { font-size: 17px; margin: 8px 0; }
+.compose-ideas { margin: 20px 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.compose-ideas > .small { width: 100%; }
+.compose-ideas .opt { width: auto; flex: 1 1 145px; margin: 0; padding: 12px; font-size: 13px; border-radius: 14px; }
+.refresh-note { text-align: center; min-height: 24px; margin: 12px 0; }
+.feed-arrival { animation: feed-arrival .5s ease-out; }
+@keyframes feed-arrival { from { transform: translateY(12px); opacity: .3; } to { transform: translateY(0); opacity: 1; } }
+.result-reason p { margin: 8px 0; }
+.first-story { gap: 18px; }
+.first-story-context { font-size: 19px; line-height: 1.45; }
+@media (prefers-reduced-motion: reduce) { .feed-arrival { animation: none; } }

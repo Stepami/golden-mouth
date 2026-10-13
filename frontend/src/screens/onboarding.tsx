@@ -25,12 +25,12 @@ function Steps({ n, back = true }: { n: number; back?: boolean }) {
 function Invite() {
   const nav = useNav()
   return <div className="screen no-tab welcome"><div className="pad">
-    <div className="brand">реки</div><h1>Твой блог.<br />Твоя история.</h1>
-    <p className="muted">Пиши посты, знакомься с героями и меняй события своего мира.</p>
+    <div className="brand">реки</div><h1>Твой пост может<br />взорвать ленту.</h1>
+    <p className="muted">Собери фанатов, попади в драму и стань главным героем своей истории.</p>
     <div className="welcome-post card" aria-label="Пример игрового поста">
-      <div className="row"><div className="welcome-avatar">✦</div><div><b>Твой канал</b><div className="small muted">только что</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>120 читателей</span></div>
+      <div className="row"><div className="welcome-avatar">✦</div><div><b>Твой канал</b><div className="small muted">пример игры</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
       <p>На моей фотографии появилась улица, которой вчера не было. Кто-нибудь узнаёт эти окна? 🌲</p>
-      <div className="row"><span className="react">👀 24</span><span className="react">✨ 12</span><span className="small muted">💬 3</span></div>
+      <div className="row"><span className="react">🔥 2,4k</span><span className="react">💀 890</span><span className="small muted">🫶 1,2k</span></div>
       <div className="welcome-reply"><b>Герой мира</b><div>Я помню этот дом. Но на карте его нет уже сорок лет.</div></div>
     </div>
     <p className="small muted">Фанаты и события виртуальные. Посты остаются внутри игры.</p>
@@ -94,14 +94,14 @@ export function ChannelHead() {
     <div className="top">
       <Avatar seed={p.handle} size={36} />
       <div><b>{p.name}</b><div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div>
-      <div className="pill">✍️ осталось {p.postsLeft}</div>
+      <div className="pill">⚡ {p.postsLeft} энергии</div>
     </div>
   )
 }
 export function Home() {
   const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world)
   return <div className="screen"><ChannelHead /><div className="pad">
-    <div className="card first-story"><div className="small eyebrow">Твоя история начинается</div><p className="first-story-context">{profile.firstContext}</p><p className="muted first-story-prompt">{profile.firstPrompt}</p>
+    <div className="card first-story"><div className="small eyebrow">Твоя история начинается</div><p className="first-story-context">{profile.firstContext}</p>
       {p.firstPostInviteBonus > 0 && <p>🎁 Первый пост даст ещё {p.firstPostInviteBonus} ходов</p>}
       <button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button>
     </div><p className="small muted first-story-footer">Твои посты меняют историю</p>

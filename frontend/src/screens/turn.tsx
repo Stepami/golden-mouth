@@ -39,12 +39,12 @@ function Compose() {
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Новый пост" right={`⚡ ${p.postsLeft}`} />
       <div className="pad">
-        <p className="small muted compose-context">{contentOf(p.world).firstPrompt}</p><TextField label="Твой пост" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" /><details className="editor-extra"><summary>Нужна идея?</summary><p className="small muted">Выбери начало и допиши по-своему.</p>{ideas.map(idea => <button className="opt" key={idea} disabled={text.length > 0} onClick={() => edit(idea.replace(/[«»]/g, ''), true)}>{idea}</button>)}{text.length > 0 && <p className="small muted">Чтобы взять другую идею, сначала очисти поле.</p>}</details>
+        <div className="compose-topic"><span className="small eyebrow">✨ О чём написать</span><p>{p.wants.find(w => !w.done)?.text ?? "Что произошло в твоём мире сегодня?"}</p><span className="small muted">{p.wants.find(w => !w.done)?.reward ?? "Своя история тоже подойдёт."}</span></div><TextField label="Твой пост" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" /><div className="compose-ideas"><div className="small muted">Начни с одной из идей</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} disabled={text.length > 0} onClick={() => edit(idea.replace(/[«»]/g, ''), true)}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
         {draft.publicationId && <div className="card"><p>У предыдущей публикации ещё нет подтверждённого результата.</p><button className="btn" onClick={() => nav.replace('02-2_live', { text: draft.submittedText, publicationId: draft.publicationId, ownWords: draft.submittedOwnWords })}>Проверить статус</button></div>}
         <button className="chip" onClick={() => nav.push('06-4_rules')}>Правила публикаций</button>
 
-        <details className="editor-extra"><summary>Задания дня · {done} из {p.wants.length}</summary><p className="small muted">Темы для поста с дополнительным опытом.</p>
+        <details className="editor-extra"><summary>Все задания дня · {done} из {p.wants.length}</summary><p className="small muted">Темы для поста с дополнительным опытом.</p>
           {p.wants.map((w, i) => (
             <div key={w.id} className="row" style={{ padding: '7px 0', borderBottom: i < p.wants.length - 1 ? '1px solid var(--line2)' : 'none' }}>
               <span>{w.done ? '✅' : '⬜'}</span><span style={{ flex: 1, ...(w.done ? { color: 'var(--muted2)', textDecoration: 'line-through' } : {}) }}>{w.text}</span><span className="small" style={{ color: 'var(--lilac)' }}>{w.reward}</span>
@@ -84,7 +84,7 @@ function Live() {
         if (apiBaseUrl) {
           const latest = await refresh()
           if (!p.hitOwnWorldMilestone && latest?.hitOwnWorldMilestone) {
-            selectDraftOwner(p.id); setWorldDraft({ definition: blankWorld(), previewOnly: true, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand, reason: 'В твоём мире уже 500 подписчиков — теперь можно создать мир с нуля' })
+            selectDraftOwner(p.id); setWorldDraft({ definition: blankWorld(), previewOnly: true, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand, reason: 'Создание своего мира открыто — можно придумать свою историю' })
             nav.replace('05-7b_own_world', { world: 'own' }); return
           }
         }
@@ -109,7 +109,7 @@ function Live() {
         <div style={{ position: 'absolute', right: 14, top: 120, width: 120, height: 200, pointerEvents: 'none' }}>
           {floats.map(f => <span key={f.id} className="float-react" style={{ left: `${f.x}%`, bottom: 0, fontSize: 24 }}>{f.emoji}</span>)}
         </div>
-        {comments.map(c => <Comment key={c.id} seed={c.avatar} profile={c.star && c.appearanceProfile ? { address: c.appearanceProfile === 'masculine' ? 'he' : c.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: c.ageBand } : undefined} name={c.author} handle={c.handle} text={c.text} star={c.star} onMore={() => nav.push('06-1_report', { id: c.id })} />)}
+        {comments.map(c => <Comment key={c.id} seed={c.avatar} profile={c.star && c.appearanceProfile ? { address: c.appearanceProfile === 'masculine' ? 'he' : c.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: c.ageBand } : undefined} name={c.author} handle={c.handle} text={c.text} star={c.star} />)}
         {typing && <div className="muted small row" style={{ gap: 8 }}>{typing} печатает…</div>}
       </div>
       <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }} aria-live="polite">{phase === 'generating' ? 'звезда готовит ответ' : phase === 'moderating' ? 'скоро появятся реакции' : 'Собираем итог…'}</div>
@@ -164,6 +164,7 @@ const haptic = (kind: 'success' | 'warning' | 'light') => { if (!inTelegram) ret
 
 function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'normal' | 'flop' | 'viral' }) {
   const nav = useNav()
+  const playerWorld = usePlayer().world
   const viral = theme === 'viral'
   const shown = useCount(Math.abs(r.delta))
   const additive = r.whys.filter(why => /^[+−-]\d+(?:[.,]\d+)?$/.test(why.value))
@@ -180,7 +181,7 @@ function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'nor
           <div className="muted2" style={{ marginBottom: 12 }}>{plural(shown, 'подписчик', 'подписчика', 'подписчиков')}</div>
           <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{r.headline}</div>
           {viral && <div className="confetti" aria-hidden>{Array.from({ length: 18 }, (_, i) => <i key={i} style={{ left: `${(i * 53) % 100}%`, animationDelay: `${(i % 6) * 0.12}s`, background: ['#FF6B8B', '#9B6BFF', '#FFD66B', '#6BFFB8'][i % 4] }} />)}</div>}
-          {r.whys[0] && <p className="result-reason">{r.whys[0].label}</p>}
+          {r.whys[0] && <div className="result-reason"><div className="small eyebrow">{contentOf(playerWorld).stars.find(star => star.avatarSeed === r.bestComment?.avatar)?.name ?? "Реакция героя"}</div><p>{r.whys[0].label}</p></div>}
           <details className="result-details"><summary>Подробнее об итоге</summary>          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[w.icon] ?? w.icon} {w.label} {(!/^[+−-]/.test(w.value) || explainsDelta) && <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b>}</span>)}</div>
           {(runtimeConfig.features.collection ? r.ribbons : []).map(x => <Ribbon key={x.title} icon={x.icon} title={x.title} sub={x.sub} />)}
           {r.bestComment && <div className="row" style={{ margin: '8px 0 12px' }}><Avatar seed={r.bestComment.avatar} size={28} /><span className="small">«{r.bestComment.text}»</span></div>}
@@ -323,7 +324,7 @@ function Thread() {
         {canReply && showHelp && <div className="card thread-help"><b>Продолжи разговор</b><p>Спроси героя о находке или расскажи свою версию. Он ответит — история продолжится.</p><p className="small muted">Ответ стоит 1 энергию. Можно пропустить и перейти в ленту.</p><button className="text-link" onClick={dismissHelp}>Понятно</button></div>}
         {canReply ? <div className="small muted" style={{ marginBottom: 16 }}>Ответ · 1 энергия</div> : <div className="small muted" style={{ marginBottom: 12 }}>Этот тред доступен для чтения.</div>}
         {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>
-          <Comment seed={comment.avatar} profile={comment.star && comment.appearanceProfile ? { address: comment.appearanceProfile === 'masculine' ? 'he' : comment.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: comment.ageBand } : undefined} name={comment.author} handle={comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} onMore={comment.me ? undefined : () => nav.push('06-1_report', { id: comment.id })} />
+          <Comment seed={comment.avatar} profile={comment.star && comment.appearanceProfile ? { address: comment.appearanceProfile === 'masculine' ? 'he' : comment.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: comment.ageBand } : undefined} name={comment.author} handle={comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} />
           {!!comment.reactions?.length && <div className="small" style={{ margin: '-6px 0 12px 44px' }}>{comment.reactions.map(reaction => <span key={`${reaction.authorId}:${reaction.emoji}`} title={reaction.author} className="react">{reaction.emoji} {reaction.author}</span>)}</div>}
           {canReply && comment.star && !comment.hidden && <button className="small" disabled={sending} onClick={() => focusReply(comment.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: draft.commentId === comment.id ? 'var(--accent)' : 'var(--lilac)' }}>{draft.commentId === comment.id ? 'Отвечаешь этому комментарию' : `Ответить герою ${comment.author}`}</button>}
         </div>)}

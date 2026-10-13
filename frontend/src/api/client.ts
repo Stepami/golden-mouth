@@ -321,7 +321,9 @@ export const api = {
     }
   },
   feed: async (world: WorldId = sessionPlayer?.world ?? 'stage'): Promise<FeedItem[]> => {
-    const remote: FeedItem[] = BASE ? await call<FeedItem[]>(inWorld('/feed')) : demoOwnPosts(sessionPlayer?.id ?? '').slice(0, 20).map(post => ({
+    const remoteData = BASE ? await Promise.all([call<FeedItem[]>(inWorld('/feed')), call<ChannelPost[]>(inWorld('/posts/mine'))]) : undefined
+    const ownedPostIds = new Set(remoteData?.[1].map(post => post.postId))
+    const remote: FeedItem[] = remoteData ? remoteData[0].map(item => ({ ...item, canReply: !!item.postId && ownedPostIds.has(item.postId) })) : demoOwnPosts(sessionPlayer?.id ?? '').slice(0, 20).map(post => ({
       kind: 'post', postId: post.id, canReply: true, author: sessionPlayer?.name, avatar: sessionPlayer?.handle, role: sessionPlayer?.role,
       ago: post.at, text: post.text, reactions: post.reactions, views: post.views,
       commentCount: withDemoComments(post, sessionPlayer?.id ?? '').comments.length,
