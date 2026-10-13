@@ -861,6 +861,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     [Test]
     [Arguments("own")]
     [Arguments("deleted")]
+    [Arguments("deleted-during")]
     [Arguments("energy")]
     [Arguments("foreign-world")]
     [Arguments("wrong-author")]
@@ -890,15 +891,25 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                 new BsonDocument("$set", new BsonDocument("Energy", 0)));
         }
 
-        Factory.Llm.Respond(CreateReplyTurnResponse(
-            scenario == "wrong-author" ? world.Stars[1].Id.Value : author.Id.Value,
-            args =>
+        Factory.Llm.Respond(async _ =>
+        {
+            if (scenario == "deleted-during")
             {
-                if (scenario == "unsafe")
+                await Database.GetCollection<World>("worlds").ReplaceOneAsync(
+                    item => item.Id == world.Id,
+                    world with { Stars = world.Stars.Where(star => star.Id != author.Id).ToArray(), Version = world.Version + 1 });
+            }
+
+            return CreateReplyTurnResponse(
+                scenario == "wrong-author" ? world.Stars[1].Id.Value : author.Id.Value,
+                args =>
                 {
-                    args["text"] = "наркотики";
-                }
-            }));
+                    if (scenario == "unsafe")
+                    {
+                        args["text"] = "наркотики";
+                    }
+                });
+        });
         var beforePost = await GetStoredPostAsync(postId);
         var beforePlayer = await GetStoredPlayerAsync(user);
         var beforeWorld = await GetStoredWorldAsync(user);
@@ -914,7 +925,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             scenario == "foreign-world" ? "unowned-world" : world.Id.Value);
 
         // Assert
-        if (scenario is "wrong-author" or "unsafe")
+        if (scenario is "wrong-author" or "unsafe" or "deleted-during")
         {
             await Assert.That(ParseReplyEvents(response.Body)[^1].Status).IsEqualTo(ReplyStatus.Failed);
         }
