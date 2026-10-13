@@ -14,13 +14,13 @@ import type { AgeBand } from '../app/ageBand'
 
 export function ChooseWorld() {
   const nav = useNav(); const { player, setPlayer } = useStore()
-  const [owned, setOwned] = useState<WorldDocument[]>([])
+  const [owned, setOwned] = useState<WorldDocument[]>(() => api.ownedWorldsSnapshot() ?? [])
   const [error, setError] = useState('')
-  useEffect(() => { if (player) api.ownedWorlds().then(setOwned).catch(() => setError('Не получилось загрузить твои миры.')) }, [player?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { let alive = true; if (player) api.ownedWorlds().then(found => { if (alive) setOwned(found) }).catch(() => { if (alive) setError('Не получилось загрузить твои миры.') }); return () => { alive = false } }, [player?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   function start(world?: WorldId, previewOnly = false) {
     selectDraftOwner(player?.id ?? 'onboarding')
     const definition = world ? worldDefinitionOf(world) : blankWorld()
-    setWorldDraft({ definition, heroOrder: definition.stars.map(star => star.id), advanced: false, previewOnly, address: player?.address ?? 'nick', group: player?.ageBand ? (player.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: player?.ageBand ?? nav.params.ageBand as AgeBand | undefined })
+    setWorldDraft({ definition, heroOrder: definition.stars.map(star => star.id), advanced: !world && !previewOnly, previewOnly, address: player?.address ?? 'nick', group: player?.ageBand ? (player.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: player?.ageBand ?? nav.params.ageBand as AgeBand | undefined })
     nav.push(world ? '01-3b_world_overview' : '05-7b_own_world', { world: definition.balanceKey })
   }
   return <div className="screen no-tab"><TopBar title="Выбери мир" onBack={nav.canBack ? nav.back : undefined} />
@@ -31,7 +31,7 @@ export function ChooseWorld() {
         {art && <div className="world-cover-image"><img src={art.cover} alt="" loading="lazy" /><span className="world-genre">{world.emoji} {art.genre}</span></div>}
         <div className="world-cover-copy"><div className="row"><b>{world.title}</b><span className="small muted">{['', 'Легко', 'Средне', 'Сложно'][world.difficulty]}</span></div><p>{art?.pitch ?? world.summary}</p><div className="world-roster">{definition.stars.slice(0, 3).map(star => <Avatar key={star.id} seed={star.avatarSeed} avatarStyle={definition.avatarStyle} profile={{ address: star.appearanceProfile === 'masculine' ? 'he' : star.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: star.ageBand }} size={26} />)}<span>Знакомиться с миром →</span></div></div>
       </button> })}</div>
-      <div className="card own-world-unlock"><h2>✦ Создай свой мир</h2>{player?.hitOwnWorldMilestone ? <><p className="small muted">Придумай место, героев и начало истории.</p><Button onClick={() => start(undefined, true)}>Создать свой мир</Button></> : <><p className="small muted own-unlock-summary">Откроется после 500 подписчиков в одном канале или после первого поста приглашённого друга.</p>{player && <><progress aria-label="Подписчики до открытия своего мира" value={Math.min(500, Math.max(player.subs, ...owned.map(world => world.subscribers)))} max={500} /><span className="small muted">{Math.min(500, Math.max(player.subs, ...owned.map(world => world.subscribers)))} / 500</span><button className="text-link" onClick={() => nav.push('04-3_invite')}>Пригласить друга →</button></>}</>}
+      <div className="card own-world-unlock"><h2>✦ Создай свой мир</h2>{player?.hitOwnWorldMilestone ? <><p className="small muted">Придумай место, героев и начало истории.</p><Button onClick={() => start()}>Создать свой мир</Button></> : <><p className="small muted own-unlock-summary">Откроется после 500 подписчиков в одном канале или после первого поста приглашённого друга.</p>{player && <><progress aria-label="Подписчики до открытия своего мира" value={Math.min(500, Math.max(player.subs, ...owned.map(world => world.subscribers)))} max={500} /><span className="small muted">{Math.min(500, Math.max(player.subs, ...owned.map(world => world.subscribers)))} / 500</span><button className="text-link" onClick={() => nav.push('04-3_invite')}>Пригласить друга →</button></>}</>}
         {isDevWorldPrototype && new URLSearchParams(location.search).has('devtools') && <details className="editor-extra"><summary>DEV: пример настройки</summary><Button secondary onClick={() => start(undefined, true)}>Попробовать быструю настройку · DEV</Button></details>}
       </div>
       {error && <p role="alert">{error}</p>}

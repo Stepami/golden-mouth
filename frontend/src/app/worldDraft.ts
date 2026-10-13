@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import type { Address, WorldDefinition } from '../api/types'
+import type { Address, Player, WorldDefinition } from '../api/types'
 import type { AgeBand } from './ageBand'
 export interface WorldDraft {
   definition: WorldDefinition; heroOrder?: string[]; advanced?: boolean; previewOnly?: boolean; persona?: { star: WorldDefinition['stars'][number]; description: string; name: string; avatar: string; role: string }; editingId?: string; reason?: string; address: Address; group: '14-17' | '18+'; ageBand?: AgeBand
@@ -25,4 +25,10 @@ export function blankWorld(): WorldDefinition {
   return { balanceKey: 'own', title: '', emoji: '✨', description: '', where: '', difficulty: 1, summary: 'Твоя история', avatarStyle: 'lorelei',
     name: '', avatar: '', role: '', voice: '', drama: 'soft', roles: [], voices: [], postIdeas: [], demoPosts: [], firstContext: '', firstPrompt: '',
     rules: [{ text: 'Без тем 18+ и травли по внешности', locked: true }], stars: [], wants: [], achievements: [] }
+}
+
+/** Start the full editor supported by POST /worlds. AI quick setup remains a separate demo. */
+export function beginOwnWorld(player: Player) {
+  selectDraftOwner(player.id)
+  setWorldDraft({ definition: { ...blankWorld(), name: player.name, avatar: player.handle, role: player.role }, advanced: true, previewOnly: false, address: player.address, group: player.ageBand === '14-17' || !player.ageBand ? '14-17' : '18+', ageBand: player.ageBand })
 }

@@ -85,10 +85,7 @@ function Live() {
         if (apiBaseUrl) {
           const latest = await refresh()
           if (latest) confirmedResult = { ...e.result, completedWants: latest.wants.filter(want => want.done && p.wants.some(before => before.id === want.id && !before.done)).map(({ id, text, reward }) => ({ id, text, reward })) }
-          if (!p.hitOwnWorldMilestone && latest?.hitOwnWorldMilestone) {
-            selectDraftOwner(p.id); setWorldDraft({ definition: blankWorld(), previewOnly: true, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand, reason: 'Создание своего мира открыто — можно придумать свою историю' })
-            nav.replace('05-7b_own_world', { world: 'own' }); return
-          }
+
         }
         else patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + e.result.delta) })
         nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: confirmedResult, post })
@@ -166,7 +163,6 @@ const haptic = (kind: 'success' | 'warning' | 'light') => { if (!inTelegram) ret
 
 function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'normal' | 'flop' | 'viral' }) {
   const nav = useNav()
-  const playerWorld = usePlayer().world
   const viral = theme === 'viral'
   const shown = useCount(Math.abs(r.delta))
   const additive = r.whys.filter(why => /^[+−-]\d+(?:[.,]\d+)?$/.test(why.value))
@@ -181,11 +177,11 @@ function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'nor
           <div className="small" style={{ letterSpacing: '.06em', color: viral ? 'var(--gift)' : 'var(--muted2)' }}>{viral ? '🌊 ПОСТ ЗАЛЕТЕЛ В РЕКИ' : 'ИТОГ ПОСТА'}</div>
           <div style={{ fontSize: 64, fontWeight: 900, lineHeight: 1.1 }} className={r.delta >= 0 ? 'up' : 'down'}>{r.delta >= 0 ? '+' : '−'}{fmt(shown)}</div>
           <div className="muted2" style={{ marginBottom: 12 }}>{plural(shown, 'подписчик', 'подписчика', 'подписчиков')}</div>
-          <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{r.headline}</div>
+          <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{viral ? r.headline : r.delta > 0 ? "Твой пост заметили ✨" : r.headline}</div>
           {viral && <div className="confetti" aria-hidden>{Array.from({ length: 18 }, (_, i) => <i key={i} style={{ left: `${(i * 53) % 100}%`, animationDelay: `${(i % 6) * 0.12}s`, background: ['#FF6B8B', '#9B6BFF', '#FFD66B', '#6BFFB8'][i % 4] }} />)}</div>}
-          {r.whys[0] && <div className="result-reason"><div className="small eyebrow">{contentOf(playerWorld).stars.find(star => star.avatarSeed === r.bestComment?.avatar)?.name ?? "Реакция героя"}</div><p>{r.whys[0].label}</p></div>}
+
           <div className="result-awards" aria-live="polite">{r.completedWants?.map(want => <div className="result-task" key={want.id}><span>✅</span><div><b>Задание выполнено</b><p>{want.text}</p><span className="small">{want.reward}</span></div></div>)}{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
-          <details className="result-details"><summary>За что этот результат?</summary>          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[w.icon] ?? w.icon} {w.label} {(!/^[+−-]/.test(w.value) || explainsDelta) && <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b>}</span>)}</div>
+          <details className="result-details"><summary>Разбор поста</summary>          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[w.icon] ?? w.icon} {w.label} {(!/^[+−-]/.test(w.value) || explainsDelta) && <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b>}</span>)}</div>
           {r.bestComment && <div className="row" style={{ margin: '8px 0 12px' }}><Avatar seed={r.bestComment.avatar} size={28} /><span className="small">«{r.bestComment.text}»</span></div>}
           </details>
           {viral ? <>
@@ -194,7 +190,7 @@ function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'nor
             <Button secondary onClick={() => nav.replace('03-5_stage')}>Дальше</Button>
           </> : <>
             <Button onClick={() => nav.replace('02-6_thread', { post })}>Посмотреть реакции</Button>
-            {theme === 'normal' && <><button onClick={() => nav.push('02-7_share', { post })} style={{ display: 'block', margin: '10px auto 4px', background: 'none', border: 'none', color: 'var(--lilac)' }}>Поделиться в чат или сторис ›</button>
+            {theme === 'normal' && <><button onClick={() => nav.push('02-7_share', { post })} aria-label="Поделиться постом" className="result-share">↗ Поделиться</button>
               </>}
           </>}
         </div>
@@ -320,7 +316,7 @@ function Thread() {
   post.comments.forEach(append)
   return (
     <div className="screen no-tab">
-      <TopBar onBack={goBack} title="Реакции" rightPlain right={<button className="thread-exit" onClick={() => nav.replace('03-3_feed')}>В ленту →</button>} />
+      <TopBar title="Реакции" rightPlain right={<button className="thread-exit" onClick={() => nav.replace('03-5_stage')}>В канал →</button>} />
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div></div>
         {canReply && showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>Герой ждёт ответа</b><p>Нажми «Ответить» под репликой и продолжи историю.</p><span className="small muted">Ответ · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
@@ -333,6 +329,7 @@ function Thread() {
         {sending && <div className="card" role="status" aria-live="polite"><div className="small muted">{target?.author ?? 'Звезда'} готовит ответ…</div><div className="live-current" aria-hidden="true"><span /></div>{preview && <><p>{preview}</p><div className="small muted">Ответ ещё не опубликован</div></>}</div>}
         {target && <div className="small muted" style={{ marginBottom: 8 }}>Отвечаешь: {target.author}</div>}
         {replyError && <div className="small" role="alert" style={{ color: 'var(--accent)', marginBottom: 12 }}>{replyError}</div>}
+        <Button secondary disabled={sending} onClick={() => nav.replace('02-1_compose')}>Написать следующий пост</Button>
       </div>
       {canReply && <div className="bottom-cta" style={{ flexDirection: 'row' }}>
         <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input className="thread-reply-input" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={draft.commentId ? 'Ответ · 1 энергия' : 'Выбери комментарий'} maxLength={1000} disabled={!draft.commentId || sending} /></div>

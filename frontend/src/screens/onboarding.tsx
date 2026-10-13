@@ -89,12 +89,12 @@ function Under14() {
 
 // 01-6: первый экран: цель, квест, что такое Реки / навыки / коллекция
 export function ChannelHead() {
-  const p = useStore().player!
+  const p = useStore().player!; const nav = useNav()
   const w = worldOf(p.world)
   return (
-    <div className="top">
+    <div className="top channel-header">
       <Avatar seed={p.handle} size={36} />
-      <div><b>{p.name}</b><div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div>
+      <div className="channel-header-copy"><b>{p.name}</b><div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div><button className="worlds-entry channel-worlds-entry" onClick={() => nav.push('01-3_world')}>Миры →</button></div>
       <div className="pill">⚡ {p.postsLeft} энергии</div>
     </div>
   )

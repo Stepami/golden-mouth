@@ -13,6 +13,7 @@ import type { PlayerDocument, Challenge, ChannelPost, Dm, FeedItem, Friend, Game
 
 let sessionPlayer: Player | undefined
 let sessionIdentity: PlayerDocument | undefined
+let ownedWorldSnapshot: WorldDocument[] | undefined
 let templates: WorldDocument[] = []
 let templatesRequest: Promise<void> | undefined
 const inWorld = (path: string): string => {
@@ -86,9 +87,11 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     return rememberPlayer(await laterLazy(demoPlayer))
   }
   const player = await call<PlayerDocument>('/me')
+  if (sessionIdentity?.id !== player.id) ownedWorldSnapshot = undefined
   sessionIdentity = player
   setTelemetryPlayerAvailable(true)
   const ownedWorlds = await call<WorldDocument[]>('/worlds')
+  ownedWorldSnapshot = ownedWorlds
   let selected: string | undefined
   try { selected = localStorage.getItem(`reki:selected-world:${player.id}`) ?? undefined } catch { /* memory fallback */ }
   const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)) ?? ownedWorlds[0]
@@ -353,7 +356,8 @@ export const api = {
   answerEvent: (id: string, text: string) => BASE ? call(inWorld(`/events/${id}/answer`), { method: 'POST', body: JSON.stringify({ text }) }) : later({ ok: true }),
   challenge: (): Promise<Challenge | null> => BASE ? call('/challenges/active') : later(mock.challenge),
   startChallenge: (friendId: string) => BASE ? call('/challenges', { method: 'POST', body: JSON.stringify({ friendId }) }) : later({ ok: true }),
-  ownedWorlds: (): Promise<WorldDocument[]> => BASE ? call('/worlds') : later(sessionPlayer ? [worldDocumentOf(sessionPlayer.world)] : []),
+  ownedWorldsSnapshot: (): WorldDocument[] | undefined => ownedWorldSnapshot ? structuredClone(ownedWorldSnapshot) : undefined,
+  ownedWorlds: async (): Promise<WorldDocument[]> => { const found = BASE ? await call<WorldDocument[]>('/worlds') : await later(sessionPlayer ? [worldDocumentOf(sessionPlayer.world)] : []); ownedWorldSnapshot = found; return found },
   saveWorld: async (worldId: string, definition: WorldDefinition): Promise<Player> => {
     if (BASE) {
       await call(`/worlds/${encodeURIComponent(worldId)}`, { method: 'PUT', body: JSON.stringify(definition) })
@@ -369,5 +373,5 @@ export const api = {
     const { id, subscribers: _subs, lock: _lock, ...definition } = current
     return api.saveWorld(id, { ...definition, ...patch })
   },
-  deleteAccount: async () => { if (BASE) await call('/me', { method: 'DELETE' }); if (sessionIdentity) { clearPlayerDrafts(sessionIdentity.id); try { localStorage.removeItem(`reki:selected-world:${sessionIdentity.id}`) } catch { /* optional storage */ } } resetDemoPlayer(sessionPlayer?.id); sessionPlayer = undefined; sessionIdentity = undefined; setTelemetryPlayerAvailable(false); setAnalyticsWorld(undefined) },
+  deleteAccount: async () => { if (BASE) await call('/me', { method: 'DELETE' }); if (sessionIdentity) { clearPlayerDrafts(sessionIdentity.id); try { localStorage.removeItem(`reki:selected-world:${sessionIdentity.id}`) } catch { /* optional storage */ } } resetDemoPlayer(sessionPlayer?.id); sessionPlayer = undefined; sessionIdentity = undefined; ownedWorldSnapshot = undefined; setTelemetryPlayerAvailable(false); setAnalyticsWorld(undefined) },
 }

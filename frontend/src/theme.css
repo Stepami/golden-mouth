@@ -288,3 +288,29 @@ progress { width: 100%; height: 8px; accent-color: #b389ff; margin: 10px 0; }
 .first-story > .btn { width: calc(100% - 40px); }
 .top-action { margin-left: auto; }
 summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; border-radius: 6px; }
+
+.channel-world-link { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.channel-world-link::after { content: ' ▾'; color: #C5A0FF; }
+.unlock-overlay { align-items: center; z-index: 50; backdrop-filter: blur(6px); }
+.unlock-celebration { position: relative; text-align: center; margin: 16px; padding: 36px 24px 24px; border: 1px solid #A879FA; background: radial-gradient(ellipse at top, #443052 0%, #1A1A24 65%); box-shadow: 0 0 70px #9D63FF26; animation: unlock-arrive .45s ease-out both; }
+.unlock-close { position: absolute; top: 10px; right: 14px; border: 0; background: none; color: #AAA5BC; font-size: 28px; cursor: pointer; }
+.unlock-sparkles { font-size: 44px; margin-bottom: 18px; }
+.unlock-celebration h1 { font-size: 30px; margin: 16px 0 12px; }
+.unlock-celebration p { margin: 0 0 24px; }
+.unlock-celebration .btn { margin-top: 12px; }
+.unlock-celebration p.small { margin: 20px 0 0; }
+.result-share { display: block; margin: 14px auto 0; padding: 8px; border: 0; background: none; color: #C5A0FF; font: inherit; cursor: pointer; }
+@keyframes unlock-arrive { from { opacity: 0; transform: translateY(24px) scale(.95); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .unlock-celebration { animation: none; } }
+
+.worlds-entry { display: inline-block; margin: 6px 0 0 8px; padding: 4px 10px; border: 1px solid #685383; border-radius: 999px; background: #282033; color: #D8BFFF; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.worlds-entry:hover { background: #352947; }
+.profile-world-name { margin-top: 6px; }
+.profile-worlds-entry { margin: 12px 0 4px; padding: 8px 18px; font-size: 14px; }
+.worlds-arrival { animation: worlds-arrive .24s ease-out both; }
+@keyframes worlds-arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .worlds-arrival { animation: none; } }
+
+.channel-header-copy { flex: 1; min-width: 0; }
+.channel-worlds-entry { margin: 8px 0 0; padding: 5px 12px; }
+.channel-header > .pill { flex-shrink: 0; }

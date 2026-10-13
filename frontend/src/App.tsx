@@ -7,6 +7,7 @@ import { setScreen } from './app/log'
 import { TelegramLaunch } from './app/TelegramLaunch'
 import { inTelegram, syncBackButton } from './telegram'
 import { api } from './api/client'
+import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
 import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
 import { worldDocumentOf } from './api/worldContent'
@@ -53,7 +54,7 @@ function Shell() {
     return () => { current = false }
   }, [explicitStart, playerState, top.id])
   const back = useCallback(() => nav.back(), [nav])
-  useEffect(() => syncBackButton(stack.length > 1, back), [stack.length, back])
+  useEffect(() => syncBackButton(stack.length > 1 && top.id !== '02-6_thread', back), [stack.length, top.id, back])
 
   const Screen = SCREENS[top.id]?.component
   const resolvingExistingPlayer = playerState === 'ready' && !explicitStart && top.id === '01-1_invite'
@@ -70,7 +71,7 @@ function Shell() {
     <NavContext.Provider value={nav}>
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'stage'}>
       <AvatarPeople.Provider value={people}><div className="app">
-        <Screen />
+        <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration />
         {tab !== undefined && (
           <nav className="tabbar">
             {TABS.map((t, i) => (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button>)}
