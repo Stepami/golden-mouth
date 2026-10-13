@@ -22,11 +22,12 @@ export const worlds: World[] = []
 const templateDocuments: Partial<Record<WorldId, WorldDocument>> = {}
 
 export function installWorldTemplates(templates: WorldDocument[]): void {
+  for (const key of Object.keys(templateDocuments)) delete templateDocuments[key as WorldId]
   for (const template of templates) templateDocuments[template.balanceKey] = structuredClone(template)
   worlds.splice(0, worlds.length, ...templates.filter(world => world.balanceKey !== 'own').map(world => ({
     id: world.balanceKey, title: world.title, emoji: world.emoji, description: world.description,
     difficulty: world.difficulty, summary: world.summary,
-    ...(world.unlockSkill && world.unlockLevel ? { lock: { skill: world.unlockSkill, level: world.unlockLevel } } : {}),
+
   })))
 }
 
@@ -74,6 +75,7 @@ export function worldDocumentOf(world: string): WorldDocument {
 }
 
 const WORLD_FORMS: Record<string, { gen: string; acc: string }> = {
+  evening: { gen: 'Вечерело', acc: 'Вечерело' }, sorcerers: { gen: 'Школы чародеев', acc: 'Школу чародеев' }, houses: { gen: 'Игры домов', acc: 'Игру домов' },
   stage: { gen: 'Сцены', acc: 'Сцену' }, academy: { gen: 'Академии', acc: 'Академию' }, it: { gen: 'Айти-тусовки', acc: 'Айти-тусовку' },
   stream: { gen: 'Стрима', acc: 'Стрим' }, own: { gen: 'своего мира', acc: 'свой мир' },
 }
@@ -88,5 +90,5 @@ export function worldDefinitionOf(world: WorldId): WorldDefinition {
   const template = templateDocuments[world]
   if (!template) throw new Error('World template has not been loaded')
   const { id: _id, subscribers: _subscribers, lock: _lock, ...definition } = structuredClone(template)
-  return definition
+  return { ...definition, rules: definition.rules.map(rule => ({ ...rule, locked: rule.text === 'Без тем 18+ и травли по внешности' })) }
 }

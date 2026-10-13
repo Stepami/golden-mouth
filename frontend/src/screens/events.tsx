@@ -11,6 +11,9 @@ import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
 import { TELEGRAM_BOT_USERNAME } from '../app/telegramLinks'
 import { register } from '.'
+import { TextField } from '../ui/TextField'
+import { ChooseWorld as NewWorld } from './worldWizard'
+import { withWorldTemplates } from '../app/withWorldTemplates'
 
 function TgBot({ time, children }: { time: string; children: React.ReactNode }) {
   return (
@@ -26,7 +29,7 @@ function EventCard({ e, border }: { e: GameEvent; border: string }) {
   const nav = useNav()
   const [text, setText] = useState('')
   const [pick, setPick] = useState<string | null>(null)
-  const go = () => { track('event_answered', { kind: e.kind, own: !!text.trim() }); api.answerEvent(e.id, text || pick || ''); nav.replace(e.kind === 'hate' ? '05-2b_hate_result' : '03-5_stage', { answer: text || pick }) }
+  const go = () => { track('event_answered', { kind: e.kind, own: pick === null }); api.answerEvent(e.id, text || pick || ''); nav.replace(e.kind === 'hate' ? '05-2b_hate_result' : '03-5_stage', { answer: text || pick }) }
   return (
     <div className="screen">
       <ChannelHead />
@@ -36,8 +39,7 @@ function EventCard({ e, border }: { e: GameEvent; border: string }) {
           <div style={{ fontSize: 20, fontWeight: 800, margin: '8px 0 4px' }}>{e.title}</div>
           <div className="small muted" style={{ marginBottom: 10 }}>{e.text}</div>
           <div className="small" style={{ color: 'var(--lilac)', marginBottom: 8 }}>{e.note}</div>
-          {e.ideas.map(i => <Chip key={i} idea on={pick === i} onClick={() => { setPick(i); setText('') }}>{i}</Chip>)}
-          <div className="card" style={{ background: '#20202B', marginTop: 4 }}><input value={text} onChange={x => { setText(x.target.value); setPick(null) }} placeholder={e.kind === 'hate' ? 'Ответить своими словами · ×1,3' : 'Написать пост своими словами · ×1,3'} maxLength={500} /></div>
+          <TextField label="Ответ на событие" value={text} fromIdea={pick !== null} onChange={(value, fromIdea) => { setText(value); setPick(fromIdea ? value : null) }} ideas={e.ideas} maxLength={500} />
           <div className="small muted" style={{ marginTop: 10 }}>{e.reward}</div>
         </Card>
       </div>
@@ -137,21 +139,6 @@ function StatsCard() {
   )
 }
 
-function NewWorld() {
-  const nav = useNav()
-  return (
-    <div className="screen no-tab" style={{ background: 'radial-gradient(circle at 50% 35%,#24344A,#0E0E13 70%)' }}>
-      <div style={{ padding: '60px 26px', textAlign: 'center' }}>
-        <span className="badge">10 000 ПОДПИСЧИКОВ</span><div style={{ fontSize: 70, margin: '20px 0 8px' }}>🌸</div>
-        <div style={{ fontSize: 28, fontWeight: 900 }}>Открыта новая линия: Академия</div><div className="muted" style={{ margin: '8px 0 22px' }}>Аниме-школа: клубы, соперницы, фестиваль. Новые звёзды и события</div>
-        <Card style={{ textAlign: 'left', marginBottom: 10 }}>🎤 Канал тот же: все 10 000 подписчиков с тобой, Сцена никуда не делась</Card>
-        <Card style={{ textAlign: 'left', marginBottom: 10 }}>🌸 Новые звёзды и события Академии приходят в твою ленту рядом со Сценой</Card>
-        <Card style={{ textAlign: 'left' }}>🃏 В коллекции 12 новых слотов</Card>
-      </div>
-      <BottomCTA second="Позже" onSecond={() => nav.replace('03-5_stage')} main="Заглянуть в Академию" onMain={() => nav.replace('03-3_feed')} />
-    </div>
-  )
-}
 
 register({
   '05-0_event_collab': { component: Collab, title: 'Событие: коллаб' },
@@ -162,5 +149,5 @@ register({
   '05-3b_while_away': { component: WhileAway, title: 'Пока тебя не было' },
   '05-4_new_star': { component: NewStar, title: 'Новая звезда' },
   '05-6_stats_card': { component: StatsCard, title: 'Карточка статов' },
-  '05-7_new_world': { component: NewWorld, title: 'Новая линия мира' },
+  '05-7_new_world': { component: withWorldTemplates(NewWorld), title: 'Новая линия мира' },
 }, { '05-0_event_collab': 0, '05-2_event': 0, '05-4_new_star': 0 })

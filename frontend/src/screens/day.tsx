@@ -1,5 +1,6 @@
+import { ExpandableText } from '../ui'
 import { contentOf, worldOf } from '../api/worldContent'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import { dm as dmMock, friends as friendsMock } from '../api/mock'
 import type { ChannelPost, DmMessage, Drama, FeedItem } from '../api/types'
@@ -9,8 +10,10 @@ import { runtimeConfig } from '../app/runtimeConfig'
 import { SkillHelp } from '../ui/SkillHelp'
 import { usePlayer, useStore } from '../app/store'
 import { Avatar, Bubble, Button, Card, Chip, Gift, Segmented, SkillBar, Sheet, TopBar, fmt, short } from '../ui'
+import { beginOwnWorld } from '../app/worldDraft'
 import { ChannelHead, Home } from './onboarding'
 import { register } from '.'
+import { TextField } from '../ui/TextField'
 
 const SKILL_NAMES = { brave: 'смелость', humor: 'юмор', topic: 'в тему' } as const
 
@@ -30,7 +33,7 @@ function Dm() {
   const [text, setText] = useState('')
   const [memory, setMemory] = useState<string[]>(d.memory)
   const [showMem, setShowMem] = useState(false)
-  const closed = p.energy <= 0
+  const closed = p.postsLeft <= 0
   const send = async (t: string) => {
     if (!t.trim() || closed || left <= 0) return
     setMsgs(m => [...m, { from: 'me', text: t }]); setText('')
@@ -46,10 +49,10 @@ function Dm() {
           <div className="small muted" style={{ marginTop: 2 }}>На +3 её карточка попадёт в коллекцию</div>
           <button onClick={() => setShowMem(true)} className="small" style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--lilac)' }}>Мира помнит: {memory.join(', ')} ›</button>
         </Card>
-        {msgs.map((m, i) => <div key={i} style={{ position: 'relative' }}><Bubble me={m.from === 'me'}>{m.text}</Bubble>{m.from === 'star' && <button onClick={() => nav.push('06-1_report', { text: m.text })} aria-label="Пожаловаться" style={{ position: 'absolute', right: 0, top: 6, background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>}</div>)}
+        {msgs.map((m, i) => <div key={i} style={{ position: 'relative' }}><Bubble me={m.from === 'me'}>{m.text}</Bubble></div>)}
         {closed ? <Card style={{ marginTop: 10, textAlign: 'center' }}><span className="muted small">Мира ушла на репетицию. Ответит утром, в 9:00</span></Card> : <>
           <div className="small muted" style={{ margin: '10px 0 8px' }}>💡 ИДЕИ ИЛИ СВОИМИ СЛОВАМИ · бесплатно · Мира ответит ещё {left} {left === 1 ? 'раз' : 'раза'} сегодня</div>
-          {d.ideas.map(i => <Chip key={i} idea onClick={() => send(i.replace(/[«»]/g, ''))}>{i}</Chip>)}
+          <TextField label="Сообщение" value={text} onChange={setText} ideas={d.ideas} maxLength={300} />
         </>}
       </div>
       {!closed && <div className="bottom-cta" style={{ flexDirection: 'row', bottom: 78 }}>
@@ -84,12 +87,11 @@ function StarCard() {
 }
 
 // 03-3: карточка поста в общей ленте. Открывается с клавиатуры (Enter/Space) и ведёт
-// именно на свой postId; жалоба — отдельное действие, она не открывает пост.
+// только на свой postId с доступным ответом. Чужие карточки остаются в ленте.
 function FeedPostCard({ item }: { item: FeedItem }) {
   const nav = useNav()
   const p = usePlayer()
-  const star = contentOf(p.world).stars.find(profile => profile.avatarSeed === item.avatar)
-  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId }) : undefined
+  const open = item.postId && item.canReply === true && !item.starId ? () => nav.push('02-6_thread', { postId: item.postId }) : undefined
   return (
     <Card style={{ marginBottom: 12, position: 'relative' }}>
       <div
@@ -99,15 +101,14 @@ function FeedPostCard({ item }: { item: FeedItem }) {
         onKeyDown={open ? event => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open() } } : undefined}
         style={open ? { cursor: 'pointer' } : undefined}
       >
-        <div className="row"><Avatar seed={item.avatar!} world={p.world} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{star && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}</div></div></div>
+        <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{item.starId && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
         {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>{p.name}</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
-        <div style={{ marginTop: 8 }}>{item.text}</div>
+        <div style={{ marginTop: 12 }}><ExpandableText text={item.text} /></div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{item.reactions?.map(r => <span key={r.emoji} className="react">{r.emoji} {short(r.count)}</span>)}</div>
           {item.commentCount != null && item.views != null && <span className="small muted" style={{ whiteSpace: 'nowrap' }}>💬 {item.commentCount} · 👁 {short(item.views)}</span>}
         </div>
       </div>
-      <button onClick={event => { event.stopPropagation(); nav.push('06-1_report', { text: item.text }) }} aria-label="Пожаловаться" style={{ position: 'absolute', right: 14, top: 12, background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>
     </Card>
   )
 }
@@ -117,13 +118,17 @@ function Feed() {
   const nav = useNav()
   const p = usePlayer(); const w = worldOf(p.world)
   const [portion, setPortion] = useState(0)
-  const key = `feed:v2:${p.id}:${p.world}`
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshNote, setRefreshNote] = useState('')
+  const [newIds, setNewIds] = useState<string[]>([])
+  const seen = useRef(new Set<string>())
+  const key = `feed:${p.id}:${p.worldInstanceId ?? p.world}`
   const [items, setItems] = useState<FeedItem[]>(() => cachedApi<FeedItem[]>(key) ?? [])
   const [feedState, setFeedState] = useState<'loading' | 'ready' | 'error'>(() => cachedApi(key) ? 'ready' : 'loading')
   useEffect(() => {
     let alive = true
-    api.feed().then(found => { if (alive) { saveApiCache(key, found); setItems(found); setFeedState('ready') } })
-      .catch(() => { if (alive) setFeedState('error') })
+    api.feed(p.world).then(found => { if (alive) { const fresh = found.filter(item => item.postId && !seen.current.has(item.postId)); const ids = fresh.map(item => item.postId!); setNewIds(portion ? ids : []); setRefreshNote(portion ? ids.length ? `Новых постов: ${ids.length}` : 'Пока нет новых постов' : ''); seen.current = new Set(found.flatMap(item => item.postId ? [item.postId] : [])); saveApiCache(key, found); setItems(found); setFeedState('ready'); setRefreshing(false) } })
+      .catch(() => { if (alive) { setFeedState('error'); setRefreshing(false) } })
     return () => { alive = false }
   }, [key, p.world, portion])
   return (
@@ -132,11 +137,11 @@ function Feed() {
       <div className="pad">
         {items.map((f, i) => f.kind === 'news'
           ? <Card key={`news-${i}`} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ МИРА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
-          : <FeedPostCard key={f.postId ?? `post-${i}`} item={f} />)}
+          : <div className={newIds.includes(f.postId ?? "") ? "feed-arrival" : undefined} key={f.postId ?? `post-${i}`}><FeedPostCard item={f} /></div>)}
         {feedState === 'loading' && <Card>Загружаем ленту…</Card>}
         {feedState === 'error' && <Card>Не получилось обновить ленту. Попробуй ещё раз.</Card>}
         {feedState === 'ready' && items.length === 0 && <Card>В ленте пока нет постов.</Card>}
-        <Button secondary onClick={() => setPortion(value => value + 1)}>Ещё посты</Button>
+        <div role="status" className="small muted refresh-note">{refreshing ? "Ищем новые истории…" : refreshNote}</div><Button secondary disabled={refreshing} onClick={() => { setRefreshing(true); setRefreshNote(''); setPortion(value => value + 1) }}>{refreshing ? "Обновляем…" : "Обновить ленту"}</Button>
       </div>
     </div>
   )
@@ -199,7 +204,7 @@ function FriendChannel() {
 function Stage() {
   const nav = useNav(); const p = usePlayer()
   const [skillHelp, setSkillHelp] = useState(false)
-  const cacheKey = `channel:${p.id}:${p.world}`
+  const cacheKey = `channel:${p.id}:${p.worldInstanceId ?? p.world}`
   const [banner, setBanner] = useState(true)
   const [posts, setPosts] = useState<ChannelPost[]>(() => cachedApi<ChannelPost[]>(cacheKey) ?? [])
   const [load, setLoad] = useState<'loading' | 'ready' | 'error'>(() => cachedApi(cacheKey) ? 'ready' : 'loading')
@@ -236,7 +241,7 @@ function Stage() {
         {load === 'error' && <Card><div className="small">Не получилось загрузить канал.</div><Button style={{ marginTop: 12 }} onClick={() => setReloadToken(token => token + 1)}>Попробовать снова</Button></Card>}
         {load === 'ready' && posts.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
       </div>
-      <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.energy > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
+      <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
     </div>
   )
@@ -246,16 +251,20 @@ function Stage() {
 function Me() {
   const nav = useNav(); const p = usePlayer()
   const [skillHelp, setSkillHelp] = useState(false)
+  const { refresh } = useStore()
+  useEffect(() => { void refresh() }, [refresh])
   const DAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
   const today = p.streak.week.indexOf(false)
   return (
     <div className="screen">
       <div className="top" style={{ border: 'none' }}><b style={{ fontSize: 18 }}>Я</b><button className="pill" onClick={() => nav.push('05-8_settings')} style={{ border: 'none' }}>⚙ Настройки</button></div>
-      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b><div className="muted small">{worldOf(p.world).emoji} {worldOf(p.world).title} · типаж: {p.type}</div></div>
+      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b><div className="small muted profile-world-name">{worldOf(p.world).emoji} {worldOf(p.world).title}</div><button className="worlds-entry profile-worlds-entry" onClick={() => nav.push('01-3_world')}>Миры →</button></div>
       <div className="pad">
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          {[[`✍️ ${p.energy}`, 'постов осталось'], [`🎯 ${p.wants.filter(w => w.done).length}/${p.wants.length}`, 'желаний дня'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ flex: 1, padding: 10, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
+        <div className="profile-stats">
+          {[[`⚡ ${p.postsLeft}`, 'энергии'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
         </div>
+        <div className="profile-task-row"><div><b>🎯 Задания дня · {p.wants.filter(w => w.done).length}/{p.wants.length}</b><p className="small muted">{p.wants.find(w => !w.done)?.text ?? "Все задания выполнены"}</p></div><button className="text-link small" onClick={() => nav.push('02-1_compose')}>Открыть →</button></div><p className="small muted energy-help">Пост и ответ расходуют энергию. Новый запас — в 09:00 МСК.</p>
+        <Card style={{ marginBottom: 18 }}><b>{p.hitOwnWorldMilestone ? '✨ Свой мир открыт' : '✨ Создай свой мир'}</b><p className="small muted">{p.hitOwnWorldMilestone ? 'Доступ подтверждён. Можно придумать свою историю.' : 'Первый пост приглашённого друга или 500 подписчиков в одном мире.'}</p>{!p.hitOwnWorldMilestone && <><progress aria-label="Подписчики до открытия своего мира" value={Math.min(500, p.subs)} max={500} /><div className="small muted">Этот мир: {Math.min(500, p.subs)} / 500</div></>}<button className="text-link" onClick={() => { if (p.hitOwnWorldMilestone) { beginOwnWorld(p); nav.push('05-7b_own_world', { world: 'own' }) } else nav.push('04-3_invite') }}>{p.hitOwnWorldMilestone ? 'Создать свой мир →' : 'Пригласить друга →'}</button></Card>
         <Card style={{ marginBottom: 10 }}>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Серия {p.streak.days} дня</b><span className="small" style={{ color: 'var(--gift)' }}>{p.streak.nextReward}</span></div>
           <div style={{ display: 'flex', gap: 6 }}>{DAYS.map((d, i) => <div key={d} style={{ flex: 1, textAlign: 'center' }}><div style={{ height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, ...(p.streak.week[i] ? { background: 'var(--grad)' } : i === today ? { border: '2px dashed var(--accent)' } : { background: '#20202B' }) }}>{p.streak.week[i] ? '🔥' : i === today ? '?' : ''}</div><div className="small muted" style={{ marginTop: 3 }}>{d}</div></div>)}</div>
@@ -294,7 +303,7 @@ function Settings() {
   const save = async (value: Partial<typeof p.settings>) => {
     if (saving) return
     setSaving(true); setError('')
-    try { const energy = await api.settings(value); patch({ settings: { ...p.settings, ...value }, ...(energy !== undefined ? { energy } : {}) }); setPanel(null); return true }
+    try { await api.settings(value); patch({ settings: { ...p.settings, ...value } }); setPanel(null); return true }
     catch { setError('Не получилось сохранить. Попробуй ещё раз.'); return false }
     finally { setSaving(false) }
   }
@@ -316,7 +325,7 @@ function Settings() {
         </Card>
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
           {row('🎙 Голос канала', `${p.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`, false, () => openPanel('address'))}
-          {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📜 Как устроен мир', '›', false, () => nav.push('05-11_world_rules'))}{row('🔒 Мои данные и правила', 'скоро ›', false, () => openPanel('data'))}{row('✉ Поддержка', 'скоро ›', true, () => openPanel('support'))}
+          {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📜 Как устроен мир', '›', false, () => nav.push('05-11_world_rules'))}{row('📋 Правила публикаций', '›', false, () => nav.push('06-4_rules'))}{row('🔒 Мои данные и правила', 'скоро ›', false, () => openPanel('data'))}{row('✉ Поддержка', 'скоро ›', true, () => openPanel('support'))}
         </Card>
         <button onClick={() => setDel(true)} className="card" style={{ width: '100%', textAlign: 'center', color: 'var(--accent)', background: 'transparent', border: '1px solid #FF6B8B55' }}>Удалить аккаунт и всё</button>
         <div className="small muted" style={{ textAlign: 'center', marginTop: 8 }}>Удалим канал, переписку и коллекцию. Вернуть будет нельзя</div>

@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
-using Reki.Application.Worlds;
 using Reki.Contracts.Events;
 using Reki.Contracts.Player;
 using Reki.Contracts.Social;
@@ -87,7 +86,7 @@ public sealed partial class ApiMapper
         DemoPosts = source.DemoPosts,
         Rules = source.Rules.Select(rule => new WorldRuleResponse(rule.Text, rule.Locked)).ToArray(),
         Stars = source.Stars.Select(star => new WorldStarResponse(
-            star.Id.Value, star.Name, star.Role, Convert.ToInt32(star.Trait), star.About, star.Voice, star.AvatarSeed, star.Relation)).ToArray(),
+            star.Id.Value, star.Name, star.Role, Convert.ToInt32(star.Trait), star.About, star.Voice, star.AvatarSeed, star.Relation) { AppearanceProfile = star.AppearanceProfile, AgeBand = star.AgeBand }).ToArray(),
         Name = source.Player.Name,
         Role = source.Player.Role,
         Avatar = source.Player.Avatar,
@@ -107,7 +106,7 @@ public sealed partial class ApiMapper
         PostIdeas = source.PostIdeas,
         DemoPosts = source.DemoPosts,
         Rules = [.. source.Rules.Where(rule => rule.Text != "Без тем 18+ и травли по внешности")
-            .Select(rule => new WorldRule(rule.Text, rule.Locked)), new WorldRule("Без тем 18+ и травли по внешности", true)],
+            .Select(rule => new WorldRule(rule.Text, false)), new WorldRule("Без тем 18+ и травли по внешности", true)],
         Stars = source.Stars.Select(star => new WorldStar(
                     StarId.From(star.Id),
                     star.Name,
@@ -118,7 +117,7 @@ public sealed partial class ApiMapper
                     star.AvatarSeed,
                     0,
                     0,
-                    DateTimeOffset.UnixEpoch)).ToArray(),
+                    DateTimeOffset.UnixEpoch) { AppearanceProfile = star.AppearanceProfile, AgeBand = star.AgeBand }).ToArray(),
         Interface = new()
         {
             Title = source.Title,
@@ -145,17 +144,6 @@ public sealed partial class ApiMapper
             Achievements = source.Achievements.Select(item => new AchievementProgress(item.Id, item.Emoji, item.Title, false)).ToArray(),
         },
     };
-
-    public UpdateWorldCommand MapWorldUpdateRequest(UpdateWorldRequest source, Reki.Domain.Worlds.WorldId worldId)
-    {
-        return new UpdateWorldCommand(
-            source.Title,
-            source.Description,
-            source.Rules?.Select(MapWorldRule).ToArray(),
-            source.Drama is { } drama ? MapDrama(drama) : null,
-            source.Voice,
-            worldId);
-    }
 
     public IReadOnlyDictionary<string, string> SanitizeProperties(
         IReadOnlyDictionary<string, JsonElement>? properties)

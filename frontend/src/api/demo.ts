@@ -1,28 +1,22 @@
-import type { ChannelPost, Player, Post, WorldId } from './types'
-import { contentOf, wantsFor } from './worldContent'
+import type { ChannelPost, CommentT, FeedItem, Player, Post, WorldId } from './types'
+import { contentOf, wantsFor, worlds } from './worldContent'
 import { player as examplePlayer } from './mock'
 
 const PLAYER_KEY = 'reki:demo-player:v2'
+const comments = new Map<string, CommentT[]>()
+const posts = new Map<string, Post>()
 function read<T>(key: string): T | undefined {
   try { return JSON.parse(localStorage.getItem(key) ?? 'null') ?? undefined } catch { return undefined }
 }
 function save(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* Демо работает и без хранилища браузера. */ }
 }
-function readSavedPlayer(): Player | undefined {
-  const player = read<Player & { postsLeft?: number; postsCap?: number }>(PLAYER_KEY)
-  if (!player) return undefined
-  player.energy ??= player.postsLeft ?? examplePlayer.energy
-  delete player.postsLeft
-  delete player.postsCap
-  return player
-}
-let currentPlayer = readSavedPlayer()
+let currentPlayer = read<Player>(PLAYER_KEY)
 export function demoPlayer(): Player {
   if (currentPlayer) return structuredClone(currentPlayer)
   const query = new URLSearchParams(location.search)
   if (query.has('screen') || query.has('gallery')) {
-    const world = (query.get('world') ?? 'stage') as WorldId
+    const world = (query.get('world') ?? worlds[0]?.id ?? 'it') as WorldId
     const profile = contentOf(world)
     return { ...structuredClone(examplePlayer), world, name: profile.name, handle: profile.handle, role: profile.roles[0], bio: '', type: 'автор своего канала', wants: wantsFor(world), voice: profile.voices[0], drama: profile.drama }
   }
@@ -41,10 +35,29 @@ export function resetDemoPlayer(playerId = currentPlayer?.id) {
       }
     } catch { /* optional storage */ }
   }
+  comments.clear()
   currentPlayer = undefined
   try { localStorage.removeItem(PLAYER_KEY) } catch { /* optional storage */ }
 }
 export const demoOwnPosts = (playerId: string): Post[] => read<Post[]>(`reki:demo-posts:${playerId}`) ?? []
 export const demoChannelPosts = (playerId: string): ChannelPost[] => demoOwnPosts(playerId).map(post => ({ postId: post.id, text: post.text,
-  createdAtUtc: post.at ?? '', views: post.views, reactions: post.reactions, commentCount: post.comments.length }))
+  createdAtUtc: post.at ?? '', views: post.views, reactions: post.reactions, commentCount: withDemoComments(post, playerId).comments.length }))
 export function saveDemoPost(playerId: string, post: Post) { save(`reki:demo-posts:${playerId}`, [post, ...demoOwnPosts(playerId).filter(item => item.id !== post.id)]) }
+export const demoPost = (id: string): Post | undefined => {
+  return posts.has(id) ? structuredClone(posts.get(id)!) : undefined
+}
+
+export function shuffle<T>(items: T[]): T[] {
+  const copy = [...items]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1)); [copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+const commentKey = (postId: string, playerId: string) => `reki:demo-comments:${playerId}:${postId}`
+export function withDemoComments(post: Post, playerId: string): Post {
+  const key = commentKey(post.id, playerId)
+  const saved = comments.get(key) ?? read<CommentT[]>(key) ?? []
+  comments.set(key, saved)
+  return { ...post, comments: [...post.comments, ...saved] }
+}

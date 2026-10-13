@@ -6,7 +6,7 @@ namespace Reki.Contracts.Worlds;
 public sealed record CreateWorldRequest
 {
     [Required]
-    [RegularExpression("^(stage|academy|it|stream|own)$")]
+    [RegularExpression("^(stage|academy|it|stream|own|evening|sorcerers|houses)$")]
     public required string BalanceKey { get; init; }
 
     [Required]

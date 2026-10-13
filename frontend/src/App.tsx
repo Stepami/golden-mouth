@@ -7,8 +7,10 @@ import { setScreen } from './app/log'
 import { TelegramLaunch } from './app/TelegramLaunch'
 import { inTelegram, syncBackButton } from './telegram'
 import { api } from './api/client'
+import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
 import { runtimeConfig } from './app/runtimeConfig'
-import { AvatarWorld } from './ui/avatar'
+import { AvatarWorld, AvatarPeople } from './ui/avatar'
+import { worldDocumentOf } from './api/worldContent'
 import type { WorldId } from './api/types'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
@@ -52,25 +54,31 @@ function Shell() {
     return () => { current = false }
   }, [explicitStart, playerState, top.id])
   const back = useCallback(() => nav.back(), [nav])
-  useEffect(() => syncBackButton(stack.length > 1, back), [stack.length, back])
+  useEffect(() => syncBackButton(stack.length > 1 && top.id !== '02-6_thread', back), [stack.length, top.id, back])
 
   const Screen = SCREENS[top.id]?.component
   const resolvingExistingPlayer = playerState === 'ready' && !explicitStart && top.id === '01-1_invite'
   if (!Screen || playerState === 'loading' || resolvingExistingPlayer) return <div className="app"><div className="screen"><div className="pad" role="status">Загружаем твою игру…</div></div></div>
   if (playerState === 'failed') return <div className="app"><div className="screen"><div className="pad"><p>Не получилось загрузить игру.</p><button className="btn" onClick={() => location.reload()}>Попробовать снова</button></div></div></div>
+  const people: React.ContextType<typeof AvatarPeople> = {}
+  if (player) {
+    people[player.handle] = { address: player.address, ageBand: player.ageBand }
+    people[player.id] = people[player.handle]
+    try { for (const star of worldDocumentOf(player.world).stars) { const profile = { address: star.appearanceProfile === 'masculine' ? 'he' as const : star.appearanceProfile === 'feminine' ? 'she' as const : 'nick' as const, ageBand: star.ageBand }; people[star.id] = profile; people[star.avatarSeed] = profile } } catch { /* templates may still be loading */ }
+  }
   const tab = TAB_OF[top.id]
   return (
     <NavContext.Provider value={nav}>
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'stage'}>
-      <div className="app">
-        <Screen />
+      <AvatarPeople.Provider value={people}><div className="app">
+        <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration />
         {tab !== undefined && (
           <nav className="tabbar">
             {TABS.map((t, i) => (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button>)}
           </nav>
         )}
       </div>
-      </AvatarWorld.Provider>
+      </AvatarPeople.Provider></AvatarWorld.Provider>
     </NavContext.Provider>
   )
 }

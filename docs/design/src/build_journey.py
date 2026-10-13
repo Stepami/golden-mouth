@@ -318,7 +318,15 @@ exec(open(os.path.join(D, 'journey_v16.py'), encoding='utf-8').read())  # #87
 
 exec(open(os.path.join(D, 'journey_v17.py'), encoding='utf-8').read())  # #87
 
-exec(open(os.path.join(D, 'journey_v18.py'), encoding='utf-8').read())  # #148
+exec(open(os.path.join(D, 'journey_v18.py'), encoding='utf-8').read())  # 0.3.0 worlds and input
+
+exec(open(os.path.join(D, 'journey_v19.py'), encoding='utf-8').read())  # DEV quick-world prototype
+
+exec(open(os.path.join(D, 'journey_v20.py'), encoding='utf-8').read())  # Compact DEV frontend
+exec(open(os.path.join(D, 'journey_v21.py'), encoding='utf-8').read())  # Follow-up DEV review
+exec(open(os.path.join(D, 'journey_v22.py'), encoding='utf-8').read())  # Story art and clearer actions
+
+exec(open(os.path.join(D, 'journey_v23.py'), encoding='utf-8').read())  # World navigation and unlock
 
 CH = os.environ.get('CHROME_BIN') or shutil.which('google-chrome') or shutil.which('chrome')
 if not CH and os.name == 'nt':

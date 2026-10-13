@@ -12,4 +12,9 @@ public sealed record WorldStar(
     string AvatarSeed,
     int Relation,
     int RelationGainedInPeriod,
-    DateTimeOffset RelationPeriodStartedAtUtc);
+    DateTimeOffset RelationPeriodStartedAtUtc)
+{
+    public string AppearanceProfile { get; init; } = "neutral";
+
+    public string AgeBand { get; init; } = string.Empty;
+}

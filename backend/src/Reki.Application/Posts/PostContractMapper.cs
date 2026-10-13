@@ -12,7 +12,7 @@ public static class PostContractMapper
         new(
             publication.Id,
             publication.Status,
-            publication.Result is null ? null : MapResult(publication.Result, world));
+            publication.Result is null ? null : MapResult(publication.Result, world)) { Failure = publication.Failure };
 
     public static FeedItemResponse MapFeedItem(
         GamePost post,
@@ -86,7 +86,11 @@ public static class PostContractMapper
             author.Id,
             author.Role,
             post.GetBranch(comment.Id).Count - 1,
-            reactions);
+            reactions)
+        {
+            AppearanceProfile = world.FindStar(comment.AuthorId)?.AppearanceProfile ?? "neutral",
+            AgeBand = world.FindStar(comment.AuthorId)?.AgeBand ?? string.Empty,
+        };
     }
 
     private static CommentReactionResponse MapReaction(CommentReaction reaction, World world, PlayerId playerId)

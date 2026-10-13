@@ -45,15 +45,14 @@ public sealed class WorldsController(
         return TypedResults.Ok(mapper.MapWorld(world));
     }
 
-    [HttpPatch("{worldId}", Name = "UpdateWorld")]
+    [HttpPut("{worldId}", Name = "UpdateWorld")]
     [ActionName("UpdateWorld")]
     public async Task<Ok> UpdateWorldAsync(
-        UpdateWorldRequest request,
+        CreateWorldRequest request,
         string worldId,
         CancellationToken cancellationToken)
     {
-        var command = mapper.MapWorldUpdateRequest(
-            request, WorldId.From(worldId));
+        var command = new UpdateWorldCommand(WorldId.From(worldId), mapper.MapWorldDefinition(request));
         await sender.Send(command, cancellationToken);
         return TypedResults.Ok();
     }

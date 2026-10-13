@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Common.Safety;
+using Reki.Contracts.Posts;
 
 namespace Reki.Api.Common.Errors;
 
@@ -23,6 +25,7 @@ internal sealed partial class ApiExceptionHandler(
             RequestConflictException or
             MongoWriteException { WriteError.Category: ServerErrorCategory.DuplicateKey } or
             ContentRejectedException or
+            UnsafeGeneratedContentException or
             CrisisDetectedException or
             AiServiceUnavailableException)
         {
@@ -64,7 +67,7 @@ internal sealed partial class ApiExceptionHandler(
                 Type = "urn:reki:problem:request-conflict",
                 Detail = "The request conflicts with the current resource state.",
             },
-            ContentRejectedException => new ProblemDetails
+            ContentRejectedException or UnsafeGeneratedContentException => new ProblemDetails
             {
                 Status = StatusCodes.Status422UnprocessableEntity,
                 Title = "Content rejected",
@@ -96,6 +99,15 @@ internal sealed partial class ApiExceptionHandler(
             },
         };
 
+        problemDetails.Extensions["failure"] = exception switch
+        {
+            ContentRejectedException rejected => new PublicationFailure("content_rejected", rejected.Category, PublicationSafetyPolicy.Version),
+            UnsafeGeneratedContentException rejected => new PublicationFailure("unsafe_generated_content", rejected.Category, PublicationSafetyPolicy.Version),
+            CrisisDetectedException => new PublicationFailure("crisis", "crisis", PublicationSafetyPolicy.Version),
+            AiServiceUnavailableException => new PublicationFailure("technical_failure", "uncertain", PublicationSafetyPolicy.Version),
+            RequestConflictException conflict when conflict.Message.Contains("limit", StringComparison.OrdinalIgnoreCase) => new PublicationFailure("limit_reached", "limit", PublicationSafetyPolicy.Version),
+            _ => null,
+        };
         problemDetails.Instance = instance;
         return problemDetails;
     }

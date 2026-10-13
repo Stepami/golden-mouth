@@ -68,6 +68,7 @@ public interface IGameStore
     ValueTask MarkPublicationFailedAsync(
         string id,
         DateTime expiresAtUtc,
+        Reki.Contracts.Posts.PublicationFailure failure,
         CancellationToken cancellationToken);
 
     /// <summary>

@@ -41,8 +41,11 @@
     "stage":   { "difficulty": 1, "k": 1.0,  "flop": 0.10, "viral_x": 1.0, "hate_from": 5000, "hate_every_days": [4, 5], "unlock": null },
     "academy": { "difficulty": 2, "k": 1.1,  "flop": 0.15, "viral_x": 1.2, "hate_from": 3000, "hate_every_days": [3, 4], "unlock": null },
     "it":      { "difficulty": 3, "k": 1.25, "flop": 0.20, "viral_x": 1.4, "hate_from": 1000, "hate_every_days": [2, 3], "unlock": null },
-    "stream":  { "difficulty": 2, "k": 1.1,  "flop": 0.15, "viral_x": 1.2, "hate_from": 3000, "hate_every_days": [3, 4], "unlock": { "skill": "humor", "level": 4 } },
-    "own":     { "difficulty": 2, "k": 1.0,  "flop": 0.15, "viral_x": 1.0, "hate_from": 5000, "hate_every_days": [3, 4], "unlock": { "subs": 10000, "or_first_friend": true, "or_plus": true } }
+    "stream":  { "difficulty": 2, "k": 1.1,  "flop": 0.15, "viral_x": 1.2, "hate_from": 3000, "hate_every_days": [3, 4], "unlock": null },
+    "evening":   { "difficulty": 1, "k": 1.0,  "flop": 0.10, "viral_x": 1.0, "hate_from": 5000, "hate_every_days": [4, 5], "unlock": null },
+    "sorcerers": { "difficulty": 2, "k": 1.1,  "flop": 0.15, "viral_x": 1.2, "hate_from": 3000, "hate_every_days": [3, 4], "unlock": null },
+    "houses":  { "difficulty": 2, "k": 1.1,  "flop": 0.15, "viral_x": 1.2, "hate_from": 3000, "hate_every_days": [3, 4], "unlock": null },
+    "own":     { "difficulty": 2, "k": 1.0,  "flop": 0.15, "viral_x": 1.0, "hate_from": 5000, "hate_every_days": [3, 4], "unlock": { "subs": 500, "or_first_friend": true } }
   },
   "drama": { "soft": { "hate_x": 0.5 }, "mid": { "hate_x": 1.0 }, "hot": { "hate_x": 1.3 }, "off": { "hate_x": 0 } },
   "challenge": { "days": 3, "active_max": 1, "min_posts": 5, "score": "0.7 * avg(post_quality) + 0.3 * avg(reach / own_median_reach)" },

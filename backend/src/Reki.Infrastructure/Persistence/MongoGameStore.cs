@@ -207,6 +207,7 @@ internal sealed class MongoGameStore : IGameStore
                 if (inviterUses < inviteBonusMaxPerDay)
                 {
                     var inviterUpdate = Builders<PlayerProfile>.Update
+                        .Set(item => item.HitOwnWorldMilestone, true)
                         .Inc(item => item.Energy, updatedInvite.BonusAmount)
                         .Inc(item => item.Version, 1);
                     await _players.UpdateOneAsync(
@@ -299,10 +300,12 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask MarkPublicationFailedAsync(
         string id,
         DateTime expiresAtUtc,
+        PublicationFailure failure,
         CancellationToken cancellationToken)
     {
         var update = Builders<Publication>.Update
             .Set(item => item.Status, PublicationStatus.Failed)
+            .Set(item => item.Failure, failure)
             .Set(item => item.Text, string.Empty)
             .Set(item => item.Parts, [])
             .Set(item => item.ExpiresAtUtc, expiresAtUtc);

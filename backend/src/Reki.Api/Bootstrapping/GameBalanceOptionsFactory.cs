@@ -122,6 +122,7 @@ internal sealed class GameBalanceOptionsFactory(
                 commentCost),
             worlds,
             postCost,
+            configuration.GetValue<int>("worlds:own:unlock:subs"),
             configuration.GetValue<double>("feed:open_probability"));
     }
 }

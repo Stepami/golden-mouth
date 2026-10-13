@@ -1,41 +1,16 @@
 import { useEffect, useState } from 'react'
 import { closeMiniApp } from '@telegram-apps/sdk-react'
 import { api } from '../api/client'
-import { firstPost } from '../api/mock'
 import { useNav } from '../app/nav'
-import { Avatar, Bubble, Button, Comment, TopBar } from '../ui'
+import { Avatar, Bubble, Button, TopBar } from '../ui'
 import { inTelegram } from '../telegram'
 import { track } from '../app/log'
 import { register } from '.'
 
-const REASONS = ['про внешность или тело', 'оскорбление', 'пошлое', 'что-то другое']
-
-// 06-1: жалоба на любую реплику; скрыта сразу, разбор за сутки
+// Report submission is hidden until backend processing is available.
 function Report() {
   const nav = useNav()
-  const [reason, setReason] = useState<string | null>(null)
-  const [sent, setSent] = useState(false)
-  const target = firstPost.comments[3]
-  const id = (nav.params.id as string) ?? target.id
-  const send = async () => { if (!reason) return; track('report', { reason: REASONS.indexOf(reason) }); await api.report(id, reason); setSent(true); setTimeout(nav.back, 900) }
-  return (
-    <div className="screen no-tab">
-      <TopBar onBack={nav.back} title="Реакции" />
-      <div className="pad" style={{ filter: 'blur(1px)', opacity: .5 }}>
-        {firstPost.comments.slice(0, 1).map(c => <Comment key={c.id} seed={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} />)}
-        <Comment seed="critic" name="stan_critic" handle="" text={<span className="muted">[реплика скрыта]</span>} />
-      </div>
-      <div className="sheet-bg"><div className="sheet">
-        <div className="row" style={{ marginBottom: 4 }}><div style={{ fontSize: 20, fontWeight: 800, flex: 1 }}>Что не так?</div><button onClick={nav.back} style={{ fontSize: 22, color: 'var(--muted2)', background: 'none', border: 'none' }}>✕</button></div>
-        <div className="small muted" style={{ marginBottom: 12 }}>{sent ? 'Спасибо. Разберёмся в течение суток' : 'Реплика уже скрыта. Мы посмотрим в течение суток'}</div>
-        <div className="card" style={{ padding: '2px 14px' }}>
-          {REASONS.map(r => <div key={r} className="why" onClick={() => setReason(r)} style={{ color: reason === r ? 'var(--accent)' : undefined }}><span>{r}</span><span className="muted">{reason === r ? '✓' : '›'}</span></div>)}
-        </div>
-        <Button style={{ marginTop: 16 }} disabled={!reason || sent} onClick={send}>Отправить</Button>
-        <button onClick={nav.back} style={{ display: 'block', margin: '10px auto 0', color: 'var(--muted2)', background: 'none', border: 'none' }}>Отмена</button>
-      </div></div>
-    </div>
-  )
+  return <div className="screen no-tab"><TopBar title="Реакции" onBack={nav.back} /><div className="pad"><p>Этот раздел пока недоступен.</p><Button onClick={nav.back}>Назад</Button></div></div>
 }
 
 /** Кризисный ответ: игра на паузе, пишет не звезда. 14–17: телефон доверия; 18+: совет обратиться к психологу.
@@ -65,7 +40,15 @@ function Crisis({ adult }: { adult: boolean }) {
   )
 }
 
+function PublicationRules() {
+  const nav = useNav()
+  return <div className="screen no-tab"><TopBar onBack={nav.back} title="Правила публикаций" /><div className="pad">
+    <h1>Твоя история — с уважением</h1><div className="publication-guidelines"><p>✨ Пиши о находках, чувствах и приключениях.</p><p>🤝 Спорь с идеями, береги людей.</p><p>🌿 Выбирай детали, подходящие твоему возрасту.</p></div><p className="small muted">Если тексту понадобится правка, подскажем. Черновик сохранится, энергия останется.</p>
+    <Button onClick={nav.back}>Вернуться</Button>
+  </div></div>
+}
 register({
+  '06-4_rules': { component: PublicationRules, title: 'Правила публикаций' },
   '06-1_report': { component: Report, title: 'Жалоба на реплику' },
   '06-2_crisis': { component: () => <Crisis adult={false} />, title: 'Кризис 14–17' },
   '06-3_crisis_adult': { component: () => <Crisis adult />, title: 'Кризис 18+' },

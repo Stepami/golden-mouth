@@ -1,5 +1,4 @@
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Common.Safety;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
@@ -19,6 +18,8 @@ public sealed record Publication(
     DateTime? ExpiresAtUtc,
     WorldId WorldId)
 {
+    public PublicationFailure? Failure { get; init; }
+
     public GeneratedPostTurn AssembleTurn()
     {
         var comments = Parts
@@ -35,12 +36,6 @@ public sealed record Publication(
         }
 
         var comment = comments[0];
-        if (!ContentSafetyPolicy.IsOutputAllowed(comment.Comment) ||
-            !ContentSafetyPolicy.IsOutputAllowed(comment.Hook))
-        {
-            throw new AiServiceUnavailableException("The model output did not pass the safety policy.");
-        }
-
         return comment with { Reaction = reactions.FirstOrDefault() ?? "🔥" };
     }
 }

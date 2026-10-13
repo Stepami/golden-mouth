@@ -13,6 +13,7 @@ namespace Reki.Infrastructure.Serialization;
 
 [JsonSerializable(typeof(Reki.Infrastructure.Jobs.StarFeedRequest))]
 [JsonSerializable(typeof(Reki.Infrastructure.Jobs.StarFeedHistoryPost[]))]
+[JsonSerializable(typeof(PublicationFailure))]
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]
 [JsonSerializable(typeof(IReadOnlyList<LiveEvent>))]
@@ -53,7 +54,6 @@ namespace Reki.Infrastructure.Serialization;
 [JsonSerializable(typeof(WorldResponse))]
 [JsonSerializable(typeof(IReadOnlyList<WorldResponse>))]
 [JsonSerializable(typeof(CreateWorldRequest))]
-[JsonSerializable(typeof(UpdateWorldRequest))]
 [JsonSerializable(typeof(PlusInterestRequest))]
 [JsonSerializable(typeof(PlusInterestResponse))]
 [JsonSerializable(typeof(ViewsLiveEvent))]

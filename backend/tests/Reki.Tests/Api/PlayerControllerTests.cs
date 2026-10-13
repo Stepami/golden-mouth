@@ -297,6 +297,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(onboarded.Energy).IsEqualTo(10);
         await Assert.That(pendingInvite.Bonus).IsEqualTo(5);
         await Assert.That(inviterAfterOnboarding.Energy).IsEqualTo(10);
+        await Assert.That(inviterAfterOnboarding.HitOwnWorldMilestone).IsFalse();
+        await Assert.That(inviter.HitOwnWorldMilestone).IsTrue();
         await Assert.That(inviter.Energy).IsEqualTo(15);
         await Assert.That(friend.Energy).IsEqualTo(14);
         await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
@@ -647,7 +649,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Task.WhenAll(
             api.Worlds.UpdateWorldAsync(
                 await GetWorldIdAsync(api),
-                new Contracts.Worlds.UpdateWorldRequest { Drama = Drama.Off },
+                DefinitionOf((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single()) with { Drama = Drama.Off },
                 CancellationToken.None),
             api.Player.UpdateSettingsAsync(
                 new UpdateSettingsRequest { Address = Address.She },

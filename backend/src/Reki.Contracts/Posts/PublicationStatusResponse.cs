@@ -4,4 +4,7 @@ namespace Reki.Contracts.Posts;
 public sealed record PublicationStatusResponse(
     string PublicationId,
     PublicationStatus Status,
-    PostResultResponse? Result);
+    PostResultResponse? Result)
+{
+    public PublicationFailure? Failure { get; init; }
+}

@@ -150,7 +150,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
         var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(11L);
+        await Assert.That(historyCount).IsEqualTo(13L);
     }
 
     [Test]
@@ -727,6 +727,66 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         }
     }
 
+    [Test]
+    public async Task RefreshCatalog_PreservesExistingDataAsync()
+    {
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        await new SeedWorldTemplates().UpAsync(database, session, CancellationToken.None);
+        var templates = database.GetCollection<BsonDocument>("world_templates");
+        var it = await templates.Find(new BsonDocument("_id", "it")).SingleAsync();
+        var existing = Common.TestGameData.CreateWorld().ToBsonDocument();
+        await database.GetCollection<BsonDocument>("worlds").InsertOneAsync(existing);
+        session.StartTransaction();
+        await new RefreshWorldPresets().UpAsync(database, session, CancellationToken.None);
+        await session.CommitTransactionAsync();
+        var catalog = await templates.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        await Assert.That(catalog.Select(item => item["_id"].AsString)).IsEquivalentTo(["it", "evening", "sorcerers", "houses"]);
+        await Assert.That(catalog.Single(item => item["_id"] == "it")).IsEqualTo(it);
+        await Assert.That(await database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(existing);
+    }
+
+    [Test]
+    public async Task Migrate_CurrentCatalog_EngineDoesNotApplyTwiceAsync()
+    {
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        var migrator = CreateMigrator(mongo.MongoClient, database.DatabaseNamespace.DatabaseName);
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
+        var templates = database.GetCollection<BsonDocument>("world_templates");
+        var before = await templates.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
+        var after = await templates.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        await Assert.That(after.Count).IsEqualTo(4);
+        await Assert.That(after.OrderBy(item => item["_id"].AsString, StringComparer.Ordinal).Select(item => item.ToJson()))
+            .IsEquivalentTo(before.OrderBy(item => item["_id"].AsString, StringComparer.Ordinal).Select(item => item.ToJson()));
+    }
+
+    [Test]
+    public async Task UnlockOwnWorld_UsesOneWorldOrReceivedInviterBonusAsync()
+    {
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        var players = database.GetCollection<BsonDocument>("players");
+        await players.InsertManyAsync(new[] { "threshold", "referral", "split", "locked" }.Select(id => new BsonDocument("_id", id)));
+        await database.GetCollection<BsonDocument>("worlds").InsertManyAsync(new[]
+        {
+            new BsonDocument { ["_id"] = "first", ["Player"] = new BsonDocument { ["PlayerId"] = "threshold", ["Subscribers"] = 500 } },
+            new BsonDocument { ["_id"] = "second", ["Player"] = new BsonDocument { ["PlayerId"] = "split", ["Subscribers"] = 250 } },
+            new BsonDocument { ["_id"] = "third", ["Player"] = new BsonDocument { ["PlayerId"] = "split", ["Subscribers"] = 250 } },
+        });
+        await database.GetCollection<BsonDocument>("invites").InsertManyAsync(new[]
+        {
+            new BsonDocument { ["InviterId"] = "referral", ["InviterBonusUsed"] = true },
+            new BsonDocument { ["InviterId"] = "locked", ["InviterBonusUsed"] = false },
+        });
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        await new UnlockOwnWorld().UpAsync(database, session, CancellationToken.None);
+        var result = await players.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        await Assert.That(result.Where(player => player["HitOwnWorldMilestone"].AsBoolean).Select(player => player["_id"].AsString)).IsEquivalentTo(["threshold", "referral"]);
+    }
+
     private static GameBalance CreateEnergyBalance() => new(10, 20, new TimeOnly(9, 0), 5, 3, 5, 3, 3, new GrowthBalance(1, 1, [], 0, 1, 1, 2, 3, 2, 1000), new ViralBalance(0, 0, 1), new FlopBalance(1), new SkillBalance([], 1, 1, 10, 2, 3, 1, 1), new RelationBalance(0, 10, 3, 5, 3), new ChallengeBalance(3, 1), new ThreadBalance(3, 9), new Dictionary<string, WorldBalance>());
 
     private static BsonDocument CreateLegacyReferralPlayer(string id, string? inviter, DateTimeOffset createdAt, int dailyBonus, int count, bool used) => new()
@@ -764,7 +824,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     {
         var options = new RekiMigrationOptions(Options.Create(new MongoOptions { DatabaseName = databaseName }));
         return MigratorBuilder.FromMongoClient(client, options)
-            .LoadMigrations([new InitialGameIndexes(), new RemoveLegacyChallengeIndex(), new SeedWorldTemplates(), new ConsolidateWorldSchema(), new RepairLegacyDocuments(), new NestWorldDocuments(), new MoveReferralStateToInvites(), new UnifyPostContent(), new CreateGameDayIndexes(), new StoreRemainingEnergy(Options.Create(CreateEnergyBalance())), new AddBonusAmountToInvite(Options.Create(CreateEnergyBalance()))])
+            .LoadMigrations([new InitialGameIndexes(), new RemoveLegacyChallengeIndex(), new SeedWorldTemplates(), new ConsolidateWorldSchema(), new RepairLegacyDocuments(), new NestWorldDocuments(), new MoveReferralStateToInvites(), new UnifyPostContent(), new RefreshWorldPresets(), new UnlockOwnWorld(), new CreateGameDayIndexes(), new StoreRemainingEnergy(Options.Create(CreateEnergyBalance())), new AddBonusAmountToInvite(Options.Create(CreateEnergyBalance()))])
             .Build();
     }
 
