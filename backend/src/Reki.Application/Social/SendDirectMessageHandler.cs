@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
-using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Domain.Social;
 
@@ -13,15 +12,17 @@ public sealed class SendDirectMessageHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
     GameDayPeriod gameDayPeriod,
-    ISender sender,
+    IRekiContextAccessor contextAccessor,
     StarTurnGenerator turnGenerator) : IRequestHandler<SendDirectMessageCommand, SentDirectMessage>
 {
     public async ValueTask<SentDirectMessage> Handle(
         SendDirectMessageCommand request,
         CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var world = await sender.Send(new Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        var rekiContext = contextAccessor.Context;
+        var player = await rekiContext.Player;
+        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
         _ = world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world.");
         var periodStart = gameDayPeriod.PeriodStart;
         var conversation = await store.GetStarConversationAsync(
@@ -54,6 +55,27 @@ public sealed class SendDirectMessageHandler(
                 conversation.Messages.TakeLast(12).ToArray()),
             player,
             cancellationToken);
+        rekiContext.Reload();
+        player = await rekiContext.Player;
+        world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
+        _ = world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world.");
+        var current = await store.GetStarConversationAsync(
+            player.Id, request.StarId, cancellationToken, world.Id) ?? conversation;
+        if (!current.Messages.SequenceEqual(conversation.Messages) || !current.Memory.SequenceEqual(conversation.Memory))
+        {
+            throw new RequestConflictException("The conversation changed during generation.");
+        }
+
+        periodStart = gameDayPeriod.PeriodStart;
+        conversation = current.PeriodStartedAtUtc == periodStart
+            ? current
+            : current with { RepliesUsed = 0, PeriodStartedAtUtc = periodStart };
+        if (conversation.RepliesUsed >= balance.Value.Relations.DirectMessageRepliesPerDay)
+        {
+            throw new RequestConflictException("The daily direct-message limit has been reached.");
+        }
+
         IReadOnlyList<DirectMessage> messages =
         [
             .. conversation.Messages,

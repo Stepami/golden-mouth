@@ -1,10 +1,10 @@
 using Mediator;
-using Reki.Application.Player;
+using Reki.Application.Common;
 
 namespace Reki.Application.Social;
 
 public sealed class GetActiveChallengeHandler(
-    ISender sender,
+    IRekiContextAccessor contextAccessor,
     ChallengeLifecycle challengeLifecycle)
     : IRequestHandler<GetActiveChallengeQuery, ChallengeView?>
 {
@@ -12,7 +12,8 @@ public sealed class GetActiveChallengeHandler(
         GetActiveChallengeQuery request,
         CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
+        var rekiContext = contextAccessor.Context;
+        var player = await rekiContext.Player;
         return await challengeLifecycle.GetActiveViewAsync(player.Id, cancellationToken);
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
+using Reki.Application.Common;
 using Reki.Application.Worlds;
 using Reki.Contracts.Worlds;
 using Reki.Domain.Worlds;
@@ -14,6 +15,7 @@ namespace Reki.Api.Worlds;
 [Route("worlds")]
 public sealed class WorldsController(
     ISender sender,
+    IRekiContext rekiContext,
     ApiMapper mapper) : ControllerBase
 {
     [AllowAnonymous]
@@ -29,7 +31,7 @@ public sealed class WorldsController(
     [ActionName("GetOwnedWorlds")]
     public async Task<Ok<IReadOnlyList<WorldResponse>>> GetOwnedWorldsAsync(CancellationToken cancellationToken)
     {
-        var worlds = await sender.Send(new GetOwnedWorldsQuery(), cancellationToken);
+        var worlds = (await rekiContext.Worlds).Values;
         return TypedResults.Ok<IReadOnlyList<WorldResponse>>(worlds.Select(mapper.MapWorld).ToArray());
     }
 

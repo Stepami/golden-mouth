@@ -1,21 +1,22 @@
 using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Player;
 
 namespace Reki.Application.Events;
 
 public sealed class AnswerEventHandler(
     IGameStore store,
-    ISender sender)
+    IRekiContextAccessor contextAccessor)
     : IRequestHandler<AnswerEventCommand>
 {
     public async ValueTask<Unit> Handle(
         AnswerEventCommand request,
         CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var world = await sender.Send(new Worlds.GetWorldQuery(player.Id, request.WorldId), cancellationToken);
+        var rekiContext = contextAccessor.Context;
+        var player = await rekiContext.Player;
+        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
         var gameEvent = await store.GetTodayEventAsync(
             player.Id,
             DateTimeOffset.MinValue,

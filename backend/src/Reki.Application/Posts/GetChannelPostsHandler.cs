@@ -1,19 +1,20 @@
 using Mediator;
 using Reki.Application.Common;
-using Reki.Application.Player;
+using Reki.Application.Common.Exceptions;
 using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts;
 
-public sealed class GetChannelPostsHandler(IGameStore store, ISender sender)
+public sealed class GetChannelPostsHandler(IGameStore store, IRekiContextAccessor contextAccessor)
     : IRequestHandler<GetChannelPostsQuery, IReadOnlyList<GamePost>>
 {
     public async ValueTask<IReadOnlyList<GamePost>> Handle(
         GetChannelPostsQuery request,
         CancellationToken cancellationToken)
     {
-        var playerId = request.PlayerId ?? (await sender.Send(new GetPlayerQuery(), cancellationToken)).Id;
-        var world = await sender.Send(new Worlds.GetWorldQuery(playerId, request.WorldId), cancellationToken);
-        return await store.GetPostsAsync(playerId, request.Limit, cancellationToken, world.Id);
+        var rekiContext = contextAccessor.Context;
+        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
+        return await store.GetPostsAsync(request.Limit, cancellationToken, world.Id);
     }
 }

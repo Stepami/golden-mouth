@@ -5,21 +5,17 @@ using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts;
 
-public sealed class GetPostHandler(IGameStore store, ISender sender)
+public sealed class GetPostHandler(IGameStore store, IRekiContextAccessor contextAccessor)
     : IRequestHandler<GetPostQuery, GamePost>
 {
     public async ValueTask<GamePost> Handle(
         GetPostQuery request,
         CancellationToken cancellationToken)
     {
-        var post = await store.GetPostAsync(request.PostId, request.PlayerId, cancellationToken)
-                   ?? throw new ResourceNotFoundException("Post not found.");
-        var world = await sender.Send(new Worlds.GetWorldQuery(request.PlayerId, request.WorldId), cancellationToken);
-        if (post.WorldId != world.Id)
-        {
-            throw new ResourceNotFoundException("Post not found.");
-        }
-
-        return post;
+        var rekiContext = contextAccessor.Context;
+        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
+        return await store.GetPostAsync(request.PostId, world.Id, cancellationToken)
+            ?? throw new ResourceNotFoundException("Post not found.");
     }
 }

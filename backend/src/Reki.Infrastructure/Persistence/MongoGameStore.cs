@@ -311,16 +311,10 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
-        PlayerId playerId,
         int? limit,
         CancellationToken cancellationToken,
         WorldId worldId)
     {
-        if (await GetWorldAsync(playerId, worldId, cancellationToken) is null)
-        {
-            return [];
-        }
-
         IFindFluent<GamePost, GamePost> query = _posts
             .Find(item => item.WorldId == worldId)
             .SortByDescending(item => item.CreatedAtUtc);
@@ -334,6 +328,13 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<GamePost?> GetPostAsync(
+        PostId postId,
+        WorldId worldId,
+        CancellationToken cancellationToken) =>
+        await _posts.Find(item => item.Id == postId && item.WorldId == worldId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+    public async ValueTask<GamePost?> GetPublicStoryPostAsync(
         PostId postId,
         PlayerId playerId,
         CancellationToken cancellationToken)

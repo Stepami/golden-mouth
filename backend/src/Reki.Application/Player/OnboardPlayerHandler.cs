@@ -5,12 +5,10 @@ using Reki.Application.Common.Exceptions;
 using Reki.Application.Telemetry;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Application.Player;
 
 public sealed class OnboardPlayerHandler(
-    ITelegramUserAccessor telegramUser,
     IGameStore store,
     GameDayPeriod gameDayPeriod,
     IOptions<GameBalance> balance,
@@ -21,7 +19,7 @@ public sealed class OnboardPlayerHandler(
         OnboardPlayerCommand request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = TelegramUserId.From(telegramUser.User.Id);
+        var telegramUserId = request.TelegramUserId;
         if (await store.GetPlayerAsync(telegramUserId, cancellationToken) is not null)
         {
             throw new RequestConflictException("Onboarding has already been completed.");

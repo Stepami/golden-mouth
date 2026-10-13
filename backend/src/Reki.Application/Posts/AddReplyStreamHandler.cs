@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
-using Reki.Application.Player;
 using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
@@ -19,6 +18,7 @@ public sealed partial class AddReplyStreamHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
     ISender sender,
+    IRekiContextAccessor contextAccessor,
     TimeProvider timeProvider,
     PlayerSafetyGuard safety,
     StarTurnGenerator generator,
@@ -35,9 +35,11 @@ public sealed partial class AddReplyStreamHandler(
             throw new RequestConflictException("The reply request is invalid.");
         }
 
-        var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var world = await sender.Send(new Worlds.GetWorldQuery(storedPlayer.Id, request.WorldId), cancellationToken);
-        var post = await sender.Send(new GetPostQuery(request.PostId, storedPlayer.Id, world.Id), cancellationToken);
+        var rekiContext = contextAccessor.Context;
+        var storedPlayer = await rekiContext.Player;
+        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
+        var post = await sender.Send(new GetPostQuery(request.PostId, world.Id), cancellationToken);
         var (target, star) = ValidateTarget(post, world, request.TargetCommentId);
         await safety.EnsureInputAllowedAsync(storedPlayer, [request.Text], cancellationToken);
         var player = storedPlayer;
@@ -169,17 +171,20 @@ public sealed partial class AddReplyStreamHandler(
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var storedPlayer = await store.GetPlayerAsync(playerId, cancellationToken)
-                           ?? throw new ResourceNotFoundException("Player not found.");
+        var rekiContext = contextAccessor.Context;
+        rekiContext.Reload();
+        var storedPlayer = await rekiContext.Player;
         var player = storedPlayer;
-        var world = await sender.Send(new Worlds.GetWorldQuery(playerId, request.WorldId), cancellationToken);
-        var post = await sender.Send(new GetPostQuery(request.PostId, playerId, world.Id), cancellationToken);
+        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
+        var post = await sender.Send(new GetPostQuery(request.PostId, world.Id), cancellationToken);
         if (post.FindRequest(request.RequestId) is { } existing)
         {
             EnsureSameRequest(existing, request, playerId);
             return await ReplayAsync(request, playerId, cancellationToken);
         }
 
+        await safety.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
         var (target, _) = ValidateTarget(post, world, request.TargetCommentId);
         if (target.AuthorId != turn.StarId.ToAuthorId() ||
             (turn.AdditionalStarId is { } other && world.FindStar(other) is null))
@@ -246,11 +251,13 @@ public sealed partial class AddReplyStreamHandler(
         PlayerId playerId,
         CancellationToken cancellationToken)
     {
-        var post = await sender.Send(new GetPostQuery(request.PostId, playerId, request.WorldId), cancellationToken);
-        var storedPlayer = await store.GetPlayerAsync(playerId, cancellationToken)
-                           ?? throw new ResourceNotFoundException("Player not found.");
+        var post = await sender.Send(new GetPostQuery(request.PostId, request.WorldId), cancellationToken);
+        var rekiContext = contextAccessor.Context;
+        rekiContext.Reload();
+        var storedPlayer = await rekiContext.Player;
         var player = storedPlayer;
-        var world = await sender.Send(new Worlds.GetWorldQuery(playerId, post.WorldId), cancellationToken);
+        var world = (await rekiContext.Worlds).GetValueOrDefault(post.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
         var existing = post.FindRequest(request.RequestId) ??
                        throw new RequestConflictException("The saved reply disappeared.");
         EnsureSameRequest(existing, request, playerId);

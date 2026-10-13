@@ -25,6 +25,65 @@ namespace Reki.Tests.Api;
 public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
+    public async Task GetFeed_ParallelPlayers_IsolatesRequestContextsAsync()
+    {
+        // Arrange
+        using var first = Factory.CreateApiClient(1091);
+        using var second = Factory.CreateApiClient(1092);
+        await CreatePlayerWithWorldAsync(first);
+        await CreatePlayerWithWorldAsync(second);
+        var firstWorld = await GetWorldIdAsync(first);
+        var secondWorld = await GetWorldIdAsync(second);
+        var firstPlayer = await GetStoredPlayerAsync(1091);
+        var secondPlayer = await GetStoredPlayerAsync(1092);
+        var posts = new[] { (firstWorld, firstPlayer), (secondWorld, secondPlayer) }
+            .Select(item => new GamePost(
+                PostId.New(),
+                PlayerId.From(item.Item2["_id"].AsString).ToAuthorId(),
+                Domain.Worlds.WorldId.From(item.Item1),
+                item.Item1,
+                1,
+                [],
+                DateTimeOffset.UnixEpoch,
+                0,
+                0,
+                1,
+                false,
+                false)).ToArray();
+        await Database.GetCollection<GamePost>("posts").InsertManyAsync(posts);
+
+        // Act
+        var feeds = await Task.WhenAll(
+            first.Posts.GetFeedAsync(firstWorld, CancellationToken.None),
+            second.Posts.GetFeedAsync(secondWorld, CancellationToken.None));
+
+        // Assert
+        await Assert.That(feeds[0].Single().PostId).IsEqualTo(posts[0].Id.Value);
+        await Assert.That(feeds[1].Single().PostId).IsEqualTo(posts[1].Id.Value);
+        await Assert.That(feeds[0].Single().Text).IsEqualTo(firstWorld);
+        await Assert.That(feeds[1].Single().Text).IsEqualTo(secondWorld);
+    }
+
+    [Test]
+    public async Task GetPost_AnotherOwnedWorld_ReturnsNotFoundAsync()
+    {
+        // Arrange
+        const long user = 1093;
+        var (postId, _) = await PublishPostForThreadAsync(user);
+        using var api = Factory.CreateApiClient(user);
+        var second = await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
+        var before = await GetStoredPostAsync(postId);
+        using var http = CreateAuthenticatedHttpClient(user);
+
+        // Act
+        using var response = await http.GetAsync($"/posts/{postId}?worldId={second.Id}", CancellationToken.None);
+
+        // Assert
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+        await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(before);
+    }
+
+    [Test]
     public async Task Feed_WithMoreThanTwentyOwnPosts_ReturnsLatestOwnPostsAsync()
     {
         // Arrange

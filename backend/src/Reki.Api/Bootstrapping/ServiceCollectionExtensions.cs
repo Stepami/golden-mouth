@@ -26,7 +26,7 @@ internal static class ServiceCollectionExtensions
         services.AddMediator(options =>
         {
             options.Assemblies = [typeof(ApplicationAssemblyMarker)];
-            options.ServiceLifetime = ServiceLifetime.Scoped;
+            options.ServiceLifetime = ServiceLifetime.Singleton;
         });
         services.AddSingleton<GameDayPeriod>();
         services.AddSingleton<PlayerSafetyGuard>();
