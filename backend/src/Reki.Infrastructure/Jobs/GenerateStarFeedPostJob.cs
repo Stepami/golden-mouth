@@ -6,6 +6,7 @@ using Reki.Application.Common.AI;
 using Reki.Application.Common.Safety;
 using Reki.Application.Posts;
 using Reki.Domain.Posts;
+using Reki.Domain.Worlds;
 using Reki.Infrastructure.Serialization;
 using TickerQ.Exceptions;
 using TickerQ.Utilities.Base;
@@ -44,10 +45,11 @@ public sealed class GenerateStarFeedPostJob(
         var profile = new StarAgentProfile(world, star.Id, [], player.Address);
         var history = recent.Select(post =>
         {
-            var author = world.FindStar(post.AuthorId);
+            var isPlayer = post.AuthorId == world.Player.PlayerId.ToAuthorId();
+            var author = world.FindStar(post.AuthorId) ?? WorldStar.DeletedAccount;
             return new StarFeedHistoryPost(
-                author?.Id,
-                author?.Name ?? "Игрок",
+                isPlayer ? null : author.Id,
+                isPlayer ? "Игрок" : author.Name,
                 post.AuthorId == star.Id.ToAuthorId(),
                 post.Text);
         }).ToArray();
@@ -70,10 +72,6 @@ public sealed class GenerateStarFeedPostJob(
             new ChatOptions
             {
                 Temperature = settings.Value.Temperature,
-                AdditionalProperties = new AdditionalPropertiesDictionary
-                {
-                    [ChatInputSafetyContext.OptionKey] = new ChatInputSafetyContext(player, []),
-                },
             },
             cancellationToken);
         var text = response.Text.Trim();

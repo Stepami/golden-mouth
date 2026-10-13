@@ -10,7 +10,6 @@ import { api } from './api/client'
 import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
 import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
-import { worldDocumentOf } from './api/worldContent'
 import type { WorldId } from './api/types'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
@@ -64,7 +63,6 @@ function Shell() {
   if (player) {
     people[player.handle] = { address: player.address, ageBand: player.ageBand }
     people[player.id] = people[player.handle]
-    try { for (const star of worldDocumentOf(player.world).stars) { const profile = { address: star.appearanceProfile === 'masculine' ? 'he' as const : star.appearanceProfile === 'feminine' ? 'she' as const : 'nick' as const, ageBand: star.ageBand }; people[star.id] = profile; people[star.avatarSeed] = profile } } catch { /* templates may still be loading */ }
   }
   const tab = TAB_OF[top.id]
   return (

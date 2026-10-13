@@ -1,5 +1,5 @@
 import { createAvatar } from '@dicebear/core'
-import { lorelei, notionists, pixelArt, thumbs, shapes } from '@dicebear/collection'
+import { adventurer, lorelei, notionists, pixelArt, thumbs, shapes } from '@dicebear/collection'
 import { createContext } from 'react'
 import type { WorldId } from '../api/types'
 import { worldOf } from '../api/worldContent'
@@ -23,6 +23,7 @@ export function avatarUri(seed: string, world: WorldId = 'stage', profile: Avata
     : style === 'notionists' ? createAvatar(notionists, { ...base,
       hair: a.hat ? ['hat'] : pick(variants.notionists[a.length], 'hairVariant'),
       beardProbability: a.facial === 'none' ? 0 : 100, beard: pick(a.facial === 'stubble' ? ['variant05', 'variant07'] : a.facial === 'mustache' ? ['variant04', 'variant06'] : ['variant08', 'variant09', 'variant10'], 'beardVariant'), glassesProbability: a.glasses ? 100 : 0 })
+    : style === 'adventurer' ? createAvatar(adventurer, base)
     : style === 'thumbs' ? createAvatar(thumbs, base)
     : style === 'shapes' ? createAvatar(shapes, base)
     : createAvatar(lorelei, { ...base,

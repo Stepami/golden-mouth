@@ -12,7 +12,8 @@ public static class PostContractMapper
         new(
             publication.Id,
             publication.Status,
-            publication.Result is null ? null : MapResult(publication.Result, world)) { Failure = publication.Failure };
+            publication.Result is null ? null : MapResult(publication.Result, world),
+            publication.Failure);
 
     public static FeedItemResponse MapFeedItem(
         GamePost post,
@@ -54,7 +55,7 @@ public static class PostContractMapper
             new ReactionLiveEvent(published.Reaction),
             new CommentLiveEvent(
                 MapComment(published.Post, comment, world, playerId)),
-            new TypingLiveEvent(published.StarName),
+            new TypingLiveEvent(ResolveAuthor(comment.AuthorId, world).Name),
             new ResultLiveEvent(MapResult(published, world)),
         ];
     }
@@ -86,11 +87,7 @@ public static class PostContractMapper
             author.Id,
             author.Role,
             post.GetBranch(comment.Id).Count - 1,
-            reactions)
-        {
-            AppearanceProfile = world.FindStar(comment.AuthorId)?.AppearanceProfile ?? "neutral",
-            AgeBand = world.FindStar(comment.AuthorId)?.AgeBand ?? string.Empty,
-        };
+            reactions);
     }
 
     private static CommentReactionResponse MapReaction(CommentReaction reaction, World world, PlayerId playerId)
@@ -113,9 +110,13 @@ public static class PostContractMapper
         }
 
         var star = world.FindStar(id);
-        return star is null
-            ? throw new InvalidOperationException("The author does not belong to the world.")
-            : (star.Id.Value, star.Name, star.AvatarSeed, star.Role, $"@{star.Id.Value}", true);
+        if (star is not null)
+        {
+            return (star.Id.Value, star.Name, star.AvatarSeed, star.Role, $"@{star.AvatarSeed.TrimStart('@')}", true);
+        }
+
+        var deleted = WorldStar.DeletedAccount;
+        return (id.Value, deleted.Name, deleted.AvatarSeed, deleted.Role, string.Empty, false);
     }
 
     private static PostResultResponse MapResult(PublishedPost source, World world)

@@ -72,7 +72,7 @@ export function Ribbon({ icon, title, sub, onClick }: { icon: string; title: Rea
 export function Whisper({ seed = 'mira', name = 'Мира', children }: { seed?: string; name?: string; children: ReactNode }) {
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', margin: '8px 0 10px' }}>
-      <Avatar seed={seed} size={30} />
+      <Avatar seed={seed} size={30} profile={{ address: 'nick' }} />
       <div style={{ background: '#251E33', border: '1px solid #9B6BFF77', borderRadius: '14px 14px 14px 4px', padding: '8px 11px', fontSize: 13, lineHeight: 1.35 }}>
         <div style={{ color: 'var(--lilac)', fontSize: 11, marginBottom: 2 }}>{name} подсказывает</div>{children}
       </div>
@@ -86,10 +86,10 @@ export function ExpandableText({ text }: { text: string }) {
   return <div><div className={expanded ? '' : 'text-preview'}>{text}</div><button className="text-link read-more" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(!expanded) }}> {expanded ? 'Свернуть' : 'Читать дальше'}</button></div>
 }
 
-export function Comment({ seed, name, handle, text, star, me, onMore, profile }: { profile?: AvatarProfile; seed: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
+export function Comment({ seed, name, handle, text, star, me, onMore }: { seed: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
   return (
     <div style={{ display: 'flex', gap: 10, marginBottom: 13 }}>
-      <Avatar seed={seed} size={34} profile={profile} />
+      <Avatar seed={seed} size={34} profile={star ? { address: 'nick' } : undefined} />
       <div style={{ flex: 1 }}>
         <div className="row comment-heading" style={{ gap: 6 }}><b>{name}</b><span className="muted small">{handle}</span>{star && <span className="small" style={{ color: 'var(--accent)' }}>★ звезда</span>}{me && <span className="small muted">ты</span>}
           {onMore && <button onClick={onMore} aria-label="Пожаловаться" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>}</div>

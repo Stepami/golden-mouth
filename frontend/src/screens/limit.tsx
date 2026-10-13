@@ -24,7 +24,7 @@ function Limit() {
     <div className="screen no-tab">
       <ChannelHead />
       <div style={{ padding: '14px 20px', textAlign: 'center' }}>
-        <Avatar seed="mira" size={72} style={{ margin: '2px auto 10px' }} />
+        <Avatar seed="mira" profile={{ address: 'nick' }} size={72} style={{ margin: '2px auto 10px' }} />
         <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Мира ответит утром</div>
         <div className="muted" style={{ marginBottom: 14 }}>Она сказала «надо подумать 👀». Энергия на сегодня закончилась. В 9:00 запас обновится</div>
         <Card style={{ textAlign: 'left', marginBottom: 12 }}><div className="small" style={{ color: 'var(--soft)', marginBottom: 4 }}>А пока бесплатно</div>читать треды · комментировать друзей · листать ленту</Card>
