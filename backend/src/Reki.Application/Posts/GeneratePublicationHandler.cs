@@ -88,9 +88,11 @@ public sealed partial class GeneratePublicationHandler(
             try
             {
                 context = await CreatePostContextAsync(request, player, world, cancellationToken);
+                await safety.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
             }
             catch (Exception exception)
             {
+                failure = FailureOf(exception);
                 GenerationFailed(exception);
                 failed = true;
             }
@@ -103,7 +105,7 @@ public sealed partial class GeneratePublicationHandler(
             if (!failed && context is not null)
             {
                 await using var updates = generator
-                    .StreamPostTurnAsync(context, player, cancellationToken)
+                    .StreamPostTurnAsync(context, cancellationToken)
                     .GetAsyncEnumerator(cancellationToken);
                 while (!failed)
                 {

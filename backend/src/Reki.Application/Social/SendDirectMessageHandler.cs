@@ -13,7 +13,8 @@ public sealed class SendDirectMessageHandler(
     IOptions<GameBalance> balance,
     GameDayPeriod gameDayPeriod,
     IRekiContextAccessor rekiContextAccessor,
-    StarTurnGenerator turnGenerator) : IRequestHandler<SendDirectMessageCommand, SentDirectMessage>
+    StarTurnGenerator turnGenerator,
+    PlayerSafetyGuard safety) : IRequestHandler<SendDirectMessageCommand, SentDirectMessage>
 {
     public async ValueTask<SentDirectMessage> Handle(
         SendDirectMessageCommand request,
@@ -48,12 +49,12 @@ public sealed class SendDirectMessageHandler(
             throw new RequestConflictException("The daily direct-message limit has been reached.");
         }
 
+        await safety.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
         var generated = await turnGenerator.GenerateDirectMessageAsync(
             new StarDirectMessageContext(
                 new StarAgentProfile(world, request.StarId, conversation.Memory, player.Address),
                 request.Text,
                 conversation.Messages.TakeLast(12).ToArray()),
-            player,
             cancellationToken);
         rekiContext.Reload();
         player = await rekiContext.Player;

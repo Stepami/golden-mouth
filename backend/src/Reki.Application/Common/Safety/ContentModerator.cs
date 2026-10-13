@@ -1,12 +1,12 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.AI;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Common.Safety;
 using Reki.Domain.Player;
 
-namespace Reki.Infrastructure.AI;
+namespace Reki.Application.Common.Safety;
 
-internal sealed class ContentModerator(OpenAiRoutingChatClient routingClient) : IContentModerator
+public sealed partial class ContentModerator(IChatClient chatClient) : IContentModerator
 {
     private static readonly HashSet<string> Categories =
         ["allowed", "age_restricted_topic", "harassment", "hate", "dangerous_instructions", "explicit_content", "crisis", "uncertain"];
@@ -36,7 +36,7 @@ internal sealed class ContentModerator(OpenAiRoutingChatClient routingClient) : 
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(30));
-            var response = await new DeepSeekThinkingChatClient(routingClient).GetResponseAsync(messages, options, timeout.Token);
+            var response = await chatClient.GetResponseAsync(messages, options, timeout.Token);
             var call = response.Messages.SelectMany(message => message.Contents).OfType<FunctionCallContent>().Single();
             if (call.Name != "content_review" || call.Arguments?.TryGetValue("category", out var raw) != true ||
                 raw?.ToString() is not { } category || !Categories.Contains(category))
@@ -65,4 +65,7 @@ internal sealed class ContentModerator(OpenAiRoutingChatClient routingClient) : 
             """);
         return AIFunctionFactory.CreateDeclaration("content_review", "Проверить содержание по возрастной политике", schema.RootElement.Clone());
     }
+
+    [JsonSerializable(typeof(IReadOnlyList<string>))]
+    private sealed partial class ContentReviewJsonContext : JsonSerializerContext;
 }

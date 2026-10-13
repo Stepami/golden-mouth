@@ -4,7 +4,6 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
-using Reki.Domain.Player;
 using static Reki.Application.Common.AI.StarToolCallParser;
 
 namespace Reki.Application.Posts;
@@ -15,7 +14,6 @@ public sealed class StarTurnGenerator(
 {
     public async IAsyncEnumerable<ChatResponseUpdate> StreamPostTurnAsync(
         StarPostContext context,
-        PlayerProfile player,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var recentPosts = context.RecentPosts.Count == 0
@@ -46,7 +44,6 @@ public sealed class StarTurnGenerator(
         ];
         var options = CreateOptions(
             ChatToolMode.RequireSpecific("comment"),
-            new ChatInputSafetyContext(player, [context.Text]),
             StarToolSchemas.Post);
         await foreach (var update in chatClient
                            .GetStreamingResponseAsync(messages, options, cancellationToken))
@@ -57,7 +54,6 @@ public sealed class StarTurnGenerator(
 
     public async ValueTask<GeneratedDirectMessage> GenerateDirectMessageAsync(
         StarDirectMessageContext context,
-        PlayerProfile player,
         CancellationToken cancellationToken)
     {
         const string turnPolicy = """
@@ -91,7 +87,6 @@ public sealed class StarTurnGenerator(
         var actions = await GetActionsAsync(
             messages,
             ChatToolMode.RequireSpecific("dm"),
-            new ChatInputSafetyContext(player, [context.Text]),
             cancellationToken);
         if (actions is not [StarDirectMessageAction directMessage] ||
             directMessage.StarId != starId ||
@@ -108,7 +103,6 @@ public sealed class StarTurnGenerator(
 
     public async IAsyncEnumerable<ChatResponseUpdate> StreamReplyTurnAsync(
         StarReplyContext context,
-        PlayerProfile player,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var policy = $$"""
@@ -134,9 +128,7 @@ public sealed class StarTurnGenerator(
         ];
         var options = CreateOptions(
             ChatToolMode.RequireSpecific("thread_reply"),
-            new ChatInputSafetyContext(player, [context.PlayerText]),
             StarToolSchemas.ThreadReply);
-        options.MaxOutputTokens = 1200;
         await foreach (var update in chatClient.GetStreamingResponseAsync(messages, options, cancellationToken))
         {
             yield return update;
@@ -146,10 +138,9 @@ public sealed class StarTurnGenerator(
     private async ValueTask<IReadOnlyList<IStarAction>> GetActionsAsync(
         IReadOnlyList<ChatMessage> messages,
         ChatToolMode toolMode,
-        ChatInputSafetyContext safetyContext,
         CancellationToken cancellationToken)
     {
-        var options = CreateOptions(toolMode, safetyContext, StarToolSchemas.DirectMessage);
+        var options = CreateOptions(toolMode, StarToolSchemas.DirectMessage);
         try
         {
             var response = await chatClient.GetResponseAsync(
@@ -177,7 +168,6 @@ public sealed class StarTurnGenerator(
 
     private ChatOptions CreateOptions(
         ChatToolMode toolMode,
-        ChatInputSafetyContext safetyContext,
         IReadOnlyList<AITool> tools)
     {
         return new ChatOptions
@@ -186,10 +176,6 @@ public sealed class StarTurnGenerator(
             Tools = [.. tools],
             ToolMode = toolMode,
             AllowMultipleToolCalls = true,
-            AdditionalProperties = new AdditionalPropertiesDictionary
-            {
-                [ChatInputSafetyContext.OptionKey] = safetyContext,
-            },
         };
     }
 }

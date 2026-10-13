@@ -70,10 +70,6 @@ public sealed class GenerateStarFeedPostJob(
             new ChatOptions
             {
                 Temperature = settings.Value.Temperature,
-                AdditionalProperties = new AdditionalPropertiesDictionary
-                {
-                    [ChatInputSafetyContext.OptionKey] = new ChatInputSafetyContext(player, []),
-                },
             },
             cancellationToken);
         var text = response.Text.Trim();

@@ -21,6 +21,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
     [Before(Test)]
     public void ConfigureChatClient()
     {
+        Factory.ResetContentModerator();
         Factory.Llm.Respond(CreateChatResponse);
     }
 

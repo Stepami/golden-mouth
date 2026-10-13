@@ -61,7 +61,7 @@ public sealed partial class AddReplyStreamHandler(
             StarTurnPolicy.IsHateEnabled(player, world, balance.Value, timeProvider.GetUtcNow()));
         yield return new ReplyLiveEvent(ReplyStatus.Generating, request.RequestId, null, null, null, null, null);
         var calls = new List<FunctionCallContent>();
-        await using var updates = generator.StreamReplyTurnAsync(context, player, cancellationToken)
+        await using var updates = generator.StreamReplyTurnAsync(context, cancellationToken)
             .GetAsyncEnumerator(cancellationToken);
         while (true)
         {

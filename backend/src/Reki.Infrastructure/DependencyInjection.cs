@@ -12,7 +12,6 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Reki.Application.Common;
 using Reki.Application.Common.AI;
-using Reki.Application.Common.Safety;
 using Reki.Application.Posts;
 using Reki.Infrastructure.AI;
 using Reki.Infrastructure.Health;
@@ -93,15 +92,11 @@ public static class DependencyInjection
         services
             .AddSingleton<LlmSpendPolicy>()
             .AddSingleton<OpenAiRoutingChatClient>()
-            .AddSingleton<IContentModerator, ContentModerator>()
             .AddChatClient(sp => sp.GetRequiredService<OpenAiRoutingChatClient>())
             .UseOpenTelemetry(
                 sourceName: "Reki.GenAI",
                 configure: telemetry => telemetry.EnableSensitiveData = false)
             .Use(innerClient => new DeepSeekThinkingChatClient(innerClient))
-            .Use((innerClient, serviceProvider) => new PlayerSafetyChatClient(
-                innerClient,
-                serviceProvider.GetRequiredService<PlayerSafetyGuard>()))
             .Use(client => new LlmSpendChatClient(client));
     }
 

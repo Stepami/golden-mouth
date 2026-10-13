@@ -7,6 +7,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using NSubstitute;
 using Reki.Application.Common;
+using Reki.Application.Common.Safety;
 using Reki.Contracts.Player;
 using Reki.Contracts.Social;
 using Reki.Contracts.Telemetry;
@@ -866,6 +867,9 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var call = unsafeResponse.Messages.SelectMany(message => message.Contents).OfType<FunctionCallContent>()
             .Single();
         (call.Arguments ?? throw new InvalidOperationException("Missing arguments."))["text"] = "наркотики";
+        Factory.ContentModerator.ReviewAsync(
+                Arg.Any<PlayerProfile>(), Arg.Is<IReadOnlyList<string>>(texts => texts.Contains("наркотики")), Arg.Any<CancellationToken>())
+            .Returns(new ContentReview(SafetyDecision.Rejected, "explicit_content"));
         Factory.Llm.Respond(unsafeResponse);
 
         // Act

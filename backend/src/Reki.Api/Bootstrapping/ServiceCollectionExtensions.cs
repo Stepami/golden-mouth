@@ -39,6 +39,7 @@ internal static class ServiceCollectionExtensions
         services.AddSingleton<ProductTelemetry>();
         services.AddSingleton<StarTurnGenerator>();
 
+        services.AddSingleton<IContentModerator, ContentModerator>();
         services.AddSingleton<IRekiContextAccessor, HttpRekiContextAccessor>();
         services.AddScoped<IRekiContext, RekiContext>();
 
