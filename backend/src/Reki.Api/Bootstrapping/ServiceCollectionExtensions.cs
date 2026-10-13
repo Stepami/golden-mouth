@@ -30,7 +30,7 @@ internal static class ServiceCollectionExtensions
         });
         services.AddSingleton<GameDayPeriod>();
         services.AddSingleton<PlayerSafetyGuard>();
-        services.AddScoped<ChallengeLifecycle>();
+        services.AddSingleton<ChallengeLifecycle>();
         services.AddSingleton<PostProgressionCalculator>();
         services.AddSingleton<ProductTelemetry>();
         services.AddSingleton<StarTurnGenerator>();
