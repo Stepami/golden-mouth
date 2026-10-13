@@ -16,10 +16,9 @@ public sealed record Publication(
     IReadOnlyList<PublicationPart> Parts,
     PublishedPost? Result,
     DateTime? ExpiresAtUtc,
-    WorldId WorldId)
+    WorldId WorldId,
+    PublicationFailure? Failure = null)
 {
-    public PublicationFailure? Failure { get; init; }
-
     public GeneratedPostTurn AssembleTurn()
     {
         var comments = Parts
