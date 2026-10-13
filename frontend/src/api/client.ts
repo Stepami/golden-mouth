@@ -145,7 +145,7 @@ export const api = {
     })))
   },
   /** Генерация, затем модерация и анимация массива реакций; при обрыве сверяем сохранённый статус. */
-  publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true): () => void {
+  publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true, wantId?: string): () => void {
     if (BASE) {
       const ctrl = new AbortController()
       let deliveredResult = false
@@ -203,7 +203,7 @@ export const api = {
           const r = await fetch(`${BASE}${inWorld("/posts/publications")}`, {
             method: 'POST', signal: ctrl.signal,
             headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', ...telegramAuthHeaders() },
-            body: JSON.stringify({ publicationId, text, ownWords }),
+            body: JSON.stringify({ publicationId, text, ownWords, wantId }),
           })
           if (!r.ok) { let failure: PublicationFailure | undefined; try { failure = (await r.json() as { failure?: PublicationFailure }).failure } catch { /* transport */ }; throw new ApiError(r.status, 'POST', '/posts/publications', failure) }
           let lastStatus: PublicationStatus | null = null

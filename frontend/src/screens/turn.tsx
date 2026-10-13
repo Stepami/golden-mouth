@@ -14,7 +14,7 @@ import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
 import { TextField } from '../ui/TextField'
-import { completePostDraft, draftKey, readPostDraft, savePostDraft } from '../app/postDraft'
+import { completePostDraft, draftKey, readPostDraft, savePostDraft, type PostDraft } from '../app/postDraft'
 import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 
 
@@ -23,9 +23,9 @@ function Compose() {
   const nav = useNav(); const p = usePlayer()
   const ideas = contentOf(p.world).ideas
   const key = draftKey(p)
-  const [draft, setDraft] = useState(() => {
+  const [draft, setDraft] = useState<PostDraft>(() => {
     const saved = readPostDraft(key)
-    return saved.text.length || saved.publicationId ? saved : { text: typeof nav.params.text === 'string' ? nav.params.text : '', ownWords: true }
+    return saved.text.length || saved.publicationId || saved.wantId ? saved : { text: typeof nav.params.text === 'string' ? nav.params.text : '', ownWords: true }
   })
   const text = draft.text
   const [durable, setDurable] = useState(true)
@@ -35,25 +35,30 @@ function Compose() {
   }
   useEffect(() => { setDurable(savePostDraft(key, draft)) }, [key, draft])
   const done = p.wants.filter(w => w.done).length
+  const selectedWant = p.wants.find(w => w.id === draft.wantId && !w.done)
+  const unavailableWant = !!draft.wantId && !selectedWant
+  const selectWant = (wantId?: string) => {
+    if (draft.publicationId) return
+    const next = { ...draft, wantId }
+    setDraft(next); setDurable(savePostDraft(key, next))
+  }
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Новый пост" right={`⚡ ${p.postsLeft}`} />
       <div className="pad">
-        <div className="compose-topic"><span className="small eyebrow">✨ О чём написать</span><p>{p.wants.find(w => !w.done)?.text ?? "Что произошло в твоём мире сегодня?"}</p><span className="small muted">{p.wants.find(w => !w.done)?.reward ?? "Своя история тоже подойдёт."}</span></div><TextField label="Твой пост" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" /><div className="compose-ideas"><div className="small muted">Начни с одной из идей</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} disabled={text.length > 0} onClick={() => edit(idea.replace(/[«»]/g, ''), true)}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>
+        <fieldset className="daily-tasks"><legend>🎯 Задания дня · {done}/{p.wants.length}</legend><p className="small muted">Выбери задание, о котором пишешь. Текст поста останется твоим.</p>
+          {p.wants.map(w => <label key={w.id} className={`daily-task ${draft.wantId === w.id ? 'selected' : ''} ${w.done ? 'done' : ''}`}><input type="radio" name="daily-task" checked={draft.wantId === w.id} disabled={w.done || !!draft.publicationId} onChange={() => selectWant(w.id)} /><span><b>{w.text}</b><span className="small muted">{w.done ? 'Выполнено ✅' : w.reward}</span></span></label>)}
+          <label className={`daily-task ${!draft.wantId ? 'selected' : ''}`}><input type="radio" name="daily-task" checked={!draft.wantId} disabled={!!draft.publicationId} onChange={() => selectWant()} /><span><b>Свободный пост</b><span className="small muted">Без задания дня</span></span></label>
+          {unavailableWant && <p role="status" className="small">Это задание уже недоступно. Выбери другое или свободный пост.</p>}
+        </fieldset><TextField label="Твой пост" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" /><div className="compose-ideas"><div className="small muted">Начни с одной из идей</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} disabled={text.length > 0} onClick={() => edit(idea.replace(/[«»]/g, ''), true)}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
-        {draft.publicationId && <div className="card"><p>У предыдущей публикации ещё нет подтверждённого результата.</p><button className="btn" onClick={() => nav.replace('02-2_live', { text: draft.submittedText, publicationId: draft.publicationId, ownWords: draft.submittedOwnWords })}>Проверить статус</button></div>}
+        {draft.publicationId && <div className="card"><p>У предыдущей публикации ещё нет подтверждённого результата.</p><button className="btn" onClick={() => nav.replace('02-2_live', { text: draft.submittedText, publicationId: draft.publicationId, ownWords: draft.submittedOwnWords, wantId: draft.submittedWantId })}>Проверить статус</button></div>}
         <button className="chip" onClick={() => nav.push('06-4_rules')}>Правила публикаций</button>
 
-        <details className="editor-extra"><summary>Все задания дня · {done} из {p.wants.length}</summary><p className="small muted">Темы для поста с дополнительным опытом.</p>
-          {p.wants.map((w, i) => (
-            <div key={w.id} className="row" style={{ padding: '7px 0', borderBottom: i < p.wants.length - 1 ? '1px solid var(--line2)' : 'none' }}>
-              <span>{w.done ? '✅' : '⬜'}</span><span style={{ flex: 1, ...(w.done ? { color: 'var(--muted2)', textDecoration: 'line-through' } : {}) }}>{w.text}</span><span className="small" style={{ color: 'var(--lilac)' }}>{w.reward}</span>
-            </div>
-          ))}
-        </details>
+
 
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim() || !!draft.publicationId} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords }); const publicationId = crypto.randomUUID(); savePostDraft(key, { ...draft, publicationId, submittedText: text, submittedOwnWords: draft.ownWords }); nav.replace('02-2_live', { text, publicationId, ownWords: draft.ownWords }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
+      <BottomCTA main="Опубликовать" disabled={!text.trim() || !!draft.publicationId || unavailableWant} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords }); const publicationId = crypto.randomUUID(); savePostDraft(key, { ...draft, publicationId, submittedText: text, submittedOwnWords: draft.ownWords, submittedWantId: selectedWant?.id }); nav.replace('02-2_live', { text, publicationId, ownWords: draft.ownWords, wantId: selectedWant?.id }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
     </div>
   )
 }
@@ -91,9 +96,9 @@ function Live() {
         nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: confirmedResult, post })
       })()
     }
-  }, (state, reason) => { if (state === 'failed') { const saved = readPostDraft(draftKey(p)); if (saved.publicationId === publicationId) savePostDraft(draftKey(p), { text: saved.text, ownWords: saved.ownWords }) }; if (reason?.code === 'crisis') { nav.replace(p.ageBand === '14-17' || !p.ageBand ? '06-2_crisis' : '06-3_crisis_adult'); return }; nav.replace('02-2b_publish_error', { text, publicationId, ownWords: nav.params.ownWords, reason, uncertain: state === 'unknown' }) }, status => {
+  }, (state, reason) => { if (state === 'failed') { const saved = readPostDraft(draftKey(p)); if (saved.publicationId === publicationId) savePostDraft(draftKey(p), { text: saved.text, ownWords: saved.ownWords, wantId: saved.wantId }) }; if (reason?.code === 'crisis') { nav.replace(p.ageBand === '14-17' || !p.ageBand ? '06-2_crisis' : '06-3_crisis_adult'); return }; nav.replace('02-2b_publish_error', { text, publicationId, ownWords: nav.params.ownWords, wantId: nav.params.wantId, reason, uncertain: state === 'unknown' }) }, status => {
     if (status === 'ready_for_moderation') setPhase('moderating')
-  }, nav.params.ownWords !== false), []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, nav.params.ownWords !== false, typeof nav.params.wantId === 'string' ? nav.params.wantId : undefined), []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="screen">
       <ChannelHead />
@@ -138,7 +143,7 @@ function PublishError() {
         <div className="sheet" role="alert" aria-live="assertive">
           <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{uncertain ? 'Проверим публикацию' : 'Пост не опубликован'}</div>
           <div className="muted" style={{ marginBottom: 20 }}>{explanation}</div>
-          {uncertain && publicationId && <Button onClick={() => nav.replace('02-2_live', { text, publicationId, ownWords: nav.params.ownWords })}>Проверить статус</Button>}
+          {uncertain && publicationId && <Button onClick={() => nav.replace('02-2_live', { text, publicationId, ownWords: nav.params.ownWords, wantId: nav.params.wantId })}>Проверить статус</Button>}
           <Button onClick={() => nav.replace('02-1_compose', { text })}>Изменить текст</Button>
           <Button secondary onClick={() => nav.push('06-4_rules')}>Правила публикаций</Button>
         </div>
