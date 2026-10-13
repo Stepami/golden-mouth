@@ -1,5 +1,4 @@
 using Mediator;
-using Reki.Application.Common;
 using Reki.Application.Player;
 using Reki.Application.Worlds;
 
@@ -7,8 +6,7 @@ namespace Reki.Application.Telemetry;
 
 public sealed class SubmitAnalyticsHandler(
     ProductTelemetry telemetry,
-    ISender sender,
-    IGameStore store)
+    ISender sender)
     : IRequestHandler<SubmitAnalyticsCommand>
 {
     public async ValueTask<Unit> Handle(
@@ -21,8 +19,7 @@ public sealed class SubmitAnalyticsHandler(
             _ = await sender.Send(new GetWorldQuery(player.Id, worldId), cancellationToken);
         }
 
-        var invite = await store.GetInviteAsync(player.Id, cancellationToken);
-        telemetry.TrackSubmission(player, request.Submission, invite is not null);
+        telemetry.TrackSubmission(player, request.Submission);
         return Unit.Value;
     }
 }

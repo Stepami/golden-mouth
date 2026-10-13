@@ -37,7 +37,7 @@ public sealed class OnboardPlayerHandler(
             await store.CreateInviteAsync(invite, cancellationToken);
         }
 
-        analytics.TrackPlayer(created, "player_created", new Dictionary<string, string>(), inviter is not null);
+        analytics.TrackPlayer(created, "player_created", new Dictionary<string, string>(), referred: inviter is not null);
         return created;
     }
 

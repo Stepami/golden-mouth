@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Reki.Contracts.Telemetry;
 using Reki.Domain.Player;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Telemetry;
 
@@ -41,6 +42,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         "share",
         "stage_reached",
         "tap",
+        "world_created",
     };
 
     private readonly HashSet<string> _properties = new(StringComparer.Ordinal)
@@ -77,7 +79,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         "world",
     };
 
-    public void TrackSubmission(PlayerProfile player, AnalyticsSubmission submission, bool referred = false)
+    public void TrackSubmission(PlayerProfile player, AnalyticsSubmission submission)
     {
         foreach (var entry in submission.Events)
         {
@@ -88,7 +90,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
                 continue;
             }
 
-            if (entry.Name is "post_scored" or "player_created" or "level_up" or "card_earned" or "post_failed" || !_events.Contains(entry.Name))
+            if (entry.Name is "post_scored" or "player_created" or "world_created" or "level_up" or "card_earned" or "post_failed" || !_events.Contains(entry.Name))
             {
                 continue;
             }
@@ -111,7 +113,6 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
             attributes["screen"] = entry.Screen;
             attributes["world"] = ReadWorldKey(entry.Properties);
             attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
-            attributes["registration_source"] = referred ? "referral" : "direct";
             if (entry.PreviousScreen is not null)
             {
                 attributes["previous_screen"] = entry.PreviousScreen;
@@ -128,7 +129,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         }
     }
 
-    public void TrackPlayer(PlayerProfile player, string eventName, IReadOnlyDictionary<string, string> properties, bool referred = false)
+    public void TrackPlayer(PlayerProfile player, string eventName, IReadOnlyDictionary<string, string> properties, WorldId? worldId = null, bool? referred = null)
     {
         if (!_events.Contains(eventName))
         {
@@ -136,9 +137,18 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         }
 
         var attributes = CreateAttributes(player.Id, eventName, timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
+        if (worldId is { } id)
+        {
+            attributes["world_id"] = id.Value;
+        }
+
         attributes["world"] = ReadWorldKey(properties);
         attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
-        attributes["registration_source"] = referred ? "referral" : "direct";
+        if (eventName == "player_created" && referred is { } isReferral)
+        {
+            attributes["registration_source"] = isReferral ? "referral" : "direct";
+        }
+
         AddProperties(attributes, properties);
         Write(eventName, attributes);
     }
@@ -159,6 +169,17 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
             timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
         AddProperties(attributes, properties);
         Write(eventName, attributes);
+    }
+
+    public void TrackWorldAudience(World world)
+    {
+        var attributes = CreateAttributes(world.Player.PlayerId, "world_audience_updated", timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
+        attributes["activity_kind"] = "inventory";
+        attributes["world_id"] = world.Id.Value;
+        attributes["world"] = world.BalanceKey;
+        attributes["world_version"] = world.Version;
+        attributes["subscriber_total"] = world.Player.Subscribers;
+        Write("world_audience_updated", attributes);
     }
 
     private static string ReadWorldKey(IReadOnlyDictionary<string, string> properties) =>

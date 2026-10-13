@@ -44,7 +44,7 @@ internal sealed class MongoGameStore : IGameStore
         _invites = database.GetCollection<Invitation>(MongoCollections.Invites);
     }
 
-    public IAsyncEnumerable<PlayerProfile> GetPlayersAsync(CancellationToken cancellationToken) =>
+    public IAsyncEnumerable<PlayerId> GetPlayerIdsAsync(CancellationToken cancellationToken) =>
         GetPlayerBatchesAsync(cancellationToken).SelectMany(batch => batch);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
@@ -539,11 +539,11 @@ internal sealed class MongoGameStore : IGameStore
             ["Open"] = true,
         };
 
-    private async IAsyncEnumerable<IEnumerable<PlayerProfile>> GetPlayerBatchesAsync(
+    private async IAsyncEnumerable<IEnumerable<PlayerId>> GetPlayerBatchesAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         using var cursor =
-            await _players.FindAsync(FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken);
+            await _players.Find(FilterDefinition<PlayerProfile>.Empty).Project(player => player.Id).ToCursorAsync(cancellationToken);
         while (await cursor.MoveNextAsync(cancellationToken))
         {
             yield return cursor.Current;

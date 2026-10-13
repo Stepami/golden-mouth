@@ -10,7 +10,7 @@ namespace Reki.Application.Common;
 
 public interface IGameStore
 {
-    IAsyncEnumerable<PlayerProfile> GetPlayersAsync(CancellationToken cancellationToken);
+    IAsyncEnumerable<PlayerId> GetPlayerIdsAsync(CancellationToken cancellationToken);
 
     ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken);
 

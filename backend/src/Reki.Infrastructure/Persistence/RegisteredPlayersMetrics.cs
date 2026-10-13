@@ -38,28 +38,15 @@ internal sealed partial class RegisteredPlayersMetrics(
     {
         var snapshot = timeProvider.GetUtcNow().ToUnixTimeMilliseconds();
         long count = 0;
-        await foreach (var player in store.GetPlayersAsync(stoppingToken))
+        await foreach (var playerId in store.GetPlayerIdsAsync(stoppingToken))
         {
-            var worlds = await store.GetWorldsAsync(player.Id, stoppingToken);
-            var worldKeys = worlds.Select(world => world.BalanceKey).Distinct().ToArray();
-            var invite = await store.GetInviteAsync(player.Id, stoppingToken);
             using var scope = logger.BeginScope(new Dictionary<string, object?>
             {
                 ["reki.stream"] = "product",
                 ["activity_kind"] = "inventory",
                 ["event_name"] = "profile_snapshot",
                 ["snapshot_time_unix_ms"] = snapshot,
-                ["player_id"] = player.Id.Value,
-                ["world"] = worldKeys.Length switch
-                {
-                    0 => "unknown",
-                    1 => worldKeys[0],
-                    _ => "multi-world",
-                },
-                ["age_group"] = player.AgeBand ?? player.BirthGroup,
-                ["registration_source"] = invite is null ? "direct" : "referral",
-                ["launch_surface"] = "unknown",
-                ["subscriber_total"] = worlds.Sum(world => world.Player.Subscribers),
+                ["player_id"] = playerId.Value,
             });
             LogProfileSnapshot();
             count++;

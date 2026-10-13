@@ -1,4 +1,6 @@
+import sqlite3
 import unittest
+import product_v2
 import build
 
 
@@ -21,6 +23,39 @@ class OuterQueryFieldsTest(unittest.TestCase):
         for panel in build.product_panels:
             if panel['id'] in expected:
                 self.assertEqual(build.columns(panel['queries'][0]['query']), expected[panel['id']])
+
+
+class WorldAudienceTest(unittest.TestCase):
+    def test_latest_version_deduplicates_delivery_and_sums_worlds(self):
+        db = sqlite3.connect(':memory:')
+        db.execute('CREATE TABLE product (player_id TEXT, world_id TEXT, world TEXT, subscriber_total INTEGER, world_version INTEGER, _timestamp INTEGER, event_name TEXT)')
+        db.executemany('INSERT INTO product VALUES (?, ?, ?, ?, ?, ?, ?)', [
+            ('player', 'a', 'stage', 120, 0, 1, 'world_audience_updated'),
+            ('player', 'a', 'stage', 100, 2, 2, 'world_audience_updated'),
+            ('player', 'a', 'stage', 150, 1, 3, 'world_audience_updated'),
+            ('player', 'a', 'stage', 100, 2, 4, 'world_audience_updated'),
+            ('player', 'b', 'it', 40, 0, 1, 'world_audience_updated'),
+        ])
+        ctes = product_v2.COMMON.split('world_ranked AS', 1)[1].split('raw AS', 1)[0].rstrip().rstrip(',')
+        self.assertEqual(db.execute('WITH world_ranked AS' + ctes + ' SELECT * FROM world_audience').fetchall(), [('player', 140, 'multi-world')])
+        db.close()
+
+
+class ProfileAttributesTest(unittest.TestCase):
+    def test_id_only_snapshot_retains_registration_dimensions(self):
+        db = sqlite3.connect(':memory:')
+        db.execute('CREATE TABLE product (player_id TEXT, age_group TEXT, registration_source TEXT, event_name TEXT)')
+        db.executemany('INSERT INTO product VALUES (?, ?, ?, ?)', [
+            ('player', '14-17', 'referral', 'player_created'),
+            ('player', None, None, 'profile_snapshot'),
+            ('legacy', '18+', 'direct', 'profile_snapshot'),
+            ('legacy', None, None, 'profile_snapshot'),
+        ])
+        cte = product_v2.COMMON.split('profile_attributes AS', 1)[1].split('raw AS', 1)[0].rstrip().rstrip(',')
+        self.assertEqual(db.execute('WITH profile_attributes AS' + cte + ' SELECT * FROM profile_attributes ORDER BY player_id').fetchall(), [
+            ('legacy', '18+', 'direct'), ('player', '14-17', 'referral'),
+        ])
+        db.close()
 
 
 if __name__ == '__main__':
