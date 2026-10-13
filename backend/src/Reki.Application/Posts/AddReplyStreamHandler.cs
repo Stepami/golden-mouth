@@ -56,7 +56,7 @@ public sealed partial class AddReplyStreamHandler(
             new StarAgentProfile(world, null, [], player.Address),
             star.Id,
             post.Text,
-            post.GetBranch(target.Id),
+            target is null ? [] : post.GetBranch(target.Id),
             request.Text,
             StarTurnPolicy.IsHateEnabled(player, world, balance.Value, timeProvider.GetUtcNow()));
         yield return new ReplyLiveEvent(ReplyStatus.Generating, request.RequestId, null, null, null, null, null);
@@ -155,8 +155,15 @@ public sealed partial class AddReplyStreamHandler(
         }
     }
 
-    private static (GameComment Comment, WorldStar Star) ValidateTarget(GamePost post, World world, CommentId targetId)
+    private static (GameComment? Comment, WorldStar Star) ValidateTarget(GamePost post, World world, CommentId? targetId)
     {
+        if (targetId is null)
+        {
+            var author = world.FindStar(post.AuthorId)
+                         ?? throw new RequestConflictException("The post author is not a star of this world.");
+            return (null, author);
+        }
+
         var target = post.Comments.FirstOrDefault(comment => comment.Id == targetId && !comment.Hidden)
                      ?? throw new ResourceNotFoundException("Comment not found.");
         var star = world.FindStar(target.AuthorId)
@@ -186,8 +193,8 @@ public sealed partial class AddReplyStreamHandler(
         }
 
         await safety.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
-        var (target, _) = ValidateTarget(post, world, request.TargetCommentId);
-        if (target.AuthorId != turn.StarId.ToAuthorId() ||
+        var (target, star) = ValidateTarget(post, world, request.TargetCommentId);
+        if (star.Id != turn.StarId ||
             (turn.AdditionalStarId is { } other && world.FindStar(other) is null))
         {
             throw new RequestConflictException("The world changed during generation.");
@@ -201,13 +208,13 @@ public sealed partial class AddReplyStreamHandler(
 
         EnsureEnergy(player);
         var bonus = post.Comments.Count(comment =>
-                        comment.AuthorId == playerId.ToAuthorId() && comment.ParentCommentId is not null)
+                        comment.AuthorId == playerId.ToAuthorId())
                     < balance.Value.Thread.BonusReplies
             ? balance.Value.Thread.SubscriberBonus
             : 0;
         var playerComment = new GameComment(
             CommentId.New(),
-            target.Id,
+            target?.Id,
             request.RequestId,
             playerId.ToAuthorId(),
             request.Text,

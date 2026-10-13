@@ -63,11 +63,11 @@ public static class PostContractMapper
     public static PostDetailResponse MapPost(GamePost post, World world, PlayerId playerId) =>
         new(
             post.Id.Value,
+            ResolveAuthor(post.AuthorId, world).Id,
             post.Text,
             post.Views,
             CreateReactions(post),
-            post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray(),
-            world.Player.PlayerId == playerId);
+            post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray());
 
     private static CommentResponse MapComment(GamePost post, GameComment comment, World world, PlayerId playerId)
     {

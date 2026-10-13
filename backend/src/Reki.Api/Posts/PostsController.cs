@@ -66,7 +66,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         var result = sender.CreateStream(
             new AddReplyCommand(
                 PostId.From(postId),
-                CommentId.From(request.CommentId),
+                request.CommentId is { } commentId ? CommentId.From(commentId) : null,
                 request.RequestId,
                 request.Text,
                 Domain.Worlds.WorldId.From(worldId)),
