@@ -7,11 +7,10 @@ world_ranked AS (SELECT player_id, world_id, world, subscriber_total,
 world_audience AS (SELECT player_id, sum(subscriber_total) AS subscribers,
  CASE WHEN count(DISTINCT world) > 1 THEN 'multi-world' ELSE max(world) END AS world
  FROM world_ranked WHERE state_rank = 1 GROUP BY player_id),
-profile_attributes AS (SELECT player_id,
- coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(nullif(age_group, ''), 'unknown') END), max(nullif(nullif(age_group, ''), 'unknown')), 'unknown') AS age_group,
- coalesce(max(nullif(nullif(registration_source, ''), 'unknown')), 'unknown') AS registration_source
- FROM product WHERE event_name IN ('player_created', 'profile_snapshot') GROUP BY player_id),
-raw AS (SELECT * FROM product WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''),
+deleted_players AS (SELECT DISTINCT player_id FROM product
+ WHERE event_name = 'player_deleted' AND player_id IS NOT NULL),
+raw AS (SELECT p.* FROM product p WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''
+ AND NOT EXISTS (SELECT 1 FROM deleted_players d WHERE d.player_id = p.player_id)),
 identities AS (SELECT r.player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,
  min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,
  coalesce(max(w.world), CASE WHEN count(DISTINCT nullif(nullif(r.world, ''), 'unknown'))>1 THEN 'multi-world' ELSE max(nullif(nullif(r.world, ''), 'unknown')) END, 'unknown') AS world,
@@ -30,29 +29,14 @@ posts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':le
  max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,
  max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),
 selected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),
-markers AS (SELECT snapshot_time_unix_ms, max(registered_count) AS expected FROM product
- WHERE event_name = 'profiles_snapshot_complete' GROUP BY snapshot_time_unix_ms),
-complete AS (SELECT m.snapshot_time_unix_ms FROM markers m LEFT JOIN product p ON
- p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = m.snapshot_time_unix_ms CROSS JOIN clock c
- WHERE m.snapshot_time_unix_ms >= c.now_ms - 180000 AND m.snapshot_time_unix_ms <= c.now_ms - 10000
- GROUP BY m.snapshot_time_unix_ms, m.expected HAVING count(DISTINCT p.player_id) = m.expected),
-latest AS (SELECT max(snapshot_time_unix_ms) AS snapshot_ms FROM complete),
-current_profiles AS (SELECT p.player_id, max(w.subscribers) AS subscribers FROM product p JOIN latest l ON
- p.event_name = 'profile_snapshot' AND p.snapshot_time_unix_ms = l.snapshot_ms
- LEFT JOIN identities i ON p.player_id = i.player_id
- LEFT JOIN world_audience w ON p.player_id = w.player_id
- LEFT JOIN profile_attributes a ON p.player_id = a.player_id WHERE
- ('${world}' = 'all' OR coalesce(i.world, 'unknown') = '${world}') AND ('${age}' = 'all' OR coalesce(nullif(i.age_group, 'unknown'), a.age_group, 'unknown') = '${age}')
- AND ('${source}' = 'all' OR coalesce(nullif(i.registration_source, 'unknown'), a.registration_source, 'unknown') = '${source}')
- AND ('${surface}' = 'all' OR coalesce(i.launch_surface, 'unknown') = '${surface}') GROUP BY p.player_id),
+current_profiles AS (SELECT s.player_id, w.subscribers FROM selected s
+ LEFT JOIN world_audience w ON s.player_id = w.player_id),
 cohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL
  AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)
-SELECT CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE count(DISTINCT p.player_id) END AS accounts,
- CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE count(DISTINCT CASE WHEN v.day=c.today THEN p.player_id END) END AS dau,
- CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE count(DISTINCT CASE WHEN v.day>=c.today-6 THEN p.player_id END) END AS wau,
- CASE WHEN l.snapshot_ms IS NULL THEN NULL ELSE count(DISTINCT CASE WHEN v.day>=c.today-29 THEN p.player_id END) END AS mau,
+SELECT count(DISTINCT p.player_id) AS accounts,
+ count(DISTINCT CASE WHEN v.day=c.today THEN p.player_id END) AS dau,
+ count(DISTINCT CASE WHEN v.day>=c.today-6 THEN p.player_id END) AS wau,
+ count(DISTINCT CASE WHEN v.day>=c.today-29 THEN p.player_id END) AS mau,
  (SELECT sum(subscribers) FROM current_profiles) AS channel_subscribers,
- (SELECT count(subscribers) FROM current_profiles) AS audience_known_accounts,
- to_timestamp_millis(l.snapshot_ms) AS snapshot_at
- FROM latest l CROSS JOIN clock c LEFT JOIN current_profiles p ON true LEFT JOIN visits v ON p.player_id=v.player_id
- GROUP BY l.snapshot_ms
+ (SELECT count(subscribers) FROM current_profiles) AS audience_known_accounts
+ FROM clock c LEFT JOIN current_profiles p ON true LEFT JOIN visits v ON p.player_id=v.player_id

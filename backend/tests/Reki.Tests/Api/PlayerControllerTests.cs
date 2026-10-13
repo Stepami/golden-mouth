@@ -5,6 +5,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using NSubstitute;
 using Reki.Application.Common;
 using Reki.Contracts.Player;
 using Reki.Contracts.Social;
@@ -51,7 +52,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         using var firstApi = Factory.CreateApiClient(firstUserId);
         using var secondApi = Factory.CreateApiClient(secondUserId);
         var store = Factory.Services.GetRequiredService<IGameStore>();
-        var before = await store.GetPlayerIdsAsync(CancellationToken.None).CountAsync(CancellationToken.None);
+        var before = await store.CountPlayersAsync(CancellationToken.None);
 
         // Act
         var onboarded = await Task.WhenAll(
@@ -62,7 +63,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             secondApi.Player.GetCurrentPlayerAsync(CancellationToken.None));
 
         // Assert
-        await Assert.That(await store.GetPlayerIdsAsync(CancellationToken.None).CountAsync(CancellationToken.None))
+        await Assert.That(await store.CountPlayersAsync(CancellationToken.None))
             .IsEqualTo(before + 2);
         await Assert.That(onboarded[0].Id).IsNotEqualTo(onboarded[1].Id);
         await Assert.That(current[0].Id).IsEqualTo(onboarded[0].Id);
@@ -90,7 +91,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         using var api = Factory.CreateApiClient();
         var store = Factory.Services.GetRequiredService<IGameStore>();
-        var before = await store.GetPlayerIdsAsync(CancellationToken.None).CountAsync(CancellationToken.None);
+        var before = await store.CountPlayersAsync(CancellationToken.None);
 
         // Act
         PlayerApiException? exception = null;
@@ -111,7 +112,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Assert
         await Assert.That(exception?.StatusCode).IsEqualTo(StatusCodes.Status401Unauthorized);
-        var after = await store.GetPlayerIdsAsync(CancellationToken.None).CountAsync(CancellationToken.None);
+        var after = await store.CountPlayersAsync(CancellationToken.None);
         await Assert.That(after).IsEqualTo(before);
     }
 
@@ -158,9 +159,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             .SingleAsync();
         await Assert.That(player["_id"].BsonType).IsEqualTo(BsonType.String);
         await Assert.That(player["TelegramUserId"].BsonType).IsEqualTo(BsonType.Int64);
-        var storedIds = await Factory.Services.GetRequiredService<IGameStore>()
-            .GetPlayerIdsAsync(CancellationToken.None).ToArrayAsync();
-        await Assert.That(storedIds).Contains(PlayerId.From(response.Id));
         await Assert.That(player.Contains("World")).IsFalse();
         await Assert.That(player["Skills"].AsBsonDocument.Names)
             .IsEquivalentTo(["brave", "humor", "topic"]);
@@ -392,7 +390,17 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Database.GetCollection<BsonDocument>("invites").InsertOneAsync(
             new BsonDocument("PlayerId", playerId));
 
+        var store = Factory.Services.GetRequiredService<IGameStore>();
+        var before = await store.CountPlayersAsync(CancellationToken.None);
         await api.Player.DeleteCurrentPlayerAsync(CancellationToken.None);
+        await Assert.That(await store.CountPlayersAsync(CancellationToken.None)).IsEqualTo(before - 1);
+        var deletion = Factory.ProductLogger.ReceivedCalls()
+            .Where(call => call.GetMethodInfo().Name == "BeginScope")
+            .Select(call => call.GetArguments()[0])
+            .OfType<IReadOnlyDictionary<string, object?>>()
+            .Single(attributes => Equals(attributes.GetValueOrDefault("player_id"), playerId) &&
+                Equals(attributes.GetValueOrDefault("event_name"), "player_deleted"));
+        await Assert.That(deletion["activity_kind"]).IsEqualTo("lifecycle");
 
         await AssertCollectionHasNoPlayerAsync(
             "players",

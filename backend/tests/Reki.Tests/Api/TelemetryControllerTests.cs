@@ -24,6 +24,7 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
                 Experiments = new Dictionary<string, string>(),
                 Events =
                 [
+                    new AnalyticsEventRequest { Name = "player_deleted", Screen = "feed" },
                     new AnalyticsEventRequest { Name = "world_created", WorldId = world.Id, Screen = "feed" },
                     new AnalyticsEventRequest { Name = "world_audience_updated", WorldId = world.Id, Screen = "feed" },
                 ],
@@ -47,6 +48,13 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
             .Single(attributes => Equals(attributes.GetValueOrDefault("player_id"), player.Id) &&
                 Equals(attributes.GetValueOrDefault("event_name"), "player_created"));
         await Assert.That(registration["registration_source"]).IsEqualTo("direct");
+        var deleted = Factory.ProductLogger.ReceivedCalls()
+            .Where(call => call.GetMethodInfo().Name == "BeginScope")
+            .Select(call => call.GetArguments()[0])
+            .OfType<IReadOnlyDictionary<string, object?>>()
+            .Any(attributes => Equals(attributes.GetValueOrDefault("player_id"), player.Id) &&
+                Equals(attributes.GetValueOrDefault("event_name"), "player_deleted"));
+        await Assert.That(deleted).IsFalse();
         await Assert.That(events[0].ContainsKey("TelegramUserId")).IsFalse();
         var audience = Factory.ProductLogger.ReceivedCalls()
             .Where(call => call.GetMethodInfo().Name == "BeginScope")

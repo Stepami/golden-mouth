@@ -28,6 +28,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         "notification_sent",
         "onboarding_step",
         "player_created",
+        "player_deleted",
         "plus_bonus_only",
         "plus_interest",
         "plus_shown",
@@ -90,7 +91,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
                 continue;
             }
 
-            if (entry.Name is "post_scored" or "player_created" or "world_created" or "level_up" or "card_earned" or "post_failed" || !_events.Contains(entry.Name))
+            if (entry.Name is "post_scored" or "player_created" or "player_deleted" or "world_created" or "level_up" or "card_earned" or "post_failed" || !_events.Contains(entry.Name))
             {
                 continue;
             }
@@ -194,7 +195,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["reki.stream"] = "product",
-            ["activity_kind"] = "real",
+            ["activity_kind"] = eventName == "player_deleted" ? "lifecycle" : "real",
             ["event_name"] = eventName,
             ["event_time_unix_ms"] = timestamp,
             ["player_id"] = playerId.Value,

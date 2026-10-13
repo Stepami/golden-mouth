@@ -15,7 +15,6 @@ class OuterQueryFieldsTest(unittest.TestCase):
 
     def test_final_panel_result_fields(self):
         expected = {
-            'accounts': ['metric', 'accounts'],
             'active-today': ['metric', 'dau'],
             'funnel': ['stage', 'users', 'base', 'conversion_pct'],
             'retention': ['cohort_day', 'registered', 'eligible_d1', 'returned_d1', 'd1_pct', 'eligible_d3', 'returned_d3', 'd3_pct', 'eligible_d7', 'returned_d7', 'd7_pct'],
@@ -41,21 +40,26 @@ class WorldAudienceTest(unittest.TestCase):
         db.close()
 
 
-class ProfileAttributesTest(unittest.TestCase):
-    def test_id_only_snapshot_retains_registration_dimensions(self):
+class DeletedPlayersTest(unittest.TestCase):
+    def test_deletion_excludes_old_and_late_events_without_excluding_new_profile(self):
         db = sqlite3.connect(':memory:')
-        db.execute('CREATE TABLE product (player_id TEXT, age_group TEXT, registration_source TEXT, event_name TEXT)')
-        db.executemany('INSERT INTO product VALUES (?, ?, ?, ?)', [
-            ('player', '14-17', 'referral', 'player_created'),
-            ('player', None, None, 'profile_snapshot'),
-            ('legacy', '18+', 'direct', 'profile_snapshot'),
-            ('legacy', None, None, 'profile_snapshot'),
+        db.execute('CREATE TABLE product (player_id TEXT, activity_kind TEXT, event_name TEXT)')
+        db.executemany('INSERT INTO product VALUES (?, ?, ?)', [
+            ('old-id', 'real', 'player_created'),
+            ('old-id', 'lifecycle', 'player_deleted'),
+            ('old-id', 'lifecycle', 'player_deleted'),
+            ('old-id', 'real', 'post_scored'),
+            ('new-id', 'real', 'player_created'),
+            ('active', 'real', 'screen_view'),
         ])
-        cte = product_v2.COMMON.split('profile_attributes AS', 1)[1].split('raw AS', 1)[0].rstrip().rstrip(',')
-        self.assertEqual(db.execute('WITH profile_attributes AS' + cte + ' SELECT * FROM profile_attributes ORDER BY player_id').fetchall(), [
-            ('legacy', '18+', 'direct'), ('player', '14-17', 'referral'),
-        ])
+        ctes = product_v2.COMMON.split('deleted_players AS', 1)[1].split('identities AS', 1)[0].rstrip().rstrip(',')
+        self.assertEqual(db.execute('WITH deleted_players AS' + ctes + ' SELECT DISTINCT player_id FROM raw ORDER BY player_id').fetchall(), [('active',), ('new-id',)])
         db.close()
+
+    def test_accounts_panel_uses_mongo_gauge_without_segment_filters(self):
+        panel = next(p for p in build.product_panels if p['id'] == 'accounts')
+        self.assertEqual(panel['queryType'], 'promql')
+        self.assertEqual(panel['queries'][0]['query'], 'max(reki_players_registered)')
 
 
 if __name__ == '__main__':
