@@ -1,3 +1,5 @@
+import mashaPortrait from '../assets/masha-v2.jpg'
+import { trackImage } from '../app/imageTiming'
 import { useEffect, useRef, useState } from 'react'
 import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
@@ -29,7 +31,7 @@ function Invite() {
     <div className="brand">реки</div><h1>Твой пост может<br />взорвать ленту.</h1>
     <p className="muted">Собери фанатов, попади в драму и стань главным героем своей истории.</p>
     <div className="welcome-post card" aria-label="Пример игрового поста">
-      <div className="row"><img className="welcome-avatar welcome-photo" src="/portraits/masha-v1.png" alt="Маша" /><div><b>Маша в тридевятом царстве</b><div className="small muted">только что</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
+      <div className="row"><img className="welcome-avatar welcome-photo" src={mashaPortrait} width={44} height={44} fetchPriority="high" onLoad={e => trackImage(e.currentTarget, 'welcome_portrait')} onError={() => trackImage(null, 'welcome_portrait')} alt="Маша" /><div><b>Маша в тридевятом царстве</b><div className="small muted">только что</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
       <p>Выложила фото с бала. Все обсуждают парня рядом со мной. Вообще-то я пришла одна 👀</p>
       <div className="row"><span className="react">🔥 2,4k</span><span className="react">💀 890</span><span className="small muted">🫶 1,2k</span></div>
       <div className="welcome-reply"><b>Джеймс · рыцарь великого дома</b><div>Ты всё-таки заметила меня. Оставишь мне первый танец на следующем балу?</div></div>
@@ -102,7 +104,7 @@ export function ChannelHead() {
 export function Home() {
   const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world)
   return <div className="screen"><ChannelHead /><div className="pad">
-    <div className="card first-story">{worldArt[p.world] && <img className="first-story-cover" src={worldArt[p.world].cover} alt={`Мир «${worldOf(p.world).title}»`} />}<div className="small eyebrow">Твоя история начинается</div><p className="first-story-context">{profile.firstContext}</p>
+    <div className="card first-story">{worldArt[p.world] && <img className="first-story-cover" src={worldArt[p.world].cover} decoding="async" onLoad={e => trackImage(e.currentTarget, `cover_${p.world}`)} onError={() => trackImage(null, `cover_${p.world}`)} alt={`Мир «${worldOf(p.world).title}»`} />}<div className="small eyebrow">Твоя история начинается</div><p className="first-story-context">{profile.firstContext}</p>
       {p.firstPostInviteBonus > 0 && <p>🎁 Первый пост даст ещё {p.firstPostInviteBonus} энергии</p>}
       <button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button>
     </div><p className="small muted first-story-footer">Твои посты меняют историю</p>

@@ -1,12 +1,16 @@
+import eveningCover from '../assets/evening-v2.webp'
+import sorcerersCover from '../assets/sorcerers-v2.webp'
+import housesCover from '../assets/houses-v2.webp'
+import itCover from '../assets/it-v2.webp'
 import type { Drama, WorldDefinition } from '../api/types'
 import { worldDefinitionOf } from '../api/worldContent'
 import { blankWorld } from './worldDraft'
 
 export const worldArt: Record<string, { cover: string; pitch: string; genre: string }> = {
-  evening: { cover: '/world-covers/evening-v1.jpg', genre: 'Тайны · Романтика', pitch: 'Исчезнувшие улицы, чужие воспоминания и знакомства после заката.' },
-  sorcerers: { cover: '/world-covers/sorcerers-v1.jpg', genre: 'Магия · Дружба', pitch: 'Школа меняется каждую ночь. Только ваша общая лента помнит всё.' },
-  houses: { cover: '/world-covers/houses-v1.jpg', genre: 'Интриги · Приключения', pitch: 'Великие дома, драконы и союзы, от которых зависит северное царство.' },
-  it: { cover: '/world-covers/it-v1.jpg', genre: 'Стартапы · Ирония', pitch: 'Запускай проекты, спорь о технологиях и попадай в стартап-драмы.' },
+  evening: { cover: eveningCover, genre: 'Тайны · Романтика', pitch: 'Исчезнувшие улицы, чужие воспоминания и знакомства после заката.' },
+  sorcerers: { cover: sorcerersCover, genre: 'Магия · Дружба', pitch: 'Школа меняется каждую ночь. Только ваша общая лента помнит всё.' },
+  houses: { cover: housesCover, genre: 'Интриги · Приключения', pitch: 'Великие дома, драконы и союзы, от которых зависит северное царство.' },
+  it: { cover: itCover, genre: 'Стартапы · Ирония', pitch: 'Запускай проекты, спорь о технологиях и попадай в стартап-драмы.' },
 }
 export const dramaOptions: { id: Drama; icon: string; title: string; description: string; example: string }[] = [
   { id: 'soft', icon: '🌤', title: 'Мягко', description: 'Тёплые знакомства, поддержка и небольшие приключения.', example: 'Неожиданная находка становится поводом сблизиться.' },

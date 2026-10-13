@@ -115,3 +115,9 @@ Stickiness — сумма активных профиле-дней / число 
 ## Техническая стоимость LLM
 
 Существующие chat traces дополняются полем `gen_ai.usage.cost` с валютой `RUB`; это техническая телеметрия, не новое продуктовое событие. Для streaming `LlmSpendChatClient` передаёт `stream_options.include_usage = true` и читает `usage.cost` из чанка через SDK JsonPatch, пока GenAI-спан ещё открыт. Стоимость появится только если администратор шлюза включил `litellm_settings.include_cost_in_streaming_usage = true`; это не параметр клиентского запроса. Для обычного ответа `LlmSpendPolicy` читает заголовки стоимости. Обе обёртки используют `LlmSpendWriter`. Дополнительных запросов журнала и ожидания стоимости нет; если поле отсутствует, приложение не записывает стоимость. Начальный расход без детализации зарегистрирован отдельно в log stream `llm_cost_ledger`. В метрики не добавляются player/post/request IDs, ключи или тексты. Методика описана в [dashboards.md](dashboards.md#стоимость-шлюза).
+
+## Загрузка изображений игры (#156)
+
+`image_loaded`: фиксированный `asset` (`welcome_portrait`, `cover_evening`, `cover_sorcerers`, `cover_houses`, `cover_it`), `duration_ms`, `transfer_bytes`, `decoded_bytes` из Resource Timing. `image_failed`: тот же фиксированный `asset`. Без URL, текста или фотографий игроков. Нулевой transfer может означать кеш; отсутствующий Resource Timing не доказывает мгновенную загрузку. События идут через существующую очередь после появления игрока: неавторизованные посетители первого экрана не входят в эти агрегаты. Исторических замеров до этого изменения нет.
+
+Для проверки задержек: в OpenObserve stream product фильтровать name=image_loaded, группировать по props.asset, считать p50/p95 duration_ms; image_failed проверять отдельно. Серверные API traces не измеряют загрузку статических файлов фронта.
