@@ -1,4 +1,4 @@
-import { useContext, type CSSProperties, type ReactNode } from 'react'
+import { useContext, useState, type CSSProperties, type ReactNode } from 'react'
 import { tap } from '../app/analytics'
 import { avatarUri, AvatarWorld, AvatarPeople, type AvatarProfile } from './avatar'
 import type { WorldId } from '../api/types'
@@ -80,14 +80,20 @@ export function Whisper({ seed = 'mira', name = 'Мира', children }: { seed?:
   )
 }
 
+export function ExpandableText({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false)
+  if (text.length < 220) return <>{text}</>
+  return <div><div className={expanded ? '' : 'text-preview'}>{text}</div><button className="text-link read-more" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(!expanded) }}> {expanded ? 'Свернуть' : 'Читать дальше'}</button></div>
+}
+
 export function Comment({ seed, name, handle, text, star, me, onMore, profile }: { profile?: AvatarProfile; seed: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
   return (
     <div style={{ display: 'flex', gap: 10, marginBottom: 13 }}>
       <Avatar seed={seed} size={34} profile={profile} />
       <div style={{ flex: 1 }}>
-        <div className="row" style={{ gap: 6 }}><b>{name}</b><span className="muted small">{handle}</span>{star && <span className="small" style={{ color: 'var(--accent)' }}>★ звезда</span>}{me && <span className="small muted">ты</span>}
+        <div className="row comment-heading" style={{ gap: 6 }}><b>{name}</b><span className="muted small">{handle}</span>{star && <span className="small" style={{ color: 'var(--accent)' }}>★ звезда</span>}{me && <span className="small muted">ты</span>}
           {onMore && <button onClick={onMore} aria-label="Пожаловаться" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>}</div>
-        <div style={{ marginTop: 2 }}>{text}</div>
+        <div style={{ marginTop: 6 }}>{typeof text === 'string' ? <ExpandableText text={text} /> : text}</div>
       </div>
     </div>
   )

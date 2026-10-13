@@ -101,10 +101,10 @@ export function ChannelHead() {
 export function Home() {
   const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world)
   return <div className="screen"><ChannelHead /><div className="pad">
-    <Card><h2>Твоя история начинается</h2><p>{profile.firstContext}</p><p className="muted">{profile.firstPrompt}</p>
+    <div className="card first-story"><div className="small eyebrow">Твоя история начинается</div><p className="first-story-context">{profile.firstContext}</p><p className="muted first-story-prompt">{profile.firstPrompt}</p>
       {p.firstPostInviteBonus > 0 && <p>🎁 Первый пост даст ещё {p.firstPostInviteBonus} ходов</p>}
       <button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button>
-    </Card><p className="small muted">Пиши посты → получай реакции → влияй на свою историю</p>
+    </div><p className="small muted first-story-footer">Твои посты меняют историю</p>
   </div></div>
 }
 

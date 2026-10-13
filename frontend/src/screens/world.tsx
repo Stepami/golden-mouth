@@ -7,6 +7,8 @@ import { selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 import { Button, TopBar } from '../ui'
 import { DescriptionSetup } from './worldWizard'
 import { register } from '.'
+import { AgeRuleNote } from './worldAdvanced'
+import { worldArt } from '../app/worldPrototype'
 
 function WorldDetailsScreen() {
   const nav = useNav(); const p = usePlayer(); const r = worldDocumentOf(p.world)
@@ -21,12 +23,13 @@ function WorldDetailsScreen() {
       nav.push('05-7b_own_world', { world: p.world })
     } catch { setError('Не получилось загрузить настройки. Попробуй ещё раз.') } finally { setLoading(false) }
   }
-  return <div className="screen no-tab"><TopBar onBack={nav.back} title="Настройки мира" /><div className="pad">
-    <h1>{r.emoji} {r.title}</h1><p className="muted">{r.description}</p><h2>Правила мира</h2>
-    <div className="card">{r.rules.map((rule, i) => <p key={i}>{rule.locked ? '🔒' : '✓'} {rule.text}</p>)}</div>
-    <h2>Редактировать мир</h2><p className="muted">Измени описание, персонажа и настроение истории. Герои, правила и голос доступны в расширенных настройках. Подписчики и прогресс сохранятся.</p>
+  return <div className="screen no-tab"><TopBar onBack={nav.back} title="Настройки мира" /><div className="pad world-details">
+    <h1>{r.emoji} {r.title}</h1><p className="muted world-details-pitch">{worldArt[p.world]?.pitch ?? r.summary}</p>
+    <details className="editor-extra"><summary>О мире</summary><p>{r.description}</p></details>
+    <details className="editor-extra"><summary>Как устроен мир</summary><div className="world-rule-list">{r.rules.map((rule, i) => rule.locked ? <AgeRuleNote key={i} teen={!p.ageBand || p.ageBand === '14-17'} /> : <p key={i}>✓ {rule.text}</p>)}</div></details>
+    <p className="small muted editor-save-note">Подписчики и прогресс сохранятся.</p>
     <Button disabled={loading} onClick={edit}>{loading ? 'Загружаем…' : 'Редактировать мир'}</Button>
-    <Button secondary onClick={() => nav.push('01-3_world')}>Другие миры и создание с нуля</Button>
+    <Button secondary onClick={() => nav.push('01-3_world')}>Выбрать другой мир</Button>
     {error && <p role="alert">{error}</p>}
   </div></div>
 }

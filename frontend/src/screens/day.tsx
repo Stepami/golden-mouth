@@ -1,3 +1,4 @@
+import { ExpandableText } from '../ui'
 import { contentOf, worldOf } from '../api/worldContent'
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
@@ -101,7 +102,7 @@ function FeedPostCard({ item }: { item: FeedItem }) {
       >
         <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{item.starId && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
         {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>{p.name}</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
-        <div style={{ marginTop: 8 }}>{item.text}</div>
+        <div style={{ marginTop: 12 }}><ExpandableText text={item.text} /></div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{item.reactions?.map(r => <span key={r.emoji} className="react">{r.emoji} {short(r.count)}</span>)}</div>
           {item.commentCount != null && item.views != null && <span className="small muted" style={{ whiteSpace: 'nowrap' }}>💬 {item.commentCount} · 👁 {short(item.views)}</span>}
