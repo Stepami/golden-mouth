@@ -252,3 +252,5 @@ progress { width: 100%; height: 8px; accent-color: #b389ff; margin: 10px 0; }
 .first-story { gap: 18px; }
 .first-story-context { font-size: 19px; line-height: 1.45; }
 @media (prefers-reduced-motion: reduce) { .feed-arrival { animation: none; } }
+
+.world-overview .pad > h2 { margin-top: 24px; }
