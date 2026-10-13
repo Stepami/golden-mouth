@@ -249,7 +249,7 @@ function Thread() {
     api.post(postId).then(found => {
       if (!alive) return
       setPost(found); setLoad('ready')
-      const saved = found.comments.find(comment => comment.requestId === draft.requestId && comment.parentCommentId === draft.commentId && comment.text === draft.text)
+      const saved = found.comments.find(comment => comment.requestId === draft.requestId && (comment.parentCommentId ?? null) === draft.commentId && comment.text === draft.text)
       if (saved) setDraft(fresh())
     }).catch((cause: unknown) => {
       if (alive) setLoad((cause as { status?: number })?.status === 404 ? 'unavailable' : 'error')
@@ -258,10 +258,11 @@ function Thread() {
     // The current draft is compared once when opening/reloading this post.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId, threadKey, reloadToken, starIds])
-  const canReply = !apiBaseUrl ? post?.canReply !== false : post?.canReply === true || (!!publishedPost && !post?.demoComments)
-  const canReplyTo = (comment?: CommentT) => !!comment?.star && !comment.hidden && stars.some(star => star.id === comment.authorId)
+  const postAuthor = stars.find(star => star.id === post?.authorId)
+  const isStarComment = (comment?: CommentT) => !!comment?.star && !comment.hidden && stars.some(star => star.id === comment.authorId)
   const target = post?.comments.find(comment => comment.id === draft.commentId)
-  const targetAvailable = canReplyTo(target)
+  const targetAvailable = draft.commentId === null ? !!postAuthor : isStarComment(target)
+  const recipient = draft.commentId === null ? postAuthor?.name : target?.author
   const edit = (change: Partial<Pick<Draft, 'text' | 'commentId'>>) => {
     setDraft(current => {
       const next = { ...current, ...change }
@@ -271,7 +272,7 @@ function Thread() {
     setReplyError('')
   }
   const send = async () => {
-    if (!post || !canReply || !targetAvailable || !draft.text.trim() || !draft.commentId || sending) return
+    if (!post || !targetAvailable || !draft.text.trim() || sending) return
     if (player.postsLeft < 1 && !draft.submitted) { setReplyError('Энергия закончилась. Новая появится в 9:00.'); return }
     const ctrl = new AbortController()
     controller.current = ctrl
@@ -323,23 +324,24 @@ function Thread() {
       <TopBar title="Реакции" rightPlain right={<button className="thread-exit" onClick={() => nav.replace('03-5_stage')}>В канал →</button>} />
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div></div>
-        {canReply && showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>Герой ждёт ответа</b><p>Нажми «Ответить» под репликой и продолжи историю.</p><span className="small muted">Ответ · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
-        {canReply ? (!showHelp && <div className="small muted" style={{ marginBottom: 16 }}>Ответ · 1 энергия</div>) : <div className="small muted" style={{ marginBottom: 12 }}>Этот тред доступен для чтения.</div>}
+        {showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
+        {!showHelp && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
         {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>
           <Comment seed={comment.avatar} name={comment.author} handle={comment.star ? comment.handle : comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} />
           {!!comment.reactions?.length && <div className="small" style={{ margin: '-6px 0 12px 44px' }}>{comment.reactions.map(reaction => <span key={`${reaction.authorId}:${reaction.emoji}`} title={reaction.author} className="react">{reaction.emoji} {reaction.author}</span>)}</div>}
-          {canReply && canReplyTo(comment) && <button className="small" disabled={sending} onClick={() => focusReply(comment.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: draft.commentId === comment.id ? 'var(--accent)' : 'var(--lilac)' }}>{draft.commentId === comment.id ? 'Отвечаешь этому комментарию' : `Ответить герою ${comment.author}`}</button>}
+          {isStarComment(comment) && <button className="small" disabled={sending} onClick={() => focusReply(comment.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: draft.commentId === comment.id ? 'var(--accent)' : 'var(--lilac)' }}>{draft.commentId === comment.id ? 'Отвечаешь этому комментарию' : `Ответить герою ${comment.author}`}</button>}
         </div>)}
-        {sending && <div className="card" role="status" aria-live="polite"><div className="small muted">{target?.author ?? 'Звезда'} готовит ответ…</div><div className="live-current" aria-hidden="true"><span /></div>{preview && <><p>{preview}</p><div className="small muted">Ответ ещё не опубликован</div></>}</div>}
-        {target && targetAvailable && <div className="small muted" style={{ marginBottom: 8 }}>Отвечаешь: {target.author}</div>}
+        {sending && <div className="card" role="status" aria-live="polite"><div className="small muted">{recipient ?? 'Звезда'} готовит ответ…</div><div className="live-current" aria-hidden="true"><span /></div>{preview && <><p>{preview}</p><div className="small muted">Ответ ещё не опубликован</div></>}</div>}
+        {targetAvailable && <div className="small muted" style={{ marginBottom: 8 }}>{draft.commentId === null ? 'Комментарий к посту' : 'Отвечаешь'}: {recipient}</div>}
+        {postAuthor && draft.commentId !== null && <button disabled={sending} onClick={() => { edit({ commentId: null }); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.thread-reply-input')?.focus()) }} style={{ background: 'none', border: 'none', color: 'var(--lilac)', marginBottom: 8 }}>К посту</button>}
         {draft.commentId && !targetAvailable && <div className="small muted" role="status" style={{ marginBottom: 8 }}>Этому аккаунту больше нельзя ответить. Выбери другой комментарий — текст ответа сохранён.</div>}
         {replyError && <div className="small" role="alert" style={{ color: 'var(--accent)', marginBottom: 12 }}>{replyError}</div>}
         <Button secondary disabled={sending} onClick={() => nav.replace('02-1_compose')}>Написать следующий пост</Button>
       </div>
-      {canReply && <div className="bottom-cta" style={{ flexDirection: 'row' }}>
-        <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input className="thread-reply-input" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={targetAvailable ? 'Ответ · 1 энергия' : 'Выбери комментарий'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
-        <button className="card thread-reply-send" onClick={send} disabled={sending || !targetAvailable || !draft.text.trim() || !draft.commentId || (player.postsLeft < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
-      </div>}
+      <div className="bottom-cta" style={{ flexDirection: 'row' }}>
+        <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input className="thread-reply-input" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
+        <button className="card thread-reply-send" onClick={send} disabled={sending || !targetAvailable || !draft.text.trim() || (player.postsLeft < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
+      </div>
     </div>
   )
 }

@@ -91,7 +91,7 @@ function StarCard() {
 function FeedPostCard({ item }: { item: FeedItem }) {
   const nav = useNav()
   const p = usePlayer()
-  const open = item.postId && item.canReply === true && !item.starId ? () => nav.push('02-6_thread', { postId: item.postId }) : undefined
+  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId }) : undefined
   return (
     <Card style={{ marginBottom: 12, position: 'relative' }}>
       <div

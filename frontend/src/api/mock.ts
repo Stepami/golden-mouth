@@ -24,7 +24,7 @@ export const player: Player = {
 
 export const firstPost: Post = {
   id: 'post1', text: 'первый день трейни: перепутала право и лево три раза. хореограф сказал «зато уверенно» 🫠', views: 312,
-  reactions: [{ emoji: '😂', count: 48 }, { emoji: '🫶', count: 21 }, { emoji: '💀', count: 9 }], at: 'только что', canReply: true,
+  reactions: [{ emoji: '😂', count: 48 }, { emoji: '🫶', count: 21 }, { emoji: '💀', count: 9 }], at: 'только что', authorId: player.id,
   comments: [
     { id: 'k1', authorId: 'mira', depth: 0, parentCommentId: null, author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'я на первой репетиции упала со сцены. «уверенно» это комплимент, поверь', star: true },
     { id: 'k2', parentCommentId: 'k1', authorId: player.id, depth: 1, reactions: [{ authorId: 'mira', author: 'Мира', avatar: 'mira', star: true, me: false, emoji: '💛' }], author: 'Лиза · трейни', avatar: '@liza.trainee', handle: '', text: 'серьёзно? со сцены?? 😳', me: true },
