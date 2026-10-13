@@ -116,7 +116,6 @@ public static class DependencyInjection
         services.AddSingleton<IGameStore, MongoGameStore>();
         services.AddMetrics();
         services.AddSingleton<RegisteredPlayersMetrics>();
-        services.AddSingleton<IGameDayStore, MongoGameDayStore>();
         services.AddSingleton<IMongoClient>(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoClient);
         services.AddSingleton<IMongoDatabase>(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoDatabase);
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);

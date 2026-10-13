@@ -10,6 +10,8 @@ namespace Reki.Application.Common;
 
 public interface IGameStore
 {
+    Task<GameDayResetResult> ResetGameDayAsync(DateTimeOffset periodStart, DateTimeOffset restedBefore, int restedPosts, CancellationToken cancellationToken);
+
     ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
 
     ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken);

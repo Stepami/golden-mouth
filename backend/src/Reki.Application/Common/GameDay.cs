@@ -10,7 +10,7 @@ using ContractSkillId = Reki.Contracts.Player.SkillId;
 namespace Reki.Application.Common;
 
 [Mapper]
-public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBalance> balance, IGameStore store, IGameDayStore dayStore, ISender sender)
+public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBalance> balance, IGameStore store, ISender sender)
 {
     private static readonly TimeSpan MoscowOffset = TimeSpan.FromHours(3);
 
@@ -45,7 +45,7 @@ public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBala
     public Task<GameDayResetResult> ResetAsync(CancellationToken cancellationToken)
     {
         var periodStart = PeriodStart;
-        return dayStore.ResetAsync(
+        return store.ResetGameDayAsync(
             periodStart,
             periodStart.AddDays(-balance.Value.Growth.RestedAfterSkippedDays),
             balance.Value.Growth.RestedFirstPosts,
