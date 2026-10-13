@@ -56,7 +56,7 @@ Startup runs versioned migrations before serving requests (except during build-t
 creates the ten initial game indexes. MongoDB accepts identical existing definitions without rebuilding them, so a
 deployed database with player data needs no manual baseline or migration-history entries. Missing indexes are created.
 
-Version `1.1.0` removes `ux_challenges_active_player` when present. Index definitions are owned by migrations;
+Version `1.1.0` removes `ux_challenges_active_player` when present. Gameplay index definitions are owned by migrations;
 there are no additional checks for manually changed definitions.
 
 Index DDL runs outside transactions under the migrator's database lock. Successful versions are recorded and skipped
@@ -98,3 +98,18 @@ dotnet test --project tests/Reki.Tests/Reki.Tests.csproj --configuration Release
 ```
 
 Building the API produces an OpenAPI document. Building the test project regenerates its typed NSwag client from that document before compilation; the client reuses DTOs from `Reki.Contracts` instead of generating copies.
+
+## Scheduled maintenance (TickerQ)
+
+TickerQ 10.4 uses `alexjamesbrown.TickerQ.MongoDB` 0.1.0 and the application's existing Mongo client/database. The provider stores schedules and execution history in `ticker_TimeTickers`, `ticker_CronTickers` and `ticker_CronTickerOccurrences` and creates its indexes at startup. Game-day period indexes are initialized idempotently before the initial reset; no data backfill or schema migration is needed.
+
+- `reset-game-day`: `0 0 9 * * *`, time zone `Europe/Moscow` (09:00 Moscow, 06:00 UTC).
+- `refresh-registered-players`: `0 * * * * *`, once per minute, using MongoDB `CountDocumentsAsync` without reading profiles, worlds or invitations.
+
+Startup catches up to the current game day and refreshes the gauge before accepting requests. Reset only touches older periods. It clears player energy/daily bonus, world wants and daily star relation gains, applies the existing rested-post rule, and increments document versions. Repeated runs do not reset the same period twice. Player/world reads and writes no longer perform daily normalization. Invitation usage, direct messages, daily events and challenge lifecycle retain their existing behavior.
+
+The built-in dashboard is `/admin/tickerq`, with login/password authentication on its API and live updates. Enable it with `Jobs__DashboardEnabled=true`, `Jobs__DashboardUsername`, and `Jobs__DashboardPassword`; enabling it without both credentials fails startup. For GitHub deployments use repository variable `TICKERQ_DASHBOARD_ENABLED=true` and secrets `TICKERQ_DASHBOARD_USERNAME` / `TICKERQ_DASHBOARD_PASSWORD`. For Compose set `TICKERQ_DASHBOARD_ENABLED=true`, `TICKERQ_DASHBOARD_USERNAME` and `TICKERQ_DASHBOARD_PASSWORD` outside the repository. The production gateway proxies the dashboard and its WebSocket connection directly to the backend. The dashboard is disabled until credentials are configured.
+
+`Jobs__ExecutionEnabled=false` disables scheduler execution (used by component tests), but startup catch-up, persisted schedule initialization and the dashboard remain available. In production leave execution enabled. A failed maintenance execution is recorded by TickerQ; manual rerun and the next startup recover an interrupted reset safely.
+
+TickerQ execution spans (`TickerQ`) and maintenance spans (`Reki.Jobs`) join the existing OTLP trace pipeline. Reset spans contain only counts (`reki.reset.players`, `reki.reset.worlds`); the registered-player gauge remains `reki.players.registered` from `Reki.Product`. Exceptions mark spans as errors and are propagated to the scheduler. There are no player IDs or player text in these signals. Technical job logs go to the existing backend stream; product analytics do not change.

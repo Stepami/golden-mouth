@@ -4,6 +4,10 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="TickerQ" Version="10.4.0" />
+    <PackageVersion Include="TickerQ.Dashboard" Version="10.4.0" />
+    <PackageVersion Include="TickerQ.Instrumentation.OpenTelemetry" Version="10.4.0" />
+    <PackageVersion Include="alexjamesbrown.TickerQ.MongoDB" Version="0.1.0" />
     <PackageVersion Include="Kot.MongoDB.Migrations.DI" Version="3.1.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
     <PackageVersion Include="CSharpGuidelinesAnalyzer" Version="3.8.5" />

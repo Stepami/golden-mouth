@@ -41,7 +41,7 @@ public sealed partial class AddReplyStreamHandler(
         var post = await sender.Send(new GetPostQuery(request.PostId, storedPlayer.Id, world.Id), cancellationToken);
         var (target, star) = ValidateTarget(post, world, request.TargetCommentId);
         await safety.EnsureInputAllowedAsync(storedPlayer, [request.Text], cancellationToken);
-        var player = gameDay.Normalize(storedPlayer);
+        var player = storedPlayer;
         var cap = await GetCapAsync(player, cancellationToken);
         if (post.FindRequest(request.RequestId) is { } existing)
         {
@@ -166,7 +166,7 @@ public sealed partial class AddReplyStreamHandler(
             cancellationToken.ThrowIfCancellationRequested();
             var storedPlayer = await store.GetPlayerAsync(playerId, cancellationToken)
                                ?? throw new ResourceNotFoundException("Player not found.");
-            var player = gameDay.Normalize(storedPlayer);
+            var player = storedPlayer;
             var world = await sender.Send(new Worlds.GetWorldQuery(playerId, request.WorldId), cancellationToken);
             var post = await sender.Send(new GetPostQuery(request.PostId, playerId, world.Id), cancellationToken);
             var cap = await GetCapAsync(player, cancellationToken);
@@ -235,7 +235,7 @@ public sealed partial class AddReplyStreamHandler(
         var post = await sender.Send(new GetPostQuery(request.PostId, playerId, request.WorldId), cancellationToken);
         var storedPlayer = await store.GetPlayerAsync(playerId, cancellationToken)
             ?? throw new ResourceNotFoundException("Player not found.");
-        var player = gameDay.Normalize(storedPlayer);
+        var player = storedPlayer;
         var world = await sender.Send(new Worlds.GetWorldQuery(playerId, post.WorldId), cancellationToken);
         var existing = post.FindRequest(request.RequestId) ?? throw new RequestConflictException("The saved reply disappeared.");
         EnsureSameRequest(existing, request, playerId);

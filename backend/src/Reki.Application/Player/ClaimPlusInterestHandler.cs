@@ -7,7 +7,6 @@ namespace Reki.Application.Player;
 public sealed class ClaimPlusInterestHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
-    GameDay gameDay,
     ISender sender) : IRequestHandler<ClaimPlusInterestCommand, int>
 {
     public async ValueTask<int> Handle(
@@ -15,11 +14,7 @@ public sealed class ClaimPlusInterestHandler(
         CancellationToken cancellationToken)
     {
         var storedPlayer = await sender.Send(new GetPlayerQuery(), cancellationToken);
-        var player = gameDay.Normalize(storedPlayer);
-        if (!ReferenceEquals(player, storedPlayer))
-        {
-            await store.TryReplacePlayerAsync(player, storedPlayer.Version, cancellationToken);
-        }
+        var player = storedPlayer;
 
         if (request.Interest)
         {

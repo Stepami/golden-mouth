@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Reki.Infrastructure;
 using Serilog;
 using TgMiniAppAuth;
+using TickerQ.DependencyInjection;
 
 namespace Reki.Api.Bootstrapping;
 
@@ -50,7 +51,7 @@ internal static class Bootstrap
 
         builder.Services
             .AddApplication()
-            .AddInfrastructure();
+            .AddInfrastructure(builder.Configuration);
     }
 
     private static void ConfigureLogging(WebApplicationBuilder builder)
@@ -77,6 +78,11 @@ internal static class Bootstrap
         app.UseExceptionHandler();
         app.UseStatusCodePages();
         app.UseSerilogRequestLogging();
+        if (!OpenApiGeneration.IsRunning)
+        {
+            app.UseTickerQ();
+        }
+
         app.UseAuthentication();
         app.UseAuthorization();
 

@@ -1,6 +1,7 @@
 using Kot.MongoDB.Migrations;
 using Kot.MongoDB.Migrations.DI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -13,15 +14,20 @@ using Reki.Application.Common.AI;
 using Reki.Application.Common.Safety;
 using Reki.Infrastructure.AI;
 using Reki.Infrastructure.Health;
+using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.Persistence;
 using Reki.Infrastructure.Rendering;
+using TickerQ.Dashboard.DependencyInjection;
+using TickerQ.DependencyInjection;
+using TickerQ.Instrumentation.OpenTelemetry;
+using TickerQ.MongoDB.DependencyInjection;
 
 namespace Reki.Infrastructure;
 
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
-        this IServiceCollection services)
+        this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
@@ -29,8 +35,40 @@ public static class DependencyInjection
         services.AddBaseHealthChecks();
         services.AddMongoInfrastructure();
         services.AddLlmInfrastructure();
+        services.AddGameJobs(configuration);
 
         return services;
+    }
+
+    private static void AddGameJobs(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<JobsOptions>().BindConfiguration(JobsOptions.SectionName)
+            .Validate(options => !options.DashboardEnabled || (!string.IsNullOrWhiteSpace(options.DashboardUsername) && !string.IsNullOrWhiteSpace(options.DashboardPassword)), "Jobs dashboard requires a username and password.")
+            .ValidateOnStart();
+        var jobs = configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
+        var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ?? throw new InvalidOperationException("Mongo configuration is required.");
+        services.AddScoped<GameMaintenanceJobs>();
+        services.AddHostedService<GameDayIndexes>();
+        services.AddHostedService<GameMaintenanceStartup>();
+        services.AddTickerQ(options =>
+        {
+            options.ConfigureScheduler(scheduler => scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
+            options.AddOperationalStore(store => store.UseExistingMongoClient(mongo.DatabaseName));
+            options.AddOpenTelemetryInstrumentation();
+            if (!jobs.ExecutionEnabled)
+            {
+                options.DisableBackgroundServices();
+            }
+
+            if (jobs.DashboardEnabled)
+            {
+                options.AddDashboard(dashboard =>
+                {
+                    dashboard.SetBasePath("/admin/tickerq");
+                    dashboard.WithBasicAuth(jobs.DashboardUsername, jobs.DashboardPassword);
+                });
+            }
+        });
     }
 
     private static void AddLlmInfrastructure(this IServiceCollection services)
@@ -79,7 +117,10 @@ public static class DependencyInjection
         services.AddSingleton<MongoCompositionRoot>();
         services.AddSingleton<IGameStore, MongoGameStore>();
         services.AddMetrics();
-        services.AddHostedService<RegisteredPlayersMetrics>();
+        services.AddSingleton<RegisteredPlayersMetrics>();
+        services.AddSingleton<IGameDayStore, MongoGameDayStore>();
+        services.AddSingleton<IMongoClient>(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoClient);
+        services.AddSingleton<IMongoDatabase>(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoDatabase);
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);
 
         services
@@ -103,7 +144,7 @@ public static class DependencyInjection
     {
         services.AddOpenTelemetry()
             .WithTracing(tracing => tracing
-                .AddSource(MongoTelemetry.ActivitySourceName, "Reki.GenAI")
+                .AddSource(MongoTelemetry.ActivitySourceName, "Reki.GenAI", "TickerQ", GameMaintenanceJobs.ActivitySourceName)
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation())
             .WithMetrics(metrics => metrics

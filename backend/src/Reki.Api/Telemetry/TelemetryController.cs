@@ -36,7 +36,7 @@ public sealed partial class TelemetryController(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(
-            new GetPlayerQuery(NormalizeDay: true),
+            new GetPlayerQuery(),
             cancellationToken);
         foreach (var entry in request.Entries)
         {

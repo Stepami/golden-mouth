@@ -664,6 +664,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             },
             world.Version,
             CancellationToken.None);
+        await ResetGameDayAsync();
         using var http = CreateAuthenticatedHttpClient(userId);
 
         // Act
@@ -742,6 +743,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(await Database.GetCollection<BsonDocument>("posts").CountDocumentsAsync(
             new BsonDocument("AuthorId", $"Player_{friend.Id}"))).IsEqualTo(1L);
         Factory.Session.Clock.SetUtcNow(usedAt.AddDays(1));
+        await ResetGameDayAsync();
         await friendApi.Posts.ModeratePublicationAsync(generation.PublicationId, worldId, CancellationToken.None);
         var saved = await Database.GetCollection<Invitation>("invites")
             .Find(item => item.InviteeId == PlayerId.From(friend.Id)).SingleAsync();
@@ -772,6 +774,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Act
         Factory.Session.Clock.SetUtcNow(reset.AddSeconds(secondsAfterReset));
+        await ResetGameDayAsync();
         var currentInviter = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
         var currentFriend = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
@@ -841,6 +844,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
         var reset = new DateTimeOffset(2026, 10, 6, 6, 0, 0, TimeSpan.Zero);
         Factory.Session.Clock.SetUtcNow(reset);
+        await ResetGameDayAsync();
 
         // Act
         await PublishAsync(8551, "первый пост на границе дня");

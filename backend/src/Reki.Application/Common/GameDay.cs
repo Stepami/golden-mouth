@@ -10,7 +10,7 @@ using ContractSkillId = Reki.Contracts.Player.SkillId;
 namespace Reki.Application.Common;
 
 [Mapper]
-public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBalance> balance, IGameStore store, ISender sender)
+public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBalance> balance, IGameStore store, IGameDayStore dayStore, ISender sender)
 {
     private static readonly TimeSpan MoscowOffset = TimeSpan.FromHours(3);
 
@@ -25,7 +25,7 @@ public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBala
 
     public async ValueTask<PlayerResponse> GetPlayerAsync(CancellationToken cancellationToken)
     {
-        var player = await sender.Send(new GetPlayerQuery(NormalizeDay: true), cancellationToken);
+        var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var invite = await store.GetInviteAsync(player.Id, cancellationToken);
         var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);
         var postsCap = GetPostsCap(player, invite, invited);
@@ -42,6 +42,16 @@ public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBala
             new Dictionary<string, string>());
     }
 
+    public Task<GameDayResetResult> ResetAsync(CancellationToken cancellationToken)
+    {
+        var periodStart = PeriodStart;
+        return dayStore.ResetAsync(
+            periodStart,
+            periodStart.AddDays(-balance.Value.Growth.RestedAfterSkippedDays),
+            balance.Value.Growth.RestedFirstPosts,
+            cancellationToken);
+    }
+
     public int GetPostsCap(PlayerProfile player, Invitation? invite, IReadOnlyList<Invitation> invited)
     {
         var start = player.PostsPeriodStartedAtUtc;
@@ -52,36 +62,6 @@ public sealed partial class GameDay(TimeProvider timeProvider, IOptions<GameBala
             invite.InviteeBonusUsedAtUtc >= start && invite.InviteeBonusUsedAtUtc < end ? 1 : 0;
         return player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay) +
             (balance.Value.InviteBonusBoth * (Math.Min(balance.Value.InviteBonusMaxPerDay, inviterUses) + inviteeUse));
-    }
-
-    public PlayerProfile Normalize(PlayerProfile player)
-    {
-        var periodStart = PeriodStart;
-        if (player.PostsPeriodStartedAtUtc == periodStart)
-        {
-            return player;
-        }
-
-        return player.StartNewPeriod(periodStart);
-    }
-
-    public Reki.Domain.Worlds.World Normalize(Reki.Domain.Worlds.World world)
-    {
-        var periodStart = PeriodStart;
-        if (world.Player.PeriodStartedAtUtc == periodStart)
-        {
-            return world;
-        }
-
-        var skippedDays = world.Player.LastPostAtUtc is null ? 0 : GetSkippedDays(GetPeriodStart(world.Player.LastPostAtUtc.Value), periodStart);
-        var restedPosts = skippedDays >= balance.Value.Growth.RestedAfterSkippedDays ? balance.Value.Growth.RestedFirstPosts : 0;
-        return world.StartNewPeriod(periodStart, restedPosts);
-    }
-
-    private static int GetSkippedDays(DateTimeOffset lastPostPeriod, DateTimeOffset currentPeriod)
-    {
-        var elapsedPeriods = Math.Max(0, (int)(currentPeriod - lastPostPeriod).TotalDays);
-        return Math.Max(0, elapsedPeriods - 1);
     }
 
     [MapperIgnoreSource(nameof(SkillProgress.Experience))]

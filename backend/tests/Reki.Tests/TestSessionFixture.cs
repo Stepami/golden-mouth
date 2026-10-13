@@ -37,7 +37,7 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
         using var cursor = await Database.ListCollectionNamesAsync(cancellationToken: cancellationToken);
         var collections = await cursor.ToListAsync(cancellationToken);
         foreach (var collection in collections.Where(name =>
-                     name != "world_templates" && name != options.MigrationsCollectionName && name != options.MigrationsLockCollectionName))
+                     !name.StartsWith("ticker_", StringComparison.Ordinal) && name != "world_templates" && name != options.MigrationsCollectionName && name != options.MigrationsLockCollectionName))
         {
             await Database.GetCollection<BsonDocument>(collection)
                 .DeleteManyAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken);

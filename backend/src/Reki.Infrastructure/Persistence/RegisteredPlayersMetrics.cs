@@ -1,42 +1,37 @@
 using System.Diagnostics.Metrics;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using Reki.Application.Common;
 
 namespace Reki.Infrastructure.Persistence;
 
-internal sealed partial class RegisteredPlayersMetrics(
-    IGameStore store,
-    IMeterFactory meters,
-    ILogger<RegisteredPlayersMetrics> logger) : BackgroundService
+public sealed partial class RegisteredPlayersMetrics
 {
+    private readonly IGameStore _store;
+    private readonly ILogger<RegisteredPlayersMetrics> _logger;
     private long _count = -1;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public RegisteredPlayersMetrics(IGameStore store, IMeterFactory meters, ILogger<RegisteredPlayersMetrics> logger)
     {
+        _store = store;
+        _logger = logger;
         var meter = meters.Create("Reki.Product");
         meter.CreateObservableGauge("reki.players.registered", ObserveCount, "{player}", "Current registered profiles in MongoDB; no player identifiers.");
-        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
-        do
-        {
-            try
-            {
-                await RefreshCountAsync(stoppingToken);
-            }
-            catch (MongoException)
-            {
-                Interlocked.Exchange(ref _count, -1);
-                LogRefreshFailed();
-            }
-        }
-        while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 
-    private async Task RefreshCountAsync(CancellationToken stoppingToken)
+    public async Task RefreshAsync(CancellationToken cancellationToken)
     {
-        var count = await store.CountPlayersAsync(stoppingToken);
-        Interlocked.Exchange(ref _count, count);
+        try
+        {
+            var count = await _store.CountPlayersAsync(cancellationToken);
+            Interlocked.Exchange(ref _count, count);
+        }
+        catch (MongoException)
+        {
+            Interlocked.Exchange(ref _count, -1);
+            LogRefreshFailed();
+            throw;
+        }
     }
 
     private IEnumerable<Measurement<long>> ObserveCount()

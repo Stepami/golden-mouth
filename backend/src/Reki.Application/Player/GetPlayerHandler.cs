@@ -8,27 +8,11 @@ namespace Reki.Application.Player;
 
 public sealed class GetPlayerHandler(
     ITelegramUserAccessor telegramUser,
-    IGameStore store,
-    GameDay gameDay) : IRequestHandler<GetPlayerQuery, PlayerProfile>
+    IGameStore store) : IRequestHandler<GetPlayerQuery, PlayerProfile>
 {
     public async ValueTask<PlayerProfile> Handle(GetPlayerQuery request, CancellationToken cancellationToken)
     {
-        var player = await ReadAsync(request, cancellationToken);
-        if (!request.NormalizeDay)
-        {
-            return player;
-        }
-
-        var normalized = gameDay.Normalize(player);
-        if (!ReferenceEquals(player, normalized) && !await store.TryReplacePlayerAsync(
-            normalized,
-            player.Version,
-            cancellationToken))
-        {
-            normalized = await ReadAsync(request, cancellationToken);
-        }
-
-        return normalized;
+        return await ReadAsync(request, cancellationToken);
     }
 
     private async ValueTask<PlayerProfile> ReadAsync(GetPlayerQuery request, CancellationToken cancellationToken)

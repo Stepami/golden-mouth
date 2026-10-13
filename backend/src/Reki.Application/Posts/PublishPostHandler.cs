@@ -48,14 +48,7 @@ public sealed class PublishPostHandler(
         var ownWords = publication.OwnWords;
         var wantId = publication.WantId;
         var now = timeProvider.GetUtcNow();
-        var player = gameDay.Normalize(storedPlayer);
-        if (!ReferenceEquals(player, storedPlayer) && !await store.TryReplacePlayerAsync(
-                player,
-                storedPlayer.Version,
-                cancellationToken))
-        {
-            throw new RequestConflictException("The player state changed while starting a new day.");
-        }
+        var player = storedPlayer;
 
         var invite = await store.GetInviteAsync(player.Id, cancellationToken);
         var invited = await store.GetInvitesByInviterAsync(player.Id, cancellationToken);

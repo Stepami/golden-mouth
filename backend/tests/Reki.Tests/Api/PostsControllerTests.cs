@@ -1210,6 +1210,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var playerId = (await GetStoredPlayerAsync(user))["_id"];
         await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(new BsonDocument("_id", playerId), new BsonDocument("$set", new BsonDocument("EnergyUsed", 10)));
         Factory.Session.Clock.Advance(TimeSpan.FromDays(1));
+        await ResetGameDayAsync();
 
         // Act
         var completed = await ReplyAsync(user, postId, targetId, "new-day", "ответ нового дня");
