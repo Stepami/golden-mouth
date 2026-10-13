@@ -322,3 +322,7 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .world-art.world-hero { height: 220px; }
 .world-art.first-story-cover { height: 156px; }
 @media (prefers-reduced-motion: reduce) { .world-art img { transition: none; } }
+
+.world-switch-dialog { margin: auto; color: var(--text); background: #1A1A24; border: 1px solid var(--line); border-radius: 26px; padding: 22px; width: calc(100% - 32px); max-width: 398px; max-height: 85dvh; overflow: auto; }
+.world-switch-dialog::backdrop { background: #08080ca6; }
+.world-switch-dialog button { margin-top: 12px; }
