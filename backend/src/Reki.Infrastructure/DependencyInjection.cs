@@ -43,7 +43,7 @@ public static class DependencyInjection
     private static void AddGameJobs(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<JobsOptions>().BindConfiguration(JobsOptions.SectionName)
-            .Validate(options => !options.DashboardEnabled || (!string.IsNullOrWhiteSpace(options.DashboardUsername) && !string.IsNullOrWhiteSpace(options.DashboardPassword)), "Jobs dashboard requires a username and password.")
+            .Validate(options => !string.IsNullOrWhiteSpace(options.DashboardUsername) && !string.IsNullOrWhiteSpace(options.DashboardPassword), "Jobs dashboard requires a username and password.")
             .ValidateOnStart();
         var jobs = configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
         var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ?? throw new InvalidOperationException("Mongo configuration is required.");
@@ -60,14 +60,11 @@ public static class DependencyInjection
                 options.DisableBackgroundServices();
             }
 
-            if (jobs.DashboardEnabled)
+            options.AddDashboard(dashboard =>
             {
-                options.AddDashboard(dashboard =>
-                {
-                    dashboard.SetBasePath("/admin/tickerq");
-                    dashboard.WithBasicAuth(jobs.DashboardUsername, jobs.DashboardPassword);
-                });
-            }
+                dashboard.SetBasePath("/admin/tickerq");
+                dashboard.WithBasicAuth(jobs.DashboardUsername, jobs.DashboardPassword);
+            });
         });
     }
 

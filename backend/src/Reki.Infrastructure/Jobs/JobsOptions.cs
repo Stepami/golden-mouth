@@ -6,8 +6,6 @@ public sealed class JobsOptions
 
     public bool ExecutionEnabled { get; set; } = true;
 
-    public bool DashboardEnabled { get; set; }
-
     public string DashboardUsername { get; set; } = string.Empty;
 
     public string DashboardPassword { get; set; } = string.Empty;

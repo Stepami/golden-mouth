@@ -35,7 +35,6 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("Jobs:ExecutionEnabled", "false");
-        builder.UseSetting("Jobs:DashboardEnabled", "true");
         builder.UseSetting("Jobs:DashboardUsername", "operator");
         builder.UseSetting("Jobs:DashboardPassword", "placeholder");
         builder.UseSetting("Mongo:ConnectionString", MongoConnectionString);
