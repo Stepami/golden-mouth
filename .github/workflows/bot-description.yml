@@ -20,6 +20,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: previous-bot-description
-          path: bot-description-before.json
+          path: |
+            bot-description-before.json
+            bot-avatar-after.jpg
           if-no-files-found: ignore
           retention-days: 7
