@@ -17,14 +17,14 @@ function WorldDetailsScreen() {
       const world = (await api.ownedWorlds()).find(item => item.id === p.worldInstanceId)
       if (!world) throw new Error('World not found')
       const { id, subscribers: _subscribers, lock: _lock, ...definition } = world
-      selectDraftOwner(p.id); setWorldDraft({ definition: { ...definition, rules: definition.rules.map(rule => ({ ...rule, locked: rule.text === 'Без тем 18+ и травли по внешности' })) }, editingId: id, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand })
-      nav.push('01-4_channel', { world: p.world })
+      selectDraftOwner(p.id); setWorldDraft({ definition: { ...definition, rules: definition.rules.map(rule => ({ ...rule, locked: rule.text === 'Без тем 18+ и травли по внешности' })) }, advanced: false, editingId: id, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand })
+      nav.push('05-7b_own_world', { world: p.world })
     } catch { setError('Не получилось загрузить настройки. Попробуй ещё раз.') } finally { setLoading(false) }
   }
   return <div className="screen no-tab"><TopBar onBack={nav.back} title="Настройки мира" /><div className="pad">
     <h1>{r.emoji} {r.title}</h1><p className="muted">{r.description}</p><h2>Правила мира</h2>
     <div className="card">{r.rules.map((rule, i) => <p key={i}>{rule.locked ? '🔒' : '✓'} {rule.text}</p>)}</div>
-    <h2>Редактировать мир</h2><p className="muted">Пройди настройки канала, описания, голоса и героев. В конце нажми «Сохранить изменения». Подписчики и прогресс сохранятся.</p>
+    <h2>Редактировать мир</h2><p className="muted">Измени описание, персонажа и настроение истории. Герои, правила и голос доступны в расширенных настройках. Подписчики и прогресс сохранятся.</p>
     <Button disabled={loading} onClick={edit}>{loading ? 'Загружаем…' : 'Редактировать мир'}</Button>
     <Button secondary onClick={() => nav.push('01-3_world')}>Другие миры и создание с нуля</Button>
     {error && <p role="alert">{error}</p>}

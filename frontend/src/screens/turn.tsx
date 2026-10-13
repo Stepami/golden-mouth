@@ -87,8 +87,8 @@ function Live() {
         if (apiBaseUrl) {
           const latest = await refresh()
           if (!p.hitOwnWorldMilestone && latest?.hitOwnWorldMilestone) {
-            selectDraftOwner(p.id); setWorldDraft({ definition: blankWorld(), address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand, reason: 'В твоём мире уже 500 подписчиков — теперь можно создать мир с нуля' })
-            nav.replace('01-4_channel', { world: 'own' }); return
+            selectDraftOwner(p.id); setWorldDraft({ definition: blankWorld(), previewOnly: true, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand, reason: 'В твоём мире уже 500 подписчиков — теперь можно создать мир с нуля' })
+            nav.replace('05-7b_own_world', { world: 'own' }); return
           }
         }
         else patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + e.result.delta) })

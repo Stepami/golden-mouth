@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import type { Address, WorldDefinition } from '../api/types'
 import type { AgeBand } from './ageBand'
 export interface WorldDraft {
-  definition: WorldDefinition; persona?: { star: WorldDefinition['stars'][number]; description: string; name: string; avatar: string; role: string }; editingId?: string; reason?: string; address: Address; group: '14-17' | '18+'; ageBand?: AgeBand
+  definition: WorldDefinition; advanced?: boolean; previewOnly?: boolean; persona?: { star: WorldDefinition['stars'][number]; description: string; name: string; avatar: string; role: string }; editingId?: string; reason?: string; address: Address; group: '14-17' | '18+'; ageBand?: AgeBand
 }
 const key = 'reki:world-setup:v1'
 let current: WorldDraft | null = null

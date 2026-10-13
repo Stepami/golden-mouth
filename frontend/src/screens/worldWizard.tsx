@@ -6,11 +6,18 @@ import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
 import { blankWorld, getWorldDraft, selectDraftOwner, setWorldDraft, updateWorldDraft, useWorldDraft } from '../app/worldDraft'
 import { pendingReferral, clearReferral } from '../app/referral'
-import { Avatar, BottomCTA, Button, Card, Dots, Segmented, TopBar } from '../ui'
+import { Avatar, BottomCTA, Button, Card, Segmented, TopBar } from '../ui'
 import { TextField } from '../ui/TextField'
+import { isDevWorldPrototype, worldArt } from '../app/worldPrototype'
+import { QuickChannelForm, QuickWorldForm, DramaPicker } from './worldQuick'
 import type { AgeBand } from '../app/ageBand'
 
 const field = (label: string, key: keyof WorldDefinition, definition: WorldDefinition, maxLength = 2000) => <TextField key={key} label={label} value={String(definition[key])} onChange={value => updateWorldDraft({ [key]: value })} maxLength={maxLength} rows={key === 'description' ? 5 : 2} />
+function QuickMode() {
+  const nav = useNav(); const draft = useWorldDraft()
+  if (!draft) return null
+  return <button className="text-link" onClick={() => { setWorldDraft({ ...draft, advanced: false }); nav.replace(draft.definition.balanceKey === 'own' || draft.editingId ? '05-7b_own_world' : '01-4_channel') }}>← Быстрые настройки</button>
+}
 function List({ label, values, onChange }: { label: string; values: string[]; onChange: (v: string[]) => void }) {
   return <details className="card" style={{ marginBottom: 12 }}><summary>{label} · {values.length}</summary>
     {values.map((value, index) => <div key={index}><TextField label={`${label} ${index + 1}`} value={value} onChange={text => onChange(values.map((v, i) => i === index ? text : v))} /><button className="chip" onClick={() => onChange(values.filter((_, i) => i !== index))}>Удалить</button></div>)}
@@ -21,23 +28,25 @@ export function ChooseWorld() {
   const [owned, setOwned] = useState<WorldDocument[]>([])
   const [error, setError] = useState('')
   useEffect(() => { if (player) api.ownedWorlds().then(setOwned).catch(() => setError('Не получилось загрузить твои миры.')) }, [player?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-  function start(world?: WorldId) {
+  function start(world?: WorldId, previewOnly = false) {
     selectDraftOwner(player?.id ?? 'onboarding')
     const definition = world ? worldDefinitionOf(world) : blankWorld()
-    // Новый голос вводится явно; старый черновик сохраняется при возврате.
-    definition.voice = ''
-    setWorldDraft({ definition, address: player?.address ?? 'nick', group: (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: player?.ageBand ?? nav.params.ageBand as AgeBand | undefined })
-    nav.push('01-4_channel', { world: definition.balanceKey })
+    setWorldDraft({ definition, advanced: false, previewOnly, address: player?.address ?? 'nick', group: (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: player?.ageBand ?? nav.params.ageBand as AgeBand | undefined })
+    nav.push(world ? '01-3b_world_overview' : '05-7b_own_world', { world: definition.balanceKey })
   }
   return <div className="screen no-tab"><TopBar title="Выбери мир" onBack={nav.canBack ? nav.back : undefined} />
     <div className="pad"><h1>Где начнётся твоя история?</h1><p className="muted">Все готовые миры доступны сразу. У каждого — свои герои и темп роста.</p>
-      {getWorldDraft() && <Button secondary onClick={() => nav.push('01-4_channel')}>Продолжить настройку</Button>}
-      {worlds.map(world => <button key={world.id} className="card world-choice" onClick={() => start(world.id)}><span style={{ fontSize: 30 }}>{world.emoji}</span><div><b>{world.title}</b> <Dots n={world.difficulty} /><div className="small muted">{world.description}</div></div><span>›</span></button>)}
-      <Card><b>✨ Создать с нуля</b><p className="small muted">{player?.hitOwnWorldMilestone ? 'Придумай место, правила и героев. Твои другие миры сохранятся.' : 'Набери 500 подписчиков в любом мире или пригласи друга по своей ссылке. Когда начислится бонус за друга, создание с нуля станет доступно.'}</p>
-        <Button disabled={!player?.hitOwnWorldMilestone} onClick={() => start()}>Создать с нуля</Button>
-        {player && !player.hitOwnWorldMilestone && <Button secondary onClick={() => nav.push('04-3_invite')}>Пригласить друга</Button>}
+      {getWorldDraft() && <Button secondary onClick={() => nav.push(getWorldDraft()?.definition.balanceKey === 'own' ? '05-7b_own_world' : '01-4_channel')}>Продолжить настройку</Button>}
+      {owned.length > 0 && <><h2>Продолжить игру</h2>{owned.map(world => <button className="continue-world card" key={world.id} onClick={async () => { try { const p = await api.me(world.id); setPlayer(p); nav.replace('03-5_stage') } catch { setError('Не получилось открыть мир.') } }}><Avatar seed={world.avatar} avatarStyle={world.avatarStyle} size={42} /><div><b>{world.name}</b><div className="small muted">{world.title} · {world.subscribers} подписчиков</div></div><span>Играть →</span></button>)}</>}
+      <h2>Выбери свою историю</h2><div className="world-catalog">{[...worlds].sort((a, b) => ['evening', 'sorcerers', 'houses', 'it'].indexOf(a.id) - ['evening', 'sorcerers', 'houses', 'it'].indexOf(b.id)).map(world => { const art = worldArt[world.id]; const definition = worldDefinitionOf(world.id); return <button key={world.id} className="world-cover-card" onClick={() => start(world.id)} aria-label={`Обзор мира ${world.title}`}>
+        {art && <div className="world-cover-image"><img src={art.cover} alt="" loading="lazy" /><span className="world-genre">{world.emoji} {art.genre}</span></div>}
+        <div className="world-cover-copy"><div className="row"><b>{world.title}</b><span className="small muted">{['', 'Легко', 'Средне', 'Сложно'][world.difficulty]}</span></div><p>{art?.pitch ?? world.summary}</p><div className="world-roster">{definition.stars.slice(0, 3).map(star => <Avatar key={star.id} seed={star.avatarSeed} avatarStyle={definition.avatarStyle} profile={{ address: star.appearanceProfile === 'masculine' ? 'he' : star.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: star.ageBand }} size={26} />)}<span>Знакомиться с миром →</span></div></div>
+      </button> })}</div>
+      <Card><b>✦ А если мир придумаешь ты?</b><p className="small muted">{player?.hitOwnWorldMilestone ? 'Название, идея и настроение — начни с самого важного.' : 'Создание своего мира открывается после 500 подписчиков в одном мире или бонуса за приглашённого друга.'}</p>
+        <Button disabled={!player?.hitOwnWorldMilestone} onClick={() => start(undefined, true)}>Создать свой мир</Button>
+        {isDevWorldPrototype && <Button secondary onClick={() => start(undefined, true)}>Попробовать быструю настройку · DEV</Button>}
+        {player && !player.hitOwnWorldMilestone && <button className="text-link" onClick={() => nav.push('04-3_invite')}>Пригласить друга →</button>}
       </Card>
-      {owned.length > 0 && <><h2>Твои миры</h2>{owned.map(world => <Button key={world.id} secondary onClick={async () => { try { const p = await api.me(world.id); setPlayer(p); nav.replace('03-5_stage') } catch { setError('Не получилось открыть мир.') } }}>{world.emoji} {world.title} · {world.subscribers}</Button>)}</>}
       {error && <p role="alert">{error}</p>}
     </div></div>
 }
@@ -47,12 +56,13 @@ function Ready({ children }: { children: (draft: NonNullable<ReturnType<typeof u
   return <>{children(draft)}</>
 }
 export function ChannelSetup() {
-  return <Ready>{draft => <ChannelForm draft={draft} />}</Ready>
+  return <Ready>{draft => draft.advanced ? <ChannelForm draft={draft} /> : <QuickChannelForm draft={draft} />}</Ready>
 }
 function ChannelForm({ draft }: { draft: NonNullable<ReturnType<typeof useWorldDraft>> }) {
   const nav = useNav(); const d = draft.definition
   const update = updateWorldDraft
   return <div className="screen no-tab"><TopBar title="Твой канал · 1 / 4" onBack={nav.back} /><div className="pad">
+    <button className="text-link" onClick={() => { setWorldDraft({ ...draft, advanced: false }); nav.push(d.balanceKey === 'own' || draft.editingId ? '05-7b_own_world' : '01-4_channel') }}>← Быстрые настройки</button>
     {draft.reason && <Card>{draft.reason}</Card>}
     <h1>Кем будешь в этом мире?</h1>
     {field('Название канала', 'name', d, 80)}{field('Ник и аватар', 'avatar', d, 80)}
@@ -71,10 +81,10 @@ function ChannelForm({ draft }: { draft: NonNullable<ReturnType<typeof useWorldD
     <List label="Роли мира" values={d.roles} onChange={roles => update({ roles })} />
   </div><BottomCTA main="Описание и правила" disabled={!d.name.trim() || !d.avatar.trim() || !d.role.trim()} onMain={() => nav.push('05-7b_own_world', { world: d.balanceKey })} /></div>
 }
-export function DescriptionSetup() { return <Ready>{draft => <DescriptionForm definition={draft.definition} />}</Ready> }
+export function DescriptionSetup() { return <Ready>{draft => draft.advanced ? <DescriptionForm definition={draft.definition} /> : <QuickWorldForm draft={draft} />}</Ready> }
 function DescriptionForm({ definition: d }: { definition: WorldDefinition }) {
   const nav = useNav()
-  return <div className="screen no-tab"><TopBar title="Мир · 2 / 4" onBack={nav.back} /><div className="pad">
+  return <div className="screen no-tab"><TopBar title="Расширенные настройки мира" onBack={nav.back} /><div className="pad"><QuickMode />
     {field('Название мира', 'title', d, 120)}{field('Описание мира', 'description', d)}{field('Где происходит история', 'where', d, 200)}
     {field('Эмодзи мира', 'emoji', d, 8)}{field('Краткое описание', 'summary', d, 200)}
     <div className="label">Темп истории</div><Segmented value={String(d.difficulty)} onChange={value => updateWorldDraft({ difficulty: Number(value) as 1 | 2 | 3 })} options={[{ id: '1', label: 'спокойно' }, { id: '2', label: 'обычно' }, { id: '3', label: 'интенсивно' }]} />
@@ -93,22 +103,23 @@ function DescriptionForm({ definition: d }: { definition: WorldDefinition }) {
   </div><BottomCTA main="Голос и драма" disabled={!d.title.trim() || !d.description.trim() || d.rules.some(rule => !rule.text.trim())} onMain={() => nav.push('01-4b_world_setup', { world: d.balanceKey })} /></div>
 }
 function fieldRule(text: string, index: number, d: WorldDefinition) { return <TextField label={`Правило ${index + 1}`} value={text} onChange={value => updateWorldDraft({ rules: d.rules.map((rule, i) => i === index ? { ...rule, text: value } : rule) })} /> }
-export function VoiceSetup() { return <Ready>{draft => <VoiceForm definition={draft.definition} />}</Ready> }
+export function VoiceSetup() { return <Ready>{draft => draft.advanced ? <VoiceForm definition={draft.definition} /> : <StarsForm draft={draft} quick />}</Ready> }
 function VoiceForm({ definition: d }: { definition: WorldDefinition }) {
   const nav = useNav()
-  return <div className="screen no-tab"><TopBar title="Голос канала · 3 / 4" onBack={nav.back} /><div className="pad"><h1>Как звучит твой канал?</h1><p className="muted">Опиши, как хочешь писать: коротко и с юмором, спокойно или дерзко. «Подскажи» использует этот стиль для черновиков. Свой текст можно писать как угодно. Стиль можно изменить позже.</p>
+  return <div className="screen no-tab"><TopBar title="Расширенные настройки голоса" onBack={nav.back} /><div className="pad"><QuickMode /><h1>Как звучит твой канал?</h1><p className="muted">Опиши, как хочешь писать: коротко и с юмором, спокойно или дерзко. «Подскажи» использует этот стиль для черновиков. Свой текст можно писать как угодно. Стиль можно изменить позже.</p>
     <TextField label="Голос канала" value={d.voice} onChange={voice => updateWorldDraft({ voice })} ideas={d.voices.length ? d.voices : ['Коротко, с добрым юмором и без пафоса', 'Спокойно, с точными деталями']} maxLength={200} placeholder="Например: коротко, с добрым юмором и без пафоса" />
     <List label="Примеры голоса" values={d.voices} onChange={voices => updateWorldDraft({ voices })} />
-    <h2>Градус драмы</h2><Segmented value={d.drama} onChange={drama => updateWorldDraft({ drama })} options={[{ id: 'soft', label: 'мягко' }, { id: 'mid', label: 'средне' }, { id: 'hot', label: 'остро' }, { id: 'off', label: 'без хейта' }]} /><p className="small muted">Безопасность 14+ работает всегда.</p>
+    <h2>Градус драмы</h2><Segmented value={d.drama} onChange={drama => updateWorldDraft({ drama })} options={[{ id: 'soft', label: 'мягко' }, { id: 'mid', label: 'средне' }, { id: 'hot', label: 'остро' }, { id: 'off', label: 'без хейта' }]} />
   </div><BottomCTA main="Настроить героев" disabled={!d.voice.trim()} onMain={() => nav.push('01-5_first_star', { world: d.balanceKey })} /></div>
 }
 export function StarsSetup() { return <Ready>{draft => <StarsForm draft={draft} />}</Ready> }
-function StarsForm({ draft }: { draft: NonNullable<ReturnType<typeof useWorldDraft>> }) {
+function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typeof useWorldDraft>>; quick?: boolean }) {
   const nav = useNav(); const { setPlayer } = useStore(); const d = draft.definition
   const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [uncertain, setUncertain] = useState(false)
   const change = (id: string, patch: Partial<WorldDefinition['stars'][number]>) => updateWorldDraft({ stars: d.stars.map(star => star.id === id ? { ...star, ...patch } : star) })
   const save = async () => {
     if (saving || uncertain) return
+    if (draft.previewOnly) { nav.push('05-7c_world_preview'); return }
     setSaving(true); setError('')
     try {
       if (!api.hasPlayer()) { const identity = await api.onboarding({ birthGroup: draft.group, ageBand: draft.ageBand, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); selectDraftOwner(identity.id); setWorldDraft(draft) }
@@ -120,7 +131,13 @@ function StarsForm({ draft }: { draft: NonNullable<ReturnType<typeof useWorldDra
       else setError(cause instanceof ApiError && cause.status === 409 ? 'Мир изменился или создание с нуля пока недоступно. Твои изменения сохранены в черновике.' : 'Не получилось сохранить мир. Проверь поля и попробуй снова.')
     } finally { setSaving(false) }
   }
-  return <div className="screen no-tab"><TopBar title="Герои · 4 / 4" onBack={saving ? undefined : nav.back} /><div className="pad"><h1>Кто живёт в твоём мире?</h1><p className="muted">Настрой состав героев, их характеры и голоса. Это не выбор первой подписки.</p>
+  if (quick) return <div className="screen no-tab"><TopBar title="Настроение истории" onBack={saving ? undefined : nav.back} /><div className="pad"><DramaPicker definition={d} />
+    <div className="quick-summary"><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand }} /><div><b>{d.name}</b><div className="small muted">{d.title} · {d.role}</div></div></div>
+    {draft.previewOnly && <p className="small prototype-note">DEV-прототип: дальше — пример ленты, без создания мира в базе.</p>}
+    <button className="text-link" onClick={() => { setWorldDraft({ ...draft, advanced: true }); nav.push('01-4_channel') }}>Расширенные настройки →</button>
+    {error && <p role="alert">{error}</p>}{uncertain && <Button onClick={() => nav.replace('01-3_world')}>Проверить список миров</Button>}
+  </div><BottomCTA main={saving ? 'Сохраняем…' : draft.previewOnly ? 'Посмотреть свою историю' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'} disabled={saving || uncertain || !d.voice.trim() || d.stars.length === 0} onMain={save} /></div>
+  return <div className="screen no-tab"><TopBar title="Расширенные настройки героев" onBack={saving ? undefined : nav.back} /><div className="pad"><QuickMode /><h1>Кто живёт в твоём мире?</h1><p className="muted">Настрой состав героев, их характеры и голоса. Это не выбор первой подписки.</p>
     {d.stars.map(star => <details className="card" key={star.id} open><summary>{star.name || 'Новый герой'}</summary><div className="row"><Avatar seed={star.avatarSeed || star.id} size={48} world={d.balanceKey} /><b>{star.name}</b></div>
       <TextField label="Имя героя" value={star.name} onChange={name => change(star.id, { name })} maxLength={80} />
       <TextField label="Роль героя" value={star.role} onChange={role => change(star.id, { role })} maxLength={80} />
@@ -133,5 +150,5 @@ function StarsForm({ draft }: { draft: NonNullable<ReturnType<typeof useWorldDra
     <Button secondary disabled={saving} onClick={() => updateWorldDraft({ stars: [...d.stars, { id: crypto.randomUUID().replaceAll('-', ''), name: '', role: '', about: '', voice: '', avatarSeed: crypto.randomUUID(), trait: 1, relation: 0 }] })}>＋ Добавить героя</Button>
     {error && <p role="alert">{error}</p>}{uncertain && <Button onClick={() => nav.replace('01-3_world')}>Проверить список миров</Button>}
     <p className="small muted">Сохраняем отдельный мир. {draft.editingId ? 'Подписчики и прогресс останутся на месте.' : 'Другие миры останутся на месте.'}</p>
-  </div><BottomCTA main={saving ? 'Сохраняем…' : draft.editingId ? 'Сохранить изменения' : 'Создать мир'} disabled={saving || uncertain || d.stars.length === 0 || d.stars.some(star => !star.name.trim() || !star.role.trim() || !star.about.trim() || !star.voice.trim())} onMain={save} /></div>
+  </div><BottomCTA main={saving ? 'Сохраняем…' : draft.previewOnly ? 'Посмотреть демо' : draft.editingId ? 'Сохранить изменения' : 'Создать мир'} disabled={saving || uncertain || d.stars.length === 0 || d.stars.some(star => !star.name.trim() || !star.role.trim() || !star.about.trim() || !star.voice.trim())} onMain={save} /></div>
 }

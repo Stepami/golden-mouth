@@ -215,3 +215,7 @@ Frontend отправляет полный CreateWorldRequest для POST и PUT
 Поля формы: канал — name/avatar/role/roles/avatarStyle (стиль по умолчанию от пресета или Lorelei для own); описание — title/description/where/emoji/summary/difficulty/rules/firstContext/firstPrompt/postIdeas/demoPosts/wants/achievements; голос — voice/voices/drama; герои — stars с автоматическими ID и нулевыми начальными отношениями. balanceKey берётся из источника; unlockSkill/unlockLevel нового каталога пустые. NPC AppearanceProfile/AgeBand задаются каталогом; неизвестные данные дают neutral без взрослых признаков.
 
 CommentResponse также возвращает appearanceProfile/ageBand автора-NPC, включая архивного героя после удаления из активного состава; игрок использует текущий профиль.
+
+### DEV-прототип быстрой настройки (13.10.2026, ожидает просмотра)
+
+Пресеты создаются существующим POST /worlds из полного payload: обзор → персонаж → драма. Поля описания и голоса в быстром пути предустановлены, расширенный редактор сохраняется. Быстрое создание с нуля пока заканчивается демонстрационной лентой без POST, регистрации или обхода HitOwnWorldMilestone. Генерация наполнения по описанию не реализована и не объявляется действующим контрактом. Backend-задача и API генерации оформляются после одобрения интерфейса.

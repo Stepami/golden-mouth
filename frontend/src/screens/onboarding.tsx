@@ -7,6 +7,7 @@ import { useStore } from '../app/store'
 import { Avatar, BottomCTA, Card, fmt } from '../ui'
 import { track } from '../app/log'
 import { register } from '.'
+import { WorldOverview, WorldPrototypePreview } from './worldQuick'
 import { ChooseWorld as World, ChannelSetup as Channel, VoiceSetup as WorldSetup, StarsSetup as FirstStar } from './worldWizard'
 
 /** Точки прогресса онбординга и «назад», кроме первого шага. */
@@ -112,6 +113,8 @@ register({
   '01-2_age': { component: Age, title: 'Год рождения и согласие' },
   '01-2b_under14': { component: Under14, title: 'Младше 14' },
   '01-3_world': { component: withWorldTemplates(World), title: 'Выбор мира' },
+  '01-3b_world_overview': { component: withWorldTemplates(WorldOverview), title: 'Обзор мира' },
+  '05-7c_world_preview': { component: WorldPrototypePreview, title: 'Демо своего мира' },
   '01-4_channel': { component: withWorldTemplates(Channel), title: 'Канал' },
   '01-4b_world_setup': { component: withWorldTemplates(WorldSetup), title: 'Мир, голос канала и драма' },
   '01-5_first_star': { component: withWorldTemplates(FirstStar), title: 'Настройка героев' },
