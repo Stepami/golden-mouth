@@ -1,6 +1,7 @@
 using System.Diagnostics.Metrics;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.WebSockets;
 using System.Text;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -314,6 +315,43 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var body = await accepted.Content.ReadAsStringAsync(CancellationToken.None);
         await Assert.That(body).Contains(nameof(ResetGameDayJob));
         await Assert.That(body).Contains(nameof(RefreshRegisteredPlayersJob));
+    }
+
+    [Test]
+    public async Task Dashboard_AuthenticatedWebSocket_SerializesStatusWithoutDisconnectingAsync()
+    {
+        // Arrange
+        using var http = Factory.CreateClient();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var client = Factory.Server.CreateWebSocketClient();
+        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes("operator:placeholder"));
+        using var socket = await client.ConnectAsync(
+            new Uri($"ws://localhost/admin/tickerq/ticker-notification-hub?access_token={Uri.EscapeDataString(credentials)}"),
+            timeout.Token);
+        var buffer = new byte[8192];
+
+        // Act
+        await socket.SendAsync(
+            Encoding.UTF8.GetBytes("{\"protocol\":\"json\",\"version\":1}\u001e").AsMemory(),
+            WebSocketMessageType.Text,
+            true,
+            timeout.Token);
+        var handshake = await socket.ReceiveAsync(buffer.AsMemory(), timeout.Token);
+        await Assert.That(handshake.MessageType).IsEqualTo(WebSocketMessageType.Text);
+        await Assert.That(Encoding.UTF8.GetString(buffer, 0, handshake.Count)).Contains("{}");
+        await socket.SendAsync(
+            Encoding.UTF8.GetBytes("{\"type\":1,\"invocationId\":\"1\",\"target\":\"GetStatus\",\"arguments\":[]}\u001e").AsMemory(),
+            WebSocketMessageType.Text,
+            true,
+            timeout.Token);
+        var status = await socket.ReceiveAsync(buffer.AsMemory(), timeout.Token);
+        var body = Encoding.UTF8.GetString(buffer, 0, status.Count);
+
+        // Assert
+        await Assert.That(status.MessageType).IsEqualTo(WebSocketMessageType.Text);
+        await Assert.That(body).Contains("\"target\":\"Status\"");
+        await Assert.That(body).Contains("\"authenticated\":true");
+        await Assert.That(body).Contains("\"username\":\"operator\"");
     }
 
     [Test]

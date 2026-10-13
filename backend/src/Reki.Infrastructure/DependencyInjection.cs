@@ -68,6 +68,11 @@ public static class DependencyInjection
                 dashboard.WithBasicAuth(jobs.DashboardUsername, jobs.DashboardPassword);
             });
         });
+        services.AddSignalR().AddJsonProtocol(options =>
+        {
+            // TickerQ sends anonymous hub payloads outside its HTTP JSON context.
+            options.PayloadSerializerOptions.TypeInfoResolver = new DefaultJsonTypeInfoResolver();
+        });
     }
 
     private static void AddLlmInfrastructure(this IServiceCollection services)
