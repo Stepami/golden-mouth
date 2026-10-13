@@ -8,6 +8,4 @@ public sealed record WorldStarResponse(
     string About,
     string Voice,
     string AvatarSeed,
-    int Relation,
-    string AppearanceProfile = "neutral",
-    string AgeBand = "");
+    int Relation);

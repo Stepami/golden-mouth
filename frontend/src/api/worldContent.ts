@@ -5,7 +5,7 @@ export interface WorldContent {
   roles: string[]
   name: string
   handle: string
-  avatarStyle: 'lorelei' | 'notionists' | 'pixelArt' | 'thumbs' | 'shapes'
+  avatarStyle: 'adventurer' | 'lorelei' | 'notionists' | 'pixelArt' | 'thumbs' | 'shapes'
   avatarLabel: string
   stars: (Star & { avatarSeed: string })[]
   voices: string[]

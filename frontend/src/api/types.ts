@@ -32,7 +32,7 @@ export interface Reaction { emoji: string; count: number }
 export interface CommentReaction { authorId: string; author: string; avatar: string; star: boolean; me: boolean; emoji: string }
 export interface CommentT {
   id: string; author: string; avatar: string; handle: string; text: string; star?: boolean; me?: boolean; hidden?: boolean
-  appearanceProfile?: 'masculine' | 'feminine' | 'neutral'; ageBand?: import('../app/ageBand').AgeBand; authorId?: string; role?: string; parentCommentId?: string | null; requestId?: string | null; depth?: number; reactions?: CommentReaction[]
+  authorId?: string; role?: string; parentCommentId?: string | null; requestId?: string | null; depth?: number; reactions?: CommentReaction[]
 }
 /** Пост канала. `canReply` есть только при загрузке с сервера (GET /posts/:id): отвечать можно лишь под своими постами. */
 export interface Post { id: string; text: string; views: number; reactions: Reaction[]; comments: CommentT[]; inRivers?: boolean; at?: string; canReply?: boolean; demoComments?: boolean }
@@ -76,7 +76,7 @@ export interface WorldDocument extends Omit<World, 'id'> {
   roles: string[]; voices: string[]; postIdeas: string[]; demoPosts: string[]
   firstContext: string; firstPrompt: string
   rules: { text: string; locked?: boolean }[]; wants: Want[]; achievements: CollectionCard[]
-  stars: (Omit<Star, 'trait'> & { trait: number; voice: string; avatarSeed: string; appearanceProfile?: 'masculine' | 'feminine' | 'neutral'; ageBand?: import('../app/ageBand').AgeBand })[]
+  stars: (Omit<Star, 'trait'> & { trait: number; voice: string; avatarSeed: string })[]
   unlockSkill?: SkillId; unlockLevel?: number
 }
 

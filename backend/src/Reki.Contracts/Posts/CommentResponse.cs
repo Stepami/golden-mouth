@@ -14,6 +14,4 @@ public sealed record CommentResponse(
     string AuthorId,
     string Role,
     int Depth,
-    IReadOnlyList<CommentReactionResponse> Reactions,
-    string AppearanceProfile = "neutral",
-    string AgeBand = "");
+    IReadOnlyList<CommentReactionResponse> Reactions);

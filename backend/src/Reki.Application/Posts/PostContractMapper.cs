@@ -87,9 +87,7 @@ public static class PostContractMapper
             author.Id,
             author.Role,
             post.GetBranch(comment.Id).Count - 1,
-            reactions,
-            world.FindStar(comment.AuthorId)?.AppearanceProfile ?? "neutral",
-            world.FindStar(comment.AuthorId)?.AgeBand ?? string.Empty);
+            reactions);
     }
 
     private static CommentReactionResponse MapReaction(CommentReaction reaction, World world, PlayerId playerId)
@@ -114,7 +112,7 @@ public static class PostContractMapper
         var star = world.FindStar(id);
         return star is null
             ? throw new InvalidOperationException("The author does not belong to the world.")
-            : (star.Id.Value, star.Name, star.AvatarSeed, star.Role, $"@{star.Id.Value}", true);
+            : (star.Id.Value, star.Name, star.AvatarSeed, star.Role, $"@{star.AvatarSeed.TrimStart('@')}", true);
     }
 
     private static PostResultResponse MapResult(PublishedPost source, World world)

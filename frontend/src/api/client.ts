@@ -225,9 +225,9 @@ export const api = {
     onStatus?.('pending')
     const profile = contentOf(sessionPlayer?.world ?? 'stage')
     const star = profile.stars[0]
-    const comment = { ...mock.liveComment, id: crypto.randomUUID(), author: star.name, avatar: star.id, handle: star.role, text: 'Вот это история! Расскажешь, что было дальше?', star: true }
+    const comment = { ...mock.liveComment, id: crypto.randomUUID(), author: star.name, avatar: star.avatarSeed, handle: `@${star.avatarSeed.replace(/^@+/, '')}`, text: 'Вот это история! Расскажешь, что было дальше?', star: true }
     const result = { ...mock.results.normal, postId: publicationId, headline: `${star.name} замечает твой пост`,
-      bestComment: { avatar: star.id, text: comment.text }, hook: `${profile.stars[1].name} готовит ответ…` }
+      bestComment: { avatar: star.avatarSeed, text: comment.text }, hook: `${profile.stars[1].name} готовит ответ…` }
     const steps: [number, LiveEvent][] = [[250, { type: 'views', views: 48 }], [650, { type: 'react', emoji: '😂' }], [1100, { type: 'comment', comment }],
       [1450, { type: 'views', views: 190 }], [1800, { type: 'react', emoji: '🫶' }], [2250, { type: 'typing', who: profile.stars[1].name }], [2650, { type: 'react', emoji: '🔥' }],
       [3000, { type: 'views', views: 312 }], [3900, { type: 'result', result }]]

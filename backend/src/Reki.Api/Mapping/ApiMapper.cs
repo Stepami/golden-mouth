@@ -86,7 +86,7 @@ public sealed partial class ApiMapper
         DemoPosts = source.DemoPosts,
         Rules = source.Rules.Select(rule => new WorldRuleResponse(rule.Text, rule.Locked)).ToArray(),
         Stars = source.Stars.Select(star => new WorldStarResponse(
-            star.Id.Value, star.Name, star.Role, Convert.ToInt32(star.Trait), star.About, star.Voice, star.AvatarSeed, star.Relation, star.AppearanceProfile, star.AgeBand)).ToArray(),
+            star.Id.Value, star.Name, star.Role, Convert.ToInt32(star.Trait), star.About, star.Voice, star.AvatarSeed, star.Relation)).ToArray(),
         Name = source.Player.Name,
         Role = source.Player.Role,
         Avatar = source.Player.Avatar,
@@ -117,9 +117,7 @@ public sealed partial class ApiMapper
                     star.AvatarSeed,
                     0,
                     0,
-                    DateTimeOffset.UnixEpoch,
-                    star.AppearanceProfile,
-                    star.AgeBand)).ToArray(),
+                    DateTimeOffset.UnixEpoch)).ToArray(),
         Interface = new()
         {
             Title = source.Title,

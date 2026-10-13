@@ -236,9 +236,9 @@ GET /me возвращает hitOwnWorldMilestone и возрастной диа
 
 Frontend отправляет полный CreateWorldRequest для POST и PUT. Все шаги используют один черновик; повторный POST /onboarding для существующего игрока запрещён. Поля ID и прогресса не являются пользовательскими настройками; новые wants/achievements/stars начинаются без прогресса. Постоянный balanceKey экземпляра сохраняется при PUT. Правило 14+ всегда восстанавливается сервером. POST не имеет ключа идемпотентности: после сетевого обрыва проверяем список миров, не повторяем создание автоматически.
 
-Поля формы: канал — name/avatar/role/roles/avatarStyle (стиль по умолчанию от пресета или Lorelei для own); описание — title/description/where/emoji/summary/difficulty/rules/firstContext/firstPrompt/postIdeas/demoPosts/wants/achievements; голос — voice/voices/drama; герои — stars с автоматическими ID и нулевыми начальными отношениями. balanceKey берётся из источника; unlockSkill/unlockLevel нового каталога пустые. NPC AppearanceProfile/AgeBand задаются каталогом; неизвестные данные дают neutral без взрослых признаков.
+Поля формы: канал — name/avatar/role/roles/avatarStyle (стиль по умолчанию от пресета или Lorelei для own); описание — title/description/where/emoji/summary/difficulty/rules/firstContext/firstPrompt/postIdeas/demoPosts/wants/achievements; голос — voice/voices/drama; герои — stars с автоматическими ID и нулевыми начальными отношениями. balanceKey берётся из источника; unlockSkill/unlockLevel нового каталога пустые. Аватары героев определяются avatarSeed и стилем мира без индивидуальных настроек внешности и возраста.
 
-CommentResponse также возвращает appearanceProfile/ageBand автора-NPC, включая архивного героя после удаления из активного состава; игрок использует текущий профиль.
+CommentResponse передаёт ключ аватара автора. Видимый @ник героя формируется из AvatarSeed; внутренний ID героя сохраняется для связей с контентом. Герои используют нейтральный профиль отрисовки; игрок — текущие Address и AgeBand из профиля.
 
 ### DEV-прототип быстрой настройки (13.10.2026, ожидает просмотра)
 
