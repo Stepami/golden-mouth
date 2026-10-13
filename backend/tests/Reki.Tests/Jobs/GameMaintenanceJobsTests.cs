@@ -1,9 +1,4 @@
 using System.Diagnostics.Metrics;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Net.WebSockets;
-using System.Text;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -296,65 +291,6 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
     }
 
     [Test]
-    public async Task Dashboard_CronEndpoint_RequiresCorrectBasicCredentialsAsync()
-    {
-        using var http = Factory.CreateClient();
-        var endpoint = Factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
-            .OfType<RouteEndpoint>().Single(item => item.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == "GetCronTickers");
-        var path = "/admin/tickerq" + (endpoint.RoutePattern.RawText ?? throw new InvalidOperationException("Missing dashboard route."));
-        using var anonymous = await http.GetAsync(path, CancellationToken.None);
-        await Assert.That(anonymous.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("operator:wrong")));
-        using var rejected = await http.GetAsync(path, CancellationToken.None);
-        await Assert.That(rejected.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("operator:placeholder")));
-
-        using var accepted = await http.GetAsync(path, CancellationToken.None);
-
-        await Assert.That(accepted.StatusCode).IsEqualTo(HttpStatusCode.OK);
-        var body = await accepted.Content.ReadAsStringAsync(CancellationToken.None);
-        await Assert.That(body).Contains(nameof(ResetGameDayJob));
-        await Assert.That(body).Contains(nameof(RefreshRegisteredPlayersJob));
-    }
-
-    [Test]
-    public async Task Dashboard_AuthenticatedWebSocket_SerializesStatusWithoutDisconnectingAsync()
-    {
-        // Arrange
-        using var http = Factory.CreateClient();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-        var client = Factory.Server.CreateWebSocketClient();
-        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes("operator:placeholder"));
-        using var socket = await client.ConnectAsync(
-            new Uri($"ws://localhost/admin/tickerq/ticker-notification-hub?access_token={Uri.EscapeDataString(credentials)}"),
-            timeout.Token);
-        var buffer = new byte[8192];
-
-        // Act
-        await socket.SendAsync(
-            Encoding.UTF8.GetBytes("{\"protocol\":\"json\",\"version\":1}\u001e").AsMemory(),
-            WebSocketMessageType.Text,
-            true,
-            timeout.Token);
-        var handshake = await socket.ReceiveAsync(buffer.AsMemory(), timeout.Token);
-        await Assert.That(handshake.MessageType).IsEqualTo(WebSocketMessageType.Text);
-        await Assert.That(Encoding.UTF8.GetString(buffer, 0, handshake.Count)).Contains("{}");
-        await socket.SendAsync(
-            Encoding.UTF8.GetBytes("{\"type\":1,\"invocationId\":\"1\",\"target\":\"GetStatus\",\"arguments\":[]}\u001e").AsMemory(),
-            WebSocketMessageType.Text,
-            true,
-            timeout.Token);
-        var status = await socket.ReceiveAsync(buffer.AsMemory(), timeout.Token);
-        var body = Encoding.UTF8.GetString(buffer, 0, status.Count);
-
-        // Assert
-        await Assert.That(status.MessageType).IsEqualTo(WebSocketMessageType.Text);
-        await Assert.That(body).Contains("\"target\":\"Status\"");
-        await Assert.That(body).Contains("\"authenticated\":true");
-        await Assert.That(body).Contains("\"username\":\"operator\"");
-    }
-
-    [Test]
     public async Task Startup_PersistsTwoRecurringSchedulesInMongoAsync()
     {
         using var http = Factory.CreateClient();
@@ -390,28 +326,5 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
 
         await Assert.That(await Database.GetCollection<BsonDocument>("players").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(beforePlayer);
         await Assert.That(await Database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(beforeWorld);
-    }
-
-    [Test]
-    public async Task Dashboard_TelegramAuthentication_HandlesBasicCredentialsAsync()
-    {
-        using var productionAuthFactory = new ApiFactory
-        {
-            Session = Factory.Session,
-            UseProductionAuthentication = true,
-        };
-        using var http = productionAuthFactory.CreateClient();
-        const string path = "/admin/tickerq/api/cron-tickers";
-        using var anonymous = await http.GetAsync(path, CancellationToken.None);
-        await Assert.That(anonymous.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("operator:wrong")));
-        using var rejected = await http.GetAsync(path, CancellationToken.None);
-        await Assert.That(rejected.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes("operator:placeholder")));
-
-        using var accepted = await http.GetAsync(path, CancellationToken.None);
-
-        await Assert.That(accepted.StatusCode).IsEqualTo(HttpStatusCode.OK);
-        await Assert.That(await accepted.Content.ReadAsStringAsync(CancellationToken.None)).Contains(nameof(ResetGameDayJob));
     }
 }

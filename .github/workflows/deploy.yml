@@ -65,8 +65,6 @@ jobs:
       LLM_PAT: ${{ secrets.LLM_PAT }}
       LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
       LLM_MODEL: ${{ secrets.LLM_MODEL }}
-      TICKERQ_DASHBOARD_USERNAME: ${{ secrets.TICKERQ_DASHBOARD_USERNAME }}
-      TICKERQ_DASHBOARD_PASSWORD: ${{ secrets.TICKERQ_DASHBOARD_PASSWORD }}
       LLM_PROXY_IP: ${{ secrets.LLM_PROXY_IP }}
       OPENOBSERVE_EMAIL: ${{ secrets.OPENOBSERVE_EMAIL }}
       OPENOBSERVE_PASSWORD: ${{ secrets.OPENOBSERVE_PASSWORD }}

@@ -18,7 +18,6 @@ using Reki.Infrastructure.Health;
 using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.Persistence;
 using Reki.Infrastructure.Rendering;
-using TickerQ.Dashboard.DependencyInjection;
 using TickerQ.DependencyInjection;
 using TickerQ.Instrumentation.OpenTelemetry;
 using TickerQ.MongoDB.DependencyInjection;
@@ -43,9 +42,7 @@ public static class DependencyInjection
 
     private static void AddGameJobs(this IServiceCollection services, IConfiguration configuration, IJsonTypeInfoResolver jsonContext)
     {
-        services.AddOptions<JobsOptions>().BindConfiguration(JobsOptions.SectionName)
-            .Validate(options => !string.IsNullOrWhiteSpace(options.DashboardUsername) && !string.IsNullOrWhiteSpace(options.DashboardPassword), "Jobs dashboard requires a username and password.")
-            .ValidateOnStart();
+        services.AddOptions<JobsOptions>().BindConfiguration(JobsOptions.SectionName);
         var jobs = configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
         var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ?? throw new InvalidOperationException("Mongo configuration is required.");
         services.MapTicker<ResetGameDayJob>().WithCron("0 0 9 * * *").WithMaxConcurrency(1);
@@ -61,17 +58,6 @@ public static class DependencyInjection
             {
                 options.DisableBackgroundServices();
             }
-
-            options.AddDashboard(dashboard =>
-            {
-                dashboard.SetBasePath("/admin/tickerq");
-                dashboard.WithBasicAuth(jobs.DashboardUsername, jobs.DashboardPassword);
-            });
-        });
-        services.AddSignalR().AddJsonProtocol(options =>
-        {
-            // TickerQ sends anonymous hub payloads outside its HTTP JSON context.
-            options.PayloadSerializerOptions.TypeInfoResolver = new DefaultJsonTypeInfoResolver();
         });
     }
 

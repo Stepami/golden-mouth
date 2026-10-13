@@ -16,7 +16,6 @@
         <PackageReference Include="MongoDB.Analyzer" />
         <PackageReference Include="MongoDB.Driver"/>
         <PackageReference Include="TickerQ" />
-        <PackageReference Include="TickerQ.Dashboard" />
         <PackageReference Include="TickerQ.Instrumentation.OpenTelemetry" />
         <PackageReference Include="alexjamesbrown.TickerQ.MongoDB" />
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"/>

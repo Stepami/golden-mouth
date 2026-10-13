@@ -32,8 +32,6 @@ services:
       Llm__ApiKey: ${LLM_PAT:?LLM_PAT is required}
       Llm__BaseUrl: ${LLM_BASE_URL:?LLM_BASE_URL is required}
       Llm__Model: ${LLM_MODEL:?LLM_MODEL is required}
-      Jobs__DashboardUsername: ${TICKERQ_DASHBOARD_USERNAME:?TICKERQ_DASHBOARD_USERNAME is required}
-      Jobs__DashboardPassword: ${TICKERQ_DASHBOARD_PASSWORD:?TICKERQ_DASHBOARD_PASSWORD is required}
       Llm__TimeoutSeconds: ${LLM_TIMEOUT_SECONDS:-20}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc

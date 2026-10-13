@@ -5,8 +5,4 @@ public sealed class JobsOptions
     public const string SectionName = "Jobs";
 
     public bool ExecutionEnabled { get; set; } = true;
-
-    public string DashboardUsername { get; set; } = string.Empty;
-
-    public string DashboardPassword { get; set; } = string.Empty;
 }
