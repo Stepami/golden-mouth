@@ -12,6 +12,7 @@ using Reki.Contracts.Worlds;
 namespace Reki.Infrastructure.Serialization;
 
 [JsonSerializable(typeof(Reki.Infrastructure.Jobs.StarFeedRequest))]
+[JsonSerializable(typeof(Reki.Infrastructure.Jobs.StarFeedHistoryPost[]))]
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]
 [JsonSerializable(typeof(IReadOnlyList<LiveEvent>))]

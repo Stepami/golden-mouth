@@ -137,7 +137,7 @@ public sealed class PublishPostHandler(
         await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
         analytics.TrackWorldAudience(updatedWorld);
         TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
-        await feedScheduler.ScheduleAsync(player.Id, world.Id, "post", publication.Id, CancellationToken.None);
+        await feedScheduler.ScheduleAsync(player.Id, world.Id);
         return PostContractMapper.MapLiveEvents(published, updatedWorld, player.Id);
     }
 

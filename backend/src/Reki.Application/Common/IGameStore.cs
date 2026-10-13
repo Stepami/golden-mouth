@@ -10,7 +10,7 @@ namespace Reki.Application.Common;
 
 public interface IGameStore
 {
-    ValueTask<bool> TryInsertStarPostAsync(GamePost post, CancellationToken cancellationToken);
+    ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken);
 
     ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken);
 

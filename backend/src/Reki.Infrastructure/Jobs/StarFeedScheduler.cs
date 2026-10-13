@@ -16,35 +16,21 @@ public sealed partial class StarFeedScheduler(
     IOptions<GameBalance> options,
     ILogger<StarFeedScheduler> logger) : IStarFeedScheduler
 {
-    public async ValueTask ScheduleAsync(
-        PlayerId playerId,
-        WorldId worldId,
-        string trigger,
-        string triggerId,
-        CancellationToken cancellationToken)
+    public async ValueTask ScheduleAsync(PlayerId playerId, WorldId worldId)
     {
-        if (trigger == "feed" && Random.Shared.NextDouble() >= options.Value.StarFeedOpenProbability)
+        var result = await manager.AddAsync<GenerateStarFeedPostJob, StarFeedRequest>(
+            timeProvider.GetUtcNow().UtcDateTime,
+            new StarFeedRequest(playerId, worldId, PostId.From(ObjectId.GenerateNewId().ToString())));
+        if (!result.IsSucceeded)
         {
-            return;
-        }
-
-        try
-        {
-            var result = await manager.AddAsync<GenerateStarFeedPostJob, StarFeedRequest>(
-                timeProvider.GetUtcNow().UtcDateTime,
-                new StarFeedRequest(playerId, worldId, PostId.From(ObjectId.GenerateNewId().ToString()), trigger, triggerId),
-                cancellationToken);
-            if (!result.IsSucceeded)
-            {
-                SchedulingFailed();
-            }
-        }
-        catch (Exception exception) when (exception is not (OutOfMemoryException or AccessViolationException))
-        {
-            // Background activity must not change an already committed HTTP business result.
             SchedulingFailed();
         }
     }
+
+    public ValueTask ScheduleFromFeedAsync(PlayerId playerId, WorldId worldId) =>
+        Random.Shared.NextDouble() < options.Value.StarFeedOpenProbability
+            ? ScheduleAsync(playerId, worldId)
+            : ValueTask.CompletedTask;
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Star feed scheduling did not succeed.")]
     private partial void SchedulingFailed();

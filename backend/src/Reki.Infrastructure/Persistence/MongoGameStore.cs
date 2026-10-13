@@ -54,18 +54,8 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask CreateInviteAsync(Invitation invite, CancellationToken cancellationToken) =>
         await _invites.InsertOneAsync(invite, cancellationToken: cancellationToken);
 
-    public async ValueTask<bool> TryInsertStarPostAsync(GamePost post, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _posts.InsertOneAsync(post, cancellationToken: cancellationToken);
-            return true;
-        }
-        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
-        {
-            return false;
-        }
-    }
+    public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken) =>
+        await _posts.InsertOneAsync(post, cancellationToken: cancellationToken);
 
     public async ValueTask<Invitation?> GetPendingInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken) =>
         await _invites.Find(item => item.InviteeId == inviteeId && !item.InviteeBonusUsed)

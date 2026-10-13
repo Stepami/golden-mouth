@@ -21,12 +21,9 @@ public sealed class GetFeedHandler(
         var world = worlds.GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var posts = await sender.Send(new GetChannelPostsQuery(world.Id, FeedSize), cancellationToken);
-        await feedScheduler.ScheduleAsync(
+        await feedScheduler.ScheduleFromFeedAsync(
             world.Player.PlayerId,
-            world.Id,
-            "feed",
-            Guid.NewGuid().ToString("N"),
-            CancellationToken.None);
+            world.Id);
         return [.. posts.Select(post => PostContractMapper.MapFeedItem(post, world, true))];
     }
 }

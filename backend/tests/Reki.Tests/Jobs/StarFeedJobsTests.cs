@@ -1,7 +1,9 @@
+using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Application.Common;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -30,7 +32,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Сегодня репетировали новую сцену.")));
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.From(ObjectId.GenerateNewId().ToString()), "post", "star-feed-success"));
+            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.From(ObjectId.GenerateNewId().ToString())));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
 
@@ -66,7 +68,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, text)));
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.From(ObjectId.GenerateNewId().ToString()), "post", "star-feed-invalid"));
+            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.From(ObjectId.GenerateNewId().ToString())));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
 
@@ -88,7 +90,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await CreatePlayerWithWorldAsync(second);
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(await GetWorldIdAsync(second)), PostId.From(ObjectId.GenerateNewId().ToString()), "post", "star-feed-foreign"));
+            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(await GetWorldIdAsync(second)), PostId.From(ObjectId.GenerateNewId().ToString())));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
 
@@ -135,7 +137,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var worldId = await GetWorldIdAsync(api);
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.From(ObjectId.GenerateNewId().ToString()), "post", "star-feed-retry"));
+            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.From(ObjectId.GenerateNewId().ToString())));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
         Factory.Llm.RespondWithHttpError();
@@ -182,8 +184,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         // Assert
         var scheduled = await tickers.Find(ticker => !existingIds.Contains(ticker.Id)).SingleAsync();
         var payload = TickerHelper.ReadTickerRequest<StarFeedRequest>(scheduled.Request);
-        await Assert.That(payload.Trigger).IsEqualTo("reply");
-        await Assert.That(payload.TriggerId).IsEqualTo("star-feed-reply");
+        await Assert.That(payload.PlayerId).IsEqualTo(PlayerId.From((await GetStoredPlayerAsync(user))["_id"].AsString));
         await Assert.That(scheduled.Retries).IsEqualTo(3);
     }
 
@@ -210,8 +211,63 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         if (expectedJobs > 0)
         {
             var payload = TickerHelper.ReadTickerRequest<StarFeedRequest>(scheduled.Single().Request);
-            await Assert.That(payload.Trigger).IsEqualTo("feed");
             await Assert.That(payload.WorldId).IsEqualTo(WorldId.From(worldId));
         }
+    }
+
+    [Test]
+    public async Task Generate_HistoryContext_DistinguishesOwnPostsAsync()
+    {
+        // Arrange
+        using var api = Factory.CreateApiClient(9509);
+        var player = await CreatePlayerWithWorldAsync(api);
+        var playerId = PlayerId.From(player.Id);
+        var worldId = WorldId.From(await GetWorldIdAsync(api));
+        var store = Factory.Services.GetRequiredService<IGameStore>();
+        var world = await store.GetWorldAsync(playerId, worldId, CancellationToken.None)
+            ?? throw new InvalidOperationException("Missing test world.");
+        var selectedStar = world.Stars[0];
+        var otherStar = world.Stars[1];
+        var authoredPosts = new[]
+        {
+            (selectedStar.Id.ToAuthorId(), "Моя история звезды."),
+            (otherStar.Id.ToAuthorId(), "История другой звезды."),
+            (playerId.ToAuthorId(), "История игрока."),
+        };
+        foreach (var (author, text) in authoredPosts)
+        {
+            await store.InsertPostAsync(
+                new GamePost(PostId.From(ObjectId.GenerateNewId().ToString()), author, worldId, text, 0, [], Factory.Session.Clock.GetUtcNow(), 0, 0, 1, false, false),
+                CancellationToken.None);
+        }
+
+        Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Новая самостоятельная история.")));
+        var context = new TickerFunctionContext<StarFeedRequest>(
+            new TickerFunctionContext(),
+            new StarFeedRequest(playerId, worldId, PostId.From(ObjectId.GenerateNewId().ToString())));
+        using var scope = Factory.Services.CreateScope();
+        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
+
+        // Act
+        await job.ExecuteAsync(context, CancellationToken.None);
+
+        // Assert
+        var prompt = GetCapturedChatMessages().Single(message => message.Role == ChatRole.User).Text;
+        const string marker = "DATA_JSON:";
+        using var document = JsonDocument.Parse(prompt[(prompt.IndexOf(marker, StringComparison.Ordinal) + marker.Length)..]);
+        var history = document.RootElement.EnumerateArray().ToArray();
+        await Assert.That(history.Length).IsEqualTo(3);
+        var own = history.Single(item => item.GetProperty("text").GetString() == "Моя история звезды.");
+        var other = history.Single(item => item.GetProperty("text").GetString() == "История другой звезды.");
+        var playerPost = history.Single(item => item.GetProperty("text").GetString() == "История игрока.");
+        await Assert.That(own.GetProperty("isOwn").GetBoolean()).IsTrue();
+        await Assert.That(own.GetProperty("starId").GetString()).IsEqualTo(selectedStar.Id.Value);
+        await Assert.That(own.GetProperty("author").GetString()).IsEqualTo(selectedStar.Name);
+        await Assert.That(other.GetProperty("isOwn").GetBoolean()).IsFalse();
+        await Assert.That(other.GetProperty("starId").GetString()).IsEqualTo(otherStar.Id.Value);
+        await Assert.That(playerPost.GetProperty("isOwn").GetBoolean()).IsFalse();
+        await Assert.That(playerPost.GetProperty("starId").ValueKind).IsEqualTo(JsonValueKind.Null);
+        var saved = await store.GetPostAsync(context.Request.PostId, worldId, CancellationToken.None);
+        await Assert.That(saved?.AuthorId).IsEqualTo(selectedStar.Id.ToAuthorId());
     }
 }

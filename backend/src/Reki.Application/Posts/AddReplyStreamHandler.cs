@@ -237,7 +237,7 @@ public sealed partial class AddReplyStreamHandler(
                 cancellationToken))
         {
             telemetry.TrackWorldAudience(updatedWorld);
-            await feedScheduler.ScheduleAsync(playerId, world.Id, "reply", request.RequestId, CancellationToken.None);
+            await feedScheduler.ScheduleAsync(playerId, world.Id);
             return Completed(request, updatedPost, updatedWorld, updatedPlayer);
         }
 
