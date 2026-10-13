@@ -48,8 +48,6 @@ public static class DependencyInjection
         var jobs = configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
         var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ?? throw new InvalidOperationException("Mongo configuration is required.");
         services.AddScoped<GameMaintenanceJobs>();
-        services.AddHostedService<GameDayIndexes>();
-        services.AddHostedService<GameMaintenanceStartup>();
         services.AddTickerQ(options =>
         {
             options.ConfigureScheduler(scheduler => scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));

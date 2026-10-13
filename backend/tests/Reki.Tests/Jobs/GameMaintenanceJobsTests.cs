@@ -295,46 +295,6 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
     }
 
     [Test]
-    public async Task Startup_MissedDays_CatchesUpBeforeServingAsync()
-    {
-        using var api = Factory.CreateApiClient(9308);
-        var response = await CreatePlayerWithWorldAsync(api);
-        var players = Database.GetCollection<PlayerProfile>("players");
-        var worlds = Database.GetCollection<World>("worlds");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
-        var world = await worlds.Find(item => item.Player.PlayerId == player.Id).SingleAsync();
-        await players.ReplaceOneAsync(item => item.Id == player.Id, player with { EnergyUsed = 7, DailyBonus = 5 });
-        var period = player.PostsPeriodStartedAtUtc.AddDays(4);
-        Factory.Session.Clock.SetUtcNow(period.AddHours(3));
-        long? count = null;
-        var expectedMeter = Factory.Services.GetRequiredService<IMeterFactory>().Create("Reki.Product");
-        using var listener = new MeterListener();
-        listener.InstrumentPublished = (instrument, meterListener) =>
-        {
-            if (instrument.Name == "reki.players.registered" && ReferenceEquals(instrument.Meter, expectedMeter))
-            {
-                meterListener.EnableMeasurementEvents(instrument);
-            }
-        };
-        listener.SetMeasurementEventCallback<long>((_, measurement, _, _) => count = measurement);
-        listener.Start();
-        var startup = new GameMaintenanceStartup(Factory.Services.GetRequiredService<IServiceScopeFactory>());
-
-        await startup.StartAsync(CancellationToken.None);
-        listener.RecordObservableInstruments();
-
-        var saved = await players.Find(item => item.Id == player.Id).SingleAsync();
-        var savedWorld = await worlds.Find(item => item.Id == world.Id).SingleAsync();
-        await Assert.That(saved.EnergyUsed).IsEqualTo(0);
-        await Assert.That(saved.DailyBonus).IsEqualTo(0);
-        await Assert.That(saved.PostsPeriodStartedAtUtc).IsEqualTo(period);
-        await Assert.That(saved.Version).IsEqualTo(player.Version + 1);
-        await Assert.That(savedWorld.Player.PeriodStartedAtUtc).IsEqualTo(period);
-        await Assert.That(savedWorld.Version).IsEqualTo(world.Version + 1);
-        await Assert.That(count).IsEqualTo(1L);
-    }
-
-    [Test]
     public async Task Dashboard_TelegramAuthentication_HandlesBasicCredentialsAsync()
     {
         using var productionAuthFactory = new ApiFactory

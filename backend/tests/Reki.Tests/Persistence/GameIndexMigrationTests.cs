@@ -149,7 +149,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
         var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(8L);
+        await Assert.That(historyCount).IsEqualTo(9L);
     }
 
     [Test]
@@ -658,6 +658,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         yield return ("events", "ix_events_player_day",
             new BsonDocument { { "PlayerId", 1 }, { "DayStartedAtUtc", -1 } }, false);
         yield return ("challenges", "ux_challenges_active_participants", new BsonDocument("Participants", 1), true);
+        yield return ("players", "ix_players_day_period", new BsonDocument("PostsPeriodStartedAtUtc", 1), false);
+        yield return ("worlds", "ix_worlds_day_period", new BsonDocument("Player.PeriodStartedAtUtc", 1), false);
         yield return ("worlds", "ix_worlds_player", new BsonDocument("Player.PlayerId", 1), false);
         yield return ("posts", "ix_posts_world_created", new BsonDocument { { "WorldId", 1 }, { "CreatedAtUtc", -1 } }, false);
         yield return ("events", "ix_events_world_day", new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "DayStartedAtUtc", 1 } }, false);
