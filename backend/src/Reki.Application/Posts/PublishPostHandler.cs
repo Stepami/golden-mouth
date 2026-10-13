@@ -49,9 +49,7 @@ public sealed class PublishPostHandler(
         var now = timeProvider.GetUtcNow();
         var player = storedPlayer;
 
-        var cap = player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
-
-        if (player.EnergyUsed > cap - balance.Value.PostEnergyCost)
+        if (player.Energy < balance.Value.PostEnergyCost)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }
@@ -84,7 +82,7 @@ public sealed class PublishPostHandler(
             balance.Value.Relations.Maximum,
             balance.Value.Relations.MaxGainPerDay,
             balance.Value.Relations.StarCardAt);
-        var updated = player.SpendPost(progression.Skills, balance.Value.PostEnergyCost, cap);
+        var updated = player.SpendPost(progression.Skills, balance.Value.PostEnergyCost);
         var postId = PostId.New();
         var starComment = new GameComment(
             CommentId.New(),
@@ -120,7 +118,7 @@ public sealed class PublishPostHandler(
             : null;
         if (updatedInvite is not null)
         {
-            updated = updated with { DailyBonus = updated.DailyBonus + balance.Value.InviteBonusBoth };
+            updated = updated with { Energy = updated.Energy + balance.Value.InviteBonusBoth };
         }
 
         var committed = await store.TryCommitPostAsync(

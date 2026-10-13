@@ -15,13 +15,11 @@ public sealed partial class GameDay(IOptions<GameBalance> balance, IGameStore st
     {
         var player = await sender.Send(new GetPlayerQuery(), cancellationToken);
         var invite = await store.GetInviteAsync(player.Id, cancellationToken);
-        var postsCap = player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
         var firstPostInviteBonus = invite is { InviteeBonusUsed: false } ? balance.Value.InviteBonusBoth : 0;
         return new PlayerResponse(
             player.Id.Value,
             Enum.Parse<Address>(player.Address, true),
-            Math.Max(0, postsCap - player.EnergyUsed),
-            postsCap,
+            player.Energy,
             firstPostInviteBonus,
             new StreakResponse(player.StreakDays, Enumerable.Range(0, 7).Select(day => day < Math.Min(7, player.StreakDays)).ToArray(), "ещё день — и бонус"),
             player.Skills.ToDictionary(item => Enum.Parse<ContractSkillId>(item.Key.Value, true), item => MapSkill(item.Value)),

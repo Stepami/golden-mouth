@@ -165,7 +165,8 @@ public sealed class ChallengeLifecycle(
             winnerId,
             profile => profile.ApplyChallengeWinBonus(
                 balance.Value.ChallengeWinBonusPerDay,
-                bonusUntil),
+                bonusUntil,
+                periodStart),
             cancellationToken);
         await UpdateWorldAsync(
             loserId,

@@ -231,7 +231,7 @@ export function ChannelHead() {
     <div className="top">
       <Avatar seed={p.handle} size={36} />
       <div><b>{p.name}</b><div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div>
-      <div className="pill">✍️ осталось {p.postsLeft}</div>
+      <div className="pill">✍️ осталось {p.energy}</div>
     </div>
   )
 }

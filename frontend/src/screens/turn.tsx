@@ -23,7 +23,7 @@ function Compose() {
   const done = p.wants.filter(w => w.done).length
   return (
     <div className="screen no-tab">
-      <TopBar onBack={nav.back} title="Новый пост" right={`✍️ осталось ${p.postsLeft} на сегодня`} />
+      <TopBar onBack={nav.back} title="Новый пост" right={`✍️ осталось ${p.energy} на сегодня`} />
       <div className="pad">
         <div className="card" style={{ minHeight: 104, marginBottom: 6 }}>
           <textarea value={text} onChange={e => setText(e.target.value)} rows={4} placeholder="Как прошёл день?" maxLength={500} />
@@ -40,7 +40,7 @@ function Compose() {
         <div className="small muted" style={{ margin: '4px 0 8px' }}>💡 ПОДСКАЖИ</div>
         {ideas.map(i => <button key={i} className="opt" onClick={() => setText(i.replace(/[«»]/g, '').replace('…', ' '))}>{i}</button>)}
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: !ideas.some(i => text.startsWith(i.replace(/[«»…]/g, '').trim())) }); nav.replace('02-2_live', { text, publicationId: crypto.randomUUID() }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
+      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (p.energy > 0) { track('post_publish', { len: text.length, own_words: !ideas.some(i => text.startsWith(i.replace(/[«»…]/g, '').trim())) }); nav.replace('02-2_live', { text, publicationId: crypto.randomUUID() }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
     </div>
   )
 }
@@ -71,7 +71,7 @@ function Live() {
       track('post_result', { delta: e.result.delta, viral: e.result.viral, flop: e.result.flop })
       void (async () => {
         if (apiBaseUrl) await refresh()
-        else patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + e.result.delta) })
+        else patch({ energy: Math.max(0, p.energy - 1), subs: Math.max(0, p.subs + e.result.delta) })
         nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: e.result, post })
       })()
     }
@@ -241,7 +241,7 @@ function Thread() {
   }
   const send = async () => {
     if (!post || !canReply || !draft.text.trim() || !draft.commentId || sending) return
-    if (player.postsLeft < 1 && !draft.submitted) { setReplyError('Энергия закончилась. Новая появится в 9:00.'); return }
+    if (player.energy < 1 && !draft.submitted) { setReplyError('Энергия закончилась. Новая появится в 9:00.'); return }
     const ctrl = new AbortController()
     controller.current = ctrl
     const key = threadKey
@@ -252,7 +252,7 @@ function Thread() {
       if (ctrl.signal.aborted || activeKey.current !== key) return
       if (!event.post || event.energyLeft == null || event.subscribers == null) throw new Error('No saved reply returned')
       const { postId: id, ...detail } = event.post
-      setPost({ ...detail, id }); patch({ subs: event.subscribers, postsLeft: event.energyLeft })
+      setPost({ ...detail, id }); patch({ subs: event.subscribers, energy: event.energyLeft })
       setDraft(fresh()); setPreview('')
       try { localStorage.removeItem(storageKey) } catch { /* optional storage */ }
     } catch (cause) {
@@ -285,7 +285,7 @@ function Thread() {
   post.comments.forEach(append)
   return (
     <div className="screen no-tab">
-      <TopBar onBack={goBack} title="Реакции" right={`⚡ ${player.postsLeft}`} />
+      <TopBar onBack={goBack} title="Реакции" right={`⚡ ${player.energy}`} />
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div></div>
         {canReply ? <div className="small" style={{ color: 'var(--gift)', marginBottom: 12 }}>💬 Ответ — 1 энергия · первые 3 ответа дают +9 подписчиков</div> : <div className="small muted" style={{ marginBottom: 12 }}>Этот тред доступен для чтения.</div>}
@@ -300,7 +300,7 @@ function Thread() {
       </div>
       {canReply && <div className="bottom-cta" style={{ flexDirection: 'row' }}>
         <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input className="thread-reply-input" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={draft.commentId ? 'Ответ · 1 энергия' : 'Выбери комментарий'} maxLength={1000} disabled={!draft.commentId || sending} /></div>
-        <button className="card thread-reply-send" onClick={send} disabled={sending || !draft.text.trim() || !draft.commentId || (player.postsLeft < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
+        <button className="card thread-reply-send" onClick={send} disabled={sending || !draft.text.trim() || !draft.commentId || (player.energy < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
       </div>}
     </div>
   )

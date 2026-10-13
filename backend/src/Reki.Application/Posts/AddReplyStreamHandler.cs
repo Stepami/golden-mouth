@@ -41,7 +41,6 @@ public sealed partial class AddReplyStreamHandler(
         var (target, star) = ValidateTarget(post, world, request.TargetCommentId);
         await safety.EnsureInputAllowedAsync(storedPlayer, [request.Text], cancellationToken);
         var player = storedPlayer;
-        var cap = GetCap(player);
         if (post.FindRequest(request.RequestId) is { } existing)
         {
             EnsureSameRequest(existing, request, player.Id);
@@ -49,7 +48,7 @@ public sealed partial class AddReplyStreamHandler(
             yield break;
         }
 
-        EnsureEnergy(player, cap);
+        EnsureEnergy(player);
         var context = new StarReplyContext(
             new StarAgentProfile(world, null, [], player.Address),
             star.Id,
@@ -129,13 +128,13 @@ public sealed partial class AddReplyStreamHandler(
         yield return outcome;
     }
 
-    private static ReplyLiveEvent Completed(AddReplyCommand request, GamePost post, World world, PlayerProfile player, int cap) =>
+    private static ReplyLiveEvent Completed(AddReplyCommand request, GamePost post, World world, PlayerProfile player) =>
         new(
             ReplyStatus.Completed,
             request.RequestId,
             Text: null,
             Post: PostContractMapper.MapPost(post, world, player.Id),
-            EnergyLeft: Math.Max(0, cap - player.EnergyUsed),
+            EnergyLeft: player.Energy,
             Subscribers: world.Player.Subscribers,
             Code: null);
 
@@ -168,7 +167,6 @@ public sealed partial class AddReplyStreamHandler(
             var player = storedPlayer;
             var world = await sender.Send(new Worlds.GetWorldQuery(playerId, request.WorldId), cancellationToken);
             var post = await sender.Send(new GetPostQuery(request.PostId, playerId, world.Id), cancellationToken);
-            var cap = GetCap(player);
             if (post.FindRequest(request.RequestId) is { } existing)
             {
                 EnsureSameRequest(existing, request, playerId);
@@ -188,7 +186,7 @@ public sealed partial class AddReplyStreamHandler(
                 throw new RequestConflictException("The world safety settings changed during generation.");
             }
 
-            EnsureEnergy(player, cap);
+            EnsureEnergy(player);
             var bonus = post.Comments.Count(comment =>
                             comment.AuthorId == playerId.ToAuthorId() && comment.ParentCommentId is not null)
                         < balance.Value.Thread.BonusReplies
@@ -213,12 +211,12 @@ public sealed partial class AddReplyStreamHandler(
             }
 
             var updatedPost = post.AddComments(comments);
-            var updatedPlayer = player.SpendEnergy(balance.Value.Thread.EnergyCost, cap);
+            var updatedPlayer = player.SpendEnergy(balance.Value.Thread.EnergyCost);
             var updatedWorld = world.AwardThreadBonus(bonus);
             if (await store.TryCommitReplyAsync(updatedPost, post.Version, request.RequestId, updatedPlayer, storedPlayer.Version, updatedWorld, world.Version, cancellationToken))
             {
                 telemetry.TrackWorldAudience(updatedWorld);
-                return Completed(request, updatedPost, updatedWorld, updatedPlayer, cap);
+                return Completed(request, updatedPost, updatedWorld, updatedPlayer);
             }
         }
 
@@ -238,19 +236,16 @@ public sealed partial class AddReplyStreamHandler(
         var world = await sender.Send(new Worlds.GetWorldQuery(playerId, post.WorldId), cancellationToken);
         var existing = post.FindRequest(request.RequestId) ?? throw new RequestConflictException("The saved reply disappeared.");
         EnsureSameRequest(existing, request, playerId);
-        return Completed(request, post, world, player, GetCap(player));
+        return Completed(request, post, world, player);
     }
 
-    private void EnsureEnergy(PlayerProfile player, int cap)
+    private void EnsureEnergy(PlayerProfile player)
     {
-        if (player.EnergyUsed > cap - balance.Value.Thread.EnergyCost)
+        if (player.Energy < balance.Value.Thread.EnergyCost)
         {
             throw new RequestConflictException("Insufficient energy.");
         }
     }
-
-    private int GetCap(PlayerProfile player) =>
-        player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Thread generation failed")]
     private partial void GenerationFailed();

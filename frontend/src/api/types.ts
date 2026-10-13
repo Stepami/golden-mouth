@@ -17,7 +17,7 @@ export interface CollectionCard { id: string; emoji: string; title: string; open
 export interface Player {
   worldInstanceId?: string; avatarStyle?: string
   id: string; name: string; handle: string; role: string; address: Address
-  world: WorldId; subs: number; postsLeft: number; postsCap: number; firstPostInviteBonus: number
+  world: WorldId; subs: number; energy: number; firstPostInviteBonus: number
   streak: { days: number; week: boolean[]; nextReward: string }
   skills: Record<SkillId, Skill>; wants: Want[]; collection: CollectionCard[]
   bio: string; type: string                     // «дерзкая с самоиронией»
@@ -82,7 +82,7 @@ export interface WorldDocument extends Omit<World, 'id'> {
 export type WorldDefinition = Omit<WorldDocument, 'id' | 'subscribers' | 'lock'>
 
 export interface PlayerDocument {
-  id: string; address: Address; postsLeft: number; postsCap: number; firstPostInviteBonus: number
+  id: string; address: Address; energy: number; firstPostInviteBonus: number
   streak: Player['streak']; skills: Player['skills']; experiments: Record<string, string>
   settings: { notifications: string; quiet: string; plus: boolean }
 }

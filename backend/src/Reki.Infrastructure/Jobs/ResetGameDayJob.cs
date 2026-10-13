@@ -27,15 +27,28 @@ public sealed partial class ResetGameDayJob(
         var restedPosts = growth.RestedFirstPosts;
         var players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
         var worlds = database.GetCollection<World>(MongoCollections.Worlds);
+        var period = SerializeDate(periodStart);
+        var energy = new BsonDocument("$add", new BsonArray
+        {
+            new BsonDocument("$cond", new BsonArray { "$Settings.Plus", balance.Value.PlusPostsPerDay, balance.Value.FreePostsPerDay }),
+            new BsonDocument("$cond", new BsonArray
+            {
+                new BsonDocument("$gt", new BsonArray { "$ChallengeBonusUntilUtc", new BsonDocument("$literal", period) }),
+                balance.Value.ChallengeWinBonusPerDay,
+                0,
+            }),
+        });
+        var playerUpdate = new BsonDocument("$set", new BsonDocument
+        {
+            { "Energy", energy },
+            { "EnergyUsed", 0 },
+            { "PostsPeriodStartedAtUtc", new BsonDocument("$literal", period) },
+            { "Version", new BsonDocument("$add", new BsonArray { "$Version", 1 }) },
+        });
         var playerResult = await players.UpdateManyAsync(
             Builders<PlayerProfile>.Filter.Lt(player => player.PostsPeriodStartedAtUtc, periodStart),
-            Builders<PlayerProfile>.Update
-                .Set(player => player.EnergyUsed, 0)
-                .Set(player => player.DailyBonus, 0)
-                .Set(player => player.PostsPeriodStartedAtUtc, periodStart)
-                .Inc(player => player.Version, 1),
+            Builders<PlayerProfile>.Update.Pipeline(new[] { playerUpdate }),
             cancellationToken: cancellationToken);
-        var period = SerializeDate(periodStart);
         var cutoff = SerializeDate(restedBefore);
         var rested = new BsonDocument("$cond", new BsonArray
         {

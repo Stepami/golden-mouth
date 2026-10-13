@@ -12,7 +12,7 @@ public sealed record PlayerProfile
 
     public int EnergyUsed { get; init; }
 
-    public int DailyBonus { get; init; }
+    public int Energy { get; init; }
 
     public DateTimeOffset PostsPeriodStartedAtUtc { get; init; }
 
@@ -28,8 +28,6 @@ public sealed record PlayerProfile
 
     public int Version { get; init; }
 
-    public int ChallengeDailyBonus { get; init; }
-
     public DateTimeOffset? ChallengeBonusUntilUtc { get; init; }
 
     public bool PlusNotifyRequested { get; init; }
@@ -38,22 +36,14 @@ public sealed record PlayerProfile
 
     public required PlayerSettings Settings { get; init; }
 
-    public int GetPostsCap(int freePerDay, int plusPerDay)
-    {
-        var baseLimit = Settings.Plus ? plusPerDay : freePerDay;
-        var challengeBonus = ChallengeBonusUntilUtc > PostsPeriodStartedAtUtc
-            ? ChallengeDailyBonus
-            : 0;
-        return baseLimit + DailyBonus + challengeBonus;
-    }
-
     public PlayerProfile ApplyChallengeWinBonus(
         int dailyBonus,
-        DateTimeOffset bonusUntilUtc)
+        DateTimeOffset bonusUntilUtc,
+        DateTimeOffset periodStartedAtUtc)
     {
         return this with
         {
-            ChallengeDailyBonus = dailyBonus,
+            Energy = Energy + (ChallengeBonusUntilUtc > periodStartedAtUtc ? 0 : dailyBonus),
             ChallengeBonusUntilUtc = bonusUntilUtc,
             Version = Version + 1,
         };
@@ -68,7 +58,7 @@ public sealed record PlayerProfile
 
         return this with
         {
-            DailyBonus = DailyBonus + bonus,
+            Energy = Energy + bonus,
             PlusInterestClaimed = true,
             Version = Version + 1,
         };
@@ -91,31 +81,28 @@ public sealed record PlayerProfile
         };
     }
 
-    public PlayerProfile StartNewPeriod(DateTimeOffset periodStartedAtUtc)
+    public PlayerProfile StartNewPeriod(DateTimeOffset periodStartedAtUtc, int energy)
     {
         return this with
         {
             EnergyUsed = 0,
-            DailyBonus = 0,
+            Energy = energy,
             PostsPeriodStartedAtUtc = periodStartedAtUtc,
             Version = Version + 1,
         };
     }
 
-    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills) =>
-        SpendPost(skills, 1, int.MaxValue);
+    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, int cost) =>
+        SpendEnergy(cost) with { Skills = skills };
 
-    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, int cost, int cap) =>
-        SpendEnergy(cost, cap) with { Skills = skills };
-
-    public PlayerProfile SpendEnergy(int cost, int cap)
+    public PlayerProfile SpendEnergy(int cost)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(cost);
-        if (EnergyUsed > cap - cost)
+        if (Energy < cost)
         {
             throw new InvalidOperationException("Insufficient energy.");
         }
 
-        return this with { EnergyUsed = EnergyUsed + cost, Version = Version + 1 };
+        return this with { Energy = Energy - cost, EnergyUsed = EnergyUsed + cost, Version = Version + 1 };
     }
 }

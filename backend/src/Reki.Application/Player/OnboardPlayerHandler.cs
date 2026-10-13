@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Telemetry;
@@ -12,6 +13,7 @@ public sealed class OnboardPlayerHandler(
     ITelegramUserAccessor telegramUser,
     IGameStore store,
     GameDayPeriod gameDayPeriod,
+    IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     ProductTelemetry analytics) : IRequestHandler<OnboardPlayerCommand, PlayerProfile>
 {
@@ -29,6 +31,7 @@ public sealed class OnboardPlayerHandler(
         var created = CreatePlayer(request, telegramUserId, gameDayPeriod.PeriodStart) with
         {
             AgeBand = request.AgeBand,
+            Energy = balance.Value.FreePostsPerDay,
         };
         await store.CreatePlayerAsync(created, cancellationToken);
         if (inviter is not null)

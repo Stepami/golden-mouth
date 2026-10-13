@@ -48,8 +48,7 @@ public sealed partial class GeneratePublicationHandler(
             yield break;
         }
 
-        var cap = player.GetPostsCap(balance.Value.FreePostsPerDay, balance.Value.PlusPostsPerDay);
-        if (player.EnergyUsed > cap - balance.Value.PostEnergyCost)
+        if (player.Energy < balance.Value.PostEnergyCost)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }

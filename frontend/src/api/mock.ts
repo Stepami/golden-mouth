@@ -3,7 +3,7 @@ import type { Challenge, Dm, FeedItem, Friend, GameEvent, Player, Post, PostResu
 
 export const player: Player = {
   id: '00000000000000000000000000000001', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', address: 'she',
-  world: 'stage', subs: 120, postsLeft: 10, postsCap: 10, firstPostInviteBonus: 0,
+  world: 'stage', subs: 120, energy: 10, firstPostInviteBonus: 0,
   streak: { days: 4, week: [true, true, true, true, false, false, false], nextReward: '7 дней: карточка «Неделя в эфире»' },
   skills: { brave: { level: 6, progress: .4 }, humor: { level: 5, progress: .7 }, topic: { level: 4, progress: .3 } },
   wants: [

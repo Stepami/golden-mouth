@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using Reki.Application.Common;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
@@ -149,7 +150,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
         var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(9L);
+        await Assert.That(historyCount).IsEqualTo(10L);
     }
 
     [Test]
@@ -610,6 +611,82 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(savedWorld.Stars.Single().Relation).IsEqualTo(3);
     }
 
+    [Test]
+    [Arguments(false, -1, 4, 15)]
+    [Arguments(false, 0, 4, 15)]
+    [Arguments(false, 1, 4, 24)]
+    [Arguments(true, 1, 4, 37)]
+    [Arguments(false, 1, 99, 0)]
+    public async Task StoreRemainingEnergy_CustomBalance_PreservesLegacyAccountingAsync(bool plus, int expirySeconds, int spent, int expected)
+    {
+        // Arrange
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        var period = new DateTimeOffset(2020, 1, 1, 6, 0, 0, TimeSpan.Zero);
+        var legacy = new BsonDocument
+        {
+            ["_id"] = "energy-player",
+            ["Settings"] = new BsonDocument("Plus", plus),
+            ["PostsPeriodStartedAtUtc"] = ReferralTimestamp(period),
+            ["ChallengeBonusUntilUtc"] = ReferralTimestamp(period.AddSeconds(expirySeconds)),
+            ["ChallengeDailyBonus"] = 9,
+            ["DailyBonus"] = 2,
+            ["EnergyUsed"] = spent,
+            ["Version"] = 7,
+        };
+        await database.GetCollection<BsonDocument>("players").InsertOneAsync(legacy);
+        var migration = new StoreRemainingEnergy(Options.Create(CreateEnergyBalance() with { FreePostsPerDay = 17, PlusPostsPerDay = 30 }));
+
+        // Act
+        await migration.UpAsync(database, session, CancellationToken.None);
+        await migration.UpAsync(database, session, CancellationToken.None);
+
+        // Assert
+        var saved = await ReadAsync(database, "players", "energy-player");
+        await Assert.That(saved["Energy"].AsInt32).IsEqualTo(expected);
+        await Assert.That(saved["EnergyUsed"].AsInt32).IsEqualTo(spent);
+        await Assert.That(saved["PostsPeriodStartedAtUtc"]).IsEqualTo(legacy["PostsPeriodStartedAtUtc"]);
+        await Assert.That(saved["ChallengeBonusUntilUtc"]).IsEqualTo(legacy["ChallengeBonusUntilUtc"]);
+        await Assert.That(saved["Version"].AsInt32).IsEqualTo(7);
+        await Assert.That(saved.Contains("DailyBonus")).IsFalse();
+        await Assert.That(saved.Contains("ChallengeDailyBonus")).IsFalse();
+    }
+
+    [Test]
+    [Arguments(0)]
+    [Arguments(6)]
+    public async Task StoreRemainingEnergy_ExistingEnergy_DoesNotReplayLegacyBonusesAsync(int energy)
+    {
+        // Arrange
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        var legacy = new BsonDocument
+        {
+            ["_id"] = "stored-energy",
+            ["Energy"] = energy,
+            ["EnergyUsed"] = 4,
+            ["DailyBonus"] = 7,
+            ["ChallengeDailyBonus"] = 3,
+        };
+        await database.GetCollection<BsonDocument>("players").InsertOneAsync(legacy);
+        var migration = new StoreRemainingEnergy(Options.Create(CreateEnergyBalance()));
+
+        // Act
+        await migration.UpAsync(database, session, CancellationToken.None);
+        await migration.UpAsync(database, session, CancellationToken.None);
+
+        // Assert
+        var saved = await ReadAsync(database, "players", "stored-energy");
+        await Assert.That(saved["Energy"].AsInt32).IsEqualTo(energy);
+        await Assert.That(saved["EnergyUsed"].AsInt32).IsEqualTo(4);
+        await Assert.That(saved.Contains("DailyBonus")).IsFalse();
+        await Assert.That(saved.Contains("ChallengeDailyBonus")).IsFalse();
+    }
+
+    private static GameBalance CreateEnergyBalance() => new(10, 20, new TimeOnly(9, 0), 5, 3, 5, 3, 3, new GrowthBalance(1, 1, [], 0, 1, 1, 2, 3, 2, 1000), new ViralBalance(0, 0, 1), new FlopBalance(1), new SkillBalance([], 1, 1, 10, 2, 3, 1, 1), new RelationBalance(0, 10, 3, 5, 3), new ChallengeBalance(3, 1), new ThreadBalance(3, 9), new Dictionary<string, WorldBalance>());
+
     private static BsonDocument CreateLegacyReferralPlayer(string id, string? inviter, DateTimeOffset createdAt, int dailyBonus, int count, bool used) => new()
     {
         ["_id"] = id,
@@ -645,7 +722,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     {
         var options = new RekiMigrationOptions(Options.Create(new MongoOptions { DatabaseName = databaseName }));
         return MigratorBuilder.FromMongoClient(client, options)
-            .LoadMigrationsFromAssembly(typeof(InitialGameIndexes).Assembly)
+            .LoadMigrations([new InitialGameIndexes(), new RemoveLegacyChallengeIndex(), new SeedWorldTemplates(), new ConsolidateWorldSchema(), new RepairLegacyDocuments(), new NestWorldDocuments(), new MoveReferralStateToInvites(), new UnifyPostContent(), new CreateGameDayIndexes(), new StoreRemainingEnergy(Options.Create(CreateEnergyBalance()))])
             .Build();
     }
 

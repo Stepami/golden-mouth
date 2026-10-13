@@ -90,7 +90,7 @@ internal sealed class MongoGameStore : IGameStore
             Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id),
             Builders<PlayerProfile>.Filter.Ne(item => item.PlusInterestClaimed, updated.PlusInterestClaimed));
         var update = Builders<PlayerProfile>.Update
-            .Inc(item => item.DailyBonus, updated.DailyBonus - player.DailyBonus)
+            .Inc(item => item.Energy, updated.Energy - player.Energy)
             .Set(item => item.PlusInterestClaimed, updated.PlusInterestClaimed)
             .Inc(item => item.Version, updated.Version - player.Version);
         var result = await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
@@ -208,7 +208,7 @@ internal sealed class MongoGameStore : IGameStore
                 if (inviterUses < inviteBonusMaxPerDay)
                 {
                     var inviterUpdate = Builders<PlayerProfile>.Update
-                        .Inc(item => item.DailyBonus, inviteBonus)
+                        .Inc(item => item.Energy, inviteBonus)
                         .Inc(item => item.Version, 1);
                     await _players.UpdateOneAsync(
                         transactionSession,

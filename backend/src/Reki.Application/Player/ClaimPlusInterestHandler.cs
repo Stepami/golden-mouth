@@ -33,7 +33,7 @@ public sealed class ClaimPlusInterestHandler(
         }
 
         return await store.TryClaimPlusInterestAsync(player, updated, cancellationToken)
-            ? updated.DailyBonus - player.DailyBonus
+            ? updated.Energy - player.Energy
             : 0;
     }
 }

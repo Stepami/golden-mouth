@@ -3,8 +3,7 @@ namespace Reki.Contracts.Player;
 public sealed record PlayerResponse(
     string Id,
     Address Address,
-    int PostsLeft,
-    int PostsCap,
+    int Energy,
     int FirstPostInviteBonus,
     StreakResponse Streak,
     IReadOnlyDictionary<SkillId, SkillResponse> Skills,
