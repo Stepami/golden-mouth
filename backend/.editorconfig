@@ -107,6 +107,7 @@ dotnet_diagnostic.AV1500.severity = none
 dotnet_diagnostic.AV1561.severity = none
 dotnet_diagnostic.AV1564.severity = none
 dotnet_diagnostic.AV1580.severity = none
+dotnet_diagnostic.VSTHRD003.severity = none
 dotnet_diagnostic.VSTHRD103.severity = none
 dotnet_diagnostic.SA1611.severity = none
 dotnet_diagnostic.SA1615.severity = none
