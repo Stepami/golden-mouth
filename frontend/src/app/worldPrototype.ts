@@ -1,3 +1,7 @@
+import eveningSmallCover from '../assets/evening-640-v3.webp'
+import sorcerersSmallCover from '../assets/sorcerers-640-v3.webp'
+import housesSmallCover from '../assets/houses-640-v3.webp'
+import itSmallCover from '../assets/it-640-v3.webp'
 import eveningCover from '../assets/evening-v2.webp'
 import sorcerersCover from '../assets/sorcerers-v2.webp'
 import housesCover from '../assets/houses-v2.webp'
@@ -6,11 +10,11 @@ import type { Drama, WorldDefinition } from '../api/types'
 import { worldDefinitionOf } from '../api/worldContent'
 import { blankWorld } from './worldDraft'
 
-export const worldArt: Record<string, { cover: string; pitch: string; genre: string }> = {
-  evening: { cover: eveningCover, genre: 'Тайны · Романтика', pitch: 'Исчезнувшие улицы, чужие воспоминания и знакомства после заката.' },
-  sorcerers: { cover: sorcerersCover, genre: 'Магия · Дружба', pitch: 'Школа меняется каждую ночь. Только ваша общая лента помнит всё.' },
-  houses: { cover: housesCover, genre: 'Интриги · Приключения', pitch: 'Великие дома, драконы и союзы, от которых зависит северное царство.' },
-  it: { cover: itCover, genre: 'Стартапы · Ирония', pitch: 'Запускай проекты, спорь о технологиях и попадай в стартап-драмы.' },
+export const worldArt: Record<string, { cover: string; smallCover: string; pitch: string; genre: string }> = {
+  evening: { cover: eveningCover, smallCover: eveningSmallCover, genre: 'Тайны · Романтика', pitch: 'Исчезнувшие улицы, чужие воспоминания и знакомства после заката.' },
+  sorcerers: { cover: sorcerersCover, smallCover: sorcerersSmallCover, genre: 'Магия · Дружба', pitch: 'Школа меняется каждую ночь. Только ваша общая лента помнит всё.' },
+  houses: { cover: housesCover, smallCover: housesSmallCover, genre: 'Интриги · Приключения', pitch: 'Великие дома, драконы и союзы, от которых зависит северное царство.' },
+  it: { cover: itCover, smallCover: itSmallCover, genre: 'Стартапы · Ирония', pitch: 'Запускай проекты, спорь о технологиях и попадай в стартап-драмы.' },
 }
 export const dramaOptions: { id: Drama; icon: string; title: string; description: string; example: string }[] = [
   { id: 'soft', icon: '🌤', title: 'Мягко', description: 'Тёплые знакомства, поддержка и небольшие приключения.', example: 'Неожиданная находка становится поводом сблизиться.' },

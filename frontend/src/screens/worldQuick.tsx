@@ -1,4 +1,4 @@
-import { trackImage } from '../app/imageTiming'
+import { WorldCover } from '../ui/WorldCover'
 import { useNav } from '../app/nav'
 import { getWorldDraft, setWorldDraft, updateWorldDraft, useWorldDraft, type WorldDraft } from '../app/worldDraft'
 import { dramaOptions, prototypeWorld, worldArt } from '../app/worldPrototype'
@@ -12,7 +12,7 @@ export function WorldOverview() {
   if (!draft) return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={nav.back} /><div className="pad"><Button onClick={() => nav.replace('01-3_world')}>Выбрать мир</Button></div></div>
   const d = draft.definition; const art = worldArt[d.balanceKey]
   return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={nav.back} />
-    {art && <img className="world-hero" src={art.cover} decoding="async" onLoad={e => trackImage(e.currentTarget, `cover_${d.balanceKey}`)} onError={() => trackImage(null, `cover_${d.balanceKey}`)} alt={`Обложка мира «${d.title}»`} />}
+    {art && <WorldCover world={d.balanceKey} className="world-hero" priority alt={`Обложка мира «${d.title}»`} />}
     <div className="pad"><div className="small eyebrow">{art?.genre}</div><h1>{d.emoji} {d.title}</h1><p className="muted">{art?.pitch ?? d.description}</p>
       <h2>Кого встретишь</h2><div className="world-people">{d.stars.map(star => <div key={star.id}><Avatar seed={star.avatarSeed} world={d.balanceKey} avatarStyle={d.avatarStyle} profile={{ address: star.appearanceProfile === 'masculine' ? 'he' : star.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: star.ageBand }} size={44} /><b>{star.name}</b><span className="small muted">{star.role}</span></div>)}</div>
 

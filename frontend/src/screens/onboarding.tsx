@@ -1,3 +1,4 @@
+import { WorldCover } from '../ui/WorldCover'
 import mashaPortrait from '../assets/masha-v2.jpg'
 import { trackImage } from '../app/imageTiming'
 import { useEffect, useRef, useState } from 'react'
@@ -104,7 +105,7 @@ export function ChannelHead() {
 export function Home() {
   const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world)
   return <div className="screen"><ChannelHead /><div className="pad">
-    <div className="card first-story">{worldArt[p.world] && <img className="first-story-cover" src={worldArt[p.world].cover} decoding="async" onLoad={e => trackImage(e.currentTarget, `cover_${p.world}`)} onError={() => trackImage(null, `cover_${p.world}`)} alt={`Мир «${worldOf(p.world).title}»`} />}<div className="small eyebrow">Твоя история начинается</div><p className="first-story-context">{profile.firstContext}</p>
+    <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}<div className="small eyebrow">Твоя история начинается</div><p className="first-story-context">{profile.firstContext}</p>
       {p.firstPostInviteBonus > 0 && <p>🎁 Первый пост даст ещё {p.firstPostInviteBonus} энергии</p>}
       <button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button>
     </div><p className="small muted first-story-footer">Твои посты меняют историю</p>
@@ -115,7 +116,7 @@ register({
   '01-1_invite': { component: Invite, title: 'Приглашение от друга' },
   '01-2_age': { component: Age, title: 'Год рождения и согласие' },
   '01-2b_under14': { component: Under14, title: 'Младше 14' },
-  '01-3_world': { component: withWorldTemplates(World), title: 'Выбор мира' },
+  '01-3_world': { component: withWorldTemplates(World, true), title: 'Выбор мира' },
   '01-3b_world_overview': { component: withWorldTemplates(WorldOverview), title: 'Обзор мира' },
   '05-7c_world_preview': { component: WorldPrototypePreview, title: 'Демо своего мира' },
   '01-4_channel': { component: withWorldTemplates(Channel), title: 'Канал' },
