@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Net;
 using System.Net.Http.Headers;
@@ -179,8 +178,8 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         listener.SetMeasurementEventCallback<long>((_, measurement, _, _) => count = measurement);
         listener.Start();
         await using var scope = Factory.Services.CreateAsyncScope();
-        var job = scope.ServiceProvider.GetRequiredService<GameMaintenanceJobs>();
-        await job.RefreshCountAsync(CancellationToken.None);
+        var job = scope.ServiceProvider.GetRequiredService<RefreshRegisteredPlayersJob>();
+        await job.ExecuteAsync(new(), CancellationToken.None);
         listener.RecordObservableInstruments();
         await Assert.That(count).IsEqualTo(0L);
         using var firstApi = Factory.CreateApiClient(9305);
@@ -188,11 +187,11 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         await CreatePlayerWithWorldAsync(firstApi);
         await CreatePlayerWithWorldAsync(secondApi);
 
-        await job.RefreshCountAsync(CancellationToken.None);
+        await job.ExecuteAsync(new(), CancellationToken.None);
         listener.RecordObservableInstruments();
         await Assert.That(count).IsEqualTo(2L);
         await firstApi.Player.DeleteCurrentPlayerAsync(CancellationToken.None);
-        await job.RefreshCountAsync(CancellationToken.None);
+        await job.ExecuteAsync(new(), CancellationToken.None);
         listener.RecordObservableInstruments();
 
         await Assert.That(count).IsEqualTo(1L);
@@ -222,32 +221,6 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
     }
 
     [Test]
-    public async Task Maintenance_Jobs_EmitsJobActivitiesAsync()
-    {
-        using var http = Factory.CreateClient();
-        var completed = new List<Activity>();
-        using var listener = new ActivityListener
-        {
-            ShouldListenTo = source => source.Name == "Reki.Jobs",
-            Sample = SampleActivity,
-            ActivityStopped = completed.Add,
-        };
-        ActivitySource.AddActivityListener(listener);
-
-        await using var scope = Factory.Services.CreateAsyncScope();
-        var job = scope.ServiceProvider.GetRequiredService<GameMaintenanceJobs>();
-        await job.ResetAsync(CancellationToken.None);
-        await job.RefreshCountAsync(CancellationToken.None);
-
-        await Assert.That(completed.Select(activity => activity.OperationName)).IsEquivalentTo(new[] { "reset-game-day", "refresh-registered-players" });
-        var reset = completed.Single(activity => activity.OperationName == "reset-game-day");
-        await Assert.That(reset.GetTagItem("reki.reset.players")).IsEqualTo(0L);
-        await Assert.That(reset.GetTagItem("reki.reset.worlds")).IsEqualTo(0L);
-        await Assert.That(completed.All(activity => activity.Status != ActivityStatusCode.Error)).IsTrue();
-        await Assert.That(completed.All(activity => activity.Source.Name == "Reki.Jobs")).IsTrue();
-    }
-
-    [Test]
     public async Task Startup_PersistsTwoRecurringSchedulesInMongoAsync()
     {
         using var http = Factory.CreateClient();
@@ -272,24 +245,15 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var beforePlayer = await Database.GetCollection<BsonDocument>("players").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
         var beforeWorld = await Database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
         Factory.Session.Clock.SetUtcNow(Factory.Session.Clock.GetUtcNow().AddDays(1));
-        Activity? completed = null;
-        using var listener = new ActivityListener
-        {
-            ShouldListenTo = source => source.Name == "Reki.Jobs",
-            Sample = SampleActivity,
-            ActivityStopped = activity => completed = activity,
-        };
-        ActivitySource.AddActivityListener(listener);
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync();
         await using var scope = Factory.Services.CreateAsyncScope();
-        var jobs = scope.ServiceProvider.GetRequiredService<GameMaintenanceJobs>();
+        var resetJob = scope.ServiceProvider.GetRequiredService<ResetGameDayJob>();
+        var countJob = scope.ServiceProvider.GetRequiredService<RefreshRegisteredPlayersJob>();
 
-        await Assert.That(() => refreshCount ? jobs.RefreshCountAsync(cancellation.Token) : jobs.ResetAsync(cancellation.Token))
+        await Assert.That(() => refreshCount ? countJob.ExecuteAsync(new(), cancellation.Token) : resetJob.ExecuteAsync(new(), cancellation.Token))
             .Throws<OperationCanceledException>();
 
-        await Assert.That(completed?.OperationName).IsEqualTo(refreshCount ? "refresh-registered-players" : "reset-game-day");
-        await Assert.That(completed?.Status).IsEqualTo(ActivityStatusCode.Error);
         await Assert.That(await Database.GetCollection<BsonDocument>("players").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(beforePlayer);
         await Assert.That(await Database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(beforeWorld);
     }
@@ -316,10 +280,4 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         await Assert.That(accepted.StatusCode).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(await accepted.Content.ReadAsStringAsync(CancellationToken.None)).Contains("reset-game-day");
     }
-
-    // ActivityListener requires its sampling delegate to accept a ref parameter.
-#pragma warning disable AV1562
-    private static ActivitySamplingResult SampleActivity(ref ActivityCreationOptions<ActivityContext> options) =>
-        options.Source.Name == "Reki.Jobs" ? ActivitySamplingResult.AllDataAndRecorded : ActivitySamplingResult.None;
-#pragma warning restore AV1562
 }

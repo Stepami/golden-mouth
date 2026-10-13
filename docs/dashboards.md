@@ -55,4 +55,4 @@ Policy выполняется после retries для обычных отве�
 
 Встроенный дашборд TickerQ доступен по `/admin/tickerq` после настройки отдельного логина и пароля. Он показывает расписания `reset-game-day` (09:00 МСК) и `refresh-registered-players` (раз в минуту), историю исполнений, ошибки и управление задачами. Настройки обязательных учётных данных описаны в [deployment.md](deployment.md#дашборд-фоновых-задач-146).
 
-В OpenObserve выполнения видны в traces с instrumentation scope `TickerQ` и `Reki.Jobs`. У `reset-game-day` есть только числовые атрибуты `reki.reset.players` и `reki.reset.worlds`. Логи выполнения попадают в `backend`; gauge `reki.players.registered` сохраняет прежнее имя и семантику. Новых продуктовых событий и снимков профилей нет.
+В OpenObserve выполнения видны в traces с instrumentation scope `TickerQ`. Лог завершения `reset-game-day` содержит количество обновлённых игроков и миров и начало периода. Логи выполнения попадают в `backend`; gauge `reki.players.registered` сохраняет прежнее имя и семантику. Новых продуктовых событий и снимков профилей нет.

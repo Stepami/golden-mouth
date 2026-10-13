@@ -47,12 +47,15 @@ public static class DependencyInjection
             .ValidateOnStart();
         var jobs = configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
         var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ?? throw new InvalidOperationException("Mongo configuration is required.");
-        services.AddScoped<GameMaintenanceJobs>();
+        var functions = services.MapTickerGroup(string.Empty);
+        functions.MapTicker<ResetGameDayJob>("reset-game-day").WithCron("0 0 9 * * *").WithMaxConcurrency(1);
+        functions.MapTicker<RefreshRegisteredPlayersJob>("refresh-registered-players").WithCron("0 * * * * *").WithMaxConcurrency(1);
         services.AddTickerQ(options =>
         {
             options.ConfigureScheduler(scheduler => scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
             options.AddOperationalStore(store => store.UseExistingMongoClient(mongo.DatabaseName));
             options.AddOpenTelemetryInstrumentation();
+            options.SetExceptionHandler<JobsExceptionHandler>();
             if (!jobs.ExecutionEnabled)
             {
                 options.DisableBackgroundServices();
@@ -139,7 +142,7 @@ public static class DependencyInjection
     {
         services.AddOpenTelemetry()
             .WithTracing(tracing => tracing
-                .AddSource(MongoTelemetry.ActivitySourceName, "Reki.GenAI", "TickerQ", GameMaintenanceJobs.ActivitySourceName)
+                .AddSource(MongoTelemetry.ActivitySourceName, "Reki.GenAI", "TickerQ")
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation())
             .WithMetrics(metrics => metrics

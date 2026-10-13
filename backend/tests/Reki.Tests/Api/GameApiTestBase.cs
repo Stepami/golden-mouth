@@ -192,7 +192,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
     protected async Task ResetGameDayAsync()
     {
         await using var scope = Factory.Services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<GameMaintenanceJobs>().ResetAsync(CancellationToken.None);
+        await scope.ServiceProvider.GetRequiredService<ResetGameDayJob>().ExecuteAsync(new(), CancellationToken.None);
     }
 
     protected async Task<string> WorldPathAsync(HttpClient http, string path)
