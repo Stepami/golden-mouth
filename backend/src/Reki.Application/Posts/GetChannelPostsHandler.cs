@@ -7,7 +7,8 @@ namespace Reki.Application.Posts;
 
 public sealed class GetChannelPostsHandler(
     IGameStore store,
-    IRekiContextAccessor rekiContextAccessor)
+    IRekiContextAccessor rekiContextAccessor,
+    IStarFeedScheduler feedScheduler)
     : IRequestHandler<GetChannelPostsQuery, IReadOnlyList<GamePost>>
 {
     public async ValueTask<IReadOnlyList<GamePost>> Handle(
@@ -17,6 +18,18 @@ public sealed class GetChannelPostsHandler(
         var worlds = await rekiContextAccessor.Context.Worlds;
         var world = worlds.GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
-        return await store.GetPostsAsync(request.Limit, cancellationToken, world.Id);
+
+        if (request.Feed)
+        {
+            await feedScheduler.ScheduleFromFeedAsync(
+                world.Player.PlayerId,
+                world.Id);
+        }
+
+        return await store.GetPostsAsync(
+            request.Limit,
+            world.Id,
+            request.Feed ? null : world.Player.PlayerId.ToAuthorId(),
+            cancellationToken);
     }
 }

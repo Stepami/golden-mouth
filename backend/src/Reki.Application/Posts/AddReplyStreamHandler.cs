@@ -23,7 +23,8 @@ public sealed partial class AddReplyStreamHandler(
     PlayerSafetyGuard safety,
     StarTurnGenerator generator,
     ILogger<AddReplyStreamHandler> logger,
-    ProductTelemetry telemetry) : IStreamRequestHandler<AddReplyCommand, ReplyLiveEvent>
+    ProductTelemetry telemetry,
+    IStarFeedScheduler feedScheduler) : IStreamRequestHandler<AddReplyCommand, ReplyLiveEvent>
 {
     public async IAsyncEnumerable<ReplyLiveEvent> Handle(
         AddReplyCommand request,
@@ -236,6 +237,7 @@ public sealed partial class AddReplyStreamHandler(
                 cancellationToken))
         {
             telemetry.TrackWorldAudience(updatedWorld);
+            await feedScheduler.ScheduleAsync(playerId, world.Id);
             return Completed(request, updatedPost, updatedWorld, updatedPlayer);
         }
 

@@ -10,6 +10,8 @@ namespace Reki.Application.Common;
 
 public interface IGameStore
 {
+    ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken);
+
     ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken);
 
     ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
@@ -73,8 +75,9 @@ public interface IGameStore
     /// </summary>
     ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
         int? limit,
-        CancellationToken cancellationToken,
-        WorldId worldId);
+        WorldId worldId,
+        AuthorId? authorId,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Reads a post only in the world whose ownership the application has already verified.

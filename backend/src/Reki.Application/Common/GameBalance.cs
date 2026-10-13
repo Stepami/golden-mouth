@@ -17,4 +17,5 @@ public sealed record GameBalance(
     ChallengeBalance Challenge,
     ThreadBalance Thread,
     IReadOnlyDictionary<string, WorldBalance> Worlds,
-    int PostEnergyCost = 1);
+    int PostEnergyCost = 1,
+    double StarFeedOpenProbability = 0);

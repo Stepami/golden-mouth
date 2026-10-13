@@ -88,6 +88,7 @@ function StarCard() {
 function FeedPostCard({ item }: { item: FeedItem }) {
   const nav = useNav()
   const p = usePlayer()
+  const star = contentOf(p.world).stars.find(profile => profile.avatarSeed === item.avatar)
   const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId }) : undefined
   return (
     <Card style={{ marginBottom: 12, position: 'relative' }}>
@@ -98,7 +99,7 @@ function FeedPostCard({ item }: { item: FeedItem }) {
         onKeyDown={open ? event => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open() } } : undefined}
         style={open ? { cursor: 'pointer' } : undefined}
       >
-        <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{item.starId && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
+        <div className="row"><Avatar seed={item.avatar!} world={p.world} size={36} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{star && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}</div></div></div>
         {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>{p.name}</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
         <div style={{ marginTop: 8 }}>{item.text}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
@@ -116,12 +117,12 @@ function Feed() {
   const nav = useNav()
   const p = usePlayer(); const w = worldOf(p.world)
   const [portion, setPortion] = useState(0)
-  const key = `feed:${p.id}:${p.world}`
+  const key = `feed:v2:${p.id}:${p.world}`
   const [items, setItems] = useState<FeedItem[]>(() => cachedApi<FeedItem[]>(key) ?? [])
   const [feedState, setFeedState] = useState<'loading' | 'ready' | 'error'>(() => cachedApi(key) ? 'ready' : 'loading')
   useEffect(() => {
     let alive = true
-    api.feed(p.world).then(found => { if (alive) { saveApiCache(key, found); setItems(found); setFeedState('ready') } })
+    api.feed().then(found => { if (alive) { saveApiCache(key, found); setItems(found); setFeedState('ready') } })
       .catch(() => { if (alive) setFeedState('error') })
     return () => { alive = false }
   }, [key, p.world, portion])

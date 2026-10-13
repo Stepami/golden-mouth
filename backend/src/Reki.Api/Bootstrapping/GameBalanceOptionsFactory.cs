@@ -121,6 +121,7 @@ internal sealed class GameBalanceOptionsFactory(
                 thread.GetValue<int>("subscriber_bonus"),
                 commentCost),
             worlds,
-            postCost);
+            postCost,
+            configuration.GetValue<double>("feed:open_probability"));
     }
 }

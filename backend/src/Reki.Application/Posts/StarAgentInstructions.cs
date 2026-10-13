@@ -7,7 +7,7 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
 
-internal static class StarAgentInstructions
+public static class StarAgentInstructions
 {
     private static readonly StarPromptJsonContext JsonContext = new(new JsonSerializerOptions
     {

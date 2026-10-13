@@ -54,6 +54,9 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask CreateInviteAsync(Invitation invite, CancellationToken cancellationToken) =>
         await _invites.InsertOneAsync(invite, cancellationToken: cancellationToken);
 
+    public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken) =>
+        await _posts.InsertOneAsync(post, cancellationToken: cancellationToken);
+
     public async ValueTask<Invitation?> GetPendingInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken) =>
         await _invites.Find(item => item.InviteeId == inviteeId && !item.InviteeBonusUsed)
             .FirstOrDefaultAsync(cancellationToken);
@@ -311,11 +314,18 @@ internal sealed class MongoGameStore : IGameStore
 
     public async ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
         int? limit,
-        CancellationToken cancellationToken,
-        WorldId worldId)
+        WorldId worldId,
+        AuthorId? authorId,
+        CancellationToken cancellationToken)
     {
+        var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId);
+        if (authorId is { } author)
+        {
+            filter &= Builders<GamePost>.Filter.Eq(item => item.AuthorId, author);
+        }
+
         IFindFluent<GamePost, GamePost> query = _posts
-            .Find(item => item.WorldId == worldId)
+            .Find(filter)
             .SortByDescending(item => item.CreatedAtUtc);
         if (limit is { } count)
         {

@@ -318,6 +318,8 @@ exec(open(os.path.join(D, 'journey_v16.py'), encoding='utf-8').read())  # #87
 
 exec(open(os.path.join(D, 'journey_v17.py'), encoding='utf-8').read())  # #87
 
+exec(open(os.path.join(D, 'journey_v18.py'), encoding='utf-8').read())  # #148
+
 CH = os.environ.get('CHROME_BIN') or shutil.which('google-chrome') or shutil.which('chrome')
 if not CH and os.name == 'nt':
     CH = os.path.join(os.environ.get('PROGRAMFILES', 'C:\\Program Files'), 'Google', 'Chrome', 'Application', 'chrome.exe')

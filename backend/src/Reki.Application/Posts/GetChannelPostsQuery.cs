@@ -4,5 +4,8 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
 
-public sealed record GetChannelPostsQuery(WorldId WorldId, int? Limit = null)
+public sealed record GetChannelPostsQuery(
+    WorldId WorldId,
+    int? Limit = null,
+    bool Feed = false)
     : IRequest<IReadOnlyList<GamePost>>;

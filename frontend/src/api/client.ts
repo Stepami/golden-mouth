@@ -4,7 +4,7 @@ import * as mock from './mock'
 import { error, warn } from '../app/log'
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics'
 import { apiBaseUrl as BASE, runtimeConfig } from '../app/runtimeConfig'
-import { demoChannelPosts, demoFeed, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, shuffle, withDemoComments } from './demo'
+import { demoChannelPosts, demoOwnPosts, demoPlayer, resetDemoPlayer, saveDemoPlayer, saveDemoPost } from './demo'
 import { contentOf, installWorldContent, installWorldTemplates, worldDocumentOf, wantsFor } from './worldContent'
 import { telegramAuthHeaders } from './auth'
 import type { AgeBand } from '../app/ageBand'
@@ -322,26 +322,15 @@ export const api = {
     }
     return sessionPlayer?.energy
   },
-  feed: async (world: WorldId = sessionPlayer?.world ?? 'stage'): Promise<FeedItem[]> => {
-    const remote: FeedItem[] = BASE ? await call<FeedItem[]>(inWorld('/feed')) : demoOwnPosts(sessionPlayer?.id ?? '').slice(0, 20).map(post => ({
-      kind: 'post', postId: post.id, canReply: true, author: sessionPlayer?.name, avatar: sessionPlayer?.handle, role: sessionPlayer?.role,
-      ago: post.at, text: post.text, reactions: post.reactions, views: post.views,
-      commentCount: withDemoComments(post, sessionPlayer?.id ?? '').comments.length,
-    }))
-    const demos = runtimeConfig.features.mockFeed ? demoFeed(world).map(item => ({ ...item,
-      commentCount: withDemoComments(demoPost(item.postId!)!, sessionPlayer?.id ?? '').comments.length })) : []
-    return runtimeConfig.features.mockFeed ? shuffle([...remote, ...demos]) : remote
-  },
+  feed: (): Promise<FeedItem[]> => BASE ? call<FeedItem[]>(inWorld('/feed')) : later([]),
   channelPosts: (): Promise<ChannelPost[]> => BASE ? call(inWorld('/posts/mine')) : laterLazy(() => demoChannelPosts(sessionPlayer?.id ?? '')),
   post: async (postId: string): Promise<Post> => {
-    const demo = runtimeConfig.features.mockFeed ? demoPost(postId) : undefined
     const local = !BASE ? demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) : undefined
-    const post = local ?? demo ?? (BASE
+    const post = local ?? (BASE
       ? await call<PostDetailResponse>(inWorld(`/posts/${encodeURIComponent(postId)}`)).then(({ postId: id, ...detail }) => ({ ...detail, id }))
       : await laterLazy(() => demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) ?? mock.post(postId)))
     if (!post) throw { status: 404 }
-    return runtimeConfig.features.mockFeed
-      ? withDemoComments({ ...post, demoComments: post.demoComments || !post.canReply }, sessionPlayer?.id ?? '') : post
+    return post
   },
   friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),
   dm: (starId: string): Promise<Dm> => BASE ? call(inWorld(`/dm/${starId}`)) : laterLazy(() => {

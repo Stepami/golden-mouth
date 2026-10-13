@@ -3,7 +3,7 @@ export type ApiMode = 'mock' | 'backend'
 export interface RuntimeConfig {
   apiMode: ApiMode
   apiBaseUrl: string
-  features: { dm: boolean; friends: boolean; collection: boolean; mockFeed: boolean }
+  features: { dm: boolean; friends: boolean; collection: boolean }
 }
 
 declare global {
@@ -15,7 +15,7 @@ declare global {
 const fallbackConfig: Readonly<RuntimeConfig> = Object.freeze({
   apiMode: 'mock',
   apiBaseUrl: '/api/v1',
-  features: { dm: false, friends: false, collection: false, mockFeed: true },
+  features: { dm: false, friends: false, collection: false },
 })
 
 function readRuntimeConfig(): Readonly<RuntimeConfig> {
