@@ -21,7 +21,9 @@ internal static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        services.AddOptions<GameBalance>().ValidateOnStart();
+        services.AddOptions<GameBalance>()
+            .Validate(balance => balance.StarFeedOpenProbability is >= 0 and <= 1, "Feed open probability must be between zero and one.")
+            .ValidateOnStart();
         services.AddTransient<IOptionsFactory<GameBalance>, GameBalanceOptionsFactory>();
         services.AddMediator(options =>
         {

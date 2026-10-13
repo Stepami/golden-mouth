@@ -19,7 +19,8 @@ public sealed class PublishPostHandler(
     IRekiContextAccessor rekiContextAccessor,
     ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
-    ProductTelemetry analytics) : IRequestHandler<PublishPostCommand, IReadOnlyList<LiveEvent>>
+    ProductTelemetry analytics,
+    IStarFeedScheduler feedScheduler) : IRequestHandler<PublishPostCommand, IReadOnlyList<LiveEvent>>
 {
     public async ValueTask<IReadOnlyList<LiveEvent>> Handle(
         PublishPostCommand request,
@@ -136,6 +137,7 @@ public sealed class PublishPostHandler(
         await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
         analytics.TrackWorldAudience(updatedWorld);
         TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
+        await feedScheduler.ScheduleAsync(player.Id, world.Id, "post", publication.Id, CancellationToken.None);
         return PostContractMapper.MapLiveEvents(published, updatedWorld, player.Id);
     }
 

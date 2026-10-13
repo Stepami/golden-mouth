@@ -328,19 +328,19 @@ export const api = {
       ago: post.at, text: post.text, reactions: post.reactions, views: post.views,
       commentCount: withDemoComments(post, sessionPlayer?.id ?? '').comments.length,
     }))
-    const demos = runtimeConfig.features.mockFeed ? demoFeed(world).map(item => ({ ...item,
+    const demos = !BASE && runtimeConfig.features.mockFeed ? demoFeed(world).map(item => ({ ...item,
       commentCount: withDemoComments(demoPost(item.postId!)!, sessionPlayer?.id ?? '').comments.length })) : []
-    return runtimeConfig.features.mockFeed ? shuffle([...remote, ...demos]) : remote
+    return !BASE && runtimeConfig.features.mockFeed ? shuffle([...remote, ...demos]) : remote
   },
   channelPosts: (): Promise<ChannelPost[]> => BASE ? call(inWorld('/posts/mine')) : laterLazy(() => demoChannelPosts(sessionPlayer?.id ?? '')),
   post: async (postId: string): Promise<Post> => {
-    const demo = runtimeConfig.features.mockFeed ? demoPost(postId) : undefined
+    const demo = !BASE && runtimeConfig.features.mockFeed ? demoPost(postId) : undefined
     const local = !BASE ? demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) : undefined
     const post = local ?? demo ?? (BASE
       ? await call<PostDetailResponse>(inWorld(`/posts/${encodeURIComponent(postId)}`)).then(({ postId: id, ...detail }) => ({ ...detail, id }))
       : await laterLazy(() => demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) ?? mock.post(postId)))
     if (!post) throw { status: 404 }
-    return runtimeConfig.features.mockFeed
+    return !BASE && runtimeConfig.features.mockFeed
       ? withDemoComments({ ...post, demoComments: post.demoComments || !post.canReply }, sessionPlayer?.id ?? '') : post
   },
   friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),

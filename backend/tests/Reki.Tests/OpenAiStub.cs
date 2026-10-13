@@ -155,7 +155,17 @@ public sealed class OpenAiStub : IDisposable
             calls.Add(tool);
         }
 
-        var message = new JsonObject { ["role"] = "assistant", ["tool_calls"] = calls };
+        var message = new JsonObject { ["role"] = "assistant" };
+        if (calls.Count > 0)
+        {
+            message["tool_calls"] = calls;
+        }
+
+        if (!string.IsNullOrEmpty(response.Text))
+        {
+            message["content"] = response.Text;
+        }
+
         var completion = new JsonObject
         {
             ["id"] = "test-completion",
@@ -166,7 +176,7 @@ public sealed class OpenAiStub : IDisposable
             {
                 ["index"] = 0,
                 [streaming ? "delta" : "message"] = message,
-                ["finish_reason"] = "tool_calls",
+                ["finish_reason"] = calls.Count > 0 ? "tool_calls" : "stop",
             }),
         };
         return streaming ? $"data: {completion.ToJsonString()}\n\ndata: [DONE]\n\n" : completion.ToJsonString();

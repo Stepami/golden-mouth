@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using NSubstitute;
+using Reki.Application.Common;
 using Reki.Application.Telemetry;
 using TUnit.AspNetCore;
 
@@ -19,6 +21,8 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
     public ILogger<ProductTelemetry> ProductLogger { get; } = Substitute.For<ILogger<ProductTelemetry>>();
 
     public bool UseProductionAuthentication { get; init; }
+
+    public double? FeedOpenProbability { get; init; }
 
     public OpenAiStub Llm => Session.Llm;
 
@@ -48,6 +52,12 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
             services.AddSingleton(ProductLogger);
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
+            if (FeedOpenProbability is { } probability)
+            {
+                services.AddSingleton<IOptions<GameBalance>>(provider => Options.Create(
+                    provider.GetRequiredService<IOptionsFactory<GameBalance>>().Create(Options.DefaultName)
+                        with { StarFeedOpenProbability = probability }));
+            }
 
             if (!UseProductionAuthentication)
             {

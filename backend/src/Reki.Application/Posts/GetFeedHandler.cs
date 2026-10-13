@@ -7,7 +7,8 @@ namespace Reki.Application.Posts;
 
 public sealed class GetFeedHandler(
     ISender sender,
-    IRekiContextAccessor rekiContextAccessor)
+    IRekiContextAccessor rekiContextAccessor,
+    IStarFeedScheduler feedScheduler)
     : IRequestHandler<GetFeedQuery, IReadOnlyList<FeedItemResponse>>
 {
     private const int FeedSize = 20;
@@ -20,6 +21,12 @@ public sealed class GetFeedHandler(
         var world = worlds.GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var posts = await sender.Send(new GetChannelPostsQuery(world.Id, FeedSize), cancellationToken);
+        await feedScheduler.ScheduleAsync(
+            world.Player.PlayerId,
+            world.Id,
+            "feed",
+            Guid.NewGuid().ToString("N"),
+            CancellationToken.None);
         return [.. posts.Select(post => PostContractMapper.MapFeedItem(post, world, true))];
     }
 }

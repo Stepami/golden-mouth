@@ -13,6 +13,7 @@ using OpenTelemetry.Trace;
 using Reki.Application.Common;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Safety;
+using Reki.Application.Posts;
 using Reki.Infrastructure.AI;
 using Reki.Infrastructure.Health;
 using Reki.Infrastructure.Jobs;
@@ -21,6 +22,7 @@ using Reki.Infrastructure.Rendering;
 using TickerQ.DependencyInjection;
 using TickerQ.Instrumentation.OpenTelemetry;
 using TickerQ.MongoDB.DependencyInjection;
+using TickerQ.Utilities.Entities;
 
 namespace Reki.Infrastructure;
 
@@ -43,11 +45,13 @@ public static class DependencyInjection
     private static void AddGameJobs(this IServiceCollection services, IConfiguration configuration, IJsonTypeInfoResolver jsonContext)
     {
         services.AddOptions<JobsOptions>().BindConfiguration(JobsOptions.SectionName);
+        services.AddSingleton<IStarFeedScheduler, StarFeedScheduler>();
+        services.MapTicker<GenerateStarFeedPostJob, StarFeedRequest>().WithMaxConcurrency(2);
         var jobs = configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
         var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ?? throw new InvalidOperationException("Mongo configuration is required.");
         services.MapTicker<ResetGameDayJob>().WithCron("0 0 9 * * *").WithMaxConcurrency(1);
         services.MapTicker<RefreshRegisteredPlayersJob>(ServiceLifetime.Singleton).WithCron("0 * * * * *").WithMaxConcurrency(1);
-        services.AddTickerQ(options =>
+        services.AddTickerQ<RekiTimeTicker, CronTickerEntity>(options =>
         {
             options.ConfigureScheduler(scheduler => scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
             options.AddOperationalStore(store => store.UseExistingMongoClient(mongo.DatabaseName));
