@@ -327,6 +327,7 @@ exec(open(os.path.join(D, 'journey_v21.py'), encoding='utf-8').read())  # Follow
 exec(open(os.path.join(D, 'journey_v22.py'), encoding='utf-8').read())  # Story art and clearer actions
 
 exec(open(os.path.join(D, 'journey_v23.py'), encoding='utf-8').read())  # World navigation and unlock
+exec(open(os.path.join(D, 'journey_v24.py'), encoding='utf-8').read())  # #150 star comments
 
 CH = os.environ.get('CHROME_BIN') or shutil.which('google-chrome') or shutil.which('chrome')
 if not CH and os.name == 'nt':
