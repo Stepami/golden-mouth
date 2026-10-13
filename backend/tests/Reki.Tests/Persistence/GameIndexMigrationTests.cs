@@ -788,7 +788,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     }
 
     [Test]
-    public async Task ReleaseCatalog_UpgradesDatabasePastDevVersionsAndPreservesUnlockedAccessAsync()
+    public async Task ReleaseCatalog_UpgradesExistingProductionDatabaseAsync()
     {
         await using var scope = CreateDatabase();
         var database = scope.Database;
