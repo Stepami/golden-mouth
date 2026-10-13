@@ -1,7 +1,7 @@
 using Kot.MongoDB.Migrations;
 using Microsoft.AspNetCore.DataProtection;
-using Reki.Api.Serialization;
 using Reki.Infrastructure;
+using Reki.Infrastructure.Serialization;
 using Serilog;
 using TgMiniAppAuth;
 using TickerQ.DependencyInjection;
