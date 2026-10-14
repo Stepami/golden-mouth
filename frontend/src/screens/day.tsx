@@ -93,7 +93,7 @@ function StarCard() {
 function FeedPostCard({ item }: { item: FeedItem }) {
   const nav = useNav()
   const p = usePlayer()
-  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId }) : undefined
+  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId, returnTo: 'feed' }) : undefined
   return (
     <Card style={{ marginBottom: 12, position: 'relative' }}>
       <div
@@ -241,7 +241,7 @@ function Stage() {
         <Button secondary style={{ marginBottom: 10 }} onClick={() => nav.push('04-3_invite')}>Позвать друга</Button>
         {load === 'loading' && <Card><span className="small muted">загружаем посты…</span></Card>}
         {load === 'error' && <Card><div className="small">Не получилось загрузить канал.</div><Button style={{ marginTop: 12 }} onClick={() => setReloadToken(token => token + 1)}>Попробовать снова</Button></Card>}
-        {load === 'ready' && posts.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
+        {load === 'ready' && posts.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId, returnTo: 'channel' })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
       </div>
       <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
@@ -265,7 +265,7 @@ function Me() {
         <div className="profile-stats">
           {[[`⚡ ${p.postsLeft}`, 'энергии'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
         </div>
-        <div className="profile-task-row"><div><b>🎯 Задания дня · {p.wants.filter(w => w.done).length}/{p.wants.length}</b><p className="small muted">{p.wants.find(w => !w.done)?.text ?? "Все задания выполнены"}</p></div><button className="text-link small" onClick={() => nav.push('02-1_compose')}>Открыть →</button></div><p className="small muted energy-help">Пост и ответ расходуют энергию. Новый запас — в 09:00 МСК.</p>
+        <div className="profile-task-row"><div><b>💡 О чём написать</b><p className="small muted">{p.wants[0]?.text ?? "Поделись событием из своего мира"}</p></div><button className="text-link small" onClick={() => nav.push('02-1_compose')}>Написать →</button></div><p className="small muted energy-help">Пост и ответ расходуют энергию. Новый запас — в 09:00 МСК.</p>
         <Card style={{ marginBottom: 18 }}><b>{p.hitOwnWorldMilestone ? '✨ Свой мир открыт' : '✨ Создай свой мир'}</b><p className="small muted">{p.hitOwnWorldMilestone ? 'Доступ подтверждён. Можно придумать свою историю.' : 'Первый пост приглашённого друга или 500 подписчиков в одном мире.'}</p>{!p.hitOwnWorldMilestone && <><progress aria-label="Подписчики до открытия своего мира" value={Math.min(500, p.subs)} max={500} /><div className="small muted">Этот мир: {Math.min(500, p.subs)} / 500</div></>}<button className="text-link" onClick={() => { if (p.hitOwnWorldMilestone) { beginOwnWorld(p); nav.push('05-7b_own_world', { world: 'own' }) } else nav.push('04-3_invite') }}>{p.hitOwnWorldMilestone ? 'Создать свой мир →' : 'Пригласить друга →'}</button></Card>
         <Card style={{ marginBottom: 10 }}>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Серия {p.streak.days} дня</b><span className="small" style={{ color: 'var(--gift)' }}>{p.streak.nextReward}</span></div>
