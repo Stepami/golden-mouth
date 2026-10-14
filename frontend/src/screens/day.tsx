@@ -1,3 +1,4 @@
+import { StoryGoal } from '../ui/StoryGoal'
 import { ExpandableText } from '../ui'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import { setAvatarPersonalization, useAvatarPersonalization } from '../app/avatarPersonalization'
@@ -227,6 +228,7 @@ function Stage() {
     <div className="screen channel-screen">
       <ChannelHead />
       <div className="pad">
+        <StoryGoal world={p.world} />
         {banner && p.subs >= 1000 && <Card style={{ marginBottom: 10, background: 'linear-gradient(135deg,#2A1A2E,#1E1A33)', border: '1px solid #FF6B8B55', position: 'relative' }}>
           <button onClick={() => setBanner(false)} className="muted" style={{ position: 'absolute', right: 14, top: 10, background: 'none', border: 'none' }}>✕</button>
           <span className="badge">НОВЫЙ ЭТАП · 1 000 ПОДПИСЧИКОВ</span>

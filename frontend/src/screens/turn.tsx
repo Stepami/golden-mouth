@@ -1,3 +1,4 @@
+import { StoryGoal } from '../ui/StoryGoal'
 import { useEffect, useRef, useState } from 'react'
 import { hapticFeedback, shareStory, shareURL } from '@telegram-apps/sdk-react'
 import { api } from '../api/client'
@@ -38,6 +39,7 @@ function Compose() {
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Новый пост" rightPlain right={<EnergyBadge value={p.postsLeft} />} />
       <div className="pad">
+        <StoryGoal world={p.world} firstStep />
         <TextField label="Твой пост" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" /><div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} disabled={!!draft.publicationId} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
         {draft.publicationId && <div className="card"><p>У предыдущей публикации ещё нет подтверждённого результата.</p><button className="btn" onClick={() => nav.replace('02-2_live', { text: draft.submittedText, publicationId: draft.publicationId, ownWords: draft.submittedOwnWords, wantId: draft.submittedWantId })}>Проверить статус</button></div>}

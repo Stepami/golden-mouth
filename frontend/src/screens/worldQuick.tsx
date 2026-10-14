@@ -1,3 +1,4 @@
+import { presetGoalFor } from '../app/presetGoals'
 import { WorldCover } from '../ui/WorldCover'
 import { useNav } from '../app/nav'
 import { getWorldDraft, setWorldDraft, updateWorldDraft, useWorldDraft, type WorldDraft } from '../app/worldDraft'
@@ -11,10 +12,11 @@ function advanced(draft: WorldDraft) { setWorldDraft({ ...draft, advanced: true 
 export function WorldOverview() {
   const draft = useWorldDraft(); const nav = useNav()
   if (!draft) return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={nav.back} /><div className="pad"><Button onClick={() => nav.replace('01-3_world')}>Выбрать мир</Button></div></div>
-  const d = draft.definition; const art = worldArt[d.balanceKey]
+  const d = draft.definition; const art = worldArt[d.balanceKey]; const goal = presetGoalFor(d)
   return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={nav.back} />
     {art && <WorldCover world={d.balanceKey} className="world-hero" priority alt={`Обложка мира «${d.title}»`} />}
     <div className="pad"><div className="small eyebrow">{art?.genre}</div><h1>{d.emoji} {d.title}</h1><p className="muted">{art?.pitch ?? d.description}</p>
+      {goal && <Card><div className="small eyebrow">Твой путь</div><p>{goal.goal}</p></Card>}
       <h2>Кого встретишь</h2><div className="world-people">{d.stars.map(star => <div key={star.id}><Avatar seed={star.avatarSeed} world={d.balanceKey} avatarStyle={d.avatarStyle} mode="default" size={44} /><b>{star.name}</b><span className="small muted">{star.role}</span></div>)}</div>
 
     </div><BottomCTA main="Выбрать персонажа" onMain={() => nav.push('01-4_channel')} /></div>

@@ -369,3 +369,19 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .tabbar button { flex:1; min-width:0; gap:5px; justify-content:center; border-radius:12px; }
 .tabbar button.on { background:#9b6bff12; }
 .tabbar button:focus-visible, .top button:focus-visible { outline:2px solid var(--lilac); outline-offset:-2px; }
+
+/* Narrative goals are optional story guidance, without completion/progress UI. */
+.first-story-goal h1 { font-size: 24px; line-height: 1.25; margin: 8px 0 0; }
+.first-story-goal { padding-bottom: 16px; border-bottom: 1px solid var(--border, #30303c); }
+.story-first-step { padding: 12px 14px; border-radius: 14px; background: rgba(155,107,255,.09); font-size: 15px; line-height: 1.5; }
+.story-first-step p { margin: 6px 0 0; }
+.story-goal { margin-bottom: 16px; font-size: 15px; line-height: 1.5; }
+.story-goal summary { cursor: pointer; font-weight: 700; }
+.story-goal summary span { font-weight: 400; margin-left: 6px; }
+.story-goal p { margin: 12px 0 0; }
+
+.first-story-screen { padding-bottom: 190px; }
+.first-story-screen .first-story { gap: 12px; }
+.first-story-screen .first-story-cover { height: 120px; }
+.first-story-screen .first-story-context { font-size: 17px; }
+.first-story-screen .first-story-goal h1 { font-size: 22px; }
