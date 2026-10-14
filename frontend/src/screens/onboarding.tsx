@@ -1,7 +1,6 @@
 import { usePresetGoal } from '../ui/StoryGoal'
 import { WorldCover } from '../ui/WorldCover'
-import goshaPortrait from '../assets/gosha-intro.svg'
-import { trackImage } from '../app/imageTiming'
+import approvedIntro from '../assets/intro-school-approved.png'
 import { useEffect, useRef, useState } from 'react'
 import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
@@ -26,20 +25,28 @@ function Steps({ n, back = true }: { n: number; back?: boolean }) {
   )
 }
 
-// 01-1: сообщение друга в Telegram (вход по карточке)
+/** Exact portrait windows from the approved sketch; no regenerated character artwork. */
+function IntroPortrait({ character }: { character: 'masha' | 'gosha' }) {
+  const masha = character === 'masha'
+  return <svg className={`intro-portrait intro-portrait-${character}`} viewBox={masha ? '85 626 116 116' : '142 931 168 168'} role="img" aria-label={masha ? 'Маша' : 'Гоша в круглых очках с волшебной палочкой'}>
+    <image href={approvedIntro} width="1036" height="1518" />
+  </svg>
+}
+
+// 01-1: approved school mini-dialogue, preserving the existing welcome layout.
 function Invite() {
   const nav = useNav()
   return <div className="screen no-tab welcome"><div className="pad">
-    <div className="brand">реки</div><h1>Твой пост может<br />взорвать ленту.</h1>
-    <p className="muted">Пиши посты от лица персонажа, получай ответы героев и развивай свою историю.</p>
+    <div className="brand">реки</div><h1>Твой пост<br />запускает историю.</h1>
+    <p className="muted">Веди блог в вымышленном мире.<br />Пиши посты — персонажи ответят.</p>
     <div className="welcome-post card" aria-label="Пример игрового поста">
-      <div className="row"><img className="welcome-avatar welcome-photo" src={goshaPortrait} width={44} height={44} fetchPriority="high" onLoad={e => trackImage(e.currentTarget, 'welcome_portrait')} onError={() => trackImage(null, 'welcome_portrait')} alt="Гоша: круглые очки, шрам и волшебная палочка" /><div><b>Гоша · Школа чародеев</b><div className="small muted">только что</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>120 читателей</span></div>
-      <p>В расписании появился урок, отменённый сто лет назад. Почему в списке моё имя? 👀</p>
-      <div className="row"><span className="react">✨ 24</span><span className="react">👀 18</span><span className="small muted">💬 3</span></div>
-      <div className="welcome-reply"><b>Георгина · ученица школы</b><div>Моё тоже. Встретимся у библиотеки? Покажу запись с этого урока… она появилась вчера.</div></div>
+      <div className="row"><IntroPortrait character="masha" /><div><b>Маша · Школа чародеев</b><div className="small muted">Пример игрового поста</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
+      <p>Выложила фото тайной комнаты. Утром дверь исчезла. Кто-нибудь ещё её видел? 👀</p>
+      <div className="row"><span className="react">🔥 2,4k</span><span className="react">💀 890</span><span className="react">🫶 1,2k</span></div>
+      <div className="welcome-reply"><IntroPortrait character="gosha" /><div><b>Гоша · ученик школы магии</b><div>Я. И оставил там свою палочку. Пойдём искать дверь — только Георгине пока не говори.</div></div></div>
     </div>
-    <p className="welcome-world-choice">Выбери мир или создай свой.</p>
-    <p className="small muted">Фанаты и события виртуальные. Посты остаются внутри игры.</p>
+    <p className="small muted welcome-disclaimer">Персонажи и фанаты виртуальные.<br />Посты остаются внутри игры.</p>
+    <p className="welcome-world-choice">Выбери мир или создай свой</p>
   </div><BottomCTA main="Начать играть" onMain={() => nav.push('01-2_age')} /></div>
 }
 

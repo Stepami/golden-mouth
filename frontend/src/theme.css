@@ -387,3 +387,16 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .first-story-screen .first-story-goal h1 { font-size: 22px; }
 
 .welcome-world-choice { font-size: 18px; font-weight: 650; margin-top: 20px; color: var(--soft); }
+
+/* Approved school intro: exact text and portrait composition. */
+.welcome h1 { font-size: 36px; line-height: 1.08; margin-top: 32px; }
+.welcome-post { transform: none; border-color: #9b6bff99; }
+.intro-portrait { display: block; flex-shrink: 0; border-radius: 50%; overflow: hidden; }
+.intro-portrait-masha { width: 44px; height: 44px; }
+.intro-portrait-gosha { width: 64px; height: 64px; }
+.welcome-reply { display: flex; align-items: flex-start; gap: 12px; margin-left: 8px; }
+.welcome-reply b { display: block; line-height: 1.35; margin-bottom: 4px; color: var(--text); }
+.welcome-reply > div { flex: 1; min-width: 0; }
+.welcome-disclaimer { margin-top: 10px; }
+.welcome-world-choice { text-align: center; font-size: 15px; font-weight: 400; color: var(--lilac); margin-top: 24px; }
+@media (max-width: 350px) { .welcome h1 { font-size: 30px; } .intro-portrait-gosha { width: 52px; height: 52px; } }
