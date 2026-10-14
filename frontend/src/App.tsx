@@ -48,11 +48,7 @@ function Shell() {
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments) }, [player?.experiments])
   useEffect(() => {
     if (playerState !== 'ready' || explicitStart || top.id !== '01-1_invite') return
-    let current = true
-    api.channelPosts()
-      .then(posts => { if (current) setStack([{ id: posts.length === 0 ? '01-6_home' : '03-5_stage', params: { channelEmpty: posts.length === 0 } }]) })
-      .catch(() => { if (current) setStack([{ id: '03-5_stage', params: {} }]) })
-    return () => { current = false }
+    setStack([{ id: '01-3_world', params: {} }])
   }, [explicitStart, playerState, top.id])
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1 && top.id !== '02-6_thread', back), [stack.length, top.id, back])
@@ -66,15 +62,15 @@ function Shell() {
     people[player.handle] = { address: player.address, ageBand: player.ageBand, personalizeAvatar }
     people[player.id] = people[player.handle]
   }
-  const tab = TAB_OF[top.id]
+  const tab = top.id === '01-3_world' && !player ? undefined : TAB_OF[top.id]
   return (
     <NavContext.Provider value={nav}>
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'stage'}>
       <AvatarPeople.Provider value={people}><div className="app">
         <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration />
         {tab !== undefined && (
-          <nav className="tabbar">
-            {TABS.map((t, i) => (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button>)}
+          <nav className="tabbar" aria-label="Основная навигация">
+            {[5, 0, 1, 2, 3, 4].map(i => { const t = TABS[i]; return (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} aria-current={i === tab ? 'page' : undefined} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button> })}
           </nav>
         )}
       </div>

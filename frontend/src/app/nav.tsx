@@ -19,4 +19,5 @@ export const TABS: { icon: string; title: string; screen: ScreenId }[] = [
   { icon: '✉', title: 'Личка', screen: '03-1_dm' },
   { icon: '☺', title: 'Друзья', screen: '03-4_friends' },
   { icon: '★', title: 'Я', screen: '05-5_collection' },
+  { icon: '◈', title: 'Миры', screen: '01-3_world' },
 ]

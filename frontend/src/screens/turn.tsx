@@ -6,7 +6,7 @@ import type { CommentT, Post, PostResult, PublicationFailure } from '../api/type
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
-import { Avatar, BottomCTA, Button, Comment, Gift, Ribbon, TopBar, Whisper, fmt, plural } from '../ui'
+import { Avatar, BottomCTA, Button, Comment, Gift, Ribbon, TopBar, EnergyBadge, Whisper, fmt, plural } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
 import { contentOf } from '../api/worldContent'
@@ -36,7 +36,7 @@ function Compose() {
   useEffect(() => { setDurable(savePostDraft(key, draft)) }, [key, draft])
   return (
     <div className="screen no-tab">
-      <TopBar onBack={nav.back} title="Новый пост" right={`⚡ ${p.postsLeft}`} />
+      <TopBar onBack={nav.back} title="Новый пост" rightPlain right={<EnergyBadge value={p.postsLeft} />} />
       <div className="pad">
         <TextField label="Твой пост" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" /><div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} disabled={!!draft.publicationId} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
@@ -319,7 +319,7 @@ function Thread() {
   post.comments.forEach(append)
   return (
     <div className="screen no-tab">
-      <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions"><span className="thread-energy" aria-label={`Осталось ${player.postsLeft} энергии`}>⚡ {player.postsLeft}</span><button className="thread-exit" onClick={goBack}>{fromFeed ? 'В ленту →' : 'В канал →'}</button></div>} />
+      <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions"><EnergyBadge value={player.postsLeft} /><button className="thread-exit" onClick={goBack}>{fromFeed ? 'В ленту →' : 'В канал →'}</button></div>} />
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div></div>
         {showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
