@@ -1,0 +1,16 @@
+name: Static response checks
+on:
+  pull_request:
+    paths:
+      - frontend/nginx.conf
+      - .github/scripts/check-static-compression.sh
+      - .github/workflows/static-config-ci.yml
+permissions:
+  contents: read
+jobs:
+  compression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate nginx and static compression in an isolated container
+        run: .github/scripts/check-static-compression.sh
