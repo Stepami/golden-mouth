@@ -30,13 +30,10 @@ public sealed partial class ContentModerator(IChatClient chatClient) : IContentM
             Tools = [Tool],
             ToolMode = ChatToolMode.RequireSpecific("content_review"),
             Temperature = 0,
-            MaxOutputTokens = 128,
         };
         try
         {
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(30));
-            var response = await chatClient.GetResponseAsync(messages, options, timeout.Token);
+            var response = await chatClient.GetResponseAsync(messages, options, cancellationToken);
             var call = response.Messages.SelectMany(message => message.Contents).OfType<FunctionCallContent>().Single();
             if (call.Name != "content_review" || call.Arguments?.TryGetValue("category", out var raw) != true ||
                 raw?.ToString() is not { } category || !Categories.Contains(category))
