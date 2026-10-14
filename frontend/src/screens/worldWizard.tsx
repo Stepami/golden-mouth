@@ -7,7 +7,7 @@ import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
 import { blankWorld, clearWorldDrafts, getWorldDraft, savedWorldDraft, selectDraftOwner, setWorldDraft, updateWorldDraft, useWorldDraft } from '../app/worldDraft'
 import { pendingReferral, clearReferral } from '../app/referral'
-import { Avatar, BottomCTA, Button, Card, Segmented, TopBar } from '../ui'
+import { Avatar, BottomCTA, Button, Card, Segmented, TopBar, EnergyBadge } from '../ui'
 import { WorldAdvanced } from './worldAdvanced'
 import { isDevWorldPrototype, worldArt } from '../app/worldPrototype'
 import { QuickChannelForm, QuickWorldForm, DramaPicker } from './worldQuick'
@@ -41,7 +41,7 @@ export function ChooseWorld() {
   const currentWorld = player ? owned.find(world => world.id === player.worldInstanceId) ?? { ...worldDocumentOf(player.world), id: player.worldInstanceId ?? player.world, name: player.name, avatar: player.handle, subscribers: player.subs } : undefined
   const otherWorlds = owned.filter(world => world.id !== currentWorld?.id)
   const resume = async (world: WorldDocument) => { try { const next = await api.me(world.id); setPlayer(next); nav.push('03-5_stage') } catch { setError('Не получилось открыть мир.') } }
-  return <div className="screen no-tab"><TopBar title="Миры" onBack={nav.canBack ? nav.back : undefined} />
+  return <div className="screen no-tab"><TopBar title="Миры" rightPlain right={player ? <EnergyBadge value={player.postsLeft} /> : undefined} />
     <div className="pad world-catalog-page worlds-home">{!player && <><h1>Выбери свою историю</h1><p className="muted">Готовые миры доступны сразу.</p></>}
       {getWorldDraft() && <Button secondary onClick={() => nav.push(getWorldDraft()?.definition.balanceKey === 'own' ? '05-7b_own_world' : '01-4_channel')}>Продолжить настройку</Button>}
       {currentWorld && <><h2>Продолжить историю</h2><button className="world-resume card" onClick={() => resume(currentWorld)}><Avatar seed={currentWorld.avatar} avatarStyle={currentWorld.avatarStyle} profile={player ? { address: player.address, ageBand: player.ageBand, personalizeAvatar: avatarPersonalization(player.id) } : undefined} size={48} /><div><b>{currentWorld.name}</b><p className="small muted">{currentWorld.emoji} {currentWorld.title} · {currentWorld.subscribers} подписчиков</p><span>Продолжить →</span></div></button></>}

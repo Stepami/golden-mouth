@@ -40,13 +40,15 @@ export function BottomCTA({ main, onMain, second, onSecond, disabled, secondDisa
 
 export function TopBar({ title, onBack, right, rightPlain = false, children }: { title?: ReactNode; onBack?: () => void; right?: ReactNode; rightPlain?: boolean; children?: ReactNode }) {
   return (
-    <div className="top">
+    <header className="top">
       {onBack && <button className="back" onClick={onBack} aria-label="Назад">‹</button>}
-      {children ?? <b style={{ fontSize: 17 }}>{title}</b>}
+      {children ?? <b className="top-title">{title}</b>}
       {right !== undefined && <div className={rightPlain ? "top-action" : "pill"}>{right}</div>}
-    </div>
+    </header>
   )
 }
+
+export function EnergyBadge({ value }: { value: number }) { return <span className="energy-badge" aria-label={`Осталось ${value} энергии`}>⚡ {value}</span> }
 
 export function Card({ children, style, onClick }: { children: ReactNode; style?: CSSProperties; onClick?: () => void }) {
   return <div className="card" style={style} onClick={onClick}>{children}</div>

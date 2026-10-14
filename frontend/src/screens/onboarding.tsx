@@ -97,8 +97,8 @@ export function ChannelHead() {
   return (
     <div className="top channel-header">
       <Avatar seed={p.handle} size={36} />
-      <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>@{p.handle.replace(/^@+/, '')}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div><button className="worlds-entry channel-worlds-entry" onClick={() => nav.push('01-3_world')}>Миры →</button></div>
-      <div className="pill">⚡ {p.postsLeft} энергии</div>
+      <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>@{p.handle.replace(/^@+/, '')}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div>
+      <div className="energy-badge" aria-label={`Осталось ${p.postsLeft} энергии`}>⚡ {p.postsLeft}</div>
     </div>
   )
 }
