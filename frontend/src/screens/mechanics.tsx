@@ -62,8 +62,8 @@ function Duel() {
           {post('katya', 'Катя', '🌸 Академия', 'на фестивале мой клуб занял последнее место. зато лучший баннер', '×4,8')}
         </div>
         <div className="label">Звёзды комментируют</div>
-        <div className="row" style={{ marginBottom: 10 }}><Avatar seed="mira" profile={{ address: 'nick' }} size={30} /><div className="small"><b>Мира</b> Лиза сегодня жёстче. Катя, соберись 😏</div></div>
-        <div className="row"><Avatar seed="sonya" profile={{ address: 'nick' }} size={30} /><div className="small"><b>Соня</b> баннер правда лучший, я бы проголосовала за обеих 💛</div></div>
+        <div className="row" style={{ marginBottom: 10 }}><Avatar seed="mira" mode="default" size={30} /><div className="small"><b>Мира</b> Лиза сегодня жёстче. Катя, соберись 😏</div></div>
+        <div className="row"><Avatar seed="sonya" mode="default" size={30} /><div className="small"><b>Соня</b> баннер правда лучший, я бы проголосовала за обеих 💛</div></div>
       </div>
       <BottomCTA main="Отправить в чат" onMain={send} />
     </div>

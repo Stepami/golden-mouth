@@ -1,6 +1,6 @@
 import type { Address } from '../api/types'
 import type { AgeBand } from '../app/ageBand'
-export interface AvatarProfile { address: Address; ageBand?: AgeBand }
+export interface AvatarProfile { address: Address; ageBand?: AgeBand; personalizeAvatar?: boolean }
 export interface Appearance {
   hair: 'normal' | 'bald' | 'receding'; length: 'short' | 'medium' | 'long'; facial: 'none' | 'stubble' | 'mustache' | 'beard'; jewelry: boolean; hat: boolean; glasses: boolean
 }

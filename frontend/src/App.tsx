@@ -10,6 +10,7 @@ import { api } from './api/client'
 import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
 import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
+import { useAvatarPersonalization } from './app/avatarPersonalization'
 import type { WorldId } from './api/types'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
@@ -32,6 +33,7 @@ function Shell() {
   const [stack, setStack] = useState<Entry[]>(() => [startEntry()])
   const top = stack[stack.length - 1]
   const { player, playerState } = useStore()
+  const personalizeAvatar = useAvatarPersonalization(player?.id ?? 'onboarding')
   const explicitStart = hasExplicitStart()
 
   const nav: Nav = useMemo(() => ({
@@ -61,7 +63,7 @@ function Shell() {
   if (playerState === 'failed') return <div className="app"><div className="screen"><div className="pad"><p>Не получилось загрузить игру.</p><button className="btn" onClick={() => location.reload()}>Попробовать снова</button></div></div></div>
   const people: React.ContextType<typeof AvatarPeople> = {}
   if (player) {
-    people[player.handle] = { address: player.address, ageBand: player.ageBand }
+    people[player.handle] = { address: player.address, ageBand: player.ageBand, personalizeAvatar }
     people[player.id] = people[player.handle]
   }
   const tab = TAB_OF[top.id]

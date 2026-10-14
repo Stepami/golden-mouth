@@ -1,4 +1,6 @@
 import { ExpandableText } from '../ui'
+import { AvatarPersonalization } from '../ui/AvatarPersonalization'
+import { setAvatarPersonalization, useAvatarPersonalization } from '../app/avatarPersonalization'
 import { contentOf, worldOf } from '../api/worldContent'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
@@ -42,7 +44,7 @@ function Dm() {
   }
   return (
     <div className="screen">
-      <TopBar onBack={nav.canBack ? nav.back : undefined}><Avatar seed={star.avatarSeed} size={36} profile={{ address: 'nick' }} /><div><b>{d.star.name}</b><div className="small" style={{ color: 'var(--accent)' }}>{d.star.role} · {d.status}</div></div></TopBar>
+      <TopBar onBack={nav.canBack ? nav.back : undefined}><Avatar seed={star.avatarSeed} size={36} mode="default" /><div><b>{d.star.name}</b><div className="small" style={{ color: 'var(--accent)' }}>{d.star.role} · {d.status}</div></div></TopBar>
       <div className="pad">
         <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#2A1A2E,#1E1A33)' }}>
           <div className="row"><b style={{ flex: 1 }}>Отношения с Мирой +2 → +3</b><span className="small" style={{ color: 'var(--gift)' }}>👑</span></div>
@@ -76,7 +78,7 @@ function StarCard() {
     <div className="screen no-tab" style={{ background: 'radial-gradient(circle at 50% 40%,#3A1F4A,#0E0E13 70%)', textAlign: 'center', padding: '50px 26px' }}>
       <span className="badge">НОВАЯ КАРТОЧКА · 2/12</span>
       <div style={{ margin: '24px auto', width: 230, borderRadius: 22, padding: 18, background: 'linear-gradient(160deg,#3A2147,#21324A)', boxShadow: '0 20px 60px #0008' }}>
-        <Avatar seed="mira" profile={{ address: 'nick' }} size={120} style={{ margin: '0 auto 12px' }} /><b style={{ fontSize: 22 }}>Мира</b><div className="small muted">лидер BLESK</div>
+        <Avatar seed="mira" mode="default" size={120} style={{ margin: '0 auto 12px' }} /><b style={{ fontSize: 22 }}>Мира</b><div className="small muted">лидер BLESK</div>
         <div style={{ marginTop: 12, fontStyle: 'italic' }}>«ты из тех, кто падает и встаёт. уважаю»</div>
       </div>
       <div style={{ fontSize: 22, fontWeight: 800 }}>Мира теперь на твоей стороне</div>
@@ -101,7 +103,7 @@ function FeedPostCard({ item }: { item: FeedItem }) {
         onKeyDown={open ? event => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open() } } : undefined}
         style={open ? { cursor: 'pointer' } : undefined}
       >
-        <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} profile={item.starId ? { address: 'nick' } : undefined} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{item.starId && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
+        <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} mode={item.starId ? 'default' : 'profile'} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{item.starId && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
         {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>{p.name}</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
         <div style={{ marginTop: 12 }}><ExpandableText text={item.text} /></div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
@@ -287,6 +289,7 @@ function Me() {
 // 05-8: настройки: градус драмы, голос канала, обращение, данные, удалить аккаунт
 function Settings() {
   const nav = useNav(); const p = usePlayer(); const { patch } = useStore()
+  const personalizeAvatar = useAvatarPersonalization(p.id)
   const [drama, setDrama] = useState<Drama>(p.drama)
   const [del, setDel] = useState(false)
   const [panel, setPanel] = useState<'notifications' | 'quiet' | 'support' | 'data' | 'address' | null>(null)
@@ -325,6 +328,8 @@ function Settings() {
         </Card>
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
           {row('🎙 Голос канала', `${p.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`, false, () => openPanel('address'))}
+          <AvatarPersonalization enabled={personalizeAvatar} onChange={enabled => setAvatarPersonalization(p.id, enabled)} />
+          <div className="row" style={{ marginBottom: 12 }}><Avatar seed={p.handle} size={48} /><span className="small muted">Выбор сохраняется на этом устройстве.</span></div>
           {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📜 Как устроен мир', '›', false, () => nav.push('05-11_world_rules'))}{row('📋 Правила публикаций', '›', false, () => nav.push('06-4_rules'))}{row('🔒 Мои данные и правила', 'скоро ›', false, () => openPanel('data'))}{row('✉ Поддержка', 'скоро ›', true, () => openPanel('support'))}
         </Card>
         <button onClick={() => setDel(true)} className="card" style={{ width: '100%', textAlign: 'center', color: 'var(--accent)', background: 'transparent', border: '1px solid #FF6B8B55' }}>Удалить аккаунт и всё</button>

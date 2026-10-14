@@ -9,6 +9,7 @@ import { DescriptionSetup } from './worldWizard'
 import { register } from '.'
 import { AgeRuleNote } from './worldAdvanced'
 import { worldArt } from '../app/worldPrototype'
+import { avatarPersonalization } from '../app/avatarPersonalization'
 
 function WorldDetailsScreen() {
   const nav = useNav(); const p = usePlayer(); const r = worldDocumentOf(p.world)
@@ -19,7 +20,7 @@ function WorldDetailsScreen() {
       const world = (await api.ownedWorlds()).find(item => item.id === p.worldInstanceId)
       if (!world) throw new Error('World not found')
       const { id, subscribers: _subscribers, lock: _lock, ...definition } = world
-      selectDraftOwner(p.id); setWorldDraft({ definition: { ...definition, rules: definition.rules.map(rule => ({ ...rule, locked: rule.text === 'Без тем 18+ и травли по внешности' })) }, advanced: false, editingId: id, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand })
+      selectDraftOwner(p.id); setWorldDraft({ definition: { ...definition, rules: definition.rules.map(rule => ({ ...rule, locked: rule.text === 'Без тем 18+ и травли по внешности' })) }, advanced: false, editingId: id, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand, personalizeAvatar: avatarPersonalization(p.id) })
       nav.push('05-7b_own_world', { world: p.world })
     } catch { setError('Не получилось загрузить настройки. Попробуй ещё раз.') } finally { setLoading(false) }
   }
