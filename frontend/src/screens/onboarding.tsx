@@ -123,4 +123,4 @@ register({
   '01-4b_world_setup': { component: withWorldTemplates(WorldSetup), title: 'Мир, голос канала и драма' },
   '01-5_first_star': { component: withWorldTemplates(FirstStar), title: 'Настройка героев' },
   '01-6_home': { component: Home, title: 'Первый экран' },
-}, { '01-6_home': 0 })
+}, { '01-6_home': 0, '01-3_world': 5 })

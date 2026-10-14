@@ -62,7 +62,7 @@ function Shell() {
     people[player.handle] = { address: player.address, ageBand: player.ageBand, personalizeAvatar }
     people[player.id] = people[player.handle]
   }
-  const tab = TAB_OF[top.id]
+  const tab = top.id === '01-3_world' && !player ? undefined : TAB_OF[top.id]
   return (
     <NavContext.Provider value={nav}>
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'stage'}>
@@ -70,7 +70,7 @@ function Shell() {
         <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration />
         {tab !== undefined && (
           <nav className="tabbar">
-            {TABS.map((t, i) => (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button>)}
+            {[5, 0, 1, 2, 3, 4].map(i => { const t = TABS[i]; return (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button> })}
           </nav>
         )}
       </div>
