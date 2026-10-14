@@ -1,3 +1,4 @@
+import rekiMark from '../assets/reki-mark-v1.png'
 import { WorldCover } from '../ui/WorldCover'
 import mashaPortrait from '../assets/masha-v2.jpg'
 import { trackImage } from '../app/imageTiming'
@@ -29,7 +30,7 @@ function Steps({ n, back = true }: { n: number; back?: boolean }) {
 function Invite() {
   const nav = useNav()
   return <div className="screen no-tab welcome"><div className="pad">
-    <div className="brand">реки</div><h1>Твой пост может<br />взорвать ленту.</h1>
+    <div className="welcome-brand"><img src={rekiMark} width={40} height={40} alt="" /><span className="brand">реки</span></div><h1>Твой пост может<br />взорвать ленту.</h1>
     <p className="muted">Собери фанатов, попади в драму и стань главным героем своей истории.</p>
     <div className="welcome-post card" aria-label="Пример игрового поста">
       <div className="row"><img className="welcome-avatar welcome-photo" src={mashaPortrait} width={44} height={44} fetchPriority="high" onLoad={e => trackImage(e.currentTarget, 'welcome_portrait')} onError={() => trackImage(null, 'welcome_portrait')} alt="Маша" /><div><b>Маша в тридевятом царстве</b><div className="small muted">только что</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
