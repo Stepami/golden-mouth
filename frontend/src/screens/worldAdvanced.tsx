@@ -8,7 +8,7 @@ import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import { DramaPicker } from './worldQuick'
 
 export function AgeRuleNote({ teen = true }: { teen?: boolean }) {
-  return <div className="age-rule-note"><b>🔒 Ограничения контента</b><p>{teen ? 'Без взрослой сексуализированной подачи. Дружба и романтические симпатии допустимы.' : 'Чувствительные темы можно обсуждать без откровенных подробностей.'}</p><p className="small muted">Травля, откровенный контент и графическое насилие запрещены для всех.</p></div>
+  return <div className="age-rule-note"><b>🔒 Ограничения контента</b><p>{teen ? 'Без взрослой сексуализированной подачи. Дружба и романтические симпатии допустимы.' : 'Чувствительные темы можно обсуждать без откровенных подробностей.'}</p><p className="small muted">Травля и откровенный контент запрещены для всех.</p></div>
 }
 function StringList({ title, help, values, onChange }: { title: string; help: string; values: string[]; onChange: (values: string[]) => void }) {
   return <details className="editor-extra"><summary>{title} · {values.length}</summary><p className="small muted">{help}</p>{values.map((value, i) => <div className="editor-list-row" key={i}><input aria-label={`${title} ${i + 1}`} value={value} maxLength={2000} onChange={e => onChange(values.map((v, j) => j === i ? e.target.value : v))} /><button className="text-link" aria-label={`Удалить: ${title} ${i + 1}`} onClick={() => onChange(values.filter((_, j) => j !== i))}>Убрать</button></div>)}<button className="chip" onClick={() => onChange([...values, ''])}>＋ Добавить</button></details>
