@@ -63,7 +63,7 @@ public sealed class PublishPostHandler(
         try
         {
             await safety.EnsureInputAllowedAsync(player, [publication.Text], cancellationToken);
-            await safety.EnsureOutputAllowedAsync(player, [turn.Comment, turn.Hook], cancellationToken);
+            PlayerSafetyGuard.EnsureOutputAllowed([turn.Comment, turn.Hook]);
         }
         catch (Exception exception) when (exception is ContentRejectedException or UnsafeGeneratedContentException)
         {

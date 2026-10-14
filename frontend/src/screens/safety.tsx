@@ -20,7 +20,7 @@ function Crisis({ adult }: { adult: boolean }) {
   useEffect(() => { track('crisis_shown', { adult }) }, [adult])
   return (
     <div className="screen no-tab">
-      <TopBar onBack={nav.back}><Avatar seed="mira" profile={{ address: 'nick' }} size={36} /><div><b>Мира</b><div className="small muted">лидер BLESK</div></div></TopBar>
+      <TopBar onBack={nav.back}><Avatar seed="mira" mode="default" size={36} /><div><b>Мира</b><div className="small muted">лидер BLESK</div></div></TopBar>
       <div className="pad">
         <Bubble>ты сегодня какая-то тихая. всё ок?</Bubble><Bubble me>не знаю. иногда кажется, что не хочу жить</Bubble>
         <div className="card" style={{ marginTop: 14, border: '1px solid #FFB86B66', background: '#1E1A16' }}>

@@ -1,0 +1,3 @@
+# #150: root comments to star posts share the existing thread, 14.10.2026.
+S['02-6a_star_comment'] = release_page('Реакции · В канал →', '<div class="card"><b>Яков Чернов · ★ звезда</b><p>У озера открылась тропа, которой вчера не было…</p></div><div class="card" style="margin:16px 0;background:#29213b;border:1px solid #b389ff"><b>💬 Обсуди пост с автором</b><p class="small">Напиши комментарий к посту или нажми «Ответить» под репликой.</p><p class="small muted">Комментарий · 1 энергия</p></div><p class="small muted">Комментарий к посту: Яков Чернов</p><p>Написать следующий пост</p>', 'Комментарий · 1 энергия　➤')
+S['02-6_thread'] = S['02-6_thread'].replace('Ответ · 1 энергия</button>', 'Выбери комментарий звезды</button>')

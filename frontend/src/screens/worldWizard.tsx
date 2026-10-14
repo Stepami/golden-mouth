@@ -12,6 +12,7 @@ import { WorldAdvanced } from './worldAdvanced'
 import { isDevWorldPrototype, worldArt } from '../app/worldPrototype'
 import { QuickChannelForm, QuickWorldForm, DramaPicker } from './worldQuick'
 import type { AgeBand } from '../app/ageBand'
+import { avatarPersonalization, setAvatarPersonalization } from '../app/avatarPersonalization'
 
 export function ChooseWorld() {
   const nav = useNav(); const { player, setPlayer } = useStore()
@@ -21,16 +22,16 @@ export function ChooseWorld() {
   function start(world?: WorldId, previewOnly = false) {
     selectDraftOwner(player?.id ?? 'onboarding')
     const definition = world ? worldDefinitionOf(world) : blankWorld()
-    setWorldDraft({ definition, heroOrder: definition.stars.map(star => star.id), advanced: !world && !previewOnly, previewOnly, address: player?.address ?? 'nick', group: player?.ageBand ? (player.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: player?.ageBand ?? nav.params.ageBand as AgeBand | undefined })
+    setWorldDraft({ definition, heroOrder: definition.stars.map(star => star.id), advanced: !world && !previewOnly, previewOnly, address: player?.address ?? 'nick', group: player?.ageBand ? (player.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: player?.ageBand ?? nav.params.ageBand as AgeBand | undefined, personalizeAvatar: player ? avatarPersonalization(player.id) : true })
     nav.push(world ? '01-3b_world_overview' : '05-7b_own_world', { world: definition.balanceKey })
   }
   return <div className="screen no-tab"><TopBar title="Выбери мир" onBack={nav.canBack ? nav.back : undefined} />
     <div className="pad world-catalog-page">{!player && <><h1>Выбери свою историю</h1><p className="muted">Готовые миры доступны сразу.</p></>}
       {getWorldDraft() && <Button secondary onClick={() => nav.push(getWorldDraft()?.definition.balanceKey === 'own' ? '05-7b_own_world' : '01-4_channel')}>Продолжить настройку</Button>}
-      {owned.length > 0 && <><h2>Продолжить игру</h2>{owned.map(world => <button className="continue-world card" key={world.id} onClick={async () => { try { const p = await api.me(world.id); setPlayer(p); nav.replace('03-5_stage') } catch { setError('Не получилось открыть мир.') } }}><Avatar seed={world.avatar} avatarStyle={world.avatarStyle} size={42} /><div><b>{world.name}</b><div className="small muted">{world.title} · {world.subscribers} подписчиков</div></div><span>Играть →</span></button>)}</>}
+      {owned.length > 0 && <><h2>Продолжить игру</h2>{owned.map(world => <button className="continue-world card" key={world.id} onClick={async () => { try { const p = await api.me(world.id); setPlayer(p); nav.replace('03-5_stage') } catch { setError('Не получилось открыть мир.') } }}><Avatar seed={world.avatar} avatarStyle={world.avatarStyle} profile={player ? { address: player.address, ageBand: player.ageBand, personalizeAvatar: avatarPersonalization(player.id) } : undefined} size={42} /><div><b>{world.name}</b><div className="small muted">{world.title} · {world.subscribers} подписчиков</div></div><span>Играть →</span></button>)}</>}
       <h2>{player ? "Новая история" : "Миры"}</h2><div className="world-catalog">{[...worlds].sort((a, b) => ['evening', 'sorcerers', 'houses', 'it'].indexOf(a.id) - ['evening', 'sorcerers', 'houses', 'it'].indexOf(b.id)).map((world, index) => { const art = worldArt[world.id]; const definition = worldDefinitionOf(world.id); return <button key={world.id} className="world-cover-card" onClick={() => start(world.id)} aria-label={`Обзор мира ${world.title}`}>
         {art && <div className="world-cover-image"><WorldCover world={world.id} catalog priority={index === 0} /><span className="world-genre">{world.emoji} {art.genre}</span></div>}
-        <div className="world-cover-copy"><div className="row"><b>{world.title}</b><span className="small muted">{['', 'Легко', 'Средне', 'Сложно'][world.difficulty]}</span></div><p>{art?.pitch ?? world.summary}</p><div className="world-roster">{definition.stars.slice(0, 3).map(star => <Avatar key={star.id} seed={star.avatarSeed} avatarStyle={definition.avatarStyle} profile={{ address: 'nick' }} size={26} />)}<span>Знакомиться с миром →</span></div></div>
+        <div className="world-cover-copy"><div className="row"><b>{world.title}</b><span className="small muted">{['', 'Легко', 'Средне', 'Сложно'][world.difficulty]}</span></div><p>{art?.pitch ?? world.summary}</p><div className="world-roster">{definition.stars.slice(0, 3).map(star => <Avatar key={star.id} seed={star.avatarSeed} avatarStyle={definition.avatarStyle} mode="default" size={26} />)}<span>Знакомиться с миром →</span></div></div>
       </button> })}</div>
       <div className="card own-world-unlock"><h2>✦ Создай свой мир</h2>{player?.hitOwnWorldMilestone ? <><p className="small muted">Придумай место, героев и начало истории.</p><Button onClick={() => start()}>Создать свой мир</Button></> : <><p className="small muted own-unlock-summary">Откроется после 500 подписчиков в одном канале или после первого поста приглашённого друга.</p>{player && <><progress aria-label="Подписчики до открытия своего мира" value={Math.min(500, Math.max(player.subs, ...owned.map(world => world.subscribers)))} max={500} /><span className="small muted">{Math.min(500, Math.max(player.subs, ...owned.map(world => world.subscribers)))} / 500</span><button className="text-link" onClick={() => nav.push('04-3_invite')}>Пригласить друга →</button></>}</>}
         {isDevWorldPrototype && new URLSearchParams(location.search).has('devtools') && <details className="editor-extra"><summary>DEV: пример настройки</summary><Button secondary onClick={() => start(undefined, true)}>Попробовать быструю настройку · DEV</Button></details>}
@@ -60,6 +61,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
       if (!api.hasPlayer()) { const identity = await api.onboarding({ birthGroup: draft.group, ageBand: draft.ageBand, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); selectDraftOwner(identity.id); setWorldDraft(draft) }
       await api.settings({ address: draft.address })
       const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d)
+      setAvatarPersonalization(player.id, draft.personalizeAvatar !== false)
       setWorldDraft(null); setPlayer(player); nav.replace('03-5_stage')
     } catch (cause) {
       if (!draft.editingId && !(cause instanceof ApiError)) { setUncertain(true); setError('Не удалось подтвердить создание. Сначала проверь список миров: повтор может создать ещё один экземпляр.') }
@@ -67,7 +69,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
     } finally { setSaving(false) }
   }
   if (quick) return <div className="screen no-tab"><TopBar title="Настроение истории" onBack={saving ? undefined : nav.back} /><div className="pad"><DramaPicker definition={d} />
-    <div className="quick-summary"><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand }} /><div><b>{d.name}</b><div className="small muted">{d.title} · {d.role}</div></div></div>
+    <div className="quick-summary"><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} /><div><b>{d.name}</b><div className="small muted">{d.title} · {d.role}</div></div></div>
     {draft.previewOnly && <p className="small prototype-note">DEV-прототип: дальше — пример ленты, без создания мира в базе.</p>}
     <button className="text-link" onClick={() => { setWorldDraft({ ...draft, advanced: true }); nav.push('01-4_channel') }}>Расширенные настройки →</button>
     {error && <p role="alert">{error}</p>}{uncertain && <Button onClick={() => nav.replace('01-3_world')}>Проверить список миров</Button>}

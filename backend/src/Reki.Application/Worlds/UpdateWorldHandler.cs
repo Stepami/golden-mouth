@@ -1,16 +1,16 @@
 using Mediator;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Common.Safety;
 
 namespace Reki.Application.Worlds;
 
-public sealed class UpdateWorldHandler(IGameStore store, IRekiContextAccessor contextAccessor, PlayerSafetyGuard safetyGuard)
+public sealed class UpdateWorldHandler(
+    IGameStore store,
+    IRekiContextAccessor contextAccessor)
     : IRequestHandler<UpdateWorldCommand>
 {
     public async ValueTask<Unit> Handle(UpdateWorldCommand request, CancellationToken cancellationToken)
     {
-        var player = await contextAccessor.Context.Player;
         var world = (await contextAccessor.Context.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var definition = request.Definition;
@@ -20,10 +20,6 @@ public sealed class UpdateWorldHandler(IGameStore store, IRekiContextAccessor co
             throw new ContentRejectedException();
         }
 
-        await safetyGuard.EnsureInputAllowedAsync(
-            player,
-            WorldSafetyInputs.From(definition),
-            cancellationToken);
         var updated = definition with
         {
             Id = world.Id,

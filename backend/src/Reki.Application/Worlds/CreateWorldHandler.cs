@@ -2,7 +2,6 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Common.Safety;
 using Reki.Application.Telemetry;
 using Reki.Domain.Worlds;
 
@@ -12,7 +11,6 @@ public sealed class CreateWorldHandler(
     IGameStore store,
     IRekiContextAccessor rekiContextAccessor,
     GameDayPeriod gameDayPeriod,
-    PlayerSafetyGuard safetyGuard,
     IOptions<GameBalance> balance,
     ProductTelemetry telemetry)
     : IRequestHandler<CreateWorldCommand, World>
@@ -37,10 +35,6 @@ public sealed class CreateWorldHandler(
         {
             Player = instance.Player with { Subscribers = balance.Value.Growth.StartingSubscribers },
         };
-        await safetyGuard.EnsureInputAllowedAsync(
-            player,
-            WorldSafetyInputs.From(world),
-            cancellationToken);
         await store.InsertWorldAsync(world, cancellationToken);
         telemetry.TrackPlayer(player, "world_created", new Dictionary<string, string> { ["world"] = world.BalanceKey }, world.Id);
         telemetry.TrackWorldAudience(world);

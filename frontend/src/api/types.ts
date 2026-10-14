@@ -34,8 +34,8 @@ export interface CommentT {
   id: string; author: string; avatar: string; handle: string; text: string; star?: boolean; me?: boolean; hidden?: boolean
   authorId?: string; role?: string; parentCommentId?: string | null; requestId?: string | null; depth?: number; reactions?: CommentReaction[]
 }
-/** Пост канала. `canReply` есть только при загрузке с сервера (GET /posts/:id): отвечать можно лишь под своими постами. */
-export interface Post { id: string; text: string; views: number; reactions: Reaction[]; comments: CommentT[]; inRivers?: boolean; at?: string; canReply?: boolean; demoComments?: boolean }
+/** Пост игрока или звезды; authorId определяет автора корневого разговора. */
+export interface Post { id: string; authorId?: string; text: string; views: number; reactions: Reaction[]; comments: CommentT[]; inRivers?: boolean; at?: string }
 /** Wire-контракт GET /posts/:id: сервер называет идентификатор postId. */
 export interface PostDetailResponse extends Omit<Post, 'id'> { postId: string }
 export interface ChannelPost { postId: string; text: string; createdAtUtc: string; views: number; reactions: Reaction[]; commentCount: number }
@@ -65,8 +65,8 @@ export interface Challenge { id: string; me: string; rival: Friend; day: number;
 export interface GameEvent { id: string; kind: 'collab' | 'hate' | 'gossip' | 'brand'; badge: string; title: string; text: string; ideas: string[]; reward: string; note: string }
 export interface DmMessage { from: 'star' | 'me'; text: string }
 export interface Dm { star: Star; status: string; memory: string[]; messages: DmMessage[]; ideas: string[]; repliesLeft: number }
-/** Карточка ленты 03-3. У постов стабильный `postId`; `canReply` открывает ответ только под своими. Новости без `postId` не открываются. */
-export interface FeedItem { kind: 'news' | 'post'; postId?: string; canReply?: boolean; author?: string; avatar?: string; role?: string; ago?: string; text: string; reactions?: Reaction[]; views?: number; commentCount?: number; repost?: string; demo?: boolean; starId?: string; world?: WorldId }
+/** Карточка ленты 03-3. Все посты со стабильным postId открывают тред. */
+export interface FeedItem { kind: 'news' | 'post'; postId?: string; author?: string; avatar?: string; role?: string; ago?: string; text: string; reactions?: Reaction[]; views?: number; commentCount?: number; repost?: string; demo?: boolean; starId?: string; world?: WorldId }
 export type WorldUpdate = Partial<Pick<WorldDocument, 'title' | 'description' | 'rules' | 'drama' | 'voice'>>
 
 /** Шаблон или экземпляр мира из MongoDB; ID экземпляра отличается от ключа баланса. */

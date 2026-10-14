@@ -88,14 +88,12 @@ public sealed class StarTurnGenerator(
             messages,
             ChatToolMode.RequireSpecific("dm"),
             cancellationToken);
-        if (actions is not [StarDirectMessageAction directMessage] ||
-            directMessage.StarId != starId ||
-            !ContentSafetyPolicy.IsOutputAllowed(directMessage.Text) ||
-            !ContentSafetyPolicy.IsOutputAllowed(directMessage.MemoryFact))
+        if (actions is not [StarDirectMessageAction directMessage] || directMessage.StarId != starId)
         {
             throw new AiServiceUnavailableException("The model returned an invalid direct message.");
         }
 
+        PlayerSafetyGuard.EnsureOutputAllowed([directMessage.Text, directMessage.MemoryFact]);
         return new GeneratedDirectMessage(
             directMessage.Text,
             MemoryFactPolicy.IsAllowed(directMessage.MemoryFact) ? directMessage.MemoryFact : string.Empty);
@@ -108,6 +106,7 @@ public sealed class StarTurnGenerator(
         var policy = $$"""
                        Вызови thread_reply ровно один раз. Ответь выбранной звездой {{context.TargetStarId.Value}}.
                        Реплика отвечает на последний комментарий игрока в выбранной ветке, а не оценивает пост.
+                       Если ветка пустая, это корневой комментарий игрока к твоему посту: ответь как автор поста.
                        Можешь поставить одну emoji-реакцию на ответ игрока и добавить один корневой комментарий
                        ДРУГОЙ звезды текущего каталога. Необязательные поля передавай пустой строкой.
                        tone: support, critique или hate. Хейт разрешён сейчас: {{context.HateEnabled}}.
