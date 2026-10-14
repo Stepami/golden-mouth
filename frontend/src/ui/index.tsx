@@ -1,6 +1,6 @@
-import { useContext, useState, type CSSProperties, type ReactNode } from 'react'
+import { useContext, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { tap } from '../app/analytics'
-import { avatarUri, AvatarWorld, AvatarPeople, type AvatarProfile } from './avatar'
+import { AvatarWorld, AvatarPeople, type AvatarProfile } from './avatar'
 import type { WorldId } from '../api/types'
 
 /**
@@ -12,8 +12,20 @@ import type { WorldId } from '../api/types'
 export function Avatar({ seed, label, size = 40, style, world, profile, avatarStyle, mode }: { seed?: string; label?: string; size?: number; style?: CSSProperties; world?: WorldId; profile?: AvatarProfile; avatarStyle?: string; mode?: 'default' | 'profile' }) {
   const currentWorld = useContext(AvatarWorld)
   const people = useContext(AvatarPeople)
-  if (!seed) return <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--grad)', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.4, ...style }}>{(label ?? '?').slice(0, 1).toUpperCase()}</div>
-  return <img src={avatarUri(seed, world ?? currentWorld, mode === 'default' ? undefined : profile ?? people[seed], avatarStyle)} alt="" width={size} height={size} style={{ borderRadius: '50%', flex: 'none', display: 'block', ...style }} />
+  const resolvedWorld = world ?? currentWorld
+  const resolvedProfile = mode === 'default' ? undefined : profile ?? (seed ? people[seed] : undefined)
+  const [portrait, setPortrait] = useState<{ key: string; uri: string }>()
+  const portraitKey = JSON.stringify([seed, resolvedWorld, resolvedProfile, avatarStyle])
+  useEffect(() => {
+    let active = true
+    if (seed) void import('./avatarRenderer').then(async ({ avatarUri }) => {
+      const uri = await avatarUri(seed, resolvedWorld, resolvedProfile, avatarStyle)
+      if (active) setPortrait({ key: portraitKey, uri })
+    }).catch(() => { /* Keep a stable initial if a deferred resource cannot load. */ })
+    return () => { active = false }
+  }, [portraitKey])
+  if (!seed || portrait?.key !== portraitKey) return <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--grad)', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.4, ...style }}>{(label ?? seed ?? '?').replace(/^@+/, '').slice(0, 1).toUpperCase()}</div>
+  return <img src={portrait.uri} alt="" width={size} height={size} style={{ borderRadius: '50%', flex: 'none', display: 'block', ...style }} />
 }
 
 export function Button({ children, secondary, onClick, disabled, style }: { children: ReactNode; secondary?: boolean; onClick?: () => void; disabled?: boolean; style?: CSSProperties }) {

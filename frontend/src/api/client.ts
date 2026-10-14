@@ -91,14 +91,16 @@ async function loadPlayer(worldId?: string): Promise<Player> {
   if (sessionIdentity?.id !== player.id) ownedWorldSnapshot = undefined
   sessionIdentity = player
   setTelemetryPlayerAvailable(true)
-  const ownedWorlds = await call<WorldDocument[]>('/worlds')
+  const [ownedWorlds, invitation] = await Promise.all([
+    call<WorldDocument[]>('/worlds'),
+    call<{ bonus: number }>('/invitation'),
+  ])
   ownedWorldSnapshot = ownedWorlds
   let selected: string | undefined
   try { selected = localStorage.getItem(`reki:selected-world:${player.id}`) ?? undefined } catch { /* memory fallback */ }
   const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)) ?? ownedWorlds[0]
   if (!world) throw new ApiError(404, 'GET', '/worlds')
   installWorldContent([world])
-  const invitation = await call<{ bonus: number }>('/invitation')
   return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, avatarStyle: world.avatarStyle,
     world: world.balanceKey, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
     wants: world.wants, collection: world.achievements, bio: '', type: 'свой голос',
