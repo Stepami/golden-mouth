@@ -1,6 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { blankWorld, selectDraftOwner, setWorldDraft, savedWorldDraft, clearWorldDrafts } from '../src/app/worldDraft.ts'
+import { register } from 'node:module'
+register('./typescript-resolver.mjs', import.meta.url)
+const { blankWorld, selectDraftOwner, setWorldDraft, savedWorldDraft, clearWorldDrafts } = await import('../src/app/worldDraft.ts')
 
 function storage() {
   const data = {}
