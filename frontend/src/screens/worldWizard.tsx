@@ -1,11 +1,11 @@
 import { WorldCover } from '../ui/WorldCover'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, ApiError } from '../api/client'
 import { worldDefinitionOf, worlds } from '../api/worldContent'
 import type { WorldDocument, WorldId } from '../api/types'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
-import { blankWorld, getWorldDraft, selectDraftOwner, setWorldDraft, updateWorldDraft, useWorldDraft } from '../app/worldDraft'
+import { blankWorld, clearWorldDrafts, getWorldDraft, savedWorldDraft, selectDraftOwner, setWorldDraft, updateWorldDraft, useWorldDraft } from '../app/worldDraft'
 import { pendingReferral, clearReferral } from '../app/referral'
 import { Avatar, BottomCTA, Button, Card, Segmented, TopBar } from '../ui'
 import { WorldAdvanced } from './worldAdvanced'
@@ -18,9 +18,22 @@ export function ChooseWorld() {
   const nav = useNav(); const { player, setPlayer } = useStore()
   const [owned, setOwned] = useState<WorldDocument[]>(() => api.ownedWorldsSnapshot() ?? [])
   const [error, setError] = useState('')
+  const [pending, setPending] = useState<{ world?: WorldId; previewOnly: boolean } | null>(null)
+  const switchDialog = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    if (!pending) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    switchDialog.current?.showModal()
+    return () => { switchDialog.current?.close(); document.body.style.overflow = previous }
+  }, [pending])
   useEffect(() => { let alive = true; if (player) api.ownedWorlds().then(found => { if (alive) setOwned(found) }).catch(() => { if (alive) setError('Не получилось загрузить твои миры.') }); return () => { alive = false } }, [player?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-  function start(world?: WorldId, previewOnly = false) {
+  function start(world?: WorldId, previewOnly = false, confirmed = false) {
     selectDraftOwner(player?.id ?? 'onboarding')
+    const previous = getWorldDraft()
+    if (!confirmed && previous && (previous.definition.balanceKey !== (world ?? 'own') || previous.editingId)) { setPending({ world, previewOnly }); return }
+    const restored = savedWorldDraft(world ?? 'own')
+    if (restored && !!restored.previewOnly === previewOnly) { setWorldDraft(restored); nav.push(world ? '01-3b_world_overview' : '05-7b_own_world', { world: restored.definition.balanceKey }); return }
     const definition = world ? worldDefinitionOf(world) : blankWorld()
     setWorldDraft({ definition, heroOrder: definition.stars.map(star => star.id), advanced: !world && !previewOnly, previewOnly, address: player?.address ?? 'nick', group: player?.ageBand ? (player.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: player?.ageBand ?? nav.params.ageBand as AgeBand | undefined, personalizeAvatar: player ? avatarPersonalization(player.id) : true })
     nav.push(world ? '01-3b_world_overview' : '05-7b_own_world', { world: definition.balanceKey })
@@ -37,6 +50,12 @@ export function ChooseWorld() {
         {isDevWorldPrototype && new URLSearchParams(location.search).has('devtools') && <details className="editor-extra"><summary>DEV: пример настройки</summary><Button secondary onClick={() => start(undefined, true)}>Попробовать быструю настройку · DEV</Button></details>}
       </div>
       {error && <p role="alert">{error}</p>}
+      {pending && <dialog ref={switchDialog} className="world-switch-dialog" aria-labelledby="world-switch-title" onCancel={e => { e.preventDefault(); setPending(null) }}>
+        <h2 id="world-switch-title">Открыть другой мир?</h2>
+        <p className="muted">Настройка «{getWorldDraft()?.definition.title || 'Твой мир'}» сохранится на этом устройстве в текущей сессии. Когда снова выберешь этот мир, сможешь продолжить.</p>
+        <Button onClick={() => { const choice = pending; setPending(null); start(choice.world, choice.previewOnly, true) }}>Открыть другой мир</Button>
+        <Button secondary onClick={() => setPending(null)}>Остаться в текущем</Button>
+      </dialog>}
     </div></div>
 }
 function Ready({ children }: { children: (draft: NonNullable<ReturnType<typeof useWorldDraft>>) => React.ReactNode }) {
@@ -58,7 +77,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
     if (draft.previewOnly) { nav.push('05-7c_world_preview'); return }
     setSaving(true); setError('')
     try {
-      if (!api.hasPlayer()) { const identity = await api.onboarding({ birthGroup: draft.group, ageBand: draft.ageBand, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); selectDraftOwner(identity.id); setWorldDraft(draft) }
+      if (!api.hasPlayer()) { const identity = await api.onboarding({ birthGroup: draft.group, ageBand: draft.ageBand, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); clearWorldDrafts('onboarding'); selectDraftOwner(identity.id); setWorldDraft(draft) }
       await api.settings({ address: draft.address })
       const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d)
       setAvatarPersonalization(player.id, draft.personalizeAvatar !== false)

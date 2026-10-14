@@ -1,3 +1,4 @@
+import { clearWorldDrafts } from './worldDraft'
 export interface PostDraft { text: string; publicationId?: string; submittedText?: string; ownWords: boolean; submittedOwnWords?: boolean }
 const memory = new Map<string, PostDraft>()
 const prefix = 'reki:post-draft:v1:'
@@ -20,6 +21,7 @@ export function completePostDraft(key: string, publicationId: string, text: stri
   savePostDraft(key, current.text === text ? { text: '', ownWords: true } : { text: current.text, ownWords: current.ownWords })
 }
 export function clearPlayerDrafts(id: string) {
+  clearWorldDrafts(id)
   for (const key of memory.keys()) if (key.startsWith(`${prefix}${id}:`)) memory.delete(key)
   try { for (const key of Object.keys(localStorage)) if (key.startsWith(`${prefix}${id}:`) || key.startsWith(`reki:reply-draft:${id}:`)) localStorage.removeItem(key)
     sessionStorage.removeItem(`reki:world-setup:v1:${id}`)
