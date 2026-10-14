@@ -14,7 +14,7 @@
 
 ## Проверка
 
-.github/workflows/static-config-ci.yml запускает .github/scripts/check-static-compression.sh. Используется закрепленный nginx:1.29.1-alpine в изолированных контейнерах с network none, без подключения к окружениям или БД. Проверяются nginx -t, gzip JS/CSS и точное восстановление содержимого, неизмененный identity-ответ, Vary, immutable, отсутствие сжатия на проксируемом mock API и no-store API/config. Новый workflow работает только на PR с соответствующими путями. CI успешно проверил конфигурацию и ответы: https://github.com/Stepami/golden-mouth/actions/runs/38605157762.
+Изолированная проверка nginx -t, gzip/identity JS и CSS, Vary, Cache-Control, отсутствия сжатия API и сохранения no-store уже прошла: https://github.com/Stepami/golden-mouth/actions/runs/38605157762. По замечанию Stepami добавленные workflow и скрипт удалены; отдельная CI-инфраструктура не входит в итоговый PR.
 
 После одобрения и выкладки: проверить настоящие production JS/CSS с Accept-Encoding gzip и identity, сравнить распакованный файл с исходным, проверить SSE и сохранить измеренные размеры в #172. До одобрения production gzip не включать.
 
