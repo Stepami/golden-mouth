@@ -133,7 +133,8 @@ function PublishError() {
           <div className="muted" style={{ marginBottom: 20 }}>{explanation}</div>
           {uncertain && publicationId && <Button onClick={() => nav.replace('02-2_live', { text, publicationId, ownWords: nav.params.ownWords, wantId: nav.params.wantId })}>Проверить статус</Button>}
           <Button onClick={() => nav.replace('02-1_compose', { text })}>Изменить текст</Button>
-          <Button secondary onClick={() => nav.push('06-4_rules')}>Правила публикаций</Button>
+          <Button secondary onClick={() => nav.replace('03-5_stage')}>В канал</Button>
+          <button className="text-link" onClick={() => nav.push('06-4_rules')}>Правила публикаций</button>
         </div>
       </div>
     </div>
