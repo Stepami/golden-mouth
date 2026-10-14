@@ -3,6 +3,8 @@ set -euo pipefail
 repo_root=$(cd "$(dirname "$0")/../.." && pwd)
 fixture_dir=$(mktemp -d)
 container_name="reki-static-check-$$"
+# nginx workers must be able to traverse the read-only fixture mount.
+chmod 755 "$fixture_dir"
 cleanup() {
   docker rm -f "$container_name" >/dev/null 2>&1 || true
   rm -rf "$fixture_dir"
@@ -31,10 +33,15 @@ docker run -d --name "$container_name" --network none --add-host backend:127.0.0
   -v "$repo_root/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
   -v "$fixture_dir/mock.conf:/etc/nginx/conf.d/mock.conf:ro" \
   -v "$fixture_dir:/usr/share/nginx/html:ro" nginx:1.29.1-alpine >/dev/null
+ready=false
 for attempt in {1..20}; do
-  if docker exec "$container_name" wget -q -O /dev/null http://127.0.0.1/runtime-config/config.js; then break; fi
+  if docker exec "$container_name" wget -q -O /dev/null http://127.0.0.1/runtime-config/config.js; then ready=true; break; fi
   sleep 0.2
 done
+if [[ "$ready" != true ]]; then
+  docker logs "$container_name" >&2
+  exit 1
+fi
 for asset in app.js app.css; do
   docker exec "$container_name" wget -q -S --header='Accept-Encoding: gzip' \
     -O "/tmp/$asset.gz" "http://127.0.0.1/assets/$asset" 2> "$fixture_dir/$asset.headers"
