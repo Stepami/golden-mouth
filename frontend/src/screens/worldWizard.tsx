@@ -72,6 +72,7 @@ export function StarsSetup() { return <Ready>{draft => <StarsForm draft={draft} 
 function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typeof useWorldDraft>>; quick?: boolean }) {
   const nav = useNav(); const { setPlayer } = useStore(); const d = draft.definition
   const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [uncertain, setUncertain] = useState(false)
+  useEffect(() => { if (error) document.querySelector('[role="alert"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }) }, [error])
   const save = async () => {
     if (saving || uncertain) return
     if (draft.previewOnly) { nav.push('05-7c_world_preview'); return }
@@ -84,7 +85,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
       setWorldDraft(null); setPlayer(player); nav.replace('03-5_stage')
     } catch (cause) {
       if (!draft.editingId && !(cause instanceof ApiError)) { setUncertain(true); setError('Не удалось подтвердить создание. Сначала проверь список миров: повтор может создать ещё один экземпляр.') }
-      else setError(cause instanceof ApiError && cause.status === 409 ? 'Мир изменился или создание с нуля пока недоступно. Твои изменения сохранены в черновике.' : 'Не получилось сохранить мир. Проверь поля и попробуй снова.')
+      else setError(cause instanceof ApiError && cause.status === 409 ? 'Мир изменился или создание с нуля пока недоступно. Твои изменения сохранены в черновике.' : cause instanceof ApiError && cause.status === 503 ? 'Проверка истории временно недоступна. Настройки сохранены — попробуй начать ещё раз чуть позже.' : 'Не получилось сохранить мир. Проверь поля и попробуй снова.')
     } finally { setSaving(false) }
   }
   if (quick) return <div className="screen no-tab"><TopBar title="Настроение истории" onBack={saving ? undefined : nav.back} /><div className="pad"><DramaPicker definition={d} />
