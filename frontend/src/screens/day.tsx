@@ -281,7 +281,6 @@ function Me() {
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b><span className="small" style={{ color: 'var(--lilac)' }}>все ›</span></div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6 }}>{p.collection.map(c => <div key={c.id} className={`slot${c.open ? ' on' : ''}`} onClick={() => c.emoji === '👑' && nav.push('03-2_star_card')} style={{ fontSize: c.open ? 22 : 14 }}>{c.open ? c.emoji : '?'}</div>)}</div>
         </Card>}
-        {p.nextWorld && <Card><div className="row"><div style={{ fontSize: 22 }}>🔒</div><div style={{ flex: 1 }}><b>Мир «{p.nextWorld.title}»</b><div className="small muted">откроется на {p.nextWorld.need}</div></div><button onClick={() => nav.push('04-3_invite')} className="small" style={{ color: 'var(--gift)', background: 'none', border: 'none' }}>позвать друга ›</button></div></Card>}
       </div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
     </div>

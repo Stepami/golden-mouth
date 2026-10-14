@@ -85,7 +85,7 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     // Demo worlds use template content because they have no server-side instances.
     await loadTemplates()
     installWorldContent(templates)
-    return rememberPlayer(await laterLazy(demoPlayer))
+    return rememberPlayer(await laterLazy(() => ({ ...demoPlayer(), nextWorld: undefined })))
   }
   const player = await call<PlayerDocument>('/me')
   if (sessionIdentity?.id !== player.id) ownedWorldSnapshot = undefined
@@ -229,7 +229,7 @@ export const api = {
     const profile = contentOf(sessionPlayer?.world ?? 'stage')
     const star = profile.stars[0]
     const comment = { ...mock.liveComment, id: crypto.randomUUID(), authorId: star.id, author: star.name, avatar: star.avatarSeed, handle: `@${star.avatarSeed.replace(/^@+/, '')}`, text: 'Вот это история! Расскажешь, что было дальше?', star: true }
-    const result = { ...mock.results.normal, postId: publicationId, headline: `${star.name} замечает твой пост`,
+    const result = { ...mock.results.normal, ribbons: [], postId: publicationId, headline: `${star.name} замечает твой пост`,
       bestComment: { avatar: star.avatarSeed, text: comment.text }, hook: `${profile.stars[1].name} готовит ответ…` }
     const steps: [number, LiveEvent][] = [[250, { type: 'views', views: 48 }], [650, { type: 'react', emoji: '😂' }], [1100, { type: 'comment', comment }],
       [1450, { type: 'views', views: 190 }], [1800, { type: 'react', emoji: '🫶' }], [2250, { type: 'typing', who: profile.stars[1].name }], [2650, { type: 'react', emoji: '🔥' }],
@@ -359,7 +359,7 @@ export const api = {
   challenge: (): Promise<Challenge | null> => BASE ? call('/challenges/active') : later(mock.challenge),
   startChallenge: (friendId: string) => BASE ? call('/challenges', { method: 'POST', body: JSON.stringify({ friendId }) }) : later({ ok: true }),
   ownedWorldsSnapshot: (): WorldDocument[] | undefined => ownedWorldSnapshot ? structuredClone(ownedWorldSnapshot) : undefined,
-  ownedWorlds: async (): Promise<WorldDocument[]> => { const found = BASE ? await call<WorldDocument[]>('/worlds') : await later(sessionPlayer ? [worldDocumentOf(sessionPlayer.world)] : []); ownedWorldSnapshot = found; return found },
+  ownedWorlds: async (): Promise<WorldDocument[]> => { const found = BASE ? await call<WorldDocument[]>('/worlds') : await later(sessionPlayer ? [{ ...worldDocumentOf(sessionPlayer.world), id: sessionPlayer.worldInstanceId ?? sessionPlayer.world, name: sessionPlayer.name, avatar: sessionPlayer.handle, subscribers: sessionPlayer.subs }] : []); ownedWorldSnapshot = found; return found },
   saveWorld: async (worldId: string, definition: WorldDefinition): Promise<Player> => {
     if (BASE) {
       await call(`/worlds/${encodeURIComponent(worldId)}`, { method: 'PUT', body: JSON.stringify(definition) })
