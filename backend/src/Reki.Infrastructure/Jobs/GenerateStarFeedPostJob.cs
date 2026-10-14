@@ -75,7 +75,7 @@ public sealed class GenerateStarFeedPostJob(
             },
             cancellationToken);
         var text = response.Text.Trim();
-        if (string.IsNullOrWhiteSpace(text) || text.Length > 1000 || !ContentSafetyPolicy.IsOutputAllowed(text))
+        if (string.IsNullOrWhiteSpace(text) || text.Length > 1000 || !PlayerSafetyGuard.IsOutputAllowed(text))
         {
             throw new TerminateExecutionException("The generated feed content is invalid.");
         }

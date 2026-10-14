@@ -6,9 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using NSubstitute;
 using Reki.Application.Common;
-using Reki.Application.Common.Safety;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
 using Reki.Contracts.Worlds;
@@ -380,9 +378,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var arguments = call.Arguments
             ?? throw new InvalidOperationException("Tool call has no arguments.");
         arguments["text"] = "наркотики";
-        Factory.ContentModerator.ReviewAsync(
-                Arg.Any<PlayerProfile>(), Arg.Is<IReadOnlyList<string>>(texts => texts.Contains("наркотики")), Arg.Any<CancellationToken>())
-            .Returns(new ContentReview(SafetyDecision.Rejected, "explicit_content"));
         Factory.Llm.Respond(unsafeResponse);
         using var http = Factory.CreateClient();
         http.DefaultRequestHeaders.Add(
@@ -523,9 +518,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         const long telegramUserId = 1010;
         using var api = Factory.CreateApiClient(telegramUserId);
         await CreatePlayerWithWorldAsync(api);
-        Factory.ContentModerator.ReviewAsync(
-                Arg.Any<PlayerProfile>(), Arg.Is<IReadOnlyList<string>>(texts => texts.Contains("я не хочу жить")), Arg.Any<CancellationToken>())
-            .Returns(new ContentReview(SafetyDecision.Crisis, "crisis"));
 
         (_, var generation, _) = await GenerateAsync(telegramUserId, "я не хочу жить");
 
@@ -1224,7 +1216,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Assert
         await Assert.That(terminal.Status).IsEqualTo(ReplyStatus.Failed);
-        await Assert.That(terminal.Code).IsEqualTo("ai_unavailable");
+        await Assert.That(terminal.Code).IsEqualTo(violation == "unsafe" ? "unsafe_generated_content" : "ai_unavailable");
         await Assert.That(terminal.Post).IsNull();
         await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(before);
         await Assert.That((await GetStoredPlayerAsync(user))["EnergyUsed"]).IsEqualTo(player["EnergyUsed"]);
@@ -1249,13 +1241,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         const long user = 8705;
         var (postId, targetId) = await PublishPostForThreadAsync(user);
         var text = scenario switch { "blank" => " ", "long" => new string('а', 1001), "unsafe" => "наркотики", _ => "ответ" };
-        if (scenario == "unsafe")
-        {
-            Factory.ContentModerator.ReviewAsync(
-                    Arg.Any<PlayerProfile>(), Arg.Is<IReadOnlyList<string>>(texts => texts.Contains(text)), Arg.Any<CancellationToken>())
-                .Returns(new ContentReview(SafetyDecision.Rejected, "explicit_content"));
-        }
-
         var key = scenario == "key" ? string.Empty : "input-validation";
         if (scenario is "player-target" or "unknown-star")
         {

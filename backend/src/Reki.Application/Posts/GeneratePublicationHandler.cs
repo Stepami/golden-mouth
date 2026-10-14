@@ -146,7 +146,7 @@ public sealed partial class GeneratePublicationHandler(
                     var complete = await sender.Send(new GetPublicationQuery(request.Id), cancellationToken)
                                    ?? throw new InvalidOperationException("The publication disappeared during generation.");
                     var turn = complete.AssembleTurn();
-                    await safety.EnsureOutputAllowedAsync(player, [turn.Comment, turn.Hook], cancellationToken);
+                    PlayerSafetyGuard.EnsureOutputAllowed([turn.Comment, turn.Hook]);
                     await store.MarkPublicationReadyAsync(request.Id, cancellationToken);
                     ready = true;
                 }

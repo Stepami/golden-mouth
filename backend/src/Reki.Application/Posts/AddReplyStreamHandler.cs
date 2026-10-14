@@ -102,6 +102,7 @@ public sealed partial class AddReplyStreamHandler(
         }
 
         GeneratedReplyTurn? turn = null;
+        var unsafeContent = false;
         try
         {
             turn = ReplyTurnPolicy.Parse(calls, context);
@@ -110,10 +111,14 @@ public sealed partial class AddReplyStreamHandler(
         {
             GenerationFailed();
         }
+        catch (UnsafeGeneratedContentException)
+        {
+            unsafeContent = true;
+        }
 
         if (turn is null)
         {
-            yield return new ReplyLiveEvent(ReplyStatus.Failed, request.RequestId, null, null, null, null, "ai_unavailable");
+            yield return new ReplyLiveEvent(ReplyStatus.Failed, request.RequestId, null, null, null, null, unsafeContent ? "unsafe_generated_content" : "ai_unavailable");
             yield break;
         }
 

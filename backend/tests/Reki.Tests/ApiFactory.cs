@@ -7,11 +7,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using NSubstitute.ClearExtensions;
 using Reki.Application.Common;
-using Reki.Application.Common.Safety;
 using Reki.Application.Telemetry;
-using Reki.Domain.Player;
 using TUnit.AspNetCore;
 
 namespace Reki.Tests;
@@ -22,8 +19,6 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
     public required TestSessionFixture Session { get; init; }
 
     public ILogger<ProductTelemetry> ProductLogger { get; } = Substitute.For<ILogger<ProductTelemetry>>();
-
-    public IContentModerator ContentModerator { get; } = Substitute.For<IContentModerator>();
 
     public bool UseProductionAuthentication { get; init; }
 
@@ -38,13 +33,6 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
     public TestApiClient CreateApiClient(long? telegramUserId = null)
     {
         return new TestApiClient(CreateClient(), telegramUserId);
-    }
-
-    public void ResetContentModerator()
-    {
-        ContentModerator.ClearSubstitute();
-        ContentModerator.ReviewAsync(Arg.Any<PlayerProfile>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
-            .Returns(new ContentReview(SafetyDecision.Allowed, "allowed"));
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -62,8 +50,6 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         {
             ProductLogger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
             services.AddSingleton(ProductLogger);
-            ResetContentModerator();
-            services.Replace(ServiceDescriptor.Singleton(ContentModerator));
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
             if (FeedOpenProbability is { } probability)

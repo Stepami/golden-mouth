@@ -88,14 +88,12 @@ public sealed class StarTurnGenerator(
             messages,
             ChatToolMode.RequireSpecific("dm"),
             cancellationToken);
-        if (actions is not [StarDirectMessageAction directMessage] ||
-            directMessage.StarId != starId ||
-            !ContentSafetyPolicy.IsOutputAllowed(directMessage.Text) ||
-            !ContentSafetyPolicy.IsOutputAllowed(directMessage.MemoryFact))
+        if (actions is not [StarDirectMessageAction directMessage] || directMessage.StarId != starId)
         {
             throw new AiServiceUnavailableException("The model returned an invalid direct message.");
         }
 
+        PlayerSafetyGuard.EnsureOutputAllowed([directMessage.Text, directMessage.MemoryFact]);
         return new GeneratedDirectMessage(
             directMessage.Text,
             MemoryFactPolicy.IsAllowed(directMessage.MemoryFact) ? directMessage.MemoryFact : string.Empty);
