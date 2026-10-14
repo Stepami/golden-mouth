@@ -339,5 +339,3 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .daily-task span span { display: block; margin-top: 3px; }
 
 .result-close { position:absolute; top:12px; right:12px; width:44px; height:44px; border:0; border-radius:50%; background:var(--card); color:var(--text); font-size:28px; cursor:pointer; }
-.compose-topics { margin-top:12px; color:var(--muted); }
-.compose-topics summary { cursor:pointer; color:var(--lilac); }
