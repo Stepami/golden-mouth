@@ -260,7 +260,7 @@ function Me() {
   return (
     <div className="screen">
       <div className="top" style={{ border: 'none' }}><b style={{ fontSize: 18 }}>Я</b><button className="pill" onClick={() => nav.push('05-8_settings')} style={{ border: 'none' }}>⚙ Настройки</button></div>
-      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b><div className="small muted profile-world-name">{worldOf(p.world).emoji} {worldOf(p.world).title}</div><button className="worlds-entry profile-worlds-entry" onClick={() => nav.push('01-3_world')}>Миры →</button></div>
+      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b>{p.handle && <div className="small muted" style={{ overflowWrap: 'anywhere' }}>@{p.handle.replace(/^@+/, '')}</div>}<div className="small muted profile-world-name">{worldOf(p.world).emoji} {worldOf(p.world).title}</div><button className="worlds-entry profile-worlds-entry" onClick={() => nav.push('01-3_world')}>Миры →</button></div>
       <div className="pad">
         <div className="profile-stats">
           {[[`⚡ ${p.postsLeft}`, 'энергии'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
