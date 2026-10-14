@@ -23,24 +23,8 @@ export const presetGoals: Record<string, { goal: string; firstStep: string }> = 
 /** Character/voice/drama choices keep the story; edited lore must not inherit its goal. */
 export function presetGoalFor(world: WorldDefinition, template = optionalWorldTemplate(world.balanceKey)) {
   if (!template || !presetGoals[world.balanceKey]) return undefined
-  const description = world.description.split('\nПерсона игрока: ')[0].replace(goalParagraph(world.balanceKey), '')
+  const description = world.description.split('\nПерсона игрока: ')[0]
   if (description !== template.description || world.title !== template.title || world.where !== template.where
     || world.firstContext !== template.firstContext || world.firstPrompt !== template.firstPrompt) return undefined
   return presetGoals[world.balanceKey]
-}
-
-function goalParagraph(key: string) {
-  return `\n\nЦель персонажа в этой истории: ${presetGoals[key].goal}`
-}
-
-/** Existing description is already passed to AI. Only enrich new, unchanged preset stories. */
-export function withPresetGoal(world: WorldDefinition): WorldDefinition {
-  const goal = presetGoalFor(world)
-  if (!goal || world.description.includes(goalParagraph(world.balanceKey))) return world
-  const paragraph = goalParagraph(world.balanceKey)
-  if (world.description.length + paragraph.length > 2000) return world
-  const personaAt = world.description.indexOf('\nПерсона игрока: ')
-  const description = personaAt < 0 ? world.description + paragraph
-    : world.description.slice(0, personaAt) + paragraph + world.description.slice(personaAt)
-  return { ...world, description }
 }

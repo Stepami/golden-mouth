@@ -1,7 +1,6 @@
 // Клиент API. Runtime config выбирает backend или тестовые данные (mock.ts).
 // Во фронте НЕТ секретов: runtime config виден в браузере. Ключи LLM и токен бота живут только на бэкенде.
 import { clearPlayerDrafts } from '../app/postDraft'
-import { withPresetGoal } from '../app/presetGoals'
 import { clearApiCache } from '../app/useApi'
 import * as mock from './mock'
 import { error, warn } from '../app/log'
@@ -135,7 +134,6 @@ export const api = {
     return sessionIdentity
   },
   createWorld: async (definition: WorldDefinition): Promise<Player> => {
-    definition = withPresetGoal(definition)
     if (BASE) {
       const world = await call<WorldDocument>('/worlds', { method: 'POST', body: JSON.stringify(definition) })
       return api.me(world.id)
