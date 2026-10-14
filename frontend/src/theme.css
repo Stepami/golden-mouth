@@ -385,3 +385,5 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .first-story-screen .first-story-cover { height: 120px; }
 .first-story-screen .first-story-context { font-size: 17px; }
 .first-story-screen .first-story-goal h1 { font-size: 22px; }
+
+.welcome-world-choice { font-size: 18px; font-weight: 650; margin-top: 20px; color: var(--soft); }

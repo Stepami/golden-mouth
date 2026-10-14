@@ -1,6 +1,6 @@
 import { usePresetGoal } from '../ui/StoryGoal'
 import { WorldCover } from '../ui/WorldCover'
-import mashaPortrait from '../assets/masha-v2.jpg'
+import goshaPortrait from '../assets/gosha-intro.svg'
 import { trackImage } from '../app/imageTiming'
 import { useEffect, useRef, useState } from 'react'
 import { withWorldTemplates } from '../app/withWorldTemplates'
@@ -31,13 +31,14 @@ function Invite() {
   const nav = useNav()
   return <div className="screen no-tab welcome"><div className="pad">
     <div className="brand">реки</div><h1>Твой пост может<br />взорвать ленту.</h1>
-    <p className="muted">Собери фанатов, попади в драму и стань главным героем своей истории.</p>
+    <p className="muted">Пиши посты от лица персонажа, получай ответы героев и развивай свою историю.</p>
     <div className="welcome-post card" aria-label="Пример игрового поста">
-      <div className="row"><img className="welcome-avatar welcome-photo" src={mashaPortrait} width={44} height={44} fetchPriority="high" onLoad={e => trackImage(e.currentTarget, 'welcome_portrait')} onError={() => trackImage(null, 'welcome_portrait')} alt="Маша" /><div><b>Маша в тридевятом царстве</b><div className="small muted">только что</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
-      <p>Выложила фото с бала. Все обсуждают парня рядом со мной. Вообще-то я пришла одна 👀</p>
-      <div className="row"><span className="react">🔥 2,4k</span><span className="react">💀 890</span><span className="small muted">🫶 1,2k</span></div>
-      <div className="welcome-reply"><b>Джеймс · рыцарь великого дома</b><div>Ты всё-таки заметила меня. Оставишь мне первый танец на следующем балу?</div></div>
+      <div className="row"><img className="welcome-avatar welcome-photo" src={goshaPortrait} width={44} height={44} fetchPriority="high" onLoad={e => trackImage(e.currentTarget, 'welcome_portrait')} onError={() => trackImage(null, 'welcome_portrait')} alt="Гоша: круглые очки, шрам и волшебная палочка" /><div><b>Гоша · Школа чародеев</b><div className="small muted">только что</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>120 читателей</span></div>
+      <p>В расписании появился урок, отменённый сто лет назад. Почему в списке моё имя? 👀</p>
+      <div className="row"><span className="react">✨ 24</span><span className="react">👀 18</span><span className="small muted">💬 3</span></div>
+      <div className="welcome-reply"><b>Георгина · ученица школы</b><div>Моё тоже. Встретимся у библиотеки? Покажу запись с этого урока… она появилась вчера.</div></div>
     </div>
+    <p className="welcome-world-choice">Выбери мир или создай свой.</p>
     <p className="small muted">Фанаты и события виртуальные. Посты остаются внутри игры.</p>
   </div><BottomCTA main="Начать играть" onMain={() => nav.push('01-2_age')} /></div>
 }
