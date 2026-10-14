@@ -342,3 +342,16 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 
 .thread-header-actions { display:flex; align-items:center; gap:10px; }
 .thread-energy { white-space:nowrap; padding:6px 10px; border-radius:20px; background:var(--card); color:var(--text); font-size:13px; }
+
+.worlds-home h2 { font-size:18px; margin:22px 0 12px; }
+.worlds-home .world-cover-image { height:145px; }
+.worlds-home .world-cover-copy b { font-size:18px; }
+.worlds-home .world-cover-copy p { min-height:40px; margin:8px 0 12px; }
+.world-resume { display:flex; align-items:center; gap:14px; width:100%; text-align:left; border:1px solid #9b6bff66; color:var(--text); cursor:pointer; }
+.world-resume > div { min-width:0; }
+.world-resume p { margin:6px 0 8px; line-height:1.4; }
+.world-resume span { font-size:14px; color:var(--lilac); }
+.worlds-home .own-world-unlock { margin-top:20px; }
+.own-world-unlock progress { display:block; width:100%; margin:14px 0 10px; }
+.own-world-unlock progress + span { display:block; }
+.own-world-unlock .text-link { display:block; margin-top:4px; }

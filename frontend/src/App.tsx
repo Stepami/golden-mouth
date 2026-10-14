@@ -48,11 +48,7 @@ function Shell() {
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments) }, [player?.experiments])
   useEffect(() => {
     if (playerState !== 'ready' || explicitStart || top.id !== '01-1_invite') return
-    let current = true
-    api.channelPosts()
-      .then(posts => { if (current) setStack([{ id: posts.length === 0 ? '01-6_home' : '03-5_stage', params: { channelEmpty: posts.length === 0 } }]) })
-      .catch(() => { if (current) setStack([{ id: '03-5_stage', params: {} }]) })
-    return () => { current = false }
+    setStack([{ id: '01-3_world', params: {} }])
   }, [explicitStart, playerState, top.id])
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1 && top.id !== '02-6_thread', back), [stack.length, top.id, back])
