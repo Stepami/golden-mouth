@@ -6,7 +6,7 @@ import * as mock from './mock'
 import { error, warn } from '../app/log'
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics'
 import { apiBaseUrl as BASE, runtimeConfig } from '../app/runtimeConfig'
-import { demoChannelPosts, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, withDemoComments } from './demo'
+import { demoWorlds, demoWorldKey, demoChannelPosts, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, withDemoComments } from './demo'
 import { contentOf, installWorldContent, installWorldTemplates, worldDocumentOf, wantsFor } from './worldContent'
 import { telegramAuthHeaders } from './auth'
 import type { AgeBand } from '../app/ageBand'
@@ -85,7 +85,10 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     // Demo worlds use template content because they have no server-side instances.
     await loadTemplates()
     installWorldContent(templates)
-    return rememberPlayer(await laterLazy(() => ({ ...demoPlayer(), nextWorld: undefined })))
+    const player = { ...demoPlayer(worldId), nextWorld: undefined }
+    const stored = demoWorlds(player.id).find(world => world.id === demoWorldKey(player))
+    if (stored) installWorldContent([stored])
+    return rememberPlayer(await later(player))
   }
   const player = await call<PlayerDocument>('/me')
   if (sessionIdentity?.id !== player.id) ownedWorldSnapshot = undefined
@@ -139,8 +142,10 @@ export const api = {
       return api.me(world.id)
     }
     if (!sessionIdentity) throw new Error('Player must be loaded before creating a world')
+    const worldInstanceId = crypto.randomUUID().replaceAll('-', '')
+    installWorldContent([{ ...definition, id: worldInstanceId, subscribers: 120 }])
     return rememberPlayer(await laterLazy(() => saveDemoPlayer({
-      ...structuredClone(mock.player), ...sessionIdentity!, worldInstanceId: crypto.randomUUID().replaceAll('-', ''), world: definition.balanceKey,
+      ...structuredClone(mock.player), ...sessionIdentity!, worldInstanceId, world: definition.balanceKey,
       name: definition.name, handle: definition.avatar, role: definition.role, avatarStyle: definition.avatarStyle,
       voice: definition.voice, drama: definition.drama,
       subs: 120, wants: definition.wants, collection: definition.achievements,
@@ -228,15 +233,16 @@ export const api = {
     onStatus?.('pending')
     const profile = contentOf(sessionPlayer?.world ?? 'stage')
     const star = profile.stars[0]
+    const nextStar = profile.stars[1] ?? star
     const comment = { ...mock.liveComment, id: crypto.randomUUID(), authorId: star.id, author: star.name, avatar: star.avatarSeed, handle: `@${star.avatarSeed.replace(/^@+/, '')}`, text: 'Вот это история! Расскажешь, что было дальше?', star: true }
     const result = { ...mock.results.normal, ribbons: [], postId: publicationId, headline: `${star.name} замечает твой пост`,
-      bestComment: { avatar: star.avatarSeed, text: comment.text }, hook: `${profile.stars[1].name} готовит ответ…` }
+      bestComment: { avatar: star.avatarSeed, text: comment.text }, hook: `${nextStar.name} готовит ответ…` }
     const steps: [number, LiveEvent][] = [[250, { type: 'views', views: 48 }], [650, { type: 'react', emoji: '😂' }], [1100, { type: 'comment', comment }],
-      [1450, { type: 'views', views: 190 }], [1800, { type: 'react', emoji: '🫶' }], [2250, { type: 'typing', who: profile.stars[1].name }], [2650, { type: 'react', emoji: '🔥' }],
+      [1450, { type: 'views', views: 190 }], [1800, { type: 'react', emoji: '🫶' }], [2250, { type: 'typing', who: nextStar.name }], [2650, { type: 'react', emoji: '🔥' }],
       [3000, { type: 'views', views: 312 }], [3900, { type: 'result', result }]]
     const timers = steps.map(([ms, e]) => setTimeout(() => {
       if (e.type === 'result' && sessionPlayer) {
-        saveDemoPost(sessionPlayer.id, { id: publicationId, authorId: sessionPlayer.id, text, views: result.views, reactions: [{ emoji: '😂', count: 1 }, { emoji: '🫶', count: 1 }, { emoji: '🔥', count: 1 }], comments: [comment], at: new Date().toISOString() })
+        saveDemoPost(sessionPlayer.id, { id: publicationId, authorId: sessionPlayer.id, text, views: result.views, reactions: [{ emoji: '😂', count: 1 }, { emoji: '🫶', count: 1 }, { emoji: '🔥', count: 1 }], comments: [comment], at: new Date().toISOString() }, demoWorldKey(sessionPlayer))
         sessionPlayer = saveDemoPlayer({ ...sessionPlayer, subs: sessionPlayer.subs + result.delta, postsLeft: Math.max(0, sessionPlayer.postsLeft - 1) })
       }
       onEvent(e)
@@ -278,7 +284,7 @@ export const api = {
         { id, parentCommentId: commentId, requestId, authorId: player.id, author: player.name, avatar: player.handle, handle: player.handle, text, me: true, depth: target ? (target.depth ?? 0) + 1 : 0, reactions: [] },
         { id: crypto.randomUUID(), parentCommentId: id, authorId: star.id, author: star.name, avatar: star.avatarSeed, handle: '', text: responseText, star: true, depth: target ? (target.depth ?? 0) + 2 : 1, reactions: [] }] }
       const bonus = post.comments.filter(comment => comment.me).length < 3 ? 9 : 0
-      saveDemoPost(player.id, saved)
+      saveDemoPost(player.id, saved, demoWorldKey(player))
       const event: ReplyLiveEvent = { status: 'completed', requestId, post: { ...saved, postId: saved.id }, energyLeft: player.postsLeft - 1, subscribers: player.subs + bonus }
       update(event); return event
     }
@@ -328,20 +334,20 @@ export const api = {
     }
   },
   feed: async (world: WorldId = sessionPlayer?.world ?? 'stage'): Promise<FeedItem[]> => {
-    const remote: FeedItem[] = BASE ? await call<FeedItem[]>(inWorld('/feed')) : demoOwnPosts(sessionPlayer?.id ?? '').slice(0, 20).map(post => ({
+    const remote: FeedItem[] = BASE ? await call<FeedItem[]>(inWorld('/feed')) : demoOwnPosts(sessionPlayer?.id ?? '', demoWorldKey(sessionPlayer)).slice(0, 20).map(post => ({
       kind: 'post', postId: post.id, author: sessionPlayer?.name, avatar: sessionPlayer?.handle, role: sessionPlayer?.role,
       ago: post.at, text: post.text, reactions: post.reactions, views: post.views,
       commentCount: withDemoComments(post, sessionPlayer?.id ?? '').comments.length,
     }))
     return remote
   },
-  channelPosts: (): Promise<ChannelPost[]> => BASE ? call(inWorld('/posts/mine')) : laterLazy(() => demoChannelPosts(sessionPlayer?.id ?? '')),
+  channelPosts: (): Promise<ChannelPost[]> => BASE ? call(inWorld('/posts/mine')) : laterLazy(() => demoChannelPosts(sessionPlayer?.id ?? '', demoWorldKey(sessionPlayer))),
   post: async (postId: string): Promise<Post> => {
     const demo = !BASE ? demoPost(postId) : undefined
-    const local = !BASE ? demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) : undefined
+    const local = !BASE ? demoOwnPosts(sessionPlayer?.id ?? '', demoWorldKey(sessionPlayer)).find(item => item.id === postId) : undefined
     const post = local ?? demo ?? (BASE
       ? await call<PostDetailResponse>(inWorld(`/posts/${encodeURIComponent(postId)}`)).then(({ postId: id, ...detail }) => ({ ...detail, id }))
-      : await laterLazy(() => demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) ?? mock.post(postId)))
+      : await laterLazy(() => demoOwnPosts(sessionPlayer?.id ?? '', demoWorldKey(sessionPlayer)).find(item => item.id === postId) ?? mock.post(postId)))
     if (!post) throw { status: 404 }
     return !BASE
       ? withDemoComments(post, sessionPlayer?.id ?? '') : post
@@ -359,7 +365,7 @@ export const api = {
   challenge: (): Promise<Challenge | null> => BASE ? call('/challenges/active') : later(mock.challenge),
   startChallenge: (friendId: string) => BASE ? call('/challenges', { method: 'POST', body: JSON.stringify({ friendId }) }) : later({ ok: true }),
   ownedWorldsSnapshot: (): WorldDocument[] | undefined => ownedWorldSnapshot ? structuredClone(ownedWorldSnapshot) : undefined,
-  ownedWorlds: async (): Promise<WorldDocument[]> => { const found = BASE ? await call<WorldDocument[]>('/worlds') : await later(sessionPlayer ? [{ ...worldDocumentOf(sessionPlayer.world), id: sessionPlayer.worldInstanceId ?? sessionPlayer.world, name: sessionPlayer.name, avatar: sessionPlayer.handle, subscribers: sessionPlayer.subs }] : []); ownedWorldSnapshot = found; return found },
+  ownedWorlds: async (): Promise<WorldDocument[]> => { const found = BASE ? await call<WorldDocument[]>('/worlds') : await later(sessionPlayer ? demoWorlds(sessionPlayer.id).length ? demoWorlds(sessionPlayer.id) : [{ ...worldDocumentOf(sessionPlayer.world), id: demoWorldKey(sessionPlayer), name: sessionPlayer.name, avatar: sessionPlayer.handle, subscribers: sessionPlayer.subs }] : []); ownedWorldSnapshot = found; return found },
   saveWorld: async (worldId: string, definition: WorldDefinition): Promise<Player> => {
     if (BASE) {
       await call(`/worlds/${encodeURIComponent(worldId)}`, { method: 'PUT', body: JSON.stringify(definition) })
@@ -368,7 +374,7 @@ export const api = {
     }
     installWorldContent([{ ...definition, id: worldId, subscribers: sessionPlayer?.subs ?? 120 }])
     clearApiCache()
-    return rememberPlayer({ ...sessionPlayer!, name: definition.name, handle: definition.avatar, role: definition.role, voice: definition.voice, drama: definition.drama })
+    return rememberPlayer(saveDemoPlayer({ ...sessionPlayer!, name: definition.name, handle: definition.avatar, role: definition.role, voice: definition.voice, drama: definition.drama }))
   },
   updateWorld: async (patch: WorldUpdate) => {
     if (!sessionPlayer?.worldInstanceId) throw new Error('World must be loaded before this request')

@@ -214,7 +214,9 @@ function Stage() {
   const [reloadToken, setReloadToken] = useState(0)
   useEffect(() => {
     let current = true
-    if (!cachedApi(cacheKey)) setLoad('loading')
+    const cached = cachedApi<ChannelPost[]>(cacheKey)
+    setPosts(cached ?? [])
+    setLoad(cached ? 'ready' : 'loading')
     api.channelPosts().then(items => {
       if (!current) return
       setPosts(items)
