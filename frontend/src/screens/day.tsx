@@ -93,7 +93,7 @@ function StarCard() {
 function FeedPostCard({ item }: { item: FeedItem }) {
   const nav = useNav()
   const p = usePlayer()
-  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId }) : undefined
+  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId, returnTo: 'feed' }) : undefined
   return (
     <Card style={{ marginBottom: 12, position: 'relative' }}>
       <div
@@ -241,7 +241,7 @@ function Stage() {
         <Button secondary style={{ marginBottom: 10 }} onClick={() => nav.push('04-3_invite')}>Позвать друга</Button>
         {load === 'loading' && <Card><span className="small muted">загружаем посты…</span></Card>}
         {load === 'error' && <Card><div className="small">Не получилось загрузить канал.</div><Button style={{ marginTop: 12 }} onClick={() => setReloadToken(token => token + 1)}>Попробовать снова</Button></Card>}
-        {load === 'ready' && posts.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
+        {load === 'ready' && posts.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId, returnTo: 'channel' })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
       </div>
       <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
