@@ -48,7 +48,7 @@ public sealed partial class GeneratePublicationHandler(
         if (existing is not null)
         {
             EnsureSameRequest(existing, player, requestHash);
-            yield return new PublicationStatusLiveEvent(existing.Status, request.Id) { Failure = existing.Failure };
+            yield return new PublicationStatusLiveEvent(existing.Status, request.Id, existing.Failure);
             yield break;
         }
 
@@ -74,7 +74,7 @@ public sealed partial class GeneratePublicationHandler(
             existing = await sender.Send(new GetPublicationQuery(request.Id), cancellationToken)
                 ?? throw new RequestConflictException("The publication changed concurrently.");
             EnsureSameRequest(existing, player, requestHash);
-            yield return new PublicationStatusLiveEvent(existing.Status, request.Id) { Failure = existing.Failure };
+            yield return new PublicationStatusLiveEvent(existing.Status, request.Id, existing.Failure);
             yield break;
         }
 
@@ -88,9 +88,11 @@ public sealed partial class GeneratePublicationHandler(
             try
             {
                 context = await CreatePostContextAsync(request, player, world, cancellationToken);
+                await safety.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
             }
             catch (Exception exception)
             {
+                failure = FailureOf(exception);
                 GenerationFailed(exception);
                 failed = true;
             }
@@ -103,7 +105,7 @@ public sealed partial class GeneratePublicationHandler(
             if (!failed && context is not null)
             {
                 await using var updates = generator
-                    .StreamPostTurnAsync(context, player, cancellationToken)
+                    .StreamPostTurnAsync(context, cancellationToken)
                     .GetAsyncEnumerator(cancellationToken);
                 while (!failed)
                 {
@@ -144,7 +146,7 @@ public sealed partial class GeneratePublicationHandler(
                     var complete = await sender.Send(new GetPublicationQuery(request.Id), cancellationToken)
                                    ?? throw new InvalidOperationException("The publication disappeared during generation.");
                     var turn = complete.AssembleTurn();
-                    await safety.EnsureOutputAllowedAsync(player, [turn.Comment, turn.Hook], cancellationToken);
+                    PlayerSafetyGuard.EnsureOutputAllowed([turn.Comment, turn.Hook]);
                     await store.MarkPublicationReadyAsync(request.Id, cancellationToken);
                     ready = true;
                 }
@@ -168,7 +170,8 @@ public sealed partial class GeneratePublicationHandler(
 
         yield return new PublicationStatusLiveEvent(
             failed ? PublicationStatus.Failed : PublicationStatus.ReadyForModeration,
-            request.Id) { Failure = failed ? failure : null };
+            request.Id,
+            failed ? failure : null);
     }
 
     private static PublicationFailure FailureOf(Exception exception) => exception switch

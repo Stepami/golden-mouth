@@ -7,7 +7,7 @@ namespace Reki.Application.Posts;
 
 public sealed record AddReplyCommand(
     PostId PostId,
-    CommentId TargetCommentId,
+    CommentId? TargetCommentId,
     string RequestId,
     string Text,
     WorldId WorldId) : IStreamRequest<ReplyLiveEvent>;

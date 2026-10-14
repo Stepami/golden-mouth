@@ -108,7 +108,7 @@ function Live() {
         <div style={{ position: 'absolute', right: 14, top: 120, width: 120, height: 200, pointerEvents: 'none' }}>
           {floats.map(f => <span key={f.id} className="float-react" style={{ left: `${f.x}%`, bottom: 0, fontSize: 24 }}>{f.emoji}</span>)}
         </div>
-        {comments.map(c => <Comment key={c.id} seed={c.avatar} profile={c.star && c.appearanceProfile ? { address: c.appearanceProfile === 'masculine' ? 'he' : c.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: c.ageBand } : undefined} name={c.author} handle={c.handle} text={c.text} star={c.star} />)}
+        {comments.map(c => <Comment key={c.id} seed={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} me={c.me} />)}
         {typing && <div className="muted small row" style={{ gap: 8 }}>{typing} печатает…</div>}
       </div>
       <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }} aria-live="polite">{phase === 'generating' ? 'звезда готовит ответ' : phase === 'moderating' ? 'скоро появятся реакции' : 'Собираем итог…'}</div>
@@ -182,7 +182,7 @@ function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'nor
 
           <div className="result-awards" aria-live="polite">{r.completedWants?.map(want => <div className="result-task" key={want.id}><span>✅</span><div><b>Задание выполнено</b><p>{want.text}</p><span className="small">{want.reward}</span></div></div>)}{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
           <details className="result-details"><summary>Разбор поста</summary>          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[w.icon] ?? w.icon} {w.label} {(!/^[+−-]/.test(w.value) || explainsDelta) && <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b>}</span>)}</div>
-          {r.bestComment && <div className="row" style={{ margin: '8px 0 12px' }}><Avatar seed={r.bestComment.avatar} size={28} /><span className="small">«{r.bestComment.text}»</span></div>}
+          {r.bestComment && <div className="row" style={{ margin: '8px 0 12px' }}><Avatar seed={r.bestComment.avatar} size={28} mode="default" /><span className="small">«{r.bestComment.text}»</span></div>}
           </details>
           {viral ? <>
             <Button onClick={() => nav.push('02-7_share', { post })}>Поделиться залётом</Button>
@@ -209,6 +209,8 @@ function Thread() {
   const { patch } = useStore()
   const publishedPost = nav.params.post as Post | undefined
   const postId = typeof nav.params.postId === 'string' ? nav.params.postId : publishedPost?.id
+  const stars = contentOf(player.world).stars
+  const starIds = stars.map(star => star.id).join('\0')
   const threadKey = `${player.id}:${player.worldInstanceId ?? player.world}:${postId ?? 'mock'}`
   const storageKey = `reki:reply-draft:${threadKey}`
   type Draft = { requestId: string; commentId: string | null; text: string; submitted: boolean }
@@ -247,7 +249,7 @@ function Thread() {
     api.post(postId).then(found => {
       if (!alive) return
       setPost(found); setLoad('ready')
-      const saved = found.comments.find(comment => comment.requestId === draft.requestId && comment.parentCommentId === draft.commentId && comment.text === draft.text)
+      const saved = found.comments.find(comment => comment.requestId === draft.requestId && (comment.parentCommentId ?? null) === draft.commentId && comment.text === draft.text)
       if (saved) setDraft(fresh())
     }).catch((cause: unknown) => {
       if (alive) setLoad((cause as { status?: number })?.status === 404 ? 'unavailable' : 'error')
@@ -255,9 +257,12 @@ function Thread() {
     return () => { alive = false }
     // The current draft is compared once when opening/reloading this post.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [postId, threadKey, reloadToken])
-  const canReply = !apiBaseUrl ? post?.canReply !== false : post?.canReply === true || (!!publishedPost && !post?.demoComments)
+  }, [postId, threadKey, reloadToken, starIds])
+  const postAuthor = stars.find(star => star.id === post?.authorId)
+  const isStarComment = (comment?: CommentT) => !!comment?.star && !comment.hidden && stars.some(star => star.id === comment.authorId)
   const target = post?.comments.find(comment => comment.id === draft.commentId)
+  const targetAvailable = draft.commentId === null ? !!postAuthor : isStarComment(target)
+  const recipient = draft.commentId === null ? postAuthor?.name : target?.author
   const edit = (change: Partial<Pick<Draft, 'text' | 'commentId'>>) => {
     setDraft(current => {
       const next = { ...current, ...change }
@@ -267,7 +272,7 @@ function Thread() {
     setReplyError('')
   }
   const send = async () => {
-    if (!post || !canReply || !draft.text.trim() || !draft.commentId || sending) return
+    if (!post || !targetAvailable || !draft.text.trim() || sending) return
     if (player.postsLeft < 1 && !draft.submitted) { setReplyError('Энергия закончилась. Новая появится в 9:00.'); return }
     const ctrl = new AbortController()
     controller.current = ctrl
@@ -319,22 +324,24 @@ function Thread() {
       <TopBar title="Реакции" rightPlain right={<button className="thread-exit" onClick={() => nav.replace('03-5_stage')}>В канал →</button>} />
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div></div>
-        {canReply && showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>Герой ждёт ответа</b><p>Нажми «Ответить» под репликой и продолжи историю.</p><span className="small muted">Ответ · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
-        {canReply ? (!showHelp && <div className="small muted" style={{ marginBottom: 16 }}>Ответ · 1 энергия</div>) : <div className="small muted" style={{ marginBottom: 12 }}>Этот тред доступен для чтения.</div>}
+        {showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
+        {!showHelp && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
         {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>
-          <Comment seed={comment.avatar} profile={comment.star && comment.appearanceProfile ? { address: comment.appearanceProfile === 'masculine' ? 'he' : comment.appearanceProfile === 'feminine' ? 'she' : 'nick', ageBand: comment.ageBand } : undefined} name={comment.author} handle={comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} />
+          <Comment seed={comment.avatar} name={comment.author} handle={comment.star ? comment.handle : comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} />
           {!!comment.reactions?.length && <div className="small" style={{ margin: '-6px 0 12px 44px' }}>{comment.reactions.map(reaction => <span key={`${reaction.authorId}:${reaction.emoji}`} title={reaction.author} className="react">{reaction.emoji} {reaction.author}</span>)}</div>}
-          {canReply && comment.star && !comment.hidden && <button className="small" disabled={sending} onClick={() => focusReply(comment.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: draft.commentId === comment.id ? 'var(--accent)' : 'var(--lilac)' }}>{draft.commentId === comment.id ? 'Отвечаешь этому комментарию' : `Ответить герою ${comment.author}`}</button>}
+          {isStarComment(comment) && <button className="small" disabled={sending} onClick={() => focusReply(comment.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: draft.commentId === comment.id ? 'var(--accent)' : 'var(--lilac)' }}>{draft.commentId === comment.id ? 'Отвечаешь этому комментарию' : `Ответить герою ${comment.author}`}</button>}
         </div>)}
-        {sending && <div className="card" role="status" aria-live="polite"><div className="small muted">{target?.author ?? 'Звезда'} готовит ответ…</div><div className="live-current" aria-hidden="true"><span /></div>{preview && <><p>{preview}</p><div className="small muted">Ответ ещё не опубликован</div></>}</div>}
-        {target && <div className="small muted" style={{ marginBottom: 8 }}>Отвечаешь: {target.author}</div>}
+        {sending && <div className="card" role="status" aria-live="polite"><div className="small muted">{recipient ?? 'Звезда'} готовит ответ…</div><div className="live-current" aria-hidden="true"><span /></div>{preview && <><p>{preview}</p><div className="small muted">Ответ ещё не опубликован</div></>}</div>}
+        {targetAvailable && <div className="small muted" style={{ marginBottom: 8 }}>{draft.commentId === null ? 'Комментарий к посту' : 'Отвечаешь'}: {recipient}</div>}
+        {postAuthor && draft.commentId !== null && <button disabled={sending} onClick={() => { edit({ commentId: null }); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.thread-reply-input')?.focus()) }} style={{ background: 'none', border: 'none', color: 'var(--lilac)', marginBottom: 8 }}>К посту</button>}
+        {draft.commentId && !targetAvailable && <div className="small muted" role="status" style={{ marginBottom: 8 }}>Этому аккаунту больше нельзя ответить. Выбери другой комментарий — текст ответа сохранён.</div>}
         {replyError && <div className="small" role="alert" style={{ color: 'var(--accent)', marginBottom: 12 }}>{replyError}</div>}
         <Button secondary disabled={sending} onClick={() => nav.replace('02-1_compose')}>Написать следующий пост</Button>
       </div>
-      {canReply && <div className="bottom-cta" style={{ flexDirection: 'row' }}>
-        <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input className="thread-reply-input" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={draft.commentId ? 'Ответ · 1 энергия' : 'Выбери комментарий'} maxLength={1000} disabled={!draft.commentId || sending} /></div>
-        <button className="card thread-reply-send" onClick={send} disabled={sending || !draft.text.trim() || !draft.commentId || (player.postsLeft < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
-      </div>}
+      <div className="bottom-cta" style={{ flexDirection: 'row' }}>
+        <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input className="thread-reply-input" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
+        <button className="card thread-reply-send" onClick={send} disabled={sending || !targetAvailable || !draft.text.trim() || (player.postsLeft < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
+      </div>
     </div>
   )
 }

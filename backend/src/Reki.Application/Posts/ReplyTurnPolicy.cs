@@ -33,6 +33,7 @@ public static class ReplyTurnPolicy
             throw new AiServiceUnavailableException("The model returned a forbidden identity or tone.");
         }
 
+        PlayerSafetyGuard.EnsureOutputAllowed([star, text, tone, emoji, other, otherText, otherTone]);
         return new GeneratedReplyTurn(context.TargetStarId, text, tone,  emoji.Length == 0 ? null : emoji, other.Length == 0 ? null : StarId.From(other),  otherText.Length == 0 ? null : otherText, otherTone.Length == 0 ? null : otherTone);
     }
 
@@ -49,7 +50,7 @@ public static class ReplyTurnPolicy
             _ => null,
         };
         if (text is null || text.Length > maxLength || (!empty && string.IsNullOrWhiteSpace(text)) ||
-            (text.Length > 0 && string.IsNullOrWhiteSpace(text)) || !ContentSafetyPolicy.IsOutputAllowed(text))
+            (text.Length > 0 && string.IsNullOrWhiteSpace(text)))
         {
             throw new AiServiceUnavailableException("The model returned unsafe or invalid thread content.");
         }

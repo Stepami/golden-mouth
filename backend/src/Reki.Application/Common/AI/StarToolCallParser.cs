@@ -202,9 +202,10 @@ internal static class StarToolCallParser
 
     private static double GetScore(IDictionary<string, object?> arguments, string name)
     {
+        const double defaultScore = .01;
         if (!arguments.TryGetValue(name, out var value))
         {
-            throw new InvalidOperationException("A required score is missing.");
+            return defaultScore;
         }
 
         double? score = value switch
@@ -217,7 +218,7 @@ internal static class StarToolCallParser
         };
         if (score is null or < 0 or > 1 || double.IsNaN(score.Value))
         {
-            throw new InvalidOperationException("The model returned an invalid score.");
+            return defaultScore;
         }
 
         return score.Value;

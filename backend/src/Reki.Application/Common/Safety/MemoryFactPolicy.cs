@@ -14,7 +14,7 @@ public static class MemoryFactPolicy
     {
         return fact.Length is > 0 and <= 160 &&
             !fact.Any(char.IsControl) &&
-            ContentSafetyPolicy.IsOutputAllowed(fact) &&
+            PlayerSafetyGuard.IsOutputAllowed(fact) &&
             !InstructionMarkers.Any(marker => fact.Contains(marker, StringComparison.OrdinalIgnoreCase));
     }
 }

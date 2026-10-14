@@ -4,9 +4,8 @@ namespace Reki.Contracts.Posts;
 
 public sealed record ReplyRequest
 {
-    [Required]
     [StringLength(64, MinimumLength = 1)]
-    public required string CommentId { get; init; }
+    public string? CommentId { get; init; }
 
     [Required]
     [StringLength(64, MinimumLength = 1)]

@@ -9,11 +9,11 @@ import type { WorldId } from '../api/types'
  * поэтому отдельного файла или ссылки на аватар нигде не нужно.
  * Без сида рисуем букву — так показывается бот.
  */
-export function Avatar({ seed, label, size = 40, style, world, profile, avatarStyle }: { seed?: string; label?: string; size?: number; style?: CSSProperties; world?: WorldId; profile?: AvatarProfile; avatarStyle?: string }) {
+export function Avatar({ seed, label, size = 40, style, world, profile, avatarStyle, mode }: { seed?: string; label?: string; size?: number; style?: CSSProperties; world?: WorldId; profile?: AvatarProfile; avatarStyle?: string; mode?: 'default' | 'profile' }) {
   const currentWorld = useContext(AvatarWorld)
   const people = useContext(AvatarPeople)
   if (!seed) return <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--grad)', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.4, ...style }}>{(label ?? '?').slice(0, 1).toUpperCase()}</div>
-  return <img src={avatarUri(seed, world ?? currentWorld, profile ?? people[seed], avatarStyle)} alt="" width={size} height={size} style={{ borderRadius: '50%', flex: 'none', display: 'block', ...style }} />
+  return <img src={avatarUri(seed, world ?? currentWorld, mode === 'default' ? undefined : profile ?? people[seed], avatarStyle)} alt="" width={size} height={size} style={{ borderRadius: '50%', flex: 'none', display: 'block', ...style }} />
 }
 
 export function Button({ children, secondary, onClick, disabled, style }: { children: ReactNode; secondary?: boolean; onClick?: () => void; disabled?: boolean; style?: CSSProperties }) {
@@ -72,7 +72,7 @@ export function Ribbon({ icon, title, sub, onClick }: { icon: string; title: Rea
 export function Whisper({ seed = 'mira', name = 'Мира', children }: { seed?: string; name?: string; children: ReactNode }) {
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', margin: '8px 0 10px' }}>
-      <Avatar seed={seed} size={30} />
+      <Avatar seed={seed} size={30} mode="default" />
       <div style={{ background: '#251E33', border: '1px solid #9B6BFF77', borderRadius: '14px 14px 14px 4px', padding: '8px 11px', fontSize: 13, lineHeight: 1.35 }}>
         <div style={{ color: 'var(--lilac)', fontSize: 11, marginBottom: 2 }}>{name} подсказывает</div>{children}
       </div>
@@ -86,10 +86,10 @@ export function ExpandableText({ text }: { text: string }) {
   return <div><div className={expanded ? '' : 'text-preview'}>{text}</div><button className="text-link read-more" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(!expanded) }}> {expanded ? 'Свернуть' : 'Читать дальше'}</button></div>
 }
 
-export function Comment({ seed, name, handle, text, star, me, onMore, profile }: { profile?: AvatarProfile; seed: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
+export function Comment({ seed, name, handle, text, star, me, onMore }: { seed: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
   return (
     <div style={{ display: 'flex', gap: 10, marginBottom: 13 }}>
-      <Avatar seed={seed} size={34} profile={profile} />
+      <Avatar seed={seed} size={34} mode={me ? 'profile' : 'default'} />
       <div style={{ flex: 1 }}>
         <div className="row comment-heading" style={{ gap: 6 }}><b>{name}</b><span className="muted small">{handle}</span>{star && <span className="small" style={{ color: 'var(--accent)' }}>★ звезда</span>}{me && <span className="small muted">ты</span>}
           {onMore && <button onClick={onMore} aria-label="Пожаловаться" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>}</div>

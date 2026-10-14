@@ -5,17 +5,34 @@ namespace Reki.Application.Common.Safety;
 
 public sealed class PlayerSafetyGuard(
     IGameStore store,
-    TimeProvider timeProvider,
-    IContentModerator moderator)
+    TimeProvider timeProvider)
 {
     private static readonly TimeSpan HateCooldown = TimeSpan.FromDays(7);
+    private static readonly string[] CrisisPhrases =
+    [
+        "не хочу жить", "хочу умереть", "убить себя", "покончить с собой", "самоубий", "suicide", "kill myself",
+    ];
 
-    public async ValueTask EnsureOutputAllowedAsync(PlayerProfile player, IEnumerable<string> texts, CancellationToken cancellationToken)
+    private static readonly string[] AgeRestrictedPhrases =
+    [
+        "порно", "секс", "наркот", "героин", "кокаин", "расчлен", "изнасил",
+    ];
+
+    private static readonly string[] PersonalHarassmentPhrases =
+    [
+        "жирн", "урод", "страшилищ", "тупая семья", "тупой отец", "тупая мать",
+    ];
+
+    public static bool IsOutputAllowed(string text) => OutputRejectionCategory(text) is null;
+
+    public static void EnsureOutputAllowed(IEnumerable<string> texts)
     {
-        var review = await moderator.ReviewAsync(player, texts.ToArray(), cancellationToken);
-        if (review.Decision != SafetyDecision.Allowed)
+        foreach (var text in texts)
         {
-            throw new UnsafeGeneratedContentException(review.Category);
+            if (OutputRejectionCategory(text) is { } category)
+            {
+                throw new UnsafeGeneratedContentException(category);
+            }
         }
     }
 
@@ -24,8 +41,22 @@ public sealed class PlayerSafetyGuard(
         IEnumerable<string> texts,
         CancellationToken cancellationToken)
     {
-        var review = await moderator.ReviewAsync(player, texts.ToArray(), cancellationToken);
-        var decision = review.Decision;
+        cancellationToken.ThrowIfCancellationRequested();
+        var decision = SafetyDecision.Allowed;
+        foreach (var text in texts)
+        {
+            if (ContainsAny(text, CrisisPhrases))
+            {
+                decision = SafetyDecision.Crisis;
+                break;
+            }
+
+            if (ContainsAny(text, AgeRestrictedPhrases))
+            {
+                decision = SafetyDecision.Rejected;
+            }
+        }
+
         if (decision == SafetyDecision.Allowed)
         {
             return;
@@ -33,17 +64,31 @@ public sealed class PlayerSafetyGuard(
 
         if (decision == SafetyDecision.Rejected)
         {
-            throw new ContentRejectedException(review.Category);
+            throw new ContentRejectedException("explicit_content");
         }
 
         var now = timeProvider.GetUtcNow();
         var paused = player.StartCrisisPause(now, HateCooldown);
-        var replaced = await store.TryReplacePlayerAsync(paused, player.Version, cancellationToken);
-        if (!replaced)
-        {
-            throw new RequestConflictException("The player state changed while applying crisis safety.");
-        }
+        await store.TryReplacePlayerAsync(paused, player.Version, cancellationToken);
 
         throw new CrisisDetectedException(player.BirthGroup == "14-17");
     }
+
+    private static string? OutputRejectionCategory(string text)
+    {
+        if (ContainsAny(text, CrisisPhrases))
+        {
+            return "crisis";
+        }
+
+        if (ContainsAny(text, AgeRestrictedPhrases))
+        {
+            return "explicit_content";
+        }
+
+        return ContainsAny(text, PersonalHarassmentPhrases) ? "harassment" : null;
+    }
+
+    private static bool ContainsAny(string text, IEnumerable<string> phrases) =>
+        phrases.Any(phrase => text.Contains(phrase, StringComparison.OrdinalIgnoreCase));
 }

@@ -1,6 +1,7 @@
 // Клиент API. Runtime config выбирает backend или тестовые данные (mock.ts).
 // Во фронте НЕТ секретов: runtime config виден в браузере. Ключи LLM и токен бота живут только на бэкенде.
 import { clearPlayerDrafts } from '../app/postDraft'
+import { clearApiCache } from '../app/useApi'
 import * as mock from './mock'
 import { error, warn } from '../app/log'
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics'
@@ -225,22 +226,22 @@ export const api = {
     onStatus?.('pending')
     const profile = contentOf(sessionPlayer?.world ?? 'stage')
     const star = profile.stars[0]
-    const comment = { ...mock.liveComment, id: crypto.randomUUID(), author: star.name, avatar: star.id, handle: star.role, text: 'Вот это история! Расскажешь, что было дальше?', star: true }
+    const comment = { ...mock.liveComment, id: crypto.randomUUID(), authorId: star.id, author: star.name, avatar: star.avatarSeed, handle: `@${star.avatarSeed.replace(/^@+/, '')}`, text: 'Вот это история! Расскажешь, что было дальше?', star: true }
     const result = { ...mock.results.normal, postId: publicationId, headline: `${star.name} замечает твой пост`,
-      bestComment: { avatar: star.id, text: comment.text }, hook: `${profile.stars[1].name} готовит ответ…` }
+      bestComment: { avatar: star.avatarSeed, text: comment.text }, hook: `${profile.stars[1].name} готовит ответ…` }
     const steps: [number, LiveEvent][] = [[250, { type: 'views', views: 48 }], [650, { type: 'react', emoji: '😂' }], [1100, { type: 'comment', comment }],
       [1450, { type: 'views', views: 190 }], [1800, { type: 'react', emoji: '🫶' }], [2250, { type: 'typing', who: profile.stars[1].name }], [2650, { type: 'react', emoji: '🔥' }],
       [3000, { type: 'views', views: 312 }], [3900, { type: 'result', result }]]
     const timers = steps.map(([ms, e]) => setTimeout(() => {
       if (e.type === 'result' && sessionPlayer) {
-        saveDemoPost(sessionPlayer.id, { id: publicationId, text, views: result.views, reactions: [{ emoji: '😂', count: 1 }, { emoji: '🫶', count: 1 }, { emoji: '🔥', count: 1 }], comments: [comment], canReply: false, demoComments: true, at: new Date().toISOString() })
+        saveDemoPost(sessionPlayer.id, { id: publicationId, authorId: sessionPlayer.id, text, views: result.views, reactions: [{ emoji: '😂', count: 1 }, { emoji: '🫶', count: 1 }, { emoji: '🔥', count: 1 }], comments: [comment], at: new Date().toISOString() })
         sessionPlayer = saveDemoPlayer({ ...sessionPlayer, subs: sessionPlayer.subs + result.delta, postsLeft: Math.max(0, sessionPlayer.postsLeft - 1) })
       }
       onEvent(e)
     }, ms * 1.1))
     return () => timers.forEach(clearTimeout)
   },
-  reply: async (postId: string, commentId: string, requestId: string, text: string,
+  reply: async (postId: string, commentId: string | null, requestId: string, text: string,
     options: { signal?: AbortSignal; onEvent?: (event: ReplyLiveEvent) => void } = {}): Promise<ReplyLiveEvent> => {
     const signal = options.signal
     const path = BASE ? inWorld(`/posts/${encodeURIComponent(postId)}/replies`) : ''
@@ -256,14 +257,15 @@ export const api = {
     if (!BASE) {
       const post = await api.post(postId)
       const existing = post.comments.find(comment => comment.requestId === requestId)
-      if (existing && (existing.text !== text || existing.parentCommentId !== commentId)) throw new ApiError(409, 'POST', '/posts/:id/replies')
+      if (existing && (existing.text !== text || (existing.parentCommentId ?? null) !== commentId)) throw new ApiError(409, 'POST', '/posts/:id/replies')
       if (existing) {
         const event: ReplyLiveEvent = { status: 'completed', requestId, post: { ...post, postId: post.id }, energyLeft: player.postsLeft, subscribers: player.subs }
         update(event); return event
       }
       if (player.postsLeft < 1) throw new ApiError(409, 'POST', '/posts/:id/replies')
       const target = post.comments.find(comment => comment.id === commentId && comment.star && !comment.hidden)
-      if (!target) throw new ApiError(409, 'POST', '/posts/:id/replies')
+      const star = contentOf(player.world).stars.find(value => value.id === (commentId === null ? post.authorId : target?.authorId))
+      if (!star || (commentId !== null && !target)) throw new ApiError(409, 'POST', '/posts/:id/replies')
       update({ status: 'generating', requestId })
       await later(undefined, 650)
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
@@ -271,9 +273,9 @@ export const api = {
       update({ status: 'generating', requestId, text: responseText })
       const id = crypto.randomUUID()
       const saved: Post = { ...post, comments: [...post.comments,
-        { id, parentCommentId: target.id, requestId, authorId: player.id, author: player.name, avatar: player.handle, handle: player.handle, text, me: true, depth: (target.depth ?? 0) + 1, reactions: [] },
-        { id: crypto.randomUUID(), parentCommentId: id, authorId: target.authorId ?? target.avatar, author: target.author, avatar: target.avatar, handle: target.handle, text: responseText, star: true, depth: (target.depth ?? 0) + 2, reactions: [] }] }
-      const bonus = post.comments.filter(comment => comment.me && comment.parentCommentId).length < 3 ? 9 : 0
+        { id, parentCommentId: commentId, requestId, authorId: player.id, author: player.name, avatar: player.handle, handle: player.handle, text, me: true, depth: target ? (target.depth ?? 0) + 1 : 0, reactions: [] },
+        { id: crypto.randomUUID(), parentCommentId: id, authorId: star.id, author: star.name, avatar: star.avatarSeed, handle: '', text: responseText, star: true, depth: target ? (target.depth ?? 0) + 2 : 1, reactions: [] }] }
+      const bonus = post.comments.filter(comment => comment.me).length < 3 ? 9 : 0
       saveDemoPost(player.id, saved)
       const event: ReplyLiveEvent = { status: 'completed', requestId, post: { ...saved, postId: saved.id }, energyLeft: player.postsLeft - 1, subscribers: player.subs + bonus }
       update(event); return event
@@ -324,10 +326,8 @@ export const api = {
     }
   },
   feed: async (world: WorldId = sessionPlayer?.world ?? 'stage'): Promise<FeedItem[]> => {
-    const remoteData = BASE ? await Promise.all([call<FeedItem[]>(inWorld('/feed')), call<ChannelPost[]>(inWorld('/posts/mine'))]) : undefined
-    const ownedPostIds = new Set(remoteData?.[1].map(post => post.postId))
-    const remote: FeedItem[] = remoteData ? remoteData[0].map(item => ({ ...item, canReply: !!item.postId && ownedPostIds.has(item.postId) })) : demoOwnPosts(sessionPlayer?.id ?? '').slice(0, 20).map(post => ({
-      kind: 'post', postId: post.id, canReply: true, author: sessionPlayer?.name, avatar: sessionPlayer?.handle, role: sessionPlayer?.role,
+    const remote: FeedItem[] = BASE ? await call<FeedItem[]>(inWorld('/feed')) : demoOwnPosts(sessionPlayer?.id ?? '').slice(0, 20).map(post => ({
+      kind: 'post', postId: post.id, author: sessionPlayer?.name, avatar: sessionPlayer?.handle, role: sessionPlayer?.role,
       ago: post.at, text: post.text, reactions: post.reactions, views: post.views,
       commentCount: withDemoComments(post, sessionPlayer?.id ?? '').comments.length,
     }))
@@ -342,7 +342,7 @@ export const api = {
       : await laterLazy(() => demoOwnPosts(sessionPlayer?.id ?? '').find(item => item.id === postId) ?? mock.post(postId)))
     if (!post) throw { status: 404 }
     return !BASE
-      ? withDemoComments({ ...post, demoComments: post.demoComments || !post.canReply }, sessionPlayer?.id ?? '') : post
+      ? withDemoComments(post, sessionPlayer?.id ?? '') : post
   },
   friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),
   dm: (starId: string): Promise<Dm> => BASE ? call(inWorld(`/dm/${starId}`)) : laterLazy(() => {
@@ -361,9 +361,11 @@ export const api = {
   saveWorld: async (worldId: string, definition: WorldDefinition): Promise<Player> => {
     if (BASE) {
       await call(`/worlds/${encodeURIComponent(worldId)}`, { method: 'PUT', body: JSON.stringify(definition) })
+      clearApiCache()
       return api.me(worldId)
     }
     installWorldContent([{ ...definition, id: worldId, subscribers: sessionPlayer?.subs ?? 120 }])
+    clearApiCache()
     return rememberPlayer({ ...sessionPlayer!, name: definition.name, handle: definition.avatar, role: definition.role, voice: definition.voice, drama: definition.drama })
   },
   updateWorld: async (patch: WorldUpdate) => {

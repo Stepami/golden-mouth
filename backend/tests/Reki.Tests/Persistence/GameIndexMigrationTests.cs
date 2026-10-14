@@ -150,7 +150,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
         var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(14L);
+        await Assert.That(historyCount).IsEqualTo(12L);
     }
 
     [Test]
@@ -728,7 +728,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     }
 
     [Test]
-    public async Task RefreshCatalog_PreservesExistingDataAsync()
+    public async Task ReleaseCatalog_PreservesExistingDataAsync()
     {
         await using var scope = CreateDatabase();
         var database = scope.Database;
@@ -739,7 +739,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var existing = Common.TestGameData.CreateWorld().ToBsonDocument();
         await database.GetCollection<BsonDocument>("worlds").InsertOneAsync(existing);
         session.StartTransaction();
-        await new RefreshWorldPresets().UpAsync(database, session, CancellationToken.None);
+        await new ReleaseWorldCatalog().UpAsync(database, session, CancellationToken.None);
         await session.CommitTransactionAsync();
         var catalog = await templates.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
         await Assert.That(catalog.Select(item => item["_id"].AsString)).IsEquivalentTo(["it", "evening", "sorcerers", "houses"]);
@@ -764,7 +764,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     }
 
     [Test]
-    public async Task UnlockOwnWorld_UsesOneWorldOrReceivedInviterBonusAsync()
+    public async Task ReleaseCatalog_UsesOneWorldOrReceivedInviterBonusAsync()
     {
         await using var scope = CreateDatabase();
         var database = scope.Database;
@@ -782,7 +782,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             new BsonDocument { ["InviterId"] = "locked", ["InviterBonusUsed"] = false },
         });
         using var session = await mongo.MongoClient.StartSessionAsync();
-        await new UnlockOwnWorld().UpAsync(database, session, CancellationToken.None);
+        await new ReleaseWorldCatalog().UpAsync(database, session, CancellationToken.None);
         var result = await players.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
         await Assert.That(result.Where(player => player["HitOwnWorldMilestone"].AsBoolean).Select(player => player["_id"].AsString)).IsEquivalentTo(["threshold", "referral"]);
     }
@@ -864,8 +864,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         };
         if (includeRelease)
         {
-            migrations.Add(new RefreshWorldPresets());
-            migrations.Add(new UnlockOwnWorld());
             migrations.Add(new ReleaseWorldCatalog());
         }
 

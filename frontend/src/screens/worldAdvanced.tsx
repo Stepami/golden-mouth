@@ -4,6 +4,7 @@ import { setWorldDraft, updateWorldDraft, type WorldDraft } from '../app/worldDr
 import type { Address, WorldDefinition } from '../api/types'
 import { Avatar, BottomCTA, Button, Segmented, TopBar } from '../ui'
 import { TextField } from '../ui/TextField'
+import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import { DramaPicker } from './worldQuick'
 
 export function AgeRuleNote({ teen = true }: { teen?: boolean }) {
@@ -25,8 +26,9 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
     <h1>Добавь свои детали</h1><p className="muted">Открой нужный раздел. Остальное можно оставить как есть.</p>
     {section('person', 'Твой персонаж', d.name ? `${d.name} · ${d.role}` : 'Имя, занятие и портрет', <>
       {text('Имя персонажа', 'name', undefined, 1, 80)}{text('Кто ты в этой истории', 'role', 'Например: фотограф, который замечает странности.', 2, 80)}
-      <div className="editor-preview"><Avatar seed={d.avatar || 'new-player'} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand }} size={48} /><div><b>{d.name || 'Твой персонаж'}</b><p className="small muted">{d.role || 'Твоё занятие в мире'}</p></div></div>
-      <details className="editor-extra"><summary>Портрет и обращение</summary>{text('Ключ портрета', 'avatar', 'Из этого текста собирается аватар. Это не описание внешности.', 1, 80)}<Segmented value={d.avatarStyle} onChange={avatarStyle => update({ avatarStyle })} options={['lorelei', 'notionists', 'pixelArt', 'thumbs', 'shapes'].map((id, i) => ({ id, label: ['портрет', 'скетч', 'пиксели', 'мини', 'формы'][i] }))} /><p className="label">Как к тебе обращаться</p><Segmented value={draft.address} onChange={(address: Address) => setWorldDraft({ ...draft, address })} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} /></details>
+      <div className="editor-preview"><Avatar seed={d.avatar || 'new-player'} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={48} /><div><b>{d.name || 'Твой персонаж'}</b><p className="small muted">{d.role || 'Твоё занятие в мире'}</p></div></div>
+      <AvatarPersonalization enabled={draft.personalizeAvatar !== false} onChange={personalizeAvatar => setWorldDraft({ ...draft, personalizeAvatar })} />
+      <details className="editor-extra"><summary>Портрет и обращение</summary>{text('Ключ портрета', 'avatar', 'Из этого текста собирается аватар. Это не описание внешности.', 1, 80)}<Segmented value={d.avatarStyle} onChange={avatarStyle => update({ avatarStyle })} options={['lorelei', 'notionists', 'pixelArt', 'thumbs', 'shapes', 'adventurer'].map((id, i) => ({ id, label: ['портрет', 'скетч', 'пиксели', 'мини', 'формы', 'приключения'][i] }))} /><p className="label">Как к тебе обращаться</p><Segmented value={draft.address} onChange={(address: Address) => setWorldDraft({ ...draft, address })} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} /></details>
       <StringList title="Варианты для своего персонажа" help="Готовые варианты занятия при выборе своего персонажа. Например: фотограф или автор местной хроники." values={d.roles} onChange={roles => update({ roles })} />
     </>)}
     {section('world', 'Мир и начало истории', d.title || 'Место, атмосфера и первая ситуация', <>
@@ -36,7 +38,7 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
     </>)}
     {section('heroes', 'Герои вокруг тебя', `${d.stars.length} героев · пишут в ленте и отвечают на посты`, <>
       <p className="small muted">Это другие жители мира. Персонаж, за которого ты играешь, сюда не входит.</p>
-      {d.stars.map(star => <details className="editor-extra hero-editor" key={star.id}><summary><Avatar seed={star.avatarSeed || star.id} avatarStyle={d.avatarStyle} size={34} /><span>{star.name || 'Новый герой'}<span className="small muted">{star.role || 'Добавь занятие героя'}</span></span></summary>
+      {d.stars.map(star => <details className="editor-extra hero-editor" key={star.id}><summary><Avatar seed={star.avatarSeed || star.id} avatarStyle={d.avatarStyle} mode="default" size={34} /><span>{star.name || 'Новый герой'}<span className="small muted">{star.role || 'Добавь занятие героя'}</span></span></summary>
         <TextField label="Имя героя" value={star.name} onChange={name => changeStar(star.id, { name })} maxLength={80} rows={1} /><TextField label="Чем занимается герой" value={star.role} onChange={role => changeStar(star.id, { role })} maxLength={80} rows={1} /><TextField label="Характер и история" value={star.about} onChange={about => changeStar(star.id, { about })} rows={3} placeholder="Что для него важно? Что он скрывает?" /><TextField label="Как герой общается" value={star.voice} onChange={voice => changeStar(star.id, { voice })} rows={2} placeholder="Например: сдержанно, с сухим юмором" />
         <details className="editor-extra"><summary>Портрет и главная черта</summary><TextField label="Ключ портрета героя" value={star.avatarSeed} onChange={avatarSeed => changeStar(star.id, { avatarSeed })} rows={1} maxLength={80} /><label className="label">Главная черта<select value={star.trait} onChange={e => changeStar(star.id, { trait: Number(e.target.value) })}>{['Смелость', 'Поддержка', 'Загадка', 'Воображение', 'Любопытство', 'Энергия', 'Ирония и расчёт', 'Сухой юмор', 'Самоирония', 'Азарт', 'Внимание'].map((label, i) => <option key={label} value={i}>{label}</option>)}</select></label></details>
         <button className="text-link down" onClick={() => update({ stars: d.stars.filter(s => s.id !== star.id) })}>Убрать героя</button>

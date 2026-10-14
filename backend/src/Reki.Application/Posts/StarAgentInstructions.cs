@@ -1,13 +1,14 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.AI;
 using Reki.Application.Common.Safety;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
 
-public static class StarAgentInstructions
+public static partial class StarAgentInstructions
 {
     private static readonly StarPromptJsonContext JsonContext = new(new JsonSerializerOptions
     {
@@ -101,4 +102,9 @@ public static class StarAgentInstructions
 
         return Encoding.UTF8.GetString(stream.ToArray());
     }
+
+    [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+    [JsonSerializable(typeof(StarPlayerPromptData))]
+    [JsonSerializable(typeof(string[]))]
+    private sealed partial class StarPromptJsonContext : JsonSerializerContext;
 }
