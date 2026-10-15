@@ -1,5 +1,5 @@
-import type { ChannelPost, CommentT, FeedItem, Player, Post, WorldId } from './types'
-import { contentOf, wantsFor, worlds } from './worldContent'
+import type { ChannelPost, CommentT, FeedItem, Player, Post, WorldId, WorldDocument } from './types'
+import { contentOf, wantsFor, worlds, worldDocumentOf } from './worldContent'
 import { player as examplePlayer } from './mock'
 
 const PLAYER_KEY = 'reki:demo-player:v2'
@@ -12,7 +12,11 @@ function save(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* Демо работает и без хранилища браузера. */ }
 }
 let currentPlayer = read<Player>(PLAYER_KEY)
-export function demoPlayer(): Player {
+export function demoPlayer(worldId?: string): Player {
+  if (worldId && currentPlayer) {
+    const selected = read<Player>(`reki:demo-world-player:${currentPlayer.id}:${worldId}`)
+    if (selected) { currentPlayer = selected; save(PLAYER_KEY, selected) }
+  }
   if (currentPlayer) return structuredClone(currentPlayer)
   const query = new URLSearchParams(location.search)
   if (query.has('screen') || query.has('gallery')) {
@@ -25,13 +29,16 @@ export function demoPlayer(): Player {
 export function saveDemoPlayer(player: Player): Player {
   currentPlayer = structuredClone(player)
   save(PLAYER_KEY, currentPlayer)
+  save(`reki:demo-world-player:${player.id}:${demoWorldKey(player)}`, currentPlayer)
+  const world = worldDocumentOf(player.world)
+  saveDemoWorld(player.id, { ...world, id: demoWorldKey(player), name: player.name, avatar: player.handle, subscribers: player.subs })
   return structuredClone(currentPlayer)
 }
 export function resetDemoPlayer(playerId = currentPlayer?.id) {
   if (playerId) {
     try {
       for (const key of Object.keys(localStorage)) {
-        if (key === `reki:demo-posts:${playerId}` || key === `reki:first-star:${playerId}` || key.startsWith(`reki:demo-comments:${playerId}:`) || key.startsWith(`reki:reply-draft:${playerId}:`)) localStorage.removeItem(key)
+        if (key === `reki:demo-posts:${playerId}` || key.startsWith(`reki:demo-posts:v2:${playerId}:`) || key === `reki:demo-worlds:${playerId}` || key.startsWith(`reki:demo-world-player:${playerId}:`) || key === `reki:first-star:${playerId}` || key.startsWith(`reki:demo-comments:${playerId}:`) || key.startsWith(`reki:reply-draft:${playerId}:`)) localStorage.removeItem(key)
       }
     } catch { /* optional storage */ }
   }
@@ -39,10 +46,14 @@ export function resetDemoPlayer(playerId = currentPlayer?.id) {
   currentPlayer = undefined
   try { localStorage.removeItem(PLAYER_KEY) } catch { /* optional storage */ }
 }
-export const demoOwnPosts = (playerId: string): Post[] => read<Post[]>(`reki:demo-posts:${playerId}`) ?? []
-export const demoChannelPosts = (playerId: string): ChannelPost[] => demoOwnPosts(playerId).map(post => ({ postId: post.id, text: post.text,
+export const demoWorlds = (playerId: string): WorldDocument[] => read<WorldDocument[]>(`reki:demo-worlds:${playerId}`) ?? []
+export function saveDemoWorld(playerId: string, world: WorldDocument) { save(`reki:demo-worlds:${playerId}`, [world, ...demoWorlds(playerId).filter(item => item.id !== world.id)]) }
+export const demoWorldKey = (player?: Pick<Player, 'world' | 'worldInstanceId'>) => player?.worldInstanceId ?? player?.world ?? 'missing'
+const postsKey = (playerId: string, worldId: string) => `reki:demo-posts:v2:${playerId}:${worldId}`
+export const demoOwnPosts = (playerId: string, worldId: string): Post[] => read<Post[]>(postsKey(playerId, worldId)) ?? []
+export const demoChannelPosts = (playerId: string, worldId: string): ChannelPost[] => demoOwnPosts(playerId, worldId).map(post => ({ postId: post.id, text: post.text,
   createdAtUtc: post.at ?? '', views: post.views, reactions: post.reactions, commentCount: withDemoComments(post, playerId).comments.length }))
-export function saveDemoPost(playerId: string, post: Post) { save(`reki:demo-posts:${playerId}`, [post, ...demoOwnPosts(playerId).filter(item => item.id !== post.id)]) }
+export function saveDemoPost(playerId: string, post: Post, worldId: string) { save(postsKey(playerId, worldId), [post, ...demoOwnPosts(playerId, worldId).filter(item => item.id !== post.id)]) }
 export const demoPost = (id: string): Post | undefined => {
   return posts.has(id) ? structuredClone(posts.get(id)!) : undefined
 }

@@ -1,6 +1,6 @@
+import { usePresetGoal } from '../ui/StoryGoal'
 import { WorldCover } from '../ui/WorldCover'
-import mashaPortrait from '../assets/masha-v2.jpg'
-import { trackImage } from '../app/imageTiming'
+import approvedIntro from '../assets/intro-school-approved.png'
 import { useEffect, useRef, useState } from 'react'
 import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
@@ -25,19 +25,28 @@ function Steps({ n, back = true }: { n: number; back?: boolean }) {
   )
 }
 
-// 01-1: сообщение друга в Telegram (вход по карточке)
+/** Exact portrait windows from the approved sketch; no regenerated character artwork. */
+function IntroPortrait({ character }: { character: 'masha' | 'gosha' }) {
+  const masha = character === 'masha'
+  return <svg className={`intro-portrait intro-portrait-${character}`} viewBox={masha ? '85 626 116 116' : '142 931 168 168'} role="img" aria-label={masha ? 'Маша' : 'Гоша в круглых очках с волшебной палочкой'}>
+    <image href={approvedIntro} width="1036" height="1518" />
+  </svg>
+}
+
+// 01-1: approved school mini-dialogue, preserving the existing welcome layout.
 function Invite() {
   const nav = useNav()
   return <div className="screen no-tab welcome"><div className="pad">
-    <div className="brand">реки</div><h1>Твой пост может<br />взорвать ленту.</h1>
-    <p className="muted">Собери фанатов, попади в драму и стань главным героем своей истории.</p>
+    <div className="brand">реки</div><h1>Твой пост<br />запускает историю.</h1>
+    <p className="muted">Веди блог в вымышленном мире.<br />Пиши посты — персонажи ответят.</p>
     <div className="welcome-post card" aria-label="Пример игрового поста">
-      <div className="row"><img className="welcome-avatar welcome-photo" src={mashaPortrait} width={44} height={44} fetchPriority="high" onLoad={e => trackImage(e.currentTarget, 'welcome_portrait')} onError={() => trackImage(null, 'welcome_portrait')} alt="Маша" /><div><b>Маша в тридевятом царстве</b><div className="small muted">только что</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
-      <p>Выложила фото с бала. Все обсуждают парня рядом со мной. Вообще-то я пришла одна 👀</p>
-      <div className="row"><span className="react">🔥 2,4k</span><span className="react">💀 890</span><span className="small muted">🫶 1,2k</span></div>
-      <div className="welcome-reply"><b>Джеймс · рыцарь великого дома</b><div>Ты всё-таки заметила меня. Оставишь мне первый танец на следующем балу?</div></div>
+      <div className="row"><IntroPortrait character="masha" /><div><b>Маша · Школа чародеев</b><div className="small muted">Пример игрового поста</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
+      <p>Выложила фото тайной комнаты. Утром дверь исчезла. Кто-нибудь ещё её видел? 👀</p>
+      <div className="row"><span className="react">🔥 2,4k</span><span className="react">💀 890</span><span className="react">🫶 1,2k</span></div>
+      <div className="welcome-reply"><IntroPortrait character="gosha" /><div><b>Гоша · ученик школы магии</b><div>Я. И оставил там свою палочку. Пойдём искать дверь — только Георгине пока не говори.</div></div></div>
     </div>
-    <p className="small muted">Фанаты и события виртуальные. Посты остаются внутри игры.</p>
+    <p className="small muted welcome-disclaimer">Персонажи и фанаты виртуальные.<br />Посты остаются внутри игры.</p>
+    <p className="welcome-world-choice">Выбери мир или создай свой</p>
   </div><BottomCTA main="Начать играть" onMain={() => nav.push('01-2_age')} /></div>
 }
 
@@ -103,13 +112,12 @@ export function ChannelHead() {
   )
 }
 export function Home() {
-  const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world)
-  return <div className="screen"><ChannelHead /><div className="pad">
-    <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}<div className="small eyebrow">Твоя история начинается</div><p className="first-story-context">{profile.firstContext}</p>
+  const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
+  return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
+    <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{profile.firstContext}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
       {p.firstPostInviteBonus > 0 && <p>🎁 Первый пост даст ещё {p.firstPostInviteBonus} энергии</p>}
-      <button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button>
-    </div><p className="small muted first-story-footer">Твои посты меняют историю</p>
-  </div></div>
+    </div><p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>
+  </div><div className="bottom-cta" style={{ bottom: 78 }}><button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button></div></div>
 }
 
 register({

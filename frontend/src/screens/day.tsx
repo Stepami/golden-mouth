@@ -1,3 +1,4 @@
+import { StoryGoal } from '../ui/StoryGoal'
 import { ExpandableText } from '../ui'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import { setAvatarPersonalization, useAvatarPersonalization } from '../app/avatarPersonalization'
@@ -213,7 +214,9 @@ function Stage() {
   const [reloadToken, setReloadToken] = useState(0)
   useEffect(() => {
     let current = true
-    if (!cachedApi(cacheKey)) setLoad('loading')
+    const cached = cachedApi<ChannelPost[]>(cacheKey)
+    setPosts(cached ?? [])
+    setLoad(cached ? 'ready' : 'loading')
     api.channelPosts().then(items => {
       if (!current) return
       setPosts(items)
@@ -227,6 +230,7 @@ function Stage() {
     <div className="screen channel-screen">
       <ChannelHead />
       <div className="pad">
+        <StoryGoal world={p.world} />
         {banner && p.subs >= 1000 && <Card style={{ marginBottom: 10, background: 'linear-gradient(135deg,#2A1A2E,#1E1A33)', border: '1px solid #FF6B8B55', position: 'relative' }}>
           <button onClick={() => setBanner(false)} className="muted" style={{ position: 'absolute', right: 14, top: 10, background: 'none', border: 'none' }}>✕</button>
           <span className="badge">НОВЫЙ ЭТАП · 1 000 ПОДПИСЧИКОВ</span>
@@ -279,7 +283,6 @@ function Me() {
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b><span className="small" style={{ color: 'var(--lilac)' }}>все ›</span></div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6 }}>{p.collection.map(c => <div key={c.id} className={`slot${c.open ? ' on' : ''}`} onClick={() => c.emoji === '👑' && nav.push('03-2_star_card')} style={{ fontSize: c.open ? 22 : 14 }}>{c.open ? c.emoji : '?'}</div>)}</div>
         </Card>}
-        {p.nextWorld && <Card><div className="row"><div style={{ fontSize: 22 }}>🔒</div><div style={{ flex: 1 }}><b>Мир «{p.nextWorld.title}»</b><div className="small muted">откроется на {p.nextWorld.need}</div></div><button onClick={() => nav.push('04-3_invite')} className="small" style={{ color: 'var(--gift)', background: 'none', border: 'none' }}>позвать друга ›</button></div></Card>}
       </div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
     </div>

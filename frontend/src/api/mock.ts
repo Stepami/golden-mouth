@@ -17,7 +17,6 @@ export const player: Player = {
     { id: 'c5', emoji: '🤝', title: 'Дуэт', open: true }, { id: 'c6', emoji: '', title: '', open: false },
   ],
   bio: 'первый год в агентстве. путаю право и лево, но очень стараюсь ✨', type: 'дерзкая с самоиронией',
-  nextWorld: { id: 'stream', title: 'Стрим', need: '😂 юмор 4' },
   drama: 'mid', voice: '«коротко, с самоиронией»',
   settings: { notifications: 'до 3 в день', quiet: '22:00–9:00', plus: false },
 }
@@ -53,7 +52,7 @@ export const post = (postId: string): Post => {
 export const results: Record<'normal' | 'flop' | 'viral', PostResult> = {
   normal: { postId: 'post1', delta: 38, headline: 'Тебя заметили: первый мем уже есть', views: 312, viral: false, flop: false,
     whys: [{ icon: '😂', label: 'смешно', value: '+28' }, { icon: '🔥', label: 'смело', value: '+10' }],
-    ribbons: [{ icon: '🌊', title: 'Пост почти залетел в Реки', sub: 'не хватило 12 репостов: смелее, и залетит' }, { icon: '👑', title: 'Мира: отношения +1' }],
+    ribbons: [],
     bestComment: { avatar: 'mira', text: '„уверенно“ это комплимент, поверь' }, hook: 'Соня пишет ответ…' },
   flop: { postId: 'post2', delta: -4, headline: 'Агентство сделало вид, что не видело этот пост', views: 640, viral: false, flop: true,
     whys: [{ icon: '🎤', label: 'мимо темы мира', value: '−7' }, { icon: '😂', label: 'смешно', value: '+3' }],
@@ -61,7 +60,7 @@ export const results: Record<'normal' | 'flop' | 'viral', PostResult> = {
     bestComment: { avatar: 'critic', text: 'а при чём тут Сцена?' } },
   viral: { postId: 'post1', delta: 620, headline: 'Мира сделала репост. Фанаты BLESK пошли смотреть, кто такая Лиза', views: 48000, viral: true, flop: false,
     whys: [{ icon: '👁', label: 'охват 48k', value: '×12' }],
-    ribbons: [{ icon: '🃏', title: 'Новая карточка: Первый залёт', sub: 'нажми, чтобы открыть' }, { icon: '👑', title: 'Мира: отношения +1' }],
+    ribbons: [],
     bestComment: { avatar: 'mira', text: 'трейни, учитесь' } },
 }
 

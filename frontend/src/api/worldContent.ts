@@ -92,3 +92,8 @@ export function worldDefinitionOf(world: WorldId): WorldDefinition {
   const { id: _id, subscribers: _subscribers, lock: _lock, ...definition } = structuredClone(template)
   return { ...definition, rules: definition.rules.map(rule => ({ ...rule, locked: rule.text === 'Без тем 18+ и травли по внешности' })) }
 }
+
+/** Missing templates must not make custom worlds inherit preset copy. */
+export function optionalWorldTemplate(world: WorldId): WorldDocument | undefined {
+  return templateDocuments[world]
+}
