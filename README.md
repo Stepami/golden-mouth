@@ -30,6 +30,8 @@ Docker images собираются только во время deployment на 
 
 Подробная настройка VDS, HTTPS, release labels и SSH-туннелей описана в [docs/deployment.md](docs/deployment.md).
 
+Нагрузочный тест четырёх ручек через k6 в Compose: [запуск и чтение результатов](load-tests/README.md).
+
 ## Запуск всего проекта
 
 Перед первым запуском задай логин и пароль администратора OpenObserve. Эти же данные Collector использует только внутри Compose-сети для отправки OTLP. Настройки OpenAI-compatible LLM передаются в Compose из переменных окружения, а не задаются моделью в файлах Compose. Затем из корня репозитория запусти:

@@ -1,6 +1,22 @@
 name: reki
 
 services:
+  k6:
+    image: grafana/k6:1.0.0
+    profiles: [load-test]
+    environment:
+      BASE_URL: http://backend:8080
+      INIT_DATA: ${INIT_DATA:-}
+      WORLD_ID: ${WORLD_ID:-}
+      POST_ID: ${POST_ID:-}
+      RATE: ${RATE:-10}
+      DURATION: ${DURATION:-10m}
+      K6_NO_USAGE_REPORT: "true"
+    volumes:
+      - ./load-tests:/scripts:ro
+      - ./load-tests/results:/results
+    command: [run, /scripts/reads.js]
+
   frontend:
     build:
       context: ./frontend
