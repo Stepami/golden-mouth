@@ -304,7 +304,17 @@ function Settings() {
   const [address, setAddress] = useState(p.address)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const openPanel = (value: typeof panel) => { setError(''); setPanel(value) }
+  const openPanel = (value: typeof panel) => {
+    // Reopening starts from saved preferences, discarding a cancelled edit.
+    if (value === 'notifications') setNotifications(p.settings.notifications === 'off' ? 'off' : p.settings.notifications === 'important' ? 'important' : 'all')
+    if (value === 'address') setAddress(p.address)
+    if (value === 'quiet') {
+      setQuietOff(p.settings.quiet === 'off')
+      setQuietStart(quietParts[0]?.match(/^\d{2}:\d{2}$/) ? quietParts[0] : '22:00')
+      setQuietEnd(quietParts[1]?.match(/^\d{2}:\d{2}$/) ? quietParts[1] : '09:00')
+    }
+    setError(''); setPanel(value)
+  }
   const row = (t: string, r: string, last = false, onClick?: () => void) => <button type="button" onClick={onClick} disabled={!onClick || saving} className="row" style={{ width: '100%', textAlign: 'left', color: 'inherit', background: 'none', border: 'none', padding: '12px 0', borderBottom: last ? 'none' : '1px solid var(--line2)' }}><div style={{ flex: 1 }}>{t}</div><span className="muted">{r}</span></button>
   const save = async (value: Partial<typeof p.settings>) => {
     if (saving) return
