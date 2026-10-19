@@ -13,7 +13,7 @@ internal sealed class RemoveUnusedThreads : RekiMigrationBase
         // if the process stops before the migrator records this version.
         try
         {
-            await db.DropCollectionAsync("threads", cancellationToken: cancellationToken);
+            await db.DropCollectionAsync("threads", cancellationToken);
         }
         catch (MongoCommandException exception) when (exception.Code == 26)
         {
