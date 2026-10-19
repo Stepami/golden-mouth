@@ -163,26 +163,12 @@ public abstract class GameApiTestBase(ApiFactory factory)
         return player;
     }
 
-    protected async Task<CreateWorldRequest> CreateWorldDefinitionAsync(TestApiClient api, WorldId world = WorldId.Stage)
+    protected Task<CreateWorldRequest> CreateWorldDefinitionAsync(TestApiClient api, WorldId world = WorldId.Stage)
     {
         // Keep historical-world tests independent of the current public catalog.
-        var name = $"legacy_fixture_{Guid.NewGuid():N}";
-        var database = Factory.Session.MongoClient.GetDatabase(name);
-        Domain.Worlds.World legacy;
-        try
-        {
-            using var session = await Factory.Session.MongoClient.StartSessionAsync();
-            await new Infrastructure.Persistence.Migrations.SeedWorldTemplates().UpAsync(database, session, CancellationToken.None);
-            legacy = await database.GetCollection<Domain.Worlds.World>("world_templates")
-                .Find(item => item.BalanceKey == world.ToString().ToLowerInvariant()).SingleAsync();
-        }
-        finally
-        {
-            await Factory.Session.MongoClient.DropDatabaseAsync(name);
-        }
-
+        var legacy = Factory.Session.LegacyWorldTemplates[world.ToString().ToLowerInvariant()];
         var template = new Reki.Api.Mapping.ApiMapper().MapWorld(legacy);
-        return DefinitionOf(template);
+        return Task.FromResult(DefinitionOf(template));
     }
 
     protected CreateWorldRequest DefinitionOf(WorldResponse template) => new()
