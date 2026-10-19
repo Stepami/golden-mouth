@@ -1,8 +1,13 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NSubstitute;
@@ -20,6 +25,50 @@ namespace Reki.Tests.Api;
 [NotInParallel("ApiState")]
 public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
+    [Test]
+    public async Task Me_WithoutProfile_ReturnsCompatibleNotFoundWithoutExceptionTelemetryAsync()
+    {
+        // Arrange
+        var collector = new FakeLogCollector();
+        await using var observedFactory = new ApiFactory { Session = Factory.Session, RequestLogs = collector };
+        using var client = observedFactory.CreateClient();
+        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "18301");
+        collector.Clear();
+        var activities = new ConcurrentQueue<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = _ => true,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activities.Enqueue,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        // Act
+        using var response = await client.GetAsync("/me", CancellationToken.None);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(CancellationToken.None));
+
+        // Assert
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+        var problem = body.RootElement;
+        await Assert.That(problem.GetProperty("type").GetString()).IsEqualTo("urn:reki:problem:resource-not-found");
+        await Assert.That(problem.GetProperty("title").GetString()).IsEqualTo("Resource not found");
+        await Assert.That(problem.GetProperty("detail").GetString()).IsEqualTo("The requested resource was not found.");
+        await Assert.That(problem.GetProperty("status").GetInt32()).IsEqualTo(404);
+        await Assert.That(problem.GetProperty("instance").GetString()).IsEqualTo("/me");
+        await Assert.That(problem.GetProperty("failure").ValueKind).IsEqualTo(JsonValueKind.Null);
+        await Assert.That(await Database.GetCollection<BsonDocument>("players")
+            .CountDocumentsAsync(new BsonDocument("TelegramUserId", 18301L), cancellationToken: CancellationToken.None))
+            .IsEqualTo(0L);
+        var logs = collector.GetSnapshot();
+        await Assert.That(logs.Any(log => log.Level is LogLevel.Warning or LogLevel.Error or LogLevel.Critical)).IsFalse();
+        await Assert.That(logs.Any(log => log.Exception is not null)).IsFalse();
+        await Assert.That(logs.Any(log => log.GetStructuredStateValue("StatusCode") == "404")).IsTrue();
+        await Assert.That(activities.Any(activity => activity.OperationName.Contains("HttpRequestIn", StringComparison.Ordinal)))
+            .IsTrue();
+        await Assert.That(activities.SelectMany(activity => activity.Events)
+            .Any(activityEvent => activityEvent.Name.Contains("exception", StringComparison.OrdinalIgnoreCase))).IsFalse();
+    }
+
     [Test]
     public async Task Me_WithoutTelegramAuthentication_ReturnsUnauthorizedAsync()
     {
