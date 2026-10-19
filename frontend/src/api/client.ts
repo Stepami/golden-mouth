@@ -1,16 +1,24 @@
 // Клиент API. Runtime config выбирает backend или тестовые данные (mock.ts).
 // Во фронте НЕТ секретов: runtime config виден в браузере. Ключи LLM и токен бота живут только на бэкенде.
 import { clearPlayerDrafts } from '../app/postDraft'
+import { clearWorldDrafts } from '../app/worldDraft'
+import { clearAvatarPersonalization } from '../app/avatarPersonalization'
+import { clearReferral } from '../app/referral'
 import { clearApiCache } from '../app/useApi'
 import * as mock from './mock'
 import { error, warn } from '../app/log'
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics'
 import { apiBaseUrl as BASE, runtimeConfig } from '../app/runtimeConfig'
 import { demoWorlds, demoWorldKey, demoChannelPosts, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, withDemoComments } from './demo'
-import { contentOf, installWorldContent, installWorldTemplates, worldDocumentOf, wantsFor } from './worldContent'
+import { clearWorldContent, contentOf, installWorldContent, installWorldTemplates, worldDocumentOf, wantsFor } from './worldContent'
 import { telegramAuthHeaders } from './auth'
 import type { AgeBand } from '../app/ageBand'
 import type { PlayerDocument, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, PublicationFailure, ReplyLiveEvent, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types'
+
+let sessionGeneration = 0
+function assertSession(generation: number) {
+  if (generation !== sessionGeneration) throw new DOMException('Account session has ended', 'AbortError')
+}
 
 let sessionPlayer: Player | undefined
 let sessionIdentity: PlayerDocument | undefined
@@ -47,9 +55,12 @@ export class ApiError extends Error {
 }
 
 async function call<T>(path: string, init?: RequestInit, authenticated = true): Promise<T> {
+  const generation = sessionGeneration
   const r = await fetch(`${BASE ?? runtimeConfig.apiBaseUrl}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...(authenticated ? telegramAuthHeaders() : {}), ...init?.headers } })
+  if (authenticated) assertSession(generation)
   if (!r.ok) { let failure: PublicationFailure | undefined; try { failure = (await r.json() as { failure?: PublicationFailure }).failure } catch { /* untyped transport error */ }; const e = new ApiError(r.status, init?.method ?? 'GET', path, failure); if (r.status >= 500) error('api_error', e, { status: r.status }); else if (r.status !== 404 || path !== '/me') warn('api_error', { status: r.status, msg: e.message }); throw e }
   const body = await r.text()
+  if (authenticated) assertSession(generation)
   return body ? JSON.parse(body) as T : undefined as T
 }
 const later = <T,>(v: T, ms = 150) => new Promise<T>(res => setTimeout(() => res(structuredClone(v)), ms))
@@ -81,14 +92,18 @@ async function publicationState(id: string): Promise<PublicationState> {
 
 const playerRequests = new Map<string, Promise<Player>>()
 async function loadPlayer(worldId?: string): Promise<Player> {
+  const generation = sessionGeneration
   if (!BASE) {
     // Demo worlds use template content because they have no server-side instances.
     await loadTemplates()
+    assertSession(generation)
     installWorldContent(templates)
     const player = { ...demoPlayer(worldId), nextWorld: undefined }
     const stored = demoWorlds(player.id).find(world => world.id === demoWorldKey(player))
     if (stored) installWorldContent([stored])
-    return rememberPlayer(await later(player))
+    const loaded = await later(player)
+    assertSession(generation)
+    return rememberPlayer(loaded)
   }
   const player = await call<PlayerDocument>('/me')
   if (sessionIdentity?.id !== player.id) ownedWorldSnapshot = undefined
@@ -98,6 +113,7 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     call<WorldDocument[]>('/worlds'),
     call<{ bonus: number }>('/invitation'),
   ])
+  assertSession(generation)
   ownedWorldSnapshot = ownedWorlds
   let selected: string | undefined
   try { selected = localStorage.getItem(`reki:selected-world:${player.id}`) ?? undefined } catch { /* memory fallback */ }
@@ -117,7 +133,7 @@ export const api = {
     const key = worldId ?? sessionPlayer?.worldInstanceId ?? ''
     const pending = playerRequests.get(key)
     if (pending) return pending
-    const request = loadPlayer(worldId).finally(() => { playerRequests.delete(key) })
+    const request = loadPlayer(worldId).finally(() => { if (playerRequests.get(key) === request) playerRequests.delete(key) })
     playerRequests.set(key, request)
     return request
   },
@@ -365,7 +381,7 @@ export const api = {
   challenge: (): Promise<Challenge | null> => BASE ? call('/challenges/active') : later(mock.challenge),
   startChallenge: (friendId: string) => BASE ? call('/challenges', { method: 'POST', body: JSON.stringify({ friendId }) }) : later({ ok: true }),
   ownedWorldsSnapshot: (): WorldDocument[] | undefined => ownedWorldSnapshot ? structuredClone(ownedWorldSnapshot) : undefined,
-  ownedWorlds: async (): Promise<WorldDocument[]> => { const found = BASE ? await call<WorldDocument[]>('/worlds') : await later(sessionPlayer ? demoWorlds(sessionPlayer.id).length ? demoWorlds(sessionPlayer.id) : [{ ...worldDocumentOf(sessionPlayer.world), id: demoWorldKey(sessionPlayer), name: sessionPlayer.name, avatar: sessionPlayer.handle, subscribers: sessionPlayer.subs }] : []); ownedWorldSnapshot = found; return found },
+  ownedWorlds: async (): Promise<WorldDocument[]> => { const generation = sessionGeneration; const found = BASE ? await call<WorldDocument[]>('/worlds') : await later(sessionPlayer ? demoWorlds(sessionPlayer.id).length ? demoWorlds(sessionPlayer.id) : [{ ...worldDocumentOf(sessionPlayer.world), id: demoWorldKey(sessionPlayer), name: sessionPlayer.name, avatar: sessionPlayer.handle, subscribers: sessionPlayer.subs }] : []); assertSession(generation); ownedWorldSnapshot = found; return found },
   saveWorld: async (worldId: string, definition: WorldDefinition): Promise<Player> => {
     if (BASE) {
       await call(`/worlds/${encodeURIComponent(worldId)}`, { method: 'PUT', body: JSON.stringify(definition) })
@@ -383,5 +399,26 @@ export const api = {
     const { id, subscribers: _subs, lock: _lock, ...definition } = current
     return api.saveWorld(id, { ...definition, ...patch })
   },
-  deleteAccount: async () => { if (BASE) await call('/me', { method: 'DELETE' }); if (sessionIdentity) { clearPlayerDrafts(sessionIdentity.id); try { localStorage.removeItem(`reki:selected-world:${sessionIdentity.id}`) } catch { /* optional storage */ } } resetDemoPlayer(sessionPlayer?.id); sessionPlayer = undefined; sessionIdentity = undefined; ownedWorldSnapshot = undefined; setTelemetryPlayerAvailable(false); setAnalyticsWorld(undefined) },
+  deleteAccount: async () => {
+    const playerId = sessionIdentity?.id ?? sessionPlayer?.id
+    if (BASE) await call('/me', { method: 'DELETE' })
+    // Invalidate requests only after the server confirms deletion. Failed deletion keeps the game intact.
+    sessionGeneration++
+    playerRequests.clear()
+    clearApiCache()
+    if (playerId) {
+      clearPlayerDrafts(playerId)
+      clearAvatarPersonalization(playerId)
+      try {
+        localStorage.removeItem(`reki:selected-world:${playerId}`)
+        localStorage.removeItem(`reki:own-world-unlock-seen:${playerId}`)
+      } catch { /* optional storage */ }
+    }
+    clearWorldDrafts('onboarding')
+    clearReferral()
+    resetDemoPlayer(playerId)
+    clearWorldContent()
+    sessionPlayer = undefined; sessionIdentity = undefined; ownedWorldSnapshot = undefined
+    setTelemetryPlayerAvailable(false); setAnalyticsWorld(undefined)
+  },
 }

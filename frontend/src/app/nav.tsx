@@ -5,6 +5,7 @@ export interface Nav {
   current: ScreenId; params: Record<string, unknown>
   push: (id: ScreenId, params?: Record<string, unknown>) => void
   replace: (id: ScreenId, params?: Record<string, unknown>) => void
+  reset: (id: ScreenId, params?: Record<string, unknown>) => void
   back: () => void
   tab: (i: number) => void
   canBack: boolean

@@ -40,6 +40,11 @@ export function installWorldContent(worlds: WorldDocument[]): void {
   }
 }
 
+export function clearWorldContent(): void {
+  for (const key of Object.keys(documents)) delete documents[key as WorldId]
+  for (const key of Object.keys(serverContent)) delete serverContent[key as WorldId]
+}
+
 function toWorldContent(world: WorldDocument): WorldContent {
   return {
     where: world.where, roles: world.roles, name: world.name, handle: world.avatar,

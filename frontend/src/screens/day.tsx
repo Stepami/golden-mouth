@@ -1,3 +1,4 @@
+import { displayHandle } from '../app/handle'
 import { StoryGoal } from '../ui/StoryGoal'
 import { ExpandableText } from '../ui'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
@@ -264,7 +265,7 @@ function Me() {
   return (
     <div className="screen">
       <TopBar title="Я" rightPlain right={<button className="header-action" onClick={() => nav.push('05-8_settings')}>⚙ Настройки</button>} />
-      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b>{p.handle && <div className="small muted" style={{ overflowWrap: 'anywhere' }}>@{p.handle.replace(/^@+/, '')}</div>}<div className="small muted profile-world-name">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
+      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b>{p.handle && <div className="small muted" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="small muted profile-world-name">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
       <div className="pad">
         <div className="profile-stats">
           {[[`⚡ ${p.postsLeft}`, 'энергии'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
@@ -291,10 +292,20 @@ function Me() {
 
 // 05-8: настройки: градус драмы, голос канала, обращение, данные, удалить аккаунт
 function Settings() {
-  const nav = useNav(); const p = usePlayer(); const { patch } = useStore()
+  const nav = useNav(); const p = usePlayer(); const { patch, resetPlayer } = useStore()
   const personalizeAvatar = useAvatarPersonalization(p.id)
   const [drama, setDrama] = useState<Drama>(p.drama)
   const [del, setDel] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const deletePending = useRef(false)
+  const [deleteError, setDeleteError] = useState('')
+  const deleteAccount = async () => {
+    if (deletePending.current) return
+    deletePending.current = true; setDeleting(true); setDeleteError('')
+    try { await api.deleteAccount(); resetPlayer(); nav.reset('01-2_age') }
+    catch { setDeleteError('Не получилось удалить аккаунт. Попробуй ещё раз.') }
+    finally { deletePending.current = false; setDeleting(false) }
+  }
   const [panel, setPanel] = useState<'notifications' | 'quiet' | 'support' | 'data' | 'address' | null>(null)
   const [notifications, setNotifications] = useState(p.settings.notifications === 'off' ? 'off' : p.settings.notifications === 'important' ? 'important' : 'all')
   const quietParts = p.settings.quiet.replace('–', '-').split('-')
@@ -349,10 +360,11 @@ function Settings() {
         {(panel === 'notifications' || panel === 'quiet') && <Button disabled={saving || (panel === 'quiet' && !quietOff && (!quietStart || !quietEnd))} onClick={() => save(panel === 'notifications' ? { notifications } : { quiet: quietOff ? 'off' : `${quietStart}-${quietEnd}` })} style={{ marginBottom: 8 }}>{saving ? 'Сохраняем…' : 'Сохранить'}</Button>}
         <Button secondary disabled={saving} onClick={() => setPanel(null)}>Закрыть</Button>
       </Sheet>}
-      {del && <Sheet onClose={() => setDel(false)}>
+      {del && <Sheet onClose={() => { if (!deleting) setDel(false) }}>
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>Удалить всё?</div>
         <div className="muted" style={{ marginBottom: 16 }}>Канал, переписка со звёздами, коллекция и прогресс удалятся навсегда</div>
-        <Button style={{ background: '#C0392B', marginBottom: 8 }} onClick={async () => { await api.deleteAccount(); setDel(false); nav.replace('01-2_age') }}>Удалить навсегда</Button><Button secondary onClick={() => setDel(false)}>Отмена</Button>
+        {deleteError && <p role="alert">{deleteError}</p>}
+        <Button disabled={deleting} style={{ background: '#C0392B', marginBottom: 8 }} onClick={deleteAccount}>{deleting ? 'Удаляем…' : 'Удалить навсегда'}</Button><Button secondary disabled={deleting} onClick={() => setDel(false)}>Отмена</Button>
       </Sheet>}
     </div>
   )
