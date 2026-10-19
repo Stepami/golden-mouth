@@ -2,6 +2,8 @@ using Kot.MongoDB.Migrations;
 using Microsoft.Extensions.Time.Testing;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Domain.Worlds;
+using Reki.Infrastructure.Persistence.Migrations;
 using TUnit.Core.Interfaces;
 
 namespace Reki.Tests;
@@ -20,6 +22,9 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
 
     public IMongoDatabase Database => MongoClient.GetDatabase(DatabaseName);
 
+    public IReadOnlyDictionary<string, World> LegacyWorldTemplates { get; } =
+        SeedWorldTemplates.CreateTemplates().ToDictionary(template => template.BalanceKey, StringComparer.Ordinal);
+
     public OpenAiStub Llm => _llm ??= new OpenAiStub();
 
     public FakeTimeProvider Clock { get; } = new(
@@ -36,12 +41,11 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
         var options = new MigrationOptions(DatabaseName);
         using var cursor = await Database.ListCollectionNamesAsync(cancellationToken: cancellationToken);
         var collections = await cursor.ToListAsync(cancellationToken);
-        foreach (var collection in collections.Where(name =>
-                     !name.StartsWith("ticker_", StringComparison.Ordinal) && name != "world_templates" && name != options.MigrationsCollectionName && name != options.MigrationsLockCollectionName))
-        {
-            await Database.GetCollection<BsonDocument>(collection)
-                .DeleteManyAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken);
-        }
+        await Task.WhenAll(collections.Where(name =>
+                !name.StartsWith("ticker_", StringComparison.Ordinal) && name != "world_templates" &&
+                name != options.MigrationsCollectionName && name != options.MigrationsLockCollectionName)
+            .Select(collection => Database.GetCollection<BsonDocument>(collection)
+                .DeleteManyAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken)));
     }
 
     public void ResetExternalState()
