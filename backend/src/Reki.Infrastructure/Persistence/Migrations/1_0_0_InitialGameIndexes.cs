@@ -86,12 +86,6 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
         Task eventTask = events.Indexes.CreateOneAsync(eventIndex, cancellationToken: cancellationToken);
         Task challengeTask = challenges.Indexes.CreateOneAsync(challengeIndex, cancellationToken: cancellationToken);
         Task worldTask = worlds.Indexes.CreateOneAsync(worldIndex, cancellationToken: cancellationToken);
-        Task threadTask = CreateDocumentIndexAsync(
-            database,
-            MongoCollections.Threads,
-            "PlayerId",
-            "ix_threads_player",
-            cancellationToken);
         Task inviteTask = CreateDocumentIndexAsync(
             database,
             MongoCollections.Invites,
@@ -108,7 +102,6 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
             eventTask,
             challengeTask,
             worldTask,
-            threadTask,
             inviteTask);
     }
 

@@ -521,7 +521,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                  {
                      "posts",
                      "publications",
-                     "threads",
                      "stars_memory",
                      "invites",
                      "challenges",

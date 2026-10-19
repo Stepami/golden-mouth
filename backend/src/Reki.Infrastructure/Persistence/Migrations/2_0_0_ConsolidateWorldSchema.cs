@@ -101,7 +101,7 @@ internal sealed class ConsolidateWorldSchema : RekiMigrationBase
             MigrateRelation(BsonSerializer.Deserialize<WorldStar>(value.AsBsonDocument), relations).ToBsonDocument()));
         await worlds.ReplaceOneAsync(session, new BsonDocument("_id", worldId), world, new ReplaceOptions { IsUpsert = true }, cancellationToken);
 
-        foreach (var collection in new[] { MongoCollections.Posts, MongoCollections.Publications, MongoCollections.Threads, MongoCollections.StarsMemory, MongoCollections.Events })
+        foreach (var collection in new[] { MongoCollections.Posts, MongoCollections.Publications, MongoCollections.StarsMemory, MongoCollections.Events })
         {
             await db.GetCollection<BsonDocument>(collection).UpdateManyAsync(
                 session,
