@@ -24,6 +24,8 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
 
     public double? FeedOpenProbability { get; init; }
 
+    public ILoggerProvider? RequestLogProvider { get; init; }
+
     public OpenAiStub Llm => Session.Llm;
 
     public string DatabaseName => Session.DatabaseName;
@@ -48,6 +50,11 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Llm:TimeoutSeconds", "1");
         builder.ConfigureServices(services =>
         {
+            if (RequestLogProvider is { } requestLogProvider)
+            {
+                services.AddLogging(logging => logging.AddProvider(requestLogProvider));
+            }
+
             ProductLogger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
             services.AddSingleton(ProductLogger);
             services.AddDataProtection().UseEphemeralDataProtectionProvider();

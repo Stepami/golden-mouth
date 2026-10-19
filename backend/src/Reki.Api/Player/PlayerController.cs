@@ -20,9 +20,25 @@ public sealed class PlayerController(
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
-    public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
+    public async Task<Results<Ok<PlayerResponse>, NotFound<ProblemDetails>>> GetCurrentPlayerAsync(
+        [FromServices] ITelegramUserAccessor telegramUser,
+        CancellationToken cancellationToken)
     {
-        var player = await rekiContext.Player;
+        var player = await store.GetPlayerAsync(TelegramUserId.From(telegramUser.User.Id), cancellationToken);
+        if (player is null)
+        {
+            var problemDetails = new ProblemDetails
+            {
+                Status = StatusCodes.Status404NotFound,
+                Title = "Resource not found",
+                Type = "urn:reki:problem:resource-not-found",
+                Detail = "The requested resource was not found.",
+                Instance = Request.Path,
+            };
+            problemDetails.Extensions["failure"] = null;
+            return TypedResults.NotFound(problemDetails);
+        }
+
         return TypedResults.Ok(player.ToResponse());
     }
 
