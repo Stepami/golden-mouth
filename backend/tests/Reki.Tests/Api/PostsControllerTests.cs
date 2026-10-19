@@ -614,6 +614,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That((fourth.Post ?? throw new InvalidOperationException("Missing reply post.")).Comments.Select(comment => comment.Depth)).IsEquivalentTo(Enumerable.Range(0, 9));
         var stored = await GetStoredPostAsync(postId);
         await Assert.That(stored["Comments"].AsBsonArray.Count).IsEqualTo(9);
+        using var collections = await Factory.Session.Database.ListCollectionNamesAsync();
+        await Assert.That(await collections.ToListAsync()).DoesNotContain("threads");
         await Assert.That(stored["Version"].AsInt32).IsEqualTo(4);
         await Assert.That(stored.Contains("ThreadReplies")).IsFalse();
         var player = await GetStoredPlayerAsync(telegramUserId);

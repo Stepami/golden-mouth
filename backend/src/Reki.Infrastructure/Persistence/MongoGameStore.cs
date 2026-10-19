@@ -23,7 +23,6 @@ internal sealed class MongoGameStore : IGameStore
     private readonly IMongoCollection<GameChallenge> _challenges;
     private readonly IMongoCollection<World> _worlds;
     private readonly IMongoCollection<World> _templates;
-    private readonly IMongoCollection<BsonDocument> _threads;
     private readonly IMongoCollection<Invitation> _invites;
 
     public MongoGameStore(MongoCompositionRoot compositionRoot)
@@ -39,7 +38,6 @@ internal sealed class MongoGameStore : IGameStore
         _challenges = database.GetCollection<GameChallenge>(MongoCollections.Challenges);
         _worlds = database.GetCollection<World>(MongoCollections.Worlds);
         _templates = database.GetCollection<World>(MongoCollections.WorldTemplates);
-        _threads = database.GetCollection<BsonDocument>(MongoCollections.Threads);
         _invites = database.GetCollection<Invitation>(MongoCollections.Invites);
     }
 
@@ -113,8 +111,6 @@ internal sealed class MongoGameStore : IGameStore
         PlayerProfile player,
         CancellationToken cancellationToken)
     {
-        var threadFilter = Builders<BsonDocument>.Filter
-            .Eq("PlayerId", player.Id.Value);
         var ownedWorldIds = await _worlds.Find(item => item.Player.PlayerId == player.Id)
             .Project(item => item.Id).ToListAsync(cancellationToken);
         Task deletePosts = _posts.DeleteManyAsync(
@@ -131,7 +127,6 @@ internal sealed class MongoGameStore : IGameStore
             .AnyEq(item => item.Participants, player.Id);
         Task deleteChallenges = _challenges.DeleteManyAsync(challengeFilter, cancellationToken);
         Task deleteWorlds = _worlds.DeleteManyAsync(item => item.Player.PlayerId == player.Id, cancellationToken);
-        Task deleteThreads = _threads.DeleteManyAsync(threadFilter, cancellationToken);
         var inviteFilter = Builders<Invitation>.Filter.Or(
             Builders<Invitation>.Filter.Eq(item => item.InviterId, player.Id),
             Builders<Invitation>.Filter.Eq(item => item.InviteeId, player.Id),
@@ -145,7 +140,6 @@ internal sealed class MongoGameStore : IGameStore
             deleteEvents,
             deleteChallenges,
             deleteWorlds,
-            deleteThreads,
             deleteInvites);
         await _players.DeleteOneAsync(item => item.Id == player.Id, cancellationToken);
     }
@@ -235,10 +229,6 @@ internal sealed class MongoGameStore : IGameStore
             }
 
             await _posts.InsertOneAsync(transactionSession, post, cancellationToken: transactionCancellationToken);
-            await _threads.InsertOneAsync(
-                transactionSession,
-                CreateThreadDocument(updatedPlayer.Id, post.Id, updatedWorld.Id, published.Hook, post.CreatedAtUtc),
-                cancellationToken: transactionCancellationToken);
             return true;
         }
     }
@@ -548,20 +538,4 @@ internal sealed class MongoGameStore : IGameStore
     {
         return await _worlds.Find(item => item.Player.PlayerId == playerId).ToListAsync(cancellationToken);
     }
-
-    private static BsonDocument CreateThreadDocument(
-        PlayerId playerId,
-        PostId postId,
-        WorldId worldId,
-        string hook,
-        DateTimeOffset createdAtUtc) =>
-        new()
-        {
-            ["PlayerId"] = playerId.Value,
-            ["PostId"] = postId.Value,
-            ["WorldId"] = worldId.Value,
-            ["Hook"] = hook,
-            ["CreatedAtUtc"] = createdAtUtc.UtcDateTime,
-            ["Open"] = true,
-        };
 }

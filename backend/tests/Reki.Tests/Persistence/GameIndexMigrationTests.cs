@@ -89,9 +89,12 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
         // Act
         await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
 
         // Assert
         await AssertCurrentIndexesAsync(database);
+        using var collections = await database.ListCollectionNamesAsync();
+        await Assert.That(await collections.ToListAsync()).DoesNotContain("threads");
         var playerCount = await database.GetCollection<BsonDocument>("players")
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
         await Assert.That(playerCount).IsEqualTo(0L);
@@ -150,7 +153,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
         var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(12L);
+        await Assert.That(historyCount).IsEqualTo(14L);
     }
 
     [Test]
@@ -819,6 +822,74 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             .IsEquivalentTo(["already", "threshold"]);
     }
 
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task Migrate_LegacyThreads_RemovesOnlyUnusedCollectionAsync(bool existingThreads)
+    {
+        // Arrange: model a database where migrations through 2.4.3 have already run.
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        var databaseName = database.DatabaseNamespace.DatabaseName;
+        await CreateMigrator(mongo.MongoClient, databaseName, includeThreadCleanup: false)
+            .MigrateAsync(cancellationToken: CancellationToken.None);
+        if (existingThreads)
+        {
+            await database.GetCollection<BsonDocument>("threads").InsertOneAsync(
+                new BsonDocument { { "_id", "legacy-thread" }, { "PlayerId", "owner" }, { "Hook", "legacy hook" } });
+            await CreateIndexAsync(database, "threads", "ix_threads_player", new BsonDocument("PlayerId", 1), false);
+        }
+
+        var post = new BsonDocument
+        {
+            { "_id", "saved-post" },
+            { "Comments", new BsonArray
+                {
+                    new BsonDocument { { "_id", "star-comment" }, { "Text", "saved comment" } },
+                    new BsonDocument { { "_id", "player-reply" }, { "ParentId", "star-comment" }, { "Text", "saved reply" } },
+                }
+            },
+        };
+        await database.GetCollection<BsonDocument>("posts").InsertOneAsync(post);
+        var options = new RekiMigrationOptions(Options.Create(new MongoOptions { DatabaseName = databaseName }));
+        var history = database.GetCollection<BsonDocument>(options.MigrationsCollectionName);
+        var originalHistory = await history.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        using var namesCursor = await database.ListCollectionNamesAsync();
+        var otherNames = (await namesCursor.ToListAsync())
+            .Where(name => name != "threads" && name != options.MigrationsCollectionName && name != options.MigrationsLockCollectionName).ToArray();
+        var snapshots = new Dictionary<string, List<BsonDocument>>(StringComparer.Ordinal);
+        foreach (var name in otherNames)
+        {
+            snapshots[name] = await database.GetCollection<BsonDocument>(name).Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        }
+
+        // Act: run the normal migrator twice, then retry the drop itself after removal.
+        var migrator = CreateMigrator(mongo.MongoClient, databaseName);
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        await new RemoveUnusedThreads().UpAsync(database, session, CancellationToken.None);
+
+        // Assert
+        using var currentNamesCursor = await database.ListCollectionNamesAsync();
+        var currentNames = await currentNamesCursor.ToListAsync();
+        await Assert.That(currentNames).DoesNotContain("threads");
+        foreach (var (name, expected) in snapshots)
+        {
+            var saved = await database.GetCollection<BsonDocument>(name).Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            await Assert.That(saved).IsEquivalentTo(expected);
+        }
+
+        var currentHistory = await history.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        await Assert.That(currentHistory.Count).IsEqualTo(originalHistory.Count + 1);
+        foreach (var entry in originalHistory)
+        {
+            await Assert.That(currentHistory).Contains(entry);
+        }
+
+        await AssertCurrentIndexesAsync(database);
+    }
+
     private static GameBalance CreateEnergyBalance() => new(10, 20, new TimeOnly(9, 0), 5, 3, 5, 3, 3, new GrowthBalance(1, 1, [], 0, 1, 1, 2, 3, 2, 1000), new ViralBalance(0, 0, 1), new FlopBalance(1), new SkillBalance([], 1, 1, 10, 2, 3, 1, 1), new RelationBalance(0, 10, 3, 5, 3), new ChallengeBalance(3, 1), new ThreadBalance(3, 9), new Dictionary<string, WorldBalance>());
 
     private static BsonDocument CreateLegacyReferralPlayer(string id, string? inviter, DateTimeOffset createdAt, int dailyBonus, int count, bool used) => new()
@@ -852,7 +923,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         }
     }
 
-    private static IMigrator CreateMigrator(IMongoClient client, string databaseName, bool includeRelease = true)
+    private static IMigrator CreateMigrator(IMongoClient client, string databaseName, bool includeRelease = true, bool includeThreadCleanup = true)
     {
         var options = new RekiMigrationOptions(Options.Create(new MongoOptions { DatabaseName = databaseName }));
         var migrations = new List<RekiMigrationBase>
@@ -865,6 +936,12 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         if (includeRelease)
         {
             migrations.Add(new ReleaseWorldCatalog());
+            migrations.Add(new RemoveStarAppearanceFields());
+        }
+
+        if (includeThreadCleanup)
+        {
+            migrations.Add(new RemoveUnusedThreads());
         }
 
         return MigratorBuilder.FromMongoClient(client, options).LoadMigrations(migrations).Build();
@@ -884,7 +961,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         yield return ("worlds", "ix_worlds_player", new BsonDocument("Player.PlayerId", 1), false);
         yield return ("posts", "ix_posts_world_created", new BsonDocument { { "WorldId", 1 }, { "CreatedAtUtc", -1 } }, false);
         yield return ("events", "ix_events_world_day", new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "DayStartedAtUtc", 1 } }, false);
-        yield return ("threads", "ix_threads_player", new BsonDocument("PlayerId", 1), false);
         yield return ("invites", "ix_invites_player", new BsonDocument("PlayerId", 1), false);
         yield return ("invites", "ux_invites_invitee", new BsonDocument("InviteeId", 1), true);
         yield return ("invites", "ix_invites_inviter", new BsonDocument("InviterId", 1), false);

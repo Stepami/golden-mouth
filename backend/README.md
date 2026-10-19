@@ -76,6 +76,8 @@ the credits that cannot be reconstructed. An already-used invitee bonus without
 a surviving post keeps its old daily credit until reset and cannot be granted again. Repeated migration does not
 subtract credits twice.
 
+Migration `2.4.4` drops the unused `threads` collection, including its documents and indexes. It is safe when the collection is absent or the migration is retried. Older migrations no longer create its index or backfill it. Conversations and replies remain in `posts.Comments`; publication and reply APIs are unchanged. The drop runs outside the migration transaction because MongoDB forbids dropping collections in a transaction. It cannot be rolled back.
+
 ## Test infrastructure
 
 API component tests share one `ApiFactory`, WireMock server and MongoDB database per test session. `TestSessionFixture` owns the MongoDB container/client, WireMock and resettable clock; TUnit disposes the dependent API factory before these resources at session end. The host starts lazily for the first API test and applies startup migrations once.
