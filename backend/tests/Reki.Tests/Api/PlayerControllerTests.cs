@@ -40,9 +40,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         using var listener = new ActivityListener
         {
             ShouldListenTo = _ => true,
-#pragma warning disable AV1562 // ActivityListener.Sample requires a ref parameter in its delegate signature.
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
-#pragma warning restore AV1562
             ActivityStopped = activities.Enqueue,
         };
         ActivitySource.AddActivityListener(listener);

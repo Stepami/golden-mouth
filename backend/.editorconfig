@@ -130,6 +130,10 @@ dotnet_diagnostic.SA1649.severity = none
 # API mappings are injected as one Mapperly-backed service, including handwritten composition mappings.
 dotnet_diagnostic.S2325.severity = none
 
+[tests/**/*.cs]
+# Test callbacks may require ref/out parameters, such as ActivityListener.Sample.
+dotnet_diagnostic.AV1562.severity = none
+
 [tests/Reki.Tests/Api/GameApiTestBase.cs]
 # Keep the HTTP test DSL instance-based so it can evolve with fixture state.
 dotnet_diagnostic.S2325.severity = none
