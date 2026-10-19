@@ -537,6 +537,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             };
             await AssertCollectionHasNoPlayerAsync(collection, new BsonDocument(ownerField, collection == "posts" ? $"Player_{playerId}" : playerId));
         }
+
         using var collections = await Factory.Session.Database.ListCollectionNamesAsync();
         await Assert.That(await collections.ToListAsync()).DoesNotContain("threads");
     }

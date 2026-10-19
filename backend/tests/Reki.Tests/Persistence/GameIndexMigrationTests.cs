@@ -843,7 +843,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var post = new BsonDocument
         {
             { "_id", "saved-post" },
-            { "Comments", new BsonArray
+            {
+                "Comments", new BsonArray
                 {
                     new BsonDocument { { "_id", "star-comment" }, { "Text", "saved comment" } },
                     new BsonDocument { { "_id", "player-reply" }, { "ParentId", "star-comment" }, { "Text", "saved reply" } },
