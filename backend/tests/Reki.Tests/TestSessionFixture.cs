@@ -22,8 +22,8 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
 
     public IMongoDatabase Database => MongoClient.GetDatabase(DatabaseName);
 
-    public IReadOnlyDictionary<string, World> LegacyWorldTemplates { get; private set; } =
-        new Dictionary<string, World>(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, World> LegacyWorldTemplates { get; } =
+        SeedWorldTemplates.CreateTemplates().ToDictionary(template => template.BalanceKey, StringComparer.Ordinal);
 
     public OpenAiStub Llm => _llm ??= new OpenAiStub();
 
@@ -34,21 +34,6 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
     {
         await _mongo.InitializeAsync();
         _client = new MongoClient(ConnectionString);
-        var name = $"legacy_fixture_{Guid.NewGuid():N}";
-        var database = MongoClient.GetDatabase(name);
-        try
-        {
-            // Seed historical templates once; API tests only read these session-owned snapshots.
-            using var session = await MongoClient.StartSessionAsync();
-            await new SeedWorldTemplates().UpAsync(database, session, CancellationToken.None);
-            var templates = await database.GetCollection<World>("world_templates")
-                .Find(FilterDefinition<World>.Empty).ToListAsync();
-            LegacyWorldTemplates = templates.ToDictionary(template => template.BalanceKey, StringComparer.Ordinal);
-        }
-        finally
-        {
-            await MongoClient.DropDatabaseAsync(name);
-        }
     }
 
     public async Task ClearGameDataAsync(CancellationToken cancellationToken)

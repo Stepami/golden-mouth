@@ -6,7 +6,7 @@ namespace Reki.Infrastructure.Persistence.Migrations;
 
 internal sealed partial class SeedWorldTemplates
 {
-    private static IReadOnlyList<World> CreateTemplates() =>
+    internal static IReadOnlyList<World> CreateTemplates() =>
     [
         new World
         {
