@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using Reki.Application.Common;
@@ -24,7 +25,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
 
     public double? FeedOpenProbability { get; init; }
 
-    public ILoggerProvider? RequestLogProvider { get; init; }
+    public FakeLogCollector? RequestLogs { get; init; }
 
     public OpenAiStub Llm => Session.Llm;
 
@@ -50,9 +51,9 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Llm:TimeoutSeconds", "1");
         builder.ConfigureServices(services =>
         {
-            if (RequestLogProvider is { } requestLogProvider)
+            if (RequestLogs is { } requestLogs)
             {
-                services.AddLogging(logging => logging.AddProvider(requestLogProvider));
+                services.AddLogging(logging => logging.AddProvider(new FakeLoggerProvider(requestLogs)));
             }
 
             ProductLogger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);

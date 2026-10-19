@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Testing;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NSubstitute;
@@ -28,14 +29,11 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Me_WithoutProfile_ReturnsCompatibleNotFoundWithoutExceptionTelemetryAsync()
     {
         // Arrange
-        var logger = Substitute.For<ILogger>();
-        logger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
-        var provider = Substitute.For<ILoggerProvider>();
-        provider.CreateLogger(Arg.Any<string>()).Returns(logger);
-        await using var observedFactory = new ApiFactory { Session = Factory.Session, RequestLogProvider = provider };
+        var collector = new FakeLogCollector();
+        await using var observedFactory = new ApiFactory { Session = Factory.Session, RequestLogs = collector };
         using var client = observedFactory.CreateClient();
         client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "18301");
-        logger.ClearReceivedCalls();
+        collector.Clear();
         var activities = new ConcurrentQueue<Activity>();
         using var listener = new ActivityListener
         {
@@ -61,12 +59,10 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(await Database.GetCollection<BsonDocument>("players")
             .CountDocumentsAsync(new BsonDocument("TelegramUserId", 18301L), cancellationToken: CancellationToken.None))
             .IsEqualTo(0L);
-        var logs = logger.ReceivedCalls().Where(call => call.GetMethodInfo().Name == "Log")
-            .Select(call => call.GetArguments()).ToArray();
-        await Assert.That(logs.Any(log => log[0] is LogLevel.Warning or LogLevel.Error or LogLevel.Critical)).IsFalse();
-        await Assert.That(logs.Any(log => log[3] is Exception)).IsFalse();
-        await Assert.That(logs.Any(log => log[2] is IEnumerable<KeyValuePair<string, object?>> properties &&
-            properties.Any(property => property.Key == "StatusCode" && Equals(property.Value, 404)))).IsTrue();
+        var logs = collector.GetSnapshot();
+        await Assert.That(logs.Any(log => log.Level is LogLevel.Warning or LogLevel.Error or LogLevel.Critical)).IsFalse();
+        await Assert.That(logs.Any(log => log.Exception is not null)).IsFalse();
+        await Assert.That(logs.Any(log => log.GetStructuredStateValue("StatusCode") == "404")).IsTrue();
         await Assert.That(activities.Any(activity => activity.OperationName.Contains("HttpRequestIn", StringComparison.Ordinal)))
             .IsTrue();
         await Assert.That(activities.SelectMany(activity => activity.Events)
