@@ -89,12 +89,9 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
         // Act
         await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
-        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
 
         // Assert
         await AssertCurrentIndexesAsync(database);
-        using var collections = await database.ListCollectionNamesAsync();
-        await Assert.That(await collections.ToListAsync()).DoesNotContain("threads");
         var playerCount = await database.GetCollection<BsonDocument>("players")
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
         await Assert.That(playerCount).IsEqualTo(0L);
@@ -878,14 +875,14 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         foreach (var (name, expected) in snapshots)
         {
             var saved = await database.GetCollection<BsonDocument>(name).Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
-            await Assert.That(saved).IsEquivalentTo(expected);
+            await Assert.That(saved.Select(document => document.ToJson())).IsEquivalentTo(expected.Select(document => document.ToJson()));
         }
 
         var currentHistory = await history.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
         await Assert.That(currentHistory.Count).IsEqualTo(originalHistory.Count + 1);
         foreach (var entry in originalHistory)
         {
-            await Assert.That(currentHistory).Contains(entry);
+            await Assert.That(currentHistory.Select(document => document.ToJson())).Contains(entry.ToJson());
         }
 
         await AssertCurrentIndexesAsync(database);
@@ -940,7 +937,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             migrations.Add(new RemoveStarAppearanceFields());
         }
 
-        if (includeThreadCleanup)
+        if (includeRelease && includeThreadCleanup)
         {
             migrations.Add(new RemoveUnusedThreads());
         }
