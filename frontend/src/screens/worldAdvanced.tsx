@@ -15,6 +15,12 @@ function StringList({ title, help, values, onChange }: { title: string; help: st
 }
 export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck }: { draft: WorldDraft; saving: boolean; error: string; uncertain: boolean; onSave: () => void; onCheck: () => void }) {
   const nav = useNav(); const d = draft.definition
+  // Temporary editor visits use their own history entry; the draft's mode stays intact.
+  const quickSettings = () => {
+    if (nav.current === '05-12_world_advanced' && nav.canBack) { nav.back(); return }
+    setWorldDraft({ ...draft, advanced: false })
+    nav.replace(d.balanceKey === 'own' || draft.editingId ? '05-7b_own_world' : '01-4_channel')
+  }
   const [open, setOpen] = useState(''); const [attempted, setAttempted] = useState(false)
   const update = updateWorldDraft
   const text = (label: string, key: keyof WorldDefinition, help?: string, rows = 2, maxLength = 2000) => <div><TextField label={label} value={String(d[key])} onChange={v => update({ [key]: v })} rows={rows} maxLength={maxLength} />{help && <p className="field-help small muted">{help}</p>}</div>
@@ -22,7 +28,7 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
   const section = (id: string, title: string, subtitle: string, children: ReactNode) => <section className="editor-section" id={`editor-${id}`}><button className="editor-section-head" aria-expanded={open === id} onClick={() => setOpen(open === id ? '' : id)}><span><b>{title}</b><span className="small muted">{subtitle}</span>{attempted && missing === id && <span className="small down">Заполни обязательные поля</span>}</span><span aria-hidden>{open === id ? '−' : '＋'}</span></button>{open === id && <div className="editor-section-body">{children}</div>}</section>
   const changeStar = (id: string, patch: Partial<WorldDefinition['stars'][number]>) => update({ stars: d.stars.map(s => s.id === id ? { ...s, ...patch } : s) })
   return <div className="screen no-tab advanced-world"><TopBar title="Настрой свой мир" onBack={saving ? undefined : nav.back} /><div className="pad">
-    <button className="text-link" onClick={() => { setWorldDraft({ ...draft, advanced: false }); nav.replace(d.balanceKey === 'own' || draft.editingId ? '05-7b_own_world' : '01-4_channel') }}>← Быстрые настройки</button>
+    <button className="text-link" onClick={quickSettings}>← Быстрые настройки</button>
     <h1>Добавь свои детали</h1><p className="muted">Открой нужный раздел. Остальное можно оставить как есть.</p>
     {section('person', 'Твой персонаж', d.name ? `${d.name} · ${d.role}` : 'Имя, занятие и портрет', <>
       {text('Имя персонажа', 'name', undefined, 1, 80)}{text('Кто ты в этой истории', 'role', 'Например: фотограф, который замечает странности.', 2, 80)}

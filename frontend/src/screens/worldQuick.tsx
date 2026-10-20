@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useStore } from '../app/store'
 import { avatarPersonalization } from '../app/avatarPersonalization'
 import { displayHandle } from '../app/handle'
@@ -15,7 +15,6 @@ import { TextField } from '../ui/TextField'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import type { Address, WorldDefinition, WorldId } from '../api/types'
 
-function advanced(draft: WorldDraft) { setWorldDraft({ ...draft, advanced: true }) }
 export function WorldOverview() {
   const draft = useWorldDraft(); const nav = useNav(); const { player } = useStore()
   const [confirmSwitch, setConfirmSwitch] = useState(false)
@@ -53,7 +52,7 @@ export function QuickWorldForm({ draft }: { draft: WorldDraft }) {
     <TextField label="Расскажи о своём мире" value={d.description} onChange={description => updateWorldDraft({ description })} rows={5} placeholder="Город парит над морем. Здесь письма доставляют птицы, а жители ищут пропавший остров…" />
     <details className="card"><summary>Нужна идея?</summary><p className="small muted">{d.description.length ? 'Очисти описание, чтобы выбрать готовую идею.' : 'Выбери основу и допиши свои детали.'}</p>{['Город над облаками, где жители ищут пропавший остров и оставляют находки в общей ленте.', 'Космическая станция, на которой каждое утро появляется сообщение из будущего.'].map(idea => <button className="opt" key={idea} disabled={d.description.length > 0} onClick={() => { if (!d.description.length) updateWorldDraft({ description: idea }) }}>{idea}</button>)}</details>
     {!draft.editingId && <p className="small prototype-note">DEV: пока показываем пример наполнения вместо AI-генерации.</p>}
-    <button className="text-link" onClick={() => { advanced(draft); nav.push('05-7b_own_world') }}>Расширенные настройки <span>→</span></button><p className="small muted">Правила, герои и завязка — если хочется настроить всё самому.</p>
+    <button className="text-link" onClick={() => nav.push('05-12_world_advanced')}>Расширенные настройки <span>→</span></button><p className="small muted">Правила, герои и завязка — если хочется настроить всё самому.</p>
   </div><BottomCTA main="Мой персонаж" disabled={!d.title.trim() || !d.description.trim()} onMain={() => { const current = getWorldDraft()!; setWorldDraft({ ...current, definition: draft.editingId ? d : prototypeWorld(d), previewOnly: !draft.editingId }); nav.push('01-4_channel') }} /></div>
 }
 export function QuickChannelForm({ draft }: { draft: WorldDraft }) {
@@ -74,8 +73,8 @@ export function QuickChannelForm({ draft }: { draft: WorldDraft }) {
     <details className="card profile-preview"><summary><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={40} /><span><b>{d.name || "Твой персонаж"}</b><span className="small muted">{displayHandle(d.avatar)}</span></span><span className="small">Изменить</span></summary><label className="label">Ник<input aria-label="Ник" value={d.avatar} maxLength={80} onChange={e => updateWorldDraft({ avatar: e.target.value })} /></label><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={56} /><AvatarPersonalization enabled={draft.personalizeAvatar !== false} onChange={personalizeAvatar => setWorldDraft({ ...draft, personalizeAvatar })} /></details>
   </div><BottomCTA main="Выбрать градус драмы" disabled={!d.name.trim() || !d.role.trim() || !d.avatar.trim()} onMain={() => nav.push('01-4b_world_setup')} /></div>
 }
-export function DramaPicker({ definition: d }: { definition: WorldDefinition }) {
-  return <><h1>Сколько драмы добавим?</h1><p className="muted">Выбери настроение истории. Его можно изменить позже.</p><div className="drama-options">{dramaOptions.map(option => <button className={`drama-option ${d.drama === option.id ? 'selected' : ''}`} aria-pressed={d.drama === option.id} onClick={() => updateWorldDraft({ drama: option.id })} key={option.id}><span className="drama-icon">{option.icon}</span><div><b>{option.title}</b><p>{option.description}</p>{d.drama === option.id && <div className="drama-example">{option.example}</div>}</div><span>{d.drama === option.id ? '✓' : ''}</span></button>)}</div></>
+export function DramaPicker({ definition: d, beforeOptions }: { definition: WorldDefinition; beforeOptions?: ReactNode }) {
+  return <><h1>Сколько драмы добавим?</h1><p className="muted">Выбери настроение истории. Его можно изменить позже.</p>{beforeOptions}<div className="drama-options">{dramaOptions.map(option => <button className={`drama-option ${d.drama === option.id ? 'selected' : ''}`} aria-pressed={d.drama === option.id} onClick={() => updateWorldDraft({ drama: option.id })} key={option.id}><span className="drama-icon">{option.icon}</span><div><b>{option.title}</b><p>{option.description}</p>{d.drama === option.id && <div className="drama-example">{option.example}</div>}</div><span>{d.drama === option.id ? '✓' : ''}</span></button>)}</div></>
 }
 export function WorldPrototypePreview() {
   const draft = useWorldDraft(); const nav = useNav()
@@ -85,6 +84,6 @@ export function WorldPrototypePreview() {
     <h2>Первая запись в ленте</h2><Card><div className="row"><Avatar seed={first?.avatarSeed} avatarStyle={d.avatarStyle} mode="default" /><div><b>{first?.name}</b><div className="small muted">{first?.role}</div></div></div><p>{d.firstContext}</p><div className="small muted">♡ 12　💬 2</div></Card>
     {second && <Card><b>{second.name}</b><p>У меня есть другая версия. Давай сравним находки в ленте?</p></Card>}
     <p className="small muted">Это пример наполнения для проверки интерфейса. После согласования AI сможет подбирать героев и завязку под твоё описание.</p>
-    <button className="text-link" onClick={() => { advanced(draft); nav.push('05-7b_own_world') }}>Посмотреть расширенные настройки →</button>
+    <button className="text-link" onClick={() => nav.push('05-12_world_advanced')}>Посмотреть расширенные настройки →</button>
   </div><BottomCTA main="Вернуться к настройке" onMain={() => nav.back()} /></div>
 }

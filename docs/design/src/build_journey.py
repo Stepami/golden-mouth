@@ -331,6 +331,10 @@ exec(open(os.path.join(D, 'journey_v24.py'), encoding='utf-8').read())  # #150 s
 exec(open(os.path.join(D, 'journey_v25.py'), encoding='utf-8').read())  # avatar personalization
 exec(open(os.path.join(D, 'journey_v26.py'), encoding='utf-8').read())  # narrative preset goals
 
+exec(open(os.path.join(D, 'journey_v27.py'), encoding='utf-8').read())  # #189 editor navigation and settings
+
+exec(open(os.path.join(D, 'journey_v28.py'), encoding='utf-8').read())  # #189 button hierarchy
+
 CH = os.environ.get('CHROME_BIN') or shutil.which('google-chrome') or shutil.which('chrome')
 if not CH and os.name == 'nt':
     CH = os.path.join(os.environ.get('PROGRAMFILES', 'C:\\Program Files'), 'Google', 'Chrome', 'Application', 'chrome.exe')

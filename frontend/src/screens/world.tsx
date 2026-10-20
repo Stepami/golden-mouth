@@ -5,7 +5,7 @@ import { usePlayer } from '../app/store'
 import { useNav } from '../app/nav'
 import { selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 import { Button, TopBar } from '../ui'
-import { DescriptionSetup } from './worldWizard'
+import { AdvancedSetup, DescriptionSetup } from './worldWizard'
 import { register } from '.'
 import { AgeRuleNote } from './worldAdvanced'
 import { worldArt } from '../app/worldPrototype'
@@ -34,4 +34,4 @@ function WorldDetailsScreen() {
     {error && <p role="alert">{error}</p>}
   </div></div>
 }
-register({ '05-7b_own_world': { component: DescriptionSetup, title: 'Описание и правила мира' }, '05-11_world_rules': { component: WorldDetailsScreen, title: 'Настройки мира' } })
+register({ '05-12_world_advanced': { component: AdvancedSetup, title: 'Редактирование мира' }, '05-7b_own_world': { component: DescriptionSetup, title: 'Описание и правила мира' }, '05-11_world_rules': { component: WorldDetailsScreen, title: 'Настройки мира' } })
