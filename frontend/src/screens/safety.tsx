@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { closeMiniApp } from '@telegram-apps/sdk-react'
+import { miniApp } from '@tma.js/sdk'
 import { api } from '../api/client'
 import { useNav } from '../app/nav'
 import { Avatar, Bubble, Button, TopBar } from '../ui'
@@ -35,7 +35,7 @@ function Crisis({ adult }: { adult: boolean }) {
           <div className="small muted" style={{ marginTop: 12 }}>Это видишь только ты. Хейт в игре выключен на неделю</div>
         </div>
       </div>
-      <div className="bottom-cta"><Button secondary onClick={() => nav.replace('03-1_dm')}>Вернуться в игру</Button><Button secondary onClick={() => inTelegram ? closeMiniApp.ifAvailable() : nav.replace('01-6_home')}>Закрыть игру на сегодня</Button></div>
+      <div className="bottom-cta"><Button secondary onClick={() => nav.replace('03-1_dm')}>Вернуться в игру</Button><Button secondary onClick={() => inTelegram ? miniApp.close.ifAvailable() : nav.replace('01-6_home')}>Закрыть игру на сегодня</Button></div>
     </div>
   )
 }

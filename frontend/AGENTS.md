@@ -4,7 +4,7 @@ Telegram Mini App: веб-страница, которая открываетс�
 
 ## Стек
 - React + TypeScript, сборка Vite
-- @telegram-apps/sdk для initData, темы и кнопок Telegram
+- @tma.js/sdk для initData, темы и кнопок Telegram
 - Бэкенд в ../backend, общаемся по REST/JSON
 
 ## Запуск

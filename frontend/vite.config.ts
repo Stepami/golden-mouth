@@ -8,7 +8,7 @@ export default defineConfig({
     tma({
       botToken: process.env.TG_PAT,
       mode: 'sdk',
-      sdkModule: '@telegram-apps/sdk',
+      sdkModule: '@tma.js/sdk',
       stateFile: 'dev/telegram-emulator-state.json',
       panel: false,
       eruda: false,

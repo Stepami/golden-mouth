@@ -1,6 +1,6 @@
 import { StoryGoal } from '../ui/StoryGoal'
 import { useEffect, useRef, useState } from 'react'
-import { hapticFeedback, shareStory, shareURL } from '@telegram-apps/sdk-react'
+import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
 import { api } from '../api/client'
 import { firstPost, results } from '../api/mock'
 import type { CommentT, Post, PostResult, PublicationFailure } from '../api/types'

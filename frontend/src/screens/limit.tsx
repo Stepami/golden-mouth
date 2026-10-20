@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { copyTextToClipboard, shareURL } from '@telegram-apps/sdk-react'
+import { copyTextToClipboard, shareURL } from '@tma.js/sdk'
 import { api } from '../api/client'
 import { worldOf } from '../api/worldContent'
 import { useNav } from '../app/nav'
