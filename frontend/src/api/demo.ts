@@ -43,6 +43,7 @@ export function resetDemoPlayer(playerId = currentPlayer?.id) {
     } catch { /* optional storage */ }
   }
   comments.clear()
+  posts.clear()
   currentPlayer = undefined
   try { localStorage.removeItem(PLAYER_KEY) } catch { /* optional storage */ }
 }
