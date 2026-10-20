@@ -1,6 +1,6 @@
 import { worldOf } from '../api/worldContent'
 import { useState } from 'react'
-import { shareURL } from '@telegram-apps/sdk-react'
+import { shareURL } from '@tma.js/sdk'
 import { api } from '../api/client'
 import { challenge as challengeMock } from '../api/mock'
 import { useApi } from '../app/useApi'

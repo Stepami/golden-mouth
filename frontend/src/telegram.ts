@@ -1,5 +1,5 @@
 // Telegram Mini App: init, кнопка «назад», размер. Вне Telegram (браузер, разработка) тихо пропускаем.
-import { backButton, expandViewport, init, isTMA, miniApp, retrieveRawInitData, retrieveLaunchParams, swipeBehavior, viewport } from '@telegram-apps/sdk-react'
+import { backButton, init, isTMA, miniApp, retrieveRawInitData, retrieveLaunchParams, swipeBehavior, viewport } from '@tma.js/sdk'
 import { rememberReferral } from './app/referral'
 import { setInitData } from './api/auth'
 
@@ -16,9 +16,9 @@ export function initTelegram(): boolean {
     backButton.mount.ifAvailable()
     miniApp.mount.ifAvailable()
     miniApp.setHeaderColor.ifAvailable('#0E0E13')
-    miniApp.setBackgroundColor.ifAvailable('#0E0E13')
+    miniApp.setBgColor.ifAvailable('#0E0E13')
     swipeBehavior.mount.ifAvailable(); swipeBehavior.disableVertical.ifAvailable()
-    if (viewport.mount.isAvailable()) viewport.mount().then(() => expandViewport.ifAvailable()).catch(() => {})
+    if (viewport.mount.isAvailable()) viewport.mount().then(() => viewport.expand.ifAvailable()).catch(() => {})
     miniApp.ready.ifAvailable()
   } catch { inTelegram = false }
   return inTelegram
