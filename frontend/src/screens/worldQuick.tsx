@@ -15,7 +15,6 @@ import { TextField } from '../ui/TextField'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import type { Address, WorldDefinition, WorldId } from '../api/types'
 
-function advanced(draft: WorldDraft) { setWorldDraft({ ...draft, advanced: true }) }
 export function WorldOverview() {
   const draft = useWorldDraft(); const nav = useNav(); const { player } = useStore()
   const [confirmSwitch, setConfirmSwitch] = useState(false)
@@ -53,7 +52,7 @@ export function QuickWorldForm({ draft }: { draft: WorldDraft }) {
     <TextField label="Расскажи о своём мире" value={d.description} onChange={description => updateWorldDraft({ description })} rows={5} placeholder="Город парит над морем. Здесь письма доставляют птицы, а жители ищут пропавший остров…" />
     <details className="card"><summary>Нужна идея?</summary><p className="small muted">{d.description.length ? 'Очисти описание, чтобы выбрать готовую идею.' : 'Выбери основу и допиши свои детали.'}</p>{['Город над облаками, где жители ищут пропавший остров и оставляют находки в общей ленте.', 'Космическая станция, на которой каждое утро появляется сообщение из будущего.'].map(idea => <button className="opt" key={idea} disabled={d.description.length > 0} onClick={() => { if (!d.description.length) updateWorldDraft({ description: idea }) }}>{idea}</button>)}</details>
     {!draft.editingId && <p className="small prototype-note">DEV: пока показываем пример наполнения вместо AI-генерации.</p>}
-    <button className="text-link" onClick={() => { advanced(draft); nav.push('05-7b_own_world') }}>Расширенные настройки <span>→</span></button><p className="small muted">Правила, герои и завязка — если хочется настроить всё самому.</p>
+    <button className="text-link" onClick={() => nav.push('05-12_world_advanced')}>Расширенные настройки <span>→</span></button><p className="small muted">Правила, герои и завязка — если хочется настроить всё самому.</p>
   </div><BottomCTA main="Мой персонаж" disabled={!d.title.trim() || !d.description.trim()} onMain={() => { const current = getWorldDraft()!; setWorldDraft({ ...current, definition: draft.editingId ? d : prototypeWorld(d), previewOnly: !draft.editingId }); nav.push('01-4_channel') }} /></div>
 }
 export function QuickChannelForm({ draft }: { draft: WorldDraft }) {
@@ -85,6 +84,6 @@ export function WorldPrototypePreview() {
     <h2>Первая запись в ленте</h2><Card><div className="row"><Avatar seed={first?.avatarSeed} avatarStyle={d.avatarStyle} mode="default" /><div><b>{first?.name}</b><div className="small muted">{first?.role}</div></div></div><p>{d.firstContext}</p><div className="small muted">♡ 12　💬 2</div></Card>
     {second && <Card><b>{second.name}</b><p>У меня есть другая версия. Давай сравним находки в ленте?</p></Card>}
     <p className="small muted">Это пример наполнения для проверки интерфейса. После согласования AI сможет подбирать героев и завязку под твоё описание.</p>
-    <button className="text-link" onClick={() => { advanced(draft); nav.push('05-7b_own_world') }}>Посмотреть расширенные настройки →</button>
+    <button className="text-link" onClick={() => nav.push('05-12_world_advanced')}>Посмотреть расширенные настройки →</button>
   </div><BottomCTA main="Вернуться к настройке" onMain={() => nav.back()} /></div>
 }
