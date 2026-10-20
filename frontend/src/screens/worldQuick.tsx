@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useStore } from '../app/store'
 import { avatarPersonalization } from '../app/avatarPersonalization'
 import { displayHandle } from '../app/handle'
@@ -73,8 +73,8 @@ export function QuickChannelForm({ draft }: { draft: WorldDraft }) {
     <details className="card profile-preview"><summary><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={40} /><span><b>{d.name || "Твой персонаж"}</b><span className="small muted">{displayHandle(d.avatar)}</span></span><span className="small">Изменить</span></summary><label className="label">Ник<input aria-label="Ник" value={d.avatar} maxLength={80} onChange={e => updateWorldDraft({ avatar: e.target.value })} /></label><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={56} /><AvatarPersonalization enabled={draft.personalizeAvatar !== false} onChange={personalizeAvatar => setWorldDraft({ ...draft, personalizeAvatar })} /></details>
   </div><BottomCTA main="Выбрать градус драмы" disabled={!d.name.trim() || !d.role.trim() || !d.avatar.trim()} onMain={() => nav.push('01-4b_world_setup')} /></div>
 }
-export function DramaPicker({ definition: d }: { definition: WorldDefinition }) {
-  return <><h1>Сколько драмы добавим?</h1><p className="muted">Выбери настроение истории. Его можно изменить позже.</p><div className="drama-options">{dramaOptions.map(option => <button className={`drama-option ${d.drama === option.id ? 'selected' : ''}`} aria-pressed={d.drama === option.id} onClick={() => updateWorldDraft({ drama: option.id })} key={option.id}><span className="drama-icon">{option.icon}</span><div><b>{option.title}</b><p>{option.description}</p>{d.drama === option.id && <div className="drama-example">{option.example}</div>}</div><span>{d.drama === option.id ? '✓' : ''}</span></button>)}</div></>
+export function DramaPicker({ definition: d, beforeOptions }: { definition: WorldDefinition; beforeOptions?: ReactNode }) {
+  return <><h1>Сколько драмы добавим?</h1><p className="muted">Выбери настроение истории. Его можно изменить позже.</p>{beforeOptions}<div className="drama-options">{dramaOptions.map(option => <button className={`drama-option ${d.drama === option.id ? 'selected' : ''}`} aria-pressed={d.drama === option.id} onClick={() => updateWorldDraft({ drama: option.id })} key={option.id}><span className="drama-icon">{option.icon}</span><div><b>{option.title}</b><p>{option.description}</p>{d.drama === option.id && <div className="drama-example">{option.example}</div>}</div><span>{d.drama === option.id ? '✓' : ''}</span></button>)}</div></>
 }
 export function WorldPrototypePreview() {
   const draft = useWorldDraft(); const nav = useNav()
