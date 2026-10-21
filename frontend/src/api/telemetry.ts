@@ -1,11 +1,8 @@
-import { createClient } from './generated/client'
-import { telemetrySubmitAnalytics, telemetrySubmitClientLogs } from './generated/sdk.gen'
-import type { AnalyticsBatchRequest, ClientLogBatchRequest } from './generated/types.gen'
-import { telegramAuthHeaders } from './auth'
+import { TelemetryClient } from './generated/reki-api'
+import type { AnalyticsBatchRequest, ClientLogBatchRequest } from './generated/reki-api'
 import { runtimeConfig } from '../app/runtimeConfig'
+import { transport } from './transport'
 
-// Separate from game error reporting: failed telemetry must not recursively log itself.
-const client = createClient({ baseUrl: new URL(runtimeConfig.apiBaseUrl, window.location.origin).href,
-  auth: () => telegramAuthHeaders().Authorization ?? '', fetch: (input, init) => fetch(input, init) })
-export const sendAnalytics = (body: AnalyticsBatchRequest) => telemetrySubmitAnalytics({ client, body, keepalive: true, throwOnError: true })
-export const sendLogs = (body: ClientLogBatchRequest) => telemetrySubmitClientLogs({ client, body, keepalive: true, throwOnError: true })
+const client = new TelemetryClient(new URL(runtimeConfig.apiBaseUrl, window.location.origin).href, transport(true))
+export const sendAnalytics = (body: AnalyticsBatchRequest) => client.submitAnalytics(body)
+export const sendLogs = (body: ClientLogBatchRequest) => client.submitClientLogs(body)

@@ -15,10 +15,11 @@ Telegram Mini App: веб-страница, которая открываетс�
 ## Структура
 - `src/screens/<группа>.tsx`: экраны, ключ = код макета (`01-3_world`). `?screen=<код>` открывает экран сразу, `?gallery` показывает все.
 - `src/ui/`: компоненты из макетов (Card, Button, Chip, Gift, Avatar, SkillBar, Ribbon, Whisper, Comment, Sheet…).
-- `openapi/reki-api.json`: снимок штатной OpenAPI-сборки backend; `src/api/generated/`: игнорируемый результат генерации перед build/dev; `src/api/types.ts`: производные UI/demo-модели, `mock.ts`: тестовые данные из макетов, `client.ts`: источник выбирает `public/runtime-config/config.js` (`mock` или `backend`).
+- `src/api/generated/reki-api.ts`: закоммиченный NSwag Fetch-клиент и wire DTO. `src/api/types.ts`: производные модели экранов, `mock.ts`: данные галереи и fallback-состояний. `client.ts`: фасад настоящего API.
+- `nswag.frontend.json`: независимый frontend-конфиг существующего NSwag 14.7.1; сборка API генерирует TS после OpenAPI. Фронтенд собирается из закоммиченного клиента без .NET. Обновление: изменить API → собрать API → закоммитить TS-клиент → проверить фронт. Generated-файлы вручную не редактировать.
+- Runtime config содержит `apiBaseUrl` и feature flags. Mock/backend-переключения нет; ошибка API не должна создавать фиктивный успешный результат. SSE POST не повторять автоматически; сохранять отмену и восстановление по статусу.
 - `scripts/screens.sh [коды]`: скриншоты 390×844 в `shots/` для сравнения с `docs/screens/`.
 
-Генератор изолирован в `tools/api-generator` со своим lockfile и TypeScript compiler API. `npm ci` устанавливает оба toolchain. Generated JSON/TS вручную не править; обновление снимка и CI описаны в README. Ручные REST-запросы и копии wire-DTO не добавлять. SSE POST не должен автоматически повторяться при обрыве.
 
 ## Секреты
 - Перед работой один раз: `git config core.hooksPath .github/hooks`. Хук `.github/scripts/check-secrets.sh` останавливает коммит с токенами, ключами, `.env` и личными путями.

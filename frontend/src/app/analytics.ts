@@ -4,9 +4,9 @@ import { apiBaseUrl as BASE } from './runtimeConfig'
 import { ActiveTime } from './activeTime'
 import { inTelegram } from '../telegram'
 import { sendAnalytics } from '../api/telemetry'
-import type { AnalyticsBatchRequest, AnalyticsEventRequest } from '../api/generated/types.gen'
+import type { AnalyticsBatchRequest, AnalyticsEventRequest } from '../api/generated/reki-api'
 type Props = Record<string, string | number | boolean | null>
-export type AEvent = Omit<AnalyticsEventRequest, 't' | 'props'> & { t: number; props?: Props }
+export type AEvent = AnalyticsEventRequest & { t: number; props?: Props }
 
 let playerAvailable = false
 export const canSendTelemetry = () => playerAvailable

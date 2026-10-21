@@ -6,11 +6,7 @@
   "scripts": {
     "dev": "vite --host",
     "build": "tsc -b && vite build",
-    "preview": "vite preview --host",
-    "api:generate": "npm run generate --prefix tools/api-generator",
-    "prebuild": "npm run api:generate",
-    "predev": "npm run api:generate",
-    "postinstall": "npm ci --prefix tools/api-generator"
+    "preview": "vite preview --host"
   },
   "dependencies": {
     "@dicebear/core": "10.7.0",

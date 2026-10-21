@@ -1,8 +1,8 @@
-import type * as Wire from './generated/types.gen'
+import type * as Wire from './generated/reki-api'
 import type * as Ui from './types'
 
 // Generated stream validators use bigint for int64; the UI consistently uses JS numbers.
-type Input<T> = T extends number ? number | bigint : T extends (infer Item)[] ? Input<Item>[] : T extends object ? { [K in keyof T]: Input<T[K]> } : T
+type Input<T> = T extends number ? number | string | bigint : T extends (infer Item)[] ? Input<Item>[] : T extends object ? { [K in keyof T]: Input<T[K]> } : T
 const number = (value: number | string | bigint): number => Number(value)
 export function worldKey(value: string): Ui.WorldId {
   switch (value) {
@@ -23,7 +23,7 @@ export function world(value: Input<Wire.WorldResponse>): Ui.WorldDocument {
 }
 export function player(value: Input<Wire.PlayerResponse>): Ui.PlayerDocument {
   const band = value.ageBand
-  if (band && !['14-17', '18-24', '25-34', '35-44', '45+'].includes(band)) throw new Error('Unknown age band')
+  if (band && band !== '18+' && !['14-17', '18-24', '25-34', '35-44', '45+'].includes(band)) throw new Error('Unknown age band')
   const ageBand = band === '14-17' || band === '18-24' || band === '25-34' || band === '35-44' || band === '45+' ? band : undefined
   const skill = (id: Ui.SkillId): Ui.Skill => {
     const item = value.skills[id]
@@ -39,12 +39,14 @@ export const channelPost = (value: Input<Wire.ChannelPostResponse>): Ui.ChannelP
 export const result = (value: Input<Wire.PostResultResponse>): Ui.PostResult => ({ ...value, delta: number(value.delta), views: number(value.views), bestComment: value.bestComment ?? undefined, hook: value.hook ?? undefined, ribbons: value.ribbons.map(ribbon => ({ ...ribbon, sub: ribbon.sub ?? undefined })) })
 export const publication = (value: Input<Wire.PublicationStatusResponse>): Ui.PublicationState => ({ ...value, failure: value.failure ?? undefined, result: value.result ? result(value.result) : null })
 export const reply = (value: Input<Wire.ReplyLiveEvent>): Ui.ReplyLiveEvent => ({ ...value, energyLeft: value.energyLeft == null ? value.energyLeft : number(value.energyLeft), subscribers: value.subscribers == null ? value.subscribers : number(value.subscribers), post: value.post ? post(value.post) : null })
-export function live(value: Input<Wire.LiveEvent>): Ui.LiveEvent {
+export function live(value: Awaited<ReturnType<import('./generated/reki-api').PostsClient['moderatePublication']>>['result'][number]): Ui.LiveEvent {
   switch (value.type) {
-    case 'views': return { ...value, views: number(value.views) }
-    case 'comment': return { ...value, comment: comment(value.comment) }
-    case 'result': return { ...value, result: result(value.result) }
-    default: return value
+    case 'views': return { ...value, type: value.type, views: number(value.views) }
+    case 'comment': return { ...value, type: value.type, comment: comment(value.comment) }
+    case 'result': return { ...value, type: value.type, result: result(value.result) }
+    case 'react': return { type: value.type, emoji: value.emoji }
+    case 'typing': return { type: value.type, who: value.who }
+    default: throw new Error('Unknown live event')
   }
 }
 export function friend(value: Input<Wire.FriendResponse>): Ui.Friend {
