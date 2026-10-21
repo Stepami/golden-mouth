@@ -69,4 +69,15 @@ jobs:
         run: npm ci && npm run build
 
       - name: Test
-        run: dotnet test --project tests/Reki.Tests/Reki.Tests.csproj --configuration Release --no-build
+        run: |
+          # Capture startup failures before Testcontainers removes the failed Mongo container.
+          docker events --filter type=container --filter label=org.testcontainers=true --filter event=die --format '{{.Actor.ID}}' |
+            while read -r container_id; do
+              docker inspect --format '{{.Name}} exit={{.State.ExitCode}} OOM={{.State.OOMKilled}} error={{.State.Error}}' "$container_id" || true
+              docker logs --tail 60 "$container_id" 2>&1 || true
+            done &
+          diagnostics_pid=$!
+          trap 'kill "$diagnostics_pid" 2>/dev/null || true' EXIT
+          df -h /
+          free -m
+          dotnet test --project tests/Reki.Tests/Reki.Tests.csproj --configuration Release --no-build
