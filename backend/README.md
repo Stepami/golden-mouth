@@ -143,5 +143,3 @@ No running API, database, Telegram token or LLM credentials are needed for gener
 SSE uses a binary stream schema so the C# generated client returns an open `FileResponse.Stream`; dispose the FileResponse after reading. Frontend Fetch generation returns a Blob, so its existing incremental SSE adapter retains the single POST and durable recovery behavior. Never automatically repeat mutation POSTs on disconnect.
 
 The active-challenge endpoint returns an empty HTTP 200 body when there is no challenge. Its named schema is nullable; the Fetch client decodes the empty response as null. HTTP behavior and game mechanics are unchanged.
-
-Direct HTTP exceptions in component tests: the removed legacy `/posts` route has no generated operation; two `/me` wire-contract checks must detect forbidden JSON fields that DTO deserialization would silently ignore. All other test requests, including expected errors, public PNGs and SSE, use NSwag.

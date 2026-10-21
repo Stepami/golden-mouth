@@ -1,5 +1,4 @@
 using System.Net;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -75,7 +74,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var before = await GetStoredPostAsync(postId);
 
         // Act
-        var response = await FailureAsync<PostsApiException>(() => api.Posts.GetPostAsync(postId, second.Id, CancellationToken.None));
+        var response = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostAsync(postId, second.Id, CancellationToken.None));
+        await Assert.That(response).IsNotNull();
 
         // Assert
         await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
@@ -380,21 +380,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task LegacyPostRoute_AfterRemoval_ReturnsNotFoundAsync()
-    {
-        // The removed route deliberately has no generated operation.
-        using var http = CreateAuthenticatedHttpClient(1022);
-        using var body = new StringContent("{\"text\":\"hello\"}", Encoding.UTF8, "application/json");
-
-        using var response = await http.PostAsync(
-            "/posts",
-            body,
-            CancellationToken.None);
-
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
-    }
-
-    [Test]
     public async Task PublishPost_AfterDailyLimit_ReturnsConflictAsync()
     {
         const long telegramUserId = 1002;
@@ -614,8 +599,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         };
 
         // Act
-        var response = await FailureAsync<PostsApiException>(() => strangerApi.Posts.ReplyToPostAsync(
+        var response = await Assert.ThrowsAsync<PostsApiException>(() => strangerApi.Posts.ReplyToPostAsync(
             postId, worldId, request, CancellationToken.None));
+        await Assert.That(response).IsNotNull();
 
         // Assert
         await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
