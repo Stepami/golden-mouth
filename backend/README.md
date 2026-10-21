@@ -119,3 +119,27 @@ TickerQ request serialization uses `ApiJsonSerializerContext` through `WithJsonC
 Successful publications and thread replies schedule a one-off `GenerateStarFeedPostJob`. Feed reads do so with `feed.open_probability` from the balance file. The existing feed returns saved posts immediately; refresh to see new star posts. The backend uses a non-streaming chat response and the existing 14+ output checks. Player energy, audience and progression are unchanged.
 
 Type-safe `AddAsync<GenerateStarFeedPostJob, StarFeedRequest>` uses `RekiTimeTicker` defaults: three retries at 30, 120 and 600 seconds. These defaults apply to all application TimeTickers; cron maintenance retains its existing configuration. Technical failures propagate to TickerQ; invalid content and missing worlds terminate without retry. A BSON ObjectId string is created at scheduling and stored as a typed PostId in the request alongside typed PlayerId and WorldId. Repeated executions reuse it; the post collection's unique `_id` prevents duplicate posts. Concurrent executions of the same request can still spend AI tokens before one insert wins. Failed TickerQ scheduling results are logged; unexpected scheduler exceptions are not swallowed. ScheduleAsync always schedules; ScheduleFromFeedAsync uses random < feed.open_probability. Neither scheduler method accepts a cancellation token. MongoGameStore uses a plain InsertPostAsync and insertion exceptions propagate to TickerQ. The AI history identifies authors and marks the selected star's own posts with isOwn. There is no transactional outbox between the business commit and scheduling.
+
+## Frontend OpenAPI contract (#122)
+
+The build-time document is the source for `frontend/openapi/reki-api.json`. No running API,
+MongoDB, LLM credentials or Telegram token is needed to generate it:
+
+```sh
+cd backend
+dotnet build src/Reki.Api/Reki.Api.csproj --configuration Release
+cd ..
+cp backend/src/Reki.Api/OpenApi/reki-api.json frontend/openapi/reki-api.json
+python3 .github/scripts/check-openapi.py
+```
+
+Never edit generated JSON or generated clients by hand. After changing API contracts or metadata,
+refresh the snapshot and run the frontend build. Backend CI compares parsed JSON (object key order
+and whitespace are ignored), then installs/builds the frontend even for backend-only changes.
+The frontend's generator and integration are delivered in a dependent PR for #122.
+
+The active-challenge endpoint returns an empty HTTP 200 body when there is no challenge; its
+schema is nullable and the frontend normalizes that representation to `null`. SSE operations
+send JSON objects in individual `data:` frames (`PublicationStatusLiveEvent` / `ReplyLiveEvent`),
+not one JSON response. Their descriptions document recovery without automatically repeating POST.
+These are metadata corrections, not changes to HTTP behavior or future #123/#193 contracts.
