@@ -143,3 +143,14 @@ schema is nullable and the frontend normalizes that representation to `null`. SS
 send JSON objects in individual `data:` frames (`PublicationStatusLiveEvent` / `ReplyLiveEvent`),
 not one JSON response. Their descriptions document recovery without automatically repeating POST.
 These are metadata corrections, not changes to HTTP behavior or future #123/#193 contracts.
+
+Contract audit (21 October 2026, baseline `cbc26b9`):
+
+| Operation / value | Generated description before #122 | Observed HTTP representation / handling |
+| --- | --- | --- |
+| `GET /challenges/active`, no active challenge | Non-null `ChallengeResponse` | HTTP 200, no Content-Type, empty body. Named schema is now nullable; frontend normalizes only this empty response to null. |
+| Publication / reply SSE | `text/event-stream` without an event schema on the operation | Each `data:` frame is a JSON `PublicationStatusLiveEvent` / `ReplyLiveEvent`; these existing component schemas are used to generate frame validators. Operation descriptions explain framing and recovery. |
+| `PATCH /settings`, `PUT /worlds/{worldId}`, `DELETE /me` | HTTP 200, no response DTO | Empty body, not `{}` on the wire. Callers discard the generated client's empty-result placeholder; no JSON response is added to the server. |
+| `POST /events`, `POST /logs` | HTTP 204 | Empty HTTP 204; frontend keeps Authorization and keepalive. |
+| Numeric fields (energy, subscribers, views, counters) | `integer` or `string` | Normal responses contain JSON numbers. The union reflects existing AllowReadingFromString settings; UI adapters normalize it without changing serialization settings. |
+| Failed requests | Not every error is listed on each operation | Global exception handler writes ProblemDetails, optionally with PublicationFailure in `failure`; auth/non-JSON errors can lack that extension. Frontend checks this optional value at runtime and retains HTTP status in ApiError. No error payload is assumed from the success schema. |
