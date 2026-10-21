@@ -20,7 +20,7 @@ export class WorldsClient {
     /**
      * @return OK
      */
-    getWorldTemplates(signal?: AbortSignal): Promise<WorldResponse[]> {
+    getWorldTemplates(signal?: AbortSignal): Promise<SwaggerResponse<WorldResponse[]>> {
         let url_ = this.baseUrl + "/worlds/templates";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -37,27 +37,27 @@ export class WorldsClient {
         });
     }
 
-    protected processGetWorldTemplates(response: Response): Promise<WorldResponse[]> {
+    protected processGetWorldTemplates(response: Response): Promise<SwaggerResponse<WorldResponse[]>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as WorldResponse[];
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<WorldResponse[]>(null as any);
+        return Promise.resolve<SwaggerResponse<WorldResponse[]>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return OK
      */
-    getOwnedWorlds(signal?: AbortSignal): Promise<WorldResponse[]> {
+    getOwnedWorlds(signal?: AbortSignal): Promise<SwaggerResponse<WorldResponse[]>> {
         let url_ = this.baseUrl + "/worlds";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -74,27 +74,27 @@ export class WorldsClient {
         });
     }
 
-    protected processGetOwnedWorlds(response: Response): Promise<WorldResponse[]> {
+    protected processGetOwnedWorlds(response: Response): Promise<SwaggerResponse<WorldResponse[]>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as WorldResponse[];
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<WorldResponse[]>(null as any);
+        return Promise.resolve<SwaggerResponse<WorldResponse[]>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return OK
      */
-    createWorld(body: CreateWorldRequest, signal?: AbortSignal): Promise<WorldResponse> {
+    createWorld(body: CreateWorldRequest, signal?: AbortSignal): Promise<SwaggerResponse<WorldResponse>> {
         let url_ = this.baseUrl + "/worlds";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -115,27 +115,27 @@ export class WorldsClient {
         });
     }
 
-    protected processCreateWorld(response: Response): Promise<WorldResponse> {
+    protected processCreateWorld(response: Response): Promise<SwaggerResponse<WorldResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as WorldResponse;
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<WorldResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<WorldResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return OK
      */
-    updateWorld(worldId: string, body: CreateWorldRequest, signal?: AbortSignal): Promise<void> {
+    updateWorld(worldId: string, body: CreateWorldRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/worlds/{worldId}";
         if (worldId === undefined || worldId === null)
             throw new globalThis.Error("The parameter 'worldId' must be defined.");
@@ -159,19 +159,19 @@ export class WorldsClient {
         });
     }
 
-    protected processUpdateWorld(response: Response): Promise<void> {
+    protected processUpdateWorld(response: Response): Promise<SwaggerResponse<void>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
-            return null;
+            return new SwaggerResponse(status, _headers, null as any);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
     }
 }
 
@@ -188,7 +188,7 @@ export class TelemetryClient {
     /**
      * @return No Content
      */
-    submitAnalytics(body: AnalyticsBatchRequest, signal?: AbortSignal): Promise<void> {
+    submitAnalytics(body: AnalyticsBatchRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/events";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -209,25 +209,25 @@ export class TelemetryClient {
         });
     }
 
-    protected processSubmitAnalytics(response: Response): Promise<void> {
+    protected processSubmitAnalytics(response: Response): Promise<SwaggerResponse<void>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 204) {
             return response.text().then((_responseText) => {
-            return null;
+            return new SwaggerResponse(status, _headers, null as any);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return No Content
      */
-    submitClientLogs(body: ClientLogBatchRequest, signal?: AbortSignal): Promise<void> {
+    submitClientLogs(body: ClientLogBatchRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/logs";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -248,25 +248,25 @@ export class TelemetryClient {
         });
     }
 
-    protected processSubmitClientLogs(response: Response): Promise<void> {
+    protected processSubmitClientLogs(response: Response): Promise<SwaggerResponse<void>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 204) {
             return response.text().then((_responseText) => {
-            return null;
+            return new SwaggerResponse(status, _headers, null as any);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return OK
      */
-    reportComment(body: ReportRequest, signal?: AbortSignal): Promise<void> {
+    reportComment(body: ReportRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/reports";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -287,19 +287,19 @@ export class TelemetryClient {
         });
     }
 
-    protected processReportComment(response: Response): Promise<void> {
+    protected processReportComment(response: Response): Promise<SwaggerResponse<void>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
-            return null;
+            return new SwaggerResponse(status, _headers, null as any);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
     }
 }
 
@@ -316,7 +316,7 @@ export class SocialClient {
     /**
      * @return OK
      */
-    getFriends(signal?: AbortSignal): Promise<FriendResponse[]> {
+    getFriends(signal?: AbortSignal): Promise<SwaggerResponse<FriendResponse[]>> {
         let url_ = this.baseUrl + "/friends";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -333,28 +333,28 @@ export class SocialClient {
         });
     }
 
-    protected processGetFriends(response: Response): Promise<FriendResponse[]> {
+    protected processGetFriends(response: Response): Promise<SwaggerResponse<FriendResponse[]>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as FriendResponse[];
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FriendResponse[]>(null as any);
+        return Promise.resolve<SwaggerResponse<FriendResponse[]>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @param worldId (optional) 
      * @return OK
      */
-    getDirectMessages(starId: string, worldId?: string | undefined, signal?: AbortSignal): Promise<DmResponse> {
+    getDirectMessages(starId: string, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<DmResponse>> {
         let url_ = this.baseUrl + "/dm/{starId}?";
         if (starId === undefined || starId === null)
             throw new globalThis.Error("The parameter 'starId' must be defined.");
@@ -378,28 +378,28 @@ export class SocialClient {
         });
     }
 
-    protected processGetDirectMessages(response: Response): Promise<DmResponse> {
+    protected processGetDirectMessages(response: Response): Promise<SwaggerResponse<DmResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as DmResponse;
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<DmResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<DmResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @param worldId (optional) 
      * @return OK
      */
-    sendDirectMessage(starId: string, body: DirectMessageRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<SendDirectMessageResponse> {
+    sendDirectMessage(starId: string, body: DirectMessageRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<SendDirectMessageResponse>> {
         let url_ = this.baseUrl + "/dm/{starId}?";
         if (starId === undefined || starId === null)
             throw new globalThis.Error("The parameter 'starId' must be defined.");
@@ -427,28 +427,28 @@ export class SocialClient {
         });
     }
 
-    protected processSendDirectMessage(response: Response): Promise<SendDirectMessageResponse> {
+    protected processSendDirectMessage(response: Response): Promise<SwaggerResponse<SendDirectMessageResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as SendDirectMessageResponse;
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<SendDirectMessageResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<SendDirectMessageResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @param worldId (optional) 
      * @return OK
      */
-    forgetStarMemory(starId: string, body: ForgetMemoryRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<void> {
+    forgetStarMemory(starId: string, body: ForgetMemoryRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/stars/{starId}/memory?";
         if (starId === undefined || starId === null)
             throw new globalThis.Error("The parameter 'starId' must be defined.");
@@ -476,25 +476,25 @@ export class SocialClient {
         });
     }
 
-    protected processForgetStarMemory(response: Response): Promise<void> {
+    protected processForgetStarMemory(response: Response): Promise<SwaggerResponse<void>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
-            return null;
+            return new SwaggerResponse(status, _headers, null as any);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return Active challenge, or an empty HTTP 200 body when no challenge exists. Clients normalize the empty body to null.
      */
-    getActiveChallenge(signal?: AbortSignal): Promise<ChallengeResponse | null> {
+    getActiveChallenge(signal?: AbortSignal): Promise<SwaggerResponse<ChallengeResponse | null>> {
         let url_ = this.baseUrl + "/challenges/active";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -511,27 +511,27 @@ export class SocialClient {
         });
     }
 
-    protected processGetActiveChallenge(response: Response): Promise<ChallengeResponse | null> {
+    protected processGetActiveChallenge(response: Response): Promise<SwaggerResponse<ChallengeResponse | null>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ChallengeResponse;
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ChallengeResponse | null>(null as any);
+        return Promise.resolve<SwaggerResponse<ChallengeResponse | null>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return OK
      */
-    startChallenge(body: StartChallengeRequest, signal?: AbortSignal): Promise<void> {
+    startChallenge(body: StartChallengeRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/challenges";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -552,19 +552,19 @@ export class SocialClient {
         });
     }
 
-    protected processStartChallenge(response: Response): Promise<void> {
+    protected processStartChallenge(response: Response): Promise<SwaggerResponse<void>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
-            return null;
+            return new SwaggerResponse(status, _headers, null as any);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
     }
 }
 
@@ -582,7 +582,7 @@ export class PostsClient {
      * @param worldId (optional) 
      * @return OK
      */
-    generatePublication(body: StartPublicationRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<FileResponse> {
+    generatePublication(body: StartPublicationRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<FileResponse>> {
         let url_ = this.baseUrl + "/posts/publications?";
         if (worldId === null)
             throw new globalThis.Error("The parameter 'worldId' cannot be null.");
@@ -607,7 +607,7 @@ export class PostsClient {
         });
     }
 
-    protected processGeneratePublication(response: Response): Promise<FileResponse> {
+    protected processGeneratePublication(response: Response): Promise<SwaggerResponse<FileResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -620,19 +620,19 @@ export class PostsClient {
                 fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
                 fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
             }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+            return response.blob().then(blob => { return new SwaggerResponse(status, _headers, { fileName: fileName, data: blob, status: status, headers: _headers }); });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<FileResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return OK
      */
-    getPublicationStatus(publicationId: string, signal?: AbortSignal): Promise<PublicationStatusResponse> {
+    getPublicationStatus(publicationId: string, signal?: AbortSignal): Promise<SwaggerResponse<PublicationStatusResponse>> {
         let url_ = this.baseUrl + "/posts/publications/{publicationId}";
         if (publicationId === undefined || publicationId === null)
             throw new globalThis.Error("The parameter 'publicationId' must be defined.");
@@ -652,28 +652,28 @@ export class PostsClient {
         });
     }
 
-    protected processGetPublicationStatus(response: Response): Promise<PublicationStatusResponse> {
+    protected processGetPublicationStatus(response: Response): Promise<SwaggerResponse<PublicationStatusResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PublicationStatusResponse;
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<PublicationStatusResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<PublicationStatusResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @param worldId (optional) 
      * @return OK
      */
-    moderatePublication(publicationId: string, worldId?: string | undefined, signal?: AbortSignal): Promise<LiveEvent[]> {
+    moderatePublication(publicationId: string, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<(LiveEventViewsLiveEvent | LiveEventReactionLiveEvent | LiveEventCommentLiveEvent | LiveEventTypingLiveEvent | LiveEventResultLiveEvent)[]>> {
         let url_ = this.baseUrl + "/posts/publications/{publicationId}/moderation?";
         if (publicationId === undefined || publicationId === null)
             throw new globalThis.Error("The parameter 'publicationId' must be defined.");
@@ -697,28 +697,28 @@ export class PostsClient {
         });
     }
 
-    protected processModeratePublication(response: Response): Promise<LiveEvent[]> {
+    protected processModeratePublication(response: Response): Promise<SwaggerResponse<(LiveEventViewsLiveEvent | LiveEventReactionLiveEvent | LiveEventCommentLiveEvent | LiveEventTypingLiveEvent | LiveEventResultLiveEvent)[]>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as LiveEvent[];
-            return result200;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as (LiveEventViewsLiveEvent | LiveEventReactionLiveEvent | LiveEventCommentLiveEvent | LiveEventTypingLiveEvent | LiveEventResultLiveEvent)[];
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<LiveEvent[]>(null as any);
+        return Promise.resolve<SwaggerResponse<(LiveEventViewsLiveEvent | LiveEventReactionLiveEvent | LiveEventCommentLiveEvent | LiveEventTypingLiveEvent | LiveEventResultLiveEvent)[]>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @param worldId (optional) 
      * @return OK
      */
-    replyToPost(postId: string, body: ReplyRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<FileResponse> {
+    replyToPost(postId: string, body: ReplyRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<FileResponse>> {
         let url_ = this.baseUrl + "/posts/{postId}/replies?";
         if (postId === undefined || postId === null)
             throw new globalThis.Error("The parameter 'postId' must be defined.");
@@ -746,7 +746,7 @@ export class PostsClient {
         });
     }
 
-    protected processReplyToPost(response: Response): Promise<FileResponse> {
+    protected processReplyToPost(response: Response): Promise<SwaggerResponse<FileResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -759,20 +759,20 @@ export class PostsClient {
                 fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
                 fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
             }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+            return response.blob().then(blob => { return new SwaggerResponse(status, _headers, { fileName: fileName, data: blob, status: status, headers: _headers }); });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<FileResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @param worldId (optional) 
      * @return OK
      */
-    getFeed(worldId?: string | undefined, signal?: AbortSignal): Promise<FeedItemResponse[]> {
+    getFeed(worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<FeedItemResponse[]>> {
         let url_ = this.baseUrl + "/feed?";
         if (worldId === null)
             throw new globalThis.Error("The parameter 'worldId' cannot be null.");
@@ -793,28 +793,28 @@ export class PostsClient {
         });
     }
 
-    protected processGetFeed(response: Response): Promise<FeedItemResponse[]> {
+    protected processGetFeed(response: Response): Promise<SwaggerResponse<FeedItemResponse[]>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as FeedItemResponse[];
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FeedItemResponse[]>(null as any);
+        return Promise.resolve<SwaggerResponse<FeedItemResponse[]>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @param worldId (optional) 
      * @return OK
      */
-    getChannelPosts(worldId?: string | undefined, signal?: AbortSignal): Promise<ChannelPostResponse[]> {
+    getChannelPosts(worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<ChannelPostResponse[]>> {
         let url_ = this.baseUrl + "/posts/mine?";
         if (worldId === null)
             throw new globalThis.Error("The parameter 'worldId' cannot be null.");
@@ -835,28 +835,28 @@ export class PostsClient {
         });
     }
 
-    protected processGetChannelPosts(response: Response): Promise<ChannelPostResponse[]> {
+    protected processGetChannelPosts(response: Response): Promise<SwaggerResponse<ChannelPostResponse[]>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ChannelPostResponse[];
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ChannelPostResponse[]>(null as any);
+        return Promise.resolve<SwaggerResponse<ChannelPostResponse[]>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @param worldId (optional) 
      * @return OK
      */
-    getPost(postId: string, worldId?: string | undefined, signal?: AbortSignal): Promise<PostDetailResponse> {
+    getPost(postId: string, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PostDetailResponse>> {
         let url_ = this.baseUrl + "/posts/{postId}?";
         if (postId === undefined || postId === null)
             throw new globalThis.Error("The parameter 'postId' must be defined.");
@@ -880,21 +880,21 @@ export class PostsClient {
         });
     }
 
-    protected processGetPost(response: Response): Promise<PostDetailResponse> {
+    protected processGetPost(response: Response): Promise<SwaggerResponse<PostDetailResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PostDetailResponse;
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<PostDetailResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<PostDetailResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 }
 
@@ -911,7 +911,7 @@ export class StoryCardsClient {
     /**
      * @return OK
      */
-    getPublicStoryCard(playerId: string, postId: string, signal?: AbortSignal): Promise<FileResponse> {
+    getPublicStoryCard(playerId: string, postId: string, signal?: AbortSignal): Promise<SwaggerResponse<FileResponse>> {
         let url_ = this.baseUrl + "/cards/story/{playerId}/{postId}.png";
         if (playerId === undefined || playerId === null)
             throw new globalThis.Error("The parameter 'playerId' must be defined.");
@@ -934,7 +934,7 @@ export class StoryCardsClient {
         });
     }
 
-    protected processGetPublicStoryCard(response: Response): Promise<FileResponse> {
+    protected processGetPublicStoryCard(response: Response): Promise<SwaggerResponse<FileResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -947,7 +947,7 @@ export class StoryCardsClient {
                 fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
                 fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
             }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+            return response.blob().then(blob => { return new SwaggerResponse(status, _headers, { fileName: fileName, data: blob, status: status, headers: _headers }); });
         } else if (status === 404) {
             return response.text().then((_responseText) => {
             let result404: any = null;
@@ -959,7 +959,7 @@ export class StoryCardsClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<FileResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 }
 
@@ -976,7 +976,7 @@ export class PlayerClient {
     /**
      * @return OK
      */
-    getCurrentPlayer(signal?: AbortSignal): Promise<PlayerResponse> {
+    getCurrentPlayer(signal?: AbortSignal): Promise<SwaggerResponse<PlayerResponse>> {
         let url_ = this.baseUrl + "/me";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -993,14 +993,14 @@ export class PlayerClient {
         });
     }
 
-    protected processGetCurrentPlayer(response: Response): Promise<PlayerResponse> {
+    protected processGetCurrentPlayer(response: Response): Promise<SwaggerResponse<PlayerResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlayerResponse;
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status === 404) {
             return response.text().then((_responseText) => {
@@ -1013,13 +1013,13 @@ export class PlayerClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<PlayerResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<PlayerResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return OK
      */
-    deleteCurrentPlayer(signal?: AbortSignal): Promise<void> {
+    deleteCurrentPlayer(signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/me";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1036,25 +1036,25 @@ export class PlayerClient {
         });
     }
 
-    protected processDeleteCurrentPlayer(response: Response): Promise<void> {
+    protected processDeleteCurrentPlayer(response: Response): Promise<SwaggerResponse<void>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
-            return null;
+            return new SwaggerResponse(status, _headers, null as any);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return OK
      */
-    completeOnboarding(body: OnboardingRequest, signal?: AbortSignal): Promise<PlayerResponse> {
+    completeOnboarding(body: OnboardingRequest, signal?: AbortSignal): Promise<SwaggerResponse<PlayerResponse>> {
         let url_ = this.baseUrl + "/onboarding";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1075,27 +1075,27 @@ export class PlayerClient {
         });
     }
 
-    protected processCompleteOnboarding(response: Response): Promise<PlayerResponse> {
+    protected processCompleteOnboarding(response: Response): Promise<SwaggerResponse<PlayerResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlayerResponse;
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<PlayerResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<PlayerResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return OK
      */
-    getInvitation(signal?: AbortSignal): Promise<InvitationResponse> {
+    getInvitation(signal?: AbortSignal): Promise<SwaggerResponse<InvitationResponse>> {
         let url_ = this.baseUrl + "/invitation";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1112,27 +1112,27 @@ export class PlayerClient {
         });
     }
 
-    protected processGetInvitation(response: Response): Promise<InvitationResponse> {
+    protected processGetInvitation(response: Response): Promise<SwaggerResponse<InvitationResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as InvitationResponse;
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<InvitationResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<InvitationResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return OK
      */
-    getReferralCode(signal?: AbortSignal): Promise<ReferralResponse> {
+    getReferralCode(signal?: AbortSignal): Promise<SwaggerResponse<ReferralResponse>> {
         let url_ = this.baseUrl + "/referral";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1149,27 +1149,27 @@ export class PlayerClient {
         });
     }
 
-    protected processGetReferralCode(response: Response): Promise<ReferralResponse> {
+    protected processGetReferralCode(response: Response): Promise<SwaggerResponse<ReferralResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ReferralResponse;
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ReferralResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<ReferralResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @return OK
      */
-    updateSettings(body: UpdateSettingsRequest, signal?: AbortSignal): Promise<void> {
+    updateSettings(body: UpdateSettingsRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/settings";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1190,26 +1190,26 @@ export class PlayerClient {
         });
     }
 
-    protected processUpdateSettings(response: Response): Promise<void> {
+    protected processUpdateSettings(response: Response): Promise<SwaggerResponse<void>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
-            return null;
+            return new SwaggerResponse(status, _headers, null as any);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @param body (optional) 
      * @return OK
      */
-    claimPlusInterest(body?: PlusInterestRequest | null | undefined, signal?: AbortSignal): Promise<PlusInterestResponse> {
+    claimPlusInterest(body?: PlusInterestRequest | null | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PlusInterestResponse>> {
         let url_ = this.baseUrl + "/plus-interest";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1230,21 +1230,21 @@ export class PlayerClient {
         });
     }
 
-    protected processClaimPlusInterest(response: Response): Promise<PlusInterestResponse> {
+    protected processClaimPlusInterest(response: Response): Promise<SwaggerResponse<PlusInterestResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlusInterestResponse;
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<PlusInterestResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<PlusInterestResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 }
 
@@ -1262,7 +1262,7 @@ export class EventsClient {
      * @param worldId (optional) 
      * @return OK
      */
-    getTodayEvent(worldId?: string | undefined, signal?: AbortSignal): Promise<GameEventResponse> {
+    getTodayEvent(worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<GameEventResponse>> {
         let url_ = this.baseUrl + "/events/today?";
         if (worldId === null)
             throw new globalThis.Error("The parameter 'worldId' cannot be null.");
@@ -1283,28 +1283,28 @@ export class EventsClient {
         });
     }
 
-    protected processGetTodayEvent(response: Response): Promise<GameEventResponse> {
+    protected processGetTodayEvent(response: Response): Promise<SwaggerResponse<GameEventResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as GameEventResponse;
-            return result200;
+            return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<GameEventResponse>(null as any);
+        return Promise.resolve<SwaggerResponse<GameEventResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
      * @param worldId (optional) 
      * @return OK
      */
-    answerEvent(eventId: string, body: AnswerEventRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<void> {
+    answerEvent(eventId: string, body: AnswerEventRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/events/{eventId}/answer?";
         if (eventId === undefined || eventId === null)
             throw new globalThis.Error("The parameter 'eventId' must be defined.");
@@ -1332,27 +1332,23 @@ export class EventsClient {
         });
     }
 
-    protected processAnswerEvent(response: Response): Promise<void> {
+    protected processAnswerEvent(response: Response): Promise<SwaggerResponse<void>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
-            return null;
+            return new SwaggerResponse(status, _headers, null as any);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
     }
 }
 
-export enum Address {
-    She = "she",
-    He = "he",
-    Nick = "nick",
-}
+export type Address = "she" | "he" | "nick";
 
 export interface AnalyticsBatchRequest {
     session: string;
@@ -1366,12 +1362,12 @@ export interface AnalyticsBatchRequest {
 
 export interface AnalyticsEventRequest {
     /** Идентификатор экземпляра мира; отсутствует у событий до создания мира. */
-    worldId?: string | undefined;
+    worldId?: string | null;
     name: string;
     t?: number;
     screen?: string;
-    prev?: string | undefined;
-    props?: any | undefined;
+    prev?: string | null;
+    props?: any | null;
 
     [key: string]: any;
 }
@@ -1389,10 +1385,7 @@ export interface BestCommentResponse {
     [key: string]: any;
 }
 
-export enum BirthGroup {
-    _1417 = "14-17",
-    _18_ = "18+",
-}
+export type BirthGroup = "14-17" | "18+";
 
 export interface ChallengeResponse {
     id: string;
@@ -1429,17 +1422,13 @@ export interface ClientLogEntryRequest {
     t?: number;
     level: ClientLogLevel;
     event: string;
-    screen?: string | undefined;
-    props?: any | undefined;
+    screen?: string | null;
+    props?: any | null;
 
     [key: string]: any;
 }
 
-export enum ClientLogLevel {
-    Info = "info",
-    Warn = "warn",
-    Error = "error",
-}
+export type ClientLogLevel = "info" | "warn" | "error";
 
 export interface CollectionCardResponse {
     id: string;
@@ -1471,8 +1460,8 @@ export interface CommentResponse {
     star: boolean;
     me: boolean;
     hidden: boolean;
-    parentCommentId: string | undefined;
-    requestId: string | undefined;
+    parentCommentId: string | null;
+    requestId: string | null;
     authorId: string;
     role: string;
     depth: number;
@@ -1497,8 +1486,8 @@ export interface CreateWorldRequest {
     emoji?: string;
     summary?: string;
     difficulty?: number;
-    unlockSkill?: string | undefined;
-    unlockLevel?: number | undefined;
+    unlockSkill?: string | null;
+    unlockLevel?: number | null;
     voices?: string[];
     postIdeas?: string[];
     demoPosts?: string[];
@@ -1511,10 +1500,7 @@ export interface CreateWorldRequest {
     [key: string]: any;
 }
 
-export enum DirectMessageAuthor {
-    Star = "star",
-    Me = "me",
-}
+export type DirectMessageAuthor = "star" | "me";
 
 export interface DirectMessageRequest {
     text: string;
@@ -1540,30 +1526,22 @@ export interface DmResponse {
     [key: string]: any;
 }
 
-export enum Drama {
-    Soft = "soft",
-    Mid = "mid",
-    Hot = "hot",
-    Off = "off",
-}
+export type Drama = "soft" | "mid" | "hot" | "off";
 
-export enum FeedItemKind {
-    News = "news",
-    Post = "post",
-}
+export type FeedItemKind = "news" | "post";
 
 export interface FeedItemResponse {
     kind: FeedItemKind;
-    postId: string | undefined;
-    author: string | undefined;
-    avatar: string | undefined;
-    role: string | undefined;
-    ago: string | undefined;
+    postId: string | null;
+    author: string | null;
+    avatar: string | null;
+    role: string | null;
+    ago: string | null;
     text: string;
-    reactions: ReactionResponse[] | undefined;
-    views: number | undefined;
-    commentCount: number | undefined;
-    repost: string | undefined;
+    reactions: ReactionResponse[] | null;
+    views: number | null;
+    commentCount: number | null;
+    repost: string | null;
 
     [key: string]: any;
 }
@@ -1586,12 +1564,7 @@ export interface FriendResponse {
     [key: string]: any;
 }
 
-export enum GameEventKind {
-    Collab = "collab",
-    Hate = "hate",
-    Gossip = "gossip",
-    Brand = "brand",
-}
+export type GameEventKind = "collab" | "hate" | "gossip" | "brand";
 
 export interface GameEventResponse {
     id: string;
@@ -1612,12 +1585,7 @@ export interface InvitationResponse {
     [key: string]: any;
 }
 
-export enum LaunchSurface {
-    Unknown = "unknown",
-    TelegramMiniApp = "telegram-mini-app",
-    Browser = "browser",
-    Standalone = "standalone",
-}
+export type LaunchSurface = "unknown" | "telegram-mini-app" | "browser" | "standalone";
 
 export interface LiveEvent {
 
@@ -1660,9 +1628,9 @@ export interface LiveEventViewsLiveEvent {
 }
 
 export interface OnboardingRequest {
-    referralCode?: string | undefined;
+    referralCode?: string | null;
     birthGroup: BirthGroup;
-    ageBand?: string | undefined;
+    ageBand?: string | null;
     address: Address;
 
     [key: string]: any;
@@ -1719,21 +1687,21 @@ export interface PostResultResponse {
     headline: string;
     whys: WhyResponse[];
     ribbons: RibbonResponse[];
-    bestComment: BestCommentResponse | undefined;
+    bestComment: BestCommentResponse | null;
     viral: boolean;
     flop: boolean;
     views: number;
-    hook: string | undefined;
+    hook: string | null;
 
     [key: string]: any;
 }
 
 export interface ProblemDetails {
-    type?: string | undefined;
-    title?: string | undefined;
-    status?: number | undefined;
-    detail?: string | undefined;
-    instance?: string | undefined;
+    type?: string | null;
+    title?: string | null;
+    status?: number | null;
+    detail?: string | null;
+    instance?: string | null;
 
     [key: string]: any;
 }
@@ -1747,18 +1715,13 @@ export interface PublicationFailure {
     [key: string]: any;
 }
 
-export enum PublicationStatus {
-    Pending = "pending",
-    Ready_for_moderation = "ready_for_moderation",
-    Completed = "completed",
-    Failed = "failed",
-}
+export type PublicationStatus = "pending" | "ready_for_moderation" | "completed" | "failed";
 
 /** A generation-stage status delivered over SSE. */
 export interface PublicationStatusLiveEvent {
     type: PublicationStatus;
     publicationId: string;
-    failure?: PublicationFailure | undefined;
+    failure?: PublicationFailure | null;
 
     [key: string]: any;
 }
@@ -1767,8 +1730,8 @@ export interface PublicationStatusLiveEvent {
 export interface PublicationStatusResponse {
     publicationId: string;
     status: PublicationStatus;
-    result: PostResultResponse | undefined;
-    failure?: PublicationFailure | undefined;
+    result: PostResultResponse | null;
+    failure?: PublicationFailure | null;
 
     [key: string]: any;
 }
@@ -1790,17 +1753,17 @@ export interface ReferralResponse {
 export interface ReplyLiveEvent {
     status: ReplyStatus;
     requestId: string;
-    text: string | undefined;
-    post: PostDetailResponse | undefined;
-    energyLeft: number | undefined;
-    subscribers: number | undefined;
-    code: string | undefined;
+    text: string | null;
+    post: PostDetailResponse | null;
+    energyLeft: number | null;
+    subscribers: number | null;
+    code: string | null;
 
     [key: string]: any;
 }
 
 export interface ReplyRequest {
-    commentId?: string | undefined;
+    commentId?: string | null;
     requestId: string;
     text: string;
 
@@ -1808,11 +1771,7 @@ export interface ReplyRequest {
 }
 
 /** Состояние генерации ответа в треде. */
-export enum ReplyStatus {
-    Generating = "generating",
-    Completed = "completed",
-    Failed = "failed",
-}
+export type ReplyStatus = "generating" | "completed" | "failed";
 
 export interface ReportRequest {
     commentId: string;
@@ -1824,13 +1783,13 @@ export interface ReportRequest {
 export interface RibbonResponse {
     icon: string;
     title: string;
-    sub: string | undefined;
+    sub: string | null;
 
     [key: string]: any;
 }
 
 export interface SendDirectMessageResponse {
-    reply: string | undefined;
+    reply: string | null;
     repliesLeft: number;
 
     [key: string]: any;
@@ -1845,18 +1804,18 @@ export interface SkillResponse {
 
 export interface SseItemOfPublicationStatusLiveEvent {
     data?: PublicationStatusLiveEvent;
-    eventId?: string | undefined;
-    eventType?: string | undefined;
-    reconnectionInterval?: string | undefined;
+    eventId?: string | null;
+    eventType?: string | null;
+    reconnectionInterval?: string | null;
 
     [key: string]: any;
 }
 
 export interface SseItemOfReplyLiveEvent {
     data?: ReplyLiveEvent;
-    eventId?: string | undefined;
-    eventType?: string | undefined;
-    reconnectionInterval?: string | undefined;
+    eventId?: string | null;
+    eventType?: string | null;
+    reconnectionInterval?: string | null;
 
     [key: string]: any;
 }
@@ -1883,7 +1842,7 @@ export interface StartPublicationRequest {
     publicationId: string;
     text: string;
     ownWords?: boolean;
-    wantId?: string | undefined;
+    wantId?: string | null;
 
     [key: string]: any;
 }
@@ -1897,10 +1856,10 @@ export interface StreakResponse {
 }
 
 export interface UpdateSettingsRequest {
-    address?: Address | undefined;
-    notifications?: string | undefined;
-    quiet?: string | undefined;
-    plus?: boolean | undefined;
+    address?: Address | null;
+    notifications?: string | null;
+    quiet?: string | null;
+    plus?: boolean | null;
 
     [key: string]: any;
 }
@@ -1931,8 +1890,8 @@ export interface WorldResponse {
     emoji: string;
     summary: string;
     difficulty?: number;
-    unlockSkill?: string | undefined;
-    unlockLevel?: number | undefined;
+    unlockSkill?: string | null;
+    unlockLevel?: number | null;
     where: string;
     firstContext: string;
     firstPrompt: string;
@@ -1974,24 +1933,27 @@ export interface WorldStarResponse {
     [key: string]: any;
 }
 
-export enum LiveEventCommentLiveEventType {
-    Comment = "comment",
-}
+export type LiveEventCommentLiveEventType = "comment";
 
-export enum LiveEventReactionLiveEventType {
-    React = "react",
-}
+export type LiveEventReactionLiveEventType = "react";
 
-export enum LiveEventResultLiveEventType {
-    Result = "result",
-}
+export type LiveEventResultLiveEventType = "result";
 
-export enum LiveEventTypingLiveEventType {
-    Typing = "typing",
-}
+export type LiveEventTypingLiveEventType = "typing";
 
-export enum LiveEventViewsLiveEventType {
-    Views = "views",
+export type LiveEventViewsLiveEventType = "views";
+
+export class SwaggerResponse<TResult> {
+    status: number;
+    headers: { [key: string]: any; };
+    result: TResult;
+
+    constructor(status: number, headers: { [key: string]: any; }, result: TResult)
+    {
+        this.status = status;
+        this.headers = headers;
+        this.result = result;
+    }
 }
 
 export interface FileResponse {
