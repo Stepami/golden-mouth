@@ -156,6 +156,7 @@ export const api = {
   /** Генерация, затем модерация и анимация массива реакций; при обрыве сверяем сохранённый статус. */
   publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true, wantId?: string): () => void {
     if (BASE) {
+      const generation = sessionGeneration()
       const ctrl = new AbortController()
       let deliveredResult = false
       const pause = (ms: number): Promise<void> => {
@@ -179,9 +180,11 @@ export const api = {
           views: 750, react: 800, comment: 950, typing: 950, result: 1300,
         }
         for (const event of events) {
+          assertSession(generation)
           if (ctrl.signal.aborted) throw new DOMException('Aborted', 'AbortError')
           const remaining = minimumGap[event.type] - (performance.now() - lastShownAt)
           if (lastShownAt && remaining > 0) await pause(remaining)
+          assertSession(generation)
           lastShownAt = performance.now()
           if (event.type === 'result') deliveredResult = true
           onEvent(event)
@@ -189,8 +192,10 @@ export const api = {
         if (!deliveredResult) throw new Error('Post response has no result')
       }
       const recover = async (): Promise<void> => {
+        if (generation !== sessionGeneration()) return
         let state: PublicationState
-        try { state = await publicationState(publicationId) } catch { onError('unknown'); return }
+        try { state = await publicationState(publicationId) } catch { if (generation === sessionGeneration()) onError('unknown'); return }
+        if (generation !== sessionGeneration()) return
         if (state.status === 'completed' && state.result) {
           if (!deliveredResult) { deliveredResult = true; onEvent({ type: 'result', result: state.result }) }
         } else if (state.status === 'ready_for_moderation') {
@@ -205,6 +210,7 @@ export const api = {
       // Defer the request so that probe does not create an abandoned publication.
       const start = setTimeout(() => { void (async () => {
         try {
+          assertSession(generation)
           const r = await stream({ url: '/posts/publications', query: { worldId: worldId() }, body: { publicationId, text, ownWords, wantId } }, ctrl.signal)
           let lastStatus: PublicationStatus | null = null
           let failure: PublicationFailure | undefined
@@ -214,7 +220,7 @@ export const api = {
           if (lastStatus !== 'ready_for_moderation') { await recover(); return }
           await moderation()
         } catch (e) {
-          if (e instanceof Error && e.name === 'AbortError') return
+          if (generation !== sessionGeneration() || (e instanceof Error && e.name === 'AbortError')) return
           error('sse_error', e)
           if (e instanceof ApiError && e.failure) onError('failed', e.failure)
           else if (e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 409) onError('failed')
