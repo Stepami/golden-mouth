@@ -1,14 +1,15 @@
 // Журнал ошибок фронта (POST /logs). Аналитика поведения отдельно: app/analytics.ts. Правила:
 // - никаких текстов игрока, имён, ников и initData: только коды экранов, id, числа, длины;
-// - события копятся и уходят пачкой (POST /logs, fetch keepalive при закрытии), в mock mode пишутся в консоль в dev;
+// - события копятся и уходят пачкой (POST /logs, fetch keepalive при закрытии); в dev также пишутся в консоль;
 // - ошибки ловятся глобально и в ErrorBoundary; повтор одной ошибки не чаще раза в минуту.
 import { event, canSendTelemetry } from './analytics'
 import { apiBaseUrl as BASE } from './runtimeConfig'
-import { telegramAuthHeaders } from '../api/auth'
+import { sendLogs } from '../api/telemetry'
+import type { ClientLogEntryRequest, ClientLogLevel } from '../api/generated/reki-api'
 const DEV = import.meta.env.DEV
 
-export type Level = 'info' | 'warn' | 'error'
-export interface LogEntry { t: number; level: Level; event: string; screen?: string; props?: Record<string, string | number | boolean | null> }
+export type Level = ClientLogLevel
+export type LogEntry = ClientLogEntryRequest & { t: number; props?: Record<string, string | number | boolean | null> }
 
 const queue: LogEntry[] = []
 const seen = new Map<string, number>()
@@ -37,8 +38,8 @@ function push(level: Level, event: string, props?: LogEntry['props']) {
 
 export function flush() {
   if (!BASE || !canSendTelemetry() || !queue.length) return
-  const body = JSON.stringify({ session, entries: queue.splice(0) })
-  fetch(`${BASE}/logs`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...telegramAuthHeaders() }, body, keepalive: true }).catch(() => {})
+  const body = { session, entries: queue.splice(0) }
+  sendLogs(body).catch(() => {})
 }
 
 /** Событие продуктовой аналитики: уходит в app/analytics.ts (POST /events), не в журнал ошибок. */

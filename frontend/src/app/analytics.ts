@@ -3,9 +3,10 @@
 import { apiBaseUrl as BASE } from './runtimeConfig'
 import { ActiveTime } from './activeTime'
 import { inTelegram } from '../telegram'
-import { telegramAuthHeaders } from '../api/auth'
+import { sendAnalytics } from '../api/telemetry'
+import type { AnalyticsBatchRequest, AnalyticsEventRequest } from '../api/generated/reki-api'
 type Props = Record<string, string | number | boolean | null>
-export interface AEvent { worldId?: string; name: string; t: number; screen: string; prev: string | null; props?: Props }
+export type AEvent = AnalyticsEventRequest & { t: number; props?: Props }
 
 let playerAvailable = false
 export const canSendTelemetry = () => playerAvailable
@@ -55,8 +56,8 @@ export const tap = (id: string, props?: Props) => event('tap', { id, ...props })
 
 export function flushEvents() {
   if (!BASE || !playerAvailable || !q.length) return
-  const body = JSON.stringify({ session, platform, launchSurface: inTelegram ? 'telegram-mini-app' : window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser', experiments, events: q.splice(0) })
-  fetch(`${BASE}/events`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...telegramAuthHeaders() }, body, keepalive: true }).catch(() => {})
+  const body: AnalyticsBatchRequest = { session, platform, launchSurface: inTelegram ? 'telegram-mini-app' : window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser', experiments, events: q.splice(0) }
+  sendAnalytics(body).catch(() => {})
 }
 
 export function installAnalytics() {
