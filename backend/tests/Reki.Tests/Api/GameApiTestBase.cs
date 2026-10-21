@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -206,17 +205,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
         await scope.ServiceProvider.GetRequiredService<ResetGameDayJob>().ExecuteAsync(new(), CancellationToken.None);
     }
 
-    protected async Task<string> WorldPathAsync(HttpClient http, string path)
-    {
-        var user = http.DefaultRequestHeaders.TryGetValues(TestAuthenticationHandler.UserIdHeaderName, out var values)
-            ? long.Parse(values.Single(), System.Globalization.CultureInfo.InvariantCulture) : 0;
-        var player = await Database.GetCollection<BsonDocument>("players")
-            .Find(new BsonDocument("TelegramUserId", user)).SingleOrDefaultAsync();
-        var world = player is null ? null : await Database.GetCollection<BsonDocument>("worlds")
-            .Find(new BsonDocument("Player.PlayerId", player["_id"])).SingleOrDefaultAsync();
-        return $"{path}?worldId={world?["_id"].AsString ?? "missing-world"}";
-    }
-
     protected async Task<(string PostId, string CommentId)> PublishPostForThreadAsync(long telegramUserId)
     {
         using var api = Factory.CreateApiClient(telegramUserId);
@@ -249,24 +237,15 @@ public abstract class GameApiTestBase(ApiFactory factory)
         string replyId,
         string text)
     {
-        using var http = CreateAuthenticatedHttpClient(telegramUserId);
-        var request = new ReplyRequest
-        {
-            CommentId = commentId,
-            RequestId = replyId,
-            Text = text,
-        };
-        using var body = new StringContent(
-            JsonSerializer.Serialize(request, ApiJsonSerializerContext.Default.ReplyRequest),
-            Encoding.UTF8,
-            "application/json");
-        using var response = await http.PostAsync(
-            await WorldPathAsync(http, $"/posts/{postId}/replies"),
-            body,
+        using var api = Factory.CreateApiClient(telegramUserId);
+        using var response = await api.Posts.ReplyToPostAsync(
+            postId,
+            await GetWorldIdAsync(api),
+            new ReplyRequest { CommentId = commentId, RequestId = replyId, Text = text },
             CancellationToken.None);
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        var json = await response.Content.ReadAsStringAsync(CancellationToken.None);
-        return ParseReplyEvents(json).Last(item => item.Status == ReplyStatus.Completed);
+        using var reader = new StreamReader(response.Stream);
+        var body = await reader.ReadToEndAsync(CancellationToken.None);
+        return ParseReplyEvents(body).Last(item => item.Status == ReplyStatus.Completed);
     }
 
     protected IReadOnlyList<ChatMessage> GetCapturedChatMessages()
@@ -282,24 +261,20 @@ public abstract class GameApiTestBase(ApiFactory factory)
         string text,
         string publicationId)
     {
-        using var http = CreateAuthenticatedHttpClient(telegramUserId);
-        var request = new StartPublicationRequest
+        using var api = Factory.CreateApiClient(telegramUserId);
+        try
         {
-            PublicationId = publicationId,
-            Text = text,
-        };
-        using var body = new StringContent(
-            JsonSerializer.Serialize(request, ApiJsonSerializerContext.Default.StartPublicationRequest),
-            Encoding.UTF8,
-            "application/json");
-        using var response = await http.PostAsync(
-            await WorldPathAsync(http, "/posts/publications"),
-            body,
-            CancellationToken.None);
-        return (
-            response.StatusCode,
-            await response.Content.ReadAsStringAsync(CancellationToken.None),
-            publicationId);
+            using var response = await api.Posts.GeneratePublicationAsync(
+                await GetWorldIdAsync(api),
+                new StartPublicationRequest { PublicationId = publicationId, Text = text },
+                CancellationToken.None);
+            using var reader = new StreamReader(response.Stream);
+            return ((System.Net.HttpStatusCode)response.StatusCode, await reader.ReadToEndAsync(CancellationToken.None), publicationId);
+        }
+        catch (PostsApiException exception)
+        {
+            return ((System.Net.HttpStatusCode)exception.StatusCode, exception.Response, publicationId);
+        }
     }
 
     protected Task PublishAsync(long telegramUserId, string text) =>
@@ -311,23 +286,10 @@ public abstract class GameApiTestBase(ApiFactory factory)
             await GenerateWithIdAsync(telegramUserId, text, requestedPublicationId);
         await Assert.That(statusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
         await Assert.That(generation).Contains("\"type\":\"ready_for_moderation\"");
-        using var http = CreateAuthenticatedHttpClient(telegramUserId);
-        using var moderation = await http.PostAsync(
-            await WorldPathAsync(http, $"/posts/publications/{publicationId}/moderation"),
-            null,
-            CancellationToken.None);
-        await Assert.That(moderation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        await Assert.That(await moderation.Content.ReadAsStringAsync(CancellationToken.None))
-            .Contains("\"type\":\"result\"");
-    }
-
-    protected HttpClient CreateAuthenticatedHttpClient(long telegramUserId)
-    {
-        var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(
-            TestAuthenticationHandler.UserIdHeaderName,
-            telegramUserId.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        return http;
+        using var api = Factory.CreateApiClient(telegramUserId);
+        var events = await api.Posts.ModeratePublicationAsync(
+            publicationId, await GetWorldIdAsync(api), CancellationToken.None);
+        await Assert.That(events.OfType<ResultLiveEvent>().Any()).IsTrue();
     }
 
     protected async Task AssertCollectionHasNoPlayerAsync(string collectionName, BsonDocument filter)

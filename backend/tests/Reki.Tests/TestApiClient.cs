@@ -12,6 +12,7 @@ public sealed class TestApiClient : IDisposable
             SetAuthenticatedUser(userId);
         }
 
+        StoryCards = new StoryCardsClient(httpClient);
         Events = new EventsClient(httpClient);
         Player = new PlayerClient(httpClient);
         Posts = new PostsClient(httpClient);
@@ -19,6 +20,8 @@ public sealed class TestApiClient : IDisposable
         Telemetry = new TelemetryClient(httpClient);
         Worlds = new WorldsClient(httpClient);
     }
+
+    public StoryCardsClient StoryCards { get; }
 
     public EventsClient Events { get; }
 

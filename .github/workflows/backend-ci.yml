@@ -6,6 +6,8 @@ on:
       - master
     paths:
       - "backend/**"
+      - "frontend/nswag.frontend.json"
+      - "frontend/src/api/generated/reki-api.ts"
       - ".github/workflows/backend-ci.yml"
   workflow_call:
 
@@ -50,6 +52,9 @@ jobs:
 
       - name: Build
         run: dotnet build Reki.slnx --configuration Release --no-restore
+
+      - name: Verify generated TypeScript client
+        run: test -f ../frontend/src/api/generated/reki-api.ts && git diff --exit-code HEAD -- ../frontend/src/api/generated/reki-api.ts
 
       - name: Test
         run: dotnet test --project tests/Reki.Tests/Reki.Tests.csproj --configuration Release --no-build

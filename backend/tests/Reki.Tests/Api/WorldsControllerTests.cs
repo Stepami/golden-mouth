@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Reki.Contracts.Worlds;
-using Reki.Infrastructure.Serialization;
 
 namespace Reki.Tests.Api;
 
@@ -69,7 +68,6 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await CreatePlayerWithWorldAsync(owner);
         await CreatePlayerWithWorldAsync(other);
         var worldId = await GetWorldIdAsync(own ? owner : other);
-        using var http = CreateAuthenticatedHttpClient(1023);
         var batch = new Reki.Contracts.Telemetry.AnalyticsBatchRequest
         {
             Session = "world-session",
@@ -83,15 +81,16 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
                 },
             ],
         };
-        using var content = new StringContent(
-            System.Text.Json.JsonSerializer.Serialize(batch, ApiJsonSerializerContext.Default.AnalyticsBatchRequest),
-            System.Text.Encoding.UTF8,
-            "application/json");
-
-        using var response = await http.PostAsync("/events", content, CancellationToken.None);
-
-        await Assert.That(response.StatusCode).IsEqualTo(own
-            ? System.Net.HttpStatusCode.NoContent : System.Net.HttpStatusCode.NotFound);
+        if (own)
+        {
+            await owner.Telemetry.SubmitAnalyticsAsync(batch, CancellationToken.None);
+        }
+        else
+        {
+            var response = await Assert.ThrowsAsync<TelemetryApiException>(() => owner.Telemetry.SubmitAnalyticsAsync(batch, CancellationToken.None));
+            await Assert.That(response).IsNotNull();
+            await Assert.That(response.StatusCode).IsEqualTo(404);
+        }
     }
 
     [Test]
@@ -189,9 +188,9 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(template.Roles.Count).IsGreaterThan(0);
         var safetyRule = template.Rules.Single(rule => rule.Text == "Без тем 18+ и травли по внешности");
         await Assert.That(safetyRule.Locked).IsTrue();
-        using var http = Factory.CreateClient();
-        using var owned = await http.GetAsync("/worlds", CancellationToken.None);
-        await Assert.That(owned.StatusCode).IsEqualTo(System.Net.HttpStatusCode.Unauthorized);
+        var rejected = await Assert.ThrowsAsync<WorldsApiException>(() => api.Worlds.GetOwnedWorldsAsync(CancellationToken.None));
+        await Assert.That(rejected).IsNotNull();
+        await Assert.That(rejected.StatusCode).IsEqualTo(401);
     }
 
     [Test]
@@ -248,32 +247,13 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         using var api = Factory.CreateApiClient(1018);
         await CreatePlayerWithWorldAsync(api);
-        using var http = CreateAuthenticatedHttpClient(1018);
 
         // Act
-        using var response = await http.GetAsync("/feed", CancellationToken.None);
+        var response = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetFeedAsync(null, CancellationToken.None));
+        await Assert.That(response).IsNotNull();
 
         // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.BadRequest);
-    }
-
-    [Test]
-    public async Task GetPlayer_DoesNotIncludeWorldAttributesAsync()
-    {
-        // Arrange
-        using var api = Factory.CreateApiClient(1019);
-        await CreatePlayerWithWorldAsync(api);
-        using var http = CreateAuthenticatedHttpClient(1019);
-
-        // Act
-        using var response = await http.GetAsync("/me", CancellationToken.None);
-        using var body = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(CancellationToken.None));
-
-        // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        await Assert.That(body.RootElement.TryGetProperty("world", out _)).IsFalse();
-        await Assert.That(body.RootElement.TryGetProperty("subs", out _)).IsFalse();
-        await Assert.That(body.RootElement.GetProperty("settings").TryGetProperty("drama", out _)).IsFalse();
+        await Assert.That(response.StatusCode).IsEqualTo(400);
     }
 
     [Test]

@@ -119,3 +119,27 @@ TickerQ request serialization uses `ApiJsonSerializerContext` through `WithJsonC
 Successful publications and thread replies schedule a one-off `GenerateStarFeedPostJob`. Feed reads do so with `feed.open_probability` from the balance file. The existing feed returns saved posts immediately; refresh to see new star posts. The backend uses a non-streaming chat response and the existing 14+ output checks. Player energy, audience and progression are unchanged.
 
 Type-safe `AddAsync<GenerateStarFeedPostJob, StarFeedRequest>` uses `RekiTimeTicker` defaults: three retries at 30, 120 and 600 seconds. These defaults apply to all application TimeTickers; cron maintenance retains its existing configuration. Technical failures propagate to TickerQ; invalid content and missing worlds terminate without retry. A BSON ObjectId string is created at scheduling and stored as a typed PostId in the request alongside typed PlayerId and WorldId. Repeated executions reuse it; the post collection's unique `_id` prevents duplicate posts. Concurrent executions of the same request can still spend AI tokens before one insert wins. Failed TickerQ scheduling results are logged; unexpected scheduler exceptions are not swallowed. ScheduleAsync always schedules; ScheduleFromFeedAsync uses random < feed.open_probability. Neither scheduler method accepts a cancellation token. MongoGameStore uses a plain InsertPostAsync and insertion exceptions propagate to TickerQ. The AI history identifies authors and marks the selected star's own posts with isOwn. There is no transactional outbox between the business commit and scheduling.
+
+## API clients (#122)
+
+Use the existing local NSwag 14.7.1 tool for two independent clients:
+
+- `backend/src/Reki.Api/nswag.json` generates the ignored C# test client, using DTOs from `Reki.Contracts` (`generateDtoTypes=false`). The test project runs it before compilation.
+- `frontend/nswag.frontend.json` generates Fetch clients and DTO interfaces in `frontend/src/api/generated/reki-api.ts`. The API project runs it after build-time OpenAPI generation. The TypeScript file is committed; OpenAPI and the C# client remain ignored.
+
+Update workflow: **change API → build API → commit TypeScript client → check frontend**.
+
+```sh
+cd backend
+dotnet tool restore
+dotnet build src/Reki.Api/Reki.Api.csproj --configuration Release
+cd ../frontend
+npx tsc -b
+npm run build
+```
+
+No running API, database, Telegram token or LLM credentials are needed for generation. Do not edit generated files by hand. Frontend build, Docker and npm commands consume the committed client without .NET. Backend CI checks the generated TypeScript diff between Build and Test.
+
+SSE uses a binary stream schema so the C# generated client returns an open `FileResponse.Stream`; dispose the FileResponse after reading. Frontend Fetch generation returns a Blob, so its existing incremental SSE adapter retains the single POST and durable recovery behavior. Never automatically repeat mutation POSTs on disconnect.
+
+The active-challenge endpoint returns an empty HTTP 200 body when there is no challenge. Its named schema is nullable; the Fetch client decodes the empty response as null. HTTP behavior and game mechanics are unchanged.

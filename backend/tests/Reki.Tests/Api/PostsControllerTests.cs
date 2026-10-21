@@ -1,5 +1,4 @@
 using System.Net;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -73,13 +72,13 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         using var api = Factory.CreateApiClient(user);
         var second = await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
         var before = await GetStoredPostAsync(postId);
-        using var http = CreateAuthenticatedHttpClient(user);
 
         // Act
-        using var response = await http.GetAsync($"/posts/{postId}?worldId={second.Id}", CancellationToken.None);
+        var response = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostAsync(postId, second.Id, CancellationToken.None));
+        await Assert.That(response).IsNotNull();
 
         // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
         await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(before);
     }
 
@@ -279,23 +278,37 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         const long telegramUserId = 1020;
         using var api = Factory.CreateApiClient(telegramUserId);
         await CreatePlayerWithWorldAsync(api);
-        Factory.Llm.Respond(CreateCommentResponse(false));
-        using var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(
-            TestAuthenticationHandler.UserIdHeaderName,
-            telegramUserId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        var resume = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Factory.Llm.Respond(async _ =>
+        {
+            await resume.Task;
+            return CreateCommentResponse(false);
+        });
         var publicationId = Guid.NewGuid().ToString();
-        using var body = new StringContent(
-            $$"""{"publicationId":"{{publicationId}}","text":"безопасный пост"}""",
-            Encoding.UTF8,
-            "application/json");
+        var worldId = await GetWorldIdAsync(api);
+        using var generation = await api.Posts.GeneratePublicationAsync(
+            worldId, new StartPublicationRequest { PublicationId = publicationId, Text = "безопасный пост" }, CancellationToken.None);
+        using var reader = new StreamReader(generation.Stream);
+        string firstEvent;
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            string? line;
+            do
+            {
+                line = await reader.ReadLineAsync(timeout.Token);
+            }
+            while (line is not null && !line.StartsWith("data: ", StringComparison.Ordinal));
 
-        using var generation = await http.PostAsync(
-            await WorldPathAsync(http, "/posts/publications"),
-            body,
-            CancellationToken.None);
-        var generationSse = await generation.Content.ReadAsStringAsync(CancellationToken.None);
-        await Assert.That(generation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+            firstEvent = line ?? throw new InvalidOperationException("No initial publication status.");
+            await Assert.That(firstEvent).Contains("\"type\":\"pending\"");
+        }
+        finally
+        {
+            resume.SetResult();
+        }
+
+        var generationSse = firstEvent + "\n" + await reader.ReadToEndAsync(CancellationToken.None);
         await Assert.That(generationSse).Contains("\"type\":\"pending\"");
         await Assert.That(generationSse.Split("\"type\":\"pending\"", StringSplitOptions.None).Length)
             .IsGreaterThan(2);
@@ -305,55 +318,28 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .SingleAsync();
         await Assert.That(ready["ExpiresAtUtc"].IsBsonNull).IsTrue();
 
-        using var duplicateBody = new StringContent(
-            $$"""{"publicationId":"{{publicationId}}","text":"безопасный пост"}""",
-            Encoding.UTF8,
-            "application/json");
-        using var duplicateGeneration = await http.PostAsync(
-            await WorldPathAsync(http, "/posts/publications"),
-            duplicateBody,
-            CancellationToken.None);
-        await Assert.That(duplicateGeneration.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        await Assert.That(await duplicateGeneration.Content.ReadAsStringAsync(CancellationToken.None))
-            .Contains("\"type\":\"ready_for_moderation\"");
+        var (_, duplicateGeneration, _) = await GenerateWithIdAsync(telegramUserId, "безопасный пост", publicationId);
+        await Assert.That(duplicateGeneration).Contains("\"type\":\"ready_for_moderation\"");
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(1);
 
-        using var moderation = await http.PostAsync(
-            await WorldPathAsync(http, $"/posts/publications/{publicationId}/moderation"),
-            null,
-            CancellationToken.None);
-        var moderationJson = await moderation.Content.ReadAsStringAsync(CancellationToken.None);
-        await Assert.That(moderation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        await Assert.That(moderation.Content.Headers.ContentType?.MediaType).IsEqualTo("application/json");
-        using var events = JsonDocument.Parse(moderationJson);
-        await Assert.That(events.RootElement.ValueKind).IsEqualTo(JsonValueKind.Array);
-        await Assert.That(events.RootElement.GetArrayLength()).IsEqualTo(5);
-        await Assert.That(events.RootElement[0].GetProperty("type").GetString()).IsEqualTo("views");
-        await Assert.That(events.RootElement[0].GetProperty("views").GetInt64()).IsEqualTo(48);
-        await Assert.That(events.RootElement[1].GetProperty("type").GetString()).IsEqualTo("react");
-        await Assert.That(events.RootElement[1].GetProperty("emoji").GetString()).IsNotNull();
-        await Assert.That(events.RootElement[2].GetProperty("type").GetString()).IsEqualTo("comment");
-        await Assert.That(events.RootElement[2].GetProperty("comment").GetProperty("star").GetBoolean()).IsTrue();
-        await Assert.That(events.RootElement[3].GetProperty("type").GetString()).IsEqualTo("typing");
-        await Assert.That(events.RootElement[3].GetProperty("who").GetString()).IsEqualTo("Соня");
-        await Assert.That(events.RootElement[4].GetProperty("type").GetString()).IsEqualTo("result");
-
-        using var status = await http.GetAsync(
-            $"/posts/publications/{publicationId}",
-            CancellationToken.None);
-        var statusJson = await status.Content.ReadAsStringAsync(CancellationToken.None);
-        await Assert.That(statusJson).Contains("\"status\":\"completed\"");
-        await Assert.That(statusJson).Contains("\"result\":{");
+        var events = await api.Posts.ModeratePublicationAsync(publicationId, worldId, CancellationToken.None);
+        await Assert.That(events.Count).IsEqualTo(5);
+        await Assert.That(((ViewsLiveEvent)events[0]).Views).IsEqualTo(48);
+        await Assert.That(((ReactionLiveEvent)events[1]).Emoji).IsNotNull();
+        await Assert.That(((CommentLiveEvent)events[2]).Comment.Star).IsTrue();
+        await Assert.That(((TypingLiveEvent)events[3]).Who).IsEqualTo("Соня");
+        var result = ((ResultLiveEvent)events[4]).Result;
+        var status = await api.Posts.GetPublicationStatusAsync(publicationId, CancellationToken.None);
+        await Assert.That(status.Status).IsEqualTo(PublicationStatus.Completed);
+        await Assert.That(status.Result).IsNotNull();
         var duplicateEvents = await api.Posts.ModeratePublicationAsync(
             publicationId, await GetWorldIdAsync(api), CancellationToken.None);
         await Assert.That(duplicateEvents.Count).IsEqualTo(5);
         await Assert.That(duplicateEvents[0]).IsTypeOf<ViewsLiveEvent>();
         var duplicateResult = (ResultLiveEvent)duplicateEvents[4];
-        await Assert.That(duplicateResult.Result.PostId)
-            .IsEqualTo(events.RootElement[4].GetProperty("result").GetProperty("postId").GetString());
-        using var savedStatus = JsonDocument.Parse(statusJson);
-        await Assert.That(events.RootElement[4].GetProperty("result").GetRawText())
-            .IsEqualTo(savedStatus.RootElement.GetProperty("result").GetRawText());
+        await Assert.That(duplicateResult.Result.PostId).IsEqualTo(result.PostId);
+        await Assert.That(JsonSerializer.Serialize(result, ApiJsonSerializerContext.Default.PostResultResponse))
+            .IsEqualTo(JsonSerializer.Serialize(status.Result, ApiJsonSerializerContext.Default.PostResultResponse));
         var player = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(player.Energy).IsEqualTo(9);
         var storedPlayer = await Database.GetCollection<BsonDocument>("players")
@@ -379,21 +365,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             ?? throw new InvalidOperationException("Tool call has no arguments.");
         arguments["text"] = "наркотики";
         Factory.Llm.Respond(unsafeResponse);
-        using var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(
-            TestAuthenticationHandler.UserIdHeaderName,
-            telegramUserId.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        var publicationId = Guid.NewGuid().ToString();
-        using var body = new StringContent(
-            $$"""{"publicationId":"{{publicationId}}","text":"безопасный пост"}""",
-            Encoding.UTF8,
-            "application/json");
-
-        using var generation = await http.PostAsync(
-            await WorldPathAsync(http, "/posts/publications"),
-            body,
-            CancellationToken.None);
-        var sse = await generation.Content.ReadAsStringAsync(CancellationToken.None);
+        var (_, sse, publicationId) = await GenerateAsync(telegramUserId, "безопасный пост");
         await Assert.That(sse).Contains("\"type\":\"failed\"");
         var publication = await Database.GetCollection<BsonDocument>("publications")
             .Find(new BsonDocument("_id", publicationId))
@@ -405,20 +377,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var player = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(player.Energy).IsEqualTo(10);
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(1);
-    }
-
-    [Test]
-    public async Task LegacyPostRoute_AfterRemoval_ReturnsNotFoundAsync()
-    {
-        using var http = CreateAuthenticatedHttpClient(1022);
-        using var body = new StringContent("{\"text\":\"hello\"}", Encoding.UTF8, "application/json");
-
-        using var response = await http.PostAsync(
-            "/posts",
-            body,
-            CancellationToken.None);
-
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
     }
 
     [Test]
@@ -632,26 +590,21 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         (var postId, var commentId) = await PublishPostForThreadAsync(ownerUserId);
         using var strangerApi = Factory.CreateApiClient(strangerUserId);
         await CreatePlayerWithWorldAsync(strangerApi);
-        using var http = CreateAuthenticatedHttpClient(strangerUserId);
+        var worldId = await GetWorldIdAsync(strangerApi);
         var request = new ReplyRequest
         {
             CommentId = commentId,
             RequestId = "thread-foreign-post",
             Text = "чужой пост",
         };
-        using var body = new StringContent(
-            JsonSerializer.Serialize(request, ApiJsonSerializerContext.Default.ReplyRequest),
-            Encoding.UTF8,
-            "application/json");
 
         // Act
-        using var response = await http.PostAsync(
-            await WorldPathAsync(http, $"/posts/{postId}/replies"),
-            body,
-            CancellationToken.None);
+        var response = await Assert.ThrowsAsync<PostsApiException>(() => strangerApi.Posts.ReplyToPostAsync(
+            postId, worldId, request, CancellationToken.None));
+        await Assert.That(response).IsNotNull();
 
         // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
     }
 
     [Test]
@@ -1581,20 +1534,22 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     private async Task<(HttpStatusCode Status, string Body, string? MediaType)> SendReplyAsync(
         long user, string postId, string? commentId, string requestId, string text, string worldId = "")
     {
-        using var http = CreateAuthenticatedHttpClient(user);
-        var path = worldId.Length == 0
-            ? await WorldPathAsync(http, $"/posts/{postId}/replies")
-            : $"/posts/{postId}/replies?worldId={worldId}";
-        using var request = new HttpRequestMessage(HttpMethod.Post, path);
-        var payload = new ReplyRequest
+        using var api = Factory.CreateApiClient(user);
+        var requestedWorld = worldId.Length == 0 ? await GetWorldIdAsync(api) : worldId;
+        try
         {
-            RequestId = requestId,
-            CommentId = commentId,
-            Text = text,
-        };
-        var json = JsonSerializer.Serialize(payload, ApiJsonSerializerContext.Default.ReplyRequest);
-        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
-        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
-        return (response.StatusCode, await response.Content.ReadAsStringAsync(CancellationToken.None), response.Content.Headers.ContentType?.MediaType);
+            using var response = await api.Posts.ReplyToPostAsync(
+                postId,
+                requestedWorld,
+                new ReplyRequest { RequestId = requestId, CommentId = commentId, Text = text },
+                CancellationToken.None);
+            using var reader = new StreamReader(response.Stream);
+            var mediaType = response.Headers.TryGetValue("Content-Type", out var values) ? values.Single().Split(';')[0] : null;
+            return ((HttpStatusCode)response.StatusCode, await reader.ReadToEndAsync(CancellationToken.None), mediaType);
+        }
+        catch (PostsApiException exception)
+        {
+            return ((HttpStatusCode)exception.StatusCode, exception.Response, null);
+        }
     }
 }

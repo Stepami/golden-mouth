@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
-using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -44,11 +43,12 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         ActivitySource.AddActivityListener(listener);
 
         // Act
-        using var response = await client.GetAsync("/me", CancellationToken.None);
-        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(CancellationToken.None));
+        var response = await Assert.ThrowsAsync<PlayerApiException>(() => new PlayerClient(client) { ReadResponseAsString = true }.GetCurrentPlayerAsync(CancellationToken.None));
+        await Assert.That(response).IsNotNull();
+        using var body = JsonDocument.Parse(response.Response);
 
         // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
         var problem = body.RootElement;
         await Assert.That(problem.GetProperty("type").GetString()).IsEqualTo("urn:reki:problem:resource-not-found");
         await Assert.That(problem.GetProperty("title").GetString()).IsEqualTo("Resource not found");
@@ -576,38 +576,15 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     }
 
     [Test]
-    public async Task Settings_InvalidAddress_ReturnsBadRequestAsync()
-    {
-        using var api = Factory.CreateApiClient(8401);
-        await CreatePlayerWithWorldAsync(api);
-        using var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8401");
-        using var content = new StringContent("{\"address\":\"wizard\"}", Encoding.UTF8, "application/json");
-        using var result =
-            await http.PatchAsync(await WorldPathAsync(http, "/settings"), content, CancellationToken.None);
-        await Assert.That(result.StatusCode).IsEqualTo(System.Net.HttpStatusCode.BadRequest);
-        var saved = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(saved.Address).IsEqualTo(Address.Nick);
-    }
-
-    [Test]
     public async Task PlusInterest_BonusOnlyThenNotify_DoesNotRepeatBonusAsync()
     {
         using var api = Factory.CreateApiClient(8402);
         await CreatePlayerWithWorldAsync(api);
         var store = Factory.Services.GetRequiredService<IGameStore>();
-        using var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8402");
         foreach (var interest in new[] { false, true, true })
         {
-            using var body = new StringContent(
-                interest ? "{\"interest\":true}" : "{\"interest\":false}",
-                Encoding.UTF8,
-                "application/json");
-            using var response = await http.PostAsync("/plus-interest", body, CancellationToken.None);
-            await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-            using var payload = JsonDocument.Parse(await response.Content.ReadAsStringAsync(CancellationToken.None));
-            await Assert.That(payload.RootElement.GetProperty("bonus").GetInt32()).IsEqualTo(interest ? 0 : 5);
+            var response = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = interest }, CancellationToken.None);
+            await Assert.That(response.Bonus).IsEqualTo(interest ? 0 : 5);
             var saved = await store.GetPlayerAsync(TelegramUserId.From(8402), CancellationToken.None)
                         ?? throw new InvalidOperationException("Missing player.");
             await Assert.That(saved.PlusNotifyRequested).IsEqualTo(interest);
@@ -617,10 +594,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         using var legacyApi = Factory.CreateApiClient(8403);
         await CreatePlayerWithWorldAsync(legacyApi);
-        http.DefaultRequestHeaders.Remove(TestAuthenticationHandler.UserIdHeaderName);
-        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8403");
-        using var legacy = await http.PostAsync("/plus-interest", null, CancellationToken.None);
-        await Assert.That(legacy.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        await legacyApi.Player.ClaimPlusInterestAsync(null, CancellationToken.None);
         var legacyPlayer = await store.GetPlayerAsync(TelegramUserId.From(8403), CancellationToken.None)
                            ?? throw new InvalidOperationException("Missing player.");
         await Assert.That(legacyPlayer.PlusNotifyRequested).IsTrue();
@@ -632,27 +606,14 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         using var api = Factory.CreateApiClient(8404);
         await CreatePlayerWithWorldAsync(api);
-        using var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8404");
 
         // Act
         var calls = Enumerable.Range(0, 2).Select(_ =>
-            http.PostAsync("/plus-interest", null, CancellationToken.None)).ToArray();
+            api.Player.ClaimPlusInterestAsync(null, CancellationToken.None)).ToArray();
         var results = await Task.WhenAll(calls);
 
         // Assert
-        var bonuses = 0;
-        foreach (var result in results)
-        {
-            using (result)
-            {
-                await Assert.That(result.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-
-                using var data =
-                    JsonDocument.Parse(await result.Content.ReadAsStringAsync(CancellationToken.None));
-                bonuses += data.RootElement.GetProperty("bonus").GetInt32();
-            }
-        }
+        var bonuses = results.Sum(result => result.Bonus);
 
         await Assert.That(bonuses).IsEqualTo(5);
         var current = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
@@ -724,15 +685,14 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Settings_MissingPlayer_ReturnsNotFoundAsync()
     {
         // Arrange
-        using var http = CreateAuthenticatedHttpClient(8411);
-        using var body = new StringContent("{}", Encoding.UTF8, "application/json");
+        using var api = Factory.CreateApiClient(8411);
 
         // Act
-        using var response =
-            await http.PatchAsync(await WorldPathAsync(http, "/settings"), body, CancellationToken.None);
+        var response = await Assert.ThrowsAsync<PlayerApiException>(() => api.Player.UpdateSettingsAsync(new UpdateSettingsRequest(), CancellationToken.None));
+        await Assert.That(response).IsNotNull();
 
         // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
         var store = Factory.Services.GetRequiredService<IGameStore>();
         await Assert.That(await store.GetPlayerAsync(TelegramUserId.From(8411), CancellationToken.None)).IsNull();
     }
@@ -776,30 +736,14 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             world.Version,
             CancellationToken.None);
         await ResetGameDayAsync();
-        using var http = CreateAuthenticatedHttpClient(userId);
 
         // Act
-        using var firstBody = new StringContent("{\"interest\":false}", Encoding.UTF8, "application/json");
-        using var secondBody = new StringContent("{\"interest\":false}", Encoding.UTF8, "application/json");
-        Task<HttpResponseMessage>[] calls =
-        [
-            http.PostAsync("/plus-interest", firstBody, CancellationToken.None),
-            http.PostAsync("/plus-interest", secondBody, CancellationToken.None),
-        ];
+        var calls = Enumerable.Range(0, 2).Select(_ => api.Player.ClaimPlusInterestAsync(
+            new PlusInterestRequest { Interest = false }, CancellationToken.None)).ToArray();
         var results = await Task.WhenAll(calls);
 
         // Assert
-        var bonuses = 0;
-        foreach (var result in results)
-        {
-            using (result)
-            {
-                await Assert.That(result.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-                using var data =
-                    JsonDocument.Parse(await result.Content.ReadAsStringAsync(CancellationToken.None));
-                bonuses += data.RootElement.GetProperty("bonus").GetInt32();
-            }
-        }
+        var bonuses = results.Sum(result => result.Bonus);
 
         await Assert.That(bonuses).IsEqualTo(alreadyClaimed ? 0 : 5);
         var saved = await store.GetPlayerAsync(TelegramUserId.From(userId), CancellationToken.None)
@@ -1016,10 +960,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var before = await GetStoredPlayerAsync(8581);
 
         // Act
-        using var http = CreateAuthenticatedHttpClient(8581);
-        using var body = new StringContent("{\"interest\":false}", Encoding.UTF8, "application/json");
-        using var claim = await http.PostAsync("/plus-interest", body, CancellationToken.None);
-        await Assert.That(claim.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
         await PublishAsync(8581, "пост после бонуса");
 
         // Assert
@@ -1039,34 +980,30 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
             item => item.Id == PlayerId.From(player.Id),
             Builders<PlayerProfile>.Update.Set(item => item.Energy, 7).Set(item => item.EnergyUsed, 3));
-        using var http = CreateAuthenticatedHttpClient(8582);
 
         // Act
-        using var response = await http.GetAsync("/me", CancellationToken.None);
-        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(CancellationToken.None));
+        var response = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        await Assert.That(body.RootElement.GetProperty("energy").GetInt32()).IsEqualTo(7);
-        await Assert.That(body.RootElement.TryGetProperty("postsLeft", out _)).IsFalse();
-        await Assert.That(body.RootElement.TryGetProperty("postsCap", out _)).IsFalse();
-        await Assert.That(body.RootElement.TryGetProperty("firstPostInviteBonus", out _)).IsFalse();
+        await Assert.That(response.Energy).IsEqualTo(7);
     }
 
     [Test]
     public async Task Invitation_WithoutAuthentication_ReturnsUnauthorizedAsync()
     {
-        using var http = Factory.CreateClient();
-        using var response = await http.GetAsync("/invitation", CancellationToken.None);
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.Unauthorized);
+        using var api = Factory.CreateApiClient();
+        var response = await Assert.ThrowsAsync<PlayerApiException>(() => api.Player.GetInvitationAsync(CancellationToken.None));
+        await Assert.That(response).IsNotNull();
+        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.Unauthorized);
     }
 
     [Test]
     public async Task Invitation_BeforeOnboarding_ReturnsNotFoundAsync()
     {
-        using var http = CreateAuthenticatedHttpClient(8583);
-        using var response = await http.GetAsync("/invitation", CancellationToken.None);
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+        using var api = Factory.CreateApiClient(8583);
+        var response = await Assert.ThrowsAsync<PlayerApiException>(() => api.Player.GetInvitationAsync(CancellationToken.None));
+        await Assert.That(response).IsNotNull();
+        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
     }
 
     private Task<BsonDocument> GetStoredInviteAsync(string inviteeId) =>

@@ -28,4 +28,9 @@
                  CopyToOutputDirectory="PreserveNewest"
                  CopyToPublishDirectory="PreserveNewest"/>
     </ItemGroup>
+    <Target Name="GenerateFrontendApiClient"
+            AfterTargets="GenerateOpenApiDocuments">
+        <Exec WorkingDirectory="$(MSBuildProjectDirectory)/../.."
+              Command="dotnet tool run nswag run ../frontend/nswag.frontend.json"/>
+    </Target>
 </Project>

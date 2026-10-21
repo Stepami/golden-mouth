@@ -23,8 +23,26 @@ internal sealed class OperationMetadataTransformer : IOpenApiOperationTransforme
             response is { Content: { } content } &&
             content.TryGetValue("text/event-stream", out var stream))
         {
-            stream.Schema = null;
+            operation.Description = operation.OperationId switch
+            {
+                "Posts_GeneratePublication" => "Server-sent events. Each data frame is a PublicationStatusLiveEvent JSON object. " +
+                    "Do not automatically repeat this POST on disconnect; query the durable publication status instead.",
+                "Posts_ReplyToPost" => "Server-sent events. Each data frame is a ReplyLiveEvent JSON object. " +
+                    "After disconnect, check the saved post for the requestId before retrying.",
+                _ => operation.Description,
+            };
+
+            // NSwag needs a binary schema to retain the response stream instead of
+            // returning an empty FileResponse and disposing the HTTP response.
+            stream.Schema = new OpenApiSchema { Type = JsonSchemaType.String, Format = "binary" };
             content.Remove("application/json");
+        }
+
+        if (operation.OperationId == "Social_GetActiveChallenge" &&
+            operation.Responses?["200"] is { } challengeResponse)
+        {
+            challengeResponse.Description = "Active challenge, or an empty HTTP 200 body when no challenge exists. " +
+                "Clients normalize the empty body to null.";
         }
 
         return Task.CompletedTask;
