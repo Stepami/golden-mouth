@@ -8,3 +8,5 @@ shots/
 .codex/
 .claude/
 apm.lock.yaml
+# Generated from openapi/reki-api.json before dev/build.
+src/api/generated/

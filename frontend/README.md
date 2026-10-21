@@ -31,3 +31,53 @@ Telegram Mini App игры «Реки». Правила для агента и �
 При миграции учтены `miniApp.setBgColor`, `viewport.expand` и `miniApp.close`. Возвращаемое значение `.ifAvailable()` теперь объект; используемые вызовы не разбирают прежний tuple. Сырые подписанные `initData` продолжают передаваться в API без преобразования ключей. Руководства: [SDK](https://docs.telegram-mini-apps.com/packages/legacy/tma-js-sdk/migrate-from-telegram-apps), [bridge](https://docs.telegram-mini-apps.com/packages/legacy/tma-js-bridge/migrate-from-telegram-apps).
 
 Срез `.npmrc before=2026-10-13` выбран 20.10.2026 с запасом не менее семи дней. Lockfile использует исправленные `valibot@1.5.0` (SDK) и `source-map-js@1.2.2` (PostCSS/Vite). Для проверки: `npm ci`, `npm audit`, `npx tsc -b`, `npm run build`, `node --test tests/*.test.mjs`. После изменения lockfile в DEV нужно выполнить `npm ci` также в контейнере с существующим томом node_modules и перезапустить frontend: пересборка образа не обновляет этот том.
+
+### Генерируемый API-клиент (#122)
+
+`openapi/reki-api.json` — сохранённый результат штатной backend-сборки. Его не редактируют
+вручную. Сборке фронтенда нужны только Node/npm и этот снимок: запущенный API, .NET и
+секреты не нужны. `npm ci` также устанавливает отдельный toolchain в `tools/api-generator`;
+`npm run dev` и `npm run build` сначала запускают генерацию. Ошибка генерации останавливает
+запуск/сборку. `src/api/generated/` игнорируется Git и не редактируется вручную.
+
+```sh
+npm ci
+npm run api:generate
+npx tsc -b
+npm run build
+node --test tests/*.test.mjs
+npm audit
+npm audit --prefix tools/api-generator
+```
+
+Конфигурация генератора: `tools/api-generator/openapi-ts.config.mjs`. Закреплены
+`@hey-api/openapi-ts@0.99.0` (22.06.2026) и его компилятор `typescript@6.0.3` (16.04.2026).
+Toolchain отделён от TypeScript 7 приложения: генератор использует compiler API, которого
+нет в native-пакете TypeScript 7. Оба lockfile и обе `.npmrc` входят в репозиторий.
+Toolchain override `js-yaml@4.3.2` (26.08.2026) устраняет известные DoS-уязвимости 4.1.1,
+закреплённой транзитивным ref-parser; production-зависимости приложения override не затрагивает.
+Прямой `valibot@1.5.0` используется сгенерированными проверками SSE и ошибок публикации.
+Даты релизов старше семи дней; срез `before=2026-10-13` сохранён.
+
+После изменения backend-контракта выполнить команды обновления снимка из
+[backend/README.md](../backend/README.md#frontend-openapi-contract-122), затем команды выше.
+Backend CI сверяет свежий OpenAPI со снимком и собирает фронтенд также при backend-only diff.
+Порядок подключения PR: сначала backend metadata + снимок/CI, затем зависимый frontend PR.
+Ни JWT из #123, ни будущий ML-протокол #193 эта миграция не вводит.
+
+`src/api/client.ts` сохраняет объект `api` и mock-режим; REST-методы и wire-типы берутся
+из генерации. `types.ts` содержит производные модели UI/демо, `mappers.ts` преобразует
+числа и проверяет ограниченные UI-значения. `transport.ts` сохраняет runtime base URL,
+Telegram Authorization, `ApiError`, журналирование и отсечение запоздавших ответов после
+удаления аккаунта. Пустой HTTP 200 у `/challenges/active` нормализуется в `null` перед
+JSON-декодированием. Аналитика/логи используют generated SDK с `keepalive`; отдельный
+клиент не допускает рекурсивной отправки ошибок телеметрии.
+
+SSE остаётся отдельным обработчиком с generated request types и Valibot-схемами событий.
+Встроенный reconnect генератора для POST не используется: публикация/ответ отправляются
+один раз, при потере потока проверяется сохранённый статус/пост. AbortSignal, requestId,
+publicationId и защита от повторной публикации сохранены.
+
+Docker копирует манифесты обоих toolchain до `npm ci`; build генерирует клиент из снимка.
+На DEV с постоянным `node_modules` после обновления манифестов выполнить `npm ci` в
+frontend-контейнере и перезапустить его.

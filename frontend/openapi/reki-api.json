@@ -1,0 +1,3303 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Reki.Api | v1",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/worlds/templates": {
+      "get": {
+        "tags": [
+          "Worlds"
+        ],
+        "operationId": "Worlds_GetWorldTemplates",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorldResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/worlds": {
+      "get": {
+        "tags": [
+          "Worlds"
+        ],
+        "operationId": "Worlds_GetOwnedWorlds",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorldResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Worlds"
+        ],
+        "operationId": "Worlds_CreateWorld",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorldRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorldRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorldRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/worlds/{worldId}": {
+      "put": {
+        "tags": [
+          "Worlds"
+        ],
+        "operationId": "Worlds_UpdateWorld",
+        "parameters": [
+          {
+            "name": "worldId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorldRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorldRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorldRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/events": {
+      "post": {
+        "tags": [
+          "Telemetry"
+        ],
+        "operationId": "Telemetry_SubmitAnalytics",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsBatchRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsBatchRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content",
+            "content": {
+              "application/json": { }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/logs": {
+      "post": {
+        "tags": [
+          "Telemetry"
+        ],
+        "operationId": "Telemetry_SubmitClientLogs",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientLogBatchRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientLogBatchRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientLogBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content",
+            "content": {
+              "application/json": { }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/reports": {
+      "post": {
+        "tags": [
+          "Telemetry"
+        ],
+        "operationId": "Telemetry_ReportComment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/friends": {
+      "get": {
+        "tags": [
+          "Social"
+        ],
+        "operationId": "Social_GetFriends",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FriendResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/dm/{starId}": {
+      "get": {
+        "tags": [
+          "Social"
+        ],
+        "operationId": "Social_GetDirectMessages",
+        "parameters": [
+          {
+            "name": "starId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "worldId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DmResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Social"
+        ],
+        "operationId": "Social_SendDirectMessage",
+        "parameters": [
+          {
+            "name": "starId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "worldId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectMessageRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectMessageRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/DirectMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendDirectMessageResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/stars/{starId}/memory": {
+      "delete": {
+        "tags": [
+          "Social"
+        ],
+        "operationId": "Social_ForgetStarMemory",
+        "parameters": [
+          {
+            "name": "starId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "worldId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgetMemoryRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgetMemoryRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgetMemoryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/challenges/active": {
+      "get": {
+        "tags": [
+          "Social"
+        ],
+        "operationId": "Social_GetActiveChallenge",
+        "responses": {
+          "200": {
+            "description": "Active challenge, or an empty HTTP 200 body when no challenge exists. Clients normalize the empty body to null.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/challenges": {
+      "post": {
+        "tags": [
+          "Social"
+        ],
+        "operationId": "Social_StartChallenge",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartChallengeRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartChallengeRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartChallengeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/posts/publications": {
+      "post": {
+        "tags": [
+          "Posts"
+        ],
+        "description": "Server-sent events. Each data frame is a PublicationStatusLiveEvent JSON object. Do not automatically repeat this POST on disconnect; query the durable publication status instead.",
+        "operationId": "Posts_GeneratePublication",
+        "parameters": [
+          {
+            "name": "worldId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartPublicationRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartPublicationRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartPublicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/event-stream": { }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/posts/publications/{publicationId}": {
+      "get": {
+        "tags": [
+          "Posts"
+        ],
+        "operationId": "Posts_GetPublicationStatus",
+        "parameters": [
+          {
+            "name": "publicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicationStatusResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/posts/publications/{publicationId}/moderation": {
+      "post": {
+        "tags": [
+          "Posts"
+        ],
+        "operationId": "Posts_ModeratePublication",
+        "parameters": [
+          {
+            "name": "publicationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "worldId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LiveEvent"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/posts/{postId}/replies": {
+      "post": {
+        "tags": [
+          "Posts"
+        ],
+        "description": "Server-sent events. Each data frame is a ReplyLiveEvent JSON object. After disconnect, check the saved post for the requestId before retrying.",
+        "operationId": "Posts_ReplyToPost",
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "worldId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/event-stream": { }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/feed": {
+      "get": {
+        "tags": [
+          "Posts"
+        ],
+        "operationId": "Posts_GetFeed",
+        "parameters": [
+          {
+            "name": "worldId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeedItemResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/posts/mine": {
+      "get": {
+        "tags": [
+          "Posts"
+        ],
+        "operationId": "Posts_GetChannelPosts",
+        "parameters": [
+          {
+            "name": "worldId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChannelPostResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/posts/{postId}": {
+      "get": {
+        "tags": [
+          "Posts"
+        ],
+        "operationId": "Posts_GetPost",
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "worldId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/cards/story/{playerId}/{postId}.png": {
+      "get": {
+        "tags": [
+          "StoryCards"
+        ],
+        "operationId": "StoryCards_GetPublicStoryCard",
+        "parameters": [
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stream"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": [
+          "Player"
+        ],
+        "operationId": "Player_GetCurrentPlayer",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Player"
+        ],
+        "operationId": "Player_DeleteCurrentPlayer",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/onboarding": {
+      "post": {
+        "tags": [
+          "Player"
+        ],
+        "operationId": "Player_CompleteOnboarding",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/invitation": {
+      "get": {
+        "tags": [
+          "Player"
+        ],
+        "operationId": "Player_GetInvitation",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/referral": {
+      "get": {
+        "tags": [
+          "Player"
+        ],
+        "operationId": "Player_GetReferralCode",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferralResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/settings": {
+      "patch": {
+        "tags": [
+          "Player"
+        ],
+        "operationId": "Player_UpdateSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSettingsRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSettingsRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/plus-interest": {
+      "post": {
+        "tags": [
+          "Player"
+        ],
+        "operationId": "Player_ClaimPlusInterest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlusInterestRequest"
+                  }
+                ]
+              }
+            },
+            "text/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlusInterestRequest"
+                  }
+                ]
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlusInterestRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlusInterestResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/events/today": {
+      "get": {
+        "tags": [
+          "Events"
+        ],
+        "operationId": "Events_GetTodayEvent",
+        "parameters": [
+          {
+            "name": "worldId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameEventResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    },
+    "/events/{eventId}/answer": {
+      "post": {
+        "tags": [
+          "Events"
+        ],
+        "operationId": "Events_AnswerEvent",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "worldId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerEventRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerEventRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { }
+            }
+          }
+        },
+        "security": [
+          {
+            "TMiniApp": [ ]
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Address": {
+        "enum": [
+          "she",
+          "he",
+          "nick"
+        ]
+      },
+      "AnalyticsBatchRequest": {
+        "required": [
+          "session",
+          "platform",
+          "events"
+        ],
+        "type": "object",
+        "properties": {
+          "session": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "platform": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "launchSurface": {
+            "$ref": "#/components/schemas/LaunchSurface"
+          },
+          "experiments": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "events": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnalyticsEventRequest"
+            }
+          }
+        }
+      },
+      "AnalyticsEventRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "worldId": {
+            "maxLength": 64,
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Идентификатор экземпляра мира; отсутствует у событий до создания мира."
+          },
+          "name": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "t": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "screen": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "prev": {
+            "maxLength": 64,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "props": {
+            "type": [
+              "null",
+              "object"
+            ]
+          }
+        }
+      },
+      "AnswerEventRequest": {
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          }
+        }
+      },
+      "BestCommentResponse": {
+        "required": [
+          "avatar",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "avatar": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "BirthGroup": {
+        "enum": [
+          "14-17",
+          "18+"
+        ]
+      },
+      "ChallengeResponse": {
+        "required": [
+          "id",
+          "me",
+          "rival",
+          "day",
+          "days",
+          "myScore",
+          "rivalScore",
+          "bestPost"
+        ],
+        "type": [
+          "null",
+          "object"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "me": {
+            "type": "string"
+          },
+          "rival": {
+            "$ref": "#/components/schemas/FriendResponse"
+          },
+          "day": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "days": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "myScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "rivalScore": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "bestPost": {
+            "type": "string"
+          }
+        }
+      },
+      "ChannelPostResponse": {
+        "required": [
+          "postId",
+          "text",
+          "createdAtUtc",
+          "views",
+          "reactions",
+          "commentCount"
+        ],
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "views": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "reactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReactionResponse"
+            }
+          },
+          "commentCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ClientLogBatchRequest": {
+        "required": [
+          "session",
+          "entries"
+        ],
+        "type": "object",
+        "properties": {
+          "session": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "entries": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClientLogEntryRequest"
+            }
+          }
+        }
+      },
+      "ClientLogEntryRequest": {
+        "required": [
+          "level",
+          "event"
+        ],
+        "type": "object",
+        "properties": {
+          "t": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "level": {
+            "$ref": "#/components/schemas/ClientLogLevel"
+          },
+          "event": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "screen": {
+            "maxLength": 64,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "props": {
+            "type": [
+              "null",
+              "object"
+            ]
+          }
+        }
+      },
+      "ClientLogLevel": {
+        "enum": [
+          "info",
+          "warn",
+          "error"
+        ]
+      },
+      "CollectionCardResponse": {
+        "required": [
+          "id",
+          "emoji",
+          "title",
+          "open"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "emoji": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "open": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CommentReactionResponse": {
+        "required": [
+          "authorId",
+          "author",
+          "avatar",
+          "star",
+          "me",
+          "emoji"
+        ],
+        "type": "object",
+        "properties": {
+          "authorId": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string"
+          },
+          "star": {
+            "type": "boolean"
+          },
+          "me": {
+            "type": "boolean"
+          },
+          "emoji": {
+            "type": "string"
+          }
+        },
+        "description": "Реакция на комментарий с готовыми данными автора."
+      },
+      "CommentResponse": {
+        "required": [
+          "id",
+          "author",
+          "avatar",
+          "handle",
+          "text",
+          "star",
+          "me",
+          "hidden",
+          "parentCommentId",
+          "requestId",
+          "authorId",
+          "role",
+          "depth",
+          "reactions"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string"
+          },
+          "handle": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "star": {
+            "type": "boolean"
+          },
+          "me": {
+            "type": "boolean"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "parentCommentId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requestId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "authorId": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "depth": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommentReactionResponse"
+            }
+          }
+        }
+      },
+      "CreateWorldRequest": {
+        "required": [
+          "balanceKey",
+          "name",
+          "avatar",
+          "role"
+        ],
+        "type": "object",
+        "properties": {
+          "balanceKey": {
+            "pattern": "^(stage|academy|it|stream|own|evening|sorcerers|houses)$",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "type": "string"
+          },
+          "avatar": {
+            "maxLength": 80,
+            "type": "string"
+          },
+          "role": {
+            "maxLength": 80,
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 120,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "avatarStyle": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "voice": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "drama": {
+            "$ref": "#/components/schemas/Drama"
+          },
+          "where": {
+            "type": "string"
+          },
+          "firstContext": {
+            "type": "string"
+          },
+          "firstPrompt": {
+            "type": "string"
+          },
+          "emoji": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "difficulty": {
+            "maximum": 3,
+            "minimum": 1,
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unlockSkill": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unlockLevel": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "voices": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "postIdeas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "demoPosts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "wants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WantResponse"
+            }
+          },
+          "achievements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionCardResponse"
+            }
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorldRuleResponse"
+            }
+          },
+          "stars": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorldStarResponse"
+            }
+          }
+        }
+      },
+      "DirectMessageAuthor": {
+        "enum": [
+          "star",
+          "me"
+        ]
+      },
+      "DirectMessageRequest": {
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          }
+        }
+      },
+      "DirectMessageResponse": {
+        "required": [
+          "from",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "$ref": "#/components/schemas/DirectMessageAuthor"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "DmResponse": {
+        "required": [
+          "star",
+          "status",
+          "memory",
+          "messages",
+          "ideas",
+          "repliesLeft"
+        ],
+        "type": "object",
+        "properties": {
+          "star": {
+            "$ref": "#/components/schemas/StarResponse"
+          },
+          "status": {
+            "type": "string"
+          },
+          "memory": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DirectMessageResponse"
+            }
+          },
+          "ideas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "repliesLeft": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Drama": {
+        "enum": [
+          "soft",
+          "mid",
+          "hot",
+          "off"
+        ]
+      },
+      "FeedItemKind": {
+        "enum": [
+          "news",
+          "post"
+        ]
+      },
+      "FeedItemResponse": {
+        "required": [
+          "kind",
+          "postId",
+          "author",
+          "avatar",
+          "role",
+          "ago",
+          "text",
+          "reactions",
+          "views",
+          "commentCount",
+          "repost"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/FeedItemKind"
+          },
+          "postId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "author": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "avatar": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ago": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "reactions": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ReactionResponse"
+            }
+          },
+          "views": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "commentCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "repost": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ForgetMemoryRequest": {
+        "required": [
+          "fact"
+        ],
+        "type": "object",
+        "properties": {
+          "fact": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          }
+        }
+      },
+      "FriendResponse": {
+        "required": [
+          "id",
+          "name",
+          "avatar",
+          "world",
+          "subs",
+          "lastPost",
+          "pronoun"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string"
+          },
+          "world": {
+            "type": "string"
+          },
+          "subs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "lastPost": {
+            "type": "string"
+          },
+          "pronoun": {
+            "type": "string"
+          }
+        }
+      },
+      "GameEventKind": {
+        "enum": [
+          "collab",
+          "hate",
+          "gossip",
+          "brand"
+        ]
+      },
+      "GameEventResponse": {
+        "required": [
+          "id",
+          "kind",
+          "badge",
+          "title",
+          "text",
+          "ideas",
+          "reward",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GameEventKind"
+          },
+          "badge": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "ideas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reward": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "InvitationResponse": {
+        "required": [
+          "bonus"
+        ],
+        "type": "object",
+        "properties": {
+          "bonus": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "LaunchSurface": {
+        "enum": [
+          "unknown",
+          "telegram-mini-app",
+          "browser",
+          "standalone"
+        ]
+      },
+      "LiveEvent": {
+        "required": [
+          "type"
+        ],
+        "type": "object",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/LiveEventViewsLiveEvent"
+          },
+          {
+            "$ref": "#/components/schemas/LiveEventReactionLiveEvent"
+          },
+          {
+            "$ref": "#/components/schemas/LiveEventCommentLiveEvent"
+          },
+          {
+            "$ref": "#/components/schemas/LiveEventTypingLiveEvent"
+          },
+          {
+            "$ref": "#/components/schemas/LiveEventResultLiveEvent"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "views": "#/components/schemas/LiveEventViewsLiveEvent",
+            "react": "#/components/schemas/LiveEventReactionLiveEvent",
+            "comment": "#/components/schemas/LiveEventCommentLiveEvent",
+            "typing": "#/components/schemas/LiveEventTypingLiveEvent",
+            "result": "#/components/schemas/LiveEventResultLiveEvent"
+          }
+        }
+      },
+      "LiveEventCommentLiveEvent": {
+        "required": [
+          "comment"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "comment"
+            ],
+            "type": "string"
+          },
+          "comment": {
+            "$ref": "#/components/schemas/CommentResponse"
+          }
+        }
+      },
+      "LiveEventReactionLiveEvent": {
+        "required": [
+          "emoji"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "react"
+            ],
+            "type": "string"
+          },
+          "emoji": {
+            "type": "string"
+          }
+        }
+      },
+      "LiveEventResultLiveEvent": {
+        "required": [
+          "result"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "result"
+            ],
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/PostResultResponse"
+          }
+        }
+      },
+      "LiveEventTypingLiveEvent": {
+        "required": [
+          "who"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "typing"
+            ],
+            "type": "string"
+          },
+          "who": {
+            "type": "string"
+          }
+        }
+      },
+      "LiveEventViewsLiveEvent": {
+        "required": [
+          "views"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "views"
+            ],
+            "type": "string"
+          },
+          "views": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "OnboardingRequest": {
+        "required": [
+          "birthGroup",
+          "address"
+        ],
+        "type": "object",
+        "properties": {
+          "referralCode": {
+            "maxLength": 64,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "birthGroup": {
+            "$ref": "#/components/schemas/BirthGroup"
+          },
+          "ageBand": {
+            "pattern": "^(14-17|18-24|25-34|35-44|45\\+)$",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          }
+        }
+      },
+      "PlayerResponse": {
+        "required": [
+          "id",
+          "address",
+          "energy",
+          "streak",
+          "skills",
+          "settings",
+          "experiments"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "energy": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "streak": {
+            "$ref": "#/components/schemas/StreakResponse"
+          },
+          "skills": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SkillResponse"
+            }
+          },
+          "settings": {
+            "$ref": "#/components/schemas/PlayerSettingsResponse"
+          },
+          "experiments": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "hitOwnWorldMilestone": {
+            "type": "boolean",
+            "default": false
+          },
+          "ageBand": {
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "PlayerSettingsResponse": {
+        "required": [
+          "notifications",
+          "quiet",
+          "plus"
+        ],
+        "type": "object",
+        "properties": {
+          "notifications": {
+            "type": "string"
+          },
+          "quiet": {
+            "type": "string"
+          },
+          "plus": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PlusInterestRequest": {
+        "type": "object",
+        "properties": {
+          "interest": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "PlusInterestResponse": {
+        "required": [
+          "bonus"
+        ],
+        "type": "object",
+        "properties": {
+          "bonus": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PostDetailResponse": {
+        "required": [
+          "postId",
+          "authorId",
+          "text",
+          "views",
+          "reactions",
+          "comments"
+        ],
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string"
+          },
+          "authorId": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "views": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "reactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReactionResponse"
+            }
+          },
+          "comments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommentResponse"
+            }
+          }
+        }
+      },
+      "PostResultResponse": {
+        "required": [
+          "postId",
+          "delta",
+          "headline",
+          "whys",
+          "ribbons",
+          "bestComment",
+          "viral",
+          "flop",
+          "views",
+          "hook"
+        ],
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string"
+          },
+          "delta": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "headline": {
+            "type": "string"
+          },
+          "whys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WhyResponse"
+            }
+          },
+          "ribbons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RibbonResponse"
+            }
+          },
+          "bestComment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BestCommentResponse"
+              }
+            ]
+          },
+          "viral": {
+            "type": "boolean"
+          },
+          "flop": {
+            "type": "boolean"
+          },
+          "views": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "hook": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PublicationFailure": {
+        "required": [
+          "code",
+          "category",
+          "policyVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "policyVersion": {
+            "type": "string"
+          }
+        },
+        "description": "Safe, durable explanation. Never contains submitted text or provider output."
+      },
+      "PublicationStatus": {
+        "enum": [
+          "pending",
+          "ready_for_moderation",
+          "completed",
+          "failed"
+        ]
+      },
+      "PublicationStatusLiveEvent": {
+        "required": [
+          "type",
+          "publicationId"
+        ],
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/PublicationStatus"
+          },
+          "publicationId": {
+            "type": "string"
+          },
+          "failure": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicationFailure"
+              }
+            ]
+          }
+        },
+        "description": "A generation-stage status delivered over SSE."
+      },
+      "PublicationStatusResponse": {
+        "required": [
+          "publicationId",
+          "status",
+          "result"
+        ],
+        "type": "object",
+        "properties": {
+          "publicationId": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PublicationStatus"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PostResultResponse"
+              }
+            ]
+          },
+          "failure": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicationFailure"
+              }
+            ]
+          }
+        },
+        "description": "The durable status of a publication for recovery after a broken stream."
+      },
+      "ReactionResponse": {
+        "required": [
+          "emoji",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "emoji": {
+            "type": "string"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ReferralResponse": {
+        "required": [
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "ReplyLiveEvent": {
+        "required": [
+          "status",
+          "requestId",
+          "text",
+          "post",
+          "energyLeft",
+          "subscribers",
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ReplyStatus"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "post": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PostDetailResponse"
+              }
+            ]
+          },
+          "energyLeft": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "subscribers": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Ход генерации комментария; только completed подтверждает сохранение."
+      },
+      "ReplyRequest": {
+        "required": [
+          "requestId",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requestId": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "type": "string"
+          }
+        }
+      },
+      "ReplyStatus": {
+        "enum": [
+          "generating",
+          "completed",
+          "failed"
+        ],
+        "description": "Состояние генерации ответа в треде."
+      },
+      "ReportRequest": {
+        "required": [
+          "commentId",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "commentId": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 128,
+            "type": "string"
+          }
+        }
+      },
+      "RibbonResponse": {
+        "required": [
+          "icon",
+          "title",
+          "sub"
+        ],
+        "type": "object",
+        "properties": {
+          "icon": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "sub": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SendDirectMessageResponse": {
+        "required": [
+          "reply",
+          "repliesLeft"
+        ],
+        "type": "object",
+        "properties": {
+          "reply": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "repliesLeft": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SkillResponse": {
+        "required": [
+          "level",
+          "progress"
+        ],
+        "type": "object",
+        "properties": {
+          "level": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "progress": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "SseItemOfPublicationStatusLiveEvent": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PublicationStatusLiveEvent"
+          },
+          "eventId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "eventType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reconnectionInterval": {
+            "pattern": "^-?(\\d+\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SseItemOfReplyLiveEvent": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ReplyLiveEvent"
+          },
+          "eventId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "eventType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reconnectionInterval": {
+            "pattern": "^-?(\\d+\\.)?\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,7})?$",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "StarResponse": {
+        "required": [
+          "id",
+          "name",
+          "role",
+          "trait",
+          "about",
+          "relation"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "trait": {
+            "type": "string"
+          },
+          "about": {
+            "type": "string"
+          },
+          "relation": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "StartChallengeRequest": {
+        "required": [
+          "friendId"
+        ],
+        "type": "object",
+        "properties": {
+          "friendId": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        }
+      },
+      "StartPublicationRequest": {
+        "required": [
+          "publicationId",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "publicationId": {
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "ownWords": {
+            "type": "boolean"
+          },
+          "wantId": {
+            "maxLength": 64,
+            "minLength": 0,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "Starts streaming generation for a publication identified by a client-generated UUID."
+      },
+      "StreakResponse": {
+        "required": [
+          "days",
+          "week",
+          "nextReward"
+        ],
+        "type": "object",
+        "properties": {
+          "days": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "week": {
+            "type": "array",
+            "items": {
+              "type": "boolean"
+            }
+          },
+          "nextReward": {
+            "type": "string"
+          }
+        }
+      },
+      "Stream": {
+        "type": "string",
+        "format": "binary"
+      },
+      "UpdateSettingsRequest": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Address"
+              }
+            ]
+          },
+          "notifications": {
+            "maxLength": 64,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quiet": {
+            "maxLength": 64,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plus": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "WantResponse": {
+        "required": [
+          "id",
+          "text",
+          "reward",
+          "done"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "reward": {
+            "type": "string"
+          },
+          "done": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WhyResponse": {
+        "required": [
+          "icon",
+          "label",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "icon": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "WorldResponse": {
+        "required": [
+          "id",
+          "balanceKey",
+          "title",
+          "description",
+          "avatarStyle",
+          "emoji",
+          "summary",
+          "where",
+          "firstContext",
+          "firstPrompt",
+          "roles",
+          "voices",
+          "postIdeas",
+          "demoPosts",
+          "rules",
+          "stars",
+          "name",
+          "role",
+          "avatar",
+          "voice",
+          "drama",
+          "wants",
+          "achievements"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "balanceKey": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "avatarStyle": {
+            "type": "string"
+          },
+          "emoji": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "difficulty": {
+            "maximum": 3,
+            "minimum": 1,
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "unlockSkill": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unlockLevel": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "where": {
+            "type": "string"
+          },
+          "firstContext": {
+            "type": "string"
+          },
+          "firstPrompt": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "voices": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "postIdeas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "demoPosts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorldRuleResponse"
+            }
+          },
+          "stars": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorldStarResponse"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string"
+          },
+          "voice": {
+            "type": "string"
+          },
+          "drama": {
+            "$ref": "#/components/schemas/Drama"
+          },
+          "subscribers": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "wants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WantResponse"
+            }
+          },
+          "achievements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollectionCardResponse"
+            }
+          }
+        }
+      },
+      "WorldRuleResponse": {
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "locked": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "WorldStarResponse": {
+        "required": [
+          "id",
+          "name",
+          "role",
+          "trait",
+          "about",
+          "voice",
+          "avatarSeed",
+          "relation"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "trait": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "about": {
+            "type": "string"
+          },
+          "voice": {
+            "type": "string"
+          },
+          "avatarSeed": {
+            "type": "string"
+          },
+          "relation": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "TMiniApp": {
+        "type": "apiKey",
+        "description": "Enter TMiniApp followed by a space and the raw Telegram initData.",
+        "name": "Authorization",
+        "in": "header"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Worlds"
+    },
+    {
+      "name": "Telemetry"
+    },
+    {
+      "name": "Social"
+    },
+    {
+      "name": "Posts"
+    },
+    {
+      "name": "StoryCards"
+    },
+    {
+      "name": "Player"
+    },
+    {
+      "name": "Events"
+    }
+  ]
+}

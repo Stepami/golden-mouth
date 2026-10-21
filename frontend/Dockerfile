@@ -2,6 +2,7 @@
 FROM node:22.20.0-alpine3.22 AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
+COPY tools/api-generator/package.json tools/api-generator/package-lock.json tools/api-generator/.npmrc ./tools/api-generator/
 RUN npm ci
 
 FROM dependencies AS development

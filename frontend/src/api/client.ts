@@ -6,32 +6,33 @@ import { clearAvatarPersonalization } from '../app/avatarPersonalization'
 import { clearReferral } from '../app/referral'
 import { clearApiCache } from '../app/useApi'
 import * as mock from './mock'
-import { error, warn } from '../app/log'
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics'
-import { apiBaseUrl as BASE, runtimeConfig } from '../app/runtimeConfig'
+import { apiBaseUrl as BASE } from '../app/runtimeConfig'
 import { demoWorlds, demoWorldKey, demoChannelPosts, demoOwnPosts, demoPlayer, demoPost, resetDemoPlayer, saveDemoPlayer, saveDemoPost, withDemoComments } from './demo'
 import { clearWorldContent, contentOf, installWorldContent, installWorldTemplates, worldDocumentOf, wantsFor } from './worldContent'
-import { telegramAuthHeaders } from './auth'
-import type { AgeBand } from '../app/ageBand'
+import { error } from '../app/log'
+import * as sdk from './generated/sdk.gen'
+import type * as Wire from './generated/types.gen'
+import * as map from './mappers'
+import { ApiError, options as remoteOptions, data, stream } from './transport'
+export { ApiError } from './transport'
+import { sessionGeneration, assertSession, endSession } from './session'
+import { parse } from 'valibot'
+import { vPublicationStatusLiveEvent, vReplyLiveEvent } from './generated/valibot.gen'
 import type { PlayerDocument, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PostResult, PublicationState, PublicationStatus, PublicationFailure, ReplyLiveEvent, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types'
-
-let sessionGeneration = 0
-function assertSession(generation: number) {
-  if (generation !== sessionGeneration) throw new DOMException('Account session has ended', 'AbortError')
-}
 
 let sessionPlayer: Player | undefined
 let sessionIdentity: PlayerDocument | undefined
 let ownedWorldSnapshot: WorldDocument[] | undefined
 let templates: WorldDocument[] = []
 let templatesRequest: Promise<void> | undefined
-const inWorld = (path: string): string => {
+const worldId = (): string => {
   if (!sessionPlayer?.worldInstanceId) throw new Error('World must be loaded before this request')
-  return `${path}?worldId=${encodeURIComponent(sessionPlayer.worldInstanceId)}`
+  return sessionPlayer.worldInstanceId
 }
 async function fetchTemplates(): Promise<void> {
   try {
-    const loaded = await call<WorldDocument[]>('/worlds/templates', undefined, false)
+    const loaded = (await data(sdk.worldsGetWorldTemplates(remoteOptions), false)).map(map.world)
     if (!loaded.length) throw new Error('No world templates returned')
     installWorldTemplates(loaded)
     templates = loaded
@@ -47,26 +48,11 @@ function loadTemplates(): Promise<void> {
 function rememberPlayer(player: Player): Player {
   try { if (player.worldInstanceId) localStorage.setItem(`reki:selected-world:${player.id}`, player.worldInstanceId) } catch { /* memory fallback */ } setTelemetryPlayerAvailable(true); sessionIdentity = { ...player, energy: player.postsLeft, experiments: player.experiments ?? {} }; sessionPlayer = player; setAnalyticsWorld(player.worldInstanceId, player.world); return player }
 
-export class ApiError extends Error {
-  constructor(public readonly status: number, method: string, path: string, public readonly failure?: PublicationFailure) {
-    super(`${method} ${path.replace(/\/[\w-]{16,}/g, '/:id')} ${status}`)
-    this.name = 'ApiError'
-  }
-}
-
-async function call<T>(path: string, init?: RequestInit, authenticated = true): Promise<T> {
-  const generation = sessionGeneration
-  const r = await fetch(`${BASE ?? runtimeConfig.apiBaseUrl}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...(authenticated ? telegramAuthHeaders() : {}), ...init?.headers } })
-  if (authenticated) assertSession(generation)
-  if (!r.ok) { let failure: PublicationFailure | undefined; try { failure = (await r.json() as { failure?: PublicationFailure }).failure } catch { /* untyped transport error */ }; const e = new ApiError(r.status, init?.method ?? 'GET', path, failure); if (r.status >= 500) error('api_error', e, { status: r.status }); else if (r.status !== 404 || path !== '/me') warn('api_error', { status: r.status, msg: e.message }); throw e }
-  const body = await r.text()
-  if (authenticated) assertSession(generation)
-  return body ? JSON.parse(body) as T : undefined as T
-}
 const later = <T,>(v: T, ms = 150) => new Promise<T>(res => setTimeout(() => res(structuredClone(v)), ms))
 const laterLazy = <T,>(load: () => T, ms = 150) => new Promise<T>((resolve, reject) => setTimeout(() => { try { resolve(structuredClone(load())) } catch (e) { reject(e) } }, ms))
 
-async function readSse<T>(response: Response, onEvent: (event: T) => void | Promise<void>): Promise<void> {
+async function readSse<T>(response: Response, decode: (value: unknown) => T, onEvent: (event: T) => void | Promise<void>): Promise<void> {
+  const generation = sessionGeneration()
   if (!response.body) throw new Error('Response has no event stream')
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
@@ -80,19 +66,19 @@ async function readSse<T>(response: Response, onEvent: (event: T) => void | Prom
       const frame = buffer.slice(0, match.index)
       buffer = buffer.slice(match.index + match[0].length)
       const data = frame.split(/\r?\n/).filter(line => line.startsWith('data:')).map(line => line.slice(5).trimStart()).join('\n')
-      if (data) await onEvent(JSON.parse(data) as T)
+      if (data) { assertSession(generation); await onEvent(decode(JSON.parse(data))) }
     }
     if (done) break
   }
 }
 
 async function publicationState(id: string): Promise<PublicationState> {
-  return call(`/posts/publications/${encodeURIComponent(id)}`)
+  return map.publication(await data(sdk.postsGetPublicationStatus({ ...remoteOptions, path: { publicationId: id } })))
 }
 
 const playerRequests = new Map<string, Promise<Player>>()
 async function loadPlayer(worldId?: string): Promise<Player> {
-  const generation = sessionGeneration
+  const generation = sessionGeneration()
   if (!BASE) {
     // Demo worlds use template content because they have no server-side instances.
     await loadTemplates()
@@ -105,13 +91,13 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     assertSession(generation)
     return rememberPlayer(loaded)
   }
-  const player = await call<PlayerDocument>('/me')
+  const player = map.player(await data(sdk.playerGetCurrentPlayer(remoteOptions)))
   if (sessionIdentity?.id !== player.id) ownedWorldSnapshot = undefined
   sessionIdentity = player
   setTelemetryPlayerAvailable(true)
   const [ownedWorlds, invitation] = await Promise.all([
-    call<WorldDocument[]>('/worlds'),
-    call<{ bonus: number }>('/invitation'),
+    data(sdk.worldsGetOwnedWorlds(remoteOptions)).then(worlds => worlds.map(map.world)),
+    data(sdk.playerGetInvitation(remoteOptions)).then(value => ({ bonus: Number(value.bonus) })),
   ])
   assertSession(generation)
   ownedWorldSnapshot = ownedWorlds
@@ -139,12 +125,12 @@ export const api = {
   },
   playerId: (): string | undefined => sessionIdentity?.id,
   hasPlayer: (): boolean => sessionIdentity !== undefined,
-  onboarding: async (body: { birthGroup: '14-17' | '18+'; ageBand?: AgeBand; address: string; referralCode?: string }): Promise<PlayerDocument> => {
+  onboarding: async (body: Wire.OnboardingRequest): Promise<PlayerDocument> => {
     if (sessionIdentity) throw new Error('Onboarding has already been completed')
     sessionIdentity = BASE
-      ? await call<PlayerDocument>('/onboarding', { method: 'POST', body: JSON.stringify(body) })
+      ? map.player(await data(sdk.playerCompleteOnboarding({ ...remoteOptions, body })))
       : await later({
-        id: crypto.randomUUID().replaceAll('-', ''), address: body.address as Player['address'],
+        id: crypto.randomUUID().replaceAll('-', ''), address: body.address,
         energy: 10, streak: { days: 1, week: [true, false, false, false, false, false, false], nextReward: 'ещё день — и бонус' },
         skills: { brave: { level: 1, progress: 0 }, humor: { level: 1, progress: 0 }, topic: { level: 1, progress: 0 } },
         settings: { notifications: 'all', quiet: '22:00-09:00', plus: false }, experiments: {},
@@ -154,7 +140,7 @@ export const api = {
   },
   createWorld: async (definition: WorldDefinition): Promise<Player> => {
     if (BASE) {
-      const world = await call<WorldDocument>('/worlds', { method: 'POST', body: JSON.stringify(definition) })
+      const world = map.world(await data(sdk.worldsCreateWorld({ ...remoteOptions, body: definition })))
       return api.me(world.id)
     }
     if (!sessionIdentity) throw new Error('Player must be loaded before creating a world')
@@ -187,11 +173,7 @@ export const api = {
         })
       }
       const moderation = async () => {
-        const r = await fetch(`${BASE}${inWorld(`/posts/publications/${encodeURIComponent(publicationId)}/moderation`)}`, {
-          method: 'POST', signal: ctrl.signal, headers: { Accept: 'application/json', ...telegramAuthHeaders() },
-        })
-        if (!r.ok) throw new ApiError(r.status, 'POST', '/posts/publications/:id/moderation')
-        const events = await r.json() as LiveEvent[]
+        const events = (await data(sdk.postsModeratePublication({ ...remoteOptions, path: { publicationId }, query: { worldId: worldId() }, signal: ctrl.signal }))).map(map.live)
         let lastShownAt = 0
         const minimumGap: Record<LiveEvent['type'], number> = {
           views: 750, react: 800, comment: 950, typing: 950, result: 1300,
@@ -223,21 +205,16 @@ export const api = {
       // Defer the request so that probe does not create an abandoned publication.
       const start = setTimeout(() => { void (async () => {
         try {
-          const r = await fetch(`${BASE}${inWorld("/posts/publications")}`, {
-            method: 'POST', signal: ctrl.signal,
-            headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', ...telegramAuthHeaders() },
-            body: JSON.stringify({ publicationId, text, ownWords, wantId }),
-          })
-          if (!r.ok) { let failure: PublicationFailure | undefined; try { failure = (await r.json() as { failure?: PublicationFailure }).failure } catch { /* transport */ }; throw new ApiError(r.status, 'POST', '/posts/publications', failure) }
+          const r = await stream({ url: '/posts/publications', query: { worldId: worldId() }, body: { publicationId, text, ownWords, wantId } }, ctrl.signal)
           let lastStatus: PublicationStatus | null = null
           let failure: PublicationFailure | undefined
-          await readSse<{ type: PublicationStatus; publicationId: string; failure?: PublicationFailure }>(r, event => { lastStatus = event.type; failure = event.failure; onStatus?.(event.type) })
+          await readSse(r, value => parse(vPublicationStatusLiveEvent, value), event => { lastStatus = event.type; failure = event.failure ?? undefined; onStatus?.(event.type) })
           if (lastStatus === 'failed') { onError('failed', failure); return }
           if (lastStatus === 'completed') { await recover(); return }
           if (lastStatus !== 'ready_for_moderation') { await recover(); return }
           await moderation()
         } catch (e) {
-          if ((e as Error).name === 'AbortError') return
+          if (e instanceof Error && e.name === 'AbortError') return
           error('sse_error', e)
           if (e instanceof ApiError && e.failure) onError('failed', e.failure)
           else if (e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 409) onError('failed')
@@ -268,7 +245,6 @@ export const api = {
   reply: async (postId: string, commentId: string | null, requestId: string, text: string,
     options: { signal?: AbortSignal; onEvent?: (event: ReplyLiveEvent) => void } = {}): Promise<ReplyLiveEvent> => {
     const signal = options.signal
-    const path = BASE ? inWorld(`/posts/${encodeURIComponent(postId)}/replies`) : ''
     const player = sessionPlayer
     if (!player) throw new Error('Player must be loaded')
     const update = (event: ReplyLiveEvent) => {
@@ -306,11 +282,8 @@ export const api = {
     }
     let completed: ReplyLiveEvent | undefined
     try {
-      const response = await fetch(`${BASE}${path}`, { method: 'POST', signal,
-        headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', ...telegramAuthHeaders() },
-        body: JSON.stringify({ requestId, commentId, text }) })
-      if (!response.ok) throw new ApiError(response.status, 'POST', '/posts/:id/replies')
-      await readSse<ReplyLiveEvent>(response, event => {
+      const response = await stream({ url: '/posts/{postId}/replies', path: { postId }, query: { worldId: worldId() }, body: { requestId, commentId, text } }, signal)
+      await readSse(response, value => map.reply(parse(vReplyLiveEvent, value)), event => {
         update(event)
         if (event.status === 'failed') throw new Error('Reply generation failed')
         if (event.status === 'completed' && event.post && event.energyLeft != null && event.subscribers != null) completed = event
@@ -318,31 +291,30 @@ export const api = {
       if (!completed) throw new Error('Reply stream ended before completion')
       return completed
     } catch (cause) {
-      if (signal?.aborted || (cause instanceof ApiError && cause.status >= 400 && cause.status < 500)) throw cause
+      if (signal?.aborted || (cause instanceof Error && cause.name === 'AbortError') || (cause instanceof ApiError && cause.status >= 400 && cause.status < 500)) throw cause
       // A lost final SSE event does not imply that the transaction failed.
-      const query = path.slice(path.indexOf('?'))
-      const post = await call<PostDetailResponse>(`/posts/${encodeURIComponent(postId)}${query}`)
+      const post = await data(sdk.postsGetPost({ ...remoteOptions, path: { postId }, query: { worldId: player.worldInstanceId! } })).then(map.post)
       const saved = post.comments.find(comment => comment.requestId === requestId && comment.parentCommentId === commentId && comment.text === text)
       if (!saved) throw cause
-      const [identity, worlds] = await Promise.all([call<PlayerDocument>('/me'), call<WorldDocument[]>('/worlds')])
+      const [identity, worlds] = await Promise.all([data(sdk.playerGetCurrentPlayer(remoteOptions)).then(map.player), data(sdk.worldsGetOwnedWorlds(remoteOptions)).then(worlds => worlds.map(map.world))])
       const world = worlds.find(value => value.id === player.worldInstanceId)
       if (!world) throw cause
       const event: ReplyLiveEvent = { status: 'completed', requestId, post, energyLeft: identity.energy, subscribers: world.subscribers }
       update(event); return event
     }
   },
-  report: (commentId: string, reason: string) => BASE ? call('/reports', { method: 'POST', body: JSON.stringify({ commentId, reason }) }) : later({ ok: true }),
+  report: (commentId: string, reason: string) => BASE ? data(sdk.telemetryReportComment({ ...remoteOptions, body: { commentId, reason } })) : later({ ok: true }),
   plusInterest: async (interest = true): Promise<{ bonus: number }> => {
-    if (BASE) return call('/plus-interest', { method: 'POST', body: JSON.stringify({ interest }) })
+    if (BASE) return data(sdk.playerClaimPlusInterest({ ...remoteOptions, body: { interest } })).then(value => ({ bonus: Number(value.bonus) }))
     const key = `reki:demo-plus-claimed:${sessionPlayer?.id}`
     const claimed = localStorage.getItem(key) === 'true'
     const bonus = claimed ? 0 : 5
     if (!claimed && sessionPlayer) { sessionPlayer = saveDemoPlayer({ ...sessionPlayer, postsLeft: sessionPlayer.postsLeft + bonus, postsCap: sessionPlayer.postsCap + bonus }); localStorage.setItem(key, 'true') }
     return later({ bonus })
   },
-  referral: (): Promise<{ code: string }> => BASE ? call('/referral') : laterLazy(() => ({ code: `ref_${sessionPlayer!.id === 'p1' ? mock.player.id : sessionPlayer!.id.replaceAll('-', '')}` })),
+  referral: (): Promise<{ code: string }> => BASE ? data(sdk.playerGetReferralCode(remoteOptions)) : laterLazy(() => ({ code: `ref_${sessionPlayer!.id === 'p1' ? mock.player.id : sessionPlayer!.id.replaceAll('-', '')}` })),
   settings: async (patch: Partial<Player['settings']> & { address?: Player['address'] }) => {
-    if (BASE) await call('/settings', { method: 'PATCH', body: JSON.stringify(patch) })
+    if (BASE) await data(sdk.playerUpdateSettings({ ...remoteOptions, body: patch }))
     if (sessionPlayer) {
       const { address, ...settings } = patch
       sessionPlayer = { ...sessionPlayer, address: address ?? sessionPlayer.address, settings: { ...sessionPlayer.settings, ...settings } }
@@ -350,41 +322,41 @@ export const api = {
     }
   },
   feed: async (world: WorldId = sessionPlayer?.world ?? 'stage'): Promise<FeedItem[]> => {
-    const remote: FeedItem[] = BASE ? await call<FeedItem[]>(inWorld('/feed')) : demoOwnPosts(sessionPlayer?.id ?? '', demoWorldKey(sessionPlayer)).slice(0, 20).map(post => ({
+    const remote: FeedItem[] = BASE ? (await data(sdk.postsGetFeed({ ...remoteOptions, query: { worldId: worldId() } }))).map(map.feed) : demoOwnPosts(sessionPlayer?.id ?? '', demoWorldKey(sessionPlayer)).slice(0, 20).map(post => ({
       kind: 'post', postId: post.id, author: sessionPlayer?.name, avatar: sessionPlayer?.handle, role: sessionPlayer?.role,
       ago: post.at, text: post.text, reactions: post.reactions, views: post.views,
       commentCount: withDemoComments(post, sessionPlayer?.id ?? '').comments.length,
     }))
     return remote
   },
-  channelPosts: (): Promise<ChannelPost[]> => BASE ? call(inWorld('/posts/mine')) : laterLazy(() => demoChannelPosts(sessionPlayer?.id ?? '', demoWorldKey(sessionPlayer))),
+  channelPosts: (): Promise<ChannelPost[]> => BASE ? data(sdk.postsGetChannelPosts({ ...remoteOptions, query: { worldId: worldId() } })).then(posts => posts.map(map.channelPost)) : laterLazy(() => demoChannelPosts(sessionPlayer?.id ?? '', demoWorldKey(sessionPlayer))),
   post: async (postId: string): Promise<Post> => {
     const demo = !BASE ? demoPost(postId) : undefined
     const local = !BASE ? demoOwnPosts(sessionPlayer?.id ?? '', demoWorldKey(sessionPlayer)).find(item => item.id === postId) : undefined
     const post = local ?? demo ?? (BASE
-      ? await call<PostDetailResponse>(inWorld(`/posts/${encodeURIComponent(postId)}`)).then(({ postId: id, ...detail }) => ({ ...detail, id }))
+      ? await data(sdk.postsGetPost({ ...remoteOptions, path: { postId }, query: { worldId: worldId() } })).then(map.post).then(({ postId: id, ...detail }) => ({ ...detail, id }))
       : await laterLazy(() => demoOwnPosts(sessionPlayer?.id ?? '', demoWorldKey(sessionPlayer)).find(item => item.id === postId) ?? mock.post(postId)))
     if (!post) throw { status: 404 }
     return !BASE
       ? withDemoComments(post, sessionPlayer?.id ?? '') : post
   },
-  friends: (): Promise<Friend[]> => BASE ? call('/friends') : later(mock.friends),
-  dm: (starId: string): Promise<Dm> => BASE ? call(inWorld(`/dm/${starId}`)) : laterLazy(() => {
+  friends: (): Promise<Friend[]> => BASE ? data(sdk.socialGetFriends(remoteOptions)).then(friends => friends.map(map.friend)) : later(mock.friends),
+  dm: (starId: string): Promise<Dm> => BASE ? data(sdk.socialGetDirectMessages({ ...remoteOptions, path: { starId }, query: { worldId: worldId() } })).then(map.dm) : laterLazy(() => {
     const star = contentOf(sessionPlayer?.world ?? 'stage').stars.find(profile => profile.id === starId)
     if (!star) throw new ApiError(404, 'GET', `/dm/${starId}`)
     return { ...mock.dm, star }
   }),
-  dmSend: (starId: string, text: string): Promise<{ reply?: string; repliesLeft: number }> => BASE ? call(inWorld(`/dm/${starId}`), { method: 'POST', body: JSON.stringify({ text }) }) : later({ repliesLeft: 2 }),
-  forget: (starId: string, fact: string) => BASE ? call(inWorld(`/stars/${starId}/memory`), { method: 'DELETE', body: JSON.stringify({ fact }) }) : later({ ok: true }),
-  eventToday: (): Promise<GameEvent> => BASE ? call(inWorld('/events/today')) : later(mock.events.collab),
-  answerEvent: (id: string, text: string) => BASE ? call(inWorld(`/events/${id}/answer`), { method: 'POST', body: JSON.stringify({ text }) }) : later({ ok: true }),
-  challenge: (): Promise<Challenge | null> => BASE ? call('/challenges/active') : later(mock.challenge),
-  startChallenge: (friendId: string) => BASE ? call('/challenges', { method: 'POST', body: JSON.stringify({ friendId }) }) : later({ ok: true }),
+  dmSend: (starId: string, text: string): Promise<{ reply?: string; repliesLeft: number }> => BASE ? data(sdk.socialSendDirectMessage({ ...remoteOptions, path: { starId }, query: { worldId: worldId() }, body: { text } })).then(value => ({ ...value, reply: value.reply ?? undefined, repliesLeft: Number(value.repliesLeft) })) : later({ repliesLeft: 2 }),
+  forget: (starId: string, fact: string) => BASE ? data(sdk.socialForgetStarMemory({ ...remoteOptions, path: { starId }, query: { worldId: worldId() }, body: { fact } })) : later({ ok: true }),
+  eventToday: (): Promise<GameEvent> => BASE ? data(sdk.eventsGetTodayEvent({ ...remoteOptions, query: { worldId: worldId() } })) : later(mock.events.collab),
+  answerEvent: (id: string, text: string) => BASE ? data(sdk.eventsAnswerEvent({ ...remoteOptions, path: { eventId: id }, query: { worldId: worldId() }, body: { text } })) : later({ ok: true }),
+  challenge: (): Promise<Challenge | null> => BASE ? data(sdk.socialGetActiveChallenge(remoteOptions)).then(map.challenge) : later(mock.challenge),
+  startChallenge: (friendId: string) => BASE ? data(sdk.socialStartChallenge({ ...remoteOptions, body: { friendId } })) : later({ ok: true }),
   ownedWorldsSnapshot: (): WorldDocument[] | undefined => ownedWorldSnapshot ? structuredClone(ownedWorldSnapshot) : undefined,
-  ownedWorlds: async (): Promise<WorldDocument[]> => { const generation = sessionGeneration; const found = BASE ? await call<WorldDocument[]>('/worlds') : await later(sessionPlayer ? demoWorlds(sessionPlayer.id).length ? demoWorlds(sessionPlayer.id) : [{ ...worldDocumentOf(sessionPlayer.world), id: demoWorldKey(sessionPlayer), name: sessionPlayer.name, avatar: sessionPlayer.handle, subscribers: sessionPlayer.subs }] : []); assertSession(generation); ownedWorldSnapshot = found; return found },
+  ownedWorlds: async (): Promise<WorldDocument[]> => { const generation = sessionGeneration(); const found = BASE ? await data(sdk.worldsGetOwnedWorlds(remoteOptions)).then(worlds => worlds.map(map.world)) : await later(sessionPlayer ? demoWorlds(sessionPlayer.id).length ? demoWorlds(sessionPlayer.id) : [{ ...worldDocumentOf(sessionPlayer.world), id: demoWorldKey(sessionPlayer), name: sessionPlayer.name, avatar: sessionPlayer.handle, subscribers: sessionPlayer.subs }] : []); assertSession(generation); ownedWorldSnapshot = found; return found },
   saveWorld: async (worldId: string, definition: WorldDefinition): Promise<Player> => {
     if (BASE) {
-      await call(`/worlds/${encodeURIComponent(worldId)}`, { method: 'PUT', body: JSON.stringify(definition) })
+      await data(sdk.worldsUpdateWorld({ ...remoteOptions, path: { worldId }, body: definition }))
       clearApiCache()
       return api.me(worldId)
     }
@@ -401,9 +373,9 @@ export const api = {
   },
   deleteAccount: async () => {
     const playerId = sessionIdentity?.id ?? sessionPlayer?.id
-    if (BASE) await call('/me', { method: 'DELETE' })
+    if (BASE) await data(sdk.playerDeleteCurrentPlayer(remoteOptions))
     // Invalidate requests only after the server confirms deletion. Failed deletion keeps the game intact.
-    sessionGeneration++
+    endSession()
     playerRequests.clear()
     clearApiCache()
     if (playerId) {

@@ -15,8 +15,10 @@ Telegram Mini App: веб-страница, которая открываетс�
 ## Структура
 - `src/screens/<группа>.tsx`: экраны, ключ = код макета (`01-3_world`). `?screen=<код>` открывает экран сразу, `?gallery` показывает все.
 - `src/ui/`: компоненты из макетов (Card, Button, Chip, Gift, Avatar, SkillBar, Ribbon, Whisper, Comment, Sheet…).
-- `src/api/types.ts`: контракт с бэкендом (#10), `mock.ts`: тестовые данные из макетов, `client.ts`: источник выбирает `public/runtime-config/config.js` (`mock` или `backend`).
+- `openapi/reki-api.json`: снимок штатной OpenAPI-сборки backend; `src/api/generated/`: игнорируемый результат генерации перед build/dev; `src/api/types.ts`: производные UI/demo-модели, `mock.ts`: тестовые данные из макетов, `client.ts`: источник выбирает `public/runtime-config/config.js` (`mock` или `backend`).
 - `scripts/screens.sh [коды]`: скриншоты 390×844 в `shots/` для сравнения с `docs/screens/`.
+
+Генератор изолирован в `tools/api-generator` со своим lockfile и TypeScript compiler API. `npm ci` устанавливает оба toolchain. Generated JSON/TS вручную не править; обновление снимка и CI описаны в README. Ручные REST-запросы и копии wire-DTO не добавлять. SSE POST не должен автоматически повторяться при обрыве.
 
 ## Секреты
 - Перед работой один раз: `git config core.hooksPath .github/hooks`. Хук `.github/scripts/check-secrets.sh` останавливает коммит с токенами, ключами, `.env` и личными путями.
