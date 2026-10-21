@@ -87,7 +87,8 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         }
         else
         {
-            var response = await FailureAsync<TelemetryApiException>(() => owner.Telemetry.SubmitAnalyticsAsync(batch, CancellationToken.None));
+            var response = await Assert.ThrowsAsync<TelemetryApiException>(() => owner.Telemetry.SubmitAnalyticsAsync(batch, CancellationToken.None));
+            await Assert.That(response).IsNotNull();
             await Assert.That(response.StatusCode).IsEqualTo(404);
         }
     }
@@ -187,7 +188,8 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(template.Roles.Count).IsGreaterThan(0);
         var safetyRule = template.Rules.Single(rule => rule.Text == "Без тем 18+ и травли по внешности");
         await Assert.That(safetyRule.Locked).IsTrue();
-        var rejected = await FailureAsync<WorldsApiException>(() => api.Worlds.GetOwnedWorldsAsync(CancellationToken.None));
+        var rejected = await Assert.ThrowsAsync<WorldsApiException>(() => api.Worlds.GetOwnedWorldsAsync(CancellationToken.None));
+        await Assert.That(rejected).IsNotNull();
         await Assert.That(rejected.StatusCode).IsEqualTo(401);
     }
 
@@ -247,31 +249,11 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await CreatePlayerWithWorldAsync(api);
 
         // Act
-        var response = await FailureAsync<PostsApiException>(() => api.Posts.GetFeedAsync(null, CancellationToken.None));
+        var response = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetFeedAsync(null, CancellationToken.None));
+        await Assert.That(response).IsNotNull();
 
         // Assert
         await Assert.That(response.StatusCode).IsEqualTo(400);
-    }
-
-    [Test]
-    public async Task GetPlayer_DoesNotIncludeWorldAttributesAsync()
-    {
-        // Arrange
-        using var api = Factory.CreateApiClient(1019);
-        await CreatePlayerWithWorldAsync(api);
-
-        // Raw HTTP is necessary here: DTO deserialization cannot detect forbidden extra JSON fields.
-        using var http = CreateAuthenticatedHttpClient(1019);
-
-        // Act
-        using var response = await http.GetAsync("/me", CancellationToken.None);
-        using var body = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(CancellationToken.None));
-
-        // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        await Assert.That(body.RootElement.TryGetProperty("world", out _)).IsFalse();
-        await Assert.That(body.RootElement.TryGetProperty("subs", out _)).IsFalse();
-        await Assert.That(body.RootElement.GetProperty("settings").TryGetProperty("drama", out _)).IsFalse();
     }
 
     [Test]

@@ -52,8 +52,9 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         });
 
         // Act
-        var response = await FailureAsync<SocialApiException>(() => api.Social.SendDirectMessageAsync(
+        var response = await Assert.ThrowsAsync<SocialApiException>(() => api.Social.SendDirectMessageAsync(
             "sonya", worldId, new DirectMessageRequest { Text = "Новый ход" }, CancellationToken.None));
+        await Assert.That(response).IsNotNull();
         var after = await api.Social.GetDirectMessagesAsync("sonya", worldId, CancellationToken.None);
 
         // Assert
@@ -149,10 +150,12 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         var worldId = await GetWorldIdAsync(api);
         foreach (var star in new[] { "mira", "unknown" })
         {
-            var get = await FailureAsync<SocialApiException>(() => api.Social.GetDirectMessagesAsync(
+            var get = await Assert.ThrowsAsync<SocialApiException>(() => api.Social.GetDirectMessagesAsync(
                 star, worldId, CancellationToken.None));
-            var post = await FailureAsync<SocialApiException>(() => api.Social.SendDirectMessageAsync(
+            await Assert.That(get).IsNotNull();
+            var post = await Assert.ThrowsAsync<SocialApiException>(() => api.Social.SendDirectMessageAsync(
                 star, worldId, new DirectMessageRequest { Text = "Привет" }, CancellationToken.None));
+            await Assert.That(post).IsNotNull();
             await Assert.That((System.Net.HttpStatusCode)get.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
             await Assert.That((System.Net.HttpStatusCode)post.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
         }
@@ -176,8 +179,9 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Act
         var worldId = await GetWorldIdAsync(api);
-        var post = await FailureAsync<SocialApiException>(() => api.Social.SendDirectMessageAsync(
+        var post = await Assert.ThrowsAsync<SocialApiException>(() => api.Social.SendDirectMessageAsync(
             "sonya", worldId, new DirectMessageRequest { Text = "Привет" }, CancellationToken.None));
+        await Assert.That(post).IsNotNull();
         var dm = await api.Social.GetDirectMessagesAsync("sonya", await GetWorldIdAsync(api), CancellationToken.None);
 
         // Assert

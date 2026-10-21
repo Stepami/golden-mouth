@@ -30,21 +30,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
     [After(Test)]
     public void ResetExternalState() => Factory.Session.ResetExternalState();
 
-    protected static async Task<TException> FailureAsync<TException>(Func<Task> request)
-        where TException : Exception
-    {
-        try
-        {
-            await request();
-        }
-        catch (TException exception)
-        {
-            return exception;
-        }
-
-        throw new InvalidOperationException("The request unexpectedly succeeded.");
-    }
-
     protected static JsonDocument ParsePlayerLayer(ChatMessage layer) =>
         JsonDocument.Parse(layer.Text[(layer.Text.IndexOf("DATA_JSON:", StringComparison.Ordinal) + "DATA_JSON:".Length)..].Trim());
 
@@ -220,17 +205,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
         await scope.ServiceProvider.GetRequiredService<ResetGameDayJob>().ExecuteAsync(new(), CancellationToken.None);
     }
 
-    protected async Task<string> WorldPathAsync(HttpClient http, string path)
-    {
-        var user = http.DefaultRequestHeaders.TryGetValues(TestAuthenticationHandler.UserIdHeaderName, out var values)
-            ? long.Parse(values.Single(), System.Globalization.CultureInfo.InvariantCulture) : 0;
-        var player = await Database.GetCollection<BsonDocument>("players")
-            .Find(new BsonDocument("TelegramUserId", user)).SingleOrDefaultAsync();
-        var world = player is null ? null : await Database.GetCollection<BsonDocument>("worlds")
-            .Find(new BsonDocument("Player.PlayerId", player["_id"])).SingleOrDefaultAsync();
-        return $"{path}?worldId={world?["_id"].AsString ?? "missing-world"}";
-    }
-
     protected async Task<(string PostId, string CommentId)> PublishPostForThreadAsync(long telegramUserId)
     {
         using var api = Factory.CreateApiClient(telegramUserId);
@@ -316,15 +290,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
         var events = await api.Posts.ModeratePublicationAsync(
             publicationId, await GetWorldIdAsync(api), CancellationToken.None);
         await Assert.That(events.OfType<ResultLiveEvent>().Any()).IsTrue();
-    }
-
-    protected HttpClient CreateAuthenticatedHttpClient(long telegramUserId)
-    {
-        var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(
-            TestAuthenticationHandler.UserIdHeaderName,
-            telegramUserId.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        return http;
     }
 
     protected async Task AssertCollectionHasNoPlayerAsync(string collectionName, BsonDocument filter)

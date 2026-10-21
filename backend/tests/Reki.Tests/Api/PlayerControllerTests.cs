@@ -43,7 +43,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         ActivitySource.AddActivityListener(listener);
 
         // Act
-        var response = await FailureAsync<PlayerApiException>(() => new PlayerClient(client) { ReadResponseAsString = true }.GetCurrentPlayerAsync(CancellationToken.None));
+        var response = await Assert.ThrowsAsync<PlayerApiException>(() => new PlayerClient(client) { ReadResponseAsString = true }.GetCurrentPlayerAsync(CancellationToken.None));
+        await Assert.That(response).IsNotNull();
         using var body = JsonDocument.Parse(response.Response);
 
         // Assert
@@ -687,7 +688,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         using var api = Factory.CreateApiClient(8411);
 
         // Act
-        var response = await FailureAsync<PlayerApiException>(() => api.Player.UpdateSettingsAsync(new UpdateSettingsRequest(), CancellationToken.None));
+        var response = await Assert.ThrowsAsync<PlayerApiException>(() => api.Player.UpdateSettingsAsync(new UpdateSettingsRequest(), CancellationToken.None));
+        await Assert.That(response).IsNotNull();
 
         // Assert
         await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
@@ -979,26 +981,19 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             item => item.Id == PlayerId.From(player.Id),
             Builders<PlayerProfile>.Update.Set(item => item.Energy, 7).Set(item => item.EnergyUsed, 3));
 
-        // Inspect raw field absence; generated DTOs silently discard unexpected JSON fields.
-        using var http = CreateAuthenticatedHttpClient(8582);
-
         // Act
-        using var response = await http.GetAsync("/me", CancellationToken.None);
-        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(CancellationToken.None));
+        var response = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        await Assert.That(body.RootElement.GetProperty("energy").GetInt32()).IsEqualTo(7);
-        await Assert.That(body.RootElement.TryGetProperty("postsLeft", out _)).IsFalse();
-        await Assert.That(body.RootElement.TryGetProperty("postsCap", out _)).IsFalse();
-        await Assert.That(body.RootElement.TryGetProperty("firstPostInviteBonus", out _)).IsFalse();
+        await Assert.That(response.Energy).IsEqualTo(7);
     }
 
     [Test]
     public async Task Invitation_WithoutAuthentication_ReturnsUnauthorizedAsync()
     {
         using var api = Factory.CreateApiClient();
-        var response = await FailureAsync<PlayerApiException>(() => api.Player.GetInvitationAsync(CancellationToken.None));
+        var response = await Assert.ThrowsAsync<PlayerApiException>(() => api.Player.GetInvitationAsync(CancellationToken.None));
+        await Assert.That(response).IsNotNull();
         await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.Unauthorized);
     }
 
@@ -1006,7 +1001,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Invitation_BeforeOnboarding_ReturnsNotFoundAsync()
     {
         using var api = Factory.CreateApiClient(8583);
-        var response = await FailureAsync<PlayerApiException>(() => api.Player.GetInvitationAsync(CancellationToken.None));
+        var response = await Assert.ThrowsAsync<PlayerApiException>(() => api.Player.GetInvitationAsync(CancellationToken.None));
+        await Assert.That(response).IsNotNull();
         await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
     }
 

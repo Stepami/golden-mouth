@@ -41,13 +41,16 @@ public sealed class StoryCardsControllerTests(ApiFactory factory) : GameApiTestB
         using var output = new MemoryStream();
         await response.Stream.CopyToAsync(output, CancellationToken.None);
         var png = output.ToArray();
-        var wrongOwner = await FailureAsync<StoryCardsApiException>(() => anonymous.StoryCards.GetPublicStoryCardAsync(
+        var wrongOwner = await Assert.ThrowsAsync<StoryCardsApiException>(() => anonymous.StoryCards.GetPublicStoryCardAsync(
             otherId, postId, CancellationToken.None));
-        var invalidId = await FailureAsync<StoryCardsApiException>(() => anonymous.StoryCards.GetPublicStoryCardAsync(
+        await Assert.That(wrongOwner).IsNotNull();
+        var invalidId = await Assert.ThrowsAsync<StoryCardsApiException>(() => anonymous.StoryCards.GetPublicStoryCardAsync(
             "invalid", postId, CancellationToken.None));
+        await Assert.That(invalidId).IsNotNull();
         await ownerApi.Player.DeleteCurrentPlayerAsync(CancellationToken.None);
-        var deleted = await FailureAsync<StoryCardsApiException>(() => anonymous.StoryCards.GetPublicStoryCardAsync(
+        var deleted = await Assert.ThrowsAsync<StoryCardsApiException>(() => anonymous.StoryCards.GetPublicStoryCardAsync(
             ownerId, postId, CancellationToken.None));
+        await Assert.That(deleted).IsNotNull();
 
         // Assert
         await Assert.That(response.StatusCode).IsEqualTo(StatusCodes.Status200OK);
