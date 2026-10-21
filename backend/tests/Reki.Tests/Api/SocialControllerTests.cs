@@ -1,4 +1,3 @@
-using System.Text;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
@@ -21,15 +20,12 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         const long user = 8392;
         using var api = Factory.CreateApiClient(user);
         await CreatePlayerWithWorldAsync(api);
-        using var http = CreateAuthenticatedHttpClient(user);
 
         // Act
-        using var response = await http.GetAsync("/challenges/active", CancellationToken.None);
-        var body = await response.Content.ReadAsStringAsync(CancellationToken.None);
+        var challenge = await api.Social.GetActiveChallengeAsync(CancellationToken.None);
 
         // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        await Assert.That(body).IsEmpty();
+        await Assert.That(challenge).IsNull();
     }
 
     [Test]
@@ -54,15 +50,14 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
             await store.SaveStarConversationAsync(changed, CancellationToken.None);
             return CreateChatResponse(messages);
         });
-        using var http = CreateAuthenticatedHttpClient(user);
-        using var body = new StringContent("{\"text\":\"Новый ход\"}", Encoding.UTF8, "application/json");
 
         // Act
-        using var response = await http.PostAsync($"/dm/sonya?worldId={worldId}", body, CancellationToken.None);
+        var response = await FailureAsync<SocialApiException>(() => api.Social.SendDirectMessageAsync(
+            "sonya", worldId, new DirectMessageRequest { Text = "Новый ход" }, CancellationToken.None));
         var after = await api.Social.GetDirectMessagesAsync("sonya", worldId, CancellationToken.None);
 
         // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.Conflict);
+        await Assert.That((System.Net.HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.Conflict);
         await Assert.That(after.Memory).IsEmpty();
         await Assert.That(after.Messages.Count).IsEqualTo(conversation.Messages.Count);
         await Assert.That(after.Messages.Select(message => message.Text))
@@ -149,17 +144,17 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         using var api = Factory.CreateApiClient(8320);
         await CreatePlayerWithWorldAsync(api, WorldId.It);
-        using var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8320");
 
         // Act / Assert
+        var worldId = await GetWorldIdAsync(api);
         foreach (var star in new[] { "mira", "unknown" })
         {
-            using var get = await http.GetAsync(await WorldPathAsync(http, $"/dm/{star}"), CancellationToken.None);
-            using var body = new StringContent("{\"text\":\"Привет\"}", Encoding.UTF8, "application/json");
-            using var post = await http.PostAsync(await WorldPathAsync(http, $"/dm/{star}"), body, CancellationToken.None);
-            await Assert.That(get.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
-            await Assert.That(post.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+            var get = await FailureAsync<SocialApiException>(() => api.Social.GetDirectMessagesAsync(
+                star, worldId, CancellationToken.None));
+            var post = await FailureAsync<SocialApiException>(() => api.Social.SendDirectMessageAsync(
+                star, worldId, new DirectMessageRequest { Text = "Привет" }, CancellationToken.None));
+            await Assert.That((System.Net.HttpStatusCode)get.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+            await Assert.That((System.Net.HttpStatusCode)post.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
         }
 
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(0);
@@ -178,16 +173,15 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         var response = CreateDirectMessageResponse();
         response.Messages[0].Contents.Add(new FunctionCallContent("extra", "react", new Dictionary<string, object?> { ["emoji"] = "🔥" }));
         Factory.Llm.Respond(response);
-        using var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "8340");
-        using var body = new StringContent("{\"text\":\"Привет\"}", Encoding.UTF8, "application/json");
 
         // Act
-        using var post = await http.PostAsync(await WorldPathAsync(http, "/dm/sonya"), body, CancellationToken.None);
+        var worldId = await GetWorldIdAsync(api);
+        var post = await FailureAsync<SocialApiException>(() => api.Social.SendDirectMessageAsync(
+            "sonya", worldId, new DirectMessageRequest { Text = "Привет" }, CancellationToken.None));
         var dm = await api.Social.GetDirectMessagesAsync("sonya", await GetWorldIdAsync(api), CancellationToken.None);
 
         // Assert
-        await Assert.That(post.StatusCode).IsEqualTo(System.Net.HttpStatusCode.ServiceUnavailable);
+        await Assert.That((System.Net.HttpStatusCode)post.StatusCode).IsEqualTo(System.Net.HttpStatusCode.ServiceUnavailable);
         await Assert.That(dm.Messages).IsEmpty();
         await Assert.That(dm.RepliesLeft).IsEqualTo(5);
     }
