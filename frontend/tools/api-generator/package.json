@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate": "openapi-ts"
+    "generate": "node generate.mjs"
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.99.0",
