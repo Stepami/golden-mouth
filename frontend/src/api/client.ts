@@ -286,9 +286,11 @@ export const api = {
       const event: ReplyLiveEvent = { status: 'completed', requestId, post: { ...saved, postId: saved.id }, energyLeft: player.postsLeft - 1, subscribers: player.subs + bonus }
       update(event); return event
     }
+    const replyWorldId = player.worldInstanceId
+    if (!replyWorldId) throw new Error('World must be loaded before this request')
     let completed: ReplyLiveEvent | undefined
     try {
-      const response = await stream({ url: '/posts/{postId}/replies', path: { postId }, query: { worldId: worldId() }, body: { requestId, commentId, text } }, signal)
+      const response = await stream({ url: '/posts/{postId}/replies', path: { postId }, query: { worldId: replyWorldId }, body: { requestId, commentId, text } }, signal)
       await readSse(response, value => map.reply(parse(vReplyLiveEvent, value)), event => {
         update(event)
         if (event.status === 'failed') throw new Error('Reply generation failed')
@@ -299,7 +301,7 @@ export const api = {
     } catch (cause) {
       if (signal?.aborted || (cause instanceof Error && cause.name === 'AbortError') || (cause instanceof ApiError && cause.status >= 400 && cause.status < 500)) throw cause
       // A lost final SSE event does not imply that the transaction failed.
-      const post = await data(sdk.postsGetPost({ ...remoteOptions, path: { postId }, query: { worldId: player.worldInstanceId! } })).then(map.post)
+      const post = await data(sdk.postsGetPost({ ...remoteOptions, path: { postId }, query: { worldId: replyWorldId } })).then(map.post)
       const saved = post.comments.find(comment => comment.requestId === requestId && comment.parentCommentId === commentId && comment.text === text)
       if (!saved) throw cause
       const [identity, worlds] = await Promise.all([data(sdk.playerGetCurrentPlayer(remoteOptions)).then(map.player), data(sdk.worldsGetOwnedWorlds(remoteOptions)).then(worlds => worlds.map(map.world))])
