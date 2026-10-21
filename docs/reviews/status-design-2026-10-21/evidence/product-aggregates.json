@@ -1,0 +1,699 @@
+{
+  "snapshot_end_utc": "2026-10-21T04:35:28.727Z",
+  "history_start_utc": "2026-07-23T04:35:28.727Z",
+  "cohort_days": 30,
+  "source": "MCP openobserve_prod / product",
+  "behavior_filter_except_coverage": "activity_kind='real'; exclude all observed player_deleted; no user texts or individual IDs",
+  "results": {
+    "coverage": {
+      "sql": "SELECT min(_timestamp) AS first_us,max(_timestamp) AS last_us,activity_kind,count(*) AS events,count(DISTINCT player_id) AS profiles FROM product GROUP BY activity_kind ORDER BY events DESC",
+      "data": {
+        "took": 47,
+        "hits": [
+          {
+            "first_us": 1791756001620117,
+            "last_us": 1792554499077005,
+            "activity_kind": "inventory",
+            "events": 19737,
+            "profiles": 91
+          },
+          {
+            "first_us": 1791335111835947,
+            "last_us": 1792554548207368,
+            "activity_kind": "real",
+            "events": 15748,
+            "profiles": 104
+          },
+          {
+            "first_us": 1791900123543725,
+            "last_us": 1792554550421150,
+            "activity_kind": "lifecycle",
+            "events": 19,
+            "profiles": 19
+          },
+          {
+            "first_us": 1791863601476298,
+            "last_us": 1791863601476298,
+            "activity_kind": "schema",
+            "events": 1,
+            "profiles": 0
+          }
+        ],
+        "total": 4,
+        "from": 0,
+        "size": 100,
+        "scan_size": 33
+      }
+    },
+    "screens": {
+      "sql": "WITH deleted AS (SELECT DISTINCT player_id FROM product WHERE event_name='player_deleted'), raw AS (SELECT p.* FROM product p WHERE activity_kind='real' AND player_id IS NOT NULL AND player_id<>'' AND NOT EXISTS (SELECT 1 FROM deleted d WHERE d.player_id=p.player_id)) SELECT screen,count(*) AS views,count(DISTINCT player_id) AS profiles FROM raw WHERE event_name='screen_view' GROUP BY screen ORDER BY views DESC",
+      "data": {
+        "took": 157,
+        "hits": [
+          {
+            "screen": "03-5_stage",
+            "views": 470,
+            "profiles": 79
+          },
+          {
+            "screen": "02-1_compose",
+            "views": 240,
+            "profiles": 73
+          },
+          {
+            "screen": "02-2_live",
+            "views": 199,
+            "profiles": 65
+          },
+          {
+            "screen": "02-6_thread",
+            "views": 192,
+            "profiles": 52
+          },
+          {
+            "screen": "01-1_invite",
+            "views": 188,
+            "profiles": 79
+          },
+          {
+            "screen": "01-3_world",
+            "views": 181,
+            "profiles": 69
+          },
+          {
+            "screen": "03-3_feed",
+            "views": 155,
+            "profiles": 42
+          },
+          {
+            "screen": "05-5_collection",
+            "views": 125,
+            "profiles": 46
+          },
+          {
+            "screen": "02-3_result",
+            "views": 119,
+            "profiles": 51
+          },
+          {
+            "screen": "01-4_channel",
+            "views": 101,
+            "profiles": 68
+          },
+          {
+            "screen": "01-3b_world_overview",
+            "views": 94,
+            "profiles": 60
+          },
+          {
+            "screen": "01-2_age",
+            "views": 83,
+            "profiles": 67
+          },
+          {
+            "screen": "01-4b_world_setup",
+            "views": 75,
+            "profiles": 69
+          },
+          {
+            "screen": "05-8_settings",
+            "views": 56,
+            "profiles": 18
+          },
+          {
+            "screen": "01-6_home",
+            "views": 50,
+            "profiles": 28
+          },
+          {
+            "screen": "02-2b_publish_error",
+            "views": 39,
+            "profiles": 18
+          },
+          {
+            "screen": "02-5_viral",
+            "views": 24,
+            "profiles": 17
+          },
+          {
+            "screen": "02-4_flop",
+            "views": 20,
+            "profiles": 16
+          },
+          {
+            "screen": "04-3_invite",
+            "views": 18,
+            "profiles": 14
+          },
+          {
+            "screen": "03-1_dm",
+            "views": 17,
+            "profiles": 3
+          },
+          {
+            "screen": "05-11_world_rules",
+            "views": 17,
+            "profiles": 11
+          },
+          {
+            "screen": "02-7_share",
+            "views": 16,
+            "profiles": 12
+          },
+          {
+            "screen": "03-4_friends",
+            "views": 15,
+            "profiles": 2
+          },
+          {
+            "screen": "01-5_first_star",
+            "views": 15,
+            "profiles": 15
+          },
+          {
+            "screen": "04-2_fake_door",
+            "views": 11,
+            "profiles": 8
+          },
+          {
+            "screen": "05-9_voice",
+            "views": 10,
+            "profiles": 7
+          },
+          {
+            "screen": "04-1_limit",
+            "views": 7,
+            "profiles": 1
+          },
+          {
+            "screen": "06-4_rules",
+            "views": 5,
+            "profiles": 4
+          },
+          {
+            "screen": "03-4c_challenge",
+            "views": 2,
+            "profiles": 2
+          },
+          {
+            "screen": "06-1_report",
+            "views": 1,
+            "profiles": 1
+          },
+          {
+            "screen": "05-7b_own_world",
+            "views": 1,
+            "profiles": 1
+          }
+        ],
+        "total": 31,
+        "from": 0,
+        "size": 100,
+        "scan_size": 67
+      }
+    },
+    "errors": {
+      "sql": "WITH deleted AS (SELECT DISTINCT player_id FROM product WHERE event_name='player_deleted'), raw AS (SELECT p.* FROM product p WHERE activity_kind='real' AND player_id IS NOT NULL AND player_id<>'' AND NOT EXISTS (SELECT 1 FROM deleted d WHERE d.player_id=p.player_id)) SELECT event_name,count(*) AS events,count(DISTINCT player_id) AS profiles,count(DISTINCT prop_id) AS distinct_prop_ids FROM raw WHERE event_name IN ('post_publish','post_scored','post_result','post_failed','world_created','player_created') GROUP BY event_name ORDER BY events DESC",
+      "data": {
+        "took": 132,
+        "hits": [
+          {
+            "event_name": "post_publish",
+            "events": 197,
+            "profiles": 65,
+            "distinct_prop_ids": 0
+          },
+          {
+            "event_name": "post_scored",
+            "events": 157,
+            "profiles": 60,
+            "distinct_prop_ids": 113
+          },
+          {
+            "event_name": "post_result",
+            "events": 154,
+            "profiles": 59,
+            "distinct_prop_ids": 0
+          },
+          {
+            "event_name": "player_created",
+            "events": 71,
+            "profiles": 71,
+            "distinct_prop_ids": 0
+          },
+          {
+            "event_name": "world_created",
+            "events": 67,
+            "profiles": 64,
+            "distinct_prop_ids": 0
+          },
+          {
+            "event_name": "post_failed",
+            "events": 29,
+            "profiles": 16,
+            "distinct_prop_ids": 29
+          }
+        ],
+        "total": 6,
+        "from": 0,
+        "size": 100,
+        "scan_size": 67
+      }
+    },
+    "navigation": {
+      "sql": "WITH deleted AS (SELECT DISTINCT player_id FROM product WHERE event_name='player_deleted'), raw AS (SELECT p.* FROM product p WHERE activity_kind='real' AND player_id IS NOT NULL AND player_id<>'' AND NOT EXISTS (SELECT 1 FROM deleted d WHERE d.player_id=p.player_id)) SELECT screen,previous_screen,count(*) AS views,count(DISTINCT player_id) AS profiles FROM raw WHERE event_name='screen_view' GROUP BY screen,previous_screen ORDER BY views DESC LIMIT 40",
+      "data": {
+        "took": 128,
+        "hits": [
+          {
+            "screen": "02-2_live",
+            "previous_screen": "02-1_compose",
+            "views": 199,
+            "profiles": 65
+          },
+          {
+            "screen": "01-1_invite",
+            "views": 173,
+            "profiles": 79
+          },
+          {
+            "screen": "02-1_compose",
+            "previous_screen": "03-5_stage",
+            "views": 158,
+            "profiles": 66
+          },
+          {
+            "screen": "02-3_result",
+            "previous_screen": "02-2_live",
+            "views": 114,
+            "profiles": 50
+          },
+          {
+            "screen": "03-5_stage",
+            "previous_screen": "02-6_thread",
+            "views": 110,
+            "profiles": 32
+          },
+          {
+            "screen": "03-3_feed",
+            "previous_screen": "03-5_stage",
+            "views": 89,
+            "profiles": 32
+          },
+          {
+            "screen": "02-6_thread",
+            "previous_screen": "03-5_stage",
+            "views": 73,
+            "profiles": 26
+          },
+          {
+            "screen": "01-4b_world_setup",
+            "previous_screen": "01-4_channel",
+            "views": 73,
+            "profiles": 68
+          },
+          {
+            "screen": "01-3b_world_overview",
+            "previous_screen": "01-3_world",
+            "views": 72,
+            "profiles": 60
+          },
+          {
+            "screen": "02-6_thread",
+            "previous_screen": "02-3_result",
+            "views": 71,
+            "profiles": 39
+          },
+          {
+            "screen": "01-2_age",
+            "previous_screen": "01-1_invite",
+            "views": 66,
+            "profiles": 65
+          },
+          {
+            "screen": "01-3_world",
+            "previous_screen": "01-2_age",
+            "views": 65,
+            "profiles": 65
+          },
+          {
+            "screen": "01-4_channel",
+            "previous_screen": "01-3b_world_overview",
+            "views": 65,
+            "profiles": 60
+          },
+          {
+            "screen": "03-5_stage",
+            "previous_screen": "01-1_invite",
+            "views": 60,
+            "profiles": 16
+          },
+          {
+            "screen": "03-5_stage",
+            "previous_screen": "01-4b_world_setup",
+            "views": 58,
+            "profiles": 55
+          },
+          {
+            "screen": "03-5_stage",
+            "previous_screen": "03-3_feed",
+            "views": 50,
+            "profiles": 22
+          },
+          {
+            "screen": "05-5_collection",
+            "previous_screen": "03-5_stage",
+            "views": 44,
+            "profiles": 22
+          },
+          {
+            "screen": "01-3_world",
+            "previous_screen": "01-1_invite",
+            "views": 42,
+            "profiles": 24
+          },
+          {
+            "screen": "03-5_stage",
+            "previous_screen": "01-3_world",
+            "views": 41,
+            "profiles": 18
+          },
+          {
+            "screen": "03-5_stage",
+            "previous_screen": "02-3_result",
+            "views": 39,
+            "profiles": 15
+          },
+          {
+            "screen": "05-5_collection",
+            "previous_screen": "03-3_feed",
+            "views": 39,
+            "profiles": 29
+          },
+          {
+            "screen": "02-2b_publish_error",
+            "previous_screen": "02-2_live",
+            "views": 37,
+            "profiles": 18
+          },
+          {
+            "screen": "02-6_thread",
+            "previous_screen": "03-3_feed",
+            "views": 31,
+            "profiles": 17
+          },
+          {
+            "screen": "03-5_stage",
+            "previous_screen": "05-5_collection",
+            "views": 31,
+            "profiles": 15
+          },
+          {
+            "screen": "05-8_settings",
+            "previous_screen": "05-5_collection",
+            "views": 28,
+            "profiles": 18
+          },
+          {
+            "screen": "02-1_compose",
+            "previous_screen": "01-6_home",
+            "views": 27,
+            "profiles": 21
+          },
+          {
+            "screen": "01-3_world",
+            "previous_screen": "01-3b_world_overview",
+            "views": 27,
+            "profiles": 21
+          },
+          {
+            "screen": "02-1_compose",
+            "previous_screen": "02-2b_publish_error",
+            "views": 26,
+            "profiles": 13
+          },
+          {
+            "screen": "03-5_stage",
+            "previous_screen": "02-1_compose",
+            "views": 24,
+            "profiles": 20
+          },
+          {
+            "screen": "01-6_home",
+            "previous_screen": "01-5_first_star",
+            "views": 24,
+            "profiles": 24
+          },
+          {
+            "screen": "01-3b_world_overview",
+            "previous_screen": "01-4_channel",
+            "views": 22,
+            "profiles": 21
+          },
+          {
+            "screen": "02-1_compose",
+            "previous_screen": "02-6_thread",
+            "views": 22,
+            "profiles": 13
+          },
+          {
+            "screen": "03-3_feed",
+            "previous_screen": "02-6_thread",
+            "views": 22,
+            "profiles": 13
+          },
+          {
+            "screen": "03-3_feed",
+            "previous_screen": "05-5_collection",
+            "views": 21,
+            "profiles": 19
+          },
+          {
+            "screen": "02-4_flop",
+            "previous_screen": "02-2_live",
+            "views": 20,
+            "profiles": 16
+          },
+          {
+            "screen": "01-6_home",
+            "previous_screen": "01-1_invite",
+            "views": 20,
+            "profiles": 5
+          },
+          {
+            "screen": "01-4_channel",
+            "previous_screen": "03-5_stage",
+            "views": 20,
+            "profiles": 19
+          },
+          {
+            "screen": "02-5_viral",
+            "previous_screen": "02-2_live",
+            "views": 19,
+            "profiles": 17
+          },
+          {
+            "screen": "01-3_world",
+            "previous_screen": "03-5_stage",
+            "views": 19,
+            "profiles": 15
+          },
+          {
+            "screen": "05-5_collection",
+            "previous_screen": "05-8_settings",
+            "views": 19,
+            "profiles": 11
+          }
+        ],
+        "total": 40,
+        "from": 0,
+        "size": 100,
+        "scan_size": 67
+      }
+    },
+    "funnel": {
+      "sql": "WITH clock AS (\n SELECT floor((max(1792557328.727) * 1000000 + 10800000000) / 86400000000) AS today,\n max(1792557328.727) * 1000 AS now_ms, count(*) AS stream_rows FROM product),\nworld_ranked AS (SELECT player_id, world_id, world, subscriber_total,\n row_number() OVER (PARTITION BY player_id, world_id ORDER BY _timestamp DESC) AS state_rank\n FROM product WHERE event_name = 'world_audience_updated' AND world_id IS NOT NULL),\nworld_audience AS (SELECT player_id, sum(subscriber_total) AS subscribers,\n CASE WHEN count(DISTINCT world) > 1 THEN 'multi-world' ELSE max(world) END AS world\n FROM world_ranked WHERE state_rank = 1 GROUP BY player_id),\ndeleted_players AS (SELECT DISTINCT player_id FROM product\n WHERE event_name = 'player_deleted' AND player_id IS NOT NULL),\nraw AS (SELECT p.* FROM product p WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''\n AND NOT EXISTS (SELECT 1 FROM deleted_players d WHERE d.player_id = p.player_id)),\nidentities AS (SELECT r.player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(w.world), CASE WHEN count(DISTINCT nullif(nullif(r.world, ''), 'unknown'))>1 THEN 'multi-world' ELSE max(nullif(nullif(r.world, ''), 'unknown')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw r LEFT JOIN world_audience w ON r.player_id = w.player_id GROUP BY r.player_id),\nselected AS (SELECT * FROM identities WHERE\n ('all' = 'all' OR world = 'all') AND ('all' = 'all' OR age_group = 'all')\n AND ('all' = 'all' OR registration_source = 'all')\n AND ('all' = 'all' OR launch_surface = 'all')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\ncurrent_profiles AS (SELECT s.player_id, w.subscribers FROM selected s\n LEFT JOIN world_audience w ON s.player_id = w.player_id),\ncohort AS (SELECT *, CASE WHEN 'registered'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN 'registered'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN 'registered'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('30' AS INT) + 1)\n, progression AS (SELECT c.player_id,count(p.post_id) AS posts FROM cohort c LEFT JOIN posts p ON c.player_id=p.player_id GROUP BY c.player_id), stages AS (\n SELECT 0 AS ord,CASE WHEN 'registered'='observed' THEN 'Первое наблюдение' ELSE 'Регистрация' END AS stage,count(*) AS users,count(*) AS base FROM progression UNION ALL\n SELECT 1,'Первый пост',count(CASE WHEN posts>=1 THEN 1 END),count(*) FROM progression UNION ALL\n SELECT 2,'Три поста',count(CASE WHEN posts>=3 THEN 1 END),count(*) FROM progression UNION ALL\n SELECT 3,'Десять постов',count(CASE WHEN posts>=10 THEN 1 END),count(*) FROM progression)\n SELECT stage,users,base,round(100.0*users/nullif(base,0),1) AS conversion_pct FROM stages ORDER BY ord\n",
+      "data": {
+        "took": 763,
+        "hits": [
+          {
+            "stage": "Регистрация",
+            "users": 71,
+            "base": 71,
+            "conversion_pct": 100
+          },
+          {
+            "stage": "Первый пост",
+            "users": 49,
+            "base": 71,
+            "conversion_pct": 69
+          },
+          {
+            "stage": "Три поста",
+            "users": 11,
+            "base": 71,
+            "conversion_pct": 15.5
+          },
+          {
+            "stage": "Десять постов",
+            "users": 1,
+            "base": 71,
+            "conversion_pct": 1.4
+          }
+        ],
+        "total": 4,
+        "from": 0,
+        "size": 100,
+        "scan_size": 811
+      }
+    },
+    "retention": {
+      "sql": "WITH clock AS (\n SELECT floor((max(1792557328.727) * 1000000 + 10800000000) / 86400000000) AS today,\n max(1792557328.727) * 1000 AS now_ms, count(*) AS stream_rows FROM product),\nworld_ranked AS (SELECT player_id, world_id, world, subscriber_total,\n row_number() OVER (PARTITION BY player_id, world_id ORDER BY _timestamp DESC) AS state_rank\n FROM product WHERE event_name = 'world_audience_updated' AND world_id IS NOT NULL),\nworld_audience AS (SELECT player_id, sum(subscriber_total) AS subscribers,\n CASE WHEN count(DISTINCT world) > 1 THEN 'multi-world' ELSE max(world) END AS world\n FROM world_ranked WHERE state_rank = 1 GROUP BY player_id),\ndeleted_players AS (SELECT DISTINCT player_id FROM product\n WHERE event_name = 'player_deleted' AND player_id IS NOT NULL),\nraw AS (SELECT p.* FROM product p WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''\n AND NOT EXISTS (SELECT 1 FROM deleted_players d WHERE d.player_id = p.player_id)),\nidentities AS (SELECT r.player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(w.world), CASE WHEN count(DISTINCT nullif(nullif(r.world, ''), 'unknown'))>1 THEN 'multi-world' ELSE max(nullif(nullif(r.world, ''), 'unknown')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw r LEFT JOIN world_audience w ON r.player_id = w.player_id GROUP BY r.player_id),\nselected AS (SELECT * FROM identities WHERE\n ('all' = 'all' OR world = 'all') AND ('all' = 'all' OR age_group = 'all')\n AND ('all' = 'all' OR registration_source = 'all')\n AND ('all' = 'all' OR launch_surface = 'all')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\ncurrent_profiles AS (SELECT s.player_id, w.subscribers FROM selected s\n LEFT JOIN world_audience w ON s.player_id = w.player_id),\ncohort AS (SELECT *, CASE WHEN 'registered'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN 'registered'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN 'registered'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('30' AS INT) + 1)\n, cohort_days AS (SELECT player_id,floor((cohort_at+10800000000)/86400000000) AS registered_day FROM cohort), returns AS (\n SELECT p.player_id,p.registered_day,c.today,max(CASE WHEN v.day=p.registered_day+1 THEN 1 ELSE 0 END) AS d1,\n max(CASE WHEN v.day=p.registered_day+3 THEN 1 ELSE 0 END) AS d3,max(CASE WHEN v.day=p.registered_day+7 THEN 1 ELSE 0 END) AS d7\n FROM cohort_days p CROSS JOIN clock c LEFT JOIN visits v ON p.player_id=v.player_id GROUP BY p.player_id,p.registered_day,c.today)\n SELECT to_timestamp_micros(registered_day*86400000000-10800000000) AS cohort_day,count(*) AS registered,\n sum(CASE WHEN registered_day+1<today THEN 1 ELSE 0 END) AS eligible_d1,\n sum(CASE WHEN registered_day+1<today THEN d1 ELSE 0 END) AS returned_d1,\n round(100.0*sum(CASE WHEN registered_day+1<today THEN d1 ELSE 0 END)/nullif(sum(CASE WHEN registered_day+1<today THEN 1 ELSE 0 END),0),1) AS d1_pct,\n sum(CASE WHEN registered_day+3<today THEN 1 ELSE 0 END) AS eligible_d3,\n sum(CASE WHEN registered_day+3<today THEN d3 ELSE 0 END) AS returned_d3,\n round(100.0*sum(CASE WHEN registered_day+3<today THEN d3 ELSE 0 END)/nullif(sum(CASE WHEN registered_day+3<today THEN 1 ELSE 0 END),0),1) AS d3_pct,\n sum(CASE WHEN registered_day+7<today THEN 1 ELSE 0 END) AS eligible_d7,\n sum(CASE WHEN registered_day+7<today THEN d7 ELSE 0 END) AS returned_d7,\n round(100.0*sum(CASE WHEN registered_day+7<today THEN d7 ELSE 0 END)/nullif(sum(CASE WHEN registered_day+7<today THEN 1 ELSE 0 END),0),1) AS d7_pct\n FROM returns GROUP BY registered_day ORDER BY registered_day\n",
+      "data": {
+        "took": 386,
+        "hits": [
+          {
+            "cohort_day": "2026-10-10T21:00:00",
+            "registered": 6,
+            "eligible_d1": 6,
+            "returned_d1": 2,
+            "d1_pct": 33.3,
+            "eligible_d3": 6,
+            "returned_d3": 0,
+            "d3_pct": 0,
+            "eligible_d7": 6,
+            "returned_d7": 0,
+            "d7_pct": 0
+          },
+          {
+            "cohort_day": "2026-10-11T21:00:00",
+            "registered": 2,
+            "eligible_d1": 2,
+            "returned_d1": 0,
+            "d1_pct": 0,
+            "eligible_d3": 2,
+            "returned_d3": 0,
+            "d3_pct": 0,
+            "eligible_d7": 2,
+            "returned_d7": 0,
+            "d7_pct": 0
+          },
+          {
+            "cohort_day": "2026-10-12T21:00:00",
+            "registered": 5,
+            "eligible_d1": 5,
+            "returned_d1": 1,
+            "d1_pct": 20,
+            "eligible_d3": 5,
+            "returned_d3": 0,
+            "d3_pct": 0,
+            "eligible_d7": 5,
+            "returned_d7": 0,
+            "d7_pct": 0
+          },
+          {
+            "cohort_day": "2026-10-13T21:00:00",
+            "registered": 12,
+            "eligible_d1": 12,
+            "returned_d1": 2,
+            "d1_pct": 16.7,
+            "eligible_d3": 12,
+            "returned_d3": 0,
+            "d3_pct": 0,
+            "eligible_d7": 0,
+            "returned_d7": 0
+          },
+          {
+            "cohort_day": "2026-10-14T21:00:00",
+            "registered": 35,
+            "eligible_d1": 35,
+            "returned_d1": 1,
+            "d1_pct": 2.9,
+            "eligible_d3": 35,
+            "returned_d3": 0,
+            "d3_pct": 0,
+            "eligible_d7": 0,
+            "returned_d7": 0
+          },
+          {
+            "cohort_day": "2026-10-15T21:00:00",
+            "registered": 2,
+            "eligible_d1": 2,
+            "returned_d1": 0,
+            "d1_pct": 0,
+            "eligible_d3": 2,
+            "returned_d3": 0,
+            "d3_pct": 0,
+            "eligible_d7": 0,
+            "returned_d7": 0
+          },
+          {
+            "cohort_day": "2026-10-16T21:00:00",
+            "registered": 1,
+            "eligible_d1": 1,
+            "returned_d1": 0,
+            "d1_pct": 0,
+            "eligible_d3": 1,
+            "returned_d3": 0,
+            "d3_pct": 0,
+            "eligible_d7": 0,
+            "returned_d7": 0
+          },
+          {
+            "cohort_day": "2026-10-18T21:00:00",
+            "registered": 4,
+            "eligible_d1": 4,
+            "returned_d1": 1,
+            "d1_pct": 25,
+            "eligible_d3": 0,
+            "returned_d3": 0,
+            "eligible_d7": 0,
+            "returned_d7": 0
+          },
+          {
+            "cohort_day": "2026-10-19T21:00:00",
+            "registered": 3,
+            "eligible_d1": 0,
+            "returned_d1": 0,
+            "eligible_d3": 0,
+            "returned_d3": 0,
+            "eligible_d7": 0,
+            "returned_d7": 0
+          },
+          {
+            "cohort_day": "2026-10-20T21:00:00",
+            "registered": 1,
+            "eligible_d1": 0,
+            "returned_d1": 0,
+            "eligible_d3": 0,
+            "returned_d3": 0,
+            "eligible_d7": 0,
+            "returned_d7": 0
+          }
+        ],
+        "total": 10,
+        "from": 0,
+        "size": 100,
+        "scan_size": 236
+      }
+    },
+    "history-coverage": {
+      "sql": "WITH clock AS (\n SELECT floor((max(1792557328.727) * 1000000 + 10800000000) / 86400000000) AS today,\n max(1792557328.727) * 1000 AS now_ms, count(*) AS stream_rows FROM product),\nworld_ranked AS (SELECT player_id, world_id, world, subscriber_total,\n row_number() OVER (PARTITION BY player_id, world_id ORDER BY _timestamp DESC) AS state_rank\n FROM product WHERE event_name = 'world_audience_updated' AND world_id IS NOT NULL),\nworld_audience AS (SELECT player_id, sum(subscriber_total) AS subscribers,\n CASE WHEN count(DISTINCT world) > 1 THEN 'multi-world' ELSE max(world) END AS world\n FROM world_ranked WHERE state_rank = 1 GROUP BY player_id),\ndeleted_players AS (SELECT DISTINCT player_id FROM product\n WHERE event_name = 'player_deleted' AND player_id IS NOT NULL),\nraw AS (SELECT p.* FROM product p WHERE activity_kind = 'real' AND player_id IS NOT NULL AND player_id <> ''\n AND NOT EXISTS (SELECT 1 FROM deleted_players d WHERE d.player_id = p.player_id)),\nidentities AS (SELECT r.player_id, min(CASE WHEN event_name NOT IN ('active_time','notification_sent') THEN _timestamp END) AS first_seen,\n min(CASE WHEN event_name = 'player_created' THEN _timestamp END) AS registered_at,\n coalesce(max(w.world), CASE WHEN count(DISTINCT nullif(nullif(r.world, ''), 'unknown'))>1 THEN 'multi-world' ELSE max(nullif(nullif(r.world, ''), 'unknown')) END, 'unknown') AS world,\n coalesce(max(CASE WHEN age_group <> '18+' THEN nullif(age_group, '') END), max(nullif(age_group, '')), 'unknown') AS age_group,\n coalesce(max(nullif(registration_source, '')), 'unknown') AS registration_source,\n CASE WHEN count(DISTINCT CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END) > 1 THEN 'multi'\n ELSE coalesce(max(CASE WHEN launch_surface <> 'unknown' THEN nullif(launch_surface, '') END), 'unknown') END AS launch_surface\n FROM raw r LEFT JOIN world_audience w ON r.player_id = w.player_id GROUP BY r.player_id),\nselected AS (SELECT * FROM identities WHERE\n ('all' = 'all' OR world = 'all') AND ('all' = 'all' OR age_group = 'all')\n AND ('all' = 'all' OR registration_source = 'all')\n AND ('all' = 'all' OR launch_surface = 'all')),\nvisits AS (SELECT DISTINCT player_id, floor((_timestamp + 10800000000) / 86400000000) AS day\n FROM raw WHERE event_name NOT IN ('active_time', 'notification_sent')),\nposts AS (SELECT player_id, coalesce(nullif(prop_id, ''), concat(player_id, ':legacy:', cast(event_time_unix_ms AS VARCHAR))) AS post_id,\n max(_timestamp) AS posted_at, max(coalesce(nullif(world, ''), 'unknown')) AS post_world,\n max(cast(prop_delta AS DOUBLE)) AS delta FROM raw WHERE event_name = 'post_scored' GROUP BY player_id, post_id),\nselected_posts AS (SELECT p.* FROM posts p JOIN selected s ON p.player_id = s.player_id),\ncurrent_profiles AS (SELECT s.player_id, w.subscribers FROM selected s\n LEFT JOIN world_audience w ON s.player_id = w.player_id),\ncohort AS (SELECT *, CASE WHEN 'registered'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN 'registered'='observed' THEN first_seen ELSE registered_at END IS NOT NULL\n AND floor((CASE WHEN 'registered'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('30' AS INT) + 1)\nSELECT count(*) AS observed_profiles,count(registered_at) AS confirmed_registrations,count(*)-count(registered_at) AS registration_unknown,to_timestamp_micros(min(first_seen)) AS first_observation FROM selected\n",
+      "data": {
+        "took": 169,
+        "hits": [
+          {
+            "observed_profiles": 85,
+            "confirmed_registrations": 71,
+            "registration_unknown": 14,
+            "first_observation": "2026-10-07T01:05:11.835947"
+          }
+        ],
+        "total": 1,
+        "from": 0,
+        "size": 100,
+        "scan_size": 101
+      }
+    }
+  }
+}

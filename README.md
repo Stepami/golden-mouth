@@ -12,6 +12,7 @@ Telegram Mini App 14+: ведёшь канал блогера в вымышле�
 | [docs/dashboards.md](docs/dashboards.md) | Представления OpenObserve: конкурсные, продуктовые и технические метрики |
 | [docs/deployment.md](docs/deployment.md) | CI/CD, production HTTPS и доступ к служебным сервисам через SSH |
 | [docs/screens/](docs/screens/README.md) | Макеты всех экранов |
+| [Сравнение экранов со Status](docs/reviews/status-design-2026-10-21/README.md) | Предложение для фронтенда: семь эскизов, примеры замен, продуктовые агрегаты и критерии приёмки |
 | [docs/audit.md](docs/audit.md) | Итоговый аудит игры и экранов, вердикт для вёрстки |
 | [docs/design/](docs/design/README.md) | Исходники экранов (HTML → PNG) |
 | [docs/balance-sim/](docs/balance-sim/README.md) | Симуляции баланса и их выводы |
