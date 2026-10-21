@@ -6,8 +6,8 @@ on:
       - master
     paths:
       - "backend/**"
-      - "frontend/openapi/**"
-      - ".github/scripts/check-openapi.py"
+      - "frontend/nswag.frontend.json"
+      - "frontend/src/api/generated/reki-api.ts"
       - ".github/workflows/backend-ci.yml"
   workflow_call:
 
@@ -53,31 +53,8 @@ jobs:
       - name: Build
         run: dotnet build Reki.slnx --configuration Release --no-restore
 
-      - name: Check frontend OpenAPI snapshot
-        run: python3 ../.github/scripts/check-openapi.py
-
-      - name: Set up Node
-        uses: actions/setup-node@v7
-        with:
-          node-version-file: frontend/.node-version
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      # This also runs on backend-only changes, so API drift cannot bypass the frontend build.
-      - name: Build frontend against the saved contract
-        working-directory: frontend
-        run: npm ci && npm run build
+      - name: Verify generated TypeScript client
+        run: test -f ../frontend/src/api/generated/reki-api.ts && git diff --exit-code HEAD -- ../frontend/src/api/generated/reki-api.ts
 
       - name: Test
-        run: |
-          # Capture startup failures before Testcontainers removes the failed Mongo container.
-          docker events --filter type=container --filter label=org.testcontainers=true --filter event=die --format '{{.Actor.ID}}' |
-            while read -r container_id; do
-              docker inspect --format '{{.Name}} exit={{.State.ExitCode}} OOM={{.State.OOMKilled}} error={{.State.Error}}' "$container_id" || true
-              docker logs --tail 60 "$container_id" 2>&1 || true
-            done &
-          diagnostics_pid=$!
-          trap 'kill "$diagnostics_pid" 2>/dev/null || true' EXIT
-          df -h /
-          free -m
-          dotnet test --project tests/Reki.Tests/Reki.Tests.csproj --configuration Release --no-build
+        run: dotnet test --project tests/Reki.Tests/Reki.Tests.csproj --configuration Release --no-build

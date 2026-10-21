@@ -1,0 +1,27 @@
+{
+  "runtime": "Net100",
+  "documentGenerator": {
+    "fromDocument": {
+      "url": "../backend/src/Reki.Api/OpenApi/reki-api.json"
+    }
+  },
+  "codeGenerators": {
+    "openApiToTypeScriptClient": {
+      "className": "{controller}Client",
+      "template": "Fetch",
+      "typeScriptVersion": 5.0,
+      "typeStyle": "Interface",
+      "dateTimeType": "String",
+      "generateClientClasses": true,
+      "generateDtoTypes": true,
+      "generateOptionalParameters": true,
+      "useAbortSignal": true,
+      "operationGenerationMode": "MultipleClientsFromOperationId",
+      "output": "src/api/generated/reki-api.ts",
+      "enumStyle": "StringLiteral",
+      "wrapResponses": true,
+      "nullValue": "Null",
+      "useLeafType": true
+    }
+  }
+}

@@ -162,7 +162,8 @@ Reki.Tests/<Feature>/<UseCase>/... component tests
 - Используй `AddOpenApi`/`MapOpenApi`; build-time document создаёт `Microsoft.Extensions.ApiDescription.Server`. Для UI разрешён только пакет `Swashbuckle.AspNetCore.SwaggerUI`; `AddSwaggerGen` и генератор Swashbuckle не использовать.
 - OpenAPI — проверяемый контракт. Изменение endpoint считается завершённым только после обновления build-time spec и успешной генерации клиента.
 - `nswag.json` лежит рядом с тестируемым API project и использует только относительные пути/ MSBuild variables.
-- NSwag не генерирует DTO (`generateDtoTypes=false`): generated client импортирует и использует типы из `Reki.Contracts`.
+- C#-конфиг `backend/src/Reki.Api/nswag.json` не генерирует DTO (`generateDtoTypes=false`): тестовый client использует `Reki.Contracts`. Это ограничение не относится к TypeScript.
+- Независимый `frontend/nswag.frontend.json` генерирует Fetch-клиент и DTO-интерфейсы при сборке API после OpenAPI. TypeScript-клиент хранится в Git; OpenAPI и C#-клиент остаются ignored. Обновление: изменить API → собрать API → закоммитить TS-клиент → проверить фронт.
 - В `Reki.Tests.csproj` должен быть custom MSBuild target, который после получения build-time OpenAPI запускает локальный tool manifest (`dotnet nswag run ...`) и генерирует typed test client до компиляции тестов.
 - Generated client хранится в явно выделенной папке `Generated/`, не редактируется вручную и генерируется детерминированно. Конфигурация не должна обращаться к запущенному dev-серверу или remote URL.
 
