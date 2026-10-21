@@ -15,6 +15,24 @@ namespace Reki.Tests.Api;
 public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
+    public async Task ActiveChallenge_NoChallenge_ReturnsEmptyOkAsync()
+    {
+        // Arrange
+        const long user = 8392;
+        using var api = Factory.CreateApiClient(user);
+        await CreatePlayerWithWorldAsync(api);
+        using var http = CreateAuthenticatedHttpClient(user);
+
+        // Act
+        using var response = await http.GetAsync("/challenges/active", CancellationToken.None);
+        var body = await response.Content.ReadAsStringAsync(CancellationToken.None);
+
+        // Assert
+        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        await Assert.That(body).IsEmpty();
+    }
+
+    [Test]
     public async Task DirectMessage_MemoryChangedDuringGeneration_PreservesFreshConversationAsync()
     {
         // Arrange

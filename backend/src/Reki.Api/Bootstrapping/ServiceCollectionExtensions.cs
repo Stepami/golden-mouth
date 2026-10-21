@@ -51,6 +51,7 @@ internal static class ServiceCollectionExtensions
         services.AddProblemDetails();
         services.AddOpenApi(options =>
         {
+            options.AddSchemaTransformer<NullableChallengeSchemaTransformer>();
             options.AddOperationTransformer<OperationMetadataTransformer>();
             options.AddDocumentTransformer<TelegramMiniAppSecurityTransformer>();
         });
