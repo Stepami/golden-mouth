@@ -1,3 +1,5 @@
+using Reki.Application.Posts.AI;
+
 namespace Reki.Application.Posts.GeneratePublicationCommand;
 
 public sealed record StarPostContext(

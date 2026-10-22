@@ -1,3 +1,4 @@
+using Reki.Application.Posts.AI;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;

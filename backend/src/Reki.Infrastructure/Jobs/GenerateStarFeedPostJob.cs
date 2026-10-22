@@ -3,6 +3,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Reki.Application.Player;
 using Reki.Application.Posts;
+using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Worlds;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -10,7 +12,7 @@ using Reki.Infrastructure.Serialization;
 using TickerQ.Exceptions;
 using TickerQ.Utilities.Base;
 using TickerQ.Utilities.Interfaces;
-using StarAgentInstructions = Reki.Application.Posts.StarAgentInstructions;
+using StarAgentInstructions = Reki.Application.Posts.AI.StarAgentInstructions;
 
 namespace Reki.Infrastructure.Jobs;
 

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 
-namespace Reki.Application.Posts;
+namespace Reki.Application.Posts.AI;
 
 internal static class StarToolSchemas
 {

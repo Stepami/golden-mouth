@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Posts.AddReplyCommand;
 using Reki.Application.Posts.GeneratePublicationCommand;
 
-namespace Reki.Application.Posts;
+namespace Reki.Application.Posts.AI;
 
 public sealed class StarTurnGenerator(
     IChatClient chatClient,

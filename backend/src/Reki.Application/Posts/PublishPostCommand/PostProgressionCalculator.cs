@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common.Balance;
+using Reki.Application.Posts.AI;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Posts.PublishPostCommand;

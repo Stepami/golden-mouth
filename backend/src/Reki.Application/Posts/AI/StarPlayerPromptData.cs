@@ -1,6 +1,6 @@
 using Reki.Domain.Worlds;
 
-namespace Reki.Application.Posts;
+namespace Reki.Application.Posts.AI;
 
 internal sealed record StarPlayerPromptData(
     string WorldId,

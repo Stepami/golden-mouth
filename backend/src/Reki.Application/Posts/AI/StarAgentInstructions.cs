@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.AI;
 using Reki.Domain.Worlds;
 
-namespace Reki.Application.Posts;
+namespace Reki.Application.Posts.AI;
 
 public static partial class StarAgentInstructions
 {

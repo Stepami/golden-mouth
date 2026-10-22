@@ -1,4 +1,4 @@
-namespace Reki.Application.Posts;
+namespace Reki.Application.Posts.AI.Safety;
 
 /// <summary>Version of the deterministic content checks used by PlayerSafetyGuard.</summary>
 public static class PublicationSafetyPolicy

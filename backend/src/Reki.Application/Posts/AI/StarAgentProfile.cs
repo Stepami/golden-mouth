@@ -1,7 +1,7 @@
 using Reki.Domain.Social;
 using Reki.Domain.Worlds;
 
-namespace Reki.Application.Posts;
+namespace Reki.Application.Posts.AI;
 
 public sealed record StarAgentProfile(
     World World,

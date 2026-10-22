@@ -2,7 +2,7 @@ using Reki.Application.Common.Exceptions;
 using Reki.Application.Player;
 using Reki.Domain.Player;
 
-namespace Reki.Application.Posts;
+namespace Reki.Application.Posts.AI.Safety;
 
 public sealed class PlayerSafetyGuard(
     IPlayerRepository playerRepository,
