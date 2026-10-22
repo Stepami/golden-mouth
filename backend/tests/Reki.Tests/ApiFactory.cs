@@ -32,7 +32,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
 
     public string MongoConnectionString => Session.ConnectionString;
 
-    internal ILogger<ProductTelemetry> ProductLogger { get; } = Substitute.For<ILogger<ProductTelemetry>>();
+    internal ILogger ProductLogger { get; } = Substitute.For<ILogger>();
 
     public TestApiClient CreateApiClient(long? telegramUserId = null)
     {
@@ -58,7 +58,9 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
             }
 
             ProductLogger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
-            services.AddSingleton(ProductLogger);
+            var productLoggerFactory = Substitute.For<ILoggerFactory>();
+            productLoggerFactory.CreateLogger(Arg.Any<string>()).Returns(ProductLogger);
+            services.AddSingleton<ILogger<ProductTelemetry>>(new Logger<ProductTelemetry>(productLoggerFactory));
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
             if (FeedOpenProbability is { } probability)
