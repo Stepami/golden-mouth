@@ -14,10 +14,6 @@ public sealed class WorldPostsHandler(
         WorldPostsQuery request,
         CancellationToken cancellationToken)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(request.PageNumber);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(request.PageSize);
-        var offset = checked(request.PageNumber * request.PageSize);
-        var limit = checked(request.PageSize + 1);
         var context = rekiContextAccessor.Context;
         var worlds = await context.Worlds;
         var world = worlds.GetValueOrDefault(request.WorldId)
@@ -33,8 +29,8 @@ public sealed class WorldPostsHandler(
         var posts = await store.GetPostsAsync(
             world.Id,
             request.Feed ? null : world.Player.PlayerId.ToAuthorId(),
-            offset,
-            limit,
+            request.PageNumber,
+            request.PageSize,
             cancellationToken);
         var hasNext = posts.Count > request.PageSize;
         if (hasNext)

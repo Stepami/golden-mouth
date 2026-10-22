@@ -308,12 +308,14 @@ internal sealed class MongoGameStore : IGameStore
     public async ValueTask<List<GamePost>> GetPostsAsync(
         WorldId worldId,
         AuthorId? authorId,
-        int offset,
-        int limit,
+        int pageNumber,
+        int pageSize,
         CancellationToken cancellationToken)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(offset);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit);
+        ArgumentOutOfRangeException.ThrowIfNegative(pageNumber);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
+        var offset = checked(pageNumber * pageSize);
+        var limit = checked(pageSize + 1);
         var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId);
         if (authorId is { } author)
         {
