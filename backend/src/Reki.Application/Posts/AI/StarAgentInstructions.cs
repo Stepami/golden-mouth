@@ -7,7 +7,7 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.AI;
 
-public static partial class StarAgentInstructions
+internal static partial class StarAgentInstructions
 {
     private static readonly StarPromptJsonContext JsonContext = new(new JsonSerializerOptions
     {
@@ -74,6 +74,9 @@ public static partial class StarAgentInstructions
     public static string SerializeTexts(IEnumerable<string> texts) =>
         JsonSerializer.Serialize(texts.ToArray(), JsonContext.StringArray);
 
+    public static string SerializeFeedHistory(StarFeedHistoryPost[] history) =>
+        JsonSerializer.Serialize(history, StarPromptJsonContext.Default.StarFeedHistoryPostArray);
+
     private static string SerializeStars(IEnumerable<WorldStar> stars)
     {
         using var stream = new MemoryStream();
@@ -104,5 +107,6 @@ public static partial class StarAgentInstructions
     [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
     [JsonSerializable(typeof(StarPlayerPromptData))]
     [JsonSerializable(typeof(string[]))]
+    [JsonSerializable(typeof(StarFeedHistoryPost[]))]
     private sealed partial class StarPromptJsonContext : JsonSerializerContext;
 }

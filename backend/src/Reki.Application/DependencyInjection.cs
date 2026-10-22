@@ -27,7 +27,7 @@ public static class DependencyInjection
         services.AddSingleton<PlayerSafetyGuard>();
         services.AddSingleton<PostProgressionCalculator>();
         services.AddSingleton<ProductTelemetry>();
-        services.AddSingleton<StarTurnGenerator>();
+        services.AddSingleton<IStarTurnGenerator, StarTurnGenerator>();
 
         return services;
     }

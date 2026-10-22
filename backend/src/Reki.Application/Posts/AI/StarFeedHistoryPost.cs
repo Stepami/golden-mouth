@@ -1,8 +1,8 @@
 using Reki.Domain.Worlds;
 
-namespace Reki.Infrastructure.Jobs.GenerateStarFeedPost;
+namespace Reki.Application.Posts.AI;
 
-public sealed record StarFeedHistoryPost(
+internal sealed record StarFeedHistoryPost(
     StarId? StarId,
     string Author,
     bool IsOwn,

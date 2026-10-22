@@ -4,7 +4,7 @@ using Reki.Domain.Player;
 
 namespace Reki.Application.Posts.AI.Safety;
 
-public sealed class PlayerSafetyGuard(
+internal sealed class PlayerSafetyGuard(
     IPlayerRepository playerRepository,
     TimeProvider timeProvider)
 {

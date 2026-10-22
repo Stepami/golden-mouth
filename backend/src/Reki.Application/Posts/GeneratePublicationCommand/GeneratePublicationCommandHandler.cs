@@ -25,7 +25,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
     TimeProvider timeProvider,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
-    StarTurnGenerator generator,
+    IStarTurnGenerator generator,
     ILogger<GeneratePublicationCommandHandler> logger,
     ProductTelemetry analytics,
     PlayerSafetyGuard safety) : IStreamCommandHandler<GeneratePublication, PublicationStatusLiveEvent>

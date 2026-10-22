@@ -24,7 +24,7 @@ internal sealed partial class AddReplyCommandHandler(
     IRekiContextAccessor rekiContextAccessor,
     TimeProvider timeProvider,
     PlayerSafetyGuard safety,
-    StarTurnGenerator generator,
+    IStarTurnGenerator generator,
     ILogger<AddReplyCommandHandler> logger,
     ProductTelemetry telemetry,
     IStarFeedScheduler feedScheduler) : IStreamCommandHandler<AddReply, ReplyLiveEvent>

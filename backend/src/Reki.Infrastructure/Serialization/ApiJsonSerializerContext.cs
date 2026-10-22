@@ -12,7 +12,6 @@ using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 namespace Reki.Infrastructure.Serialization;
 
 [JsonSerializable(typeof(StarFeedRequest))]
-[JsonSerializable(typeof(StarFeedHistoryPost[]))]
 [JsonSerializable(typeof(PublicationFailure))]
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]
