@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Api.Serialization;
 using Reki.Application.Balance;
 using Reki.Application.Player;
 using Reki.Application.Worlds;
@@ -14,7 +15,6 @@ using Reki.Contracts.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Serialization;
 using StarId = Reki.Domain.Worlds.StarId;
 using WorldId = Reki.Contracts.Player.WorldId;
 

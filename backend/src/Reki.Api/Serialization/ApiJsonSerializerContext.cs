@@ -1,5 +1,7 @@
 using System.Net.ServerSentEvents;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
+using Reki.Application.Posts.AI;
 using Reki.Contracts.Common;
 using Reki.Contracts.Events;
 using Reki.Contracts.Player;
@@ -9,8 +11,15 @@ using Reki.Contracts.Telemetry;
 using Reki.Contracts.Worlds;
 using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 
-namespace Reki.Infrastructure.Serialization;
+namespace Reki.Api.Serialization;
 
+[JsonSerializable(typeof(ProblemDetails))]
+[JsonSerializable(typeof(HttpValidationProblemDetails))]
+[JsonSerializable(typeof(ValidationProblemDetails))]
+[JsonSerializable(typeof(StarPlayerPromptData))]
+[JsonSerializable(typeof(StarFeedHistoryPost[]))]
+[JsonSerializable(typeof(StarCatalogEntry[]))]
+[JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(StarFeedRequest))]
 [JsonSerializable(typeof(PublicationFailure))]
 [JsonSerializable(typeof(Stream))]
@@ -80,4 +89,4 @@ namespace Reki.Infrastructure.Serialization;
         typeof(SnakeCaseEnumConverter<PublicationStatus>)
     ],
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-public sealed partial class ApiJsonSerializerContext : JsonSerializerContext;
+internal sealed partial class ApiJsonSerializerContext : JsonSerializerContext;

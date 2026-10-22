@@ -3,10 +3,10 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Api.Serialization;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
 using Reki.Contracts.Worlds;
-using Reki.Infrastructure.Serialization;
 using ResetGameDayJob = Reki.Infrastructure.Jobs.ResetGameDayJob;
 
 namespace Reki.Tests.Api;

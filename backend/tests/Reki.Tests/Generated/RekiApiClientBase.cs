@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Reki.Infrastructure.Serialization;
+using Reki.Api.Serialization;
 
 namespace Reki.Tests.Generated;
 
