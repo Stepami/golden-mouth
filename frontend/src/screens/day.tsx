@@ -4,12 +4,14 @@ import { ExpandableText } from '../ui'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import { setAvatarPersonalization, useAvatarPersonalization } from '../app/avatarPersonalization'
 import { contentOf, worldOf } from '../api/worldContent'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import { dm as dmMock, friends as friendsMock } from '../api/mock'
 import type { ChannelPost, DmMessage, Drama, FeedItem } from '../api/types'
 import { useNav } from '../app/nav'
-import { useApi, cachedApi, saveApiCache } from '../app/useApi'
+import { useApi } from '../app/useApi'
+import { usePostPages } from '../app/usePostPages'
+import { usePostListGestures } from '../app/usePostListGestures'
 import { runtimeConfig } from '../app/runtimeConfig'
 import { SkillHelp } from '../ui/SkillHelp'
 import { usePlayer, useStore } from '../app/store'
@@ -121,31 +123,34 @@ function FeedPostCard({ item }: { item: FeedItem }) {
 function Feed() {
   const nav = useNav()
   const p = usePlayer(); const w = worldOf(p.world)
-  const [portion, setPortion] = useState(0)
-  const [refreshing, setRefreshing] = useState(false)
-  const [refreshNote, setRefreshNote] = useState('')
-  const [newIds, setNewIds] = useState<string[]>([])
-  const seen = useRef(new Set<string>())
-  const key = `feed:${p.id}:${p.worldInstanceId ?? p.world}`
-  const [items, setItems] = useState<FeedItem[]>(() => cachedApi<FeedItem[]>(key) ?? [])
-  const [feedState, setFeedState] = useState<'loading' | 'ready' | 'error'>(() => cachedApi(key) ? 'ready' : 'loading')
-  useEffect(() => {
-    let alive = true
-    api.feed(p.world).then(found => { if (alive) { const fresh = found.filter(item => item.postId && !seen.current.has(item.postId)); const ids = fresh.map(item => item.postId!); setNewIds(portion ? ids : []); setRefreshNote(portion ? ids.length ? `Новых постов: ${ids.length}` : 'Пока нет новых постов' : ''); seen.current = new Set(found.flatMap(item => item.postId ? [item.postId] : [])); saveApiCache(key, found); setItems(found); setFeedState('ready'); setRefreshing(false) } })
-      .catch(() => { if (alive) { setFeedState('error'); setRefreshing(false) } })
-    return () => { alive = false }
-  }, [key, p.world, portion])
+  const key = `feed-pages:${p.id}:${p.worldInstanceId ?? p.world}`
+  const loadPage = useCallback((pageNumber: number, signal: AbortSignal) => api.feed(p.worldInstanceId, pageNumber, signal), [p.worldInstanceId])
+  const list = usePostPages<FeedItem>(key, loadPage)
+  const [arrivals, setArrivals] = useState({ key, ids: [] as string[], note: '' })
+  const newIds = arrivals.key === key ? arrivals.ids : []
+  const refreshNote = arrivals.key === key ? arrivals.note : ''
+  const refresh = async () => {
+    const seen = new Set(list.items.map(item => item.postId))
+    setArrivals({ key, ids: [], note: '' })
+    const page = await list.refresh()
+    if (!page) return
+    const ids = page.items.flatMap(item => item.postId && !seen.has(item.postId) ? [item.postId] : [])
+    setArrivals({ key, ids, note: ids.length ? `Новых постов: ${ids.length}` : 'Пока нет новых постов' })
+  }
+  const gestures = usePostListGestures(key, list, refresh)
   return (
-    <div className="screen">
+    <div className="screen post-list-screen" ref={gestures.screenRef}>
+      <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
       <TopBar title={`Лента ${w.gen}`} right={<button onClick={() => nav.push('05-11_world_rules')} style={{ background: 'none', border: 'none', color: 'inherit', fontSize: 13 }}>📜 Как устроен мир</button>} />
       <div className="pad">
-        {items.map((f, i) => f.kind === 'news'
+        {list.items.map((f, i) => f.kind === 'news'
           ? <Card key={`news-${i}`} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ МИРА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
           : <div className={newIds.includes(f.postId ?? "") ? "feed-arrival" : undefined} key={f.postId ?? `post-${i}`}><FeedPostCard item={f} /></div>)}
-        {feedState === 'loading' && <Card>Загружаем ленту…</Card>}
-        {feedState === 'error' && <Card>Не получилось обновить ленту. Попробуй ещё раз.</Card>}
-        {feedState === 'ready' && items.length === 0 && <Card>В ленте пока нет постов.</Card>}
-        <div role="status" className="small muted refresh-note">{refreshing ? "Ищем новые истории…" : refreshNote}</div><Button secondary disabled={refreshing} onClick={() => { setRefreshing(true); setRefreshNote(''); setPortion(value => value + 1) }}>{refreshing ? "Обновляем…" : "Обновить ленту"}</Button>
+        {list.pending === 'first' && !list.ready && <Card>Загружаем ленту…</Card>}
+        {list.error === 'first' && <Card>Не получилось обновить ленту. Потяни вниз от начала списка, чтобы повторить.</Card>}
+        {list.ready && list.items.length === 0 && <Card>В ленте пока нет постов.</Card>}
+        {(refreshNote && !list.pending) && <div role="status" className="small muted refresh-note">{refreshNote}</div>}
+        <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.error === 'more' ? 'Не получилось загрузить посты. Потяни вниз от начала списка, чтобы обновить.' : list.ready && !list.hasNext && list.items.length > 0 ? 'Все посты загружены' : ''}</div>
       </div>
     </div>
   )
@@ -208,27 +213,16 @@ function FriendChannel() {
 function Stage() {
   const nav = useNav(); const p = usePlayer()
   const [skillHelp, setSkillHelp] = useState(false)
-  const cacheKey = `channel:${p.id}:${p.worldInstanceId ?? p.world}`
+  const cacheKey = `channel-pages:${p.id}:${p.worldInstanceId ?? p.world}`
   const [banner, setBanner] = useState(true)
-  const [posts, setPosts] = useState<ChannelPost[]>(() => cachedApi<ChannelPost[]>(cacheKey) ?? [])
-  const [load, setLoad] = useState<'loading' | 'ready' | 'error'>(() => cachedApi(cacheKey) ? 'ready' : 'loading')
-  const [reloadToken, setReloadToken] = useState(0)
-  useEffect(() => {
-    let current = true
-    const cached = cachedApi<ChannelPost[]>(cacheKey)
-    setPosts(cached ?? [])
-    setLoad(cached ? 'ready' : 'loading')
-    api.channelPosts().then(items => {
-      if (!current) return
-      setPosts(items)
-      saveApiCache(cacheKey, items)
-      setLoad('ready')
-    }).catch(() => { if (current) setLoad('error') })
-    return () => { current = false }
-  }, [reloadToken, cacheKey])
-  if (load === 'ready' && posts.length === 0) return <Home />
+  const loadPage = useCallback((pageNumber: number, signal: AbortSignal) => api.channelPosts(p.worldInstanceId, pageNumber, signal), [p.worldInstanceId])
+  const list = usePostPages<ChannelPost>(cacheKey, loadPage)
+  const gestures = usePostListGestures(cacheKey, list, list.refresh)
+  const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
+  if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home /></div>
   return (
-    <div className="screen channel-screen">
+    <div className="screen channel-screen post-list-screen" ref={gestures.screenRef}>
+      {pullIndicator}
       <ChannelHead />
       <div className="pad">
         <StoryGoal world={p.world} />
@@ -244,9 +238,10 @@ function Stage() {
         </Card>
         {runtimeConfig.features.collection && <Card style={{ marginBottom: 10 }} onClick={() => nav.tab(4)}><div className="row"><div style={{ fontSize: 22 }}>🃏</div><div style={{ flex: 1 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b></div><span className="muted">›</span></div></Card>}
         <Button secondary style={{ marginBottom: 10 }} onClick={() => nav.push('04-3_invite')}>Позвать друга</Button>
-        {load === 'loading' && <Card><span className="small muted">загружаем посты…</span></Card>}
-        {load === 'error' && <Card><div className="small">Не получилось загрузить канал.</div><Button style={{ marginTop: 12 }} onClick={() => setReloadToken(token => token + 1)}>Попробовать снова</Button></Card>}
-        {load === 'ready' && posts.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId, returnTo: 'channel' })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
+        {list.pending === 'first' && !list.ready && <Card><span className="small muted">загружаем посты…</span></Card>}
+        {list.error === 'first' && <Card><div className="small">Не получилось загрузить канал. Потяни вниз от начала списка, чтобы повторить.</div></Card>}
+        {list.items.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId, returnTo: 'channel' })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
+        <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.error === 'more' ? 'Не получилось загрузить посты. Потяни вниз от начала списка, чтобы обновить.' : list.ready && !list.hasNext ? 'Все посты загружены' : ''}</div>
       </div>
       <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}

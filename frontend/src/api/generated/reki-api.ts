@@ -769,15 +769,24 @@ export class PostsClient {
     }
 
     /**
-     * @param worldId (optional) 
+     * @param pageNumber (optional) 
+     * @param pageSize (optional) 
      * @return OK
      */
-    getFeed(worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<FeedItemResponse[]>> {
+    getFeed(worldId: string, pageNumber?: number | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
         let url_ = this.baseUrl + "/feed?";
-        if (worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' cannot be null.");
-        else if (worldId !== undefined)
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
+        if (pageNumber === null)
+            throw new globalThis.Error("The parameter 'pageNumber' cannot be null.");
+        else if (pageNumber !== undefined)
+            url_ += "pageNumber=" + encodeURIComponent("" + pageNumber) + "&";
+        if (pageSize === null)
+            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
+        else if (pageSize !== undefined)
+            url_ += "pageSize=" + encodeURIComponent("" + pageSize) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -793,13 +802,13 @@ export class PostsClient {
         });
     }
 
-    protected processGetFeed(response: Response): Promise<SwaggerResponse<FeedItemResponse[]>> {
+    protected processGetFeed(response: Response): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as FeedItemResponse[];
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PageResponseOfFeedItemResponse;
             return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
@@ -807,19 +816,28 @@ export class PostsClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<SwaggerResponse<FeedItemResponse[]>>(new SwaggerResponse(status, _headers, null as any));
+        return Promise.resolve<SwaggerResponse<PageResponseOfFeedItemResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
-     * @param worldId (optional) 
+     * @param pageNumber (optional) 
+     * @param pageSize (optional) 
      * @return OK
      */
-    getChannelPosts(worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<ChannelPostResponse[]>> {
+    getChannelPosts(worldId: string, pageNumber?: number | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfChannelPostResponse>> {
         let url_ = this.baseUrl + "/posts/mine?";
-        if (worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' cannot be null.");
-        else if (worldId !== undefined)
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
+        if (pageNumber === null)
+            throw new globalThis.Error("The parameter 'pageNumber' cannot be null.");
+        else if (pageNumber !== undefined)
+            url_ += "pageNumber=" + encodeURIComponent("" + pageNumber) + "&";
+        if (pageSize === null)
+            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
+        else if (pageSize !== undefined)
+            url_ += "pageSize=" + encodeURIComponent("" + pageSize) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -835,13 +853,13 @@ export class PostsClient {
         });
     }
 
-    protected processGetChannelPosts(response: Response): Promise<SwaggerResponse<ChannelPostResponse[]>> {
+    protected processGetChannelPosts(response: Response): Promise<SwaggerResponse<PageResponseOfChannelPostResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ChannelPostResponse[];
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PageResponseOfChannelPostResponse;
             return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
@@ -849,7 +867,7 @@ export class PostsClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<SwaggerResponse<ChannelPostResponse[]>>(new SwaggerResponse(status, _headers, null as any));
+        return Promise.resolve<SwaggerResponse<PageResponseOfChannelPostResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
@@ -1632,6 +1650,24 @@ export interface OnboardingRequest {
     birthGroup: BirthGroup;
     ageBand?: string | null;
     address: Address;
+
+    [key: string]: any;
+}
+
+/** A page of API response items. */
+export interface PageResponseOfChannelPostResponse {
+    items: ChannelPostResponse[];
+    pageNumber: number;
+    hasNext: boolean;
+
+    [key: string]: any;
+}
+
+/** A page of API response items. */
+export interface PageResponseOfFeedItemResponse {
+    items: FeedItemResponse[];
+    pageNumber: number;
+    hasNext: boolean;
 
     [key: string]: any;
 }

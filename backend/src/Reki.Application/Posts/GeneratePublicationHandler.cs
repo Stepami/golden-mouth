@@ -217,13 +217,13 @@ public sealed partial class GeneratePublicationHandler(
         CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
-        var recentPosts = await sender.Send(new GetChannelPostsQuery(world.Id, 3), cancellationToken);
+        var recentPosts = await sender.Send(new WorldPostsQuery(world.Id, PageNumber: 0, PageSize: 3), cancellationToken);
         var hateEnabled = StarTurnPolicy.IsHateEnabled(player, world, balance.Value, now);
         return new StarPostContext(
             request.Text,
             new StarAgentProfile(world, null, [], player.Address),
             GetStage(world.Player.Subscribers),
-            recentPosts.Select(post => post.Text).ToArray(),
+            recentPosts.Items.Select(post => post.Text).ToArray(),
             hateEnabled);
     }
 

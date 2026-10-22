@@ -45,6 +45,8 @@
       "includedOperationIds": [],
       "excludedOperationIds": [],
       "additionalNamespaceUsages": [
+        "PageResponseOfFeedItemResponse = Reki.Contracts.Common.PageResponse<Reki.Contracts.Posts.FeedItemResponse>",
+        "PageResponseOfChannelPostResponse = Reki.Contracts.Common.PageResponse<Reki.Contracts.Posts.ChannelPostResponse>",
         "Microsoft.AspNetCore.Mvc",
         "Reki.Contracts.Events",
         "Reki.Contracts.Player",

@@ -59,7 +59,7 @@ Reki.Tests/<Feature>/<UseCase>/... component tests
 ```
 
 - Один use case хранит рядом свои command/query, handler, validation, result и ports, если они не переиспользуются другим use case.
-- Все публичные API request/response DTO и связанные enum находятся в `Reki.Contracts`, остаются immutable и не содержат поведения. Application может зависеть от `Contracts` для типизированных входов и готовых ответов; `Contracts` не зависит от `Application` или HTTP runtime.
+- Все публичные API request/response DTO и связанные enum находятся в `Reki.Contracts`, остаются immutable и не содержат бизнес-логики. Application может зависеть от `Contracts` для типизированных входов и готовых ответов; `Contracts` не зависит от остальных production-проектов. В `Contracts` разрешён `FrameworkReference` на `Microsoft.AspNetCore.App` для штатных MVC-атрибутов HTTP-контрактов (`FromQuery`, `BindRequired` и аналогичных метаданных привязки). Контроллеры, middleware и обработка HTTP-запросов остаются в `Api`; самописные провайдеры метаданных вместо штатных атрибутов не добавлять.
 - Domain организуется вокруг business concepts и aggregate boundaries: не дублируй aggregate только ради зеркальной папки каждого handler.
 - Infrastructure-код, специфичный для use case, лежит в том же feature slice; общий repository/serializer остаётся на уровне feature.
 - Логические bounded contexts изолируются namespaces и internal API. Они не читают Mongo collections друг друга напрямую; между ними используй узкие application contracts и integration events, а domain events оставляй внутри context.

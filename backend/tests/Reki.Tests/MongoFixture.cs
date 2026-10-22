@@ -5,7 +5,7 @@ namespace Reki.Tests;
 
 public sealed class MongoFixture : IAsyncInitializer, IAsyncDisposable
 {
-    private readonly MongoDbContainer _container = new MongoDbBuilder("mongo:8.0.32-noble")
+    private readonly MongoDbContainer _container = new MongoDbBuilder("mongo:9.0.4-resolute")
         .WithReplicaSet()
         .Build();
 

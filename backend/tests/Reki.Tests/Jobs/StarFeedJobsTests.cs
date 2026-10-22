@@ -39,14 +39,14 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         // Act
         await job.ExecuteAsync(context, CancellationToken.None);
         await job.ExecuteAsync(context, CancellationToken.None);
-        var feed = await api.Posts.GetFeedAsync(worldId, CancellationToken.None);
+        var feed = await api.Posts.GetFeedAsync(worldId, null, null, CancellationToken.None);
 
         // Assert
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(1);
         var lastRequest = Factory.Llm.GetLastRequest();
         await Assert.That(lastRequest.TryGetProperty("stream", out var streaming) && streaming.GetBoolean()).IsFalse();
-        await Assert.That(feed.Count).IsEqualTo(1);
-        await Assert.That(feed.Single().Text).IsEqualTo("Сегодня репетировали новую сцену.");
+        await Assert.That(feed.Items.Count).IsEqualTo(1);
+        await Assert.That(feed.Items.Single().Text).IsEqualTo("Сегодня репетировали новую сцену.");
         var stored = await Database.GetCollection<GamePost>("posts").Find(FilterDefinition<GamePost>.Empty).SingleAsync();
         await Assert.That(ObjectId.TryParse(stored.Id.Value, out _)).IsTrue();
         await Assert.That(stored.AuthorId.Value.StartsWith("Star_", StringComparison.Ordinal)).IsTrue();
@@ -163,9 +163,9 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await job.ExecuteAsync(context, CancellationToken.None);
 
         // Assert
-        var feed = await api.Posts.GetFeedAsync(worldId, CancellationToken.None);
-        await Assert.That(feed.Single().PostId).IsEqualTo(context.Request.PostId.Value);
-        await Assert.That(feed.Single().Text).IsEqualTo("Новый день в мастерской.");
+        var feed = await api.Posts.GetFeedAsync(worldId, null, null, CancellationToken.None);
+        await Assert.That(feed.Items.Single().PostId).IsEqualTo(context.Request.PostId.Value);
+        await Assert.That(feed.Items.Single().Text).IsEqualTo("Новый день в мастерской.");
     }
 
     [Test]
@@ -202,10 +202,10 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var existingIds = await tickers.Find(FilterDefinition<RekiTimeTicker>.Empty).Project(ticker => ticker.Id).ToListAsync();
 
         // Act
-        var feed = await api.Posts.GetFeedAsync(worldId, CancellationToken.None);
+        var feed = await api.Posts.GetFeedAsync(worldId, null, null, CancellationToken.None);
 
         // Assert
-        await Assert.That(feed.Count).IsEqualTo(0);
+        await Assert.That(feed.Items.Count).IsEqualTo(0);
         var scheduled = await tickers.Find(ticker => !existingIds.Contains(ticker.Id)).ToListAsync();
         await Assert.That(scheduled.Count).IsEqualTo(expectedJobs);
         if (expectedJobs > 0)

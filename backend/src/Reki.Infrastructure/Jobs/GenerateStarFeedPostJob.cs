@@ -40,10 +40,10 @@ public sealed class GenerateStarFeedPostJob(
             return;
         }
 
-        var recent = await store.GetPostsAsync(20, worldId, null, cancellationToken);
+        var recent = await store.GetPostsAsync(worldId, null, 0, 20, cancellationToken);
         var star = world.Stars[(int)((uint)context.Id.GetHashCode() % (uint)world.Stars.Count)];
         var profile = new StarAgentProfile(world, star.Id, [], player.Address);
-        var history = recent.Select(post =>
+        var history = recent.Items.Select(post =>
         {
             var isPlayer = post.AuthorId == world.Player.PlayerId.ToAuthorId();
             var author = world.FindStar(post.AuthorId) ?? WorldStar.DeletedAccount;

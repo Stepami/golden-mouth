@@ -65,8 +65,9 @@ export type DmMessage = Wire.DirectMessageResponse
 export type Dm = Omit<Fields<Wire.DmResponse>, 'star' | 'repliesLeft'> & { star: Star; repliesLeft: number }
 // Feed rows omit absent wire values; demo rows also carry local catalog metadata.
 type FeedMetadata = Exclude<keyof Wire.FeedItemResponse, 'kind' | 'text' | 'views' | 'commentCount' | 'reactions'>
+export type PostsPage<T> = Pick<Wire.PageResponseOfFeedItemResponse, 'pageNumber' | 'hasNext'> & { items: T[] }
 export type FeedItem = Pick<Fields<Wire.FeedItemResponse>, 'kind' | 'text'> & { [K in FeedMetadata]?: NonNullable<Wire.FeedItemResponse[K]> } & {
-  reactions?: Reaction[]; views?: number; commentCount?: number; demo?: boolean; starId?: string; world?: WorldId
+  postId?: string; reactions?: Reaction[]; views?: number; commentCount?: number; demo?: boolean; starId?: string; world?: WorldId
 }
 export type WorldDocument = Omit<Fields<Wire.WorldResponse>, 'balanceKey' | 'difficulty' | 'subscribers' | 'stars' | 'unlockSkill' | 'unlockLevel'> & {
   balanceKey: WorldId; difficulty: 1 | 2 | 3; subscribers: number; lock?: World['lock']

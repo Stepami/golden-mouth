@@ -305,28 +305,34 @@ internal sealed class MongoGameStore : IGameStore
             cancellationToken: cancellationToken);
     }
 
-    public async ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
-        int? limit,
+    public async ValueTask<WorldPostsPage> GetPostsAsync(
         WorldId worldId,
         AuthorId? authorId,
+        int pageNumber,
+        int pageSize,
         CancellationToken cancellationToken)
     {
+        var offset = pageNumber * pageSize;
+        var limit = pageSize + 1;
         var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId);
         if (authorId is { } author)
         {
             filter &= Builders<GamePost>.Filter.Eq(item => item.AuthorId, author);
         }
 
-        IFindFluent<GamePost, GamePost> query = _posts
+        var posts = await _posts
             .Find(filter)
-            .SortByDescending(item => item.CreatedAtUtc);
-        if (limit is { } count)
+            .SortByDescending(item => item.CreatedAtUtc)
+            .Skip(offset)
+            .Limit(limit)
+            .ToListAsync(cancellationToken);
+        var hasNext = posts.Count > pageSize;
+        if (hasNext)
         {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
-            query = query.Limit(count);
+            posts.RemoveAt(posts.Count - 1);
         }
 
-        return await query.ToListAsync(cancellationToken);
+        return new WorldPostsPage(posts, pageNumber, hasNext);
     }
 
     public async ValueTask<GamePost?> GetPostAsync(

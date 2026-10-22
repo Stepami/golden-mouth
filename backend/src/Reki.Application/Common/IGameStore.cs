@@ -73,11 +73,13 @@ public interface IGameStore
 
     /// <summary>
     /// Reads posts in a world whose ownership the application has already verified.
+    /// Returns a page with its number and whether another page exists.
     /// </summary>
-    ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
-        int? limit,
+    ValueTask<WorldPostsPage> GetPostsAsync(
         WorldId worldId,
         AuthorId? authorId,
+        int pageNumber,
+        int pageSize,
         CancellationToken cancellationToken);
 
     /// <summary>
