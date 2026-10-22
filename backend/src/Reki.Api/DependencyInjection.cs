@@ -1,14 +1,15 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Reki.Api.Mapping;
 using Reki.Api.OpenApi;
-using Reki.Api.Serialization;
 using Reki.Infrastructure.Serialization;
 using TgMiniAppAuth;
 
-namespace Reki.Api.Bootstrapping;
+namespace Reki.Api;
 
-internal static class DependencyInjection
+internal static partial class DependencyInjection
 {
     public static IServiceCollection AddApi(this IServiceCollection services)
     {
@@ -39,4 +40,10 @@ internal static class DependencyInjection
             options.Converters.Add(converter);
         }
     }
+
+    [JsonSerializable(typeof(ProblemDetails))]
+    [JsonSerializable(typeof(HttpValidationProblemDetails))]
+    [JsonSerializable(typeof(ValidationProblemDetails))]
+    [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+    internal sealed partial class ProblemDetailsJsonSerializerContext : JsonSerializerContext;
 }
