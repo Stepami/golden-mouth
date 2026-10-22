@@ -55,7 +55,9 @@ Reki.Contracts/<Feature>/Request.cs, Response.cs
 Reki.Application/<Feature>/<Action>Command/<Action>.cs, <Action>CommandHandler.cs
 Reki.Application/<Feature>/Get<Data>/<Data>Query.cs, <Data>QueryHandler.cs
 Reki.Domain/<Feature>/... aggregates, entities, value objects, domain events
-Reki.Infrastructure/<Feature>/... repositories, BSON mappings, external adapters
+Reki.Infrastructure/Mongo/Repositories/<Entity>Repository.cs
+Reki.Infrastructure/Mongo/... BSON mappings, migrations, Mongo options and health check
+Reki.Infrastructure/Jobs/<JobNameWithoutSuffix>/... job-specific helpers
 Reki.Tests/<Feature>/<UseCase>/... component tests
 ```
 
@@ -66,7 +68,9 @@ Reki.Tests/<Feature>/<UseCase>/... component tests
 - Все собственные типы исключений каждой сборки находятся в папке `Exceptions` в корне соответствующего проекта; namespace — `<AssemblyRootNamespace>.Exceptions` (например, `Reki.Application.Exceptions`). Это правило имеет приоритет над группировкой по поддоменам, use case и `Common`. Обработчики исключений остаются рядом с соответствующими API-адаптерами или jobs.
 - Все публичные API request/response DTO и связанные enum находятся в `Reki.Contracts`, остаются immutable и не содержат бизнес-логики. Application может зависеть от `Contracts` для типизированных входов и готовых ответов; `Contracts` не зависит от остальных production-проектов. В `Contracts` разрешён `FrameworkReference` на `Microsoft.AspNetCore.App` для штатных MVC-атрибутов HTTP-контрактов (`FromQuery`, `BindRequired` и аналогичных метаданных привязки). Контроллеры, middleware и обработка HTTP-запросов остаются в `Api`; самописные провайдеры метаданных вместо штатных атрибутов не добавлять.
 - Domain организуется вокруг business concepts и aggregate boundaries: не дублируй aggregate только ради зеркальной папки каждого handler.
-- Infrastructure-код, специфичный для use case, лежит в том же feature slice; общий repository/serializer остаётся на уровне feature.
+- Все Mongo-репозитории Infrastructure и `MongoGameStore` находятся в `Mongo/Repositories` без подпапок; опции — в `Mongo/Options`, остальные Mongo-компоненты, включая migrations и health check, — в `Mongo`. Джобы с собственными вспомогательными моделями, сервисами или репозиториями сгруппированы в `Jobs/<JobNameWithoutSuffix>`; джобы без таких файлов остаются в корне `Jobs`. Общие репозитории не переносятся в папку одной джобы.
+- Регистрация модулей Infrastructure находится в их `DependencyInjection`: `AI.AddChatClients`, `Mongo.AddMongo`, `Jobs.AddJobs`, `RekiContext.AddRekiContext`. Корневой `DependencyInjection.AddInfrastructure` объединяет эти регистрации. Папка контекста сохраняет имя `RekiContext`.
+- `MongoCollections` находится в `Mongo/Repositories`. Джобы переиспользуют существующие репозитории через интерфейсы Application; при нехватке функциональности расширяются эти интерфейсы и реализации в `Mongo/Repositories`. Mongo-запросы остаются в репозиториях и используют типизированные filters и updates с выражениями к свойствам.
 - Логические bounded contexts изолируются namespaces и internal API. Они не читают Mongo collections друг друга напрямую; между ними используй узкие application contracts и integration events, а domain events оставляй внутри context.
 - Не создавай общие `Utils`, `Helpers`, generic repository или god-service. Папка `Common` допустима только для небольших cross-cutting primitives с несколькими реальными consumers.
 

@@ -26,4 +26,12 @@ public interface IPlayerRepository
         PlayerProfile player,
         int expectedVersion,
         CancellationToken cancellationToken);
+
+    ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
+
+    ValueTask<long> ResetGameDayAsync(
+        DateTimeOffset periodStart,
+        int freeEnergy,
+        int plusEnergy,
+        CancellationToken cancellationToken);
 }

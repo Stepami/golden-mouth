@@ -9,6 +9,7 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
+using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 using Reki.Tests.Api;
 using TickerQ.Exceptions;
 using TickerQ.Utilities;

@@ -124,7 +124,7 @@ dotnet_diagnostic.AV1755.severity = none
 # Tool action records stay nested so the strict parser and its internal result types form one unit.
 dotnet_diagnostic.SA1201.severity = none
 
-[src/Reki.Infrastructure/Persistence/Migrations/*.cs]
+[src/Reki.Infrastructure/Mongo/Migrations/*.cs]
 # Migration filenames include their version; class names remain stable for migration history.
 dotnet_diagnostic.SA1649.severity = none
 

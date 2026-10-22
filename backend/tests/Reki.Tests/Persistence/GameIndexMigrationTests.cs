@@ -8,8 +8,9 @@ using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Persistence;
-using Reki.Infrastructure.Persistence.Migrations;
+using Reki.Infrastructure.Mongo.Migrations;
+using Reki.Infrastructure.Mongo.Options;
+using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Tests.Persistence;
 

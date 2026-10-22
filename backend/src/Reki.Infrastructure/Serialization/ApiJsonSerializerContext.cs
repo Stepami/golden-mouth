@@ -7,7 +7,7 @@ using Reki.Contracts.Posts;
 using Reki.Contracts.Social;
 using Reki.Contracts.Telemetry;
 using Reki.Contracts.Worlds;
-using Reki.Infrastructure.Jobs;
+using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 
 namespace Reki.Infrastructure.Serialization;
 

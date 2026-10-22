@@ -3,7 +3,7 @@ using Microsoft.Extensions.Time.Testing;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Persistence.Migrations;
+using Reki.Infrastructure.Mongo.Migrations;
 using TUnit.Core.Interfaces;
 
 namespace Reki.Tests;

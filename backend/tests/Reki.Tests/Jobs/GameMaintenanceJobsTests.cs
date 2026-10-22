@@ -6,10 +6,13 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Common;
 using Reki.Application.Common.Balance;
+using Reki.Application.Player;
+using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
 using Reki.Tests.Api;
+using ResetGameDayJob = Reki.Infrastructure.Jobs.ResetGameDayJob;
 
 namespace Reki.Tests.Jobs;
 
@@ -202,7 +205,12 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
         await players.ReplaceOneAsync(item => item.Id == player.Id, player with { Energy = 6, EnergyUsed = 4 });
         var changed = Options.Create(Factory.Services.GetRequiredService<IOptions<GameBalance>>().Value with { FreePostsPerDay = 12 });
-        var job = new ResetGameDayJob(Database, new GameDayPeriod(Factory.Session.Clock, changed), changed, NullLogger<ResetGameDayJob>.Instance);
+        var job = new ResetGameDayJob(
+            Factory.Services.GetRequiredService<IPlayerRepository>(),
+            Factory.Services.GetRequiredService<IWorldRepository>(),
+            new GameDayPeriod(Factory.Session.Clock, changed),
+            changed,
+            NullLogger<ResetGameDayJob>.Instance);
 
         // Act
         await job.ExecuteAsync(new(), CancellationToken.None);

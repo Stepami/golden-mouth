@@ -6,8 +6,8 @@ using MongoDB.Driver;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
 using Reki.Contracts.Worlds;
-using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.Serialization;
+using ResetGameDayJob = Reki.Infrastructure.Jobs.ResetGameDayJob;
 
 namespace Reki.Tests.Api;
 
