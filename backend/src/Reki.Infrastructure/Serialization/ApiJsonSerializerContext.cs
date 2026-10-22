@@ -9,11 +9,12 @@ using Reki.Contracts.Posts;
 using Reki.Contracts.Social;
 using Reki.Contracts.Telemetry;
 using Reki.Contracts.Worlds;
+using Reki.Infrastructure.Jobs;
 
 namespace Reki.Infrastructure.Serialization;
 
-[JsonSerializable(typeof(Reki.Infrastructure.Jobs.StarFeedRequest))]
-[JsonSerializable(typeof(Reki.Infrastructure.Jobs.StarFeedHistoryPost[]))]
+[JsonSerializable(typeof(StarFeedRequest))]
+[JsonSerializable(typeof(StarFeedHistoryPost[]))]
 [JsonSerializable(typeof(PublicationFailure))]
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]

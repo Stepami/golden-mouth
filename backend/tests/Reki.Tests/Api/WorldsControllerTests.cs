@@ -1,4 +1,5 @@
 using MongoDB.Driver;
+using Reki.Contracts.Telemetry;
 using Reki.Contracts.Worlds;
 
 namespace Reki.Tests.Api;
@@ -18,14 +19,14 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await CreatePlayerWithWorldAsync(owner);
         await CreatePlayerWithWorldAsync(other);
         var worldId = await GetWorldIdAsync(own ? owner : other);
-        var batch = new Reki.Contracts.Telemetry.AnalyticsBatchRequest
+        var batch = new AnalyticsBatchRequest
         {
             Session = "world-session",
             Platform = "web",
             Experiments = new Dictionary<string, string>(),
             Events =
             [
-                new Reki.Contracts.Telemetry.AnalyticsEventRequest
+                new AnalyticsEventRequest
                 {
                     Name = "screen_view", WorldId = worldId, Screen = "feed",
                 },
@@ -87,7 +88,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         try
         {
             await api.Player.CompleteOnboardingAsync(
-                new Reki.Contracts.Player.OnboardingRequest
+                new Contracts.Player.OnboardingRequest
                 {
                     BirthGroup = Contracts.Player.BirthGroup.Teen,
                     Address = Contracts.Player.Address.Nick,

@@ -238,7 +238,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         (var pendingStatus, _, _) = await GenerateAsync(
             ownerUserId,
             "незавершённая публикация");
-        await Assert.That(pendingStatus).IsEqualTo(System.Net.HttpStatusCode.OK);
+        await Assert.That(pendingStatus).IsEqualTo(HttpStatusCode.OK);
 
         var owner = await GetStoredPlayerAsync(ownerUserId);
         var posts = Database.GetCollection<BsonDocument>("posts");
@@ -438,7 +438,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         (var statusCode, _, _) = await GenerateAsync(
             telegramUserId,
             "over limit");
-        await Assert.That(statusCode).IsEqualTo(System.Net.HttpStatusCode.Conflict);
+        await Assert.That(statusCode).IsEqualTo(HttpStatusCode.Conflict);
     }
 
     [Test]
@@ -648,7 +648,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(response).IsNotNull();
 
         // Assert
-        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
     }
 
     [Test]
@@ -779,7 +779,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                 Player = world.Player with
                 {
                     Subscribers = sample.Subs,
-                    Drama = Enum.Parse<Domain.Worlds.WorldDrama>(sample.Drama, true),
+                    Drama = Enum.Parse<WorldDrama>(sample.Drama, true),
                 },
             },
                 world.Version,

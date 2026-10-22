@@ -695,7 +695,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(response).IsNotNull();
 
         // Assert
-        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
         var playerRepository = Factory.Services.GetRequiredService<IPlayerRepository>();
         await Assert.That(await playerRepository.GetPlayerAsync(TelegramUserId.From(8411), CancellationToken.None)).IsNull();
     }
@@ -788,8 +788,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             await friendApi.Posts.ModeratePublicationAsync(generation.PublicationId, worldId, CancellationToken.None);
 
         // Assert
-        var postId = first.OfType<Reki.Contracts.Posts.ResultLiveEvent>().Single().Result.PostId;
-        await Assert.That(repeated.OfType<Reki.Contracts.Posts.ResultLiveEvent>().Single().Result.PostId)
+        var postId = first.OfType<ResultLiveEvent>().Single().Result.PostId;
+        await Assert.That(repeated.OfType<ResultLiveEvent>().Single().Result.PostId)
             .IsEqualTo(postId);
         await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
             .IsEqualTo(15);
@@ -998,7 +998,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         using var api = Factory.CreateApiClient();
         var response = await Assert.ThrowsAsync<PlayerApiException>(() => api.Player.GetInvitationAsync(CancellationToken.None));
         await Assert.That(response).IsNotNull();
-        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.Unauthorized);
+        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
     }
 
     [Test]
@@ -1007,7 +1007,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         using var api = Factory.CreateApiClient(8583);
         var response = await Assert.ThrowsAsync<PlayerApiException>(() => api.Player.GetInvitationAsync(CancellationToken.None));
         await Assert.That(response).IsNotNull();
-        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.NotFound);
+        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
     }
 
     private Task<BsonDocument> GetStoredInviteAsync(string inviteeId) =>
