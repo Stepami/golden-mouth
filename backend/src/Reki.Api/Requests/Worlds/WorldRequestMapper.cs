@@ -49,8 +49,12 @@ internal static partial class WorldRequestMapper
     private static DateTimeOffset InitialPlayerPeriod() => default;
 
     private static IReadOnlyList<WorldRule> MapRules(IReadOnlyList<WorldRuleRequest> source) =>
-        [.. source.Where(rule => rule.Text != "Без тем 18+ и травли по внешности")
-            .Select(rule => new WorldRule(rule.Text, false)), new WorldRule("Без тем 18+ и травли по внешности", true)];
+    [
+        .. source
+            .Where(rule => rule.Text != "Без тем 18+ и травли по внешности")
+            .Select(rule => new WorldRule(rule.Text, false)),
+        new("Без тем 18+ и травли по внешности", true)
+    ];
 
     [MapperIgnoreSource(nameof(WorldStarRequest.Relation))]
     [MapValue(nameof(WorldStar.Relation), 0)]
