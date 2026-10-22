@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
 using Reki.Application.Common;
-using Reki.Application.Worlds;
+using Reki.Application.Worlds.CreateWorldCommand;
+using Reki.Application.Worlds.GetWorldTemplates;
+using Reki.Application.Worlds.UpdateWorldCommand;
 using Reki.Contracts.Worlds;
 using Reki.Domain.Worlds;
 

@@ -12,6 +12,7 @@ using Reki.Infrastructure.Serialization;
 using TickerQ.Exceptions;
 using TickerQ.Utilities.Base;
 using TickerQ.Utilities.Interfaces;
+using StarAgentInstructions = Reki.Application.Common.AI.StarAgentInstructions;
 
 namespace Reki.Infrastructure.Jobs;
 

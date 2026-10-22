@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Reki.Application.Telemetry.SubmitAnalyticsCommand;
 using Reki.Contracts.Telemetry;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;

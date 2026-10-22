@@ -1,0 +1,20 @@
+using Mediator;
+using Reki.Application.Common;
+
+namespace Reki.Application.Telemetry.ReportCommentCommand;
+
+public sealed class ReportCommentCommandHandler(
+    ProductTelemetry telemetry,
+    IRekiContextAccessor rekiContextAccessor)
+    : ICommandHandler<ReportComment>
+{
+    public async ValueTask<Unit> Handle(
+        ReportComment request,
+        CancellationToken cancellationToken)
+    {
+        var player = await rekiContextAccessor.Context.Player;
+        telemetry.Track(player.Id, "report", new Dictionary<string, string>());
+        return Unit.Value;
+    }
+}
+

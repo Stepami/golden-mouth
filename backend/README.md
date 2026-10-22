@@ -146,4 +146,6 @@ The active-challenge endpoint returns an empty HTTP 200 body when there is no ch
 
 ## Persistence
 
+Application messages and handlers are grouped by use case inside their subdomain: `Posts/AddReplyCommand/` contains `AddReply` and `AddReplyCommandHandler`; `Events/GetTodayEvent/` contains `TodayEventQuery` and `TodayEventQueryHandler`. Helpers used by one use case live beside it, including its result models and adapter ports. Helpers shared by several use cases in one subdomain stay at the subdomain root. Cross-subdomain AI generation and safety components, request context, transactions, and the shared balance configuration live in `Common`.
+
 Persistence ports live beside their application features. Each Mongo repository handles one entity: player, world (including templates), post, publication, invitation, star conversation, daily event, or challenge. Handlers, request context, and jobs depend directly on the ports they use. `IGameStore` / `MongoGameStore` retains multi-entity transactions for post/reply commits and deletion of all player data. Player deletion reads owned world IDs and deletes related documents and the player in one transaction; operations run sequentially on the same session. Public story world ownership is verified in the application handler before rendering.

@@ -1,8 +1,7 @@
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Application.Common;
-using Reki.Application.Posts;
+using Reki.Application.Posts.GetPublicStoryCard;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 

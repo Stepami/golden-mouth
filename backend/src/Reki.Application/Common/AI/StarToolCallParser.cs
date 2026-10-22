@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
+using Reki.Application.Posts;
 using Reki.Domain.Social;
 
 namespace Reki.Application.Common.AI;

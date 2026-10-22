@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
 using Reki.Application.Common;
-using Reki.Application.Telemetry;
+using Reki.Application.Telemetry.ReportCommentCommand;
+using Reki.Application.Telemetry.SubmitAnalyticsCommand;
 using Reki.Contracts.Telemetry;
 using Reki.Domain.Posts;
 

@@ -2,7 +2,8 @@ using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
-using Reki.Application.Events;
+using Reki.Application.Events.AnswerEventCommand;
+using Reki.Application.Events.GetTodayEvent;
 using Reki.Contracts.Events;
 using DomainEventId = Reki.Domain.Events.EventId;
 

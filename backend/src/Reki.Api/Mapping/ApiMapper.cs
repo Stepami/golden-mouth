@@ -1,6 +1,8 @@
 using System.Text.Json;
-using Reki.Application.Social;
-using Reki.Application.Telemetry;
+using Reki.Application.Social.GetDirectMessages;
+using Reki.Application.Social.GetFriends;
+using Reki.Application.Social.SendDirectMessageCommand;
+using Reki.Application.Telemetry.SubmitAnalyticsCommand;
 using Reki.Contracts.Events;
 using Reki.Contracts.Player;
 using Reki.Contracts.Social;

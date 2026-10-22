@@ -52,13 +52,15 @@ backend/
 ```text
 Reki.Api/<Feature>/<UseCase>/Controller.cs
 Reki.Contracts/<Feature>/Request.cs, Response.cs
-Reki.Application/<Feature>/<UseCase>/Command.cs|Query.cs, Handler.cs, Mapper.cs
+Reki.Application/<Feature>/<Action>Command/<Action>.cs, <Action>CommandHandler.cs
+Reki.Application/<Feature>/Get<Data>/<Data>Query.cs, <Data>QueryHandler.cs
 Reki.Domain/<Feature>/... aggregates, entities, value objects, domain events
 Reki.Infrastructure/<Feature>/... repositories, BSON mappings, external adapters
 Reki.Tests/<Feature>/<UseCase>/... component tests
 ```
 
 - Один use case хранит рядом свои command/query, handler, validation, result и ports, если они не переиспользуются другим use case.
+- В Application папка команды называется `<Message>Command` (`AddReplyCommand`), папка query — `Get` + имя получаемых данных без суффикса `Query` (`TodayEventQuery` → `GetTodayEvent`). Namespace соответствует расположению файла. Вспомогательные сервисы, модели и ports одного use case находятся в его папке, даже если их также использует внешний adapter. Типы нескольких use case одного поддомена остаются в корне папки поддомена. `Common` содержит только общие для нескольких поддоменов компоненты; конфигурационные модели общего баланса и связанные с ними вложенные типы остаются вместе.
 - Все публичные API request/response DTO и связанные enum находятся в `Reki.Contracts`, остаются immutable и не содержат бизнес-логики. Application может зависеть от `Contracts` для типизированных входов и готовых ответов; `Contracts` не зависит от остальных production-проектов. В `Contracts` разрешён `FrameworkReference` на `Microsoft.AspNetCore.App` для штатных MVC-атрибутов HTTP-контрактов (`FromQuery`, `BindRequired` и аналогичных метаданных привязки). Контроллеры, middleware и обработка HTTP-запросов остаются в `Api`; самописные провайдеры метаданных вместо штатных атрибутов не добавлять.
 - Domain организуется вокруг business concepts и aggregate boundaries: не дублируй aggregate только ради зеркальной папки каждого handler.
 - Infrastructure-код, специфичный для use case, лежит в том же feature slice; общий repository/serializer остаётся на уровне feature.
