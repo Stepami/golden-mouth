@@ -4,7 +4,7 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
-namespace Reki.Application.Common;
+namespace Reki.Application;
 
 /// <summary>Coordinates persistence operations involving multiple entities.</summary>
 public interface IGameStore

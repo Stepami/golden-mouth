@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Reki.Application.Common;
-using Reki.Application.Common.Balance;
+using Reki.Application.Balance;
 using Reki.Application.Player;
 using Reki.Application.Worlds;
 using TickerQ.Utilities.Base;

@@ -1,4 +1,3 @@
-using Reki.Domain.Common;
 using Reki.Domain.Posts;
 using Vogen;
 

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
-using Reki.Application.Common;
+using Reki.Application.RekiContext;
 using Reki.Application.Worlds.CreateWorldCommand;
 using Reki.Application.Worlds.GetWorldTemplates;
 using Reki.Application.Worlds.UpdateWorldCommand;

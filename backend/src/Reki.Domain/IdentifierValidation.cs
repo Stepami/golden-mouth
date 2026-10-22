@@ -1,6 +1,6 @@
 using Vogen;
 
-namespace Reki.Domain.Common;
+namespace Reki.Domain;
 
 internal static class IdentifierValidation
 {

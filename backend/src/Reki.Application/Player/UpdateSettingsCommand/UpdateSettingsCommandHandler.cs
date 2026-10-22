@@ -1,7 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Options;
-using Reki.Application.Common;
-using Reki.Application.Common.Balance;
+using Reki.Application.Balance;
+using Reki.Application.RekiContext;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Player.UpdateSettingsCommand;

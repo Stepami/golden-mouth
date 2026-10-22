@@ -1,4 +1,4 @@
-namespace Reki.Application.Common.Balance;
+namespace Reki.Application.Balance;
 
 public sealed record WorldBalance(
     double GrowthCoefficient,

@@ -1,4 +1,3 @@
-using Reki.Domain.Common;
 using Vogen;
 
 namespace Reki.Domain.Telemetry;

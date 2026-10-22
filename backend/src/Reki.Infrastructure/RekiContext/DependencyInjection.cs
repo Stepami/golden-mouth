@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Reki.Application.Common;
+using Reki.Application.RekiContext;
 using TgMiniAppAuth;
 
 namespace Reki.Infrastructure.RekiContext;

@@ -1,4 +1,4 @@
-using Reki.Application.Common.Balance;
+using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;

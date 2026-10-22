@@ -2,7 +2,7 @@ using System.Globalization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
-namespace Reki.Application.Common.Balance;
+namespace Reki.Application.Balance;
 
 /// <inheritdoc/>
 public sealed class GameBalanceOptionsFactory(

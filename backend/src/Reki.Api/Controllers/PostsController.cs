@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Application.Common;
 using Reki.Application.Posts;
 using Reki.Application.Posts.AddReplyCommand;
 using Reki.Application.Posts.GeneratePublicationCommand;
@@ -9,6 +8,7 @@ using Reki.Application.Posts.GetPostDetail;
 using Reki.Application.Posts.GetPublicationStatus;
 using Reki.Application.Posts.GetWorldPosts;
 using Reki.Application.Posts.PublishPostCommand;
+using Reki.Application.RekiContext;
 using Reki.Contracts.Common;
 using Reki.Contracts.Posts;
 using Reki.Domain.Posts;

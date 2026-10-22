@@ -1,7 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Options;
-using Reki.Application.Common;
-using Reki.Application.Common.Balance;
+using Reki.Application.Balance;
+using Reki.Application.RekiContext;
 
 namespace Reki.Application.Player.ClaimPlusInterestCommand;
 

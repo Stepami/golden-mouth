@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Options;
-using Reki.Application.Common.Balance;
 
-namespace Reki.Application.Common;
+namespace Reki.Application.Balance;
 
 public sealed class GameDayPeriod(TimeProvider timeProvider, IOptions<GameBalance> balance)
 {

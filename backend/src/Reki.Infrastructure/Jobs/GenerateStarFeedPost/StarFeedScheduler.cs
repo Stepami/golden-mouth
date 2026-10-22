@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Reki.Application.Common.Balance;
+using Reki.Application.Balance;
 using Reki.Application.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;

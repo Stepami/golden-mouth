@@ -1,4 +1,4 @@
-﻿namespace Reki.Application.Common;
+﻿namespace Reki.Application.RekiContext;
 
 public interface IRekiContextAccessor
 {

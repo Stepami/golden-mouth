@@ -1,5 +1,5 @@
 using Mediator;
-using Reki.Application.Common;
+using Reki.Application.RekiContext;
 
 namespace Reki.Application.Telemetry.ReportCommentCommand;
 

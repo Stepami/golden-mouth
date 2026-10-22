@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Reki.Application.Common;
+using Reki.Application.RekiContext;
 
 namespace Reki.Infrastructure.RekiContext;
 

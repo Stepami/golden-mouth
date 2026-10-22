@@ -1,7 +1,7 @@
 ﻿using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 
-namespace Reki.Application.Common;
+namespace Reki.Application.RekiContext;
 
 public interface IRekiContext
 {

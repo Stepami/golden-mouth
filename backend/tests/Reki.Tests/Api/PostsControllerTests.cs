@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Application.Common.Balance;
+using Reki.Application.Balance;
 using Reki.Application.Player;
 using Reki.Application.Worlds;
 using Reki.Contracts.Player;

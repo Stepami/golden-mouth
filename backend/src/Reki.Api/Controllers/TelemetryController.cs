@@ -2,7 +2,7 @@ using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Mapping;
-using Reki.Application.Common;
+using Reki.Application.RekiContext;
 using Reki.Application.Telemetry.ReportCommentCommand;
 using Reki.Application.Telemetry.SubmitAnalyticsCommand;
 using Reki.Contracts.Telemetry;

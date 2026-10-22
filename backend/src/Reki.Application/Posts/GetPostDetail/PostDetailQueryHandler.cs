@@ -1,7 +1,7 @@
 using Mediator;
-using Reki.Application.Common;
 using Reki.Application.Exceptions;
 using Reki.Application.Posts.GetPost;
+using Reki.Application.RekiContext;
 using Reki.Contracts.Posts;
 
 namespace Reki.Application.Posts.GetPostDetail;
