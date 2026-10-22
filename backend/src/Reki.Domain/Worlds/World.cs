@@ -62,18 +62,6 @@ public sealed record World
 
     public bool HasStar(StarId starId, string name) => Stars.Any(star => star.Id == starId && star.Name == name);
 
-    public World StartNewPeriod(DateTimeOffset periodStart, int restedPosts) => this with
-    {
-        Stars = Stars.Select(star => star with { RelationGainedInPeriod = 0, RelationPeriodStartedAtUtc = periodStart }).ToArray(),
-        Version = Version + 1,
-        Player = Player with
-        {
-            PeriodStartedAtUtc = periodStart,
-            RestedPostsRemaining = restedPosts,
-            Wants = Player.Wants.Select(want => want with { Done = false }).ToArray(),
-        },
-    };
-
     public World PublishPost(
         long subscriberDelta,
         bool viral,

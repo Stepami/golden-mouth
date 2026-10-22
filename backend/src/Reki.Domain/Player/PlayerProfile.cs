@@ -68,17 +68,6 @@ public sealed record PlayerProfile
         };
     }
 
-    public PlayerProfile StartNewPeriod(DateTimeOffset periodStartedAtUtc, int energy)
-    {
-        return this with
-        {
-            EnergyUsed = 0,
-            Energy = energy,
-            PostsPeriodStartedAtUtc = periodStartedAtUtc,
-            Version = Version + 1,
-        };
-    }
-
     public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, int cost) =>
         SpendEnergy(cost) with { Skills = skills };
 

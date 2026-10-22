@@ -36,8 +36,6 @@ internal static class StarToolCallParser
         {
             "react" => ParseReaction(arguments),
             "comment" => ParseComment(arguments),
-            "repost" => ParseRepost(arguments),
-            "start_event" => ParseEvent(arguments),
             _ => throw new InvalidOperationException("The model returned an unknown action."),
         };
     }
@@ -70,26 +68,6 @@ internal static class StarToolCallParser
         return tone is "support" or "critique" or "hate"
             ? tone
             : throw new InvalidOperationException("The model returned an invalid comment tone.");
-    }
-
-    private static StarRepostAction ParseRepost(IDictionary<string, object?> arguments)
-    {
-        EnsureExactKeys(arguments, ["star_id", "text"]);
-        return new StarRepostAction(
-            StarId.From(GetString(arguments, "star_id", 40, allowEmpty: false)),
-            GetString(arguments, "text", 500, allowEmpty: false));
-    }
-
-    private static StarEventAction ParseEvent(IDictionary<string, object?> arguments)
-    {
-        EnsureExactKeys(arguments, ["type", "text"]);
-        var type = GetString(arguments, "type", 20, allowEmpty: false);
-        if (type is not ("collab" or "rumor" or "chance" or "hate"))
-        {
-            throw new InvalidOperationException("The model returned an unknown event type.");
-        }
-
-        return new StarEventAction(type, GetString(arguments, "text", 1000, allowEmpty: false));
     }
 
     private static IReadOnlyList<StarReason> GetReasons(
@@ -231,8 +209,4 @@ internal static class StarToolCallParser
         double Topic,
         IReadOnlyList<StarReason> Reasons,
         bool OnTopic) : IStarAction;
-
-    internal sealed record StarRepostAction(StarId StarId, string Text) : IStarAction;
-
-    internal sealed record StarEventAction(string Type, string Text) : IStarAction;
 }

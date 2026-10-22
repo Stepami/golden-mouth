@@ -173,8 +173,4 @@ public sealed partial class ApiMapper
 
     [MapEnum(EnumMappingStrategy.ByName)]
     private partial Drama MapDrama(WorldDrama source);
-
-    private partial WorldRuleResponse MapWorldRule(WorldRule source);
-
-    private partial WorldRule MapWorldRule(WorldRuleResponse source);
 }
