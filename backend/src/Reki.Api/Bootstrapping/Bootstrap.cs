@@ -1,6 +1,9 @@
 using Kot.MongoDB.Migrations;
 using Microsoft.AspNetCore.DataProtection;
+using Reki.Api.Common;
 using Reki.Api.OpenApi;
+using Reki.Application;
+using Reki.Application.Common;
 using Reki.Infrastructure;
 using Reki.Infrastructure.Serialization;
 using Serilog;
@@ -59,6 +62,8 @@ internal static class Bootstrap
             return;
         }
 
+        builder.Services.AddSingleton<IRekiContextAccessor, HttpRekiContextAccessor>();
+        builder.Services.AddScoped<IRekiContext, RekiContext>();
         builder.Services
             .AddApplication()
             .AddInfrastructure(builder.Configuration, ApiJsonSerializerContext.Default);

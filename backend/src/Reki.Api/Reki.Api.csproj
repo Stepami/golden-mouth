@@ -14,7 +14,6 @@
 
     <ItemGroup>
         <PackageReference Include="DotNext.Threading"/>
-        <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all"/>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi"/>
         <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all"/>
         <PackageReference Include="Riok.Mapperly" PrivateAssets="all"/>

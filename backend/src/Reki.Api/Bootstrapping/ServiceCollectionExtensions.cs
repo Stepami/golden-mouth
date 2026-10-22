@@ -1,18 +1,9 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.Extensions.Options;
-using Reki.Api.Common;
 using Reki.Api.Common.Errors;
 using Reki.Api.Mapping;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
-using Reki.Application;
-using Reki.Application.Common;
-using Reki.Application.Common.Balance;
-using Reki.Application.Posts.AI;
-using Reki.Application.Posts.AI.Safety;
-using Reki.Application.Posts.PublishPostCommand;
-using Reki.Application.Telemetry;
 using Reki.Infrastructure.Serialization;
 using TgMiniAppAuth;
 
@@ -20,31 +11,6 @@ namespace Reki.Api.Bootstrapping;
 
 internal static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
-    {
-        services.AddOptions<GameBalance>()
-            .Validate(
-                balance => balance.StarFeedOpenProbability is >= 0 and <= 1,
-                "Feed open probability must be between zero and one.")
-            .ValidateOnStart();
-        services.AddTransient<IOptionsFactory<GameBalance>, GameBalanceOptionsFactory>();
-        services.AddMediator(options =>
-        {
-            options.Assemblies = [typeof(ApplicationAssemblyMarker)];
-            options.ServiceLifetime = ServiceLifetime.Singleton;
-        });
-        services.AddSingleton<GameDayPeriod>();
-        services.AddSingleton<PlayerSafetyGuard>();
-        services.AddSingleton<PostProgressionCalculator>();
-        services.AddSingleton<ProductTelemetry>();
-        services.AddSingleton<StarTurnGenerator>();
-
-        services.AddSingleton<IRekiContextAccessor, HttpRekiContextAccessor>();
-        services.AddScoped<IRekiContext, RekiContext>();
-
-        return services;
-    }
-
     public static IServiceCollection AddApi(this IServiceCollection services)
     {
         services.AddExceptionHandler<ApiExceptionHandler>();
