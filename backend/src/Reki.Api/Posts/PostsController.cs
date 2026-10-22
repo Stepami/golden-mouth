@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Application.Common;
 using Reki.Application.Posts;
+using Reki.Contracts.Common;
 using Reki.Contracts.Posts;
 using Reki.Domain.Posts;
 
@@ -76,7 +77,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
 
     [HttpGet("feed", Name = "GetFeed")]
     [ActionName("GetFeed")]
-    public async Task<Ok<FeedPageResponse>> GetFeedAsync(
+    public async Task<Ok<PageResponse<FeedItemResponse>>> GetFeedAsync(
         [FromQuery] WorldPostsRequest request,
         [FromServices] IRekiContext rekiContext,
         CancellationToken cancellationToken)
@@ -87,12 +88,12 @@ public sealed class PostsController(ISender sender) : ControllerBase
         var worlds = await rekiContext.Worlds;
         IReadOnlyList<FeedItemResponse> response =
             [.. result.Items.Select(post => PostContractMapper.MapFeedItem(post, worlds[post.WorldId]))];
-        return TypedResults.Ok(new FeedPageResponse(response, result.PageNumber, result.HasNext));
+        return TypedResults.Ok(new PageResponse<FeedItemResponse>(response, result.PageNumber, result.HasNext));
     }
 
     [HttpGet("posts/mine", Name = "GetChannelPosts")]
     [ActionName("GetChannelPosts")]
-    public async Task<Ok<ChannelPostsPageResponse>> GetChannelPostsAsync(
+    public async Task<Ok<PageResponse<ChannelPostResponse>>> GetChannelPostsAsync(
         [FromQuery] WorldPostsRequest request,
         CancellationToken cancellationToken)
     {
@@ -100,7 +101,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
             new WorldPostsQuery(Domain.Worlds.WorldId.From(request.WorldId), request.PageNumber, request.PageSize),
             cancellationToken);
         IReadOnlyList<ChannelPostResponse> response = result.Items.Select(PostContractMapper.MapChannelPost).ToArray();
-        return TypedResults.Ok(new ChannelPostsPageResponse(response, result.PageNumber, result.HasNext));
+        return TypedResults.Ok(new PageResponse<ChannelPostResponse>(response, result.PageNumber, result.HasNext));
     }
 
     [HttpGet("posts/{postId}", Name = "GetPost")]

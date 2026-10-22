@@ -773,7 +773,7 @@ export class PostsClient {
      * @param pageSize (optional) 
      * @return OK
      */
-    getFeed(worldId: string, pageNumber?: number | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<FeedPageResponse>> {
+    getFeed(worldId: string, pageNumber?: number | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
         let url_ = this.baseUrl + "/feed?";
         if (worldId === undefined || worldId === null)
             throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
@@ -802,13 +802,13 @@ export class PostsClient {
         });
     }
 
-    protected processGetFeed(response: Response): Promise<SwaggerResponse<FeedPageResponse>> {
+    protected processGetFeed(response: Response): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as FeedPageResponse;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PageResponseOfFeedItemResponse;
             return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
@@ -816,7 +816,7 @@ export class PostsClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<SwaggerResponse<FeedPageResponse>>(new SwaggerResponse(status, _headers, null as any));
+        return Promise.resolve<SwaggerResponse<PageResponseOfFeedItemResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
@@ -824,7 +824,7 @@ export class PostsClient {
      * @param pageSize (optional) 
      * @return OK
      */
-    getChannelPosts(worldId: string, pageNumber?: number | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<ChannelPostsPageResponse>> {
+    getChannelPosts(worldId: string, pageNumber?: number | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfChannelPostResponse>> {
         let url_ = this.baseUrl + "/posts/mine?";
         if (worldId === undefined || worldId === null)
             throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
@@ -853,13 +853,13 @@ export class PostsClient {
         });
     }
 
-    protected processGetChannelPosts(response: Response): Promise<SwaggerResponse<ChannelPostsPageResponse>> {
+    protected processGetChannelPosts(response: Response): Promise<SwaggerResponse<PageResponseOfChannelPostResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ChannelPostsPageResponse;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PageResponseOfChannelPostResponse;
             return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
@@ -867,7 +867,7 @@ export class PostsClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<SwaggerResponse<ChannelPostsPageResponse>>(new SwaggerResponse(status, _headers, null as any));
+        return Promise.resolve<SwaggerResponse<PageResponseOfChannelPostResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
@@ -1429,15 +1429,6 @@ export interface ChannelPostResponse {
     [key: string]: any;
 }
 
-/** A page of the player's channel posts. */
-export interface ChannelPostsPageResponse {
-    items: ChannelPostResponse[];
-    pageNumber: number;
-    hasNext: boolean;
-
-    [key: string]: any;
-}
-
 export interface ClientLogBatchRequest {
     session: string;
     entries: ClientLogEntryRequest[];
@@ -1573,15 +1564,6 @@ export interface FeedItemResponse {
     [key: string]: any;
 }
 
-/** A page of world feed posts. */
-export interface FeedPageResponse {
-    items: FeedItemResponse[];
-    pageNumber: number;
-    hasNext: boolean;
-
-    [key: string]: any;
-}
-
 export interface ForgetMemoryRequest {
     fact: string;
 
@@ -1668,6 +1650,24 @@ export interface OnboardingRequest {
     birthGroup: BirthGroup;
     ageBand?: string | null;
     address: Address;
+
+    [key: string]: any;
+}
+
+/** A page of API response items. */
+export interface PageResponseOfChannelPostResponse {
+    items: ChannelPostResponse[];
+    pageNumber: number;
+    hasNext: boolean;
+
+    [key: string]: any;
+}
+
+/** A page of API response items. */
+export interface PageResponseOfFeedItemResponse {
+    items: FeedItemResponse[];
+    pageNumber: number;
+    hasNext: boolean;
 
     [key: string]: any;
 }

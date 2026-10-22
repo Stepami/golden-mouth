@@ -2,6 +2,7 @@ using System.Net.ServerSentEvents;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Reki.Contracts.Common;
 using Reki.Contracts.Events;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
@@ -42,8 +43,8 @@ namespace Reki.Infrastructure.Serialization;
 [JsonSerializable(typeof(UpdateSettingsRequest))]
 [JsonSerializable(typeof(FeedItemResponse[]))]
 [JsonSerializable(typeof(WorldPostsRequest))]
-[JsonSerializable(typeof(FeedPageResponse))]
-[JsonSerializable(typeof(ChannelPostsPageResponse))]
+[JsonSerializable(typeof(PageResponse<FeedItemResponse>))]
+[JsonSerializable(typeof(PageResponse<ChannelPostResponse>))]
 [JsonSerializable(typeof(IReadOnlyList<FeedItemResponse>))]
 [JsonSerializable(typeof(ChannelPostResponse[]))]
 [JsonSerializable(typeof(IReadOnlyList<ChannelPostResponse>))]
