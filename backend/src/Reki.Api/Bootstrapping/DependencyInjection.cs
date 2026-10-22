@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Authorization;
-using Reki.Api.Common.Errors;
 using Reki.Api.Mapping;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;

@@ -9,6 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="DotNext.Threading"/>
         <PackageReference Include="Kot.MongoDB.Migrations.DI" />
         <PackageReference Include="Microsoft.Extensions.AI"/>
         <PackageReference Include="Microsoft.Extensions.AI.OpenAI"/>

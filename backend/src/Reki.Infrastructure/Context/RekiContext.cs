@@ -8,7 +8,7 @@ using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 using TgMiniAppAuth.AuthContext.User;
 
-namespace Reki.Api.Common;
+namespace Reki.Infrastructure.Context;
 
 internal sealed class RekiContext : IRekiContext
 {

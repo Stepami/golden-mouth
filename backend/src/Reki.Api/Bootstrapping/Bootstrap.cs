@@ -1,13 +1,10 @@
 using Kot.MongoDB.Migrations;
 using Microsoft.AspNetCore.DataProtection;
-using Reki.Api.Common;
 using Reki.Api.OpenApi;
 using Reki.Application;
-using Reki.Application.Common;
 using Reki.Infrastructure;
 using Reki.Infrastructure.Serialization;
 using Serilog;
-using TgMiniAppAuth;
 using TickerQ.DependencyInjection;
 
 namespace Reki.Api.Bootstrapping;
@@ -54,7 +51,6 @@ internal static class Bootstrap
     private static void ConfigureServices(WebApplicationBuilder builder)
     {
         builder.Services.AddHttpContextAccessor();
-        builder.Services.AddTgMiniAppAuth(builder.Configuration);
         builder.Services.AddApi();
         if (OpenApiGeneration.IsRunning)
         {
@@ -62,8 +58,6 @@ internal static class Bootstrap
             return;
         }
 
-        builder.Services.AddSingleton<IRekiContextAccessor, HttpRekiContextAccessor>();
-        builder.Services.AddScoped<IRekiContext, RekiContext>();
         builder.Services
             .AddApplication()
             .AddInfrastructure(builder.Configuration, ApiJsonSerializerContext.Default);

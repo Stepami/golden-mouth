@@ -1,6 +1,8 @@
-﻿using Reki.Application.Common;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Reki.Application.Common;
 
-namespace Reki.Api.Common;
+namespace Reki.Infrastructure.Context;
 
 internal sealed class HttpRekiContextAccessor(
     IHttpContextAccessor httpContextAccessor) : IRekiContextAccessor

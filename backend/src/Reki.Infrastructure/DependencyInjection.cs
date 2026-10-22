@@ -19,6 +19,7 @@ using Reki.Application.Posts.AI;
 using Reki.Application.Posts.GetPublicStoryCard;
 using Reki.Application.Worlds;
 using Reki.Infrastructure.AI;
+using Reki.Infrastructure.Context;
 using Reki.Infrastructure.Events;
 using Reki.Infrastructure.Health;
 using Reki.Infrastructure.Invites;
@@ -28,6 +29,7 @@ using Reki.Infrastructure.Player;
 using Reki.Infrastructure.Posts;
 using Reki.Infrastructure.Rendering;
 using Reki.Infrastructure.Worlds;
+using TgMiniAppAuth;
 using TickerQ.DependencyInjection;
 using TickerQ.Instrumentation.OpenTelemetry;
 using TickerQ.MongoDB.DependencyInjection;
@@ -38,8 +40,13 @@ namespace Reki.Infrastructure;
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(
-        this IServiceCollection services, IConfiguration configuration, IJsonTypeInfoResolver jsonContext)
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IJsonTypeInfoResolver jsonContext)
     {
+        services.AddTgMiniAppAuth(configuration);
+        services.AddSingleton<IRekiContextAccessor, HttpRekiContextAccessor>();
+        services.AddScoped<IRekiContext, RekiContext>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
         services.AddObservability();
@@ -51,7 +58,10 @@ public static class DependencyInjection
         return services;
     }
 
-    private static void AddGameJobs(this IServiceCollection services, IConfiguration configuration, IJsonTypeInfoResolver jsonContext)
+    private static void AddGameJobs(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IJsonTypeInfoResolver jsonContext)
     {
         services.AddOptions<JobsOptions>().BindConfiguration(JobsOptions.SectionName);
         services.AddSingleton<IStarFeedScheduler, StarFeedScheduler>();

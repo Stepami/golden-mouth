@@ -5,7 +5,7 @@ using Reki.Application.Exceptions;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Contracts.Posts;
 
-namespace Reki.Api.Common.Errors;
+namespace Reki.Api;
 
 internal sealed partial class ApiExceptionHandler(
     IProblemDetailsService problemDetailsService,

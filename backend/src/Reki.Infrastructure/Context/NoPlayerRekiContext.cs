@@ -3,7 +3,7 @@ using Reki.Application.Exceptions;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 
-namespace Reki.Api.Common;
+namespace Reki.Infrastructure.Context;
 
 internal sealed class NoPlayerRekiContext : IRekiContext
 {
