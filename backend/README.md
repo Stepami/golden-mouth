@@ -99,7 +99,7 @@ dotnet build Reki.slnx --configuration Release
 dotnet test --project tests/Reki.Tests/Reki.Tests.csproj --configuration Release --no-build
 ```
 
-Building the API produces an OpenAPI document. Building the test project regenerates its typed NSwag client from that document before compilation; the client reuses DTOs from `Reki.Contracts` instead of generating copies.
+Building the API produces an OpenAPI document. Building the test project regenerates its typed NSwag client from that document before compilation; the client reuses request DTOs from `Reki.Api` and response DTOs from `Reki.Application` instead of generating copies.
 
 ## Scheduled maintenance (TickerQ)
 
@@ -124,7 +124,7 @@ Type-safe `AddAsync<GenerateStarFeedPostJob, StarFeedRequest>` uses `RekiTimeTic
 
 Use the existing local NSwag 14.7.1 tool for two independent clients:
 
-- `backend/src/Reki.Api/nswag.json` generates the ignored C# test client, using DTOs from `Reki.Contracts` (`generateDtoTypes=false`). The test project runs it before compilation.
+- `backend/src/Reki.Api/nswag.json` generates the ignored C# test client, using request DTOs from `Reki.Api` and response DTOs from `Reki.Application` (`generateDtoTypes=false`). The test project runs it before compilation.
 - `frontend/nswag.frontend.json` generates Fetch clients and DTO interfaces in `frontend/src/api/generated/reki-api.ts`. The API project runs it after build-time OpenAPI generation. The TypeScript file is committed; OpenAPI and the C# client remain ignored.
 
 Update workflow: **change API → build API → commit TypeScript client → check frontend**.

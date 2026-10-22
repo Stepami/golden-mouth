@@ -1,4 +1,4 @@
-﻿{
+{
   "runtime": "Net100",
   "defaultVariables": "Configuration=Debug",
   "documentGenerator": {
@@ -45,15 +45,21 @@
       "includedOperationIds": [],
       "excludedOperationIds": [],
       "additionalNamespaceUsages": [
-        "PageResponseOfFeedItemResponse = Reki.Contracts.Common.PageResponse<Reki.Contracts.Posts.FeedItemResponse>",
-        "PageResponseOfChannelPostResponse = Reki.Contracts.Common.PageResponse<Reki.Contracts.Posts.ChannelPostResponse>",
+        "PageResponseOfFeedItemResponse = Reki.Application.Responses.PageResponse<Reki.Application.Posts.Responses.FeedItemResponse>",
+        "PageResponseOfChannelPostResponse = Reki.Application.Responses.PageResponse<Reki.Application.Posts.Responses.ChannelPostResponse>",
         "Microsoft.AspNetCore.Mvc",
-        "Reki.Contracts.Events",
-        "Reki.Contracts.Player",
-        "Reki.Contracts.Posts",
-        "Reki.Contracts.Social",
-        "Reki.Contracts.Telemetry",
-        "Reki.Contracts.Worlds"
+        "Reki.Api.Requests.Events",
+        "Reki.Api.Requests.Player",
+        "Reki.Api.Requests.Posts",
+        "Reki.Api.Requests.Social",
+        "Reki.Api.Requests.Telemetry",
+        "Reki.Api.Requests.Worlds",
+        "Reki.Application.Events.Responses",
+        "Reki.Application.Player.Responses",
+        "Reki.Application.Posts.Responses",
+        "Reki.Application.Social.Responses",
+        "Reki.Application.Worlds.Responses",
+        "Reki.Domain.Worlds"
       ],
       "additionalContractNamespaceUsages": [],
       "generateOptionalParameters": false,

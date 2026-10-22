@@ -1,0 +1,33 @@
+using Reki.Application.Posts.AddReplyCommand;
+using Reki.Application.Posts.GeneratePublicationCommand;
+using Reki.Application.Posts.GetWorldPosts;
+using Reki.Domain.Posts;
+using Reki.Domain.Worlds;
+using Riok.Mapperly.Abstractions;
+
+namespace Reki.Api.Requests.Posts;
+
+[Mapper]
+internal static partial class PostRequestMapper
+{
+    public static GeneratePublication ToCommand(this StartPublicationRequest source, string worldId) =>
+        MapPublication(source, WorldId.From(worldId));
+
+    public static AddReply ToCommand(this ReplyRequest source, string postId, string worldId) =>
+        MapReply(source, PostId.From(postId), WorldId.From(worldId));
+
+    public static WorldPostsQuery ToQuery(this WorldPostsRequest source, bool feed = false) =>
+        MapQuery(source, feed);
+
+    [MapProperty(nameof(StartPublicationRequest.PublicationId), nameof(GeneratePublication.Id))]
+    private static partial GeneratePublication MapPublication(StartPublicationRequest source, WorldId worldId);
+
+    [MapProperty(nameof(ReplyRequest.CommentId), nameof(AddReply.TargetCommentId))]
+    private static partial AddReply MapReply(ReplyRequest source, PostId postId, WorldId worldId);
+
+    private static partial WorldPostsQuery MapQuery(WorldPostsRequest source, bool feed);
+
+    private static WorldId MapWorldId(string source) => WorldId.From(source);
+
+    private static CommentId? MapCommentId(string? source) => source is null ? null : CommentId.From(source);
+}

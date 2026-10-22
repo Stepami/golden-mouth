@@ -2,12 +2,13 @@ using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Api.Mapping;
+using Reki.Api.Requests.Worlds;
 using Reki.Application.RekiContext;
+using Reki.Application.Worlds;
 using Reki.Application.Worlds.CreateWorldCommand;
 using Reki.Application.Worlds.GetWorldTemplates;
+using Reki.Application.Worlds.Responses;
 using Reki.Application.Worlds.UpdateWorldCommand;
-using Reki.Contracts.Worlds;
 using Reki.Domain.Worlds;
 
 namespace Reki.Api.Controllers;
@@ -17,8 +18,7 @@ namespace Reki.Api.Controllers;
 [Route("worlds")]
 public sealed class WorldsController(
     ISender sender,
-    IRekiContext rekiContext,
-    IApiMapper mapper) : ControllerBase
+    IRekiContext rekiContext) : ControllerBase
 {
     [AllowAnonymous]
     [HttpGet("templates", Name = "GetWorldTemplates")]
@@ -26,7 +26,7 @@ public sealed class WorldsController(
     public async Task<Ok<IReadOnlyList<WorldResponse>>> GetWorldTemplatesAsync(CancellationToken cancellationToken)
     {
         var worlds = await sender.Send(new WorldTemplatesQuery(), cancellationToken);
-        return TypedResults.Ok<IReadOnlyList<WorldResponse>>([.. worlds.Select(mapper.MapWorld)]);
+        return TypedResults.Ok<IReadOnlyList<WorldResponse>>([.. worlds.Select(world => world.ToResponse())]);
     }
 
     [HttpGet(Name = "GetOwnedWorlds")]
@@ -34,7 +34,7 @@ public sealed class WorldsController(
     public async Task<Ok<IReadOnlyList<WorldResponse>>> GetOwnedWorldsAsync(CancellationToken cancellationToken)
     {
         var worlds = await rekiContext.Worlds;
-        return TypedResults.Ok<IReadOnlyList<WorldResponse>>([.. worlds.Values.Select(mapper.MapWorld)]);
+        return TypedResults.Ok<IReadOnlyList<WorldResponse>>([.. worlds.Values.Select(world => world.ToResponse())]);
     }
 
     [HttpPost(Name = "CreateWorld")]
@@ -42,9 +42,9 @@ public sealed class WorldsController(
     public async Task<Ok<WorldResponse>> CreateWorldAsync(CreateWorldRequest request, CancellationToken cancellationToken)
     {
         var world = await sender.Send(
-            new CreateWorld(mapper.MapWorldDefinition(request)),
+            request.ToCommand(),
             cancellationToken);
-        return TypedResults.Ok(mapper.MapWorld(world));
+        return TypedResults.Ok(world.ToResponse());
     }
 
     [HttpPut("{worldId}", Name = "UpdateWorld")]
@@ -54,7 +54,7 @@ public sealed class WorldsController(
         string worldId,
         CancellationToken cancellationToken)
     {
-        var command = new UpdateWorld(WorldId.From(worldId), mapper.MapWorldDefinition(request));
+        var command = request.ToCommand(worldId);
         await sender.Send(command, cancellationToken);
         return TypedResults.Ok();
     }

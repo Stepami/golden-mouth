@@ -8,9 +8,9 @@ using Reki.Application.Exceptions;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPost;
+using Reki.Application.Posts.Responses;
 using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
-using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -149,7 +149,7 @@ internal sealed partial class AddReplyCommandHandler(
             ReplyStatus.Completed,
             request.RequestId,
             Text: null,
-            Post: PostContractMapper.MapPost(post, world, player.Id),
+            Post: PostResponseMapper.MapPost(post, world, player.Id),
             EnergyLeft: player.Energy,
             Subscribers: world.Player.Subscribers,
             Code: null);

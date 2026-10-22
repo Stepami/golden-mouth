@@ -1,4 +1,3 @@
-using Reki.Contracts.Telemetry;
 using Reki.Domain.Telemetry;
 
 namespace Reki.Application.Telemetry.SubmitAnalyticsCommand;

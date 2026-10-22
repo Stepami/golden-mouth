@@ -1,11 +1,10 @@
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Api.Mapping;
+using Reki.Api.Requests.Telemetry;
 using Reki.Application.RekiContext;
 using Reki.Application.Telemetry.ReportCommentCommand;
 using Reki.Application.Telemetry.SubmitAnalyticsCommand;
-using Reki.Contracts.Telemetry;
 using Reki.Domain.Posts;
 
 namespace Reki.Api.Controllers;
@@ -16,7 +15,6 @@ namespace Reki.Api.Controllers;
 public sealed partial class TelemetryController(
     ISender sender,
     IRekiContext rekiContext,
-    IApiMapper mapper,
     ILogger<TelemetryController> logger) : ControllerBase
 {
     [HttpPost("events", Name = "SubmitAnalytics")]
@@ -26,7 +24,7 @@ public sealed partial class TelemetryController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new SubmitAnalytics(mapper.MapAnalytics(request)),
+            request.ToCommand(),
             cancellationToken);
         return TypedResults.NoContent();
     }
@@ -40,7 +38,7 @@ public sealed partial class TelemetryController(
         var player = await rekiContext.Player;
         foreach (var entry in request.Entries)
         {
-            var properties = mapper.SanitizeProperties(entry.Props);
+            var properties = entry.Props.SanitizeProperties();
             properties.TryGetValue("status", out var status);
             properties.TryGetValue("path", out var path);
             WriteClientLog(
@@ -62,9 +60,7 @@ public sealed partial class TelemetryController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new ReportComment(
-                CommentId.From(request.CommentId),
-                request.Reason),
+            request.ToCommand(),
             cancellationToken);
         return TypedResults.Ok();
     }

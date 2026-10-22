@@ -1,8 +1,8 @@
 using Mediator;
 using Reki.Application.Exceptions;
 using Reki.Application.Posts.GetPost;
+using Reki.Application.Posts.Responses;
 using Reki.Application.RekiContext;
-using Reki.Contracts.Posts;
 
 namespace Reki.Application.Posts.GetPostDetail;
 
@@ -15,6 +15,6 @@ internal sealed class PostDetailQueryHandler(ISender sender, IRekiContextAccesso
         var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var post = await sender.Send(new PostQuery(request.PostId, world.Id), cancellationToken);
-        return PostContractMapper.MapPost(post, world, player.Id);
+        return PostResponseMapper.MapPost(post, world, player.Id);
     }
 }

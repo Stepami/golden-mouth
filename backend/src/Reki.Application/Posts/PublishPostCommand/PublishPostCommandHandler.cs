@@ -8,9 +8,9 @@ using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPublication;
 using Reki.Application.Posts.GetWorldPosts;
+using Reki.Application.Posts.Responses;
 using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
-using Reki.Contracts.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 
@@ -45,7 +45,7 @@ internal sealed class PublishPostCommandHandler(
 
         if (publication is { Status: PublicationStatus.Completed, Result: not null })
         {
-            return PostContractMapper.MapLiveEvents(publication.Result, world, storedPlayer.Id);
+            return PostResponseMapper.MapLiveEvents(publication.Result, world, storedPlayer.Id);
         }
 
         if (publication.Status != PublicationStatus.ReadyForModeration)
@@ -160,7 +160,7 @@ internal sealed class PublishPostCommandHandler(
         analytics.TrackWorldAudience(updatedWorld);
         TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
         await feedScheduler.ScheduleAsync(player.Id, world.Id);
-        return PostContractMapper.MapLiveEvents(published, updatedWorld, player.Id);
+        return PostResponseMapper.MapLiveEvents(published, updatedWorld, player.Id);
     }
 
     private static double GetMedian(IReadOnlyList<long> values)

@@ -2,15 +2,16 @@ using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Reki.Api.Requests.Player;
 using Reki.Application.Invites;
 using Reki.Application.Player;
 using Reki.Application.Player.ClaimPlusInterestCommand;
 using Reki.Application.Player.DeletePlayerCommand;
 using Reki.Application.Player.GetReferral;
 using Reki.Application.Player.OnboardPlayerCommand;
+using Reki.Application.Player.Responses;
 using Reki.Application.Player.UpdateSettingsCommand;
 using Reki.Application.RekiContext;
-using Reki.Contracts.Player;
 using Reki.Domain.Player;
 using TgMiniAppAuth.AuthContext.User;
 
@@ -57,12 +58,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(
-            new OnboardPlayer(
-                TelegramUserId.From(telegramUser.User.Id),
-                ToStorageValue(request.BirthGroup),
-                request.Address.ToString().ToLowerInvariant(),
-                request.ReferralCode,
-                request.AgeBand),
+            request.ToCommand(TelegramUserId.From(telegramUser.User.Id)),
             cancellationToken);
         return TypedResults.Ok(player.ToResponse());
     }
@@ -93,11 +89,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new UpdateSettings(
-                request.Notifications,
-                request.Quiet,
-                request.Plus,
-                request.Address?.ToString().ToLowerInvariant()),
+            request.ToCommand(),
             cancellationToken);
         return TypedResults.Ok();
     }
@@ -109,7 +101,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         var bonus = await sender.Send(
-            new ClaimPlusInterest(request?.Interest ?? true),
+            request.ToCommand(),
             cancellationToken);
         return TypedResults.Ok(new PlusInterestResponse(bonus));
     }
@@ -123,15 +115,5 @@ public sealed class PlayerController(
             new DeletePlayer(),
             cancellationToken);
         return TypedResults.Ok();
-    }
-
-    private static string ToStorageValue(BirthGroup birthGroup)
-    {
-        return birthGroup switch
-        {
-            BirthGroup.Teen => "14-17",
-            BirthGroup.Adult => "18+",
-            _ => throw new ArgumentOutOfRangeException(nameof(birthGroup)),
-        };
     }
 }

@@ -8,7 +8,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Reki.Application\Reki.Application.csproj"/>
-        <ProjectReference Include="..\Reki.Contracts\Reki.Contracts.csproj"/>
         <ProjectReference Include="..\Reki.Infrastructure\Reki.Infrastructure.csproj"/>
     </ItemGroup>
 

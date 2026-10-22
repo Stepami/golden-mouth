@@ -1,5 +1,5 @@
 using Mediator;
-using Reki.Contracts.Posts;
+using Reki.Application.Posts.Responses;
 
 namespace Reki.Application.Posts.GetPublicationStatus;
 

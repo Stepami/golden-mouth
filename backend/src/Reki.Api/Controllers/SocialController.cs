@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Contracts.Social;
+using Reki.Api.Requests.Social;
+using Reki.Application.Social.Responses;
 
 namespace Reki.Api.Controllers;
 

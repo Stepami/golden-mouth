@@ -1,8 +1,8 @@
 using Mediator;
 using Reki.Application.Exceptions;
 using Reki.Application.Posts.GetPublication;
+using Reki.Application.Posts.Responses;
 using Reki.Application.RekiContext;
-using Reki.Contracts.Posts;
 
 namespace Reki.Application.Posts.GetPublicationStatus;
 
@@ -22,6 +22,6 @@ internal sealed class PublicationStatusQueryHandler(
         var worlds = await rekiContextAccessor.Context.Worlds;
         var world = worlds.GetValueOrDefault(publication.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
-        return PostContractMapper.MapPublication(publication, world);
+        return PostResponseMapper.MapPublication(publication, world);
     }
 }

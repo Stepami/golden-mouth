@@ -8,14 +8,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Api.Requests.Player;
+using Reki.Api.Requests.Posts;
+using Reki.Api.Requests.Telemetry;
 using Reki.Application.Player;
+using Reki.Application.Player.Responses;
+using Reki.Application.Posts.Responses;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
-using Reki.Contracts.Player;
-using Reki.Contracts.Posts;
-using Reki.Contracts.Telemetry;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
+using Reki.Domain.Worlds;
 
 namespace Reki.Tests.Api;
 
@@ -105,8 +108,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Act
         var onboarded = await Task.WhenAll(
-            CreatePlayerWithWorldAsync(firstApi, WorldId.Stream),
-            CreatePlayerWithWorldAsync(secondApi, WorldId.Academy));
+            CreatePlayerWithWorldAsync(firstApi, WorldTemplate.Stream),
+            CreatePlayerWithWorldAsync(secondApi, WorldTemplate.Academy));
         var current = await Task.WhenAll(
             firstApi.Player.GetCurrentPlayerAsync(CancellationToken.None),
             secondApi.Player.GetCurrentPlayerAsync(CancellationToken.None));
@@ -658,7 +661,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Task.WhenAll(
             api.Worlds.UpdateWorldAsync(
                 await GetWorldIdAsync(api),
-                DefinitionOf((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single()) with { Drama = Drama.Off },
+                DefinitionOf((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single()) with { Drama = WorldDrama.Off },
                 CancellationToken.None),
             api.Player.UpdateSettingsAsync(
                 new UpdateSettingsRequest { Address = Address.She },

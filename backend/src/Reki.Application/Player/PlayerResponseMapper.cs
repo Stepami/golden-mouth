@@ -1,7 +1,7 @@
-using Reki.Contracts.Player;
+using Reki.Application.Player.Responses;
 using Reki.Domain.Player;
 using Riok.Mapperly.Abstractions;
-using ContractSkillId = Reki.Contracts.Player.SkillId;
+using ContractSkillId = Reki.Application.Player.Responses.SkillId;
 
 namespace Reki.Application.Player;
 
@@ -15,12 +15,18 @@ public static partial class PlayerResponseMapper
             Enum.Parse<Address>(player.Address, true),
             player.Energy,
             new StreakResponse(player.StreakDays, Enumerable.Range(0, 7).Select(day => day < Math.Min(7, player.StreakDays)).ToArray(), "ещё день — и бонус"),
-            player.Skills.ToDictionary(item => Enum.Parse<ContractSkillId>(item.Key.Value, true), item => MapSkill(item.Value)),
-            new PlayerSettingsResponse(player.Settings.Notifications, player.Settings.Quiet, player.Settings.Plus),
+            MapSkills(player.Skills),
+            MapSettings(player.Settings),
             new Dictionary<string, string>(),
             player.HitOwnWorldMilestone,
             player.AgeBand ?? (player.BirthGroup == "14-17" ? "14-17" : "18+"));
     }
+
+    private static partial IReadOnlyDictionary<ContractSkillId, SkillResponse> MapSkills(IReadOnlyDictionary<Domain.Player.SkillId, SkillProgress> source);
+
+    private static ContractSkillId MapSkillId(Domain.Player.SkillId source) => Enum.Parse<ContractSkillId>(source.Value, true);
+
+    private static partial PlayerSettingsResponse MapSettings(PlayerSettings source);
 
     [MapperIgnoreSource(nameof(SkillProgress.Experience))]
     private static partial SkillResponse MapSkill(SkillProgress source);

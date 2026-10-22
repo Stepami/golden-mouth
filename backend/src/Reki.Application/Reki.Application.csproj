@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
         <ProjectReference Include="..\Reki.Domain\Reki.Domain.csproj"/>
-        <ProjectReference Include="..\Reki.Contracts\Reki.Contracts.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

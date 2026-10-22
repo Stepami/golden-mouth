@@ -1,6 +1,6 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Contracts.Social;
+using Reki.Api.Requests.Social;
 
 namespace Reki.Tests.Api;
 

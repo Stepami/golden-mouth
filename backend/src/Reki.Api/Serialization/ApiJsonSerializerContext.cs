@@ -1,14 +1,23 @@
 using System.Net.ServerSentEvents;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
+using Reki.Api.Requests.Events;
+using Reki.Api.Requests.Player;
+using Reki.Api.Requests.Posts;
+using Reki.Api.Requests.Social;
+using Reki.Api.Requests.Telemetry;
+using Reki.Api.Requests.Worlds;
+using Reki.Application.Events.Responses;
+using Reki.Application.Player;
+using Reki.Application.Player.Responses;
+using Reki.Application.Posts;
 using Reki.Application.Posts.AI;
-using Reki.Contracts.Common;
-using Reki.Contracts.Events;
-using Reki.Contracts.Player;
-using Reki.Contracts.Posts;
-using Reki.Contracts.Social;
-using Reki.Contracts.Telemetry;
-using Reki.Contracts.Worlds;
+using Reki.Application.Posts.Responses;
+using Reki.Application.Responses;
+using Reki.Application.Social.Responses;
+using Reki.Application.Telemetry;
+using Reki.Application.Worlds.Responses;
+using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 
 namespace Reki.Api.Serialization;
@@ -77,7 +86,7 @@ namespace Reki.Api.Serialization;
     [
         typeof(CamelCaseEnumConverter<SkillId>),
         typeof(CamelCaseEnumConverter<Address>),
-        typeof(CamelCaseEnumConverter<Drama>),
+        typeof(CamelCaseEnumConverter<WorldDrama>),
         typeof(CamelCaseEnumConverter<BirthGroup>),
         typeof(CamelCaseEnumConverter<FeedItemKind>),
         typeof(CamelCaseEnumConverter<DirectMessageAuthor>),

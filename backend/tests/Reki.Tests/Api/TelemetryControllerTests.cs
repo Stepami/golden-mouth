@@ -1,8 +1,8 @@
 using System.Globalization;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Api.Requests.Telemetry;
 using Reki.Application.Telemetry;
-using Reki.Contracts.Telemetry;
 
 namespace Reki.Tests.Api;
 

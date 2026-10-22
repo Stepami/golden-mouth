@@ -2,7 +2,6 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application;
 using Reki.Application.Posts;
-using Reki.Contracts.Posts;
 using Reki.Domain.Events;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;

@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Reki.Api.Requests.Posts;
 using Reki.Application.Posts;
 using Reki.Application.Posts.AddReplyCommand;
 using Reki.Application.Posts.GeneratePublicationCommand;
@@ -8,9 +9,9 @@ using Reki.Application.Posts.GetPostDetail;
 using Reki.Application.Posts.GetPublicationStatus;
 using Reki.Application.Posts.GetWorldPosts;
 using Reki.Application.Posts.PublishPostCommand;
+using Reki.Application.Posts.Responses;
 using Reki.Application.RekiContext;
-using Reki.Contracts.Common;
-using Reki.Contracts.Posts;
+using Reki.Application.Responses;
 using Reki.Domain.Posts;
 
 namespace Reki.Api.Controllers;
@@ -28,12 +29,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = sender.CreateStream(
-            new GeneratePublication(
-                request.PublicationId,
-                request.Text,
-                request.OwnWords,
-                request.WantId,
-                Domain.Worlds.WorldId.From(worldId)),
+            request.ToCommand(worldId),
             cancellationToken);
         return TypedResults.ServerSentEvents(result);
     }
@@ -71,12 +67,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = sender.CreateStream(
-            new AddReply(
-                PostId.From(postId),
-                request.CommentId is { } commentId ? CommentId.From(commentId) : null,
-                request.RequestId,
-                request.Text,
-                Domain.Worlds.WorldId.From(worldId)),
+            request.ToCommand(postId, worldId),
             cancellationToken);
         return TypedResults.ServerSentEvents(result);
     }
@@ -89,11 +80,11 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new WorldPostsQuery(Domain.Worlds.WorldId.From(request.WorldId), request.PageNumber, request.PageSize, Feed: true),
+            request.ToQuery(feed: true),
             cancellationToken);
         var worlds = await rekiContext.Worlds;
         IReadOnlyList<FeedItemResponse> response =
-            [.. result.Items.Select(post => PostContractMapper.MapFeedItem(post, worlds[post.WorldId]))];
+            [.. result.Items.Select(post => PostResponseMapper.MapFeedItem(post, worlds[post.WorldId]))];
         return TypedResults.Ok(new PageResponse<FeedItemResponse>(response, result.PageNumber, result.HasNext));
     }
 
@@ -104,9 +95,9 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new WorldPostsQuery(Domain.Worlds.WorldId.From(request.WorldId), request.PageNumber, request.PageSize),
+            request.ToQuery(),
             cancellationToken);
-        IReadOnlyList<ChannelPostResponse> response = [.. result.Items.Select(PostContractMapper.MapChannelPost)];
+        IReadOnlyList<ChannelPostResponse> response = [.. result.Items.Select(PostResponseMapper.MapChannelPost)];
         return TypedResults.Ok(new PageResponse<ChannelPostResponse>(response, result.PageNumber, result.HasNext));
     }
 

@@ -5,7 +5,7 @@
 ## Технологический контракт
 
 - .NET 10 (`net10.0`), `LangVersion=latest`, nullable reference types и warnings as errors.
-- Modular monolith, Clean Architecture и DDD в пяти production-проектах: Api, Contracts, Infrastructure, Application и Domain. Один процесс и один deployable; feature/use-case boundaries задаются папками и namespaces, а не новыми проектами.
+- Modular monolith, Clean Architecture и DDD в четырёх production-проектах: Api, Infrastructure, Application и Domain. Один процесс и один deployable; feature/use-case boundaries задаются папками и namespaces, а не новыми проектами.
 - MongoDB через `MongoDB.Driver` **3.9.0**. Entity Framework и другие ORM не добавлять.
 - HTTP API реализуется только ASP.NET Core controllers с attribute routing. Minimal API handlers для прикладных маршрутов не использовать.
 - Source generation: `Mediator`, `Validly`, `Mapperly`, `Vogen`, `System.Text.Json`.
@@ -18,7 +18,7 @@
 
 ## Структура solution и зависимости
 
-При создании solution используй `.slnx`, Central Package Management и ровно пять production-проектов:
+При создании solution используй `.slnx`, Central Package Management и ровно четыре production-проекта:
 
 ```text
 backend/
@@ -30,7 +30,6 @@ backend/
   BannedSymbols.txt
   src/
     Reki.Api/                         # composition root, exception handlers, controllers
-    Reki.Contracts/                   # публичные request/response API contracts
     Reki.Infrastructure/              # MongoDB, external API clients, adapters
     Reki.Application/                 # commands, queries, handlers, ports
     Reki.Domain/                      # aggregates, entities, value objects, domain events
@@ -41,17 +40,19 @@ backend/
 Зависимости направлены внутрь:
 
 - `Domain` не ссылается на ASP.NET Core, MongoDB, Serilog и инфраструктурные пакеты.
-- `Application` ссылается на `Domain` и `Contracts`, объявляет use cases и порты и формирует готовые публичные response DTO в обработчиках.
-- `Contracts` не ссылается на остальные production-проекты и содержит только публичные модели HTTP-контракта.
-- `Infrastructure` ссылается на `Application`, `Domain` и при необходимости `Contracts` и реализует порты: MongoDB, внешние API, часы и прочий I/O.
-- `Api` ссылается на `Application`, `Contracts` и `Infrastructure`, является composition root и HTTP-адаптером; бизнес-логики в controllers нет.
-- Не создавай отдельные проекты на feature, bounded context, module или shared kernel. Новые production-проекты, кроме закреплённого `Reki.Contracts`, требуют отдельного архитектурного решения в issue.
+- `Application` ссылается на `Domain`, объявляет use cases и порты и формирует готовые публичные response DTO в обработчиках.
+- `Infrastructure` ссылается на `Application` и `Domain` и реализует порты: MongoDB, внешние API, часы и прочий I/O.
+- `Api` ссылается на `Application` и `Infrastructure`, является composition root и HTTP-адаптером; бизнес-логики в controllers нет.
+- Не создавай отдельные проекты на feature, bounded context, module или shared kernel. Новые production-проекты требуют отдельного архитектурного решения в issue.
 
 Код внутри проектов делится по feature/use case, а не по техническим папкам `Services`, `Dtos` и `Repositories` на весь проект:
 
 ```text
 Reki.Api/Controllers/<Feature>Controller.cs
-Reki.Contracts/<Feature>/Request.cs, Response.cs
+Reki.Api/Requests/<Feature>/... HTTP requests и static extension mapper
+Reki.Application/<Feature>/Responses/... response DTO
+Reki.Application/<Feature>/<Feature>ResponseMapper.cs
+Reki.Application/Responses/... общие response DTO
 Reki.Application/<Feature>/<Action>Command/<Action>.cs, <Action>CommandHandler.cs
 Reki.Application/<Feature>/Get<Data>/<Data>Query.cs, <Data>QueryHandler.cs
 Reki.Domain/<Feature>/... aggregates, entities, value objects, domain events
@@ -67,7 +68,7 @@ Reki.Tests/<Feature>/<UseCase>/... component tests
 - Общие AI-компоненты постов (генератор, настройки, промпты, tool schemas и модели ответа) находятся в `Posts/AI`. Проверки безопасности, политика допустимого AI-ответа и связанные решения — в `Posts/AI/Safety`. Вспомогательные типы, используемые только одним use case, остаются рядом с его сообщением и обработчиком.
 - Генерация реакций, ответов в тредах и самостоятельных постов звёзд инкапсулирована в Application за `IStarTurnGenerator`. Фоновая джоба вызывает генератор, проверяет актуальность данных и сохраняет результат; промпты, сериализация AI-истории и вызовы `IChatClient` остаются внутри генерации Application.
 - Все собственные типы исключений каждой сборки находятся в папке `Exceptions` в корне соответствующего проекта; namespace — `<AssemblyRootNamespace>.Exceptions` (например, `Reki.Application.Exceptions`). Это правило имеет приоритет над группировкой по поддоменам, use case и `Common`. Обработчики исключений остаются рядом с соответствующими API-адаптерами или jobs.
-- Все публичные API request/response DTO и связанные enum находятся в `Reki.Contracts`, остаются immutable и не содержат бизнес-логики. Application может зависеть от `Contracts` для типизированных входов и готовых ответов; `Contracts` не зависит от остальных production-проектов. В `Contracts` разрешён `FrameworkReference` на `Microsoft.AspNetCore.App` для штатных MVC-атрибутов HTTP-контрактов (`FromQuery`, `BindRequired` и аналогичных метаданных привязки). Контроллеры, middleware и обработка HTTP-запросов остаются в `Api`; самописные провайдеры метаданных вместо штатных атрибутов не добавлять.
+- Публичные request/response DTO остаются immutable и не содержат бизнес-логики. Входящие HTTP-модели и штатные MVC-атрибуты binding/validation принадлежат `Api/Requests/<Subdomain>`, исходящие сообщения — `Application/<Subdomain>/Responses`, общие исходящие модели — `Application/Responses`. Application не зависит от API requests или ASP.NET Core; самописные провайдеры метаданных вместо штатных атрибутов не добавляются.
 - Domain организуется вокруг business concepts и aggregate boundaries: не дублируй aggregate только ради зеркальной папки каждого handler.
 - Все Mongo-репозитории Infrastructure и `MongoGameStore` находятся в `Mongo/Repositories` без подпапок; опции — в `Mongo/Options`, остальные Mongo-компоненты, включая migrations и health check, — в `Mongo`. Джобы с собственными вспомогательными моделями, сервисами или репозиториями сгруппированы в `Jobs/<JobNameWithoutSuffix>`; джобы без таких файлов остаются в корне `Jobs`. Общие репозитории не переносятся в папку одной джобы.
 - Регистрация модулей Infrastructure находится в их `DependencyInjection`: `AI.AddChatClients`, `Mongo.AddMongo`, `Jobs.AddJobs`, `RekiContext.AddRekiContext`. Корневой `DependencyInjection.AddInfrastructure` объединяет эти регистрации. Папка контекста сохраняет имя `RekiContext`.
@@ -76,18 +77,18 @@ Reki.Tests/<Feature>/<UseCase>/... component tests
 - Логические bounded contexts изолируются namespaces и internal API. Они не читают Mongo collections друг друга напрямую; между ними используй узкие application contracts и integration events, а domain events оставляй внутри context.
 - Не создавай общие `Utils`, `Helpers`, generic repository или god-service. Папка `Common` допустима только для небольших cross-cutting primitives с несколькими реальными consumers.
 
-## Удаление Contracts: согласованные правила переноса
+## Модели сообщений и маппинг
 
-План миграции: `docs/backend-contracts-removal-plan.md`. До его выполнения `Reki.Contracts` остаётся частью текущей структуры. Для переноса контрактов следующие правила имеют приоритет над описанием текущих пяти проектов и размещения DTO выше. Целевая структура содержит четыре production-проекта: Api, Application, Infrastructure и Domain. После завершения миграции и успешной сборки удалить временный план из `docs` и ссылку на него из этого файла; постоянные правила размещения моделей и мапперов сохранить.
+Solution содержит четыре production-проекта: Api, Application, Infrastructure и Domain. Отдельного проекта Contracts нет.
 
 - Исходящие сообщения, включая SSE events и вложенные response-модели, принадлежат Application: `Application/<Subdomain>/Responses`. Общие для нескольких поддоменов исходящие модели находятся в `Application/Responses`; использования только из API, Infrastructure или тестов не делают модель общей.
 - Маппинг исходящих сообщений находится в корне `Application/<Subdomain>` в статическом extension mapper, вне папки Responses. Существующий mapper переиспользуется и остаётся на уровне поддомена; при отсутствии создаётся новый. В `Application/<Subdomain>/Responses` находятся специфичные для поддомена модели. Корневая `Application/Responses` предназначена для общих моделей. Общий корневой mapper для всех поддоменов не создаётся.
 - Входящие HTTP-модели находятся в `Api/Requests/<Subdomain>`, включая вложенные request-модели и HTTP binding/validation metadata. Статические extension mappers входящих моделей находятся в той же папке и преобразуют запросы в application commands, queries или их входные модели. Application не зависит от API request-типов или ASP.NET Core.
-- Модели Responses не используются как вложенные входящие модели: для таких случаев создаются request-типы с сохранением публичного JSON-формата. Папка `Api/Mapping`, `IApiMapper`, `ApiMapper` и их DI-регистрация удаляются после переноса всех преобразований по поддоменам.
+- Модели Responses не используются как вложенные входящие модели: для таких случаев создаются request-типы с сохранением публичного JSON-формата. Корневая папка `Api/Mapping` и DI-мэпперы не используются.
 - Доменные enum и value objects переиспользуются, когда совпадают смысл и допустимые значения. HTTP enum остаются в API, прикладные типы — в своём поддомене Application. Типы не переносятся в Domain только ради общего доступа; сериализованные имена, значения и ключи словарей сохраняются.
 - Единственный source-generated `ApiJsonSerializerContext` и настройка сериализации остаются в `Api/Serialization`. MVC, HTTP JSON и AI используют общую настройку; Application получает `IOptions<JsonSerializerOptions>` через DI. Новые контексты в Application/Infrastructure и reflection fallback не добавляются.
 - Финальным этапом рефакторинга максимально сокращай ручной маппинг средствами Riok.Mapperly: используй генерируемые static partial extension methods, маппинг вложенных моделей, коллекций и совместимых enum. Переиспользуй типизированные преобразования; ручной код оставляй для необходимых правил, вычислений и очистки данных. Сохраняй контракт и поведение, не скрывай unmapped members blanket suppressions и не используй reflection fallback.
-- После переноса `Application` зависит от `Domain`, `Infrastructure` — от `Application` и `Domain`, `Api` — от `Application`, `Infrastructure` и при необходимости `Domain`. Project references, NSwag imports/aliases, тесты и документация обновляются до удаления проекта Contracts.
+- `Application` зависит от `Domain`, `Infrastructure` — от `Application` и `Domain`, `Api` — от `Application`, `Infrastructure` и при необходимости `Domain`. NSwag imports/aliases и потребители используют фактические namespaces API requests и Application responses.
 
 ## Общие MSBuild-настройки и анализаторы
 
@@ -190,7 +191,7 @@ Reki.Tests/<Feature>/<UseCase>/... component tests
 - Используй `AddOpenApi`/`MapOpenApi`; build-time document создаёт `Microsoft.Extensions.ApiDescription.Server`. Для UI разрешён только пакет `Swashbuckle.AspNetCore.SwaggerUI`; `AddSwaggerGen` и генератор Swashbuckle не использовать.
 - OpenAPI — проверяемый контракт. Изменение endpoint считается завершённым только после обновления build-time spec и успешной генерации клиента.
 - `nswag.json` лежит рядом с тестируемым API project и использует только относительные пути/ MSBuild variables.
-- C#-конфиг `backend/src/Reki.Api/nswag.json` не генерирует DTO (`generateDtoTypes=false`): тестовый client использует `Reki.Contracts`. Это ограничение не относится к TypeScript.
+- C#-конфиг `backend/src/Reki.Api/nswag.json` не генерирует DTO (`generateDtoTypes=false`): тестовый client использует request-типы `Reki.Api` и response-типы `Reki.Application`. Это ограничение не относится к TypeScript.
 - Независимый `frontend/nswag.frontend.json` генерирует Fetch-клиент и DTO-интерфейсы при сборке API после OpenAPI. TypeScript-клиент хранится в Git; OpenAPI и C#-клиент остаются ignored. Обновление: изменить API → собрать API → закоммитить TS-клиент → проверить фронт.
 - В `Reki.Tests.csproj` должен быть custom MSBuild target, который после получения build-time OpenAPI запускает локальный tool manifest (`dotnet nswag run ...`) и генерирует typed test client до компиляции тестов.
 - Generated client хранится в явно выделенной папке `Generated/`, не редактируется вручную и генерируется детерминированно. Конфигурация не должна обращаться к запущенному dev-серверу или remote URL.

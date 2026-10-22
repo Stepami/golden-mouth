@@ -1,5 +1,3 @@
-using Reki.Contracts.Posts;
-
 namespace Reki.Application.Posts;
 
 public interface IPublicationRepository

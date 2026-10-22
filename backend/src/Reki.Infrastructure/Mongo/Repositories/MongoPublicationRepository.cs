@@ -1,6 +1,5 @@
 using MongoDB.Driver;
 using Reki.Application.Posts;
-using Reki.Contracts.Posts;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 

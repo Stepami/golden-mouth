@@ -1,5 +1,5 @@
 using Mediator;
-using Reki.Contracts.Posts;
+using Reki.Application.Posts.Responses;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.GeneratePublicationCommand;

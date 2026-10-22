@@ -1,10 +1,11 @@
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Api.Mapping;
+using Reki.Api.Requests.Events;
+using Reki.Application.Events;
 using Reki.Application.Events.AnswerEventCommand;
 using Reki.Application.Events.GetTodayEvent;
-using Reki.Contracts.Events;
+using Reki.Application.Events.Responses;
 using Reki.Domain.Events;
 
 namespace Reki.Api.Controllers;
@@ -13,8 +14,7 @@ namespace Reki.Api.Controllers;
 [Produces("application/json")]
 [Route("events")]
 public sealed class EventsController(
-    ISender sender,
-    IApiMapper mapper) : ControllerBase
+    ISender sender) : ControllerBase
 {
     [HttpGet("today", Name = "GetTodayEvent")]
     [ActionName("GetTodayEvent")]
@@ -25,7 +25,7 @@ public sealed class EventsController(
         var gameEvent = await sender.Send(
             new TodayEventQuery(Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
-        return TypedResults.Ok(mapper.MapEvent(gameEvent));
+        return TypedResults.Ok(gameEvent.ToResponse());
     }
 
     [HttpPost("{eventId}/answer", Name = "AnswerEvent")]
@@ -37,10 +37,7 @@ public sealed class EventsController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new AnswerEvent(
-                RekiEventId.From(eventId),
-                request.Text,
-                Domain.Worlds.WorldId.From(worldId)),
+            request.ToCommand(eventId, worldId),
             cancellationToken);
         return TypedResults.Ok();
     }
