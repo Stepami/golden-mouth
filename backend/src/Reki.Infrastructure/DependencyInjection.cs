@@ -19,7 +19,6 @@ using Reki.Application.Posts.AI;
 using Reki.Application.Posts.GetPublicStoryCard;
 using Reki.Application.Worlds;
 using Reki.Infrastructure.AI;
-using Reki.Infrastructure.Context;
 using Reki.Infrastructure.Events;
 using Reki.Infrastructure.Health;
 using Reki.Infrastructure.Invites;
@@ -27,6 +26,7 @@ using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.Persistence;
 using Reki.Infrastructure.Player;
 using Reki.Infrastructure.Posts;
+using Reki.Infrastructure.RekiContext;
 using Reki.Infrastructure.Rendering;
 using Reki.Infrastructure.Worlds;
 using TgMiniAppAuth;
@@ -46,7 +46,7 @@ public static class DependencyInjection
     {
         services.AddTgMiniAppAuth(configuration);
         services.AddSingleton<IRekiContextAccessor, HttpRekiContextAccessor>();
-        services.AddScoped<IRekiContext, RekiContext>();
+        services.AddScoped<IRekiContext, LazyRekiContext>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
         services.AddObservability();

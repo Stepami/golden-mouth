@@ -2,7 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Reki.Application.Common;
 
-namespace Reki.Infrastructure.Context;
+namespace Reki.Infrastructure.RekiContext;
 
 internal sealed class HttpRekiContextAccessor(
     IHttpContextAccessor httpContextAccessor) : IRekiContextAccessor

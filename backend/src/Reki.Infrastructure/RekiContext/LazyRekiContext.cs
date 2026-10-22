@@ -8,14 +8,14 @@ using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 using TgMiniAppAuth.AuthContext.User;
 
-namespace Reki.Infrastructure.Context;
+namespace Reki.Infrastructure.RekiContext;
 
-internal sealed class RekiContext : IRekiContext
+internal sealed class LazyRekiContext : IRekiContext
 {
     private readonly AsyncLazy<PlayerProfile> _player;
     private readonly AsyncLazy<IReadOnlyDictionary<WorldId, World>> _worlds;
 
-    public RekiContext(
+    public LazyRekiContext(
         ITelegramUserAccessor telegramUser,
         IPlayerRepository playerRepository,
         IWorldRepository worldRepository)
