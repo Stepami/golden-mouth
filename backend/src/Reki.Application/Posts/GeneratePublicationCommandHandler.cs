@@ -24,7 +24,7 @@ public sealed partial class GeneratePublicationCommandHandler(
     StarTurnGenerator generator,
     ILogger<GeneratePublicationCommandHandler> logger,
     ProductTelemetry analytics,
-    PlayerSafetyGuard safety) : IStreamRequestHandler<GeneratePublication, PublicationStatusLiveEvent>
+    PlayerSafetyGuard safety) : IStreamCommandHandler<GeneratePublication, PublicationStatusLiveEvent>
 {
     private static readonly TimeSpan FailedRetention = TimeSpan.FromDays(1);
 

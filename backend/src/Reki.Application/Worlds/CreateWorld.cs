@@ -3,4 +3,4 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Worlds;
 
-public sealed record CreateWorld(World Definition) : IRequest<World>;
+public sealed record CreateWorld(World Definition) : ICommand<World>;

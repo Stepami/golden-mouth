@@ -9,7 +9,7 @@ public sealed class UpdateSettingsCommandHandler(
     IPlayerRepository playerRepository,
     IRekiContextAccessor rekiContextAccessor,
     IOptions<GameBalance> balance)
-    : IRequestHandler<UpdateSettings>
+    : ICommandHandler<UpdateSettings>
 {
     public async ValueTask<Unit> Handle(UpdateSettings request, CancellationToken cancellationToken)
     {

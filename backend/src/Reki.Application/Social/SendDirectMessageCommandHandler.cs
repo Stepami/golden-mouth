@@ -14,7 +14,7 @@ public sealed class SendDirectMessageCommandHandler(
     GameDayPeriod gameDayPeriod,
     IRekiContextAccessor rekiContextAccessor,
     StarTurnGenerator turnGenerator,
-    PlayerSafetyGuard safety) : IRequestHandler<SendDirectMessage, SentDirectMessage>
+    PlayerSafetyGuard safety) : ICommandHandler<SendDirectMessage, SentDirectMessage>
 {
     public async ValueTask<SentDirectMessage> Handle(
         SendDirectMessage request,

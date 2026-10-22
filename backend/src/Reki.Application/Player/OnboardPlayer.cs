@@ -8,4 +8,4 @@ public sealed record OnboardPlayer(
     string BirthGroup,
     string Address,
     string? ReferralCode,
-    string? AgeBand) : IRequest<PlayerProfile>;
+    string? AgeBand) : ICommand<PlayerProfile>;

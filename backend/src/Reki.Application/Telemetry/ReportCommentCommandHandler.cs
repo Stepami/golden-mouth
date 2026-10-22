@@ -6,7 +6,7 @@ namespace Reki.Application.Telemetry;
 public sealed class ReportCommentCommandHandler(
     ProductTelemetry telemetry,
     IRekiContextAccessor rekiContextAccessor)
-    : IRequestHandler<ReportComment>
+    : ICommandHandler<ReportComment>
 {
     public async ValueTask<Unit> Handle(
         ReportComment request,

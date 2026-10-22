@@ -10,4 +10,4 @@ public sealed record AddReply(
     CommentId? TargetCommentId,
     string RequestId,
     string Text,
-    WorldId WorldId) : IStreamRequest<ReplyLiveEvent>;
+    WorldId WorldId) : IStreamCommand<ReplyLiveEvent>;

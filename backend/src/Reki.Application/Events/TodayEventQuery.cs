@@ -4,4 +4,4 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Events;
 
-public sealed record TodayEventQuery(WorldId WorldId) : IRequest<DailyGameEvent>;
+public sealed record TodayEventQuery(WorldId WorldId) : IQuery<DailyGameEvent>;

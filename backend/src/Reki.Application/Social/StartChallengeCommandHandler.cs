@@ -6,7 +6,7 @@ namespace Reki.Application.Social;
 public sealed class StartChallengeCommandHandler(
     IRekiContextAccessor rekiContextAccessor,
     ChallengeLifecycle challengeLifecycle)
-    : IRequestHandler<StartChallenge>
+    : ICommandHandler<StartChallenge>
 {
     public async ValueTask<Unit> Handle(
         StartChallenge request,

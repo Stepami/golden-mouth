@@ -3,4 +3,4 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Worlds;
 
-public sealed record UpdateWorld(WorldId WorldId, World Definition) : IRequest;
+public sealed record UpdateWorld(WorldId WorldId, World Definition) : ICommand;

@@ -7,4 +7,4 @@ namespace Reki.Application.Posts;
 public sealed record PostQuery(
     PostId PostId,
     WorldId WorldId)
-    : IRequest<GamePost>;
+    : IQuery<GamePost>;

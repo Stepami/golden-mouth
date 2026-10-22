@@ -7,7 +7,7 @@ namespace Reki.Application.Telemetry;
 public sealed class SubmitAnalyticsCommandHandler(
     ProductTelemetry telemetry,
     IRekiContextAccessor rekiContextAccessor)
-    : IRequestHandler<SubmitAnalytics>
+    : ICommandHandler<SubmitAnalytics>
 {
     public async ValueTask<Unit> Handle(
         SubmitAnalytics request,

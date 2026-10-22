@@ -7,7 +7,7 @@ namespace Reki.Application.Social;
 public sealed class ForgetStarMemoryCommandHandler(
     IStarConversationRepository starConversationRepository,
     IRekiContextAccessor rekiContextAccessor)
-    : IRequestHandler<ForgetStarMemory>
+    : ICommandHandler<ForgetStarMemory>
 {
     public async ValueTask<Unit> Handle(
         ForgetStarMemory request,

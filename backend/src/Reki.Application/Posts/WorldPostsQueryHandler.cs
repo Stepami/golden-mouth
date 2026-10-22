@@ -8,7 +8,7 @@ public sealed class WorldPostsQueryHandler(
     IPostRepository postRepository,
     IRekiContextAccessor rekiContextAccessor,
     IStarFeedScheduler feedScheduler)
-    : IRequestHandler<WorldPostsQuery, WorldPostsPage>
+    : IQueryHandler<WorldPostsQuery, WorldPostsPage>
 {
     public async ValueTask<WorldPostsPage> Handle(
         WorldPostsQuery request,

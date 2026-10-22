@@ -7,7 +7,7 @@ namespace Reki.Application.Player;
 public sealed class ClaimPlusInterestCommandHandler(
     IPlayerRepository playerRepository,
     IOptions<GameBalance> balance,
-    IRekiContextAccessor rekiContextAccessor) : IRequestHandler<ClaimPlusInterest, int>
+    IRekiContextAccessor rekiContextAccessor) : ICommandHandler<ClaimPlusInterest, int>
 {
     public async ValueTask<int> Handle(
         ClaimPlusInterest request,

@@ -8,7 +8,7 @@ public sealed class DeletePlayerCommandHandler(
     IGameStore store,
     IRekiContextAccessor rekiContextAccessor,
     ProductTelemetry telemetry)
-    : IRequestHandler<DeletePlayer>
+    : ICommandHandler<DeletePlayer>
 {
     public async ValueTask<Unit> Handle(
         DeletePlayer request,

@@ -8,4 +8,4 @@ public sealed record WorldPostsQuery(
     int PageNumber,
     int PageSize,
     bool Feed = false)
-    : IRequest<WorldPostsPage>;
+    : IQuery<WorldPostsPage>;

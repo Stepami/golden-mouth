@@ -25,7 +25,7 @@ public sealed class PublishPostCommandHandler(
     PostProgressionCalculator progressionCalculator,
     ProductTelemetry analytics,
     PlayerSafetyGuard safety,
-    IStarFeedScheduler feedScheduler) : IRequestHandler<PublishPost, IReadOnlyList<LiveEvent>>
+    IStarFeedScheduler feedScheduler) : ICommandHandler<PublishPost, IReadOnlyList<LiveEvent>>
 {
     public async ValueTask<IReadOnlyList<LiveEvent>> Handle(
         PublishPost request,

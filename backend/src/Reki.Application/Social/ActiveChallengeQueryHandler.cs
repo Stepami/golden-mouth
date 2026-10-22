@@ -6,7 +6,7 @@ namespace Reki.Application.Social;
 public sealed class ActiveChallengeQueryHandler(
     IRekiContextAccessor rekiContextAccessor,
     ChallengeLifecycle challengeLifecycle)
-    : IRequestHandler<ActiveChallengeQuery, ChallengeView?>
+    : IQueryHandler<ActiveChallengeQuery, ChallengeView?>
 {
     public async ValueTask<ChallengeView?> Handle(
         ActiveChallengeQuery request,

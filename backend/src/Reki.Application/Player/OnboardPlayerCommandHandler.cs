@@ -15,7 +15,7 @@ public sealed class OnboardPlayerCommandHandler(
     GameDayPeriod gameDayPeriod,
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
-    ProductTelemetry analytics) : IRequestHandler<OnboardPlayer, PlayerProfile>
+    ProductTelemetry analytics) : ICommandHandler<OnboardPlayer, PlayerProfile>
 {
     public async ValueTask<PlayerProfile> Handle(
         OnboardPlayer request,

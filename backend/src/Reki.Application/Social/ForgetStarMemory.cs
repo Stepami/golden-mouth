@@ -4,4 +4,4 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Social;
 
-public sealed record ForgetStarMemory(StarId StarId, string Fact, WorldId WorldId) : IRequest;
+public sealed record ForgetStarMemory(StarId StarId, string Fact, WorldId WorldId) : ICommand;

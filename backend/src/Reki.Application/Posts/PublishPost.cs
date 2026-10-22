@@ -4,4 +4,4 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
 
-public sealed record PublishPost(string PublicationId, WorldId WorldId) : IRequest<IReadOnlyList<LiveEvent>>;
+public sealed record PublishPost(string PublicationId, WorldId WorldId) : ICommand<IReadOnlyList<LiveEvent>>;

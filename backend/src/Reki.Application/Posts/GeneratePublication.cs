@@ -9,4 +9,4 @@ public sealed record GeneratePublication(
     string Text,
     bool OwnWords,
     string? WantId,
-    WorldId WorldId) : IStreamRequest<PublicationStatusLiveEvent>;
+    WorldId WorldId) : IStreamCommand<PublicationStatusLiveEvent>;

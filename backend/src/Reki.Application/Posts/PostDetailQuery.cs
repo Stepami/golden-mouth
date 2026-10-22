@@ -5,4 +5,4 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts;
 
-public sealed record PostDetailQuery(PostId PostId, WorldId WorldId) : IRequest<PostDetailResponse>;
+public sealed record PostDetailQuery(PostId PostId, WorldId WorldId) : IQuery<PostDetailResponse>;

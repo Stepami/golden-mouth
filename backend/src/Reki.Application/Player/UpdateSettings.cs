@@ -6,4 +6,4 @@ public sealed record UpdateSettings(
     string? Notifications,
     string? Quiet,
     bool? Plus,
-    string? Address) : IRequest;
+    string? Address) : ICommand;

@@ -5,7 +5,7 @@ namespace Reki.Application.Social;
 
 public sealed class FriendsQueryHandler(
     IRekiContextAccessor rekiContextAccessor)
-    : IRequestHandler<FriendsQuery, IReadOnlyList<FriendSummary>>
+    : IQueryHandler<FriendsQuery, IReadOnlyList<FriendSummary>>
 {
     public async ValueTask<IReadOnlyList<FriendSummary>> Handle(
         FriendsQuery request,

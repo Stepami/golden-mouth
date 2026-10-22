@@ -8,7 +8,7 @@ namespace Reki.Application.Posts;
 public sealed class PublicationStatusQueryHandler(
     ISender sender,
     IRekiContextAccessor rekiContextAccessor)
-    : IRequestHandler<PublicationStatusQuery, PublicationStatusResponse>
+    : IQueryHandler<PublicationStatusQuery, PublicationStatusResponse>
 {
     public async ValueTask<PublicationStatusResponse> Handle(
         PublicationStatusQuery request,

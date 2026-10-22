@@ -24,7 +24,7 @@ public sealed partial class AddReplyCommandHandler(
     StarTurnGenerator generator,
     ILogger<AddReplyCommandHandler> logger,
     ProductTelemetry telemetry,
-    IStarFeedScheduler feedScheduler) : IStreamRequestHandler<AddReply, ReplyLiveEvent>
+    IStarFeedScheduler feedScheduler) : IStreamCommandHandler<AddReply, ReplyLiveEvent>
 {
     public async IAsyncEnumerable<ReplyLiveEvent> Handle(
         AddReply request,

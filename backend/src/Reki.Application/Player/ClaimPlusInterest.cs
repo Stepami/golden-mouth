@@ -2,4 +2,4 @@ using Mediator;
 
 namespace Reki.Application.Player;
 
-public sealed record ClaimPlusInterest(bool Interest) : IRequest<int>;
+public sealed record ClaimPlusInterest(bool Interest) : ICommand<int>;

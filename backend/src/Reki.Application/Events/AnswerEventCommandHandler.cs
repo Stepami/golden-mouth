@@ -7,7 +7,7 @@ namespace Reki.Application.Events;
 public sealed class AnswerEventCommandHandler(
     IDailyGameEventRepository dailyGameEventRepository,
     IRekiContextAccessor rekiContextAccessor)
-    : IRequestHandler<AnswerEvent>
+    : ICommandHandler<AnswerEvent>
 {
     public async ValueTask<Unit> Handle(
         AnswerEvent request,

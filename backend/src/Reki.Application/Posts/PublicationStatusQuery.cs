@@ -3,4 +3,4 @@ using Reki.Contracts.Posts;
 
 namespace Reki.Application.Posts;
 
-public sealed record PublicationStatusQuery(string PublicationId) : IRequest<PublicationStatusResponse>;
+public sealed record PublicationStatusQuery(string PublicationId) : IQuery<PublicationStatusResponse>;

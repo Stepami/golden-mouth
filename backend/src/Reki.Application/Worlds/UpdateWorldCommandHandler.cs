@@ -7,7 +7,7 @@ namespace Reki.Application.Worlds;
 public sealed class UpdateWorldCommandHandler(
     IWorldRepository worldRepository,
     IRekiContextAccessor contextAccessor)
-    : IRequestHandler<UpdateWorld>
+    : ICommandHandler<UpdateWorld>
 {
     public async ValueTask<Unit> Handle(UpdateWorld request, CancellationToken cancellationToken)
     {

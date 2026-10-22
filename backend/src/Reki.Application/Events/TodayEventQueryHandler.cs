@@ -8,7 +8,7 @@ namespace Reki.Application.Events;
 public sealed class TodayEventQueryHandler(
     IDailyGameEventRepository dailyGameEventRepository,
     GameDayPeriod gameDayPeriod,
-    IRekiContextAccessor rekiContextAccessor) : IRequestHandler<TodayEventQuery, DailyGameEvent>
+    IRekiContextAccessor rekiContextAccessor) : IQueryHandler<TodayEventQuery, DailyGameEvent>
 {
     public async ValueTask<DailyGameEvent> Handle(
         TodayEventQuery request,

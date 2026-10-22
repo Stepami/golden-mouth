@@ -10,7 +10,7 @@ public sealed class DirectMessagesQueryHandler(
     IStarConversationRepository starConversationRepository,
     IOptions<GameBalance> balance,
     GameDayPeriod gameDayPeriod,
-    IRekiContextAccessor rekiContextAccessor) : IRequestHandler<DirectMessagesQuery, DirectMessageView>
+    IRekiContextAccessor rekiContextAccessor) : IQueryHandler<DirectMessagesQuery, DirectMessageView>
 {
     public async ValueTask<DirectMessageView> Handle(
         DirectMessagesQuery request,

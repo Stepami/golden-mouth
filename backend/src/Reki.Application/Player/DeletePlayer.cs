@@ -2,5 +2,5 @@ using Mediator;
 
 namespace Reki.Application.Player;
 
-public sealed record DeletePlayer : IRequest;
+public sealed record DeletePlayer : ICommand;
 

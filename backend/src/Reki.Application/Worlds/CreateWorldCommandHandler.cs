@@ -13,7 +13,7 @@ public sealed class CreateWorldCommandHandler(
     GameDayPeriod gameDayPeriod,
     IOptions<GameBalance> balance,
     ProductTelemetry telemetry)
-    : IRequestHandler<CreateWorld, World>
+    : ICommandHandler<CreateWorld, World>
 {
     public async ValueTask<World> Handle(CreateWorld request, CancellationToken cancellationToken)
     {

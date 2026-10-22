@@ -3,4 +3,4 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Worlds;
 
-public sealed record WorldTemplatesQuery : IRequest<IReadOnlyList<World>>;
+public sealed record WorldTemplatesQuery : IQuery<IReadOnlyList<World>>;

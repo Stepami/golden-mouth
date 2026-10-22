@@ -9,7 +9,7 @@ public sealed class PublicStoryCardQueryHandler(
     IPlayerRepository playerRepository,
     IPostRepository postRepository,
     IWorldRepository worldRepository)
-    : IRequestHandler<PublicStoryCardQuery, StoryCardData>
+    : IQueryHandler<PublicStoryCardQuery, StoryCardData>
 {
     public async ValueTask<StoryCardData> Handle(
         PublicStoryCardQuery request,

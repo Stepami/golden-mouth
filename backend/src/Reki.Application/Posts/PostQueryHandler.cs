@@ -8,7 +8,7 @@ namespace Reki.Application.Posts;
 public sealed class PostQueryHandler(
     IPostRepository postRepository,
     IRekiContextAccessor rekiContextAccessor)
-    : IRequestHandler<PostQuery, GamePost>
+    : IQueryHandler<PostQuery, GamePost>
 {
     public async ValueTask<GamePost> Handle(
         PostQuery request,
