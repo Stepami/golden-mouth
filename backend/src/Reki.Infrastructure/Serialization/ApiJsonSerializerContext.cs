@@ -21,6 +21,7 @@ namespace Reki.Infrastructure.Serialization;
 [JsonSerializable(typeof(SseItem<PublicationStatusLiveEvent>))]
 [JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(HttpValidationProblemDetails))]
+[JsonSerializable(typeof(ValidationProblemDetails))]
 [JsonSerializable(typeof(PlayerResponse))]
 [JsonSerializable(typeof(ReferralResponse))]
 [JsonSerializable(typeof(InvitationResponse))]
