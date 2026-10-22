@@ -1,4 +1,4 @@
-namespace Reki.Application.Common.Exceptions;
+namespace Reki.Application.Posts;
 
 public sealed class CrisisDetectedException(bool isTeen) : Exception("A crisis signal was detected.")
 {

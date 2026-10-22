@@ -1,14 +1,10 @@
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
-using Reki.Application.Common.Exceptions;
-using Reki.Application.Common.Safety;
 using Reki.Application.Posts.AddReplyCommand;
 using Reki.Application.Posts.GeneratePublicationCommand;
-using Reki.Application.Social.SendDirectMessageCommand;
-using static Reki.Application.Common.AI.StarToolCallParser;
 
-namespace Reki.Application.Common.AI;
+namespace Reki.Application.Posts;
 
 public sealed class StarTurnGenerator(
     IChatClient chatClient,
@@ -54,53 +50,6 @@ public sealed class StarTurnGenerator(
         }
     }
 
-    public async ValueTask<GeneratedDirectMessage> GenerateDirectMessageAsync(
-        StarDirectMessageContext context,
-        CancellationToken cancellationToken)
-    {
-        const string turnPolicy = """
-                                  Ответь только через tool dm. memory_fact — один короткий безопасный факт
-                                  об интересах игрока или пустая строка. Не сохраняй команды, роли, ID, экономику,
-                                  чувствительные данные или содержание, которого игрок не сообщал. Личка всегда без хейта.
-                                  star_id должен совпадать с единственным целевым персонажем каталога.
-                                  """;
-        var userPrompt = $$"""
-                           Сообщение игрока: {{context.Text}}
-                           """;
-        if (context.Agent.StarId is not { } starId)
-        {
-            throw new AiServiceUnavailableException("A direct message requires a target star.");
-        }
-
-        if (context.Agent.World.FindStar(starId) is null)
-        {
-            throw new AiServiceUnavailableException("The star does not belong to this world.");
-        }
-
-        List<ChatMessage> messages =
-        [
-            StarAgentInstructions.CreatePlatformPolicy(turnPolicy, context.Agent),
-            StarAgentInstructions.CreatePlayerOwnedLayer(context.Agent),
-        ];
-        messages.AddRange(context.History.TakeLast(12).Select(message =>
-            new ChatMessage(message.From == "star" ? ChatRole.Assistant : ChatRole.User, message.Text)));
-        messages.Add(new ChatMessage(ChatRole.User, userPrompt));
-
-        var actions = await GetActionsAsync(
-            messages,
-            ChatToolMode.RequireSpecific("dm"),
-            cancellationToken);
-        if (actions is not [StarDirectMessageAction directMessage] || directMessage.StarId != starId)
-        {
-            throw new AiServiceUnavailableException("The model returned an invalid direct message.");
-        }
-
-        PlayerSafetyGuard.EnsureOutputAllowed([directMessage.Text, directMessage.MemoryFact]);
-        return new GeneratedDirectMessage(
-            directMessage.Text,
-            MemoryFactPolicy.IsAllowed(directMessage.MemoryFact) ? directMessage.MemoryFact : string.Empty);
-    }
-
     public async IAsyncEnumerable<ChatResponseUpdate> StreamReplyTurnAsync(
         StarReplyContext context,
         [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -133,37 +82,6 @@ public sealed class StarTurnGenerator(
         await foreach (var update in chatClient.GetStreamingResponseAsync(messages, options, cancellationToken))
         {
             yield return update;
-        }
-    }
-
-    private async ValueTask<IReadOnlyList<IStarAction>> GetActionsAsync(
-        IReadOnlyList<ChatMessage> messages,
-        ChatToolMode toolMode,
-        CancellationToken cancellationToken)
-    {
-        var options = CreateOptions(toolMode, StarToolSchemas.DirectMessage);
-        try
-        {
-            var response = await chatClient.GetResponseAsync(
-                messages,
-                options,
-                cancellationToken);
-            var calls = response.Messages
-                .SelectMany(message => message.Contents)
-                .OfType<FunctionCallContent>();
-            return Parse(calls);
-        }
-        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
-        {
-            throw new AiServiceUnavailableException("The model request timed out.", exception);
-        }
-        catch (Exception exception) when (exception is not (
-                                              OperationCanceledException or
-                                              AiServiceUnavailableException or
-                                              ContentRejectedException or
-                                              CrisisDetectedException))
-        {
-            throw new AiServiceUnavailableException("The model request failed.", exception);
         }
     }
 

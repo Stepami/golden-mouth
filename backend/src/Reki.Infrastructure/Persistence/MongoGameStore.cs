@@ -7,7 +7,6 @@ using Reki.Domain.Events;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using Reki.Domain.Social;
 using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Persistence;
@@ -18,9 +17,9 @@ internal sealed class MongoGameStore : IGameStore
     private readonly IMongoCollection<PlayerProfile> _players;
     private readonly IMongoCollection<GamePost> _posts;
     private readonly IMongoCollection<Publication> _publications;
-    private readonly IMongoCollection<StarConversation> _starMemories;
+    private readonly IMongoCollection<BsonDocument> _starMemories;
     private readonly IMongoCollection<DailyGameEvent> _events;
-    private readonly IMongoCollection<GameChallenge> _challenges;
+    private readonly IMongoCollection<BsonDocument> _challenges;
     private readonly IMongoCollection<World> _worlds;
     private readonly IMongoCollection<Invitation> _invites;
 
@@ -32,9 +31,9 @@ internal sealed class MongoGameStore : IGameStore
         _players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
         _posts = database.GetCollection<GamePost>(MongoCollections.Posts);
         _publications = database.GetCollection<Publication>(MongoCollections.Publications);
-        _starMemories = database.GetCollection<StarConversation>(MongoCollections.StarsMemory);
+        _starMemories = database.GetCollection<BsonDocument>(MongoCollections.StarsMemory);
         _events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
-        _challenges = database.GetCollection<GameChallenge>(MongoCollections.Challenges);
+        _challenges = database.GetCollection<BsonDocument>(MongoCollections.Challenges);
         _worlds = database.GetCollection<World>(MongoCollections.Worlds);
         _invites = database.GetCollection<Invitation>(MongoCollections.Invites);
     }
@@ -60,14 +59,15 @@ internal sealed class MongoGameStore : IGameStore
                 cancellationToken: transactionCancellationToken);
             await _starMemories.DeleteManyAsync(
                 transactionSession,
-                item => item.PlayerId == player.Id,
+                new BsonDocument("PlayerId", player.Id.Value),
                 cancellationToken: transactionCancellationToken);
             await _events.DeleteManyAsync(
                 transactionSession,
                 item => item.PlayerId == player.Id,
                 cancellationToken: transactionCancellationToken);
-            var challengeFilter = Builders<GameChallenge>.Filter
-                .AnyEq(item => item.Participants, player.Id);
+            var challengeFilter = Builders<BsonDocument>.Filter.Or(
+                new BsonDocument("Participants", player.Id.Value),
+                new BsonDocument("PlayerId", player.Id.Value));
             await _challenges.DeleteManyAsync(
                 transactionSession,
                 challengeFilter,

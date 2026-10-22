@@ -44,12 +44,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             return CreateReplyTurnResponse(selected[..selected.IndexOf('.')]);
         }
 
-        var directMessage = messages.Any(message => message.Text.Contains(
-            "tool dm",
-            StringComparison.Ordinal));
-        var response = directMessage
-            ? CreateDirectMessageResponse()
-            : CreateCommentResponse(includeUnknownArgument: false);
+        var response = CreateCommentResponse(includeUnknownArgument: false);
         var platform = messages.First(message => message.Role == ChatRole.System).Text.Replace("\r\n", "\n", StringComparison.Ordinal);
         var start = platform.IndexOf("[", StringComparison.Ordinal);
         var end = platform.IndexOf("\n\nОграничения текущего хода:", StringComparison.Ordinal);
@@ -65,10 +60,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             .OfType<FunctionCallContent>().Single().Arguments
             ?? throw new InvalidOperationException("The test response has no arguments.");
         arguments["star_id"] = persona.GetProperty("id").GetString();
-        if (!directMessage)
-        {
-            arguments["author"] = persona.GetProperty("name").GetString();
-        }
+        arguments["author"] = persona.GetProperty("name").GetString();
 
         return response;
     }
@@ -115,18 +107,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
         return new ChatResponse(new ChatMessage(
             ChatRole.Assistant,
             [new FunctionCallContent("test-reply-call", "thread_reply", arguments)]));
-    }
-
-    protected static ChatResponse CreateDirectMessageResponse()
-    {
-        var arguments = new Dictionary<string, object?>
-        {
-            ["star_id"] = "sonya",
-            ["text"] = "Вижу, о чём ты. Вернёмся к этому после следующего поста.",
-            ["memory_fact"] = "любит короткие посты",
-        };
-        var call = new FunctionCallContent("test-dm-call", "dm", arguments);
-        return new ChatResponse(new ChatMessage(ChatRole.Assistant, [call]));
     }
 
     protected static async Task<string> GetWorldIdAsync(TestApiClient api) =>

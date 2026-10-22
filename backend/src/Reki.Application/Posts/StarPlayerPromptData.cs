@@ -1,6 +1,6 @@
 using Reki.Domain.Worlds;
 
-namespace Reki.Application.Common.AI;
+namespace Reki.Application.Posts;
 
 internal sealed record StarPlayerPromptData(
     string WorldId,
@@ -10,5 +10,4 @@ internal sealed record StarPlayerPromptData(
     string Drama,
     string ChannelVoice,
     string Address,
-    string? StarId,
-    IReadOnlyList<string> Memory);
+    string? StarId);

@@ -1,4 +1,4 @@
-namespace Reki.Application.Common.Safety;
+namespace Reki.Application.Posts;
 
 public enum SafetyDecision
 {

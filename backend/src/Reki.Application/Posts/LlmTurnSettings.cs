@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Reki.Application.Common.AI;
+namespace Reki.Application.Posts;
 
 public sealed record LlmTurnSettings
 {

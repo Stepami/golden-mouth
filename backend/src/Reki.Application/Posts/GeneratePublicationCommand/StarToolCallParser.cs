@@ -1,9 +1,8 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
-using Reki.Application.Posts;
 using Reki.Domain.Social;
 
-namespace Reki.Application.Common.AI;
+namespace Reki.Application.Posts.GeneratePublicationCommand;
 
 internal static class StarToolCallParser
 {
@@ -23,29 +22,6 @@ internal static class StarToolCallParser
 
     internal interface IStarAction;
 
-    internal sealed record StarReactionAction(string Emoji) : IStarAction;
-
-    internal sealed record StarCommentAction(
-        string Author,
-        StarId StarId,
-        string Text,
-        string Hook,
-        string Tone,
-        double Brave,
-        double Humor,
-        double Topic,
-        IReadOnlyList<StarReason> Reasons,
-        bool OnTopic) : IStarAction;
-
-    internal sealed record StarRepostAction(StarId StarId, string Text) : IStarAction;
-
-    internal sealed record StarDirectMessageAction(
-        StarId StarId,
-        string Text,
-        string MemoryFact) : IStarAction;
-
-    internal sealed record StarEventAction(string Type, string Text) : IStarAction;
-
     public static IReadOnlyList<IStarAction> Parse(IEnumerable<FunctionCallContent> calls)
     {
         return calls.Select(Parse).ToArray();
@@ -60,7 +36,6 @@ internal static class StarToolCallParser
             "react" => ParseReaction(arguments),
             "comment" => ParseComment(arguments),
             "repost" => ParseRepost(arguments),
-            "dm" => ParseDirectMessage(arguments),
             "start_event" => ParseEvent(arguments),
             _ => throw new InvalidOperationException("The model returned an unknown action."),
         };
@@ -102,15 +77,6 @@ internal static class StarToolCallParser
         return new StarRepostAction(
             StarId.From(GetString(arguments, "star_id", 40, allowEmpty: false)),
             GetString(arguments, "text", 500, allowEmpty: false));
-    }
-
-    private static StarDirectMessageAction ParseDirectMessage(IDictionary<string, object?> arguments)
-    {
-        EnsureExactKeys(arguments, ["star_id", "text", "memory_fact"]);
-        return new StarDirectMessageAction(
-            StarId.From(GetString(arguments, "star_id", 40, allowEmpty: false)),
-            GetString(arguments, "text", 1000, allowEmpty: false),
-            GetString(arguments, "memory_fact", 160, allowEmpty: true));
     }
 
     private static StarEventAction ParseEvent(IDictionary<string, object?> arguments)
@@ -250,4 +216,22 @@ internal static class StarToolCallParser
             throw new InvalidOperationException("The model returned unknown or missing tool arguments.");
         }
     }
+
+    internal sealed record StarReactionAction(string Emoji) : IStarAction;
+
+    internal sealed record StarCommentAction(
+        string Author,
+        StarId StarId,
+        string Text,
+        string Hook,
+        string Tone,
+        double Brave,
+        double Humor,
+        double Topic,
+        IReadOnlyList<StarReason> Reasons,
+        bool OnTopic) : IStarAction;
+
+    internal sealed record StarRepostAction(StarId StarId, string Text) : IStarAction;
+
+    internal sealed record StarEventAction(string Type, string Text) : IStarAction;
 }

@@ -1,11 +1,7 @@
 using System.Text.Json;
-using Reki.Application.Social.GetDirectMessages;
-using Reki.Application.Social.GetFriends;
-using Reki.Application.Social.SendDirectMessageCommand;
 using Reki.Application.Telemetry.SubmitAnalyticsCommand;
 using Reki.Contracts.Events;
 using Reki.Contracts.Player;
-using Reki.Contracts.Social;
 using Reki.Contracts.Telemetry;
 using Reki.Contracts.Worlds;
 using Reki.Domain.Events;
@@ -21,21 +17,6 @@ namespace Reki.Api.Mapping;
 [Mapper]
 public sealed partial class ApiMapper
 {
-    public DmResponse MapDirectMessages(DirectMessageView view)
-    {
-        var persona = view.Star;
-        StarResponse star = new(persona.Id.Value, persona.Name, persona.Role, persona.Trait.ToString(), persona.About, view.Relation);
-        return new DmResponse(
-            star,
-            "на связи",
-            view.Conversation.Memory,
-            view.Conversation.Messages
-                .Select(MapDirectMessage)
-                .ToArray(),
-            ["спросить про новый пост", "обсудить событие дня"],
-            view.RepliesLeft);
-    }
-
     public AnalyticsSubmission MapAnalytics(AnalyticsBatchRequest source)
     {
         return new AnalyticsSubmission(
@@ -53,13 +34,6 @@ public sealed partial class ApiMapper
                 item.Prev,
                 SanitizeProperties(item.Props))).ToArray());
     }
-
-    public partial SendDirectMessageResponse MapSentDirectMessage(SentDirectMessage source);
-
-    [MapProperty(nameof(FriendSummary.Subscribers), nameof(FriendResponse.Subs))]
-    public partial FriendResponse MapFriend(FriendSummary source);
-
-    public partial IReadOnlyList<FriendResponse> MapFriends(IReadOnlyList<FriendSummary> source);
 
     [MapperIgnoreSource(nameof(DailyGameEvent.PlayerId))]
     [MapperIgnoreSource(nameof(DailyGameEvent.DayStartedAtUtc))]
@@ -171,19 +145,12 @@ public sealed partial class ApiMapper
     private static StarTrait MapStarTrait(int source) =>
         Enum.Parse<StarTrait>(source.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
-    private static DirectMessageAuthor MapDirectMessageAuthor(string source)
-    {
-        return Enum.Parse<DirectMessageAuthor>(source, true);
-    }
-
     private static GameEventKind MapGameEventKind(string source)
     {
         return Enum.Parse<GameEventKind>(source, true);
     }
 
     private static string MapEventId(DomainEventId source) => source.Value;
-
-    private static string MapPlayerId(PlayerId source) => source.Value;
 
     private static string SanitizeElement(JsonElement element)
     {
@@ -208,8 +175,6 @@ public sealed partial class ApiMapper
 
     [MapEnum(EnumMappingStrategy.ByName)]
     private partial Drama MapDrama(WorldDrama source);
-
-    private partial DirectMessageResponse MapDirectMessage(DirectMessage source);
 
     private partial WorldRuleResponse MapWorldRule(WorldRule source);
 

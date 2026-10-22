@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 
-namespace Reki.Application.Common.AI;
+namespace Reki.Application.Posts;
 
 internal static class StarToolSchemas
 {
@@ -14,18 +14,12 @@ internal static class StarToolSchemas
             CommentSchema),
         Create("repost", "Сделать репост от имени звезды.", RepostSchema),
         Create(
-            "dm",
-            "Ответить игроку в личных сообщениях и запомнить один безопасный факт.",
-            DirectMessageSchema),
-        Create(
             "start_event",
             "Начать событие разрешённого типа из правил мира.",
             StartEventSchema),
     ];
 
     public static readonly IReadOnlyList<AITool> Post = All.Where(tool => tool.Name is "comment" or "react").ToArray();
-
-    public static readonly IReadOnlyList<AITool> DirectMessage = All.Where(tool => tool.Name == "dm").ToArray();
 
     public static readonly IReadOnlyList<AITool> ThreadReply =
         [Create("thread_reply", "Ответить в треде; необязательные поля передаются пустой строкой.", ThreadReplySchema)];
@@ -102,19 +96,6 @@ internal static class StarToolSchemas
                                           "additionalProperties": false
                                         }
                                         """;
-
-    private const string DirectMessageSchema = """
-                                               {
-                                                 "type": "object",
-                                                 "properties": {
-                                                   "star_id": { "type": "string", "minLength": 1, "maxLength": 40 },
-                                                   "text": { "type": "string", "minLength": 1, "maxLength": 1000 },
-                                                   "memory_fact": { "type": "string", "maxLength": 160 }
-                                                 },
-                                                 "required": ["star_id", "text", "memory_fact"],
-                                                 "additionalProperties": false
-                                               }
-                                               """;
 
     private const string StartEventSchema = """
                                             {

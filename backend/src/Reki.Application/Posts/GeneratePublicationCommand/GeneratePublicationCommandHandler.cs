@@ -6,16 +6,14 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
-using Reki.Application.Common.AI;
 using Reki.Application.Common.Balance;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Common.Safety;
 using Reki.Application.Posts.GetPublication;
 using Reki.Application.Posts.GetWorldPosts;
 using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
-using static Reki.Application.Common.AI.StarToolCallParser;
+using static Reki.Application.Posts.GeneratePublicationCommand.StarToolCallParser;
 
 namespace Reki.Application.Posts.GeneratePublicationCommand;
 
@@ -225,7 +223,7 @@ public sealed partial class GeneratePublicationCommandHandler(
         var hateEnabled = StarTurnPolicy.IsHateEnabled(player, world, balance.Value, now);
         return new StarPostContext(
             request.Text,
-            new StarAgentProfile(world, null, [], player.Address),
+            new StarAgentProfile(world, null, player.Address),
             GetStage(world.Player.Subscribers),
             recentPosts.Items.Select(post => post.Text).ToArray(),
             hateEnabled);

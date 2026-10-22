@@ -161,13 +161,9 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
     }
 
     [Test]
-    [Arguments(false, -1, 10)]
-    [Arguments(false, 0, 10)]
-    [Arguments(false, 1, 13)]
-    [Arguments(true, -1, 20)]
-    [Arguments(true, 0, 20)]
-    [Arguments(true, 1, 23)]
-    public async Task Reset_ChallengeExpiryBoundary_SetsCurrentBalanceEnergyAsync(bool plus, int expirySeconds, int expectedEnergy)
+    [Arguments(false, 10)]
+    [Arguments(true, 20)]
+    public async Task Reset_SetsCurrentBalanceEnergyAsync(bool plus, int expectedEnergy)
     {
         // Arrange
         using var api = Factory.CreateApiClient(9308);
@@ -180,7 +176,6 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
             Energy = 31,
             EnergyUsed = 4,
             Settings = player.Settings with { Plus = plus },
-            ChallengeBonusUntilUtc = reset.AddSeconds(expirySeconds),
         });
         Factory.Session.Clock.SetUtcNow(reset);
 
@@ -191,40 +186,10 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var saved = await players.Find(item => item.Id == player.Id).SingleAsync();
         await Assert.That(saved.Energy).IsEqualTo(expectedEnergy);
         await Assert.That(saved.EnergyUsed).IsEqualTo(0);
-        await Assert.That(saved.ChallengeBonusUntilUtc).IsEqualTo(reset.AddSeconds(expirySeconds));
         await Assert.That(saved.PostsPeriodStartedAtUtc).IsEqualTo(reset);
         await Assert.That(saved.Version).IsEqualTo(player.Version + 1);
         await ResetGameDayAsync();
         await Assert.That((await players.Find(item => item.Id == player.Id).SingleAsync()).Energy).IsEqualTo(expectedEnergy);
-    }
-
-    [Test]
-    public async Task ChallengeReward_ActiveRenewal_DoesNotStackEnergyAsync()
-    {
-        // Arrange
-        using var api = Factory.CreateApiClient(9309);
-        var response = await CreatePlayerWithWorldAsync(api);
-        var players = Database.GetCollection<PlayerProfile>("players");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
-        var period = player.PostsPeriodStartedAtUtc;
-        var spent = player with { Energy = 6, EnergyUsed = 4 };
-
-        // Act
-        var first = spent.ApplyChallengeWinBonus(3, period.AddDays(3), period);
-        var renewed = first.ApplyChallengeWinBonus(3, period.AddDays(4), period);
-        await players.ReplaceOneAsync(item => item.Id == player.Id, renewed);
-
-        // Assert
-        await Assert.That(first.Energy).IsEqualTo(9);
-        await Assert.That(renewed.Energy).IsEqualTo(9);
-        await Assert.That(renewed.EnergyUsed).IsEqualTo(4);
-        await Assert.That(renewed.ChallengeBonusUntilUtc).IsEqualTo(period.AddDays(4));
-        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(9);
-        Factory.Session.Clock.SetUtcNow(period.AddDays(1));
-        await ResetGameDayAsync();
-        var reset = await players.Find(item => item.Id == player.Id).SingleAsync();
-        await Assert.That(reset.Energy).IsEqualTo(13);
-        await Assert.That(reset.EnergyUsed).IsEqualTo(0);
     }
 
     [Test]

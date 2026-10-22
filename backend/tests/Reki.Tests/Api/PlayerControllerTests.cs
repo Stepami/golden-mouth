@@ -13,7 +13,7 @@ using NSubstitute;
 using Reki.Application.Player;
 using Reki.Application.Worlds;
 using Reki.Contracts.Player;
-using Reki.Contracts.Social;
+using Reki.Contracts.Posts;
 using Reki.Contracts.Telemetry;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
@@ -567,11 +567,12 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             new UpdateSettingsRequest { Address = Address.She },
             CancellationToken.None);
         await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
-        await api.Social.SendDirectMessageAsync(
-            "sonya",
+        using var publication = await api.Posts.GeneratePublicationAsync(
             await GetWorldIdAsync(api),
-            new DirectMessageRequest { Text = "Привет" },
+            new StartPublicationRequest { PublicationId = Guid.NewGuid().ToString("N"), Text = "Новый пост", OwnWords = true },
             CancellationToken.None);
+        using var reader = new StreamReader(publication.Stream);
+        await reader.ReadToEndAsync();
         using var profile = ParsePlayerLayer(GetCapturedChatMessages()[1]);
         await Assert.That(profile.RootElement.GetProperty("address").GetString()).IsEqualTo("she");
     }

@@ -6,7 +6,6 @@ using Reki.Domain.Events;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using Reki.Domain.Social;
 using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Persistence;
@@ -22,8 +21,6 @@ internal static class MongoClassMappings
     public static void Register()
     {
         BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.AuthorIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.ChallengeIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.CommentIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
@@ -41,17 +38,13 @@ internal static class MongoClassMappings
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.StarIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.StarConversationIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.TelegramUserIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.WorldIdBsonSerializer());
         RegisterWithMongoId<PlayerProfile, PlayerId>(item => item.Id);
         RegisterWithMongoId<GamePost, PostId>(item => item.Id);
         RegisterWithMongoId<Publication, string>(item => item.Id);
-        RegisterWithMongoId<StarConversation, StarConversationId>(item => item.Id);
         RegisterWithMongoId<DailyGameEvent, EventId>(item => item.Id);
-        RegisterWithMongoId<GameChallenge, ChallengeId>(item => item.Id);
         RegisterWithMongoId<World, WorldId>(item => item.Id);
         RegisterWithMongoId<Invitation, InvitationId>(item => item.Id);
     }

@@ -30,26 +30,11 @@ public sealed record PlayerProfile
 
     public int Version { get; init; }
 
-    public DateTimeOffset? ChallengeBonusUntilUtc { get; init; }
-
     public bool PlusNotifyRequested { get; init; }
 
     public string? AgeBand { get; init; }
 
     public required PlayerSettings Settings { get; init; }
-
-    public PlayerProfile ApplyChallengeWinBonus(
-        int dailyBonus,
-        DateTimeOffset bonusUntilUtc,
-        DateTimeOffset periodStartedAtUtc)
-    {
-        return this with
-        {
-            Energy = Energy + (ChallengeBonusUntilUtc > periodStartedAtUtc ? 0 : dailyBonus),
-            ChallengeBonusUntilUtc = bonusUntilUtc,
-            Version = Version + 1,
-        };
-    }
 
     public PlayerProfile ClaimPlusInterestBonus(int bonus)
     {

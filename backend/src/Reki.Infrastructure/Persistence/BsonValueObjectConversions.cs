@@ -10,7 +10,6 @@ using Vogen;
 namespace Reki.Infrastructure.Persistence;
 
 [BsonSerializer<AuthorId>]
-[BsonSerializer<ChallengeId>]
 [BsonSerializer<CommentId>]
 [BsonSerializer<EventId>]
 [BsonSerializer<InvitationId>]
@@ -19,7 +18,6 @@ namespace Reki.Infrastructure.Persistence;
 [BsonSerializer<SessionId>]
 [BsonSerializer<SkillId>]
 [BsonSerializer<StarId>]
-[BsonSerializer<StarConversationId>]
 [BsonSerializer<TelegramUserId>]
 [BsonSerializer<WorldId>]
 internal partial class BsonValueObjectConversions;

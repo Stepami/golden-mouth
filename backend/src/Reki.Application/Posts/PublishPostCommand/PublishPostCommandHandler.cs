@@ -4,11 +4,9 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Balance;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Common.Safety;
 using Reki.Application.Invites;
 using Reki.Application.Posts.GetPublication;
 using Reki.Application.Posts.GetWorldPosts;
-using Reki.Application.Social;
 using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
 using Reki.Domain.Player;
@@ -24,7 +22,6 @@ public sealed class PublishPostCommandHandler(
     TimeProvider timeProvider,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
-    ChallengeLifecycle challengeLifecycle,
     PostProgressionCalculator progressionCalculator,
     ProductTelemetry analytics,
     PlayerSafetyGuard safety,
@@ -158,7 +155,6 @@ public sealed class PublishPostCommandHandler(
             throw new RequestConflictException("The player state changed while publishing the post.");
         }
 
-        await challengeLifecycle.RecordPostAsync(player.Id, post, cancellationToken);
         analytics.TrackWorldAudience(updatedWorld);
         TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
         await feedScheduler.ScheduleAsync(player.Id, world.Id);

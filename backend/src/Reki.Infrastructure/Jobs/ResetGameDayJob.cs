@@ -29,15 +29,9 @@ public sealed partial class ResetGameDayJob(
         var players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
         var worlds = database.GetCollection<World>(MongoCollections.Worlds);
         var period = SerializeDate(periodStart);
-        var energy = new BsonDocument("$add", new BsonArray
+        var energy = new BsonDocument("$cond", new BsonArray
         {
-            new BsonDocument("$cond", new BsonArray { "$Settings.Plus", balance.Value.PlusPostsPerDay, balance.Value.FreePostsPerDay }),
-            new BsonDocument("$cond", new BsonArray
-            {
-                new BsonDocument("$gt", new BsonArray { "$ChallengeBonusUntilUtc", new BsonDocument("$literal", period) }),
-                balance.Value.ChallengeWinBonusPerDay,
-                0,
-            }),
+            "$Settings.Plus", balance.Value.PlusPostsPerDay, balance.Value.FreePostsPerDay,
         });
         var playerUpdate = new BsonDocument("$set", new BsonDocument
         {

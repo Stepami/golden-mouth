@@ -4,7 +4,6 @@ using MongoDB.Driver;
 using Reki.Application.Posts;
 using Reki.Domain.Events;
 using Reki.Domain.Posts;
-using Reki.Domain.Social;
 
 namespace Reki.Infrastructure.Persistence.Migrations;
 
@@ -21,9 +20,9 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
         var players = database.GetCollection<BsonDocument>(MongoCollections.Players);
         var posts = database.GetCollection<GamePost>(MongoCollections.Posts);
         var publications = database.GetCollection<Publication>(MongoCollections.Publications);
-        var memories = database.GetCollection<StarConversation>(MongoCollections.StarsMemory);
+        var memories = database.GetCollection<BsonDocument>(MongoCollections.StarsMemory);
         var events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
-        var challenges = database.GetCollection<GameChallenge>(MongoCollections.Challenges);
+        var challenges = database.GetCollection<BsonDocument>(MongoCollections.Challenges);
         var worlds = database.GetCollection<BsonDocument>(MongoCollections.Worlds);
 
         var telegramKey = Builders<BsonDocument>.IndexKeys
@@ -33,14 +32,14 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
         var postKeys = Builders<GamePost>.IndexKeys
             .Ascending("PlayerId")
             .Descending(item => item.CreatedAtUtc);
-        var memoryKeys = Builders<StarConversation>.IndexKeys
-            .Ascending(item => item.PlayerId)
-            .Ascending(item => item.StarId);
+        var memoryKeys = Builders<BsonDocument>.IndexKeys
+            .Ascending("PlayerId")
+            .Ascending("StarId");
         var eventKeys = Builders<DailyGameEvent>.IndexKeys
             .Ascending(item => item.PlayerId)
             .Descending(item => item.DayStartedAtUtc);
-        var challengeKey = Builders<GameChallenge>.IndexKeys
-            .Ascending(item => item.Participants);
+        var challengeKey = Builders<BsonDocument>.IndexKeys
+            .Ascending("Participants");
         var worldKeys = Builders<BsonDocument>.IndexKeys
             .Ascending("PlayerId")
             .Ascending("WorldId");
@@ -61,14 +60,14 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
             "ux_stars_memory_player_star",
             unique: true);
         var eventIndex = IndexFactory.Create(eventKeys, "ix_events_player_day");
-        var challengeOptions = new CreateIndexOptions<GameChallenge>
+        var challengeOptions = new CreateIndexOptions<BsonDocument>
         {
             Name = "ux_challenges_active_participants",
             Unique = true,
-            PartialFilterExpression = Builders<GameChallenge>.Filter
-                .Eq(item => item.Status, ChallengeStatus.Active),
+            PartialFilterExpression = Builders<BsonDocument>.Filter
+                .Eq("Status", 1),
         };
-        var challengeIndex = new CreateIndexModel<GameChallenge>(challengeKey, challengeOptions);
+        var challengeIndex = new CreateIndexModel<BsonDocument>(challengeKey, challengeOptions);
         var worldIndex = IndexFactory.Create(
             worldKeys,
             "ux_worlds_player_world",

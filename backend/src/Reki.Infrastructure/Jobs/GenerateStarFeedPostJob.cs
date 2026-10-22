@@ -1,8 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
-using Reki.Application.Common.AI;
-using Reki.Application.Common.Safety;
 using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Application.Worlds;
@@ -12,7 +10,7 @@ using Reki.Infrastructure.Serialization;
 using TickerQ.Exceptions;
 using TickerQ.Utilities.Base;
 using TickerQ.Utilities.Interfaces;
-using StarAgentInstructions = Reki.Application.Common.AI.StarAgentInstructions;
+using StarAgentInstructions = Reki.Application.Posts.StarAgentInstructions;
 
 namespace Reki.Infrastructure.Jobs;
 
@@ -46,7 +44,7 @@ public sealed class GenerateStarFeedPostJob(
 
         var recent = await postRepository.GetPostsAsync(worldId, null, 0, 20, cancellationToken);
         var star = world.Stars[(int)((uint)context.Id.GetHashCode() % (uint)world.Stars.Count)];
-        var profile = new StarAgentProfile(world, star.Id, [], player.Address);
+        var profile = new StarAgentProfile(world, star.Id, player.Address);
         var history = recent.Items.Select(post =>
         {
             var isPlayer = post.AuthorId == world.Player.PlayerId.ToAuthorId();

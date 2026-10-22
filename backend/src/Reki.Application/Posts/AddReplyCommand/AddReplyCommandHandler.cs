@@ -4,10 +4,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
-using Reki.Application.Common.AI;
 using Reki.Application.Common.Balance;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Common.Safety;
 using Reki.Application.Posts.GetPost;
 using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
@@ -56,7 +54,7 @@ public sealed partial class AddReplyCommandHandler(
 
         EnsureEnergy(player);
         var context = new StarReplyContext(
-            new StarAgentProfile(world, null, [], player.Address),
+            new StarAgentProfile(world, null, player.Address),
             star.Id,
             post.Text,
             target is null ? [] : post.GetBranch(target.Id),
