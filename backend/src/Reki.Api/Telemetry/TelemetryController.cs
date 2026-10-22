@@ -25,7 +25,7 @@ public sealed partial class TelemetryController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new SubmitAnalyticsCommand(mapper.MapAnalytics(request)),
+            new SubmitAnalytics(mapper.MapAnalytics(request)),
             cancellationToken);
         return TypedResults.NoContent();
     }
@@ -61,7 +61,7 @@ public sealed partial class TelemetryController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new ReportCommentCommand(
+            new ReportComment(
                 CommentId.From(request.CommentId),
                 request.Reason),
             cancellationToken);

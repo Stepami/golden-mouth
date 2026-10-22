@@ -22,7 +22,7 @@ public sealed class EventsController(
         CancellationToken cancellationToken)
     {
         var gameEvent = await sender.Send(
-            new GetTodayEventQuery(Domain.Worlds.WorldId.From(worldId)),
+            new TodayEventQuery(Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapEvent(gameEvent));
     }
@@ -36,7 +36,7 @@ public sealed class EventsController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new AnswerEventCommand(
+            new AnswerEvent(
                 DomainEventId.From(eventId),
                 request.Text,
                 Domain.Worlds.WorldId.From(worldId)),

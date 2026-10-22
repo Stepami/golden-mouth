@@ -52,7 +52,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(
-            new OnboardPlayerCommand(
+            new OnboardPlayer(
                 TelegramUserId.From(telegramUser.User.Id),
                 ToStorageValue(request.BirthGroup),
                 request.Address.ToString().ToLowerInvariant(),
@@ -76,7 +76,7 @@ public sealed class PlayerController(
     public async Task<Ok<ReferralResponse>> GetReferralCodeAsync(CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new GetReferralQuery(),
+            new ReferralQuery(),
             cancellationToken);
         return TypedResults.Ok(result);
     }
@@ -88,7 +88,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new UpdateSettingsCommand(
+            new UpdateSettings(
                 request.Notifications,
                 request.Quiet,
                 request.Plus,
@@ -104,7 +104,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         var bonus = await sender.Send(
-            new ClaimPlusInterestCommand(request?.Interest ?? true),
+            new ClaimPlusInterest(request?.Interest ?? true),
             cancellationToken);
         return TypedResults.Ok(new PlusInterestResponse(bonus));
     }
@@ -115,7 +115,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new DeletePlayerCommand(),
+            new DeletePlayer(),
             cancellationToken);
         return TypedResults.Ok();
     }

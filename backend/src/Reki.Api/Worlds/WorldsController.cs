@@ -23,7 +23,7 @@ public sealed class WorldsController(
     [ActionName("GetWorldTemplates")]
     public async Task<Ok<IReadOnlyList<WorldResponse>>> GetWorldTemplatesAsync(CancellationToken cancellationToken)
     {
-        var worlds = await sender.Send(new GetWorldTemplatesQuery(), cancellationToken);
+        var worlds = await sender.Send(new WorldTemplatesQuery(), cancellationToken);
         return TypedResults.Ok<IReadOnlyList<WorldResponse>>([.. worlds.Select(mapper.MapWorld)]);
     }
 
@@ -40,7 +40,7 @@ public sealed class WorldsController(
     public async Task<Ok<WorldResponse>> CreateWorldAsync(CreateWorldRequest request, CancellationToken cancellationToken)
     {
         var world = await sender.Send(
-            new CreateWorldCommand(mapper.MapWorldDefinition(request)),
+            new CreateWorld(mapper.MapWorldDefinition(request)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapWorld(world));
     }
@@ -52,7 +52,7 @@ public sealed class WorldsController(
         string worldId,
         CancellationToken cancellationToken)
     {
-        var command = new UpdateWorldCommand(WorldId.From(worldId), mapper.MapWorldDefinition(request));
+        var command = new UpdateWorld(WorldId.From(worldId), mapper.MapWorldDefinition(request));
         await sender.Send(command, cancellationToken);
         return TypedResults.Ok();
     }

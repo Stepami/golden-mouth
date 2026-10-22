@@ -22,7 +22,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = sender.CreateStream(
-            new GeneratePublicationCommand(
+            new GeneratePublication(
                 request.PublicationId,
                 request.Text,
                 request.OwnWords,
@@ -39,7 +39,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new GetPublicationStatusQuery(publicationId), cancellationToken);
+            new PublicationStatusQuery(publicationId), cancellationToken);
         return TypedResults.Ok(result);
     }
 
@@ -51,7 +51,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new PublishPostCommand(publicationId, Domain.Worlds.WorldId.From(worldId)),
+            new PublishPost(publicationId, Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok(result);
     }
@@ -65,7 +65,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = sender.CreateStream(
-            new AddReplyCommand(
+            new AddReply(
                 PostId.From(postId),
                 request.CommentId is { } commentId ? CommentId.From(commentId) : null,
                 request.RequestId,
@@ -112,7 +112,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new GetPostDetailQuery(PostId.From(postId), Domain.Worlds.WorldId.From(worldId)),
+            new PostDetailQuery(PostId.From(postId), Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok(result);
     }

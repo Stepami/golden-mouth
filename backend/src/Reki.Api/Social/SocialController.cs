@@ -22,7 +22,7 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         var friends = await sender.Send(
-            new GetFriendsQuery(),
+            new FriendsQuery(),
             cancellationToken);
         var response = mapper.MapFriends(friends);
         return TypedResults.Ok(response);
@@ -36,7 +36,7 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new GetDirectMessagesQuery(StarId.From(starId), Domain.Worlds.WorldId.From(worldId)),
+            new DirectMessagesQuery(StarId.From(starId), Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);
         return TypedResults.Ok(mapper.MapDirectMessages(result));
     }
@@ -50,7 +50,7 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new SendDirectMessageCommand(
+            new SendDirectMessage(
                 StarId.From(starId),
                 request.Text,
                 Domain.Worlds.WorldId.From(worldId)),
@@ -67,7 +67,7 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new ForgetStarMemoryCommand(
+            new ForgetStarMemory(
                 StarId.From(starId),
                 request.Fact,
                 Domain.Worlds.WorldId.From(worldId)),
@@ -81,7 +81,7 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         var view = await sender.Send(
-            new GetActiveChallengeQuery(),
+            new ActiveChallengeQuery(),
             cancellationToken);
         ChallengeResponse? response = null;
         if (view is not null)
@@ -115,7 +115,7 @@ public sealed class SocialController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new StartChallengeCommand(PlayerId.From(request.FriendId)),
+            new StartChallenge(PlayerId.From(request.FriendId)),
             cancellationToken);
         return TypedResults.Ok();
     }

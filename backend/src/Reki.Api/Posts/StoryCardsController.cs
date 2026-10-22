@@ -31,7 +31,7 @@ public sealed class StoryCardsController(
         }
 
         var card = await sender.Send(
-            new GetPublicStoryCardQuery(PlayerId.From(playerId), PostId.From(postId)),
+            new PublicStoryCardQuery(PlayerId.From(playerId), PostId.From(postId)),
             cancellationToken);
         Response.ContentType = "image/png";
         Response.Headers.CacheControl = "no-store";
