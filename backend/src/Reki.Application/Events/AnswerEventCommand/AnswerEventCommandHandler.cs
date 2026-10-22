@@ -1,6 +1,6 @@
 using Mediator;
 using Reki.Application.Common;
-using Reki.Application.Common.Exceptions;
+using Reki.Application.Exceptions;
 
 namespace Reki.Application.Events.AnswerEventCommand;
 

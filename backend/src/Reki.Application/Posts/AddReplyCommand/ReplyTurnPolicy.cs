@@ -1,5 +1,5 @@
 using Microsoft.Extensions.AI;
-using Reki.Application.Posts.AI;
+using Reki.Application.Exceptions;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Domain.Social;
 

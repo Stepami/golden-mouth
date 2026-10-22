@@ -1,5 +1,5 @@
 using Mediator;
-using Reki.Application.Common.Exceptions;
+using Reki.Application.Exceptions;
 using Reki.Application.Player;
 using Reki.Application.Worlds;
 

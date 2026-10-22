@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
-using Reki.Application.Common.Exceptions;
-using Reki.Application.Posts.AI;
+using Reki.Application.Exceptions;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Contracts.Posts;
 

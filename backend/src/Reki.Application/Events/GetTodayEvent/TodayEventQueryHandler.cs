@@ -1,6 +1,6 @@
 using Mediator;
 using Reki.Application.Common;
-using Reki.Application.Common.Exceptions;
+using Reki.Application.Exceptions;
 using Reki.Domain.Events;
 
 namespace Reki.Application.Events.GetTodayEvent;
