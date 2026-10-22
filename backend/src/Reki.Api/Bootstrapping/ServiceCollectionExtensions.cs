@@ -1,11 +1,11 @@
 using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.Options;
 using Reki.Api.Common;
 using Reki.Api.Common.Errors;
 using Reki.Api.Mapping;
 using Reki.Api.OpenApi;
+using Reki.Api.Serialization;
 using Reki.Application;
 using Reki.Application.Common;
 using Reki.Application.Common.Balance;
@@ -67,8 +67,8 @@ internal static class ServiceCollectionExtensions
 
     private static void ConfigureJson(JsonSerializerOptions options)
     {
-        IJsonTypeInfoResolver resolver = ApiJsonSerializerContext.Default;
-        options.TypeInfoResolverChain.Insert(0, resolver);
+        options.TypeInfoResolverChain.Insert(0, ApiJsonSerializerContext.Default);
+        options.TypeInfoResolverChain.Insert(0, ProblemDetailsJsonSerializerContext.Default);
         foreach (var converter in ApiJsonSerializerContext.Default.Options.Converters)
         {
             options.Converters.Add(converter);

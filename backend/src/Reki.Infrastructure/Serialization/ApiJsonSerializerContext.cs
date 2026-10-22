@@ -1,7 +1,5 @@
 using System.Net.ServerSentEvents;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Reki.Contracts.Common;
 using Reki.Contracts.Events;
 using Reki.Contracts.Player;
@@ -20,9 +18,6 @@ namespace Reki.Infrastructure.Serialization;
 [JsonSerializable(typeof(object))]
 [JsonSerializable(typeof(IReadOnlyList<LiveEvent>))]
 [JsonSerializable(typeof(SseItem<PublicationStatusLiveEvent>))]
-[JsonSerializable(typeof(ProblemDetails))]
-[JsonSerializable(typeof(HttpValidationProblemDetails))]
-[JsonSerializable(typeof(ValidationProblemDetails))]
 [JsonSerializable(typeof(PlayerResponse))]
 [JsonSerializable(typeof(ReferralResponse))]
 [JsonSerializable(typeof(InvitationResponse))]
