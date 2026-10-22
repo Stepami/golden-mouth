@@ -100,7 +100,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         var result = await sender.Send(
             new WorldPostsQuery(Domain.Worlds.WorldId.From(request.WorldId), request.PageNumber, request.PageSize),
             cancellationToken);
-        IReadOnlyList<ChannelPostResponse> response = result.Items.Select(PostContractMapper.MapChannelPost).ToArray();
+        IReadOnlyList<ChannelPostResponse> response = [.. result.Items.Select(PostContractMapper.MapChannelPost)];
         return TypedResults.Ok(new PageResponse<ChannelPostResponse>(response, result.PageNumber, result.HasNext));
     }
 
