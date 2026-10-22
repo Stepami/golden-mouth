@@ -43,37 +43,53 @@ internal sealed class MongoGameStore : IGameStore
         PlayerProfile player,
         CancellationToken cancellationToken)
     {
-        var ownedWorldIds = await _worlds.Find(item => item.Player.PlayerId == player.Id)
-            .Project(item => item.Id).ToListAsync(cancellationToken);
-        Task deletePosts = _posts.DeleteManyAsync(
-            Builders<GamePost>.Filter.In(item => item.WorldId, ownedWorldIds),
-            cancellationToken);
-        Task deletePublications = _publications.DeleteManyAsync(
-            item => item.PlayerId == player.Id,
-            cancellationToken);
-        Task deleteMemories = _starMemories.DeleteManyAsync(
-            item => item.PlayerId == player.Id,
-            cancellationToken);
-        Task deleteEvents = _events.DeleteManyAsync(item => item.PlayerId == player.Id, cancellationToken);
-        var challengeFilter = Builders<GameChallenge>.Filter
-            .AnyEq(item => item.Participants, player.Id);
-        Task deleteChallenges = _challenges.DeleteManyAsync(challengeFilter, cancellationToken);
-        Task deleteWorlds = _worlds.DeleteManyAsync(item => item.Player.PlayerId == player.Id, cancellationToken);
-        var inviteFilter = Builders<Invitation>.Filter.Or(
-            Builders<Invitation>.Filter.Eq(item => item.InviterId, player.Id),
-            Builders<Invitation>.Filter.Eq(item => item.InviteeId, player.Id),
-            new BsonDocument("PlayerId", player.Id.Value));
-        Task deleteInvites = _invites.DeleteManyAsync(inviteFilter, cancellationToken);
+        using var session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
+        await session.WithTransactionAsync(DeleteAsync, cancellationToken: cancellationToken);
 
-        await Task.WhenAll(
-            deletePosts,
-            deletePublications,
-            deleteMemories,
-            deleteEvents,
-            deleteChallenges,
-            deleteWorlds,
-            deleteInvites);
-        await _players.DeleteOneAsync(item => item.Id == player.Id, cancellationToken);
+        async Task<bool> DeleteAsync(IClientSessionHandle transactionSession, CancellationToken transactionCancellationToken)
+        {
+            var ownedWorldIds = await _worlds.Find(transactionSession, item => item.Player.PlayerId == player.Id)
+                .Project(item => item.Id).ToListAsync(transactionCancellationToken);
+            await _posts.DeleteManyAsync(
+                transactionSession,
+                Builders<GamePost>.Filter.In(item => item.WorldId, ownedWorldIds),
+                cancellationToken: transactionCancellationToken);
+            await _publications.DeleteManyAsync(
+                transactionSession,
+                item => item.PlayerId == player.Id,
+                cancellationToken: transactionCancellationToken);
+            await _starMemories.DeleteManyAsync(
+                transactionSession,
+                item => item.PlayerId == player.Id,
+                cancellationToken: transactionCancellationToken);
+            await _events.DeleteManyAsync(
+                transactionSession,
+                item => item.PlayerId == player.Id,
+                cancellationToken: transactionCancellationToken);
+            var challengeFilter = Builders<GameChallenge>.Filter
+                .AnyEq(item => item.Participants, player.Id);
+            await _challenges.DeleteManyAsync(
+                transactionSession,
+                challengeFilter,
+                cancellationToken: transactionCancellationToken);
+            await _worlds.DeleteManyAsync(
+                transactionSession,
+                item => item.Player.PlayerId == player.Id,
+                cancellationToken: transactionCancellationToken);
+            var inviteFilter = Builders<Invitation>.Filter.Or(
+                Builders<Invitation>.Filter.Eq(item => item.InviterId, player.Id),
+                Builders<Invitation>.Filter.Eq(item => item.InviteeId, player.Id),
+                new BsonDocument("PlayerId", player.Id.Value));
+            await _invites.DeleteManyAsync(
+                transactionSession,
+                inviteFilter,
+                cancellationToken: transactionCancellationToken);
+            await _players.DeleteOneAsync(
+                transactionSession,
+                item => item.Id == player.Id,
+                cancellationToken: transactionCancellationToken);
+            return true;
+        }
     }
 
     public async ValueTask<bool> TryCommitPostAsync(
