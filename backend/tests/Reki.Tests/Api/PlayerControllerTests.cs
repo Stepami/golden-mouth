@@ -6,11 +6,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Testing;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using NSubstitute;
 using Reki.Application.Player;
+using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
@@ -29,10 +28,10 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Me_WithoutProfile_ReturnsCompatibleNotFoundWithoutExceptionTelemetryAsync()
     {
         // Arrange
-        var collector = new FakeLogCollector();
-        await using var observedFactory = new ApiFactory { Session = Factory.Session, RequestLogs = collector };
+        await using var observedFactory = new ApiFactory { Session = Factory.Session };
         using var client = observedFactory.CreateClient();
         client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "18301");
+        var collector = observedFactory.Services.GetFakeLogCollector();
         collector.Clear();
         var activities = new ConcurrentQueue<Activity>();
         using var listener = new ActivityListener
@@ -507,13 +506,11 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var before = await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
         await api.Player.DeleteCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None)).IsEqualTo(before - 1);
-        var deletion = Factory.ProductLogger.ReceivedCalls()
-            .Where(call => call.GetMethodInfo().Name == "BeginScope")
-            .Select(call => call.GetArguments()[0])
-            .OfType<IReadOnlyDictionary<string, object?>>()
-            .Single(attributes => Equals(attributes.GetValueOrDefault("player_id"), playerId) &&
-                Equals(attributes.GetValueOrDefault("event_name"), "player_deleted"));
-        await Assert.That(deletion["activity_kind"]).IsEqualTo("lifecycle");
+        var deletion = Factory.Services.GetFakeLogCollector().GetSnapshot()
+            .Where(record => record.Category == typeof(ProductTelemetry).FullName)
+            .Single(record => record.GetStructuredStateValue("player_id") == playerId &&
+                record.GetStructuredStateValue("event_name") == "player_deleted");
+        await Assert.That(deletion.GetStructuredStateValue("activity_kind")).IsEqualTo("lifecycle");
 
         await AssertCollectionHasNoPlayerAsync(
             "players",

@@ -1,6 +1,7 @@
+using System.Globalization;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using NSubstitute;
+using Reki.Application.Telemetry;
 using Reki.Contracts.Telemetry;
 
 namespace Reki.Tests.Api;
@@ -30,40 +31,32 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
                 ],
             },
             CancellationToken.None);
-        var events = Factory.ProductLogger.ReceivedCalls()
-            .Where(call => call.GetMethodInfo().Name == "BeginScope")
-            .Select(call => call.GetArguments()[0])
-            .OfType<IReadOnlyDictionary<string, object?>>()
-            .Where(attributes => Equals(attributes.GetValueOrDefault("player_id"), player.Id) &&
-                Equals(attributes.GetValueOrDefault("event_name"), "world_created"))
+        var productEvents = Factory.Services.GetFakeLogCollector().GetSnapshot()
+            .Where(record => record.Category == typeof(ProductTelemetry).FullName)
+            .ToArray();
+        var events = productEvents
+            .Where(record => record.GetStructuredStateValue("player_id") == player.Id &&
+                record.GetStructuredStateValue("event_name") == "world_created")
             .ToArray();
         await Assert.That(events.Length).IsEqualTo(1);
-        await Assert.That(events[0]["world_id"]).IsEqualTo(world.Id);
-        await Assert.That(events[0]["world"]).IsEqualTo(world.BalanceKey);
-        await Assert.That(events[0].ContainsKey("registration_source")).IsFalse();
-        var registration = Factory.ProductLogger.ReceivedCalls()
-            .Where(call => call.GetMethodInfo().Name == "BeginScope")
-            .Select(call => call.GetArguments()[0])
-            .OfType<IReadOnlyDictionary<string, object?>>()
-            .Single(attributes => Equals(attributes.GetValueOrDefault("player_id"), player.Id) &&
-                Equals(attributes.GetValueOrDefault("event_name"), "player_created"));
-        await Assert.That(registration["registration_source"]).IsEqualTo("direct");
-        var deleted = Factory.ProductLogger.ReceivedCalls()
-            .Where(call => call.GetMethodInfo().Name == "BeginScope")
-            .Select(call => call.GetArguments()[0])
-            .OfType<IReadOnlyDictionary<string, object?>>()
-            .Any(attributes => Equals(attributes.GetValueOrDefault("player_id"), player.Id) &&
-                Equals(attributes.GetValueOrDefault("event_name"), "player_deleted"));
+        await Assert.That(events[0].GetStructuredStateValue("world_id")).IsEqualTo(world.Id);
+        await Assert.That(events[0].GetStructuredStateValue("world")).IsEqualTo(world.BalanceKey);
+        await Assert.That(events[0].StructuredState?.Any(property => property.Key == "registration_source") ?? false).IsFalse();
+        var registration = productEvents
+            .Single(record => record.GetStructuredStateValue("player_id") == player.Id &&
+                record.GetStructuredStateValue("event_name") == "player_created");
+        await Assert.That(registration.GetStructuredStateValue("registration_source")).IsEqualTo("direct");
+        var deleted = productEvents
+            .Any(record => record.GetStructuredStateValue("player_id") == player.Id &&
+                record.GetStructuredStateValue("event_name") == "player_deleted");
         await Assert.That(deleted).IsFalse();
-        await Assert.That(events[0].ContainsKey("TelegramUserId")).IsFalse();
-        var audience = Factory.ProductLogger.ReceivedCalls()
-            .Where(call => call.GetMethodInfo().Name == "BeginScope")
-            .Select(call => call.GetArguments()[0])
-            .OfType<IReadOnlyDictionary<string, object?>>()
-            .Single(attributes => Equals(attributes.GetValueOrDefault("world_id"), world.Id) &&
-                Equals(attributes.GetValueOrDefault("event_name"), "world_audience_updated"));
-        await Assert.That(audience["subscriber_total"]).IsEqualTo(world.Subscribers);
-        await Assert.That(audience["activity_kind"]).IsEqualTo("inventory");
+        await Assert.That(events[0].StructuredState?.Any(property => property.Key == "TelegramUserId") ?? false).IsFalse();
+        var audience = productEvents
+            .Single(record => record.GetStructuredStateValue("world_id") == world.Id &&
+                record.GetStructuredStateValue("event_name") == "world_audience_updated");
+        await Assert.That(audience.GetStructuredStateValue("subscriber_total"))
+            .IsEqualTo(world.Subscribers.ToString(CultureInfo.InvariantCulture));
+        await Assert.That(audience.GetStructuredStateValue("activity_kind")).IsEqualTo("inventory");
     }
 
     [Test]

@@ -4,13 +4,9 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
-using NSubstitute;
 using Reki.Api;
 using Reki.Application.Balance;
-using Reki.Application.Telemetry;
 using TUnit.AspNetCore;
 
 namespace Reki.Tests;
@@ -24,15 +20,11 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
 
     public double? FeedOpenProbability { get; init; }
 
-    public FakeLogCollector? RequestLogs { get; init; }
-
     public OpenAiStub Llm => Session.Llm;
 
     public string DatabaseName => Session.DatabaseName;
 
     public string MongoConnectionString => Session.ConnectionString;
-
-    internal ILogger ProductLogger { get; } = Substitute.For<ILogger>();
 
     public TestApiClient CreateApiClient(long? telegramUserId = null)
     {
@@ -52,15 +44,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Llm:TimeoutSeconds", "1");
         builder.ConfigureServices(services =>
         {
-            if (RequestLogs is { } requestLogs)
-            {
-                services.AddLogging(logging => logging.AddProvider(new FakeLoggerProvider(requestLogs)));
-            }
-
-            ProductLogger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
-            var productLoggerFactory = Substitute.For<ILoggerFactory>();
-            productLoggerFactory.CreateLogger(Arg.Any<string>()).Returns(ProductLogger);
-            services.AddSingleton<ILogger<ProductTelemetry>>(new Logger<ProductTelemetry>(productLoggerFactory));
+            services.AddFakeLogging();
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
             if (FeedOpenProbability is { } probability)
