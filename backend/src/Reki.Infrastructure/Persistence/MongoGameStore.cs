@@ -309,17 +309,20 @@ internal sealed class MongoGameStore : IGameStore
         int? limit,
         WorldId worldId,
         AuthorId? authorId,
+        int offset,
         CancellationToken cancellationToken)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
         var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId);
         if (authorId is { } author)
         {
             filter &= Builders<GamePost>.Filter.Eq(item => item.AuthorId, author);
         }
 
-        IFindFluent<GamePost, GamePost> query = _posts
+        var query = _posts
             .Find(filter)
-            .SortByDescending(item => item.CreatedAtUtc);
+            .SortByDescending(item => item.CreatedAtUtc)
+            .Skip(offset);
         if (limit is { } count)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);

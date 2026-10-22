@@ -40,7 +40,7 @@ public sealed class GenerateStarFeedPostJob(
             return;
         }
 
-        var recent = await store.GetPostsAsync(20, worldId, null, cancellationToken);
+        var recent = await store.GetPostsAsync(20, worldId, null, 0, cancellationToken);
         var star = world.Stars[(int)((uint)context.Id.GetHashCode() % (uint)world.Stars.Count)];
         var profile = new StarAgentProfile(world, star.Id, [], player.Address);
         var history = recent.Select(post =>

@@ -50,7 +50,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         foreach (var worldId in new[] { firstId, secondId })
         {
-            var worldPosts = await store.GetPostsAsync(null, worldId, null, CancellationToken.None);
+            var worldPosts = await store.GetPostsAsync(null, worldId, null, 0, CancellationToken.None);
             var conversation = await store.GetStarConversationAsync(owner, starId, CancellationToken.None, worldId)
                 ?? throw new InvalidOperationException("Missing conversation.");
             await Assert.That(worldPosts.Single().WorldId).IsEqualTo(worldId);
@@ -249,11 +249,12 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await CreatePlayerWithWorldAsync(api);
 
         // Act
-        var response = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetFeedAsync(null, CancellationToken.None));
-        await Assert.That(response).IsNotNull();
+        using var http = Factory.CreateClient();
+        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "1018");
+        using var response = await http.GetAsync("/feed");
 
         // Assert
-        await Assert.That(response.StatusCode).IsEqualTo(400);
+        await Assert.That((int)response.StatusCode).IsEqualTo(400);
     }
 
     [Test]

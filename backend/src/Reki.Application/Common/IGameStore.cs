@@ -78,6 +78,7 @@ public interface IGameStore
         int? limit,
         WorldId worldId,
         AuthorId? authorId,
+        int offset,
         CancellationToken cancellationToken);
 
     /// <summary>

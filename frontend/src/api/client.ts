@@ -329,10 +329,10 @@ export const api = {
         }
     },
     feed: async (world: WorldId = sessionPlayer?.world ?? 'stage'): Promise<FeedItem[]> => {
-        const remote: FeedItem[] = (await data(sdk.posts.getFeed(worldId()))).map(map.feed);
+        const remote: FeedItem[] = (await data(sdk.posts.getFeed(worldId()))).items.map(map.feed);
         return remote;
     },
-    channelPosts: (): Promise<ChannelPost[]> => data(sdk.posts.getChannelPosts(worldId())).then(posts => posts.map(map.channelPost)),
+    channelPosts: (): Promise<ChannelPost[]> => data(sdk.posts.getChannelPosts(worldId())).then(page => page.items.map(map.channelPost)),
     post: async (postId: string): Promise<Post> => {
         return data(sdk.posts.getPost(postId, worldId())).then(map.post).then(({ postId: id, ...detail }) => ({ ...detail, id }));
     },

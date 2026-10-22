@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
@@ -43,6 +45,27 @@ internal sealed class OperationMetadataTransformer : IOpenApiOperationTransforme
         {
             challengeResponse.Description = "Active challenge, or an empty HTTP 200 body when no challenge exists. " +
                 "Clients normalize the empty body to null.";
+        }
+
+        if (operation.OperationId is "Posts_GetFeed" or "Posts_GetChannelPosts" && operation.Parameters is { } parameters)
+        {
+            foreach (var parameter in parameters.OfType<OpenApiParameter>())
+            {
+                if (parameter.Name is not { } name)
+                {
+                    continue;
+                }
+
+                parameter.Name = JsonNamingPolicy.CamelCase.ConvertName(name);
+                if (parameter.Name == "worldId")
+                {
+                    parameter.Required = true;
+                }
+                else if (parameter.Schema is OpenApiSchema schema)
+                {
+                    schema.Default = JsonValue.Create(parameter.Name == "pageNumber" ? 0 : 10);
+                }
+            }
         }
 
         return Task.CompletedTask;

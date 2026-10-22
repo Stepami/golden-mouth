@@ -76,32 +76,31 @@ public sealed class PostsController(ISender sender) : ControllerBase
 
     [HttpGet("feed", Name = "GetFeed")]
     [ActionName("GetFeed")]
-    public async Task<Ok<IReadOnlyList<FeedItemResponse>>> GetFeedAsync(
-        [FromQuery] string worldId,
+    public async Task<Ok<FeedPageResponse>> GetFeedAsync(
+        [FromQuery] WorldPostsRequest request,
         [FromServices] IRekiContext rekiContext,
         CancellationToken cancellationToken)
     {
-        const int feedSize = 20;
         var result = await sender.Send(
-            new GetChannelPostsQuery(Domain.Worlds.WorldId.From(worldId), feedSize, Feed: true),
+            new WorldPostsQuery(Domain.Worlds.WorldId.From(request.WorldId), request.PageNumber, request.PageSize, Feed: true),
             cancellationToken);
         var worlds = await rekiContext.Worlds;
         IReadOnlyList<FeedItemResponse> response =
-            [.. result.Select(post => PostContractMapper.MapFeedItem(post, worlds[post.WorldId]))];
-        return TypedResults.Ok(response);
+            [.. result.Items.Select(post => PostContractMapper.MapFeedItem(post, worlds[post.WorldId]))];
+        return TypedResults.Ok(new FeedPageResponse(response, result.PageNumber, result.HasNext));
     }
 
     [HttpGet("posts/mine", Name = "GetChannelPosts")]
     [ActionName("GetChannelPosts")]
-    public async Task<Ok<IReadOnlyList<ChannelPostResponse>>> GetChannelPostsAsync(
-        [FromQuery] string worldId,
+    public async Task<Ok<ChannelPostsPageResponse>> GetChannelPostsAsync(
+        [FromQuery] WorldPostsRequest request,
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new GetChannelPostsQuery(Domain.Worlds.WorldId.From(worldId)),
+            new WorldPostsQuery(Domain.Worlds.WorldId.From(request.WorldId), request.PageNumber, request.PageSize),
             cancellationToken);
-        IReadOnlyList<ChannelPostResponse> response = result.Select(PostContractMapper.MapChannelPost).ToArray();
-        return TypedResults.Ok(response);
+        IReadOnlyList<ChannelPostResponse> response = result.Items.Select(PostContractMapper.MapChannelPost).ToArray();
+        return TypedResults.Ok(new ChannelPostsPageResponse(response, result.PageNumber, result.HasNext));
     }
 
     [HttpGet("posts/{postId}", Name = "GetPost")]
