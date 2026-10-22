@@ -10,13 +10,13 @@ namespace Reki.Api.Requests.Player;
 [Mapper]
 internal static partial class PlayerRequestMapper
 {
-    public static OnboardPlayer ToCommand(this OnboardingRequest source, TelegramUserId telegramUserId) =>
+    public static OnboardPlayer ToOnboardPlayer(this OnboardingRequest source, TelegramUserId telegramUserId) =>
         new(telegramUserId, source.BirthGroup.ToStorageValue(), source.Address.ToString().ToLowerInvariant(), source.ReferralCode, source.AgeBand);
 
     [MapProperty(nameof(UpdateSettingsRequest.Address), nameof(UpdateSettings.Address), Use = nameof(MapAddress))]
-    public static partial UpdateSettings ToCommand(this UpdateSettingsRequest source);
+    public static partial UpdateSettings ToUpdateSettings(this UpdateSettingsRequest source);
 
-    public static ClaimPlusInterest ToCommand(this PlusInterestRequest? source) => new(source?.Interest ?? true);
+    public static ClaimPlusInterest ToClaimPlusInterest(this PlusInterestRequest? source) => new(source?.Interest ?? true);
 
     private static string? MapAddress(Address? source) => source?.ToString().ToLowerInvariant();
 

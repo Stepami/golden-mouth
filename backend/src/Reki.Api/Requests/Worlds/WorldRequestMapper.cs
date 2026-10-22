@@ -9,9 +9,9 @@ namespace Reki.Api.Requests.Worlds;
 [Mapper]
 internal static partial class WorldRequestMapper
 {
-    public static CreateWorld ToCommand(this CreateWorldRequest source) => new(source.ToWorld());
+    public static CreateWorld ToCreateWorld(this CreateWorldRequest source) => new(source.ToWorld());
 
-    public static UpdateWorld ToCommand(this CreateWorldRequest source, string worldId) =>
+    public static UpdateWorld ToUpdateWorld(this CreateWorldRequest source, string worldId) =>
         new(WorldId.From(worldId), source.ToWorld());
 
     [MapValue(nameof(World.Id), Use = nameof(NewWorldId))]

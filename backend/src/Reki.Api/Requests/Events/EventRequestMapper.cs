@@ -6,6 +6,6 @@ namespace Reki.Api.Requests.Events;
 
 internal static class EventRequestMapper
 {
-    public static AnswerEvent ToCommand(this AnswerEventRequest source, string eventId, string worldId) =>
+    public static AnswerEvent ToAnswerEvent(this AnswerEventRequest source, string eventId, string worldId) =>
         new(RekiEventId.From(eventId), source.Text, WorldId.From(worldId));
 }

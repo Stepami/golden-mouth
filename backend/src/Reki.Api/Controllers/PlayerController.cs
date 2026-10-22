@@ -5,12 +5,9 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Requests.Player;
 using Reki.Application.Invites;
 using Reki.Application.Player;
-using Reki.Application.Player.ClaimPlusInterestCommand;
 using Reki.Application.Player.DeletePlayerCommand;
 using Reki.Application.Player.GetReferral;
-using Reki.Application.Player.OnboardPlayerCommand;
 using Reki.Application.Player.Responses;
-using Reki.Application.Player.UpdateSettingsCommand;
 using Reki.Application.RekiContext;
 using Reki.Domain.Player;
 using TgMiniAppAuth.AuthContext.User;
@@ -58,7 +55,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(
-            request.ToCommand(TelegramUserId.From(telegramUser.User.Id)),
+            request.ToOnboardPlayer(TelegramUserId.From(telegramUser.User.Id)),
             cancellationToken);
         return TypedResults.Ok(player.ToResponse());
     }
@@ -89,7 +86,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            request.ToCommand(),
+            request.ToUpdateSettings(),
             cancellationToken);
         return TypedResults.Ok();
     }
@@ -101,7 +98,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         var bonus = await sender.Send(
-            request.ToCommand(),
+            request.ToClaimPlusInterest(),
             cancellationToken);
         return TypedResults.Ok(new PlusInterestResponse(bonus));
     }

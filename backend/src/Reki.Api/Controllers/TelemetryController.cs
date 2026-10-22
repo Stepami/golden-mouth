@@ -3,9 +3,6 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Requests.Telemetry;
 using Reki.Application.RekiContext;
-using Reki.Application.Telemetry.ReportCommentCommand;
-using Reki.Application.Telemetry.SubmitAnalyticsCommand;
-using Reki.Domain.Posts;
 
 namespace Reki.Api.Controllers;
 
@@ -24,7 +21,7 @@ public sealed partial class TelemetryController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            request.ToCommand(),
+            request.ToSubmitAnalytics(),
             cancellationToken);
         return TypedResults.NoContent();
     }
@@ -60,7 +57,7 @@ public sealed partial class TelemetryController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            request.ToCommand(),
+            request.ToReportComment(),
             cancellationToken);
         return TypedResults.Ok();
     }

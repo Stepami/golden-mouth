@@ -10,10 +10,12 @@ namespace Reki.Api.Requests.Posts;
 [Mapper]
 internal static partial class PostRequestMapper
 {
-    public static GeneratePublication ToCommand(this StartPublicationRequest source, string worldId) =>
+    public static GeneratePublication ToGeneratePublication(
+        this StartPublicationRequest source,
+        string worldId) =>
         MapPublication(source, WorldId.From(worldId));
 
-    public static AddReply ToCommand(this ReplyRequest source, string postId, string worldId) =>
+    public static AddReply ToAddReply(this ReplyRequest source, string postId, string worldId) =>
         MapReply(source, PostId.From(postId), WorldId.From(worldId));
 
     public static WorldPostsQuery ToQuery(this WorldPostsRequest source, bool feed = false) =>

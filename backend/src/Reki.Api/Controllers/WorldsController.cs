@@ -5,11 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Requests.Worlds;
 using Reki.Application.RekiContext;
 using Reki.Application.Worlds;
-using Reki.Application.Worlds.CreateWorldCommand;
 using Reki.Application.Worlds.GetWorldTemplates;
 using Reki.Application.Worlds.Responses;
-using Reki.Application.Worlds.UpdateWorldCommand;
-using Reki.Domain.Worlds;
 
 namespace Reki.Api.Controllers;
 
@@ -42,7 +39,7 @@ public sealed class WorldsController(
     public async Task<Ok<WorldResponse>> CreateWorldAsync(CreateWorldRequest request, CancellationToken cancellationToken)
     {
         var world = await sender.Send(
-            request.ToCommand(),
+            request.ToCreateWorld(),
             cancellationToken);
         return TypedResults.Ok(world.ToResponse());
     }
@@ -54,7 +51,7 @@ public sealed class WorldsController(
         string worldId,
         CancellationToken cancellationToken)
     {
-        var command = request.ToCommand(worldId);
+        var command = request.ToUpdateWorld(worldId);
         await sender.Send(command, cancellationToken);
         return TypedResults.Ok();
     }

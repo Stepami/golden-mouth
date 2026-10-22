@@ -3,10 +3,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Requests.Events;
 using Reki.Application.Events;
-using Reki.Application.Events.AnswerEventCommand;
 using Reki.Application.Events.GetTodayEvent;
 using Reki.Application.Events.Responses;
-using Reki.Domain.Events;
 
 namespace Reki.Api.Controllers;
 
@@ -37,7 +35,7 @@ public sealed class EventsController(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            request.ToCommand(eventId, worldId),
+            request.ToAnswerEvent(eventId, worldId),
             cancellationToken);
         return TypedResults.Ok();
     }

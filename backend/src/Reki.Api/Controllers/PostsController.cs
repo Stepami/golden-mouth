@@ -3,11 +3,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Requests.Posts;
 using Reki.Application.Posts;
-using Reki.Application.Posts.AddReplyCommand;
-using Reki.Application.Posts.GeneratePublicationCommand;
 using Reki.Application.Posts.GetPostDetail;
 using Reki.Application.Posts.GetPublicationStatus;
-using Reki.Application.Posts.GetWorldPosts;
 using Reki.Application.Posts.PublishPostCommand;
 using Reki.Application.Posts.Responses;
 using Reki.Application.RekiContext;
@@ -29,7 +26,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = sender.CreateStream(
-            request.ToCommand(worldId),
+            request.ToGeneratePublication(worldId),
             cancellationToken);
         return TypedResults.ServerSentEvents(result);
     }
@@ -67,7 +64,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = sender.CreateStream(
-            request.ToCommand(postId, worldId),
+            request.ToAddReply(postId, worldId),
             cancellationToken);
         return TypedResults.ServerSentEvents(result);
     }

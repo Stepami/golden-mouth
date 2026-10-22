@@ -6,13 +6,13 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Api.Requests.Posts;
+using Reki.Api.Requests.Worlds;
 using Reki.Api.Serialization;
 using Reki.Application.Balance;
 using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Application.Posts.Responses;
 using Reki.Application.Worlds;
-using Reki.Application.Worlds.Responses;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -41,7 +41,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .Select(item => new GamePost(
                 PostId.New(),
                 PlayerId.From(item.Item2["_id"].AsString).ToAuthorId(),
-                Domain.Worlds.WorldId.From(item.Item1),
+                WorldId.From(item.Item1),
                 item.Item1,
                 1,
                 [],
@@ -99,7 +99,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var posts = Enumerable.Range(0, 46).Select(index => new GamePost(
             PostId.New(),
             (index < 21 ? ownerId : otherId).ToAuthorId(),
-            Domain.Worlds.WorldId.From(index < 21 ? world["_id"].AsString : "other-world"),
+            WorldId.From(index < 21 ? world["_id"].AsString : "other-world"),
             $"post-{index}",
             index + 1,
             [],
@@ -1383,7 +1383,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var secondPost = original with
         {
             Id = PostId.New(),
-            WorldId = Domain.Worlds.WorldId.From(second.Id),
+            WorldId = WorldId.From(second.Id),
             Comments = [original.Comments[0]],
             Version = 0,
         };
@@ -1431,7 +1431,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var secondWorld =
             await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
         var original = await ReadPostAsync(postId);
-        var secondPost = original with { Id = PostId.New(), WorldId = Domain.Worlds.WorldId.From(secondWorld.Id), Version = 0 };
+        var secondPost = original with { Id = PostId.New(), WorldId = WorldId.From(secondWorld.Id), Version = 0 };
         await Database.GetCollection<GamePost>("posts").InsertOneAsync(secondPost);
         var player = await ReadPlayerAsync(user);
         await Database.GetCollection<PlayerProfile>("players")
