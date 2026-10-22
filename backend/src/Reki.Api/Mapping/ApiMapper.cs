@@ -6,11 +6,9 @@ using Reki.Contracts.Telemetry;
 using Reki.Contracts.Worlds;
 using Reki.Domain.Events;
 using Reki.Domain.Player;
-using Reki.Domain.Social;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 using Riok.Mapperly.Abstractions;
-using DomainEventId = Reki.Domain.Events.EventId;
 
 namespace Reki.Api.Mapping;
 
@@ -150,7 +148,7 @@ public sealed partial class ApiMapper
         return Enum.Parse<GameEventKind>(source, true);
     }
 
-    private static string MapEventId(DomainEventId source) => source.Value;
+    private static string MapEventId(RekiEventId source) => source.Value;
 
     private static string SanitizeElement(JsonElement element)
     {

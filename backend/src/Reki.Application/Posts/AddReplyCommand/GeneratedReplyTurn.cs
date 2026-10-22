@@ -1,4 +1,4 @@
-using Reki.Domain.Social;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.AddReplyCommand;
 

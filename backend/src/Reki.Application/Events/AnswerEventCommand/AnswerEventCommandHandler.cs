@@ -21,7 +21,7 @@ public sealed class AnswerEventCommandHandler(
             DateTimeOffset.MinValue,
             cancellationToken,
             world.Id);
-        if (gameEvent is null || gameEvent.Id != request.EventId)
+        if (gameEvent is null || gameEvent.Id != request.RekiEventId)
         {
             throw new ResourceNotFoundException("Event not found.");
         }

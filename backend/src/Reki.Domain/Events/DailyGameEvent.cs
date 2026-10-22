@@ -4,7 +4,7 @@ using Reki.Domain.Worlds;
 namespace Reki.Domain.Events;
 
 public sealed record DailyGameEvent(
-    EventId Id,
+    RekiEventId Id,
     PlayerId PlayerId,
     WorldId WorldId,
     string Kind,

@@ -2,7 +2,7 @@ using Reki.Domain.Common;
 using Reki.Domain.Posts;
 using Vogen;
 
-namespace Reki.Domain.Social;
+namespace Reki.Domain.Worlds;
 
 [ValueObject<string>(comparison: ComparisonGeneration.Omit)]
 public readonly partial struct StarId

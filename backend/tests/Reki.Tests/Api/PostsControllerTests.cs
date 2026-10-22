@@ -13,9 +13,9 @@ using Reki.Contracts.Posts;
 using Reki.Contracts.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using Reki.Domain.Social;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Serialization;
+using StarId = Reki.Domain.Worlds.StarId;
 using WorldId = Reki.Contracts.Player.WorldId;
 
 namespace Reki.Tests.Api;

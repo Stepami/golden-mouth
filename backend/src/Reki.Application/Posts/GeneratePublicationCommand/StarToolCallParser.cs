@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Reki.Application.Posts.AI;
-using Reki.Domain.Social;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.GeneratePublicationCommand;
 

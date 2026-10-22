@@ -1,5 +1,5 @@
 using Reki.Domain.Player;
-using Reki.Domain.Social;
+using Reki.Domain.Worlds;
 using Vogen;
 
 namespace Reki.Domain.Posts;

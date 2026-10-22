@@ -29,7 +29,7 @@ public sealed class TodayEventQueryHandler(
         }
 
         var gameEvent = new DailyGameEvent(
-            EventId.New(),
+            RekiEventId.New(),
             player.Id,
             world.Id,
             "collab",

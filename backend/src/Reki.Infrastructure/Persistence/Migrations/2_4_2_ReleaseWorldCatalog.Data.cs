@@ -1,5 +1,4 @@
 using Reki.Domain.Player;
-using Reki.Domain.Social;
 using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Persistence.Migrations;

@@ -5,7 +5,7 @@ using Reki.Api.Mapping;
 using Reki.Application.Events.AnswerEventCommand;
 using Reki.Application.Events.GetTodayEvent;
 using Reki.Contracts.Events;
-using DomainEventId = Reki.Domain.Events.EventId;
+using Reki.Domain.Events;
 
 namespace Reki.Api.Events;
 
@@ -38,7 +38,7 @@ public sealed class EventsController(
     {
         await sender.Send(
             new AnswerEvent(
-                DomainEventId.From(eventId),
+                RekiEventId.From(eventId),
                 request.Text,
                 Domain.Worlds.WorldId.From(worldId)),
             cancellationToken);

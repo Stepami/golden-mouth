@@ -1,6 +1,5 @@
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using Reki.Domain.Social;
 
 namespace Reki.Domain.Worlds;
 

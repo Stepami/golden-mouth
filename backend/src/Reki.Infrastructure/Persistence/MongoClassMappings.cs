@@ -24,7 +24,7 @@ internal static class MongoClassMappings
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.CommentIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.EventIdBsonSerializer());
+            new BsonValueObjectConversions.RekiEventIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.InvitationIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
@@ -44,7 +44,7 @@ internal static class MongoClassMappings
         RegisterWithMongoId<PlayerProfile, PlayerId>(item => item.Id);
         RegisterWithMongoId<GamePost, PostId>(item => item.Id);
         RegisterWithMongoId<Publication, string>(item => item.Id);
-        RegisterWithMongoId<DailyGameEvent, EventId>(item => item.Id);
+        RegisterWithMongoId<DailyGameEvent, RekiEventId>(item => item.Id);
         RegisterWithMongoId<World, WorldId>(item => item.Id);
         RegisterWithMongoId<Invitation, InvitationId>(item => item.Id);
     }

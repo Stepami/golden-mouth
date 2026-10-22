@@ -2,7 +2,6 @@ using Reki.Domain.Events;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using Reki.Domain.Social;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 using Vogen;
@@ -11,7 +10,7 @@ namespace Reki.Infrastructure.Persistence;
 
 [BsonSerializer<AuthorId>]
 [BsonSerializer<CommentId>]
-[BsonSerializer<EventId>]
+[BsonSerializer<RekiEventId>]
 [BsonSerializer<InvitationId>]
 [BsonSerializer<PlayerId>]
 [BsonSerializer<PostId>]

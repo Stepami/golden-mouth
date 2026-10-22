@@ -1,12 +1,11 @@
 using Reki.Domain.Player;
-using Reki.Domain.Social;
 using Reki.Domain.Worlds;
 
 namespace Reki.Tests.Common;
 
 internal static class TestGameData
 {
-    private static readonly StarId StarId = StarId.From("mira");
+    private static readonly StarId StarId = Domain.Worlds.StarId.From("mira");
     private static readonly DateTimeOffset PeriodStart = new(2026, 10, 5, 6, 0, 0, TimeSpan.Zero);
 
     internal static World CreateWorld() => new()
