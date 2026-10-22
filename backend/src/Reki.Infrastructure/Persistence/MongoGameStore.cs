@@ -305,7 +305,7 @@ internal sealed class MongoGameStore : IGameStore
             cancellationToken: cancellationToken);
     }
 
-    public async ValueTask<List<GamePost>> GetPostsAsync(
+    public async ValueTask<WorldPostsPage> GetPostsAsync(
         WorldId worldId,
         AuthorId? authorId,
         int pageNumber,
@@ -314,20 +314,27 @@ internal sealed class MongoGameStore : IGameStore
     {
         ArgumentOutOfRangeException.ThrowIfNegative(pageNumber);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
-        var offset = checked(pageNumber * pageSize);
-        var limit = checked(pageSize + 1);
+        var offset = pageNumber * pageSize;
+        var limit = pageSize + 1;
         var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId);
         if (authorId is { } author)
         {
             filter &= Builders<GamePost>.Filter.Eq(item => item.AuthorId, author);
         }
 
-        return await _posts
+        var posts = await _posts
             .Find(filter)
             .SortByDescending(item => item.CreatedAtUtc)
             .Skip(offset)
             .Limit(limit)
             .ToListAsync(cancellationToken);
+        var hasNext = posts.Count > pageSize;
+        if (hasNext)
+        {
+            posts.RemoveAt(posts.Count - 1);
+        }
+
+        return new WorldPostsPage(posts, pageNumber, hasNext);
     }
 
     public async ValueTask<GamePost?> GetPostAsync(

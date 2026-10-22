@@ -26,18 +26,11 @@ public sealed class WorldPostsHandler(
                 world.Id);
         }
 
-        var posts = await store.GetPostsAsync(
+        return await store.GetPostsAsync(
             world.Id,
             request.Feed ? null : world.Player.PlayerId.ToAuthorId(),
             request.PageNumber,
             request.PageSize,
             cancellationToken);
-        var hasNext = posts.Count > request.PageSize;
-        if (hasNext)
-        {
-            posts.RemoveAt(posts.Count - 1);
-        }
-
-        return new WorldPostsPage(posts, request.PageNumber, hasNext);
     }
 }
