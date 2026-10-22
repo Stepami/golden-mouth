@@ -58,6 +58,8 @@ internal static class ServiceCollectionExtensions
         services
             .AddControllers(options => options.Filters.Add(
                 new AuthorizeFilter(TgMiniAppAuthConstants.AuthenticationScheme)))
+            .ConfigureApiBehaviorOptions(options =>
+                options.InvalidModelStateResponseFactory = InvalidModelStateResponseFactory.Create)
             .AddJsonOptions(options => ConfigureJson(options.JsonSerializerOptions));
         services.AddSingleton<ApiMapper>();
         services.ConfigureHttpJsonOptions(options => ConfigureJson(options.SerializerOptions));
