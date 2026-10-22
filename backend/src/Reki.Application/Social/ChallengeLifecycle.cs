@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
+using Reki.Application.Common.Balance;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Player;
 using Reki.Application.Social.GetActiveChallenge;

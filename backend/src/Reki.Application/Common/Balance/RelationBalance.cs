@@ -1,4 +1,4 @@
-namespace Reki.Application.Common;
+namespace Reki.Application.Common.Balance;
 
 public sealed record RelationBalance(
     int Minimum,

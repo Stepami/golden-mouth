@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
-using Reki.Application.Common;
+using Reki.Application.Common.Balance;
 using Reki.Application.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;

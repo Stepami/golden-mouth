@@ -9,6 +9,7 @@ using Reki.Api.OpenApi;
 using Reki.Application;
 using Reki.Application.Common;
 using Reki.Application.Common.AI;
+using Reki.Application.Common.Balance;
 using Reki.Application.Common.Safety;
 using Reki.Application.Posts.PublishPostCommand;
 using Reki.Application.Social;

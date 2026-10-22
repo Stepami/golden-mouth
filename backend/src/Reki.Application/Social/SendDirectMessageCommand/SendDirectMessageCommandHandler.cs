@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.AI;
+using Reki.Application.Common.Balance;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
 using Reki.Domain.Social;

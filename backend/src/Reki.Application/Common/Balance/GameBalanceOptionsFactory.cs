@@ -1,10 +1,11 @@
 using System.Globalization;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using Reki.Application.Common;
 
-namespace Reki.Api.Bootstrapping;
+namespace Reki.Application.Common.Balance;
 
-internal sealed class GameBalanceOptionsFactory(
+/// <inheritdoc/>
+public sealed class GameBalanceOptionsFactory(
     IConfiguration configuration,
     IEnumerable<IConfigureOptions<GameBalance>> setups,
     IEnumerable<IPostConfigureOptions<GameBalance>> postConfigures,

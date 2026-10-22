@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
+using Reki.Application.Common.Balance;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Invites;
 using Reki.Application.Telemetry;

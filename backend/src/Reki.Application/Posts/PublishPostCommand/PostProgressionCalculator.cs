@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
-using Reki.Application.Common;
+using Reki.Application.Common.Balance;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Posts.PublishPostCommand;

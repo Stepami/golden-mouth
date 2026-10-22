@@ -2,7 +2,7 @@ using Kot.MongoDB.Migrations;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Application.Common;
+using Reki.Application.Common.Balance;
 
 namespace Reki.Infrastructure.Persistence.Migrations;
 

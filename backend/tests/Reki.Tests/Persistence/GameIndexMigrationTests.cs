@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using Reki.Application.Common;
+using Reki.Application.Common.Balance;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;

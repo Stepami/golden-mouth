@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using Reki.Application.Common;
+using Reki.Application.Common.Balance;
 using Reki.Application.Telemetry;
 using TUnit.AspNetCore;
 
