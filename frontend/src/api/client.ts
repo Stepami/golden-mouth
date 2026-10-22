@@ -16,7 +16,7 @@ export { ApiError } from './transport';
 import { sessionGeneration, assertSession, endSession } from './session';
 import { parse } from 'valibot';
 import { publicationEvent, replyEvent } from './streamEvents';
-import type { PlayerDocument, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PublicationState, PublicationStatus, PublicationFailure, ReplyLiveEvent, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
+import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PublicationState, PublicationStatus, PublicationFailure, ReplyLiveEvent, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
 let sessionPlayer: Player | undefined;
 let sessionIdentity: PlayerDocument | undefined;
 let ownedWorldSnapshot: WorldDocument[] | undefined;
@@ -328,11 +328,14 @@ export const api = {
             sessionPlayer = { ...sessionPlayer, address: address ?? sessionPlayer.address, settings: { ...sessionPlayer.settings, ...settings } };
         }
     },
-    feed: async (world: WorldId = sessionPlayer?.world ?? 'stage'): Promise<FeedItem[]> => {
-        const remote: FeedItem[] = (await data(sdk.posts.getFeed(worldId()))).items.map(map.feed);
-        return remote;
+    feed: async (selectedWorldId: string | undefined, pageNumber = 0, signal?: AbortSignal): Promise<PostsPage<FeedItem>> => {
+        const page = await data(sdk.posts.getFeed(selectedWorldId ?? worldId(), pageNumber, undefined, signal));
+        return { ...page, items: page.items.map(map.feed) };
     },
-    channelPosts: (): Promise<ChannelPost[]> => data(sdk.posts.getChannelPosts(worldId())).then(page => page.items.map(map.channelPost)),
+    channelPosts: async (selectedWorldId: string | undefined, pageNumber = 0, signal?: AbortSignal): Promise<PostsPage<ChannelPost>> => {
+        const page = await data(sdk.posts.getChannelPosts(selectedWorldId ?? worldId(), pageNumber, undefined, signal));
+        return { ...page, items: page.items.map(map.channelPost) };
+    },
     post: async (postId: string): Promise<Post> => {
         return data(sdk.posts.getPost(postId, worldId())).then(map.post).then(({ postId: id, ...detail }) => ({ ...detail, id }));
     },
