@@ -8,7 +8,7 @@ using Reki.Domain.Player;
 
 namespace Reki.Application.Posts.PublishPostCommand;
 
-public sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
+internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
 {
     private static readonly SkillId Brave = SkillId.From("brave");
     private static readonly SkillId Humor = SkillId.From("humor");

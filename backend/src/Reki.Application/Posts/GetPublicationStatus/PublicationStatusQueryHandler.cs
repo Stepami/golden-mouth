@@ -6,7 +6,7 @@ using Reki.Contracts.Posts;
 
 namespace Reki.Application.Posts.GetPublicationStatus;
 
-public sealed class PublicationStatusQueryHandler(
+internal sealed class PublicationStatusQueryHandler(
     ISender sender,
     IRekiContextAccessor rekiContextAccessor)
     : IQueryHandler<PublicationStatusQuery, PublicationStatusResponse>

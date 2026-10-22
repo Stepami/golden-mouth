@@ -19,7 +19,7 @@ using static Reki.Application.Posts.GeneratePublicationCommand.StarToolCallParse
 
 namespace Reki.Application.Posts.GeneratePublicationCommand;
 
-public sealed partial class GeneratePublicationCommandHandler(
+internal sealed partial class GeneratePublicationCommandHandler(
     IPublicationRepository publicationRepository,
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,

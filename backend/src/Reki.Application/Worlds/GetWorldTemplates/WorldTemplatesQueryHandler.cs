@@ -3,7 +3,7 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Worlds.GetWorldTemplates;
 
-public sealed class WorldTemplatesQueryHandler(IWorldRepository worldRepository) : IQueryHandler<WorldTemplatesQuery, IReadOnlyList<World>>
+internal sealed class WorldTemplatesQueryHandler(IWorldRepository worldRepository) : IQueryHandler<WorldTemplatesQuery, IReadOnlyList<World>>
 {
     public async ValueTask<IReadOnlyList<World>> Handle(WorldTemplatesQuery request, CancellationToken cancellationToken) =>
         await worldRepository.GetWorldTemplatesAsync(cancellationToken);

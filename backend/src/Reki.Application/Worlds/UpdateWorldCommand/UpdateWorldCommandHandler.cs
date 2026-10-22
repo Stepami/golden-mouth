@@ -4,7 +4,7 @@ using Reki.Application.RekiContext;
 
 namespace Reki.Application.Worlds.UpdateWorldCommand;
 
-public sealed class UpdateWorldCommandHandler(
+internal sealed class UpdateWorldCommandHandler(
     IWorldRepository worldRepository,
     IRekiContextAccessor contextAccessor)
     : ICommandHandler<UpdateWorld>

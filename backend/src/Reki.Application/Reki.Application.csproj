@@ -12,4 +12,9 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
         <PackageReference Include="Microsoft.Extensions.Options"/>
     </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="Reki.Tests"/>
+        <!-- NSubstitute creates ILogger<ProductTelemetry> proxies in this assembly. -->
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2"/>
+    </ItemGroup>
 </Project>

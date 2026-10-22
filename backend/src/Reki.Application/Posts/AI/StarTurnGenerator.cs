@@ -6,7 +6,7 @@ using Reki.Application.Posts.GeneratePublicationCommand;
 
 namespace Reki.Application.Posts.AI;
 
-public sealed class StarTurnGenerator(
+internal sealed class StarTurnGenerator(
     IChatClient chatClient,
     IOptions<LlmTurnSettings> settings)
 {

@@ -6,7 +6,7 @@ using Reki.Contracts.Posts;
 
 namespace Reki.Application.Posts.GetPostDetail;
 
-public sealed class PostDetailQueryHandler(ISender sender, IRekiContextAccessor rekiContextAccessor) : IQueryHandler<PostDetailQuery, PostDetailResponse>
+internal sealed class PostDetailQueryHandler(ISender sender, IRekiContextAccessor rekiContextAccessor) : IQueryHandler<PostDetailQuery, PostDetailResponse>
 {
     public async ValueTask<PostDetailResponse> Handle(PostDetailQuery request, CancellationToken cancellationToken)
     {

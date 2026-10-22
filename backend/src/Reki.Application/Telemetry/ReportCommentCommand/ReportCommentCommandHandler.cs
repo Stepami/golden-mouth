@@ -3,7 +3,7 @@ using Reki.Application.RekiContext;
 
 namespace Reki.Application.Telemetry.ReportCommentCommand;
 
-public sealed class ReportCommentCommandHandler(
+internal sealed class ReportCommentCommandHandler(
     ProductTelemetry telemetry,
     IRekiContextAccessor rekiContextAccessor)
     : ICommandHandler<ReportComment>

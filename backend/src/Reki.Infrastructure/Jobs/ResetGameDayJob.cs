@@ -8,7 +8,7 @@ using TickerQ.Utilities.Interfaces;
 
 namespace Reki.Infrastructure.Jobs;
 
-public sealed partial class ResetGameDayJob(
+internal sealed partial class ResetGameDayJob(
     IPlayerRepository players,
     IWorldRepository worlds,
     GameDayPeriod gameDayPeriod,

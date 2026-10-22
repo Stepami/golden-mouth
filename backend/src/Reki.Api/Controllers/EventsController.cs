@@ -14,7 +14,7 @@ namespace Reki.Api.Controllers;
 [Route("events")]
 public sealed class EventsController(
     ISender sender,
-    ApiMapper mapper) : ControllerBase
+    IApiMapper mapper) : ControllerBase
 {
     [HttpGet("today", Name = "GetTodayEvent")]
     [ActionName("GetTodayEvent")]

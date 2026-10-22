@@ -16,7 +16,7 @@ using StarAgentInstructions = Reki.Application.Posts.AI.StarAgentInstructions;
 
 namespace Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 
-public sealed class GenerateStarFeedPostJob(
+internal sealed class GenerateStarFeedPostJob(
     IPlayerRepository playerRepository,
     IPostRepository postRepository,
     IWorldRepository worldRepository,

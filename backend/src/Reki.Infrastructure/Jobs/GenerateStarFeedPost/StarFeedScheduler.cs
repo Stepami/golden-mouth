@@ -9,7 +9,7 @@ using TickerQ.Utilities.Interfaces.Managers;
 
 namespace Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 
-public sealed partial class StarFeedScheduler(
+internal sealed partial class StarFeedScheduler(
     ITimeTickerManager<RekiTimeTicker> manager,
     TimeProvider timeProvider,
     IOptions<GameBalance> options,

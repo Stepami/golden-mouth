@@ -9,7 +9,7 @@ using Reki.Domain.Player;
 
 namespace Reki.Application.Player.OnboardPlayerCommand;
 
-public sealed class OnboardPlayerCommandHandler(
+internal sealed class OnboardPlayerCommandHandler(
     IInvitationRepository invitationRepository,
     IPlayerRepository playerRepository,
     GameDayPeriod gameDayPeriod,

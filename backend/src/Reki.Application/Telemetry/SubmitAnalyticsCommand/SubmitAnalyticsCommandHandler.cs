@@ -4,7 +4,7 @@ using Reki.Application.RekiContext;
 
 namespace Reki.Application.Telemetry.SubmitAnalyticsCommand;
 
-public sealed class SubmitAnalyticsCommandHandler(
+internal sealed class SubmitAnalyticsCommandHandler(
     ProductTelemetry telemetry,
     IRekiContextAccessor rekiContextAccessor)
     : ICommandHandler<SubmitAnalytics>

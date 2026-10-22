@@ -6,7 +6,7 @@ using Reki.Domain.Player;
 
 namespace Reki.Application.Player.UpdateSettingsCommand;
 
-public sealed class UpdateSettingsCommandHandler(
+internal sealed class UpdateSettingsCommandHandler(
     IPlayerRepository playerRepository,
     IRekiContextAccessor rekiContextAccessor,
     IOptions<GameBalance> balance)

@@ -5,7 +5,7 @@ using Reki.Application.RekiContext;
 
 namespace Reki.Application.Player.ClaimPlusInterestCommand;
 
-public sealed class ClaimPlusInterestCommandHandler(
+internal sealed class ClaimPlusInterestCommandHandler(
     IPlayerRepository playerRepository,
     IOptions<GameBalance> balance,
     IRekiContextAccessor rekiContextAccessor) : ICommandHandler<ClaimPlusInterest, int>

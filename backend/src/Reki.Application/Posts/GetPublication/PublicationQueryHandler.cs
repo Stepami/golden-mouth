@@ -2,7 +2,7 @@ using Mediator;
 
 namespace Reki.Application.Posts.GetPublication;
 
-public sealed class PublicationQueryHandler(IPublicationRepository publicationRepository) : IQueryHandler<PublicationQuery, Publication?>
+internal sealed class PublicationQueryHandler(IPublicationRepository publicationRepository) : IQueryHandler<PublicationQuery, Publication?>
 {
     public async ValueTask<Publication?> Handle(PublicationQuery request, CancellationToken cancellationToken)
     {

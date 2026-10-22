@@ -13,7 +13,7 @@ using Riok.Mapperly.Abstractions;
 namespace Reki.Api.Mapping;
 
 [Mapper]
-public sealed partial class ApiMapper
+internal sealed partial class ApiMapper : IApiMapper
 {
     public AnalyticsSubmission MapAnalytics(AnalyticsBatchRequest source)
     {

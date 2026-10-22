@@ -16,7 +16,7 @@ namespace Reki.Api.Controllers;
 public sealed partial class TelemetryController(
     ISender sender,
     IRekiContext rekiContext,
-    ApiMapper mapper,
+    IApiMapper mapper,
     ILogger<TelemetryController> logger) : ControllerBase
 {
     [HttpPost("events", Name = "SubmitAnalytics")]

@@ -26,6 +26,9 @@
                  CopyToOutputDirectory="PreserveNewest"
                  CopyToPublishDirectory="PreserveNewest"/>
     </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="Reki.Tests"/>
+    </ItemGroup>
     <Target Name="GenerateFrontendApiClient"
             AfterTargets="GenerateOpenApiDocuments">
         <Exec WorkingDirectory="$(MSBuildProjectDirectory)/../.."

@@ -4,7 +4,7 @@ using Reki.Application.Telemetry;
 
 namespace Reki.Application.Player.DeletePlayerCommand;
 
-public sealed class DeletePlayerCommandHandler(
+internal sealed class DeletePlayerCommandHandler(
     IGameStore store,
     IRekiContextAccessor rekiContextAccessor,
     ProductTelemetry telemetry)

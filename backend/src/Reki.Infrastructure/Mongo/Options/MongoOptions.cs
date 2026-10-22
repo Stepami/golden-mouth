@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Reki.Infrastructure.Mongo.Options;
 
-public sealed class MongoOptions
+internal sealed class MongoOptions
 {
     public const string SectionName = "Mongo";
 

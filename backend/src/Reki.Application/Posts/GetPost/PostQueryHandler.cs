@@ -5,7 +5,7 @@ using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts.GetPost;
 
-public sealed class PostQueryHandler(
+internal sealed class PostQueryHandler(
     IPostRepository postRepository,
     IRekiContextAccessor rekiContextAccessor)
     : IQueryHandler<PostQuery, GamePost>

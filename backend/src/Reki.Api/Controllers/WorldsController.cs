@@ -18,7 +18,7 @@ namespace Reki.Api.Controllers;
 public sealed class WorldsController(
     ISender sender,
     IRekiContext rekiContext,
-    ApiMapper mapper) : ControllerBase
+    IApiMapper mapper) : ControllerBase
 {
     [AllowAnonymous]
     [HttpGet("templates", Name = "GetWorldTemplates")]

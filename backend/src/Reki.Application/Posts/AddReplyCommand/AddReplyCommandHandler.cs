@@ -17,7 +17,7 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.AddReplyCommand;
 
-public sealed partial class AddReplyCommandHandler(
+internal sealed partial class AddReplyCommandHandler(
     IGameStore store,
     IOptions<GameBalance> balance,
     ISender sender,

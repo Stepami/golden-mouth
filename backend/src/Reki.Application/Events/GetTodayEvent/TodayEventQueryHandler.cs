@@ -6,7 +6,7 @@ using Reki.Domain.Events;
 
 namespace Reki.Application.Events.GetTodayEvent;
 
-public sealed class TodayEventQueryHandler(
+internal sealed class TodayEventQueryHandler(
     IDailyGameEventRepository dailyGameEventRepository,
     GameDayPeriod gameDayPeriod,
     IRekiContextAccessor rekiContextAccessor) : IQueryHandler<TodayEventQuery, DailyGameEvent>

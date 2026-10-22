@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 namespace Reki.Application.Balance;
 
 /// <inheritdoc/>
-public sealed class GameBalanceOptionsFactory(
+internal sealed class GameBalanceOptionsFactory(
     IConfiguration configuration,
     IEnumerable<IConfigureOptions<GameBalance>> setups,
     IEnumerable<IPostConfigureOptions<GameBalance>> postConfigures,

@@ -5,7 +5,7 @@ using Reki.Application.Worlds;
 
 namespace Reki.Application.Posts.GetPublicStoryCard;
 
-public sealed class PublicStoryCardQueryHandler(
+internal sealed class PublicStoryCardQueryHandler(
     IPlayerRepository playerRepository,
     IPostRepository postRepository,
     IWorldRepository worldRepository)

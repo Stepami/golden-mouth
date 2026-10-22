@@ -4,7 +4,7 @@ using Reki.Contracts.Player;
 
 namespace Reki.Application.Player.GetReferral;
 
-public sealed class ReferralQueryHandler(IRekiContextAccessor rekiContextAccessor) :
+internal sealed class ReferralQueryHandler(IRekiContextAccessor rekiContextAccessor) :
     IQueryHandler<ReferralQuery, ReferralResponse>
 {
     public async ValueTask<ReferralResponse> Handle(

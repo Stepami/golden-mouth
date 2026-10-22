@@ -16,7 +16,7 @@ using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts.PublishPostCommand;
 
-public sealed class PublishPostCommandHandler(
+internal sealed class PublishPostCommandHandler(
     IInvitationRepository invitationRepository,
     IPublicationRepository publicationRepository,
     IGameStore store,

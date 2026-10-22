@@ -4,7 +4,7 @@ using Reki.Application.RekiContext;
 
 namespace Reki.Application.Events.AnswerEventCommand;
 
-public sealed class AnswerEventCommandHandler(
+internal sealed class AnswerEventCommandHandler(
     IDailyGameEventRepository dailyGameEventRepository,
     IRekiContextAccessor rekiContextAccessor)
     : ICommandHandler<AnswerEvent>

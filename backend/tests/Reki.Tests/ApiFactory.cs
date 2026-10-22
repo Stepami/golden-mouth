@@ -20,8 +20,6 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
     [ClassDataSource<TestSessionFixture>(Shared = SharedType.PerTestSession)]
     public required TestSessionFixture Session { get; init; }
 
-    public ILogger<ProductTelemetry> ProductLogger { get; } = Substitute.For<ILogger<ProductTelemetry>>();
-
     public bool UseProductionAuthentication { get; init; }
 
     public double? FeedOpenProbability { get; init; }
@@ -33,6 +31,8 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
     public string DatabaseName => Session.DatabaseName;
 
     public string MongoConnectionString => Session.ConnectionString;
+
+    internal ILogger<ProductTelemetry> ProductLogger { get; } = Substitute.For<ILogger<ProductTelemetry>>();
 
     public TestApiClient CreateApiClient(long? telegramUserId = null)
     {

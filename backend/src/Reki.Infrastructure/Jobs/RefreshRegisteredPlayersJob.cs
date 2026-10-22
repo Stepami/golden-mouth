@@ -5,7 +5,7 @@ using TickerQ.Utilities.Interfaces;
 
 namespace Reki.Infrastructure.Jobs;
 
-public sealed class RefreshRegisteredPlayersJob : ITickerFunction
+internal sealed class RefreshRegisteredPlayersJob : ITickerFunction
 {
     private readonly IPlayerRepository _players;
     private long _count = -1;

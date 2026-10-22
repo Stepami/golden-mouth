@@ -8,7 +8,7 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Worlds.CreateWorldCommand;
 
-public sealed class CreateWorldCommandHandler(
+internal sealed class CreateWorldCommandHandler(
     IWorldRepository worldRepository,
     IRekiContextAccessor rekiContextAccessor,
     GameDayPeriod gameDayPeriod,

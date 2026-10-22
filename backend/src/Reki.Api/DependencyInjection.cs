@@ -25,7 +25,7 @@ internal static partial class DependencyInjection
             .AddControllers(options => options.Filters.Add(
                 new AuthorizeFilter(TgMiniAppAuthConstants.AuthenticationScheme)))
             .AddJsonOptions(options => ConfigureJson(options.JsonSerializerOptions));
-        services.AddSingleton<ApiMapper>();
+        services.AddSingleton<IApiMapper, ApiMapper>();
         services.ConfigureHttpJsonOptions(options => ConfigureJson(options.SerializerOptions));
 
         return services;

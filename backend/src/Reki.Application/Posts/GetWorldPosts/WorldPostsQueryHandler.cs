@@ -4,7 +4,7 @@ using Reki.Application.RekiContext;
 
 namespace Reki.Application.Posts.GetWorldPosts;
 
-public sealed class WorldPostsQueryHandler(
+internal sealed class WorldPostsQueryHandler(
     IPostRepository postRepository,
     IRekiContextAccessor rekiContextAccessor,
     IStarFeedScheduler feedScheduler)
