@@ -31,10 +31,10 @@ public sealed class WorldPostsHandler(
         }
 
         var posts = await store.GetPostsAsync(
-            limit,
             world.Id,
             request.Feed ? null : world.Player.PlayerId.ToAuthorId(),
             offset,
+            limit,
             cancellationToken);
         return new WorldPostsPage(
             posts.Take(request.PageSize).ToArray(),

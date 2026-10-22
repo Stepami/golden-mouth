@@ -306,30 +306,26 @@ internal sealed class MongoGameStore : IGameStore
     }
 
     public async ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
-        int? limit,
         WorldId worldId,
         AuthorId? authorId,
         int offset,
+        int limit,
         CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit);
         var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId);
         if (authorId is { } author)
         {
             filter &= Builders<GamePost>.Filter.Eq(item => item.AuthorId, author);
         }
 
-        var query = _posts
+        return await _posts
             .Find(filter)
             .SortByDescending(item => item.CreatedAtUtc)
-            .Skip(offset);
-        if (limit is { } count)
-        {
-            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(count);
-            query = query.Limit(count);
-        }
-
-        return await query.ToListAsync(cancellationToken);
+            .Skip(offset)
+            .Limit(limit)
+            .ToListAsync(cancellationToken);
     }
 
     public async ValueTask<GamePost?> GetPostAsync(

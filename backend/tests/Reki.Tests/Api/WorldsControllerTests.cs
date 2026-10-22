@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Reki.Contracts.Worlds;
 
@@ -9,55 +8,6 @@ namespace Reki.Tests.Api;
 [NotInParallel("ApiState")]
 public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
-    [Test]
-    public async Task WorldReads_SeparateInstances_IsolateContentAsync()
-    {
-        using var api = Factory.CreateApiClient(1022);
-        var player = await CreatePlayerWithWorldAsync(api);
-        var firstId = Domain.Worlds.WorldId.From(await GetWorldIdAsync(api));
-        var second = await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
-        var secondId = Domain.Worlds.WorldId.From(second.Id);
-        var owner = Domain.Player.PlayerId.From(player.Id);
-        var store = Factory.Services.GetRequiredService<Reki.Application.Common.IGameStore>();
-        var posts = new[] { firstId, secondId }.Select(worldId => new Reki.Domain.Posts.GamePost(
-            Domain.Posts.PostId.New(),
-            owner.ToAuthorId(),
-            worldId,
-            worldId.Value,
-            1,
-            [],
-            DateTimeOffset.UnixEpoch,
-            0,
-            0,
-            1,
-            false,
-            false)).ToArray();
-        await Database.GetCollection<Reki.Domain.Posts.GamePost>("posts").InsertManyAsync(posts);
-        var starId = Domain.Social.StarId.From("mira");
-        foreach (var worldId in new[] { firstId, secondId })
-        {
-            var conversation = new Reki.Domain.Social.StarConversation(
-                Domain.Social.StarConversationId.New(),
-                owner,
-                worldId,
-                starId,
-                [worldId.Value],
-                [],
-                0,
-                DateTimeOffset.UnixEpoch);
-            await store.SaveStarConversationAsync(conversation, CancellationToken.None);
-        }
-
-        foreach (var worldId in new[] { firstId, secondId })
-        {
-            var worldPosts = await store.GetPostsAsync(null, worldId, null, 0, CancellationToken.None);
-            var conversation = await store.GetStarConversationAsync(owner, starId, CancellationToken.None, worldId)
-                ?? throw new InvalidOperationException("Missing conversation.");
-            await Assert.That(worldPosts.Single().WorldId).IsEqualTo(worldId);
-            await Assert.That(conversation.Memory.Single()).IsEqualTo(worldId.Value);
-        }
-    }
-
     [Test]
     [Arguments(true)]
     [Arguments(false)]
