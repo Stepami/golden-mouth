@@ -1,5 +1,6 @@
 using Kot.MongoDB.Migrations;
 using Microsoft.AspNetCore.DataProtection;
+using Reki.Api.OpenApi;
 using Reki.Infrastructure;
 using Reki.Infrastructure.Serialization;
 using Serilog;

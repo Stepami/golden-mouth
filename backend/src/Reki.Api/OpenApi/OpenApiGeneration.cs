@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace Reki.Api.Bootstrapping;
+namespace Reki.Api.OpenApi;
 
 internal static class OpenApiGeneration
 {
