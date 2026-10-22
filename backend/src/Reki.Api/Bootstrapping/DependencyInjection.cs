@@ -9,7 +9,7 @@ using TgMiniAppAuth;
 
 namespace Reki.Api.Bootstrapping;
 
-internal static class ServiceCollectionExtensions
+internal static class DependencyInjection
 {
     public static IServiceCollection AddApi(this IServiceCollection services)
     {
