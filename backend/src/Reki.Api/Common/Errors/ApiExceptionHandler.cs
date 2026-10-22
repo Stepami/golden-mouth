@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using Reki.Application.Common.Exceptions;
-using Reki.Application.Common.Safety;
+using Reki.Application.Posts;
 using Reki.Contracts.Posts;
 
 namespace Reki.Api.Common.Errors;

@@ -1,5 +1,6 @@
 using MongoDB.Driver;
 using Reki.Application.Posts;
+using Reki.Application.Posts.GetWorldPosts;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Persistence;
