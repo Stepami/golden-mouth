@@ -2,6 +2,8 @@ using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Requests.Telemetry;
+using Reki.Api.Requests.Telemetry.AnalyticsBatch;
+using Reki.Api.Requests.Telemetry.ClientLogBatch;
 using Reki.Application.RekiContext;
 
 namespace Reki.Api.Controllers;

@@ -12,10 +12,12 @@ using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPublication;
 using Reki.Application.Posts.GetWorldPosts;
 using Reki.Application.Posts.Responses;
+using Reki.Application.Posts.Responses.PublicationStatusLiveEvent;
 using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
 using Reki.Domain.Player;
 using static Reki.Application.Posts.GeneratePublicationCommand.StarToolCallParser;
+using PublicationStatusLiveEvent = Reki.Application.Posts.Responses.PublicationStatusLiveEvent.PublicationStatusLiveEvent;
 
 namespace Reki.Application.Posts.GeneratePublicationCommand;
 

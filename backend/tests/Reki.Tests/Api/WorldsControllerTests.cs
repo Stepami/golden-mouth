@@ -1,6 +1,7 @@
 using MongoDB.Driver;
 using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Telemetry;
+using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Worlds;
 using Reki.Application.Player;
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Application.Telemetry.ReportCommentCommand;
 using Reki.Application.Telemetry.SubmitAnalyticsCommand;
 using Reki.Domain.Posts;

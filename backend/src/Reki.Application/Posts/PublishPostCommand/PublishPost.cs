@@ -1,6 +1,8 @@
 using Mediator;
 using Reki.Application.Posts.Responses;
+using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Domain.Worlds;
+using LiveEvent = Reki.Application.Posts.Responses.LiveEvent.LiveEvent;
 
 namespace Reki.Application.Posts.PublishPostCommand;
 

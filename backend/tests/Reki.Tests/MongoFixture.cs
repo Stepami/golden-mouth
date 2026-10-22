@@ -1,5 +1,5 @@
-using Testcontainers.MongoDb;
 using TUnit.Core.Interfaces;
+using Testcontainers.MongoDb;
 
 namespace Reki.Tests;
 

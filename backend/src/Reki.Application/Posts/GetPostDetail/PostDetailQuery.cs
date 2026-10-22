@@ -1,5 +1,6 @@
 using Mediator;
 using Reki.Application.Posts.Responses;
+using Reki.Application.Posts.Responses.PostDetail;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 

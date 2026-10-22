@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 using Reki.Application.Social.Responses;
+using Reki.Application.Social.Responses.Challenge;
 
 namespace Reki.Api.OpenApi;
 
