@@ -1,7 +1,8 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
-using Reki.Application.Common;
+using Reki.Application.Player;
+using Reki.Application.Social;
 using Reki.Contracts.Player;
 using Reki.Contracts.Social;
 using Reki.Domain.Player;
@@ -38,16 +39,17 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         var worldId = await GetWorldIdAsync(api);
         await api.Social.SendDirectMessageAsync(
             "sonya", worldId, new DirectMessageRequest { Text = "Первый ход" }, CancellationToken.None);
-        var store = Factory.Services.GetRequiredService<IGameStore>();
-        var player = await store.GetPlayerAsync(TelegramUserId.From(user), CancellationToken.None)
+        var playerRepository = Factory.Services.GetRequiredService<IPlayerRepository>();
+        var starConversationRepository = Factory.Services.GetRequiredService<IStarConversationRepository>();
+        var player = await playerRepository.GetPlayerAsync(TelegramUserId.From(user), CancellationToken.None)
             ?? throw new InvalidOperationException("Missing player.");
-        var conversation = await store.GetStarConversationAsync(
+        var conversation = await starConversationRepository.GetStarConversationAsync(
             player.Id, Domain.Social.StarId.From("sonya"), CancellationToken.None, Domain.Worlds.WorldId.From(worldId))
             ?? throw new InvalidOperationException("Missing conversation.");
         var changed = conversation with { Memory = [] };
         Factory.Llm.Respond(async messages =>
         {
-            await store.SaveStarConversationAsync(changed, CancellationToken.None);
+            await starConversationRepository.SaveStarConversationAsync(changed, CancellationToken.None);
             return CreateChatResponse(messages);
         });
 
@@ -219,10 +221,11 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         using var api = Factory.CreateApiClient(8370);
         await CreatePlayerWithWorldAsync(api);
         await api.Social.SendDirectMessageAsync("sonya", await GetWorldIdAsync(api), new DirectMessageRequest { Text = "Первое сообщение" }, CancellationToken.None);
-        var store = Factory.Services.GetRequiredService<IGameStore>();
-        var player = await store.GetPlayerAsync(TelegramUserId.From(8370), CancellationToken.None)
+        var playerRepository = Factory.Services.GetRequiredService<IPlayerRepository>();
+        var starConversationRepository = Factory.Services.GetRequiredService<IStarConversationRepository>();
+        var player = await playerRepository.GetPlayerAsync(TelegramUserId.From(8370), CancellationToken.None)
             ?? throw new InvalidOperationException("Missing player.");
-        var conversation = await store.GetStarConversationAsync(
+        var conversation = await starConversationRepository.GetStarConversationAsync(
             player.Id, Domain.Social.StarId.From("sonya"), CancellationToken.None, Domain.Worlds.WorldId.From(await GetWorldIdAsync(api)))
             ?? throw new InvalidOperationException("Missing conversation.");
         var prepared = conversation with
@@ -231,7 +234,7 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
             Messages = Enumerable.Range(0, 20).Select(index => new Reki.Domain.Social.DirectMessage(
                 index % 2 == 0 ? "me" : "star", $"прошлый ход {index}")).ToArray(),
         };
-        await store.SaveStarConversationAsync(prepared, CancellationToken.None);
+        await starConversationRepository.SaveStarConversationAsync(prepared, CancellationToken.None);
 
         // Act
         await api.Social.SendDirectMessageAsync("sonya", await GetWorldIdAsync(api), new DirectMessageRequest { Text = "Текущий ход" }, CancellationToken.None);

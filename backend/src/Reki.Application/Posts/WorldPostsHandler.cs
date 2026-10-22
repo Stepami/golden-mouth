@@ -5,7 +5,7 @@ using Reki.Application.Common.Exceptions;
 namespace Reki.Application.Posts;
 
 public sealed class WorldPostsHandler(
-    IGameStore store,
+    IPostRepository postRepository,
     IRekiContextAccessor rekiContextAccessor,
     IStarFeedScheduler feedScheduler)
     : IRequestHandler<WorldPostsQuery, WorldPostsPage>
@@ -26,7 +26,7 @@ public sealed class WorldPostsHandler(
                 world.Id);
         }
 
-        return await store.GetPostsAsync(
+        return await postRepository.GetPostsAsync(
             world.Id,
             request.Feed ? null : world.Player.PlayerId.ToAuthorId(),
             request.PageNumber,

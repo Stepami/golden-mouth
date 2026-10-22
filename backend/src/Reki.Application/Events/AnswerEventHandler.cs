@@ -5,7 +5,7 @@ using Reki.Application.Common.Exceptions;
 namespace Reki.Application.Events;
 
 public sealed class AnswerEventHandler(
-    IGameStore store,
+    IDailyGameEventRepository dailyGameEventRepository,
     IRekiContextAccessor rekiContextAccessor)
     : IRequestHandler<AnswerEventCommand>
 {
@@ -16,7 +16,7 @@ public sealed class AnswerEventHandler(
         var player = await rekiContextAccessor.Context.Player;
         var world = (await rekiContextAccessor.Context.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
-        var gameEvent = await store.GetTodayEventAsync(
+        var gameEvent = await dailyGameEventRepository.GetTodayEventAsync(
             player.Id,
             DateTimeOffset.MinValue,
             cancellationToken,
@@ -26,7 +26,7 @@ public sealed class AnswerEventHandler(
             throw new ResourceNotFoundException("Event not found.");
         }
 
-        await store.SaveEventAsync(gameEvent with { Answer = request.Text }, cancellationToken);
+        await dailyGameEventRepository.SaveEventAsync(gameEvent with { Answer = request.Text }, cancellationToken);
         return Unit.Value;
     }
 }

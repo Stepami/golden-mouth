@@ -6,7 +6,7 @@ using Reki.Domain.Events;
 namespace Reki.Application.Events;
 
 public sealed class GetTodayEventHandler(
-    IGameStore store,
+    IDailyGameEventRepository dailyGameEventRepository,
     GameDayPeriod gameDayPeriod,
     IRekiContextAccessor rekiContextAccessor) : IRequestHandler<GetTodayEventQuery, DailyGameEvent>
 {
@@ -18,7 +18,7 @@ public sealed class GetTodayEventHandler(
         var world = (await rekiContextAccessor.Context.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var periodStart = gameDayPeriod.PeriodStart;
-        var existing = await store.GetTodayEventAsync(
+        var existing = await dailyGameEventRepository.GetTodayEventAsync(
             player.Id,
             periodStart,
             cancellationToken,
@@ -41,7 +41,7 @@ public sealed class GetTodayEventHandler(
             "Ответ можно дать один раз.",
             periodStart,
             null);
-        await store.SaveEventAsync(gameEvent, cancellationToken);
+        await dailyGameEventRepository.SaveEventAsync(gameEvent, cancellationToken);
         return gameEvent;
     }
 }

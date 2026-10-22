@@ -1,10 +1,11 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
-using Reki.Application.Common;
 using Reki.Application.Common.AI;
 using Reki.Application.Common.Safety;
+using Reki.Application.Player;
 using Reki.Application.Posts;
+using Reki.Application.Worlds;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Serialization;
@@ -15,7 +16,9 @@ using TickerQ.Utilities.Interfaces;
 namespace Reki.Infrastructure.Jobs;
 
 public sealed class GenerateStarFeedPostJob(
-    IGameStore store,
+    IPlayerRepository playerRepository,
+    IPostRepository postRepository,
+    IWorldRepository worldRepository,
     IChatClient chatClient,
     TimeProvider timeProvider,
     IOptions<LlmTurnSettings> settings) : ITickerFunction<StarFeedRequest>
@@ -27,20 +30,20 @@ public sealed class GenerateStarFeedPostJob(
         var request = context.Request;
         var playerId = request.PlayerId;
         var worldId = request.WorldId;
-        var player = await store.GetPlayerAsync(playerId, cancellationToken);
-        var world = await store.GetWorldAsync(playerId, worldId, cancellationToken);
+        var player = await playerRepository.GetPlayerAsync(playerId, cancellationToken);
+        var world = await worldRepository.GetWorldAsync(playerId, worldId, cancellationToken);
         if (player is null || world is null || world.Stars.Count == 0)
         {
             throw new TerminateExecutionException("The feed world is unavailable.");
         }
 
         var postId = request.PostId;
-        if (await store.GetPostAsync(postId, worldId, cancellationToken) is not null)
+        if (await postRepository.GetPostAsync(postId, worldId, cancellationToken) is not null)
         {
             return;
         }
 
-        var recent = await store.GetPostsAsync(worldId, null, 0, 20, cancellationToken);
+        var recent = await postRepository.GetPostsAsync(worldId, null, 0, 20, cancellationToken);
         var star = world.Stars[(int)((uint)context.Id.GetHashCode() % (uint)world.Stars.Count)];
         var profile = new StarAgentProfile(world, star.Id, [], player.Address);
         var history = recent.Items.Select(post =>
@@ -81,14 +84,14 @@ public sealed class GenerateStarFeedPostJob(
         }
 
         // Recheck ownership after the external call, including deletion while generating.
-        var freshWorld = await store.GetWorldAsync(playerId, worldId, cancellationToken);
+        var freshWorld = await worldRepository.GetWorldAsync(playerId, worldId, cancellationToken);
         if (freshWorld?.FindStar(star.Id) is null ||
-            await store.GetPlayerAsync(playerId, cancellationToken) is null)
+            await playerRepository.GetPlayerAsync(playerId, cancellationToken) is null)
         {
             throw new TerminateExecutionException("The feed world is unavailable.");
         }
 
         var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, [], timeProvider.GetUtcNow(), 0, 0, 1, false, false);
-        await store.InsertPostAsync(post, cancellationToken);
+        await postRepository.InsertPostAsync(post, cancellationToken);
     }
 }

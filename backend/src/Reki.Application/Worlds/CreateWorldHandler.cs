@@ -8,7 +8,7 @@ using Reki.Domain.Worlds;
 namespace Reki.Application.Worlds;
 
 public sealed class CreateWorldHandler(
-    IGameStore store,
+    IWorldRepository worldRepository,
     IRekiContextAccessor rekiContextAccessor,
     GameDayPeriod gameDayPeriod,
     IOptions<GameBalance> balance,
@@ -35,7 +35,7 @@ public sealed class CreateWorldHandler(
         {
             Player = instance.Player with { Subscribers = balance.Value.Growth.StartingSubscribers },
         };
-        await store.InsertWorldAsync(world, cancellationToken);
+        await worldRepository.InsertWorldAsync(world, cancellationToken);
         telemetry.TrackPlayer(player, "world_created", new Dictionary<string, string> { ["world"] = world.BalanceKey }, world.Id);
         telemetry.TrackWorldAudience(world);
         return world;

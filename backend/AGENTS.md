@@ -122,6 +122,7 @@ Reki.Tests/<Feature>/<UseCase>/... component tests
 - Сохраняй explicit conversion между Vogen type и primitive. Implicit conversion запрещён: он ослабляет типизацию и может скрыть validation. Primitive не должен протекать через domain API вместо value object.
 - Составной value object с несколькими равноправными полями, например amount + currency, остаётся immutable `record`/`record struct`; не упаковывай его искусственно в один внутренний DTO только ради Vogen.
 - Репозиторий создаётся на aggregate root, а не на каждую entity. Интерфейс находится в Domain/Application согласно направлению зависимостей, Mongo-реализация — в Infrastructure.
+- Каждый Mongo repository работает с одной сущностью (aggregate root); интерфейс и реализация лежат в папках соответствующей feature. Потребители получают нужные repository interfaces напрямую через DI. `IGameStore` / `MongoGameStore` пока координирует операции над несколькими сущностями: транзакционные коммиты поста и ответа, а также удаление всех данных игрока. Удаление сохраняет существующее поведение без транзакции. Проверки доступа между сущностями выполняются в Application.
 - Один command/query и один handler на use case. Не создавай сервисы с десятками несвязанных методов.
 - Domain events отделяют побочные эффекты внутри bounded context; integration events между contexts не должны выдавать внутреннюю domain model.
 - Используй `TimeProvider`, а не `DateTime.UtcNow`, и передавай `CancellationToken` во все async I/O операции.

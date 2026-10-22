@@ -3,7 +3,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Application.Common;
+using Reki.Application.Posts;
+using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -223,8 +224,9 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var player = await CreatePlayerWithWorldAsync(api);
         var playerId = PlayerId.From(player.Id);
         var worldId = WorldId.From(await GetWorldIdAsync(api));
-        var store = Factory.Services.GetRequiredService<IGameStore>();
-        var world = await store.GetWorldAsync(playerId, worldId, CancellationToken.None)
+        var postRepository = Factory.Services.GetRequiredService<IPostRepository>();
+        var worldRepository = Factory.Services.GetRequiredService<IWorldRepository>();
+        var world = await worldRepository.GetWorldAsync(playerId, worldId, CancellationToken.None)
             ?? throw new InvalidOperationException("Missing test world.");
         var selectedStar = world.Stars[0];
         var otherStar = world.Stars[1];
@@ -236,7 +238,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         };
         foreach (var (author, text) in authoredPosts)
         {
-            await store.InsertPostAsync(
+            await postRepository.InsertPostAsync(
                 new GamePost(PostId.From(ObjectId.GenerateNewId().ToString()), author, worldId, text, 0, [], Factory.Session.Clock.GetUtcNow(), 0, 0, 1, false, false),
                 CancellationToken.None);
         }
@@ -267,7 +269,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await Assert.That(other.GetProperty("starId").GetString()).IsEqualTo(otherStar.Id.Value);
         await Assert.That(playerPost.GetProperty("isOwn").GetBoolean()).IsFalse();
         await Assert.That(playerPost.GetProperty("starId").ValueKind).IsEqualTo(JsonValueKind.Null);
-        var saved = await store.GetPostAsync(context.Request.PostId, worldId, CancellationToken.None);
+        var saved = await postRepository.GetPostAsync(context.Request.PostId, worldId, CancellationToken.None);
         await Assert.That(saved?.AuthorId).IsEqualTo(selectedStar.Id.ToAuthorId());
     }
 }

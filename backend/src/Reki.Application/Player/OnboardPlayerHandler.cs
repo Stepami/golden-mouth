@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Invites;
 using Reki.Application.Telemetry;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
@@ -9,7 +10,8 @@ using Reki.Domain.Player;
 namespace Reki.Application.Player;
 
 public sealed class OnboardPlayerHandler(
-    IGameStore store,
+    IInvitationRepository invitationRepository,
+    IPlayerRepository playerRepository,
     GameDayPeriod gameDayPeriod,
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
@@ -20,7 +22,7 @@ public sealed class OnboardPlayerHandler(
         CancellationToken cancellationToken)
     {
         var telegramUserId = request.TelegramUserId;
-        if (await store.GetPlayerAsync(telegramUserId, cancellationToken) is not null)
+        if (await playerRepository.GetPlayerAsync(telegramUserId, cancellationToken) is not null)
         {
             throw new RequestConflictException("Onboarding has already been completed.");
         }
@@ -31,11 +33,11 @@ public sealed class OnboardPlayerHandler(
             AgeBand = request.AgeBand,
             Energy = balance.Value.FreePostsPerDay,
         };
-        await store.CreatePlayerAsync(created, cancellationToken);
+        await playerRepository.CreatePlayerAsync(created, cancellationToken);
         if (inviter is not null)
         {
             var invite = Invitation.Create(inviter.Id, created.Id, timeProvider.GetUtcNow(), balance.Value.InviteBonusBoth);
-            await store.CreateInviteAsync(invite, cancellationToken);
+            await invitationRepository.CreateInviteAsync(invite, cancellationToken);
         }
 
         analytics.TrackPlayer(created, "player_created", new Dictionary<string, string>(), referred: inviter is not null);
@@ -78,7 +80,7 @@ public sealed class OnboardPlayerHandler(
             return null;
         }
 
-        var inviter = await store.GetPlayerAsync(PlayerId.From(code[4..]), cancellationToken);
+        var inviter = await playerRepository.GetPlayerAsync(PlayerId.From(code[4..]), cancellationToken);
         return inviter is not null && inviter.TelegramUserId != telegramUserId
             ? inviter
             : null;

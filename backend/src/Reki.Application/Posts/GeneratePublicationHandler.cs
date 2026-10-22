@@ -16,7 +16,7 @@ using static Reki.Application.Common.AI.StarToolCallParser;
 namespace Reki.Application.Posts;
 
 public sealed partial class GeneratePublicationHandler(
-    IGameStore store,
+    IPublicationRepository publicationRepository,
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
     ISender sender,
@@ -69,7 +69,7 @@ public sealed partial class GeneratePublicationHandler(
             null,
             timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime,
             world.Id);
-        if (!await store.TryCreatePublicationAsync(publication, cancellationToken))
+        if (!await publicationRepository.TryCreatePublicationAsync(publication, cancellationToken))
         {
             existing = await sender.Send(new GetPublicationQuery(request.Id), cancellationToken)
                 ?? throw new RequestConflictException("The publication changed concurrently.");
@@ -116,7 +116,7 @@ public sealed partial class GeneratePublicationHandler(
                         if (hasUpdate)
                         {
                             var update = updates.Current;
-                            await store.AppendPublicationPartAsync(
+                            await publicationRepository.AppendPublicationPartAsync(
                                 request.Id,
                                 new PublicationPart(update.Text, null, null),
                                 cancellationToken);
@@ -147,7 +147,7 @@ public sealed partial class GeneratePublicationHandler(
                                    ?? throw new InvalidOperationException("The publication disappeared during generation.");
                     var turn = complete.AssembleTurn();
                     PlayerSafetyGuard.EnsureOutputAllowed([turn.Comment, turn.Hook]);
-                    await store.MarkPublicationReadyAsync(request.Id, cancellationToken);
+                    await publicationRepository.MarkPublicationReadyAsync(request.Id, cancellationToken);
                     ready = true;
                 }
                 catch (Exception exception)
@@ -163,7 +163,7 @@ public sealed partial class GeneratePublicationHandler(
             if (!ready)
             {
                 var expiresAtUtc = timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime;
-                await store.MarkPublicationFailedAsync(request.Id, expiresAtUtc, failure, CancellationToken.None);
+                await publicationRepository.MarkPublicationFailedAsync(request.Id, expiresAtUtc, failure, CancellationToken.None);
                 analytics.TrackPlayer(player, "post_failed", new Dictionary<string, string> { ["id"] = request.Id });
             }
         }
@@ -261,7 +261,7 @@ public sealed partial class GeneratePublicationHandler(
                 StarTurnPolicy.EnsurePostAllowed(generated, context.Agent.World, context.HateEnabled);
             }
 
-            await store.AppendPublicationPartAsync(publicationId, part, cancellationToken);
+            await publicationRepository.AppendPublicationPartAsync(publicationId, part, cancellationToken);
         }
     }
 }

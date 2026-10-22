@@ -1,7 +1,9 @@
-﻿using System.Collections.Frozen;
+using System.Collections.Frozen;
 using DotNext.Threading;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Player;
+using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 using TgMiniAppAuth.AuthContext.User;
@@ -13,11 +15,14 @@ internal sealed class RekiContext : IRekiContext
     private readonly AsyncLazy<PlayerProfile> _player;
     private readonly AsyncLazy<IReadOnlyDictionary<WorldId, World>> _worlds;
 
-    public RekiContext(ITelegramUserAccessor telegramUser, IGameStore store)
+    public RekiContext(
+        ITelegramUserAccessor telegramUser,
+        IPlayerRepository playerRepository,
+        IWorldRepository worldRepository)
     {
         _player = new AsyncLazy<PlayerProfile>(
             async ct =>
-                await store.GetPlayerAsync(
+                await playerRepository.GetPlayerAsync(
                     TelegramUserId.From(telegramUser.User.Id),
                     ct) ??
                 throw new ResourceNotFoundException("Player not found."),
@@ -26,7 +31,7 @@ internal sealed class RekiContext : IRekiContext
             async ct =>
             {
                 var player = await _player.WithCancellation(ct);
-                var worlds = await store.GetWorldsAsync(player.Id, ct);
+                var worlds = await worldRepository.GetWorldsAsync(player.Id, ct);
                 return worlds.ToFrozenDictionary(world => world.Id);
             },
             resettable: true);

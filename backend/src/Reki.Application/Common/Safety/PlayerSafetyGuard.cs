@@ -1,10 +1,11 @@
 using Reki.Application.Common.Exceptions;
+using Reki.Application.Player;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Common.Safety;
 
 public sealed class PlayerSafetyGuard(
-    IGameStore store,
+    IPlayerRepository playerRepository,
     TimeProvider timeProvider)
 {
     private static readonly TimeSpan HateCooldown = TimeSpan.FromDays(7);
@@ -69,7 +70,7 @@ public sealed class PlayerSafetyGuard(
 
         var now = timeProvider.GetUtcNow();
         var paused = player.StartCrisisPause(now, HateCooldown);
-        await store.TryReplacePlayerAsync(paused, player.Version, cancellationToken);
+        await playerRepository.TryReplacePlayerAsync(paused, player.Version, cancellationToken);
 
         throw new CrisisDetectedException(player.BirthGroup == "14-17");
     }

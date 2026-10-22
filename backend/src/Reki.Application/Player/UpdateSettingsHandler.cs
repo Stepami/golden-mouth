@@ -6,7 +6,7 @@ using Reki.Domain.Player;
 namespace Reki.Application.Player;
 
 public sealed class UpdateSettingsHandler(
-    IGameStore store,
+    IPlayerRepository playerRepository,
     IRekiContextAccessor rekiContextAccessor,
     IOptions<GameBalance> balance)
     : IRequestHandler<UpdateSettingsCommand>
@@ -26,7 +26,7 @@ public sealed class UpdateSettingsHandler(
                 : 0),
             Version = player.Version + 1,
         };
-        await store.TryReplacePlayerAsync(updated, player.Version, cancellationToken);
+        await playerRepository.TryReplacePlayerAsync(updated, player.Version, cancellationToken);
         return Unit.Value;
     }
 }

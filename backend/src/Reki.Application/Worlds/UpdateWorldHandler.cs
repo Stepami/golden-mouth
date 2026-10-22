@@ -5,7 +5,7 @@ using Reki.Application.Common.Exceptions;
 namespace Reki.Application.Worlds;
 
 public sealed class UpdateWorldHandler(
-    IGameStore store,
+    IWorldRepository worldRepository,
     IRekiContextAccessor contextAccessor)
     : IRequestHandler<UpdateWorldCommand>
 {
@@ -52,7 +52,7 @@ public sealed class UpdateWorldHandler(
                 }).ToArray(),
             },
         };
-        if (!await store.TryReplaceWorldAsync(updated, world.Version, cancellationToken))
+        if (!await worldRepository.TryReplaceWorldAsync(updated, world.Version, cancellationToken))
         {
             throw new RequestConflictException("World changed concurrently.");
         }

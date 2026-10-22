@@ -5,7 +5,7 @@ using Reki.Application.Common;
 namespace Reki.Application.Player;
 
 public sealed class ClaimPlusInterestHandler(
-    IGameStore store,
+    IPlayerRepository playerRepository,
     IOptions<GameBalance> balance,
     IRekiContextAccessor rekiContextAccessor) : IRequestHandler<ClaimPlusInterestCommand, int>
 {
@@ -21,7 +21,7 @@ public sealed class ClaimPlusInterestHandler(
             var subscribed = player.RequestPlusNotification();
             if (!ReferenceEquals(subscribed, player))
             {
-                await store.SavePlusNotificationAsync(player, subscribed, cancellationToken);
+                await playerRepository.SavePlusNotificationAsync(player, subscribed, cancellationToken);
                 player = subscribed;
             }
         }
@@ -32,7 +32,7 @@ public sealed class ClaimPlusInterestHandler(
             return 0;
         }
 
-        return await store.TryClaimPlusInterestAsync(player, updated, cancellationToken)
+        return await playerRepository.TryClaimPlusInterestAsync(player, updated, cancellationToken)
             ? updated.Energy - player.Energy
             : 0;
     }

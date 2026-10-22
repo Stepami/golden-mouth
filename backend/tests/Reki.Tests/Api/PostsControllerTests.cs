@@ -6,6 +6,8 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Common;
+using Reki.Application.Player;
+using Reki.Application.Worlds;
 using Reki.Contracts.Player;
 using Reki.Contracts.Posts;
 using Reki.Contracts.Worlds;
@@ -742,7 +744,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             (WorldId.Stream, 2999, "mid", false, false), (WorldId.Stream, 3000, "mid", false, true),
             (WorldId.Own, 4999, "mid", false, false), (WorldId.Own, 5000, "mid", false, true),
         ];
-        var store = Factory.Services.GetRequiredService<IGameStore>();
+        var playerRepository = Factory.Services.GetRequiredService<IPlayerRepository>();
+        var worldRepository = Factory.Services.GetRequiredService<IWorldRepository>();
         var clock = Factory.Services.GetRequiredService<TimeProvider>();
         Factory.Llm.Respond(messages =>
         {
@@ -760,16 +763,16 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             long userId = 8350 + index;
             using var api = Factory.CreateApiClient(userId);
             await CreatePlayerWithWorldAsync(api, sample.World);
-            var player = await store.GetPlayerAsync(TelegramUserId.From(userId), CancellationToken.None)
+            var player = await playerRepository.GetPlayerAsync(TelegramUserId.From(userId), CancellationToken.None)
                 ?? throw new InvalidOperationException("Missing player.");
             var prepared = player with
             {
                 HateDisabledUntilUtc = sample.Cooldown ? clock.GetUtcNow().AddHours(1) : null,
                 Version = player.Version + 1,
             };
-            await Assert.That(await store.TryReplacePlayerAsync(prepared, player.Version, CancellationToken.None)).IsTrue();
-            var world = (await store.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
-            await Assert.That(await store.TryReplaceWorldAsync(
+            await Assert.That(await playerRepository.TryReplacePlayerAsync(prepared, player.Version, CancellationToken.None)).IsTrue();
+            var world = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
+            await Assert.That(await worldRepository.TryReplaceWorldAsync(
                 world with
             {
                 Version = world.Version + 1,

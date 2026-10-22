@@ -5,7 +5,7 @@ using Reki.Application.Common.Exceptions;
 namespace Reki.Application.Social;
 
 public sealed class ForgetStarMemoryHandler(
-    IGameStore store,
+    IStarConversationRepository starConversationRepository,
     IRekiContextAccessor rekiContextAccessor)
     : IRequestHandler<ForgetStarMemoryCommand>
 {
@@ -18,14 +18,14 @@ public sealed class ForgetStarMemoryHandler(
         var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         _ = world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world.");
-        var conversation = await store.GetStarConversationAsync(
+        var conversation = await starConversationRepository.GetStarConversationAsync(
             player.Id,
             request.StarId,
             cancellationToken,
             world.Id);
         if (conversation is not null)
         {
-            await store.SaveStarConversationAsync(
+            await starConversationRepository.SaveStarConversationAsync(
                 conversation with
                 {
                     Memory = conversation.Memory

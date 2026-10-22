@@ -7,7 +7,7 @@ using Reki.Domain.Social;
 namespace Reki.Application.Social;
 
 public sealed class GetDirectMessagesHandler(
-    IGameStore store,
+    IStarConversationRepository starConversationRepository,
     IOptions<GameBalance> balance,
     GameDayPeriod gameDayPeriod,
     IRekiContextAccessor rekiContextAccessor) : IRequestHandler<GetDirectMessagesQuery, DirectMessageView>
@@ -22,7 +22,7 @@ public sealed class GetDirectMessagesHandler(
             ?? throw new ResourceNotFoundException("World not found.");
         _ = world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world.");
         var periodStart = gameDayPeriod.PeriodStart;
-        var conversation = await store.GetStarConversationAsync(
+        var conversation = await starConversationRepository.GetStarConversationAsync(
             player.Id,
             request.StarId,
             cancellationToken,
@@ -38,7 +38,7 @@ public sealed class GetDirectMessagesHandler(
         if (conversation.PeriodStartedAtUtc != periodStart)
         {
             conversation = conversation with { RepliesUsed = 0, PeriodStartedAtUtc = periodStart };
-            await store.SaveStarConversationAsync(conversation, cancellationToken);
+            await starConversationRepository.SaveStarConversationAsync(conversation, cancellationToken);
         }
 
         var repliesLeft = Math.Max(

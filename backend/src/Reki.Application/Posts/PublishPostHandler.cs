@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Common;
 using Reki.Application.Common.Exceptions;
 using Reki.Application.Common.Safety;
+using Reki.Application.Invites;
 using Reki.Application.Social;
 using Reki.Application.Telemetry;
 using Reki.Contracts.Posts;
@@ -13,6 +14,8 @@ using Reki.Domain.Posts;
 namespace Reki.Application.Posts;
 
 public sealed class PublishPostHandler(
+    IInvitationRepository invitationRepository,
+    IPublicationRepository publicationRepository,
     IGameStore store,
     IOptions<GameBalance> balance,
     TimeProvider timeProvider,
@@ -69,7 +72,7 @@ public sealed class PublishPostHandler(
         {
             var category = exception is ContentRejectedException rejected ? rejected.Category : ((UnsafeGeneratedContentException)exception).Category;
             var failure = new PublicationFailure(exception is ContentRejectedException ? "content_rejected" : "unsafe_generated_content", category, PublicationSafetyPolicy.Version);
-            await store.MarkPublicationFailedAsync(publication.Id, now.AddDays(1).UtcDateTime, failure, cancellationToken);
+            await publicationRepository.MarkPublicationFailedAsync(publication.Id, now.AddDays(1).UtcDateTime, failure, cancellationToken);
             throw;
         }
 
@@ -133,7 +136,7 @@ public sealed class PublishPostHandler(
         var hook = turn.Hook;
 
         var published = new PublishedPost(post, hook, turn.StarName, turn.Reaction, turn.Reasons);
-        var invite = await store.GetPendingInviteAsync(player.Id, cancellationToken);
+        var invite = await invitationRepository.GetPendingInviteAsync(player.Id, cancellationToken);
         var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
         updated = updated with { Energy = updated.Energy + (updatedInvite?.BonusAmount ?? 0) };
 

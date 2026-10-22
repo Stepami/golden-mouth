@@ -9,7 +9,7 @@ using Reki.Domain.Social;
 namespace Reki.Application.Social;
 
 public sealed class SendDirectMessageHandler(
-    IGameStore store,
+    IStarConversationRepository starConversationRepository,
     IOptions<GameBalance> balance,
     GameDayPeriod gameDayPeriod,
     IRekiContextAccessor rekiContextAccessor,
@@ -26,7 +26,7 @@ public sealed class SendDirectMessageHandler(
             ?? throw new ResourceNotFoundException("World not found.");
         _ = world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world.");
         var periodStart = gameDayPeriod.PeriodStart;
-        var conversation = await store.GetStarConversationAsync(
+        var conversation = await starConversationRepository.GetStarConversationAsync(
             player.Id,
             request.StarId,
             cancellationToken,
@@ -61,7 +61,7 @@ public sealed class SendDirectMessageHandler(
         world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         _ = world.FindStar(request.StarId) ?? throw new ResourceNotFoundException("The star does not belong to this world.");
-        var current = await store.GetStarConversationAsync(
+        var current = await starConversationRepository.GetStarConversationAsync(
             player.Id, request.StarId, cancellationToken, world.Id) ?? conversation;
         if (!current.Messages.SequenceEqual(conversation.Messages) || !current.Memory.SequenceEqual(conversation.Memory))
         {
@@ -93,7 +93,7 @@ public sealed class SendDirectMessageHandler(
             Memory = memory,
             RepliesUsed = conversation.RepliesUsed + 1,
         };
-        await store.SaveStarConversationAsync(updated, cancellationToken);
+        await starConversationRepository.SaveStarConversationAsync(updated, cancellationToken);
         return new SentDirectMessage(
             generated.Text,
             balance.Value.Relations.DirectMessageRepliesPerDay - updated.RepliesUsed);

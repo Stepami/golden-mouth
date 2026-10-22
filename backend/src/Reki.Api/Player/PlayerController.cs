@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Application.Common;
+using Reki.Application.Invites;
 using Reki.Application.Player;
 using Reki.Contracts.Player;
 using Reki.Domain.Player;
@@ -15,7 +16,8 @@ namespace Reki.Api.Player;
 [Route("/")]
 public sealed class PlayerController(
     IRekiContext rekiContext,
-    IGameStore store,
+    IInvitationRepository invitationRepository,
+    IPlayerRepository playerRepository,
     ISender sender) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
@@ -24,7 +26,7 @@ public sealed class PlayerController(
         [FromServices] ITelegramUserAccessor telegramUser,
         CancellationToken cancellationToken)
     {
-        var player = await store.GetPlayerAsync(TelegramUserId.From(telegramUser.User.Id), cancellationToken);
+        var player = await playerRepository.GetPlayerAsync(TelegramUserId.From(telegramUser.User.Id), cancellationToken);
         if (player is null)
         {
             var problemDetails = new ProblemDetails
@@ -65,7 +67,7 @@ public sealed class PlayerController(
     public async Task<Ok<InvitationResponse>> GetInvitationAsync(CancellationToken cancellationToken)
     {
         var player = await rekiContext.Player;
-        var invitation = await store.GetPendingInviteAsync(player.Id, cancellationToken);
+        var invitation = await invitationRepository.GetPendingInviteAsync(player.Id, cancellationToken);
         return TypedResults.Ok(new InvitationResponse(invitation?.BonusAmount ?? 0));
     }
 
