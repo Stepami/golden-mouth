@@ -76,6 +76,18 @@ Reki.Tests/<Feature>/<UseCase>/... component tests
 - Логические bounded contexts изолируются namespaces и internal API. Они не читают Mongo collections друг друга напрямую; между ними используй узкие application contracts и integration events, а domain events оставляй внутри context.
 - Не создавай общие `Utils`, `Helpers`, generic repository или god-service. Папка `Common` допустима только для небольших cross-cutting primitives с несколькими реальными consumers.
 
+## Удаление Contracts: согласованные правила переноса
+
+План миграции: `docs/backend-contracts-removal-plan.md`. До его выполнения `Reki.Contracts` остаётся частью текущей структуры. Для переноса контрактов следующие правила имеют приоритет над описанием текущих пяти проектов и размещения DTO выше. Целевая структура содержит четыре production-проекта: Api, Application, Infrastructure и Domain.
+
+- Исходящие сообщения, включая SSE events и вложенные response-модели, принадлежат Application: `Application/<Subdomain>/Responses`. Общие для нескольких поддоменов исходящие модели находятся в `Application/Responses`; использования только из API, Infrastructure или тестов не делают модель общей.
+- Маппинг исходящих сообщений находится в корне соответствующего поддомена Application в статическом extension mapper. Существующий mapper переиспользуется и приводится к этому виду; при отсутствии создаётся новый. Папка Responses содержит модели, mapper остаётся на уровне поддомена. Общий корневой mapper для всех поддоменов не создаётся.
+- Входящие HTTP-модели находятся в `Api/Requests/<Subdomain>`, включая вложенные request-модели и HTTP binding/validation metadata. Статические extension mappers входящих моделей находятся в той же папке и преобразуют запросы в application commands, queries или их входные модели. Application не зависит от API request-типов или ASP.NET Core.
+- Модели Responses не используются как вложенные входящие модели: для таких случаев создаются request-типы с сохранением публичного JSON-формата. Папка `Api/Mapping`, `IApiMapper`, `ApiMapper` и их DI-регистрация удаляются после переноса всех преобразований по поддоменам.
+- Доменные enum и value objects переиспользуются, когда совпадают смысл и допустимые значения. HTTP enum остаются в API, прикладные типы — в своём поддомене Application. Типы не переносятся в Domain только ради общего доступа; сериализованные имена, значения и ключи словарей сохраняются.
+- Единственный source-generated `ApiJsonSerializerContext` и настройка сериализации остаются в `Api/Serialization`. MVC, HTTP JSON и AI используют общую настройку; Application получает `IOptions<JsonSerializerOptions>` через DI. Новые контексты в Application/Infrastructure и reflection fallback не добавляются.
+- После переноса `Application` зависит от `Domain`, `Infrastructure` — от `Application` и `Domain`, `Api` — от `Application`, `Infrastructure` и при необходимости `Domain`. Project references, NSwag imports/aliases, тесты и документация обновляются до удаления проекта Contracts.
+
 ## Общие MSBuild-настройки и анализаторы
 
 Все проекты наследуют эти свойства из `Directory.Build.props`; не повторяй их в `.csproj`:
