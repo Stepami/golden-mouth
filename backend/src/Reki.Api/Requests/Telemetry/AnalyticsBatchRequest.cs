@@ -14,7 +14,7 @@ public sealed record AnalyticsBatchRequest
     public required string Platform { get; init; }
 
     [EnumDataType(typeof(LaunchSurface))]
-    public LaunchSurface LaunchSurface { get; init; }
+    public LaunchSurface LaunchSurface { get; init; } = LaunchSurface.Unknown;
 
     public IReadOnlyDictionary<string, string> Experiments { get; init; }
         = new Dictionary<string, string>();

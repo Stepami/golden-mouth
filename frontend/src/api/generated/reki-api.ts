@@ -1448,6 +1448,15 @@ export interface ClientLogEntryRequest {
 
 export type ClientLogLevel = "info" | "warn" | "error";
 
+export interface CollectionCardRequest {
+    id: string;
+    emoji: string;
+    title: string;
+    open: boolean;
+
+    [key: string]: any;
+}
+
 export interface CollectionCardResponse {
     id: string;
     emoji: string;
@@ -1497,7 +1506,7 @@ export interface CreateWorldRequest {
     description?: string;
     avatarStyle?: string;
     voice?: string;
-    drama?: Drama;
+    drama?: WorldDrama;
     where?: string;
     firstContext?: string;
     firstPrompt?: string;
@@ -1509,11 +1518,11 @@ export interface CreateWorldRequest {
     voices?: string[];
     postIdeas?: string[];
     demoPosts?: string[];
-    wants?: WantResponse[];
-    achievements?: CollectionCardResponse[];
+    wants?: WantRequest[];
+    achievements?: CollectionCardRequest[];
     roles?: string[];
-    rules?: WorldRuleResponse[];
-    stars?: WorldStarResponse[];
+    rules?: WorldRuleRequest[];
+    stars?: WorldStarRequest[];
 
     [key: string]: any;
 }
@@ -1543,8 +1552,6 @@ export interface DmResponse {
 
     [key: string]: any;
 }
-
-export type Drama = "soft" | "mid" | "hot" | "off";
 
 export type FeedItemKind = "news" | "post";
 
@@ -1900,6 +1907,15 @@ export interface UpdateSettingsRequest {
     [key: string]: any;
 }
 
+export interface WantRequest {
+    id: string;
+    text: string;
+    reward: string;
+    done: boolean;
+
+    [key: string]: any;
+}
+
 export interface WantResponse {
     id: string;
     text: string;
@@ -1916,6 +1932,8 @@ export interface WhyResponse {
 
     [key: string]: any;
 }
+
+export type WorldDrama = "soft" | "mid" | "hot" | "off";
 
 export interface WorldResponse {
     id: string;
@@ -1941,7 +1959,7 @@ export interface WorldResponse {
     role: string;
     avatar: string;
     voice: string;
-    drama: Drama;
+    drama: WorldDrama;
     subscribers?: number;
     wants: WantResponse[];
     achievements: CollectionCardResponse[];
@@ -1949,9 +1967,29 @@ export interface WorldResponse {
     [key: string]: any;
 }
 
+export interface WorldRuleRequest {
+    text: string;
+    locked?: boolean;
+
+    [key: string]: any;
+}
+
 export interface WorldRuleResponse {
     text: string;
     locked?: boolean;
+
+    [key: string]: any;
+}
+
+export interface WorldStarRequest {
+    id: string;
+    name: string;
+    role: string;
+    trait: number;
+    about: string;
+    voice: string;
+    avatarSeed: string;
+    relation: number;
 
     [key: string]: any;
 }
