@@ -305,7 +305,7 @@ internal sealed class MongoGameStore : IGameStore
             cancellationToken: cancellationToken);
     }
 
-    public async ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
+    public async ValueTask<List<GamePost>> GetPostsAsync(
         WorldId worldId,
         AuthorId? authorId,
         int offset,

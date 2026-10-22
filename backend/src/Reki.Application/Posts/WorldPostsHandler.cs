@@ -36,9 +36,12 @@ public sealed class WorldPostsHandler(
             offset,
             limit,
             cancellationToken);
-        return new WorldPostsPage(
-            posts.Take(request.PageSize).ToArray(),
-            request.PageNumber,
-            posts.Count > request.PageSize);
+        var hasNext = posts.Count > request.PageSize;
+        if (hasNext)
+        {
+            posts.RemoveAt(posts.Count - 1);
+        }
+
+        return new WorldPostsPage(posts, request.PageNumber, hasNext);
     }
 }

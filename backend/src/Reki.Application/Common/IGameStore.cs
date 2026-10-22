@@ -74,7 +74,7 @@ public interface IGameStore
     /// <summary>
     /// Reads posts in a world whose ownership the application has already verified.
     /// </summary>
-    ValueTask<IReadOnlyList<GamePost>> GetPostsAsync(
+    ValueTask<List<GamePost>> GetPostsAsync(
         WorldId worldId,
         AuthorId? authorId,
         int offset,
