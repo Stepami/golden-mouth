@@ -7,7 +7,6 @@
     <ItemGroup>
         <PackageReference Include="Mediator.Abstractions"/>
         <PackageReference Include="Riok.Mapperly" PrivateAssets="all"/>
-        <PackageReference Include="TgMiniAppAuth"/>
         <PackageReference Include="Microsoft.Extensions.AI.Abstractions"/>
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
         <PackageReference Include="Microsoft.Extensions.Options"/>
