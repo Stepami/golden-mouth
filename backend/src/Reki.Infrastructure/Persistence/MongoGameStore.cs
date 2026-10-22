@@ -312,8 +312,6 @@ internal sealed class MongoGameStore : IGameStore
         int pageSize,
         CancellationToken cancellationToken)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(pageNumber);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
         var offset = pageNumber * pageSize;
         var limit = pageSize + 1;
         var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId);
