@@ -50,7 +50,7 @@ backend/
 Код внутри проектов делится по feature/use case, а не по техническим папкам `Services`, `Dtos` и `Repositories` на весь проект:
 
 ```text
-Reki.Api/<Feature>/<UseCase>/Controller.cs
+Reki.Api/Controllers/<Feature>Controller.cs
 Reki.Contracts/<Feature>/Request.cs, Response.cs
 Reki.Application/<Feature>/<Action>Command/<Action>.cs, <Action>CommandHandler.cs
 Reki.Application/<Feature>/Get<Data>/<Data>Query.cs, <Data>QueryHandler.cs
@@ -157,7 +157,7 @@ Reki.Tests/<Feature>/<UseCase>/... component tests
 
 ## HTTP API, JSON и внешние сервисы
 
-- Controllers группируются по feature/use case, наследуются от `ControllerBase` и помечаются `[ApiController]`. Маршруты задаются attribute routing; `Program.cs` содержит composition root и одно `MapControllers()`.
+- Все controllers находятся в корневой папке проекта `Api/Controllers` без вложенных подпапок, namespace — `Reki.Api.Controllers`. Они наследуются от `ControllerBase` и помечаются `[ApiController]`. Маршруты задаются attribute routing; `Program.cs` содержит composition root и одно `MapControllers()`.
 - Каждый action имеет явный HTTP-атрибут, стабильное имя route, `CancellationToken` и возвращает конкретный typed result из `Microsoft.AspNetCore.Http.HttpResults` через `TypedResults`. Для нескольких вариантов используй `Results<T1, T2, ...>`. Атрибуты `[ProducesResponseType]` не добавляй: OpenAPI получает response metadata из typed return type. Не смешивай controllers с `MapGet`/`MapPost` и самописными Minimal API endpoint groups.
 - Controller только связывает HTTP-вход с command/query и возвращает результат через `TypedResults`. Domain entities и внутренние application results наружу не возвращаются; преобразование в публичные DTO и SSE events выполняется в Application. Существующие маршруты мигрируй по use case, не добавляй новые mapper-вызовы в controllers.
 - Ошибки отдаются как `ProblemDetails`/`ValidationProblemDetails` с устойчивыми кодами; stack trace и внутренние сообщения клиенту не выдаются.

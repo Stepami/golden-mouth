@@ -14,7 +14,7 @@ using Reki.Contracts.Player;
 using Reki.Domain.Player;
 using TgMiniAppAuth.AuthContext.User;
 
-namespace Reki.Api.Player;
+namespace Reki.Api.Controllers;
 
 [ApiController]
 [Produces("application/json")]

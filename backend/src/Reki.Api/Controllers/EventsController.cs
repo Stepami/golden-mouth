@@ -7,7 +7,7 @@ using Reki.Application.Events.GetTodayEvent;
 using Reki.Contracts.Events;
 using Reki.Domain.Events;
 
-namespace Reki.Api.Events;
+namespace Reki.Api.Controllers;
 
 [ApiController]
 [Produces("application/json")]

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Contracts.Social;
 
-namespace Reki.Api.Social;
+namespace Reki.Api.Controllers;
 
 [ApiController]
 [Produces("application/json")]

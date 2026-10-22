@@ -8,7 +8,7 @@ using Reki.Application.Telemetry.SubmitAnalyticsCommand;
 using Reki.Contracts.Telemetry;
 using Reki.Domain.Posts;
 
-namespace Reki.Api.Telemetry;
+namespace Reki.Api.Controllers;
 
 [ApiController]
 [Produces("application/json")]

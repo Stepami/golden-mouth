@@ -10,7 +10,7 @@ using Reki.Application.Worlds.UpdateWorldCommand;
 using Reki.Contracts.Worlds;
 using Reki.Domain.Worlds;
 
-namespace Reki.Api.Worlds;
+namespace Reki.Api.Controllers;
 
 [ApiController]
 [Produces("application/json")]

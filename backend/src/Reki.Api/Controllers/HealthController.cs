@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-namespace Reki.Api.Common.Health;
+namespace Reki.Api.Controllers;
 
 [ApiController]
 [AllowAnonymous]

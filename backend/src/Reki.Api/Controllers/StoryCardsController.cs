@@ -5,7 +5,7 @@ using Reki.Application.Posts.GetPublicStoryCard;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 
-namespace Reki.Api.Posts;
+namespace Reki.Api.Controllers;
 
 [ApiController]
 [Route("cards/story")]
