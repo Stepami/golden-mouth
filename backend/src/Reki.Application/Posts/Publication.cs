@@ -12,7 +12,7 @@ public sealed record Publication(
     string RequestHash,
     bool OwnWords,
     string? WantId,
-    PublicationStatus Status,
+    PublicationStatusType Status,
     IReadOnlyList<PublicationPart> Parts,
     PublishedPost? Result,
     DateTime? ExpiresAtUtc,

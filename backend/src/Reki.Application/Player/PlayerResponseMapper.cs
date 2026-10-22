@@ -1,7 +1,6 @@
 using Reki.Application.Player.Responses;
 using Reki.Domain.Player;
 using Riok.Mapperly.Abstractions;
-using ContractSkillId = Reki.Application.Player.Responses.SkillId;
 
 namespace Reki.Application.Player;
 
@@ -22,9 +21,9 @@ public static partial class PlayerResponseMapper
             player.AgeBand ?? (player.BirthGroup == "14-17" ? "14-17" : "18+"));
     }
 
-    private static partial IReadOnlyDictionary<ContractSkillId, SkillResponse> MapSkills(IReadOnlyDictionary<Domain.Player.SkillId, SkillProgress> source);
+    private static partial IReadOnlyDictionary<SkillIdType, SkillResponse> MapSkills(IReadOnlyDictionary<SkillId, SkillProgress> source);
 
-    private static ContractSkillId MapSkillId(Domain.Player.SkillId source) => Enum.Parse<ContractSkillId>(source.Value, true);
+    private static SkillIdType MapSkillId(SkillId source) => Enum.Parse<SkillIdType>(source.Value, true);
 
     private static partial PlayerSettingsResponse MapSettings(PlayerSettings source);
 

@@ -1,7 +1,6 @@
 using Mediator;
 using Reki.Application.Exceptions;
 using Reki.Application.Posts.GetPublication;
-using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.PublicationStatus;
 using Reki.Application.RekiContext;
 

@@ -11,14 +11,12 @@ using Reki.Api.Serialization;
 using Reki.Application.Balance;
 using Reki.Application.Player;
 using Reki.Application.Posts;
-using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Application.Posts.Responses.ReplyLiveEvent;
 using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
-using StarId = Reki.Domain.Worlds.StarId;
 
 namespace Reki.Tests.Api;
 
@@ -376,7 +374,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(((TypingLiveEvent)events[3]).Who).IsEqualTo("Соня");
         var result = ((ResultLiveEvent)events[4]).Result;
         var status = await api.Posts.GetPublicationStatusAsync(publicationId, CancellationToken.None);
-        await Assert.That(status.Status).IsEqualTo(PublicationStatus.Completed);
+        await Assert.That(status.Status).IsEqualTo(PublicationStatusType.Completed);
         await Assert.That(status.Result).IsNotNull();
         var duplicateEvents = await api.Posts.ModeratePublicationAsync(
             publicationId, await GetWorldIdAsync(api), CancellationToken.None);
@@ -705,7 +703,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Assert
         await Assert.That(events).Contains("failed");
-        await Assert.That(status.Status).IsEqualTo(PublicationStatus.Failed);
+        await Assert.That(status.Status).IsEqualTo(PublicationStatusType.Failed);
         await Assert.That(player.Energy).IsEqualTo(10);
         await Assert.That((await api.Posts.GetChannelPostsAsync(await GetWorldIdAsync(api), null, null, CancellationToken.None)).Items).IsEmpty();
     }
@@ -788,7 +786,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                 CancellationToken.None)).IsTrue();
             (_, _, var id) = await GenerateAsync(userId, "Безопасный пост о событиях мира");
             var status = await api.Posts.GetPublicationStatusAsync(id, CancellationToken.None);
-            await Assert.That(status.Status).IsEqualTo(sample.Allowed ? PublicationStatus.ReadyForModeration : PublicationStatus.Failed);
+            await Assert.That(status.Status).IsEqualTo(sample.Allowed ? PublicationStatusType.ReadyForModeration : PublicationStatusType.Failed);
             await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(10);
         }
     }

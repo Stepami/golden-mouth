@@ -11,7 +11,6 @@ using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
 using Reki.Tests.Api;
-using ResetGameDayJob = Reki.Infrastructure.Jobs.ResetGameDayJob;
 
 namespace Reki.Tests.Jobs;
 

@@ -9,13 +9,11 @@ using Reki.Api.Requests.Worlds;
 using Reki.Api.Serialization;
 using Reki.Application.Player;
 using Reki.Application.Player.Responses;
-using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Application.Posts.Responses.ReplyLiveEvent;
 using Reki.Application.Worlds;
 using Reki.Application.Worlds.Responses;
-using ReplyLiveEvent = Reki.Application.Posts.Responses.ReplyLiveEvent.ReplyLiveEvent;
-using ResetGameDayJob = Reki.Infrastructure.Jobs.ResetGameDayJob;
+using Reki.Infrastructure.Jobs;
 
 namespace Reki.Tests.Api;
 

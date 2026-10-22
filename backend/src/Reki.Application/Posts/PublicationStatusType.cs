@@ -1,6 +1,6 @@
 namespace Reki.Application.Posts;
 
-public enum PublicationStatus
+public enum PublicationStatusType
 {
     Pending,
     ReadyForModeration,

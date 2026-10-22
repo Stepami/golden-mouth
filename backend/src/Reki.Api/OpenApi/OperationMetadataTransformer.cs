@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
-using PublicationStatusLiveEvent = Reki.Application.Posts.Responses.PublicationStatusLiveEvent.PublicationStatusLiveEvent;
-using ReplyLiveEvent = Reki.Application.Posts.Responses.ReplyLiveEvent.ReplyLiveEvent;
 
 namespace Reki.Api.OpenApi;
 

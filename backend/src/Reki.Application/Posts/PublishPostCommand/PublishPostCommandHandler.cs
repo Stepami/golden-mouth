@@ -8,13 +8,11 @@ using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPublication;
 using Reki.Application.Posts.GetWorldPosts;
-using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
-using LiveEvent = Reki.Application.Posts.Responses.LiveEvent.LiveEvent;
 
 namespace Reki.Application.Posts.PublishPostCommand;
 
@@ -45,12 +43,12 @@ internal sealed class PublishPostCommandHandler(
             throw new ResourceNotFoundException("Publication not found.");
         }
 
-        if (publication is { Status: PublicationStatus.Completed, Result: not null })
+        if (publication is { Status: PublicationStatusType.Completed, Result: not null })
         {
             return PostResponseMapper.MapLiveEvents(publication.Result, world, storedPlayer.Id);
         }
 
-        if (publication.Status != PublicationStatus.ReadyForModeration)
+        if (publication.Status != PublicationStatusType.ReadyForModeration)
         {
             throw new RequestConflictException("The publication is not ready for moderation.");
         }

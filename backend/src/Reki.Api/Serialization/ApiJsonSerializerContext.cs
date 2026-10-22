@@ -14,7 +14,6 @@ using Reki.Application.Player;
 using Reki.Application.Player.Responses;
 using Reki.Application.Posts;
 using Reki.Application.Posts.AI;
-using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.ChannelPost;
 using Reki.Application.Posts.Responses.FeedItem;
 using Reki.Application.Posts.Responses.LiveEvent;
@@ -30,9 +29,6 @@ using Reki.Application.Telemetry;
 using Reki.Application.Worlds.Responses;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
-using LiveEvent = Reki.Application.Posts.Responses.LiveEvent.LiveEvent;
-using PublicationStatusLiveEvent = Reki.Application.Posts.Responses.PublicationStatusLiveEvent.PublicationStatusLiveEvent;
-using ReplyLiveEvent = Reki.Application.Posts.Responses.ReplyLiveEvent.ReplyLiveEvent;
 
 namespace Reki.Api.Serialization;
 
@@ -56,7 +52,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(StartPublicationRequest))]
 [JsonSerializable(typeof(PublicationStatusLiveEvent))]
 [JsonSerializable(typeof(PublicationStatusResponse))]
-[JsonSerializable(typeof(PublicationStatus))]
+[JsonSerializable(typeof(PublicationStatusType))]
 [JsonSerializable(typeof(LiveEventType))]
 [JsonSerializable(typeof(ReplyRequest))]
 [JsonSerializable(typeof(ReplyStatus))]
@@ -98,7 +94,7 @@ namespace Reki.Api.Serialization;
 [JsonSourceGenerationOptions(
     Converters =
     [
-        typeof(CamelCaseEnumConverter<SkillId>),
+        typeof(CamelCaseEnumConverter<SkillIdType>),
         typeof(CamelCaseEnumConverter<Address>),
         typeof(CamelCaseEnumConverter<WorldDrama>),
         typeof(CamelCaseEnumConverter<BirthGroup>),
@@ -109,7 +105,7 @@ namespace Reki.Api.Serialization;
         typeof(CamelCaseEnumConverter<ReplyStatus>),
         typeof(CamelCaseEnumConverter<ClientLogLevel>),
         typeof(KebabCaseEnumConverter<LaunchSurface>),
-        typeof(SnakeCaseEnumConverter<PublicationStatus>)
+        typeof(SnakeCaseEnumConverter<PublicationStatusType>)
     ],
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal sealed partial class ApiJsonSerializerContext : JsonSerializerContext;

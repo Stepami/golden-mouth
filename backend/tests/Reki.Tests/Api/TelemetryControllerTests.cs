@@ -1,7 +1,6 @@
 using System.Globalization;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Api.Requests.Telemetry;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Telemetry.ClientLogBatch;
 using Reki.Application.Telemetry;

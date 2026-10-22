@@ -1,5 +1,6 @@
 using System.Globalization;
 using Reki.Application.Posts.Responses;
+using Reki.Application.Posts.Responses.ChannelPost;
 using Reki.Application.Posts.Responses.Comment;
 using Reki.Application.Posts.Responses.FeedItem;
 using Reki.Application.Posts.Responses.LiveEvent;
@@ -10,7 +11,6 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 using Riok.Mapperly.Abstractions;
-using LiveEvent = Reki.Application.Posts.Responses.LiveEvent.LiveEvent;
 
 namespace Reki.Application.Posts;
 

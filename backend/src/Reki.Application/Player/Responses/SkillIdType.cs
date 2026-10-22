@@ -1,6 +1,6 @@
 namespace Reki.Application.Player.Responses;
 
-public enum SkillId
+public enum SkillIdType
 {
     Brave,
     Humor,

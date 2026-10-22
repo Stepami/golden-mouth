@@ -111,9 +111,9 @@ internal sealed class MongoGameStore : IGameStore
             var readyFilter = Builders<Publication>.Filter.And(
                 Builders<Publication>.Filter.Eq(item => item.Id, publicationId),
                 Builders<Publication>.Filter.Eq(item => item.PlayerId, updatedPlayer.Id),
-                Builders<Publication>.Filter.Eq(item => item.Status, PublicationStatus.ReadyForModeration));
+                Builders<Publication>.Filter.Eq(item => item.Status, PublicationStatusType.ReadyForModeration));
             var complete = Builders<Publication>.Update
-                .Set(item => item.Status, PublicationStatus.Completed)
+                .Set(item => item.Status, PublicationStatusType.Completed)
                 .Set(item => item.Result, published)
                 .Set(item => item.Text, string.Empty)
                 .Set(item => item.Parts, []);

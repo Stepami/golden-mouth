@@ -5,7 +5,7 @@ public sealed record PlayerResponse(
     Address Address,
     int Energy,
     StreakResponse Streak,
-    IReadOnlyDictionary<SkillId, SkillResponse> Skills,
+    IReadOnlyDictionary<SkillIdType, SkillResponse> Skills,
     PlayerSettingsResponse Settings,
     IReadOnlyDictionary<string, string> Experiments,
     bool HitOwnWorldMilestone = false,

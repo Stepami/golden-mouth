@@ -11,13 +11,10 @@ using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPublication;
 using Reki.Application.Posts.GetWorldPosts;
-using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.PublicationStatusLiveEvent;
 using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
 using Reki.Domain.Player;
-using static Reki.Application.Posts.GeneratePublicationCommand.StarToolCallParser;
-using PublicationStatusLiveEvent = Reki.Application.Posts.Responses.PublicationStatusLiveEvent.PublicationStatusLiveEvent;
 
 namespace Reki.Application.Posts.GeneratePublicationCommand;
 
@@ -70,7 +67,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
             requestHash,
             request.OwnWords,
             request.WantId,
-            PublicationStatus.Pending,
+            PublicationStatusType.Pending,
             [],
             null,
             timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime,
@@ -84,7 +81,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
             yield break;
         }
 
-        yield return new PublicationStatusLiveEvent(PublicationStatus.Pending, request.Id);
+        yield return new PublicationStatusLiveEvent(PublicationStatusType.Pending, request.Id);
         var failure = new PublicationFailure("technical_failure", "uncertain", PublicationSafetyPolicy.Version);
         var failed = false;
         var ready = false;
@@ -141,7 +138,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
                         break;
                     }
 
-                    yield return new PublicationStatusLiveEvent(PublicationStatus.Pending, request.Id);
+                    yield return new PublicationStatusLiveEvent(PublicationStatusType.Pending, request.Id);
                 }
             }
 
@@ -175,7 +172,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
         }
 
         yield return new PublicationStatusLiveEvent(
-            failed ? PublicationStatus.Failed : PublicationStatus.ReadyForModeration,
+            failed ? PublicationStatusType.Failed : PublicationStatusType.ReadyForModeration,
             request.Id,
             failed ? failure : null);
     }
@@ -241,10 +238,10 @@ internal sealed partial class GeneratePublicationCommandHandler(
     {
         foreach (var call in update.Contents.OfType<FunctionCallContent>())
         {
-            var action = Parse([call]).Single();
+            var action = StarToolCallParser.Parse([call]).Single();
             var part = action switch
             {
-                StarCommentAction comment => new PublicationPart(
+                StarToolCallParser.StarCommentAction comment => new PublicationPart(
                     null,
                     new GeneratedPostTurn(
                         comment.Author,
@@ -259,7 +256,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
                         comment.OnTopic,
                         comment.Tone),
                     null),
-                StarReactionAction reaction => new PublicationPart(null, null, reaction.Emoji),
+                StarToolCallParser.StarReactionAction reaction => new PublicationPart(null, null, reaction.Emoji),
                 _ => throw new AiServiceUnavailableException("The model returned an unsupported action."),
             };
             if (part.Comment is { } generated)

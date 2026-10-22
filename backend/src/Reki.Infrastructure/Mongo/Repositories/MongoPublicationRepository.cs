@@ -42,7 +42,7 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
     {
         var update = Builders<Publication>.Update.Push(item => item.Parts, part);
         var result = await _publications.UpdateOneAsync(
-            item => item.Id == id && item.Status == PublicationStatus.Pending,
+            item => item.Id == id && item.Status == PublicationStatusType.Pending,
             update,
             cancellationToken: cancellationToken);
         if (result.ModifiedCount != 1)
@@ -54,10 +54,10 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
     public async ValueTask MarkPublicationReadyAsync(string id, CancellationToken cancellationToken)
     {
         var update = Builders<Publication>.Update
-            .Set(item => item.Status, PublicationStatus.ReadyForModeration)
+            .Set(item => item.Status, PublicationStatusType.ReadyForModeration)
             .Set(item => item.ExpiresAtUtc, null);
         var result = await _publications.UpdateOneAsync(
-            item => item.Id == id && item.Status == PublicationStatus.Pending,
+            item => item.Id == id && item.Status == PublicationStatusType.Pending,
             update,
             cancellationToken: cancellationToken);
         if (result.ModifiedCount != 1)
@@ -73,13 +73,13 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
         CancellationToken cancellationToken)
     {
         var update = Builders<Publication>.Update
-            .Set(item => item.Status, PublicationStatus.Failed)
+            .Set(item => item.Status, PublicationStatusType.Failed)
             .Set(item => item.Failure, failure)
             .Set(item => item.Text, string.Empty)
             .Set(item => item.Parts, [])
             .Set(item => item.ExpiresAtUtc, expiresAtUtc);
         await _publications.UpdateOneAsync(
-            item => item.Id == id && item.Status != PublicationStatus.Completed,
+            item => item.Id == id && item.Status != PublicationStatusType.Completed,
             update,
             cancellationToken: cancellationToken);
     }

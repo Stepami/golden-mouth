@@ -105,10 +105,12 @@ dotnet_diagnostic.IDE0007.severity = error
 # loosen rules
 dotnet_diagnostic.AV1210.severity = none
 dotnet_diagnostic.SA1309.severity = none
+dotnet_diagnostic.AV1008.severity = none
 dotnet_diagnostic.AV1500.severity = none
 dotnet_diagnostic.AV1561.severity = none
 dotnet_diagnostic.AV1564.severity = none
 dotnet_diagnostic.AV1580.severity = none
+dotnet_diagnostic.AV1745.severity = none
 dotnet_diagnostic.VSTHRD003.severity = none
 dotnet_diagnostic.VSTHRD103.severity = none
 dotnet_diagnostic.SA1611.severity = none
