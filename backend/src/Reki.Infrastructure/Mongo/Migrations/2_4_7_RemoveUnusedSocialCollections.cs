@@ -1,7 +1,6 @@
 using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
 
@@ -11,7 +10,7 @@ internal sealed class RemoveUnusedSocialCollections : RekiMigrationBase
 
     public override async Task UpAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken)
     {
-        foreach (var name in new[] { MongoCollections.StarsMemory, MongoCollections.Challenges })
+        foreach (var name in new[] { "stars_memory", "challenges" })
         {
             var options = new ListCollectionNamesOptions { Filter = new BsonDocument("name", name) };
             using var collections = await db.ListCollectionNamesAsync(options, cancellationToken);

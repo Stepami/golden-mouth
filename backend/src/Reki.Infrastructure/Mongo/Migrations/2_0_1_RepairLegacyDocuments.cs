@@ -19,7 +19,7 @@ internal sealed class RepairLegacyDocuments : RekiMigrationBase
     public override async Task UpAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken)
     {
         await InitializeArraysAsync(db, session, MongoCollections.Posts, ["Comments", "ThreadReplies"], cancellationToken);
-        await InitializeArraysAsync(db, session, MongoCollections.StarsMemory, ["Memory", "Messages"], cancellationToken);
+        await InitializeArraysAsync(db, session, "stars_memory", ["Memory", "Messages"], cancellationToken);
         await InitializeArraysAsync(db, session, MongoCollections.Events, ["Ideas"], cancellationToken);
         await InitializeArraysAsync(db, session, MongoCollections.Publications, ["Parts"], cancellationToken);
         await InitializeArraysAsync(db, session, MongoCollections.Worlds, WorldArrays, cancellationToken);

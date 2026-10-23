@@ -36,7 +36,7 @@ internal sealed class ConsolidateWorldSchema : RekiMigrationBase
         await worlds.Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(Builders<BsonDocument>.IndexKeys.Ascending("PlayerId"), new CreateIndexOptions { Name = "ix_worlds_player" }),
             cancellationToken: cancellationToken);
-        var memories = db.GetCollection<BsonDocument>(MongoCollections.StarsMemory);
+        var memories = db.GetCollection<BsonDocument>("stars_memory");
         await DropIndexAsync(memories, "ux_stars_memory_player_star", cancellationToken);
         await CreateIndexAsync(memories, "ux_stars_memory_world_star", "StarId", true, cancellationToken);
         await CreateIndexAsync(db.GetCollection<BsonDocument>(MongoCollections.Posts), "ix_posts_world_created", "CreatedAtUtc", false, cancellationToken);
@@ -102,7 +102,7 @@ internal sealed class ConsolidateWorldSchema : RekiMigrationBase
             MigrateRelation(BsonSerializer.Deserialize<WorldStar>(value.AsBsonDocument), relations).ToBsonDocument()));
         await worlds.ReplaceOneAsync(session, new BsonDocument("_id", worldId), world, new ReplaceOptions { IsUpsert = true }, cancellationToken);
 
-        foreach (var collection in new[] { MongoCollections.Posts, MongoCollections.Publications, MongoCollections.StarsMemory, MongoCollections.Events })
+        foreach (var collection in new[] { MongoCollections.Posts, MongoCollections.Publications, "stars_memory", MongoCollections.Events })
         {
             await db.GetCollection<BsonDocument>(collection).UpdateManyAsync(
                 session,
