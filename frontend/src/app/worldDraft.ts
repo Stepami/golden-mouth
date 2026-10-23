@@ -1,4 +1,3 @@
-import { legacyDraftSlot, migrateWorldDraft } from './worldStorageMigration'
 import { useSyncExternalStore } from 'react'
 import type { Address, Player, WorldDefinition } from '../api/types'
 import type { AgeBand } from './ageBand'
@@ -6,20 +5,20 @@ import { avatarPersonalization } from './avatarPersonalization'
 export interface WorldDraft {
   definition: WorldDefinition; heroOrder?: string[]; advanced?: boolean; previewOnly?: boolean; persona?: { star: WorldDefinition['stars'][number]; description: string; name: string; avatar: string; role: string }; editingId?: string; reason?: string; address: Address; group: '14-17' | '18+'; ageBand?: AgeBand; personalizeAvatar?: boolean
 }
-const key = 'reki:world-setup:v1'
+const key = 'reki:world-setup:v2'
 let current: WorldDraft | null = null
 let owner = ''
 const saved = new Map<string, WorldDraft>()
 const slot = (world: string) => `${key}:${owner}:world:${world}`
 export function savedWorldDraft(world: string): WorldDraft | null {
   if (current && (current.definition.templateId ?? 'custom') === world && !current.editingId) return current
-  try { return migrateWorldDraft(JSON.parse(sessionStorage.getItem(slot(world)) ?? sessionStorage.getItem(slot(legacyDraftSlot(world))) ?? 'null')) as WorldDraft | null ?? saved.get(slot(world)) ?? null } catch { return saved.get(slot(world)) ?? null }
+  try { return JSON.parse(sessionStorage.getItem(slot(world)) ?? 'null') as WorldDraft | null ?? saved.get(slot(world)) ?? null } catch { return saved.get(slot(world)) ?? null }
 }
 const listeners = new Set<() => void>()
 export function selectDraftOwner(id: string) {
   if (owner === id) return
   owner = id; current = null
-  try { current = migrateWorldDraft(JSON.parse(sessionStorage.getItem(`${key}:${owner}`) ?? 'null')) as WorldDraft | null } catch { /* memory fallback */ }
+  try { current = JSON.parse(sessionStorage.getItem(`${key}:${owner}`) ?? 'null') as WorldDraft | null } catch { /* memory fallback */ }
   if (current && current.personalizeAvatar === undefined) current = { ...current, personalizeAvatar: avatarPersonalization(id) }
 }
 export function setWorldDraft(value: WorldDraft | null) {

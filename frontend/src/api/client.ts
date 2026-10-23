@@ -1,4 +1,3 @@
-import { migrateWorldStorage } from '../app/worldStorageMigration';
 // Фасад API поверх NSwag Fetch-клиента.
 // Во фронте НЕТ секретов: runtime config виден в браузере. Ключи LLM и токен бота живут только на бэкенде.
 import { clearPlayerDrafts } from '../app/postDraft';
@@ -49,7 +48,7 @@ function loadTemplates(): Promise<void> {
 function rememberPlayer(player: Player): Player {
     try {
         if (player.worldInstanceId)
-            localStorage.setItem(`reki:selected-world:${player.id}`, player.worldInstanceId);
+            localStorage.setItem(`reki:selected-world:v2:${player.id}`, player.worldInstanceId);
     }
     catch { /* memory fallback */ }
     setTelemetryPlayerAvailable(true);
@@ -101,14 +100,12 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     ]);
     assertSession(generation);
     ownedWorldSnapshot = ownedWorlds;
-    await migrateWorldStorage(player.id, ownedWorlds.map(world => world.id));
-    assertSession(generation);
     let selected: string | undefined;
     try {
-        selected = localStorage.getItem(`reki:selected-world:${player.id}`) ?? undefined;
+        selected = localStorage.getItem(`reki:selected-world:v2:${player.id}`) ?? undefined;
     }
     catch { /* memory fallback */ }
-    const world = ownedWorlds.find(item => item.id.replaceAll('-', '') === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)?.replaceAll('-', '')) ?? ownedWorlds[0];
+    const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)) ?? ownedWorlds[0];
     if (!world)
         throw new ApiError(404, 'GET', '/worlds');
     installWorldContent([world]);
@@ -380,7 +377,7 @@ export const api = {
             clearPlayerDrafts(playerId);
             clearAvatarPersonalization(playerId);
             try {
-                localStorage.removeItem(`reki:selected-world:${playerId}`);
+                localStorage.removeItem(`reki:selected-world:v2:${playerId}`);
                 localStorage.removeItem(`reki:own-world-unlock-seen:${playerId}`);
             }
             catch { /* optional storage */ }

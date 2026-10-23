@@ -1,5 +1,7 @@
 using System.Linq.Expressions;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 using Reki.Application.Posts;
 using Reki.Domain.Events;
 using Reki.Domain.Invites;
@@ -16,7 +18,7 @@ internal static class MongoClassMappings
     /// </summary>
     public static void Register()
     {
-        BsonSerializer.TryRegisterSerializer(new WorldDifficultySerializer());
+        BsonSerializer.TryRegisterSerializer(new EnumSerializer<WorldDifficulty>(BsonType.String));
         BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.AuthorIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.CommentIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(

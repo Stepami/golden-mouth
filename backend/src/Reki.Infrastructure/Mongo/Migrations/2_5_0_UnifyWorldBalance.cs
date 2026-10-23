@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 using Reki.Infrastructure.Mongo.Repositories;
 using TickerQ.Utilities;
@@ -94,12 +95,12 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
     private static string? LegacyKey(BsonDocument document) =>
         document.TryGetValue("BalanceKey", out var key) && key.IsString ? key.AsString : null;
 
-    private static string Difficulty(BsonDocument document) => LegacyKey(document) switch
+    private static WorldDifficulty Difficulty(BsonDocument document) => LegacyKey(document) switch
     {
-        "stage" or "evening" => "easy",
-        "academy" or "stream" or "sorcerers" or "houses" or "own" => "normal",
-        "it" => "hard",
-        null when document.GetValue("Difficulty", BsonNull.Value).IsString => document["Difficulty"].AsString,
+        "stage" or "evening" => WorldDifficulty.Easy,
+        "academy" or "stream" or "sorcerers" or "houses" or "own" => WorldDifficulty.Normal,
+        "it" => WorldDifficulty.Hard,
+        null when document.GetValue("Difficulty", BsonNull.Value).IsString => Enum.Parse<WorldDifficulty>(document["Difficulty"].AsString, ignoreCase: true),
         _ => throw new InvalidOperationException("The mechanical difficulty cannot be resolved."),
     };
 
@@ -109,12 +110,12 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
         var own = LegacyKey(document) == "own";
         var coefficients = difficulty switch
         {
-            "easy" => new BsonDocument { { "GrowthCoefficient", 1.0 }, { "FlopChance", 0.10 }, { "ViralMultiplier", 1.0 }, { "HateFrom", 5000L } },
-            "normal" => new BsonDocument { { "GrowthCoefficient", own ? 1.0 : 1.1 }, { "FlopChance", 0.15 }, { "ViralMultiplier", own ? 1.0 : 1.2 }, { "HateFrom", own ? 5000L : 3000L } },
-            "hard" => new BsonDocument { { "GrowthCoefficient", 1.25 }, { "FlopChance", 0.20 }, { "ViralMultiplier", 1.4 }, { "HateFrom", 1000L } },
+            WorldDifficulty.Easy => new BsonDocument { { "GrowthCoefficient", 1.0 }, { "FlopChance", 0.10 }, { "ViralMultiplier", 1.0 }, { "HateFrom", 5000L } },
+            WorldDifficulty.Normal => new BsonDocument { { "GrowthCoefficient", own ? 1.0 : 1.1 }, { "FlopChance", 0.15 }, { "ViralMultiplier", own ? 1.0 : 1.2 }, { "HateFrom", own ? 5000L : 3000L } },
+            WorldDifficulty.Hard => new BsonDocument { { "GrowthCoefficient", 1.25 }, { "FlopChance", 0.20 }, { "ViralMultiplier", 1.4 }, { "HateFrom", 1000L } },
             _ => throw new InvalidOperationException("Unknown mechanical difficulty."),
         };
-        return new BsonDocument { { "Difficulty", difficulty }, { "Coefficients", coefficients } };
+        return new BsonDocument { { "Difficulty", difficulty.ToString() }, { "Coefficients", coefficients } };
     }
 
     private static async Task RewriteWorldsAsync(
@@ -131,7 +132,7 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
             var previousId = document["_id"];
             var isTemplate = name == MongoCollections.WorldTemplates;
             var key = LegacyKey(document);
-            document["Difficulty"] = Difficulty(document);
+            document["Difficulty"] = Difficulty(document).ToString();
             document["_id"] = ids[previousId];
             if (isTemplate)
             {
