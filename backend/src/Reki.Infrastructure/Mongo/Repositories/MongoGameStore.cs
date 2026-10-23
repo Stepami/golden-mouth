@@ -16,9 +16,7 @@ internal sealed class MongoGameStore : IGameStore
     private readonly IMongoCollection<PlayerProfile> _players;
     private readonly IMongoCollection<GamePost> _posts;
     private readonly IMongoCollection<Publication> _publications;
-    private readonly IMongoCollection<BsonDocument> _starMemories;
     private readonly IMongoCollection<DailyGameEvent> _events;
-    private readonly IMongoCollection<BsonDocument> _challenges;
     private readonly IMongoCollection<World> _worlds;
     private readonly IMongoCollection<Invitation> _invites;
 
@@ -30,9 +28,7 @@ internal sealed class MongoGameStore : IGameStore
         _players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
         _posts = database.GetCollection<GamePost>(MongoCollections.Posts);
         _publications = database.GetCollection<Publication>(MongoCollections.Publications);
-        _starMemories = database.GetCollection<BsonDocument>(MongoCollections.StarsMemory);
         _events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
-        _challenges = database.GetCollection<BsonDocument>(MongoCollections.Challenges);
         _worlds = database.GetCollection<World>(MongoCollections.Worlds);
         _invites = database.GetCollection<Invitation>(MongoCollections.Invites);
     }
@@ -56,20 +52,9 @@ internal sealed class MongoGameStore : IGameStore
                 transactionSession,
                 item => item.PlayerId == player.Id,
                 cancellationToken: transactionCancellationToken);
-            await _starMemories.DeleteManyAsync(
-                transactionSession,
-                new BsonDocument("PlayerId", new BsonBinaryData(player.Id.Value, GuidRepresentation.Standard)),
-                cancellationToken: transactionCancellationToken);
             await _events.DeleteManyAsync(
                 transactionSession,
                 item => item.PlayerId == player.Id,
-                cancellationToken: transactionCancellationToken);
-            var challengeFilter = Builders<BsonDocument>.Filter.Or(
-                new BsonDocument("Participants", new BsonBinaryData(player.Id.Value, GuidRepresentation.Standard)),
-                new BsonDocument("PlayerId", new BsonBinaryData(player.Id.Value, GuidRepresentation.Standard)));
-            await _challenges.DeleteManyAsync(
-                transactionSession,
-                challengeFilter,
                 cancellationToken: transactionCancellationToken);
             await _worlds.DeleteManyAsync(
                 transactionSession,
