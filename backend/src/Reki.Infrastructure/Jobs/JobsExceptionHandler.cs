@@ -4,7 +4,7 @@ using TickerQ.Utilities.Interfaces;
 
 namespace Reki.Infrastructure.Jobs;
 
-public sealed partial class JobsExceptionHandler(ILogger<JobsExceptionHandler> logger) : ITickerExceptionHandler
+internal sealed partial class JobsExceptionHandler(ILogger<JobsExceptionHandler> logger) : ITickerExceptionHandler
 {
     public Task HandleExceptionAsync(Exception exception, Guid tickerId, TickerType tickerType)
     {

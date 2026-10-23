@@ -1,5 +1,8 @@
 using MongoDB.Driver;
-using Reki.Contracts.Worlds;
+using Reki.Api.Requests.Player;
+using Reki.Api.Requests.Telemetry.AnalyticsBatch;
+using Reki.Api.Requests.Worlds;
+using Reki.Application.Player;
 
 namespace Reki.Tests.Api;
 
@@ -18,14 +21,14 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await CreatePlayerWithWorldAsync(owner);
         await CreatePlayerWithWorldAsync(other);
         var worldId = await GetWorldIdAsync(own ? owner : other);
-        var batch = new Reki.Contracts.Telemetry.AnalyticsBatchRequest
+        var batch = new AnalyticsBatchRequest
         {
-            Session = "world-session",
+            Session = Guid.NewGuid().ToString("N"),
             Platform = "web",
             Experiments = new Dictionary<string, string>(),
             Events =
             [
-                new Reki.Contracts.Telemetry.AnalyticsEventRequest
+                new AnalyticsEventRequest
                 {
                     Name = "screen_view", WorldId = worldId, Screen = "feed",
                 },
@@ -87,10 +90,10 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         try
         {
             await api.Player.CompleteOnboardingAsync(
-                new Reki.Contracts.Player.OnboardingRequest
+                new OnboardingRequest
                 {
-                    BirthGroup = Contracts.Player.BirthGroup.Teen,
-                    Address = Contracts.Player.Address.Nick,
+                    BirthGroup = BirthGroup.Teen,
+                    Address = Address.Nick,
                 },
                 CancellationToken.None);
         }
@@ -113,12 +116,12 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task UpdateWorld_WithoutLockedSafetyRule_RestoresRuleAsync()
     {
         using var api = Factory.CreateApiClient(1011);
-        await CreatePlayerWithWorldAsync(api, Contracts.Player.WorldId.Own);
+        await CreatePlayerWithWorldAsync(api, WorldTemplate.Own);
         var request = (await CreateWorldDefinitionAsync(api)) with
         {
             Title = "Мой мир",
             Description = "Безопасное описание мира",
-            Rules = [new WorldRuleResponse("Звёзды любят короткие посты")],
+            Rules = [new WorldRuleRequest("Звёзды любят короткие посты")],
         };
 
         await api.Worlds.UpdateWorldAsync(await GetWorldIdAsync(api), request, CancellationToken.None);
@@ -150,7 +153,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         using var api = Factory.CreateApiClient(1015);
         var player = await CreatePlayerWithWorldAsync(api);
         var firstId = await GetWorldIdAsync(api);
-        var request = (await CreateWorldDefinitionAsync(api, Contracts.Player.WorldId.Academy)) with
+        var request = (await CreateWorldDefinitionAsync(api, WorldTemplate.Academy)) with
         {
             Name = "Второй канал",
             Avatar = "second",
@@ -212,10 +215,10 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var api = Factory.CreateApiClient(1091);
         await api.Player.CompleteOnboardingAsync(
-            new Contracts.Player.OnboardingRequest
+            new OnboardingRequest
         {
-            BirthGroup = Contracts.Player.BirthGroup.Teen,
-            Address = Contracts.Player.Address.Nick,
+            BirthGroup = BirthGroup.Teen,
+            Address = Address.Nick,
         },
             CancellationToken.None);
         var templates = await api.Worlds.GetWorldTemplatesAsync(CancellationToken.None);
@@ -266,7 +269,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var api = Factory.CreateApiClient(1092);
         var player = await CreatePlayerWithWorldAsync(api);
-        var definition = await CreateWorldDefinitionAsync(api, Contracts.Player.WorldId.Own);
+        var definition = await CreateWorldDefinitionAsync(api, WorldTemplate.Own);
         WorldsApiException? rejected = null;
         try
         {

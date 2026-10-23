@@ -28,12 +28,12 @@ public sealed class StoryCardsControllerTests(ApiFactory factory) : GameApiTestB
         var other = await Database.GetCollection<BsonDocument>("players")
             .Find(new BsonDocument("TelegramUserId", otherTelegramId))
             .SingleAsync();
-        var ownerId = owner["_id"].AsString;
-        var otherId = other["_id"].AsString;
+        var ownerId = owner["_id"].AsBsonBinaryData.ToGuid().ToString("N");
+        var otherId = other["_id"].AsBsonBinaryData.ToGuid().ToString("N");
         var post = await Database.GetCollection<BsonDocument>("posts")
             .Find(new BsonDocument("AuthorId", $"Player_{ownerId}"))
             .SingleAsync();
-        var postId = post["_id"].AsString;
+        var postId = post["_id"].AsBsonBinaryData.ToGuid().ToString("N");
         using var anonymous = Factory.CreateApiClient();
 
         // Act

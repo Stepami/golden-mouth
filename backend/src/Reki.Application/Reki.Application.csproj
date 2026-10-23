@@ -1,15 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <ItemGroup>
         <ProjectReference Include="..\Reki.Domain\Reki.Domain.csproj"/>
-        <ProjectReference Include="..\Reki.Contracts\Reki.Contracts.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Mediator.Abstractions"/>
+        <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all"/>
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
         <PackageReference Include="Riok.Mapperly" PrivateAssets="all"/>
-        <PackageReference Include="TgMiniAppAuth"/>
         <PackageReference Include="Microsoft.Extensions.AI.Abstractions"/>
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
         <PackageReference Include="Microsoft.Extensions.Options"/>
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="Reki.Tests"/>
+        <InternalsVisibleTo Include="Reki.Api"/>
     </ItemGroup>
 </Project>

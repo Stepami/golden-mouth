@@ -1,5 +1,5 @@
-using Reki.Application.Common.Exceptions;
-using Reki.Contracts.Posts;
+using Reki.Application.Exceptions;
+using Reki.Application.Posts.AI;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 
@@ -12,7 +12,7 @@ public sealed record Publication(
     string RequestHash,
     bool OwnWords,
     string? WantId,
-    PublicationStatus Status,
+    PublicationStatusType Status,
     IReadOnlyList<PublicationPart> Parts,
     PublishedPost? Result,
     DateTime? ExpiresAtUtc,

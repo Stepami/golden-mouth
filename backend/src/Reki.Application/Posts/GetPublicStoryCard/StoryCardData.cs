@@ -1,0 +1,22 @@
+using Reki.Domain.Posts;
+
+namespace Reki.Application.Posts.GetPublicStoryCard;
+
+public sealed record StoryCardData(
+    string PlayerName,
+    string Handle,
+    long Subscribers,
+    string PostText,
+    long Views,
+    long SubscriberDelta,
+    bool Viral)
+{
+    public static StoryCardData From(Domain.Worlds.World player, GamePost post) => new(
+        player.Player.Name,
+        player.Player.Avatar,
+        player.Player.Subscribers,
+        post.Text,
+        post.Views,
+        post.SubscriberDelta,
+        post.Viral);
+}

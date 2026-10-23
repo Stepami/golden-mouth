@@ -3,7 +3,7 @@
 import { apiBaseUrl as BASE } from './runtimeConfig'
 import { ActiveTime } from './activeTime'
 import { inTelegram } from '../telegram'
-import { sendAnalytics } from '../api/telemetry'
+import { getSessionId, sendAnalytics } from '../api/telemetry'
 import type { AnalyticsBatchRequest, AnalyticsEventRequest } from '../api/generated/reki-api'
 type Props = Record<string, string | number | boolean | null>
 export type AEvent = AnalyticsEventRequest & { t: number; props?: Props }
@@ -29,7 +29,6 @@ function recordActiveTime() {
 
 const q: AEvent[] = []
 let screen = '', prev: string | null = null, enteredAt = Date.now()
-const session = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)
 const platform = (() => { try { return new URLSearchParams(location.hash.slice(1)).get('tgWebAppPlatform') ?? 'web' } catch { return 'web' } })()
 /** Флаги экспериментов (A/B), приходят с бэкенда в /me. Пример: { plus_offer: '10' | '20' }. */
 let experiments: Record<string, string> = {}
@@ -54,8 +53,10 @@ export function screenView(next: string) {
 /** Нажатие ключевой кнопки: id кнопки, не текст. */
 export const tap = (id: string, props?: Props) => event('tap', { id, ...props })
 
-export function flushEvents() {
+export async function flushEvents() {
   if (!BASE || !playerAvailable || !q.length) return
+  const session = await getSessionId().catch(() => undefined)
+  if (!session || !playerAvailable || !q.length) return
   const body: AnalyticsBatchRequest = { session, platform, launchSurface: inTelegram ? 'telegram-mini-app' : window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser', experiments, events: q.splice(0) }
   sendAnalytics(body).catch(() => {})
 }
@@ -63,6 +64,7 @@ export function flushEvents() {
 export function installAnalytics() {
   if (installed) return
   installed = true
+  if (BASE) void getSessionId().catch(() => {})
   event('session_start', { platform })
   const interact = () => activeTime.interact(performance.now())
   for (const name of ['pointerdown', 'keydown', 'scroll']) document.addEventListener(name, interact, { passive: true, capture: true })

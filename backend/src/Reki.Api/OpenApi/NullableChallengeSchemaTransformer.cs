@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
-using Reki.Contracts.Social;
+using Reki.Application.Social.Responses.Challenge;
 
 namespace Reki.Api.OpenApi;
 
@@ -13,7 +13,7 @@ internal sealed class NullableChallengeSchemaTransformer : IOpenApiSchemaTransfo
     {
         // Ok<ChallengeResponse?> writes an empty 200 when no challenge is active.
         // Mark the named schema nullable rather than creating an anonymous union,
-        // so NSwag can continue reusing the existing Contracts DTO.
+        // so NSwag can continue reusing the existing Application response DTO.
         if (context.JsonTypeInfo.Type == typeof(ChallengeResponse))
         {
             schema.Type |= JsonSchemaType.Null;

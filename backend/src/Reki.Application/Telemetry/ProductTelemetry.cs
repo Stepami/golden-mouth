@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Logging;
-using Reki.Contracts.Telemetry;
+using Reki.Application.Telemetry.SubmitAnalyticsCommand;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Telemetry;
 
-public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, TimeProvider timeProvider)
+internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, TimeProvider timeProvider)
 {
     private readonly int _maxAttributeLength = 64;
     private readonly HashSet<string> _events = new(StringComparer.Ordinal)
@@ -14,9 +14,6 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         "app_hidden",
         "app_visible",
         "card_earned",
-        "challenge_finished",
-        "challenge_post",
-        "challenge_started",
         "crisis_shown",
         "event_answered",
         "hate_wave",
@@ -102,7 +99,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
                 attributes["world_id"] = worldId.Value;
             }
 
-            attributes["session_id"] = submission.Session.Value;
+            attributes["session_id"] = submission.Session.Value.ToString("N");
             attributes["platform"] = submission.Platform;
             attributes["launch_surface"] = submission.LaunchSurface switch
             {
@@ -197,7 +194,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
             ["activity_kind"] = eventName == "player_deleted" ? "lifecycle" : "real",
             ["event_name"] = eventName,
             ["event_time_unix_ms"] = timestamp,
-            ["player_id"] = playerId.Value,
+            ["player_id"] = playerId.Value.ToString("N"),
             ["received_time_unix_ms"] = timeProvider.GetUtcNow().ToUnixTimeMilliseconds(),
         };
     }

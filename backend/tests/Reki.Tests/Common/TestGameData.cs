@@ -1,5 +1,4 @@
 using Reki.Domain.Player;
-using Reki.Domain.Social;
 using Reki.Domain.Worlds;
 
 namespace Reki.Tests.Common;
@@ -17,7 +16,7 @@ internal static class TestGameData
         Stars = [new WorldStar(StarId, "Мира", "лидер BLESK", StarTrait.Boldness, "Ценит смелость", "коротко", "mira", 0, 0, PeriodStart)],
         Player = new()
         {
-            PlayerId = PlayerId.From("player-one"),
+            PlayerId = PlayerId.From(Guid.Parse("31eb7a8322194c548f535274fdf67b2f")),
             Name = "Канал",
             Role = "creator",
             Avatar = "avatar",

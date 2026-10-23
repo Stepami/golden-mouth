@@ -2,7 +2,7 @@ using TickerQ.Utilities.Entities;
 
 namespace Reki.Infrastructure.Jobs;
 
-public sealed class RekiTimeTicker : TimeTickerEntity<RekiTimeTicker>
+internal sealed class RekiTimeTicker : TimeTickerEntity<RekiTimeTicker>
 {
     public RekiTimeTicker()
     {

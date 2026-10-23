@@ -21,7 +21,7 @@ export function transport(telemetry = false) {
   return { async fetch(url: RequestInfo, init: RequestInit = {}): Promise<Response> {
     const headers = new Headers(init.headers)
     const path = new URL(String(url), baseUrl).pathname.slice(new URL(baseUrl).pathname.replace(/\/$/, '').length)
-    if (path !== '/worlds/templates') for (const [key, value] of Object.entries(telegramAuthHeaders())) headers.set(key, value)
+    if (path !== '/worlds/templates' && path !== '/sessions') for (const [key, value] of Object.entries(telegramAuthHeaders())) headers.set(key, value)
     const response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
     if (response.ok) return response
     let failure: PublicationFailure | undefined

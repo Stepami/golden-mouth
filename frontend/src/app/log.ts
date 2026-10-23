@@ -4,7 +4,7 @@
 // - ошибки ловятся глобально и в ErrorBoundary; повтор одной ошибки не чаще раза в минуту.
 import { event, canSendTelemetry } from './analytics'
 import { apiBaseUrl as BASE } from './runtimeConfig'
-import { sendLogs } from '../api/telemetry'
+import { getSessionId, sendLogs } from '../api/telemetry'
 import type { ClientLogEntryRequest, ClientLogLevel } from '../api/generated/reki-api'
 const DEV = import.meta.env.DEV
 
@@ -14,10 +14,8 @@ export type LogEntry = ClientLogEntryRequest & { t: number; props?: Record<strin
 const queue: LogEntry[] = []
 const seen = new Map<string, number>()
 let screen = ''
-let session = Math.random().toString(36).slice(2, 10)
 
 export const setScreen = (s: string) => { screen = s }
-export const sessionId = () => session
 
 /** Убираем всё похожее на текст: строки длиннее 64 символов режем до длины. */
 function clean(props?: LogEntry['props']): LogEntry['props'] {
@@ -36,8 +34,10 @@ function push(level: Level, event: string, props?: LogEntry['props']) {
   if (queue.length >= 20 || level === 'error') flush()
 }
 
-export function flush() {
+export async function flush() {
   if (!BASE || !canSendTelemetry() || !queue.length) return
+  const session = await getSessionId().catch(() => undefined)
+  if (!session || !canSendTelemetry() || !queue.length) return
   const body = { session, entries: queue.splice(0) }
   sendLogs(body).catch(() => {})
 }

@@ -5,6 +5,7 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageVersion Include="DotNext.Threading" Version="6.9.0"/>
+        <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.13"/>
         <PackageVersion Include="TickerQ" Version="10.4.0"/>
         <PackageVersion Include="TickerQ.Instrumentation.OpenTelemetry" Version="10.4.0"/>
         <PackageVersion Include="alexjamesbrown.TickerQ.MongoDB" Version="0.1.0"/>

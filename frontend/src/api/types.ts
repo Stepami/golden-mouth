@@ -7,7 +7,7 @@ type Fields<T> = { [K in keyof T as string extends K ? never : number extends K 
 export type SkillId = 'brave' | 'humor' | 'topic'
 export type WorldId = 'stage' | 'academy' | 'it' | 'stream' | 'own' | 'evening' | 'sorcerers' | 'houses'
 export type Address = Wire.Address
-export type Drama = Wire.Drama
+export type Drama = Wire.WorldDrama
 export interface World {
   id: WorldId; title: string; emoji: string; description: string
   difficulty: 1 | 2 | 3; summary: string; lock?: { skill: SkillId; level: number }
@@ -55,7 +55,7 @@ type UiLiveEvent<E> = E extends { type: 'views' } ? Omit<E, 'views'> & { views: 
 type WireLiveEvent = Awaited<ReturnType<import('./generated/reki-api').PostsClient['moderatePublication']>>['result'][number]
 type Discriminated<T> = T extends { type?: infer Kind } ? Omit<Fields<T>, 'type'> & { type: NonNullable<Kind> } : never
 export type LiveEvent = UiLiveEvent<Discriminated<WireLiveEvent>>
-export type PublicationStatus = Wire.PublicationStatus
+export type PublicationStatus = Wire.PublicationStatusType
 export type PublicationFailure = Wire.PublicationFailure
 export type PublicationState = Omit<Fields<Wire.PublicationStatusResponse>, 'result' | 'failure'> & { result: PostResult | null; failure?: PublicationFailure }
 export type Friend = Omit<Fields<Wire.FriendResponse>, 'subs' | 'pronoun'> & { subs: number; pronoun: 'её' | 'его' }
