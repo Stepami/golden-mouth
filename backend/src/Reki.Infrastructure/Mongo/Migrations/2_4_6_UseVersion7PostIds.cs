@@ -15,23 +15,19 @@ namespace Reki.Infrastructure.Mongo.Migrations;
 
 internal sealed class UseVersion7PostIds : RekiMigrationBase
 {
-    private const string Mappings = "migration_2_4_6_post_ids";
     private const string TimeTickers = "ticker_TimeTickers";
 
     public override DatabaseVersion Version => new(2, 4, 6);
 
     public override Task UpAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken) =>
-        RewriteAsync(new MigrationContext(db, session, false, cancellationToken));
+        RewriteAsync(new MigrationContext(db, session, cancellationToken));
 
-    public override async Task DownAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken)
-    {
-        await RewriteAsync(new MigrationContext(db, session, true, cancellationToken));
-        await db.GetCollection<BsonDocument>(Mappings).DeleteManyAsync(session, FilterDefinition<BsonDocument>.Empty, cancellationToken: cancellationToken);
-    }
+    public override Task DownAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("The original identifiers are not retained. Restore a database backup to undo this migration.");
 
     private static async Task RewriteAsync(MigrationContext context)
     {
-        // RekiMigrator runs one migration in one transaction, including the rollback map.
+        // RekiMigrator runs one migration in one transaction; ID mappings live only for this attempt.
         await RewriteDocumentsAsync(context, MongoCollections.Posts, false);
         await RewriteDocumentsAsync(context, MongoCollections.Publications, true);
         await RewriteInvitationsAsync(context);
@@ -57,7 +53,7 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
                 var original = document.DeepClone().AsBsonDocument;
                 if (idKind is not null)
                 {
-                    document["_id"] = await ResolveIdAsync(context, document["_id"], idKind, document, "CreatedAtUtc");
+                    document["_id"] = ResolveId(context, document["_id"], idKind, document, "CreatedAtUtc");
                 }
 
                 await RewritePlayerReferencesAsync(context, document);
@@ -87,11 +83,11 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
         {
             if (element.Name is "PlayerId" or "InviterId" or "InviteeId" && !element.Value.IsBsonNull)
             {
-                document[element.Name] = await ResolveIdAsync(context, element.Value, "Player", document, "CreatedAtUtc");
+                document[element.Name] = ResolveId(context, element.Value, "Player", document, "CreatedAtUtc");
             }
             else if (element.Name == "Participants" && element.Value.IsBsonArray)
             {
-                await RewriteParticipantsAsync(context, element.Value.AsBsonArray, document);
+                RewriteParticipants(context, element.Value.AsBsonArray, document);
             }
             else
             {
@@ -103,11 +99,11 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
         }
     }
 
-    private static async Task RewriteParticipantsAsync(MigrationContext context, BsonArray participants, BsonDocument source)
+    private static void RewriteParticipants(MigrationContext context, BsonArray participants, BsonDocument source)
     {
         for (var index = 0; index < participants.Count; index++)
         {
-            participants[index] = await ResolveIdAsync(context, participants[index], "Player", source, "CreatedAtUtc");
+            participants[index] = ResolveId(context, participants[index], "Player", source, "CreatedAtUtc");
         }
     }
 
@@ -128,8 +124,8 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
         var identity = new BsonDocument("_id", document["_id"]);
         var post = embedded ? document["Result"]["Post"].AsBsonDocument : document;
         var original = post.DeepClone().AsBsonDocument;
-        post["_id"] = await ResolveIdAsync(context, post["_id"], "Post", post, "CreatedAtUtc");
-        await RewriteCommentsAsync(context, post);
+        post["_id"] = ResolveId(context, post["_id"], "Post", post, "CreatedAtUtc");
+        RewriteComments(context, post);
         if (post == original)
         {
             return;
@@ -151,14 +147,14 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
         }
     }
 
-    private static async Task RewriteCommentsAsync(MigrationContext context, BsonDocument post)
+    private static void RewriteComments(MigrationContext context, BsonDocument post)
     {
         foreach (var comment in post.GetValue("Comments", new BsonArray()).AsBsonArray.Select(entry => entry.AsBsonDocument))
         {
-            comment["_id"] = await ResolveIdAsync(context, comment["_id"], "Comment", post, "CreatedAtUtc");
+            comment["_id"] = ResolveId(context, comment["_id"], "Comment", post, "CreatedAtUtc");
             if (comment.TryGetValue("ParentCommentId", out var parent) && !parent.IsBsonNull)
             {
-                comment["ParentCommentId"] = await ResolveIdAsync(context, parent, "Comment", post, "CreatedAtUtc");
+                comment["ParentCommentId"] = ResolveId(context, parent, "Comment", post, "CreatedAtUtc");
             }
         }
     }
@@ -171,7 +167,7 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
             async document =>
             {
                 var previousId = document["_id"];
-                var nextId = await ResolveIdAsync(context, previousId, "Invitation", document, "CreatedAtUtc");
+                var nextId = ResolveId(context, previousId, "Invitation", document, "CreatedAtUtc");
                 if (nextId == previousId)
                 {
                     return;
@@ -193,24 +189,6 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
 
     private static async Task RewriteTickerAsync(MigrationContext context, IMongoCollection<BsonDocument> collection, BsonDocument ticker)
     {
-        var mappings = context.Database.GetCollection<BsonDocument>(Mappings);
-        var key = new BsonDocument { ["Kind"] = "Ticker", ["OldId"] = ticker["_id"] };
-        var original = await mappings.Find(context.Session, new BsonDocument("_id", key)).FirstOrDefaultAsync(context.CancellationToken);
-        if (context.Downgrade)
-        {
-            if (original is not null)
-            {
-                await collection.UpdateOneAsync(context.Session, new BsonDocument("_id", ticker["_id"]), Builders<BsonDocument>.Update.Set("Request", original["Request"]), cancellationToken: context.CancellationToken);
-            }
-
-            return;
-        }
-
-        if (original is null)
-        {
-            await mappings.InsertOneAsync(context.Session, new BsonDocument { ["_id"] = key, ["Request"] = ticker["Request"] }, cancellationToken: context.CancellationToken);
-        }
-
         // Legacy ObjectIds must be migrated before the request can be read as ValueObject<Guid>.
         var request = JsonNode.Parse(TickerHelper.ReadTickerRequestAsString(ticker["Request"].AsBsonBinaryData.Bytes))?.AsObject()
             ?? throw new InvalidOperationException("The star feed request is missing.");
@@ -226,31 +204,28 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
             ?? throw new InvalidOperationException("The star feed post identifier is missing.");
         BsonValue previousId = Guid.TryParseExact(previousText, "D", out _)
             ? new BsonBinaryData(Guid.Parse(previousText), GuidRepresentation.Standard) : new BsonString(previousText);
-        var nextId = await ResolveIdAsync(context, previousId, "Post", ticker, "CreatedAt");
+        var nextId = ResolveId(context, previousId, "Post", ticker, "CreatedAt");
         request["postId"] = nextId.IsBsonBinaryData ? nextId.AsBsonBinaryData.ToGuid(GuidRepresentation.Standard).ToString("D") : nextId.AsString;
         var playerText = request["playerId"]?.GetValue<string>() ?? throw new InvalidOperationException("The star feed player identifier is missing.");
         BsonValue playerId = Guid.TryParseExact(playerText, "D", out _)
             ? new BsonBinaryData(Guid.Parse(playerText), GuidRepresentation.Standard) : new BsonString(playerText);
-        var nextPlayerId = await ResolveIdAsync(context, playerId, "Player", ticker, "CreatedAt");
+        var nextPlayerId = ResolveId(context, playerId, "Player", ticker, "CreatedAt");
         request["playerId"] = nextPlayerId.IsBsonBinaryData ? nextPlayerId.AsBsonBinaryData.ToGuid(GuidRepresentation.Standard).ToString("D") : nextPlayerId.AsString;
         var payload = TickerHelper.CreateTickerRequest(Encoding.UTF8.GetBytes(request.ToJsonString()));
         await collection.UpdateOneAsync(context.Session, new BsonDocument("_id", ticker["_id"]), Builders<BsonDocument>.Update.Set("Request", new BsonBinaryData(payload)), cancellationToken: context.CancellationToken);
     }
 
-    private static async Task<BsonValue> ResolveIdAsync(MigrationContext context, BsonValue previousId, string kind, BsonDocument source, string timestampField)
+    private static BsonValue ResolveId(MigrationContext context, BsonValue previousId, string kind, BsonDocument source, string timestampField)
     {
-        var mappings = context.Database.GetCollection<BsonDocument>(Mappings);
-        var key = new BsonDocument { ["Kind"] = kind, ["OldId"] = previousId };
-        var filter = context.Downgrade ? new BsonDocument { ["_id.Kind"] = kind, ["NewId"] = previousId } : new BsonDocument("_id", key);
-        var existing = await mappings.Find(context.Session, filter).FirstOrDefaultAsync(context.CancellationToken);
-        if (existing is not null)
-        {
-            return context.Downgrade ? existing["_id"]["OldId"] : existing["NewId"];
-        }
-
-        if (context.Downgrade || IsCurrentId(previousId))
+        if (IsCurrentId(previousId))
         {
             return previousId;
+        }
+
+        var key = (kind, previousId);
+        if (context.Ids.TryGetValue(key, out var existing))
+        {
+            return existing;
         }
 
         var parsed = previousId.IsString && Guid.TryParse(previousId.AsString, out var guid) ? guid : (Guid?)null;
@@ -259,7 +234,7 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
             ? PostId.New(ReadTimestamp(source[timestampField])).Value
             : parsed ?? fallback ?? Guid.Parse(previousId.AsString);
         var nextId = new BsonBinaryData(value, GuidRepresentation.Standard);
-        await mappings.InsertOneAsync(context.Session, new BsonDocument { ["_id"] = key, ["NewId"] = nextId }, cancellationToken: context.CancellationToken);
+        context.Ids.Add(key, nextId);
         return nextId;
     }
 
@@ -279,5 +254,8 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
         return BsonSerializer.LookupSerializer<DateTimeOffset>().Deserialize(BsonDeserializationContext.CreateRoot(reader));
     }
 
-    private sealed record MigrationContext(IMongoDatabase Database, IClientSessionHandle Session, bool Downgrade, CancellationToken CancellationToken);
+    private sealed record MigrationContext(IMongoDatabase Database, IClientSessionHandle Session, CancellationToken CancellationToken)
+    {
+        public Dictionary<(string Kind, BsonValue OldId), BsonValue> Ids { get; } = [];
+    }
 }

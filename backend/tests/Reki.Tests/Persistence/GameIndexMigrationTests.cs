@@ -49,9 +49,9 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(comments[1]["ParentCommentId"]).IsEqualTo(comments[0]["_id"]);
         await Assert.That(comments[1]["Text"]).IsEqualTo("reply");
 
-        await MigratePostIdsAsync(scope.Database, downgrade: true);
+        await Assert.That(() => MigratePostIdsAsync(scope.Database, downgrade: true)).Throws<NotSupportedException>();
 
-        await Assert.That(await posts.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(original);
+        await Assert.That(await posts.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(migrated);
     }
 
     [Test]
@@ -183,18 +183,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await Assert.That((await posts.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync()).Select(document => document.ToJson())).IsEquivalentTo(migrated.Select(document => document.ToJson()));
             await Assert.That((await tickers.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync()).Select(document => document.ToJson())).IsEquivalentTo(savedTickers.Select(document => document.ToJson()));
 
-            await MigratePostIdsAsync(database, downgrade: true);
-
-            await Assert.That((await posts.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync()).Select(document => document.ToJson())).IsEquivalentTo(new[] { first, second, current }.Select(document => document.ToJson()));
-            await Assert.That(await publications.Find(new BsonDocument("_id", "publication")).SingleAsync()).IsEqualTo(publication);
-            await Assert.That((await publications.Find(new BsonDocument("_id", "orphan-publication")).SingleAsync())["Result"]["Post"]).IsEqualTo(orphan);
-            await Assert.That(await invitations.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(oldInvitation);
-            foreach (var (name, document) in legacyReferences)
-            {
-                await Assert.That(await database.GetCollection<BsonDocument>(name).Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(document);
-            }
-
-            await Assert.That((await tickers.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync()).Select(document => document.ToJson())).IsEquivalentTo(new[] { completed, pending, unrelated }.Select(document => document.ToJson()));
+            var collections = await (await database.ListCollectionNamesAsync()).ToListAsync();
+            await Assert.That(collections.Contains("migration_2_4_6_post_ids", StringComparer.Ordinal)).IsFalse();
         }
         finally
         {
@@ -217,7 +207,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await Assert.That(() => MigratePostIdsAsync(database)).Throws<KeyNotFoundException>();
 
             await Assert.That((await posts.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync()).Select(document => document.ToJson())).IsEquivalentTo(new[] { valid, invalid }.Select(document => document.ToJson()));
-            await Assert.That(await database.GetCollection<BsonDocument>("migration_2_4_6_post_ids").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
+            var collections = await (await database.ListCollectionNamesAsync()).ToListAsync();
+            await Assert.That(collections.Contains("migration_2_4_6_post_ids", StringComparer.Ordinal)).IsFalse();
         }
         finally
         {
