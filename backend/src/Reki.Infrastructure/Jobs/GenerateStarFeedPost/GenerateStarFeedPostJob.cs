@@ -13,8 +13,7 @@ internal sealed class GenerateStarFeedPostJob(
     IPlayerRepository playerRepository,
     IPostRepository postRepository,
     IWorldRepository worldRepository,
-    IStarTurnGenerator generator,
-    TimeProvider timeProvider) : ITickerFunction<StarFeedRequest>
+    IStarTurnGenerator generator) : ITickerFunction<StarFeedRequest>
 {
     public async Task ExecuteAsync(
         TickerFunctionContext<StarFeedRequest> context,
@@ -53,7 +52,7 @@ internal sealed class GenerateStarFeedPostJob(
             throw new TerminateExecutionException("The feed world is unavailable.");
         }
 
-        var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, [], timeProvider.GetUtcNow(), 0, 0, 1, false, false);
+        var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, [], postId.GetTimestamp(), 0, 0, 1, false, false);
         await postRepository.InsertPostAsync(post, cancellationToken);
     }
 }

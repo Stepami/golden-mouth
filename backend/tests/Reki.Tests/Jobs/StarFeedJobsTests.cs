@@ -31,15 +31,18 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var worldId = await GetWorldIdAsync(api);
         var before = await GetStoredPlayerAsync(9501);
         var worldBefore = await GetStoredWorldAsync(9501);
+        var createdAt = Factory.Session.Clock.GetUtcNow().AddMilliseconds(123);
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Сегодня репетировали новую сцену.")));
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.New()));
+            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.New(createdAt)));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
 
         // Act
+        Factory.Session.Clock.Advance(TimeSpan.FromMinutes(5));
         await job.ExecuteAsync(context, CancellationToken.None);
+        Factory.Session.Clock.Advance(TimeSpan.FromMinutes(10));
         await job.ExecuteAsync(context, CancellationToken.None);
         var feed = await api.Posts.GetFeedAsync(worldId, null, null, CancellationToken.None);
 
@@ -51,6 +54,8 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await Assert.That(feed.Items.Single().Text).IsEqualTo("Сегодня репетировали новую сцену.");
         var stored = await Database.GetCollection<GamePost>("posts").Find(FilterDefinition<GamePost>.Empty).SingleAsync();
         await Assert.That(stored.Id.Value.Version == 7).IsTrue();
+        await Assert.That(stored.Id).IsEqualTo(context.Request.PostId);
+        await Assert.That(stored.CreatedAtUtc).IsEqualTo(createdAt);
         await Assert.That(stored.AuthorId.Value.StartsWith("Star_", StringComparison.Ordinal)).IsTrue();
         await Assert.That((await GetStoredPlayerAsync(9501)).ToJson()).IsEqualTo(before.ToJson());
         await Assert.That((await GetStoredWorldAsync(9501)).ToJson()).IsEqualTo(worldBefore.ToJson());
