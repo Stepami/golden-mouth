@@ -1073,7 +1073,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
     private static BsonDocument CreatePost(string id, bool bsonDateTime)
     {
-        var document = new GamePost(PostId.New(), PlayerId.From(Guid.Parse("a96fb5ddf0564809a1d2bb5ed78a210f")).ToAuthorId(), WorldId.From("world"), id, 123, [], CreatedAt, 7, 0.8, 1.2, false, false, 5).ToBsonDocument();
+        var document = new GamePost(PostId.New(CreatedAt), PlayerId.From(Guid.Parse("a96fb5ddf0564809a1d2bb5ed78a210f")).ToAuthorId(), WorldId.From("world"), id, 123, [], CreatedAt, 7, 0.8, 1.2, false, false, 5).ToBsonDocument();
         document["_id"] = id;
         document["Extra"] = new BsonDocument("Retained", true);
         if (bsonDateTime)

@@ -39,7 +39,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var secondPlayer = await GetStoredPlayerAsync(1092);
         var posts = new[] { (firstWorld, firstPlayer), (secondWorld, secondPlayer) }
             .Select(item => new GamePost(
-                PostId.New(),
+                PostId.New(DateTimeOffset.UnixEpoch),
                 PlayerId.From(item.Item2["_id"].AsBsonBinaryData.ToGuid().ToString("N")).ToAuthorId(),
                 WorldId.From(item.Item1),
                 item.Item1,
@@ -1258,7 +1258,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var calls = Factory.Llm.RequestCount;
 
         // Act
-        var requestedPostId = scenario switch { "missing-post" => PostId.New().Value.ToString("N"), _ => postId };
+        var requestedPostId = scenario switch { "missing-post" => PostId.New(Factory.Session.Clock.GetUtcNow()).Value.ToString("N"), _ => postId };
         var requestedCommentId = scenario switch { "missing-target" => CommentId.New().Value.ToString("N"), _ => targetId };
         var result = await SendReplyAsync(user, requestedPostId, requestedCommentId, key, text, scenario == "missing-world" ? "missing-world" : string.Empty);
 
@@ -1382,7 +1382,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var original = await posts.Find(item => item.Id == PostId.From(postId)).SingleAsync();
         var secondPost = original with
         {
-            Id = PostId.New(),
+            Id = PostId.New(original.CreatedAtUtc),
             WorldId = WorldId.From(second.Id),
             Comments = [original.Comments[0]],
             Version = 0,
@@ -1431,7 +1431,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var secondWorld =
             await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
         var original = await ReadPostAsync(postId);
-        var secondPost = original with { Id = PostId.New(), WorldId = WorldId.From(secondWorld.Id), Version = 0 };
+        var secondPost = original with { Id = PostId.New(original.CreatedAtUtc), WorldId = WorldId.From(secondWorld.Id), Version = 0 };
         await Database.GetCollection<GamePost>("posts").InsertOneAsync(secondPost);
         var player = await ReadPlayerAsync(user);
         await Database.GetCollection<PlayerProfile>("players")
