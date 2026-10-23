@@ -1,4 +1,3 @@
-using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application;
 using Reki.Application.Posts;
@@ -60,13 +59,9 @@ internal sealed class MongoGameStore : IGameStore
                 transactionSession,
                 item => item.Player.PlayerId == player.Id,
                 cancellationToken: transactionCancellationToken);
-            var inviteFilter = Builders<Invitation>.Filter.Or(
-                Builders<Invitation>.Filter.Eq(item => item.InviterId, player.Id),
-                Builders<Invitation>.Filter.Eq(item => item.InviteeId, player.Id),
-                new BsonDocument("PlayerId", new BsonBinaryData(player.Id.Value, GuidRepresentation.Standard)));
             await _invites.DeleteManyAsync(
                 transactionSession,
-                inviteFilter,
+                item => item.InviterId == player.Id || item.InviteeId == player.Id,
                 cancellationToken: transactionCancellationToken);
             await _players.DeleteOneAsync(
                 transactionSession,

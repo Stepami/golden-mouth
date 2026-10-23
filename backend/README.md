@@ -78,7 +78,7 @@ subtract credits twice.
 
 Migration `2.4.4` drops the unused `threads` collection, including its documents and indexes. It is safe when the collection is absent or the migration is retried. Older migrations no longer create its index or backfill it. Conversations and replies remain in `posts.Comments`; publication and reply APIs are unchanged. The drop runs outside the migration transaction because MongoDB forbids dropping collections in a transaction. It cannot be rolled back.
 
-Migration `2.4.7` drops the retired `stars_memory` and `challenges` collections, including their documents and indexes. It runs after the historical Social migrations and is safe when either collection is absent or the migration is retried. The drops run outside the migration transaction and cannot be rolled back. Account deletion no longer accesses these collections; Social API stubs remain unchanged.
+Migration `2.4.7` drops the retired `stars_memory` and `challenges` collections, including their documents and indexes, and deletes legacy `invites` documents containing `PlayerId`. It runs after the historical Social migrations and is safe when either collection is absent or the migration is retried. The drops run outside the migration transaction and cannot be rolled back; invitation cleanup uses the migration transaction. Account deletion only matches invitations by `InviterId` or `InviteeId`; Social API stubs remain unchanged. Databases that have already applied `2.4.7` will not run its updated cleanup automatically.
 
 ## Test infrastructure
 

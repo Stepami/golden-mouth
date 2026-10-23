@@ -1,6 +1,7 @@
 using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
 
@@ -21,5 +22,10 @@ internal sealed class RemoveUnusedSocialCollections : RekiMigrationBase
                 await db.DropCollectionAsync(name, cancellationToken);
             }
         }
+
+        await db.GetCollection<BsonDocument>(MongoCollections.Invites).DeleteManyAsync(
+            session,
+            new BsonDocument("PlayerId", new BsonDocument("$exists", true)),
+            cancellationToken: cancellationToken);
     }
 }
