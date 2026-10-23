@@ -2,7 +2,7 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.AI;
 
-internal sealed record StarPlayerPromptData(
+public sealed record StarPlayerPromptData(
     string WorldId,
     string WorldTitle,
     string WorldDescription,
