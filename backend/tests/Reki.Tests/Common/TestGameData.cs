@@ -10,8 +10,8 @@ internal static class TestGameData
 
     internal static World CreateWorld() => new()
     {
-        Id = WorldId.From("world-one"),
-        BalanceKey = "stage",
+        Id = WorldId.From(Guid.Parse("1c6b59c8-9abe-434b-929a-3db01b8d1ab8")),
+        Difficulty = WorldDifficulty.Easy,
         Interface = new(),
         Stars = [new WorldStar(StarId, "Мира", "лидер BLESK", StarTrait.Boldness, "Ценит смелость", "коротко", "mira", 0, 0, PeriodStart)],
         Player = new()

@@ -1,7 +1,9 @@
+using Reki.Domain.Worlds;
+
 namespace Reki.Api.Requests.Worlds;
 
 public sealed record WorldStarRequest(
-    string Id,
+    StarId Id,
     string Name,
     string Role,
     int Trait,

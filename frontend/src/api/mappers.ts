@@ -4,19 +4,13 @@ import type * as Ui from './types'
 // Generated stream validators use bigint for int64; the UI consistently uses JS numbers.
 type Input<T> = T extends number ? number | string | bigint : T extends (infer Item)[] ? Input<Item>[] : T extends object ? { [K in keyof T]: Input<T[K]> } : T
 const number = (value: number | string | bigint): number => Number(value)
-export function worldKey(value: string): Ui.WorldId {
-  switch (value) {
-    case 'stage': case 'academy': case 'it': case 'stream': case 'own': case 'evening': case 'sorcerers': case 'houses': return value
-    default: throw new Error('Unknown world balance key')
-  }
-}
 function skillKey(value: string): Ui.SkillId {
   switch (value) { case 'brave': case 'humor': case 'topic': return value; default: throw new Error('Unknown skill') }
 }
 export function world(value: Input<Wire.WorldResponse>): Ui.WorldDocument {
-  const difficulty = number(value.difficulty ?? 1)
-  if (difficulty !== 1 && difficulty !== 2 && difficulty !== 3) throw new Error('Invalid difficulty')
-  return { ...value, balanceKey: worldKey(value.balanceKey), difficulty, subscribers: number(value.subscribers ?? 0),
+  const difficulty = value.difficulty ?? 'normal'
+  if (difficulty !== 'easy' && difficulty !== 'normal' && difficulty !== 'hard') throw new Error('Invalid difficulty')
+  return { ...value, difficulty, subscribers: number(value.subscribers ?? 0),
     unlockSkill: value.unlockSkill ? skillKey(value.unlockSkill) : undefined, unlockLevel: value.unlockLevel == null ? undefined : number(value.unlockLevel),
     stars: value.stars.map(star => ({ ...star, trait: number(star.trait), relation: number(star.relation) })),
   }

@@ -1,8 +1,10 @@
+using Reki.Domain.Posts;
+
 namespace Reki.Application.Posts.Responses.FeedItem;
 
 public sealed record FeedItemResponse(
     FeedItemKind Kind,
-    string? PostId,
+    PostId? PostId,
     string? Author,
     string? Avatar,
     string? Role,

@@ -8,13 +8,13 @@ namespace Reki.Application.Worlds;
 [Mapper]
 public static partial class WorldResponseMapper
 {
-    [MapProperty("Id.Value", nameof(WorldResponse.Id))]
     [MapNestedProperties(nameof(World.Interface))]
     [MapNestedProperties(nameof(World.Player))]
     [MapperIgnoreSource(nameof(World.Version))]
+    [MapperIgnoreSource(nameof(World.TemplateId))]
+    [MapperIgnoreSource(nameof(World.IsArchived))]
     public static partial WorldResponse ToResponse(this World source);
 
-    [MapProperty("Id.Value", nameof(WorldStarResponse.Id))]
     [MapperIgnoreSource(nameof(WorldStar.RelationGainedInPeriod))]
     [MapperIgnoreSource(nameof(WorldStar.RelationPeriodStartedAtUtc))]
     private static partial WorldStarResponse MapStar(WorldStar source);

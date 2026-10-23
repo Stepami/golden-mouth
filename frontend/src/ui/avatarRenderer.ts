@@ -24,7 +24,7 @@ function loadStyle(style: keyof typeof definitions): Promise<Style> {
   return pending
 }
 const cache = new Map<string, string>()
-export async function avatarUri(seed: string, world: WorldId = 'stage', profile?: AvatarProfile, styleOverride?: string): Promise<string> {
+export async function avatarUri(seed: string, world: WorldId = 'edfccf53-65c6-4eaf-8321-2391bc1758bd', profile?: AvatarProfile, styleOverride?: string): Promise<string> {
   let style = styleOverride ?? 'lorelei'
   if (!styleOverride) { try { style = worldOf(world).avatarStyle } catch { /* empty custom world uses portrait */ } }
   const chosenStyle = (Object.hasOwn(definitions, style) ? style : 'lorelei') as keyof typeof definitions

@@ -3,6 +3,8 @@ using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Worlds;
 using Reki.Application.Player;
+using Reki.Domain.Telemetry;
+using Reki.Domain.Worlds;
 
 namespace Reki.Tests.Api;
 
@@ -23,14 +25,14 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         var worldId = await GetWorldIdAsync(own ? owner : other);
         var batch = new AnalyticsBatchRequest
         {
-            Session = Guid.NewGuid().ToString("N"),
+            Session = SessionId.New(),
             Platform = "web",
             Experiments = new Dictionary<string, string>(),
             Events =
             [
                 new AnalyticsEventRequest
                 {
-                    Name = "screen_view", WorldId = worldId, Screen = "feed",
+                    Name = "screen_view", WorldId = WorldId.From(worldId), Screen = "feed",
                 },
             ],
         };
@@ -52,10 +54,11 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         using var api = Factory.CreateApiClient(1020);
         await CreatePlayerWithWorldAsync(api);
         var definition = await CreateWorldDefinitionAsync(api);
-        var star = definition.Stars[0] with { Id = "my-star", Name = "Своя звезда", Relation = 5 };
+        var star = definition.Stars[0] with { Id = StarId.From("my-star"), Name = "Своя звезда", Relation = 5 };
         var request = definition with
         {
             Title = "Новый мир",
+            Difficulty = (WorldDifficulty)0,
             AvatarStyle = "shapes",
             Roles = ["Автор"],
             Stars = [star],
@@ -68,12 +71,13 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         var loaded = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id == first.Id);
 
         await Assert.That(first.Id).IsNotEqualTo(second.Id);
-        await Assert.That(first.Id).IsNotEqualTo("stage");
-        await Assert.That(loaded.BalanceKey).IsEqualTo("stage");
+        await Assert.That(first.Id).IsNotEqualTo(WorldId.From("edfccf53-65c6-4eaf-8321-2391bc1758bd"));
+        await Assert.That((await Database.GetCollection<World>("worlds").Find(world => world.Id == loaded.Id).SingleAsync()).TemplateId).IsEqualTo(request.TemplateId);
+        await Assert.That(loaded.Difficulty).IsEqualTo(WorldDifficulty.Normal);
         await Assert.That(loaded.Title).IsEqualTo(request.Title);
         await Assert.That(loaded.AvatarStyle).IsEqualTo(request.AvatarStyle);
         await Assert.That(loaded.Roles.Single()).IsEqualTo("Автор");
-        await Assert.That(loaded.Stars.Single().Id).IsEqualTo("my-star");
+        await Assert.That(loaded.Stars.Single().Id.Value).IsEqualTo("my-star");
         await Assert.That(loaded.Stars.Single().Relation).IsEqualTo(0);
         await Assert.That(loaded.Subscribers).IsEqualTo(120);
         await Assert.That(loaded.Wants.Any(want => want.Done)).IsFalse();
@@ -103,12 +107,12 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         }
 
         var worlds = await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None);
-        var first = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id == firstId);
+        var first = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id.ToString() == firstId);
         var current = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         await Assert.That(exception?.StatusCode).IsEqualTo(409);
         await Assert.That(current.Id).IsEqualTo(firstPlayer.Id);
-        await Assert.That(worlds.Single().Id).IsEqualTo(firstId);
+        await Assert.That(worlds.Single().Id.ToString()).IsEqualTo(firstId);
         await Assert.That(first.Name).IsEqualTo("Player");
     }
 
@@ -136,7 +140,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var api = Factory.CreateApiClient();
         var templates = await api.Worlds.GetWorldTemplatesAsync(CancellationToken.None);
-        var template = templates.Single(world => world.BalanceKey == "evening");
+        var template = templates.Single(world => world.Id == WorldId.From("b3a1a522-0263-4796-a197-57a8731fc291"));
         await Assert.That(template.Stars.Count).IsGreaterThan(0);
         await Assert.That(template.Roles.Count).IsGreaterThan(0);
         var safetyRule = template.Rules.Single(rule => rule.Text == "Без тем 18+ и травли по внешности");
@@ -163,16 +167,16 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Act
         var worlds = await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None);
-        var first = worlds.Single(item => item.Id == firstId);
+        var first = worlds.Single(item => item.Id.ToString() == firstId);
         var selected = worlds.Single(item => item.Id == second.Id);
         var currentPlayer = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Assert
         await Assert.That(first.Id).IsNotEqualTo(selected.Id);
-        await Assert.That(first.BalanceKey).IsEqualTo("stage");
-        await Assert.That(selected.BalanceKey).IsEqualTo("academy");
+        await Assert.That((await Database.GetCollection<World>("worlds").Find(world => world.Id == first.Id).SingleAsync()).TemplateId).IsEqualTo(WorldId.From("b3a1a522-0263-4796-a197-57a8731fc291"));
+        await Assert.That((await Database.GetCollection<World>("worlds").Find(world => world.Id == selected.Id).SingleAsync()).TemplateId).IsEqualTo(request.TemplateId);
         await Assert.That(selected.Name).IsEqualTo("Второй канал");
-        await Assert.That(selected.Stars.Any(star => star.Id == "aiko")).IsTrue();
+        await Assert.That(selected.Stars.Any(star => star.Id == StarId.From("aiko"))).IsTrue();
         await Assert.That(currentPlayer.Id).IsEqualTo(player.Id);
     }
 
@@ -191,7 +195,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Assert
         await Assert.That(worlds.Count).IsEqualTo(1);
-        await Assert.That(worlds.Any(world => world.Id == id)).IsFalse();
+        await Assert.That(worlds.Any(world => world.Id.ToString() == id)).IsFalse();
     }
 
     [Test]
@@ -222,13 +226,13 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         },
             CancellationToken.None);
         var templates = await api.Worlds.GetWorldTemplatesAsync(CancellationToken.None);
-        await Assert.That(templates.Select(template => template.BalanceKey)).IsEquivalentTo(["it", "evening", "sorcerers", "houses"]);
+        await Assert.That(templates.Select(template => template.Id)).IsEquivalentTo([WorldId.From("5720946a-ea7c-4a10-9c50-51ce3deefc53"), WorldId.From("b3a1a522-0263-4796-a197-57a8731fc291"), WorldId.From("aec9494b-4118-4525-8458-e85d759c8dd9"), WorldId.From("8c02a7fb-3b55-4eb0-b957-1b4869ed9834")]);
         foreach (var template in templates)
         {
             var definition = DefinitionOf(template);
             var created = await api.Worlds.CreateWorldAsync(definition, CancellationToken.None);
-            var collection = Database.GetCollection<Domain.Worlds.World>("worlds");
-            var id = Domain.Worlds.WorldId.From(created.Id);
+            var collection = Database.GetCollection<World>("worlds");
+            var id = created.Id;
             var original = await collection.Find(world => world.Id == id).SingleAsync();
             var progressed = original with
             {
@@ -245,14 +249,16 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             var request = definition with
             {
                 Title = "Изменённый мир",
-                BalanceKey = "own",
+                Difficulty = (WorldDifficulty)0,
+                TemplateId = null,
                 Stars = definition.Stars.Skip(1).ToArray(),
                 Roles = ["Хроникёр"],
                 PostIdeas = ["Новая идея"],
             };
-            await api.Worlds.UpdateWorldAsync(created.Id, request, CancellationToken.None);
+            await api.Worlds.UpdateWorldAsync(created.Id.ToString(), request, CancellationToken.None);
             var updated = await collection.Find(world => world.Id == id).SingleAsync();
-            await Assert.That(updated.BalanceKey).IsEqualTo(original.BalanceKey);
+            await Assert.That(updated.Difficulty).IsEqualTo(WorldDifficulty.Normal);
+            await Assert.That(updated.TemplateId).IsEqualTo(original.TemplateId);
             await Assert.That(updated.Player.PlayerId).IsEqualTo(original.Player.PlayerId);
             await Assert.That(updated.Player.Subscribers).IsEqualTo(730L);
             await Assert.That(updated.Stars.All(star => star.Relation == 3)).IsTrue();
@@ -283,10 +289,10 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(rejected?.StatusCode).IsEqualTo(409);
         await Assert.That((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Count).IsEqualTo(1);
         await Database.GetCollection<Domain.Player.PlayerProfile>("players").UpdateOneAsync(
-            item => item.Id == Domain.Player.PlayerId.From(player.Id),
+            item => item.Id == player.Id,
             Builders<Domain.Player.PlayerProfile>.Update.Set(item => item.HitOwnWorldMilestone, true));
         var created = await api.Worlds.CreateWorldAsync(definition, CancellationToken.None);
-        await Assert.That(created.BalanceKey).IsEqualTo("own");
+        await Assert.That((await Database.GetCollection<World>("worlds").Find(world => world.Id == created.Id).SingleAsync()).TemplateId).IsNull();
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).HitOwnWorldMilestone).IsTrue();
     }
 
@@ -294,19 +300,26 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Publication_CrossesThreshold_PermanentlyUnlocksOwnWorldAsync()
     {
         using var api = Factory.CreateApiClient(1093);
-        await CreatePlayerWithWorldAsync(api);
-        var id = Domain.Worlds.WorldId.From(await GetWorldIdAsync(api));
-        await Database.GetCollection<Domain.Worlds.World>("worlds").UpdateOneAsync(
+        var player = await CreatePlayerWithWorldAsync(api);
+        var id = WorldId.From(await GetWorldIdAsync(api));
+        await Database.GetCollection<World>("worlds").UpdateOneAsync(
             world => world.Id == id,
-            Builders<Domain.Worlds.World>.Update.Set(world => world.Player.Subscribers, 499));
+            Builders<World>.Update.Set(world => world.Player.Subscribers, 499));
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).HitOwnWorldMilestone).IsFalse();
 
         // Fixed publication seed produces a positive turn; flops must not unlock the milestone.
-        await PublishWithIdAsync(1093, "Расскажу о сегодняшней репетиции", "00000000-0000-0000-0000-000000000001");
+        var generation = await GenerateWithIdAsync(1093, "Расскажу о сегодняшней репетиции", "00000000-0000-0000-0000-000000000001");
+        await Assert.That(generation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        var definition = (await CreateWorldDefinitionAsync(api)) with { Difficulty = WorldDifficulty.Hard };
+        await api.Worlds.UpdateWorldAsync(id.ToString(), definition, CancellationToken.None);
+        await api.Posts.ModeratePublicationAsync(generation.PublicationId, id.ToString(), CancellationToken.None);
+        var scored = Factory.Services.GetFakeLogCollector().GetSnapshot().Single(record =>
+            record.GetStructuredStateValue("event_name") == "post_scored" && record.GetStructuredStateValue("player_id") == player.Id.ToString());
+        await Assert.That(scored.GetStructuredStateValue("difficulty")).IsEqualTo("hard");
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).HitOwnWorldMilestone).IsTrue();
-        await Database.GetCollection<Domain.Worlds.World>("worlds").UpdateOneAsync(
+        await Database.GetCollection<World>("worlds").UpdateOneAsync(
             world => world.Id == id,
-            Builders<Domain.Worlds.World>.Update.Set(world => world.Player.Subscribers, 100));
+            Builders<World>.Update.Set(world => world.Player.Subscribers, 100));
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).HitOwnWorldMilestone).IsTrue();
     }
 }

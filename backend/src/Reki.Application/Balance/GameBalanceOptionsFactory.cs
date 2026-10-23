@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Balance;
 
@@ -56,19 +57,20 @@ internal sealed class GameBalanceOptionsFactory(
             .GetChildren()
             .Select(item => item.Get<double>())
             .ToArray();
-        IReadOnlyDictionary<string, WorldBalance> worlds = configuration
-            .GetRequiredSection("worlds")
+        IReadOnlyDictionary<WorldDifficulty, DifficultyBalance> difficulties = configuration
+            .GetRequiredSection("difficulties")
             .GetChildren()
             .ToDictionary(
-                item => item.Key,
-                item => new WorldBalance(
+                item => Enum.Parse<WorldDifficulty>(item.Key, ignoreCase: true),
+                item => new DifficultyBalance(
                     item.GetValue<double>("k"),
                     item.GetValue<double>("flop"),
                     item.GetValue<double>("viral_x"),
-                    item.GetValue<long>("hate_from")),
-                StringComparer.Ordinal);
+                    item.GetValue<long>("hate_from")));
 
-        if (decay.Count == 0 || levelThresholds.Count != 10 || worlds.Count == 0)
+        if (decay.Count == 0 || levelThresholds.Count != 10 ||
+            difficulties.Count != 3 || Enum.GetValues<WorldDifficulty>().Any(value => !difficulties.ContainsKey(value)) ||
+            difficulties.Values.Any(value => value.GrowthCoefficient <= 0 || value.FlopChance is < 0 or > 1 || value.ViralMultiplier <= 0 || value.HateFrom < 0))
         {
             throw new InvalidOperationException("The game balance configuration is incomplete.");
         }
@@ -121,9 +123,9 @@ internal sealed class GameBalanceOptionsFactory(
                 thread.GetValue<int>("bonus_replies"),
                 thread.GetValue<int>("subscriber_bonus"),
                 commentCost),
-            worlds,
+            difficulties,
             postCost,
-            configuration.GetValue<int>("worlds:own:unlock:subs"),
+            configuration.GetValue<int>("access:create_world_from_scratch:subs"),
             configuration.GetValue<double>("feed:open_probability"));
     }
 }

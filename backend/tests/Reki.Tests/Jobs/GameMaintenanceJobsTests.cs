@@ -31,7 +31,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var response = await CreatePlayerWithWorldAsync(api);
         var players = Database.GetCollection<PlayerProfile>("players");
         var worlds = Database.GetCollection<World>("worlds");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
+        var player = await players.Find(item => item.Id == response.Id).SingleAsync();
         var world = await worlds.Find(item => item.Player.PlayerId == player.Id).SingleAsync();
         var seededPlayer = player with { EnergyUsed = 7, Energy = 8, PlusInterestClaimed = true };
         var seededWorld = world with
@@ -81,12 +81,12 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         await Assert.That(savedWorld.Stars.All(star => star.Relation == 4 &&
             star.RelationGainedInPeriod == (shouldReset ? 0 : 3) && star.RelationPeriodStartedAtUtc == period)).IsTrue();
         var playerBson = await Database.GetCollection<BsonDocument>("players").Find(new BsonDocument("_id", new BsonBinaryData(saved.Id.Value, GuidRepresentation.Standard))).SingleAsync();
-        var worldBson = await Database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", savedWorld.Id.Value)).SingleAsync();
+        var worldBson = await Database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", new BsonBinaryData(savedWorld.Id.Value, GuidRepresentation.Standard))).SingleAsync();
 
         await ResetGameDayAsync();
 
         await Assert.That(await Database.GetCollection<BsonDocument>("players").Find(new BsonDocument("_id", new BsonBinaryData(saved.Id.Value, GuidRepresentation.Standard))).SingleAsync()).IsEqualTo(playerBson);
-        await Assert.That(await Database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", savedWorld.Id.Value)).SingleAsync()).IsEqualTo(worldBson);
+        await Assert.That(await Database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", new BsonBinaryData(savedWorld.Id.Value, GuidRepresentation.Standard))).SingleAsync()).IsEqualTo(worldBson);
     }
 
     [Test]
@@ -98,7 +98,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var response = await CreatePlayerWithWorldAsync(api);
         var players = Database.GetCollection<PlayerProfile>("players");
         var worlds = Database.GetCollection<World>("worlds");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
+        var player = await players.Find(item => item.Id == response.Id).SingleAsync();
         var world = await worlds.Find(item => item.Player.PlayerId == player.Id).SingleAsync();
         var period = player.PostsPeriodStartedAtUtc.AddDays(daysAhead);
         await players.ReplaceOneAsync(item => item.Id == player.Id, player with { PostsPeriodStartedAtUtc = period, EnergyUsed = 7, Energy = 8 });
@@ -122,7 +122,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         using var api = Factory.CreateApiClient(9303);
         var response = await CreatePlayerWithWorldAsync(api);
         var worlds = Database.GetCollection<World>("worlds");
-        var world = await worlds.Find(item => item.Player.PlayerId == PlayerId.From(response.Id)).SingleAsync();
+        var world = await worlds.Find(item => item.Player.PlayerId == response.Id).SingleAsync();
         var reset = world.Player.PeriodStartedAtUtc.AddDays(1);
         await worlds.ReplaceOneAsync(item => item.Id == world.Id, world with
         {
@@ -146,7 +146,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         using var api = Factory.CreateApiClient(9304);
         var response = await CreatePlayerWithWorldAsync(api);
         var players = Database.GetCollection<PlayerProfile>("players");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
+        var player = await players.Find(item => item.Id == response.Id).SingleAsync();
         await players.ReplaceOneAsync(item => item.Id == player.Id, player with { EnergyUsed = 7, Energy = 8 });
         var beforePlayer = await Database.GetCollection<BsonDocument>("players").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
         var beforeWorld = await Database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
@@ -170,7 +170,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         using var api = Factory.CreateApiClient(9308);
         var response = await CreatePlayerWithWorldAsync(api);
         var players = Database.GetCollection<PlayerProfile>("players");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
+        var player = await players.Find(item => item.Id == response.Id).SingleAsync();
         var reset = player.PostsPeriodStartedAtUtc.AddDays(1);
         await players.ReplaceOneAsync(item => item.Id == player.Id, player with
         {
@@ -200,7 +200,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         using var api = Factory.CreateApiClient(9310);
         var response = await CreatePlayerWithWorldAsync(api);
         var players = Database.GetCollection<PlayerProfile>("players");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
+        var player = await players.Find(item => item.Id == response.Id).SingleAsync();
         await players.ReplaceOneAsync(item => item.Id == player.Id, player with { Energy = 6, EnergyUsed = 4 });
         var changed = Options.Create(Factory.Services.GetRequiredService<IOptions<GameBalance>>().Value with { FreePostsPerDay = 12 });
         var job = new ResetGameDayJob(

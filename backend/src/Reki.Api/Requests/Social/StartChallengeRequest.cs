@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
+using Reki.Domain.Player;
 
 namespace Reki.Api.Requests.Social;
 
 public sealed record StartChallengeRequest
 {
     [Required]
-    [MaxLength(64)]
-    public required string FriendId { get; init; }
+    public required PlayerId FriendId { get; init; }
 }
 

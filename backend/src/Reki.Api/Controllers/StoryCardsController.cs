@@ -19,18 +19,12 @@ public sealed class StoryCardsController(
     [ProducesResponseType<Stream>(StatusCodes.Status200OK, "image/png")]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IResult> GetPublicStoryCardAsync(
-        string playerId,
-        string postId,
+        PlayerId playerId,
+        PostId postId,
         CancellationToken cancellationToken)
     {
-        if (!Guid.TryParseExact(playerId, "N", out _) ||
-            !Guid.TryParseExact(postId, "N", out _))
-        {
-            return TypedResults.NotFound();
-        }
-
         var card = await sender.Send(
-            new PublicStoryCardQuery(PlayerId.From(playerId), PostId.From(postId)),
+            new PublicStoryCardQuery(playerId, postId),
             cancellationToken);
         Response.ContentType = "image/png";
         Response.Headers.CacheControl = "no-store";

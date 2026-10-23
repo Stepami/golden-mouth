@@ -18,8 +18,6 @@ public sealed record WorldInterface
 
     public string Summary { get; init; } = string.Empty;
 
-    public WorldDifficulty Difficulty { get; init; } = WorldDifficulty.Easy;
-
     public string? UnlockSkill { get; init; }
 
     public int? UnlockLevel { get; init; }

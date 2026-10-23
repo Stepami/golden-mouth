@@ -9,8 +9,8 @@ internal sealed partial class SeedWorldTemplates
     [
         new World
         {
-            Id = WorldId.From("stage"),
-            BalanceKey = "stage",
+            Id = WorldId.From("edfccf53-65c6-4eaf-8321-2391bc1758bd"),
+            Difficulty = WorldDifficulty.Easy,
             Roles = ["🎤 Трейни", "📸 Фансайт", "💃 Хореограф", "🎧 Продюсер"],
             Voices = ["коротко, с самоиронией", "ярко, с эмодзи", "честно, как в дневнике"],
             PostIdeas = ["Сегодня на репетиции до меня дошло, что…", "Никто не предупреждал, что перед дебютом…", "Моя самая смешная ошибка на сцене…"],
@@ -61,7 +61,6 @@ internal sealed partial class SeedWorldTemplates
             {
                 Title = "Сцена",
                 Emoji = "🎤",
-                Difficulty = WorldDifficulty.Easy,
                 Summary = "мало провалов · хейт с 5k · ценят смелость",
                 Description = "Начни жизнь в айдол-агентстве: первые фанаты, внимание звёзд и истории за кулисами.",
                 Where = "Сцене",
@@ -103,8 +102,8 @@ internal sealed partial class SeedWorldTemplates
         },
         new World
         {
-            Id = WorldId.From("academy"),
-            BalanceKey = "academy",
+            Id = WorldId.From("b018145e-c887-4d00-9f18-5c877d0af8be"),
+            Difficulty = WorldDifficulty.Normal,
             Roles = ["📚 Участник клуба", "🎨 Мангака", "🎭 Организатор фестиваля", "🔬 Изобретатель"],
             Voices = ["как в дневнике клуба", "с юмором и аниме-сравнениями", "спокойно и по делу"],
             PostIdeas = ["Наш клуб готовился к фестивалю, но…", "Сегодня на занятии мы придумали…", "Самая неожиданная история после уроков…"],
@@ -155,7 +154,6 @@ internal sealed partial class SeedWorldTemplates
             {
                 Title = "Академия",
                 Emoji = "🌸",
-                Difficulty = WorldDifficulty.Normal,
                 Summary = "рост ×1,1 · хейт с 3k · ценят «в тему»",
                 Description = "Стань частью аниме-академии: найди свой клуб, знакомься с героями и готовься к фестивалю.",
                 Where = "Академии",
@@ -197,8 +195,8 @@ internal sealed partial class SeedWorldTemplates
         },
         new World
         {
-            Id = WorldId.From("it"),
-            BalanceKey = "it",
+            Id = WorldId.From("5720946a-ea7c-4a10-9c50-51ce3deefc53"),
+            Difficulty = WorldDifficulty.Hard,
             Roles = ["🧑\u200D💻 Разработчик", "🤖 AI-энтузиаст", "🧪 Тестировщик", "🚀 Автор стартапа", "🤝 Эйчар"],
             Voices = ["коротко, с айти-самоиронией", "с фактами и примерами", "как заметки из лаборатории"],
             PostIdeas = ["Сегодня мой код заработал, когда я…", "Проверил обещание новой AI-модели и обнаружил…", "Баг, который оказался фичей, пока…"],
@@ -250,7 +248,6 @@ internal sealed partial class SeedWorldTemplates
             {
                 Title = "Айти-тусовка",
                 Emoji = "💻",
-                Difficulty = WorldDifficulty.Hard,
                 Summary = "рост ×1,25 · хейт с 1k · больше риска",
                 Description = "Заведи техноблог: делись проектами, спорь с авторами каналов и попадай в стартап-драмы.",
                 Where = "Айти-тусовке",
@@ -292,8 +289,8 @@ internal sealed partial class SeedWorldTemplates
         },
         new World
         {
-            Id = WorldId.From("stream"),
-            BalanceKey = "stream",
+            Id = WorldId.From("0cb3f809-6dfd-4ef1-af52-daa12a5b8804"),
+            Difficulty = WorldDifficulty.Normal,
             Roles = ["🎮 Стример", "🎙 Комментатор", "🛡 Модератор", "🏆 Киберспортсмен"],
             Voices = ["энергично, как в чате", "с юмором и игровыми сравнениями", "спокойно, без капслока"],
             PostIdeas = ["Первый эфир: три зрителя и…", "Чат попросил ещё один раунд, но…", "Самый смешной момент матча…"],
@@ -344,7 +341,6 @@ internal sealed partial class SeedWorldTemplates
             {
                 Title = "Стрим",
                 Emoji = "🎮",
-                Difficulty = WorldDifficulty.Normal,
                 Summary = "рост ×1,1 · ценят юмор",
                 Description = "Примерь жизнь стримера: собирай зрителей, знакомься с героями эфиров и обсуждай турниры.",
                 Where = "Стриме",
@@ -388,8 +384,8 @@ internal sealed partial class SeedWorldTemplates
         },
         new World
         {
-            Id = WorldId.From("own"),
-            BalanceKey = "own",
+            Id = WorldId.From("14049891-fe2b-4d98-b38f-0f37e6544052"),
+            Difficulty = WorldDifficulty.Normal,
             Roles = ["✨ Рассказчик", "🧭 Исследователь", "🎨 Создатель", "📰 Хроникёр"],
             Voices = ["как хроника приключения", "с юмором и фантазией", "как личный дневник"],
             PostIdeas = ["В моём мире сегодня впервые…", "Никто не ожидал, что главный герой…", "Одна маленькая деталь изменила всё…"],
@@ -440,7 +436,6 @@ internal sealed partial class SeedWorldTemplates
             {
                 Title = "Свой мир",
                 Emoji = "✨",
-                Difficulty = WorldDifficulty.Normal,
                 Summary = string.Empty,
                 Description = "Придумай свою жизнь: выбери мир и роль, веди блог и знакомься с героями своей истории.",
                 Where = "своём мире",

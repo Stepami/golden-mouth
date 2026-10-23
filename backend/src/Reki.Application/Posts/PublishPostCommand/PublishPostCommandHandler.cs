@@ -28,6 +28,7 @@ internal sealed class PublishPostCommandHandler(
     PostProgressionCalculator progressionCalculator,
     ProductTelemetry analytics,
     PlayerSafetyGuard safety,
+    StarTurnPolicy turnPolicy,
     IStarFeedScheduler feedScheduler) : ICommandHandler<PublishPost, IReadOnlyList<LiveEvent>>
 {
     public async ValueTask<IReadOnlyList<LiveEvent>> Handle(
@@ -79,7 +80,7 @@ internal sealed class PublishPostCommandHandler(
             throw;
         }
 
-        StarTurnPolicy.EnsurePostAllowed(turn, world, StarTurnPolicy.IsHateEnabled(player, world, balance.Value, now));
+        turnPolicy.EnsurePostAllowed(turn, player, world);
 
         var wantCompleted = wantId is not null && world.Player.Wants.Any(want =>
             want.Id == wantId && !want.Done);
@@ -187,7 +188,8 @@ internal sealed class PublishPostCommandHandler(
             "post_scored",
             new Dictionary<string, string>
             {
-                ["world"] = afterWorld.BalanceKey,
+                ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty,
+                ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant(),
                 ["brave"] = turn.Brave.ToString("0.###", CultureInfo.InvariantCulture),
                 ["humor"] = turn.Humor.ToString("0.###", CultureInfo.InvariantCulture),
                 ["topic"] = turn.Topic.ToString("0.###", CultureInfo.InvariantCulture),
@@ -207,7 +209,7 @@ internal sealed class PublishPostCommandHandler(
                     "level_up",
                     new Dictionary<string, string>
                     {
-                        ["world"] = afterWorld.BalanceKey,
+                        ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant(),
                         ["skill"] = skillId.Value,
                         ["level"] = progress.Level.ToString(CultureInfo.InvariantCulture),
                     });
@@ -222,7 +224,7 @@ internal sealed class PublishPostCommandHandler(
             analytics.TrackPlayer(
                 after,
                 "card_earned",
-                new Dictionary<string, string> { ["card"] = achievement.Id, ["world"] = afterWorld.BalanceKey });
+                new Dictionary<string, string> { ["card"] = achievement.Id, ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant() });
         }
     }
 }

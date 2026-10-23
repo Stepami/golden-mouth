@@ -5,9 +5,7 @@ namespace Reki.Api.Requests.Worlds;
 
 public sealed record CreateWorldRequest
 {
-    [Required]
-    [RegularExpression("^(stage|academy|it|stream|own|evening|sorcerers|houses)$")]
-    public required string BalanceKey { get; init; }
+    public WorldId? TemplateId { get; init; }
 
     [Required]
     [MaxLength(80)]
@@ -46,8 +44,7 @@ public sealed record CreateWorldRequest
 
     public string Summary { get; init; } = string.Empty;
 
-    [Range(1, 3)]
-    public int Difficulty { get; init; } = 1;
+    public WorldDifficulty Difficulty { get; init; } = WorldDifficulty.Normal;
 
     public string? UnlockSkill { get; init; }
 

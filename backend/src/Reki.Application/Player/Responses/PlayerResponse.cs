@@ -1,11 +1,13 @@
+using Reki.Domain.Player;
+
 namespace Reki.Application.Player.Responses;
 
 public sealed record PlayerResponse(
-    string Id,
+    PlayerId Id,
     Address Address,
     int Energy,
     StreakResponse Streak,
-    IReadOnlyDictionary<SkillIdType, SkillResponse> Skills,
+    IReadOnlyDictionary<SkillId, SkillResponse> Skills,
     PlayerSettingsResponse Settings,
     IReadOnlyDictionary<string, string> Experiments,
     bool HitOwnWorldMilestone = false,

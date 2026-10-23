@@ -5,12 +5,13 @@ import type * as Wire from './generated/reki-api'
 type Fields<T> = { [K in keyof T as string extends K ? never : number extends K ? never : K]: T[K] }
 
 export type SkillId = 'brave' | 'humor' | 'topic'
-export type WorldId = 'stage' | 'academy' | 'it' | 'stream' | 'own' | 'evening' | 'sorcerers' | 'houses'
+export type WorldId = string
+export type WorldDifficulty = 'easy' | 'normal' | 'hard'
 export type Address = Wire.Address
 export type Drama = Wire.WorldDrama
 export interface World {
   id: WorldId; title: string; emoji: string; description: string
-  difficulty: 1 | 2 | 3; summary: string; lock?: { skill: SkillId; level: number }
+  difficulty: WorldDifficulty; summary: string; lock?: { skill: SkillId; level: number }
 }
 export type Star = Omit<Fields<Wire.StarResponse>, 'relation'> & { relation: number }
 export type Skill = { [K in keyof Wire.SkillResponse]: number }
@@ -22,7 +23,7 @@ export type PlayerDocument = Omit<Fields<Wire.PlayerResponse>, 'energy' | 'skill
   ageBand?: import('../app/ageBand').AgeBand
 }
 export interface Player extends Omit<PlayerDocument, 'energy' | 'experiments'> {
-  worldInstanceId?: string; avatarStyle?: string
+  worldInstanceId?: string; difficulty?: WorldDifficulty; avatarStyle?: string
   name: string; handle: string; role: string; world: WorldId
   subs: number; postsLeft: number; postsCap: number; firstPostInviteBonus: number
   wants: Want[]; collection: CollectionCard[]; bio: string; type: string
@@ -69,10 +70,10 @@ export type PostsPage<T> = Pick<Wire.PageResponseOfFeedItemResponse, 'nextCursor
 export type FeedItem = Pick<Fields<Wire.FeedItemResponse>, 'kind' | 'text'> & { [K in FeedMetadata]?: NonNullable<Wire.FeedItemResponse[K]> } & {
   postId?: string; reactions?: Reaction[]; views?: number; commentCount?: number; demo?: boolean; starId?: string; world?: WorldId
 }
-export type WorldDocument = Omit<Fields<Wire.WorldResponse>, 'balanceKey' | 'difficulty' | 'subscribers' | 'stars' | 'unlockSkill' | 'unlockLevel'> & {
-  balanceKey: WorldId; difficulty: 1 | 2 | 3; subscribers: number; lock?: World['lock']
+export type WorldDocument = Omit<Fields<Wire.WorldResponse>, 'difficulty' | 'subscribers' | 'stars' | 'unlockSkill' | 'unlockLevel'> & {
+  difficulty: WorldDifficulty; subscribers: number; lock?: World['lock']
   stars: (Omit<Fields<Wire.WorldStarResponse>, 'trait' | 'relation'> & { trait: number; relation: number })[]
   unlockSkill?: SkillId; unlockLevel?: number
 }
-export type WorldDefinition = Omit<WorldDocument, 'id' | 'subscribers' | 'lock'>
+export type WorldDefinition = Omit<WorldDocument, 'id' | 'subscribers' | 'lock'> & { templateId: WorldId | null }
 export type WorldUpdate = Partial<Pick<WorldDocument, 'title' | 'description' | 'rules' | 'drama' | 'voice'>>

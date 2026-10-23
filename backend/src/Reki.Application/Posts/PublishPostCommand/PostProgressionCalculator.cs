@@ -22,9 +22,7 @@ internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
         bool wantCompleted,
         string publicationId)
     {
-        var world = balance.Value.Worlds.TryGetValue(gameWorld.BalanceKey, out var value)
-            ? value
-            : throw new InvalidOperationException($"World balance is missing for '{gameWorld.BalanceKey}'.");
+        var world = balance.Value.Difficulties[gameWorld.Difficulty];
         var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
         var postIndex = player.EnergyUsed + 1;
         var multiplier = GetGrowthMultiplier(gameWorld, postIndex, ownWords);
@@ -73,7 +71,7 @@ internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
         return value / (double)ulong.MaxValue;
     }
 
-    private static bool IsFlop(string publicationId, WorldBalance world) =>
+    private static bool IsFlop(string publicationId, DifficultyBalance world) =>
         StableRoll(publicationId, "flop") < world.FlopChance;
 
     private double GetGrowthMultiplier(Domain.Worlds.World gameWorld, int postIndex, bool ownWords)
@@ -97,7 +95,7 @@ internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
         return multiplier;
     }
 
-    private bool IsViral(string publicationId, double quality, WorldBalance world)
+    private bool IsViral(string publicationId, double quality, DifficultyBalance world)
     {
         var chance = (balance.Value.Viral.BaseChance + (balance.Value.Viral.ChancePerQuality * quality)) *
                      world.ViralMultiplier;

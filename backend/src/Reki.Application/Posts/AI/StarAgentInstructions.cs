@@ -42,7 +42,7 @@ internal sealed class StarAgentInstructions(IOptions<JsonSerializerOptions> json
     public ChatMessage CreatePlayerOwnedLayer(StarAgentProfile profile)
     {
         var data = new StarPlayerPromptData(
-            profile.World.BalanceKey,
+            profile.World.Id.ToString(),
             profile.World.Interface.Title,
             profile.World.Interface.Description,
             profile.World.Rules,

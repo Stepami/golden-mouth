@@ -25,6 +25,7 @@ public static class DependencyInjection
         });
         services.AddSingleton<GameDayPeriod>();
         services.AddSingleton<PlayerSafetyGuard>();
+        services.AddSingleton<StarTurnPolicy>();
         services.AddSingleton<PostProgressionCalculator>();
         services.AddSingleton<ProductTelemetry>();
         services.AddSingleton<StarAgentInstructions>();

@@ -1,5 +1,5 @@
-// Фасад API поверх NSwag Fetch-клиента.
-// Во фронте НЕТ секретов: runtime config виден в браузере. Ключи LLM и токен бота живут только на бэкенде.
+// Р¤Р°СЃР°Рґ API РїРѕРІРµСЂС… NSwag Fetch-РєР»РёРµРЅС‚Р°.
+// Р’Рѕ С„СЂРѕРЅС‚Рµ РќР•Рў СЃРµРєСЂРµС‚РѕРІ: runtime config РІРёРґРµРЅ РІ Р±СЂР°СѓР·РµСЂРµ. РљР»СЋС‡Рё LLM Рё С‚РѕРєРµРЅ Р±РѕС‚Р° Р¶РёРІСѓС‚ С‚РѕР»СЊРєРѕ РЅР° Р±СЌРєРµРЅРґРµ.
 import { clearPlayerDrafts } from '../app/postDraft';
 import { clearWorldDrafts } from '../app/worldDraft';
 import { clearAvatarPersonalization } from '../app/avatarPersonalization';
@@ -48,13 +48,13 @@ function loadTemplates(): Promise<void> {
 function rememberPlayer(player: Player): Player {
     try {
         if (player.worldInstanceId)
-            localStorage.setItem(`reki:selected-world:${player.id}`, player.worldInstanceId);
+            localStorage.setItem(`reki:selected-world:v2:${player.id}`, player.worldInstanceId);
     }
     catch { /* memory fallback */ }
     setTelemetryPlayerAvailable(true);
     sessionIdentity = { ...player, energy: player.postsLeft, experiments: player.experiments ?? {} };
     sessionPlayer = player;
-    setAnalyticsWorld(player.worldInstanceId, player.world);
+    setAnalyticsWorld(player.worldInstanceId, player.difficulty);
     return player;
 }
 async function readSse<T>(response: Response, decode: (value: unknown) => T, onEvent: (event: T) => void | Promise<void>): Promise<void> {
@@ -102,16 +102,16 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     ownedWorldSnapshot = ownedWorlds;
     let selected: string | undefined;
     try {
-        selected = localStorage.getItem(`reki:selected-world:${player.id}`) ?? undefined;
+        selected = localStorage.getItem(`reki:selected-world:v2:${player.id}`) ?? undefined;
     }
     catch { /* memory fallback */ }
     const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)) ?? ownedWorlds[0];
     if (!world)
         throw new ApiError(404, 'GET', '/worlds');
     installWorldContent([world]);
-    return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, avatarStyle: world.avatarStyle,
-        world: world.balanceKey, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
-        wants: world.wants, collection: world.achievements, bio: '', type: 'свой голос',
+    return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, difficulty: world.difficulty, avatarStyle: world.avatarStyle,
+        world: world.id, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
+        wants: world.wants, collection: world.achievements, bio: '', type: 'СЃРІРѕР№ РіРѕР»РѕСЃ',
         voice: world.voice, drama: world.drama,
     });
 }
@@ -143,7 +143,7 @@ export const api = {
         const world = map.world(await data(sdk.worlds.createWorld(definition)));
         return api.me(world.id);
     },
-    /** Генерация, затем модерация и анимация массива реакций; при обрыве сверяем сохранённый статус. */
+    /** Р“РµРЅРµСЂР°С†РёСЏ, Р·Р°С‚РµРј РјРѕРґРµСЂР°С†РёСЏ Рё Р°РЅРёРјР°С†РёСЏ РјР°СЃСЃРёРІР° СЂРµР°РєС†РёР№; РїСЂРё РѕР±СЂС‹РІРµ СЃРІРµСЂСЏРµРј СЃРѕС…СЂР°РЅС‘РЅРЅС‹Р№ СЃС‚Р°С‚СѓСЃ. */
     publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true, wantId?: string): () => void {
         const generation = sessionGeneration();
         const ctrl = new AbortController();
@@ -344,10 +344,10 @@ export const api = {
     dmSend: (starId: string, text: string): Promise<{
         reply?: string;
         repliesLeft: number;
-    }> => data(sdk.social.sendDirectMessage(starId, { text }, worldId())).then(value => ({ ...value, reply: value.reply ?? undefined, repliesLeft: Number(value.repliesLeft) })),
-    forget: (starId: string, fact: string) => data(sdk.social.forgetStarMemory(starId, { fact }, worldId())),
+    }> => data(sdk.social.sendDirectMessage(starId, worldId(), { text })).then(value => ({ ...value, reply: value.reply ?? undefined, repliesLeft: Number(value.repliesLeft) })),
+    forget: (starId: string, fact: string) => data(sdk.social.forgetStarMemory(starId, worldId(), { fact })),
     eventToday: (): Promise<GameEvent> => data(sdk.events.getTodayEvent(worldId())),
-    answerEvent: (id: string, text: string) => data(sdk.events.answerEvent(id, { text }, worldId())),
+    answerEvent: (id: string, text: string) => data(sdk.events.answerEvent(id, worldId(), { text })),
     challenge: (): Promise<Challenge | null> => data(sdk.social.getActiveChallenge()).then(map.challenge),
     startChallenge: (friendId: string) => data(sdk.social.startChallenge({ friendId })),
     ownedWorldsSnapshot: (): WorldDocument[] | undefined => ownedWorldSnapshot ? structuredClone(ownedWorldSnapshot) : undefined,
@@ -364,7 +364,7 @@ export const api = {
         if (!current)
             throw new Error('World not found');
         const { id, subscribers: _subs, lock: _lock, ...definition } = current;
-        return api.saveWorld(id, { ...definition, ...patch });
+        return api.saveWorld(id, { ...definition, templateId: null, ...patch });
     },
     deleteAccount: async () => {
         const playerId = sessionIdentity?.id ?? sessionPlayer?.id;
@@ -377,7 +377,7 @@ export const api = {
             clearPlayerDrafts(playerId);
             clearAvatarPersonalization(playerId);
             try {
-                localStorage.removeItem(`reki:selected-world:${playerId}`);
+                localStorage.removeItem(`reki:selected-world:v2:${playerId}`);
                 localStorage.removeItem(`reki:own-world-unlock-seen:${playerId}`);
             }
             catch { /* optional storage */ }

@@ -1,13 +1,10 @@
-using System.ComponentModel.DataAnnotations;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Worlds.Responses;
 
 public sealed record WorldResponse
 {
-    public required string Id { get; init; }
-
-    public required string BalanceKey { get; init; }
+    public required WorldId Id { get; init; }
 
     public required string Title { get; init; }
 
@@ -19,8 +16,7 @@ public sealed record WorldResponse
 
     public required string Summary { get; init; }
 
-    [Range(1, 3)]
-    public int Difficulty { get; init; } = 1;
+    public WorldDifficulty Difficulty { get; init; } = WorldDifficulty.Easy;
 
     public string? UnlockSkill { get; init; }
 

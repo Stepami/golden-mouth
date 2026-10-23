@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
+using Reki.Domain.Posts;
 
 namespace Reki.Api.Requests.Posts;
 
 public sealed record ReplyRequest
 {
-    [StringLength(64, MinimumLength = 1)]
-    public string? CommentId { get; init; }
+    public CommentId? CommentId { get; init; }
 
     [Required]
     [StringLength(64, MinimumLength = 1)]

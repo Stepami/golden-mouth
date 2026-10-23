@@ -7,6 +7,7 @@ using Reki.Application.RekiContext;
 using Reki.Application.Worlds;
 using Reki.Application.Worlds.GetWorldTemplates;
 using Reki.Application.Worlds.Responses;
+using Reki.Domain.Worlds;
 
 namespace Reki.Api.Controllers;
 
@@ -48,7 +49,7 @@ public sealed class WorldsController(
     [ActionName("UpdateWorld")]
     public async Task<Ok> UpdateWorldAsync(
         CreateWorldRequest request,
-        string worldId,
+        WorldId worldId,
         CancellationToken cancellationToken)
     {
         var command = request.ToUpdateWorld(worldId);

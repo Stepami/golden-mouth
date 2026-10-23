@@ -1,12 +1,12 @@
 using System.ComponentModel.DataAnnotations;
+using Reki.Domain.Posts;
 
 namespace Reki.Api.Requests.Telemetry;
 
 public sealed record ReportRequest
 {
     [Required]
-    [MaxLength(64)]
-    public required string CommentId { get; init; }
+    public required CommentId CommentId { get; init; }
 
     [Required]
     [MaxLength(128)]

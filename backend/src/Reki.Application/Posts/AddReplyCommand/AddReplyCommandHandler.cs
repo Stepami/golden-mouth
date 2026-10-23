@@ -22,8 +22,8 @@ internal sealed partial class AddReplyCommandHandler(
     IOptions<GameBalance> balance,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
-    TimeProvider timeProvider,
     PlayerSafetyGuard safety,
+    StarTurnPolicy turnPolicy,
     IStarTurnGenerator generator,
     ILogger<AddReplyCommandHandler> logger,
     ProductTelemetry telemetry,
@@ -61,7 +61,7 @@ internal sealed partial class AddReplyCommandHandler(
             post.Text,
             target is null ? [] : post.GetBranch(target.Id),
             request.Text,
-            StarTurnPolicy.IsHateEnabled(player, world, balance.Value, timeProvider.GetUtcNow()));
+            turnPolicy.IsHateEnabled(player, world));
         yield return new ReplyLiveEvent(ReplyStatus.Generating, request.RequestId, null, null, null, null, null);
         var calls = new List<FunctionCallContent>();
         await using var updates = generator.StreamReplyTurnAsync(context, cancellationToken)
@@ -208,7 +208,7 @@ internal sealed partial class AddReplyCommandHandler(
             throw new RequestConflictException("The world changed during generation.");
         }
 
-        var hateEnabled = StarTurnPolicy.IsHateEnabled(player, world, balance.Value, timeProvider.GetUtcNow());
+        var hateEnabled = turnPolicy.IsHateEnabled(player, world);
         if ((turn.Tone == "hate" || turn.AdditionalTone == "hate") && !hateEnabled)
         {
             throw new RequestConflictException("The world safety settings changed during generation.");

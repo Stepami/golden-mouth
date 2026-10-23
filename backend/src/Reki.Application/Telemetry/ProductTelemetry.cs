@@ -75,6 +75,8 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
         "topic",
         "viral",
         "world",
+        "template_id",
+        "difficulty",
     };
 
     public void TrackSubmission(PlayerProfile player, AnalyticsSubmission submission)
@@ -96,7 +98,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
             var attributes = CreateAttributes(player.Id, entry.Name, entry.Timestamp);
             if (entry.WorldId is { } worldId)
             {
-                attributes["world_id"] = worldId.Value;
+                attributes["world_id"] = worldId.ToString();
             }
 
             attributes["session_id"] = submission.Session.Value.ToString("N");
@@ -109,7 +111,8 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
                 _ => "unknown",
             };
             attributes["screen"] = entry.Screen;
-            attributes["world"] = ReadWorldKey(entry.Properties);
+            attributes["difficulty"] = ReadDifficulty(entry.Properties);
+            attributes["template_id"] = ReadTemplateId(entry.Properties);
             attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
             if (entry.PreviousScreen is not null)
             {
@@ -137,10 +140,11 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
         var attributes = CreateAttributes(player.Id, eventName, timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
         if (worldId is { } id)
         {
-            attributes["world_id"] = id.Value;
+            attributes["world_id"] = id.ToString();
         }
 
-        attributes["world"] = ReadWorldKey(properties);
+        attributes["difficulty"] = ReadDifficulty(properties);
+        attributes["template_id"] = ReadTemplateId(properties);
         attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
         if (eventName == "player_created" && referred is { } isReferral)
         {
@@ -173,15 +177,20 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
     {
         var attributes = CreateAttributes(world.Player.PlayerId, "world_audience_updated", timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
         attributes["activity_kind"] = "inventory";
-        attributes["world_id"] = world.Id.Value;
-        attributes["world"] = world.BalanceKey;
+        attributes["world_id"] = world.Id.ToString();
+        attributes["template_id"] = world.TemplateId?.ToString() ?? string.Empty;
+        attributes["difficulty"] = world.Difficulty.ToString().ToLowerInvariant();
         attributes["subscriber_total"] = world.Player.Subscribers;
         Write("world_audience_updated", attributes);
     }
 
-    private static string ReadWorldKey(IReadOnlyDictionary<string, string> properties) =>
-        properties.TryGetValue("world", out var world) && world is "stage" or "academy" or "it" or "stream" or "own"
-            ? world : "unknown";
+    private static string ReadDifficulty(IReadOnlyDictionary<string, string> properties) =>
+        properties.TryGetValue("difficulty", out var difficulty) && difficulty is "easy" or "normal" or "hard"
+            ? difficulty : "unknown";
+
+    private static string? ReadTemplateId(IReadOnlyDictionary<string, string> properties) =>
+        properties.TryGetValue("template_id", out var template) && Guid.TryParse(template, out var id)
+            ? id.ToString("D") : null;
 
     private Dictionary<string, object?> CreateAttributes(
         PlayerId playerId,

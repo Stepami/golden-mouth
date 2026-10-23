@@ -11,7 +11,11 @@ public sealed record World
 
     public required WorldPlayer Player { get; init; }
 
-    public required string BalanceKey { get; init; }
+    public WorldId? TemplateId { get; init; }
+
+    public WorldDifficulty Difficulty { get; init; } = WorldDifficulty.Normal;
+
+    public bool IsArchived { get; init; }
 
     public IReadOnlyList<string> Roles { get; init; } = [];
 

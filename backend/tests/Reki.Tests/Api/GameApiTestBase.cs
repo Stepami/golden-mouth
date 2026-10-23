@@ -13,6 +13,7 @@ using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Application.Posts.Responses.ReplyLiveEvent;
 using Reki.Application.Worlds;
 using Reki.Application.Worlds.Responses;
+using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
 
 namespace Reki.Tests.Api;
@@ -116,7 +117,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
     }
 
     protected static async Task<string> GetWorldIdAsync(TestApiClient api) =>
-        (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().Id;
+        (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().Id.ToString();
 
     protected static IReadOnlyList<ReplyLiveEvent> ParseReplyEvents(string body) =>
         body.Split('\n').Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
@@ -140,7 +141,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         {
             // Compatibility fixtures represent an already unlocked, historical owner.
             await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(
-                new BsonDocument("_id", new BsonBinaryData(Guid.Parse(player.Id), GuidRepresentation.Standard)),
+                new BsonDocument("_id", new BsonBinaryData(player.Id.Value, GuidRepresentation.Standard)),
                 new BsonDocument("$set", new BsonDocument("HitOwnWorldMilestone", true)));
         }
 
@@ -153,12 +154,21 @@ public abstract class GameApiTestBase(ApiFactory factory)
         // Keep historical-world tests independent of the current public catalog.
         var legacy = Factory.Session.LegacyWorldTemplates[world.ToString().ToLowerInvariant()];
         var template = legacy.ToResponse();
-        return Task.FromResult(DefinitionOf(template));
+        return Task.FromResult(DefinitionOf(template) with
+        {
+            TemplateId = world switch
+            {
+                WorldTemplate.Own => null,
+                WorldTemplate.It => WorldId.From("5720946a-ea7c-4a10-9c50-51ce3deefc53"),
+                WorldTemplate.Stage => WorldId.From("b3a1a522-0263-4796-a197-57a8731fc291"),
+                _ => WorldId.From("8c02a7fb-3b55-4eb0-b957-1b4869ed9834"),
+            },
+        });
     }
 
     protected CreateWorldRequest DefinitionOf(WorldResponse template) => new()
         {
-            BalanceKey = template.BalanceKey,
+            TemplateId = template.Id,
             Title = template.Title,
             Description = template.Description,
             AvatarStyle = template.AvatarStyle,
@@ -227,7 +237,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         using var response = await api.Posts.ReplyToPostAsync(
             postId,
             await GetWorldIdAsync(api),
-            new ReplyRequest { CommentId = commentId, RequestId = replyId, Text = text },
+            new ReplyRequest { CommentId = Domain.Posts.CommentId.From(commentId), RequestId = replyId, Text = text },
             CancellationToken.None);
         using var reader = new StreamReader(response.Stream);
         var body = await reader.ReadToEndAsync(CancellationToken.None);

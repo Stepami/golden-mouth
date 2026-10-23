@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using Reki.Domain.Worlds;
 
 namespace Reki.Api.Requests.Telemetry.AnalyticsBatch;
 
@@ -8,8 +9,7 @@ public sealed record AnalyticsEventRequest
     /// <summary>
     /// Идентификатор экземпляра мира; отсутствует у событий до создания мира.
     /// </summary>
-    [MaxLength(64)]
-    public string? WorldId { get; init; }
+    public WorldId? WorldId { get; init; }
 
     [Required]
     [MaxLength(64)]

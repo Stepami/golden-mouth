@@ -2,9 +2,7 @@ using System.Text.Json;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Application.Telemetry.ReportCommentCommand;
 using Reki.Application.Telemetry.SubmitAnalyticsCommand;
-using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
-using Reki.Domain.Worlds;
 using Riok.Mapperly.Abstractions;
 
 namespace Reki.Api.Requests.Telemetry;
@@ -12,7 +10,7 @@ namespace Reki.Api.Requests.Telemetry;
 [Mapper]
 internal static partial class TelemetryRequestMapper
 {
-    public static ReportComment ToReportComment(this ReportRequest source) => new(CommentId.From(source.CommentId), source.Reason);
+    public static ReportComment ToReportComment(this ReportRequest source) => new(source.CommentId, source.Reason);
 
     public static SubmitAnalytics ToSubmitAnalytics(this AnalyticsBatchRequest source) => new(source.ToSubmission());
 
@@ -35,10 +33,6 @@ internal static partial class TelemetryRequestMapper
     [MapProperty(nameof(AnalyticsEventRequest.Prev), nameof(AnalyticsEntry.PreviousScreen))]
     [MapProperty(nameof(AnalyticsEventRequest.Props), nameof(AnalyticsEntry.Properties), Use = nameof(SanitizeProperties))]
     private static partial AnalyticsEntry MapEvent(AnalyticsEventRequest source);
-
-    private static SessionId MapSession(string source) => SessionId.From(source);
-
-    private static WorldId? MapWorldId(string? source) => source is null ? null : WorldId.From(source);
 
     private static IReadOnlyDictionary<string, string> SanitizeExperiments(IReadOnlyDictionary<string, string> source) =>
         source.ToDictionary(item => item.Key, item => SanitizeJsonString(item.Value, 64));
