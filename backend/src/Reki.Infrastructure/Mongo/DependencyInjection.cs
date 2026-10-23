@@ -2,7 +2,6 @@ using Kot.MongoDB.Migrations;
 using Kot.MongoDB.Migrations.DI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using MongoDB.Driver;
 using Reki.Application;
 using Reki.Application.Events;
 using Reki.Application.Invites;
@@ -18,6 +17,8 @@ internal static class DependencyInjection
 {
     public static IServiceCollection AddMongo(this IServiceCollection services)
     {
+        // TickerQ registers the shared GuidSerializer with GuidRepresentation.Standard first.
+        MongoClassMappings.Register();
         services
             .AddOptions<MongoOptions>()
             .BindConfiguration(MongoOptions.SectionName)
@@ -35,8 +36,8 @@ internal static class DependencyInjection
         services.AddSingleton<IPublicationRepository, MongoPublicationRepository>();
         services.AddSingleton<IInvitationRepository, MongoInvitationRepository>();
         services.AddSingleton<IDailyGameEventRepository, MongoDailyGameEventRepository>();
-        services.AddSingleton<IMongoClient>(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoClient);
-        services.AddSingleton<IMongoDatabase>(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoDatabase);
+        services.AddSingleton(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoClient);
+        services.AddSingleton(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoDatabase);
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);
 
         services

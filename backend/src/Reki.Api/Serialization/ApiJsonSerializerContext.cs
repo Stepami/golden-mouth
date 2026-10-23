@@ -27,6 +27,11 @@ using Reki.Application.Social.Responses.Challenge;
 using Reki.Application.Social.Responses.Dm;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds.Responses;
+using Reki.Domain.Events;
+using Reki.Domain.Invites;
+using Reki.Domain.Player;
+using Reki.Domain.Posts;
+using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 
@@ -40,6 +45,12 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(StarCatalogEntry[]))]
 [JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(StarFeedRequest))]
+[JsonSerializable(typeof(SessionId))]
+[JsonSerializable(typeof(PlayerId))]
+[JsonSerializable(typeof(PostId))]
+[JsonSerializable(typeof(CommentId))]
+[JsonSerializable(typeof(InvitationId))]
+[JsonSerializable(typeof(RekiEventId))]
 [JsonSerializable(typeof(PublicationFailure))]
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]

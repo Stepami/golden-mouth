@@ -13,6 +13,7 @@ using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.PublishPostCommand;
 
@@ -109,7 +110,7 @@ internal sealed class PublishPostCommandHandler(
         {
             HitOwnWorldMilestone = player.HitOwnWorldMilestone || updatedWorld.Player.Subscribers >= balance.Value.OwnWorldSubscribers,
         };
-        var postId = PostId.New();
+        var postId = PostId.New(now);
         var starComment = new GameComment(
             CommentId.New(),
             null,
@@ -175,8 +176,8 @@ internal sealed class PublishPostCommandHandler(
     private static void TrackProgression(
         PlayerProfile before,
         PlayerProfile after,
-        Reki.Domain.Worlds.World beforeWorld,
-        Reki.Domain.Worlds.World afterWorld,
+        World beforeWorld,
+        World afterWorld,
         GamePost post,
         GeneratedPostTurn turn,
         ProductTelemetry analytics)
@@ -192,7 +193,7 @@ internal sealed class PublishPostCommandHandler(
                 ["topic"] = turn.Topic.ToString("0.###", CultureInfo.InvariantCulture),
                 ["quality"] = post.Quality.ToString("0.###", CultureInfo.InvariantCulture),
                 ["post_index"] = after.EnergyUsed.ToString(CultureInfo.InvariantCulture),
-                ["id"] = post.Id.Value,
+                ["id"] = post.Id.Value.ToString("N"),
                 ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
             });
 

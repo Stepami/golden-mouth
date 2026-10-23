@@ -1081,6 +1081,43 @@ export class TelemetryClient {
     }
 
     /**
+     * @return OK
+     */
+    startSession(signal?: AbortSignal): Promise<SwaggerResponse<string>> {
+        let url_ = this.baseUrl + "/sessions";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            signal,
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processStartSession(_response);
+        });
+    }
+
+    protected processStartSession(response: Response): Promise<SwaggerResponse<string>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as string;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<string>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
      * @return No Content
      */
     submitAnalytics(body: AnalyticsBatchRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
@@ -1758,11 +1795,9 @@ export interface PublicationFailure {
     [key: string]: any;
 }
 
-export type PublicationStatus = "pending" | "ready_for_moderation" | "completed" | "failed";
-
 /** A generation-stage status delivered over SSE. */
 export interface PublicationStatusLiveEvent {
-    type: PublicationStatus;
+    type: PublicationStatusType;
     publicationId: string;
     failure?: PublicationFailure | null;
 
@@ -1772,12 +1807,14 @@ export interface PublicationStatusLiveEvent {
 /** The durable status of a publication for recovery after a broken stream. */
 export interface PublicationStatusResponse {
     publicationId: string;
-    status: PublicationStatus;
+    status: PublicationStatusType;
     result: PostResultResponse | null;
     failure?: PublicationFailure | null;
 
     [key: string]: any;
 }
+
+export type PublicationStatusType = "pending" | "ready_for_moderation" | "completed" | "failed";
 
 export interface ReactionResponse {
     emoji: string;

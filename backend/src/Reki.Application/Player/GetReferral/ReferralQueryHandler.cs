@@ -12,6 +12,6 @@ internal sealed class ReferralQueryHandler(IRekiContextAccessor rekiContextAcces
         CancellationToken cancellationToken)
     {
         var player = await rekiContextAccessor.Context.Player;
-        return new ReferralResponse($"ref_{player.Id.Value}");
+        return new ReferralResponse($"ref_{player.Id.Value:N}");
     }
 }

@@ -13,6 +13,21 @@ namespace Reki.Tests.Api;
 public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
+    public async Task StartSession_Anonymous_ReturnsDistinctGuidIdsAsync()
+    {
+        using var http = Factory.CreateClient();
+        var client = new TelemetryClient(http);
+
+        var first = await client.StartSessionAsync(CancellationToken.None);
+        var second = await client.StartSessionAsync(CancellationToken.None);
+
+        await Assert.That(Guid.TryParseExact(first, "D", out _)).IsTrue();
+        await Assert.That(Guid.TryParseExact(second, "D", out _)).IsTrue();
+        await Assert.That(second).IsNotEqualTo(first);
+        await Assert.That(await Database.GetCollection<BsonDocument>("players").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
+    }
+
+    [Test]
     public async Task WorldCreated_ClientSpoof_LeavesSingleServerEventAsync()
     {
         using var api = Factory.CreateApiClient(1030);
@@ -21,7 +36,7 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
         await api.Telemetry.SubmitAnalyticsAsync(
             new AnalyticsBatchRequest
             {
-                Session = "creation-test",
+                Session = Guid.NewGuid().ToString("N"),
                 Platform = "web",
                 Experiments = new Dictionary<string, string>(),
                 Events =
@@ -69,7 +84,7 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
         await api.Telemetry.SubmitClientLogsAsync(
             new ClientLogBatchRequest
             {
-                Session = "test-session",
+                Session = Guid.NewGuid().ToString("N"),
                 Entries =
                 [
                     new ClientLogEntryRequest

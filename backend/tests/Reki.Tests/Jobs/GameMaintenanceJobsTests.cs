@@ -80,12 +80,12 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         await Assert.That(savedWorld.Player.Wants.All(want => want.Done == !shouldReset)).IsTrue();
         await Assert.That(savedWorld.Stars.All(star => star.Relation == 4 &&
             star.RelationGainedInPeriod == (shouldReset ? 0 : 3) && star.RelationPeriodStartedAtUtc == period)).IsTrue();
-        var playerBson = await Database.GetCollection<BsonDocument>("players").Find(new BsonDocument("_id", saved.Id.Value)).SingleAsync();
+        var playerBson = await Database.GetCollection<BsonDocument>("players").Find(new BsonDocument("_id", new BsonBinaryData(saved.Id.Value, GuidRepresentation.Standard))).SingleAsync();
         var worldBson = await Database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", savedWorld.Id.Value)).SingleAsync();
 
         await ResetGameDayAsync();
 
-        await Assert.That(await Database.GetCollection<BsonDocument>("players").Find(new BsonDocument("_id", saved.Id.Value)).SingleAsync()).IsEqualTo(playerBson);
+        await Assert.That(await Database.GetCollection<BsonDocument>("players").Find(new BsonDocument("_id", new BsonBinaryData(saved.Id.Value, GuidRepresentation.Standard))).SingleAsync()).IsEqualTo(playerBson);
         await Assert.That(await Database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", savedWorld.Id.Value)).SingleAsync()).IsEqualTo(worldBson);
     }
 

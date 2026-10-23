@@ -1,10 +1,12 @@
 using Mediator;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Requests.Telemetry;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Telemetry.ClientLogBatch;
 using Reki.Application.RekiContext;
+using Reki.Domain.Telemetry;
 
 namespace Reki.Api.Controllers;
 
@@ -16,6 +18,11 @@ public sealed partial class TelemetryController(
     IRekiContext rekiContext,
     ILogger<TelemetryController> logger) : ControllerBase
 {
+    [AllowAnonymous]
+    [HttpPost("sessions", Name = "StartSession")]
+    [ActionName("StartSession")]
+    public SessionId StartSession() => SessionId.New();
+
     [HttpPost("events", Name = "SubmitAnalytics")]
     [ActionName("SubmitAnalytics")]
     public async Task<NoContent> SubmitAnalyticsAsync(
@@ -43,7 +50,7 @@ public sealed partial class TelemetryController(
             WriteClientLog(
                 entry.Level,
                 entry.Event,
-                player.Id.Value,
+                player.Id.Value.ToString("N"),
                 entry.Screen ?? string.Empty,
                 status ?? string.Empty,
                 path ?? string.Empty);

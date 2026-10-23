@@ -4,7 +4,6 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using Reki.Domain.Invites;
-using Reki.Domain.Player;
 using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
@@ -59,22 +58,22 @@ internal sealed class MoveReferralStateToInvites : RekiMigrationBase
             var deduction = count < 0 ? dailyBonus : count * LegacyBonus;
             if (count > 0 && period is { } start)
             {
-                var candidates = await db.GetCollection<Invitation>(MongoCollections.Invites)
-                    .Find(session, item => item.InviterId == PlayerId.From(player["_id"].AsString) &&
-                        item.CreatedAtUtc >= start && item.CreatedAtUtc < start.AddDays(1))
-                    .SortBy(item => item.CreatedAtUtc).ThenBy(item => item.Id)
-                    .Limit(count).ToListAsync(cancellationToken);
+                var invitations = await invites.Find(session, new BsonDocument("InviterId", player["_id"])).ToListAsync(cancellationToken);
+                var candidates = invitations.Where(item => ReadTime(item["CreatedAtUtc"]) >= start && ReadTime(item["CreatedAtUtc"]) < start.AddDays(1))
+                    .OrderBy(item => ReadTime(item["CreatedAtUtc"])).ThenBy(item => item["_id"])
+                    .Take(count).ToList();
                 if (candidates.Count == count && deduction <= dailyBonus)
                 {
                     await PreserveInviterCreditsAsync(invites, session, candidates, cancellationToken);
                 }
             }
 
-            var own = await db.GetCollection<Invitation>(MongoCollections.Invites)
-                .Find(session, item => item.InviteeId == PlayerId.From(player["_id"].AsString))
+            var own = await invites
+                .Find(session, new BsonDocument("InviteeId", player["_id"]))
                 .FirstOrDefaultAsync(cancellationToken);
-            if (period is { } ownStart && own?.InviteeBonusUsedAtUtc >= ownStart &&
-                own.InviteeBonusUsedAtUtc < ownStart.AddDays(1))
+            var ownUsedAt = own is null ? null : ReadTime(own.GetValue("InviteeBonusUsedAtUtc", BsonNull.Value));
+            if (period is { } ownStart && ownUsedAt >= ownStart &&
+                ownUsedAt < ownStart.AddDays(1))
             {
                 deduction += player.GetValue("FirstPostInviteBonus", 0).ToInt32();
             }
@@ -110,17 +109,19 @@ internal sealed class MoveReferralStateToInvites : RekiMigrationBase
             usedAt = firstPost is null ? null : ReadTime(firstPost.GetValue("CreatedAtUtc", BsonNull.Value));
         }
 
-        var invite = new Invitation(
-            InvitationId.From("legacy_" + player["_id"].AsString),
-            PlayerId.From(inviterId.AsString),
-            PlayerId.From(player["_id"].AsString),
-            created,
-            true,
-            inviteeUsed,
-            0,
-            null,
-            usedAt);
-        var document = invite.ToBsonDocument();
+        // Preserve the historical BSON schema independently of today's domain ID types.
+        var document = new BsonDocument
+        {
+            ["_id"] = "legacy_" + player["_id"].AsString,
+            ["InviterId"] = inviterId,
+            ["InviteeId"] = player["_id"],
+            ["CreatedAtUtc"] = WriteTime(created),
+            ["InviterBonusUsed"] = true,
+            ["InviteeBonusUsed"] = inviteeUsed,
+            ["BonusAmount"] = 0,
+            ["InviterBonusUsedAtUtc"] = BsonNull.Value,
+            ["InviteeBonusUsedAtUtc"] = usedAt is { } used ? WriteTime(used) : BsonNull.Value,
+        };
         await db.GetCollection<BsonDocument>(MongoCollections.Invites).UpdateOneAsync(
             session,
             new BsonDocument("InviteeId", player["_id"]),
@@ -132,22 +133,32 @@ internal sealed class MoveReferralStateToInvites : RekiMigrationBase
     private static async Task PreserveInviterCreditsAsync(
         IMongoCollection<BsonDocument> invites,
         IClientSessionHandle session,
-        IEnumerable<Invitation> candidates,
+        IEnumerable<BsonDocument> candidates,
         CancellationToken cancellationToken)
     {
         foreach (var invite in candidates)
         {
-            var updated = invite with { InviterBonusUsed = true, InviterBonusUsedAtUtc = invite.CreatedAtUtc };
             await invites.UpdateOneAsync(
                 session,
-                new BsonDocument("_id", invite.Id.Value),
+                new BsonDocument("_id", invite["_id"]),
                 new BsonDocument("$set", new BsonDocument
                 {
                     ["InviterBonusUsed"] = true,
-                    ["InviterBonusUsedAtUtc"] = updated.ToBsonDocument()["InviterBonusUsedAtUtc"],
+                    ["InviterBonusUsedAtUtc"] = invite["CreatedAtUtc"],
                 }),
                 cancellationToken: cancellationToken);
         }
+    }
+
+    private static BsonValue WriteTime(DateTimeOffset value)
+    {
+        var document = new BsonDocument();
+        using var writer = new BsonDocumentWriter(document);
+        writer.WriteStartDocument();
+        writer.WriteName("value");
+        BsonSerializer.LookupSerializer<DateTimeOffset>().Serialize(BsonSerializationContext.CreateRoot(writer), value);
+        writer.WriteEndDocument();
+        return document["value"];
     }
 
     private static DateTimeOffset? ReadTime(BsonValue value)

@@ -31,7 +31,7 @@ public static partial class PostResponseMapper
         var resolved = ResolveAuthor(post.AuthorId, author);
         return new(
             FeedItemKind.Post,
-            post.Id.Value,
+            post.Id.Value.ToString("N"),
             resolved.Name,
             resolved.Avatar,
             resolved.Role,
@@ -75,7 +75,7 @@ public static partial class PostResponseMapper
 
     public static PostDetailResponse MapPost(this GamePost post, World world, PlayerId playerId) =>
         new(
-            post.Id.Value,
+            post.Id.Value.ToString("N"),
             ResolveAuthor(post.AuthorId, world).Id,
             post.Text,
             post.Views,
@@ -87,7 +87,7 @@ public static partial class PostResponseMapper
         var author = ResolveAuthor(comment.AuthorId, world);
         var reactions = comment.Reactions.Select(reaction => MapReaction(reaction, world, playerId)).ToArray();
         return new CommentResponse(
-            comment.Id.Value,
+            comment.Id.Value.ToString("N"),
             author.Name,
             author.Avatar,
             author.Handle,
@@ -95,7 +95,7 @@ public static partial class PostResponseMapper
             author.Star,
             comment.AuthorId == playerId.ToAuthorId(),
             comment.Hidden,
-            comment.ParentCommentId?.Value,
+            comment.ParentCommentId?.Value.ToString("N"),
             comment.RequestId,
             author.Id,
             author.Role,
@@ -119,7 +119,7 @@ public static partial class PostResponseMapper
     {
         if (id == world.Player.PlayerId.ToAuthorId())
         {
-            return (world.Player.PlayerId.Value, world.Player.Name, world.Player.Avatar, world.Player.Role, world.Player.Avatar, false);
+            return (world.Player.PlayerId.Value.ToString("N"), world.Player.Name, world.Player.Avatar, world.Player.Role, world.Player.Avatar, false);
         }
 
         var star = world.FindStar(id);
@@ -132,6 +132,8 @@ public static partial class PostResponseMapper
         return (id.Value, deleted.Name, deleted.AvatarSeed, deleted.Role, string.Empty, false);
     }
 
+    private static string MapGuid(Guid source) => source.ToString("N");
+
     private static PostResultResponse MapResult(PublishedPost source, World world)
     {
         var post = source.Post;
@@ -139,7 +141,7 @@ public static partial class PostResponseMapper
         var whys = source.Reasons.Select(reason => new WhyResponse(reason.Icon, reason.Label, $"+{post.SubscriberDelta}")).ToArray();
         var best = bestComment is null ? null : new BestCommentResponse(ResolveAuthor(bestComment.AuthorId, world).Avatar, bestComment.Text);
         return new PostResultResponse(
-            post.Id.Value,
+            post.Id.Value.ToString("N"),
             post.SubscriberDelta,
             post.Viral ? "Пост залетел" : "Канал растёт",
             whys,

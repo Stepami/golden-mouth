@@ -140,7 +140,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         {
             // Compatibility fixtures represent an already unlocked, historical owner.
             await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(
-                new BsonDocument("_id", player.Id),
+                new BsonDocument("_id", new BsonBinaryData(Guid.Parse(player.Id), GuidRepresentation.Standard)),
                 new BsonDocument("$set", new BsonDocument("HitOwnWorldMilestone", true)));
         }
 
@@ -199,9 +199,9 @@ public abstract class GameApiTestBase(ApiFactory factory)
         var player = await GetStoredPlayerAsync(telegramUserId);
         var post = await Database
             .GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("AuthorId", $"Player_{player["_id"]}"))
+            .Find(new BsonDocument("AuthorId", $"Player_{player["_id"].AsBsonBinaryData.ToGuid():N}"))
             .SingleAsync();
-        return (post["_id"].AsString, post["Comments"].AsBsonArray[0]["_id"].AsString);
+        return (post["_id"].AsBsonBinaryData.ToGuid().ToString("N"), post["Comments"].AsBsonArray[0]["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
     }
 
     protected Task<BsonDocument> GetStoredPlayerAsync(long telegramUserId) =>
@@ -213,7 +213,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
     protected Task<BsonDocument> GetStoredPostAsync(string postId) =>
         Database
             .GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("_id", postId))
+            .Find(new BsonDocument("_id", new BsonBinaryData(Guid.Parse(postId), GuidRepresentation.Standard)))
             .SingleAsync();
 
     protected async Task<ReplyLiveEvent> ReplyAsync(

@@ -10,7 +10,7 @@ public static partial class PlayerResponseMapper
     public static PlayerResponse ToResponse(this PlayerProfile player)
     {
         return new PlayerResponse(
-            player.Id.Value,
+            player.Id.Value.ToString("N"),
             Enum.Parse<Address>(player.Address, true),
             player.Energy,
             new StreakResponse(player.StreakDays, Enumerable.Range(0, 7).Select(day => day < Math.Min(7, player.StreakDays)).ToArray(), "ещё день — и бонус"),

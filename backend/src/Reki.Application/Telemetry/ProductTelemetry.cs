@@ -99,7 +99,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
                 attributes["world_id"] = worldId.Value;
             }
 
-            attributes["session_id"] = submission.Session.Value;
+            attributes["session_id"] = submission.Session.Value.ToString("N");
             attributes["platform"] = submission.Platform;
             attributes["launch_surface"] = submission.LaunchSurface switch
             {
@@ -194,7 +194,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
             ["activity_kind"] = eventName == "player_deleted" ? "lifecycle" : "real",
             ["event_name"] = eventName,
             ["event_time_unix_ms"] = timestamp,
-            ["player_id"] = playerId.Value,
+            ["player_id"] = playerId.Value.ToString("N"),
             ["received_time_unix_ms"] = timeProvider.GetUtcNow().ToUnixTimeMilliseconds(),
         };
     }

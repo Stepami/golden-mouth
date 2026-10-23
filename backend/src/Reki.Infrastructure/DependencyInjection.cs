@@ -27,9 +27,9 @@ public static class DependencyInjection
         services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
         services.AddObservability();
         services.AddBaseHealthChecks();
-        services.AddMongo();
         services.AddChatClients();
         services.AddJobs(configuration, jsonContext);
+        services.AddMongo();
 
         return services;
     }

@@ -23,7 +23,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         var worldId = await GetWorldIdAsync(own ? owner : other);
         var batch = new AnalyticsBatchRequest
         {
-            Session = "world-session",
+            Session = Guid.NewGuid().ToString("N"),
             Platform = "web",
             Experiments = new Dictionary<string, string>(),
             Events =

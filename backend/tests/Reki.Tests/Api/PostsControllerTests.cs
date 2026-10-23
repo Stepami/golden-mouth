@@ -40,7 +40,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var posts = new[] { (firstWorld, firstPlayer), (secondWorld, secondPlayer) }
             .Select(item => new GamePost(
                 PostId.New(),
-                PlayerId.From(item.Item2["_id"].AsString).ToAuthorId(),
+                PlayerId.From(item.Item2["_id"].AsBsonBinaryData.ToGuid().ToString("N")).ToAuthorId(),
                 WorldId.From(item.Item1),
                 item.Item1,
                 1,
@@ -59,8 +59,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             second.Posts.GetFeedAsync(secondWorld, null, null, CancellationToken.None));
 
         // Assert
-        await Assert.That(feeds[0].Items.Single().PostId).IsEqualTo(posts[0].Id.Value);
-        await Assert.That(feeds[1].Items.Single().PostId).IsEqualTo(posts[1].Id.Value);
+        await Assert.That(feeds[0].Items.Single().PostId).IsEqualTo(posts[0].Id.Value.ToString("N"));
+        await Assert.That(feeds[1].Items.Single().PostId).IsEqualTo(posts[1].Id.Value.ToString("N"));
         await Assert.That(feeds[0].Items.Single().Text).IsEqualTo(firstWorld);
         await Assert.That(feeds[1].Items.Single().Text).IsEqualTo(secondWorld);
     }
@@ -93,7 +93,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await CreatePlayerWithWorldAsync(api);
         var player = await GetStoredPlayerAsync(telegramUserId);
         var world = await GetStoredWorldAsync(telegramUserId);
-        var ownerId = PlayerId.From(player["_id"].AsString);
+        var ownerId = PlayerId.From(player["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
         var otherId = PlayerId.New();
         var start = new DateTimeOffset(2026, 10, 5, 6, 0, 0, TimeSpan.Zero);
         var posts = Enumerable.Range(0, 46).Select(index => new GamePost(
@@ -128,7 +128,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             var feedPage = await api.Posts.GetFeedAsync(worldId, pageNumber, 10, CancellationToken.None);
             var channelPage = await api.Posts.GetChannelPostsAsync(worldId, pageNumber, 10, CancellationToken.None);
             var expectedIds = posts.Take(21).Reverse().Skip(pageNumber * 10).Take(10)
-                .Select(post => post.Id.Value).ToArray();
+                .Select(post => post.Id.Value.ToString("N")).ToArray();
             await Assert.That(feedPage.Items.Select(post => post.PostId).SequenceEqual(expectedIds)).IsTrue();
             await Assert.That(channelPage.Items.Select(post => post.PostId).SequenceEqual(expectedIds)).IsTrue();
             await Assert.That(feedPage.PageNumber).IsEqualTo(pageNumber);
@@ -147,8 +147,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var numberedChannel = await api.Posts.GetChannelPostsAsync(worldId, 1, null, CancellationToken.None);
         await Assert.That(numberedFeed.Items.Count).IsEqualTo(10);
         await Assert.That(numberedChannel.Items.Count).IsEqualTo(10);
-        await Assert.That(numberedFeed.Items[0].PostId).IsEqualTo(posts[10].Id.Value);
-        await Assert.That(numberedChannel.Items[0].PostId).IsEqualTo(posts[10].Id.Value);
+        await Assert.That(numberedFeed.Items[0].PostId).IsEqualTo(posts[10].Id.Value.ToString("N"));
+        await Assert.That(numberedChannel.Items[0].PostId).IsEqualTo(posts[10].Id.Value.ToString("N"));
 
         using var http = Factory.CreateClient();
         http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "1036");
@@ -243,10 +243,10 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var owner = await GetStoredPlayerAsync(ownerUserId);
         var posts = Database.GetCollection<BsonDocument>("posts");
         await posts.UpdateOneAsync(
-            new BsonDocument { ["AuthorId"] = $"Player_{owner["_id"].AsString}", ["Text"] = "старый пост канала" },
+            new BsonDocument { ["AuthorId"] = $"Player_{owner["_id"].AsBsonBinaryData.ToGuid().ToString("N")}", ["Text"] = "старый пост канала" },
             new BsonDocument("$set", new BsonDocument("CreatedAtUtc", new BsonDateTime(new DateTime(2026, 10, 7, 6, 0, 0, DateTimeKind.Utc)))));
         await posts.UpdateOneAsync(
-            new BsonDocument { ["AuthorId"] = $"Player_{owner["_id"].AsString}", ["Text"] = "новый пост канала" },
+            new BsonDocument { ["AuthorId"] = $"Player_{owner["_id"].AsBsonBinaryData.ToGuid().ToString("N")}", ["Text"] = "новый пост канала" },
             new BsonDocument("$set", new BsonDocument("CreatedAtUtc", new BsonDateTime(new DateTime(2026, 10, 7, 7, 0, 0, DateTimeKind.Utc)))));
 
         // Act
@@ -297,10 +297,10 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var player = await GetStoredPlayerAsync(telegramUserId);
         var post = await Database
             .GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("AuthorId", $"Player_{player["_id"]}"))
+            .Find(new BsonDocument("AuthorId", $"Player_{player["_id"].AsBsonBinaryData.ToGuid():N}"))
             .SingleAsync();
-        var postId = post["_id"].AsString;
-        var commentId = post["Comments"].AsBsonArray[0]["_id"].AsString;
+        var postId = post["_id"].AsBsonBinaryData.ToGuid().ToString("N");
+        var commentId = post["Comments"].AsBsonArray[0]["_id"].AsBsonBinaryData.ToGuid().ToString("N");
         await ReplyAsync(telegramUserId, postId, commentId, "detail-own-reply", "мой ответ");
 
         // Act
@@ -309,7 +309,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Assert
         await Assert.That(detail.PostId).IsEqualTo(postId);
         await Assert.That(detail.Text).IsEqualTo("пост с комментариями");
-        await Assert.That(detail.AuthorId).IsEqualTo((await GetStoredPlayerAsync(telegramUserId))["_id"].AsString);
+        await Assert.That(detail.AuthorId).IsEqualTo((await GetStoredPlayerAsync(telegramUserId))["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
         await Assert.That(detail.Views).IsGreaterThanOrEqualTo(48);
         await Assert.That(detail.Reactions.Count).IsEqualTo(1);
         await Assert.That(detail.Comments.Count).IsEqualTo(3);
@@ -390,7 +390,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .Find(new BsonDocument("TelegramUserId", telegramUserId))
             .SingleAsync();
         var postCount = await Database.GetCollection<BsonDocument>("posts")
-            .CountDocumentsAsync(new BsonDocument("AuthorId", $"Player_{storedPlayer["_id"]}"));
+            .CountDocumentsAsync(new BsonDocument("AuthorId", $"Player_{storedPlayer["_id"].AsBsonBinaryData.ToGuid():N}"));
         await Assert.That(postCount).IsEqualTo(1);
     }
 
@@ -459,7 +459,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .SingleAsync();
         var postCount = await Database
             .GetCollection<BsonDocument>("posts")
-            .CountDocumentsAsync(new BsonDocument("AuthorId", $"Player_{player["_id"]}"));
+            .CountDocumentsAsync(new BsonDocument("AuthorId", $"Player_{player["_id"].AsBsonBinaryData.ToGuid():N}"));
 
         await Assert.That(generation).Contains("\"type\":\"failed\"");
         var publication = await Database.GetCollection<BsonDocument>("publications")
@@ -986,7 +986,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(starReply.Me).IsFalse();
         await Assert.That(starReply.Depth).IsEqualTo(2);
         var selectedProfile = world.Stars.Single(star => star.Id.Value == selected);
-        await Assert.That(playerReply.AuthorId).IsEqualTo(world.Player.PlayerId.Value);
+        await Assert.That(playerReply.AuthorId).IsEqualTo(world.Player.PlayerId.Value.ToString("N"));
         await Assert.That(playerReply.Author).IsEqualTo(world.Player.Name);
         await Assert.That(playerReply.Avatar).IsEqualTo(world.Player.Avatar);
         await Assert.That(playerReply.Role).IsEqualTo(world.Player.Role);
@@ -997,7 +997,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var finalPost = completed.Post ?? throw new InvalidOperationException("Missing completed post.");
         var finalPlayer = finalPost.Comments.Single(comment => comment.Id == playerReply.Id);
         var finalStar = finalPost.Comments.Single(comment => comment.Id == starReply.Id);
-        await Assert.That(finalPlayer.AuthorId).IsEqualTo(world.Player.PlayerId.Value);
+        await Assert.That(finalPlayer.AuthorId).IsEqualTo(world.Player.PlayerId.Value.ToString("N"));
         await Assert.That(finalPlayer.Author).IsEqualTo(world.Player.Name);
         await Assert.That(finalPlayer.Avatar).IsEqualTo(world.Player.Avatar);
         await Assert.That(finalPlayer.Role).IsEqualTo(world.Player.Role);
@@ -1023,7 +1023,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             await Assert.That(additional.RequestId).IsNull();
             await Assert.That(additional.Text).IsEqualTo("Есть ещё один взгляд на тему.");
             await Assert.That((completed.Post ?? throw new InvalidOperationException("Missing completed post.")).Comments.Single(comment => comment.Id == additional.Id).Text).IsEqualTo("Есть ещё один взгляд на тему.");
-            await Assert.That(stored["Comments"].AsBsonArray.Single(comment => comment["_id"].AsString == additional.Id)["Text"].AsString).IsEqualTo("Есть ещё один взгляд на тему.");
+            await Assert.That(stored["Comments"].AsBsonArray.Single(comment => comment["_id"].AsBsonBinaryData.ToGuid().ToString("N") == additional.Id)["Text"].AsString).IsEqualTo("Есть ещё один взгляд на тему.");
         }
 
         var player = await GetStoredPlayerAsync(user);
@@ -1031,8 +1031,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(completed.EnergyLeft).IsEqualTo(8);
         var storedOwn = stored["Comments"].AsBsonArray.Single(item => item["RequestId"].IsString && item["RequestId"].AsString == "valid-turn");
         await Assert.That(storedOwn["AuthorId"].BsonType).IsEqualTo(BsonType.String);
-        await Assert.That(storedOwn["AuthorId"].AsString).IsEqualTo($"Player_{beforePlayer["_id"].AsString}");
-        var storedStar = stored["Comments"].AsBsonArray.Single(item => item["ParentCommentId"].IsString && item["ParentCommentId"].AsString == storedOwn["_id"].AsString);
+        await Assert.That(storedOwn["AuthorId"].AsString).IsEqualTo($"Player_{beforePlayer["_id"].AsBsonBinaryData.ToGuid().ToString("N")}");
+        var storedStar = stored["Comments"].AsBsonArray.Single(item => item["ParentCommentId"] == storedOwn["_id"]);
         await Assert.That(storedStar["AuthorId"].BsonType).IsEqualTo(BsonType.String);
         await Assert.That(storedStar["AuthorId"].AsString).IsEqualTo($"Star_{selected}");
         await Assert.That(stored["Version"].AsInt32).IsEqualTo(1);
@@ -1061,7 +1061,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var calls = Factory.Llm.RequestCount;
 
         // Act
-        var response = await SendReplyAsync(user, postId, changed == "target" ? secondRoot.Id.Value : targetId, "saved-key", changed == "text" ? "другой ответ" : "исходный ответ");
+        var response = await SendReplyAsync(user, postId, changed == "target" ? secondRoot.Id.Value.ToString("N") : targetId, "saved-key", changed == "text" ? "другой ответ" : "исходный ответ");
 
         // Assert
         await Assert.That(response.Status).IsEqualTo(HttpStatusCode.Conflict);
@@ -1078,7 +1078,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         const long user = 8703;
         var (postId, targetId) = await PublishPostForThreadAsync(user);
         var first = await ReplyAsync(user, postId, targetId, "recover", "сохранённый ответ");
-        await Database.GetCollection<BsonDocument>("posts").UpdateOneAsync(new BsonDocument("_id", postId), new BsonDocument("$set", new BsonDocument("Views", 999)));
+        await Database.GetCollection<BsonDocument>("posts").UpdateOneAsync(new BsonDocument("_id", new BsonBinaryData(Guid.Parse(postId), GuidRepresentation.Standard)), new BsonDocument("$set", new BsonDocument("Views", 999)));
         var calls = Factory.Llm.RequestCount;
         var beforePlayer = await GetStoredPlayerAsync(user);
         var beforeWorld = await GetStoredWorldAsync(user);
@@ -1243,9 +1243,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         if (scenario is "player-target" or "unknown-star")
         {
             var author = scenario == "player-target"
-                ? $"Player_{(await GetStoredPlayerAsync(user))["_id"].AsString}"
+                ? $"Player_{(await GetStoredPlayerAsync(user))["_id"].AsBsonBinaryData.ToGuid().ToString("N")}"
                 : "Star_unknown-star";
-            await Database.GetCollection<BsonDocument>("posts").UpdateOneAsync(new BsonDocument("_id", postId), new BsonDocument("$set", new BsonDocument("Comments.0.AuthorId", author)));
+            await Database.GetCollection<BsonDocument>("posts").UpdateOneAsync(new BsonDocument("_id", new BsonBinaryData(Guid.Parse(postId), GuidRepresentation.Standard)), new BsonDocument("$set", new BsonDocument("Comments.0.AuthorId", author)));
         }
 
         if (scenario is "energy" or "energy-over")
@@ -1260,7 +1260,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var calls = Factory.Llm.RequestCount;
 
         // Act
-        var result = await SendReplyAsync(user, scenario == "missing-post" ? "missing-post" : postId, scenario == "missing-target" ? "missing-target" : targetId, key, text, scenario == "missing-world" ? "missing-world" : string.Empty);
+        var requestedPostId = scenario switch { "missing-post" => PostId.New().Value.ToString("N"), _ => postId };
+        var requestedCommentId = scenario switch { "missing-target" => CommentId.New().Value.ToString("N"), _ => targetId };
+        var result = await SendReplyAsync(user, requestedPostId, requestedCommentId, key, text, scenario == "missing-world" ? "missing-world" : string.Empty);
 
         // Assert
         var expectedStatus = scenario switch
@@ -1285,7 +1287,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var (postId, targetId) = await PublishPostForThreadAsync(user);
         var player = await GetStoredPlayerAsync(user);
         var post = await Database.GetCollection<GamePost>("posts").Find(item => item.Id == PostId.From(postId)).SingleAsync();
-        var historical = Enumerable.Range(0, 3).Select(index => new GameComment(CommentId.New(), CommentId.From(targetId), null, PlayerId.From(player["_id"].AsString).ToAuthorId(), $"исторический ответ {index}", false, [])).ToArray();
+        var historical = Enumerable.Range(0, 3).Select(index => new GameComment(CommentId.New(), CommentId.From(targetId), null, PlayerId.From(player["_id"].AsBsonBinaryData.ToGuid().ToString("N")).ToAuthorId(), $"исторический ответ {index}", false, [])).ToArray();
         await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(item => item.Id == post.Id, post with { Comments = [.. post.Comments, .. historical] });
         var before = await GetStoredWorldAsync(user);
 
@@ -1390,7 +1392,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await posts.InsertOneAsync(secondPost);
 
         // Act
-        var response = await SendReplyAsync(user, secondPost.Id.Value, targetId, "second-world", "ответ во втором мире", second.Id);
+        var response = await SendReplyAsync(user, secondPost.Id.Value.ToString("N"), targetId, "second-world", "ответ во втором мире", second.Id);
         var completed = ParseReplyEvents(response.Body)[^1];
 
         // Assert
@@ -1398,7 +1400,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(completed.EnergyLeft).IsEqualTo(7);
         await Assert.That((await GetStoredPlayerAsync(user))["EnergyUsed"].AsInt32).IsEqualTo(3);
         await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(3);
-        await Assert.That((await GetStoredPostAsync(secondPost.Id.Value))["Comments"].AsBsonArray.Count).IsEqualTo(3);
+        await Assert.That((await GetStoredPostAsync(secondPost.Id.Value.ToString("N")))["Comments"].AsBsonArray.Count).IsEqualTo(3);
     }
 
     [Test]
@@ -1441,8 +1443,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Act
         var responses = await Task.WhenAll(
-            SendReplyAsync(user, original.Id.Value, targetId, "first-key", "Ответ игрока", original.WorldId.Value),
-            SendReplyAsync(user, secondPost.Id.Value, targetId, "second-key", "Ответ игрока", secondPost.WorldId.Value));
+            SendReplyAsync(user, original.Id.Value.ToString("N"), targetId, "first-key", "Ответ игрока", original.WorldId.Value),
+            SendReplyAsync(user, secondPost.Id.Value.ToString("N"), targetId, "second-key", "Ответ игрока", secondPost.WorldId.Value));
         var savedPosts = await Database.GetCollection<BsonDocument>("posts").Find(FilterDefinition<BsonDocument>.Empty)
             .ToListAsync();
         var savedWorlds = await Database.GetCollection<BsonDocument>("worlds")
@@ -1477,8 +1479,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Act
         var responses = await Task.WhenAll(
-            SendReplyAsync(user, post.Id.Value, targetId, "contested-key", "Первая мысль", post.WorldId.Value),
-            SendReplyAsync(user, post.Id.Value, targetId, "contested-key", "Вторая мысль", post.WorldId.Value));
+            SendReplyAsync(user, post.Id.Value.ToString("N"), targetId, "contested-key", "Первая мысль", post.WorldId.Value),
+            SendReplyAsync(user, post.Id.Value.ToString("N"), targetId, "contested-key", "Вторая мысль", post.WorldId.Value));
         var saved = await ReadPostAsync(postId);
 
         // Assert
@@ -1546,7 +1548,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var count = Factory.Llm.RequestCount;
 
         // Act
-        var result = await SendReplyAsync(user, post.Id.Value, targetId, "failure-key", "Ответ игрока", post.WorldId.Value);
+        var result = await SendReplyAsync(user, post.Id.Value.ToString("N"), targetId, "failure-key", "Ответ игрока", post.WorldId.Value);
 
         // Assert
         if (scenario == "hidden")

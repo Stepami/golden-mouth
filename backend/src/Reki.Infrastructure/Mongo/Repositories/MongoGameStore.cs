@@ -58,15 +58,15 @@ internal sealed class MongoGameStore : IGameStore
                 cancellationToken: transactionCancellationToken);
             await _starMemories.DeleteManyAsync(
                 transactionSession,
-                new BsonDocument("PlayerId", player.Id.Value),
+                new BsonDocument("PlayerId", new BsonBinaryData(player.Id.Value, GuidRepresentation.Standard)),
                 cancellationToken: transactionCancellationToken);
             await _events.DeleteManyAsync(
                 transactionSession,
                 item => item.PlayerId == player.Id,
                 cancellationToken: transactionCancellationToken);
             var challengeFilter = Builders<BsonDocument>.Filter.Or(
-                new BsonDocument("Participants", player.Id.Value),
-                new BsonDocument("PlayerId", player.Id.Value));
+                new BsonDocument("Participants", new BsonBinaryData(player.Id.Value, GuidRepresentation.Standard)),
+                new BsonDocument("PlayerId", new BsonBinaryData(player.Id.Value, GuidRepresentation.Standard)));
             await _challenges.DeleteManyAsync(
                 transactionSession,
                 challengeFilter,
@@ -78,7 +78,7 @@ internal sealed class MongoGameStore : IGameStore
             var inviteFilter = Builders<Invitation>.Filter.Or(
                 Builders<Invitation>.Filter.Eq(item => item.InviterId, player.Id),
                 Builders<Invitation>.Filter.Eq(item => item.InviteeId, player.Id),
-                new BsonDocument("PlayerId", player.Id.Value));
+                new BsonDocument("PlayerId", new BsonBinaryData(player.Id.Value, GuidRepresentation.Standard)));
             await _invites.DeleteManyAsync(
                 transactionSession,
                 inviteFilter,

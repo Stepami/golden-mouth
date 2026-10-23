@@ -133,7 +133,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             var persisted = await Database.GetCollection<BsonDocument>("players")
                 .Find(new BsonDocument("TelegramUserId", userId))
                 .SingleAsync(CancellationToken.None);
-            await Assert.That(persisted["_id"].AsString).IsEqualTo(player.Id);
+            await Assert.That(persisted["_id"].AsBsonBinaryData.ToGuid().ToString("N")).IsEqualTo(player.Id);
         }
     }
 
@@ -208,7 +208,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             .GetCollection<BsonDocument>("players")
             .Find(new BsonDocument("TelegramUserId", telegramUserId))
             .SingleAsync();
-        await Assert.That(player["_id"].BsonType).IsEqualTo(BsonType.String);
+        await Assert.That(player["_id"].AsBsonBinaryData.SubType).IsEqualTo(BsonBinarySubType.UuidStandard);
         await Assert.That(player["TelegramUserId"].BsonType).IsEqualTo(BsonType.Int64);
         await Assert.That(player.Contains("World")).IsFalse();
         await Assert.That(player["Skills"].AsBsonDocument.Names)
@@ -239,7 +239,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Assert
         await Assert.That(first.Code).IsEqualTo(repeated.Code);
         await Assert.That(first.Code == other.Code).IsFalse();
-        var invite = await GetStoredInviteAsync(friend["_id"].AsString);
+        var invite = await GetStoredInviteAsync(friend["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
         await Assert.That(invite["InviterId"]).IsEqualTo(inviter["_id"]);
         await Assert.That(friend.Contains("InvitedBy")).IsFalse();
         await Assert.That(friend["Energy"].AsInt32).IsEqualTo(10);
@@ -299,11 +299,11 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(results.Any(result => result is not null)).IsTrue();
         foreach (var result in results.OfType<PlayerResponse>())
         {
-            await Assert.That(result.Id).IsEqualTo(friend["_id"].AsString);
+            await Assert.That(result.Id).IsEqualTo(friend["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
         }
 
-        var invite = await GetStoredInviteAsync(friend["_id"].AsString);
-        await Assert.That(invite["InviterId"].AsString).IsEqualTo(referral.Code[4..]);
+        var invite = await GetStoredInviteAsync(friend["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
+        await Assert.That(invite["InviterId"].AsBsonBinaryData.ToGuid().ToString("N")).IsEqualTo(referral.Code[4..]);
         await Assert.That(inviter["Energy"].AsInt32).IsEqualTo(10);
         await Assert.That(await Database.GetCollection<BsonDocument>("invites").CountDocumentsAsync(
             new BsonDocument("InviteeId", friend["_id"]))).IsEqualTo(1L);
@@ -356,7 +356,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
         await Assert.That(storedInviter["Energy"].AsInt32).IsEqualTo(15);
         await Assert.That(storedFriend["Energy"].AsInt32).IsEqualTo(13);
-        var invite = await GetStoredInviteAsync(storedFriend["_id"].AsString);
+        var invite = await GetStoredInviteAsync(storedFriend["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
         await Assert.That(invite["InviterBonusUsed"].AsBoolean).IsTrue();
         await Assert.That(invite["InviteeBonusUsed"].AsBoolean).IsTrue();
         await Assert.That(invite["InviterBonusUsedAtUtc"]).IsEqualTo(invite["InviteeBonusUsedAtUtc"]);
@@ -405,7 +405,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
         var players = Database.GetCollection<BsonDocument>("players");
         await players.UpdateManyAsync(
-            Builders<BsonDocument>.Filter.In("_id", new[] { inviter.Id, friend.Id }),
+            Builders<BsonDocument>.Filter.In("_id", new[] { inviter.Id, friend.Id }.Select(id => new BsonBinaryData(Guid.Parse(id), GuidRepresentation.Standard))),
             Builders<BsonDocument>.Update.Set("Energy", 17));
         if (alreadyUsed)
         {
@@ -451,7 +451,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             var friend = await GetStoredPlayerAsync(friendId);
             await Assert.That(friend["Energy"].AsInt32).IsEqualTo(14);
             await Assert.That(friend["EnergyUsed"].AsInt32).IsEqualTo(1);
-            var invite = await GetStoredInviteAsync(friend["_id"].AsString);
+            var invite = await GetStoredInviteAsync(friend["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
             await Assert.That(invite["InviteeBonusUsed"].AsBoolean).IsTrue();
             await Assert.That(invite["InviterBonusUsed"].AsBoolean).IsTrue();
         }
@@ -483,13 +483,13 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var player = await players
             .Find(new BsonDocument("TelegramUserId", telegramUserId))
             .SingleAsync();
-        var playerId = player["_id"].AsString;
+        var playerId = player["_id"].AsBsonBinaryData.ToGuid().ToString("N");
 
         await PublishAsync(telegramUserId, "hello");
         await api.Telemetry.SubmitAnalyticsAsync(
             new AnalyticsBatchRequest
             {
-                Session = "test-session",
+                Session = Guid.NewGuid().ToString("N"),
                 Platform = "test",
                 Experiments = new Dictionary<string, string>(),
                 Events =
@@ -504,7 +504,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             },
             CancellationToken.None);
         await Database.GetCollection<BsonDocument>("invites").InsertOneAsync(
-            new BsonDocument("PlayerId", playerId));
+            new BsonDocument("PlayerId", new BsonBinaryData(Guid.Parse(playerId), GuidRepresentation.Standard)));
 
         var before = await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
         await api.Player.DeleteCurrentPlayerAsync(CancellationToken.None);
@@ -1011,6 +1011,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     }
 
     private Task<BsonDocument> GetStoredInviteAsync(string inviteeId) =>
-        Database.GetCollection<BsonDocument>("invites").Find(new BsonDocument("InviteeId", inviteeId))
+        Database.GetCollection<BsonDocument>("invites").Find(new BsonDocument("InviteeId", new BsonBinaryData(Guid.Parse(inviteeId), GuidRepresentation.Standard)))
             .SingleAsync(CancellationToken.None);
 }

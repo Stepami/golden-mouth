@@ -1,9 +1,15 @@
 using Kot.MongoDB.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Jobs;
+using Reki.Infrastructure.Mongo;
 using Reki.Infrastructure.Mongo.Migrations;
+using TickerQ.DependencyInjection;
+using TickerQ.MongoDB.DependencyInjection;
+using TickerQ.Utilities.Entities;
 using TUnit.Core.Interfaces;
 
 namespace Reki.Tests;
@@ -32,6 +38,10 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
 
     public async Task InitializeAsync()
     {
+        // Match production registration order, including TickerQ's BSON UUID serializer.
+        new ServiceCollection().AddTickerQ<RekiTimeTicker, CronTickerEntity>(options =>
+            options.AddOperationalStore(store => store.UseExistingMongoClient(DatabaseName)));
+        MongoClassMappings.Register();
         await _mongo.InitializeAsync();
         _client = new MongoClient(ConnectionString);
     }
