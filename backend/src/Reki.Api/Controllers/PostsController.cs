@@ -1,7 +1,7 @@
-using System.ComponentModel.DataAnnotations;
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Requests.Posts;
 using Reki.Application.Posts;
 using Reki.Application.Posts.GetPostDetail;
@@ -17,6 +17,7 @@ using Reki.Application.Posts.Responses.ReplyLiveEvent;
 using Reki.Application.RekiContext;
 using Reki.Application.Responses;
 using Reki.Domain.Posts;
+using Reki.Domain.Worlds;
 
 namespace Reki.Api.Controllers;
 
@@ -29,7 +30,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
     [ActionName("GeneratePublication")]
     public ServerSentEventsResult<PublicationStatusLiveEvent> GeneratePublication(
         StartPublicationRequest request,
-        [FromQuery, RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
+        [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken)
     {
         var result = sender.CreateStream(
@@ -53,11 +54,11 @@ public sealed class PostsController(ISender sender) : ControllerBase
     [ActionName("ModeratePublication")]
     public async Task<Ok<IReadOnlyList<LiveEvent>>> ModeratePublicationAsync(
         string publicationId,
-        [FromQuery, RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
+        [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new PublishPost(publicationId, Domain.Worlds.WorldId.From(worldId)),
+            new PublishPost(publicationId, worldId),
             cancellationToken);
         return TypedResults.Ok(result);
     }
@@ -67,7 +68,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
     public ServerSentEventsResult<ReplyLiveEvent> ReplyToPost(
         string postId,
         ReplyRequest request,
-        [FromQuery, RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
+        [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken)
     {
         var result = sender.CreateStream(
@@ -109,11 +110,11 @@ public sealed class PostsController(ISender sender) : ControllerBase
     [ActionName("GetPost")]
     public async Task<Ok<PostDetailResponse>> GetPostAsync(
         string postId,
-        [FromQuery, RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
+        [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new PostDetailQuery(PostId.From(postId), Domain.Worlds.WorldId.From(worldId)),
+            new PostDetailQuery(PostId.From(postId), worldId),
             cancellationToken);
         return TypedResults.Ok(result);
     }

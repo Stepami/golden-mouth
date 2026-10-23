@@ -71,10 +71,8 @@ internal sealed partial class GeneratePublicationCommandHandler(
             [],
             null,
             timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime,
-            world.Id)
-        {
-            BalanceSnapshot = new PublicationBalance(world.Difficulty, balance.Value.Difficulties[world.Difficulty]),
-        };
+            world.Id,
+            BalanceSnapshot: new PublicationBalance(world.Difficulty, balance.Value.Difficulties[world.Difficulty]));
         if (!await publicationRepository.TryCreatePublicationAsync(publication, cancellationToken))
         {
             existing = await sender.Send(new PublicationQuery(request.Id), cancellationToken)

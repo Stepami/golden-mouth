@@ -1,11 +1,12 @@
-using System.ComponentModel.DataAnnotations;
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Requests.Events;
 using Reki.Application.Events;
 using Reki.Application.Events.GetTodayEvent;
 using Reki.Application.Events.Responses;
+using Reki.Domain.Worlds;
 
 namespace Reki.Api.Controllers;
 
@@ -18,11 +19,11 @@ public sealed class EventsController(
     [HttpGet("today", Name = "GetTodayEvent")]
     [ActionName("GetTodayEvent")]
     public async Task<Ok<GameEventResponse>> GetTodayEventAsync(
-        [FromQuery, RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
+        [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken)
     {
         var gameEvent = await sender.Send(
-            new TodayEventQuery(Domain.Worlds.WorldId.From(worldId)),
+            new TodayEventQuery(worldId),
             cancellationToken);
         return TypedResults.Ok(gameEvent.ToResponse());
     }
@@ -32,7 +33,7 @@ public sealed class EventsController(
     public async Task<Ok> AnswerEventAsync(
         string eventId,
         AnswerEventRequest request,
-        [FromQuery, RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
+        [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken)
     {
         await sender.Send(

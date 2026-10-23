@@ -18,14 +18,13 @@ export class EventsClient {
     }
 
     /**
-     * @param worldId (optional) 
      * @return OK
      */
-    getTodayEvent(worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<GameEventResponse>> {
+    getTodayEvent(worldId: string, signal?: AbortSignal): Promise<SwaggerResponse<GameEventResponse>> {
         let url_ = this.baseUrl + "/events/today?";
-        if (worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' cannot be null.");
-        else if (worldId !== undefined)
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -60,17 +59,16 @@ export class EventsClient {
     }
 
     /**
-     * @param worldId (optional) 
      * @return OK
      */
-    answerEvent(eventId: string, body: AnswerEventRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+    answerEvent(eventId: string, worldId: string, body: AnswerEventRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/events/{eventId}/answer?";
         if (eventId === undefined || eventId === null)
             throw new globalThis.Error("The parameter 'eventId' must be defined.");
         url_ = url_.replace("{eventId}", encodeURIComponent("" + eventId));
-        if (worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' cannot be null.");
-        else if (worldId !== undefined)
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -403,14 +401,13 @@ export class PostsClient {
     }
 
     /**
-     * @param worldId (optional) 
      * @return OK
      */
-    generatePublication(body: StartPublicationRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<FileResponse>> {
+    generatePublication(worldId: string, body: StartPublicationRequest, signal?: AbortSignal): Promise<SwaggerResponse<FileResponse>> {
         let url_ = this.baseUrl + "/posts/publications?";
-        if (worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' cannot be null.");
-        else if (worldId !== undefined)
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -494,17 +491,16 @@ export class PostsClient {
     }
 
     /**
-     * @param worldId (optional) 
      * @return OK
      */
-    moderatePublication(publicationId: string, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<(LiveEventViewsLiveEvent | LiveEventReactionLiveEvent | LiveEventCommentLiveEvent | LiveEventTypingLiveEvent | LiveEventResultLiveEvent)[]>> {
+    moderatePublication(publicationId: string, worldId: string, signal?: AbortSignal): Promise<SwaggerResponse<(LiveEventViewsLiveEvent | LiveEventReactionLiveEvent | LiveEventCommentLiveEvent | LiveEventTypingLiveEvent | LiveEventResultLiveEvent)[]>> {
         let url_ = this.baseUrl + "/posts/publications/{publicationId}/moderation?";
         if (publicationId === undefined || publicationId === null)
             throw new globalThis.Error("The parameter 'publicationId' must be defined.");
         url_ = url_.replace("{publicationId}", encodeURIComponent("" + publicationId));
-        if (worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' cannot be null.");
-        else if (worldId !== undefined)
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -539,17 +535,16 @@ export class PostsClient {
     }
 
     /**
-     * @param worldId (optional) 
      * @return OK
      */
-    replyToPost(postId: string, body: ReplyRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<FileResponse>> {
+    replyToPost(postId: string, worldId: string, body: ReplyRequest, signal?: AbortSignal): Promise<SwaggerResponse<FileResponse>> {
         let url_ = this.baseUrl + "/posts/{postId}/replies?";
         if (postId === undefined || postId === null)
             throw new globalThis.Error("The parameter 'postId' must be defined.");
         url_ = url_.replace("{postId}", encodeURIComponent("" + postId));
-        if (worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' cannot be null.");
-        else if (worldId !== undefined)
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -695,17 +690,16 @@ export class PostsClient {
     }
 
     /**
-     * @param worldId (optional) 
      * @return OK
      */
-    getPost(postId: string, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PostDetailResponse>> {
+    getPost(postId: string, worldId: string, signal?: AbortSignal): Promise<SwaggerResponse<PostDetailResponse>> {
         let url_ = this.baseUrl + "/posts/{postId}?";
         if (postId === undefined || postId === null)
             throw new globalThis.Error("The parameter 'postId' must be defined.");
         url_ = url_.replace("{postId}", encodeURIComponent("" + postId));
-        if (worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' cannot be null.");
-        else if (worldId !== undefined)
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1416,7 +1410,6 @@ export interface AnalyticsBatchRequest {
 }
 
 export interface AnalyticsEventRequest {
-    /** Идентификатор экземпляра мира; отсутствует у событий до создания мира. */
     worldId?: string | null;
     name: string;
     t?: number;
@@ -1503,7 +1496,6 @@ export interface CollectionCardResponse {
     [key: string]: any;
 }
 
-/** Реакция на комментарий с готовыми данными автора. */
 export interface CommentReactionResponse {
     authorId: string;
     author: string;
@@ -1698,7 +1690,6 @@ export interface OnboardingRequest {
     [key: string]: any;
 }
 
-/** A page of API response items. */
 export interface PageResponseOfChannelPostResponse {
     items: ChannelPostResponse[];
     nextCursor: string | null;
@@ -1706,7 +1697,6 @@ export interface PageResponseOfChannelPostResponse {
     [key: string]: any;
 }
 
-/** A page of API response items. */
 export interface PageResponseOfFeedItemResponse {
     items: FeedItemResponse[];
     nextCursor: string | null;
@@ -1784,7 +1774,6 @@ export interface ProblemDetails {
     [key: string]: any;
 }
 
-/** Safe, durable explanation. Never contains submitted text or provider output. */
 export interface PublicationFailure {
     code: string;
     category: string;
@@ -1793,7 +1782,6 @@ export interface PublicationFailure {
     [key: string]: any;
 }
 
-/** A generation-stage status delivered over SSE. */
 export interface PublicationStatusLiveEvent {
     type: PublicationStatusType;
     publicationId: string;
@@ -1802,7 +1790,6 @@ export interface PublicationStatusLiveEvent {
     [key: string]: any;
 }
 
-/** The durable status of a publication for recovery after a broken stream. */
 export interface PublicationStatusResponse {
     publicationId: string;
     status: PublicationStatusType;
@@ -1827,7 +1814,6 @@ export interface ReferralResponse {
     [key: string]: any;
 }
 
-/** Ход генерации комментария; только completed подтверждает сохранение. */
 export interface ReplyLiveEvent {
     status: ReplyStatus;
     requestId: string;
@@ -1848,7 +1834,6 @@ export interface ReplyRequest {
     [key: string]: any;
 }
 
-/** Состояние генерации ответа в треде. */
 export type ReplyStatus = "generating" | "completed" | "failed";
 
 export interface ReportRequest {
@@ -1915,7 +1900,6 @@ export interface StartChallengeRequest {
     [key: string]: any;
 }
 
-/** Starts streaming generation for a publication identified by a client-generated UUID. */
 export interface StartPublicationRequest {
     publicationId: string;
     text: string;
@@ -1934,7 +1918,7 @@ export interface StreakResponse {
 }
 
 export interface UpdateSettingsRequest {
-    address?: Address | null;
+    address?: UpdateSettingsRequestAddress | null;
     notifications?: string | null;
     quiet?: string | null;
     plus?: boolean | null;
@@ -1974,8 +1958,6 @@ export type WorldDrama = "soft" | "mid" | "hot" | "off";
 
 export interface WorldResponse {
     id: string;
-    templateId?: string | null;
-    isArchived?: boolean;
     title: string;
     description: string;
     avatarStyle: string;
@@ -2054,6 +2036,8 @@ export type LiveEventResultLiveEventType = "result";
 export type LiveEventTypingLiveEventType = "typing";
 
 export type LiveEventViewsLiveEventType = "views";
+
+export type UpdateSettingsRequestAddress = "she" | "he" | "nick";
 
 export class SwaggerResponse<TResult> {
     status: number;

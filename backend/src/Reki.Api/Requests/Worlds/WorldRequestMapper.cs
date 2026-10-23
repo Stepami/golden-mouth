@@ -11,8 +11,8 @@ internal static partial class WorldRequestMapper
 {
     public static CreateWorld ToCreateWorld(this CreateWorldRequest source) => new(source.ToWorld());
 
-    public static UpdateWorld ToUpdateWorld(this CreateWorldRequest source, string worldId) =>
-        new(WorldId.From(worldId), source.ToWorld());
+    public static UpdateWorld ToUpdateWorld(this CreateWorldRequest source, WorldId worldId) =>
+        new(worldId, source.ToWorld());
 
     // These source fields are projected by the dedicated Interface and Player mappings.
     [MapperIgnoreSource(nameof(CreateWorldRequest.Name))]
@@ -115,8 +115,6 @@ internal static partial class WorldRequestMapper
     private static DateTimeOffset InitialRelationPeriod() => DateTimeOffset.UnixEpoch;
 
     private static StarId MapStarId(string source) => StarId.From(source);
-
-    private static WorldId? MapTemplateId(Guid? source) => source is { } id ? WorldId.From(id) : null;
 
     private static StarTrait MapStarTrait(int source) =>
         Enum.Parse<StarTrait>(source.ToString(System.Globalization.CultureInfo.InvariantCulture));

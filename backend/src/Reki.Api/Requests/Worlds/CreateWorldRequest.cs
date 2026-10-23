@@ -5,7 +5,7 @@ namespace Reki.Api.Requests.Worlds;
 
 public sealed record CreateWorldRequest
 {
-    public Guid? TemplateId { get; init; }
+    public WorldId? TemplateId { get; init; }
 
     [Required]
     [MaxLength(80)]

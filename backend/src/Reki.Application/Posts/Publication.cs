@@ -17,10 +17,9 @@ public sealed record Publication(
     PublishedPost? Result,
     DateTime? ExpiresAtUtc,
     WorldId WorldId,
-    PublicationFailure? Failure = null)
+    PublicationFailure? Failure = null,
+    PublicationBalance? BalanceSnapshot = null)
 {
-    public PublicationBalance? BalanceSnapshot { get; init; }
-
     public GeneratedPostTurn AssembleTurn()
     {
         var comments = Parts

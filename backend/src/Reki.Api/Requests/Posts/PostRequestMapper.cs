@@ -12,11 +12,11 @@ internal static partial class PostRequestMapper
 {
     public static GeneratePublication ToGeneratePublication(
         this StartPublicationRequest source,
-        string worldId) =>
-        MapPublication(source, WorldId.From(worldId));
+        WorldId worldId) =>
+        MapPublication(source, worldId);
 
-    public static AddReply ToAddReply(this ReplyRequest source, string postId, string worldId) =>
-        MapReply(source, PostId.From(postId), WorldId.From(worldId));
+    public static AddReply ToAddReply(this ReplyRequest source, string postId, WorldId worldId) =>
+        MapReply(source, PostId.From(postId), worldId);
 
     public static WorldPostsQuery ToQuery(this WorldPostsRequest source, bool feed = false) =>
         MapQuery(source, feed);
@@ -28,8 +28,6 @@ internal static partial class PostRequestMapper
     private static partial AddReply MapReply(ReplyRequest source, PostId postId, WorldId worldId);
 
     private static partial WorldPostsQuery MapQuery(WorldPostsRequest source, bool feed);
-
-    private static WorldId MapWorldId(string source) => WorldId.From(source);
 
     private static PostId? MapPostId(Guid? source) => source is { } value ? PostId.From(value) : null;
 

@@ -23,7 +23,7 @@ export type PlayerDocument = Omit<Fields<Wire.PlayerResponse>, 'energy' | 'skill
   ageBand?: import('../app/ageBand').AgeBand
 }
 export interface Player extends Omit<PlayerDocument, 'energy' | 'experiments'> {
-  worldInstanceId?: string; templateId?: string | null; difficulty?: WorldDifficulty; avatarStyle?: string
+  worldInstanceId?: string; difficulty?: WorldDifficulty; avatarStyle?: string
   name: string; handle: string; role: string; world: WorldId
   subs: number; postsLeft: number; postsCap: number; firstPostInviteBonus: number
   wants: Want[]; collection: CollectionCard[]; bio: string; type: string
@@ -70,10 +70,10 @@ export type PostsPage<T> = Pick<Wire.PageResponseOfFeedItemResponse, 'nextCursor
 export type FeedItem = Pick<Fields<Wire.FeedItemResponse>, 'kind' | 'text'> & { [K in FeedMetadata]?: NonNullable<Wire.FeedItemResponse[K]> } & {
   postId?: string; reactions?: Reaction[]; views?: number; commentCount?: number; demo?: boolean; starId?: string; world?: WorldId
 }
-export type WorldDocument = Omit<Fields<Wire.WorldResponse>, 'templateId' | 'difficulty' | 'subscribers' | 'stars' | 'unlockSkill' | 'unlockLevel'> & {
-  templateId: WorldId | null; difficulty: WorldDifficulty; subscribers: number; lock?: World['lock']
+export type WorldDocument = Omit<Fields<Wire.WorldResponse>, 'difficulty' | 'subscribers' | 'stars' | 'unlockSkill' | 'unlockLevel'> & {
+  difficulty: WorldDifficulty; subscribers: number; lock?: World['lock']
   stars: (Omit<Fields<Wire.WorldStarResponse>, 'trait' | 'relation'> & { trait: number; relation: number })[]
   unlockSkill?: SkillId; unlockLevel?: number
 }
-export type WorldDefinition = Omit<WorldDocument, 'id' | 'subscribers' | 'lock' | 'isArchived'>
+export type WorldDefinition = Omit<WorldDocument, 'id' | 'subscribers' | 'lock'> & { templateId: WorldId | null }
 export type WorldUpdate = Partial<Pick<WorldDocument, 'title' | 'description' | 'rules' | 'drama' | 'voice'>>

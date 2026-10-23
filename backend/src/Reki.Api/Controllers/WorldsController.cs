@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -8,6 +7,7 @@ using Reki.Application.RekiContext;
 using Reki.Application.Worlds;
 using Reki.Application.Worlds.GetWorldTemplates;
 using Reki.Application.Worlds.Responses;
+using Reki.Domain.Worlds;
 
 namespace Reki.Api.Controllers;
 
@@ -49,7 +49,7 @@ public sealed class WorldsController(
     [ActionName("UpdateWorld")]
     public async Task<Ok> UpdateWorldAsync(
         CreateWorldRequest request,
-        [RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
+        WorldId worldId,
         CancellationToken cancellationToken)
     {
         var command = request.ToUpdateWorld(worldId);

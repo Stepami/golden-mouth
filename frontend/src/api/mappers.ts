@@ -10,7 +10,7 @@ function skillKey(value: string): Ui.SkillId {
 export function world(value: Input<Wire.WorldResponse>): Ui.WorldDocument {
   const difficulty = value.difficulty ?? 'easy'
   if (difficulty !== 'easy' && difficulty !== 'normal' && difficulty !== 'hard') throw new Error('Invalid difficulty')
-  return { ...value, templateId: value.templateId ?? null, difficulty, subscribers: number(value.subscribers ?? 0),
+  return { ...value, difficulty, subscribers: number(value.subscribers ?? 0),
     unlockSkill: value.unlockSkill ? skillKey(value.unlockSkill) : undefined, unlockLevel: value.unlockLevel == null ? undefined : number(value.unlockLevel),
     stars: value.stars.map(star => ({ ...star, trait: number(star.trait), relation: number(star.relation) })),
   }

@@ -1383,7 +1383,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var secondPost = original with
         {
             Id = PostId.New(original.CreatedAtUtc),
-            WorldId = WorldId.From(second.Id),
+            WorldId = second.Id,
             Comments = [original.Comments[0]],
             Version = 0,
         };
@@ -1431,7 +1431,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var secondWorld =
             await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
         var original = await ReadPostAsync(postId);
-        var secondPost = original with { Id = PostId.New(original.CreatedAtUtc), WorldId = WorldId.From(secondWorld.Id), Version = 0 };
+        var secondPost = original with { Id = PostId.New(original.CreatedAtUtc), WorldId = secondWorld.Id, Version = 0 };
         await Database.GetCollection<GamePost>("posts").InsertOneAsync(secondPost);
         var player = await ReadPlayerAsync(user);
         await Database.GetCollection<PlayerProfile>("players")

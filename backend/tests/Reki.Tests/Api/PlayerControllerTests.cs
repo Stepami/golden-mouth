@@ -120,9 +120,9 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(onboarded[0].Id).IsNotEqualTo(onboarded[1].Id);
         await Assert.That(current[0].Id).IsEqualTo(onboarded[0].Id);
         await Assert.That(current[1].Id).IsEqualTo(onboarded[1].Id);
-        await Assert.That((await firstApi.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().TemplateId)
+        await Assert.That((await GetStoredWorldAsync(firstUserId))["TemplateId"].AsBsonBinaryData.ToGuid())
             .IsEqualTo(Guid.Parse("8c02a7fb-3b55-4eb0-b957-1b4869ed9834"));
-        await Assert.That((await secondApi.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().TemplateId)
+        await Assert.That((await GetStoredWorldAsync(secondUserId))["TemplateId"].AsBsonBinaryData.ToGuid())
             .IsEqualTo(Guid.Parse("8c02a7fb-3b55-4eb0-b957-1b4869ed9834"));
         foreach ((var userId, var player) in new[]
                  {
@@ -769,7 +769,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(saved.Energy).IsEqualTo(alreadyClaimed ? 10 : 15);
         await Assert.That(saved.EnergyUsed).IsEqualTo(0);
         await Assert.That(saved.PostsPeriodStartedAtUtc).IsEqualTo(player.PostsPeriodStartedAtUtc);
-        _ = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id == world.Id.Value);
+        _ = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id == world.Id);
         var savedWorld = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
         await Assert.That(savedWorld.Player.Wants.All(want => !want.Done)).IsTrue();
         await Assert.That(savedWorld.Stars.All(relation => relation.RelationGainedInPeriod == 0 &&

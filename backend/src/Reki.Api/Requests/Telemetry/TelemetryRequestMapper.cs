@@ -4,7 +4,6 @@ using Reki.Application.Telemetry.ReportCommentCommand;
 using Reki.Application.Telemetry.SubmitAnalyticsCommand;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
-using Reki.Domain.Worlds;
 using Riok.Mapperly.Abstractions;
 
 namespace Reki.Api.Requests.Telemetry;
@@ -37,8 +36,6 @@ internal static partial class TelemetryRequestMapper
     private static partial AnalyticsEntry MapEvent(AnalyticsEventRequest source);
 
     private static SessionId MapSession(string source) => SessionId.From(source);
-
-    private static WorldId? MapWorldId(string? source) => source is null ? null : WorldId.From(source);
 
     private static IReadOnlyDictionary<string, string> SanitizeExperiments(IReadOnlyDictionary<string, string> source) =>
         source.ToDictionary(item => item.Key, item => SanitizeJsonString(item.Value, 64));

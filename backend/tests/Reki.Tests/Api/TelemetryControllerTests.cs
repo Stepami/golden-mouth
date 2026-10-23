@@ -21,8 +21,8 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
         var first = await client.StartSessionAsync(CancellationToken.None);
         var second = await client.StartSessionAsync(CancellationToken.None);
 
-        await Assert.That(Guid.TryParseExact(first, "D", out _)).IsTrue();
-        await Assert.That(Guid.TryParseExact(second, "D", out _)).IsTrue();
+        await Assert.That(first != Guid.Empty).IsTrue();
+        await Assert.That(second != Guid.Empty).IsTrue();
         await Assert.That(second).IsNotEqualTo(first);
         await Assert.That(await Database.GetCollection<BsonDocument>("players").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
     }
@@ -42,8 +42,8 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
                 Events =
                 [
                     new AnalyticsEventRequest { Name = "player_deleted", Screen = "feed" },
-                    new AnalyticsEventRequest { Name = "world_created", WorldId = world.Id.ToString(), Screen = "feed" },
-                    new AnalyticsEventRequest { Name = "world_audience_updated", WorldId = world.Id.ToString(), Screen = "feed" },
+                    new AnalyticsEventRequest { Name = "world_created", WorldId = world.Id, Screen = "feed" },
+                    new AnalyticsEventRequest { Name = "world_audience_updated", WorldId = world.Id, Screen = "feed" },
                 ],
             },
             CancellationToken.None);
@@ -56,7 +56,7 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
             .ToArray();
         await Assert.That(events.Length).IsEqualTo(1);
         await Assert.That(events[0].GetStructuredStateValue("world_id")).IsEqualTo(world.Id.ToString());
-        await Assert.That(events[0].GetStructuredStateValue("template_id")).IsEqualTo(world.TemplateId?.ToString());
+        await Assert.That(events[0].GetStructuredStateValue("template_id")).IsEqualTo((await GetStoredWorldAsync(1030))["TemplateId"].AsBsonBinaryData.ToGuid().ToString());
         await Assert.That(events[0].GetStructuredStateValue("difficulty")).IsEqualTo("easy");
         await Assert.That(events[0].StructuredState?.Any(property => property.Key == "registration_source") ?? false).IsFalse();
         var registration = productEvents

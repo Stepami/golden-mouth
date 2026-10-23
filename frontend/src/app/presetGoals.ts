@@ -1,4 +1,4 @@
-import type { WorldDefinition } from '../api/types'
+import type { WorldDefinition, WorldDocument } from '../api/types'
 import { optionalWorldTemplate } from '../api/worldContent'
 
 export const presetGoals: Record<string, { goal: string; firstStep: string }> = {
@@ -21,10 +21,7 @@ export const presetGoals: Record<string, { goal: string; firstStep: string }> = 
 }
 
 /** Character/voice/drama choices keep the story; edited lore must not inherit its goal. */
-export function presetGoalFor(world: WorldDefinition, template = optionalWorldTemplate(world.templateId)) {
-  if (!world.templateId || !template || !presetGoals[world.templateId]) return undefined
-  const description = world.description.split('\nПерсона игрока: ')[0]
-  if (description !== template.description || world.title !== template.title || world.where !== template.where
-    || world.firstContext !== template.firstContext || world.firstPrompt !== template.firstPrompt) return undefined
-  return presetGoals[world.templateId]
+export function presetGoalFor(world: WorldDefinition | WorldDocument) {
+  const template = optionalWorldTemplate(world)
+  return template ? presetGoals[template.id] : undefined
 }

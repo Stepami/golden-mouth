@@ -25,7 +25,7 @@ const templateDocuments: Partial<Record<WorldId, WorldDocument>> = {}
 export function installWorldTemplates(templates: WorldDocument[]): void {
   for (const key of Object.keys(templateDocuments)) delete templateDocuments[key as WorldId]
   for (const template of templates) templateDocuments[template.id] = structuredClone(template)
-  worlds.splice(0, worlds.length, ...templates.filter(world => !world.isArchived).map(world => ({
+  worlds.splice(0, worlds.length, ...templates.map(world => ({
     id: world.id, title: world.title, emoji: world.emoji, description: world.description,
     difficulty: world.difficulty, summary: world.summary,
 
@@ -36,7 +36,8 @@ const serverContent: Partial<Record<WorldId, WorldContent>> = {}
 const traitNames = ['Дерзкость', 'Поддержка', 'Загадка', 'Воображение', 'Любопытство', 'Энергия', 'Ирония и расчёт', 'Сухой юмор', 'Самоирония', 'Азарт', 'Внимание']
 export function installWorldContent(worlds: WorldDocument[]): void {
   for (const world of worlds) {
-    if (world.templateId && worldArt[world.templateId]) worldArt[world.id] = worldArt[world.templateId]
+    const template = optionalWorldTemplate(world)
+    if (template && worldArt[template.id]) worldArt[world.id] = worldArt[template.id]
     documents[world.id] = world
     serverContent[world.id] = toWorldContent(world)
   }
@@ -89,18 +90,20 @@ const WORLD_FORMS: Record<string, { gen: string; acc: string }> = {
 export function worldOf(id: string) {
   const world = documents[id as WorldId] ?? templateDocuments[id as WorldId]
   if (!world) throw new Error('World has not been loaded')
-  return { ...world, id: world.id, ...(WORLD_FORMS[world.templateId ?? world.id] ?? { gen: world.title, acc: world.title }) }
+  return { ...world, id: world.id, ...(WORLD_FORMS[optionalWorldTemplate(world)?.id ?? world.id] ?? { gen: world.title, acc: world.title }) }
 }
 
 /** Выбор шаблона заполняет форму; сервер получает описание и ссылку на исходный шаблон. */
 export function worldDefinitionOf(world: WorldId): WorldDefinition {
   const template = templateDocuments[world]
   if (!template) throw new Error('World template has not been loaded')
-  const { id, isArchived: _archived, subscribers: _subscribers, lock: _lock, ...definition } = structuredClone(template)
+  const { id, subscribers: _subscribers, lock: _lock, ...definition } = structuredClone(template)
   return { ...definition, templateId: id, rules: definition.rules.map(rule => ({ ...rule, locked: rule.text === 'Без тем 18+ и травли по внешности' })) }
 }
 
 /** Missing templates must not make custom worlds inherit preset copy. */
-export function optionalWorldTemplate(world: WorldId | null): WorldDocument | undefined {
-  return world ? templateDocuments[world] : undefined
+export function optionalWorldTemplate(world: WorldDefinition | WorldDocument): WorldDocument | undefined {
+  return Object.values(templateDocuments).find(template => template && template.title === world.title
+    && template.description === world.description.split('\nПерсона игрока: ')[0]
+    && template.where === world.where && template.firstContext === world.firstContext && template.firstPrompt === world.firstPrompt)
 }

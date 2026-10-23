@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Reki.Domain.Worlds;
 
 namespace Reki.Api.Requests.Posts;
 
@@ -13,8 +14,7 @@ public sealed record WorldPostsRequest : IValidatableObject
     [Required]
     [BindRequired]
     [FromQuery(Name = "worldId")]
-    [RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")]
-    public required string WorldId { get; init; }
+    public required WorldId WorldId { get; init; }
 
     [FromQuery(Name = "cursor")]
     public Guid? Cursor { get; init; }

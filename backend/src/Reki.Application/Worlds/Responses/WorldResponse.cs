@@ -4,11 +4,7 @@ namespace Reki.Application.Worlds.Responses;
 
 public sealed record WorldResponse
 {
-    public required Guid Id { get; init; }
-
-    public Guid? TemplateId { get; init; }
-
-    public bool IsArchived { get; init; }
+    public required WorldId Id { get; init; }
 
     public required string Title { get; init; }
 

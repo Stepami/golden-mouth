@@ -31,7 +31,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             [
                 new AnalyticsEventRequest
                 {
-                    Name = "screen_view", WorldId = worldId.ToString(), Screen = "feed",
+                    Name = "screen_view", WorldId = WorldId.From(worldId), Screen = "feed",
                 },
             ],
         };
@@ -69,12 +69,12 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         var loaded = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id == first.Id);
 
         await Assert.That(first.Id).IsNotEqualTo(second.Id);
-        await Assert.That(first.Id).IsNotEqualTo(Guid.Parse("edfccf53-65c6-4eaf-8321-2391bc1758bd"));
-        await Assert.That(loaded.TemplateId).IsEqualTo(request.TemplateId);
+        await Assert.That(first.Id).IsNotEqualTo(WorldId.From("edfccf53-65c6-4eaf-8321-2391bc1758bd"));
+        await Assert.That((await Database.GetCollection<World>("worlds").Find(world => world.Id == loaded.Id).SingleAsync()).TemplateId).IsEqualTo(request.TemplateId);
         await Assert.That(loaded.Title).IsEqualTo(request.Title);
         await Assert.That(loaded.AvatarStyle).IsEqualTo(request.AvatarStyle);
         await Assert.That(loaded.Roles.Single()).IsEqualTo("Автор");
-        await Assert.That(loaded.Stars.Single().Id).IsEqualTo("my-star");
+        await Assert.That(loaded.Stars.Single().Id.Value).IsEqualTo("my-star");
         await Assert.That(loaded.Stars.Single().Relation).IsEqualTo(0);
         await Assert.That(loaded.Subscribers).IsEqualTo(120);
         await Assert.That(loaded.Wants.Any(want => want.Done)).IsFalse();
@@ -137,7 +137,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var api = Factory.CreateApiClient();
         var templates = await api.Worlds.GetWorldTemplatesAsync(CancellationToken.None);
-        var template = templates.Single(world => world.Id == Guid.Parse("b3a1a522-0263-4796-a197-57a8731fc291"));
+        var template = templates.Single(world => world.Id == WorldId.From("b3a1a522-0263-4796-a197-57a8731fc291"));
         await Assert.That(template.Stars.Count).IsGreaterThan(0);
         await Assert.That(template.Roles.Count).IsGreaterThan(0);
         var safetyRule = template.Rules.Single(rule => rule.Text == "Без тем 18+ и травли по внешности");
@@ -170,10 +170,10 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Assert
         await Assert.That(first.Id).IsNotEqualTo(selected.Id);
-        await Assert.That(first.TemplateId).IsEqualTo(Guid.Parse("b3a1a522-0263-4796-a197-57a8731fc291"));
-        await Assert.That(selected.TemplateId).IsEqualTo(request.TemplateId);
+        await Assert.That((await Database.GetCollection<World>("worlds").Find(world => world.Id == first.Id).SingleAsync()).TemplateId).IsEqualTo(WorldId.From("b3a1a522-0263-4796-a197-57a8731fc291"));
+        await Assert.That((await Database.GetCollection<World>("worlds").Find(world => world.Id == selected.Id).SingleAsync()).TemplateId).IsEqualTo(request.TemplateId);
         await Assert.That(selected.Name).IsEqualTo("Второй канал");
-        await Assert.That(selected.Stars.Any(star => star.Id == "aiko")).IsTrue();
+        await Assert.That(selected.Stars.Any(star => star.Id == StarId.From("aiko"))).IsTrue();
         await Assert.That(currentPlayer.Id).IsEqualTo(player.Id);
     }
 
@@ -223,13 +223,13 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         },
             CancellationToken.None);
         var templates = await api.Worlds.GetWorldTemplatesAsync(CancellationToken.None);
-        await Assert.That(templates.Select(template => template.Id)).IsEquivalentTo([Guid.Parse("5720946a-ea7c-4a10-9c50-51ce3deefc53"), Guid.Parse("b3a1a522-0263-4796-a197-57a8731fc291"), Guid.Parse("aec9494b-4118-4525-8458-e85d759c8dd9"), Guid.Parse("8c02a7fb-3b55-4eb0-b957-1b4869ed9834")]);
+        await Assert.That(templates.Select(template => template.Id)).IsEquivalentTo([WorldId.From("5720946a-ea7c-4a10-9c50-51ce3deefc53"), WorldId.From("b3a1a522-0263-4796-a197-57a8731fc291"), WorldId.From("aec9494b-4118-4525-8458-e85d759c8dd9"), WorldId.From("8c02a7fb-3b55-4eb0-b957-1b4869ed9834")]);
         foreach (var template in templates)
         {
             var definition = DefinitionOf(template);
             var created = await api.Worlds.CreateWorldAsync(definition, CancellationToken.None);
             var collection = Database.GetCollection<World>("worlds");
-            var id = WorldId.From(created.Id);
+            var id = created.Id;
             var original = await collection.Find(world => world.Id == id).SingleAsync();
             var progressed = original with
             {
@@ -287,7 +287,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             item => item.Id == Domain.Player.PlayerId.From(player.Id),
             Builders<Domain.Player.PlayerProfile>.Update.Set(item => item.HitOwnWorldMilestone, true));
         var created = await api.Worlds.CreateWorldAsync(definition, CancellationToken.None);
-        await Assert.That(created.TemplateId).IsNull();
+        await Assert.That((await Database.GetCollection<World>("worlds").Find(world => world.Id == created.Id).SingleAsync()).TemplateId).IsNull();
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).HitOwnWorldMilestone).IsTrue();
     }
 

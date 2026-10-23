@@ -13,6 +13,7 @@ using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Application.Posts.Responses.ReplyLiveEvent;
 using Reki.Application.Worlds;
 using Reki.Application.Worlds.Responses;
+using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
 
 namespace Reki.Tests.Api;
@@ -158,9 +159,9 @@ public abstract class GameApiTestBase(ApiFactory factory)
             TemplateId = world switch
             {
                 WorldTemplate.Own => null,
-                WorldTemplate.It => Guid.Parse("5720946a-ea7c-4a10-9c50-51ce3deefc53"),
-                WorldTemplate.Stage => Guid.Parse("b3a1a522-0263-4796-a197-57a8731fc291"),
-                _ => Guid.Parse("8c02a7fb-3b55-4eb0-b957-1b4869ed9834"),
+                WorldTemplate.It => WorldId.From("5720946a-ea7c-4a10-9c50-51ce3deefc53"),
+                WorldTemplate.Stage => WorldId.From("b3a1a522-0263-4796-a197-57a8731fc291"),
+                _ => WorldId.From("8c02a7fb-3b55-4eb0-b957-1b4869ed9834"),
             },
         });
     }
@@ -184,7 +185,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             PostIdeas = template.PostIdeas,
             DemoPosts = template.DemoPosts,
             Rules = template.Rules.Select(rule => new WorldRuleRequest(rule.Text, rule.Locked)).ToArray(),
-            Stars = template.Stars.Select(star => new WorldStarRequest(star.Id, star.Name, star.Role, star.Trait, star.About, star.Voice, star.AvatarSeed, star.Relation)).ToArray(),
+            Stars = template.Stars.Select(star => new WorldStarRequest(star.Id.Value, star.Name, star.Role, star.Trait, star.About, star.Voice, star.AvatarSeed, star.Relation)).ToArray(),
             Wants = template.Wants.Select(want => new WantRequest(want.Id, want.Text, want.Reward, want.Done)).ToArray(),
             Achievements = template.Achievements.Select(card => new CollectionCardRequest(card.Id, card.Emoji, card.Title, card.Open)).ToArray(),
             Name = "Player",
