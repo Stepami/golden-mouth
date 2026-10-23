@@ -17,8 +17,7 @@ public sealed record Publication(
     PublishedPost? Result,
     DateTime? ExpiresAtUtc,
     WorldId WorldId,
-    PublicationFailure? Failure = null,
-    PublicationBalance? BalanceSnapshot = null)
+    PublicationFailure? Failure = null)
 {
     public GeneratedPostTurn AssembleTurn()
     {

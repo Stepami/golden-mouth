@@ -20,10 +20,9 @@ internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
         GeneratedPostTurn turn,
         bool ownWords,
         bool wantCompleted,
-        string publicationId,
-        DifficultyBalance? difficulty = null)
+        string publicationId)
     {
-        var world = difficulty ?? balance.Value.Difficulties[gameWorld.Difficulty];
+        var world = balance.Value.Difficulties[gameWorld.Difficulty];
         var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
         var postIndex = player.EnergyUsed + 1;
         var multiplier = GetGrowthMultiplier(gameWorld, postIndex, ownWords);

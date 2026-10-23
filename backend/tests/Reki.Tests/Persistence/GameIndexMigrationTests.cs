@@ -26,10 +26,10 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     private static readonly DateTimeOffset CreatedAt = new(2026, 10, 5, 15, 0, 0, 123, TimeSpan.FromHours(3));
 
     [Test]
-    [Arguments("own", "Normal", 1.0, 0.15, 1.0, 5000L)]
-    [Arguments("it", "Hard", 1.25, 0.20, 1.4, 1000L)]
+    [Arguments("own", "Normal")]
+    [Arguments("it", "Hard")]
     public async Task UnifyWorldBalance_LegacyWorld_PreservesPublicationOnRetryAsync(
-        string key, string difficulty, double growth, double flop, double viral, long hateFrom)
+        string key, string difficulty)
     {
         // Arrange
         await using var scope = CreateDatabase();
@@ -66,6 +66,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await database.GetCollection<BsonDocument>("publications").InsertOneAsync(new BsonDocument
         {
             ["_id"] = "saved-publication", ["WorldId"] = oldId, ["Text"] = "saved text", ["OwnWords"] = true,
+            ["BalanceSnapshot"] = new BsonDocument("Obsolete", true),
             ["WantId"] = BsonNull.Value, ["RequestHash"] = "old hash", ["Status"] = "ReadyForModeration",
             ["Result"] = new BsonDocument("Post", new BsonDocument { ["WorldId"] = oldId, ["SubscriberDelta"] = 17L }),
         });
@@ -118,12 +119,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(publication["WorldId"]).IsEqualTo(uuid);
         await Assert.That(publication["Result"]["Post"]["WorldId"]).IsEqualTo(uuid);
         await Assert.That(publication["Result"]["Post"]["SubscriberDelta"]).IsEqualTo(17L);
-        await Assert.That(publication["BalanceSnapshot"]["Difficulty"]).IsEqualTo(difficulty);
-        var coefficients = publication["BalanceSnapshot"]["Coefficients"];
-        await Assert.That(coefficients["GrowthCoefficient"].ToDouble()).IsEqualTo(growth);
-        await Assert.That(coefficients["FlopChance"].ToDouble()).IsEqualTo(flop);
-        await Assert.That(coefficients["ViralMultiplier"].ToDouble()).IsEqualTo(viral);
-        await Assert.That(coefficients["HateFrom"].ToInt64()).IsEqualTo(hateFrom);
+        await Assert.That(publication.Contains("BalanceSnapshot")).IsFalse();
         await Assert.That(publication["RequestHash"].AsString).IsEqualTo("AB03196A97E021E36DCCD3B80D4E0219BDDAC0E01092CBF3CFB834477E89D1BF");
         var retainedTickers = await database.GetCollection<BsonDocument>("ticker_TimeTickers").Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
         await Assert.That(retainedTickers.Single()).IsEqualTo(unrelatedTicker);

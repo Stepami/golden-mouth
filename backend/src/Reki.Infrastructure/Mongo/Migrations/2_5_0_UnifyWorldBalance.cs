@@ -31,7 +31,6 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
         var templates = await ReadWorldsAsync(db, session, MongoCollections.WorldTemplates, cancellationToken);
         var worlds = await ReadWorldsAsync(db, session, MongoCollections.Worlds, cancellationToken);
         var ids = new Dictionary<BsonValue, BsonBinaryData>();
-        var profiles = new Dictionary<BsonValue, BsonDocument>();
         foreach (var document in templates.Concat(worlds))
         {
             var previous = document["_id"];
@@ -39,8 +38,6 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
             {
                 throw new InvalidOperationException("World identifiers are not globally unique.");
             }
-
-            profiles[previous] = Snapshot(document);
         }
 
         if (ids.Values.Distinct().Count() != ids.Count)
@@ -53,7 +50,7 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
         await RewriteWorldsAsync(db, session, MongoCollections.Worlds, worlds, ids, cancellationToken);
         foreach (var collectionName in new[] { MongoCollections.Posts, MongoCollections.Publications, MongoCollections.Events })
         {
-            await RewriteReferencesAsync(db, session, collectionName, ids, profiles, cancellationToken);
+            await RewriteReferencesAsync(db, session, collectionName, ids, cancellationToken);
         }
 
         await db.GetCollection<BsonDocument>("ticker_TimeTickers").DeleteManyAsync(
@@ -104,20 +101,6 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
         null when document.GetValue("Difficulty", BsonNull.Value).IsString => Enum.Parse<WorldDifficulty>(document["Difficulty"].AsString, ignoreCase: true),
         _ => throw new InvalidOperationException("The mechanical difficulty cannot be resolved."),
     };
-
-    private static BsonDocument Snapshot(BsonDocument document)
-    {
-        var difficulty = Difficulty(document);
-        var own = LegacyKey(document) == "own";
-        var coefficients = difficulty switch
-        {
-            WorldDifficulty.Easy => new BsonDocument { { "GrowthCoefficient", 1.0 }, { "FlopChance", 0.10 }, { "ViralMultiplier", 1.0 }, { "HateFrom", 5000L } },
-            WorldDifficulty.Normal => new BsonDocument { { "GrowthCoefficient", own ? 1.0 : 1.1 }, { "FlopChance", 0.15 }, { "ViralMultiplier", own ? 1.0 : 1.2 }, { "HateFrom", own ? 5000L : 3000L } },
-            WorldDifficulty.Hard => new BsonDocument { { "GrowthCoefficient", 1.25 }, { "FlopChance", 0.20 }, { "ViralMultiplier", 1.4 }, { "HateFrom", 1000L } },
-            _ => throw new InvalidOperationException("Unknown mechanical difficulty."),
-        };
-        return new BsonDocument { { "Difficulty", difficulty.ToString() }, { "Coefficients", coefficients } };
-    }
 
     private static async Task RewriteWorldsAsync(
         IMongoDatabase db,
@@ -202,7 +185,6 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
         IClientSessionHandle session,
         string name,
         IReadOnlyDictionary<BsonValue, BsonBinaryData> ids,
-        IReadOnlyDictionary<BsonValue, BsonDocument> profiles,
         CancellationToken cancellationToken)
     {
         var collection = db.GetCollection<BsonDocument>(name);
@@ -210,10 +192,9 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
         await cursor.ForEachAsync(
             async document =>
             {
-                if (name == MongoCollections.Publications && document.TryGetValue("WorldId", out var worldId) &&
-                    (!document.Contains("BalanceSnapshot") || document["BalanceSnapshot"].IsBsonNull))
+                if (name == MongoCollections.Publications)
                 {
-                    document["BalanceSnapshot"] = ResolveProfile(worldId, ids, profiles).DeepClone();
+                    document.Remove("BalanceSnapshot");
                 }
 
                 RewriteReferenceFields(document, ids);
@@ -229,18 +210,6 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
                 await collection.ReplaceOneAsync(session, new BsonDocument("_id", document["_id"]), document, cancellationToken: cancellationToken);
             },
             cancellationToken);
-    }
-
-    private static BsonDocument ResolveProfile(BsonValue worldId, IReadOnlyDictionary<BsonValue, BsonBinaryData> ids, IReadOnlyDictionary<BsonValue, BsonDocument> profiles)
-    {
-        if (profiles.TryGetValue(worldId, out var profile))
-        {
-            return profile;
-        }
-
-        var source = ids.FirstOrDefault(pair => pair.Value == ConvertId(worldId));
-        return source.Key is not null && profiles.TryGetValue(source.Key, out profile)
-            ? profile : throw new InvalidOperationException("A publication references a missing world.");
     }
 
     private static void RewriteReferenceFields(BsonValue value, IReadOnlyDictionary<BsonValue, BsonBinaryData> ids)

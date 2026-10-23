@@ -300,7 +300,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Publication_CrossesThreshold_PermanentlyUnlocksOwnWorldAsync()
     {
         using var api = Factory.CreateApiClient(1093);
-        await CreatePlayerWithWorldAsync(api);
+        var player = await CreatePlayerWithWorldAsync(api);
         var id = WorldId.From(await GetWorldIdAsync(api));
         await Database.GetCollection<World>("worlds").UpdateOneAsync(
             world => world.Id == id,
@@ -308,7 +308,14 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).HitOwnWorldMilestone).IsFalse();
 
         // Fixed publication seed produces a positive turn; flops must not unlock the milestone.
-        await PublishWithIdAsync(1093, "Расскажу о сегодняшней репетиции", "00000000-0000-0000-0000-000000000001");
+        var generation = await GenerateWithIdAsync(1093, "Расскажу о сегодняшней репетиции", "00000000-0000-0000-0000-000000000001");
+        await Assert.That(generation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        var definition = (await CreateWorldDefinitionAsync(api)) with { Difficulty = WorldDifficulty.Hard };
+        await api.Worlds.UpdateWorldAsync(id.ToString(), definition, CancellationToken.None);
+        await api.Posts.ModeratePublicationAsync(generation.PublicationId, id.ToString(), CancellationToken.None);
+        var scored = Factory.Services.GetFakeLogCollector().GetSnapshot().Single(record =>
+            record.GetStructuredStateValue("event_name") == "post_scored" && record.GetStructuredStateValue("player_id") == player.Id.ToString());
+        await Assert.That(scored.GetStructuredStateValue("difficulty")).IsEqualTo("hard");
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).HitOwnWorldMilestone).IsTrue();
         await Database.GetCollection<World>("worlds").UpdateOneAsync(
             world => world.Id == id,

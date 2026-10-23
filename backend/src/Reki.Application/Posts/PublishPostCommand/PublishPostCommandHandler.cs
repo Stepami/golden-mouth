@@ -79,10 +79,7 @@ internal sealed class PublishPostCommandHandler(
             throw;
         }
 
-        var snapshot = publication.BalanceSnapshot
-            ?? throw new InvalidOperationException("The publication has no difficulty snapshot.");
-        var difficulty = snapshot.Coefficients;
-        StarTurnPolicy.EnsurePostAllowed(turn, world, StarTurnPolicy.IsHateEnabled(player, world, balance.Value, now, difficulty));
+        StarTurnPolicy.EnsurePostAllowed(turn, world, StarTurnPolicy.IsHateEnabled(player, world, balance.Value, now));
 
         var wantCompleted = wantId is not null && world.Player.Wants.Any(want =>
             want.Id == wantId && !want.Done);
@@ -97,8 +94,7 @@ internal sealed class PublishPostCommandHandler(
             turn,
             ownWords,
             wantCompleted,
-            publication.Id,
-            difficulty);
+            publication.Id);
         var updatedWorld = world.PublishPost(
             progression.SubscriberDelta,
             progression.Viral,
@@ -163,7 +159,7 @@ internal sealed class PublishPostCommandHandler(
         }
 
         analytics.TrackWorldAudience(updatedWorld);
-        TrackProgression(player, updated, world, updatedWorld, post, turn, snapshot.Difficulty, analytics);
+        TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
         await feedScheduler.ScheduleAsync(player.Id, world.Id);
         return PostResponseMapper.MapLiveEvents(published, updatedWorld, player.Id);
     }
@@ -184,7 +180,6 @@ internal sealed class PublishPostCommandHandler(
         World afterWorld,
         GamePost post,
         GeneratedPostTurn turn,
-        WorldDifficulty difficulty,
         ProductTelemetry analytics)
     {
         analytics.TrackPlayer(
@@ -193,7 +188,7 @@ internal sealed class PublishPostCommandHandler(
             new Dictionary<string, string>
             {
                 ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty,
-                ["difficulty"] = difficulty.ToString().ToLowerInvariant(),
+                ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant(),
                 ["brave"] = turn.Brave.ToString("0.###", CultureInfo.InvariantCulture),
                 ["humor"] = turn.Humor.ToString("0.###", CultureInfo.InvariantCulture),
                 ["topic"] = turn.Topic.ToString("0.###", CultureInfo.InvariantCulture),
@@ -213,7 +208,7 @@ internal sealed class PublishPostCommandHandler(
                     "level_up",
                     new Dictionary<string, string>
                     {
-                        ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = difficulty.ToString().ToLowerInvariant(),
+                        ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant(),
                         ["skill"] = skillId.Value,
                         ["level"] = progress.Level.ToString(CultureInfo.InvariantCulture),
                     });
@@ -228,7 +223,7 @@ internal sealed class PublishPostCommandHandler(
             analytics.TrackPlayer(
                 after,
                 "card_earned",
-                new Dictionary<string, string> { ["card"] = achievement.Id, ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = difficulty.ToString().ToLowerInvariant() });
+                new Dictionary<string, string> { ["card"] = achievement.Id, ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant() });
         }
     }
 }

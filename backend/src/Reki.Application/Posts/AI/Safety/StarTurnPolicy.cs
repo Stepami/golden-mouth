@@ -7,9 +7,9 @@ namespace Reki.Application.Posts.AI.Safety;
 
 public static class StarTurnPolicy
 {
-    public static bool IsHateEnabled(PlayerProfile player, World gameWorld, GameBalance balance, DateTimeOffset now, DifficultyBalance? difficulty = null)
+    public static bool IsHateEnabled(PlayerProfile player, World gameWorld, GameBalance balance, DateTimeOffset now)
     {
-        var profile = difficulty ?? balance.Difficulties[gameWorld.Difficulty];
+        var profile = balance.Difficulties[gameWorld.Difficulty];
         return gameWorld.Player.Subscribers >= profile.HateFrom && gameWorld.Player.Drama != WorldDrama.Off &&
             (player.HateDisabledUntilUtc is null || player.HateDisabledUntilUtc <= now);
     }
