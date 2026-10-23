@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
 namespace Reki.Api.Requests.Posts;
@@ -17,7 +18,7 @@ public sealed record WorldPostsRequest : IValidatableObject
     public required WorldId WorldId { get; init; }
 
     [FromQuery(Name = "cursor")]
-    public Guid? Cursor { get; init; }
+    public PostId? Cursor { get; init; }
 
     [DefaultValue(DefaultPageSize)]
     [FromQuery(Name = "pageSize")]
@@ -26,7 +27,7 @@ public sealed record WorldPostsRequest : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (Cursor is { Version: not 7 })
+        if (Cursor is { Value.Version: not 7 })
         {
             yield return new ValidationResult("Cursor must be a version 7 UUID.", [nameof(Cursor)]);
         }

@@ -44,8 +44,7 @@ public sealed record CreateWorldRequest
 
     public string Summary { get; init; } = string.Empty;
 
-    [EnumDataType(typeof(WorldDifficulty))]
-    public WorldDifficulty Difficulty { get; init; } = WorldDifficulty.Easy;
+    public WorldDifficulty Difficulty { get; init; } = WorldDifficulty.Normal;
 
     public string? UnlockSkill { get; init; }
 

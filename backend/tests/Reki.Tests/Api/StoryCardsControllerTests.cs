@@ -60,7 +60,7 @@ public sealed class StoryCardsControllerTests(ApiFactory factory) : GameApiTestB
         await Assert.That(BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(16, 4))).IsEqualTo(1080);
         await Assert.That(BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(20, 4))).IsEqualTo(1920);
         await Assert.That(wrongOwner.StatusCode).IsEqualTo(StatusCodes.Status404NotFound);
-        await Assert.That(invalidId.StatusCode).IsEqualTo(StatusCodes.Status404NotFound);
+        await Assert.That(invalidId.StatusCode).IsEqualTo(StatusCodes.Status400BadRequest);
         await Assert.That(deleted.StatusCode).IsEqualTo(StatusCodes.Status404NotFound);
     }
 }

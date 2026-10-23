@@ -141,7 +141,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         {
             // Compatibility fixtures represent an already unlocked, historical owner.
             await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(
-                new BsonDocument("_id", new BsonBinaryData(Guid.Parse(player.Id), GuidRepresentation.Standard)),
+                new BsonDocument("_id", new BsonBinaryData(player.Id.Value, GuidRepresentation.Standard)),
                 new BsonDocument("$set", new BsonDocument("HitOwnWorldMilestone", true)));
         }
 
@@ -185,7 +185,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             PostIdeas = template.PostIdeas,
             DemoPosts = template.DemoPosts,
             Rules = template.Rules.Select(rule => new WorldRuleRequest(rule.Text, rule.Locked)).ToArray(),
-            Stars = template.Stars.Select(star => new WorldStarRequest(star.Id.Value, star.Name, star.Role, star.Trait, star.About, star.Voice, star.AvatarSeed, star.Relation)).ToArray(),
+            Stars = template.Stars.Select(star => new WorldStarRequest(star.Id, star.Name, star.Role, star.Trait, star.About, star.Voice, star.AvatarSeed, star.Relation)).ToArray(),
             Wants = template.Wants.Select(want => new WantRequest(want.Id, want.Text, want.Reward, want.Done)).ToArray(),
             Achievements = template.Achievements.Select(card => new CollectionCardRequest(card.Id, card.Emoji, card.Title, card.Open)).ToArray(),
             Name = "Player",
@@ -237,7 +237,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         using var response = await api.Posts.ReplyToPostAsync(
             postId,
             await GetWorldIdAsync(api),
-            new ReplyRequest { CommentId = commentId, RequestId = replyId, Text = text },
+            new ReplyRequest { CommentId = Reki.Domain.Posts.CommentId.From(commentId), RequestId = replyId, Text = text },
             CancellationToken.None);
         using var reader = new StreamReader(response.Stream);
         var body = await reader.ReadToEndAsync(CancellationToken.None);

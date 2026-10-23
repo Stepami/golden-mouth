@@ -31,7 +31,7 @@ public static partial class PostResponseMapper
         var resolved = ResolveAuthor(post.AuthorId, author);
         return new(
             FeedItemKind.Post,
-            post.Id.Value.ToString("N"),
+            post.Id,
             resolved.Name,
             resolved.Avatar,
             resolved.Role,
@@ -43,7 +43,7 @@ public static partial class PostResponseMapper
             null);
     }
 
-    [MapProperty("Id.Value", nameof(ChannelPostResponse.PostId))]
+    [MapProperty(nameof(GamePost.Id), nameof(ChannelPostResponse.PostId))]
     [MapProperty("Comments.Count", nameof(ChannelPostResponse.CommentCount))]
     [MapPropertyFromSource(nameof(ChannelPostResponse.Reactions), Use = nameof(CreateReactions))]
     [MapperIgnoreSource(nameof(GamePost.AuthorId))]
@@ -75,8 +75,8 @@ public static partial class PostResponseMapper
 
     public static PostDetailResponse MapPost(this GamePost post, World world, PlayerId playerId) =>
         new(
-            post.Id.Value.ToString("N"),
-            ResolveAuthor(post.AuthorId, world).Id,
+            post.Id,
+            post.AuthorId,
             post.Text,
             post.Views,
             CreateReactions(post),
@@ -87,7 +87,7 @@ public static partial class PostResponseMapper
         var author = ResolveAuthor(comment.AuthorId, world);
         var reactions = comment.Reactions.Select(reaction => MapReaction(reaction, world, playerId)).ToArray();
         return new CommentResponse(
-            comment.Id.Value.ToString("N"),
+            comment.Id,
             author.Name,
             author.Avatar,
             author.Handle,
@@ -95,9 +95,9 @@ public static partial class PostResponseMapper
             author.Star,
             comment.AuthorId == playerId.ToAuthorId(),
             comment.Hidden,
-            comment.ParentCommentId?.Value.ToString("N"),
+            comment.ParentCommentId,
             comment.RequestId,
-            author.Id,
+            comment.AuthorId,
             author.Role,
             post.GetBranch(comment.Id).Count - 1,
             reactions);
@@ -107,7 +107,7 @@ public static partial class PostResponseMapper
     {
         var owner = ResolveAuthor(reaction.AuthorId, world);
         return new CommentReactionResponse(
-            owner.Id,
+            reaction.AuthorId,
             owner.Name,
             owner.Avatar,
             owner.Star,
@@ -115,24 +115,22 @@ public static partial class PostResponseMapper
             reaction.Emoji);
     }
 
-    private static (string Id, string Name, string Avatar, string Role, string Handle, bool Star) ResolveAuthor(AuthorId id, World world)
+    private static (string Name, string Avatar, string Role, string Handle, bool Star) ResolveAuthor(AuthorId id, World world)
     {
         if (id == world.Player.PlayerId.ToAuthorId())
         {
-            return (world.Player.PlayerId.Value.ToString("N"), world.Player.Name, world.Player.Avatar, world.Player.Role, world.Player.Avatar, false);
+            return (world.Player.Name, world.Player.Avatar, world.Player.Role, world.Player.Avatar, false);
         }
 
         var star = world.FindStar(id);
         if (star is not null)
         {
-            return (star.Id.Value, star.Name, star.AvatarSeed, star.Role, $"@{star.AvatarSeed.TrimStart('@')}", true);
+            return (star.Name, star.AvatarSeed, star.Role, $"@{star.AvatarSeed.TrimStart('@')}", true);
         }
 
         var deleted = WorldStar.DeletedAccount;
-        return (id.Value, deleted.Name, deleted.AvatarSeed, deleted.Role, string.Empty, false);
+        return (deleted.Name, deleted.AvatarSeed, deleted.Role, string.Empty, false);
     }
-
-    private static string MapGuid(Guid source) => source.ToString("N");
 
     private static PostResultResponse MapResult(PublishedPost source, World world)
     {
@@ -141,7 +139,7 @@ public static partial class PostResponseMapper
         var whys = source.Reasons.Select(reason => new WhyResponse(reason.Icon, reason.Label, $"+{post.SubscriberDelta}")).ToArray();
         var best = bestComment is null ? null : new BestCommentResponse(ResolveAuthor(bestComment.AuthorId, world).Avatar, bestComment.Text);
         return new PostResultResponse(
-            post.Id.Value.ToString("N"),
+            post.Id,
             post.SubscriberDelta,
             post.Viral ? "Пост залетел" : "Канал растёт",
             whys,

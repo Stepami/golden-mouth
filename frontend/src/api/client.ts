@@ -344,8 +344,8 @@ export const api = {
     dmSend: (starId: string, text: string): Promise<{
         reply?: string;
         repliesLeft: number;
-    }> => data(sdk.social.sendDirectMessage(starId, { text }, worldId())).then(value => ({ ...value, reply: value.reply ?? undefined, repliesLeft: Number(value.repliesLeft) })),
-    forget: (starId: string, fact: string) => data(sdk.social.forgetStarMemory(starId, { fact }, worldId())),
+    }> => data(sdk.social.sendDirectMessage(starId, worldId(), { text })).then(value => ({ ...value, reply: value.reply ?? undefined, repliesLeft: Number(value.repliesLeft) })),
+    forget: (starId: string, fact: string) => data(sdk.social.forgetStarMemory(starId, worldId(), { fact })),
     eventToday: (): Promise<GameEvent> => data(sdk.events.getTodayEvent(worldId())),
     answerEvent: (id: string, text: string) => data(sdk.events.answerEvent(id, worldId(), { text })),
     challenge: (): Promise<Challenge | null> => data(sdk.social.getActiveChallenge()).then(map.challenge),

@@ -1,7 +1,9 @@
+using Reki.Domain.Worlds;
+
 namespace Reki.Application.Social.Responses.Dm;
 
 public sealed record StarResponse(
-    string Id,
+    StarId Id,
     string Name,
     string Role,
     string Trait,

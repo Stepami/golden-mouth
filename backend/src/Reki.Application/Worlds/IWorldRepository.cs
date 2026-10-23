@@ -14,8 +14,6 @@ public interface IWorldRepository
 
     ValueTask<IReadOnlyList<World>> GetWorldTemplatesAsync(CancellationToken cancellationToken);
 
-    ValueTask<World?> GetWorldTemplateAsync(WorldId templateId, CancellationToken cancellationToken);
-
     ValueTask<IReadOnlyList<World>> GetWorldsAsync(PlayerId playerId, CancellationToken cancellationToken);
 
     ValueTask<bool> TryReplaceWorldAsync(World world, int expectedVersion, CancellationToken cancellationToken);

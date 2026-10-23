@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.OpenApi;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
+using Reki.Domain.Events;
+using Reki.Domain.Player;
+using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 using TgMiniAppAuth;
@@ -15,6 +18,11 @@ namespace Reki.Api;
 [OpenApiMarker<WorldId>]
 [OpenApiMarker<StarId>]
 [OpenApiMarker<SessionId>]
+[OpenApiMarker<PlayerId>]
+[OpenApiMarker<PostId>]
+[OpenApiMarker<CommentId>]
+[OpenApiMarker<AuthorId>]
+[OpenApiMarker<RekiEventId>]
 internal static partial class DependencyInjection
 {
     public static IServiceCollection AddApi(this IServiceCollection services)

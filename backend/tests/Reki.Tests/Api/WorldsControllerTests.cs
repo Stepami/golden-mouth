@@ -3,6 +3,7 @@ using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Worlds;
 using Reki.Application.Player;
+using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 
 namespace Reki.Tests.Api;
@@ -24,7 +25,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         var worldId = await GetWorldIdAsync(own ? owner : other);
         var batch = new AnalyticsBatchRequest
         {
-            Session = Guid.NewGuid().ToString("N"),
+            Session = SessionId.New(),
             Platform = "web",
             Experiments = new Dictionary<string, string>(),
             Events =
@@ -53,10 +54,11 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         using var api = Factory.CreateApiClient(1020);
         await CreatePlayerWithWorldAsync(api);
         var definition = await CreateWorldDefinitionAsync(api);
-        var star = definition.Stars[0] with { Id = "my-star", Name = "Своя звезда", Relation = 5 };
+        var star = definition.Stars[0] with { Id = StarId.From("my-star"), Name = "Своя звезда", Relation = 5 };
         var request = definition with
         {
             Title = "Новый мир",
+            Difficulty = (WorldDifficulty)0,
             AvatarStyle = "shapes",
             Roles = ["Автор"],
             Stars = [star],
@@ -71,6 +73,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(first.Id).IsNotEqualTo(second.Id);
         await Assert.That(first.Id).IsNotEqualTo(WorldId.From("edfccf53-65c6-4eaf-8321-2391bc1758bd"));
         await Assert.That((await Database.GetCollection<World>("worlds").Find(world => world.Id == loaded.Id).SingleAsync()).TemplateId).IsEqualTo(request.TemplateId);
+        await Assert.That(loaded.Difficulty).IsEqualTo(WorldDifficulty.Normal);
         await Assert.That(loaded.Title).IsEqualTo(request.Title);
         await Assert.That(loaded.AvatarStyle).IsEqualTo(request.AvatarStyle);
         await Assert.That(loaded.Roles.Single()).IsEqualTo("Автор");
@@ -246,6 +249,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             var request = definition with
             {
                 Title = "Изменённый мир",
+                Difficulty = (WorldDifficulty)0,
                 TemplateId = null,
                 Stars = definition.Stars.Skip(1).ToArray(),
                 Roles = ["Хроникёр"],
@@ -253,6 +257,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             };
             await api.Worlds.UpdateWorldAsync(created.Id.ToString(), request, CancellationToken.None);
             var updated = await collection.Find(world => world.Id == id).SingleAsync();
+            await Assert.That(updated.Difficulty).IsEqualTo(WorldDifficulty.Normal);
             await Assert.That(updated.TemplateId).IsEqualTo(original.TemplateId);
             await Assert.That(updated.Player.PlayerId).IsEqualTo(original.Player.PlayerId);
             await Assert.That(updated.Player.Subscribers).IsEqualTo(730L);
@@ -284,7 +289,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(rejected?.StatusCode).IsEqualTo(409);
         await Assert.That((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Count).IsEqualTo(1);
         await Database.GetCollection<Domain.Player.PlayerProfile>("players").UpdateOneAsync(
-            item => item.Id == Domain.Player.PlayerId.From(player.Id),
+            item => item.Id == player.Id,
             Builders<Domain.Player.PlayerProfile>.Update.Set(item => item.HitOwnWorldMilestone, true));
         var created = await api.Worlds.CreateWorldAsync(definition, CancellationToken.None);
         await Assert.That((await Database.GetCollection<World>("worlds").Find(world => world.Id == created.Id).SingleAsync()).TemplateId).IsNull();

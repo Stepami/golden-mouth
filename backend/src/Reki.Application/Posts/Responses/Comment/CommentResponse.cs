@@ -1,7 +1,9 @@
+using Reki.Domain.Posts;
+
 namespace Reki.Application.Posts.Responses.Comment;
 
 public sealed record CommentResponse(
-    string Id,
+    CommentId Id,
     string Author,
     string Avatar,
     string Handle,
@@ -9,9 +11,9 @@ public sealed record CommentResponse(
     bool Star,
     bool Me,
     bool Hidden,
-    string? ParentCommentId,
+    CommentId? ParentCommentId,
     string? RequestId,
-    string AuthorId,
+    AuthorId AuthorId,
     string Role,
     int Depth,
     IReadOnlyList<CommentReactionResponse> Reactions);

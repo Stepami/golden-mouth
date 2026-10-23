@@ -1,7 +1,9 @@
+using Reki.Domain.Events;
+
 namespace Reki.Application.Events.Responses;
 
 public sealed record GameEventResponse(
-    string Id,
+    RekiEventId Id,
     GameEventKind Kind,
     string Badge,
     string Title,

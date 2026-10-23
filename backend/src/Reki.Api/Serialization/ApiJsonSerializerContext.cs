@@ -46,6 +46,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(StarFeedRequest))]
 [JsonSerializable(typeof(SessionId))]
+[JsonSerializable(typeof(Guid))]
 [JsonSerializable(typeof(PlayerId))]
 [JsonSerializable(typeof(PostId))]
 [JsonSerializable(typeof(CommentId))]
@@ -105,7 +106,6 @@ namespace Reki.Api.Serialization;
 [JsonSourceGenerationOptions(
     Converters =
     [
-        typeof(CamelCaseEnumConverter<SkillIdType>),
         typeof(CamelCaseEnumConverter<Address>),
         typeof(CamelCaseEnumConverter<WorldDrama>),
         typeof(CamelCaseEnumConverter<WorldDifficulty>),

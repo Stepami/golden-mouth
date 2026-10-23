@@ -13,7 +13,7 @@ public sealed record World
 
     public WorldId? TemplateId { get; init; }
 
-    public WorldDifficulty Difficulty { get; init; } = WorldDifficulty.Easy;
+    public WorldDifficulty Difficulty { get; init; } = WorldDifficulty.Normal;
 
     public bool IsArchived { get; init; }
 

@@ -1,7 +1,9 @@
+using Reki.Domain.Player;
+
 namespace Reki.Application.Social.Responses;
 
 public sealed record FriendResponse(
-    string Id,
+    PlayerId Id,
     string Name,
     string Avatar,
     string World,

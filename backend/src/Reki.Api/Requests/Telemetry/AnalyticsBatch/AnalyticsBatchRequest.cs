@@ -1,13 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using Reki.Application.Telemetry;
+using Reki.Domain.Telemetry;
 
 namespace Reki.Api.Requests.Telemetry.AnalyticsBatch;
 
 public sealed record AnalyticsBatchRequest
 {
     [Required]
-    [MaxLength(128)]
-    public required string Session { get; init; }
+    public required SessionId Session { get; init; }
 
     [Required]
     [MaxLength(64)]

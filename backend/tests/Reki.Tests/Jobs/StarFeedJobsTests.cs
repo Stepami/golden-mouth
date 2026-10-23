@@ -35,7 +35,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Сегодня репетировали новую сцену.")));
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.New(createdAt), createdAt.ToUnixTimeMilliseconds()));
+            new StarFeedRequest(player.Id, WorldId.From(worldId), PostId.New(createdAt), createdAt.ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
 
@@ -75,7 +75,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, text)));
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
+            new StarFeedRequest(player.Id, WorldId.From(worldId), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
 
@@ -97,7 +97,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await CreatePlayerWithWorldAsync(second);
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(await GetWorldIdAsync(second)), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
+            new StarFeedRequest(player.Id, WorldId.From(await GetWorldIdAsync(second)), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
 
@@ -145,7 +145,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var worldId = await GetWorldIdAsync(api);
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
+            new StarFeedRequest(player.Id, WorldId.From(worldId), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
         Factory.Llm.RespondWithHttpError();
@@ -172,7 +172,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
 
         // Assert
         var feed = await api.Posts.GetFeedAsync(worldId, null, null, CancellationToken.None);
-        await Assert.That(feed.Items.Single().PostId).IsEqualTo(context.Request.PostId.Value.ToString("N"));
+        await Assert.That(feed.Items.Single().PostId).IsEqualTo(context.Request.PostId);
         await Assert.That(feed.Items.Single().Text).IsEqualTo("Новый день в мастерской.");
     }
 
@@ -229,7 +229,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         // Arrange
         using var api = Factory.CreateApiClient(9509);
         var player = await CreatePlayerWithWorldAsync(api);
-        var playerId = PlayerId.From(player.Id);
+        var playerId = player.Id;
         var worldId = WorldId.From(await GetWorldIdAsync(api));
         var postRepository = Factory.Services.GetRequiredService<IPostRepository>();
         var worldRepository = Factory.Services.GetRequiredService<IWorldRepository>();

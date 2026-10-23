@@ -66,7 +66,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
     [HttpPost("posts/{postId}/replies", Name = "ReplyToPost")]
     [ActionName("ReplyToPost")]
     public ServerSentEventsResult<ReplyLiveEvent> ReplyToPost(
-        string postId,
+        PostId postId,
         ReplyRequest request,
         [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken)
@@ -90,7 +90,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         var worlds = await rekiContext.Worlds;
         IReadOnlyList<FeedItemResponse> response =
             [.. result.Items.Select(post => PostResponseMapper.MapFeedItem(post, worlds[post.WorldId]))];
-        return TypedResults.Ok(new PageResponse<FeedItemResponse>(response, result.NextCursor?.ToString()));
+        return TypedResults.Ok(new PageResponse<FeedItemResponse>(response, result.NextCursor));
     }
 
     [HttpGet("posts/mine", Name = "GetChannelPosts")]
@@ -103,18 +103,18 @@ public sealed class PostsController(ISender sender) : ControllerBase
             request.ToQuery(),
             cancellationToken);
         IReadOnlyList<ChannelPostResponse> response = [.. result.Items.Select(PostResponseMapper.MapChannelPost)];
-        return TypedResults.Ok(new PageResponse<ChannelPostResponse>(response, result.NextCursor?.ToString()));
+        return TypedResults.Ok(new PageResponse<ChannelPostResponse>(response, result.NextCursor));
     }
 
     [HttpGet("posts/{postId}", Name = "GetPost")]
     [ActionName("GetPost")]
     public async Task<Ok<PostDetailResponse>> GetPostAsync(
-        string postId,
+        PostId postId,
         [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            new PostDetailQuery(PostId.From(postId), worldId),
+            new PostDetailQuery(postId, worldId),
             cancellationToken);
         return TypedResults.Ok(result);
     }

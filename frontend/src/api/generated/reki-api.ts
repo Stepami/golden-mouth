@@ -782,17 +782,16 @@ export class SocialClient {
     }
 
     /**
-     * @param worldId (optional) 
      * @return OK
      */
-    getDirectMessages(starId: string, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<DmResponse>> {
+    getDirectMessages(starId: string, worldId: string, signal?: AbortSignal): Promise<SwaggerResponse<DmResponse>> {
         let url_ = this.baseUrl + "/dm/{starId}?";
         if (starId === undefined || starId === null)
             throw new globalThis.Error("The parameter 'starId' must be defined.");
         url_ = url_.replace("{starId}", encodeURIComponent("" + starId));
-        if (worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' cannot be null.");
-        else if (worldId !== undefined)
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -827,17 +826,16 @@ export class SocialClient {
     }
 
     /**
-     * @param worldId (optional) 
      * @return OK
      */
-    sendDirectMessage(starId: string, body: DirectMessageRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<SendDirectMessageResponse>> {
+    sendDirectMessage(starId: string, worldId: string, body: DirectMessageRequest, signal?: AbortSignal): Promise<SwaggerResponse<SendDirectMessageResponse>> {
         let url_ = this.baseUrl + "/dm/{starId}?";
         if (starId === undefined || starId === null)
             throw new globalThis.Error("The parameter 'starId' must be defined.");
         url_ = url_.replace("{starId}", encodeURIComponent("" + starId));
-        if (worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' cannot be null.");
-        else if (worldId !== undefined)
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -876,17 +874,16 @@ export class SocialClient {
     }
 
     /**
-     * @param worldId (optional) 
      * @return OK
      */
-    forgetStarMemory(starId: string, body: ForgetMemoryRequest, worldId?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+    forgetStarMemory(starId: string, worldId: string, body: ForgetMemoryRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/stars/{starId}/memory?";
         if (starId === undefined || starId === null)
             throw new globalThis.Error("The parameter 'starId' must be defined.");
         url_ = url_.replace("{starId}", encodeURIComponent("" + starId));
-        if (worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' cannot be null.");
-        else if (worldId !== undefined)
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 

@@ -8,7 +8,7 @@ function skillKey(value: string): Ui.SkillId {
   switch (value) { case 'brave': case 'humor': case 'topic': return value; default: throw new Error('Unknown skill') }
 }
 export function world(value: Input<Wire.WorldResponse>): Ui.WorldDocument {
-  const difficulty = value.difficulty ?? 'easy'
+  const difficulty = value.difficulty ?? 'normal'
   if (difficulty !== 'easy' && difficulty !== 'normal' && difficulty !== 'hard') throw new Error('Invalid difficulty')
   return { ...value, difficulty, subscribers: number(value.subscribers ?? 0),
     unlockSkill: value.unlockSkill ? skillKey(value.unlockSkill) : undefined, unlockLevel: value.unlockLevel == null ? undefined : number(value.unlockLevel),

@@ -6,6 +6,7 @@ using Reki.Api.Requests.Events;
 using Reki.Application.Events;
 using Reki.Application.Events.GetTodayEvent;
 using Reki.Application.Events.Responses;
+using Reki.Domain.Events;
 using Reki.Domain.Worlds;
 
 namespace Reki.Api.Controllers;
@@ -31,7 +32,7 @@ public sealed class EventsController(
     [HttpPost("{eventId}/answer", Name = "AnswerEvent")]
     [ActionName("AnswerEvent")]
     public async Task<Ok> AnswerEventAsync(
-        string eventId,
+        RekiEventId eventId,
         AnswerEventRequest request,
         [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken)

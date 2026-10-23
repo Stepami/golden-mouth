@@ -25,17 +25,6 @@ internal sealed class CreateWorldCommandHandler(
             throw new RequestConflictException("Creating a world from scratch is not unlocked.");
         }
 
-        if (source.TemplateId is { } templateId &&
-            await worldRepository.GetWorldTemplateAsync(templateId, cancellationToken) is not { IsArchived: false })
-        {
-            throw new ResourceNotFoundException("An available world template was not found.");
-        }
-
-        if (!Enum.IsDefined(source.Difficulty))
-        {
-            throw new ContentRejectedException();
-        }
-
         if (source.Stars.Count == 0 || source.Stars.Any(star => !Enum.IsDefined(star.Trait)) ||
             source.Stars.Select(star => star.Id).Distinct().Count() != source.Stars.Count)
         {

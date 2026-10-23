@@ -37,6 +37,7 @@ internal static partial class WorldRequestMapper
     [MapValue(nameof(World.Id), Use = nameof(NewWorldId))]
     [MapValue(nameof(World.Version), 0)]
     [MapValue(nameof(World.IsArchived), false)]
+    [MapProperty(nameof(CreateWorldRequest.Difficulty), nameof(World.Difficulty), Use = nameof(MapDifficulty))]
     [MapProperty(nameof(CreateWorldRequest.Rules), nameof(World.Rules), Use = nameof(MapRules))]
     public static partial World ToWorld(this CreateWorldRequest source);
 
@@ -114,7 +115,12 @@ internal static partial class WorldRequestMapper
 
     private static DateTimeOffset InitialRelationPeriod() => DateTimeOffset.UnixEpoch;
 
-    private static StarId MapStarId(string source) => StarId.From(source);
+    private static WorldDifficulty MapDifficulty(WorldDifficulty source) => source switch
+    {
+        WorldDifficulty.Easy => WorldDifficulty.Easy,
+        WorldDifficulty.Hard => WorldDifficulty.Hard,
+        _ => WorldDifficulty.Normal,
+    };
 
     private static StarTrait MapStarTrait(int source) =>
         Enum.Parse<StarTrait>(source.ToString(System.Globalization.CultureInfo.InvariantCulture));

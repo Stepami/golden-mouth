@@ -4,6 +4,7 @@ using MongoDB.Driver;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Telemetry.ClientLogBatch;
 using Reki.Application.Telemetry;
+using Reki.Domain.Telemetry;
 
 namespace Reki.Tests.Api;
 
@@ -36,7 +37,7 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
         await api.Telemetry.SubmitAnalyticsAsync(
             new AnalyticsBatchRequest
             {
-                Session = Guid.NewGuid().ToString("N"),
+                Session = SessionId.New(),
                 Platform = "web",
                 Experiments = new Dictionary<string, string>(),
                 Events =
@@ -51,7 +52,7 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
             .Where(record => record.Category == typeof(ProductTelemetry).FullName)
             .ToArray();
         var events = productEvents
-            .Where(record => record.GetStructuredStateValue("player_id") == player.Id &&
+            .Where(record => record.GetStructuredStateValue("player_id") == player.Id.ToString() &&
                 record.GetStructuredStateValue("event_name") == "world_created")
             .ToArray();
         await Assert.That(events.Length).IsEqualTo(1);
@@ -60,11 +61,11 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
         await Assert.That(events[0].GetStructuredStateValue("difficulty")).IsEqualTo("easy");
         await Assert.That(events[0].StructuredState?.Any(property => property.Key == "registration_source") ?? false).IsFalse();
         var registration = productEvents
-            .Single(record => record.GetStructuredStateValue("player_id") == player.Id &&
+            .Single(record => record.GetStructuredStateValue("player_id") == player.Id.ToString() &&
                 record.GetStructuredStateValue("event_name") == "player_created");
         await Assert.That(registration.GetStructuredStateValue("registration_source")).IsEqualTo("direct");
         var deleted = productEvents
-            .Any(record => record.GetStructuredStateValue("player_id") == player.Id &&
+            .Any(record => record.GetStructuredStateValue("player_id") == player.Id.ToString() &&
                 record.GetStructuredStateValue("event_name") == "player_deleted");
         await Assert.That(deleted).IsFalse();
         await Assert.That(events[0].StructuredState?.Any(property => property.Key == "TelegramUserId") ?? false).IsFalse();
@@ -85,7 +86,7 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
         await api.Telemetry.SubmitClientLogsAsync(
             new ClientLogBatchRequest
             {
-                Session = Guid.NewGuid().ToString("N"),
+                Session = SessionId.New(),
                 Entries =
                 [
                     new ClientLogEntryRequest
