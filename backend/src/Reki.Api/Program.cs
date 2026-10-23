@@ -1,5 +1,4 @@
 using Kot.MongoDB.Migrations;
-using Microsoft.AspNetCore.DataProtection;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Application;
@@ -74,7 +73,6 @@ public partial class Program
         builder.Services.AddApi();
         if (OpenApiGeneration.IsRunning)
         {
-            builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
             return;
         }
 

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -45,7 +44,6 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.ConfigureServices(services =>
         {
             services.AddFakeLogging();
-            services.AddDataProtection().UseEphemeralDataProtectionProvider();
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
             if (FeedOpenProbability is { } probability)
             {

@@ -1,6 +1,6 @@
 namespace Reki.Application.Posts.AI;
 
-internal sealed record StarCatalogEntry(
+public sealed record StarCatalogEntry(
     string Id,
     string Name,
     string Role,

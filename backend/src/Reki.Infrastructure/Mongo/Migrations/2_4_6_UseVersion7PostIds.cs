@@ -39,7 +39,7 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
             (MongoCollections.Players, "Player"), (MongoCollections.Events, "Event"),
             (MongoCollections.Invites, null), (MongoCollections.Worlds, null),
             (MongoCollections.WorldTemplates, null), (MongoCollections.Publications, null),
-            (MongoCollections.StarsMemory, null), (MongoCollections.Challenges, null),
+            ("stars_memory", null), ("challenges", null),
         })
         {
             var collection = context.Database.GetCollection<BsonDocument>(name);

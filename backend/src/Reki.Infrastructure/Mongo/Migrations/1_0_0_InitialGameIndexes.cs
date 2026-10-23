@@ -21,9 +21,9 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
         var players = database.GetCollection<BsonDocument>(MongoCollections.Players);
         var posts = database.GetCollection<GamePost>(MongoCollections.Posts);
         var publications = database.GetCollection<Publication>(MongoCollections.Publications);
-        var memories = database.GetCollection<BsonDocument>(MongoCollections.StarsMemory);
+        var memories = database.GetCollection<BsonDocument>("stars_memory");
         var events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
-        var challenges = database.GetCollection<BsonDocument>(MongoCollections.Challenges);
+        var challenges = database.GetCollection<BsonDocument>("challenges");
         var worlds = database.GetCollection<BsonDocument>(MongoCollections.Worlds);
 
         var telegramKey = Builders<BsonDocument>.IndexKeys

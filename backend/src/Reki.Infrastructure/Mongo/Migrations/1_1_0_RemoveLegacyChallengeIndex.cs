@@ -1,7 +1,6 @@
 using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
 
@@ -16,7 +15,7 @@ internal sealed class RemoveLegacyChallengeIndex : RekiMigrationBase
         IClientSessionHandle session,
         CancellationToken cancellationToken)
     {
-        var challenges = db.GetCollection<BsonDocument>(MongoCollections.Challenges);
+        var challenges = db.GetCollection<BsonDocument>("challenges");
         using var cursor = await challenges.Indexes.ListAsync(cancellationToken);
         var indexes = await cursor.ToListAsync(cancellationToken);
         var legacy = indexes.SingleOrDefault(index => index["name"] == LegacyIndexName);
