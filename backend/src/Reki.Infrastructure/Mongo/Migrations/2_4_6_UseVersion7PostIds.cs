@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
@@ -192,17 +193,43 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
 
     private static async Task RewriteTickerAsync(MigrationContext context, IMongoCollection<BsonDocument> collection, BsonDocument ticker)
     {
+        var mappings = context.Database.GetCollection<BsonDocument>(Mappings);
+        var key = new BsonDocument { ["Kind"] = "Ticker", ["OldId"] = ticker["_id"] };
+        var original = await mappings.Find(context.Session, new BsonDocument("_id", key)).FirstOrDefaultAsync(context.CancellationToken);
+        if (context.Downgrade)
+        {
+            if (original is not null)
+            {
+                await collection.UpdateOneAsync(context.Session, new BsonDocument("_id", ticker["_id"]), Builders<BsonDocument>.Update.Set("Request", original["Request"]), cancellationToken: context.CancellationToken);
+            }
+
+            return;
+        }
+
+        if (original is null)
+        {
+            await mappings.InsertOneAsync(context.Session, new BsonDocument { ["_id"] = key, ["Request"] = ticker["Request"] }, cancellationToken: context.CancellationToken);
+        }
+
         // Legacy ObjectIds must be migrated before the request can be read as ValueObject<Guid>.
         var request = JsonNode.Parse(TickerHelper.ReadTickerRequestAsString(ticker["Request"].AsBsonBinaryData.Bytes))?.AsObject()
             ?? throw new InvalidOperationException("The star feed request is missing.");
+        foreach (var property in new[] { "PlayerId", "WorldId", "PostId" })
+        {
+            if (request.Remove(property, out var value))
+            {
+                request[JsonNamingPolicy.CamelCase.ConvertName(property)] = value;
+            }
+        }
+
         var previousText = request["postId"]?.GetValue<string>()
             ?? throw new InvalidOperationException("The star feed post identifier is missing.");
-        BsonValue previousId = context.Downgrade || Guid.TryParseExact(previousText, "D", out _)
+        BsonValue previousId = Guid.TryParseExact(previousText, "D", out _)
             ? new BsonBinaryData(Guid.Parse(previousText), GuidRepresentation.Standard) : new BsonString(previousText);
         var nextId = await ResolveIdAsync(context, previousId, "Post", ticker, "CreatedAt");
         request["postId"] = nextId.IsBsonBinaryData ? nextId.AsBsonBinaryData.ToGuid(GuidRepresentation.Standard).ToString("D") : nextId.AsString;
         var playerText = request["playerId"]?.GetValue<string>() ?? throw new InvalidOperationException("The star feed player identifier is missing.");
-        BsonValue playerId = context.Downgrade || Guid.TryParseExact(playerText, "D", out _)
+        BsonValue playerId = Guid.TryParseExact(playerText, "D", out _)
             ? new BsonBinaryData(Guid.Parse(playerText), GuidRepresentation.Standard) : new BsonString(playerText);
         var nextPlayerId = await ResolveIdAsync(context, playerId, "Player", ticker, "CreatedAt");
         request["playerId"] = nextPlayerId.IsBsonBinaryData ? nextPlayerId.AsBsonBinaryData.ToGuid(GuidRepresentation.Standard).ToString("D") : nextPlayerId.AsString;

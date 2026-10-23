@@ -55,9 +55,9 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     }
 
     [Test]
-    [Arguments(false)]
-    [Arguments(true)]
-    public async Task Migrate_PostIds_PreservesReferencesOnRetryAsync(bool bsonDateTime)
+    [Arguments(false, false)]
+    [Arguments(true, true)]
+    public async Task Migrate_PostIds_PreservesReferencesOnRetryAsync(bool bsonDateTime, bool legacyTickerFormat)
     {
         var database = mongo.MongoClient.GetDatabase($"post_ids_{Guid.NewGuid():N}");
         try
@@ -95,7 +95,9 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await publications.InsertOneAsync(publication);
             var orphan = CreatePost("orphan", bsonDateTime);
             await publications.InsertOneAsync(new BsonDocument { ["_id"] = "orphan-publication", ["Result"] = new BsonDocument("Post", orphan) });
-            await tickers.InsertManyAsync([CreateTicker("completed", first["_id"].AsString), CreateTicker("pending", "pending-post")]);
+            var completed = CreateTicker("completed", first["_id"].AsString, legacyTickerFormat);
+            var pending = CreateTicker("pending", "pending-post", legacyTickerFormat);
+            await tickers.InsertManyAsync([completed, pending]);
             var unrelated = CreateTicker("unrelated", "unchanged");
             unrelated["Function"] = "OtherJob";
             await tickers.InsertOneAsync(unrelated);
@@ -192,7 +194,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
                 await Assert.That(await database.GetCollection<BsonDocument>(name).Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(document);
             }
 
-            await Assert.That((await tickers.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync()).Select(document => document.ToJson())).IsEquivalentTo(new[] { CreateTicker("completed", first["_id"].AsString), CreateTicker("pending", "pending-post"), unrelated }.Select(document => document.ToJson()));
+            await Assert.That((await tickers.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync()).Select(document => document.ToJson())).IsEquivalentTo(new[] { completed, pending, unrelated }.Select(document => document.ToJson()));
         }
         finally
         {
@@ -1107,11 +1109,11 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         return document;
     }
 
-    private static BsonDocument CreateTicker(string id, string postId) => new()
+    private static BsonDocument CreateTicker(string id, string postId, bool legacyFormat = false) => new()
     {
         ["_id"] = id,
         ["Function"] = nameof(GenerateStarFeedPostJob),
-        ["Request"] = new BsonBinaryData(TickerHelper.CreateTickerRequest(System.Text.Encoding.UTF8.GetBytes(new System.Text.Json.Nodes.JsonObject { ["playerId"] = "a96fb5ddf0564809a1d2bb5ed78a210f", ["worldId"] = "world", ["postId"] = postId }.ToJsonString()))),
+        ["Request"] = new BsonBinaryData(TickerHelper.CreateTickerRequest(System.Text.Encoding.UTF8.GetBytes(new System.Text.Json.Nodes.JsonObject { [legacyFormat ? "PlayerId" : "playerId"] = "a96fb5ddf0564809a1d2bb5ed78a210f", [legacyFormat ? "WorldId" : "worldId"] = "world", [legacyFormat ? "PostId" : "postId"] = postId }.ToJsonString()))),
         ["CreatedAt"] = new BsonDateTime(CreatedAt.AddHours(1).UtcDateTime),
         ["Retries"] = 3,
     };
