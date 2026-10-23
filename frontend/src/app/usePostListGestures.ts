@@ -4,7 +4,7 @@ const REFRESH_DISTANCE = 60
 
 /** Native scrolling loads older posts; pulling down from the top refreshes the list. */
 export function usePostListGestures(key: string, list: {
-  pageNumber: number; hasNext: boolean; pending: string | null; error?: string
+  nextCursor: string | null; hasNext: boolean; pending: string | null; error?: string
   loadMore: () => Promise<unknown>
 }, refresh: () => Promise<unknown>) {
   const screenRef = useRef<HTMLDivElement>(null)
@@ -21,7 +21,7 @@ export function usePostListGestures(key: string, list: {
     }, { rootMargin: '0px 0px 200px 0px' })
     observer.observe(tail)
     return () => observer.disconnect()
-  }, [key, list.pageNumber, list.hasNext, list.pending, list.error, list.loadMore])
+  }, [key, list.nextCursor, list.hasNext, list.pending, list.error, list.loadMore])
 
   useEffect(() => {
     const screen = screenRef.current

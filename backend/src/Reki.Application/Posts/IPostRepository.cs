@@ -10,12 +10,12 @@ public interface IPostRepository
 
     /// <summary>
     /// Reads posts in a world whose ownership the application has already verified.
-    /// Returns a page with its number and whether another page exists.
+    /// Returns posts ordered by descending UUID and the cursor for the next page, if any.
     /// </summary>
     ValueTask<WorldPostsPage> GetPostsAsync(
         WorldId worldId,
         AuthorId? authorId,
-        int pageNumber,
+        PostId? cursor,
         int pageSize,
         CancellationToken cancellationToken);
 

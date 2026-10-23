@@ -36,7 +36,7 @@ internal sealed class GenerateStarFeedPostJob(
             return;
         }
 
-        var recent = await postRepository.GetPostsAsync(worldId, null, 0, 20, cancellationToken);
+        var recent = await postRepository.GetPostsAsync(worldId, null, null, 20, cancellationToken);
         var star = world.Stars[(int)((uint)context.Id.GetHashCode() % (uint)world.Stars.Count)];
         var profile = new StarAgentProfile(world, star.Id, player.Address);
         var text = await generator.GenerateFeedPostAsync(profile, recent.Items, cancellationToken);

@@ -328,12 +328,12 @@ export const api = {
             sessionPlayer = { ...sessionPlayer, address: address ?? sessionPlayer.address, settings: { ...sessionPlayer.settings, ...settings } };
         }
     },
-    feed: async (selectedWorldId: string | undefined, pageNumber = 0, signal?: AbortSignal): Promise<PostsPage<FeedItem>> => {
-        const page = await data(sdk.posts.getFeed(selectedWorldId ?? worldId(), pageNumber, undefined, signal));
+    feed: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<FeedItem>> => {
+        const page = await data(sdk.posts.getFeed(selectedWorldId ?? worldId(), cursor, undefined, signal));
         return { ...page, items: page.items.map(map.feed) };
     },
-    channelPosts: async (selectedWorldId: string | undefined, pageNumber = 0, signal?: AbortSignal): Promise<PostsPage<ChannelPost>> => {
-        const page = await data(sdk.posts.getChannelPosts(selectedWorldId ?? worldId(), pageNumber, undefined, signal));
+    channelPosts: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<ChannelPost>> => {
+        const page = await data(sdk.posts.getChannelPosts(selectedWorldId ?? worldId(), cursor, undefined, signal));
         return { ...page, items: page.items.map(map.channelPost) };
     },
     post: async (postId: string): Promise<Post> => {

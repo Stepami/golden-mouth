@@ -8,7 +8,6 @@ namespace Reki.Api.Requests.Posts;
 /// <summary>Query parameters for posts in an owned world.</summary>
 public sealed record WorldPostsRequest : IValidatableObject
 {
-    private const int DefaultPageNumber = 0;
     private const int DefaultPageSize = 10;
 
     [Required]
@@ -16,10 +15,8 @@ public sealed record WorldPostsRequest : IValidatableObject
     [FromQuery(Name = "worldId")]
     public required string WorldId { get; init; }
 
-    [DefaultValue(DefaultPageNumber)]
-    [FromQuery(Name = "pageNumber")]
-    [Range(0, int.MaxValue)]
-    public int PageNumber { get; init; } = DefaultPageNumber;
+    [FromQuery(Name = "cursor")]
+    public Guid? Cursor { get; init; }
 
     [DefaultValue(DefaultPageSize)]
     [FromQuery(Name = "pageSize")]
@@ -28,9 +25,9 @@ public sealed record WorldPostsRequest : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if ((long)PageNumber * PageSize > int.MaxValue)
+        if (Cursor is { Version: not 7 })
         {
-            yield return new ValidationResult("Page offset exceeds the supported range.", [nameof(PageNumber)]);
+            yield return new ValidationResult("Cursor must be a version 7 UUID.", [nameof(Cursor)]);
         }
     }
 }

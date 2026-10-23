@@ -119,7 +119,7 @@ internal sealed class PublishPostCommandHandler(
             turn.Comment,
             false,
             []);
-        var recentPosts = await sender.Send(new WorldPostsQuery(world.Id, PageNumber: 0, PageSize: 20), cancellationToken);
+        var recentPosts = await sender.Send(new WorldPostsQuery(world.Id, Cursor: null, PageSize: 20), cancellationToken);
         var recentViews = recentPosts.Items.Select(post => post.Views).ToArray();
         var views = Math.Max(48, updatedWorld.Player.Subscribers);
         var reachRatio = recentViews.Length == 0 ? 1 : views / GetMedian(recentViews);

@@ -350,7 +350,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
         var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(16L);
+        await Assert.That(historyCount).IsEqualTo(17L);
     }
 
     [Test]
@@ -1022,9 +1022,12 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var otherNames = (await namesCursor.ToListAsync())
             .Where(name => name != "threads" && name != options.MigrationsCollectionName && name != options.MigrationsLockCollectionName).ToArray();
         var snapshots = new Dictionary<string, List<BsonDocument>>(StringComparer.Ordinal);
+        var indexSnapshots = new Dictionary<string, List<BsonDocument>>(StringComparer.Ordinal);
         foreach (var name in otherNames)
         {
             snapshots[name] = await database.GetCollection<BsonDocument>(name).Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            using var indexes = await database.GetCollection<BsonDocument>(name).Indexes.ListAsync();
+            indexSnapshots[name] = await indexes.ToListAsync();
         }
 
         // Act: run only the thread cleanup twice, then retry the drop itself after removal.
@@ -1052,7 +1055,12 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await Assert.That(currentHistory.Select(document => document.ToJson())).Contains(entry.ToJson());
         }
 
-        await AssertCurrentIndexesAsync(database);
+        foreach (var (name, expected) in indexSnapshots)
+        {
+            using var indexes = await database.GetCollection<BsonDocument>(name).Indexes.ListAsync();
+            await Assert.That((await indexes.ToListAsync()).Select(document => document.ToJson()))
+                .IsEquivalentTo(expected.Select(document => document.ToJson()));
+        }
     }
 
     private static async Task AssertRetiredSocialCollectionsAbsentAsync(IMongoDatabase database)
@@ -1148,6 +1156,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             migrations.Add(new RemoveUnusedThreads());
             migrations.Add(new RemoveChallengeBonus());
             migrations.Add(new RemoveUnusedSocialCollections());
+            migrations.Add(new CreatePostCursorIndexes());
         }
 
         return MigratorBuilder.FromMongoClient(client, options).LoadMigrations(migrations).Build();
@@ -1162,7 +1171,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         yield return ("players", "ix_players_day_period", new BsonDocument("PostsPeriodStartedAtUtc", 1), false);
         yield return ("worlds", "ix_worlds_day_period", new BsonDocument("Player.PeriodStartedAtUtc", 1), false);
         yield return ("worlds", "ix_worlds_player", new BsonDocument("Player.PlayerId", 1), false);
-        yield return ("posts", "ix_posts_world_created", new BsonDocument { { "WorldId", 1 }, { "CreatedAtUtc", -1 } }, false);
+        yield return ("posts", "ix_posts_world_id", new BsonDocument { { "WorldId", 1 }, { "_id", -1 } }, false);
+        yield return ("posts", "ix_posts_world_author_id", new BsonDocument { { "WorldId", 1 }, { "AuthorId", 1 }, { "_id", -1 } }, false);
         yield return ("events", "ix_events_world_day", new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "DayStartedAtUtc", 1 } }, false);
         yield return ("invites", "ix_invites_player", new BsonDocument("PlayerId", 1), false);
         yield return ("invites", "ux_invites_invitee", new BsonDocument("InviteeId", 1), true);
@@ -1172,10 +1182,10 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     private static async Task SeedCurrentIndexesAsync(IMongoDatabase database)
     {
         await CreateIndexAsync(database, "posts", "ix_posts_player_created", new BsonDocument { { "PlayerId", 1 }, { "CreatedAtUtc", -1 } }, false);
+        await CreateIndexAsync(database, "posts", "ix_posts_world_created", new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "CreatedAtUtc", 1 } }, false);
         foreach (var (collection, name, keys, unique) in ExpectedIndexes())
         {
-            var legacyKeys = name == "ix_posts_world_created" ? new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "CreatedAtUtc", 1 } } : keys;
-            await CreateIndexAsync(database, collection, name, name == "ix_worlds_player" ? new BsonDocument("PlayerId", 1) : legacyKeys, unique);
+            await CreateIndexAsync(database, collection, name, name == "ix_worlds_player" ? new BsonDocument("PlayerId", 1) : keys, unique);
         }
     }
 
@@ -1211,6 +1221,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             var index = indexes.Single(item => item["name"] == name);
             await Assert.That(index["key"]).IsEqualTo(keys);
             await Assert.That(indexes.Any(item => item["name"] == "ix_posts_player_created")).IsFalse();
+            await Assert.That(indexes.Any(item => item["name"] == "ix_posts_world_created")).IsFalse();
             await Assert.That(index.GetValue("unique", false).AsBoolean).IsEqualTo(unique);
             if (name == "ix_publications_expiry")
             {

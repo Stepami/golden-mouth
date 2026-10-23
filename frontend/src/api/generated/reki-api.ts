@@ -593,20 +593,20 @@ export class PostsClient {
     }
 
     /**
-     * @param pageNumber (optional) 
+     * @param cursor (optional) 
      * @param pageSize (optional) 
      * @return OK
      */
-    getFeed(worldId: string, pageNumber?: number | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
+    getFeed(worldId: string, cursor?: string | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
         let url_ = this.baseUrl + "/feed?";
         if (worldId === undefined || worldId === null)
             throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
         else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
-        if (pageNumber === null)
-            throw new globalThis.Error("The parameter 'pageNumber' cannot be null.");
-        else if (pageNumber !== undefined)
-            url_ += "pageNumber=" + encodeURIComponent("" + pageNumber) + "&";
+        if (cursor === null)
+            throw new globalThis.Error("The parameter 'cursor' cannot be null.");
+        else if (cursor !== undefined)
+            url_ += "cursor=" + encodeURIComponent("" + cursor) + "&";
         if (pageSize === null)
             throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
         else if (pageSize !== undefined)
@@ -644,20 +644,20 @@ export class PostsClient {
     }
 
     /**
-     * @param pageNumber (optional) 
+     * @param cursor (optional) 
      * @param pageSize (optional) 
      * @return OK
      */
-    getChannelPosts(worldId: string, pageNumber?: number | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfChannelPostResponse>> {
+    getChannelPosts(worldId: string, cursor?: string | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfChannelPostResponse>> {
         let url_ = this.baseUrl + "/posts/mine?";
         if (worldId === undefined || worldId === null)
             throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
         else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
-        if (pageNumber === null)
-            throw new globalThis.Error("The parameter 'pageNumber' cannot be null.");
-        else if (pageNumber !== undefined)
-            url_ += "pageNumber=" + encodeURIComponent("" + pageNumber) + "&";
+        if (cursor === null)
+            throw new globalThis.Error("The parameter 'cursor' cannot be null.");
+        else if (cursor !== undefined)
+            url_ += "cursor=" + encodeURIComponent("" + cursor) + "&";
         if (pageSize === null)
             throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
         else if (pageSize !== undefined)
@@ -1701,8 +1701,7 @@ export interface OnboardingRequest {
 /** A page of API response items. */
 export interface PageResponseOfChannelPostResponse {
     items: ChannelPostResponse[];
-    pageNumber: number;
-    hasNext: boolean;
+    nextCursor: string | null;
 
     [key: string]: any;
 }
@@ -1710,8 +1709,7 @@ export interface PageResponseOfChannelPostResponse {
 /** A page of API response items. */
 export interface PageResponseOfFeedItemResponse {
     items: FeedItemResponse[];
-    pageNumber: number;
-    hasNext: boolean;
+    nextCursor: string | null;
 
     [key: string]: any;
 }

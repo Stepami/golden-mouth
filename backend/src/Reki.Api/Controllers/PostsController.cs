@@ -88,7 +88,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         var worlds = await rekiContext.Worlds;
         IReadOnlyList<FeedItemResponse> response =
             [.. result.Items.Select(post => PostResponseMapper.MapFeedItem(post, worlds[post.WorldId]))];
-        return TypedResults.Ok(new PageResponse<FeedItemResponse>(response, result.PageNumber, result.HasNext));
+        return TypedResults.Ok(new PageResponse<FeedItemResponse>(response, result.NextCursor?.ToString()));
     }
 
     [HttpGet("posts/mine", Name = "GetChannelPosts")]
@@ -101,7 +101,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
             request.ToQuery(),
             cancellationToken);
         IReadOnlyList<ChannelPostResponse> response = [.. result.Items.Select(PostResponseMapper.MapChannelPost)];
-        return TypedResults.Ok(new PageResponse<ChannelPostResponse>(response, result.PageNumber, result.HasNext));
+        return TypedResults.Ok(new PageResponse<ChannelPostResponse>(response, result.NextCursor?.ToString()));
     }
 
     [HttpGet("posts/{postId}", Name = "GetPost")]
