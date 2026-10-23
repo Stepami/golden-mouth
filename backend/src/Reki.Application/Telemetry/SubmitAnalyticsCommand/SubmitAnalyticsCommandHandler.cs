@@ -15,7 +15,7 @@ internal sealed class SubmitAnalyticsCommandHandler(
     {
         var rekiContext = rekiContextAccessor.Context;
         var player = await rekiContext.Player;
-        foreach (var worldId in request.Submission.Events.Select(entry => entry.WorldId).OfType<Reki.Domain.Worlds.WorldId>().Distinct())
+        foreach (var worldId in request.Submission.Events.Select(entry => entry.WorldId).OfType<Domain.Worlds.WorldId>().Distinct())
         {
             _ = (await rekiContext.Worlds).GetValueOrDefault(worldId)
             ?? throw new ResourceNotFoundException("World not found.");

@@ -11,7 +11,7 @@ public sealed record StoryCardData(
     long SubscriberDelta,
     bool Viral)
 {
-    public static StoryCardData From(Reki.Domain.Worlds.World player, GamePost post) => new(
+    public static StoryCardData From(Domain.Worlds.World player, GamePost post) => new(
         player.Player.Name,
         player.Player.Avatar,
         player.Player.Subscribers,

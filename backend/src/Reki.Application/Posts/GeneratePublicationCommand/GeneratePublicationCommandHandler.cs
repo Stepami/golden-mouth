@@ -216,7 +216,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
     private async ValueTask<StarPostContext> CreatePostContextAsync(
         GeneratePublication request,
         PlayerProfile player,
-        Reki.Domain.Worlds.World world,
+        Domain.Worlds.World world,
         CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();

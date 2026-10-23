@@ -49,7 +49,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
             if (FeedOpenProbability is { } probability)
             {
-                services.AddSingleton<IOptions<GameBalance>>(provider => Options.Create(
+                services.AddSingleton(provider => Options.Create(
                     provider.GetRequiredService<IOptionsFactory<GameBalance>>().Create(Options.DefaultName)
                         with { StarFeedOpenProbability = probability }));
             }

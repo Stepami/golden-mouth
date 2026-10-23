@@ -16,7 +16,7 @@ internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
 
     public PostProgression Calculate(
         PlayerProfile player,
-        Reki.Domain.Worlds.World gameWorld,
+        Domain.Worlds.World gameWorld,
         GeneratedPostTurn turn,
         bool ownWords,
         bool wantCompleted,
@@ -76,7 +76,7 @@ internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
     private static bool IsFlop(string publicationId, WorldBalance world) =>
         StableRoll(publicationId, "flop") < world.FlopChance;
 
-    private double GetGrowthMultiplier(Reki.Domain.Worlds.World gameWorld, int postIndex, bool ownWords)
+    private double GetGrowthMultiplier(Domain.Worlds.World gameWorld, int postIndex, bool ownWords)
     {
         double multiplier = 1;
         if (gameWorld.Player.Subscribers < balance.Value.Growth.StarterBelowSubscribers)
