@@ -10,6 +10,7 @@ using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 using Reki.Infrastructure.Mongo.Migrations;
 using Reki.Infrastructure.Mongo.Options;
@@ -74,7 +75,13 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             ["playerId"] = "a96fb5dd-f056-4809-a1d2-bb5ed78a210f", ["worldId"] = oldId, ["postId"] = "saved-post",
         };
         ticker["Request"] = new BsonBinaryData(TickerHelper.CreateTickerRequest(System.Text.Encoding.UTF8.GetBytes(tickerRequest.ToJsonString())));
-        await database.GetCollection<BsonDocument>("ticker_TimeTickers").InsertOneAsync(ticker);
+        var orphanedTicker = CreateTicker("orphaned-world-job", "old-post");
+        orphanedTicker["Status"] = 3; // Completed history can outlive its deleted world.
+        var unrelatedTicker = CreateTicker("other-job", "unused");
+        unrelatedTicker["Function"] = nameof(ResetGameDayJob);
+        await database.GetCollection<BsonDocument>("ticker_TimeTickers").InsertManyAsync([ticker, orphanedTicker, unrelatedTicker]);
+        var cronSchedule = new BsonDocument { ["_id"] = "daily-reset", ["Function"] = nameof(ResetGameDayJob) };
+        await database.GetCollection<BsonDocument>("ticker_CronTickers").InsertOneAsync(cronSchedule);
 
         // Act
         await MigrateWorldBalanceAsync(database);
@@ -118,13 +125,15 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(coefficients["ViralMultiplier"].ToDouble()).IsEqualTo(viral);
         await Assert.That(coefficients["HateFrom"].ToInt64()).IsEqualTo(hateFrom);
         await Assert.That(publication["RequestHash"].AsString).IsEqualTo("AB03196A97E021E36DCCD3B80D4E0219BDDAC0E01092CBF3CFB834477E89D1BF");
-        await Assert.That(ReadRequest(await ReadAsync(database, "ticker_TimeTickers", "world-job")).GetProperty("worldId").GetString()).IsEqualTo(worldGuid.ToString("D"));
+        var retainedTickers = await database.GetCollection<BsonDocument>("ticker_TimeTickers").Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        await Assert.That(retainedTickers.Single()).IsEqualTo(unrelatedTicker);
+        await Assert.That(await ReadAsync(database, "ticker_CronTickers", "daily-reset")).IsEqualTo(cronSchedule);
         await Assert.That(templates.Count).IsEqualTo(8);
         await Assert.That(templates.Single(template => template["_id"] == currentTemplateId)["Interface"]["Title"].AsString).IsEqualTo("Актуальный IT");
         await Assert.That(templates.Count(template => template["IsArchived"].AsBoolean)).IsEqualTo(4);
         await Assert.That(templates.All(template => template["Player"]["PlayerId"].AsBsonBinaryData.ToGuid() == Guid.Empty && template["TemplateId"].IsBsonNull)).IsTrue();
         using var names = await database.ListCollectionNamesAsync();
-        await Assert.That(await names.ToListAsync()).IsEquivalentTo(["worlds", "world_templates", "posts", "events", "publications", "ticker_TimeTickers"]);
+        await Assert.That(await names.ToListAsync()).IsEquivalentTo(["worlds", "world_templates", "posts", "events", "publications", "ticker_TimeTickers", "ticker_CronTickers"]);
     }
 
     [Test]

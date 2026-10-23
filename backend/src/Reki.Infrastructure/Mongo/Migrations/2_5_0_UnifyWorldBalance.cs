@@ -1,13 +1,11 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json.Nodes;
 using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 using Reki.Infrastructure.Mongo.Repositories;
-using TickerQ.Utilities;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
 
@@ -58,7 +56,10 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
             await RewriteReferencesAsync(db, session, collectionName, ids, profiles, cancellationToken);
         }
 
-        await RewriteTickersAsync(db, session, ids, cancellationToken);
+        await db.GetCollection<BsonDocument>("ticker_TimeTickers").DeleteManyAsync(
+            session,
+            new BsonDocument("Function", nameof(GenerateStarFeedPostJob)),
+            cancellationToken: cancellationToken);
     }
 
     private static Task<List<BsonDocument>> ReadWorldsAsync(IMongoDatabase db, IClientSessionHandle session, string name, CancellationToken cancellationToken) =>
@@ -276,25 +277,5 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
 
         var converted = ConvertId(value);
         return ids.Values.Contains(converted) ? converted : throw new InvalidOperationException("A document references a missing world.");
-    }
-
-    private static async Task RewriteTickersAsync(IMongoDatabase db, IClientSessionHandle session, IReadOnlyDictionary<BsonValue, BsonBinaryData> ids, CancellationToken cancellationToken)
-    {
-        var collection = db.GetCollection<BsonDocument>("ticker_TimeTickers");
-        using var cursor = await collection.FindAsync(session, new BsonDocument("Function", nameof(GenerateStarFeedPostJob)), cancellationToken: cancellationToken);
-        await cursor.ForEachAsync(
-            async ticker =>
-            {
-                var payload = JsonNode.Parse(TickerHelper.ReadTickerRequestAsString(ticker["Request"].AsBsonBinaryData.Bytes))?.AsObject()
-                    ?? throw new InvalidOperationException("Missing scheduled world request.");
-                var key = payload.ContainsKey("worldId") ? "worldId" : "WorldId";
-                var previous = new BsonString(payload[key]?.GetValue<string>()
-                    ?? throw new InvalidOperationException("Missing scheduled world identifier."));
-                payload.Remove("WorldId");
-                payload["worldId"] = ResolveReference(previous, ids).ToGuid(GuidRepresentation.Standard).ToString("D");
-                ticker["Request"] = new BsonBinaryData(TickerHelper.CreateTickerRequest(Encoding.UTF8.GetBytes(payload.ToJsonString())));
-                await collection.ReplaceOneAsync(session, new BsonDocument("_id", ticker["_id"]), ticker, cancellationToken: cancellationToken);
-            },
-            cancellationToken);
     }
 }
