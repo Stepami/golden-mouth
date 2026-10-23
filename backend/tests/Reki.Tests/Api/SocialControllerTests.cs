@@ -23,7 +23,7 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(dm.Messages.Count).IsEqualTo(0);
         await Assert.That(dm.Memory.Count).IsEqualTo(0);
         await Assert.That(dm.Ideas.Count).IsEqualTo(0);
-        await Assert.That(dm.Star.Id).IsEqualTo(Reki.Domain.Worlds.StarId.From("sonya"));
+        await Assert.That(dm.Star.Id).IsEqualTo(Domain.Worlds.StarId.From("sonya"));
         await Assert.That(dm.Status).IsEqualTo(string.Empty);
         await Assert.That(dm.RepliesLeft).IsEqualTo(0);
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(0);
@@ -38,7 +38,7 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
             "sonya", "a83d771c-f009-4b0e-9bae-9b3d08e09017", new DirectMessageRequest { Text = "Привет" }, CancellationToken.None);
         await api.Social.ForgetStarMemoryAsync(
             "sonya", "a83d771c-f009-4b0e-9bae-9b3d08e09017", new ForgetMemoryRequest { Fact = "Факт" }, CancellationToken.None);
-        await api.Social.StartChallengeAsync(new StartChallengeRequest { FriendId = Reki.Domain.Player.PlayerId.New() }, CancellationToken.None);
+        await api.Social.StartChallengeAsync(new StartChallengeRequest { FriendId = Domain.Player.PlayerId.New() }, CancellationToken.None);
 
         await Assert.That(sent.Reply).IsNull();
         await Assert.That(sent.RepliesLeft).IsEqualTo(0);

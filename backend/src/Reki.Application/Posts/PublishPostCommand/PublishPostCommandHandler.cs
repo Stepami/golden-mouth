@@ -28,6 +28,7 @@ internal sealed class PublishPostCommandHandler(
     PostProgressionCalculator progressionCalculator,
     ProductTelemetry analytics,
     PlayerSafetyGuard safety,
+    StarTurnPolicy turnPolicy,
     IStarFeedScheduler feedScheduler) : ICommandHandler<PublishPost, IReadOnlyList<LiveEvent>>
 {
     public async ValueTask<IReadOnlyList<LiveEvent>> Handle(
@@ -79,7 +80,7 @@ internal sealed class PublishPostCommandHandler(
             throw;
         }
 
-        StarTurnPolicy.EnsurePostAllowed(turn, world, StarTurnPolicy.IsHateEnabled(player, world, balance.Value, now));
+        turnPolicy.EnsurePostAllowed(turn, player, world);
 
         var wantCompleted = wantId is not null && world.Player.Wants.Any(want =>
             want.Id == wantId && !want.Done);

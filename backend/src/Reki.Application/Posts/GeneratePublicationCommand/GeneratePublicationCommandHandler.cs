@@ -27,7 +27,8 @@ internal sealed partial class GeneratePublicationCommandHandler(
     IStarTurnGenerator generator,
     ILogger<GeneratePublicationCommandHandler> logger,
     ProductTelemetry analytics,
-    PlayerSafetyGuard safety) : IStreamCommandHandler<GeneratePublication, PublicationStatusLiveEvent>
+    PlayerSafetyGuard safety,
+    StarTurnPolicy turnPolicy) : IStreamCommandHandler<GeneratePublication, PublicationStatusLiveEvent>
 {
     private static readonly TimeSpan FailedRetention = TimeSpan.FromDays(1);
 
@@ -123,7 +124,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
                                 request.Id,
                                 new PublicationPart(update.Text, null, null),
                                 cancellationToken);
-                            await PersistActionsAsync(request.Id, update, context, cancellationToken);
+                            await PersistActionsAsync(request.Id, update, player, context, cancellationToken);
                         }
                     }
                     catch (Exception exception)
@@ -219,9 +220,8 @@ internal sealed partial class GeneratePublicationCommandHandler(
         Domain.Worlds.World world,
         CancellationToken cancellationToken)
     {
-        var now = timeProvider.GetUtcNow();
         var recentPosts = await sender.Send(new WorldPostsQuery(world.Id, Cursor: null, PageSize: 3), cancellationToken);
-        var hateEnabled = StarTurnPolicy.IsHateEnabled(player, world, balance.Value, now);
+        var hateEnabled = turnPolicy.IsHateEnabled(player, world);
         return new StarPostContext(
             request.Text,
             new StarAgentProfile(world, null, player.Address),
@@ -233,6 +233,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
     private async ValueTask PersistActionsAsync(
         string publicationId,
         ChatResponseUpdate update,
+        PlayerProfile player,
         StarPostContext context,
         CancellationToken cancellationToken)
     {
@@ -261,7 +262,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
             };
             if (part.Comment is { } generated)
             {
-                StarTurnPolicy.EnsurePostAllowed(generated, context.Agent.World, context.HateEnabled);
+                turnPolicy.EnsurePostAllowed(generated, player, context.Agent.World);
             }
 
             await publicationRepository.AppendPublicationPartAsync(publicationId, part, cancellationToken);

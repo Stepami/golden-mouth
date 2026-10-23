@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Domain.Player;
@@ -5,20 +6,20 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.AI.Safety;
 
-public static class StarTurnPolicy
+internal sealed class StarTurnPolicy(IOptions<GameBalance> balance, TimeProvider timeProvider)
 {
-    public static bool IsHateEnabled(PlayerProfile player, World gameWorld, GameBalance balance, DateTimeOffset now)
+    public bool IsHateEnabled(PlayerProfile player, World gameWorld)
     {
-        var profile = balance.Difficulties[gameWorld.Difficulty];
+        var profile = balance.Value.Difficulties[gameWorld.Difficulty];
         return gameWorld.Player.Subscribers >= profile.HateFrom && gameWorld.Player.Drama != WorldDrama.Off &&
-            (player.HateDisabledUntilUtc is null || player.HateDisabledUntilUtc <= now);
+            (player.HateDisabledUntilUtc is null || player.HateDisabledUntilUtc <= timeProvider.GetUtcNow());
     }
 
-    public static void EnsurePostAllowed(GeneratedPostTurn turn, World world, bool hateEnabled)
+    public void EnsurePostAllowed(GeneratedPostTurn turn, PlayerProfile player, World world)
     {
         if (!world.HasStar(turn.StarId, turn.StarName) ||
             turn.Tone is not ("support" or "critique" or "hate") ||
-            (turn.Tone == "hate" && !hateEnabled))
+            (turn.Tone == "hate" && !IsHateEnabled(player, world)))
         {
             throw new AiServiceUnavailableException("The model returned a forbidden identity or tone.");
         }

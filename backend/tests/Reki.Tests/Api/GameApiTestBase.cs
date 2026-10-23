@@ -237,7 +237,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         using var response = await api.Posts.ReplyToPostAsync(
             postId,
             await GetWorldIdAsync(api),
-            new ReplyRequest { CommentId = Reki.Domain.Posts.CommentId.From(commentId), RequestId = replyId, Text = text },
+            new ReplyRequest { CommentId = Domain.Posts.CommentId.From(commentId), RequestId = replyId, Text = text },
             CancellationToken.None);
         using var reader = new StreamReader(response.Stream);
         var body = await reader.ReadToEndAsync(CancellationToken.None);
