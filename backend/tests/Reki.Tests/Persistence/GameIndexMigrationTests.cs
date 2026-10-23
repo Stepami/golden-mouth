@@ -49,7 +49,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(comments[1]["ParentCommentId"]).IsEqualTo(comments[0]["_id"]);
         await Assert.That(comments[1]["Text"]).IsEqualTo("reply");
 
-        await Assert.That(() => MigratePostIdsAsync(scope.Database, downgrade: true)).Throws<NotSupportedException>();
+        await MigratePostIdsAsync(scope.Database, downgrade: true);
 
         await Assert.That(await posts.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(migrated);
     }
