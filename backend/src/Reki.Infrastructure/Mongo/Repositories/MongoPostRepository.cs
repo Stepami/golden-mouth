@@ -21,11 +21,10 @@ internal sealed class MongoPostRepository : IPostRepository
     public async ValueTask<WorldPostsPage> GetPostsAsync(
         WorldId worldId,
         AuthorId? authorId,
-        int pageNumber,
+        PostId? cursor,
         int pageSize,
         CancellationToken cancellationToken)
     {
-        var offset = pageNumber * pageSize;
         var limit = pageSize + 1;
         var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId);
         if (authorId is { } author)
@@ -33,10 +32,14 @@ internal sealed class MongoPostRepository : IPostRepository
             filter &= Builders<GamePost>.Filter.Eq(item => item.AuthorId, author);
         }
 
+        if (cursor is { } before)
+        {
+            filter &= Builders<GamePost>.Filter.Lt(item => item.Id, before);
+        }
+
         var posts = await _posts
             .Find(filter)
-            .SortByDescending(item => item.CreatedAtUtc)
-            .Skip(offset)
+            .SortByDescending(item => item.Id)
             .Limit(limit)
             .ToListAsync(cancellationToken);
         var hasNext = posts.Count > pageSize;
@@ -45,7 +48,7 @@ internal sealed class MongoPostRepository : IPostRepository
             posts.RemoveAt(posts.Count - 1);
         }
 
-        return new WorldPostsPage(posts, pageNumber, hasNext);
+        return new WorldPostsPage(posts, hasNext ? posts[^1].Id : null);
     }
 
     public async ValueTask<GamePost?> GetPostAsync(

@@ -220,7 +220,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
         CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
-        var recentPosts = await sender.Send(new WorldPostsQuery(world.Id, PageNumber: 0, PageSize: 3), cancellationToken);
+        var recentPosts = await sender.Send(new WorldPostsQuery(world.Id, Cursor: null, PageSize: 3), cancellationToken);
         var hateEnabled = StarTurnPolicy.IsHateEnabled(player, world, balance.Value, now);
         return new StarPostContext(
             request.Text,

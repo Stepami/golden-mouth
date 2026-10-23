@@ -31,15 +31,18 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var worldId = await GetWorldIdAsync(api);
         var before = await GetStoredPlayerAsync(9501);
         var worldBefore = await GetStoredWorldAsync(9501);
+        var createdAt = Factory.Session.Clock.GetUtcNow().AddMilliseconds(123);
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Сегодня репетировали новую сцену.")));
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.New()));
+            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.New(createdAt), createdAt.ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
 
         // Act
+        Factory.Session.Clock.Advance(TimeSpan.FromMinutes(5));
         await job.ExecuteAsync(context, CancellationToken.None);
+        Factory.Session.Clock.Advance(TimeSpan.FromMinutes(10));
         await job.ExecuteAsync(context, CancellationToken.None);
         var feed = await api.Posts.GetFeedAsync(worldId, null, null, CancellationToken.None);
 
@@ -51,6 +54,8 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await Assert.That(feed.Items.Single().Text).IsEqualTo("Сегодня репетировали новую сцену.");
         var stored = await Database.GetCollection<GamePost>("posts").Find(FilterDefinition<GamePost>.Empty).SingleAsync();
         await Assert.That(stored.Id.Value.Version == 7).IsTrue();
+        await Assert.That(stored.Id).IsEqualTo(context.Request.PostId);
+        await Assert.That(stored.CreatedAtUtc).IsEqualTo(createdAt);
         await Assert.That(stored.AuthorId.Value.StartsWith("Star_", StringComparison.Ordinal)).IsTrue();
         await Assert.That((await GetStoredPlayerAsync(9501)).ToJson()).IsEqualTo(before.ToJson());
         await Assert.That((await GetStoredWorldAsync(9501)).ToJson()).IsEqualTo(worldBefore.ToJson());
@@ -70,7 +75,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, text)));
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.New()));
+            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
 
@@ -92,7 +97,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await CreatePlayerWithWorldAsync(second);
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(await GetWorldIdAsync(second)), PostId.New()));
+            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(await GetWorldIdAsync(second)), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
 
@@ -123,6 +128,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await Assert.That(payload.PlayerId).IsEqualTo(PlayerId.From((await GetStoredPlayerAsync(user))["_id"].AsBsonBinaryData.ToGuid().ToString("N")));
         await Assert.That(payload.WorldId).IsEqualTo(WorldId.From(await GetWorldIdAsync(api)));
         await Assert.That(payload.PostId.Value.Version).IsEqualTo(7);
+        await Assert.That(payload.CreatedAtUnixMilliseconds).IsEqualTo(Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds());
         await Assert.That(scheduled.Function).IsEqualTo(nameof(GenerateStarFeedPostJob));
         await Assert.That(scheduled.Retries).IsEqualTo(3);
         await Assert.That(scheduled.RetryIntervals).IsEquivalentTo(new[] { 30, 120, 600 });
@@ -139,7 +145,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var worldId = await GetWorldIdAsync(api);
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.New()));
+            new StarFeedRequest(PlayerId.From(player.Id), WorldId.From(worldId), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
         Factory.Llm.RespondWithHttpError();
@@ -240,14 +246,14 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         foreach (var (author, text) in authoredPosts)
         {
             await postRepository.InsertPostAsync(
-                new GamePost(PostId.New(), author, worldId, text, 0, [], Factory.Session.Clock.GetUtcNow(), 0, 0, 1, false, false),
+                new GamePost(PostId.New(Factory.Session.Clock.GetUtcNow()), author, worldId, text, 0, [], Factory.Session.Clock.GetUtcNow(), 0, 0, 1, false, false),
                 CancellationToken.None);
         }
 
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Новая самостоятельная история.")));
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(playerId, worldId, PostId.New()));
+            new StarFeedRequest(playerId, worldId, PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
 

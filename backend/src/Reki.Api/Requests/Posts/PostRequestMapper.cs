@@ -31,5 +31,7 @@ internal static partial class PostRequestMapper
 
     private static WorldId MapWorldId(string source) => WorldId.From(source);
 
+    private static PostId? MapPostId(Guid? source) => source is { } value ? PostId.From(value) : null;
+
     private static CommentId? MapCommentId(string? source) => source is null ? null : CommentId.From(source);
 }

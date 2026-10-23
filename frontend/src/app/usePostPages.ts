@@ -6,7 +6,7 @@ import { cachedApi, saveApiCache } from './useApi'
 type State<T> = { key: string; page?: PostsPage<T>; pending: 'first' | 'more' | null; error?: 'first' | 'more' }
 
 /** Keeps pagination and stale-request protection shared by the feed and channel. */
-export function usePostPages<T extends { postId?: string }>(key: string, load: (pageNumber: number, signal: AbortSignal) => Promise<PostsPage<T>>) {
+export function usePostPages<T extends { postId?: string }>(key: string, load: (cursor: string | undefined, signal: AbortSignal) => Promise<PostsPage<T>>) {
   const initial = (): State<T> => ({ key, page: cachedApi<PostsPage<T>>(key), pending: 'first' })
   const [state, setState] = useState<State<T>>(initial)
   const latest = useRef(state)
@@ -16,8 +16,8 @@ export function usePostPages<T extends { postId?: string }>(key: string, load: (
   const fetchPage = useCallback(async (append: boolean): Promise<PostsPage<T> | undefined> => {
     if (request.current || latest.current.key !== key) return
     const previous = latest.current.page
-    if (append && !previous?.hasNext) return
-    const pageNumber = append && previous ? previous.pageNumber + 1 : 0
+    if (append && !previous?.nextCursor) return
+    const cursor = append ? previous?.nextCursor ?? undefined : undefined
     const controller = new AbortController()
     const session = sessionGeneration()
     request.current = controller
@@ -25,7 +25,7 @@ export function usePostPages<T extends { postId?: string }>(key: string, load: (
     latest.current = pending
     setState(pending)
     try {
-      const page = await load(pageNumber, controller.signal)
+      const page = await load(cursor, controller.signal)
       if (controller.signal.aborted || session !== sessionGeneration()) return
       const seen = new Set<string>()
       const items = [...(append ? previous?.items ?? [] : []), ...page.items].filter(item => {
@@ -60,8 +60,8 @@ export function usePostPages<T extends { postId?: string }>(key: string, load: (
 
   return {
     items: current.page?.items ?? [],
-    hasNext: current.page?.hasNext ?? false,
-    pageNumber: current.page?.pageNumber ?? -1,
+    hasNext: !!current.page?.nextCursor,
+    nextCursor: current.page?.nextCursor ?? null,
     ready: !!current.page,
     pending: current.pending,
     error: current.error,

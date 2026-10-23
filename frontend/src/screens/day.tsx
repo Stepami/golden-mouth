@@ -123,8 +123,8 @@ function FeedPostCard({ item }: { item: FeedItem }) {
 function Feed() {
   const nav = useNav()
   const p = usePlayer(); const w = worldOf(p.world)
-  const key = `feed-pages:${p.id}:${p.worldInstanceId ?? p.world}`
-  const loadPage = useCallback((pageNumber: number, signal: AbortSignal) => api.feed(p.worldInstanceId, pageNumber, signal), [p.worldInstanceId])
+  const key = `feed-keyset-v1:${p.id}:${p.worldInstanceId ?? p.world}`
+  const loadPage = useCallback((cursor: string | undefined, signal: AbortSignal) => api.feed(p.worldInstanceId, cursor, signal), [p.worldInstanceId])
   const list = usePostPages<FeedItem>(key, loadPage)
   const [arrivals, setArrivals] = useState({ key, ids: [] as string[], note: '' })
   const newIds = arrivals.key === key ? arrivals.ids : []
@@ -213,9 +213,9 @@ function FriendChannel() {
 function Stage() {
   const nav = useNav(); const p = usePlayer()
   const [skillHelp, setSkillHelp] = useState(false)
-  const cacheKey = `channel-pages:${p.id}:${p.worldInstanceId ?? p.world}`
+  const cacheKey = `channel-keyset-v1:${p.id}:${p.worldInstanceId ?? p.world}`
   const [banner, setBanner] = useState(true)
-  const loadPage = useCallback((pageNumber: number, signal: AbortSignal) => api.channelPosts(p.worldInstanceId, pageNumber, signal), [p.worldInstanceId])
+  const loadPage = useCallback((cursor: string | undefined, signal: AbortSignal) => api.channelPosts(p.worldInstanceId, cursor, signal), [p.worldInstanceId])
   const list = usePostPages<ChannelPost>(cacheKey, loadPage)
   const gestures = usePostListGestures(cacheKey, list, list.refresh)
   const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
