@@ -475,6 +475,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     [Test]
     public async Task DeleteAccount_RemovesPlayerDataFromMongoAsync()
     {
+        // Arrange
         const long telegramUserId = 1004;
         using var api = Factory.CreateApiClient(telegramUserId);
         await CreatePlayerWithWorldAsync(api);
@@ -503,11 +504,25 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                 ],
             },
             CancellationToken.None);
-        await Database.GetCollection<BsonDocument>("invites").InsertOneAsync(
-            new BsonDocument("PlayerId", new BsonBinaryData(Guid.Parse(playerId), GuidRepresentation.Standard)));
+        var invitations = Database.GetCollection<Invitation>("invites");
+        var deletedPlayerId = PlayerId.From(Guid.Parse(playerId));
+        var otherPlayerId = PlayerId.New();
+        var unrelatedInvitation = Invitation.Create(otherPlayerId, PlayerId.New(), Factory.Session.Clock.GetUtcNow(), 5);
+        await invitations.InsertManyAsync(new[]
+        {
+            Invitation.Create(deletedPlayerId, otherPlayerId, Factory.Session.Clock.GetUtcNow(), 5),
+            Invitation.Create(PlayerId.New(), deletedPlayerId, Factory.Session.Clock.GetUtcNow(), 5),
+            unrelatedInvitation,
+        });
 
         var before = await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
+
+        // Act
         await api.Player.DeleteCurrentPlayerAsync(CancellationToken.None);
+
+        // Assert
+        var savedInvitations = await invitations.Find(FilterDefinition<Invitation>.Empty).ToListAsync();
+        await Assert.That(savedInvitations).IsEquivalentTo(new[] { unrelatedInvitation });
         await Assert.That(await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None)).IsEqualTo(before - 1);
         var deletion = Factory.Services.GetFakeLogCollector().GetSnapshot()
             .Where(record => record.Category == typeof(ProductTelemetry).FullName)
@@ -522,9 +537,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                  {
                      "posts",
                      "publications",
-                     "stars_memory",
-                     "invites",
-                     "challenges",
                      "events",
                      "analytics",
                      "worlds",
