@@ -52,7 +52,8 @@ internal sealed class GenerateStarFeedPostJob(
             throw new TerminateExecutionException("The feed world is unavailable.");
         }
 
-        var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, [], postId.GetTimestamp(), 0, 0, 1, false, false);
+        var createdAt = DateTimeOffset.FromUnixTimeMilliseconds(request.CreatedAtUnixMilliseconds);
+        var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, [], createdAt, 0, 0, 1, false, false);
         await postRepository.InsertPostAsync(post, cancellationToken);
     }
 }

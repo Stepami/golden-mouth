@@ -1,10 +1,10 @@
 using System.Globalization;
+using System.Text.Json;
 using Kot.MongoDB.Migrations;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using Reki.Api.Serialization;
 using Reki.Application.Balance;
 using Reki.Domain.Events;
 using Reki.Domain.Invites;
@@ -123,8 +123,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             var savedOrphan = await publications.Find(new BsonDocument("_id", "orphan-publication")).SingleAsync();
             await AssertVersion7Async(savedOrphan["Result"]["Post"]["_id"].AsBsonBinaryData.ToGuid().ToString("N"), CreatedAt);
             var savedTickers = await tickers.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
-            await Assert.That(ReadRequest(savedTickers.Single(ticker => ticker["_id"] == "completed")).PostId.Value.ToString("N")).IsEqualTo(migratedFirst["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
-            await AssertVersion7Async(ReadRequest(savedTickers.Single(ticker => ticker["_id"] == "pending")).PostId.Value.ToString("N"), CreatedAt.AddHours(1));
+            await Assert.That(ReadRequest(savedTickers.Single(ticker => ticker["_id"] == "completed")).GetProperty("postId").GetString()).IsEqualTo(migratedFirst["_id"].AsBsonBinaryData.ToGuid().ToString("D"));
+            await AssertVersion7Async(Guid.Parse(ReadRequest(savedTickers.Single(ticker => ticker["_id"] == "pending")).GetProperty("postId").GetString() ?? string.Empty).ToString("N"), CreatedAt.AddHours(1));
             await Assert.That(savedTickers.Single(ticker => ticker["_id"] == "unrelated")).IsEqualTo(unrelated);
             var migratedInvitation = await invitations.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
             await Assert.That(migratedInvitation["_id"].AsBsonBinaryData.SubType == BsonBinarySubType.UuidStandard).IsTrue();
@@ -1093,8 +1093,11 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         ["Retries"] = 3,
     };
 
-    private static StarFeedRequest ReadRequest(BsonDocument ticker) =>
-        TickerHelper.ReadTickerRequest(ticker["Request"].AsBsonBinaryData.Bytes, ApiJsonSerializerContext.Default.StarFeedRequest);
+    private static JsonElement ReadRequest(BsonDocument ticker)
+    {
+        using var request = JsonDocument.Parse(TickerHelper.ReadTickerRequestAsString(ticker["Request"].AsBsonBinaryData.Bytes));
+        return request.RootElement.Clone();
+    }
 
     private static async Task AssertVersion7Async(string id, DateTimeOffset createdAt)
     {

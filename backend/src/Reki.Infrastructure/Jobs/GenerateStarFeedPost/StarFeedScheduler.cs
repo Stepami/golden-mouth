@@ -20,7 +20,11 @@ internal sealed partial class StarFeedScheduler(
         var now = timeProvider.GetUtcNow();
         var result = await manager.AddAsync<GenerateStarFeedPostJob, StarFeedRequest>(
             now.UtcDateTime,
-            new StarFeedRequest(playerId, worldId, PostId.New(now)));
+            new StarFeedRequest(
+                playerId,
+                worldId,
+                PostId.New(now),
+                now.ToUnixTimeMilliseconds()));
         if (!result.IsSucceeded)
         {
             SchedulingFailed();
