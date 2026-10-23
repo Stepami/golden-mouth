@@ -5,7 +5,7 @@ import type { Address, WorldDefinition } from '../api/types'
 import { Avatar, BottomCTA, Button, Segmented, TopBar } from '../ui'
 import { TextField } from '../ui/TextField'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
-import { DramaPicker } from './worldQuick'
+import { DifficultyPicker, DramaPicker } from './worldQuick'
 
 export function AgeRuleNote({ teen = true }: { teen?: boolean }) {
   return <div className="age-rule-note"><b>🔒 Ограничения контента</b><p>{teen ? 'Без взрослой сексуализированной подачи. Дружба и романтические симпатии допустимы.' : 'Чувствительные темы можно обсуждать без откровенных подробностей.'}</p><p className="small muted">Травля и откровенный контент запрещены для всех.</p></div>
@@ -19,7 +19,7 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
   const quickSettings = () => {
     if (nav.current === '05-12_world_advanced' && nav.canBack) { nav.back(); return }
     setWorldDraft({ ...draft, advanced: false })
-    nav.replace(d.balanceKey === 'own' || draft.editingId ? '05-7b_own_world' : '01-4_channel')
+    nav.replace(d.templateId === null || draft.editingId ? '05-7b_own_world' : '01-4_channel')
   }
   const [open, setOpen] = useState(''); const [attempted, setAttempted] = useState(false)
   const update = updateWorldDraft
@@ -29,7 +29,7 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
   const changeStar = (id: string, patch: Partial<WorldDefinition['stars'][number]>) => update({ stars: d.stars.map(s => s.id === id ? { ...s, ...patch } : s) })
   return <div className="screen no-tab advanced-world"><TopBar title="Настрой свой мир" onBack={saving ? undefined : nav.back} /><div className="pad">
     <button className="text-link" onClick={quickSettings}>← Быстрые настройки</button>
-    <h1>Добавь свои детали</h1><p className="muted">Открой нужный раздел. Остальное можно оставить как есть.</p>
+    <DifficultyPicker definition={d} /><h1>Добавь свои детали</h1><p className="muted">Открой нужный раздел. Остальное можно оставить как есть.</p>
     {section('person', 'Твой персонаж', d.name ? `${d.name} · ${d.role}` : 'Имя, занятие и портрет', <>
       {text('Имя персонажа', 'name', undefined, 1, 80)}{text('Кто ты в этой истории', 'role', 'Например: фотограф, который замечает странности.', 2, 80)}
       <div className="editor-preview"><Avatar seed={d.avatar || 'new-player'} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={48} /><div><b>{d.name || 'Твой персонаж'}</b><p className="small muted">{d.role || 'Твоё занятие в мире'}</p></div></div>
@@ -40,7 +40,7 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
     {section('world', 'Мир и начало истории', d.title || 'Место, атмосфера и первая ситуация', <>
       {text('Название мира', 'title', undefined, 1, 120)}{text('О чём этот мир', 'description', 'Что здесь необычного и какие истории хочется прожить?', 4)}{text('Где всё происходит', 'where', 'Например: в дождливом городе или северном царстве.', 1, 200)}
       {text('С чего начинается история', 'firstContext', 'Первая ситуация, которую увидит игрок.', 3)}{text('Подсказка для первого поста', 'firstPrompt', 'Вопрос, который поможет начать писать.', 2)}
-      <details className="editor-extra"><summary>Оформление карточки мира</summary>{text('Значок мира', 'emoji', undefined, 1, 8)}{text('Короткое описание', 'summary', 'Подпись на карточке мира.', 2, 200)}<p className="label">Обозначение сложности</p><Segmented value={String(d.difficulty)} onChange={v => update({ difficulty: Number(v) as 1 | 2 | 3 })} options={[{ id: '1', label: 'легко' }, { id: '2', label: 'средне' }, { id: '3', label: 'сложно' }]} /><p className="small muted">Меняет подпись на карточке, а не скорость роста подписчиков.</p></details>
+      <details className="editor-extra"><summary>Оформление карточки мира</summary>{text('Значок мира', 'emoji', undefined, 1, 8)}{text('Короткое описание', 'summary', 'Подпись на карточке мира.', 2, 200)}</details>
     </>)}
     {section('heroes', 'Герои вокруг тебя', `${d.stars.length} героев · пишут в ленте и отвечают на посты`, <>
       <p className="small muted">Это другие жители мира. Персонаж, за которого ты играешь, сюда не входит.</p>
@@ -50,7 +50,7 @@ export function WorldAdvanced({ draft, saving, error, uncertain, onSave, onCheck
         <button className="text-link down" onClick={() => update({ stars: d.stars.filter(s => s.id !== star.id) })}>Убрать героя</button>
       </details>)}<Button secondary onClick={() => update({ stars: [...d.stars, { id: crypto.randomUUID().replaceAll('-', ''), name: '', role: '', about: '', voice: '', avatarSeed: crypto.randomUUID(), trait: 1, relation: 0 }] })}>＋ Добавить героя</Button>
     </>)}
-    {section('mood', 'Настроение истории', 'Драма и стиль подсказок', <><DramaPicker definition={d} />{text('Стиль подсказок для постов', 'voice', 'Так звучат готовые подсказки. Свой пост ты пишешь как хочешь.', 2, 200)}<StringList title="Варианты стиля" help="Готовые варианты для быстрого выбора стиля подсказок." values={d.voices} onChange={voices => update({ voices })} /></>)}
+    {section('mood', 'Настроение истории', 'Драма и стиль подсказок', <><DramaPicker definition={d} withDifficulty={false} />{text('Стиль подсказок для постов', 'voice', 'Так звучат готовые подсказки. Свой пост ты пишешь как хочешь.', 2, 200)}<StringList title="Варианты стиля" help="Готовые варианты для быстрого выбора стиля подсказок." values={d.voices} onChange={voices => update({ voices })} /></>)}
     {section('rules', 'Особенности мира', 'Что здесь возможно и как всё устроено', <><p className="small muted">Например: «Магия работает только ночью». Эти правила влияют на поведение героев.</p><div className="editor-rules">{d.rules.map((rule, i) => rule.locked ? <AgeRuleNote key={i} teen={draft.group !== '18+' || draft.ageBand === '14-17'} /> : <div className="editor-rule" key={i}><TextField label={`Особенность ${i + 1}`} value={rule.text} onChange={text => update({ rules: d.rules.map((r, j) => i === j ? { ...r, text } : r) })} rows={2} /><button className="text-link" onClick={() => update({ rules: d.rules.filter((_, j) => i !== j) })}>Убрать особенность</button></div>)}</div><button className="chip" onClick={() => update({ rules: [...d.rules, { text: '', locked: false }] })}>＋ Добавить особенность</button></>)}
     {section('extra', 'Дополнительные настройки игры', 'Идеи постов, задания и оформление достижений', <>
       <StringList title="Идеи для постов" help="Начала фраз, которые игрок может дописать." values={d.postIdeas} onChange={postIdeas => update({ postIdeas })} /><StringList title="Примеры постов" help="Образцы текста для этого мира." values={d.demoPosts} onChange={demoPosts => update({ demoPosts })} />

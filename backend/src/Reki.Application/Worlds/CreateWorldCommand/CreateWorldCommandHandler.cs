@@ -20,9 +20,20 @@ internal sealed class CreateWorldCommandHandler(
     {
         var player = await rekiContextAccessor.Context.Player;
         var source = request.Definition;
-        if (source.BalanceKey == "own" && !player.HitOwnWorldMilestone)
+        if (source.TemplateId is null && !player.HitOwnWorldMilestone)
         {
             throw new RequestConflictException("Creating a world from scratch is not unlocked.");
+        }
+
+        if (source.TemplateId is { } templateId &&
+            await worldRepository.GetWorldTemplateAsync(templateId, cancellationToken) is not { IsArchived: false })
+        {
+            throw new ResourceNotFoundException("An available world template was not found.");
+        }
+
+        if (!Enum.IsDefined(source.Difficulty))
+        {
+            throw new ContentRejectedException();
         }
 
         if (source.Stars.Count == 0 || source.Stars.Any(star => !Enum.IsDefined(star.Trait)) ||
@@ -37,7 +48,7 @@ internal sealed class CreateWorldCommandHandler(
             Player = instance.Player with { Subscribers = balance.Value.Growth.StartingSubscribers },
         };
         await worldRepository.InsertWorldAsync(world, cancellationToken);
-        telemetry.TrackPlayer(player, "world_created", new Dictionary<string, string> { ["world"] = world.BalanceKey }, world.Id);
+        telemetry.TrackPlayer(player, "world_created", new Dictionary<string, string> { ["template_id"] = world.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = world.Difficulty.ToString().ToLowerInvariant() }, world.Id);
         telemetry.TrackWorldAudience(world);
         return world;
     }

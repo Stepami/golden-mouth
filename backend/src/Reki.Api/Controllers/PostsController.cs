@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -28,7 +29,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
     [ActionName("GeneratePublication")]
     public ServerSentEventsResult<PublicationStatusLiveEvent> GeneratePublication(
         StartPublicationRequest request,
-        [FromQuery] string worldId,
+        [FromQuery, RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
         CancellationToken cancellationToken)
     {
         var result = sender.CreateStream(
@@ -52,7 +53,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
     [ActionName("ModeratePublication")]
     public async Task<Ok<IReadOnlyList<LiveEvent>>> ModeratePublicationAsync(
         string publicationId,
-        [FromQuery] string worldId,
+        [FromQuery, RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
@@ -66,7 +67,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
     public ServerSentEventsResult<ReplyLiveEvent> ReplyToPost(
         string postId,
         ReplyRequest request,
-        [FromQuery] string worldId,
+        [FromQuery, RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
         CancellationToken cancellationToken)
     {
         var result = sender.CreateStream(
@@ -108,7 +109,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
     [ActionName("GetPost")]
     public async Task<Ok<PostDetailResponse>> GetPostAsync(
         string postId,
-        [FromQuery] string worldId,
+        [FromQuery, RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(

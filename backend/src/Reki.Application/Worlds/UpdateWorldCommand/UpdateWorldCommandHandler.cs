@@ -24,7 +24,8 @@ internal sealed class UpdateWorldCommandHandler(
         {
             Id = world.Id,
             Version = world.Version + 1,
-            BalanceKey = world.BalanceKey,
+            TemplateId = world.TemplateId,
+            IsArchived = world.IsArchived,
             Stars = definition.Stars.Select(star =>
             {
                 var previous = world.FindStar(star.Id);

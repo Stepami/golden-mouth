@@ -108,6 +108,7 @@ namespace Reki.Api.Serialization;
         typeof(CamelCaseEnumConverter<SkillIdType>),
         typeof(CamelCaseEnumConverter<Address>),
         typeof(CamelCaseEnumConverter<WorldDrama>),
+        typeof(CamelCaseEnumConverter<WorldDifficulty>),
         typeof(CamelCaseEnumConverter<BirthGroup>),
         typeof(CamelCaseEnumConverter<FeedItemKind>),
         typeof(CamelCaseEnumConverter<DirectMessageAuthor>),

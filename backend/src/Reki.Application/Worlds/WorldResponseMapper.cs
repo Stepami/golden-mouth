@@ -14,6 +14,8 @@ public static partial class WorldResponseMapper
     [MapperIgnoreSource(nameof(World.Version))]
     public static partial WorldResponse ToResponse(this World source);
 
+    private static Guid? MapTemplateId(WorldId? source) => source?.Value;
+
     [MapProperty("Id.Value", nameof(WorldStarResponse.Id))]
     [MapperIgnoreSource(nameof(WorldStar.RelationGainedInPeriod))]
     [MapperIgnoreSource(nameof(WorldStar.RelationPeriodStartedAtUtc))]

@@ -14,7 +14,7 @@
     "challenge_win_bonus_days": 3
   },
   "growth": {
-    "formula": "delta = k_world * (0.5 + quality) * subs^power * decay(energy_index) * mult",
+    "formula": "delta = k_difficulty * (0.5 + quality) * subs^power * decay(energy_index) * mult",
     "power": 0.6,
     "k": 1.0,
     "decay": [{ "from": 1, "to": 5, "x": 1.0 }, { "from": 6, "to": 10, "x": 0.7 }, { "from": 11, "to": 99, "x": 0.25 }],
@@ -37,16 +37,39 @@
   "relations": { "min": -5, "max": 5, "max_gain_per_day": 1, "star_card_at": 3, "dm_star_replies_per_day": 5 },
   "thread": { "bonus_replies": 3, "subscriber_bonus": 9 },
   "stages": [{ "id": "mask", "from": 120 }, { "id": "views", "from": 1000 }, { "id": "strike", "from": 5000 }, { "id": "new_line", "from": 10000 }],
-  "worlds": {
-    "stage":   { "difficulty": 1, "k": 1.0,  "flop": 0.10, "viral_x": 1.0, "hate_from": 5000, "hate_every_days": [4, 5], "unlock": null },
-    "academy": { "difficulty": 2, "k": 1.1,  "flop": 0.15, "viral_x": 1.2, "hate_from": 3000, "hate_every_days": [3, 4], "unlock": null },
-    "it":      { "difficulty": 3, "k": 1.25, "flop": 0.20, "viral_x": 1.4, "hate_from": 1000, "hate_every_days": [2, 3], "unlock": null },
-    "stream":  { "difficulty": 2, "k": 1.1,  "flop": 0.15, "viral_x": 1.2, "hate_from": 3000, "hate_every_days": [3, 4], "unlock": null },
-    "evening":   { "difficulty": 1, "k": 1.0,  "flop": 0.10, "viral_x": 1.0, "hate_from": 5000, "hate_every_days": [4, 5], "unlock": null },
-    "sorcerers": { "difficulty": 2, "k": 1.1,  "flop": 0.15, "viral_x": 1.2, "hate_from": 3000, "hate_every_days": [3, 4], "unlock": null },
-    "houses":  { "difficulty": 2, "k": 1.1,  "flop": 0.15, "viral_x": 1.2, "hate_from": 3000, "hate_every_days": [3, 4], "unlock": null },
-    "own":     { "difficulty": 2, "k": 1.0,  "flop": 0.15, "viral_x": 1.0, "hate_from": 5000, "hate_every_days": [3, 4], "unlock": { "subs": 500, "or_first_friend": true } }
+  "difficulties": {
+    "easy": {
+      "k": 1.0,
+      "flop": 0.1,
+      "viral_x": 1.0,
+      "hate_from": 5000,
+      "hate_every_days": [
+        4,
+        5
+      ]
+    },
+    "normal": {
+      "k": 1.1,
+      "flop": 0.15,
+      "viral_x": 1.2,
+      "hate_from": 3000,
+      "hate_every_days": [
+        3,
+        4
+      ]
+    },
+    "hard": {
+      "k": 1.25,
+      "flop": 0.2,
+      "viral_x": 1.4,
+      "hate_from": 1000,
+      "hate_every_days": [
+        2,
+        3
+      ]
+    }
   },
+  "access": { "create_world_from_scratch": { "subs": 500, "or_first_friend": true } },
   "drama": { "soft": { "hate_x": 0.5 }, "mid": { "hate_x": 1.0 }, "hot": { "hate_x": 1.3 }, "off": { "hate_x": 0 } },
   "challenge": { "days": 3, "active_max": 1, "min_posts": 5, "score": "0.7 * avg(post_quality) + 0.3 * avg(reach / own_median_reach)" },
   "streak": { "rewards": { "3": "posts+2", "7": "card:week_on_air", "14": "frame", "30": "guest_star" }, "burns": false },

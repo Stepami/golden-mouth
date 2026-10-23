@@ -19,6 +19,8 @@ public sealed record Publication(
     WorldId WorldId,
     PublicationFailure? Failure = null)
 {
+    public PublicationBalance? BalanceSnapshot { get; init; }
+
     public GeneratedPostTurn AssembleTurn()
     {
         var comments = Parts

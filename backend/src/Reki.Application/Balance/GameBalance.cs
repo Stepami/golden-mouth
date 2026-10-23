@@ -1,3 +1,5 @@
+using Reki.Domain.Worlds;
+
 namespace Reki.Application.Balance;
 
 public sealed record GameBalance(
@@ -16,7 +18,7 @@ public sealed record GameBalance(
     RelationBalance Relations,
     ChallengeBalance Challenge,
     ThreadBalance Thread,
-    IReadOnlyDictionary<string, WorldBalance> Worlds,
+    IReadOnlyDictionary<WorldDifficulty, DifficultyBalance> Difficulties,
     int PostEnergyCost = 1,
     int OwnWorldSubscribers = 500,
     double StarFeedOpenProbability = 0);

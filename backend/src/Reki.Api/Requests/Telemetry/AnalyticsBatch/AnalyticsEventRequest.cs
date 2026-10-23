@@ -9,6 +9,7 @@ public sealed record AnalyticsEventRequest
     /// Идентификатор экземпляра мира; отсутствует у событий до создания мира.
     /// </summary>
     [MaxLength(64)]
+    [RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")]
     public string? WorldId { get; init; }
 
     [Required]

@@ -6,7 +6,6 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using Reki.Application.Balance;
-using Reki.Domain.Events;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
@@ -24,6 +23,168 @@ namespace Reki.Tests.Persistence;
 public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 {
     private static readonly DateTimeOffset CreatedAt = new(2026, 10, 5, 15, 0, 0, 123, TimeSpan.FromHours(3));
+
+    [Test]
+    [Arguments("own", "normal", 1.0, 0.15, 1.0, 5000L)]
+    [Arguments("stage", "easy", 1.0, 0.10, 1.0, 5000L)]
+    [Arguments("evening", "easy", 1.0, 0.10, 1.0, 5000L)]
+    [Arguments("academy", "normal", 1.1, 0.15, 1.2, 3000L)]
+    [Arguments("stream", "normal", 1.1, 0.15, 1.2, 3000L)]
+    [Arguments("sorcerers", "normal", 1.1, 0.15, 1.2, 3000L)]
+    [Arguments("houses", "normal", 1.1, 0.15, 1.2, 3000L)]
+    [Arguments("it", "hard", 1.25, 0.20, 1.4, 1000L)]
+    public async Task UnifyWorldBalance_LegacyWorld_PreservesPublicationOnRetryAsync(
+        string key, string difficulty, double growth, double flop, double viral, long hateFrom)
+    {
+        // Arrange
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        using (var session = await mongo.MongoClient.StartSessionAsync())
+        {
+            await new SeedWorldTemplates().UpAsync(database, session, CancellationToken.None);
+            await new ReleaseWorldCatalog().UpAsync(database, session, CancellationToken.None);
+        }
+
+        var currentTemplateId = new BsonBinaryData(Guid.Parse("5720946a-ea7c-4a10-9c50-51ce3deefc53"), GuidRepresentation.Standard);
+        await database.GetCollection<BsonDocument>("world_templates").UpdateOneAsync(
+            new BsonDocument("_id", currentTemplateId), new BsonDocument("$set", new BsonDocument("Interface.Title", "Актуальный IT")));
+        var worldGuid = Guid.Parse("f247337b-410f-43fa-8c03-8968cc9fafc2");
+        var oldId = worldGuid.ToString("N");
+        var uuid = new BsonBinaryData(worldGuid, GuidRepresentation.Standard);
+        var original = Common.TestGameData.CreateWorld().ToBsonDocument();
+        original["_id"] = oldId;
+        original["BalanceKey"] = key;
+        original.Remove("Difficulty");
+        original.Remove("TemplateId");
+        original.Remove("IsArchived");
+        original["Interface"]["Difficulty"] = 3; // Decorative difficulty must never override mechanics.
+        original["Player"]["Subscribers"] = 9876L;
+        await database.GetCollection<BsonDocument>("worlds").InsertOneAsync(original);
+        await database.GetCollection<BsonDocument>("posts").InsertOneAsync(new BsonDocument
+        {
+            ["_id"] = "saved-post", ["WorldId"] = oldId, ["Text"] = "saved text", ["SubscriberDelta"] = 17L,
+        });
+        await database.GetCollection<BsonDocument>("events").InsertOneAsync(new BsonDocument
+        {
+            ["_id"] = "saved-event", ["WorldId"] = oldId, ["Reward"] = "saved reward",
+        });
+        await database.GetCollection<BsonDocument>("publications").InsertOneAsync(new BsonDocument
+        {
+            ["_id"] = "saved-publication", ["WorldId"] = oldId, ["Text"] = "saved text", ["OwnWords"] = true,
+            ["WantId"] = BsonNull.Value, ["RequestHash"] = "old hash", ["Status"] = "ReadyForModeration",
+            ["Result"] = new BsonDocument("Post", new BsonDocument { ["WorldId"] = oldId, ["SubscriberDelta"] = 17L }),
+        });
+        var ticker = CreateTicker("world-job", "saved-post");
+        var tickerRequest = new System.Text.Json.Nodes.JsonObject
+        {
+            ["playerId"] = "a96fb5dd-f056-4809-a1d2-bb5ed78a210f", ["worldId"] = oldId, ["postId"] = "saved-post",
+        };
+        ticker["Request"] = new BsonBinaryData(TickerHelper.CreateTickerRequest(System.Text.Encoding.UTF8.GetBytes(tickerRequest.ToJsonString())));
+        await database.GetCollection<BsonDocument>("ticker_TimeTickers").InsertOneAsync(ticker);
+
+        // Act
+        await MigrateWorldBalanceAsync(database);
+        var firstWorld = await database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", uuid)).SingleAsync();
+        var firstPublication = await ReadAsync(database, "publications", "saved-publication");
+        await MigrateWorldBalanceAsync(database);
+        var saved = await database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", uuid)).SingleAsync();
+        var publication = await ReadAsync(database, "publications", "saved-publication");
+        var templates = await database.GetCollection<BsonDocument>("world_templates").Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+
+        // Assert
+        await Assert.That(saved).IsEqualTo(firstWorld);
+        await Assert.That(publication).IsEqualTo(firstPublication);
+        await Assert.That(saved["Difficulty"]).IsEqualTo(difficulty);
+        await Assert.That(saved["Player"]).IsEqualTo(original["Player"]);
+        await Assert.That(saved["Stars"]).IsEqualTo(original["Stars"]);
+        await Assert.That(saved["IsArchived"].AsBoolean).IsFalse();
+        await Assert.That(saved.Contains("BalanceKey")).IsFalse();
+        await Assert.That(saved["Interface"].AsBsonDocument.Contains("Difficulty")).IsFalse();
+        if (key == "own")
+        {
+            await Assert.That(saved["TemplateId"].IsBsonNull).IsTrue();
+        }
+        else
+        {
+            await Assert.That(saved["TemplateId"].AsBsonBinaryData.SubType).IsEqualTo(BsonBinarySubType.UuidStandard);
+            var expectedTemplate = key switch
+            {
+                "stage" => "edfccf53-65c6-4eaf-8321-2391bc1758bd",
+                "evening" => "b3a1a522-0263-4796-a197-57a8731fc291",
+                "academy" => "b018145e-c887-4d00-9f18-5c877d0af8be",
+                "stream" => "0cb3f809-6dfd-4ef1-af52-daa12a5b8804",
+                "sorcerers" => "aec9494b-4118-4525-8458-e85d759c8dd9",
+                "houses" => "8c02a7fb-3b55-4eb0-b957-1b4869ed9834",
+                _ => "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+            };
+            await Assert.That(saved["TemplateId"].AsBsonBinaryData.ToGuid()).IsEqualTo(Guid.Parse(expectedTemplate));
+        }
+
+        await Assert.That((await ReadAsync(database, "posts", "saved-post"))["WorldId"]).IsEqualTo(uuid);
+        await Assert.That((await ReadAsync(database, "posts", "saved-post"))["SubscriberDelta"]).IsEqualTo(17L);
+        await Assert.That((await ReadAsync(database, "events", "saved-event"))["WorldId"]).IsEqualTo(uuid);
+        await Assert.That(publication["WorldId"]).IsEqualTo(uuid);
+        await Assert.That(publication["Result"]["Post"]["WorldId"]).IsEqualTo(uuid);
+        await Assert.That(publication["Result"]["Post"]["SubscriberDelta"]).IsEqualTo(17L);
+        await Assert.That(publication["BalanceSnapshot"]["Difficulty"]).IsEqualTo(difficulty);
+        var coefficients = publication["BalanceSnapshot"]["Coefficients"];
+        await Assert.That(coefficients["GrowthCoefficient"].ToDouble()).IsEqualTo(growth);
+        await Assert.That(coefficients["FlopChance"].ToDouble()).IsEqualTo(flop);
+        await Assert.That(coefficients["ViralMultiplier"].ToDouble()).IsEqualTo(viral);
+        await Assert.That(coefficients["HateFrom"].ToInt64()).IsEqualTo(hateFrom);
+        await Assert.That(publication["RequestHash"].AsString).IsEqualTo("AB03196A97E021E36DCCD3B80D4E0219BDDAC0E01092CBF3CFB834477E89D1BF");
+        await Assert.That(ReadRequest(await ReadAsync(database, "ticker_TimeTickers", "world-job")).GetProperty("worldId").GetString()).IsEqualTo(worldGuid.ToString("D"));
+        await Assert.That(templates.Count).IsEqualTo(8);
+        await Assert.That(templates.Single(template => template["_id"] == currentTemplateId)["Interface"]["Title"].AsString).IsEqualTo("Актуальный IT");
+        await Assert.That(templates.Count(template => template["IsArchived"].AsBoolean)).IsEqualTo(4);
+        await Assert.That(templates.All(template => template["Player"]["PlayerId"].AsBsonBinaryData.ToGuid() == Guid.Empty && template["TemplateId"].IsBsonNull)).IsTrue();
+        using var names = await database.ListCollectionNamesAsync();
+        await Assert.That(await names.ToListAsync()).IsEquivalentTo(["worlds", "world_templates", "posts", "events", "publications", "ticker_TimeTickers"]);
+    }
+
+    [Test]
+    public async Task UnifyWorldBalance_NonGuidIdentifier_PreservesDeterministicIdentityAsync()
+    {
+        // Arrange
+        await using var scope = CreateDatabase();
+        var original = Common.TestGameData.CreateWorld().ToBsonDocument();
+        original["_id"] = "legacy-world-one";
+        original["BalanceKey"] = "stage";
+        await scope.Database.GetCollection<BsonDocument>("worlds").InsertOneAsync(original);
+
+        // Act
+        await MigrateWorldBalanceAsync(scope.Database);
+        await MigrateWorldBalanceAsync(scope.Database);
+        var saved = await scope.Database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+
+        // Assert
+        await Assert.That(saved.Count).IsEqualTo(1);
+        await Assert.That(saved[0]["_id"].AsBsonBinaryData.ToGuid()).IsEqualTo(Guid.Parse("d69600c0-c203-2ec9-3418-49bf27afd351"));
+        await Assert.That(saved[0]["Player"]).IsEqualTo(original["Player"]);
+    }
+
+    [Test]
+    public async Task UnifyWorldBalance_MissingWorldReference_RollsBackConversionAsync()
+    {
+        // Arrange
+        await using var scope = CreateDatabase();
+        var original = Common.TestGameData.CreateWorld().ToBsonDocument();
+        original["_id"] = "legacy-world-one";
+        original["BalanceKey"] = "stage";
+        var worlds = scope.Database.GetCollection<BsonDocument>("worlds");
+        await worlds.InsertOneAsync(original);
+        var orphan = new BsonDocument { ["_id"] = "orphan", ["WorldId"] = "missing-world" };
+        await scope.Database.GetCollection<BsonDocument>("posts").InsertOneAsync(orphan);
+
+        // Act
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => MigrateWorldBalanceAsync(scope.Database));
+
+        // Assert
+        await Assert.That(exception).IsNotNull();
+        await Assert.That(await worlds.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(original);
+        await Assert.That(await ReadAsync(scope.Database, "posts", "orphan")).IsEqualTo(orphan);
+        await Assert.That(await scope.Database.GetCollection<BsonDocument>("world_templates").CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
+    }
 
     [Test]
     public async Task Migrate_LegacyComments_PreservesParentLinksAsync()
@@ -227,7 +388,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var source = Common.TestGameData.CreateWorld();
         var expected = source with
         {
-            Interface = source.Interface with { Title = "Свой мир", Difficulty = WorldDifficulty.Hard },
+            Difficulty = WorldDifficulty.Hard,
+            Interface = source.Interface with { Title = "Свой мир" },
             Player = source.Player with
             {
                 PlayerId = PlayerId.From(collectionName == "world_templates" ? "00000000000000000000000000000000" : "c7e5abd8b70c54a2d22beacd8a3e6377"),
@@ -242,6 +404,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             },
         };
         var original = expected.ToBsonDocument();
+        original["Interface"]["Difficulty"] = original["Difficulty"];
+        original.Remove("Difficulty");
         var legacy = original.DeepClone().AsBsonDocument;
         var fields = legacy["Interface"].AsBsonDocument.Elements.Concat(legacy["Player"].AsBsonDocument.Elements).ToArray();
         foreach (var field in fields)
@@ -265,14 +429,13 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await migration.UpAsync(database, session, CancellationToken.None);
         await migration.UpAsync(database, session, CancellationToken.None);
         var saved = await collection.Find(new BsonDocument("_id", original["_id"])).SingleAsync();
+        saved["Interface"] = new BsonDocument(saved["Interface"].AsBsonDocument.Elements.OrderBy(field => field.Name, StringComparer.Ordinal));
+        original["Interface"] = new BsonDocument(original["Interface"].AsBsonDocument.Elements.OrderBy(field => field.Name, StringComparer.Ordinal));
         await Assert.That(new BsonDocument(saved.Elements.OrderBy(field => field.Name, StringComparer.Ordinal)))
             .IsEqualTo(new BsonDocument(original.Elements.OrderBy(field => field.Name, StringComparer.Ordinal)));
-        var hydrated = BsonSerializer.Deserialize<World>(saved);
-        await Assert.That(hydrated.Player.PlayerId).IsEqualTo(expected.Player.PlayerId);
-        await Assert.That(hydrated.Player.Drama).IsEqualTo(expected.Player.Drama);
-        await Assert.That(hydrated.Player.Wants).IsEquivalentTo(expected.Player.Wants);
-        await Assert.That(hydrated.Player.Achievements).IsEquivalentTo(expected.Player.Achievements);
-        await Assert.That(hydrated.Interface).IsEqualTo(expected.Interface);
+        await Assert.That(saved["Player"]).IsEqualTo(expected.Player.ToBsonDocument());
+        await Assert.That(saved["Interface"]["Title"].AsString).IsEqualTo("Свой мир");
+        await Assert.That(saved["Interface"]["Difficulty"].AsString).IsEqualTo("hard");
         using var indexes = await database.GetCollection<BsonDocument>("worlds").Indexes.ListAsync();
         await Assert.That((await indexes.ToListAsync()).Single(index => index["name"] == "ix_worlds_player")["key"])
             .IsEqualTo(new BsonDocument("Player.PlayerId", 1));
@@ -362,8 +525,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var database = scope.Database;
         using var session = await mongo.MongoClient.StartSessionAsync();
         await new SeedWorldTemplates().UpAsync(database, session, CancellationToken.None);
-        var template = await database.GetCollection<World>(MongoCollections.WorldTemplates)
-            .Find(world => world.BalanceKey == kind).SingleAsync();
+        var template = SeedWorldTemplates.CreateTemplates().Single(world => world.Id == WorldId.From(Guid.Parse(kind == "stage" ? "edfccf53-65c6-4eaf-8321-2391bc1758bd" : "0cb3f809-6dfd-4ef1-af52-daa12a5b8804")));
         var period = new BsonArray { DateTimeOffset.UnixEpoch.Ticks, 0 };
         var achievement = new AchievementProgress("saved-card", "🌊", "Свой момент", true).ToBsonDocument();
         achievement["WorldId"] = kind;
@@ -398,26 +560,26 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
         await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
 
-        var world = await database.GetCollection<World>(MongoCollections.Worlds)
+        var world = await database.GetCollection<BsonDocument>(MongoCollections.Worlds)
             .Find(new BsonDocument("Player.PlayerId", "ca2b7afeed3ac05f1bda84ef172efad9")).SingleAsync();
-        await Assert.That(world.BalanceKey).IsEqualTo(kind);
-        await Assert.That(world.Player.Name).IsEqualTo("Свой канал");
-        await Assert.That(world.Player.Avatar).IsEqualTo("@legacy.channel");
-        await Assert.That(world.Player.Role).IsEqualTo("Своя роль");
-        await Assert.That(world.Player.Subscribers).IsEqualTo(987L);
-        await Assert.That(world.Player.Voice).IsEqualTo("Свой голос");
-        await Assert.That(world.Player.Drama).IsEqualTo(WorldDrama.Soft);
-        await Assert.That(world.Player.Wants.Single().Done).IsTrue();
-        await Assert.That(world.Player.Achievements.Single().IsOpen).IsTrue();
-        await Assert.That(world.Stars[0].Relation).IsEqualTo(3);
-        await Assert.That(world.Stars[0].RelationGainedInPeriod).IsEqualTo(1);
-        await Assert.That(world.Stars[0].RelationPeriodStartedAtUtc).IsEqualTo(DateTimeOffset.UnixEpoch);
-        await Assert.That(world.Roles).IsEquivalentTo(template.Roles);
-        await Assert.That(world.Rules).IsEquivalentTo(template.Rules);
-        await Assert.That(world.Interface.AvatarStyle).IsEqualTo(template.Interface.AvatarStyle);
+        await Assert.That(world["BalanceKey"].AsString).IsEqualTo(kind);
+        await Assert.That(world["Player"]["Name"].AsString).IsEqualTo("Свой канал");
+        await Assert.That(world["Player"]["Avatar"].AsString).IsEqualTo("@legacy.channel");
+        await Assert.That(world["Player"]["Role"].AsString).IsEqualTo("Своя роль");
+        await Assert.That(world["Player"]["Subscribers"].ToInt64()).IsEqualTo(987L);
+        await Assert.That(world["Player"]["Voice"].AsString).IsEqualTo("Свой голос");
+        await Assert.That(world["Player"]["Drama"].ToInt32()).IsEqualTo((int)WorldDrama.Soft);
+        await Assert.That(world["Player"]["Wants"][0]["Done"].AsBoolean).IsTrue();
+        await Assert.That(world["Player"]["Achievements"][0]["IsOpen"].AsBoolean).IsTrue();
+        await Assert.That(world["Stars"][0]["Relation"].ToInt32()).IsEqualTo(3);
+        await Assert.That(world["Stars"][0]["RelationGainedInPeriod"].ToInt32()).IsEqualTo(1);
+        await Assert.That(world["Stars"][0]["RelationPeriodStartedAtUtc"]).IsEqualTo(template.Stars[0].ToBsonDocument()["RelationPeriodStartedAtUtc"]);
+        await Assert.That(world["Roles"]).IsEqualTo(new BsonArray(template.Roles));
+        await Assert.That(world["Rules"]).IsEqualTo(new BsonArray(template.Rules.Select(rule => rule.ToBsonDocument())));
+        await Assert.That(world["Interface"]["AvatarStyle"].AsString).IsEqualTo(template.Interface.AvatarStyle);
         var savedEvent = await database.GetCollection<BsonDocument>(MongoCollections.Events)
             .Find(new BsonDocument("_id", "cc3fb9ee31be4b8b991163a6b06af36e")).SingleAsync();
-        await Assert.That(BsonSerializer.Deserialize<DailyGameEvent>(savedEvent).WorldId).IsEqualTo(world.Id);
+        await Assert.That(savedEvent["WorldId"]).IsEqualTo(world["_id"]);
         var savedPlayer = await database.GetCollection<BsonDocument>(MongoCollections.Players)
             .Find(new BsonDocument("_id", "ca2b7afeed3ac05f1bda84ef172efad9")).SingleAsync();
         await Assert.That(savedPlayer.Contains("World")).IsFalse();
@@ -486,7 +648,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var post = new GamePost(
             PostId.From("d9d4a347db06b4483654268785e235fa"),
             PlayerId.From("b27d9a691c953713a6fa4df4378d0a9f").ToAuthorId(),
-            WorldId.From("world"),
+            WorldId.From(Guid.Parse("e3791532-36fe-4109-84d5-ab7ca537e12a")),
             "post",
             10,
             [],
@@ -770,9 +932,10 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var database = scope.Database;
         using var session = await mongo.MongoClient.StartSessionAsync();
         await new SeedWorldTemplates().UpAsync(database, session, CancellationToken.None);
+        await MigrateWorldBalanceAsync(database);
         var templates = await database.GetCollection<World>(MongoCollections.WorldTemplates)
             .Find(FilterDefinition<World>.Empty).ToListAsync();
-        await Assert.That(templates.Select(world => world.Id.Value)).IsEquivalentTo(["stage", "academy", "it", "stream", "own"]);
+        await Assert.That(templates.Select(world => world.Id.Value)).IsEquivalentTo([Guid.Parse("edfccf53-65c6-4eaf-8321-2391bc1758bd"), Guid.Parse("b018145e-c887-4d00-9f18-5c877d0af8be"), Guid.Parse("5720946a-ea7c-4a10-9c50-51ce3deefc53"), Guid.Parse("0cb3f809-6dfd-4ef1-af52-daa12a5b8804"), Guid.Parse("14049891-fe2b-4d98-b38f-0f37e6544052")]);
         await Assert.That(templates.All(world => world.Player.PlayerId.Value == Guid.Empty)).IsTrue();
         await Assert.That(templates.All(world => world.Stars.Count > 0 && world.Roles.Count > 0 && world.Rules.Count > 0)).IsTrue();
         await Assert.That(templates.All(world => world.Player.Wants.Count == 3 && world.Player.Achievements.Count == 12)).IsTrue();
@@ -788,8 +951,9 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         using var session = await mongo.MongoClient.StartSessionAsync();
         var migration = new SeedWorldTemplates();
         await migration.UpAsync(database, session, CancellationToken.None);
+        await MigrateWorldBalanceAsync(database);
         var templates = database.GetCollection<World>(MongoCollections.WorldTemplates);
-        var stageId = WorldId.From("stage");
+        var stageId = WorldId.From(Guid.Parse("edfccf53-65c6-4eaf-8321-2391bc1758bd"));
         var template = await templates.Find(world => world.Id == stageId).SingleAsync();
         var edited = template with { Interface = template.Interface with { Title = "Обновлённый шаблон" } };
         await templates.ReplaceOneAsync(world => world.Id == stageId, edited);
@@ -959,7 +1123,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await CreateMigrator(mongo.MongoClient, database.DatabaseNamespace.DatabaseName, false)
             .MigrateAsync(cancellationToken: CancellationToken.None);
         var templates = database.GetCollection<BsonDocument>("world_templates");
-        var it = await templates.Find(new BsonDocument("_id", "it")).SingleAsync();
+        var it = await templates.Find(new BsonDocument("_id", new BsonBinaryData(Guid.Parse("5720946a-ea7c-4a10-9c50-51ce3deefc53"), GuidRepresentation.Standard))).SingleAsync();
         var players = database.GetCollection<BsonDocument>("players");
         await players.InsertManyAsync([
             new BsonDocument { { "_id", "already" }, { "TelegramUserId", 10001L }, { "HitOwnWorldMilestone", true } },
@@ -977,8 +1141,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
         var catalog = await templates.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
         await Assert.That(catalog.Select(item => item.ToJson())).IsEquivalentTo(before.Select(item => item.ToJson()));
-        await Assert.That(catalog.Select(item => item["_id"].AsString)).IsEquivalentTo(["it", "evening", "sorcerers", "houses"]);
-        await Assert.That(catalog.Single(item => item["_id"] == "it")).IsEqualTo(it);
+        await Assert.That(catalog.Select(item => item["BalanceKey"].AsString)).IsEquivalentTo(["it", "evening", "sorcerers", "houses"]);
+        await Assert.That(catalog.Single(item => item["BalanceKey"] == "it")).IsEqualTo(it);
         await Assert.That(await worlds.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(existing);
         var result = await players.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
         await Assert.That(result.Where(player => player["HitOwnWorldMilestone"].AsBoolean).Select(player => player["_id"].AsString))
@@ -1073,7 +1237,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
     private static BsonDocument CreatePost(string id, bool bsonDateTime)
     {
-        var document = new GamePost(PostId.New(CreatedAt), PlayerId.From(Guid.Parse("a96fb5ddf0564809a1d2bb5ed78a210f")).ToAuthorId(), WorldId.From("world"), id, 123, [], CreatedAt, 7, 0.8, 1.2, false, false, 5).ToBsonDocument();
+        var document = new GamePost(PostId.New(CreatedAt), PlayerId.From(Guid.Parse("a96fb5ddf0564809a1d2bb5ed78a210f")).ToAuthorId(), WorldId.From(Guid.Parse("e3791532-36fe-4109-84d5-ab7ca537e12a")), id, 123, [], CreatedAt, 7, 0.8, 1.2, false, false, 5).ToBsonDocument();
         document["_id"] = id;
         document["Extra"] = new BsonDocument("Retained", true);
         if (bsonDateTime)
@@ -1105,7 +1269,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(long.Parse(id[..12], NumberStyles.HexNumber, CultureInfo.InvariantCulture)).IsEqualTo(createdAt.ToUnixTimeMilliseconds());
     }
 
-    private static GameBalance CreateEnergyBalance() => new(10, 20, new TimeOnly(9, 0), 5, 3, 5, 3, 3, new GrowthBalance(1, 1, [], 0, 1, 1, 2, 3, 2, 1000), new ViralBalance(0, 0, 1), new FlopBalance(1), new SkillBalance([], 1, 1, 10, 2, 3, 1, 1), new RelationBalance(0, 10, 3, 5, 3), new ChallengeBalance(3, 1), new ThreadBalance(3, 9), new Dictionary<string, WorldBalance>());
+    private static GameBalance CreateEnergyBalance() => new(10, 20, new TimeOnly(9, 0), 5, 3, 5, 3, 3, new GrowthBalance(1, 1, [], 0, 1, 1, 2, 3, 2, 1000), new ViralBalance(0, 0, 1), new FlopBalance(1), new SkillBalance([], 1, 1, 10, 2, 3, 1, 1), new RelationBalance(0, 10, 3, 5, 3), new ChallengeBalance(3, 1), new ThreadBalance(3, 9), new Dictionary<WorldDifficulty, DifficultyBalance>());
 
     private static BsonDocument CreateLegacyReferralPlayer(string id, string? inviter, DateTimeOffset createdAt, int dailyBonus, int count, bool used) => new()
     {
@@ -1262,6 +1426,22 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
     private static Task<BsonDocument> ReadAsync(IMongoDatabase database, string collection, string id) =>
         database.GetCollection<BsonDocument>(collection).Find(new BsonDocument("_id", id)).SingleAsync();
+
+    private async Task MigrateWorldBalanceAsync(IMongoDatabase database)
+    {
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        session.StartTransaction();
+        try
+        {
+            await new UnifyWorldBalance().UpAsync(database, session, CancellationToken.None);
+            await session.CommitTransactionAsync();
+        }
+        catch
+        {
+            await session.AbortTransactionAsync();
+            throw;
+        }
+    }
 
     private async Task MigratePostIdsAsync(IMongoDatabase database, bool downgrade = false)
     {

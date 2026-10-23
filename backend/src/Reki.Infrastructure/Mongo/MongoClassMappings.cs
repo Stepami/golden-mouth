@@ -16,6 +16,7 @@ internal static class MongoClassMappings
     /// </summary>
     public static void Register()
     {
+        BsonSerializer.TryRegisterSerializer(new WorldDifficultySerializer());
         BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.AuthorIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.CommentIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(

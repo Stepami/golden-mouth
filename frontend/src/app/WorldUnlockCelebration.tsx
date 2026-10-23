@@ -39,7 +39,7 @@ export function WorldUnlockCelebration() {
     <span className="badge">НОВАЯ ВОЗМОЖНОСТЬ</span>
     <h1 id="world-unlock-title">Свой мир открыт!</h1>
     <p>Придумай место, героев и историю, которая будет только твоей.</p>
-    <Button onClick={() => { dismiss(); if (preview || !player) { nav.push('01-3_world'); return }; beginOwnWorld(player); nav.push('05-7b_own_world', { world: 'own' }) }}>Создать свой мир</Button>
+    <Button onClick={() => { dismiss(); if (preview || !player) { nav.push('01-3_world'); return }; beginOwnWorld(player); nav.push('05-7b_own_world', {}) }}>Создать свой мир</Button>
     <Button secondary onClick={dismiss}>Продолжить историю</Button>
     <p className="small muted">Доступ сохранён. Создать мир можно и позже — в разделе «Миры».</p>
   </div></div>

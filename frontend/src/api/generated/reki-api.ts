@@ -1535,7 +1535,7 @@ export interface CommentResponse {
 }
 
 export interface CreateWorldRequest {
-    balanceKey: string;
+    templateId?: string | null;
     name: string;
     avatar: string;
     role: string;
@@ -1549,7 +1549,7 @@ export interface CreateWorldRequest {
     firstPrompt?: string;
     emoji?: string;
     summary?: string;
-    difficulty?: number;
+    difficulty?: WorldDifficulty;
     unlockSkill?: string | null;
     unlockLevel?: number | null;
     voices?: string[];
@@ -1968,17 +1968,20 @@ export interface WhyResponse {
     [key: string]: any;
 }
 
+export type WorldDifficulty = "easy" | "normal" | "hard";
+
 export type WorldDrama = "soft" | "mid" | "hot" | "off";
 
 export interface WorldResponse {
     id: string;
-    balanceKey: string;
+    templateId?: string | null;
+    isArchived?: boolean;
     title: string;
     description: string;
     avatarStyle: string;
     emoji: string;
     summary: string;
-    difficulty?: number;
+    difficulty?: WorldDifficulty;
     unlockSkill?: string | null;
     unlockLevel?: number | null;
     where: string;

@@ -34,8 +34,13 @@ internal sealed class MongoWorldRepository : IWorldRepository
 
     public async ValueTask<IReadOnlyList<World>> GetWorldTemplatesAsync(CancellationToken cancellationToken)
     {
-        return await _templates.Find(FilterDefinition<World>.Empty).ToListAsync(cancellationToken);
+        return await _templates.Find(item => item.Player.PlayerId == PlayerId.From(Guid.Empty) &&
+            item.TemplateId == null && !item.IsArchived).ToListAsync(cancellationToken);
     }
+
+    public async ValueTask<World?> GetWorldTemplateAsync(WorldId templateId, CancellationToken cancellationToken) =>
+        await _templates.Find(item => item.Id == templateId && item.Player.PlayerId == PlayerId.From(Guid.Empty) &&
+            item.TemplateId == null).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<IReadOnlyList<World>> GetWorldsAsync(PlayerId playerId, CancellationToken cancellationToken)
     {

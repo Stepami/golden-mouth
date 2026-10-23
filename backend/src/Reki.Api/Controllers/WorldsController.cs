@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -48,7 +49,7 @@ public sealed class WorldsController(
     [ActionName("UpdateWorld")]
     public async Task<Ok> UpdateWorldAsync(
         CreateWorldRequest request,
-        string worldId,
+        [RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
         CancellationToken cancellationToken)
     {
         var command = request.ToUpdateWorld(worldId);

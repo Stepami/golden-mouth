@@ -26,6 +26,100 @@ namespace Reki.Tests.Api;
 public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
+    public async Task Publication_DifficultyChangedBeforeConfirmation_KeepsSnapshotForConfirmationAsync()
+    {
+        // Arrange
+        const long user = 1098;
+        using var api = Factory.CreateApiClient(user);
+        await CreatePlayerWithWorldAsync(api);
+        var worldId = await GetWorldIdAsync(api);
+        const string firstId = "00000000-0000-0000-0000-000000000001";
+        const string secondId = "00000000-0000-0000-0000-000000000002";
+        using (var response = await api.Posts.GeneratePublicationAsync(
+                   worldId,
+                   new StartPublicationRequest { PublicationId = firstId, Text = "Репетиция", OwnWords = false },
+                   CancellationToken.None))
+        using (var reader = new StreamReader(response.Stream))
+        {
+            await Assert.That(await reader.ReadToEndAsync(CancellationToken.None)).Contains("ready_for_moderation");
+        }
+
+        // Act
+        var definition = DefinitionOf((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single());
+        await api.Worlds.UpdateWorldAsync(worldId, definition with { Difficulty = WorldDifficulty.Hard }, CancellationToken.None);
+        var firstEvents = await api.Posts.ModeratePublicationAsync(firstId, worldId, CancellationToken.None);
+        var replay = await api.Posts.ModeratePublicationAsync(firstId, worldId, CancellationToken.None);
+        using (var response = await api.Posts.GeneratePublicationAsync(
+                   worldId,
+                   new StartPublicationRequest { PublicationId = secondId, Text = "Следующая репетиция", OwnWords = false },
+                   CancellationToken.None))
+        using (var reader = new StreamReader(response.Stream))
+        {
+            await Assert.That(await reader.ReadToEndAsync(CancellationToken.None)).Contains("ready_for_moderation");
+        }
+
+        var secondEvents = await api.Posts.ModeratePublicationAsync(secondId, worldId, CancellationToken.None);
+        var saved = await Database.GetCollection<Publication>("publications")
+            .Find(publication => publication.Id == firstId || publication.Id == secondId).ToListAsync();
+        var posts = await Database.GetCollection<GamePost>("posts")
+            .Find(post => post.WorldId == WorldId.From(worldId)).SortBy(post => post.CreatedAtUtc).ToListAsync();
+
+        // Assert
+        await Assert.That((saved.Single(publication => publication.Id == firstId).BalanceSnapshot ?? throw new InvalidOperationException("Missing first balance snapshot")).Difficulty).IsEqualTo(WorldDifficulty.Easy);
+        await Assert.That((saved.Single(publication => publication.Id == firstId).BalanceSnapshot ?? throw new InvalidOperationException("Missing first balance snapshot")).Coefficients.GrowthCoefficient).IsEqualTo(1d);
+        await Assert.That((saved.Single(publication => publication.Id == secondId).BalanceSnapshot ?? throw new InvalidOperationException("Missing second balance snapshot")).Difficulty).IsEqualTo(WorldDifficulty.Hard);
+        await Assert.That((saved.Single(publication => publication.Id == secondId).BalanceSnapshot ?? throw new InvalidOperationException("Missing second balance snapshot")).Coefficients.GrowthCoefficient).IsEqualTo(1.25d);
+        var firstPostId = firstEvents.OfType<ResultLiveEvent>().Single().Result.PostId;
+        var secondPostId = secondEvents.OfType<ResultLiveEvent>().Single().Result.PostId;
+        await Assert.That(posts.Single(post => post.Id == PostId.From(firstPostId)).SubscriberDelta).IsEqualTo(42L);
+        await Assert.That(posts.Single(post => post.Id == PostId.From(secondPostId)).SubscriberDelta).IsEqualTo(64L);
+        await Assert.That(replay.OfType<ResultLiveEvent>().Single().Result.PostId).IsEqualTo(firstPostId);
+        await Assert.That(posts.Count).IsEqualTo(2);
+        await Assert.That((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().Subscribers).IsEqualTo(226L);
+        var scored = Factory.Services.GetFakeLogCollector().GetSnapshot()
+            .Where(record => record.GetStructuredStateValue("event_name") == "post_scored").ToArray();
+        await Assert.That(scored.Single(record => record.GetStructuredStateValue("prop_id") == Guid.Parse(firstPostId).ToString("N"))
+            .GetStructuredStateValue("difficulty")).IsEqualTo("easy");
+        await Assert.That(scored.Single(record => record.GetStructuredStateValue("prop_id") == Guid.Parse(secondPostId).ToString("N"))
+            .GetStructuredStateValue("difficulty")).IsEqualTo("hard");
+    }
+
+    [Test]
+    public async Task Publication_HateThresholdChanged_ConfirmsUsingOriginalDifficultyAsync()
+    {
+        // Arrange
+        const long user = 1099;
+        using var api = Factory.CreateApiClient(user);
+        await CreatePlayerWithWorldAsync(api, WorldTemplate.It);
+        var worldId = await GetWorldIdAsync(api);
+        await Database.GetCollection<World>("worlds").UpdateOneAsync(
+            world => world.Id == WorldId.From(worldId), Builders<World>.Update.Set(world => world.Player.Subscribers, 1000));
+        Factory.Llm.Respond(messages =>
+        {
+            var response = CreateChatResponse(messages);
+            var arguments = response.Messages[0].Contents.OfType<FunctionCallContent>().Single().Arguments
+                ?? throw new InvalidOperationException("Missing arguments");
+            arguments["tone"] = "hate";
+            return response;
+        });
+        var first = await GenerateAsync(user, "Безопасная история мира");
+        await Assert.That(first.Body).Contains("ready_for_moderation");
+
+        // Act
+        var definition = DefinitionOf((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single());
+        await api.Worlds.UpdateWorldAsync(worldId, definition with { Difficulty = WorldDifficulty.Easy }, CancellationToken.None);
+        var confirmed = await api.Posts.ModeratePublicationAsync(first.PublicationId, worldId, CancellationToken.None);
+        var next = await GenerateAsync(user, "Следующая безопасная история");
+        var status = await api.Posts.GetPublicationStatusAsync(next.PublicationId, CancellationToken.None);
+
+        // Assert
+        await Assert.That(confirmed.OfType<ResultLiveEvent>().Count()).IsEqualTo(1);
+        await Assert.That(status.Status).IsEqualTo(PublicationStatusType.Failed);
+        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(9);
+        await Assert.That(await Database.GetCollection<GamePost>("posts").CountDocumentsAsync(post => post.WorldId == WorldId.From(worldId))).IsEqualTo(1L);
+    }
+
+    [Test]
     public async Task GetFeed_ParallelPlayers_IsolatesRequestContextsAsync()
     {
         // Arrange
@@ -42,7 +136,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                 PostId.New(DateTimeOffset.UnixEpoch),
                 PlayerId.From(item.Item2["_id"].AsBsonBinaryData.ToGuid().ToString("N")).ToAuthorId(),
                 WorldId.From(item.Item1),
-                item.Item1,
+                item.Item1.ToString(),
                 1,
                 [],
                 DateTimeOffset.UnixEpoch,
@@ -61,8 +155,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Assert
         await Assert.That(feeds[0].Items.Single().PostId).IsEqualTo(posts[0].Id.Value.ToString("N"));
         await Assert.That(feeds[1].Items.Single().PostId).IsEqualTo(posts[1].Id.Value.ToString("N"));
-        await Assert.That(feeds[0].Items.Single().Text).IsEqualTo(firstWorld);
-        await Assert.That(feeds[1].Items.Single().Text).IsEqualTo(secondWorld);
+        await Assert.That(feeds[0].Items.Single().Text).IsEqualTo(firstWorld.ToString());
+        await Assert.That(feeds[1].Items.Single().Text).IsEqualTo(secondWorld.ToString());
     }
 
     [Test]
@@ -76,7 +170,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var before = await GetStoredPostAsync(postId);
 
         // Act
-        var response = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostAsync(postId, second.Id, CancellationToken.None));
+        var response = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostAsync(postId, second.Id.ToString(), CancellationToken.None));
         await Assert.That(response).IsNotNull();
 
         // Assert
@@ -99,7 +193,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var posts = Enumerable.Range(0, 46).Select(index => new GamePost(
             PostId.New(start.AddMinutes(index - (index % 2))),
             (index < 21 ? ownerId : otherId).ToAuthorId(),
-            WorldId.From(index < 21 ? world["_id"].AsString : "other-world"),
+            WorldId.From(index < 21 ? world["_id"].AsBsonBinaryData.ToGuid() : Guid.Parse("a83d771c-f009-4b0e-9bae-9b3d08e09017")),
             $"post-{index}",
             index + 1,
             [],
@@ -575,7 +669,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var userMessage = messages.Last(message => message.Role == ChatRole.User);
         await Assert.That(messages.Count(message => message.Role == ChatRole.System)).IsEqualTo(2);
         using var profile = ParsePlayerLayer(playerOwnedLayer);
-        await Assert.That(profile.RootElement.GetProperty("worldId").GetString()).IsEqualTo("own");
+        await Assert.That(profile.RootElement.GetProperty("worldId").GetString()).IsEqualTo((await GetWorldIdAsync(api)).ToString());
         await Assert.That(profile.RootElement.GetProperty("worldTitle").GetString()).IsEqualTo("Театральная мастерская");
         await Assert.That(profile.RootElement.GetProperty("worldDescription").GetString())
             .IsEqualTo("Камерный мир молодых режиссёров и актёров.");
@@ -721,7 +815,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         using var data = ParsePlayerLayer(messages[1]);
 
         // Assert
-        await Assert.That(data.RootElement.GetProperty("worldId").GetString()).IsEqualTo("own");
+        await Assert.That(data.RootElement.GetProperty("worldId").GetString()).IsEqualTo((await GetWorldIdAsync(api)).ToString());
         await Assert.That(data.RootElement.GetProperty("channelVoice").GetString()).IsEqualTo(injected);
         await Assert.That(messages[0].Text.Contains(injected, StringComparison.Ordinal)).IsFalse();
         await Assert.That(messages[0].Text).Contains("Искра");
@@ -740,7 +834,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             (WorldTemplate.Academy, 2999, "mid", false, false), (WorldTemplate.Academy, 3000, "mid", false, true),
             (WorldTemplate.It, 999, "mid", false, false), (WorldTemplate.It, 1000, "mid", false, true),
             (WorldTemplate.Stream, 2999, "mid", false, false), (WorldTemplate.Stream, 3000, "mid", false, true),
-            (WorldTemplate.Own, 4999, "mid", false, false), (WorldTemplate.Own, 5000, "mid", false, true),
+            (WorldTemplate.Own, 2999, "mid", false, false), (WorldTemplate.Own, 3000, "mid", false, true),
         ];
         var playerRepository = Factory.Services.GetRequiredService<IPlayerRepository>();
         var worldRepository = Factory.Services.GetRequiredService<IWorldRepository>();
@@ -819,7 +913,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var third = ParseReplyEvents((await SendReplyAsync(user, postId, null, "second-root", "Ещё одна мысль")).Body)[^1];
         var fourth = await ReplyAsync(user, postId, answer.Id, "fourth-key", "Ещё один ответ");
         using var api = Factory.CreateApiClient(user);
-        var restored = await api.Posts.GetPostAsync(postId, world.Id.Value, CancellationToken.None);
+        var restored = await api.Posts.GetPostAsync(postId, world.Id.Value.ToString(), CancellationToken.None);
 
         // Assert
         await Assert.That(first.Status).IsEqualTo(ReplyStatus.Completed);
@@ -910,7 +1004,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             null,
             "invalid-root",
             "Комментарий к посту",
-            scenario == "foreign-world" ? "unowned-world" : world.Id.Value);
+            scenario == "foreign-world" ? "5dfe7e85-cc03-42d3-81f8-f4c9393dca6a" : world.Id.Value.ToString());
 
         // Assert
         if (scenario is "wrong-author" or "unsafe" or "deleted-during")
@@ -960,7 +1054,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var completed = events[^1];
         var stored = await GetStoredPostAsync(postId);
         using var api = Factory.CreateApiClient(user);
-        var detail = await api.Posts.GetPostAsync(postId, world.Id.Value, CancellationToken.None);
+        var detail = await api.Posts.GetPostAsync(postId, world.Id.Value.ToString(), CancellationToken.None);
 
         // Assert
         await Assert.That(response.Status).IsEqualTo(HttpStatusCode.OK);
@@ -1260,7 +1354,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Act
         var requestedPostId = scenario switch { "missing-post" => PostId.New(Factory.Session.Clock.GetUtcNow()).Value.ToString("N"), _ => postId };
         var requestedCommentId = scenario switch { "missing-target" => CommentId.New().Value.ToString("N"), _ => targetId };
-        var result = await SendReplyAsync(user, requestedPostId, requestedCommentId, key, text, scenario == "missing-world" ? "missing-world" : string.Empty);
+        var result = await SendReplyAsync(user, requestedPostId, requestedCommentId, key, text, scenario == "missing-world" ? "5dfe7e85-cc03-42d3-81f8-f4c9393dca6a" : string.Empty);
 
         // Assert
         var expectedStatus = scenario switch
@@ -1323,8 +1417,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         using var api = Factory.CreateApiClient(user);
 
         // Act
-        var detail = await api.Posts.GetPostAsync(postId, world.Id.Value, CancellationToken.None);
-        var feed = await api.Posts.GetFeedAsync(world.Id.Value, null, null, CancellationToken.None);
+        var detail = await api.Posts.GetPostAsync(postId, world.Id.Value.ToString(), CancellationToken.None);
+        var feed = await api.Posts.GetFeedAsync(world.Id.Value.ToString(), null, null, CancellationToken.None);
         var turn = await ReplyAsync(user, postId, targetId, "star-post", "ответ на пост звезды");
 
         // Assert
@@ -1390,7 +1484,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await posts.InsertOneAsync(secondPost);
 
         // Act
-        var response = await SendReplyAsync(user, secondPost.Id.Value.ToString("N"), targetId, "second-world", "ответ во втором мире", second.Id);
+        var response = await SendReplyAsync(user, secondPost.Id.Value.ToString("N"), targetId, "second-world", "ответ во втором мире", second.Id.ToString());
         var completed = ParseReplyEvents(response.Body)[^1];
 
         // Assert
@@ -1441,8 +1535,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Act
         var responses = await Task.WhenAll(
-            SendReplyAsync(user, original.Id.Value.ToString("N"), targetId, "first-key", "Ответ игрока", original.WorldId.Value),
-            SendReplyAsync(user, secondPost.Id.Value.ToString("N"), targetId, "second-key", "Ответ игрока", secondPost.WorldId.Value));
+            SendReplyAsync(user, original.Id.Value.ToString("N"), targetId, "first-key", "Ответ игрока", original.WorldId.Value.ToString()),
+            SendReplyAsync(user, secondPost.Id.Value.ToString("N"), targetId, "second-key", "Ответ игрока", secondPost.WorldId.Value.ToString()));
         var savedPosts = await Database.GetCollection<BsonDocument>("posts").Find(FilterDefinition<BsonDocument>.Empty)
             .ToListAsync();
         var savedWorlds = await Database.GetCollection<BsonDocument>("worlds")
@@ -1477,8 +1571,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Act
         var responses = await Task.WhenAll(
-            SendReplyAsync(user, post.Id.Value.ToString("N"), targetId, "contested-key", "Первая мысль", post.WorldId.Value),
-            SendReplyAsync(user, post.Id.Value.ToString("N"), targetId, "contested-key", "Вторая мысль", post.WorldId.Value));
+            SendReplyAsync(user, post.Id.Value.ToString("N"), targetId, "contested-key", "Первая мысль", post.WorldId.Value.ToString()),
+            SendReplyAsync(user, post.Id.Value.ToString("N"), targetId, "contested-key", "Вторая мысль", post.WorldId.Value.ToString()));
         var saved = await ReadPostAsync(postId);
 
         // Assert
@@ -1546,7 +1640,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var count = Factory.Llm.RequestCount;
 
         // Act
-        var result = await SendReplyAsync(user, post.Id.Value.ToString("N"), targetId, "failure-key", "Ответ игрока", post.WorldId.Value);
+        var result = await SendReplyAsync(user, post.Id.Value.ToString("N"), targetId, "failure-key", "Ответ игрока", post.WorldId.Value.ToString());
 
         // Assert
         if (scenario == "hidden")

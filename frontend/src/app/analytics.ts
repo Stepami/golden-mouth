@@ -16,9 +16,10 @@ export function setTelemetryPlayerAvailable(available: boolean) {
   else q.length = 0
 }
 
-let selectedWorld: string | undefined
+let selectedTemplateId: string | null | undefined
+let selectedDifficulty: string | undefined
 let selectedWorldId: string | undefined
-export function setAnalyticsWorld(worldId: string | undefined, world?: string) { selectedWorldId = worldId; selectedWorld = world }
+export function setAnalyticsWorld(worldId: string | undefined, templateId?: string | null, difficulty?: string) { selectedWorldId = worldId; selectedTemplateId = templateId; selectedDifficulty = difficulty }
 
 const activeTime = new ActiveTime(performance.now(), document.visibilityState === 'visible')
 let installed = false
@@ -38,7 +39,7 @@ const clean = (p?: Props) => p && Object.fromEntries(Object.entries(p).map(([k, 
 
 export function event(name: string, props?: Props) {
   if (q.length >= 100) q.shift()
-  q.push({ worldId: selectedWorldId, name, t: Date.now(), screen, prev, props: clean({ ...(selectedWorld ? { world: selectedWorld } : {}), ...props }) })
+  q.push({ worldId: selectedWorldId, name, t: Date.now(), screen, prev, props: clean({ ...(selectedWorldId ? { template_id: selectedTemplateId ?? null, difficulty: selectedDifficulty ?? null } : {}), ...props }) })
   if (!BASE && import.meta.env.DEV) console.debug('[event]', name, screen, props ?? '')
   if (q.length >= 25) flushEvents()
 }

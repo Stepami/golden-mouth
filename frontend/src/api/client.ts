@@ -1,3 +1,4 @@
+import { migrateWorldStorage } from '../app/worldStorageMigration';
 // Фасад API поверх NSwag Fetch-клиента.
 // Во фронте НЕТ секретов: runtime config виден в браузере. Ключи LLM и токен бота живут только на бэкенде.
 import { clearPlayerDrafts } from '../app/postDraft';
@@ -54,7 +55,7 @@ function rememberPlayer(player: Player): Player {
     setTelemetryPlayerAvailable(true);
     sessionIdentity = { ...player, energy: player.postsLeft, experiments: player.experiments ?? {} };
     sessionPlayer = player;
-    setAnalyticsWorld(player.worldInstanceId, player.world);
+    setAnalyticsWorld(player.worldInstanceId, player.templateId, player.difficulty);
     return player;
 }
 async function readSse<T>(response: Response, decode: (value: unknown) => T, onEvent: (event: T) => void | Promise<void>): Promise<void> {
@@ -100,17 +101,19 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     ]);
     assertSession(generation);
     ownedWorldSnapshot = ownedWorlds;
+    await migrateWorldStorage(player.id, ownedWorlds.map(world => world.id));
+    assertSession(generation);
     let selected: string | undefined;
     try {
         selected = localStorage.getItem(`reki:selected-world:${player.id}`) ?? undefined;
     }
     catch { /* memory fallback */ }
-    const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)) ?? ownedWorlds[0];
+    const world = ownedWorlds.find(item => item.id.replaceAll('-', '') === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)?.replaceAll('-', '')) ?? ownedWorlds[0];
     if (!world)
         throw new ApiError(404, 'GET', '/worlds');
     installWorldContent([world]);
-    return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, avatarStyle: world.avatarStyle,
-        world: world.balanceKey, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
+    return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, templateId: world.templateId, difficulty: world.difficulty, avatarStyle: world.avatarStyle,
+        world: world.id, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
         wants: world.wants, collection: world.achievements, bio: '', type: 'свой голос',
         voice: world.voice, drama: world.drama,
     });

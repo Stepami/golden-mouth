@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Mediator;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -17,7 +18,7 @@ public sealed class EventsController(
     [HttpGet("today", Name = "GetTodayEvent")]
     [ActionName("GetTodayEvent")]
     public async Task<Ok<GameEventResponse>> GetTodayEventAsync(
-        [FromQuery] string worldId,
+        [FromQuery, RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
         CancellationToken cancellationToken)
     {
         var gameEvent = await sender.Send(
@@ -31,7 +32,7 @@ public sealed class EventsController(
     public async Task<Ok> AnswerEventAsync(
         string eventId,
         AnswerEventRequest request,
-        [FromQuery] string worldId,
+        [FromQuery, RegularExpression("^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$")] string worldId,
         CancellationToken cancellationToken)
     {
         await sender.Send(

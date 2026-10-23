@@ -42,8 +42,8 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
                 Events =
                 [
                     new AnalyticsEventRequest { Name = "player_deleted", Screen = "feed" },
-                    new AnalyticsEventRequest { Name = "world_created", WorldId = world.Id, Screen = "feed" },
-                    new AnalyticsEventRequest { Name = "world_audience_updated", WorldId = world.Id, Screen = "feed" },
+                    new AnalyticsEventRequest { Name = "world_created", WorldId = world.Id.ToString(), Screen = "feed" },
+                    new AnalyticsEventRequest { Name = "world_audience_updated", WorldId = world.Id.ToString(), Screen = "feed" },
                 ],
             },
             CancellationToken.None);
@@ -55,8 +55,9 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
                 record.GetStructuredStateValue("event_name") == "world_created")
             .ToArray();
         await Assert.That(events.Length).IsEqualTo(1);
-        await Assert.That(events[0].GetStructuredStateValue("world_id")).IsEqualTo(world.Id);
-        await Assert.That(events[0].GetStructuredStateValue("world")).IsEqualTo(world.BalanceKey);
+        await Assert.That(events[0].GetStructuredStateValue("world_id")).IsEqualTo(world.Id.ToString());
+        await Assert.That(events[0].GetStructuredStateValue("template_id")).IsEqualTo(world.TemplateId?.ToString());
+        await Assert.That(events[0].GetStructuredStateValue("difficulty")).IsEqualTo("easy");
         await Assert.That(events[0].StructuredState?.Any(property => property.Key == "registration_source") ?? false).IsFalse();
         var registration = productEvents
             .Single(record => record.GetStructuredStateValue("player_id") == player.Id &&
@@ -68,7 +69,7 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
         await Assert.That(deleted).IsFalse();
         await Assert.That(events[0].StructuredState?.Any(property => property.Key == "TelegramUserId") ?? false).IsFalse();
         var audience = productEvents
-            .Single(record => record.GetStructuredStateValue("world_id") == world.Id &&
+            .Single(record => record.GetStructuredStateValue("world_id") == world.Id.ToString() &&
                 record.GetStructuredStateValue("event_name") == "world_audience_updated");
         await Assert.That(audience.GetStructuredStateValue("subscriber_total"))
             .IsEqualTo(world.Subscribers.ToString(CultureInfo.InvariantCulture));

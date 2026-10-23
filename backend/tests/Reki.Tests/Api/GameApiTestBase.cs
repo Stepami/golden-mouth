@@ -116,7 +116,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
     }
 
     protected static async Task<string> GetWorldIdAsync(TestApiClient api) =>
-        (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().Id;
+        (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().Id.ToString();
 
     protected static IReadOnlyList<ReplyLiveEvent> ParseReplyEvents(string body) =>
         body.Split('\n').Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
@@ -153,12 +153,21 @@ public abstract class GameApiTestBase(ApiFactory factory)
         // Keep historical-world tests independent of the current public catalog.
         var legacy = Factory.Session.LegacyWorldTemplates[world.ToString().ToLowerInvariant()];
         var template = legacy.ToResponse();
-        return Task.FromResult(DefinitionOf(template));
+        return Task.FromResult(DefinitionOf(template) with
+        {
+            TemplateId = world switch
+            {
+                WorldTemplate.Own => null,
+                WorldTemplate.It => Guid.Parse("5720946a-ea7c-4a10-9c50-51ce3deefc53"),
+                WorldTemplate.Stage => Guid.Parse("b3a1a522-0263-4796-a197-57a8731fc291"),
+                _ => Guid.Parse("8c02a7fb-3b55-4eb0-b957-1b4869ed9834"),
+            },
+        });
     }
 
     protected CreateWorldRequest DefinitionOf(WorldResponse template) => new()
         {
-            BalanceKey = template.BalanceKey,
+            TemplateId = template.Id,
             Title = template.Title,
             Description = template.Description,
             AvatarStyle = template.AvatarStyle,

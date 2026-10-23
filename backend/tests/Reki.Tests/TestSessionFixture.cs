@@ -29,7 +29,8 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
     public IMongoDatabase Database => MongoClient.GetDatabase(DatabaseName);
 
     public IReadOnlyDictionary<string, World> LegacyWorldTemplates { get; } =
-        SeedWorldTemplates.CreateTemplates().ToDictionary(template => template.BalanceKey, StringComparer.Ordinal);
+        SeedWorldTemplates.CreateTemplates().Zip(new[] { "stage", "academy", "it", "stream", "own" })
+            .ToDictionary(pair => pair.Second, pair => pair.First, StringComparer.Ordinal);
 
     public OpenAiStub Llm => _llm ??= new OpenAiStub();
 

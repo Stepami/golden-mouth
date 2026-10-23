@@ -28,7 +28,6 @@ internal static partial class WorldRequestMapper
     [MapperIgnoreSource(nameof(CreateWorldRequest.FirstPrompt))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Emoji))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Summary))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Difficulty))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.UnlockSkill))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.UnlockLevel))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Wants))]
@@ -37,11 +36,12 @@ internal static partial class WorldRequestMapper
     [MapPropertyFromSource(nameof(World.Player), Use = nameof(ToWorldPlayer))]
     [MapValue(nameof(World.Id), Use = nameof(NewWorldId))]
     [MapValue(nameof(World.Version), 0)]
+    [MapValue(nameof(World.IsArchived), false)]
     [MapProperty(nameof(CreateWorldRequest.Rules), nameof(World.Rules), Use = nameof(MapRules))]
     public static partial World ToWorld(this CreateWorldRequest source);
 
     // Project only interface settings from the flat HTTP request.
-    [MapperIgnoreSource(nameof(CreateWorldRequest.BalanceKey))]
+    [MapperIgnoreSource(nameof(CreateWorldRequest.TemplateId))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Name))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Avatar))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Role))]
@@ -55,11 +55,11 @@ internal static partial class WorldRequestMapper
     [MapperIgnoreSource(nameof(CreateWorldRequest.Roles))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Rules))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Stars))]
-    [MapProperty(nameof(CreateWorldRequest.Difficulty), nameof(WorldInterface.Difficulty), Use = nameof(MapWorldDifficulty))]
+    [MapperIgnoreSource(nameof(CreateWorldRequest.Difficulty))]
     private static partial WorldInterface ToWorldInterface(this CreateWorldRequest source);
 
     // Project player settings and initialize fresh progress independently of submitted values.
-    [MapperIgnoreSource(nameof(CreateWorldRequest.BalanceKey))]
+    [MapperIgnoreSource(nameof(CreateWorldRequest.TemplateId))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Title))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Description))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.AvatarStyle))]
@@ -116,13 +116,7 @@ internal static partial class WorldRequestMapper
 
     private static StarId MapStarId(string source) => StarId.From(source);
 
-    private static WorldDifficulty MapWorldDifficulty(int source) => source switch
-    {
-        1 => WorldDifficulty.Easy,
-        2 => WorldDifficulty.Normal,
-        3 => WorldDifficulty.Hard,
-        _ => throw new ArgumentOutOfRangeException(nameof(source)),
-    };
+    private static WorldId? MapTemplateId(Guid? source) => source is { } id ? WorldId.From(id) : null;
 
     private static StarTrait MapStarTrait(int source) =>
         Enum.Parse<StarTrait>(source.ToString(System.Globalization.CultureInfo.InvariantCulture));
