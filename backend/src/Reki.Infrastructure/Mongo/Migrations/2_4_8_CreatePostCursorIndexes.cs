@@ -1,4 +1,5 @@
 using Kot.MongoDB.Migrations;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Domain.Posts;
 using Reki.Infrastructure.Mongo.Repositories;
@@ -24,10 +25,18 @@ internal sealed class CreatePostCursorIndexes : RekiMigrationBase
         ],
         cancellationToken);
 
-        using var cursor = await posts.Indexes.ListAsync(cancellationToken);
-        if ((await cursor.ToListAsync(cancellationToken)).Any(index => index["name"] == "ix_posts_world_created"))
+        foreach (var (collectionName, indexName) in new[]
         {
-            await posts.Indexes.DropOneAsync("ix_posts_world_created", cancellationToken);
+            (MongoCollections.Posts, "ix_posts_world_created"),
+            (MongoCollections.Invites, "ix_invites_player"),
+        })
+        {
+            var collection = db.GetCollection<BsonDocument>(collectionName);
+            using var cursor = await collection.Indexes.ListAsync(cancellationToken);
+            if ((await cursor.ToListAsync(cancellationToken)).Any(index => index["name"] == indexName))
+            {
+                await collection.Indexes.DropOneAsync(indexName, cancellationToken);
+            }
         }
     }
 }

@@ -1174,7 +1174,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         yield return ("posts", "ix_posts_world_id", new BsonDocument { { "WorldId", 1 }, { "_id", -1 } }, false);
         yield return ("posts", "ix_posts_world_author_id", new BsonDocument { { "WorldId", 1 }, { "AuthorId", 1 }, { "_id", -1 } }, false);
         yield return ("events", "ix_events_world_day", new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "DayStartedAtUtc", 1 } }, false);
-        yield return ("invites", "ix_invites_player", new BsonDocument("PlayerId", 1), false);
         yield return ("invites", "ux_invites_invitee", new BsonDocument("InviteeId", 1), true);
         yield return ("invites", "ix_invites_inviter", new BsonDocument("InviterId", 1), false);
     }
@@ -1183,6 +1182,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     {
         await CreateIndexAsync(database, "posts", "ix_posts_player_created", new BsonDocument { { "PlayerId", 1 }, { "CreatedAtUtc", -1 } }, false);
         await CreateIndexAsync(database, "posts", "ix_posts_world_created", new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "CreatedAtUtc", 1 } }, false);
+        await CreateIndexAsync(database, "invites", "ix_invites_player", new BsonDocument("PlayerId", 1), false);
         foreach (var (collection, name, keys, unique) in ExpectedIndexes())
         {
             await CreateIndexAsync(database, collection, name, name == "ix_worlds_player" ? new BsonDocument("PlayerId", 1) : keys, unique);
@@ -1222,6 +1222,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await Assert.That(index["key"]).IsEqualTo(keys);
             await Assert.That(indexes.Any(item => item["name"] == "ix_posts_player_created")).IsFalse();
             await Assert.That(indexes.Any(item => item["name"] == "ix_posts_world_created")).IsFalse();
+            await Assert.That(indexes.Any(item => item["name"] == "ix_invites_player")).IsFalse();
             await Assert.That(index.GetValue("unique", false).AsBoolean).IsEqualTo(unique);
             if (name == "ix_publications_expiry")
             {
