@@ -27,5 +27,3 @@ services:
 
   backend:
     image: reki-backend:${REKI_VERSION:-local}
-    extra_hosts:
-      - "shared1.multitool.works=${LLM_PROXY_IP:?LLM_PROXY_IP is required}"

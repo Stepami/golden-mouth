@@ -26,7 +26,7 @@ Production разворачивается на self-hosted GitHub Actions runner
    uname -m
    ```
 
-   Для текущего workflow архитектура должна отображаться как `x86_64`, потому что deployment job требует label `x64`. Если SSH не подключается, открой **Облачные серверы → нужный сервер → Консоль** и проверь сервер из веб-консоли.
+   Текущая production-площадка рассчитана на Linux x64: архитектура должна отображаться как `x86_64`. Сам deployment job выбирает runner по custom label `reki-prod`. Если SSH не подключается, открой **Облачные серверы → нужный сервер → Консоль** и проверь сервер из веб-консоли.
 
 Официальная справка: [управление облачными серверами Timeweb Cloud](https://timeweb.cloud/docs/cloud-servers/manage-servers).
 
@@ -160,11 +160,11 @@ sudo ./svc.sh status
 
 ### 6. Проверить или зарегистрировать self-hosted runner
 
-Если runner уже отображается как **Idle** и имеет labels `self-hosted`, `linux`, `x64`, повторно регистрировать его не нужно.
+Deployment job использует `runs-on: reki-prod`. Добавь custom label `reki-prod` только новому production runner. Это label, а не имя runner: совпадение имени не выбирает машину для job. Если runner уже зарегистрирован, повторная регистрация не нужна; label можно добавить через **Settings → Actions → Runners → нужный runner → Labels**. Во время переноса оставляй старый runner остановленным, а новый запускай только после восстановления томов, сертификатов и подготовки deployment-тега.
 
 1. Открой репозиторий на GitHub.
 2. Перейди **Settings → Actions → Runners**.
-3. Проверь существующий runner. Для этого workflow обязательны labels `self-hosted`, `linux`, `x64`.
+3. Проверь, что production runner установлен на Linux x64 и имеет custom label `reki-prod`. Стандартные labels `self-hosted`, `linux`, `x64` сохраняются; deployment job выбирает машину по `reki-prod`.
 4. Если runner отсутствует, нажми **New self-hosted runner**, выбери **Linux** и **x64**.
 5. GitHub покажет актуальные команды скачивания и регистрации с одноразовым токеном. Выполни их на VDS именно в том порядке, который показан на странице. Токен регистрации живёт один час; его нельзя сохранять в репозитории.
 6. Выполняй runner не от `root`, а от отдельного пользователя. Например:
@@ -264,9 +264,15 @@ sudo ./svc.sh status
    curl --head https://reki-app.ru
    ```
 
-   Первый запрос к домену должен вернуть перенаправление на HTTPS, второй — успешный HTTPS-ответ. Если deployment job остаётся в состоянии **Queued**, почти всегда runner выключен или у него нет одного из labels `self-hosted`, `linux`, `x64`.
+   Первый запрос к домену должен вернуть перенаправление на HTTPS, второй — успешный HTTPS-ответ. Если deployment job остаётся в состоянии **Queued**, проверь, что новый runner включён, доступен репозиторию и имеет label `reki-prod`.
 
 ## Подготовка релиза
+
+При переносе на RU-сервер Multitool вызывается напрямую через `LLM_BASE_URL`; production Compose не подменяет hostname провайдера через `extra_hosts`. Переменная `LLM_PROXY_IP` для нового deployment не нужна. Старый тег может содержать прежние Compose/workflow: первый deployment на новой площадке должен использовать тег с обновлённой конфигурацией.
+
+OpenObserve закреплён на `dockerhub.timeweb.cloud/openobserve/openobserve:v1.1.2-simd`. Это согласованное обновление с `v1.0.4` на `v1.1.2` вместе со сменой registry на зеркало Timeweb. На x86-64 SIMD-образ требует AVX-512: перед запуском на другой машине проверить CPU и доступность образа; при локальной разработке используется тот же `compose.yml`. Перед первым запуском новой версии сохранить исходный backup данных; возврат старого image сам по себе не откатывает изменения данных новой версии.
+
+После успешного запуска Compose и установки renewal hook deployment выполняет `docker system prune -af`: удаляет остановленные контейнеры, неиспользуемые сети, все неиспользуемые images и build cache. Флаг `--volumes` не используется, Docker volumes сохраняются. Очистка относится ко всему Docker daemon runner; старые images для отката после неё придётся загрузить или собрать заново. Если deployment или установка hook завершились ошибкой, шаг очистки пропускается.
 
 GitReleaseManager формирует описание релиза из GitHub issues, включённых в milestone. Перед ручным запуском workflow `GitHub Release`:
 
