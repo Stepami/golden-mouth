@@ -1,3 +1,4 @@
+import leraPortrait from '../assets/onboarding-lera.jpg'
 import welcomeSki from '../assets/welcome-ski.jpg'
 import { GameHeader } from '../ui/GameHeader'
 import { Typewriter } from '../ui/Typewriter'
@@ -28,55 +29,82 @@ function Steps({ n, back = true }: { n: number; back?: boolean }) {
   )
 }
 
-// 01-1: approved school mini-dialogue, preserving the existing welcome layout.
+const welcomeHeadlines = [
+  ['Пиши.', 'Тебя услышат.'],
+  ['Будь собой.', 'Или попробуй иначе.'],
+  ['Собери своих.', 'По характеру.'],
+  ['А что, если', 'первым написать?'],
+]
+
+function WelcomeHeadline() {
+  const [index, setIndex] = useState(0)
+  useEffect(() => {
+    const motion = matchMedia('(prefers-reduced-motion: reduce)')
+    if (motion.matches || new URLSearchParams(location.search).has('shot')) return
+    const timer = window.setInterval(() => setIndex(i => (i + 1) % welcomeHeadlines.length), 3400)
+    return () => window.clearInterval(timer)
+  }, [])
+  return <h1 className="welcome-headline"><span key={index}><Typewriter text={welcomeHeadlines[index].join("\n")} cursor /></span></h1>
+}
+
+// 01-1: welcome montage from the approved prototype.
 function Invite() {
   const nav = useNav()
   return <main className="welcome-screen">
     <div className="welcome-brand">реки.</div>
     <div className="welcome-scene">
       <article className="welcome-social-post"><div className="row"><span className="welcome-self">ты</span><div><b>Твой пост</b><small className="muted">только что</small></div><span className="muted" style={{ marginLeft: 'auto' }}>···</span></div><p>Хочу в горы. Кто со мной? 🏔️</p><img src={welcomeSki} alt="Друзья на горнолыжном склоне" /><small className="muted">♡ 12　Макс и ещё 11</small></article>
-      <article className="welcome-social-reply"><span className="welcome-max">М</span><div><b>Макс</b><p><Typewriter text="С тобой — хоть на край света. Горы тоже подойдут 😌" /></p></div></article>
+      <article className="welcome-social-reply"><span className="welcome-max">М</span><div><b>Макс</b><p>С тобой — хоть на край света. Горы тоже подойдут 😏</p></div></article>
       <div className="welcome-notification"><span>↗</span><div><b>Макс написал тебе</b><small className="muted">Вдвоём поедем? 👀</small></div><b className="welcome-unread">1</b></div>
     </div>
-    <div className="welcome-promise"><p className="small muted">Твой блог. Твоя компания.</p><h1>А что, если<br />первым написать?</h1><p className="muted">Здесь нет реальных собеседников — только ИИ. Пробуй общение без оглядки на знакомых.</p></div>
+    <div className="welcome-promise"><p className="small muted">Твой блог. Твоя компания.</p><WelcomeHeadline /><p className="muted">Здесь нет реальных собеседников — только ИИ. Пробуй общение без оглядки на знакомых.</p></div>
     <button className="btn" onClick={() => nav.push('01-2_age')}>Попробовать →</button>
   </main>
 }
 
-// 01-2: год рождения, согласие не отмечено заранее; младше 14 → 01-2b
+// 01-2: возраст, согласие не отмечено заранее; младше 14 → 01-2b
 function Age() {
   const nav = useNav()
-  const currentYear = new Date().getFullYear()
-  const years = Array.from({ length: 91 }, (_, i) => currentYear - 10 - i)
-  const [year, setYear] = useState(2010)
+  const ages = Array.from({ length: 92 }, (_, i) => i + 8)
+  const [age, setAge] = useState(18)
   const [agree, setAgree] = useState(false)
   const wheel = useRef<HTMLDivElement>(null)
-  useEffect(() => { if (wheel.current) wheel.current.scrollTop = years.indexOf(2010) * 38 }, [])
-  const onWheel = () => { const el = wheel.current; if (el) setYear(years[Math.min(years.length - 1, Math.max(0, Math.round(el.scrollTop / 38)))]) }
-  const age = new Date().getFullYear() - year
-  return (
-    <div className="screen no-tab">
-      <Steps n={1} back={false} />
-      <div style={{ padding: '4px 20px' }}>
-        <div className="brand" style={{ fontSize: 26 }}>Реки</div>
-        <div style={{ fontSize: 24, fontWeight: 800, margin: '14px 0 6px' }}>Год рождения</div>
-        <div className="muted" style={{ marginBottom: 10 }}>Чтобы звёзды говорили с тобой как надо</div>
-        <div ref={wheel} onScroll={onWheel} style={{ height: 230, overflowY: 'auto', scrollSnapType: 'y mandatory', background: 'var(--card)', borderRadius: 18, textAlign: 'center', padding: '96px 0' }}>
-          {years.map(y => <div key={y} onClick={() => setYear(y)} style={{ scrollSnapAlign: 'center', height: 38, lineHeight: '38px', fontSize: y === year ? 22 : 18, fontWeight: y === year ? 800 : 400, color: y === year ? 'var(--text)' : 'var(--muted)', background: y === year ? 'var(--card2)' : 'none', borderRadius: 10, margin: '0 12px' }}>{y}</div>)}
-        </div>
-        <Card style={{ marginTop: 18 }}>
-          <b>Сохраним твою игру?</b>
-          <div className="small muted" style={{ margin: '6px 0 10px' }}>Храним только Telegram ID и игру, сервер в России. Удалить всё можно в профиле в один тап. <span style={{ color: '#8CC8FF' }}>Подробнее</span></div>
-          <label className="row" style={{ gap: 8 }}>
-            <button onClick={() => setAgree(!agree)} aria-pressed={agree} style={{ width: 22, height: 22, borderRadius: 6, border: agree ? 'none' : '2px solid var(--line)', background: agree ? 'var(--grad)' : 'none', color: '#fff', fontSize: 14 }}>{agree ? '✓' : ''}</button>
-            <span className="small">Согласие на обработку данных</span>
-          </label>
-        </Card>
-        {!agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
-      </div>
-      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 14 }); nav.push(age < 14 ? '01-2b_under14' : '01-3_world', { group: age < 18 ? '14-17' : '18+', ageBand: ageBand(age) }) }} />
+  useEffect(() => { if (wheel.current) wheel.current.scrollTop = (18 - 8) * 44 }, [])
+  const selectAge = (value: number) => {
+    setAge(value)
+    wheel.current?.scrollTo({ top: (value - 8) * 44, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+  }
+  return <main className="age-screen">
+    <div className="welcome-brand">реки.</div>
+    <button className="age-back icon-button" aria-label="Назад" onClick={nav.back}>‹</button>
+    <div className="age-copy"><p className="small muted">Знакомство · 1 / 1</p><h1>Сколько<br />тебе лет?</h1><p className="muted">Дальше — выбор первого мира.</p></div>
+    <div className="age-wheel">
+      <div ref={wheel} className="age-wheel-list" role="listbox" aria-label="Твой возраст" tabIndex={0}
+        onKeyDown={event => { if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) { event.preventDefault(); selectAge(event.key === 'Home' ? 8 : event.key === 'End' ? 99 : Math.max(8, Math.min(99, age + (event.key === 'ArrowDown' ? 1 : -1)))) } }}
+        onScroll={() => { if (wheel.current) setAge(Math.max(8, Math.min(99, 8 + Math.round(wheel.current.scrollTop / 44)))) }}>
+        {ages.map(value => <button key={value} role="option" aria-selected={value === age} tabIndex={-1} onClick={() => selectAge(value)}>{value}</button>)}
+      </div><span className="age-wheel-unit" aria-hidden="true">лет</span>
     </div>
-  )
+    <label className="age-consent"><input type="checkbox" checked={agree} onChange={event => setAgree(event.target.checked)} /><span>Даю согласие на обработку персональных данных.</span></label>
+    <button className="btn" disabled={!agree} onClick={() => { track('onboarding_step', { step: 'age', ok: age >= 14 }); nav.push(age < 14 ? '01-2b_under14' : '01-2c_guide', { group: age < 18 ? '14-17' : '18+', ageBand: ageBand(age) }) }}>Продолжить →</button>
+  </main>
+}
+
+function LeraGuide() {
+  const nav = useNav()
+  const [step, setStep] = useState(0)
+  const finish = () => nav.push('01-3_world', nav.params)
+  const title = step ? 'Теперь выбери мир' : 'Привет, я Лера!'
+  const paragraphs = step
+    ? ['В каждом мире — своя сюжетная линия и уникальные персонажи. Выбери, куда хочешь попасть.']
+    : ['Коротко расскажу про Реки.', 'Здесь твой блог читают только ИИ-персонажи. Пиши то, что хочется, знакомься и пробуй разные роли.', 'Время здесь идёт быстрее: можно за вечер набрать аудиторию и посмотреть, каково это — когда тебя знают.']
+  return <main className="lera-screen">
+    <div className="lera-top"><button className="back" aria-label="Назад" onClick={() => step ? setStep(0) : nav.back()}>‹</button><span>{step + 1} / 2</span><button onClick={finish}>Пропустить</button></div>
+    <div className="lera-person"><img src={leraPortrait} alt="Лера" /><span className="muted">Лера</span></div>
+    <div className="lera-speech" key={step}><h1><Typewriter text={title} /></h1>{paragraphs.map((text, index) => <p key={index} className={index ? 'lera-detail' : undefined}><Typewriter text={text} /></p>)}</div>
+    <div className="lera-dots" aria-label={`Шаг ${step + 1} из 2`}>{[0, 1].map(n => <i key={n} className={n === step ? 'active' : ''} />)}</div>
+    <button className="btn" onClick={() => step ? finish() : setStep(1)}>{step ? 'Выбрать мир →' : 'Вперёд →'}</button>
+  </main>
 }
 
 function Under14() {
@@ -107,7 +135,8 @@ export function Home() {
 
 register({
   '01-1_invite': { component: Invite, title: 'Приглашение от друга' },
-  '01-2_age': { component: Age, title: 'Год рождения и согласие' },
+  '01-2c_guide': { component: LeraGuide, title: 'Знакомство с Лерой' },
+  '01-2_age': { component: Age, title: 'Возраст и согласие' },
   '01-2b_under14': { component: Under14, title: 'Младше 14' },
   '01-3_world': { component: withWorldTemplates(World, true), title: 'Выбор мира' },
   '01-3b_world_overview': { component: withWorldTemplates(WorldOverview), title: 'Обзор мира' },

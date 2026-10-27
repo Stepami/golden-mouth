@@ -1,3 +1,4 @@
+import { WorldCover } from '../ui/WorldCover'
 import { GameHeader } from '../ui/GameHeader'
 import { Icon } from '../ui/Icon'
 import { resultHistory } from '../app/resultHistory'
@@ -230,9 +231,9 @@ function Me() {
   const DAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
   const today = p.streak.week.indexOf(false)
   return (
-    <div className="screen">
-      <TopBar title="Я" rightPlain right={<button className="header-action" onClick={() => nav.push('05-8_settings')}>⚙ Настройки</button>} />
-      <div className="profile-cover" /><div className="profile-identity"><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b>{p.handle && <div className="small muted" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="small muted profile-world-name">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
+    <div className="screen identity-screen">
+      <GameHeader />
+      <div className="profile-cover"><WorldCover world={p.world} alt={`Мир «${worldOf(p.world).title}»`} /></div><div className="profile-identity"><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b>{p.handle && <div className="small muted" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<p className="profile-role">{p.role}</p><div className="small muted profile-world-name">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
       <div className="pad">
         <div className="profile-actions"><Button secondary onClick={() => nav.push('03-5_stage')}>Мои записи</Button><Button secondary onClick={() => nav.push('05-13_progress')}>История и навыки</Button></div><div className="profile-stats">
           {[[`⚡ ${p.postsLeft}`, 'энергии'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}

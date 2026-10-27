@@ -13,7 +13,7 @@ function Progress() {
   const p = usePlayer(); const nav = useNav(); const goal = usePresetGoal(p.world)
   const [tab, setTab] = useState<'story' | 'results'>('story')
   const history = resultHistory(p)
-  return <div className="screen progress-screen"><GameHeader compact /><div className="page-tabs"><button className={tab === 'story' ? 'active' : ''} onClick={() => setTab('story')}>Твоя история</button><button className={tab === 'results' ? 'active' : ''} onClick={() => setTab('results')}>Результаты</button></div>
+  return <div className="screen progress-screen"><GameHeader /><div className="page-tabs"><button className={tab === 'story' ? 'active' : ''} onClick={() => setTab('story')}>Твоя история</button><button className={tab === 'results' ? 'active' : ''} onClick={() => setTab('results')}>Результаты</button></div>
     <div className="pad">{tab === 'story' ? <>
       <h1>Твой путь</h1>
       {goal && <section className="card journey-goal"><span className="eyebrow small">Главная цель</span><h2>{goal.goal}</h2><details><summary>С чего начать</summary><p>{goal.firstStep}</p></details></section>}
