@@ -1,8 +1,7 @@
 import { Button, Sheet } from '.'
 
 export function SkillHelp({ onClose }: { onClose: () => void }) {
-  return <Sheet onClose={onClose}>
-    <h2 style={{ fontSize: 20, marginBottom: 12 }}>Как поднять навыки</h2>
+  return <Sheet title="Как поднять навыки" className="skill-help-sheet" onClose={onClose}>
     <div className="why"><span>🔥 Смелость</span><span>Делись опытом и отвечай по делу</span></div>
     <div className="why"><span>😂 Юмор</span><span>Находи смешное в событиях мира</span></div>
     <div className="why"><span>🎯 В тему</span><span>Пиши о героях и событиях своего мира</span></div>

@@ -3,7 +3,7 @@ import { GameHeader } from '../ui/GameHeader'
 import { Icon } from '../ui/Icon'
 import { resultHistory } from '../app/resultHistory'
 import { PublicationResult } from '../ui/PublicationResult'
-import { saveTheme, type Theme } from '../app/theme'
+import { saveTheme, savedTheme, type ThemePreference } from '../app/theme'
 import { displayHandle } from '../app/handle'
 import { StoryGoal } from '../ui/StoryGoal'
 import { ExpandableText } from '../ui'
@@ -71,8 +71,7 @@ function Dm() {
         <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input value={text} onChange={e => setText(e.target.value)} placeholder="Ответить Мире своими словами…" maxLength={300} /></div>
         <button className="card" onClick={() => send(text)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label="Отправить">➤</button>
       </div>}
-      {showMem && <Sheet onClose={() => setShowMem(false)}>
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Что Мира помнит о тебе</div>
+      {showMem && <Sheet title="Что Мира помнит о тебе" onClose={() => setShowMem(false)}>
         <div className="small muted" style={{ marginBottom: 12 }}>Она опирается на это в разговорах. Удали, что не хочешь, чтобы она помнила</div>
         {memory.map(m => <div key={m} className="why"><span>{m}</span><button onClick={() => { setMemory(x => x.filter(y => y !== m)); api.forget(d.star.id, m) }} style={{ background: 'none', border: 'none', color: 'var(--accent)' }}>удалить</button></div>)}
         <Button secondary style={{ marginTop: 14 }} onClick={() => setShowMem(false)}>Готово</Button>
@@ -263,7 +262,7 @@ function Me() {
 function Settings() {
   const nav = useNav(); const p = usePlayer(); const { patch, resetPlayer } = useStore()
   const personalizeAvatar = useAvatarPersonalization(p.id)
-  const [theme, setTheme] = useState<Theme>(() => document.documentElement.dataset.theme === 'light' ? 'light' : 'dark')
+  const [theme, setTheme] = useState<ThemePreference>(savedTheme)
   const [drama, setDrama] = useState<Drama>(p.drama)
   const [del, setDel] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -314,7 +313,7 @@ function Settings() {
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Настройки" />
-      <div className="pad"><section className="theme-picker"><b>Оформление</b><Segmented value={theme} onChange={(value: Theme) => { setTheme(value); saveTheme(value) }} options={[{ id: 'light', label: 'Светлое' }, { id: 'dark', label: 'Тёмное' }]} /></section>
+      <div className="pad"><section className="theme-picker"><b>Оформление</b><Segmented value={theme} onChange={(value: ThemePreference) => { setTheme(value); saveTheme(value) }} options={[{ id: 'system', label: 'Системное' }, { id: 'light', label: 'Светлое' }, { id: 'dark', label: 'Тёмное' }]} /></section>
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
           {row('🔔 Уведомления', `${p.settings.notifications === 'off' ? 'выключены' : p.settings.notifications === 'important' ? 'важные' : 'все'} ›`, false, () => openPanel('notifications'))}{row('🌙 Тихие часы', `${p.settings.quiet === 'off' ? 'выключены' : p.settings.quiet} ›`, false, () => openPanel('quiet'))}
           <div style={{ padding: '12px 0' }}><div>🌩 Градус драмы</div><div className="small muted" style={{ margin: '2px 0 8px' }}>Сколько хейта и скандалов в мире. Фильтр 14+ работает всегда</div>
@@ -330,8 +329,7 @@ function Settings() {
         <div className="small muted" style={{ textAlign: 'center', marginTop: 8 }}>Удалим канал, переписку и коллекцию. Вернуть будет нельзя</div>
       </div>
       {error && !panel && <div className="pad small" role="alert">{error}</div>}
-      {panel && <Sheet onClose={() => { if (!saving) setPanel(null) }}>
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 12 }}>{({ notifications: 'Уведомления', quiet: 'Тихие часы', support: 'Поддержка', data: 'Мои данные и правила', address: 'Как к тебе обращаться' })[panel]}</div>
+      {panel && <Sheet title={({ notifications: 'Уведомления', quiet: 'Тихие часы', support: 'Поддержка', data: 'Мои данные и правила', address: 'Как к тебе обращаться' })[panel]} onClose={() => { if (!saving) setPanel(null) }}>
         {panel === 'address' && <><Segmented value={address} onChange={value => setAddress(value as typeof address)} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} /><Button disabled={saving} style={{ marginTop: 14, marginBottom: 8 }} onClick={async () => { if (saving) return; setSaving(true); setError(''); try { await api.settings({ address }); patch({ address }); setPanel(null) } catch { setError('Не получилось сохранить. Попробуй ещё раз.') } finally { setSaving(false) } }}>Сохранить</Button></>}
         {panel === 'notifications' && <><Segmented value={notifications} onChange={setNotifications} options={[{ id: 'all', label: 'все' }, { id: 'important', label: 'важные' }, { id: 'off', label: 'выключены' }]} /><p className="small muted">Пока сохраняем твой выбор. Уведомления в боте появятся позже.</p></>}
         {panel === 'quiet' && <><label className="quiet-toggle"><input type="checkbox" checked={quietOff} onChange={e => setQuietOff(e.target.checked)} /><span>Выключить тихие часы</span></label><div className="quiet-times"><label>С <input aria-label="Начало тихих часов" type="time" value={quietStart} disabled={quietOff} onChange={e => setQuietStart(e.target.value)} /></label><label>До <input aria-label="Конец тихих часов" type="time" value={quietEnd} disabled={quietOff} onChange={e => setQuietEnd(e.target.value)} /></label></div><p className="small muted">Пока сохраняем твой выбор. Тихие часы начнут действовать вместе с уведомлениями в боте.</p></>}
@@ -340,8 +338,7 @@ function Settings() {
         {(panel === 'notifications' || panel === 'quiet') && <Button disabled={saving || (panel === 'quiet' && !quietOff && (!quietStart || !quietEnd))} onClick={() => save(panel === 'notifications' ? { notifications } : { quiet: quietOff ? 'off' : `${quietStart}-${quietEnd}` })} style={{ marginBottom: 8 }}>{saving ? 'Сохраняем…' : 'Сохранить'}</Button>}
         <Button secondary disabled={saving} onClick={() => setPanel(null)}>Закрыть</Button>
       </Sheet>}
-      {del && <Sheet onClose={() => { if (!deleting) setDel(false) }}>
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>Удалить всё?</div>
+      {del && <Sheet title="Удалить всё?" onClose={() => { if (!deleting) setDel(false) }}>
         <div className="muted" style={{ marginBottom: 16 }}>Канал, переписка со звёздами, коллекция и прогресс удалятся навсегда</div>
         {deleteError && <p role="alert">{deleteError}</p>}
         <Button disabled={deleting} style={{ background: 'var(--danger)', marginBottom: 8 }} onClick={deleteAccount}>{deleting ? 'Удаляем…' : 'Удалить навсегда'}</Button><Button secondary disabled={deleting} onClick={() => setDel(false)}>Отмена</Button>
