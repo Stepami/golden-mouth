@@ -139,7 +139,7 @@ export function Segmented<T extends string>({ options, value, onChange }: { opti
   )
 }
 
-export function Sheet({ children, onClose }: { children: ReactNode; onClose?: () => void }) {
+export function Sheet({ children, onClose, className = '', label = 'Дополнительные настройки' }: { children: ReactNode; onClose?: () => void; className?: string; label?: string }) {
   const dialog = useRef<HTMLDivElement>(null)
   const close = useRef(onClose); close.current = onClose
   useEffect(() => {
@@ -160,7 +160,7 @@ export function Sheet({ children, onClose }: { children: ReactNode; onClose?: ()
     document.addEventListener('keydown', keydown)
     return () => { document.body.style.overflow = overflow; document.removeEventListener('keydown', keydown); previous?.focus() }
   }, [])
-  return <div className="sheet-bg" onClick={onClose}><div ref={dialog} className="sheet" role="dialog" aria-modal="true" aria-label="Дополнительные настройки" tabIndex={-1} onClick={e => e.stopPropagation()}>{children}</div></div>
+  return <div className={`sheet-bg ${className ? `${className}-bg` : ''}`} onClick={onClose}><div ref={dialog} className={`sheet ${className}`} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={e => e.stopPropagation()}>{children}</div></div>
 }
 
 /** Сложность мира точками ●●○ */

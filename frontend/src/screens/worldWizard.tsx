@@ -17,13 +17,24 @@ import type { AgeBand } from '../app/ageBand'
 import { avatarPersonalization, setAvatarPersonalization } from '../app/avatarPersonalization'
 
 export function ChooseWorld() {
-  const nav = useNav(); const { player, setPlayer } = useStore()
-  const [owned, setOwned] = useState<WorldDocument[]>(() => api.ownedWorldsSnapshot() ?? [])
+  const nav = useNav(); const { player, playerState, setPlayer, refresh } = useStore()
+  const [ownership, setOwnership] = useState<{ owner: string; worlds: WorldDocument[]; loaded: boolean }>({ owner: '', worlds: [], loaded: false })
+  const owned = player && ownership.owner === player.id ? ownership.worlds : []
+  const ownedLoaded = !!player && ownership.owner === player.id && ownership.loaded
   const [category, setCategory] = useState('Все')
   const [unlockInfo, setUnlockInfo] = useState(false)
   const [error, setError] = useState('')
+  const [ownedFailed, setOwnedFailed] = useState(false)
   const [pending, setPending] = useState<boolean | null>(null)
-  useEffect(() => { let alive = true; if (player) api.ownedWorlds().then(found => { if (alive) setOwned(found) }).catch(() => { if (alive) setError('Не получилось загрузить твои миры.') }); return () => { alive = false } }, [player?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    let alive = true
+    setOwnedFailed(false)
+    if (player) api.ownedWorlds().then(found => {
+      if (alive) { setOwnership({ owner: player.id, worlds: found, loaded: true }); setError('') }
+    }).catch(() => { if (alive) { setOwnedFailed(true); setError('Не получилось загрузить твои миры. Показан прогресс текущего мира.') } })
+    return () => { alive = false }
+  }, [player?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function startOwn(previewOnly = false, confirmed = false) {
     selectDraftOwner(player?.id ?? 'onboarding')
     const previous = getWorldDraft()
@@ -35,6 +46,16 @@ export function ChooseWorld() {
     nav.push('05-7b_own_world', {})
   }
   const currentWorld = player ? owned.find(world => world.id === player.worldInstanceId) ?? { ...worldDocumentOf(player.world), id: player.worldInstanceId ?? player.world, name: player.name, avatar: player.handle, subscribers: player.subs } : undefined
+  const bestWorld = player ? [currentWorld!, ...owned].reduce((best, world) => world.subscribers > best.subscribers ? world : best) : undefined
+  const bestSubscribers = bestWorld?.subscribers
+  const ownProgress = bestSubscribers === undefined ? undefined : Math.min(500, Math.max(0, bestSubscribers))
+  const openProgress = async () => {
+    if (!bestWorld || !player) return
+    try {
+      if (bestWorld.id !== player.worldInstanceId) setPlayer(await api.me(bestWorld.id))
+      setUnlockInfo(false); nav.push('05-13_progress')
+    } catch { setError('Не получилось открыть прогресс мира. Попробуй ещё раз.') }
+  }
   const otherWorlds = owned.filter(world => world.id !== currentWorld?.id)
   const resume = async (world: WorldDocument) => { try { const next = await api.me(world.id); setPlayer(next); nav.push('03-5_stage') } catch { setError('Не получилось открыть мир.') } }
   return <div className="screen no-tab"><header className="catalog-header"><span className="welcome-brand">реки.</span>{player && <button aria-label="Мой профиль" onClick={() => nav.push('05-5_collection')}><Avatar seed={player.handle} size={36} /></button>}</header>
@@ -43,9 +64,33 @@ export function ChooseWorld() {
         <span className="own-prototype-art" aria-hidden="true"><span className="own-prototype-photo"><img src={welcomeSki} alt="" /><span>свои люди · новые истории</span></span><span className="own-prototype-sticker">а что, если…</span></span>
         <strong>Воплоти свои<br />фантазии</strong>
         <span className="own-prototype-value"><span className="own-prototype-mic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m4 16 12-12 4 4L8 20H4v-4Zm10-10 4 4" /></svg></span><span>Придумай свой мир.<br />Ты и твои собеседники.</span></span>
-        {player?.hitOwnWorldMilestone ? <span className="own-prototype-cta">Создать свой мир ↗</span> : <><span className="own-prototype-locked"><b>Свой мир откроется</b><span><strong>{Math.min(500, Math.max(player?.subs ?? 0, ...owned.map(world => world.subscribers)))}</strong> / 500</span></span><span className="own-prototype-track" role="progressbar" aria-label="Подписчики для открытия своего мира" aria-valuemin={0} aria-valuemax={500} aria-valuenow={Math.min(500, Math.max(player?.subs ?? 0, ...owned.map(world => world.subscribers)))}>{Array.from({ length: 10 }, (_, index) => <i key={index} style={{ background: `linear-gradient(to right, #17221b ${Math.max(0, Math.min(100, (Math.max(player?.subs ?? 0, ...owned.map(world => world.subscribers)) - index * 50) * 2))}%, #17221b22 0)` }} />)}</span><span className="own-prototype-alternative">или пригласи первого друга ↗</span></>}
+        {player?.hitOwnWorldMilestone ? <span className="own-prototype-cta">Создать свой мир ↗</span> : <><span className="own-prototype-locked"><b>Свой мир откроется</b><span>{ownProgress === undefined ? 'После первого мира' : <><strong>{bestSubscribers}</strong> / 500</>}</span></span>{ownProgress !== undefined && <span className="own-prototype-track" role="progressbar" aria-label="Подписчики для открытия своего мира" aria-valuemin={0} aria-valuemax={500} aria-valuenow={ownProgress}>{Array.from({ length: 10 }, (_, index) => <i key={index} style={{ background: `linear-gradient(to right, #17221b ${Math.max(0, Math.min(100, (ownProgress - index * 50) * 2))}%, #17221b22 0)` }} />)}</span>}<span className="own-prototype-alternative">или пригласи первого друга ↗</span></>}
+
       </button>
-      {unlockInfo && <Sheet onClose={() => setUnlockInfo(false)}><h2>Как открыть свой мир</h2><p>Набери 500 подписчиков в одном канале или пригласи друга — мир откроется после его первого поста.</p><p className="small muted">Голосовое создание пока недоступно. Сейчас можно настроить мир текстом.</p>{player && <Button onClick={() => { setUnlockInfo(false); nav.push('04-3_invite') }}>Пригласить друга →</Button>}<Button secondary onClick={() => setUnlockInfo(false)}>Понятно</Button></Sheet>}
+      {player?.hitOwnWorldMilestone && <button className="text-button" onClick={() => setUnlockInfo(true)}>О своём мире →</button>}
+      {unlockInfo && <Sheet className="own-unlock-modal" label="Как открыть свой мир" onClose={() => setUnlockInfo(false)}>
+        <div className="own-unlock-head"><h2>Свой мир — из твоей идеи</h2><button className="icon-button" aria-label="Закрыть" onClick={() => setUnlockInfo(false)}>×</button></div>
+        <div className="own-unlock-sheet">
+          <p className="own-unlock-lead">Придумай место, себя и собеседников. Сейчас настройка текстом — диктовка пока недоступна.</p>
+          <div className="unlock-compact">
+            <strong>{player?.hitOwnWorldMilestone ? '✓ Можно создавать' : 'Как открыть'}</strong>
+            <div className="unlock-followers"><span>Набери 500 подписчиков<br />в одном мире</span><b>{bestSubscribers === undefined ? '—' : bestSubscribers}<small>/ 500</small></b></div>
+            {ownProgress !== undefined ? <><progress max={500} value={ownProgress} aria-label={`${bestSubscribers} из 500 подписчиков`} /><small className="unlock-world">{ownedLoaded ? 'Лучший мир' : 'Текущий мир'}: {bestWorld?.title}{!ownedLoaded && (ownedFailed ? ' · остальные данные недоступны' : ' · загружаем остальные миры')}</small></> : <p className="unlock-no-data">{playerState === 'loading' ? 'Загружаем профиль…' : playerState === 'failed' ? 'Не удалось загрузить профиль. Счётчик пока недоступен.' : 'Прогресс появится после создания первого мира.'}</p>}
+            {player?.hitOwnWorldMilestone && <p className="unlock-confirmed">Доступ подтверждён сервером.</p>}
+            <div className="unlock-friend"><span>или</span><p>Пригласи друга.<br />Доступ откроется после его первого поста.</p></div>
+          </div>
+          <Button disabled={playerState === 'loading'} onClick={() => {
+            if (playerState === 'failed') { void refresh(); return }
+            setUnlockInfo(false)
+            if (player?.hitOwnWorldMilestone) startOwn()
+            else if (player) nav.push('04-3_invite')
+            else document.querySelector('.catalog-heading')?.scrollIntoView({ block: 'start' })
+          }}>{player?.hitOwnWorldMilestone ? 'Создать свой мир' : player ? 'Пригласить друга' : playerState === 'failed' ? 'Повторить загрузку профиля' : playerState === 'loading' ? 'Загружаем…' : 'Выбрать первый мир'}</Button>
+          <button className="magic-progress" onClick={() => player ? void openProgress() : setUnlockInfo(false)}>{player ? 'К прогрессу →' : 'Вернуться к мирам →'}</button>
+          {error && <p role="alert">{error}</p>}
+        </div>
+      </Sheet>}
+
 
       {getWorldDraft() && <Button secondary onClick={() => nav.push(getWorldDraft()?.definition.templateId === null ? '05-7b_own_world' : '01-4_channel')}>Продолжить настройку</Button>}
       {currentWorld && <><h2>Твои миры</h2><button className="world-resume card" onClick={() => resume(currentWorld)}><Avatar seed={currentWorld.avatar} avatarStyle={currentWorld.avatarStyle} profile={player ? { address: player.address, ageBand: player.ageBand, personalizeAvatar: avatarPersonalization(player.id) } : undefined} size={48} /><div><b>{currentWorld.name}</b><p className="small muted">{currentWorld.emoji} {currentWorld.title} · {currentWorld.subscribers} подписчиков</p><span>Продолжить →</span></div></button></>}
