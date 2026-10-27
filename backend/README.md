@@ -160,3 +160,22 @@ Persistence ports live beside their application features. Each Mongo repository 
 Direct messages, friends, star conversation memory, and challenges have no Application handlers, repositories, domain implementation, or AI calls. Their controller routes and wire contracts remain: friends return an empty list, active challenge returns null (empty HTTP 200), direct-message reads return an empty DTO, sending returns a null reply and zero replies left, and other writes return empty HTTP 200 without side effects. Standard authentication and request validation remain.
 
 Migration `2.4.5` removes the retired challenge bonus expiry field from player documents while preserving existing energy. Daily reset grants only the base energy for the player's plan. Old social collections are retained for historical migrations and transactional account deletion using raw BSON; deployment does not purge their contents. Reserved balance configuration and historical achievement definitions remain for compatibility, with no active challenge or DM behavior.
+
+## Manual runtime balance update (#184)
+
+After deploying #184 once, a valid replacement of `/app/config/balance.json` is reloaded by the standard .NET JSON configuration provider. `IOptionsMonitor<GameBalance>` supplies a new immutable balance for subsequent operations. Each calculation holds one local value, including its helpers. Unfinished publications use the balance and world difficulty at confirmation; completed results replay unchanged. Existing energy is retained until the next daily reset, which uses the new balance.
+
+Choose the backend container explicitly. Copy its current file for rollback, prepare a complete replacement, validate JSON syntax and review all changed values against the existing balance constraints before applying:
+
+```sh
+container='<backend-container>'
+docker cp "$container:/app/config/balance.json" balance.previous.json
+# Edit a copy named balance.next.json; retain all required sections.
+python3 -m json.tool balance.next.json >/dev/null
+docker cp balance.next.json "$container:/app/config/balance.next.json"
+docker exec --user root "$container" sh -c 'chmod 0444 /app/config/balance.next.json && mv /app/config/balance.next.json /app/config/balance.json'
+```
+
+The image runs as `app`; replacing the file can require the explicit root connection above. Wait a few seconds for the standard file-change notification, then verify the changed parameter with the next relevant game operation and check container logs for validation errors. The process and container must remain running. JSON syntax validation alone does not validate game values: an invalid JSON file or balance can cause errors; there is no automatic rollback or last-known-good cache. To roll back, repeat the replacement using `balance.previous.json`.
+
+The edit is lost when the container is recreated. Save the same intended values in `docs/config/balance.json` so the next image preserves them. No volume, management API, custom watcher or delivery automation is introduced. Changing `posts.reset_time_msk` requires a process restart and coordination with the existing TickerQ schedule; hot reload does not rebuild cron schedules.

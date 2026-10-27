@@ -8,7 +8,7 @@ using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
 
-internal sealed class AddBonusAmountToInvite(IOptions<GameBalance> balance) : RekiMigrationBase
+internal sealed class AddBonusAmountToInvite(IOptionsMonitor<GameBalance> balance) : RekiMigrationBase
 {
     public override DatabaseVersion Version { get; } = new(2, 4, 1);
 
@@ -17,10 +17,11 @@ internal sealed class AddBonusAmountToInvite(IOptions<GameBalance> balance) : Re
         IClientSessionHandle session,
         CancellationToken cancellationToken)
     {
+        var currentBalance = balance.CurrentValue;
         await db.GetCollection<BsonDocument>(MongoCollections.Invites).UpdateManyAsync(
             session,
             FilterDefinition<BsonDocument>.Empty,
-            Builders<BsonDocument>.Update.Set(nameof(Invitation.BonusAmount), balance.Value.InviteBonusBoth),
+            Builders<BsonDocument>.Update.Set(nameof(Invitation.BonusAmount), currentBalance.InviteBonusBoth),
             cancellationToken: cancellationToken);
     }
 }

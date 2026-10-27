@@ -7,17 +7,18 @@ using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
 
-internal sealed class StoreRemainingEnergy(IOptions<GameBalance> balance) : RekiMigrationBase
+internal sealed class StoreRemainingEnergy(IOptionsMonitor<GameBalance> balance) : RekiMigrationBase
 {
     public override DatabaseVersion Version => new(2, 4, 0);
 
     public override async Task UpAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken)
     {
+        var currentBalance = balance.CurrentValue;
         var baseEnergy = new BsonDocument("$cond", new BsonArray
         {
             "$Settings.Plus",
-            balance.Value.PlusPostsPerDay,
-            balance.Value.FreePostsPerDay,
+            currentBalance.PlusPostsPerDay,
+            currentBalance.FreePostsPerDay,
         });
         var challengeBonus = new BsonDocument("$cond", new BsonArray
         {

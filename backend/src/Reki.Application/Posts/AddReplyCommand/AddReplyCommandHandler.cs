@@ -19,7 +19,7 @@ namespace Reki.Application.Posts.AddReplyCommand;
 
 internal sealed partial class AddReplyCommandHandler(
     IGameStore store,
-    IOptions<GameBalance> balance,
+    IOptionsMonitor<GameBalance> balance,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
     PlayerSafetyGuard safety,
@@ -54,14 +54,15 @@ internal sealed partial class AddReplyCommandHandler(
             yield break;
         }
 
-        EnsureEnergy(player);
+        var currentBalance = balance.CurrentValue;
+        EnsureEnergy(player, currentBalance);
         var context = new StarReplyContext(
             new StarAgentProfile(world, null, player.Address),
             star.Id,
             post.Text,
             target is null ? [] : post.GetBranch(target.Id),
             request.Text,
-            turnPolicy.IsHateEnabled(player, world));
+            turnPolicy.IsHateEnabled(player, world, currentBalance));
         yield return new ReplyLiveEvent(ReplyStatus.Generating, request.RequestId, null, null, null, null, null);
         var calls = new List<FunctionCallContent>();
         await using var updates = generator.StreamReplyTurnAsync(context, cancellationToken)
@@ -180,6 +181,14 @@ internal sealed partial class AddReplyCommandHandler(
         return (target, star);
     }
 
+    private static void EnsureEnergy(PlayerProfile player, GameBalance currentBalance)
+    {
+        if (player.Energy < currentBalance.Thread.EnergyCost)
+        {
+            throw new RequestConflictException("Insufficient energy.");
+        }
+    }
+
     private async ValueTask<ReplyLiveEvent> CommitAsync(
         AddReply request,
         GeneratedReplyTurn turn,
@@ -208,17 +217,18 @@ internal sealed partial class AddReplyCommandHandler(
             throw new RequestConflictException("The world changed during generation.");
         }
 
-        var hateEnabled = turnPolicy.IsHateEnabled(player, world);
+        var currentBalance = balance.CurrentValue;
+        var hateEnabled = turnPolicy.IsHateEnabled(player, world, currentBalance);
         if ((turn.Tone == "hate" || turn.AdditionalTone == "hate") && !hateEnabled)
         {
             throw new RequestConflictException("The world safety settings changed during generation.");
         }
 
-        EnsureEnergy(player);
+        EnsureEnergy(player, currentBalance);
         var bonus = post.Comments.Count(comment =>
                         comment.AuthorId == playerId.ToAuthorId())
-                    < balance.Value.Thread.BonusReplies
-            ? balance.Value.Thread.SubscriberBonus
+                    < currentBalance.Thread.BonusReplies
+            ? currentBalance.Thread.SubscriberBonus
             : 0;
         var playerComment = new GameComment(
             CommentId.New(),
@@ -239,7 +249,7 @@ internal sealed partial class AddReplyCommandHandler(
         }
 
         var updatedPost = post.AddComments(comments);
-        var updatedPlayer = player.SpendEnergy(balance.Value.Thread.EnergyCost);
+        var updatedPlayer = player.SpendEnergy(currentBalance.Thread.EnergyCost);
         var updatedWorld = world.AwardThreadBonus(bonus);
         if (await store.TryCommitReplyAsync(
                 updatedPost,
@@ -279,14 +289,6 @@ internal sealed partial class AddReplyCommandHandler(
                        throw new RequestConflictException("The saved reply disappeared.");
         EnsureSameRequest(existing, request, playerId);
         return Completed(request, post, world, player);
-    }
-
-    private void EnsureEnergy(PlayerProfile player)
-    {
-        if (player.Energy < balance.Value.Thread.EnergyCost)
-        {
-            throw new RequestConflictException("Insufficient energy.");
-        }
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Thread generation failed")]

@@ -12,7 +12,7 @@ internal sealed class CreateWorldCommandHandler(
     IWorldRepository worldRepository,
     IRekiContextAccessor rekiContextAccessor,
     GameDayPeriod gameDayPeriod,
-    IOptions<GameBalance> balance,
+    IOptionsMonitor<GameBalance> balance,
     ProductTelemetry telemetry)
     : ICommandHandler<CreateWorld, World>
 {
@@ -31,10 +31,11 @@ internal sealed class CreateWorldCommandHandler(
             throw new ContentRejectedException();
         }
 
-        var instance = source.Instantiate(player.Id, gameDayPeriod.PeriodStart);
+        var currentBalance = balance.CurrentValue;
+        var instance = source.Instantiate(player.Id, gameDayPeriod.GetPeriodStart(currentBalance));
         var world = instance with
         {
-            Player = instance.Player with { Subscribers = balance.Value.Growth.StartingSubscribers },
+            Player = instance.Player with { Subscribers = currentBalance.Growth.StartingSubscribers },
         };
         await worldRepository.InsertWorldAsync(world, cancellationToken);
         telemetry.TrackPlayer(player, "world_created", new Dictionary<string, string> { ["template_id"] = world.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = world.Difficulty.ToString().ToLowerInvariant() }, world.Id);

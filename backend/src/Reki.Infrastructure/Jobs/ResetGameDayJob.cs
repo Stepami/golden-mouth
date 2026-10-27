@@ -12,18 +12,19 @@ internal sealed partial class ResetGameDayJob(
     IPlayerRepository players,
     IWorldRepository worlds,
     GameDayPeriod gameDayPeriod,
-    IOptions<GameBalance> balance,
+    IOptionsMonitor<GameBalance> balance,
     ILogger<ResetGameDayJob> logger) : ITickerFunction
 {
     public async Task ExecuteAsync(TickerFunctionContext context, CancellationToken cancellationToken = default)
     {
-        var periodStart = gameDayPeriod.PeriodStart;
-        var growth = balance.Value.Growth;
+        var currentBalance = balance.CurrentValue;
+        var periodStart = gameDayPeriod.GetPeriodStart(currentBalance);
+        var growth = currentBalance.Growth;
         var restedBefore = periodStart.AddDays(-growth.RestedAfterSkippedDays);
         var playerCount = await players.ResetGameDayAsync(
             periodStart,
-            balance.Value.FreePostsPerDay,
-            balance.Value.PlusPostsPerDay,
+            currentBalance.FreePostsPerDay,
+            currentBalance.PlusPostsPerDay,
             cancellationToken);
         var worldCount = await worlds.ResetGameDayAsync(
             periodStart,

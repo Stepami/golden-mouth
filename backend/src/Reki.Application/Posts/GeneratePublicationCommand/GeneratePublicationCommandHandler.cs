@@ -20,7 +20,7 @@ namespace Reki.Application.Posts.GeneratePublicationCommand;
 
 internal sealed partial class GeneratePublicationCommandHandler(
     IPublicationRepository publicationRepository,
-    IOptions<GameBalance> balance,
+    IOptionsMonitor<GameBalance> balance,
     TimeProvider timeProvider,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
@@ -56,7 +56,8 @@ internal sealed partial class GeneratePublicationCommandHandler(
             yield break;
         }
 
-        if (player.Energy < balance.Value.PostEnergyCost)
+        var currentBalance = balance.CurrentValue;
+        if (player.Energy < currentBalance.PostEnergyCost)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }
@@ -91,7 +92,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
             StarPostContext? context = null;
             try
             {
-                context = await CreatePostContextAsync(request, player, world, cancellationToken);
+                context = await CreatePostContextAsync(request, player, world, currentBalance, cancellationToken);
                 await safety.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
             }
             catch (Exception exception)
@@ -124,7 +125,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
                                 request.Id,
                                 new PublicationPart(update.Text, null, null),
                                 cancellationToken);
-                            await PersistActionsAsync(request.Id, update, player, context, cancellationToken);
+                            await PersistActionsAsync(request.Id, update, player, context, currentBalance, cancellationToken);
                         }
                     }
                     catch (Exception exception)
@@ -218,10 +219,11 @@ internal sealed partial class GeneratePublicationCommandHandler(
         GeneratePublication request,
         PlayerProfile player,
         Domain.Worlds.World world,
+        GameBalance currentBalance,
         CancellationToken cancellationToken)
     {
         var recentPosts = await sender.Send(new WorldPostsQuery(world.Id, Cursor: null, PageSize: 3), cancellationToken);
-        var hateEnabled = turnPolicy.IsHateEnabled(player, world);
+        var hateEnabled = turnPolicy.IsHateEnabled(player, world, currentBalance);
         return new StarPostContext(
             request.Text,
             new StarAgentProfile(world, null, player.Address),
@@ -235,6 +237,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
         ChatResponseUpdate update,
         PlayerProfile player,
         StarPostContext context,
+        GameBalance currentBalance,
         CancellationToken cancellationToken)
     {
         foreach (var call in update.Contents.OfType<FunctionCallContent>())
@@ -262,7 +265,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
             };
             if (part.Comment is { } generated)
             {
-                turnPolicy.EnsurePostAllowed(generated, player, context.Agent.World);
+                turnPolicy.EnsurePostAllowed(generated, player, context.Agent.World, currentBalance);
             }
 
             await publicationRepository.AppendPublicationPartAsync(publicationId, part, cancellationToken);

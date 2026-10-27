@@ -1,12 +1,10 @@
 using System.Diagnostics.Metrics;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Balance;
-using Reki.Application.Player;
-using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
@@ -202,27 +200,36 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var players = Database.GetCollection<PlayerProfile>("players");
         var player = await players.Find(item => item.Id == response.Id).SingleAsync();
         await players.ReplaceOneAsync(item => item.Id == player.Id, player with { Energy = 6, EnergyUsed = 4 });
-        var changed = Options.Create(Factory.Services.GetRequiredService<IOptions<GameBalance>>().Value with { FreePostsPerDay = 12 });
-        var job = new ResetGameDayJob(
-            Factory.Services.GetRequiredService<IPlayerRepository>(),
-            Factory.Services.GetRequiredService<IWorldRepository>(),
-            new GameDayPeriod(Factory.Session.Clock, changed),
-            changed,
-            NullLogger<ResetGameDayJob>.Instance);
+        var configuration = (IConfigurationRoot)Factory.Services.GetRequiredService<IConfiguration>();
+        var monitor = Factory.Services.GetRequiredService<IOptionsMonitor<GameBalance>>();
+        var previous = configuration["posts:free_per_day"];
+        GameBalance? notified = null;
+        using var subscription = monitor.OnChange(value => notified = value);
+        var job = Factory.Services.GetRequiredService<ResetGameDayJob>();
+        try
+        {
+            // Act
+            configuration["posts:free_per_day"] = "12";
+            configuration.Reload();
+            await job.ExecuteAsync(new(), CancellationToken.None);
+            var beforeReset = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+            Factory.Session.Clock.SetUtcNow(player.PostsPeriodStartedAtUtc.AddDays(1));
+            await job.ExecuteAsync(new(), CancellationToken.None);
+            var afterReset = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
-        // Act
-        await job.ExecuteAsync(new(), CancellationToken.None);
-        var beforeReset = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        Factory.Session.Clock.SetUtcNow(player.PostsPeriodStartedAtUtc.AddDays(1));
-        await job.ExecuteAsync(new(), CancellationToken.None);
-        var afterReset = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
-
-        // Assert
-        await Assert.That(beforeReset.Energy).IsEqualTo(6);
-        await Assert.That(afterReset.Energy).IsEqualTo(12);
-        var stored = await players.Find(item => item.Id == player.Id).SingleAsync();
-        await Assert.That(stored.EnergyUsed).IsEqualTo(0);
-        await Assert.That(stored.Version).IsEqualTo(player.Version + 1);
+            // Assert
+            await Assert.That(notified?.FreePostsPerDay).IsEqualTo(12);
+            await Assert.That(beforeReset.Energy).IsEqualTo(6);
+            await Assert.That(afterReset.Energy).IsEqualTo(12);
+            var stored = await players.Find(item => item.Id == player.Id).SingleAsync();
+            await Assert.That(stored.EnergyUsed).IsEqualTo(0);
+            await Assert.That(stored.Version).IsEqualTo(player.Version + 1);
+        }
+        finally
+        {
+            configuration["posts:free_per_day"] = previous;
+            configuration.Reload();
+        }
     }
 
     [Test]
