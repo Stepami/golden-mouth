@@ -1,0 +1,120 @@
+{
+  "sourceFrontend": "b7176fb",
+  "realBackend": true,
+  "apiInterception": false,
+  "states": [
+    {
+      "theme": "light",
+      "width": 390,
+      "screen": "03-3_feed",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "screen": "03-5_stage",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "screen": "05-13_progress",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "screen": "05-5_collection",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "screen": "03-3_feed",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "screen": "03-5_stage",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "screen": "05-13_progress",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "screen": "05-5_collection",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "screen": "03-3_feed",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "screen": "03-5_stage",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "screen": "05-13_progress",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "screen": "05-5_collection",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "screen": "03-3_feed",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "screen": "03-5_stage",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "screen": "05-13_progress",
+      "overflow": false,
+      "brokenImages": 0
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "screen": "05-5_collection",
+      "overflow": false,
+      "brokenImages": 0
+    }
+  ],
+  "pageErrors": []
+}
