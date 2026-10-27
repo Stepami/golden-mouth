@@ -1,7 +1,8 @@
 using Kot.MongoDB.Migrations;
 using Microsoft.Extensions.Logging;
-using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Domain.Player;
+using Reki.Domain.Worlds;
 using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
@@ -14,164 +15,73 @@ internal sealed partial class RefreshWorldContent(ILogger<RefreshWorldContent> l
 
     public override async Task UpAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken)
     {
-        foreach (var collectionName in new[] { MongoCollections.WorldTemplates, MongoCollections.Worlds })
-        {
-            await MigrateCollectionAsync(db.GetCollection<BsonDocument>(collectionName), session, cancellationToken);
-        }
+        var content = CreateContent().ToDictionary(item => item.Id);
+        var owner = PlayerId.From(Guid.Empty);
+        var templates = Builders<World>.Filter.In(world => world.Id, content.Keys) &
+                        Builders<World>.Filter.Where(world => world.Player.PlayerId == owner && world.TemplateId == null && !world.IsArchived);
+        var instances = Builders<World>.Filter.In(world => world.TemplateId, content.Keys.Select(id => (WorldId?)id)) &
+                        Builders<World>.Filter.Where(world => world.Player.PlayerId != owner && !world.IsArchived);
+        await RefreshCollectionAsync(db.GetCollection<World>(MongoCollections.WorldTemplates), session, templates, content, cancellationToken);
+        await RefreshCollectionAsync(db.GetCollection<World>(MongoCollections.Worlds), session, instances, content, cancellationToken);
     }
 
-    private static async Task<string> MigrateDocumentAsync(IMongoCollection<BsonDocument> collection, IClientSessionHandle session, ContentRevision revision, BsonDocument document, CancellationToken cancellationToken)
+    private static World ApplyContent(World world, WorldContent content) => world with
     {
-        if (Matches(document, revision.After, revision.StarsAfter))
+        Interface = world.Interface with
         {
-            return "AlreadyCurrent";
-        }
+            Description = PreservePersona(world.Interface.Description, content.Interface.Description),
+            Where = content.Interface.Where,
+            Summary = content.Interface.Summary,
+            FirstContext = content.Interface.FirstContext,
+            FirstPrompt = content.Interface.FirstPrompt,
+        },
+        Roles = content.Roles,
+        Voices = content.Voices,
+        PostIdeas = content.PostIdeas,
+        DemoPosts = content.DemoPosts,
+        Rules = content.Rules,
+        Stars = world.Stars.Select(star => UpdateStar(star, content.Stars)).ToArray(),
+    };
 
-        if (!Matches(document, revision.Before, revision.StarsBefore))
-        {
-            return "UnknownOrEditedContent";
-        }
-
-        await collection.UpdateOneAsync(
-            session,
-            new BsonDocument("_id", document["_id"]),
-            new BsonDocument("$set", CreateUpdate(document, revision)),
-            cancellationToken: cancellationToken);
-        return "Updated";
+    private static WorldStar UpdateStar(WorldStar star, IReadOnlyList<StarContent> content)
+    {
+        var updated = content.FirstOrDefault(item => item.Id == star.Id);
+        return updated is null ? star : star with { Role = updated.Role, About = updated.About, Voice = updated.Voice };
     }
 
-    private static bool Matches(BsonDocument document, BsonDocument fields, BsonDocument stars)
+    private static string PreservePersona(string previous, string description)
     {
-        foreach (var field in fields)
-        {
-            if (!TryReadField(document, field.Name, out var actual))
-            {
-                return false;
-            }
-
-            if (field.Name == "Interface.Description" && actual.IsString)
-            {
-                var text = actual.AsString;
-                var marker = text.IndexOf(PersonaMarker, StringComparison.Ordinal);
-                actual = marker < 0 ? text : text[..marker];
-            }
-
-            if (actual != field.Value)
-            {
-                return false;
-            }
-        }
-
-        if (!document.TryGetValue("Stars", out var value) || !value.IsBsonArray)
-        {
-            return false;
-        }
-
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var item in value.AsBsonArray)
-        {
-            if (item is not BsonDocument star || !star.TryGetValue("_id", out var id) || !id.IsString ||
-                !seen.Add(id.AsString) || !stars.TryGetValue(id.AsString, out var expected) || expected is not BsonDocument known)
-            {
-                return false;
-            }
-
-            if (known.Any(field => !star.TryGetValue(field.Name, out var actual) || actual != field.Value))
-            {
-                return false;
-            }
-        }
-
-        return true;
+        var marker = previous.IndexOf(PersonaMarker, StringComparison.Ordinal);
+        return marker < 0 ? description : description + previous[marker..];
     }
 
-    private static bool TryReadField(BsonDocument document, string path, out BsonValue value)
+    [LoggerMessage(Level = LogLevel.Information, Message = "World content migration attempt: {Collection}, updated {Count}")]
+    private static partial void LogContentAttempt(ILogger logger, string collection, int count);
+
+    private async Task RefreshCollectionAsync(IMongoCollection<World> collection, IClientSessionHandle session, FilterDefinition<World> filter, IReadOnlyDictionary<WorldId, WorldContent> content, CancellationToken cancellationToken)
     {
-        value = document;
-        foreach (var name in path.Split('.'))
-        {
-            if (value is not BsonDocument parent || !parent.TryGetValue(name, out value))
-            {
-                value = BsonNull.Value;
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static BsonDocument CreateUpdate(BsonDocument document, ContentRevision revision)
-    {
-        var fields = revision.After.DeepClone().AsBsonDocument;
-        var description = document["Interface"]["Description"].AsString;
-        var marker = description.IndexOf(PersonaMarker, StringComparison.Ordinal);
-        if (marker >= 0)
-        {
-            fields["Interface.Description"] = fields["Interface.Description"].AsString + description[marker..];
-        }
-
-        var stars = document["Stars"].AsBsonArray;
-        for (var index = 0; index < stars.Count; index++)
-        {
-            var target = revision.StarsAfter[stars[index]["_id"].AsString].AsBsonDocument;
-            AddStarFields(fields, target, index);
-        }
-
-        return fields;
-    }
-
-    private static void AddStarFields(BsonDocument fields, BsonDocument target, int index)
-    {
-        foreach (var field in target.Where(field => field.Name != "Name"))
-        {
-            fields[$"Stars.{index}.{field.Name}"] = field.Value.DeepClone();
-        }
-    }
-
-    [LoggerMessage(Level = LogLevel.Information,
-        Message = "World content migration attempt: {Collection}, template {TemplateId}, {Result}: {Count}")]
-    private static partial void LogContentAttempt(ILogger logger, string collection, Guid templateId, string result, int count);
-
-    private async Task MigrateCollectionAsync(IMongoCollection<BsonDocument> collection, IClientSessionHandle session, CancellationToken cancellationToken)
-    {
-        foreach (var revision in CreateRevisions())
-        {
-            await MigrateRevisionAsync(collection, session, revision, cancellationToken);
-        }
-    }
-
-    private async Task MigrateRevisionAsync(IMongoCollection<BsonDocument> collection, IClientSessionHandle session, ContentRevision revision, CancellationToken cancellationToken)
-    {
-        var emptyOwner = new BsonBinaryData(Guid.Empty, GuidRepresentation.Standard);
-        var templateId = new BsonBinaryData(revision.TemplateId, GuidRepresentation.Standard);
-        var filter = new BsonDocument("IsArchived", false);
-        if (collection.CollectionNamespace.CollectionName == MongoCollections.WorldTemplates)
-        {
-            filter.Add("_id", templateId);
-            filter.Add("Player.PlayerId", emptyOwner);
-            filter.Add("TemplateId", BsonNull.Value);
-        }
-        else
-        {
-            filter.Add("TemplateId", templateId);
-            filter.Add("Player.PlayerId", new BsonDocument("$ne", emptyOwner));
-        }
-
-        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        var count = 0;
         using var cursor = await collection.FindAsync(session, filter, cancellationToken: cancellationToken);
         await cursor.ForEachAsync(
-            async document =>
+            async world =>
             {
-                var result = await MigrateDocumentAsync(collection, session, revision, document, cancellationToken);
-                counts[result] = counts.GetValueOrDefault(result) + 1;
+                var updated = ApplyContent(world, content[world.TemplateId ?? world.Id]);
+                await collection.ReplaceOneAsync(session, item => item.Id == world.Id, updated, new ReplaceOptions { IsUpsert = true }, cancellationToken);
+                count++;
             },
             cancellationToken);
-        foreach (var (result, count) in counts)
-        {
-            LogContentAttempt(logger, collection.CollectionNamespace.CollectionName, revision.TemplateId, result, count);
-        }
+        LogContentAttempt(logger, collection.CollectionNamespace.CollectionName, count);
     }
 
-    private sealed record ContentRevision(Guid TemplateId, BsonDocument Before, BsonDocument StarsBefore,
-        BsonDocument After, BsonDocument StarsAfter);
+    private sealed record WorldContent(
+        WorldId Id,
+        WorldInterface Interface,
+        IReadOnlyList<string> Roles,
+        IReadOnlyList<string> Voices,
+        IReadOnlyList<string> PostIdeas,
+        IReadOnlyList<string> DemoPosts,
+        IReadOnlyList<WorldRule> Rules,
+        IReadOnlyList<StarContent> Stars);
+
+    private sealed record StarContent(StarId Id, string Role, string About, string Voice);
 }
