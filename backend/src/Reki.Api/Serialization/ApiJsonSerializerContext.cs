@@ -42,6 +42,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(ValidationProblemDetails))]
 [JsonSerializable(typeof(StarPlayerPromptData))]
 [JsonSerializable(typeof(StarFeedHistoryPost[]))]
+[JsonSerializable(typeof(StarFeedSourceContent))]
 [JsonSerializable(typeof(StarCatalogEntry[]))]
 [JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(StarFeedRequest))]

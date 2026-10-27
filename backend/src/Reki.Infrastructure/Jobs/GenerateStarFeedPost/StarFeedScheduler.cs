@@ -15,7 +15,12 @@ internal sealed partial class StarFeedScheduler(
     IOptions<GameBalance> options,
     ILogger<StarFeedScheduler> logger) : IStarFeedScheduler
 {
-    public async ValueTask ScheduleAsync(PlayerId playerId, WorldId worldId)
+    public async ValueTask ScheduleAsync(
+        PlayerId playerId,
+        WorldId worldId,
+        StarFeedEvent sourceEvent,
+        PostId? sourcePostId,
+        CommentId? sourceCommentId)
     {
         var now = timeProvider.GetUtcNow();
         var result = await manager.AddAsync<GenerateStarFeedPostJob, StarFeedRequest>(
@@ -24,7 +29,10 @@ internal sealed partial class StarFeedScheduler(
                 playerId,
                 worldId,
                 PostId.New(now),
-                now.ToUnixTimeMilliseconds()));
+                now.ToUnixTimeMilliseconds(),
+                sourceEvent,
+                sourcePostId,
+                sourceCommentId));
         if (!result.IsSucceeded)
         {
             SchedulingFailed();
@@ -33,7 +41,7 @@ internal sealed partial class StarFeedScheduler(
 
     public ValueTask ScheduleFromFeedAsync(PlayerId playerId, WorldId worldId) =>
         Random.Shared.NextDouble() < options.Value.StarFeedOpenProbability
-            ? ScheduleAsync(playerId, worldId)
+            ? ScheduleAsync(playerId, worldId, StarFeedEvent.FeedOpened, null, null)
             : ValueTask.CompletedTask;
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Star feed scheduling did not succeed")]

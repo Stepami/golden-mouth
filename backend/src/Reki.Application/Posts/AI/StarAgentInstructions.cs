@@ -69,6 +69,9 @@ internal sealed class StarAgentInstructions(IOptions<JsonSerializerOptions> json
     public string SerializeFeedHistory(StarFeedHistoryPost[] history) =>
         JsonSerializer.Serialize(history, jsonOptions.Value);
 
+    public string SerializeFeedSource(StarFeedSourceContent source) =>
+        JsonSerializer.Serialize(source, jsonOptions.Value);
+
     private string SerializeStars(IEnumerable<WorldStar> stars)
     {
         var catalog = stars.Select(star => new StarCatalogEntry(
