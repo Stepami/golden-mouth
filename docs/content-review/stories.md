@@ -2,6 +2,8 @@
 
 Версия `review-2026-10-20.6`. Предложение для [#192](https://github.com/Stepami/golden-mouth/issues/192), [#195](https://github.com/Stepami/golden-mouth/issues/195), [PR #196](https://github.com/Stepami/golden-mouth/pull/196). Исполнитель сюжетов, новые журналы и управление запуском ещё не реализованы. Это содержание и контракт для ревью, не описание готового API.
 
+Технический контракт после обновления ветки: [база API и миграции 2.5.0](technical-baseline.md). Редакторские названия историй не являются HTTP WorldId.
+
 [Пресеты](presets.md) · [Прокачка](progression.md) · [Отношения и конфликты](relationships.md) · [Знания героев](knowledge.md) · [Стоимость и проверка](balance-check.md) · [Референсы](similarity.md)
 
 ## Принципы

@@ -5,7 +5,7 @@ import { usePlayer } from '../app/store'
 import { useNav } from '../app/nav'
 import { selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 import { Button, TopBar } from '../ui'
-import { DescriptionSetup } from './worldWizard'
+import { AdvancedSetup, DescriptionSetup } from './worldWizard'
 import { register } from '.'
 import { AgeRuleNote } from './worldAdvanced'
 import { worldArt } from '../app/worldPrototype'
@@ -20,7 +20,7 @@ function WorldDetailsScreen() {
       const world = (await api.ownedWorlds()).find(item => item.id === p.worldInstanceId)
       if (!world) throw new Error('World not found')
       const { id, subscribers: _subscribers, lock: _lock, ...definition } = world
-      selectDraftOwner(p.id); setWorldDraft({ definition: { ...definition, rules: definition.rules.map(rule => ({ ...rule, locked: rule.text === 'Без тем 18+ и травли по внешности' })) }, advanced: false, editingId: id, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand, personalizeAvatar: avatarPersonalization(p.id) })
+      selectDraftOwner(p.id); setWorldDraft({ definition: { ...definition, templateId: null, rules: definition.rules.map(rule => ({ ...rule, locked: rule.text === 'Без тем 18+ и травли по внешности' })) }, advanced: false, editingId: id, address: p.address, group: p.ageBand === '14-17' ? '14-17' : '18+', ageBand: p.ageBand, personalizeAvatar: avatarPersonalization(p.id) })
       nav.push('05-7b_own_world', { world: p.world })
     } catch { setError('Не получилось загрузить настройки. Попробуй ещё раз.') } finally { setLoading(false) }
   }
@@ -34,4 +34,4 @@ function WorldDetailsScreen() {
     {error && <p role="alert">{error}</p>}
   </div></div>
 }
-register({ '05-7b_own_world': { component: DescriptionSetup, title: 'Описание и правила мира' }, '05-11_world_rules': { component: WorldDetailsScreen, title: 'Настройки мира' } })
+register({ '05-12_world_advanced': { component: AdvancedSetup, title: 'Редактирование мира' }, '05-7b_own_world': { component: DescriptionSetup, title: 'Описание и правила мира' }, '05-11_world_rules': { component: WorldDetailsScreen, title: 'Настройки мира' } })

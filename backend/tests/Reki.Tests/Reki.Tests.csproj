@@ -10,7 +10,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Reki.Api\Reki.Api.csproj"/>
-        <ProjectReference Include="..\..\src\Reki.Contracts\Reki.Contracts.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -19,6 +18,7 @@
         <PackageReference Include="Testcontainers.MongoDb"/>
         <PackageReference Include="MongoDB.Driver"/>
         <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing"/>
+        <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing"/>
         <PackageReference Include="NSubstitute"/>
         <PackageReference Include="WireMock.Net"/>
     </ItemGroup>

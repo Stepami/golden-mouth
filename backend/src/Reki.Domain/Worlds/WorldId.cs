@@ -1,14 +1,13 @@
-using Reki.Domain.Common;
 using Vogen;
 
 namespace Reki.Domain.Worlds;
 
-[ValueObject<string>(comparison: ComparisonGeneration.Omit)]
+[ValueObject<Guid>(comparison: ComparisonGeneration.Omit)]
 public readonly partial struct WorldId
 {
-    public static WorldId New() => From(Guid.NewGuid().ToString("N"));
+    public static WorldId New() => From(Guid.NewGuid());
 
-    private static string NormalizeInput(string value) => value.Trim().ToLowerInvariant();
+    public static WorldId From(string value) => From(Guid.Parse(value));
 
-    private static Validation Validate(string value) => IdentifierValidation.String(value);
+    public override string ToString() => ToString("D", System.Globalization.CultureInfo.InvariantCulture);
 }

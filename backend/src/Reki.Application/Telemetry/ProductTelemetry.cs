@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Logging;
-using Reki.Contracts.Telemetry;
+using Reki.Application.Telemetry.SubmitAnalyticsCommand;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Telemetry;
 
-public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, TimeProvider timeProvider)
+internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, TimeProvider timeProvider)
 {
     private readonly int _maxAttributeLength = 64;
     private readonly HashSet<string> _events = new(StringComparer.Ordinal)
@@ -14,9 +14,6 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         "app_hidden",
         "app_visible",
         "card_earned",
-        "challenge_finished",
-        "challenge_post",
-        "challenge_started",
         "crisis_shown",
         "event_answered",
         "hate_wave",
@@ -78,6 +75,8 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         "topic",
         "viral",
         "world",
+        "template_id",
+        "difficulty",
     };
 
     public void TrackSubmission(PlayerProfile player, AnalyticsSubmission submission)
@@ -99,10 +98,10 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
             var attributes = CreateAttributes(player.Id, entry.Name, entry.Timestamp);
             if (entry.WorldId is { } worldId)
             {
-                attributes["world_id"] = worldId.Value;
+                attributes["world_id"] = worldId.ToString();
             }
 
-            attributes["session_id"] = submission.Session.Value;
+            attributes["session_id"] = submission.Session.Value.ToString("N");
             attributes["platform"] = submission.Platform;
             attributes["launch_surface"] = submission.LaunchSurface switch
             {
@@ -112,7 +111,8 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
                 _ => "unknown",
             };
             attributes["screen"] = entry.Screen;
-            attributes["world"] = ReadWorldKey(entry.Properties);
+            attributes["difficulty"] = ReadDifficulty(entry.Properties);
+            attributes["template_id"] = ReadTemplateId(entry.Properties);
             attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
             if (entry.PreviousScreen is not null)
             {
@@ -140,10 +140,11 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
         var attributes = CreateAttributes(player.Id, eventName, timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
         if (worldId is { } id)
         {
-            attributes["world_id"] = id.Value;
+            attributes["world_id"] = id.ToString();
         }
 
-        attributes["world"] = ReadWorldKey(properties);
+        attributes["difficulty"] = ReadDifficulty(properties);
+        attributes["template_id"] = ReadTemplateId(properties);
         attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
         if (eventName == "player_created" && referred is { } isReferral)
         {
@@ -176,15 +177,20 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
     {
         var attributes = CreateAttributes(world.Player.PlayerId, "world_audience_updated", timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
         attributes["activity_kind"] = "inventory";
-        attributes["world_id"] = world.Id.Value;
-        attributes["world"] = world.BalanceKey;
+        attributes["world_id"] = world.Id.ToString();
+        attributes["template_id"] = world.TemplateId?.ToString() ?? string.Empty;
+        attributes["difficulty"] = world.Difficulty.ToString().ToLowerInvariant();
         attributes["subscriber_total"] = world.Player.Subscribers;
         Write("world_audience_updated", attributes);
     }
 
-    private static string ReadWorldKey(IReadOnlyDictionary<string, string> properties) =>
-        properties.TryGetValue("world", out var world) && world is "stage" or "academy" or "it" or "stream" or "own"
-            ? world : "unknown";
+    private static string ReadDifficulty(IReadOnlyDictionary<string, string> properties) =>
+        properties.TryGetValue("difficulty", out var difficulty) && difficulty is "easy" or "normal" or "hard"
+            ? difficulty : "unknown";
+
+    private static string? ReadTemplateId(IReadOnlyDictionary<string, string> properties) =>
+        properties.TryGetValue("template_id", out var template) && Guid.TryParse(template, out var id)
+            ? id.ToString("D") : null;
 
     private Dictionary<string, object?> CreateAttributes(
         PlayerId playerId,
@@ -197,7 +203,7 @@ public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, T
             ["activity_kind"] = eventName == "player_deleted" ? "lifecycle" : "real",
             ["event_name"] = eventName,
             ["event_time_unix_ms"] = timestamp,
-            ["player_id"] = playerId.Value,
+            ["player_id"] = playerId.Value.ToString("N"),
             ["received_time_unix_ms"] = timeProvider.GetUtcNow().ToUnixTimeMilliseconds(),
         };
     }

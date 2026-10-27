@@ -9,7 +9,6 @@
   <Folder Name="/src/">
     <Project Path="src/Reki.Api/Reki.Api.csproj" />
     <Project Path="src/Reki.Application/Reki.Application.csproj" />
-    <Project Path="src/Reki.Contracts/Reki.Contracts.csproj" />
     <Project Path="src/Reki.Domain/Reki.Domain.csproj" />
     <Project Path="src/Reki.Infrastructure/Reki.Infrastructure.csproj" />
   </Folder>

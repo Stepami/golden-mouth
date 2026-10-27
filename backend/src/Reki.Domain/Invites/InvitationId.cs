@@ -1,12 +1,13 @@
-using Reki.Domain.Common;
 using Vogen;
 
 namespace Reki.Domain.Invites;
 
-[ValueObject<string>(comparison: ComparisonGeneration.Omit)]
+[ValueObject<Guid>(comparison: ComparisonGeneration.Omit)]
 public readonly partial struct InvitationId
 {
-    public static InvitationId New() => From(Guid.NewGuid().ToString("N"));
+    public static InvitationId New() => From(Guid.NewGuid());
 
-    private static Validation Validate(string value) => IdentifierValidation.String(value);
+    public static InvitationId From(string value) => From(Guid.Parse(value));
+
+    public override string ToString() => ToString("N", System.Globalization.CultureInfo.InvariantCulture);
 }

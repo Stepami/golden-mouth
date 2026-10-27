@@ -29,13 +29,9 @@
 
 Rider MCP недоступен: IDE diagnostics, semantic navigation/debugger и coverage из Rider не выполнялись; использованы CLI build/style/TUnit с HTML-отчётом.
 
-## Воспроизведение
+## Исторический способ воспроизведения
 
-```sh
-python3 scripts/export-star-prompts.py --container reki-issue-sdk --output /tmp/reki-prompts.json
-# LLM_BASE_URL / LLM_PAT / LLM_MODEL задаются приватно вне репозитория
-python3 scripts/audit-star-prompts.py --messages-file /tmp/reki-prompts.json --output /tmp/reki-probes.json
-```
+Для этого аудита prompts экспортировались из C#-генератора в диагностическом контейнере, затем отдельный Python-скрипт отправлял синтетические пробы внешнему LLM. Корневой каталог диагностических скриптов удалён 24.10.2026; прежние команды больше не доступны в текущем checkout. Сохранённые JSON-артефакты выше относятся к историческому прогону.
 
 ## Horseless Carriages — проверка требования Степана в #97
 

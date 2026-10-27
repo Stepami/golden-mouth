@@ -34,6 +34,9 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
 .screen.no-tab { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
 .screen.channel-screen { padding-bottom: calc(180px + env(safe-area-inset-bottom)); }
 .pad { padding: 14px 16px; }
+.post-list-screen { overflow-anchor: none; }
+.post-list-pull { overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; }
+.post-list-tail { min-height: 32px; padding: 14px 0; text-align: center; color: var(--muted); font-size: 13px; }
 
 .top { display: flex; align-items: center; gap: 10px; padding: 10px 16px 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 5; }
 .top .back { font-size: 22px; background: none; border: none; color: var(--text); padding-right: 4px; }
@@ -400,3 +403,7 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .welcome-disclaimer { margin-top: 10px; }
 .welcome-world-choice { text-align: center; font-size: 15px; font-weight: 400; color: var(--lilac); margin-top: 24px; }
 @media (max-width: 350px) { .welcome h1 { font-size: 30px; } .intro-portrait-gosha { width: 52px; height: 52px; } }
+
+.drama-world-edit { margin-top: 16px; }
+.drama-world-edit > p { margin-top: 8px; }
+.profile-world-settings { margin-bottom: 18px; }

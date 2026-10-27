@@ -1,5 +1,5 @@
 using Reki.Domain.Player;
-using Reki.Domain.Social;
+using Reki.Domain.Worlds;
 using Vogen;
 
 namespace Reki.Domain.Posts;
@@ -12,7 +12,7 @@ public readonly partial struct AuthorId
     /// <param name="playerId">Исходный идентификатор игрока.</param>
     /// <returns>Проверенный идентификатор автора-игрока.</returns>
     internal static AuthorId From(PlayerId playerId) =>
-        From($"{AuthorKind.Player}_{playerId.Value}");
+        From($"{AuthorKind.Player}_{playerId.Value:N}");
 
     /// <summary>Создаёт идентификатор автора из <see cref="StarId"/>.</summary>
     /// <param name="starId">Исходный идентификатор AI звезды.</param>

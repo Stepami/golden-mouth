@@ -76,6 +76,10 @@ the credits that cannot be reconstructed. An already-used invitee bonus without
 a surviving post keeps its old daily credit until reset and cannot be granted again. Repeated migration does not
 subtract credits twice.
 
+Migration `2.4.4` drops the unused `threads` collection, including its documents and indexes. It is safe when the collection is absent or the migration is retried. Older migrations no longer create its index or backfill it. Conversations and replies remain in `posts.Comments`; publication and reply APIs are unchanged. The drop runs outside the migration transaction because MongoDB forbids dropping collections in a transaction. It cannot be rolled back.
+
+Migration `2.4.7` drops the retired `stars_memory` and `challenges` collections, including their documents and indexes, and deletes legacy `invites` documents containing `PlayerId`. It runs after the historical Social migrations and is safe when either collection is absent or the migration is retried. The drops run outside the migration transaction and cannot be rolled back; invitation cleanup uses the migration transaction. Account deletion only matches invitations by `InviterId` or `InviteeId`; Social API stubs remain unchanged. Databases that have already applied `2.4.7` will not run its updated cleanup automatically.
+
 ## Test infrastructure
 
 API component tests share one `ApiFactory`, WireMock server and MongoDB database per test session. `TestSessionFixture` owns the MongoDB container/client, WireMock and resettable clock; TUnit disposes the dependent API factory before these resources at session end. The host starts lazily for the first API test and applies startup migrations once.
@@ -97,7 +101,7 @@ dotnet build Reki.slnx --configuration Release
 dotnet test --project tests/Reki.Tests/Reki.Tests.csproj --configuration Release --no-build
 ```
 
-Building the API produces an OpenAPI document. Building the test project regenerates its typed NSwag client from that document before compilation; the client reuses DTOs from `Reki.Contracts` instead of generating copies.
+Building the API produces an OpenAPI document. Building the test project regenerates its typed NSwag client from that document before compilation; the client reuses request DTOs from `Reki.Api` and response DTOs from `Reki.Application` instead of generating copies.
 
 ## Scheduled maintenance (TickerQ)
 
@@ -106,7 +110,7 @@ TickerQ 10.4 uses `alexjamesbrown.TickerQ.MongoDB` 0.1.0 and the application's e
 - `ResetGameDayJob`: `0 0 9 * * *`, time zone `Europe/Moscow` (09:00 Moscow, 06:00 UTC).
 - `RefreshRegisteredPlayersJob`: `0 * * * * *`, once per minute, using MongoDB `CountDocumentsAsync` without reading profiles, worlds or invitations.
 
-`ResetGameDayJob` and `RefreshRegisteredPlayersJob` implement `ITickerFunction` and are registered with `MapTicker`; TickerQ uses the job class names as function names, and the schedules are unchanged. Both jobs access MongoDB directly. The count job is singleton and owns the registered-player gauge. `GameDayPeriod` calculates the current period from injected `TimeProvider` and `IOptions<GameBalance>`; the reset job receives balance options through DI as well. Startup does not run maintenance jobs. The jobs run on their schedules. Reset only touches older periods. It clears player energy/daily bonus, world wants and daily star relation gains, applies the existing rested-post rule, and increments document versions. Repeated runs do not reset the same period twice. Player/world reads and writes no longer perform daily normalization. Invitation usage, direct messages, daily events and challenge lifecycle retain their existing behavior.
+`ResetGameDayJob` and `RefreshRegisteredPlayersJob` implement `ITickerFunction` and are registered with `MapTicker`; TickerQ uses the job class names as function names, and the schedules are unchanged. Both jobs access MongoDB directly. The count job is singleton and owns the registered-player gauge. `GameDayPeriod` calculates the current period from injected `TimeProvider` and `IOptions<GameBalance>`; the reset job receives balance options through DI as well. Startup does not run maintenance jobs. The jobs run on their schedules. Reset only touches older periods. It clears player energy/daily bonus, world wants and daily star relation gains, applies the existing rested-post rule, and increments document versions. Repeated runs do not reset the same period twice. Player/world reads and writes no longer perform daily normalization. Invitation usage and daily events retain their existing behavior. Daily reset no longer grants challenge bonuses; direct messages, friends, memory and challenges are compatibility stubs.
 
 `Jobs__ExecutionEnabled=false` disables scheduler execution (used by component tests), but persisted schedule initialization remains enabled. In production leave execution enabled. A failed maintenance execution is recorded by TickerQ; the next scheduled execution recovers an interrupted reset safely.
 
@@ -116,4 +120,43 @@ TickerQ request serialization uses `ApiJsonSerializerContext` through `WithJsonC
 
 Successful publications and thread replies schedule a one-off `GenerateStarFeedPostJob`. Feed reads do so with `feed.open_probability` from the balance file. The existing feed returns saved posts immediately; refresh to see new star posts. The backend uses a non-streaming chat response and the existing 14+ output checks. Player energy, audience and progression are unchanged.
 
-Type-safe `AddAsync<GenerateStarFeedPostJob, StarFeedRequest>` uses `RekiTimeTicker` defaults: three retries at 30, 120 and 600 seconds. These defaults apply to all application TimeTickers; cron maintenance retains its existing configuration. Technical failures propagate to TickerQ; invalid content and missing worlds terminate without retry. A BSON ObjectId string is created at scheduling and stored as a typed PostId in the request alongside typed PlayerId and WorldId. Repeated executions reuse it; the post collection's unique `_id` prevents duplicate posts. Concurrent executions of the same request can still spend AI tokens before one insert wins. Failed TickerQ scheduling results are logged; unexpected scheduler exceptions are not swallowed. ScheduleAsync always schedules; ScheduleFromFeedAsync uses random < feed.open_probability. Neither scheduler method accepts a cancellation token. MongoGameStore uses a plain InsertPostAsync and insertion exceptions propagate to TickerQ. The AI history identifies authors and marks the selected star's own posts with isOwn. There is no transactional outbox between the business commit and scheduling.
+Type-safe `AddAsync<GenerateStarFeedPostJob, StarFeedRequest>` uses `RekiTimeTicker` defaults: three retries at 30, 120 and 600 seconds. These defaults apply to all application TimeTickers; cron maintenance retains its existing configuration. Technical failures propagate to TickerQ; invalid content and missing worlds terminate without retry. A BSON ObjectId string is created at scheduling and stored as a typed PostId in the request alongside typed PlayerId and WorldId. Repeated executions reuse it; the post collection's unique `_id` prevents duplicate posts. Concurrent executions of the same request can still spend AI tokens before one insert wins. Failed TickerQ scheduling results are logged; unexpected scheduler exceptions are not swallowed. ScheduleAsync always schedules; ScheduleFromFeedAsync uses random < feed.open_probability. Neither scheduler method accepts a cancellation token. MongoPostRepository uses a plain InsertPostAsync and insertion exceptions propagate to TickerQ. The AI history identifies authors and marks the selected star's own posts with isOwn. There is no transactional outbox between the business commit and scheduling.
+
+## API clients (#122)
+
+Use the existing local NSwag 14.7.1 tool for two independent clients:
+
+- `backend/src/Reki.Api/nswag.json` generates the ignored C# test client, using request DTOs from `Reki.Api` and response DTOs from `Reki.Application` (`generateDtoTypes=false`). The test project runs it before compilation.
+- `frontend/nswag.frontend.json` generates Fetch clients and DTO interfaces in `frontend/src/api/generated/reki-api.ts`. The API project runs it after build-time OpenAPI generation. The TypeScript file is committed; OpenAPI and the C# client remain ignored.
+
+Update workflow: **change API → build API → commit TypeScript client → check frontend**.
+
+```sh
+cd backend
+dotnet tool restore
+dotnet build src/Reki.Api/Reki.Api.csproj --configuration Release
+cd ../frontend
+npx tsc -b
+npm run build
+```
+
+No running API, database, Telegram token or LLM credentials are needed for generation. Do not edit generated files by hand. Frontend build, Docker and npm commands consume the committed client without .NET. Backend CI checks the generated TypeScript diff between Build and Test.
+
+SSE uses a binary stream schema so the C# generated client returns an open `FileResponse.Stream`; dispose the FileResponse after reading. Frontend Fetch generation returns a Blob, so its existing incremental SSE adapter retains the single POST and durable recovery behavior. Never automatically repeat mutation POSTs on disconnect.
+
+The active-challenge endpoint returns an empty HTTP 200 body when there is no challenge. Its named schema is nullable; the Fetch client decodes the empty response as null. HTTP behavior and game mechanics are unchanged.
+
+## Persistence
+
+Application messages and handlers are grouped by use case inside their subdomain: `Posts/AddReplyCommand/` contains `AddReply` and `AddReplyCommandHandler`; `Events/GetTodayEvent/` contains `TodayEventQuery` and `TodayEventQueryHandler`. Helpers used by one use case live beside it, including its result models and adapter ports. Helpers shared by several use cases in one subdomain stay at the subdomain root. Shared post AI components live in `Posts/AI`, with safety checks and policies in `Posts/AI/Safety`; the publication tool parser lives in `Posts/GeneratePublicationCommand`. Request context, transactions, and the shared balance configuration live in `Common`. All custom exception types live in the root `Exceptions` folder of their declaring assembly, for example `Reki.Application/Exceptions` with namespace `Reki.Application.Exceptions`.
+
+Placement follows consumers inside Application only; API error handling, infrastructure jobs, tests, and generated code do not make a type shared. Follow service methods to their use cases when a helper is referenced indirectly. For example, `PublicationSafetyPolicy` belongs to `Posts` because generation and publication use it, and `WorldPostsPage` belongs to `Posts/GetWorldPosts` because that is the only Application consumer of the repository's post-page query. All balance configuration models, including `GameBalance` and its nested configuration types, live in `Common/Balance` with namespace `Reki.Application.Common.Balance`.
+
+Persistence ports live beside their application features. Each Mongo repository handles one entity: player, world (including templates), post, publication, invitation, or daily event. Handlers, request context, and jobs depend directly on the ports they use. `IGameStore` / `MongoGameStore` retains multi-entity transactions for post/reply commits and deletion of all player data. Player deletion reads owned world IDs and deletes related documents and the player in one transaction; operations run sequentially on the same session. Public story world ownership is verified in the application handler before rendering.
+
+
+## Disabled social features
+
+Direct messages, friends, star conversation memory, and challenges have no Application handlers, repositories, domain implementation, or AI calls. Their controller routes and wire contracts remain: friends return an empty list, active challenge returns null (empty HTTP 200), direct-message reads return an empty DTO, sending returns a null reply and zero replies left, and other writes return empty HTTP 200 without side effects. Standard authentication and request validation remain.
+
+Migration `2.4.5` removes the retired challenge bonus expiry field from player documents while preserving existing energy. Daily reset grants only the base energy for the player's plan. Old social collections are retained for historical migrations and transactional account deletion using raw BSON; deployment does not purge their contents. Reserved balance configuration and historical achievement definitions remain for compatibility, with no active challenge or DM behavior.

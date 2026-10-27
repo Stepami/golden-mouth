@@ -3,7 +3,7 @@ import type { Challenge, Dm, Friend, GameEvent, Player, Post, PostResult } from 
 
 export const player: Player = {
   id: '00000000000000000000000000000001', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', address: 'she',
-  world: 'stage', subs: 120, postsLeft: 10, postsCap: 10, firstPostInviteBonus: 0,
+  world: 'edfccf53-65c6-4eaf-8321-2391bc1758bd', subs: 120, postsLeft: 10, postsCap: 10, firstPostInviteBonus: 0,
   streak: { days: 4, week: [true, true, true, true, false, false, false], nextReward: '7 дней: карточка «Неделя в эфире»' },
   skills: { brave: { level: 6, progress: .4 }, humor: { level: 5, progress: .7 }, topic: { level: 4, progress: .3 } },
   wants: [
@@ -25,9 +25,9 @@ export const firstPost: Post = {
   id: 'post1', text: 'первый день трейни: перепутала право и лево три раза. хореограф сказал «зато уверенно» 🫠', views: 312,
   reactions: [{ emoji: '😂', count: 48 }, { emoji: '🫶', count: 21 }, { emoji: '💀', count: 9 }], at: 'только что', authorId: player.id,
   comments: [
-    { id: 'k1', authorId: 'mira', depth: 0, parentCommentId: null, author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'я на первой репетиции упала со сцены. «уверенно» это комплимент, поверь', star: true },
-    { id: 'k2', parentCommentId: 'k1', authorId: player.id, depth: 1, reactions: [{ authorId: 'mira', author: 'Мира', avatar: 'mira', star: true, me: false, emoji: '💛' }], author: 'Лиза · трейни', avatar: '@liza.trainee', handle: '', text: 'серьёзно? со сцены?? 😳', me: true },
-    { id: 'k3', authorId: 'mira', parentCommentId: 'k2', depth: 2, author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'прямо в оркестровую яму. потом расскажу 🙃', star: true },
+    { id: 'k1', authorId: 'Star_mira', depth: 0, parentCommentId: null, author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'я на первой репетиции упала со сцены. «уверенно» это комплимент, поверь', star: true },
+    { id: 'k2', parentCommentId: 'k1', authorId: player.id, depth: 1, reactions: [{ authorId: 'Star_mira', author: 'Мира', avatar: 'mira', star: true, me: false, emoji: '💛' }], author: 'Лиза · трейни', avatar: '@liza.trainee', handle: '', text: 'серьёзно? со сцены?? 😳', me: true },
+    { id: 'k3', authorId: 'Star_mira', parentCommentId: 'k2', depth: 2, author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'прямо в оркестровую яму. потом расскажу 🙃', star: true },
   ],
 }
 

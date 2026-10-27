@@ -1,14 +1,11 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NSubstitute;
-using Reki.Application.Common;
-using Reki.Application.Telemetry;
+using Reki.Api;
+using Reki.Application.Balance;
 using TUnit.AspNetCore;
 
 namespace Reki.Tests;
@@ -17,8 +14,6 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
 {
     [ClassDataSource<TestSessionFixture>(Shared = SharedType.PerTestSession)]
     public required TestSessionFixture Session { get; init; }
-
-    public ILogger<ProductTelemetry> ProductLogger { get; } = Substitute.For<ILogger<ProductTelemetry>>();
 
     public bool UseProductionAuthentication { get; init; }
 
@@ -48,13 +43,11 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Llm:TimeoutSeconds", "1");
         builder.ConfigureServices(services =>
         {
-            ProductLogger.IsEnabled(Arg.Any<LogLevel>()).Returns(true);
-            services.AddSingleton(ProductLogger);
-            services.AddDataProtection().UseEphemeralDataProtectionProvider();
+            services.AddFakeLogging();
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
             if (FeedOpenProbability is { } probability)
             {
-                services.AddSingleton<IOptions<GameBalance>>(provider => Options.Create(
+                services.AddSingleton(provider => Options.Create(
                     provider.GetRequiredService<IOptionsFactory<GameBalance>>().Create(Options.DefaultName)
                         with { StarFeedOpenProbability = probability }));
             }

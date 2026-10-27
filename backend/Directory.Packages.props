@@ -2,47 +2,61 @@
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
         <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+        <!--Versions-->
+        <MediatorVersion>3.0.2</MediatorVersion>
+        <MicrosoftExtensionsVersion>10.0.13</MicrosoftExtensionsVersion>
+        <MicrosoftAiVersion>10.11.0</MicrosoftAiVersion>
+        <MicrosoftTestingVersion>10.11.0</MicrosoftTestingVersion>
+        <OtelVersion>1.20.1</OtelVersion>
+        <SkiaVersion>4.153.1</SkiaVersion>
+        <TickerQVersion>10.4.0</TickerQVersion>
+        <TUnitVersion>1.76.0</TUnitVersion>
     </PropertyGroup>
     <ItemGroup>
-        <PackageVersion Include="DotNext.Threading" Version="6.9.0"/>
-        <PackageVersion Include="TickerQ" Version="10.4.0"/>
-        <PackageVersion Include="TickerQ.Instrumentation.OpenTelemetry" Version="10.4.0"/>
         <PackageVersion Include="alexjamesbrown.TickerQ.MongoDB" Version="0.1.0"/>
+        <PackageVersion Include="TickerQ" Version="$(TickerQVersion)"/>
+        <PackageVersion Include="TickerQ.Instrumentation.OpenTelemetry" Version="$(TickerQVersion)"/>
         <PackageVersion Include="Kot.MongoDB.Migrations.DI" Version="3.1.0"/>
-        <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0"/>
-        <PackageVersion Include="CSharpGuidelinesAnalyzer" Version="3.8.5"/>
-        <PackageVersion Include="Mediator.Abstractions" Version="3.0.2"/>
-        <PackageVersion Include="Mediator.SourceGenerator" Version="3.0.2"/>
-        <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12"/>
-        <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.12"/>
-        <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.10.1"/>
-        <PackageVersion Include="Microsoft.Extensions.AI" Version="10.10.0"/>
-        <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.10.1"/>
-        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12"/>
-        <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.12"/>
-        <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.10.0"/>
-        <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23"/>
-        <PackageVersion Include="MongoDB.Analyzer" Version="2.0.0"/>
-        <PackageVersion Include="MongoDB.Driver" Version="3.12.0"/>
-        <PackageVersion Include="NSubstitute" Version="6.2.0"/>
-        <PackageVersion Include="Nullable.Extended.Analyzer" Version="1.16.6891"/>
-        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1"/>
-        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1"/>
-        <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0"/>
-        <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0"/>
-        <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.19.0"/>
+        <PackageVersion Include="MongoDB.Driver" Version="3.13.0"/>
+        <PackageVersion Include="DotNext.Threading" Version="6.10.0"/>
+        <PackageVersion Include="Mediator.Abstractions" Version="$(MediatorVersion)"/>
+        <PackageVersion Include="Mediator.SourceGenerator" Version="$(MediatorVersion)"/>
+        <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="$(MicrosoftExtensionsVersion)"/>
+        <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="$(MicrosoftExtensionsVersion)"/>
+        <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="$(MicrosoftAiVersion)"/>
+        <PackageVersion Include="Microsoft.Extensions.AI" Version="$(MicrosoftAiVersion)"/>
+        <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="$(MicrosoftAiVersion)"/>
+        <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="$(MicrosoftExtensionsVersion)"/>
+        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsVersion)"/>
+        <PackageVersion Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsVersion)"/>
         <PackageVersion Include="Riok.Mapperly" Version="4.3.1"/>
         <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0"/>
-        <PackageVersion Include="SkiaSharp" Version="4.153.1"/>
-        <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1"/>
+        <PackageVersion Include="SkiaSharp" Version="$(SkiaVersion)"/>
+        <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="$(SkiaVersion)"/>
+        <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.3.1"/>
+        <PackageVersion Include="TgMiniAppAuth" Version="0.0.8"/>
+        <PackageVersion Include="Vogen" Version="8.0.7"/>
+        <!--OpenTelemetry-->
+        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OtelVersion)"/>
+        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="$(OtelVersion)"/>
+        <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OtelVersion)"/>
+        <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OtelVersion)"/>
+        <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OtelVersion)"/>
+        <!--Analyzers-->
+        <PackageVersion Include="CSharpGuidelinesAnalyzer" Version="3.8.5"/>
+        <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23"/>
+        <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0"/>
+        <PackageVersion Include="MongoDB.Analyzer" Version="2.0.0"/>
+        <PackageVersion Include="Nullable.Extended.Analyzer" Version="1.16.6891"/>
         <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.35.0.4138"/>
         <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556"/>
-        <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.3.0"/>
-        <PackageVersion Include="TUnit" Version="1.73.19"/>
-        <PackageVersion Include="TUnit.AspNetCore" Version="1.73.19"/>
+        <!--Testing-->
+        <PackageVersion Include="Microsoft.Extensions.Diagnostics.Testing" Version="$(MicrosoftTestingVersion)"/>
+        <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="$(MicrosoftTestingVersion)"/>
+        <PackageVersion Include="NSubstitute" Version="6.2.0"/>
         <PackageVersion Include="Testcontainers.MongoDb" Version="4.16.0"/>
-        <PackageVersion Include="TgMiniAppAuth" Version="0.0.8"/>
+        <PackageVersion Include="TUnit" Version="$(TUnitVersion)"/>
+        <PackageVersion Include="TUnit.AspNetCore" Version="$(TUnitVersion)"/>
         <PackageVersion Include="WireMock.Net" Version="2.19.0"/>
-        <PackageVersion Include="Vogen" Version="8.0.7"/>
     </ItemGroup>
 </Project>

@@ -1,12 +1,13 @@
-using Reki.Domain.Common;
 using Vogen;
 
 namespace Reki.Domain.Telemetry;
 
-[ValueObject<string>(comparison: ComparisonGeneration.Omit)]
+[ValueObject<Guid>(comparison: ComparisonGeneration.Omit)]
 public readonly partial struct SessionId
 {
-    public static SessionId New() => From(Guid.NewGuid().ToString("N"));
+    public static SessionId New() => From(Guid.NewGuid());
 
-    private static Validation Validate(string value) => IdentifierValidation.String(value);
+    public static SessionId From(string value) => From(Guid.Parse(value));
+
+    public override string ToString() => ToString("N", System.Globalization.CultureInfo.InvariantCulture);
 }

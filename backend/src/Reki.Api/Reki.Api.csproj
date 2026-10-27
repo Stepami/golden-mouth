@@ -8,13 +8,10 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Reki.Application\Reki.Application.csproj"/>
-        <ProjectReference Include="..\Reki.Contracts\Reki.Contracts.csproj"/>
         <ProjectReference Include="..\Reki.Infrastructure\Reki.Infrastructure.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="DotNext.Threading"/>
-        <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all"/>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi"/>
         <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all"/>
         <PackageReference Include="Riok.Mapperly" PrivateAssets="all"/>
@@ -28,4 +25,12 @@
                  CopyToOutputDirectory="PreserveNewest"
                  CopyToPublishDirectory="PreserveNewest"/>
     </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="Reki.Tests"/>
+    </ItemGroup>
+    <Target Name="GenerateFrontendApiClient"
+            AfterTargets="GenerateOpenApiDocuments">
+        <Exec WorkingDirectory="$(MSBuildProjectDirectory)/../.."
+              Command="dotnet tool run nswag run ../frontend/nswag.frontend.json"/>
+    </Target>
 </Project>

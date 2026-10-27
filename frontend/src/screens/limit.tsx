@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { copyTextToClipboard, shareURL } from '@telegram-apps/sdk-react'
+import { copyTextToClipboard, shareURL } from '@tma.js/sdk'
 import { api } from '../api/client'
 import { worldOf } from '../api/worldContent'
 import { useNav } from '../app/nav'
@@ -115,7 +115,7 @@ function Invite() {
           <div style={{ fontSize: 28, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{fmt(p.subs)}</div>
           <div className="small">подписчиков · {worldOf(p.world).emoji} {worldOf(p.world).title}</div><div className="small muted" style={{ marginTop: 4 }}>а ты кем будешь?</div>
         </div>
-        <Card style={{ color: 'var(--muted)' }}><span className="small">Твоя ссылка: {link ?? 'Загружаем…'}</span></Card>
+        <Card style={{ color: 'var(--muted)', overflowWrap: 'anywhere' }}><span className="small">Твоя ссылка: {link ?? (linkError ? 'Не удалось загрузить' : 'Загружаем…')}</span></Card>
       </div>
       {linkError && <div className="pad" role="alert">Не удалось получить твою ссылку.<Button secondary onClick={retry}>Попробовать снова</Button></div>}
       {copyError && <div className="pad small" role="alert">Не удалось скопировать. Ссылка показана выше.</div>}

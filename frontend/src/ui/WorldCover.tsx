@@ -11,8 +11,8 @@ export function preloadCatalogCover() {
   const image = new Image()
   image.fetchPriority = 'high'
   image.sizes = catalogCoverSizes
-  image.srcset = coverSrcSet('evening')
-  image.src = worldArt.evening.cover
+  image.srcset = coverSrcSet('b3a1a522-0263-4796-a197-57a8731fc291')
+  image.src = worldArt['b3a1a522-0263-4796-a197-57a8731fc291'].cover
 }
 
 export function WorldCover({ world, className = '', alt = '', catalog = false, priority = false }: { world: string; className?: string; alt?: string; catalog?: boolean; priority?: boolean }) {

@@ -1,90 +1,79 @@
-// Контракт фронт ↔ бэкенд (issue #10). Бэкенд может уточнить поля: меняем здесь и в mock.ts.
-export type SkillId = 'brave' | 'humor' | 'topic'
-export type WorldId = 'stage' | 'academy' | 'it' | 'stream' | 'own' | 'evening' | 'sorcerers' | 'houses'
-export type Address = 'she' | 'he' | 'nick'
-export type Drama = 'soft' | 'mid' | 'hot' | 'off'
+// Wire models are generated from OpenAPI. These types only adapt them for the UI/demo.
+import type * as Wire from './generated/reki-api'
 
+// OpenAPI allows unknown fields; UI mapped types operate on declared fields only.
+type Fields<T> = { [K in keyof T as string extends K ? never : number extends K ? never : K]: T[K] }
+
+export type SkillId = 'brave' | 'humor' | 'topic'
+export type WorldId = string
+export type WorldDifficulty = 'easy' | 'normal' | 'hard'
+export type Address = Wire.Address
+export type Drama = Wire.WorldDrama
 export interface World {
   id: WorldId; title: string; emoji: string; description: string
-  difficulty: 1 | 2 | 3; summary: string      // «рост ×1,1 · хейт с 3k · ценят юмор»
-  lock?: { skill: SkillId; level: number }     // нет поля = открыт
+  difficulty: WorldDifficulty; summary: string; lock?: { skill: SkillId; level: number }
 }
-export interface Star { id: string; name: string; role: string; trait: string; about: string; relation: number }
-export interface Skill { level: number; progress: number } // progress 0..1 до следующего уровня
-export interface Want { id: string; text: string; reward: string; done: boolean }
-export interface CollectionCard { id: string; emoji: string; title: string; open: boolean }
-
-export interface Player {
-  worldInstanceId?: string; avatarStyle?: string; hitOwnWorldMilestone?: boolean; ageBand?: import('../app/ageBand').AgeBand
-  id: string; name: string; handle: string; role: string; address: Address
-  world: WorldId; subs: number; postsLeft: number; postsCap: number; firstPostInviteBonus: number
-  streak: { days: number; week: boolean[]; nextReward: string }
-  skills: Record<SkillId, Skill>; wants: Want[]; collection: CollectionCard[]
-  bio: string; type: string                     // «дерзкая с самоиронией»
-  nextWorld?: { id: WorldId; title: string; need: string }
-  drama: Drama; voice: string
-  settings: { notifications: string; quiet: string; plus: boolean }
-  /** A/B-флаги, например { plus_offer: '10' } — аналитика прикладывает их к каждому событию */
-  experiments?: Record<string, string>
+export type Star = Omit<Fields<Wire.StarResponse>, 'relation'> & { relation: number }
+export type Skill = { [K in keyof Wire.SkillResponse]: number }
+export type Want = Wire.WantResponse
+export type CollectionCard = Wire.CollectionCardResponse
+export type PlayerDocument = Omit<Fields<Wire.PlayerResponse>, 'energy' | 'skills' | 'streak' | 'ageBand'> & {
+  energy: number; skills: Record<SkillId, Skill>
+  streak: Omit<Fields<Wire.StreakResponse>, 'days'> & { days: number }
+  ageBand?: import('../app/ageBand').AgeBand
 }
-
-export interface Reaction { emoji: string; count: number }
-export interface CommentReaction { authorId: string; author: string; avatar: string; star: boolean; me: boolean; emoji: string }
-export interface CommentT {
-  id: string; author: string; avatar: string; handle: string; text: string; star?: boolean; me?: boolean; hidden?: boolean
-  authorId?: string; role?: string; parentCommentId?: string | null; requestId?: string | null; depth?: number; reactions?: CommentReaction[]
+export interface Player extends Omit<PlayerDocument, 'energy' | 'experiments'> {
+  worldInstanceId?: string; difficulty?: WorldDifficulty; avatarStyle?: string
+  name: string; handle: string; role: string; world: WorldId
+  subs: number; postsLeft: number; postsCap: number; firstPostInviteBonus: number
+  wants: Want[]; collection: CollectionCard[]; bio: string; type: string
+  nextWorld?: { id: WorldId; title: string; need: string }; drama: Drama; voice: string
+  experiments?: Wire.PlayerResponse['experiments']
 }
-/** Пост игрока или звезды; authorId определяет автора корневого разговора. */
-export interface Post { id: string; authorId?: string; text: string; views: number; reactions: Reaction[]; comments: CommentT[]; inRivers?: boolean; at?: string }
-/** Wire-контракт GET /posts/:id: сервер называет идентификатор postId. */
-export interface PostDetailResponse extends Omit<Post, 'id'> { postId: string }
-export interface ChannelPost { postId: string; text: string; createdAtUtc: string; views: number; reactions: Reaction[]; commentCount: number }
-/** SSE одного ответа: промежуточный текст не опубликован; completed подтверждает транзакцию. */
-export interface ReplyLiveEvent {
-  status: 'generating' | 'completed' | 'failed'; requestId: string
-  text?: string | null; post?: PostDetailResponse | null; energyLeft?: number | null; subscribers?: number | null; code?: string | null
+export type Reaction = Omit<Fields<Wire.ReactionResponse>, 'count'> & { count: number }
+export type CommentReaction = Wire.CommentReactionResponse
+// Demo comments can omit server-enriched author/thread metadata.
+type CommentMetadata = 'star' | 'me' | 'hidden' | 'parentCommentId' | 'requestId' | 'authorId' | 'role' | 'reactions'
+export type CommentT = Omit<Fields<Wire.CommentResponse>, CommentMetadata | 'depth'> & Partial<Pick<Fields<Wire.CommentResponse>, CommentMetadata>> & { depth?: number }
+export type PostDetailResponse = Omit<Fields<Wire.PostDetailResponse>, 'views' | 'reactions' | 'comments' | 'authorId'> & {
+  authorId?: string; views: number; reactions: Reaction[]; comments: CommentT[]
 }
-
-export interface Why { icon: string; label: string; value: string }
-export interface PostResult {
-  postId: string; delta: number; headline: string; whys: Why[]
-  ribbons: { icon: string; title: string; sub?: string }[]
-  bestComment?: { avatar: string; text: string }
-  viral: boolean; flop: boolean; views: number
-  completedWants?: { id: string; text: string; reward: string }[] // Frontend-only: confirmed done transition after publication.
-  hook?: string                                 // нить: на постах 1–9 закрывается через 1–3 хода
+export type Post = Omit<PostDetailResponse, 'postId'> & { id: string; inRivers?: boolean; at?: string }
+export type ChannelPost = Omit<Fields<Wire.ChannelPostResponse>, 'views' | 'commentCount' | 'reactions'> & { views: number; commentCount: number; reactions: Reaction[] }
+export type ReplyLiveEvent = Pick<Fields<Wire.ReplyLiveEvent>, 'status' | 'requestId'> & Partial<Pick<Fields<Wire.ReplyLiveEvent>, 'text' | 'code'>> & {
+  post?: PostDetailResponse | null; energyLeft?: number | null; subscribers?: number | null
 }
-/** Элемент массива живой реакции (JSON из POST /posts/publications/{id}/moderation) */
-export type LiveEvent = { type: 'views'; views: number } | { type: 'react'; emoji: string } | { type: 'comment'; comment: CommentT } | { type: 'typing'; who: string } | { type: 'result'; result: PostResult }
-export type PublicationStatus = 'pending' | 'ready_for_moderation' | 'completed' | 'failed'
-export interface PublicationFailure { code: string; category: string; policyVersion: string }
-export interface PublicationState { failure?: PublicationFailure; publicationId: string; status: PublicationStatus; result: PostResult | null }
-
-export interface Friend { id: string; name: string; avatar: string; world: string; subs: number; lastPost: string; pronoun: 'её' | 'его' }
-export interface Challenge { id: string; me: string; rival: Friend; day: number; days: number; myScore: number; rivalScore: number; bestPost: string }
-export interface GameEvent { id: string; kind: 'collab' | 'hate' | 'gossip' | 'brand'; badge: string; title: string; text: string; ideas: string[]; reward: string; note: string }
-export interface DmMessage { from: 'star' | 'me'; text: string }
-export interface Dm { star: Star; status: string; memory: string[]; messages: DmMessage[]; ideas: string[]; repliesLeft: number }
-/** Карточка ленты 03-3. Все посты со стабильным postId открывают тред. */
-export interface FeedItem { kind: 'news' | 'post'; postId?: string; author?: string; avatar?: string; role?: string; ago?: string; text: string; reactions?: Reaction[]; views?: number; commentCount?: number; repost?: string; demo?: boolean; starId?: string; world?: WorldId }
-export type WorldUpdate = Partial<Pick<WorldDocument, 'title' | 'description' | 'rules' | 'drama' | 'voice'>>
-
-/** Шаблон или экземпляр мира из MongoDB; ID экземпляра отличается от ключа баланса. */
-export interface WorldDocument extends Omit<World, 'id'> {
-  id: string; balanceKey: WorldId; avatarStyle: string; where: string
-  name: string; avatar: string; role: string; subscribers: number; voice: string; drama: Drama
-  roles: string[]; voices: string[]; postIdeas: string[]; demoPosts: string[]
-  firstContext: string; firstPrompt: string
-  rules: { text: string; locked?: boolean }[]; wants: Want[]; achievements: CollectionCard[]
-  stars: (Omit<Star, 'trait'> & { trait: number; voice: string; avatarSeed: string })[]
+export type Why = Wire.WhyResponse
+export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views' | 'ribbons' | 'bestComment' | 'hook'> & {
+  delta: number; views: number
+  ribbons: (Omit<Fields<Wire.RibbonResponse>, 'sub'> & { sub?: string })[]
+  bestComment?: Wire.BestCommentResponse; hook?: string
+  completedWants?: Pick<Want, 'id' | 'text' | 'reward'>[]
+}
+type UiLiveEvent<E> = E extends { type: 'views' } ? Omit<E, 'views'> & { views: number }
+  : E extends { type: 'comment' } ? Omit<E, 'comment'> & { comment: CommentT }
+  : E extends { type: 'result' } ? Omit<E, 'result'> & { result: PostResult } : E
+type WireLiveEvent = Awaited<ReturnType<import('./generated/reki-api').PostsClient['moderatePublication']>>['result'][number]
+type Discriminated<T> = T extends { type?: infer Kind } ? Omit<Fields<T>, 'type'> & { type: NonNullable<Kind> } : never
+export type LiveEvent = UiLiveEvent<Discriminated<WireLiveEvent>>
+export type PublicationStatus = Wire.PublicationStatusType
+export type PublicationFailure = Wire.PublicationFailure
+export type PublicationState = Omit<Fields<Wire.PublicationStatusResponse>, 'result' | 'failure'> & { result: PostResult | null; failure?: PublicationFailure }
+export type Friend = Omit<Fields<Wire.FriendResponse>, 'subs' | 'pronoun'> & { subs: number; pronoun: 'её' | 'его' }
+export type Challenge = Omit<Fields<NonNullable<Wire.ChallengeResponse>>, 'rival' | 'day' | 'days' | 'myScore' | 'rivalScore'> & { rival: Friend; day: number; days: number; myScore: number; rivalScore: number }
+export type GameEvent = Wire.GameEventResponse
+export type DmMessage = Wire.DirectMessageResponse
+export type Dm = Omit<Fields<Wire.DmResponse>, 'star' | 'repliesLeft'> & { star: Star; repliesLeft: number }
+// Feed rows omit absent wire values; demo rows also carry local catalog metadata.
+type FeedMetadata = Exclude<keyof Wire.FeedItemResponse, 'kind' | 'text' | 'views' | 'commentCount' | 'reactions'>
+export type PostsPage<T> = Pick<Wire.PageResponseOfFeedItemResponse, 'nextCursor'> & { items: T[] }
+export type FeedItem = Pick<Fields<Wire.FeedItemResponse>, 'kind' | 'text'> & { [K in FeedMetadata]?: NonNullable<Wire.FeedItemResponse[K]> } & {
+  postId?: string; reactions?: Reaction[]; views?: number; commentCount?: number; demo?: boolean; starId?: string; world?: WorldId
+}
+export type WorldDocument = Omit<Fields<Wire.WorldResponse>, 'difficulty' | 'subscribers' | 'stars' | 'unlockSkill' | 'unlockLevel'> & {
+  difficulty: WorldDifficulty; subscribers: number; lock?: World['lock']
+  stars: (Omit<Fields<Wire.WorldStarResponse>, 'trait' | 'relation'> & { trait: number; relation: number })[]
   unlockSkill?: SkillId; unlockLevel?: number
 }
-
-/** Полное описание для создания нового экземпляра; источник может быть шаблоном. */
-export type WorldDefinition = Omit<WorldDocument, 'id' | 'subscribers' | 'lock'>
-
-export interface PlayerDocument {
-  id: string; address: Address; hitOwnWorldMilestone?: boolean; ageBand?: import('../app/ageBand').AgeBand; energy: number
-  streak: Player['streak']; skills: Player['skills']; experiments: Record<string, string>
-  settings: { notifications: string; quiet: string; plus: boolean }
-}
+export type WorldDefinition = Omit<WorldDocument, 'id' | 'subscribers' | 'lock'> & { templateId: WorldId | null }
+export type WorldUpdate = Partial<Pick<WorldDocument, 'title' | 'description' | 'rules' | 'drama' | 'voice'>>

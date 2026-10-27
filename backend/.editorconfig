@@ -73,6 +73,7 @@ resharper_mvc_view_component_view_not_resolved_highlighting = warning
 resharper_mvc_view_not_resolved_highlighting = warning
 resharper_razor_assembly_not_resolved_highlighting = warning
 resharper_redundant_base_qualifier_highlighting = warning
+resharper_redundant_name_qualifier_highlighting = error
 resharper_suggest_var_or_type_built_in_types_highlighting = hint
 resharper_suggest_var_or_type_elsewhere_highlighting = hint
 resharper_suggest_var_or_type_simple_types_highlighting = hint
@@ -96,6 +97,7 @@ dotnet_diagnostic.SA1600.severity = none
 dotnet_diagnostic.SA1601.severity = none
 dotnet_diagnostic.SA1602.severity = none
 dotnet_diagnostic.SA1633.severity = none
+dotnet_diagnostic.IDE0001.severity = error
 dotnet_diagnostic.IDE0003.severity = error
 dotnet_diagnostic.IDE0005.severity = error
 dotnet_diagnostic.IDE0007.severity = error
@@ -103,10 +105,12 @@ dotnet_diagnostic.IDE0007.severity = error
 # loosen rules
 dotnet_diagnostic.AV1210.severity = none
 dotnet_diagnostic.SA1309.severity = none
+dotnet_diagnostic.AV1008.severity = none
 dotnet_diagnostic.AV1500.severity = none
 dotnet_diagnostic.AV1561.severity = none
 dotnet_diagnostic.AV1564.severity = none
 dotnet_diagnostic.AV1580.severity = none
+dotnet_diagnostic.AV1745.severity = none
 dotnet_diagnostic.VSTHRD003.severity = none
 dotnet_diagnostic.VSTHRD103.severity = none
 dotnet_diagnostic.SA1611.severity = none
@@ -122,13 +126,17 @@ dotnet_diagnostic.AV1755.severity = none
 # Tool action records stay nested so the strict parser and its internal result types form one unit.
 dotnet_diagnostic.SA1201.severity = none
 
-[src/Reki.Infrastructure/Persistence/Migrations/*.cs]
+[src/Reki.Infrastructure/Mongo/Migrations/*.cs]
 # Migration filenames include their version; class names remain stable for migration history.
 dotnet_diagnostic.SA1649.severity = none
 
 [src/Reki.Api/Mapping/ApiMapper.cs]
 # API mappings are injected as one Mapperly-backed service, including handwritten composition mappings.
 dotnet_diagnostic.S2325.severity = none
+
+[tests/**/*.cs]
+# Test callbacks may require ref/out parameters, such as ActivityListener.Sample.
+dotnet_diagnostic.AV1562.severity = none
 
 [tests/Reki.Tests/Api/GameApiTestBase.cs]
 # Keep the HTTP test DSL instance-based so it can evolve with fixture state.

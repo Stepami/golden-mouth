@@ -16,6 +16,12 @@ export function setAvatarPersonalization(playerId: string, enabled: boolean) {
   notify()
 }
 
+export function clearAvatarPersonalization(playerId: string) {
+  memory.delete(playerId)
+  try { localStorage.removeItem(prefix + playerId) } catch { /* session fallback */ }
+  notify()
+}
+
 function subscribe(listener: () => void) {
   listeners.add(listener)
   const onStorage = (event: StorageEvent) => { if (event.key === null || event.key.startsWith(prefix)) listener() }

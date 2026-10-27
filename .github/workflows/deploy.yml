@@ -57,7 +57,7 @@ jobs:
   deploy:
     name: Build and deploy to production
     needs: validate-version
-    runs-on: self-hosted
+    runs-on: reki-prod
     env:
       COMPOSE_FILE: compose.yml:compose.production.yml
       REKI_VERSION: ${{ needs.validate-version.outputs.image-version }}
@@ -65,7 +65,6 @@ jobs:
       LLM_PAT: ${{ secrets.LLM_PAT }}
       LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
       LLM_MODEL: ${{ secrets.LLM_MODEL }}
-      LLM_PROXY_IP: ${{ secrets.LLM_PROXY_IP }}
       OPENOBSERVE_EMAIL: ${{ secrets.OPENOBSERVE_EMAIL }}
       OPENOBSERVE_PASSWORD: ${{ secrets.OPENOBSERVE_PASSWORD }}
 
@@ -103,6 +102,10 @@ jobs:
             --mount 'type=bind,source=/etc/letsencrypt/renewal-hooks/deploy,target=/target' \
             nginx:1.29.1-alpine \
             -c 'install -m 755 /source /target/reload-openobserve-gateway.sh'
+
+      - name: Clean up unused Docker data
+        shell: bash
+        run: docker system prune -af
 
       - name: Show container status on failure
         if: failure()

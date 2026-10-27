@@ -1,15 +1,21 @@
+using System.Globalization;
+using System.Text.Json;
 using Kot.MongoDB.Migrations;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using Reki.Application.Common;
+using Reki.Application.Balance;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Persistence;
-using Reki.Infrastructure.Persistence.Migrations;
+using Reki.Infrastructure.Jobs;
+using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
+using Reki.Infrastructure.Mongo.Migrations;
+using Reki.Infrastructure.Mongo.Options;
+using Reki.Infrastructure.Mongo.Repositories;
+using TickerQ.Utilities;
 
 namespace Reki.Tests.Persistence;
 
@@ -17,6 +23,306 @@ namespace Reki.Tests.Persistence;
 [ParallelGroup("Migrations", Order = 0)]
 public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 {
+    private static readonly DateTimeOffset CreatedAt = new(2026, 10, 5, 15, 0, 0, 123, TimeSpan.FromHours(3));
+
+    [Test]
+    [Arguments("own", "Normal")]
+    [Arguments("it", "Hard")]
+    public async Task UnifyWorldBalance_LegacyWorld_PreservesPublicationOnRetryAsync(
+        string key, string difficulty)
+    {
+        // Arrange
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        using (var session = await mongo.MongoClient.StartSessionAsync())
+        {
+            await new SeedWorldTemplates().UpAsync(database, session, CancellationToken.None);
+            await new ReleaseWorldCatalog().UpAsync(database, session, CancellationToken.None);
+        }
+
+        var currentTemplateId = new BsonBinaryData(Guid.Parse("5720946a-ea7c-4a10-9c50-51ce3deefc53"), GuidRepresentation.Standard);
+        await database.GetCollection<BsonDocument>("world_templates").UpdateOneAsync(
+            new BsonDocument("_id", currentTemplateId), new BsonDocument("$set", new BsonDocument("Interface.Title", "Актуальный IT")));
+        var worldGuid = Guid.Parse("f247337b-410f-43fa-8c03-8968cc9fafc2");
+        var oldId = worldGuid.ToString("N");
+        var uuid = new BsonBinaryData(worldGuid, GuidRepresentation.Standard);
+        var original = Common.TestGameData.CreateWorld().ToBsonDocument();
+        original["_id"] = oldId;
+        original["BalanceKey"] = key;
+        original.Remove("Difficulty");
+        original.Remove("TemplateId");
+        original.Remove("IsArchived");
+        original["Interface"]["Difficulty"] = 3; // Decorative difficulty must never override mechanics.
+        original["Player"]["Subscribers"] = 9876L;
+        await database.GetCollection<BsonDocument>("worlds").InsertOneAsync(original);
+        await database.GetCollection<BsonDocument>("posts").InsertOneAsync(new BsonDocument
+        {
+            ["_id"] = "saved-post", ["WorldId"] = oldId, ["Text"] = "saved text", ["SubscriberDelta"] = 17L,
+        });
+        await database.GetCollection<BsonDocument>("events").InsertOneAsync(new BsonDocument
+        {
+            ["_id"] = "saved-event", ["WorldId"] = oldId, ["Reward"] = "saved reward",
+        });
+        await database.GetCollection<BsonDocument>("publications").InsertOneAsync(new BsonDocument
+        {
+            ["_id"] = "saved-publication", ["WorldId"] = oldId, ["Text"] = "saved text", ["OwnWords"] = true,
+            ["BalanceSnapshot"] = new BsonDocument("Obsolete", true),
+            ["WantId"] = BsonNull.Value, ["RequestHash"] = "old hash", ["Status"] = "ReadyForModeration",
+            ["Result"] = new BsonDocument("Post", new BsonDocument { ["WorldId"] = oldId, ["SubscriberDelta"] = 17L }),
+        });
+        var ticker = CreateTicker("world-job", "saved-post");
+        var tickerRequest = new System.Text.Json.Nodes.JsonObject
+        {
+            ["playerId"] = "a96fb5dd-f056-4809-a1d2-bb5ed78a210f", ["worldId"] = oldId, ["postId"] = "saved-post",
+        };
+        ticker["Request"] = new BsonBinaryData(TickerHelper.CreateTickerRequest(System.Text.Encoding.UTF8.GetBytes(tickerRequest.ToJsonString())));
+        var orphanedTicker = CreateTicker("orphaned-world-job", "old-post");
+        orphanedTicker["Status"] = 3; // Completed history can outlive its deleted world.
+        var unrelatedTicker = CreateTicker("other-job", "unused");
+        unrelatedTicker["Function"] = nameof(ResetGameDayJob);
+        await database.GetCollection<BsonDocument>("ticker_TimeTickers").InsertManyAsync([ticker, orphanedTicker, unrelatedTicker]);
+        var cronSchedule = new BsonDocument { ["_id"] = "daily-reset", ["Function"] = nameof(ResetGameDayJob) };
+        await database.GetCollection<BsonDocument>("ticker_CronTickers").InsertOneAsync(cronSchedule);
+
+        // Act
+        await MigrateWorldBalanceAsync(database);
+        var firstWorld = await database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", uuid)).SingleAsync();
+        var firstPublication = await ReadAsync(database, "publications", "saved-publication");
+        await MigrateWorldBalanceAsync(database);
+        var saved = await database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", uuid)).SingleAsync();
+        var publication = await ReadAsync(database, "publications", "saved-publication");
+        var templates = await database.GetCollection<BsonDocument>("world_templates").Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+
+        // Assert
+        await Assert.That(saved).IsEqualTo(firstWorld);
+        await Assert.That(publication).IsEqualTo(firstPublication);
+        await Assert.That(saved["Difficulty"]).IsEqualTo(difficulty);
+        await Assert.That(saved["Player"]).IsEqualTo(original["Player"]);
+        await Assert.That(saved["Stars"]).IsEqualTo(original["Stars"]);
+        await Assert.That(saved["IsArchived"].AsBoolean).IsFalse();
+        await Assert.That(saved.Contains("BalanceKey")).IsFalse();
+        await Assert.That(saved["Interface"].AsBsonDocument.Contains("Difficulty")).IsFalse();
+        if (key == "own")
+        {
+            await Assert.That(saved["TemplateId"].IsBsonNull).IsTrue();
+        }
+        else
+        {
+            await Assert.That(saved["TemplateId"].AsBsonBinaryData.SubType).IsEqualTo(BsonBinarySubType.UuidStandard);
+            const string expectedTemplate = "5720946a-ea7c-4a10-9c50-51ce3deefc53";
+            await Assert.That(saved["TemplateId"].AsBsonBinaryData.ToGuid()).IsEqualTo(Guid.Parse(expectedTemplate));
+        }
+
+        await Assert.That((await ReadAsync(database, "posts", "saved-post"))["WorldId"]).IsEqualTo(uuid);
+        await Assert.That((await ReadAsync(database, "posts", "saved-post"))["SubscriberDelta"]).IsEqualTo(17L);
+        await Assert.That((await ReadAsync(database, "events", "saved-event"))["WorldId"]).IsEqualTo(uuid);
+        await Assert.That(publication["WorldId"]).IsEqualTo(uuid);
+        await Assert.That(publication["Result"]["Post"]["WorldId"]).IsEqualTo(uuid);
+        await Assert.That(publication["Result"]["Post"]["SubscriberDelta"]).IsEqualTo(17L);
+        await Assert.That(publication.Contains("BalanceSnapshot")).IsFalse();
+        await Assert.That(publication["RequestHash"].AsString).IsEqualTo("AB03196A97E021E36DCCD3B80D4E0219BDDAC0E01092CBF3CFB834477E89D1BF");
+        var retainedTickers = await database.GetCollection<BsonDocument>("ticker_TimeTickers").Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        await Assert.That(retainedTickers.Single()).IsEqualTo(unrelatedTicker);
+        await Assert.That(await ReadAsync(database, "ticker_CronTickers", "daily-reset")).IsEqualTo(cronSchedule);
+        await Assert.That(templates.Count).IsEqualTo(8);
+        await Assert.That(templates.Single(template => template["_id"] == currentTemplateId)["Interface"]["Title"].AsString).IsEqualTo("Актуальный IT");
+        await Assert.That(templates.Count(template => template["IsArchived"].AsBoolean)).IsEqualTo(4);
+        await Assert.That(templates.All(template => template["Player"]["PlayerId"].AsBsonBinaryData.ToGuid() == Guid.Empty && template["TemplateId"].IsBsonNull)).IsTrue();
+        using var names = await database.ListCollectionNamesAsync();
+        await Assert.That(await names.ToListAsync()).IsEquivalentTo(["worlds", "world_templates", "posts", "events", "publications", "ticker_TimeTickers", "ticker_CronTickers"]);
+    }
+
+    [Test]
+    public async Task Migrate_LegacyComments_PreservesParentLinksAsync()
+    {
+        await using var scope = CreateDatabase();
+        var posts = scope.Database.GetCollection<BsonDocument>("posts");
+        var original = CreatePost(PostId.New(CreatedAt).Value.ToString("N"), false);
+        original["Comments"] = new BsonArray
+        {
+            new BsonDocument { ["_id"] = "legacy-root", ["ParentCommentId"] = BsonNull.Value, ["Text"] = "root" },
+            new BsonDocument { ["_id"] = "legacy-child", ["ParentCommentId"] = "legacy-root", ["Text"] = "reply" },
+        };
+        await posts.InsertOneAsync(original);
+
+        await MigratePostIdsAsync(scope.Database);
+
+        var migrated = await posts.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
+        var comments = migrated["Comments"].AsBsonArray;
+        await Assert.That(migrated["_id"].AsBsonBinaryData.ToGuid()).IsEqualTo(Guid.Parse(original["_id"].AsString));
+        await Assert.That(comments[0]["_id"].AsBsonBinaryData.SubType == BsonBinarySubType.UuidStandard).IsTrue();
+        await Assert.That(comments[1]["_id"].AsBsonBinaryData.SubType == BsonBinarySubType.UuidStandard).IsTrue();
+        await Assert.That(comments[0]["_id"]).IsNotEqualTo(comments[1]["_id"]);
+        await Assert.That(comments[1]["ParentCommentId"]).IsEqualTo(comments[0]["_id"]);
+        await Assert.That(comments[1]["Text"]).IsEqualTo("reply");
+
+        await MigratePostIdsAsync(scope.Database, downgrade: true);
+
+        await Assert.That(await posts.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(migrated);
+    }
+
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(true, true)]
+    public async Task Migrate_PostIds_PreservesReferencesOnRetryAsync(bool bsonDateTime, bool legacyTickerFormat)
+    {
+        var database = mongo.MongoClient.GetDatabase($"post_ids_{Guid.NewGuid():N}");
+        try
+        {
+            var posts = database.GetCollection<BsonDocument>("posts");
+            var publications = database.GetCollection<BsonDocument>("publications");
+            var tickers = database.GetCollection<BsonDocument>("ticker_TimeTickers");
+            var invitations = database.GetCollection<BsonDocument>("invites");
+            await invitations.Indexes.CreateOneAsync(new CreateIndexModel<BsonDocument>(new BsonDocument("InviteeId", 1), new CreateIndexOptions { Unique = true }));
+            var oldInvitation = new BsonDocument { ["_id"] = "legacy-invitation", ["InviteeId"] = "a96fb5ddf0564809a1d2bb5ed78a210f", ["BonusAmount"] = 5 };
+            await invitations.InsertOneAsync(oldInvitation);
+            const string playerId = "a96fb5ddf0564809a1d2bb5ed78a210f";
+            var legacyReferences = new Dictionary<string, BsonDocument>
+            {
+                ["players"] = new() { ["_id"] = playerId, ["Version"] = 3 },
+                ["worlds"] = new() { ["_id"] = "world", ["Player"] = new BsonDocument("PlayerId", playerId) },
+                ["world_templates"] = new() { ["_id"] = "it", ["Player"] = new BsonDocument("PlayerId", Guid.Empty.ToString("N")) },
+                ["events"] = new() { ["_id"] = Guid.NewGuid().ToString("N"), ["PlayerId"] = playerId },
+                ["stars_memory"] = new() { ["_id"] = "memory", ["PlayerId"] = playerId },
+                ["challenges"] = new() { ["_id"] = "challenge", ["PlayerId"] = playerId, ["Participants"] = new BsonArray { playerId } },
+            };
+            foreach (var (name, document) in legacyReferences)
+            {
+                await database.GetCollection<BsonDocument>(name).InsertOneAsync(document);
+            }
+
+            var first = CreatePost(ObjectId.GenerateNewId().ToString(), bsonDateTime);
+            var second = CreatePost(Guid.NewGuid().ToString("N"), bsonDateTime);
+            var current = CreatePost(PostId.New(CreatedAt).Value.ToString("N"), bsonDateTime);
+            await posts.InsertManyAsync([first, second, current]);
+            var publication = new BsonDocument
+            {
+                ["_id"] = "publication", ["Result"] = new BsonDocument("Post", first.DeepClone()), ["Text"] = "saved publication",
+            };
+            await publications.InsertOneAsync(publication);
+            var orphan = CreatePost("orphan", bsonDateTime);
+            await publications.InsertOneAsync(new BsonDocument { ["_id"] = "orphan-publication", ["Result"] = new BsonDocument("Post", orphan) });
+            var completed = CreateTicker("completed", first["_id"].AsString, legacyTickerFormat);
+            var pending = CreateTicker("pending", "pending-post", legacyTickerFormat);
+            await tickers.InsertManyAsync([completed, pending]);
+            var unrelated = CreateTicker("unrelated", "unchanged");
+            unrelated["Function"] = "OtherJob";
+            await tickers.InsertOneAsync(unrelated);
+
+            await MigratePostIdsAsync(database);
+
+            var migrated = await posts.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            await Assert.That(migrated.Count).IsEqualTo(3);
+            await Assert.That(migrated.Select(post => post["_id"]).Distinct().Count()).IsEqualTo(3);
+            var migratedFirst = migrated.Single(post => post["Text"] == first["Text"]);
+            var migratedSecond = migrated.Single(post => post["Text"] == second["Text"]);
+            await AssertVersion7Async(migratedFirst["_id"].AsBsonBinaryData.ToGuid().ToString("N"), CreatedAt);
+            await AssertVersion7Async(migratedSecond["_id"].AsBsonBinaryData.ToGuid().ToString("N"), CreatedAt);
+            await Assert.That(migratedFirst["_id"]).IsNotEqualTo(first["_id"]);
+            await Assert.That(migratedSecond["_id"]).IsNotEqualTo(second["_id"]);
+            await Assert.That(migrated.Single(post => post["Text"] == current["Text"])).IsEqualTo(new BsonDocument(current) { ["_id"] = new BsonBinaryData(Guid.Parse(current["_id"].AsString), GuidRepresentation.Standard) });
+            var expected = first.DeepClone().AsBsonDocument;
+            expected["_id"] = migratedFirst["_id"];
+            await Assert.That(migratedFirst).IsEqualTo(expected);
+            var savedPublication = await publications.Find(new BsonDocument("_id", "publication")).SingleAsync();
+            await Assert.That(savedPublication["Result"]["Post"]).IsEqualTo(expected);
+            await Assert.That(savedPublication["Text"]).IsEqualTo(publication["Text"]);
+            var savedOrphan = await publications.Find(new BsonDocument("_id", "orphan-publication")).SingleAsync();
+            await AssertVersion7Async(savedOrphan["Result"]["Post"]["_id"].AsBsonBinaryData.ToGuid().ToString("N"), CreatedAt);
+            var savedTickers = await tickers.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            await Assert.That(ReadRequest(savedTickers.Single(ticker => ticker["_id"] == "completed")).GetProperty("postId").GetString()).IsEqualTo(migratedFirst["_id"].AsBsonBinaryData.ToGuid().ToString("D"));
+            await AssertVersion7Async(Guid.Parse(ReadRequest(savedTickers.Single(ticker => ticker["_id"] == "pending")).GetProperty("postId").GetString() ?? string.Empty).ToString("N"), CreatedAt.AddHours(1));
+            await Assert.That(savedTickers.Single(ticker => ticker["_id"] == "unrelated")).IsEqualTo(unrelated);
+            var migratedInvitation = await invitations.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
+            await Assert.That(migratedInvitation["_id"].AsBsonBinaryData.SubType == BsonBinarySubType.UuidStandard).IsTrue();
+            await Assert.That(migratedInvitation["InviteeId"].AsBsonBinaryData.ToGuid()).IsEqualTo(Guid.Parse(oldInvitation["InviteeId"].AsString));
+            foreach (var (name, document) in legacyReferences)
+            {
+                var saved = await database.GetCollection<BsonDocument>(name).Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
+                var expectedReference = document.DeepClone().AsBsonDocument;
+                var uuid = new BsonBinaryData(Guid.Parse(playerId), GuidRepresentation.Standard);
+                switch (name)
+                {
+                    case "players":
+                    {
+                        expectedReference["_id"] = uuid;
+                        break;
+                    }
+
+                    case "worlds":
+                    {
+                        expectedReference["Player"]["PlayerId"] = uuid;
+                        break;
+                    }
+
+                    case "world_templates":
+                    {
+                        expectedReference["Player"]["PlayerId"] = new BsonBinaryData(Guid.Empty, GuidRepresentation.Standard);
+                        break;
+                    }
+
+                    case "events":
+                    {
+                        expectedReference["_id"] = new BsonBinaryData(Guid.Parse(document["_id"].AsString), GuidRepresentation.Standard);
+                        expectedReference["PlayerId"] = uuid;
+                        break;
+                    }
+
+                    case "challenges":
+                    {
+                        expectedReference["PlayerId"] = uuid;
+                        expectedReference["Participants"] = new BsonArray { uuid };
+                        break;
+                    }
+
+                    default:
+                    {
+                        expectedReference["PlayerId"] = uuid;
+                        break;
+                    }
+                }
+
+                await Assert.That(saved).IsEqualTo(expectedReference);
+            }
+
+            await MigratePostIdsAsync(database);
+
+            await Assert.That((await posts.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync()).Select(document => document.ToJson())).IsEquivalentTo(migrated.Select(document => document.ToJson()));
+            await Assert.That((await tickers.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync()).Select(document => document.ToJson())).IsEquivalentTo(savedTickers.Select(document => document.ToJson()));
+
+            var collections = await (await database.ListCollectionNamesAsync()).ToListAsync();
+            await Assert.That(collections.Contains("migration_2_4_6_post_ids", StringComparer.Ordinal)).IsFalse();
+        }
+        finally
+        {
+            await mongo.MongoClient.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+        }
+    }
+
+    [Test]
+    public async Task Migrate_MissingTimestamp_RollsBackAllChangesAsync()
+    {
+        var database = mongo.MongoClient.GetDatabase($"post_ids_{Guid.NewGuid():N}");
+        try
+        {
+            var posts = database.GetCollection<BsonDocument>("posts");
+            var valid = CreatePost("valid-post", false);
+            var invalid = CreatePost("missing-timestamp", false);
+            invalid.Remove("CreatedAtUtc");
+            await posts.InsertManyAsync([valid, invalid]);
+
+            await Assert.That(() => MigratePostIdsAsync(database)).Throws<KeyNotFoundException>();
+
+            await Assert.That((await posts.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync()).Select(document => document.ToJson())).IsEquivalentTo(new[] { valid, invalid }.Select(document => document.ToJson()));
+            var collections = await (await database.ListCollectionNamesAsync()).ToListAsync();
+            await Assert.That(collections.Contains("migration_2_4_6_post_ids", StringComparer.Ordinal)).IsFalse();
+        }
+        finally
+        {
+            await mongo.MongoClient.DropDatabaseAsync(database.DatabaseNamespace.DatabaseName);
+        }
+    }
+
     [Test]
     [Arguments("worlds")]
     [Arguments("world_templates")]
@@ -28,10 +334,11 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var source = Common.TestGameData.CreateWorld();
         var expected = source with
         {
-            Interface = source.Interface with { Title = "Свой мир", Difficulty = WorldDifficulty.Hard },
+            Difficulty = WorldDifficulty.Hard,
+            Interface = source.Interface with { Title = "Свой мир" },
             Player = source.Player with
             {
-                PlayerId = PlayerId.From(collectionName == "world_templates" ? "00000000000000000000000000000000" : "world-owner"),
+                PlayerId = PlayerId.From(collectionName == "world_templates" ? "00000000000000000000000000000000" : "c7e5abd8b70c54a2d22beacd8a3e6377"),
                 Avatar = "legacy-avatar",
                 Drama = collectionName == "worlds" ? WorldDrama.Mid : WorldDrama.Hot,
                 Subscribers = 9876,
@@ -43,6 +350,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             },
         };
         var original = expected.ToBsonDocument();
+        original["Interface"]["Difficulty"] = original["Difficulty"];
+        original.Remove("Difficulty");
         var legacy = original.DeepClone().AsBsonDocument;
         var fields = legacy["Interface"].AsBsonDocument.Elements.Concat(legacy["Player"].AsBsonDocument.Elements).ToArray();
         foreach (var field in fields)
@@ -66,14 +375,13 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await migration.UpAsync(database, session, CancellationToken.None);
         await migration.UpAsync(database, session, CancellationToken.None);
         var saved = await collection.Find(new BsonDocument("_id", original["_id"])).SingleAsync();
+        saved["Interface"] = new BsonDocument(saved["Interface"].AsBsonDocument.Elements.OrderBy(field => field.Name, StringComparer.Ordinal));
+        original["Interface"] = new BsonDocument(original["Interface"].AsBsonDocument.Elements.OrderBy(field => field.Name, StringComparer.Ordinal));
         await Assert.That(new BsonDocument(saved.Elements.OrderBy(field => field.Name, StringComparer.Ordinal)))
             .IsEqualTo(new BsonDocument(original.Elements.OrderBy(field => field.Name, StringComparer.Ordinal)));
-        var hydrated = BsonSerializer.Deserialize<World>(saved);
-        await Assert.That(hydrated.Player.PlayerId).IsEqualTo(expected.Player.PlayerId);
-        await Assert.That(hydrated.Player.Drama).IsEqualTo(expected.Player.Drama);
-        await Assert.That(hydrated.Player.Wants).IsEquivalentTo(expected.Player.Wants);
-        await Assert.That(hydrated.Player.Achievements).IsEquivalentTo(expected.Player.Achievements);
-        await Assert.That(hydrated.Interface).IsEqualTo(expected.Interface);
+        await Assert.That(saved["Player"]).IsEqualTo(expected.Player.ToBsonDocument());
+        await Assert.That(saved["Interface"]["Title"].AsString).IsEqualTo("Свой мир");
+        await Assert.That(saved["Interface"]["Difficulty"].AsString).IsEqualTo("Hard");
         using var indexes = await database.GetCollection<BsonDocument>("worlds").Indexes.ListAsync();
         await Assert.That((await indexes.ToListAsync()).Single(index => index["name"] == "ix_worlds_player")["key"])
             .IsEqualTo(new BsonDocument("Player.PlayerId", 1));
@@ -92,23 +400,22 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
         // Assert
         await AssertCurrentIndexesAsync(database);
+        await AssertRetiredSocialCollectionsAbsentAsync(database);
         var playerCount = await database.GetCollection<BsonDocument>("players")
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
         await Assert.That(playerCount).IsEqualTo(0L);
     }
 
     [Test]
-    [Arguments(false, false)]
-    [Arguments(true, true)]
-    public async Task Migrate_ExistingDatabase_SafelyAdoptsCurrentStateAsync(
-        bool existingIndexes,
-        bool legacyIndex)
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task Migrate_ExistingDatabase_SafelyAdoptsCurrentStateAsync(bool existingIndexes)
     {
         // Arrange
         await using var scope = CreateDatabase();
         var database = scope.Database;
         var player = new BsonDocument
-            { { "_id", "test-player" }, { "TelegramUserId", 12345L }, { "World", "stream" } };
+            { { "_id", "test-player" }, { "TelegramUserId", 12345L }, { "World", "stream" }, { "ChallengeBonusUntilUtc", ReferralTimestamp(CreatedAt) } };
         await database.GetCollection<BsonDocument>("players")
             .InsertOneAsync(player, cancellationToken: CancellationToken.None);
         var challenge = new BsonDocument
@@ -118,14 +425,15 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         };
         await database.GetCollection<BsonDocument>("challenges")
             .InsertOneAsync(challenge, cancellationToken: CancellationToken.None);
+        var invitation = Invitation.Create(PlayerId.New(), PlayerId.New(), CreatedAt, 5).ToBsonDocument();
+        await database.GetCollection<BsonDocument>("invites").InsertManyAsync(new[]
+        {
+            invitation,
+            new BsonDocument { ["_id"] = "legacy-invite", ["PlayerId"] = "test-player" },
+        });
         if (existingIndexes)
         {
             await SeedCurrentIndexesAsync(database);
-        }
-
-        if (legacyIndex)
-        {
-            await CreateIndexAsync(database, "challenges", "ux_challenges_active_player", new BsonDocument("PlayerId", 1), unique: true);
         }
 
         var migrator = CreateMigrator(mongo.MongoClient, database.DatabaseNamespace.DatabaseName);
@@ -138,19 +446,20 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await AssertCurrentIndexesAsync(database);
         var savedPlayer = await database.GetCollection<BsonDocument>("players")
             .Find(new BsonDocument("_id", "test-player")).SingleAsync(CancellationToken.None);
-        var savedChallenge = await database.GetCollection<BsonDocument>("challenges")
-            .Find(new BsonDocument("_id", "test-challenge")).SingleAsync(CancellationToken.None);
         await Assert.That(savedPlayer["_id"]).IsEqualTo(player["_id"]);
         await Assert.That(savedPlayer.Contains("World")).IsFalse();
+        await Assert.That(savedPlayer.Contains("ChallengeBonusUntilUtc")).IsFalse();
         var worlds = await database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("Player.PlayerId", "test-player")).ToListAsync(CancellationToken.None);
         await Assert.That(worlds.Count).IsEqualTo(1);
         await Assert.That(worlds[0]["BalanceKey"].AsString).IsEqualTo("stream");
         await Assert.That(worlds[0]["Stars"].AsBsonArray.Count).IsEqualTo(3);
-        await Assert.That(savedChallenge).IsEqualTo(challenge);
+        await AssertRetiredSocialCollectionsAbsentAsync(database);
+        var savedInvitations = await database.GetCollection<BsonDocument>("invites").Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        await Assert.That(savedInvitations.Select(item => item.ToJson())).IsEquivalentTo(new[] { invitation.ToJson() });
         var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
         var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(12L);
+        await Assert.That(historyCount).IsEqualTo(17L);
     }
 
     [Test]
@@ -162,14 +471,13 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var database = scope.Database;
         using var session = await mongo.MongoClient.StartSessionAsync();
         await new SeedWorldTemplates().UpAsync(database, session, CancellationToken.None);
-        var template = await database.GetCollection<World>(MongoCollections.WorldTemplates)
-            .Find(world => world.BalanceKey == kind).SingleAsync();
+        var template = SeedWorldTemplates.CreateTemplates().Single(world => world.Id == WorldId.From(Guid.Parse(kind == "stage" ? "edfccf53-65c6-4eaf-8321-2391bc1758bd" : "0cb3f809-6dfd-4ef1-af52-daa12a5b8804")));
         var period = new BsonArray { DateTimeOffset.UnixEpoch.Ticks, 0 };
         var achievement = new AchievementProgress("saved-card", "🌊", "Свой момент", true).ToBsonDocument();
         achievement["WorldId"] = kind;
         var player = new BsonDocument
         {
-            { "_id", "legacy-player" }, { "TelegramUserId", 12345L }, { "World", kind },
+            { "_id", "ca2b7afeed3ac05f1bda84ef172efad9" }, { "TelegramUserId", 12345L }, { "World", kind },
             { "Name", "Свой канал" }, { "Handle", "@legacy.channel" }, { "Role", "Своя роль" },
             { "Subscribers", 987L }, { "TotalPostsPublished", 15 }, { "PostsSinceViral", 4 },
             { "ConsecutiveFlops", 2 }, { "PostsPeriodStartedAtUtc", period.DeepClone() },
@@ -181,7 +489,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await database.GetCollection<BsonDocument>(MongoCollections.Players).InsertOneAsync(player);
         await database.GetCollection<BsonDocument>(MongoCollections.Events).InsertOneAsync(new BsonDocument
         {
-            { "_id", "legacy-event" }, { "PlayerId", "legacy-player" }, { "Kind", "collab" },
+            { "_id", "cc3fb9ee31be4b8b991163a6b06af36e" }, { "PlayerId", "ca2b7afeed3ac05f1bda84ef172efad9" }, { "Kind", "collab" },
             { "Badge", "событие" }, { "Title", "Коллаб" }, { "Text", "История" },
             { "Ideas", new BsonArray() }, { "Reward", "опыт" }, { "Note", "Ответ" },
             { "DayStartedAtUtc", period.DeepClone() }, { "Answer", BsonNull.Value },
@@ -190,7 +498,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         if (kind == "stage")
         {
             await database.GetCollection<BsonDocument>(MongoCollections.Events).UpdateOneAsync(
-                new BsonDocument("_id", "legacy-event"),
+                new BsonDocument("_id", "cc3fb9ee31be4b8b991163a6b06af36e"),
                 Builders<BsonDocument>.Update.Set("WorldId", BsonNull.Value));
         }
 
@@ -198,28 +506,28 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
         await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
 
-        var world = await database.GetCollection<World>(MongoCollections.Worlds)
-            .Find(new BsonDocument("Player.PlayerId", "legacy-player")).SingleAsync();
-        await Assert.That(world.BalanceKey).IsEqualTo(kind);
-        await Assert.That(world.Player.Name).IsEqualTo("Свой канал");
-        await Assert.That(world.Player.Avatar).IsEqualTo("@legacy.channel");
-        await Assert.That(world.Player.Role).IsEqualTo("Своя роль");
-        await Assert.That(world.Player.Subscribers).IsEqualTo(987L);
-        await Assert.That(world.Player.Voice).IsEqualTo("Свой голос");
-        await Assert.That(world.Player.Drama).IsEqualTo(WorldDrama.Soft);
-        await Assert.That(world.Player.Wants.Single().Done).IsTrue();
-        await Assert.That(world.Player.Achievements.Single().IsOpen).IsTrue();
-        await Assert.That(world.Stars[0].Relation).IsEqualTo(3);
-        await Assert.That(world.Stars[0].RelationGainedInPeriod).IsEqualTo(1);
-        await Assert.That(world.Stars[0].RelationPeriodStartedAtUtc).IsEqualTo(DateTimeOffset.UnixEpoch);
-        await Assert.That(world.Roles).IsEquivalentTo(template.Roles);
-        await Assert.That(world.Rules).IsEquivalentTo(template.Rules);
-        await Assert.That(world.Interface.AvatarStyle).IsEqualTo(template.Interface.AvatarStyle);
+        var world = await database.GetCollection<BsonDocument>(MongoCollections.Worlds)
+            .Find(new BsonDocument("Player.PlayerId", "ca2b7afeed3ac05f1bda84ef172efad9")).SingleAsync();
+        await Assert.That(world["BalanceKey"].AsString).IsEqualTo(kind);
+        await Assert.That(world["Player"]["Name"].AsString).IsEqualTo("Свой канал");
+        await Assert.That(world["Player"]["Avatar"].AsString).IsEqualTo("@legacy.channel");
+        await Assert.That(world["Player"]["Role"].AsString).IsEqualTo("Своя роль");
+        await Assert.That(world["Player"]["Subscribers"].ToInt64()).IsEqualTo(987L);
+        await Assert.That(world["Player"]["Voice"].AsString).IsEqualTo("Свой голос");
+        await Assert.That(world["Player"]["Drama"].ToInt32()).IsEqualTo((int)WorldDrama.Soft);
+        await Assert.That(world["Player"]["Wants"][0]["Done"].AsBoolean).IsTrue();
+        await Assert.That(world["Player"]["Achievements"][0]["IsOpen"].AsBoolean).IsTrue();
+        await Assert.That(world["Stars"][0]["Relation"].ToInt32()).IsEqualTo(3);
+        await Assert.That(world["Stars"][0]["RelationGainedInPeriod"].ToInt32()).IsEqualTo(1);
+        await Assert.That(world["Stars"][0]["RelationPeriodStartedAtUtc"]).IsEqualTo(template.Stars[0].ToBsonDocument()["RelationPeriodStartedAtUtc"]);
+        await Assert.That(world["Roles"]).IsEqualTo(new BsonArray(template.Roles));
+        await Assert.That(world["Rules"]).IsEqualTo(new BsonArray(template.Rules.Select(rule => rule.ToBsonDocument())));
+        await Assert.That(world["Interface"]["AvatarStyle"].AsString).IsEqualTo(template.Interface.AvatarStyle);
         var savedEvent = await database.GetCollection<BsonDocument>(MongoCollections.Events)
-            .Find(new BsonDocument("_id", "legacy-event")).SingleAsync();
-        await Assert.That(BsonSerializer.Deserialize<Domain.Events.DailyGameEvent>(savedEvent).WorldId).IsEqualTo(world.Id);
+            .Find(new BsonDocument("_id", "cc3fb9ee31be4b8b991163a6b06af36e")).SingleAsync();
+        await Assert.That(savedEvent["WorldId"]).IsEqualTo(world["_id"]);
         var savedPlayer = await database.GetCollection<BsonDocument>(MongoCollections.Players)
-            .Find(new BsonDocument("_id", "legacy-player")).SingleAsync();
+            .Find(new BsonDocument("_id", "ca2b7afeed3ac05f1bda84ef172efad9")).SingleAsync();
         await Assert.That(savedPlayer.Contains("World")).IsFalse();
         await Assert.That(savedPlayer.Contains("Subscribers")).IsFalse();
         await Assert.That(savedPlayer.Contains("StarRelations")).IsFalse();
@@ -284,9 +592,9 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             .AddExperience(6, [0, 8, 20, 36, 56, 80, 110, 150, 200, 270]).Experience).IsEqualTo(20);
 
         var post = new GamePost(
-            PostId.From("hydrated-post"),
-            PlayerId.From("player").ToAuthorId(),
-            WorldId.From("world"),
+            PostId.From("d9d4a347db06b4483654268785e235fa"),
+            PlayerId.From("b27d9a691c953713a6fa4df4378d0a9f").ToAuthorId(),
+            WorldId.From(Guid.Parse("e3791532-36fe-4109-84d5-ab7ca537e12a")),
             "post",
             10,
             [],
@@ -301,7 +609,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var posts = database.GetCollection<BsonDocument>("posts");
         await posts.InsertOneAsync(post, cancellationToken: CancellationToken.None);
         await migration.UpAsync(database, session, CancellationToken.None);
-        var repairedPost = await posts.Find(new BsonDocument("_id", "hydrated-post")).SingleAsync(CancellationToken.None);
+        var repairedPost = await posts.Find(new BsonDocument("_id", post["_id"])).SingleAsync(CancellationToken.None);
         await Assert.That(repairedPost["ThreadReplies"].AsBsonArray.Count).IsEqualTo(0);
         repairedPost.Remove("ThreadReplies");
         var hydrated = BsonSerializer.Deserialize<GamePost>(repairedPost);
@@ -345,12 +653,12 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(saved.Single(item => item["_id"] == "inviter")["DailyBonus"].AsInt32).IsEqualTo(2);
         await Assert.That(saved.Single(item => item["_id"] == "first")["DailyBonus"].AsInt32).IsEqualTo(3);
         await Assert.That(saved.Single(item => item["_id"] == "second")["DailyBonus"].AsInt32).IsEqualTo(3);
-        var invitations = database.GetCollection<Invitation>("invites");
-        await Assert.That(await invitations.CountDocumentsAsync(FilterDefinition<Invitation>.Empty)).IsEqualTo(4L);
-        var childInvite = await invitations.Find(item => item.InviteeId == PlayerId.From("first-child")).SingleAsync();
-        await Assert.That(childInvite.InviterId.Value).IsEqualTo("first");
+        var invitations = database.GetCollection<LegacyInvitation>("invites");
+        await Assert.That(await invitations.CountDocumentsAsync(FilterDefinition<LegacyInvitation>.Empty)).IsEqualTo(4L);
+        var childInvite = await invitations.Find(item => item.InviteeId == "first-child").SingleAsync();
+        await Assert.That(childInvite.InviterId).IsEqualTo("first");
         await Assert.That(childInvite.InviterBonusUsedAtUtc).IsEqualTo(period.AddHours(6));
-        var invites = await invitations.Find(item => item.InviterId == PlayerId.From("inviter"))
+        var invites = await invitations.Find(item => item.InviterId == "inviter")
             .SortBy(item => item.CreatedAtUtc).ToListAsync();
         await Assert.That(invites.Count).IsEqualTo(3);
         var expectedIds = new[] { "first", "second", "third" };
@@ -358,9 +666,9 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         {
             var invite = invites[index];
             var expectedId = expectedIds[index];
-            await Assert.That(invite.Id.Value).IsEqualTo($"legacy_{expectedId}");
-            await Assert.That(invite.InviteeId.Value).IsEqualTo(expectedId);
-            await Assert.That(invite.InviterId.Value).IsEqualTo("inviter");
+            await Assert.That(invite.Id).IsEqualTo($"legacy_{expectedId}");
+            await Assert.That(invite.InviteeId).IsEqualTo(expectedId);
+            await Assert.That(invite.InviterId).IsEqualTo("inviter");
             await Assert.That(invite.CreatedAtUtc).IsEqualTo(period.AddHours(index + 1));
             await Assert.That(invite.InviterBonusUsed).IsTrue();
             await Assert.That(invite.InviterBonusUsedAtUtc).IsEqualTo(index < 2 ? period.AddHours(index + 1) : (DateTimeOffset?)null);
@@ -406,8 +714,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await Assert.That(saved.Contains("InviteBonusesEarnedInPeriod")).IsFalse();
         }
 
-        var invite = await database.GetCollection<Invitation>("invites")
-            .Find(item => item.InviteeId == PlayerId.From("first")).SingleAsync();
+        var invite = await database.GetCollection<LegacyInvitation>("invites")
+            .Find(item => item.InviteeId == "first").SingleAsync();
         await Assert.That(invite.CreatedAtUtc).IsEqualTo(missing == "created" ? period : period.AddHours(1));
         await Assert.That(invite.InviterBonusUsedAtUtc).IsEqualTo(missing == "created" ? period : (DateTimeOffset?)null);
     }
@@ -432,8 +740,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var saved = await players.Find(new BsonDocument("_id", "friend")).SingleAsync();
         await Assert.That(saved["DailyBonus"].AsInt32).IsEqualTo(8);
         await Assert.That(saved.Contains("FirstPostInviteBonusUsed")).IsFalse();
-        var invitation = await database.GetCollection<Invitation>("invites")
-            .Find(item => item.InviteeId == PlayerId.From("friend")).SingleAsync();
+        var invitation = await database.GetCollection<LegacyInvitation>("invites")
+            .Find(item => item.InviteeId == "friend").SingleAsync();
         await Assert.That(invitation.InviterBonusUsed).IsTrue();
         await Assert.That(invitation.InviterBonusUsedAtUtc).IsNull();
         await Assert.That(invitation.InviteeBonusUsed).IsTrue();
@@ -570,10 +878,11 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var database = scope.Database;
         using var session = await mongo.MongoClient.StartSessionAsync();
         await new SeedWorldTemplates().UpAsync(database, session, CancellationToken.None);
+        await MigrateWorldBalanceAsync(database);
         var templates = await database.GetCollection<World>(MongoCollections.WorldTemplates)
             .Find(FilterDefinition<World>.Empty).ToListAsync();
-        await Assert.That(templates.Select(world => world.Id.Value)).IsEquivalentTo(["stage", "academy", "it", "stream", "own"]);
-        await Assert.That(templates.All(world => world.Player.PlayerId.Value == "00000000000000000000000000000000")).IsTrue();
+        await Assert.That(templates.Select(world => world.Id.Value)).IsEquivalentTo([Guid.Parse("edfccf53-65c6-4eaf-8321-2391bc1758bd"), Guid.Parse("b018145e-c887-4d00-9f18-5c877d0af8be"), Guid.Parse("5720946a-ea7c-4a10-9c50-51ce3deefc53"), Guid.Parse("0cb3f809-6dfd-4ef1-af52-daa12a5b8804"), Guid.Parse("14049891-fe2b-4d98-b38f-0f37e6544052")]);
+        await Assert.That(templates.All(world => world.Player.PlayerId.Value == Guid.Empty)).IsTrue();
         await Assert.That(templates.All(world => world.Stars.Count > 0 && world.Roles.Count > 0 && world.Rules.Count > 0)).IsTrue();
         await Assert.That(templates.All(world => world.Player.Wants.Count == 3 && world.Player.Achievements.Count == 12)).IsTrue();
         await Assert.That(templates.SelectMany(world => world.Stars).All(star => Enum.IsDefined(star.Trait))).IsTrue();
@@ -588,14 +897,15 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         using var session = await mongo.MongoClient.StartSessionAsync();
         var migration = new SeedWorldTemplates();
         await migration.UpAsync(database, session, CancellationToken.None);
+        await MigrateWorldBalanceAsync(database);
         var templates = database.GetCollection<World>(MongoCollections.WorldTemplates);
-        var stageId = WorldId.From("stage");
+        var stageId = WorldId.From(Guid.Parse("edfccf53-65c6-4eaf-8321-2391bc1758bd"));
         var template = await templates.Find(world => world.Id == stageId).SingleAsync();
         var edited = template with { Interface = template.Interface with { Title = "Обновлённый шаблон" } };
         await templates.ReplaceOneAsync(world => world.Id == stageId, edited);
-        var owned = template.Instantiate(PlayerId.From("seed-player"), DateTimeOffset.UnixEpoch) with
+        var owned = template.Instantiate(PlayerId.From("7914ac6b4a791783fb72443b5461c5e8"), DateTimeOffset.UnixEpoch) with
         {
-            Player = template.Player with { PlayerId = PlayerId.From("seed-player"), Subscribers = 987 },
+            Player = template.Player with { PlayerId = PlayerId.From("7914ac6b4a791783fb72443b5461c5e8"), Subscribers = 987 },
             Stars = [template.Stars[0] with { Name = "Своя звезда", Relation = 3 }],
         };
         await database.GetCollection<World>(MongoCollections.Worlds).InsertOneAsync(owned);
@@ -728,42 +1038,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     }
 
     [Test]
-    public async Task ReleaseCatalog_PreservesExistingDataAsync()
-    {
-        await using var scope = CreateDatabase();
-        var database = scope.Database;
-        using var session = await mongo.MongoClient.StartSessionAsync();
-        await new SeedWorldTemplates().UpAsync(database, session, CancellationToken.None);
-        var templates = database.GetCollection<BsonDocument>("world_templates");
-        var it = await templates.Find(new BsonDocument("_id", "it")).SingleAsync();
-        var existing = Common.TestGameData.CreateWorld().ToBsonDocument();
-        await database.GetCollection<BsonDocument>("worlds").InsertOneAsync(existing);
-        session.StartTransaction();
-        await new ReleaseWorldCatalog().UpAsync(database, session, CancellationToken.None);
-        await session.CommitTransactionAsync();
-        var catalog = await templates.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
-        await Assert.That(catalog.Select(item => item["_id"].AsString)).IsEquivalentTo(["it", "evening", "sorcerers", "houses"]);
-        await Assert.That(catalog.Single(item => item["_id"] == "it")).IsEqualTo(it);
-        await Assert.That(await database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(existing);
-    }
-
-    [Test]
-    public async Task Migrate_CurrentCatalog_EngineDoesNotApplyTwiceAsync()
-    {
-        await using var scope = CreateDatabase();
-        var database = scope.Database;
-        var migrator = CreateMigrator(mongo.MongoClient, database.DatabaseNamespace.DatabaseName);
-        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
-        var templates = database.GetCollection<BsonDocument>("world_templates");
-        var before = await templates.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
-        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
-        var after = await templates.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
-        await Assert.That(after.Count).IsEqualTo(4);
-        await Assert.That(after.OrderBy(item => item["_id"].AsString, StringComparer.Ordinal).Select(item => item.ToJson()))
-            .IsEquivalentTo(before.OrderBy(item => item["_id"].AsString, StringComparer.Ordinal).Select(item => item.ToJson()));
-    }
-
-    [Test]
     public async Task ReleaseCatalog_UsesOneWorldOrReceivedInviterBonusAsync()
     {
         await using var scope = CreateDatabase();
@@ -795,7 +1069,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await CreateMigrator(mongo.MongoClient, database.DatabaseNamespace.DatabaseName, false)
             .MigrateAsync(cancellationToken: CancellationToken.None);
         var templates = database.GetCollection<BsonDocument>("world_templates");
-        var it = await templates.Find(new BsonDocument("_id", "it")).SingleAsync();
+        var it = await templates.Find(new BsonDocument("_id", new BsonBinaryData(Guid.Parse("5720946a-ea7c-4a10-9c50-51ce3deefc53"), GuidRepresentation.Standard))).SingleAsync();
         var players = database.GetCollection<BsonDocument>("players");
         await players.InsertManyAsync([
             new BsonDocument { { "_id", "already" }, { "TelegramUserId", 10001L }, { "HitOwnWorldMilestone", true } },
@@ -809,17 +1083,139 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await worlds.InsertOneAsync(existing);
         var migrator = CreateMigrator(mongo.MongoClient, database.DatabaseNamespace.DatabaseName);
         await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
+        var before = await templates.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
         await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
         var catalog = await templates.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
-        await Assert.That(catalog.Select(item => item["_id"].AsString)).IsEquivalentTo(["it", "evening", "sorcerers", "houses"]);
-        await Assert.That(catalog.Single(item => item["_id"] == "it")).IsEqualTo(it);
+        await Assert.That(catalog.Select(item => item.ToJson())).IsEquivalentTo(before.Select(item => item.ToJson()));
+        await Assert.That(catalog.Select(item => item["BalanceKey"].AsString)).IsEquivalentTo(["it", "evening", "sorcerers", "houses"]);
+        await Assert.That(catalog.Single(item => item["BalanceKey"] == "it")).IsEqualTo(it);
         await Assert.That(await worlds.Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(existing);
         var result = await players.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
         await Assert.That(result.Where(player => player["HitOwnWorldMilestone"].AsBoolean).Select(player => player["_id"].AsString))
             .IsEquivalentTo(["already", "threshold"]);
     }
 
-    private static GameBalance CreateEnergyBalance() => new(10, 20, new TimeOnly(9, 0), 5, 3, 5, 3, 3, new GrowthBalance(1, 1, [], 0, 1, 1, 2, 3, 2, 1000), new ViralBalance(0, 0, 1), new FlopBalance(1), new SkillBalance([], 1, 1, 10, 2, 3, 1, 1), new RelationBalance(0, 10, 3, 5, 3), new ChallengeBalance(3, 1), new ThreadBalance(3, 9), new Dictionary<string, WorldBalance>());
+    [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task Migrate_LegacyThreads_RemovesOnlyUnusedCollectionAsync(bool existingThreads)
+    {
+        // Arrange: model a database where migrations through 2.4.3 have already run.
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        var databaseName = database.DatabaseNamespace.DatabaseName;
+        await CreateMigrator(mongo.MongoClient, databaseName, includeThreadCleanup: false)
+            .MigrateAsync(cancellationToken: CancellationToken.None);
+        if (existingThreads)
+        {
+            await database.GetCollection<BsonDocument>("threads").InsertOneAsync(
+                new BsonDocument { { "_id", "legacy-thread" }, { "PlayerId", "owner" }, { "Hook", "legacy hook" } });
+            await CreateIndexAsync(database, "threads", "ix_threads_player", new BsonDocument("PlayerId", 1), false);
+        }
+
+        var post = new BsonDocument
+        {
+            { "_id", "saved-post" },
+            {
+                "Comments", new BsonArray
+                {
+                    new BsonDocument { { "_id", "star-comment" }, { "Text", "saved comment" } },
+                    new BsonDocument { { "_id", "player-reply" }, { "ParentId", "star-comment" }, { "Text", "saved reply" } },
+                }
+            },
+        };
+        await database.GetCollection<BsonDocument>("posts").InsertOneAsync(post);
+        var options = new RekiMigrationOptions(Options.Create(new MongoOptions { DatabaseName = databaseName }));
+        var history = database.GetCollection<BsonDocument>(options.MigrationsCollectionName);
+        var originalHistory = await history.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        using var namesCursor = await database.ListCollectionNamesAsync();
+        var otherNames = (await namesCursor.ToListAsync())
+            .Where(name => name != "threads" && name != options.MigrationsCollectionName && name != options.MigrationsLockCollectionName).ToArray();
+        var snapshots = new Dictionary<string, List<BsonDocument>>(StringComparer.Ordinal);
+        var indexSnapshots = new Dictionary<string, List<BsonDocument>>(StringComparer.Ordinal);
+        foreach (var name in otherNames)
+        {
+            snapshots[name] = await database.GetCollection<BsonDocument>(name).Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            using var indexes = await database.GetCollection<BsonDocument>(name).Indexes.ListAsync();
+            indexSnapshots[name] = await indexes.ToListAsync();
+        }
+
+        // Act: run only the thread cleanup twice, then retry the drop itself after removal.
+        var migrator = MigratorBuilder.FromMongoClient(mongo.MongoClient, options)
+            .LoadMigrations([new RemoveUnusedThreads()]).Build();
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        await new RemoveUnusedThreads().UpAsync(database, session, CancellationToken.None);
+
+        // Assert
+        using var currentNamesCursor = await database.ListCollectionNamesAsync();
+        var currentNames = await currentNamesCursor.ToListAsync();
+        await Assert.That(currentNames).DoesNotContain("threads");
+        foreach (var (name, expected) in snapshots)
+        {
+            var saved = await database.GetCollection<BsonDocument>(name).Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+            await Assert.That(saved.Select(document => document.ToJson())).IsEquivalentTo(expected.Select(document => document.ToJson()));
+        }
+
+        var currentHistory = await history.Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        await Assert.That(currentHistory.Count).IsEqualTo(originalHistory.Count + 1);
+        foreach (var entry in originalHistory)
+        {
+            await Assert.That(currentHistory.Select(document => document.ToJson())).Contains(entry.ToJson());
+        }
+
+        foreach (var (name, expected) in indexSnapshots)
+        {
+            using var indexes = await database.GetCollection<BsonDocument>(name).Indexes.ListAsync();
+            await Assert.That((await indexes.ToListAsync()).Select(document => document.ToJson()))
+                .IsEquivalentTo(expected.Select(document => document.ToJson()));
+        }
+    }
+
+    private static async Task AssertRetiredSocialCollectionsAbsentAsync(IMongoDatabase database)
+    {
+        using var cursor = await database.ListCollectionNamesAsync();
+        var names = await cursor.ToListAsync();
+        await Assert.That(names).DoesNotContain("stars_memory");
+        await Assert.That(names).DoesNotContain("challenges");
+    }
+
+    private static BsonDocument CreatePost(string id, bool bsonDateTime)
+    {
+        var document = new GamePost(PostId.New(CreatedAt), PlayerId.From(Guid.Parse("a96fb5ddf0564809a1d2bb5ed78a210f")).ToAuthorId(), WorldId.From(Guid.Parse("e3791532-36fe-4109-84d5-ab7ca537e12a")), id, 123, [], CreatedAt, 7, 0.8, 1.2, false, false, 5).ToBsonDocument();
+        document["_id"] = id;
+        document["Extra"] = new BsonDocument("Retained", true);
+        if (bsonDateTime)
+        {
+            document["CreatedAtUtc"] = new BsonDateTime(CreatedAt.UtcDateTime);
+        }
+
+        return document;
+    }
+
+    private static BsonDocument CreateTicker(string id, string postId, bool legacyFormat = false) => new()
+    {
+        ["_id"] = id,
+        ["Function"] = nameof(GenerateStarFeedPostJob),
+        ["Request"] = new BsonBinaryData(TickerHelper.CreateTickerRequest(System.Text.Encoding.UTF8.GetBytes(new System.Text.Json.Nodes.JsonObject { [legacyFormat ? "PlayerId" : "playerId"] = "a96fb5ddf0564809a1d2bb5ed78a210f", [legacyFormat ? "WorldId" : "worldId"] = "world", [legacyFormat ? "PostId" : "postId"] = postId }.ToJsonString()))),
+        ["CreatedAt"] = new BsonDateTime(CreatedAt.AddHours(1).UtcDateTime),
+        ["Retries"] = 3,
+    };
+
+    private static JsonElement ReadRequest(BsonDocument ticker)
+    {
+        using var request = JsonDocument.Parse(TickerHelper.ReadTickerRequestAsString(ticker["Request"].AsBsonBinaryData.Bytes));
+        return request.RootElement.Clone();
+    }
+
+    private static async Task AssertVersion7Async(string id, DateTimeOffset createdAt)
+    {
+        await Assert.That(Guid.ParseExact(id, "N").Version).IsEqualTo(7);
+        await Assert.That(long.Parse(id[..12], NumberStyles.HexNumber, CultureInfo.InvariantCulture)).IsEqualTo(createdAt.ToUnixTimeMilliseconds());
+    }
+
+    private static GameBalance CreateEnergyBalance() => new(10, 20, new TimeOnly(9, 0), 5, 3, 5, 3, 3, new GrowthBalance(1, 1, [], 0, 1, 1, 2, 3, 2, 1000), new ViralBalance(0, 0, 1), new FlopBalance(1), new SkillBalance([], 1, 1, 10, 2, 3, 1, 1), new RelationBalance(0, 10, 3, 5, 3), new ChallengeBalance(3, 1), new ThreadBalance(3, 9), new Dictionary<WorldDifficulty, DifficultyBalance>());
 
     private static BsonDocument CreateLegacyReferralPlayer(string id, string? inviter, DateTimeOffset createdAt, int dailyBonus, int count, bool used) => new()
     {
@@ -834,7 +1230,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     };
 
     private static BsonValue ReferralTimestamp(DateTimeOffset value) =>
-        Invitation.Create(PlayerId.From("timestamp-inviter"), PlayerId.From("timestamp-friend"), value, 0)
+        Invitation.Create(PlayerId.New(), PlayerId.New(), value, 0)
             .ToBsonDocument()["CreatedAtUtc"];
 
     private static async Task AssertDocumentArraysAsync(IMongoDatabase database, string collectionName, IReadOnlyList<string> fields)
@@ -852,7 +1248,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         }
     }
 
-    private static IMigrator CreateMigrator(IMongoClient client, string databaseName, bool includeRelease = true)
+    private static IMigrator CreateMigrator(IMongoClient client, string databaseName, bool includeRelease = true, bool includeThreadCleanup = true)
     {
         var options = new RekiMigrationOptions(Options.Create(new MongoOptions { DatabaseName = databaseName }));
         var migrations = new List<RekiMigrationBase>
@@ -865,6 +1261,15 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         if (includeRelease)
         {
             migrations.Add(new ReleaseWorldCatalog());
+            migrations.Add(new RemoveStarAppearanceFields());
+        }
+
+        if (includeRelease && includeThreadCleanup)
+        {
+            migrations.Add(new RemoveUnusedThreads());
+            migrations.Add(new RemoveChallengeBonus());
+            migrations.Add(new RemoveUnusedSocialCollections());
+            migrations.Add(new CreatePostCursorIndexes());
         }
 
         return MigratorBuilder.FromMongoClient(client, options).LoadMigrations(migrations).Build();
@@ -874,18 +1279,14 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     {
         yield return ("players", "ux_players_telegram_user", new BsonDocument("TelegramUserId", 1), true);
         yield return ("publications", "ix_publications_expiry", new BsonDocument("ExpiresAtUtc", 1), false);
-        yield return ("stars_memory", "ux_stars_memory_world_star",
-            new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "StarId", 1 } }, true);
         yield return ("events", "ix_events_player_day",
             new BsonDocument { { "PlayerId", 1 }, { "DayStartedAtUtc", -1 } }, false);
-        yield return ("challenges", "ux_challenges_active_participants", new BsonDocument("Participants", 1), true);
         yield return ("players", "ix_players_day_period", new BsonDocument("PostsPeriodStartedAtUtc", 1), false);
         yield return ("worlds", "ix_worlds_day_period", new BsonDocument("Player.PeriodStartedAtUtc", 1), false);
         yield return ("worlds", "ix_worlds_player", new BsonDocument("Player.PlayerId", 1), false);
-        yield return ("posts", "ix_posts_world_created", new BsonDocument { { "WorldId", 1 }, { "CreatedAtUtc", -1 } }, false);
+        yield return ("posts", "ix_posts_world_id", new BsonDocument { { "WorldId", 1 }, { "_id", -1 } }, false);
+        yield return ("posts", "ix_posts_world_author_id", new BsonDocument { { "WorldId", 1 }, { "AuthorId", 1 }, { "_id", -1 } }, false);
         yield return ("events", "ix_events_world_day", new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "DayStartedAtUtc", 1 } }, false);
-        yield return ("threads", "ix_threads_player", new BsonDocument("PlayerId", 1), false);
-        yield return ("invites", "ix_invites_player", new BsonDocument("PlayerId", 1), false);
         yield return ("invites", "ux_invites_invitee", new BsonDocument("InviteeId", 1), true);
         yield return ("invites", "ix_invites_inviter", new BsonDocument("InviterId", 1), false);
     }
@@ -893,10 +1294,11 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     private static async Task SeedCurrentIndexesAsync(IMongoDatabase database)
     {
         await CreateIndexAsync(database, "posts", "ix_posts_player_created", new BsonDocument { { "PlayerId", 1 }, { "CreatedAtUtc", -1 } }, false);
+        await CreateIndexAsync(database, "posts", "ix_posts_world_created", new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "CreatedAtUtc", 1 } }, false);
+        await CreateIndexAsync(database, "invites", "ix_invites_player", new BsonDocument("PlayerId", 1), false);
         foreach (var (collection, name, keys, unique) in ExpectedIndexes())
         {
-            var legacyKeys = name == "ix_posts_world_created" ? new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "CreatedAtUtc", 1 } } : keys;
-            await CreateIndexAsync(database, collection, name, name == "ix_worlds_player" ? new BsonDocument("PlayerId", 1) : legacyKeys, unique);
+            await CreateIndexAsync(database, collection, name, name == "ix_worlds_player" ? new BsonDocument("PlayerId", 1) : keys, unique);
         }
     }
 
@@ -911,11 +1313,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         if (name == "ix_publications_expiry")
         {
             options.ExpireAfter = TimeSpan.Zero;
-        }
-
-        if (name == "ux_challenges_active_participants")
-        {
-            options.PartialFilterExpression = new BsonDocument("Status", 1);
         }
 
         if (name == "ux_invites_invitee")
@@ -937,16 +1334,12 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             var index = indexes.Single(item => item["name"] == name);
             await Assert.That(index["key"]).IsEqualTo(keys);
             await Assert.That(indexes.Any(item => item["name"] == "ix_posts_player_created")).IsFalse();
+            await Assert.That(indexes.Any(item => item["name"] == "ix_posts_world_created")).IsFalse();
+            await Assert.That(indexes.Any(item => item["name"] == "ix_invites_player")).IsFalse();
             await Assert.That(index.GetValue("unique", false).AsBoolean).IsEqualTo(unique);
-            await Assert.That(indexes.Any(item => item["name"] == "ux_challenges_active_player")).IsFalse();
             if (name == "ix_publications_expiry")
             {
                 await Assert.That(index["expireAfterSeconds"].ToInt64()).IsEqualTo(0L);
-            }
-
-            if (name == "ux_challenges_active_participants")
-            {
-                await Assert.That(index["partialFilterExpression"]).IsEqualTo(new BsonDocument("Status", 1));
             }
         }
     }
@@ -980,6 +1373,47 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     private static Task<BsonDocument> ReadAsync(IMongoDatabase database, string collection, string id) =>
         database.GetCollection<BsonDocument>(collection).Find(new BsonDocument("_id", id)).SingleAsync();
 
+    private async Task MigrateWorldBalanceAsync(IMongoDatabase database)
+    {
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        session.StartTransaction();
+        try
+        {
+            await new UnifyWorldBalance().UpAsync(database, session, CancellationToken.None);
+            await session.CommitTransactionAsync();
+        }
+        catch
+        {
+            await session.AbortTransactionAsync();
+            throw;
+        }
+    }
+
+    private async Task MigratePostIdsAsync(IMongoDatabase database, bool downgrade = false)
+    {
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        var migration = new UseVersion7PostIds();
+        session.StartTransaction();
+        try
+        {
+            if (downgrade)
+            {
+                await migration.DownAsync(database, session, CancellationToken.None);
+            }
+            else
+            {
+                await migration.UpAsync(database, session, CancellationToken.None);
+            }
+
+            await session.CommitTransactionAsync();
+        }
+        catch
+        {
+            await session.AbortTransactionAsync();
+            throw;
+        }
+    }
+
     private async Task MigrateAsync(IMongoDatabase database)
     {
         using var session = await mongo.MongoClient.StartSessionAsync();
@@ -997,6 +1431,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     }
 
     private MigrationDatabase CreateDatabase() => new(mongo.MongoClient);
+
+    private sealed record LegacyInvitation(string Id, string InviterId, string InviteeId, DateTimeOffset CreatedAtUtc, bool InviterBonusUsed, bool InviteeBonusUsed, int BonusAmount, DateTimeOffset? InviterBonusUsedAtUtc, DateTimeOffset? InviteeBonusUsedAtUtc);
 
     private sealed class MigrationDatabase(IMongoClient client) : IAsyncDisposable
     {

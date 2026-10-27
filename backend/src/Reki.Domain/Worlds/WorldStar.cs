@@ -1,5 +1,3 @@
-using Reki.Domain.Social;
-
 namespace Reki.Domain.Worlds;
 
 public sealed record WorldStar(

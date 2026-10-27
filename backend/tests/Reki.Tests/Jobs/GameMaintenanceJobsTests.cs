@@ -4,7 +4,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Application.Common;
+using Reki.Application.Balance;
+using Reki.Application.Player;
+using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
@@ -29,7 +31,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var response = await CreatePlayerWithWorldAsync(api);
         var players = Database.GetCollection<PlayerProfile>("players");
         var worlds = Database.GetCollection<World>("worlds");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
+        var player = await players.Find(item => item.Id == response.Id).SingleAsync();
         var world = await worlds.Find(item => item.Player.PlayerId == player.Id).SingleAsync();
         var seededPlayer = player with { EnergyUsed = 7, Energy = 8, PlusInterestClaimed = true };
         var seededWorld = world with
@@ -78,13 +80,13 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         await Assert.That(savedWorld.Player.Wants.All(want => want.Done == !shouldReset)).IsTrue();
         await Assert.That(savedWorld.Stars.All(star => star.Relation == 4 &&
             star.RelationGainedInPeriod == (shouldReset ? 0 : 3) && star.RelationPeriodStartedAtUtc == period)).IsTrue();
-        var playerBson = await Database.GetCollection<BsonDocument>("players").Find(new BsonDocument("_id", saved.Id.Value)).SingleAsync();
-        var worldBson = await Database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", savedWorld.Id.Value)).SingleAsync();
+        var playerBson = await Database.GetCollection<BsonDocument>("players").Find(new BsonDocument("_id", new BsonBinaryData(saved.Id.Value, GuidRepresentation.Standard))).SingleAsync();
+        var worldBson = await Database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", new BsonBinaryData(savedWorld.Id.Value, GuidRepresentation.Standard))).SingleAsync();
 
         await ResetGameDayAsync();
 
-        await Assert.That(await Database.GetCollection<BsonDocument>("players").Find(new BsonDocument("_id", saved.Id.Value)).SingleAsync()).IsEqualTo(playerBson);
-        await Assert.That(await Database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", savedWorld.Id.Value)).SingleAsync()).IsEqualTo(worldBson);
+        await Assert.That(await Database.GetCollection<BsonDocument>("players").Find(new BsonDocument("_id", new BsonBinaryData(saved.Id.Value, GuidRepresentation.Standard))).SingleAsync()).IsEqualTo(playerBson);
+        await Assert.That(await Database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("_id", new BsonBinaryData(savedWorld.Id.Value, GuidRepresentation.Standard))).SingleAsync()).IsEqualTo(worldBson);
     }
 
     [Test]
@@ -96,7 +98,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var response = await CreatePlayerWithWorldAsync(api);
         var players = Database.GetCollection<PlayerProfile>("players");
         var worlds = Database.GetCollection<World>("worlds");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
+        var player = await players.Find(item => item.Id == response.Id).SingleAsync();
         var world = await worlds.Find(item => item.Player.PlayerId == player.Id).SingleAsync();
         var period = player.PostsPeriodStartedAtUtc.AddDays(daysAhead);
         await players.ReplaceOneAsync(item => item.Id == player.Id, player with { PostsPeriodStartedAtUtc = period, EnergyUsed = 7, Energy = 8 });
@@ -120,7 +122,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         using var api = Factory.CreateApiClient(9303);
         var response = await CreatePlayerWithWorldAsync(api);
         var worlds = Database.GetCollection<World>("worlds");
-        var world = await worlds.Find(item => item.Player.PlayerId == PlayerId.From(response.Id)).SingleAsync();
+        var world = await worlds.Find(item => item.Player.PlayerId == response.Id).SingleAsync();
         var reset = world.Player.PeriodStartedAtUtc.AddDays(1);
         await worlds.ReplaceOneAsync(item => item.Id == world.Id, world with
         {
@@ -144,7 +146,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         using var api = Factory.CreateApiClient(9304);
         var response = await CreatePlayerWithWorldAsync(api);
         var players = Database.GetCollection<PlayerProfile>("players");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
+        var player = await players.Find(item => item.Id == response.Id).SingleAsync();
         await players.ReplaceOneAsync(item => item.Id == player.Id, player with { EnergyUsed = 7, Energy = 8 });
         var beforePlayer = await Database.GetCollection<BsonDocument>("players").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
         var beforeWorld = await Database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
@@ -160,26 +162,21 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
     }
 
     [Test]
-    [Arguments(false, -1, 10)]
-    [Arguments(false, 0, 10)]
-    [Arguments(false, 1, 13)]
-    [Arguments(true, -1, 20)]
-    [Arguments(true, 0, 20)]
-    [Arguments(true, 1, 23)]
-    public async Task Reset_ChallengeExpiryBoundary_SetsCurrentBalanceEnergyAsync(bool plus, int expirySeconds, int expectedEnergy)
+    [Arguments(false, 10)]
+    [Arguments(true, 20)]
+    public async Task Reset_SetsCurrentBalanceEnergyAsync(bool plus, int expectedEnergy)
     {
         // Arrange
         using var api = Factory.CreateApiClient(9308);
         var response = await CreatePlayerWithWorldAsync(api);
         var players = Database.GetCollection<PlayerProfile>("players");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
+        var player = await players.Find(item => item.Id == response.Id).SingleAsync();
         var reset = player.PostsPeriodStartedAtUtc.AddDays(1);
         await players.ReplaceOneAsync(item => item.Id == player.Id, player with
         {
             Energy = 31,
             EnergyUsed = 4,
             Settings = player.Settings with { Plus = plus },
-            ChallengeBonusUntilUtc = reset.AddSeconds(expirySeconds),
         });
         Factory.Session.Clock.SetUtcNow(reset);
 
@@ -190,40 +187,10 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var saved = await players.Find(item => item.Id == player.Id).SingleAsync();
         await Assert.That(saved.Energy).IsEqualTo(expectedEnergy);
         await Assert.That(saved.EnergyUsed).IsEqualTo(0);
-        await Assert.That(saved.ChallengeBonusUntilUtc).IsEqualTo(reset.AddSeconds(expirySeconds));
         await Assert.That(saved.PostsPeriodStartedAtUtc).IsEqualTo(reset);
         await Assert.That(saved.Version).IsEqualTo(player.Version + 1);
         await ResetGameDayAsync();
         await Assert.That((await players.Find(item => item.Id == player.Id).SingleAsync()).Energy).IsEqualTo(expectedEnergy);
-    }
-
-    [Test]
-    public async Task ChallengeReward_ActiveRenewal_DoesNotStackEnergyAsync()
-    {
-        // Arrange
-        using var api = Factory.CreateApiClient(9309);
-        var response = await CreatePlayerWithWorldAsync(api);
-        var players = Database.GetCollection<PlayerProfile>("players");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
-        var period = player.PostsPeriodStartedAtUtc;
-        var spent = player with { Energy = 6, EnergyUsed = 4 };
-
-        // Act
-        var first = spent.ApplyChallengeWinBonus(3, period.AddDays(3), period);
-        var renewed = first.ApplyChallengeWinBonus(3, period.AddDays(4), period);
-        await players.ReplaceOneAsync(item => item.Id == player.Id, renewed);
-
-        // Assert
-        await Assert.That(first.Energy).IsEqualTo(9);
-        await Assert.That(renewed.Energy).IsEqualTo(9);
-        await Assert.That(renewed.EnergyUsed).IsEqualTo(4);
-        await Assert.That(renewed.ChallengeBonusUntilUtc).IsEqualTo(period.AddDays(4));
-        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(9);
-        Factory.Session.Clock.SetUtcNow(period.AddDays(1));
-        await ResetGameDayAsync();
-        var reset = await players.Find(item => item.Id == player.Id).SingleAsync();
-        await Assert.That(reset.Energy).IsEqualTo(13);
-        await Assert.That(reset.EnergyUsed).IsEqualTo(0);
     }
 
     [Test]
@@ -233,10 +200,15 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         using var api = Factory.CreateApiClient(9310);
         var response = await CreatePlayerWithWorldAsync(api);
         var players = Database.GetCollection<PlayerProfile>("players");
-        var player = await players.Find(item => item.Id == PlayerId.From(response.Id)).SingleAsync();
+        var player = await players.Find(item => item.Id == response.Id).SingleAsync();
         await players.ReplaceOneAsync(item => item.Id == player.Id, player with { Energy = 6, EnergyUsed = 4 });
         var changed = Options.Create(Factory.Services.GetRequiredService<IOptions<GameBalance>>().Value with { FreePostsPerDay = 12 });
-        var job = new ResetGameDayJob(Database, new GameDayPeriod(Factory.Session.Clock, changed), changed, NullLogger<ResetGameDayJob>.Instance);
+        var job = new ResetGameDayJob(
+            Factory.Services.GetRequiredService<IPlayerRepository>(),
+            Factory.Services.GetRequiredService<IWorldRepository>(),
+            new GameDayPeriod(Factory.Session.Clock, changed),
+            changed,
+            NullLogger<ResetGameDayJob>.Instance);
 
         // Act
         await job.ExecuteAsync(new(), CancellationToken.None);

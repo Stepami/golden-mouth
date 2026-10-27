@@ -1,7 +1,15 @@
 using Kot.MongoDB.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Domain.Worlds;
+using Reki.Infrastructure.Jobs;
+using Reki.Infrastructure.Mongo;
+using Reki.Infrastructure.Mongo.Migrations;
+using TickerQ.DependencyInjection;
+using TickerQ.MongoDB.DependencyInjection;
+using TickerQ.Utilities.Entities;
 using TUnit.Core.Interfaces;
 
 namespace Reki.Tests;
@@ -20,6 +28,10 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
 
     public IMongoDatabase Database => MongoClient.GetDatabase(DatabaseName);
 
+    public IReadOnlyDictionary<string, World> LegacyWorldTemplates { get; } =
+        SeedWorldTemplates.CreateTemplates().Zip(new[] { "stage", "academy", "it", "stream", "own" })
+            .ToDictionary(pair => pair.Second, pair => pair.First, StringComparer.Ordinal);
+
     public OpenAiStub Llm => _llm ??= new OpenAiStub();
 
     public FakeTimeProvider Clock { get; } = new(
@@ -27,6 +39,10 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
 
     public async Task InitializeAsync()
     {
+        // Match production registration order, including TickerQ's BSON UUID serializer.
+        new ServiceCollection().AddTickerQ<RekiTimeTicker, CronTickerEntity>(options =>
+            options.AddOperationalStore(store => store.UseExistingMongoClient(DatabaseName)));
+        MongoClassMappings.Register();
         await _mongo.InitializeAsync();
         _client = new MongoClient(ConnectionString);
     }
@@ -36,12 +52,11 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
         var options = new MigrationOptions(DatabaseName);
         using var cursor = await Database.ListCollectionNamesAsync(cancellationToken: cancellationToken);
         var collections = await cursor.ToListAsync(cancellationToken);
-        foreach (var collection in collections.Where(name =>
-                     !name.StartsWith("ticker_", StringComparison.Ordinal) && name != "world_templates" && name != options.MigrationsCollectionName && name != options.MigrationsLockCollectionName))
-        {
-            await Database.GetCollection<BsonDocument>(collection)
-                .DeleteManyAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken);
-        }
+        await Task.WhenAll(collections.Where(name =>
+                !name.StartsWith("ticker_", StringComparison.Ordinal) && name != "world_templates" &&
+                name != options.MigrationsCollectionName && name != options.MigrationsLockCollectionName)
+            .Select(collection => Database.GetCollection<BsonDocument>(collection)
+                .DeleteManyAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken)));
     }
 
     public void ResetExternalState()

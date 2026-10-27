@@ -6,7 +6,6 @@ WORKDIR /src/backend
 COPY backend/Directory.Build.props backend/Directory.Packages.props backend/global.json ./
 COPY backend/src/Reki.Domain/Reki.Domain.csproj src/Reki.Domain/
 COPY backend/src/Reki.Application/Reki.Application.csproj src/Reki.Application/
-COPY backend/src/Reki.Contracts/Reki.Contracts.csproj src/Reki.Contracts/
 COPY backend/src/Reki.Infrastructure/Reki.Infrastructure.csproj src/Reki.Infrastructure/
 COPY backend/src/Reki.Api/Reki.Api.csproj src/Reki.Api/
 RUN dotnet restore src/Reki.Api/Reki.Api.csproj

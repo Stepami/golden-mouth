@@ -2,6 +2,8 @@
 
 Версия содержания: `review-2026-10-20.6`. Статус: proposed, содержание для #195. Код, миграции и работающая игра не изменены.
 
+Технический контракт после обновления ветки: [база API и миграции 2.5.0](technical-baseline.md). Редакторские названия историй не являются HTTP WorldId.
+
 [Задача #195](https://github.com/Stepami/golden-mouth/issues/195) · [Сходство и источники](similarity.md) · [16 сюжетов](stories.md)
 
 Сохраняются четыре мира, их названия, ID и 12 существующих имён. Для каждого мира ниже приведены значения полей, а не задания будущему автору. Примеры реплик написаны для игры и не являются цитатами прототипов.
@@ -35,7 +37,7 @@
 | Джон Винтер | `jon` | `__ice__and__fire__` |
 | Джеймс Левлистер | `james` | `_gold__lion` |
 
-Значения сверены с [каталогом 2.4.2](../../backend/src/Reki.Infrastructure/Persistence/Migrations/2_4_2_ReleaseWorldCatalog.Data.cs) и [миграцией 2.4.3](../../backend/src/Reki.Infrastructure/Persistence/Migrations/2_4_3_RemoveStarAppearanceFields.cs). Миграция 2.4.3 адресно обновляет семь seed; у Изабеллы и Романа сохраняются значения каталога. Это стандартные значения, а не команда переписать пользовательские настройки. Будущая миграция описаний не должна менять `Id`, `Name` и `AvatarSeed` ни в шаблонах, ни в существующих мирах; проверить их сохранность до и после миграции, включая пользовательские значения.
+Значения сверены с [каталогом 2.4.2](../../backend/src/Reki.Infrastructure/Mongo/Migrations/2_4_2_ReleaseWorldCatalog.Data.cs) и [миграцией 2.4.3](../../backend/src/Reki.Infrastructure/Mongo/Migrations/2_4_3_RemoveStarAppearanceFields.cs). Миграция 2.4.3 адресно обновляет семь seed; у Изабеллы и Романа сохраняются значения каталога. Это стандартные значения, а не команда переписать пользовательские настройки. Будущая миграция описаний не должна менять `Id`, `Name` и `AvatarSeed` ни в шаблонах, ни в существующих мирах; проверить их сохранность до и после миграции, включая пользовательские значения.
 
 
 <a id="evening"></a>
@@ -465,7 +467,7 @@
 
 ### Известный стандарт: Вечерело
 
-Источник: [2_4_2_ReleaseWorldCatalog.Data.cs](https://github.com/Stepami/golden-mouth/blob/0875680129c9e69a8035cc6ea77a6ac467fc93f6/backend/src/Reki.Infrastructure/Persistence/Migrations/2_4_2_ReleaseWorldCatalog.Data.cs). Новые значения: [раздел мира](#evening). Во всех строках действует условие замены всего набора выше.
+Источник: [2_4_2_ReleaseWorldCatalog.Data.cs](https://github.com/Stepami/golden-mouth/blob/0875680129c9e69a8035cc6ea77a6ac467fc93f6/backend/src/Reki.Infrastructure/Mongo/Migrations/2_4_2_ReleaseWorldCatalog.Data.cs). Новые значения: [раздел мира](#evening). Во всех строках действует условие замены всего набора выше.
 
 | Поле / элемент старого списка | Старое значение целиком | Новое значение |
 | --- | --- | --- |
@@ -507,7 +509,7 @@
 
 ### Известный стандарт: Школа чародеев
 
-Источник: [2_4_2_ReleaseWorldCatalog.Data.cs](https://github.com/Stepami/golden-mouth/blob/0875680129c9e69a8035cc6ea77a6ac467fc93f6/backend/src/Reki.Infrastructure/Persistence/Migrations/2_4_2_ReleaseWorldCatalog.Data.cs). Новые значения: [раздел мира](#sorcerers). Во всех строках действует условие замены всего набора выше.
+Источник: [2_4_2_ReleaseWorldCatalog.Data.cs](https://github.com/Stepami/golden-mouth/blob/0875680129c9e69a8035cc6ea77a6ac467fc93f6/backend/src/Reki.Infrastructure/Mongo/Migrations/2_4_2_ReleaseWorldCatalog.Data.cs). Новые значения: [раздел мира](#sorcerers). Во всех строках действует условие замены всего набора выше.
 
 | Поле / элемент старого списка | Старое значение целиком | Новое значение |
 | --- | --- | --- |
@@ -549,7 +551,7 @@
 
 ### Известный стандарт: Игра домов
 
-Источник: [2_4_2_ReleaseWorldCatalog.Data.cs](https://github.com/Stepami/golden-mouth/blob/0875680129c9e69a8035cc6ea77a6ac467fc93f6/backend/src/Reki.Infrastructure/Persistence/Migrations/2_4_2_ReleaseWorldCatalog.Data.cs). Новые значения: [раздел мира](#houses). Во всех строках действует условие замены всего набора выше.
+Источник: [2_4_2_ReleaseWorldCatalog.Data.cs](https://github.com/Stepami/golden-mouth/blob/0875680129c9e69a8035cc6ea77a6ac467fc93f6/backend/src/Reki.Infrastructure/Mongo/Migrations/2_4_2_ReleaseWorldCatalog.Data.cs). Новые значения: [раздел мира](#houses). Во всех строках действует условие замены всего набора выше.
 
 | Поле / элемент старого списка | Старое значение целиком | Новое значение |
 | --- | --- | --- |
@@ -591,7 +593,7 @@
 
 ### Известный стандарт: Айти-тусовка
 
-Источник: [1_2_0_SeedWorldTemplates.Data.cs](https://github.com/Stepami/golden-mouth/blob/0875680129c9e69a8035cc6ea77a6ac467fc93f6/backend/src/Reki.Infrastructure/Persistence/Migrations/1_2_0_SeedWorldTemplates.Data.cs). Новые значения: [раздел мира](#it). Во всех строках действует условие замены всего набора выше.
+Источник: [1_2_0_SeedWorldTemplates.Data.cs](https://github.com/Stepami/golden-mouth/blob/0875680129c9e69a8035cc6ea77a6ac467fc93f6/backend/src/Reki.Infrastructure/Mongo/Migrations/1_2_0_SeedWorldTemplates.Data.cs). Новые значения: [раздел мира](#it). Во всех строках действует условие замены всего набора выше.
 
 | Поле / элемент старого списка | Старое значение целиком | Новое значение |
 | --- | --- | --- |

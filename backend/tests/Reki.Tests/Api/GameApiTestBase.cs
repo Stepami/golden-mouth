@@ -1,14 +1,20 @@
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Contracts.Player;
-using Reki.Contracts.Posts;
-using Reki.Contracts.Worlds;
+using Reki.Api.Requests.Player;
+using Reki.Api.Requests.Posts;
+using Reki.Api.Requests.Worlds;
+using Reki.Api.Serialization;
+using Reki.Application.Player;
+using Reki.Application.Player.Responses;
+using Reki.Application.Posts.Responses.LiveEvent;
+using Reki.Application.Posts.Responses.ReplyLiveEvent;
+using Reki.Application.Worlds;
+using Reki.Application.Worlds.Responses;
+using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
-using Reki.Infrastructure.Serialization;
 
 namespace Reki.Tests.Api;
 
@@ -45,12 +51,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             return CreateReplyTurnResponse(selected[..selected.IndexOf('.')]);
         }
 
-        var directMessage = messages.Any(message => message.Text.Contains(
-            "tool dm",
-            StringComparison.Ordinal));
-        var response = directMessage
-            ? CreateDirectMessageResponse()
-            : CreateCommentResponse(includeUnknownArgument: false);
+        var response = CreateCommentResponse(includeUnknownArgument: false);
         var platform = messages.First(message => message.Role == ChatRole.System).Text.Replace("\r\n", "\n", StringComparison.Ordinal);
         var start = platform.IndexOf("[", StringComparison.Ordinal);
         var end = platform.IndexOf("\n\nОграничения текущего хода:", StringComparison.Ordinal);
@@ -66,10 +67,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             .OfType<FunctionCallContent>().Single().Arguments
             ?? throw new InvalidOperationException("The test response has no arguments.");
         arguments["star_id"] = persona.GetProperty("id").GetString();
-        if (!directMessage)
-        {
-            arguments["author"] = persona.GetProperty("name").GetString();
-        }
+        arguments["author"] = persona.GetProperty("name").GetString();
 
         return response;
     }
@@ -118,20 +116,8 @@ public abstract class GameApiTestBase(ApiFactory factory)
             [new FunctionCallContent("test-reply-call", "thread_reply", arguments)]));
     }
 
-    protected static ChatResponse CreateDirectMessageResponse()
-    {
-        var arguments = new Dictionary<string, object?>
-        {
-            ["star_id"] = "sonya",
-            ["text"] = "Вижу, о чём ты. Вернёмся к этому после следующего поста.",
-            ["memory_fact"] = "любит короткие посты",
-        };
-        var call = new FunctionCallContent("test-dm-call", "dm", arguments);
-        return new ChatResponse(new ChatMessage(ChatRole.Assistant, [call]));
-    }
-
     protected static async Task<string> GetWorldIdAsync(TestApiClient api) =>
-        (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().Id;
+        (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().Id.ToString();
 
     protected static IReadOnlyList<ReplyLiveEvent> ParseReplyEvents(string body) =>
         body.Split('\n').Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
@@ -140,7 +126,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
 
     protected async Task<PlayerResponse> CreatePlayerWithWorldAsync(
         TestApiClient api,
-        WorldId world = WorldId.Stage,
+        WorldTemplate world = WorldTemplate.Stage,
         string referralCode = "")
     {
         var player = await api.Player.CompleteOnboardingAsync(
@@ -151,11 +137,11 @@ public abstract class GameApiTestBase(ApiFactory factory)
                 ReferralCode = referralCode,
             },
             CancellationToken.None);
-        if (world == WorldId.Own)
+        if (world == WorldTemplate.Own)
         {
             // Compatibility fixtures represent an already unlocked, historical owner.
             await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(
-                new BsonDocument("_id", player.Id),
+                new BsonDocument("_id", new BsonBinaryData(player.Id.Value, GuidRepresentation.Standard)),
                 new BsonDocument("$set", new BsonDocument("HitOwnWorldMilestone", true)));
         }
 
@@ -163,31 +149,26 @@ public abstract class GameApiTestBase(ApiFactory factory)
         return player;
     }
 
-    protected async Task<CreateWorldRequest> CreateWorldDefinitionAsync(TestApiClient api, WorldId world = WorldId.Stage)
+    protected Task<CreateWorldRequest> CreateWorldDefinitionAsync(TestApiClient api, WorldTemplate world = WorldTemplate.Stage)
     {
         // Keep historical-world tests independent of the current public catalog.
-        var name = $"legacy_fixture_{Guid.NewGuid():N}";
-        var database = Factory.Session.MongoClient.GetDatabase(name);
-        Domain.Worlds.World legacy;
-        try
+        var legacy = Factory.Session.LegacyWorldTemplates[world.ToString().ToLowerInvariant()];
+        var template = legacy.ToResponse();
+        return Task.FromResult(DefinitionOf(template) with
         {
-            using var session = await Factory.Session.MongoClient.StartSessionAsync();
-            await new Infrastructure.Persistence.Migrations.SeedWorldTemplates().UpAsync(database, session, CancellationToken.None);
-            legacy = await database.GetCollection<Domain.Worlds.World>("world_templates")
-                .Find(item => item.BalanceKey == world.ToString().ToLowerInvariant()).SingleAsync();
-        }
-        finally
-        {
-            await Factory.Session.MongoClient.DropDatabaseAsync(name);
-        }
-
-        var template = new Reki.Api.Mapping.ApiMapper().MapWorld(legacy);
-        return DefinitionOf(template);
+            TemplateId = world switch
+            {
+                WorldTemplate.Own => null,
+                WorldTemplate.It => WorldId.From("5720946a-ea7c-4a10-9c50-51ce3deefc53"),
+                WorldTemplate.Stage => WorldId.From("b3a1a522-0263-4796-a197-57a8731fc291"),
+                _ => WorldId.From("8c02a7fb-3b55-4eb0-b957-1b4869ed9834"),
+            },
+        });
     }
 
     protected CreateWorldRequest DefinitionOf(WorldResponse template) => new()
         {
-            BalanceKey = template.BalanceKey,
+            TemplateId = template.Id,
             Title = template.Title,
             Description = template.Description,
             AvatarStyle = template.AvatarStyle,
@@ -203,10 +184,10 @@ public abstract class GameApiTestBase(ApiFactory factory)
             Voices = template.Voices,
             PostIdeas = template.PostIdeas,
             DemoPosts = template.DemoPosts,
-            Rules = template.Rules,
-            Stars = template.Stars,
-            Wants = template.Wants,
-            Achievements = template.Achievements,
+            Rules = template.Rules.Select(rule => new WorldRuleRequest(rule.Text, rule.Locked)).ToArray(),
+            Stars = template.Stars.Select(star => new WorldStarRequest(star.Id, star.Name, star.Role, star.Trait, star.About, star.Voice, star.AvatarSeed, star.Relation)).ToArray(),
+            Wants = template.Wants.Select(want => new WantRequest(want.Id, want.Text, want.Reward, want.Done)).ToArray(),
+            Achievements = template.Achievements.Select(card => new CollectionCardRequest(card.Id, card.Emoji, card.Title, card.Open)).ToArray(),
             Name = "Player",
             Avatar = "player",
             Role = "creator",
@@ -220,17 +201,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
         await scope.ServiceProvider.GetRequiredService<ResetGameDayJob>().ExecuteAsync(new(), CancellationToken.None);
     }
 
-    protected async Task<string> WorldPathAsync(HttpClient http, string path)
-    {
-        var user = http.DefaultRequestHeaders.TryGetValues(TestAuthenticationHandler.UserIdHeaderName, out var values)
-            ? long.Parse(values.Single(), System.Globalization.CultureInfo.InvariantCulture) : 0;
-        var player = await Database.GetCollection<BsonDocument>("players")
-            .Find(new BsonDocument("TelegramUserId", user)).SingleOrDefaultAsync();
-        var world = player is null ? null : await Database.GetCollection<BsonDocument>("worlds")
-            .Find(new BsonDocument("Player.PlayerId", player["_id"])).SingleOrDefaultAsync();
-        return $"{path}?worldId={world?["_id"].AsString ?? "missing-world"}";
-    }
-
     protected async Task<(string PostId, string CommentId)> PublishPostForThreadAsync(long telegramUserId)
     {
         using var api = Factory.CreateApiClient(telegramUserId);
@@ -239,9 +209,9 @@ public abstract class GameApiTestBase(ApiFactory factory)
         var player = await GetStoredPlayerAsync(telegramUserId);
         var post = await Database
             .GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("AuthorId", $"Player_{player["_id"]}"))
+            .Find(new BsonDocument("AuthorId", $"Player_{player["_id"].AsBsonBinaryData.ToGuid():N}"))
             .SingleAsync();
-        return (post["_id"].AsString, post["Comments"].AsBsonArray[0]["_id"].AsString);
+        return (post["_id"].AsBsonBinaryData.ToGuid().ToString("N"), post["Comments"].AsBsonArray[0]["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
     }
 
     protected Task<BsonDocument> GetStoredPlayerAsync(long telegramUserId) =>
@@ -253,7 +223,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
     protected Task<BsonDocument> GetStoredPostAsync(string postId) =>
         Database
             .GetCollection<BsonDocument>("posts")
-            .Find(new BsonDocument("_id", postId))
+            .Find(new BsonDocument("_id", new BsonBinaryData(Guid.Parse(postId), GuidRepresentation.Standard)))
             .SingleAsync();
 
     protected async Task<ReplyLiveEvent> ReplyAsync(
@@ -263,24 +233,15 @@ public abstract class GameApiTestBase(ApiFactory factory)
         string replyId,
         string text)
     {
-        using var http = CreateAuthenticatedHttpClient(telegramUserId);
-        var request = new ReplyRequest
-        {
-            CommentId = commentId,
-            RequestId = replyId,
-            Text = text,
-        };
-        using var body = new StringContent(
-            JsonSerializer.Serialize(request, ApiJsonSerializerContext.Default.ReplyRequest),
-            Encoding.UTF8,
-            "application/json");
-        using var response = await http.PostAsync(
-            await WorldPathAsync(http, $"/posts/{postId}/replies"),
-            body,
+        using var api = Factory.CreateApiClient(telegramUserId);
+        using var response = await api.Posts.ReplyToPostAsync(
+            postId,
+            await GetWorldIdAsync(api),
+            new ReplyRequest { CommentId = Domain.Posts.CommentId.From(commentId), RequestId = replyId, Text = text },
             CancellationToken.None);
-        await Assert.That(response.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        var json = await response.Content.ReadAsStringAsync(CancellationToken.None);
-        return ParseReplyEvents(json).Last(item => item.Status == ReplyStatus.Completed);
+        using var reader = new StreamReader(response.Stream);
+        var body = await reader.ReadToEndAsync(CancellationToken.None);
+        return ParseReplyEvents(body).Last(item => item.Status == ReplyStatus.Completed);
     }
 
     protected IReadOnlyList<ChatMessage> GetCapturedChatMessages()
@@ -296,24 +257,20 @@ public abstract class GameApiTestBase(ApiFactory factory)
         string text,
         string publicationId)
     {
-        using var http = CreateAuthenticatedHttpClient(telegramUserId);
-        var request = new StartPublicationRequest
+        using var api = Factory.CreateApiClient(telegramUserId);
+        try
         {
-            PublicationId = publicationId,
-            Text = text,
-        };
-        using var body = new StringContent(
-            JsonSerializer.Serialize(request, ApiJsonSerializerContext.Default.StartPublicationRequest),
-            Encoding.UTF8,
-            "application/json");
-        using var response = await http.PostAsync(
-            await WorldPathAsync(http, "/posts/publications"),
-            body,
-            CancellationToken.None);
-        return (
-            response.StatusCode,
-            await response.Content.ReadAsStringAsync(CancellationToken.None),
-            publicationId);
+            using var response = await api.Posts.GeneratePublicationAsync(
+                await GetWorldIdAsync(api),
+                new StartPublicationRequest { PublicationId = publicationId, Text = text },
+                CancellationToken.None);
+            using var reader = new StreamReader(response.Stream);
+            return ((System.Net.HttpStatusCode)response.StatusCode, await reader.ReadToEndAsync(CancellationToken.None), publicationId);
+        }
+        catch (PostsApiException exception)
+        {
+            return ((System.Net.HttpStatusCode)exception.StatusCode, exception.Response, publicationId);
+        }
     }
 
     protected Task PublishAsync(long telegramUserId, string text) =>
@@ -325,23 +282,10 @@ public abstract class GameApiTestBase(ApiFactory factory)
             await GenerateWithIdAsync(telegramUserId, text, requestedPublicationId);
         await Assert.That(statusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
         await Assert.That(generation).Contains("\"type\":\"ready_for_moderation\"");
-        using var http = CreateAuthenticatedHttpClient(telegramUserId);
-        using var moderation = await http.PostAsync(
-            await WorldPathAsync(http, $"/posts/publications/{publicationId}/moderation"),
-            null,
-            CancellationToken.None);
-        await Assert.That(moderation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        await Assert.That(await moderation.Content.ReadAsStringAsync(CancellationToken.None))
-            .Contains("\"type\":\"result\"");
-    }
-
-    protected HttpClient CreateAuthenticatedHttpClient(long telegramUserId)
-    {
-        var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(
-            TestAuthenticationHandler.UserIdHeaderName,
-            telegramUserId.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        return http;
+        using var api = Factory.CreateApiClient(telegramUserId);
+        var events = await api.Posts.ModeratePublicationAsync(
+            publicationId, await GetWorldIdAsync(api), CancellationToken.None);
+        await Assert.That(events.OfType<ResultLiveEvent>().Any()).IsTrue();
     }
 
     protected async Task AssertCollectionHasNoPlayerAsync(string collectionName, BsonDocument filter)

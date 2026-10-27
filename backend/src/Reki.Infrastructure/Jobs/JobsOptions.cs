@@ -1,6 +1,6 @@
 namespace Reki.Infrastructure.Jobs;
 
-public sealed class JobsOptions
+internal sealed class JobsOptions
 {
     public const string SectionName = "Jobs";
 

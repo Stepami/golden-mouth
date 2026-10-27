@@ -1,6 +1,6 @@
 import { StoryGoal } from '../ui/StoryGoal'
 import { useEffect, useRef, useState } from 'react'
-import { hapticFeedback, shareStory, shareURL } from '@telegram-apps/sdk-react'
+import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
 import { api } from '../api/client'
 import { firstPost, results } from '../api/mock'
 import type { CommentT, Post, PostResult, PublicationFailure } from '../api/types'
@@ -257,8 +257,8 @@ function Thread() {
     // The current draft is compared once when opening/reloading this post.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId, threadKey, reloadToken, starIds])
-  const postAuthor = stars.find(star => star.id === post?.authorId)
-  const isStarComment = (comment?: CommentT) => !!comment?.star && !comment.hidden && stars.some(star => star.id === comment.authorId)
+  const postAuthor = stars.find(star => `Star_${star.id}` === post?.authorId)
+  const isStarComment = (comment?: CommentT) => !!comment?.star && !comment.hidden && stars.some(star => `Star_${star.id}` === comment.authorId)
   const target = post?.comments.find(comment => comment.id === draft.commentId)
   const targetAvailable = draft.commentId === null ? !!postAuthor : isStarComment(target)
   const recipient = draft.commentId === null ? postAuthor?.name : target?.author

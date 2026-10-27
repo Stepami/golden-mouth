@@ -1,14 +1,17 @@
+import { displayHandle } from '../app/handle'
 import { StoryGoal } from '../ui/StoryGoal'
 import { ExpandableText } from '../ui'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import { setAvatarPersonalization, useAvatarPersonalization } from '../app/avatarPersonalization'
 import { contentOf, worldOf } from '../api/worldContent'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import { dm as dmMock, friends as friendsMock } from '../api/mock'
 import type { ChannelPost, DmMessage, Drama, FeedItem } from '../api/types'
 import { useNav } from '../app/nav'
-import { useApi, cachedApi, saveApiCache } from '../app/useApi'
+import { useApi } from '../app/useApi'
+import { usePostPages } from '../app/usePostPages'
+import { usePostListGestures } from '../app/usePostListGestures'
 import { runtimeConfig } from '../app/runtimeConfig'
 import { SkillHelp } from '../ui/SkillHelp'
 import { usePlayer, useStore } from '../app/store'
@@ -120,31 +123,34 @@ function FeedPostCard({ item }: { item: FeedItem }) {
 function Feed() {
   const nav = useNav()
   const p = usePlayer(); const w = worldOf(p.world)
-  const [portion, setPortion] = useState(0)
-  const [refreshing, setRefreshing] = useState(false)
-  const [refreshNote, setRefreshNote] = useState('')
-  const [newIds, setNewIds] = useState<string[]>([])
-  const seen = useRef(new Set<string>())
-  const key = `feed:${p.id}:${p.worldInstanceId ?? p.world}`
-  const [items, setItems] = useState<FeedItem[]>(() => cachedApi<FeedItem[]>(key) ?? [])
-  const [feedState, setFeedState] = useState<'loading' | 'ready' | 'error'>(() => cachedApi(key) ? 'ready' : 'loading')
-  useEffect(() => {
-    let alive = true
-    api.feed(p.world).then(found => { if (alive) { const fresh = found.filter(item => item.postId && !seen.current.has(item.postId)); const ids = fresh.map(item => item.postId!); setNewIds(portion ? ids : []); setRefreshNote(portion ? ids.length ? `Новых постов: ${ids.length}` : 'Пока нет новых постов' : ''); seen.current = new Set(found.flatMap(item => item.postId ? [item.postId] : [])); saveApiCache(key, found); setItems(found); setFeedState('ready'); setRefreshing(false) } })
-      .catch(() => { if (alive) { setFeedState('error'); setRefreshing(false) } })
-    return () => { alive = false }
-  }, [key, p.world, portion])
+  const key = `feed-keyset-v1:${p.id}:${p.worldInstanceId ?? p.world}`
+  const loadPage = useCallback((cursor: string | undefined, signal: AbortSignal) => api.feed(p.worldInstanceId, cursor, signal), [p.worldInstanceId])
+  const list = usePostPages<FeedItem>(key, loadPage)
+  const [arrivals, setArrivals] = useState({ key, ids: [] as string[], note: '' })
+  const newIds = arrivals.key === key ? arrivals.ids : []
+  const refreshNote = arrivals.key === key ? arrivals.note : ''
+  const refresh = async () => {
+    const seen = new Set(list.items.map(item => item.postId))
+    setArrivals({ key, ids: [], note: '' })
+    const page = await list.refresh()
+    if (!page) return
+    const ids = page.items.flatMap(item => item.postId && !seen.has(item.postId) ? [item.postId] : [])
+    setArrivals({ key, ids, note: ids.length ? `Новых постов: ${ids.length}` : 'Пока нет новых постов' })
+  }
+  const gestures = usePostListGestures(key, list, refresh)
   return (
-    <div className="screen">
+    <div className="screen post-list-screen" ref={gestures.screenRef}>
+      <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
       <TopBar title={`Лента ${w.gen}`} right={<button onClick={() => nav.push('05-11_world_rules')} style={{ background: 'none', border: 'none', color: 'inherit', fontSize: 13 }}>📜 Как устроен мир</button>} />
       <div className="pad">
-        {items.map((f, i) => f.kind === 'news'
+        {list.items.map((f, i) => f.kind === 'news'
           ? <Card key={`news-${i}`} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ МИРА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
           : <div className={newIds.includes(f.postId ?? "") ? "feed-arrival" : undefined} key={f.postId ?? `post-${i}`}><FeedPostCard item={f} /></div>)}
-        {feedState === 'loading' && <Card>Загружаем ленту…</Card>}
-        {feedState === 'error' && <Card>Не получилось обновить ленту. Попробуй ещё раз.</Card>}
-        {feedState === 'ready' && items.length === 0 && <Card>В ленте пока нет постов.</Card>}
-        <div role="status" className="small muted refresh-note">{refreshing ? "Ищем новые истории…" : refreshNote}</div><Button secondary disabled={refreshing} onClick={() => { setRefreshing(true); setRefreshNote(''); setPortion(value => value + 1) }}>{refreshing ? "Обновляем…" : "Обновить ленту"}</Button>
+        {list.pending === 'first' && !list.ready && <Card>Загружаем ленту…</Card>}
+        {list.error === 'first' && <Card>Не получилось обновить ленту. Потяни вниз от начала списка, чтобы повторить.</Card>}
+        {list.ready && list.items.length === 0 && <Card>В ленте пока нет постов.</Card>}
+        {(refreshNote && !list.pending) && <div role="status" className="small muted refresh-note">{refreshNote}</div>}
+        <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.error === 'more' ? 'Не получилось загрузить посты. Потяни вниз от начала списка, чтобы обновить.' : list.ready && !list.hasNext && list.items.length > 0 ? 'Все посты загружены' : ''}</div>
       </div>
     </div>
   )
@@ -207,27 +213,16 @@ function FriendChannel() {
 function Stage() {
   const nav = useNav(); const p = usePlayer()
   const [skillHelp, setSkillHelp] = useState(false)
-  const cacheKey = `channel:${p.id}:${p.worldInstanceId ?? p.world}`
+  const cacheKey = `channel-keyset-v1:${p.id}:${p.worldInstanceId ?? p.world}`
   const [banner, setBanner] = useState(true)
-  const [posts, setPosts] = useState<ChannelPost[]>(() => cachedApi<ChannelPost[]>(cacheKey) ?? [])
-  const [load, setLoad] = useState<'loading' | 'ready' | 'error'>(() => cachedApi(cacheKey) ? 'ready' : 'loading')
-  const [reloadToken, setReloadToken] = useState(0)
-  useEffect(() => {
-    let current = true
-    const cached = cachedApi<ChannelPost[]>(cacheKey)
-    setPosts(cached ?? [])
-    setLoad(cached ? 'ready' : 'loading')
-    api.channelPosts().then(items => {
-      if (!current) return
-      setPosts(items)
-      saveApiCache(cacheKey, items)
-      setLoad('ready')
-    }).catch(() => { if (current) setLoad('error') })
-    return () => { current = false }
-  }, [reloadToken, cacheKey])
-  if (load === 'ready' && posts.length === 0) return <Home />
+  const loadPage = useCallback((cursor: string | undefined, signal: AbortSignal) => api.channelPosts(p.worldInstanceId, cursor, signal), [p.worldInstanceId])
+  const list = usePostPages<ChannelPost>(cacheKey, loadPage)
+  const gestures = usePostListGestures(cacheKey, list, list.refresh)
+  const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
+  if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home /></div>
   return (
-    <div className="screen channel-screen">
+    <div className="screen channel-screen post-list-screen" ref={gestures.screenRef}>
+      {pullIndicator}
       <ChannelHead />
       <div className="pad">
         <StoryGoal world={p.world} />
@@ -243,9 +238,10 @@ function Stage() {
         </Card>
         {runtimeConfig.features.collection && <Card style={{ marginBottom: 10 }} onClick={() => nav.tab(4)}><div className="row"><div style={{ fontSize: 22 }}>🃏</div><div style={{ flex: 1 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b></div><span className="muted">›</span></div></Card>}
         <Button secondary style={{ marginBottom: 10 }} onClick={() => nav.push('04-3_invite')}>Позвать друга</Button>
-        {load === 'loading' && <Card><span className="small muted">загружаем посты…</span></Card>}
-        {load === 'error' && <Card><div className="small">Не получилось загрузить канал.</div><Button style={{ marginTop: 12 }} onClick={() => setReloadToken(token => token + 1)}>Попробовать снова</Button></Card>}
-        {load === 'ready' && posts.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId, returnTo: 'channel' })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
+        {list.pending === 'first' && !list.ready && <Card><span className="small muted">загружаем посты…</span></Card>}
+        {list.error === 'first' && <Card><div className="small">Не получилось загрузить канал. Потяни вниз от начала списка, чтобы повторить.</div></Card>}
+        {list.items.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId, returnTo: 'channel' })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
+        <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.error === 'more' ? 'Не получилось загрузить посты. Потяни вниз от начала списка, чтобы обновить.' : list.ready && !list.hasNext ? 'Все посты загружены' : ''}</div>
       </div>
       <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
@@ -264,13 +260,14 @@ function Me() {
   return (
     <div className="screen">
       <TopBar title="Я" rightPlain right={<button className="header-action" onClick={() => nav.push('05-8_settings')}>⚙ Настройки</button>} />
-      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b>{p.handle && <div className="small muted" style={{ overflowWrap: 'anywhere' }}>@{p.handle.replace(/^@+/, '')}</div>}<div className="small muted profile-world-name">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
+      <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b>{p.handle && <div className="small muted" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="small muted profile-world-name">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
       <div className="pad">
         <div className="profile-stats">
           {[[`⚡ ${p.postsLeft}`, 'энергии'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
         </div>
         <div className="profile-task-row"><div><b>💡 О чём написать</b><p className="small muted">{p.wants[0]?.text ?? "Поделись событием из своего мира"}</p></div><button className="text-link small" onClick={() => nav.push('02-1_compose')}>Написать →</button></div><p className="small muted energy-help">Пост и ответ расходуют энергию. Новый запас — в 09:00 МСК.</p>
-        <Card style={{ marginBottom: 18 }}><b>{p.hitOwnWorldMilestone ? '✨ Свой мир открыт' : '✨ Создай свой мир'}</b><p className="small muted">{p.hitOwnWorldMilestone ? 'Доступ подтверждён. Можно придумать свою историю.' : 'Первый пост приглашённого друга или 500 подписчиков в одном мире.'}</p>{!p.hitOwnWorldMilestone && <><progress aria-label="Подписчики до открытия своего мира" value={Math.min(500, p.subs)} max={500} /><div className="small muted">Этот мир: {Math.min(500, p.subs)} / 500</div></>}<button className="text-link" onClick={() => { if (p.hitOwnWorldMilestone) { beginOwnWorld(p); nav.push('05-7b_own_world', { world: 'own' }) } else nav.push('04-3_invite') }}>{p.hitOwnWorldMilestone ? 'Создать свой мир →' : 'Пригласить друга →'}</button></Card>
+        <Card style={{ marginBottom: 12 }}><b>{p.hitOwnWorldMilestone ? '✨ Свой мир открыт' : '✨ Создай свой мир'}</b><p className="small muted">{p.hitOwnWorldMilestone ? 'Доступ подтверждён. Можно придумать свою историю.' : 'Первый пост приглашённого друга или 500 подписчиков в одном мире.'}</p>{!p.hitOwnWorldMilestone && <><progress aria-label="Подписчики до открытия своего мира" value={Math.min(500, p.subs)} max={500} /><div className="small muted">Этот мир: {Math.min(500, p.subs)} / 500</div></>}<button className="text-link" onClick={() => { if (p.hitOwnWorldMilestone) { beginOwnWorld(p); nav.push('05-7b_own_world', {}) } else nav.push('04-3_invite') }}>{p.hitOwnWorldMilestone ? 'Создать свой мир →' : 'Пригласить друга →'}</button></Card>
+        <div className="profile-world-settings"><Button secondary onClick={() => nav.push('05-11_world_rules')}>Настройки мира</Button></div>
         <Card style={{ marginBottom: 10 }}>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Серия {p.streak.days} дня</b><span className="small" style={{ color: 'var(--gift)' }}>{p.streak.nextReward}</span></div>
           <div style={{ display: 'flex', gap: 6 }}>{DAYS.map((d, i) => <div key={d} style={{ flex: 1, textAlign: 'center' }}><div style={{ height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, ...(p.streak.week[i] ? { background: 'var(--grad)' } : i === today ? { border: '2px dashed var(--accent)' } : { background: '#20202B' }) }}>{p.streak.week[i] ? '🔥' : i === today ? '?' : ''}</div><div className="small muted" style={{ marginTop: 3 }}>{d}</div></div>)}</div>
@@ -291,10 +288,20 @@ function Me() {
 
 // 05-8: настройки: градус драмы, голос канала, обращение, данные, удалить аккаунт
 function Settings() {
-  const nav = useNav(); const p = usePlayer(); const { patch } = useStore()
+  const nav = useNav(); const p = usePlayer(); const { patch, resetPlayer } = useStore()
   const personalizeAvatar = useAvatarPersonalization(p.id)
   const [drama, setDrama] = useState<Drama>(p.drama)
   const [del, setDel] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const deletePending = useRef(false)
+  const [deleteError, setDeleteError] = useState('')
+  const deleteAccount = async () => {
+    if (deletePending.current) return
+    deletePending.current = true; setDeleting(true); setDeleteError('')
+    try { await api.deleteAccount(); resetPlayer(); nav.reset('01-2_age') }
+    catch { setDeleteError('Не получилось удалить аккаунт. Попробуй ещё раз.') }
+    finally { deletePending.current = false; setDeleting(false) }
+  }
   const [panel, setPanel] = useState<'notifications' | 'quiet' | 'support' | 'data' | 'address' | null>(null)
   const [notifications, setNotifications] = useState(p.settings.notifications === 'off' ? 'off' : p.settings.notifications === 'important' ? 'important' : 'all')
   const quietParts = p.settings.quiet.replace('–', '-').split('-')
@@ -304,7 +311,17 @@ function Settings() {
   const [address, setAddress] = useState(p.address)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const openPanel = (value: typeof panel) => { setError(''); setPanel(value) }
+  const openPanel = (value: typeof panel) => {
+    // Reopening starts from saved preferences, discarding a cancelled edit.
+    if (value === 'notifications') setNotifications(p.settings.notifications === 'off' ? 'off' : p.settings.notifications === 'important' ? 'important' : 'all')
+    if (value === 'address') setAddress(p.address)
+    if (value === 'quiet') {
+      setQuietOff(p.settings.quiet === 'off')
+      setQuietStart(quietParts[0]?.match(/^\d{2}:\d{2}$/) ? quietParts[0] : '22:00')
+      setQuietEnd(quietParts[1]?.match(/^\d{2}:\d{2}$/) ? quietParts[1] : '09:00')
+    }
+    setError(''); setPanel(value)
+  }
   const row = (t: string, r: string, last = false, onClick?: () => void) => <button type="button" onClick={onClick} disabled={!onClick || saving} className="row" style={{ width: '100%', textAlign: 'left', color: 'inherit', background: 'none', border: 'none', padding: '12px 0', borderBottom: last ? 'none' : '1px solid var(--line2)' }}><div style={{ flex: 1 }}>{t}</div><span className="muted">{r}</span></button>
   const save = async (value: Partial<typeof p.settings>) => {
     if (saving) return
@@ -333,7 +350,7 @@ function Settings() {
           {row('🎙 Голос канала', `${p.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`, false, () => openPanel('address'))}
           <AvatarPersonalization enabled={personalizeAvatar} onChange={enabled => setAvatarPersonalization(p.id, enabled)} />
           <div className="row" style={{ marginBottom: 12 }}><Avatar seed={p.handle} size={48} /><span className="small muted">Выбор сохраняется на этом устройстве.</span></div>
-          {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📜 Как устроен мир', '›', false, () => nav.push('05-11_world_rules'))}{row('📋 Правила публикаций', '›', false, () => nav.push('06-4_rules'))}{row('🔒 Мои данные и правила', 'скоро ›', false, () => openPanel('data'))}{row('✉ Поддержка', 'скоро ›', true, () => openPanel('support'))}
+          {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📋 Правила публикаций', '›', false, () => nav.push('06-4_rules'))}{row('🔒 Мои данные и правила', 'скоро ›', false, () => openPanel('data'))}{row('✉ Поддержка', 'скоро ›', true, () => openPanel('support'))}
         </Card>
         <button onClick={() => setDel(true)} className="card" style={{ width: '100%', textAlign: 'center', color: 'var(--accent)', background: 'transparent', border: '1px solid #FF6B8B55' }}>Удалить аккаунт и всё</button>
         <div className="small muted" style={{ textAlign: 'center', marginTop: 8 }}>Удалим канал, переписку и коллекцию. Вернуть будет нельзя</div>
@@ -349,10 +366,11 @@ function Settings() {
         {(panel === 'notifications' || panel === 'quiet') && <Button disabled={saving || (panel === 'quiet' && !quietOff && (!quietStart || !quietEnd))} onClick={() => save(panel === 'notifications' ? { notifications } : { quiet: quietOff ? 'off' : `${quietStart}-${quietEnd}` })} style={{ marginBottom: 8 }}>{saving ? 'Сохраняем…' : 'Сохранить'}</Button>}
         <Button secondary disabled={saving} onClick={() => setPanel(null)}>Закрыть</Button>
       </Sheet>}
-      {del && <Sheet onClose={() => setDel(false)}>
+      {del && <Sheet onClose={() => { if (!deleting) setDel(false) }}>
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>Удалить всё?</div>
         <div className="muted" style={{ marginBottom: 16 }}>Канал, переписка со звёздами, коллекция и прогресс удалятся навсегда</div>
-        <Button style={{ background: '#C0392B', marginBottom: 8 }} onClick={async () => { await api.deleteAccount(); setDel(false); nav.replace('01-2_age') }}>Удалить навсегда</Button><Button secondary onClick={() => setDel(false)}>Отмена</Button>
+        {deleteError && <p role="alert">{deleteError}</p>}
+        <Button disabled={deleting} style={{ background: '#C0392B', marginBottom: 8 }} onClick={deleteAccount}>{deleting ? 'Удаляем…' : 'Удалить навсегда'}</Button><Button secondary disabled={deleting} onClick={() => setDel(false)}>Отмена</Button>
       </Sheet>}
     </div>
   )

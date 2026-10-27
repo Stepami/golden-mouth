@@ -40,6 +40,7 @@ function Shell() {
     current: top.id, params: top.params, canBack: stack.length > 1,
     push: (id, params = {}) => { setStack(s => [...s, { id, params }]); window.scrollTo(0, 0) },
     replace: (id, params = {}) => { setStack(s => [...s.slice(0, -1), { id, params }]); window.scrollTo(0, 0) },
+    reset: (id, params = {}) => { setStack([{ id, params }]); window.scrollTo(0, 0) },
     back: () => setStack(s => (s.length > 1 ? s.slice(0, -1) : s)),
     tab: i => { setStack([{ id: TABS[i].screen, params: {} }]); window.scrollTo(0, 0) },
   }), [top, stack.length])
@@ -65,7 +66,7 @@ function Shell() {
   const tab = top.id === '01-3_world' && !player ? undefined : TAB_OF[top.id]
   return (
     <NavContext.Provider value={nav}>
-      <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'stage'}>
+      <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'edfccf53-65c6-4eaf-8321-2391bc1758bd'}>
       <AvatarPeople.Provider value={people}><div className="app">
         <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration />
         {tab !== undefined && (

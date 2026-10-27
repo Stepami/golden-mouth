@@ -1,12 +1,13 @@
-using Reki.Domain.Common;
 using Vogen;
 
 namespace Reki.Domain.Posts;
 
-[ValueObject<string>(comparison: ComparisonGeneration.Omit)]
+[ValueObject<Guid>(comparison: ComparisonGeneration.Omit)]
 public readonly partial struct CommentId
 {
-    public static CommentId New() => From(Guid.NewGuid().ToString("N"));
+    public static CommentId New() => From(Guid.NewGuid());
 
-    private static Validation Validate(string value) => IdentifierValidation.String(value);
+    public static CommentId From(string value) => From(Guid.Parse(value));
+
+    public override string ToString() => ToString("N", System.Globalization.CultureInfo.InvariantCulture);
 }
