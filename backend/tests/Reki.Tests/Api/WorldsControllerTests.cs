@@ -143,8 +143,10 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         var template = templates.Single(world => world.Id == WorldId.From("b3a1a522-0263-4796-a197-57a8731fc291"));
         await Assert.That(template.Stars.Count).IsGreaterThan(0);
         await Assert.That(template.Roles.Count).IsGreaterThan(0);
-        var safetyRule = template.Rules.Single(rule => rule.Text == "Без тем 18+ и травли по внешности");
-        await Assert.That(safetyRule.Locked).IsTrue();
+        await Assert.That(template.FirstContext.Contains("бейсбола", StringComparison.Ordinal)).IsTrue();
+        var eduard = template.Stars.Single(star => star.Id == StarId.From("eduard"));
+        await Assert.That(eduard.About.Contains("добычу", StringComparison.Ordinal)).IsTrue();
+        await Assert.That(template.Rules.Any(rule => rule.Text == "Без тем 18+ и травли по внешности")).IsFalse();
         var rejected = await Assert.ThrowsAsync<WorldsApiException>(() => api.Worlds.GetOwnedWorldsAsync(CancellationToken.None));
         await Assert.That(rejected).IsNotNull();
         await Assert.That(rejected.StatusCode).IsEqualTo(401);
