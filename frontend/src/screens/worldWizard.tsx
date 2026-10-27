@@ -45,8 +45,8 @@ export function ChooseWorld() {
     setWorldDraft({ definition, heroOrder: [], advanced: !previewOnly, previewOnly, address: player?.address ?? 'nick', group: player?.ageBand ? (player.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: player?.ageBand ?? nav.params.ageBand as AgeBand | undefined, personalizeAvatar: player ? avatarPersonalization(player.id) : true })
     nav.push('05-7b_own_world', {})
   }
-  const currentWorld = player ? owned.find(world => world.id === player.worldInstanceId) ?? { ...worldDocumentOf(player.world), id: player.worldInstanceId ?? player.world, name: player.name, avatar: player.handle, subscribers: player.subs } : undefined
-  const bestWorld = player ? [currentWorld!, ...owned].reduce((best, world) => world.subscribers > best.subscribers ? world : best) : undefined
+  const currentWorld = player ? { ...(owned.find(world => world.id === player.worldInstanceId) ?? worldDocumentOf(player.world)), id: player.worldInstanceId ?? player.world, name: player.name, avatar: player.handle, subscribers: player.subs } : undefined
+  const bestWorld = player ? [currentWorld!, ...owned.filter(world => world.id !== currentWorld!.id)].reduce((best, world) => world.subscribers > best.subscribers ? world : best) : undefined
   const bestSubscribers = bestWorld?.subscribers
   const ownProgress = bestSubscribers === undefined ? undefined : Math.min(500, Math.max(0, bestSubscribers))
   const openProgress = async () => {

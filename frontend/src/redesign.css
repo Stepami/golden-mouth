@@ -274,3 +274,7 @@ html.shot .app { width:390px;max-width:390px; }html.shot .bottom-cta { max-width
 .sheet .btn { font-size:var(--sheet-action);line-height:20px;min-height:44px; }
 .sheet input:not([type=checkbox]):not([type=radio]),.sheet select,.sheet textarea { font-size:16px; }
 .sheet .small { font-size:var(--sheet-body); }
+
+.skill-help-list { display:grid;gap:14px;padding:0;list-style:none; }
+.skill-help-list b,.skill-help-list span { display:block;font-size:14px;line-height:1.5; }
+.skill-help-list span { color:var(--muted); }
