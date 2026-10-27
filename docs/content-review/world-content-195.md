@@ -12,6 +12,24 @@
 
 IT-герои — игровые образы по исходным ориентирам Степана, не «Кремниевая долина». Мемная маска Нидерландов сохранена. Реальные авторы, редакторские соответствия и внешние ссылки не попадают в runtime. Платформенные инструкции безопасности и возрастной порог не меняются; отдельная старая строка «Без тем 18+ и травли по внешности» удаляется из каталога и списка правил обновляемых пресетных миров вместе с заменой всего списка. Существующий обработчик создания/редактирования мира по-прежнему добавляет обязательное платформенное правило; эта политика отдельным контентным PR не отменяется.
 
+
+## Проверка идентификаторов NPC (28.10.2026)
+
+Повторная сверка по `master` на коммите `3fd6c1ac45bbe76e13eb80b2b7428713f6d0be6e`: все 12 ключей в `2_5_1_RefreshWorldContent.Data.cs` совпадают с явными `StarId.From(...)` исходных пресетов **в соответствующем WorldId**. Расхождения ID не подтверждены; ключи миграции не заменены предположениями из имени, порядка карточек или AvatarSeed.
+
+| WorldId | Источник | StarId присутствующих стандартных NPC |
+| --- | --- | --- |
+| `b3a1a522-0263-4796-a197-57a8731fc291` | 2.4.2 | `isabella`, `eduard`, `yakov` |
+| `aec9494b-4118-4525-8458-e85d759c8dd9` | 2.4.2 | `gosha`, `georgina`, `roman` |
+| `8c02a7fb-3b55-4eb0-b957-1b4869ed9834` | 2.4.2 | `diana`, `jon`, `james` |
+| `5720946a-ea7c-4a10-9c50-51ce3deefc53` | 1.2.0 | `greedy_wolf`, `2kotleti_news`, `alexey_nl` |
+
+Авторитетные определения: [пресеты 2.4.2](https://github.com/Stepami/golden-mouth/blob/3fd6c1ac45bbe76e13eb80b2b7428713f6d0be6e/backend/src/Reki.Infrastructure/Mongo/Migrations/2_4_2_ReleaseWorldCatalog.Data.cs), [IT-пресет 1.2.0](https://github.com/Stepami/golden-mouth/blob/3fd6c1ac45bbe76e13eb80b2b7428713f6d0be6e/backend/src/Reki.Infrastructure/Mongo/Migrations/1_2_0_SeedWorldTemplates.Data.cs#L198).
+
+[Миграция 2.4.3](https://github.com/Stepami/golden-mouth/blob/3fd6c1ac45bbe76e13eb80b2b7428713f6d0be6e/backend/src/Reki.Infrastructure/Mongo/Migrations/2_4_3_RemoveStarAppearanceFields.cs#L43) явно разделяет `StarId` и `AvatarSeed`: например, `eduard` → аватарка `ed_thekiller_skin`, `yakov` → `nessssssie`, `gosha` → `gosh`. Она обновляет только AvatarSeed, не Stars._id. Эти значения аватарок не являются новыми ID.
+
+[Доменный StarId](https://github.com/Stepami/golden-mouth/blob/3fd6c1ac45bbe76e13eb80b2b7428713f6d0be6e/backend/src/Reki.Domain/Worlds/StarId.cs) — строковый идентификатор; [World.Instantiate](https://github.com/Stepami/golden-mouth/blob/3fd6c1ac45bbe76e13eb80b2b7428713f6d0be6e/backend/src/Reki.Domain/Worlds/World.cs#L33) сохраняет ID NPC при создании экземпляра. В 2.5.1 целевой контент выбирается по `TemplateId ?? Id`, NPC — точным сравнением `StarId` внутри этого мира. Обходится существующий `world.Stars`, меняются только Role/About/Voice: отсутствующий герой не добавляется, неизвестный NPC не изменяется, порядок и числовые отношения сохраняются. Поля Player и Version не присваиваются заново.
+
 ## Миграция 2.5.1
 
 Исторические миграции не меняются. По замечанию Степана к #222 от 27.10.2026 убраны сравнение BSON-снимков и отдельные тесты миграции: по его данным, игроки текстовые атрибуты миров не редактировали. Миграция читает доменные World, обновляет контент через `with` и сохраняет документы через ReplaceOne с IsUpsert=true.
