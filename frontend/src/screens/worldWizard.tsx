@@ -60,6 +60,7 @@ export function ChooseWorld() {
   const resume = async (world: WorldDocument) => { try { const next = await api.me(world.id); setPlayer(next); nav.push('03-5_stage') } catch { setError('Не получилось открыть мир.') } }
   return <div className="screen no-tab"><header className="catalog-header"><span className="welcome-brand">реки.</span>{player && <button aria-label="Мой профиль" onClick={() => nav.push('05-5_collection')}><Avatar seed={player.handle} size={36} /></button>}</header>
     <div className="pad world-catalog-page worlds-home">
+      {playerState === 'unauthorized' && <p className="small muted" role="status">Можно посмотреть миры. Для создания и сохранения открой Реки в Telegram.</p>}
       <button className="own-world-prototype" onClick={() => player?.hitOwnWorldMilestone ? startOwn() : setUnlockInfo(true)}>
         <span className="own-prototype-art" aria-hidden="true"><span className="own-prototype-photo"><img src={welcomeSki} alt="" /><span>свои люди · новые истории</span></span><span className="own-prototype-sticker">а что, если…</span></span>
         <strong>Воплоти свои<br />фантазии</strong>
@@ -75,7 +76,7 @@ export function ChooseWorld() {
           <div className="unlock-compact">
             <strong>{player?.hitOwnWorldMilestone ? '✓ Можно создавать' : 'Как открыть'}</strong>
             <div className="unlock-followers"><span>Набери 500 подписчиков<br />в одном мире</span><b>{bestSubscribers === undefined ? '—' : bestSubscribers}<small>/ 500</small></b></div>
-            {ownProgress !== undefined ? <><progress max={500} value={ownProgress} aria-label={`${bestSubscribers} из 500 подписчиков`} /><small className="unlock-world">{ownedLoaded ? 'Лучший мир' : 'Текущий мир'}: {bestWorld?.title}{!ownedLoaded && (ownedFailed ? ' · остальные данные недоступны' : ' · загружаем остальные миры')}</small></> : <p className="unlock-no-data">{playerState === 'loading' ? 'Загружаем профиль…' : playerState === 'failed' ? 'Не удалось загрузить профиль. Счётчик пока недоступен.' : 'Прогресс появится после создания первого мира.'}</p>}
+            {ownProgress !== undefined ? <><progress max={500} value={ownProgress} aria-label={`${bestSubscribers} из 500 подписчиков`} /><small className="unlock-world">{ownedLoaded ? 'Лучший мир' : 'Текущий мир'}: {bestWorld?.title}{!ownedLoaded && (ownedFailed ? ' · остальные данные недоступны' : ' · загружаем остальные миры')}</small></> : <p className="unlock-no-data">{playerState === 'loading' ? 'Загружаем профиль…' : playerState === 'failed' ? 'Не удалось загрузить профиль. Счётчик пока недоступен.' : playerState === 'unauthorized' ? 'Для сохранения прогресса открой Реки в Telegram.' : 'Прогресс появится после создания первого мира.'}</p>}
             {player?.hitOwnWorldMilestone && <p className="unlock-confirmed">Доступ подтверждён сервером.</p>}
             <div className="unlock-friend"><span>или</span><p>Пригласи друга.<br />Доступ откроется после его первого поста.</p></div>
           </div>
