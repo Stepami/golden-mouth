@@ -18,38 +18,46 @@ internal sealed partial class StarFeedScheduler(
     IOptions<GameBalance> options,
     ILogger<StarFeedScheduler> logger) : IStarFeedScheduler
 {
-    public async ValueTask ScheduleAsync(
-        PlayerId playerId,
-        WorldId worldId,
-        StarFeedEvent sourceEvent,
-        PostId? sourcePostId,
-        CommentId? sourceCommentId)
+    public async ValueTask ScheduleFromPostAsync(PlayerId playerId, WorldId worldId, PostId sourcePostId)
     {
         var now = timeProvider.GetUtcNow();
-        var postId = PostId.New(now);
-        var result = sourceEvent.Value switch
-        {
-            StarFeedEventType.FeedOpened when sourcePostId is null && sourceCommentId is null =>
-                await manager.AddAsync<GenerateStarFeedOnFeedOpenedJob, StarFeedRequest>(
-                    now.UtcDateTime, new StarFeedRequest(playerId, worldId, postId, now.ToUnixTimeMilliseconds())),
-            StarFeedEventType.PostPublished when sourcePostId is { } sourceId && sourceCommentId is null =>
-                await manager.AddAsync<GenerateStarFeedOnPostPublishedJob, StarFeedOnPostPublishedRequest>(
-                    now.UtcDateTime, new StarFeedOnPostPublishedRequest(playerId, worldId, postId, now.ToUnixTimeMilliseconds(), sourceId)),
-            StarFeedEventType.CommentPublished when sourcePostId is { } sourceId && sourceCommentId is { } commentId =>
-                await manager.AddAsync<GenerateStarFeedOnCommentPublishedJob, StarFeedOnCommentPublishedRequest>(
-                    now.UtcDateTime, new StarFeedOnCommentPublishedRequest(playerId, worldId, postId, now.ToUnixTimeMilliseconds(), sourceId, commentId)),
-            _ => throw new InvalidOperationException("Invalid feed source."),
-        };
+        var result = await manager.AddAsync<GenerateStarFeedOnPostPublishedJob, StarFeedOnPostPublishedRequest>(
+            now.UtcDateTime,
+            new StarFeedOnPostPublishedRequest(playerId, worldId, PostId.New(now), now.ToUnixTimeMilliseconds(), sourcePostId));
         if (!result.IsSucceeded)
         {
             SchedulingFailed();
         }
     }
 
-    public ValueTask ScheduleFromFeedAsync(PlayerId playerId, WorldId worldId) =>
-        Random.Shared.NextDouble() < options.Value.StarFeedOpenProbability
-            ? ScheduleAsync(playerId, worldId, StarFeedEvent.From(StarFeedEventType.FeedOpened), null, null)
-            : ValueTask.CompletedTask;
+    public async ValueTask ScheduleFromCommentAsync(PlayerId playerId, WorldId worldId, PostId sourcePostId, CommentId sourceCommentId)
+    {
+        var now = timeProvider.GetUtcNow();
+        var result = await manager.AddAsync<GenerateStarFeedOnCommentPublishedJob, StarFeedOnCommentPublishedRequest>(
+            now.UtcDateTime,
+            new StarFeedOnCommentPublishedRequest(playerId, worldId, PostId.New(now), now.ToUnixTimeMilliseconds(), sourcePostId, sourceCommentId));
+        if (!result.IsSucceeded)
+        {
+            SchedulingFailed();
+        }
+    }
+
+    public async ValueTask ScheduleFromFeedAsync(PlayerId playerId, WorldId worldId)
+    {
+        if (Random.Shared.NextDouble() >= options.Value.StarFeedOpenProbability)
+        {
+            return;
+        }
+
+        var now = timeProvider.GetUtcNow();
+        var result = await manager.AddAsync<GenerateStarFeedOnFeedOpenedJob, StarFeedRequest>(
+            now.UtcDateTime,
+            new StarFeedRequest(playerId, worldId, PostId.New(now), now.ToUnixTimeMilliseconds()));
+        if (!result.IsSucceeded)
+        {
+            SchedulingFailed();
+        }
+    }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Star feed scheduling did not succeed")]
     private partial void SchedulingFailed();

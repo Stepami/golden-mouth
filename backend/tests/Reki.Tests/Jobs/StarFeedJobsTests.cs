@@ -347,19 +347,31 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "На новой карте я тоже не вижу мост.")));
         using var scope = Factory.Services.CreateScope();
 
+        var before = await GetStoredPlayerAsync(9511);
+        var worldBefore = await GetStoredWorldAsync(9511);
+
         // Act
         if (sourceEvent == StarFeedEventType.PostPublished)
         {
-            await scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnPostPublishedJob>().ExecuteAsync(
-                new TickerFunctionContext<StarFeedOnPostPublishedRequest>(new TickerFunctionContext(), new StarFeedOnPostPublishedRequest(player.Id, worldId, postId, now.ToUnixTimeMilliseconds(), source.Id)), CancellationToken.None);
+            var context = new TickerFunctionContext<StarFeedOnPostPublishedRequest>(
+                new TickerFunctionContext(), new StarFeedOnPostPublishedRequest(player.Id, worldId, postId, now.ToUnixTimeMilliseconds(), source.Id));
+            var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnPostPublishedJob>();
+            await job.ExecuteAsync(context, CancellationToken.None);
+            await job.ExecuteAsync(context, CancellationToken.None);
         }
         else
         {
-            await scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnCommentPublishedJob>().ExecuteAsync(
-                new TickerFunctionContext<StarFeedOnCommentPublishedRequest>(new TickerFunctionContext(), new StarFeedOnCommentPublishedRequest(player.Id, worldId, postId, now.ToUnixTimeMilliseconds(), source.Id, comment.Id)), CancellationToken.None);
+            var context = new TickerFunctionContext<StarFeedOnCommentPublishedRequest>(
+                new TickerFunctionContext(), new StarFeedOnCommentPublishedRequest(player.Id, worldId, postId, now.ToUnixTimeMilliseconds(), source.Id, comment.Id));
+            var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnCommentPublishedJob>();
+            await job.ExecuteAsync(context, CancellationToken.None);
+            await job.ExecuteAsync(context, CancellationToken.None);
         }
 
         // Assert
+        await Assert.That(Factory.Llm.RequestCount).IsEqualTo(1);
+        await Assert.That((await GetStoredPlayerAsync(9511)).ToJson()).IsEqualTo(before.ToJson());
+        await Assert.That((await GetStoredWorldAsync(9511)).ToJson()).IsEqualTo(worldBefore.ToJson());
         var messages = GetCapturedChatMessages();
         var prompt = messages.Single(message => message.Role == ChatRole.User && message.Text.StartsWith("Исходный контент", StringComparison.Ordinal)).Text;
         const string marker = "DATA_JSON:";
@@ -380,7 +392,10 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
             await Assert.That(prompt.Contains(unrelated.Text, StringComparison.Ordinal)).IsFalse();
         }
 
-        await Assert.That((await repository.GetPostAsync(postId, worldId, CancellationToken.None))?.Text).IsEqualTo("На новой карте я тоже не вижу мост.");
+        var saved = await repository.GetPostAsync(postId, worldId, CancellationToken.None);
+        await Assert.That(saved?.Text).IsEqualTo("На новой карте я тоже не вижу мост.");
+        await Assert.That(saved?.CreatedAtUtc).IsEqualTo(now);
+        await Assert.That(await Database.GetCollection<GamePost>("posts").CountDocumentsAsync(FilterDefinition<GamePost>.Empty)).IsEqualTo(2);
     }
 
     [Test]

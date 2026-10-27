@@ -11,6 +11,14 @@ public interface IStarTurnGenerator
         StarFeedContext context,
         CancellationToken cancellationToken);
 
+    ValueTask<string?> GeneratePostReactionAsync(
+        StarFeedPostContext context,
+        CancellationToken cancellationToken);
+
+    ValueTask<string?> GenerateCommentReactionAsync(
+        StarFeedCommentContext context,
+        CancellationToken cancellationToken);
+
     IAsyncEnumerable<ChatResponseUpdate> StreamPostTurnAsync(
         StarPostContext context,
         CancellationToken cancellationToken);

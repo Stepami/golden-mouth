@@ -252,7 +252,7 @@ internal sealed partial class AddReplyCommandHandler(
                 cancellationToken))
         {
             telemetry.TrackWorldAudience(updatedWorld);
-            await feedScheduler.ScheduleAsync(playerId, world.Id, StarFeedEvent.From(StarFeedEventType.CommentPublished), post.Id, playerComment.Id);
+            await feedScheduler.ScheduleFromCommentAsync(playerId, world.Id, post.Id, playerComment.Id);
             return Completed(request, updatedPost, updatedWorld, updatedPlayer);
         }
 
