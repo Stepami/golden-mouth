@@ -33,7 +33,9 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
+using Reki.Infrastructure.Jobs.GenerateStarFeedOnCommentPublished;
+using Reki.Infrastructure.Jobs.GenerateStarFeedOnPostPublished;
+using Reki.Infrastructure.Jobs.StarFeed;
 
 namespace Reki.Api.Serialization;
 
@@ -46,6 +48,8 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(StarCatalogEntry[]))]
 [JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(StarFeedRequest))]
+[JsonSerializable(typeof(StarFeedOnPostPublishedRequest))]
+[JsonSerializable(typeof(StarFeedOnCommentPublishedRequest))]
 [JsonSerializable(typeof(SessionId))]
 [JsonSerializable(typeof(Guid))]
 [JsonSerializable(typeof(PlayerId))]

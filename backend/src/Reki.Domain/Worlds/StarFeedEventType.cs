@@ -1,6 +1,6 @@
-namespace Reki.Application.Posts;
+namespace Reki.Domain.Worlds;
 
-public enum StarFeedEvent
+public enum StarFeedEventType
 {
     FeedOpened,
     PostPublished,

@@ -25,13 +25,7 @@ internal sealed class StarTurnGenerator(
             throw new InvalidOperationException("A feed post requires a star of the current world.");
         }
 
-        var instruction = context.SourceEvent switch
-        {
-            StarFeedEvent.FeedOpened => "Напиши один самостоятельный пост: добавь новое событие, наблюдение или действие в рамках личности и мира. Выбери другой повод, предмет или место; не продолжай ситуацию из последней собственной записи.",
-            StarFeedEvent.PostPublished => "Напиши один пост-реакцию на конкретный исходный пост игрока. Ответь на его смысл и добавь собственную позицию.",
-            StarFeedEvent.CommentPublished => "Напиши один пост-реакцию на конкретный комментарий игрока с учётом исходного поста и его ветки. Ответь на смысл комментария и добавь собственную позицию.",
-            _ => throw new InvalidOperationException("Unknown feed event."),
-        };
+        var instruction = context.SourceEvent.GetInstruction();
         List<ChatMessage> messages =
         [
             instructions.CreatePlatformPolicy(

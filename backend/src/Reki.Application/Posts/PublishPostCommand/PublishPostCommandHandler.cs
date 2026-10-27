@@ -161,7 +161,7 @@ internal sealed class PublishPostCommandHandler(
 
         analytics.TrackWorldAudience(updatedWorld);
         TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
-        await feedScheduler.ScheduleAsync(player.Id, world.Id, StarFeedEvent.PostPublished, post.Id, null);
+        await feedScheduler.ScheduleAsync(player.Id, world.Id, StarFeedEvent.From(StarFeedEventType.PostPublished), post.Id, null);
         return PostResponseMapper.MapLiveEvents(published, updatedWorld, player.Id);
     }
 

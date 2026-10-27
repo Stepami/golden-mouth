@@ -9,7 +9,10 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
-using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
+using Reki.Infrastructure.Jobs.GenerateStarFeedOnCommentPublished;
+using Reki.Infrastructure.Jobs.GenerateStarFeedOnFeedOpened;
+using Reki.Infrastructure.Jobs.GenerateStarFeedOnPostPublished;
+using Reki.Infrastructure.Jobs.StarFeed;
 using Reki.Tests.Api;
 using TickerQ.Exceptions;
 using TickerQ.Utilities;
@@ -37,7 +40,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
             new TickerFunctionContext(),
             new StarFeedRequest(player.Id, WorldId.From(worldId), PostId.New(createdAt), createdAt.ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
-        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
+        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>();
 
         // Act
         Factory.Session.Clock.Advance(TimeSpan.FromMinutes(5));
@@ -77,7 +80,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
             new TickerFunctionContext(),
             new StarFeedRequest(player.Id, WorldId.From(worldId), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
-        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
+        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>();
 
         // Act
         await Assert.That(() => job.ExecuteAsync(context, CancellationToken.None)).Throws<TerminateExecutionException>();
@@ -99,7 +102,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
             new TickerFunctionContext(),
             new StarFeedRequest(player.Id, WorldId.From(await GetWorldIdAsync(second)), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
-        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
+        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>();
 
         // Act
         await Assert.That(() => job.ExecuteAsync(context, CancellationToken.None)).Throws<TerminateExecutionException>();
@@ -124,16 +127,14 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
 
         // Assert
         var scheduled = await tickers.Find(ticker => !existingIds.Contains(ticker.Id)).SingleAsync();
-        var payload = TickerHelper.ReadTickerRequest<StarFeedRequest>(scheduled.Request);
+        var payload = TickerHelper.ReadTickerRequest<StarFeedOnPostPublishedRequest>(scheduled.Request);
         await Assert.That(payload.PlayerId).IsEqualTo(PlayerId.From((await GetStoredPlayerAsync(user))["_id"].AsBsonBinaryData.ToGuid().ToString("N")));
         await Assert.That(payload.WorldId).IsEqualTo(WorldId.From(await GetWorldIdAsync(api)));
-        await Assert.That(payload.SourceEvent).IsEqualTo(StarFeedEvent.PostPublished);
-        var source = await Factory.Services.GetRequiredService<IPostRepository>().GetPostAsync(payload.SourcePostId ?? throw new InvalidOperationException("Missing source post."), payload.WorldId, CancellationToken.None);
+        var source = await Factory.Services.GetRequiredService<IPostRepository>().GetPostAsync(payload.SourcePostId, payload.WorldId, CancellationToken.None);
         await Assert.That(source?.Text).IsEqualTo("Новая история про сцену.");
-        await Assert.That(payload.SourceCommentId).IsNull();
         await Assert.That(payload.PostId.Value.Version).IsEqualTo(7);
         await Assert.That(payload.CreatedAtUnixMilliseconds).IsEqualTo(Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds());
-        await Assert.That(scheduled.Function).IsEqualTo(nameof(GenerateStarFeedPostJob));
+        await Assert.That(scheduled.Function).IsEqualTo(nameof(GenerateStarFeedOnPostPublishedJob));
         await Assert.That(scheduled.Retries).IsEqualTo(3);
         await Assert.That(scheduled.RetryIntervals).IsEquivalentTo(new[] { 30, 120, 600 });
         await Assert.That(scheduled.ExecutionTime).IsEqualTo(Factory.Session.Clock.GetUtcNow().UtcDateTime);
@@ -151,7 +152,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
             new TickerFunctionContext(),
             new StarFeedRequest(player.Id, WorldId.From(worldId), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
-        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
+        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>();
         Factory.Llm.RespondWithHttpError();
         Exception? failure = null;
 
@@ -195,10 +196,10 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
 
         // Assert
         var scheduled = await tickers.Find(ticker => !existingIds.Contains(ticker.Id)).SingleAsync();
-        var payload = TickerHelper.ReadTickerRequest<StarFeedRequest>(scheduled.Request);
+        var payload = TickerHelper.ReadTickerRequest<StarFeedOnCommentPublishedRequest>(scheduled.Request);
         await Assert.That(payload.PlayerId).IsEqualTo(PlayerId.From((await GetStoredPlayerAsync(user))["_id"].AsBsonBinaryData.ToGuid().ToString("N")));
-        await Assert.That(payload.SourceEvent).IsEqualTo(StarFeedEvent.CommentPublished);
-        var source = await Factory.Services.GetRequiredService<IPostRepository>().GetPostAsync(payload.SourcePostId ?? throw new InvalidOperationException("Missing source post."), payload.WorldId, CancellationToken.None);
+        await Assert.That(scheduled.Function).IsEqualTo(nameof(GenerateStarFeedOnCommentPublishedJob));
+        var source = await Factory.Services.GetRequiredService<IPostRepository>().GetPostAsync(payload.SourcePostId, payload.WorldId, CancellationToken.None);
         await Assert.That(source?.Comments.Single(item => item.Id == payload.SourceCommentId).Text).IsEqualTo("Продолжение истории.");
         await Assert.That(scheduled.Retries).IsEqualTo(3);
     }
@@ -227,9 +228,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         {
             var payload = TickerHelper.ReadTickerRequest<StarFeedRequest>(scheduled.Single().Request);
             await Assert.That(payload.WorldId).IsEqualTo(WorldId.From(worldId));
-            await Assert.That(payload.SourceEvent).IsEqualTo(StarFeedEvent.FeedOpened);
-            await Assert.That(payload.SourcePostId).IsNull();
-            await Assert.That(payload.SourceCommentId).IsNull();
+            await Assert.That(scheduled.Single().Function).IsEqualTo(nameof(GenerateStarFeedOnFeedOpenedJob));
         }
     }
 
@@ -272,7 +271,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
             new TickerFunctionContext(),
             new StarFeedRequest(playerId, worldId, PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
         using var scope = Factory.Services.CreateScope();
-        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>();
+        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>();
 
         // Act
         await job.ExecuteAsync(context, CancellationToken.None);
@@ -314,7 +313,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         using var scope = Factory.Services.CreateScope();
 
         // Act
-        await scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>().ExecuteAsync(
+        await scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>().ExecuteAsync(
             new TickerFunctionContext<StarFeedRequest>(new TickerFunctionContext(), request), CancellationToken.None);
 
         // Assert
@@ -325,9 +324,9 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
     }
 
     [Test]
-    [Arguments(StarFeedEvent.PostPublished)]
-    [Arguments(StarFeedEvent.CommentPublished)]
-    public async Task Generate_DelayedReaction_UsesExactSavedContextAsync(StarFeedEvent sourceEvent)
+    [Arguments(StarFeedEventType.PostPublished)]
+    [Arguments(StarFeedEventType.CommentPublished)]
+    public async Task Generate_DelayedReaction_UsesExactSavedContextAsync(StarFeedEventType sourceEvent)
     {
         // Arrange
         using var api = Factory.CreateApiClient(9511);
@@ -340,17 +339,25 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var comment = new GameComment(CommentId.New(), parent.Id, "source-reply", player.Id.ToAuthorId(), "На карте нет моста.", false, []);
         var answer = new GameComment(CommentId.New(), comment.Id, null, world.Stars[0].Id.ToAuthorId(), "Я проверю мост по старому плану.", false, []);
         var unrelated = new GameComment(CommentId.New(), null, null, world.Stars[1].Id.ToAuthorId(), "Другая ветка", false, []);
-        var source = new GamePost(PostId.New(now), sourceEvent == StarFeedEvent.CommentPublished ? world.Stars[0].Id.ToAuthorId() : player.Id.ToAuthorId(), worldId, "Я нашёл старую карту.", 0, [parent, comment, answer, unrelated], now, 0, 0, 1, false, false);
+        var source = new GamePost(PostId.New(now), sourceEvent == StarFeedEventType.CommentPublished ? world.Stars[0].Id.ToAuthorId() : player.Id.ToAuthorId(), worldId, "Я нашёл старую карту.", 0, [parent, comment, answer, unrelated], now, 0, 0, 1, false, false);
         var repository = Factory.Services.GetRequiredService<IPostRepository>();
         await repository.InsertPostAsync(source, CancellationToken.None);
-        var request = new StarFeedRequest(player.Id, worldId, PostId.New(now), now.ToUnixTimeMilliseconds(), sourceEvent, source.Id, sourceEvent == StarFeedEvent.CommentPublished ? comment.Id : null);
+        var postId = PostId.New(now);
         Factory.Session.Clock.Advance(TimeSpan.FromHours(4));
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "На новой карте я тоже не вижу мост.")));
         using var scope = Factory.Services.CreateScope();
 
         // Act
-        await scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>().ExecuteAsync(
-            new TickerFunctionContext<StarFeedRequest>(new TickerFunctionContext(), request), CancellationToken.None);
+        if (sourceEvent == StarFeedEventType.PostPublished)
+        {
+            await scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnPostPublishedJob>().ExecuteAsync(
+                new TickerFunctionContext<StarFeedOnPostPublishedRequest>(new TickerFunctionContext(), new StarFeedOnPostPublishedRequest(player.Id, worldId, postId, now.ToUnixTimeMilliseconds(), source.Id)), CancellationToken.None);
+        }
+        else
+        {
+            await scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnCommentPublishedJob>().ExecuteAsync(
+                new TickerFunctionContext<StarFeedOnCommentPublishedRequest>(new TickerFunctionContext(), new StarFeedOnCommentPublishedRequest(player.Id, worldId, postId, now.ToUnixTimeMilliseconds(), source.Id, comment.Id)), CancellationToken.None);
+        }
 
         // Assert
         var messages = GetCapturedChatMessages();
@@ -360,8 +367,8 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var content = document.RootElement;
         await Assert.That(content.GetProperty("text").GetString()).IsEqualTo(source.Text);
         await Assert.That(content.GetProperty("authorId").GetString()).IsEqualTo(source.AuthorId.Value);
-        await Assert.That(messages[0].Text.Contains(sourceEvent == StarFeedEvent.PostPublished ? "исходный пост игрока" : "комментарий игрока", StringComparison.Ordinal)).IsTrue();
-        if (sourceEvent == StarFeedEvent.CommentPublished)
+        await Assert.That(messages[0].Text.Contains(sourceEvent == StarFeedEventType.PostPublished ? "исходный пост игрока" : "комментарий игрока", StringComparison.Ordinal)).IsTrue();
+        if (sourceEvent == StarFeedEventType.CommentPublished)
         {
             await Assert.That(content.GetProperty("comment").GetProperty("text").GetString()).IsEqualTo(comment.Text);
             var branch = content.GetProperty("branch").EnumerateArray().ToArray();
@@ -373,7 +380,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
             await Assert.That(prompt.Contains(unrelated.Text, StringComparison.Ordinal)).IsFalse();
         }
 
-        await Assert.That((await repository.GetPostAsync(request.PostId, worldId, CancellationToken.None))?.Text).IsEqualTo("На новой карте я тоже не вижу мост.");
+        await Assert.That((await repository.GetPostAsync(postId, worldId, CancellationToken.None))?.Text).IsEqualTo("На новой карте я тоже не вижу мост.");
     }
 
     [Test]
@@ -409,15 +416,23 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
 
         var isComment = scenario.EndsWith("comment", StringComparison.Ordinal);
         var sourceCommentId = scenario == "missing-comment" ? CommentId.New() : comment.Id;
-        var request = new StarFeedRequest(player.Id, worldId, PostId.New(now), now.ToUnixTimeMilliseconds(), isComment ? StarFeedEvent.CommentPublished : StarFeedEvent.PostPublished, post.Id, isComment ? sourceCommentId : null);
+        var postId = PostId.New(now);
         using var scope = Factory.Services.CreateScope();
 
         // Act
-        await Assert.That(() => scope.ServiceProvider.GetRequiredService<GenerateStarFeedPostJob>().ExecuteAsync(
-            new TickerFunctionContext<StarFeedRequest>(new TickerFunctionContext(), request), CancellationToken.None)).Throws<TerminateExecutionException>();
+        if (isComment)
+        {
+            await Assert.That(() => scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnCommentPublishedJob>().ExecuteAsync(
+                new TickerFunctionContext<StarFeedOnCommentPublishedRequest>(new TickerFunctionContext(), new StarFeedOnCommentPublishedRequest(player.Id, worldId, postId, now.ToUnixTimeMilliseconds(), post.Id, sourceCommentId)), CancellationToken.None)).Throws<TerminateExecutionException>();
+        }
+        else
+        {
+            await Assert.That(() => scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnPostPublishedJob>().ExecuteAsync(
+                new TickerFunctionContext<StarFeedOnPostPublishedRequest>(new TickerFunctionContext(), new StarFeedOnPostPublishedRequest(player.Id, worldId, postId, now.ToUnixTimeMilliseconds(), post.Id)), CancellationToken.None)).Throws<TerminateExecutionException>();
+        }
 
         // Assert
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(0);
-        await Assert.That(await repository.GetPostAsync(request.PostId, worldId, CancellationToken.None)).IsNull();
+        await Assert.That(await repository.GetPostAsync(postId, worldId, CancellationToken.None)).IsNull();
     }
 }
