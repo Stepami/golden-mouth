@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-28",
+  "source": "User-selected current design-system; executable app.html chain",
+  "files": [
+    {
+      "name": "app.html",
+      "sha256": "abf138a8a08b85a33fe6867feec9da2e0d8cdc940960d11af3454f348fbe087f"
+    },
+    {
+      "name": "tokens.css",
+      "sha256": "12ccbfe84d7b097d406e29137222c91f43388bb93001a4b83bb83ee704067b90"
+    },
+    {
+      "name": "app-base.css",
+      "sha256": "d3da75c31a126e4f0b461ced707af6dfba9acfc63dda80ecf85bd5292e0b53c8"
+    },
+    {
+      "name": "app.css",
+      "sha256": "86b69a78d880532b4b0a3b017cc6de82c73df7e5143e25d3083e8ae398641c47"
+    },
+    {
+      "name": "components.css",
+      "sha256": "6fd6fcfd1a3a7f16bbafa8e2d31a9880dce211ffce32bbcfac5b3f7aed57a52c"
+    },
+    {
+      "name": "catalog.js",
+      "sha256": "556bca24c70702d6a3e7a3a56fc6cb875d53ce528d8160f633a3ccd551c81206"
+    },
+    {
+      "name": "app.js",
+      "sha256": "6b1c8d3162964d183e56a9dc2373a726727128f1037409f3c2e40ba35810c3ba"
+    },
+    {
+      "name": "README.md",
+      "sha256": "30dc0f97727baa4dd41efc588688b0132fcc2038b6f8889303f989e2ef3b09f3"
+    },
+    {
+      "name": "system.html",
+      "sha256": "ae09b9816d38e744c1b3c726a54876f311961ab9bb61f0e49cdfada7161553b5"
+    }
+  ]
+}

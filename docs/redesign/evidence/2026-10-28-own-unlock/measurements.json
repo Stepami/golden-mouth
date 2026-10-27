@@ -1,0 +1,152 @@
+{
+  "realBackend": true,
+  "apiInterception": false,
+  "checks": [
+    {
+      "theme": "light",
+      "width": 320,
+      "dev": {
+        "box": {
+          "x": 12,
+          "y": 109.234375,
+          "width": 296,
+          "height": 625.53125
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(247, 249, 249)",
+        "titleSize": "18px",
+        "leadSize": "15px",
+        "progress": 177,
+        "overflow": false,
+        "bodyOverflow": false
+      },
+      "reference": {
+        "box": {
+          "x": 12,
+          "y": 147.234375,
+          "width": 296,
+          "height": 549.53125
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(247, 249, 249)",
+        "titleSize": "18px",
+        "leadSize": "15px"
+      }
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "dev": {
+        "box": {
+          "x": 12,
+          "y": 132.375,
+          "width": 366,
+          "height": 579.25
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(247, 249, 249)",
+        "titleSize": "18px",
+        "leadSize": "15px",
+        "progress": 177,
+        "overflow": false,
+        "bodyOverflow": false
+      },
+      "reference": {
+        "box": {
+          "x": 12,
+          "y": 159.125,
+          "width": 366,
+          "height": 525.75
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(247, 249, 249)",
+        "titleSize": "18px",
+        "leadSize": "15px"
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "dev": {
+        "box": {
+          "x": 12,
+          "y": 109.234375,
+          "width": 296,
+          "height": 625.53125
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(22, 24, 28)",
+        "titleSize": "18px",
+        "leadSize": "15px",
+        "progress": 177,
+        "overflow": false,
+        "bodyOverflow": false
+      },
+      "reference": {
+        "box": {
+          "x": 12,
+          "y": 147.234375,
+          "width": 296,
+          "height": 549.53125
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(22, 24, 28)",
+        "titleSize": "18px",
+        "leadSize": "15px"
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "dev": {
+        "box": {
+          "x": 12,
+          "y": 132.375,
+          "width": 366,
+          "height": 579.25
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(22, 24, 28)",
+        "titleSize": "18px",
+        "leadSize": "15px",
+        "progress": 177,
+        "overflow": false,
+        "bodyOverflow": false
+      },
+      "reference": {
+        "box": {
+          "x": 12,
+          "y": 159.125,
+          "width": 366,
+          "height": 525.75
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(22, 24, 28)",
+        "titleSize": "18px",
+        "leadSize": "15px"
+      }
+    },
+    {
+      "focusTrap": true
+    },
+    {
+      "transition": "progress",
+      "ok": true
+    },
+    {
+      "transition": "invite",
+      "routeOpened": true
+    }
+  ],
+  "errors": [],
+  "frontend": "e5ac87a",
+  "referenceMetrics": "Fixture set to177 for visual comparison; DEV177 came from real backend"
+}

@@ -1,0 +1,33 @@
+{
+  "mode": "controlled browser wire fixtures; no server rights granted; mutations blocked",
+  "results": [
+    {
+      "state": "guest",
+      "overflow": false
+    },
+    {
+      "state": "profile-error",
+      "appError": true,
+      "noCounter": true
+    },
+    {
+      "state": "worlds-error",
+      "overflow": false
+    },
+    {
+      "state": "best-other",
+      "overflow": false,
+      "progressTransition": true
+    },
+    {
+      "state": "count-without-right",
+      "overflow": false
+    },
+    {
+      "state": "unlocked",
+      "overflow": false,
+      "createTransition": true
+    }
+  ],
+  "frontend": "e5ac87a"
+}

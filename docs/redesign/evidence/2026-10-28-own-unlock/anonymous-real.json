@@ -1,0 +1,13 @@
+{
+  "frontend": "9133b2b",
+  "mode": "Authorization removed from outgoing requests; real backend responses, no fulfill/stubs",
+  "checks": {
+    "anonymousMe401": true,
+    "publicTemplates200": true,
+    "noCounter": true,
+    "noProgress": true,
+    "guestCtaCloses": true,
+    "protectedProgressGuard": true
+  },
+  "errors": []
+}
