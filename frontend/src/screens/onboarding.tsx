@@ -1,7 +1,9 @@
+import welcomeSki from '../assets/welcome-ski.jpg'
+import { GameHeader } from '../ui/GameHeader'
+import { Typewriter } from '../ui/Typewriter'
 import { displayHandle } from '../app/handle'
 import { usePresetGoal } from '../ui/StoryGoal'
 import { WorldCover } from '../ui/WorldCover'
-import approvedIntro from '../assets/intro-school-approved.png'
 import { useEffect, useRef, useState } from 'react'
 import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
@@ -21,34 +23,24 @@ function Steps({ n, back = true }: { n: number; back?: boolean }) {
   return (
     <div className="row" style={{ padding: '10px 16px 0', height: 40 }}>
       {back && <button className="back" onClick={nav.back} style={{ background: 'none', border: 'none', fontSize: 24, color: 'var(--soft)' }} aria-label="Назад">‹</button>}
-      <div style={{ marginLeft: 'auto' }} aria-label={`Шаг ${n} из 5`}>{[1, 2, 3, 4, 5].map(i => <i key={i} style={{ display: 'inline-block', width: i === n ? 18 : 6, height: 6, borderRadius: 3, marginLeft: 5, background: i <= n ? 'var(--accent)' : '#33323F' }} />)}</div>
+      <div style={{ marginLeft: 'auto' }} aria-label={`Шаг ${n} из 5`}>{[1, 2, 3, 4, 5].map(i => <i key={i} style={{ display: 'inline-block', width: i === n ? 18 : 6, height: 6, borderRadius: 3, marginLeft: 5, background: i <= n ? 'var(--accent)' : 'var(--line)' }} />)}</div>
     </div>
   )
-}
-
-/** Exact portrait windows from the approved sketch; no regenerated character artwork. */
-function IntroPortrait({ character }: { character: 'masha' | 'gosha' }) {
-  const masha = character === 'masha'
-  return <svg className={`intro-portrait intro-portrait-${character}`} viewBox={masha ? '85 626 116 116' : '142 931 168 168'} role="img" aria-label={masha ? 'Маша' : 'Гоша в круглых очках с волшебной палочкой'}>
-    <image href={approvedIntro} width="1036" height="1518" />
-  </svg>
 }
 
 // 01-1: approved school mini-dialogue, preserving the existing welcome layout.
 function Invite() {
   const nav = useNav()
-  return <div className="screen no-tab welcome"><div className="pad">
-    <div className="brand">реки</div><h1>Твой пост<br />запускает историю.</h1>
-    <p className="muted">Веди блог в вымышленном мире.<br />Пиши посты — персонажи ответят.</p>
-    <div className="welcome-post card" aria-label="Пример игрового поста">
-      <div className="row"><IntroPortrait character="masha" /><div><b>Маша · Школа чародеев</b><div className="small muted">Пример игрового поста</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
-      <p>Выложила фото тайной комнаты. Утром дверь исчезла. Кто-нибудь ещё её видел? 👀</p>
-      <div className="row"><span className="react">🔥 2,4k</span><span className="react">💀 890</span><span className="react">🫶 1,2k</span></div>
-      <div className="welcome-reply"><IntroPortrait character="gosha" /><div><b>Гоша · ученик школы магии</b><div>Я. И оставил там свою палочку. Пойдём искать дверь — только Георгине пока не говори.</div></div></div>
+  return <main className="welcome-screen">
+    <div className="welcome-brand">реки.</div>
+    <div className="welcome-scene">
+      <article className="welcome-social-post"><div className="row"><span className="welcome-self">ты</span><div><b>Твой пост</b><small className="muted">только что</small></div><span className="muted" style={{ marginLeft: 'auto' }}>···</span></div><p>Хочу в горы. Кто со мной? 🏔️</p><img src={welcomeSki} alt="Друзья на горнолыжном склоне" /><small className="muted">♡ 12　Макс и ещё 11</small></article>
+      <article className="welcome-social-reply"><span className="welcome-max">М</span><div><b>Макс</b><p><Typewriter text="С тобой — хоть на край света. Горы тоже подойдут 😌" /></p></div></article>
+      <div className="welcome-notification"><span>↗</span><div><b>Макс написал тебе</b><small className="muted">Вдвоём поедем? 👀</small></div><b className="welcome-unread">1</b></div>
     </div>
-    <p className="small muted welcome-disclaimer">Персонажи и фанаты виртуальные.<br />Посты остаются внутри игры.</p>
-    <p className="welcome-world-choice">Выбери мир или создай свой</p>
-  </div><BottomCTA main="Начать играть" onMain={() => nav.push('01-2_age')} /></div>
+    <div className="welcome-promise"><p className="small muted">Твой блог. Твоя компания.</p><h1>А что, если<br />первым написать?</h1><p className="muted">Здесь нет реальных собеседников — только ИИ. Пробуй общение без оглядки на знакомых.</p></div>
+    <button className="btn" onClick={() => nav.push('01-2_age')}>Попробовать →</button>
+  </main>
 }
 
 // 01-2: год рождения, согласие не отмечено заранее; младше 14 → 01-2b
@@ -69,14 +61,14 @@ function Age() {
         <div className="brand" style={{ fontSize: 26 }}>Реки</div>
         <div style={{ fontSize: 24, fontWeight: 800, margin: '14px 0 6px' }}>Год рождения</div>
         <div className="muted" style={{ marginBottom: 10 }}>Чтобы звёзды говорили с тобой как надо</div>
-        <div ref={wheel} onScroll={onWheel} style={{ height: 230, overflowY: 'auto', scrollSnapType: 'y mandatory', background: '#14141B', borderRadius: 18, textAlign: 'center', padding: '96px 0' }}>
-          {years.map(y => <div key={y} onClick={() => setYear(y)} style={{ scrollSnapAlign: 'center', height: 38, lineHeight: '38px', fontSize: y === year ? 22 : 18, fontWeight: y === year ? 800 : 400, color: y === year ? 'var(--text)' : 'var(--muted)', background: y === year ? '#22222D' : 'none', borderRadius: 10, margin: '0 12px' }}>{y}</div>)}
+        <div ref={wheel} onScroll={onWheel} style={{ height: 230, overflowY: 'auto', scrollSnapType: 'y mandatory', background: 'var(--card)', borderRadius: 18, textAlign: 'center', padding: '96px 0' }}>
+          {years.map(y => <div key={y} onClick={() => setYear(y)} style={{ scrollSnapAlign: 'center', height: 38, lineHeight: '38px', fontSize: y === year ? 22 : 18, fontWeight: y === year ? 800 : 400, color: y === year ? 'var(--text)' : 'var(--muted)', background: y === year ? 'var(--card2)' : 'none', borderRadius: 10, margin: '0 12px' }}>{y}</div>)}
         </div>
         <Card style={{ marginTop: 18 }}>
           <b>Сохраним твою игру?</b>
           <div className="small muted" style={{ margin: '6px 0 10px' }}>Храним только Telegram ID и игру, сервер в России. Удалить всё можно в профиле в один тап. <span style={{ color: '#8CC8FF' }}>Подробнее</span></div>
           <label className="row" style={{ gap: 8 }}>
-            <button onClick={() => setAgree(!agree)} aria-pressed={agree} style={{ width: 22, height: 22, borderRadius: 6, border: agree ? 'none' : '2px solid #55536A', background: agree ? 'var(--grad)' : 'none', color: '#fff', fontSize: 14 }}>{agree ? '✓' : ''}</button>
+            <button onClick={() => setAgree(!agree)} aria-pressed={agree} style={{ width: 22, height: 22, borderRadius: 6, border: agree ? 'none' : '2px solid var(--line)', background: agree ? 'var(--grad)' : 'none', color: '#fff', fontSize: 14 }}>{agree ? '✓' : ''}</button>
             <span className="small">Согласие на обработку данных</span>
           </label>
         </Card>
@@ -101,24 +93,16 @@ function Under14() {
 }
 
 // 01-6: первый экран: цель, квест, что такое Реки / навыки / коллекция
-export function ChannelHead() {
-  const p = useStore().player!; const nav = useNav()
-  const w = worldOf(p.world)
-  return (
-    <div className="top channel-header">
-      <Avatar seed={p.handle} size={36} />
-      <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div>
-      <div className="energy-badge" aria-label={`Осталось ${p.postsLeft} энергии`}>⚡ {p.postsLeft}</div>
-    </div>
-  )
-}
+export function ChannelHead() { return <GameHeader /> }
 export function Home() {
   const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
-  return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
-    <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{profile.firstContext}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
-      {p.firstPostInviteBonus > 0 && <p>🎁 Первый пост даст ещё {p.firstPostInviteBonus} энергии</p>}
-    </div><p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>
-  </div><div className="bottom-cta" style={{ bottom: 78 }}><button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button></div></div>
+  return <div className="screen opening-screen"><div className="top"><button className="back" aria-label="Назад к мирам" onClick={() => nav.replace('01-3_world')}>‹</button><div><b>{worldOf(p.world).title}</b><div className="small muted">Завязка истории</div></div></div><div className="pad">
+    {worldArt[p.world] && <WorldCover world={p.world} className="opening-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}
+    <div className="row opening-persona"><Avatar seed={p.handle} size={42} /><b>Ты — {p.name}</b></div>
+    <h1>Здесь начинается твоя история.</h1><p className="opening-context"><Typewriter text={profile.firstContext} /></p>
+    {goal && <section className="card opening-goal"><span className="small muted">Твоя цель</span><h2>{goal.goal}</h2><p>{goal.firstStep}</p></section>}
+    {p.firstPostInviteBonus > 0 && <p className="small muted">Первый пост даст ещё {p.firstPostInviteBonus} энергии.</p>}
+  </div><div className="bottom-cta"><button className="btn" onClick={() => nav.push('02-1_compose', { firstStory: true })}>Начать историю →</button></div></div>
 }
 
 register({

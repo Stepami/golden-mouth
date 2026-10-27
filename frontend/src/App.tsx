@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { NavContext, TABS, type Nav, type ScreenId } from './app/nav'
+import { NavContext, type Nav, type ScreenId } from './app/nav'
 import { StoreProvider, useStore } from './app/store'
 import { SCREENS, TAB_OF } from './screens'
 import { screenView, setExperiments, tap } from './app/analytics'
 import { setScreen } from './app/log'
 import { TelegramLaunch } from './app/TelegramLaunch'
 import { inTelegram, syncBackButton } from './telegram'
-import { api } from './api/client'
+import { Avatar } from './ui'
+import { Icon } from './ui/Icon'
 import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
-import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
 import { useAvatarPersonalization } from './app/avatarPersonalization'
 import type { WorldId } from './api/types'
@@ -42,7 +42,7 @@ function Shell() {
     replace: (id, params = {}) => { setStack(s => [...s.slice(0, -1), { id, params }]); window.scrollTo(0, 0) },
     reset: (id, params = {}) => { setStack([{ id, params }]); window.scrollTo(0, 0) },
     back: () => setStack(s => (s.length > 1 ? s.slice(0, -1) : s)),
-    tab: i => { setStack([{ id: TABS[i].screen, params: {} }]); window.scrollTo(0, 0) },
+    tab: i => { setStack([{ id: ['03-5_stage', '03-3_feed', '03-1_dm', '03-4_friends', '05-5_collection', '01-3_world'][i], params: {} }]); window.scrollTo(0, 0) },
   }), [top, stack.length])
 
   useEffect(() => { setScreen(top.id); screenView(top.id) }, [top.id])
@@ -71,7 +71,11 @@ function Shell() {
         <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration />
         {tab !== undefined && (
           <nav className="tabbar" aria-label="Основная навигация">
-            {[5, 0, 1, 2, 3, 4].map(i => { const t = TABS[i]; return (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} aria-current={i === tab ? 'page' : undefined} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button> })}
+            <button aria-label="Миры" aria-current={top.id === '01-3_world' ? 'page' : undefined} className={top.id === '01-3_world' ? 'on' : ''} onClick={() => { tap('tab', { to: '01-3_world' }); nav.tab(5) }}><Icon name="home" /></button>
+            <button aria-label="Лента" aria-current={['03-3_feed', '03-5_stage', '02-6_thread'].includes(top.id) ? 'page' : undefined} className={['03-3_feed', '03-5_stage', '02-6_thread'].includes(top.id) ? 'on' : ''} onClick={() => { tap('tab', { to: '03-3_feed' }); nav.tab(1) }}><Icon name="message" /></button>
+            <button className="tabbar-compose" aria-label="Новая запись" onClick={() => nav.push('02-1_compose')}><Icon name="plus" size={30} /></button>
+            <button aria-label="История и навыки" aria-current={top.id === '05-13_progress' ? 'page' : undefined} className={top.id === '05-13_progress' ? 'on' : ''} onClick={() => { tap('tab', { to: '05-13_progress' }); nav.reset('05-13_progress') }}><Icon name="chart" /></button>
+            <button aria-label="Мой профиль" aria-current={top.id === '05-5_collection' ? 'page' : undefined} className={top.id === '05-5_collection' ? 'on' : ''} onClick={() => { tap('tab', { to: '05-5_collection' }); nav.tab(4) }}><Avatar seed={player?.handle} label="Я" size={30} /></button>
           </nav>
         )}
       </div>

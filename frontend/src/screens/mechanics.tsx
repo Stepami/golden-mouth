@@ -29,13 +29,13 @@ function Challenge() {
         </div>
         <Card style={{ marginBottom: 10 }}>
           <div className="small muted" style={{ marginBottom: 8 }}>СЧЁТ · оценка постов + рост к своей норме</div>
-          {[[c.me, c.myScore, 'var(--grad)'], ['Катя', c.rivalScore, 'linear-gradient(90deg,#6BB8FF,#9B6BFF)']].map(([n, v, g]) => (
+          {[[c.me, c.myScore, 'var(--grad)'], ['Катя', c.rivalScore, 'linear-gradient(90deg,#6BB8FF,var(--accent))']].map(([n, v, g]) => (
             <div key={n as string} className="row" style={{ fontSize: 13, marginBottom: 6 }}><span style={{ width: 70, color: 'var(--soft)' }}>{n}</span><div className="bar"><i style={{ width: `${(v as number) / max * 100}%`, background: g as string }} /></div><b style={{ width: 40, textAlign: 'right' }}>×{String(v).replace('.', ',')}</b></div>
           ))}
           <div className="small muted" style={{ marginTop: 6 }}>У Кати {fmt(c.rival.subs)} подписчиков, у тебя {fmt(p.subs)}. Считаем качество постов, а не подписчиков, поэтому шансы равные</div>
         </Card>
         <Card style={{ marginBottom: 10 }}><b>Ставка</b><div className="why"><span>🏆 Победитель</span><span className="up">+3 поста в день на 3 дня</span></div><div className="why"><span>🫠 Проигравший</span><span className="muted">ничего не теряет · карточка «Реванш»</span></div></Card>
-        <Card style={{ background: '#20202B' }} onClick={() => nav.push('03-4d_duel')}><span className="small">🔥 Лучший пост дня: {c.bestPost} ›</span></Card>
+        <Card style={{ background: 'var(--card2)' }} onClick={() => nav.push('03-4d_duel')}><span className="small">🔥 Лучший пост дня: {c.bestPost} ›</span></Card>
       </div>
       <BottomCTA main="Новый пост в зарубу" onMain={() => { track('challenge_post'); nav.push('02-1_compose') }} />
     </div>
@@ -81,7 +81,7 @@ function Voice() {
       <div className="pad">
         <div className="muted" style={{ marginBottom: 12 }}>Как ты пишешь. «Подскажи» дописывает твои черновики в этом стиле, а не в общем AI-стиле</div>
         <TextField label="Голос канала" value={v} onChange={setV} maxLength={200} ideas={presets} />
-        <Card style={{ marginTop: 10, background: '#20202B' }}><div className="small muted" style={{ marginBottom: 4 }}>ПРИМЕР ПОДСКАЗКИ</div>{contentOf(p.world).ideas[0]}</Card>
+        <Card style={{ marginTop: 10, background: 'var(--card2)' }}><div className="small muted" style={{ marginBottom: 4 }}>ПРИМЕР ПОДСКАЗКИ</div>{contentOf(p.world).ideas[0]}</Card>
       </div>
       <BottomCTA main="Сохранить" onMain={async () => {
         const voice = v.trim()

@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { tap } from '../app/analytics'
 import { AvatarWorld, AvatarPeople, type AvatarProfile } from './avatar'
 import type { WorldId } from '../api/types'
@@ -74,7 +74,7 @@ export function SkillBar({ name, level, progress }: { name: string; level?: numb
 
 export function Ribbon({ icon, title, sub, onClick }: { icon: string; title: ReactNode; sub?: ReactNode; onClick?: () => void }) {
   return (
-    <div onClick={onClick} className="row" style={{ background: '#22222D', borderRadius: 14, padding: '9px 12px', marginBottom: 8 }}>
+    <div onClick={onClick} className="row" style={{ background: 'var(--card2)', borderRadius: 14, padding: '9px 12px', marginBottom: 8 }}>
       <div style={{ fontSize: 20 }}>{icon}</div>
       <div style={{ flex: 1, fontSize: 14 }}><b>{title}</b>{sub && <div className="small muted">{sub}</div>}</div>
       <span className="muted">›</span>
@@ -87,7 +87,7 @@ export function Whisper({ seed = 'mira', name = 'Мира', children }: { seed?:
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', margin: '8px 0 10px' }}>
       <Avatar seed={seed} size={30} mode="default" />
-      <div style={{ background: '#251E33', border: '1px solid #9B6BFF77', borderRadius: '14px 14px 14px 4px', padding: '8px 11px', fontSize: 13, lineHeight: 1.35 }}>
+      <div style={{ background: 'var(--card)', border: '1px solid var(--line)', borderRadius: '14px 14px 14px 4px', padding: '8px 11px', fontSize: 13, lineHeight: 1.35 }}>
         <div style={{ color: 'var(--lilac)', fontSize: 11, marginBottom: 2 }}>{name} подсказывает</div>{children}
       </div>
     </div>
@@ -116,14 +116,14 @@ export function Comment({ seed, name, handle, text, star, me, onMore }: { seed: 
 export function Bubble({ children, me }: { children: ReactNode; me?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
-      <div style={{ maxWidth: '78%', padding: '9px 12px', borderRadius: 18, ...(me ? { background: 'linear-gradient(135deg,#FF6B8B,#9B6BFF)', borderBottomRightRadius: 6 } : { background: '#22222D', borderBottomLeftRadius: 6 }) }}>{children}</div>
+      <div style={{ maxWidth: '78%', padding: '9px 12px', borderRadius: 18, ...(me ? { background: 'var(--grad)', borderBottomRightRadius: 6 } : { background: 'var(--card2)', borderBottomLeftRadius: 6 }) }}>{children}</div>
     </div>
   )
 }
 
 export function Toggle({ on, onChange }: { on: boolean; onChange?: (v: boolean) => void }) {
   return (
-    <button onClick={() => onChange?.(!on)} aria-pressed={on} style={{ width: 42, height: 26, borderRadius: 13, border: 'none', background: on ? '#2E9E6F' : '#33323F', position: 'relative', flex: 'none' }}>
+    <button onClick={() => onChange?.(!on)} aria-pressed={on} style={{ width: 42, height: 26, borderRadius: 13, border: 'none', background: on ? 'var(--up)' : 'var(--line)', position: 'relative', flex: 'none' }}>
       <i style={{ position: 'absolute', [on ? 'right' : 'left']: 3, top: 3, width: 20, height: 20, borderRadius: '50%', background: '#fff' }} />
     </button>
   )
@@ -131,21 +131,41 @@ export function Toggle({ on, onChange }: { on: boolean; onChange?: (v: boolean) 
 
 export function Segmented<T extends string>({ options, value, onChange }: { options: { id: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div style={{ display: 'flex', gap: 4, background: '#14141B', borderRadius: 11, padding: 3 }}>
+    <div style={{ display: 'flex', gap: 4, background: 'var(--card)', borderRadius: 11, padding: 3 }}>
       {options.map(o => (
-        <button key={o.id} onClick={() => onChange(o.id)} style={{ flex: 1, padding: '7px 0', borderRadius: 9, border: 'none', fontSize: 13, background: o.id === value ? 'var(--grad)' : 'none', color: o.id === value ? '#fff' : 'var(--muted2)' }}>{o.label}</button>
+        <button key={o.id} onClick={() => onChange(o.id)} style={{ flex: 1, padding: '7px 0', borderRadius: 9, border: 'none', fontSize: 13, background: o.id === value ? 'var(--grad)' : 'none', color: o.id === value ? 'var(--on-accent)' : 'var(--muted2)' }}>{o.label}</button>
       ))}
     </div>
   )
 }
 
 export function Sheet({ children, onClose }: { children: ReactNode; onClose?: () => void }) {
-  return <div className="sheet-bg" onClick={onClose}><div className="sheet" onClick={e => e.stopPropagation()}>{children}</div></div>
+  const dialog = useRef<HTMLDivElement>(null)
+  const close = useRef(onClose); close.current = onClose
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    dialog.current?.focus()
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close.current?.()
+      if (event.key === 'Tab') {
+        const focusable = dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), summary, a[href]')
+        if (!focusable?.length) { event.preventDefault(); return }
+        const first = focusable[0], last = focusable[focusable.length - 1]
+        if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.current)) { event.preventDefault(); last.focus() }
+        else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog.current)) { event.preventDefault(); first.focus() }
+      }
+    }
+    document.addEventListener('keydown', keydown)
+    return () => { document.body.style.overflow = overflow; document.removeEventListener('keydown', keydown); previous?.focus() }
+  }, [])
+  return <div className="sheet-bg" onClick={onClose}><div ref={dialog} className="sheet" role="dialog" aria-modal="true" aria-label="Дополнительные настройки" tabIndex={-1} onClick={e => e.stopPropagation()}>{children}</div></div>
 }
 
 /** Сложность мира точками ●●○ */
 export function Dots({ n, of = 3 }: { n: number; of?: number }) {
-  return <span>{Array.from({ length: of }, (_, i) => <i key={i} style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', marginRight: 3, background: i < n ? 'var(--accent)' : '#33323F' }} />)}</span>
+  return <span>{Array.from({ length: of }, (_, i) => <i key={i} style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', marginRight: 3, background: i < n ? 'var(--accent)' : 'var(--line)' }} />)}</span>
 }
 
 /** Числа как в макетах: 2 310, 48k */

@@ -7,6 +7,10 @@ import { installAnalytics } from './app/analytics'
 import { installGlobalHandlers } from './app/log'
 import { initTelegram } from './telegram'
 import './theme.css'
+import './redesign.css'
+import { applySavedTheme } from './app/theme'
+
+applySavedTheme()
 
 if (new URLSearchParams(location.search).has('shot')) document.documentElement.classList.add('shot')
 if (initTelegram()) {

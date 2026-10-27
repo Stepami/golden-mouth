@@ -57,9 +57,9 @@ function FakeDoor() {
     finally { setBusy(false) }
   }
   const plan = (name: string, price: string, rows: [string, boolean][], hi?: boolean) => (
-    <div className="card" style={{ flex: 1, padding: 12, ...(hi ? { border: '2px solid var(--accent)', background: 'linear-gradient(160deg,#2A1A2E,#1A1A24)' } : { border: '1px solid #33323F' }) }}>
+    <div className="card" style={{ flex: 1, padding: 12, ...(hi ? { border: '2px solid var(--accent)', background: 'linear-gradient(160deg,#2A1A2E,var(--card))' } : { border: '1px solid var(--line)' }) }}>
       <b>{name}</b><div style={{ fontSize: 20, fontWeight: 900, margin: '2px 0 8px' }}>{price}</div>
-      {rows.map(([t, on]) => <div key={t} className="small" style={{ marginBottom: 5, color: on ? undefined : '#55536A' }}>{on ? '✓' : '—'} {t}</div>)}
+      {rows.map(([t, on]) => <div key={t} className="small" style={{ marginBottom: 5, color: on ? undefined : 'var(--line)' }}>{on ? '✓' : '—'} {t}</div>)}
     </div>
   )
   return (
@@ -72,7 +72,7 @@ function FakeDoor() {
           {plan('Реки+', '349 ₽/мес', [['20 энергии в день', true], ['+5 за друга', true], ['свой стиль канала', true], ['все миры сразу', true]], true)}
         </div>
         <div className="muted small" style={{ marginBottom: 12 }}>Реки+ ещё в работе, деньги не списываются. Можно оставить интерес к запуску. Рассылка в боте появится позже</div>
-        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#1F2A26,#1A1A24)', border: '1px solid #6BFFB855' }}><b className="up">{sent ? message : 'Можно получить +5 энергии один раз'}</b></Card>
+        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#1F2A26,var(--card))', border: '1px solid #6BFFB855' }}><b className="up">{sent ? message : 'Можно получить +5 энергии один раз'}</b></Card>
         {error && <p className="small" role="alert">{error}</p>}
         <Button onClick={() => take(true)} disabled={sent || busy} style={{ marginBottom: 8 }}>Хочу Реки+</Button>
         <button className="muted small" onClick={() => take(false)} disabled={sent || busy} style={{ background: 'none', border: 'none' }}>Забрать только +5 энергии</button>
@@ -112,7 +112,7 @@ function Invite() {
         <div className="label">Друг увидит твою карточку</div>
         <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420 60%,#12203A)', borderRadius: 16, padding: 14, textAlign: 'center', marginBottom: 12 }}>
           <Avatar seed={p.handle} size={44} style={{ margin: '0 auto 6px' }} /><b>{p.name}</b>
-          <div style={{ fontSize: 28, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{fmt(p.subs)}</div>
+          <div style={{ fontSize: 28, fontWeight: 900, background: 'linear-gradient(90deg,var(--accent),#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{fmt(p.subs)}</div>
           <div className="small">подписчиков · {worldOf(p.world).emoji} {worldOf(p.world).title}</div><div className="small muted" style={{ marginTop: 4 }}>а ты кем будешь?</div>
         </div>
         <Card style={{ color: 'var(--muted)', overflowWrap: 'anywhere' }}><span className="small">Твоя ссылка: {link ?? (linkError ? 'Не удалось загрузить' : 'Загружаем…')}</span></Card>
@@ -131,7 +131,7 @@ function FriendJoined() {
     <div className="screen no-tab">
       <ChannelHead />
       <div className="sheet-bg" style={{ alignItems: 'center' }}><div className="sheet" style={{ textAlign: 'center', padding: 24 }}>
-        <div className="row" style={{ justifyContent: 'center', gap: 0, marginBottom: 12 }}><Avatar seed={p.handle} size={64} style={{ border: '3px solid #1A1A24' }} /><Avatar seed="katya" size={64} style={{ marginLeft: -14, border: '3px solid #1A1A24' }} /></div>
+        <div className="row" style={{ justifyContent: 'center', gap: 0, marginBottom: 12 }}><Avatar seed={p.handle} size={64} style={{ border: '3px solid var(--card)' }} /><Avatar seed="katya" size={64} style={{ marginLeft: -14, border: '3px solid var(--card)' }} /></div>
         <div style={{ fontSize: 22, fontWeight: 900 }}>Катя пришла по твоей карточке!</div>
         <div className="muted" style={{ margin: '6px 0 16px' }}>Она завела канал в Академии и сделала первый пост</div>
         <Gift style={{ fontSize: 20, padding: 14 }}>+5 энергии тебе и ей</Gift>

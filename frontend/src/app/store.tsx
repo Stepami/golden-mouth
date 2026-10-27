@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { selectDraftOwner } from './worldDraft'
+import { clearResultHistory } from './resultHistory'
 import { api } from '../api/client'
 import type { Player } from '../api/types'
 
@@ -17,6 +18,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [unlockPlayerId, setUnlockPlayerId] = useState<string | null>(null)
   const resetPlayer = useCallback(() => {
     generation.current++
+    clearResultHistory()
     if (player) unlockSeen.delete(player.id)
     selectDraftOwner('onboarding')
     setPlayerValue(null); setPlayerState('missing'); setUnlockPlayerId(null)

@@ -1,4 +1,7 @@
-import { StoryGoal } from '../ui/StoryGoal'
+import { rememberResult, resultHistory } from '../app/resultHistory'
+import { PublicationResult } from '../ui/PublicationResult'
+import { usePresetGoal } from '../ui/StoryGoal'
+import { Icon } from '../ui/Icon'
 import { useEffect, useRef, useState } from 'react'
 import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
 import { api } from '../api/client'
@@ -7,10 +10,10 @@ import type { CommentT, Post, PostResult, PublicationFailure } from '../api/type
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
-import { Avatar, BottomCTA, Button, Comment, Gift, Ribbon, TopBar, EnergyBadge, Whisper, fmt, plural } from '../ui'
+import { Avatar, BottomCTA, Button, Comment, Gift, TopBar, EnergyBadge, fmt } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
-import { contentOf } from '../api/worldContent'
+import { contentOf, worldOf } from '../api/worldContent'
 import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
@@ -23,6 +26,8 @@ import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 function Compose() {
   const nav = useNav(); const p = usePlayer()
   const ideas = contentOf(p.world).ideas
+  const goal = usePresetGoal(p.world)
+  const firstStory = nav.params.firstStory === true
   const key = draftKey(p)
   const [draft, setDraft] = useState<PostDraft>(() => {
     const saved = readPostDraft(key)
@@ -36,11 +41,13 @@ function Compose() {
   }
   useEffect(() => { setDurable(savePostDraft(key, draft)) }, [key, draft])
   return (
-    <div className="screen no-tab">
-      <TopBar onBack={nav.back} title="Новый пост" rightPlain right={<EnergyBadge value={p.postsLeft} />} />
+    <div className={`screen no-tab compose-screen${firstStory ? ' story-compose' : ''}`}>
+      <TopBar onBack={nav.canBack ? nav.back : () => nav.replace('03-3_feed')} title={firstStory ? 'Первый ход' : 'Новая запись'} />
       <div className="pad">
-        <StoryGoal world={p.world} firstStep />
-        <TextField label="Твой пост" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" /><div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} disabled={!!draft.publicationId} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>
+        <div className="compose-world small muted">В мире · <b>{worldOf(p.world).title}</b></div><div className="row compose-author"><Avatar seed={p.handle} size={42} /><div><b>{p.name}</b><div className="small muted">{p.role}</div></div></div>
+        {firstStory && <section className="compose-story-context"><h1>Твой первый ход</h1><p className="muted">{goal?.firstStep ?? contentOf(p.world).firstContext}</p></section>}
+        <textarea className="compose-input" aria-label="Твоя запись" value={text} onChange={event => edit(event.target.value)} maxLength={500} placeholder="Что происходит в твоём мире?" rows={8} disabled={!!draft.publicationId} />
+        <details className="compose-suggestions"><summary>О чём написать</summary><div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} disabled={!!draft.publicationId || text.length > 0} onClick={() => { if (!text.length) edit(idea.replace(/[«»]/g, ''), true) }}>{idea}</button>)}</div>{text.length > 0 && <p className="small muted">Идея заполняет пустое поле. Твой текст сохранён.</p>}</details>
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
         {draft.publicationId && <div className="card"><p>У предыдущей публикации ещё нет подтверждённого результата.</p><button className="btn" onClick={() => nav.replace('02-2_live', { text: draft.submittedText, publicationId: draft.publicationId, ownWords: draft.submittedOwnWords, wantId: draft.submittedWantId })}>Проверить статус</button></div>}
 
@@ -48,7 +55,7 @@ function Compose() {
 
 
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim() || !!draft.publicationId} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords }); const publicationId = crypto.randomUUID(); savePostDraft(key, { ...draft, publicationId, submittedText: text, submittedOwnWords: draft.ownWords, submittedWantId: undefined }); nav.replace('02-2_live', { text, publicationId, ownWords: draft.ownWords, wantId: undefined }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
+      <div className="compose-footer-meta small muted">{text.length} / 500 · ⚡ −1</div><BottomCTA main="Опубликовать" disabled={!text.trim() || !!draft.publicationId} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords }); const publicationId = crypto.randomUUID(); savePostDraft(key, { ...draft, publicationId, submittedText: text, submittedOwnWords: draft.ownWords, submittedWantId: undefined }); nav.replace('02-2_live', { text, publicationId, ownWords: draft.ownWords, wantId: undefined }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
     </div>
   )
 }
@@ -83,6 +90,7 @@ function Live() {
 
         }
         else patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + e.result.delta) })
+        rememberResult(p, post, confirmedResult)
         nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: confirmedResult, post })
       })()
     }
@@ -144,59 +152,40 @@ function PublishError() {
 }
 
 /** Итог поста одной карточкой поверх канала: обычный, провал, залёт (праздничная тема). */
-/** Отсчёт числа 0 → n за 0,8 с (UX-аудит: «число считается, чипы по одному, haptic»). */
-function useCount(n: number, ms = 800) {
-  const [v, setV] = useState(0)
-  useEffect(() => {
-    if (new URLSearchParams(location.search).has('shot') || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setV(n); return }
-    const t0 = performance.now(); let raf = 0
-    const tick = (t: number) => { const k = Math.min(1, (t - t0) / ms); setV(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(tick) }
-    raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf)
-  }, [n, ms])
-  return v
-}
 const haptic = (kind: 'success' | 'warning' | 'light') => { if (!inTelegram) return; try { if (kind === 'light') hapticFeedback.impactOccurred.ifAvailable('light'); else hapticFeedback.notificationOccurred.ifAvailable(kind) } catch { /* вне Telegram */ } }
 
 function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'normal' | 'flop' | 'viral' }) {
-  const nav = useNav()
+  const nav = useNav(); const p = usePlayer()
   const closeButton = useRef<HTMLButtonElement>(null)
-  useEffect(() => { closeButton.current?.focus(); const close = (event: KeyboardEvent) => { if (event.key === 'Escape') nav.replace('03-5_stage') }; document.addEventListener('keydown', close); return () => document.removeEventListener('keydown', close) }, [nav])
-  const viral = theme === 'viral'
-  const shown = useCount(Math.abs(r.delta))
-  const additive = r.whys.filter(why => /^[+−-]\d+(?:[.,]\d+)?$/.test(why.value))
-  const explainsDelta = additive.length > 0 && additive.reduce((sum, why) => sum + Number(why.value.replace('−', '-').replace(',', '.')), 0) === r.delta
-  useEffect(() => { haptic(r.delta >= 0 ? 'success' : 'warning'); const ts = r.whys.map((_, i) => setTimeout(() => haptic('light'), 850 + i * 150)); return () => ts.forEach(clearTimeout) }, [r])
-  return (
-    <div className="screen no-tab">
-      <ChannelHead />
-      <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">только что</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}<span className="small muted" style={{ float: 'right' }}>👁 {fmt(r.views)}</span></div></div></div>
-      <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.55)' }}>
-        <div className="sheet" style={{ background: viral ? 'linear-gradient(170deg,#1B2A4A,#2A1236 60%,#1A1A24)' : '#1A1A24', position: 'relative' }}>
-          <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')}>×</button>
-          <div className="small" style={{ paddingRight: 40, letterSpacing: '.06em', color: viral ? 'var(--gift)' : 'var(--muted2)' }}>{viral ? '🌊 ПОСТ ЗАЛЕТЕЛ В РЕКИ' : 'ИТОГ ПОСТА'}</div>
-          <div style={{ fontSize: 64, fontWeight: 900, lineHeight: 1.1 }} className={r.delta >= 0 ? 'up' : 'down'}>{r.delta >= 0 ? '+' : '−'}{fmt(shown)}</div>
-          <div className="muted2" style={{ marginBottom: 12 }}>{plural(shown, 'подписчик', 'подписчика', 'подписчиков')}</div>
-          <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{r.delta < 0 ? "Часть подписчиков ушла" : r.delta === 0 ? "Подписчиков столько же" : viral ? r.headline : "Твой пост заметили ✨"}</div>
-          {viral && <div className="confetti" aria-hidden>{Array.from({ length: 18 }, (_, i) => <i key={i} style={{ left: `${(i * 53) % 100}%`, animationDelay: `${(i % 6) * 0.12}s`, background: ['#FF6B8B', '#9B6BFF', '#FFD66B', '#6BFFB8'][i % 4] }} />)}</div>}
-
-          <div className="result-awards" aria-live="polite">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
-          <details className="result-details"><summary>Разбор поста</summary>          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[w.icon] ?? w.icon} {w.label} {(!/^[+−-]/.test(w.value) || explainsDelta) && <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b>}</span>)}</div>
-          {r.bestComment && <div className="row" style={{ margin: '8px 0 12px' }}><Avatar seed={r.bestComment.avatar} size={28} mode="default" /><span className="small">«{r.bestComment.text}»</span></div>}
-          </details>
-          {viral ? <>
-            <Button onClick={() => nav.push('02-7_share', { post })}>Поделиться залётом</Button>
-            <div className="small" style={{ textAlign: 'center', margin: '8px 0', color: 'var(--gift)' }}>Позови друга в свой мир</div>
-            <Button secondary onClick={() => nav.replace('03-5_stage')}>В канал</Button>
-          </> : <>
-            <Button onClick={() => nav.replace('02-6_thread', { post })}>Посмотреть реакции</Button>
-            {theme === 'normal' && <><button onClick={() => nav.push('02-7_share', { post })} aria-label="Поделиться постом" className="result-share">↗ Поделиться</button>
-              </>}
-          </>}
-        </div>
-      </div>
-    </div>
-  )
+  const saved = resultHistory(p).find(item => item.post.id === r.postId)
+  const close = () => nav.replace('03-5_stage')
+  useEffect(() => {
+    haptic(r.delta >= 0 ? 'success' : 'warning')
+    const previous = document.activeElement as HTMLElement | null
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    closeButton.current?.focus()
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close()
+      if (event.key === 'Tab') {
+        const buttons = closeButton.current?.closest('[role="dialog"]')?.querySelectorAll<HTMLElement>('button, summary, a[href]')
+        if (!buttons?.length) return
+        const first = buttons[0], last = buttons[buttons.length - 1]
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+      }
+    }
+    document.addEventListener('keydown', keydown)
+    return () => { document.body.style.overflow = overflow; document.removeEventListener('keydown', keydown); previous?.focus() }
+  }, [])
+  return <div className="screen result-screen"><ChannelHead /><div className="pad"><article className="timeline-post"><div className="row"><Avatar seed={p.handle} /><b>{p.name}</b><span className="small muted">только что</span></div><p>{post.text}</p></article></div>
+    <div className="publication-overlay" onClick={close}><div className={`publication-dialog${theme === 'flop' ? ' negative' : ''}`} role="dialog" aria-modal="true" aria-labelledby="publication-title" onClick={event => event.stopPropagation()}>
+      <div className="publication-dialog-heading"><p className="muted" id="publication-title">{theme === 'viral' ? 'Твоя запись залетела' : 'Запись опубликована'}</p><button ref={closeButton} className="icon-button" aria-label="Закрыть результат" onClick={close}><Icon name="close" /></button></div>
+      <PublicationResult result={r} skills={saved?.skills} />
+      <button className="text-button" onClick={() => nav.replace('02-6_thread', { post })}>К обсуждению →</button>
+    </div></div></div>
 }
+
 const Result = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.normal; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="normal" /> }
 const Flop = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.flop; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? 'сегодня сдавала пробник по ЕГЭ, всё сложно' }} theme="flop" /> }
 const Viral = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.viral; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="viral" /> }
@@ -320,10 +309,10 @@ function Thread() {
   post.comments.filter(comment => !comment.parentCommentId).forEach(append)
   post.comments.forEach(append)
   return (
-    <div className="screen no-tab">
-      <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions"><EnergyBadge value={player.postsLeft} /><button className="thread-exit" onClick={goBack}>{fromFeed ? 'В ленту →' : 'В канал →'}</button></div>} />
+    <div className="screen thread-screen">
+      <TopBar onBack={goBack} title="Обсуждение" rightPlain right={<div className="thread-header-actions"><EnergyBadge value={player.postsLeft} /><button className="thread-exit" onClick={goBack}>{fromFeed ? 'В ленту →' : 'В канал →'}</button></div>} />
       <div className="pad">
-        <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div></div>
+        <div className="timeline-post" style={{ marginBottom: 12 }}><div className="row"><Avatar seed={postAuthor?.avatarSeed ?? player.handle} size={40} /><b>{postAuthor?.name ?? player.name}</b></div><p>{post.text}</p><div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div></div>
         {showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
         {!showHelp && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
         {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>
@@ -338,8 +327,8 @@ function Thread() {
         {replyError && <div className="small" role="alert" style={{ color: 'var(--accent)', marginBottom: 12 }}>{replyError}</div>}
         <Button secondary disabled={sending} onClick={() => nav.replace('02-1_compose')}>Написать следующий пост</Button>
       </div>
-      <div className="bottom-cta" style={{ flexDirection: 'row' }}>
-        <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input className="thread-reply-input" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
+      <div className="bottom-cta thread-composer" style={{ flexDirection: 'row' }}>
+        <div className="card" style={{ flex: 1, padding: '12px 14px' }}><textarea rows={2} className="thread-reply-input" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
         <button className="card thread-reply-send" onClick={send} disabled={sending || !targetAvailable || !draft.text.trim() || (player.postsLeft < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
       </div>
     </div>
@@ -385,4 +374,4 @@ register({
   '02-5_viral': { component: Viral, title: 'Залёт' },
   '02-6_thread': { component: Thread, title: 'Тред' },
   '02-7_share': { component: Share, title: 'Поделиться' },
-}, { '02-2_live': 0 })
+}, { '02-2_live': 0, '02-6_thread': 1 })
