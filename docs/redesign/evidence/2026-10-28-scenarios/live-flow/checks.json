@@ -1,0 +1,49 @@
+{
+  "commit": "b413cb0",
+  "realBackend": true,
+  "apiInterception": false,
+  "checks": [],
+  "errors": [],
+  "api": [
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    }
+  ]
+}

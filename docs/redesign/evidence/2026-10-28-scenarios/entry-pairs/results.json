@@ -1,0 +1,181 @@
+{
+  "results": [
+    {
+      "theme": "light",
+      "width": 320,
+      "screen": "characters",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "screen": "custom",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "screen": "optional-settings",
+      "overflow": false,
+      "reference": "optional details in same form; reference settingsForm comparison"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "screen": "opening",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "screen": "own-info",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "checks": "Direct profile submit→Home without mandatory mood; optional voice/drama/difficulty saved; NPC switch restores previous roster; chosen NPC removed; payload real drama/difficulty; save→opening→composer; no title typewriter; own info Escape closes",
+      "apiInterception": true,
+      "realBackend": false
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "screen": "characters",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "screen": "custom",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "screen": "optional-settings",
+      "overflow": false,
+      "reference": "optional details in same form; reference settingsForm comparison"
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "screen": "opening",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "screen": "own-info",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "checks": "Direct profile submit→Home without mandatory mood; optional voice/drama/difficulty saved; NPC switch restores previous roster; chosen NPC removed; payload real drama/difficulty; save→opening→composer; no title typewriter; own info Escape closes",
+      "apiInterception": true,
+      "realBackend": false
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "screen": "characters",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "screen": "custom",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "screen": "optional-settings",
+      "overflow": false,
+      "reference": "optional details in same form; reference settingsForm comparison"
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "screen": "opening",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "screen": "own-info",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "checks": "Direct profile submit→Home without mandatory mood; optional voice/drama/difficulty saved; NPC switch restores previous roster; chosen NPC removed; payload real drama/difficulty; save→opening→composer; no title typewriter; own info Escape closes",
+      "apiInterception": true,
+      "realBackend": false
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "screen": "characters",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "screen": "custom",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "screen": "optional-settings",
+      "overflow": false,
+      "reference": "optional details in same form; reference settingsForm comparison"
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "screen": "opening",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "screen": "own-info",
+      "overflow": false,
+      "reference": "executable reference"
+    },
+    {
+      "customCreation": true,
+      "allNPCsRetained": true,
+      "staticTitle": true,
+      "openingHasNoDock": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "checks": "Direct profile submit→Home without mandatory mood; optional voice/drama/difficulty saved; NPC switch restores previous roster; chosen NPC removed; payload real drama/difficulty; save→opening→composer; no title typewriter; own info Escape closes",
+      "apiInterception": true,
+      "realBackend": false
+    }
+  ],
+  "errors": [],
+  "realBackend": false,
+  "syntheticFixture": true
+}

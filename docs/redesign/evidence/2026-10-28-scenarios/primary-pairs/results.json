@@ -1,0 +1,102 @@
+{
+  "mode": "local browser wire fixtures for visual QA; not DEV integration",
+  "checks": [
+    {
+      "screen": "05-8_settings",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "04-3_invite",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "05-13_progress",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "05-5_collection",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "05-8_settings",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "04-3_invite",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "05-13_progress",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "05-5_collection",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "05-8_settings",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "04-3_invite",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "05-13_progress",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "05-5_collection",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "05-8_settings",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "04-3_invite",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "05-13_progress",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "05-5_collection",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    }
+  ],
+  "errors": []
+}

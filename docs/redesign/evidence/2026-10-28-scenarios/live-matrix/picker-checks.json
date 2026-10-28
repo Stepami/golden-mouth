@@ -1,0 +1,8 @@
+{
+  "commit": "8003dd2",
+  "realBackend": true,
+  "apiInterception": false,
+  "twoRealQaWorlds": true,
+  "switchToOtherAndReload": true,
+  "switchBack": true
+}

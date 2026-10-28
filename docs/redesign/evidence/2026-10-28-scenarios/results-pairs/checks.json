@@ -1,0 +1,102 @@
+{
+  "mode": "UI fixtures, publication callback uses saved actual API result; no real writes; reference omits absent skill/relationship fields",
+  "checks": [
+    {
+      "label": "compose",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "compact",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "full",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "channel",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "compose",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "label": "compact",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "label": "full",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "label": "channel",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "label": "compose",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "compact",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "full",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "channel",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "label": "compose",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "label": "compact",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "label": "full",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "label": "channel",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    }
+  ],
+  "errors": []
+}

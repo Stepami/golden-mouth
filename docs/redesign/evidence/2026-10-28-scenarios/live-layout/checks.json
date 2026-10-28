@@ -1,0 +1,57 @@
+{
+  "commit": "8003dd2",
+  "realBackend": true,
+  "apiInterception": false,
+  "deleteRequests": 0,
+  "checks": [
+    {
+      "theme": "dark",
+      "width": 320,
+      "editBelowCover": true,
+      "headerChildrenInside": true,
+      "saveInsideSheet": true,
+      "deleteConfirmationCancel": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "editBelowCover": true,
+      "headerChildrenInside": true,
+      "saveInsideSheet": true,
+      "deleteConfirmationCancel": true
+    },
+    {
+      "theme": "dark",
+      "width": 540,
+      "editBelowCover": true,
+      "headerChildrenInside": true,
+      "saveInsideSheet": true,
+      "deleteConfirmationCancel": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "editBelowCover": true,
+      "headerChildrenInside": true,
+      "saveInsideSheet": true,
+      "deleteConfirmationCancel": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "editBelowCover": true,
+      "headerChildrenInside": true,
+      "saveInsideSheet": true,
+      "deleteConfirmationCancel": true
+    },
+    {
+      "theme": "light",
+      "width": 540,
+      "editBelowCover": true,
+      "headerChildrenInside": true,
+      "saveInsideSheet": true,
+      "deleteConfirmationCancel": true
+    }
+  ],
+  "errors": []
+}

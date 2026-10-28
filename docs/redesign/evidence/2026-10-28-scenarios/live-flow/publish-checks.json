@@ -1,0 +1,159 @@
+{
+  "commit": "b413cb0",
+  "realBackend": true,
+  "apiInterception": false,
+  "checks": [
+    {
+      "draftRestoredByReopening": true
+    },
+    {
+      "realSsePublicationFloatAboveActualFeed": true,
+      "actualOwnPosts": 1,
+      "noModal": true
+    },
+    {
+      "expandCloseReturnsUsableRealFeed": true
+    },
+    {
+      "replyTextVisible": true
+    }
+  ],
+  "errors": [],
+  "api": [
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/publications",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/posts/publications/a7919115-e941-4562-b202-4b3484473315/moderation",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc/replies",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    }
+  ]
+}

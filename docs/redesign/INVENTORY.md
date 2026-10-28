@@ -1,6 +1,6 @@
 # Инвентарь актуального эталона → frontend — #205 / #219
 
-Дата: 28.10.2026. Это перечень поверхностей и ветвей текущего исполняемого эталона, а не утверждение о полном pixel parity. Исторические README v0.35–41 описывают разные итерации; при расхождении проверялся текущий `app.js`, а не прежнее описание. Например, текущий `welcomeMontage()` снова содержит социальный пост, а `guidedOnboarding()` — два шага Леры.
+Дата: 28.10.2026. Актуализировано для DEV8003dd2; новый проход — [REVIEW](REVIEW-2026-10-28.md). Это перечень поверхностей и ветвей текущего исполняемого эталона, а не утверждение о полном pixel parity. Исторические README v0.35–41 описывают разные итерации; при расхождении проверялся текущий `app.js`, а не прежнее описание. Например, текущий `welcomeMontage()` снова содержит социальный пост, а `guidedOnboarding()` — два шага Леры.
 
 Источники: `app.html` → `tokens.css`, `app-base.css`, `app.css`, **последним `components.css`**; затем `catalog.js`, `app.js`. `system.html` встраивает эти же поверхности, не отдельную реализацию. `reference.json` с маркетинговым референсом Yope не использовался как макет экранов. Идентичность входных файлов зафиксирована [SHA-256 manifest](evidence/2026-10-28-own-unlock/source-manifest.json), без персональных путей.
 
@@ -28,9 +28,9 @@
 | Own-world sheet: лучший/текущий мир, загрузка/ошибка списка | реальные owned worlds + текущий player | adapted | live177 + UI fixture420/ошибка; при неполном списке не называется «лучшим» |
 | Own-world sheet: счётчик ≥500 без права | locked CTA | adapted | UI fixture620; цифра не заменяет `hitOwnWorldMilestone` |
 | Own-world sheet: unlocked при небольшом счётчике | «Можно создавать», текстовый редактор | adapted | UI fixture; серверное право не выводится из счётчика; причина разблокировки не выдумывается |
-| `createForm`: профиль в шаблоне / выбор героя | обзор → `01-4_channel` | adapted | live/source; отдельные страницы вместо длинного sheet |
+| `createForm`: профиль в шаблоне / выбор героя | обзор → `01-4_channel` | adapted | 20 новых entry-пар + real create: sheet, NPC в исходном порядке, «Свой» последним, без default; submit прямо в Home |
 | `ownCharacterSelect`, `ownCustomCharacter`, `ownCharacterChoose` | QuickChannelForm / редактор персоны | adapted | source; реальный состав API, выбранный готовый NPC не дублируется |
-| Настройка драмы/сложности | `01-4b_world_setup` | adapted | live/source; нынешние значения API, не новая экономика |
+| Настройка драмы/сложности | PresetEntryForm optional details | adapted | 20 entry-пар + real direct create; необязательные details в форме, старый mood-маршрут сохранён для прямого входа, не обязательный шаг |
 | `ownReview`, редактирование места/персоны/NPC/правил | `05-12_world_advanced`, `05-7b_own_world` | adapted | source/UI fixture; ручной редактор, не результат AI-генерации; заблокированные правила сохраняются |
 | Создание / save, ошибка валидации, конфликт, неизвестный исход | StarsForm / WorldAdvanced / WorldSwitchDialog | adapted | source + прежний UI-проход; нет фиктивного успешного сохранения, при неизвестном исходе предлагается сверить миры |
 | `ownIdea`: идея → генерация | ручной текстовый редактор | adapted | source; нет сцены с голосовым CTA, поскольку кнопка не запустила бы реальную операцию |
@@ -48,12 +48,12 @@
 | `energyPolicyInfo`, `showLimit`: компактная справка | HUD → EnergyHelp; `04-1_limit` сохранён | adapted | [8 пар HUD](evidence/2026-10-28-hud-sheets/README.md), live: компактная справка, реальный остаток, reset09:00МСК, стоимость1, чтение бесплатно; регенерация эталона не реализована; полноэкранный лимит этим проходом не переработан |
 | `skillHelp` | `SkillHelp` | adapted | Новая типографика/close + live UI; объясняет текущую механику, без покупки кристаллов |
 | `skillExample(0..2)` | объяснения навыков в SkillHelp | adapted | source; нет отдельных per-skill окон с возвратом в редактор |
-| `progressPage`, goal / skills | `05-13_progress` | adapted | live; ориентир из контента, реальные шкалы и серия; не состояние автомата |
+| `progressPage`, goal / skills | `05-13_progress` | adapted | 16 primary-пар + real DEV; arc-overview/active/road, статические персональные ориентиры, реальные навыки; без фиктивной стадии и награды |
 | `progressionTasks`: отметки подцелей | нет ручной отметки | missing | **API/смысл**: подтверждение сюжетных действий не возвращается; нажатие не выдаётся за достижение |
 | `storyDashboard`, pause/resume, chapter claim | контекст/цель без автомата | missing | **API**: нет узла, чекпоинтов, паузы и подтверждённой награды |
-| `characterIntro`, `characterOpeningPage` | `01-6_home` | adapted | live/source; завязка и текущая персона, не обещание персональной сгенерированной истории |
-| `storyWritingPage`, `editorGoal` | первый пост / контекст Compose | adapted | live/source; статический ориентир вместо активного сюжетного intent |
-| `personalArcIntro`, этапы/требования арки | отсутствуют | missing | **API**: нет прогресса персональной арки; fixture не проверяет реальный сюжет |
+| `characterIntro`, `characterOpeningPage` | `01-6_home` | adapted | 20 entry-пар + real DEV; статический заголовок, персональные context/goal для неизменённого NPC и явный CTA; не серверный автомат |
+| `storyWritingPage`, `editorGoal` | первый пост / контекст Compose | adapted | real DEV: отдельный первый ход с персональным ориентиром, текст/черновик/публикация; нет подтверждённого сюжетного intent |
+| `personalArcIntro`, этапы/требования арки | characterGuidance / arc-road | adapted | Статический персональный план перенесён для12 неизменённых NPC; API прогресса/переходов нет, этапы не помечаются выполненными |
 | `progressionAchievements`, ready/claimed/next batch | отсутствуют | missing | **API**: нет статусов/выдачи наборов; старая collection feature flag не замена |
 | `visitStreakCard`, семь дней серии | серверная streak в профиле/истории | adapted | live; серия не подарок дня |
 | `claimStreakReward`, gift art / claim / claimed | отсутствуют | missing | **API**: нет проверяемого календаря подарков и однократного получения |
@@ -73,12 +73,12 @@
 | `postCard`, authorLine, time, metrics | FeedPostCard / Stage | adapted | live; серверные views/emoji, нет фиктивного личного like/repost |
 | `peoplePage`: участники | состав NPC в обзоре/редакторе | adapted | source; **отдельной страницы участников нет**, просмотр списка не утверждается как просмотр профиля |
 | `profilePage`: конкретный NPC, relationship, его посты | нет равноценной NPC-страницы | missing | **UI + API**: старый `03-2_star_card` — галерейная Мира, не профиль реального NPC; перенос не заявлен, отношения не подставлены |
-| `compose` blank / draft / suggestions / disabled | `02-1_compose` | adapted | live + draft reload; полноэкранный редактор и лимит500 вместо modal/2000 |
+| `compose` blank / draft / suggestions / disabled | `02-1_compose` | adapted | real DEV b413cb0: compose-композиция/ресурсы/author/actionbar; лимит500, без boost/suggestion fixture; draft reopen PASS; 16 новых пар320/390×2темы |
 | `publish`, pending/generating/moderating | `02-2_live` | adapted | live SSE; настоящая операция с request/publication ID |
 | `pendingPanel`, failed / unknown / recover publication | `02-2b_publish_error`, «Проверить статус» | adapted | прежние UI-проверки + source; реальный сетевой обрыв не симулировался как доказательство серверной идемпотентности |
 | `drawThread`, root / nested target / recipient unavailable | `02-6_thread` | adapted | live/root+nested UI; полноэкранное обсуждение с dock вместо prototype dialog |
 | Reply draft / sending / partial / failed / recover | Thread + api.reply | adapted | live SSE success + source/прежние UI-ошибки; при retry сохраняется requestId |
-| `publicationPeek`, компактный результат поверх поста | `02-3_result` | adapted | live +48; отдельный focus-trapped dialog вместо раскрытия того же inline details |
+| `publicationPeek`, компактный результат поверх поста | `02-3_result` | adapted | real DEV b413cb0: немодальный aside над настоящим Stage, без backdrop/focus trap; expand/close PASS, 16 новых пар320/390×2темы |
 | `postOutcome`, full breakdown / expand / collapse | PublicationResult | adapted | live; сохранённые серверные whys/ribbons, не объяснения fixture |
 | Result flop / viral / neutral, reduced motion | Result/Flop/Viral | adapted | прежние UI-кадры; минус без зелёного празднования, реальные flop/viral этим проходом не вызывались |
 | `resultSkillChanges`, before/after/why | не показываются без серверного снимка | missing | **API**: точного XP поста нет; две загрузки профиля не доказательство причинности |
@@ -91,12 +91,12 @@
 
 | Эталон / состояния | Приложение | Статус | Основание / конкретное отличие |
 | --- | --- | --- | --- |
-| `identityPage` профиль / свои посты / история | `05-5_collection`, отдельные Stage/Progress | adapted | live; роль/обложка с API, другая раскладка статистики и вкладок |
-| `settingsForm`: персона/мир/NPC/драма/правила | Settings + WorldDetails + WorldAdvanced | adapted | source/live; формы распределены по страницам, контракт сохраняется |
+| `identityPage` профиль / свои посты / история | `05-5_collection`, отдельные Stage/Progress | adapted | 16 primary-пар + live8003dd2: cover/avatar/edit/name/role/meta/posts/history; edit ниже cover на320/390/540 обе темы |
+| `settingsForm`: персона/мир/NPC/драма/правила | Settings + WorldDetails + WorldAdvanced | adapted | 16 primary-пар + real PUT/reopen/restore; единый WorldSettings sheet, раскрываемые дополнительные поля, fresh merge; delete/confirm/cancel доступны прямо здесь |
 | `appearance`: system/light/dark | сохранённый ThemePreference | adapted | В этом продолжении восстановлено **system**, смена OS scheme/reload проверяются отдельно; ручные темы не переписаны |
 | `chooseAvatar`, resetAvatar, локальное фото | DiceBear personalization | adapted | source; загрузка фото отсутствует; это не равнозначные функции |
 | settings conflict / error / reload | сообщения ошибок + сохранённый draft | adapted | source/прежний UI-проход; эталонный modal не воспроизведён полностью |
-| `inviteInfo`, copy | `04-3_invite` | adapted | live; настоящая referral ссылка вместо example.com fixture; полноэкранный маршрут |
+| `inviteInfo`, copy | `04-3_invite` | adapted | 16 primary-пар + real referral/copy: компактный sheet, профиль, выгоды и настоящая ссылка; sendchat сохранён вторичным действием |
 | `worldBoot`, processing stage | загрузка шаблонов/создание | adapted | source; существующая операция не сопровождается вымышленными AI-фазами |
 | `uiState`, loading/error/no-energy/pending | реальные состояния каждого запроса | adapted | source; нет единой геометрии всех state-panel эталона |
 | `durable=false`, local storage unavailable | предупреждение черновика с session fallback | adapted | source/прежние UI-проверки; не реальный отказ устройства |

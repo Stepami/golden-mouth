@@ -1,0 +1,984 @@
+{
+  "commit": "8003dd2",
+  "realBackend": true,
+  "apiInterception": false,
+  "checks": [
+    {
+      "screen": "01-6_home",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "02-1_compose",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "03-5_stage",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "05-13_progress",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "05-13b_results",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "05-5_collection",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "01-6_home",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "02-1_compose",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "03-5_stage",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "05-13_progress",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "05-13b_results",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "05-5_collection",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "01-6_home",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "02-1_compose",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "03-5_stage",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "05-13_progress",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "05-13b_results",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "05-5_collection",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "screen": "01-6_home",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "02-1_compose",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "03-5_stage",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "05-13_progress",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "05-13b_results",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "screen": "05-5_collection",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "api": [
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204,
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "status": 200,
+      "method": "GET"
+    }
+  ]
+}
