@@ -1,0 +1,40 @@
+{
+  "mode": "controlled browser wire fixtures; server mutations blocked; not real backend integration",
+  "results": [
+    {
+      "state": "loading",
+      "pass": true,
+      "overflow": false
+    },
+    {
+      "state": "error-retry",
+      "pass": true,
+      "overflow": false
+    },
+    {
+      "state": "empty",
+      "pass": true,
+      "overflow": false
+    },
+    {
+      "state": "many",
+      "pass": true,
+      "overflow": false
+    },
+    {
+      "state": "switch-error",
+      "pass": true,
+      "overflow": false
+    },
+    {
+      "state": "switch-success",
+      "pass": true,
+      "overflow": false
+    },
+    {
+      "state": "zero-energy",
+      "pass": true,
+      "overflow": false
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "realBackend": true,
+  "apiInterception": false,
+  "focusTrap": true,
+  "escapeRestoresFocus": true,
+  "backdropCloses": true,
+  "draftRestoredAcrossHUDNavigation": true
+}

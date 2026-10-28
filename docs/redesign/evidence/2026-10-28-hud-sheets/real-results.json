@@ -1,0 +1,455 @@
+{
+  "commit": "6d91d39",
+  "realBackend": true,
+  "apiInterception": false,
+  "checks": [
+    {
+      "theme": "light",
+      "width": 320,
+      "sheet": "worlds",
+      "dev": {
+        "box": {
+          "x": 10,
+          "y": 286,
+          "width": 300,
+          "height": 272
+        },
+        "padding": "19px",
+        "radius": "30px",
+        "bg": "rgb(247, 249, 249)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      },
+      "reference": {
+        "box": {
+          "x": 10,
+          "y": 274.03125,
+          "width": 300,
+          "height": 295.9375
+        },
+        "padding": "19px",
+        "radius": "30px",
+        "bg": "rgb(247, 249, 249)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      }
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "sheet": "energy",
+      "dev": {
+        "box": {
+          "x": 12,
+          "y": 222,
+          "width": 296,
+          "height": 400
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(247, 249, 249)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      },
+      "reference": {
+        "box": {
+          "x": 12,
+          "y": 219.3125,
+          "width": 296,
+          "height": 405.375
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(247, 249, 249)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      }
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "sheet": "worlds",
+      "dev": {
+        "box": {
+          "x": 10,
+          "y": 281,
+          "width": 370,
+          "height": 282
+        },
+        "padding": "24px",
+        "radius": "30px",
+        "bg": "rgb(247, 249, 249)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      },
+      "reference": {
+        "box": {
+          "x": 10,
+          "y": 269.03125,
+          "width": 370,
+          "height": 305.9375
+        },
+        "padding": "24px",
+        "radius": "30px",
+        "bg": "rgb(247, 249, 249)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      }
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "sheet": "energy",
+      "dev": {
+        "box": {
+          "x": 12,
+          "y": 222,
+          "width": 366,
+          "height": 400
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(247, 249, 249)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      },
+      "reference": {
+        "box": {
+          "x": 12,
+          "y": 219.3125,
+          "width": 366,
+          "height": 405.375
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(247, 249, 249)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "sheet": "worlds",
+      "dev": {
+        "box": {
+          "x": 10,
+          "y": 286,
+          "width": 300,
+          "height": 272
+        },
+        "padding": "19px",
+        "radius": "30px",
+        "bg": "rgb(22, 24, 28)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      },
+      "reference": {
+        "box": {
+          "x": 10,
+          "y": 274.03125,
+          "width": 300,
+          "height": 295.9375
+        },
+        "padding": "19px",
+        "radius": "30px",
+        "bg": "rgb(22, 24, 28)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "sheet": "energy",
+      "dev": {
+        "box": {
+          "x": 12,
+          "y": 222,
+          "width": 296,
+          "height": 400
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(22, 24, 28)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      },
+      "reference": {
+        "box": {
+          "x": 12,
+          "y": 219.3125,
+          "width": 296,
+          "height": 405.375
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(22, 24, 28)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "sheet": "worlds",
+      "dev": {
+        "box": {
+          "x": 10,
+          "y": 281,
+          "width": 370,
+          "height": 282
+        },
+        "padding": "24px",
+        "radius": "30px",
+        "bg": "rgb(22, 24, 28)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      },
+      "reference": {
+        "box": {
+          "x": 10,
+          "y": 269.03125,
+          "width": 370,
+          "height": 305.9375
+        },
+        "padding": "24px",
+        "radius": "30px",
+        "bg": "rgb(22, 24, 28)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "sheet": "energy",
+      "dev": {
+        "box": {
+          "x": 12,
+          "y": 222,
+          "width": 366,
+          "height": 400
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(22, 24, 28)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      },
+      "reference": {
+        "box": {
+          "x": 12,
+          "y": 219.3125,
+          "width": 366,
+          "height": 405.375
+        },
+        "padding": "20px",
+        "radius": "24px",
+        "bg": "rgb(22, 24, 28)",
+        "titleSize": "18px",
+        "overflow": false,
+        "bodyOverflow": false
+      }
+    },
+    {
+      "energyCTA": true
+    },
+    {
+      "currentWorldClosesWithoutNavigation": true
+    },
+    {
+      "catalogTransition": true
+    }
+  ],
+  "errors": [],
+  "responses": [
+    {
+      "path": "/api/v1/sessions",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/sessions",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/events",
+      "status": 204
+    },
+    {
+      "path": "/api/v1/invitation",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "status": 200
+    }
+  ]
+}
