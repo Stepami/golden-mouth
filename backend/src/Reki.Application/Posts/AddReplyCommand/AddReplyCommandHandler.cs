@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Comment;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPost;
 using Reki.Application.Posts.Responses.ReplyLiveEvent;
@@ -27,7 +28,7 @@ internal sealed partial class AddReplyCommandHandler(
     IStarTurnGenerator generator,
     ILogger<AddReplyCommandHandler> logger,
     ProductTelemetry telemetry,
-    IStarFeedScheduler feedScheduler) : IStreamCommandHandler<AddReply, ReplyLiveEvent>
+    IStarFeedScheduler<ScheduleFromCommentRequest> feedScheduler) : IStreamCommandHandler<AddReply, ReplyLiveEvent>
 {
     public async IAsyncEnumerable<ReplyLiveEvent> Handle(
         AddReply request,
@@ -262,7 +263,7 @@ internal sealed partial class AddReplyCommandHandler(
                 cancellationToken))
         {
             telemetry.TrackWorldAudience(updatedWorld);
-            await feedScheduler.ScheduleFromCommentAsync(playerId, world.Id, post.Id, playerComment.Id);
+            await feedScheduler.ScheduleFeedAsync(new ScheduleFromCommentRequest(playerId, world.Id, post.Id, playerComment.Id));
             return Completed(request, updatedPost, updatedWorld, updatedPlayer);
         }
 

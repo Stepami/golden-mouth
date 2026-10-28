@@ -1,63 +1,28 @@
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Reki.Application.Balance;
+﻿using Microsoft.Extensions.Logging;
 using Reki.Application.Posts;
-using Reki.Domain.Player;
-using Reki.Domain.Posts;
-using Reki.Domain.Worlds;
-using Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
-using Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
-using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;
+using TickerQ.Utilities.Interfaces;
 using TickerQ.Utilities.Interfaces.Managers;
 
 namespace Reki.Infrastructure.Jobs.GenerateStarFeed;
 
-internal sealed partial class StarFeedScheduler(
+internal abstract partial class StarFeedScheduler<TJob, TRequest, TRekiRequest>(
     ITimeTickerManager<RekiTimeTicker> manager,
     TimeProvider timeProvider,
-    IOptionsMonitor<GameBalance> options,
-    ILogger<StarFeedScheduler> logger) : IStarFeedScheduler
+    ILogger logger) : IStarFeedScheduler<TRekiRequest>
+    where TJob : class, ITickerFunction<TRequest>
 {
-    public async ValueTask ScheduleFromPostAsync(PlayerId playerId, WorldId worldId, PostId sourcePostId)
+    public async ValueTask ScheduleFeedAsync(TRekiRequest request)
     {
         var now = timeProvider.GetUtcNow();
-        var result = await manager.AddAsync<GenerateStarFeedOnPostPublishedJob, StarFeedOnPostPublishedRequest>(
-            now.UtcDateTime,
-            new StarFeedOnPostPublishedRequest(playerId, worldId, PostId.New(now), now.ToUnixTimeMilliseconds(), sourcePostId));
+        var jobRequest = CreateRequest(request, now);
+        var result = await manager.AddAsync<TJob, TRequest>(now.UtcDateTime, jobRequest);
         if (!result.IsSucceeded)
         {
             SchedulingFailed();
         }
     }
 
-    public async ValueTask ScheduleFromCommentAsync(PlayerId playerId, WorldId worldId, PostId sourcePostId, CommentId sourceCommentId)
-    {
-        var now = timeProvider.GetUtcNow();
-        var result = await manager.AddAsync<GenerateStarFeedOnCommentPublishedJob, StarFeedOnCommentPublishedRequest>(
-            now.UtcDateTime,
-            new StarFeedOnCommentPublishedRequest(playerId, worldId, PostId.New(now), now.ToUnixTimeMilliseconds(), sourcePostId, sourceCommentId));
-        if (!result.IsSucceeded)
-        {
-            SchedulingFailed();
-        }
-    }
-
-    public async ValueTask ScheduleFromFeedAsync(PlayerId playerId, WorldId worldId)
-    {
-        if (Random.Shared.NextDouble() >= options.CurrentValue.StarFeedOpenProbability)
-        {
-            return;
-        }
-
-        var now = timeProvider.GetUtcNow();
-        var result = await manager.AddAsync<GenerateStarFeedOnFeedOpenedJob, StarFeedRequest>(
-            now.UtcDateTime,
-            new StarFeedRequest(playerId, worldId, PostId.New(now), now.ToUnixTimeMilliseconds()));
-        if (!result.IsSucceeded)
-        {
-            SchedulingFailed();
-        }
-    }
+    protected abstract TRequest CreateRequest(TRekiRequest request, DateTimeOffset createdAt);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Star feed scheduling did not succeed")]
     private partial void SchedulingFailed();

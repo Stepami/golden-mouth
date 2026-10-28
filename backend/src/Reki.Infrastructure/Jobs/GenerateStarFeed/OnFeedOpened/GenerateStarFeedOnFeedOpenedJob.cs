@@ -22,6 +22,11 @@ internal sealed class GenerateStarFeedOnFeedOpenedJob(
         CancellationToken cancellationToken = default)
     {
         var request = context.Request;
+        if (!request.ShouldGenerate)
+        {
+            return;
+        }
+
         var playerId = request.PlayerId;
         var worldId = request.WorldId;
         var postId = request.PostId;

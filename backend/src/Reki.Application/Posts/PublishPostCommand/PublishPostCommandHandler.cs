@@ -29,7 +29,7 @@ internal sealed class PublishPostCommandHandler(
     ProductTelemetry analytics,
     PlayerSafetyGuard safety,
     StarTurnPolicy turnPolicy,
-    IStarFeedScheduler feedScheduler) : ICommandHandler<PublishPost, IReadOnlyList<LiveEvent>>
+    IStarFeedScheduler<ScheduleFromPostRequest> feedScheduler) : ICommandHandler<PublishPost, IReadOnlyList<LiveEvent>>
 {
     public async ValueTask<IReadOnlyList<LiveEvent>> Handle(
         PublishPost request,
@@ -162,7 +162,7 @@ internal sealed class PublishPostCommandHandler(
 
         analytics.TrackWorldAudience(updatedWorld);
         TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
-        await feedScheduler.ScheduleFromPostAsync(player.Id, world.Id, post.Id);
+        await feedScheduler.ScheduleFeedAsync(new ScheduleFromPostRequest(player.Id, world.Id, post.Id));
         return published.MapLiveEvents(updatedWorld, player.Id);
     }
 

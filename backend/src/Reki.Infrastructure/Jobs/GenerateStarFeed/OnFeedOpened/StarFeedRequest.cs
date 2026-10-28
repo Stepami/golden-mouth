@@ -9,4 +9,5 @@ public sealed record StarFeedRequest(
     PlayerId PlayerId,
     WorldId WorldId,
     PostId PostId,
-    [property: JsonRequired] long CreatedAtUnixMilliseconds);
+    [property: JsonRequired] long CreatedAtUnixMilliseconds,
+    bool ShouldGenerate);
