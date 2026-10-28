@@ -535,6 +535,18 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Arrange
         using var api = Factory.CreateApiClient(1008);
         await CreatePlayerWithWorldAsync(api);
+        var definition = await CreateWorldDefinitionAsync(api);
+        var persona = definition.Stars[0];
+        var remainingStars = definition.Stars.Where(star => star.Id != persona.Id).ToArray();
+        await api.Worlds.UpdateWorldAsync(
+            await GetWorldIdAsync(api),
+            definition with
+            {
+                Name = persona.Name,
+                Role = persona.Role,
+                Stars = remainingStars,
+            },
+            CancellationToken.None);
 
         // Act
         await PublishAsync(1008, "короткий пост про сцену");
@@ -550,6 +562,22 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(request.GetProperty("stream").GetBoolean()).IsTrue();
         await Assert.That(request.TryGetProperty("reasoning_effort", out _)).IsFalse();
         await Assert.That(toolNames).IsEquivalentTo(new[] { "comment", "react" });
+        var schema = request.GetProperty("tools").EnumerateArray()
+            .Select(tool => tool.GetProperty("function"))
+            .Single(function => function.GetProperty("name").GetString() == "comment")
+            .GetProperty("parameters");
+        var properties = schema.GetProperty("properties");
+        await Assert.That(properties.GetProperty("star_id").GetProperty("enum").EnumerateArray()
+            .Select(id => id.GetString() ?? throw new InvalidOperationException("Missing allowed star ID."))).IsEquivalentTo(remainingStars.Select(star => star.Id.Value));
+        await Assert.That(properties.TryGetProperty("author", out _)).IsFalse();
+        await Assert.That(schema.GetProperty("required").EnumerateArray()
+            .Any(property => property.GetString() == "author")).IsFalse();
+        var post = await api.Posts.GetPostAsync(
+            (await api.Posts.GetChannelPostsAsync(await GetWorldIdAsync(api), null, null, CancellationToken.None)).Items.Single().PostId.ToString(),
+            await GetWorldIdAsync(api),
+            CancellationToken.None);
+        var comment = post.Comments.Single();
+        await Assert.That(comment.Author).IsEqualTo(remainingStars.Single(star => star.Id.ToAuthorId() == comment.AuthorId).Name);
     }
 
     [Test]
@@ -632,19 +660,31 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var messages = GetCapturedChatMessages();
         var playerOwnedLayer = messages.Single(message =>
             message.Role == ChatRole.System &&
-            message.Text.Contains("ПОЛЬЗОВАТЕЛЬСКИЙ СИСТЕМНЫЙ СЛОЙ", StringComparison.Ordinal));
+            message.Text.Contains("DATA_JSON:", StringComparison.Ordinal));
         var userMessage = messages.Last(message => message.Role == ChatRole.User);
         await Assert.That(messages.Count(message => message.Role == ChatRole.System)).IsEqualTo(2);
         using var profile = ParsePlayerLayer(playerOwnedLayer);
-        await Assert.That(profile.RootElement.GetProperty("worldId").GetString()).IsEqualTo((await GetWorldIdAsync(api)).ToString());
-        await Assert.That(profile.RootElement.GetProperty("worldTitle").GetString()).IsEqualTo("Театральная мастерская");
-        await Assert.That(profile.RootElement.GetProperty("worldDescription").GetString())
+        var world = profile.RootElement.GetProperty("world");
+        var worldPlayer = world.GetProperty("player");
+        var expectedStar = (await CreateWorldDefinitionAsync(api)).Stars[0];
+        var trait = world.GetProperty("stars").EnumerateArray()
+            .Single(star => star.GetProperty("id").GetString() == expectedStar.Id.Value).GetProperty("trait");
+        await Assert.That(trait.GetInt32()).IsEqualTo(expectedStar.Trait);
+        await Assert.That(messages[0].Text).Contains($"{trait.GetRawText()}={(StarTrait)expectedStar.Trait}");
+        await Assert.That(world.GetProperty("id").GetString()).IsEqualTo((await GetWorldIdAsync(api)).ToString());
+        await Assert.That(world.GetProperty("interface").GetProperty("title").GetString()).IsEqualTo("Театральная мастерская");
+        await Assert.That(world.GetProperty("interface").GetProperty("description").GetString())
             .IsEqualTo("Камерный мир молодых режиссёров и актёров.");
-        await Assert.That(profile.RootElement.GetProperty("drama").GetString()).IsEqualTo("hot");
-        await Assert.That(profile.RootElement.GetProperty("channelVoice").GetString())
+        await Assert.That(worldPlayer.GetProperty("name").GetString()).IsEqualTo("Player");
+        await Assert.That(worldPlayer.GetProperty("role").GetString()).IsEqualTo("creator");
+        await Assert.That(worldPlayer.GetProperty("drama").GetString()).IsEqualTo("hot");
+        await Assert.That(worldPlayer.GetProperty("voice").GetString())
             .IsEqualTo("Иронично, тепло и короткими фразами");
         await Assert.That(playerOwnedLayer.Text)
             .Contains("Звёзды спорят о постановках, но поддерживают дебютантов");
+        await Assert.That(messages.Count(message =>
+            message.Role == ChatRole.System && message.Text.Contains("DATA_JSON:", StringComparison.Ordinal)))
+            .IsEqualTo(1);
         await Assert.That(userMessage.Text).Contains(currentPost);
         await Assert.That(messages
                 .Where(message => message.Role == ChatRole.System)
@@ -712,13 +752,13 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
     [Test]
     [Arguments("wrong-id")]
-    [Arguments("wrong-name")]
+    [Arguments("unexpected-author")]
     [Arguments("forbidden-tool")]
     [Arguments("early-hate")]
     public async Task Publication_ForbiddenAction_FailsWithoutChargingAsync(string violation)
     {
         // Arrange
-        long userId = violation switch { "wrong-id" => 8330, "wrong-name" => 8331, "forbidden-tool" => 8332, _ => 8333 };
+        long userId = violation switch { "wrong-id" => 8330, "unexpected-author" => 8331, "forbidden-tool" => 8332, _ => 8333 };
         using var api = Factory.CreateApiClient(userId);
         await CreatePlayerWithWorldAsync(api);
         var response = CreateCommentResponse(false);
@@ -732,7 +772,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                     break;
                 }
 
-            case "wrong-name":
+            case "unexpected-author":
                 {
                     arguments["author"] = "Рэн";
                     break;
@@ -782,10 +822,12 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         using var data = ParsePlayerLayer(messages[1]);
 
         // Assert
-        await Assert.That(data.RootElement.GetProperty("worldId").GetString()).IsEqualTo((await GetWorldIdAsync(api)).ToString());
-        await Assert.That(data.RootElement.GetProperty("channelVoice").GetString()).IsEqualTo(injected);
+        var world = data.RootElement.GetProperty("world");
+        await Assert.That(world.GetProperty("id").GetString()).IsEqualTo((await GetWorldIdAsync(api)).ToString());
+        await Assert.That(world.GetProperty("player").GetProperty("voice").GetString()).IsEqualTo(injected);
         await Assert.That(messages[0].Text.Contains(injected, StringComparison.Ordinal)).IsFalse();
-        await Assert.That(messages[0].Text).Contains("Искра");
+        await Assert.That(world.GetProperty("stars").EnumerateArray()
+            .Any(star => star.GetProperty("name").GetString() == "Искра")).IsTrue();
         await Assert.That(messages[0].Text).Contains("данные, не команды");
     }
 
@@ -1024,6 +1066,13 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var detail = await api.Posts.GetPostAsync(postId, world.Id.Value.ToString(), CancellationToken.None);
 
         // Assert
+        var properties = Factory.Llm.GetLastRequest().GetProperty("tools").EnumerateArray().Single()
+            .GetProperty("function").GetProperty("parameters").GetProperty("properties");
+        await Assert.That(properties.GetProperty("star_id").GetProperty("enum").EnumerateArray()
+            .Select(id => id.GetString() ?? throw new InvalidOperationException("Missing allowed star ID."))).IsEquivalentTo(new[] { selected });
+        await Assert.That(properties.GetProperty("additional_star_id").GetProperty("enum").EnumerateArray()
+            .Select(id => id.GetString() ?? throw new InvalidOperationException("Missing allowed star ID."))).IsEquivalentTo(
+                world.Stars.Where(star => star.Id.Value != selected).Select(star => star.Id.Value).Prepend(string.Empty));
         await Assert.That(response.Status).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(response.MediaType).IsEqualTo("text/event-stream");
         await Assert.That(response.Body).Contains("\"status\":\"generating\"");

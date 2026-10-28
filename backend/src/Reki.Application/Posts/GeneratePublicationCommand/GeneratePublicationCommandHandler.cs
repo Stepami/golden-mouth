@@ -247,7 +247,8 @@ internal sealed partial class GeneratePublicationCommandHandler(
                 StarToolCallParser.StarCommentAction comment => new PublicationPart(
                     null,
                     new GeneratedPostTurn(
-                        comment.Author,
+                        (context.Agent.World.FindStar(comment.StarId)
+                            ?? throw new AiServiceUnavailableException("The model returned a forbidden identity.")).Name,
                         comment.StarId,
                         comment.Text,
                         comment.Hook,

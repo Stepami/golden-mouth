@@ -374,6 +374,15 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await Assert.That((await GetStoredPlayerAsync(9511)).ToJson()).IsEqualTo(before.ToJson());
         await Assert.That((await GetStoredWorldAsync(9511)).ToJson()).IsEqualTo(worldBefore.ToJson());
         var messages = GetCapturedChatMessages();
+        using var profile = ParsePlayerLayer(messages.Single(message =>
+            message.Role == ChatRole.System && message.Text.Contains("DATA_JSON:", StringComparison.Ordinal)));
+        var generatedWorld = profile.RootElement.GetProperty("world");
+        var selectedId = profile.RootElement.GetProperty("starId").GetString();
+        await Assert.That(generatedWorld.GetProperty("player").GetProperty("name").GetString()).IsEqualTo(world.Player.Name);
+        await Assert.That(generatedWorld.GetProperty("player").GetProperty("role").GetString()).IsEqualTo(world.Player.Role);
+        await Assert.That(generatedWorld.GetProperty("stars").EnumerateArray()
+            .Select(star => star.GetProperty("id").GetString() ?? throw new InvalidOperationException("Missing star ID."))).IsEquivalentTo(world.Stars.Select(star => star.Id.Value));
+        await Assert.That(messages[0].Text).Contains($"id={selectedId}");
         var prompt = messages.Single(message => message.Role == ChatRole.User && message.Text.TrimStart().StartsWith("Исходный контент", StringComparison.Ordinal)).Text;
         const string marker = "DATA_JSON:";
         using var document = JsonDocument.Parse(prompt[(prompt.IndexOf(marker, StringComparison.Ordinal) + marker.Length)..]);
@@ -394,6 +403,8 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         }
 
         var saved = await repository.GetPostAsync(postId, worldId, CancellationToken.None);
+        await Assert.That(saved?.AuthorId).IsEqualTo(
+            world.Stars.Single(star => star.Id.Value == selectedId).Id.ToAuthorId());
         await Assert.That(saved?.Text).IsEqualTo("На новой карте я тоже не вижу мост.");
         await Assert.That(saved?.CreatedAtUtc).IsEqualTo(now);
         await Assert.That(await Database.GetCollection<GamePost>("posts").CountDocumentsAsync(FilterDefinition<GamePost>.Empty)).IsEqualTo(2);

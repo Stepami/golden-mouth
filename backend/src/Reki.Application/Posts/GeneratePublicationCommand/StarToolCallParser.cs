@@ -9,7 +9,6 @@ internal static class StarToolCallParser
 {
     private static readonly string[] CommentKeys =
     [
-        "author",
         "star_id",
         "text",
         "hook",
@@ -50,7 +49,6 @@ internal static class StarToolCallParser
     {
         EnsureExactKeys(arguments, CommentKeys);
         return new StarCommentAction(
-            GetString(arguments, "author", 40, allowEmpty: false),
             StarId.From(GetString(arguments, "star_id", 40, allowEmpty: false)),
             GetString(arguments, "text", 500, allowEmpty: false),
             GetString(arguments, "hook", 240, allowEmpty: false),
@@ -199,7 +197,6 @@ internal static class StarToolCallParser
     internal sealed record StarReactionAction(string Emoji) : IStarAction;
 
     internal sealed record StarCommentAction(
-        string Author,
         StarId StarId,
         string Text,
         string Hook,

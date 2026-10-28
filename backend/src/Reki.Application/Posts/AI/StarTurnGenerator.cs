@@ -1,10 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Reki.Application.Posts.AddReplyCommand;
 using Reki.Application.Posts.GeneratePublicationCommand;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.AI;
 
@@ -51,7 +53,6 @@ internal sealed class StarTurnGenerator(
         {
           "type": "object",
           "properties": {
-            "author": { "type": "string", "description": "Точное отображаемое name персонажа из каталога, не id.", "minLength": 1, "maxLength": 40 },
             "star_id": { "type": "string", "minLength": 1, "maxLength": 40 },
             "text": { "type": "string", "minLength": 1, "maxLength": 500 },
             "hook": { "type": "string", "minLength": 1, "maxLength": 240 },
@@ -75,22 +76,10 @@ internal sealed class StarTurnGenerator(
             },
             "on_topic": { "type": "boolean" }
           },
-          "required": ["author", "star_id", "text", "hook", "tone", "brave", "humor", "topic", "why", "on_topic"],
+          "required": ["star_id", "text", "hook", "tone", "brave", "humor", "topic", "why", "on_topic"],
           "additionalProperties": false
         }
         """;
-
-    private static readonly IReadOnlyList<AITool> Post =
-    [
-        Create("react", "Поставить реакцию на пост.", ReactSchema),
-        Create(
-            "comment",
-            "Оценить пост и оставить комментарий звезды. Экономику считает сервер.",
-            CommentSchema),
-    ];
-
-    private static readonly IReadOnlyList<AITool> ThreadReply =
-        [Create("thread_reply", "Ответить в треде; необязательные поля передаются пустой строкой.", ThreadReplySchema)];
 
     public async IAsyncEnumerable<ChatResponseUpdate> StreamPostTurnAsync(
         StarPostContext context,
@@ -102,9 +91,8 @@ internal sealed class StarTurnGenerator(
         var turnPolicy = $$"""
                            Для поста обязательно вызови comment ровно один раз и можешь вызвать react
                            не более одного раза. Оцени текст по трём шкалам мира от 0 до 1.
-                           author — отображаемое поле name из каталога, НЕ id и НЕ ник.
-                           star_id — поле id того же персонажа. Например, для Миры: author=Мира, star_id=mira.
-                           Выбирай только персонажей текущего каталога; пример не добавляет Миру в другие миры.
+                           star_id — поле id персонажа из world.stars. Имя автора определяет сервер.
+                           Выбирай только персонажей world.stars, не персонажа игрока world.player.
                            tone: support (поддержка), critique (критика текста) или hate (острая реакция на текст).
                            Хейт разрешён сейчас: {{context.HateEnabled}}. Если false, tone=hate запрещён.
                            """;
@@ -124,7 +112,7 @@ internal sealed class StarTurnGenerator(
         ];
         var options = CreateOptions(
             ChatToolMode.RequireSpecific("comment"),
-            Post);
+            CreatePostTools(context.Agent.World));
         await foreach (var update in chatClient
                            .GetStreamingResponseAsync(messages, options, cancellationToken))
         {
@@ -160,11 +148,66 @@ internal sealed class StarTurnGenerator(
         ];
         var options = CreateOptions(
             ChatToolMode.RequireSpecific("thread_reply"),
-            ThreadReply);
+            CreateThreadReplyTools(context));
         await foreach (var update in chatClient.GetStreamingResponseAsync(messages, options, cancellationToken))
         {
             yield return update;
         }
+    }
+
+    private static IReadOnlyList<AITool> CreatePostTools(World world) =>
+    [
+        Create("react", "Поставить реакцию на пост.", ReactSchema),
+        Create(
+            "comment",
+            "Оценить пост и оставить комментарий звезды. Экономику считает сервер.",
+            CreateStarSchema(CommentSchema, world.Stars.Select(star => star.Id.Value), null)),
+    ];
+
+    private static IReadOnlyList<AITool> CreateThreadReplyTools(StarReplyContext context) =>
+    [
+        Create(
+            "thread_reply",
+            "Ответить в треде; необязательные поля передаются пустой строкой.",
+            CreateStarSchema(
+                ThreadReplySchema,
+                [context.TargetStarId.Value],
+                [string.Empty, .. context.Agent.World.Stars
+                    .Where(star => star.Id != context.TargetStarId)
+                    .Select(star => star.Id.Value)])),
+    ];
+
+    private static string CreateStarSchema(
+        string schema,
+        IEnumerable<string> starIds,
+        IEnumerable<string>? additionalStarIds)
+    {
+        var document = JsonNode.Parse(schema)
+            ?? throw new InvalidOperationException("The tool schema is missing.");
+        var properties = document["properties"]
+            ?? throw new InvalidOperationException("The tool schema properties are missing.");
+        var starProperty = properties["star_id"]
+            ?? throw new InvalidOperationException("The tool schema star identity is missing.");
+        starProperty["enum"] = CreateAllowedIds(starIds);
+        if (additionalStarIds is not null)
+        {
+            var additionalStarProperty = properties["additional_star_id"]
+                ?? throw new InvalidOperationException("The tool schema additional star identity is missing.");
+            additionalStarProperty["enum"] = CreateAllowedIds(additionalStarIds);
+        }
+
+        return document.ToJsonString();
+    }
+
+    private static JsonArray CreateAllowedIds(IEnumerable<string> starIds)
+    {
+        var values = new JsonArray();
+        foreach (var starId in starIds)
+        {
+            values.Add(JsonValue.Create(starId));
+        }
+
+        return values;
     }
 
     private static AIFunctionDeclaration Create(string name, string description, string schema)
