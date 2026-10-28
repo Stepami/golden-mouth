@@ -10,6 +10,8 @@ import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
+import { EnergyHelp } from '../ui/GameSheets'
+import { GameHeader } from '../ui/GameHeader'
 
 const shareInvite = (link: string) => {
   track('invite_sent')
@@ -17,23 +19,10 @@ const shareInvite = (link: string) => {
   if (inTelegram) shareURL.ifAvailable(link, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`)
 }
 
-// 04-1: «звёзды отдыхают»; звёздам не пишем, бесплатное остаётся
+// Current reference showLimit opens energy help; retain the real daily-reset policy.
 function Limit() {
   const nav = useNav()
-  return (
-    <div className="screen no-tab">
-      <ChannelHead />
-      <div style={{ padding: '14px 20px', textAlign: 'center' }}>
-        <Avatar seed="mira" mode="default" size={72} style={{ margin: '2px auto 10px' }} />
-        <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Мира ответит утром</div>
-        <div className="muted" style={{ marginBottom: 14 }}>Она сказала «надо подумать 👀». Энергия на сегодня закончилась. В 9:00 запас обновится</div>
-        <Card style={{ textAlign: 'left', marginBottom: 12 }}><div className="small" style={{ color: 'var(--soft)', marginBottom: 4 }}>А пока бесплатно</div>читать треды · комментировать друзей · листать ленту</Card>
-        <Gift style={{ textAlign: 'left', fontSize: 15, padding: '12px 14px' }}>Позови друга: +5 энергии вам обоим прямо сегодня<div style={{ fontWeight: 600, fontSize: 12, marginTop: 2 }}>как только он сделает первый пост · до 3 друзей в день</div></Gift>
-        <button onClick={() => nav.push('04-2_fake_door')} style={{ marginTop: 14, fontSize: 14, color: 'var(--muted2)', background: 'none', border: 'none' }}>Реки+: +10 энергии и все миры ›</button>
-      </div>
-      <BottomCTA main="Позвать друга" onMain={() => nav.push('04-3_invite')} />
-    </div>
-  )
+  return <div className="screen"><GameHeader /><EnergyHelp onClose={() => nav.canBack ? nav.back() : nav.replace('03-3_feed')} /></div>
 }
 
 // 04-2: Реки+ тарифом; платёжки нет, «Хочу» пишет интерес и даёт +5 энергии
@@ -134,7 +123,7 @@ function FriendJoined() {
 }
 
 register({
-  '04-1_limit': { component: Limit, title: 'Лимит: звёзды отдыхают' },
+  '04-1_limit': { component: Limit, title: 'Как работает энергия' },
   '04-2_fake_door': { component: FakeDoor, title: 'Реки+' },
   '04-2b_plus_push': { component: PlusPush, title: 'Бот: Реки+ открыт' },
   '04-3_invite': { component: Invite, title: 'Позвать друзей' },

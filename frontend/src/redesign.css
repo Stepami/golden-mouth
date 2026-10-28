@@ -364,3 +364,19 @@ button.game-resource { color:var(--text);text-align:left;font:inherit; }
 .participants-list { padding:20px; }.participants-list h1 { font-size:26px;margin-bottom:20px; }.participants-list>button { display:flex;width:100%;align-items:center;gap:12px;text-align:left;border:0;border-bottom:1px solid var(--line);padding:14px 0;border-radius:0;background:none;color:var(--text); }.participants-list>button>span:first-of-type { flex:1; }.participants-list strong,.participants-list small { display:block; }.participants-list small { font-size:11px;color:var(--muted);margin-top:5px; }.profile-bio { margin:12px 20px;font-size:14px;line-height:1.6; }.avatar-link { display:block;min-width:36px;min-height:36px;padding:0;border:0;border-radius:50%;background:none; }.avatar-link:disabled { opacity:1; }
 .resume-panel { display:flex;align-items:center;gap:12px;width:calc(100% - 32px);margin:12px 16px;padding:14px;border:1px solid var(--line);border-radius:20px;background:var(--card);color:var(--text);text-align:left; }.resume-panel>span:nth-child(2) { flex:1;min-width:0; }.resume-panel strong,.resume-panel small { display:block; }.resume-panel strong { font-size:14px; }.resume-panel small { font-size:11px;color:var(--muted);margin-top:4px; }
 .publication-error-sheet>.btn { margin-top:8px; }
+
+/* Final source pass: disclosure spacing and history retain their profile context. */
+.settings-sheet .settings-section { border-radius:12px; }
+.settings-sheet .settings-section>summary { line-height:1.5;font-weight:400; }
+.settings-sheet .settings-section[open]>summary { margin-bottom:14px; }
+.settings-sheet .setting-row { margin:8px 0;padding:10px; }
+.settings-sheet .setting-row>summary { font-size:11px;line-height:1.5; }
+.settings-sheet .avatar-setting>div { min-width:0; }
+.settings-sheet .avatar-setting small { overflow-wrap:anywhere; }
+.action-history { padding:20px; }
+.action-history h1 { font-size:24px;margin:0 0 16px; }
+.action-history article { padding:16px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere; }
+.action-history article>small { color:var(--muted);font-size:11px; }
+.action-history article>p { font-size:14px;line-height:1.5; }
+
+@media(max-width:350px) { .settings-sheet .form-pair { grid-template-columns:minmax(0,1fr); } }

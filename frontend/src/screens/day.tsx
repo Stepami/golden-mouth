@@ -24,7 +24,7 @@ import { usePostListGestures } from '../app/usePostListGestures'
 import { runtimeConfig } from '../app/runtimeConfig'
 import { SkillHelp } from '../ui/SkillHelp'
 import { usePlayer, useStore } from '../app/store'
-import { Avatar, Bubble, Button, Card, Chip, Gift, Segmented, SkillBar, Sheet, TopBar, fmt, short } from '../ui'
+import { Avatar, Bubble, Button, Card, Chip, Gift, Segmented, SkillBar, Sheet, TopBar, fmt, short, plural } from '../ui'
 import { beginOwnWorld } from '../app/worldDraft'
 import { ChannelHead } from './onboarding'
 import { register } from '.'
@@ -254,14 +254,21 @@ function Stage() {
 
 function Me() {
   const p = usePlayer(); const nav = useNav()
+  const [profileTab, setProfileTab] = useState<'posts' | 'history'>('posts')
+  const history = resultHistory(p)
+  const tabs = <nav className="profile-history-tabs" aria-label="Профиль"><button aria-pressed={profileTab === 'posts'} onClick={() => setProfileTab('posts')}>Записи</button><button aria-pressed={profileTab === 'history'} onClick={() => setProfileTab('history')}>История действий</button></nav>
   const loadPage = useCallback((cursor: string | undefined, signal: AbortSignal) => api.channelPosts(p.worldInstanceId, cursor, signal), [p.worldInstanceId])
   const list = usePostPages<ChannelPost>(`channel-keyset-v1:${p.id}:${p.worldInstanceId ?? p.world}`, loadPage)
+  if (profileTab === 'history') return <div className="screen identity-screen"><GameHeader />{tabs}<section className="action-history"><h1>История действий</h1><p className="small muted">Подтверждённые результаты записей на этом устройстве. История ответов и других устройств пока не возвращается сервером.</p>
+    {!history.length && <p>После публикации здесь появится её результат.</p>}
+    {history.map(item => <article key={item.post.id}><small>Публикация · {worldOf(p.world).title}</small><p>{item.post.text}</p><PublicationResult result={item.result} skills={item.skills} /><button className="text-button" onClick={() => nav.push('02-6_thread', { postId: item.post.id })}>Открыть обсуждение →</button></article>)}
+  </section></div>
   return <div className="screen identity-screen"><GameHeader /><ResumePanel />
     <section className="social-profile"><div className="profile-cover"><WorldCover world={p.world} alt={`Обложка мира ${worldOf(p.world).title}`} /></div>
       <div className="profile-identity-row"><button className="avatar-edit" aria-label="Настройки персонажа" onClick={() => nav.push('05-8_settings')}><Avatar seed={p.handle} size={64} /></button><button className="profile-edit" onClick={() => nav.push('05-8_settings')}>Редактировать</button></div>
-      <h1>{p.name}</h1><p className="profile-handle">{displayHandle(p.handle)}</p><p className="profile-role">{p.role}</p><div className="profile-meta"><span>📍 {worldOf(p.world).title}</span><span><b>{fmt(p.subs)}</b> подписчиков</span>{list.ready && !list.hasNext && <span><b>{list.items.length}</b> записей</span>}</div>
+      <h1>{p.name}</h1><p className="profile-handle">{displayHandle(p.handle)}</p><p className="profile-role">{p.role}</p><div className="profile-meta"><span>📍 {worldOf(p.world).title}</span><span><b>{fmt(p.subs)}</b> подписчиков</span>{list.ready && !list.hasNext && <span><b>{list.items.length}</b> {plural(list.items.length, 'запись', 'записи', 'записей')}</span>}</div>
     </section>
-    <nav className="profile-history-tabs" aria-label="Профиль"><button aria-pressed="true">Записи</button><button onClick={() => nav.push('05-13b_results')}>История действий</button></nav>
+    {tabs}
     <div className="profile-posts-heading"><strong>Записи</strong><span>Твой голос в этом мире</span></div>
     {list.pending === 'first' && !list.ready && <p className="pad" role="status">Загружаем записи…</p>}
     {list.error && <div className="pad" role="alert"><p>Не удалось загрузить записи.</p><Button secondary onClick={() => void list.refresh()}>Повторить</Button></div>}
