@@ -3,7 +3,7 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
-namespace Reki.Infrastructure.Jobs.StarFeed;
+namespace Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
 
 public sealed record StarFeedRequest(
     PlayerId PlayerId,

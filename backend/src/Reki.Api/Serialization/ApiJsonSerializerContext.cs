@@ -33,9 +33,9 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnCommentPublished;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnPostPublished;
-using Reki.Infrastructure.Jobs.StarFeed;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;
 
 namespace Reki.Api.Serialization;
 

@@ -5,12 +5,12 @@ using Reki.Application.Posts;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnCommentPublished;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnFeedOpened;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnPostPublished;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;
 using TickerQ.Utilities.Interfaces.Managers;
 
-namespace Reki.Infrastructure.Jobs.StarFeed;
+namespace Reki.Infrastructure.Jobs.GenerateStarFeed;
 
 internal sealed partial class StarFeedScheduler(
     ITimeTickerManager<RekiTimeTicker> manager,
