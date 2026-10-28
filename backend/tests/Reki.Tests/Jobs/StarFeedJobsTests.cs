@@ -344,7 +344,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await Assert.That((await GetStoredPlayerAsync(9511)).ToJson()).IsEqualTo(before.ToJson());
         await Assert.That((await GetStoredWorldAsync(9511)).ToJson()).IsEqualTo(worldBefore.ToJson());
         var messages = GetCapturedChatMessages();
-        var prompt = messages.Single(message => message.Role == ChatRole.User && message.Text.StartsWith("Исходный контент", StringComparison.Ordinal)).Text;
+        var prompt = messages.Single(message => message.Role == ChatRole.User && message.Text.TrimStart().StartsWith("Исходный контент", StringComparison.Ordinal)).Text;
         const string marker = "DATA_JSON:";
         using var document = JsonDocument.Parse(prompt[(prompt.IndexOf(marker, StringComparison.Ordinal) + marker.Length)..]);
         var content = document.RootElement;
