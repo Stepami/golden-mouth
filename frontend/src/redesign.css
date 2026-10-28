@@ -360,3 +360,4 @@ button.game-resource { color:var(--text);text-align:left;font:inherit; }
 .game-topline>.icon-button:last-child { flex:none;max-width:64px;border-radius:15px;padding:5px;gap:3px; }
 .game-topline>.icon-button:last-child svg { width:19px;height:19px;flex:none; }
 .game-topline>.icon-button:last-child small { white-space:nowrap; }
+.appearance-choices button[aria-pressed=true] { color:var(--on-accent); }

@@ -64,7 +64,7 @@ function Compose() {
   </div>
   return (
     <div className={`screen no-tab compose-screen results-compose${firstStory ? ' story-compose' : ''}`}>
-      <header className="results-compose-heading"><h1>{firstStory ? 'Первый ход' : 'Новая запись'}</h1><button className="icon-button" aria-label="Закрыть редактор" onClick={nav.canBack ? nav.back : () => nav.replace('03-3_feed')}><Icon name="close" /></button></header>
+      <header className="results-compose-heading"><button className="icon-button" aria-label="Закрыть редактор" onClick={nav.canBack ? nav.back : () => nav.replace('03-3_feed')}><Icon name="close" /></button><h1>Новая запись</h1></header>
       <section className="results-compose-resources" aria-label="Ресурсы мира">
         <div className="results-resource-row"><button className="results-energy" onClick={() => setEnergyHelp(true)} aria-label="Как работает энергия"><span>⚡ <b>{p.postsLeft}</b><small> / {p.postsCap}</small></span><small>Энергия</small></button><div className="results-audience"><span>👥 <b>{fmt(p.subs)}</b></span><small>{worldOf(p.world).title}</small></div></div>
         <button className="results-compose-skills" onClick={() => nav.push('05-13_progress')} aria-label="История и навыки">{SKILLS.map(({ id, icon, name }) => <span key={id}><span>{icon} {name} <b>ур. {p.skills[id].level}</b></span><i><em style={{ width: `${Math.max(0, Math.min(100, p.skills[id].progress * 100))}%` }} /></i></span>)}<Icon name="arrow" size={18} /></button>
@@ -73,7 +73,7 @@ function Compose() {
         <div className="compose-world small muted">Публикация в мире · <b>{worldOf(p.world).title}</b></div>
         <div className="row compose-author"><Avatar seed={p.handle} size={36} /><div><b>{p.name}</b><div className="small muted">{worldOf(p.world).title} · {p.role}</div></div></div>
         {firstStory && <section className="compose-story-context"><h2>Твой первый ход</h2><p className="muted">{guidance?.firstStep ?? goal?.firstStep ?? contentOf(p.world).firstContext}</p></section>}
-        <label className="compose-label" htmlFor="compose-post-text">Твой пост</label>
+        <label className="sr-only" htmlFor="compose-post-text">Твой пост</label>
         <textarea id="compose-post-text" className="compose-input" value={text} onChange={event => edit(event.target.value)} maxLength={500} placeholder="Что происходит?" disabled={!!draft.publicationId} />
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
         {draft.publicationId && <div className="results-pending" role="status"><b>Проверим, что с записью.</b><p>Запись могла сохраниться — сначала проверим её статус. Черновик сохранён.</p><button className="text-button" onClick={() => nav.replace('02-2b_publish_error', { text: draft.submittedText, publicationId: draft.publicationId, ownWords: draft.submittedOwnWords, wantId: draft.submittedWantId, uncertain: true })}>Проверить статус →</button></div>}
