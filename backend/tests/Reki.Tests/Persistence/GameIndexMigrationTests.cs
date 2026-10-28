@@ -12,7 +12,6 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
-using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 using Reki.Infrastructure.Mongo.Migrations;
 using Reki.Infrastructure.Mongo.Options;
 using Reki.Infrastructure.Mongo.Repositories;
@@ -1205,7 +1204,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     private static BsonDocument CreateTicker(string id, string postId, bool legacyFormat = false) => new()
     {
         ["_id"] = id,
-        ["Function"] = nameof(GenerateStarFeedPostJob),
+        ["Function"] = "GenerateStarFeedPostJob",
         ["Request"] = new BsonBinaryData(TickerHelper.CreateTickerRequest(System.Text.Encoding.UTF8.GetBytes(new System.Text.Json.Nodes.JsonObject { [legacyFormat ? "PlayerId" : "playerId"] = "a96fb5ddf0564809a1d2bb5ed78a210f", [legacyFormat ? "WorldId" : "worldId"] = "world", [legacyFormat ? "PostId" : "postId"] = postId }.ToJsonString()))),
         ["CreatedAt"] = new BsonDateTime(CreatedAt.AddHours(1).UtcDateTime),
         ["Retries"] = 3,

@@ -162,7 +162,7 @@ internal sealed class PublishPostCommandHandler(
 
         analytics.TrackWorldAudience(updatedWorld);
         TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
-        await feedScheduler.ScheduleAsync(player.Id, world.Id);
+        await feedScheduler.ScheduleFromPostAsync(player.Id, world.Id, post.Id);
         return PostResponseMapper.MapLiveEvents(published, updatedWorld, player.Id);
     }
 

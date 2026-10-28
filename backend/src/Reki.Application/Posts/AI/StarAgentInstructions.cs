@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
+using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.AI;
@@ -66,8 +67,11 @@ internal sealed class StarAgentInstructions(IOptions<JsonSerializerOptions> json
     public string SerializeTexts(IEnumerable<string> texts) =>
         JsonSerializer.Serialize(texts.ToArray(), jsonOptions.Value);
 
-    public string SerializeFeedHistory(StarFeedHistoryPost[] history) =>
-        JsonSerializer.Serialize(history, jsonOptions.Value);
+    public string SerializeHistory(IReadOnlyList<GamePost> posts, StarAgentProfile profile) =>
+        JsonSerializer.Serialize(posts.Select(post => post.ToFeedHistoryPost(profile)).ToArray(), jsonOptions.Value);
+
+    public string SerializeFeedSource(StarFeedSourceContent source) =>
+        JsonSerializer.Serialize(source, jsonOptions.Value);
 
     private string SerializeStars(IEnumerable<WorldStar> stars)
     {
