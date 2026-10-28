@@ -1,5 +1,8 @@
 import { rememberResult, resultHistory } from '../app/resultHistory'
 import { PublicationResult } from '../ui/PublicationResult'
+import { SKILLS } from '../ui/GameHeader'
+import { EnergyHelp } from '../ui/GameSheets'
+import '../ui/results-parity.css'
 import { usePresetGoal } from '../ui/StoryGoal'
 import { Icon } from '../ui/Icon'
 import { useEffect, useRef, useState } from 'react'
@@ -13,7 +16,8 @@ import { inTelegram } from '../telegram'
 import { Avatar, BottomCTA, Button, Comment, Gift, TopBar, EnergyBadge, fmt } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
-import { contentOf, worldOf } from '../api/worldContent'
+import { characterGuidanceFor } from '../app/characterGuidance'
+import { contentOf, worldOf, worldDocumentOf } from '../api/worldContent'
 import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
@@ -25,8 +29,9 @@ import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 // 02-1: пост, желания дня, «Подскажи» дописывает черновик
 function Compose() {
   const nav = useNav(); const p = usePlayer()
-  const ideas = contentOf(p.world).ideas
+  const [energyHelp, setEnergyHelp] = useState(false)
   const goal = usePresetGoal(p.world)
+  const guidance = characterGuidanceFor(p, worldDocumentOf(p.world))
   const firstStory = nav.params.firstStory === true
   const key = draftKey(p)
   const [draft, setDraft] = useState<PostDraft>(() => {
@@ -40,22 +45,41 @@ function Compose() {
     setDraft(next); setDurable(savePostDraft(key, next))
   }
   useEffect(() => { setDurable(savePostDraft(key, draft)) }, [key, draft])
+  const publish = () => {
+    if (!text.trim() || draft.publicationId) return
+    if (p.postsLeft < 1) { track('limit_reached'); nav.replace('04-1_limit'); return }
+    track('post_publish', { len: text.length, own_words: draft.ownWords })
+    const publicationId = crypto.randomUUID()
+    savePostDraft(key, { ...draft, publicationId, submittedText: text, submittedOwnWords: draft.ownWords, submittedWantId: undefined })
+    nav.replace('02-2_live', { text, publicationId, ownWords: draft.ownWords, wantId: undefined })
+  }
+  if (firstStory) return <div className="screen no-tab story-writing-page">
+    <header><button className="icon-button" aria-label="К завязке" onClick={nav.canBack ? nav.back : () => nav.replace('01-6_home')}><Icon name="back" /></button><span>{worldOf(p.world).title}<small>Первый ход</small></span></header>
+    <div className="character-intro-identity"><Avatar seed={p.handle} size={40} /><span>{p.name}</span></div>
+    <h1>Твой первый ход</h1><p>{guidance?.firstStep ?? goal?.firstStep ?? contentOf(p.world).firstContext}</p>
+    <label className="sr-only" htmlFor="story-writing-text">Твоя запись</label><textarea id="story-writing-text" maxLength={500} placeholder="Напиши своими словами…" value={text} onChange={event => edit(event.target.value)} disabled={!!draft.publicationId} />
+    {draft.publicationId && <div role="status"><p>У записи ещё нет подтверждённого результата.</p><button className="text-button" onClick={() => nav.replace('02-2b_publish_error', { text: draft.submittedText, publicationId: draft.publicationId, ownWords: draft.submittedOwnWords, wantId: draft.submittedWantId, uncertain: true })}>Проверить статус →</button></div>}
+    {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
+    <span className="small muted">{text.length} / 500 · ⚡ −1</span>{p.postsLeft < 1 && <p role="status">Энергия закончилась. Черновик сохранён.</p>}<button className="btn" disabled={!text.trim() || !!draft.publicationId || p.postsLeft < 1} onClick={publish}>Опубликовать</button>
+  </div>
   return (
-    <div className={`screen no-tab compose-screen${firstStory ? ' story-compose' : ''}`}>
-      <TopBar onBack={nav.canBack ? nav.back : () => nav.replace('03-3_feed')} title={firstStory ? 'Первый ход' : 'Новая запись'} />
-      <div className="pad">
-        <div className="compose-world small muted">В мире · <b>{worldOf(p.world).title}</b></div><div className="row compose-author"><Avatar seed={p.handle} size={42} /><div><b>{p.name}</b><div className="small muted">{p.role}</div></div></div>
-        {firstStory && <section className="compose-story-context"><h1>Твой первый ход</h1><p className="muted">{goal?.firstStep ?? contentOf(p.world).firstContext}</p></section>}
-        <textarea className="compose-input" aria-label="Твоя запись" value={text} onChange={event => edit(event.target.value)} maxLength={500} placeholder="Что происходит в твоём мире?" rows={8} disabled={!!draft.publicationId} />
-        <details className="compose-suggestions"><summary>О чём написать</summary><div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} disabled={!!draft.publicationId || text.length > 0} onClick={() => { if (!text.length) edit(idea.replace(/[«»]/g, ''), true) }}>{idea}</button>)}</div>{text.length > 0 && <p className="small muted">Идея заполняет пустое поле. Твой текст сохранён.</p>}</details>
+    <div className={`screen no-tab compose-screen results-compose${firstStory ? ' story-compose' : ''}`}>
+      <header className="results-compose-heading"><h1>{firstStory ? 'Первый ход' : 'Новая запись'}</h1><button className="icon-button" aria-label="Закрыть редактор" onClick={nav.canBack ? nav.back : () => nav.replace('03-3_feed')}><Icon name="close" /></button></header>
+      <section className="results-compose-resources" aria-label="Ресурсы мира">
+        <div className="results-resource-row"><button className="results-energy" onClick={() => setEnergyHelp(true)} aria-label="Как работает энергия"><span>⚡ <b>{p.postsLeft}</b><small> / {p.postsCap}</small></span><small>Энергия</small></button><div className="results-audience"><span>👥 <b>{fmt(p.subs)}</b></span><small>{worldOf(p.world).title}</small></div></div>
+        <button className="results-compose-skills" onClick={() => nav.push('05-13_progress')} aria-label="История и навыки">{SKILLS.map(({ id, icon, name }) => <span key={id}><span>{icon} {name} <b>ур. {p.skills[id].level}</b></span><i><em style={{ width: `${Math.max(0, Math.min(100, p.skills[id].progress * 100))}%` }} /></i></span>)}<Icon name="arrow" size={18} /></button>
+      </section>
+      <div className="results-compose-body">
+        <div className="compose-world small muted">Публикация в мире · <b>{worldOf(p.world).title}</b></div>
+        <div className="row compose-author"><Avatar seed={p.handle} size={36} /><div><b>{p.name}</b><div className="small muted">{worldOf(p.world).title} · {p.role}</div></div></div>
+        {firstStory && <section className="compose-story-context"><h2>Твой первый ход</h2><p className="muted">{guidance?.firstStep ?? goal?.firstStep ?? contentOf(p.world).firstContext}</p></section>}
+        <label className="compose-label" htmlFor="compose-post-text">Твой пост</label>
+        <textarea id="compose-post-text" className="compose-input" value={text} onChange={event => edit(event.target.value)} maxLength={500} placeholder="Что происходит?" disabled={!!draft.publicationId} />
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
-        {draft.publicationId && <div className="card"><p>У предыдущей публикации ещё нет подтверждённого результата.</p><button className="btn" onClick={() => nav.replace('02-2_live', { text: draft.submittedText, publicationId: draft.publicationId, ownWords: draft.submittedOwnWords, wantId: draft.submittedWantId })}>Проверить статус</button></div>}
-
-
-
-
+        {draft.publicationId && <div className="results-pending" role="status"><b>Проверим, что с записью.</b><p>Запись могла сохраниться — сначала проверим её статус. Черновик сохранён.</p><button className="text-button" onClick={() => nav.replace('02-2b_publish_error', { text: draft.submittedText, publicationId: draft.publicationId, ownWords: draft.submittedOwnWords, wantId: draft.submittedWantId, uncertain: true })}>Проверить статус →</button></div>}
+        <div className="results-compose-bottom"><div className="results-compose-actions"><span className="small muted">Один пост · 1 энергия</span><button className="btn" disabled={!text.trim() || !!draft.publicationId || p.postsLeft < 1} onClick={publish}>Опубликовать</button></div><div className="results-compose-count small muted">{text.length} / 500 · ⚡ −1</div>{p.postsLeft < 1 && <p className="small muted" role="status">Энергия закончилась. Черновик сохранён.</p>}</div>
       </div>
-      <div className="compose-footer-meta small muted">{text.length} / 500 · ⚡ −1</div><BottomCTA main="Опубликовать" disabled={!text.trim() || !!draft.publicationId} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords }); const publicationId = crypto.randomUUID(); savePostDraft(key, { ...draft, publicationId, submittedText: text, submittedOwnWords: draft.ownWords, submittedWantId: undefined }); nav.replace('02-2_live', { text, publicationId, ownWords: draft.ownWords, wantId: undefined }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
+      {energyHelp && <EnergyHelp onClose={() => setEnergyHelp(false)} />}
     </div>
   )
 }
@@ -162,27 +186,15 @@ function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'nor
   useEffect(() => {
     haptic(r.delta >= 0 ? 'success' : 'warning')
     const previous = document.activeElement as HTMLElement | null
-    const overflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
     closeButton.current?.focus()
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close()
-      if (event.key === 'Tab') {
-        const buttons = closeButton.current?.closest('[role="dialog"]')?.querySelectorAll<HTMLElement>('button, summary, a[href]')
-        if (!buttons?.length) return
-        const first = buttons[0], last = buttons[buttons.length - 1]
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
-      }
-    }
+    const keydown = (event: KeyboardEvent) => { if (event.key === 'Escape') close() }
     document.addEventListener('keydown', keydown)
-    return () => { document.body.style.overflow = overflow; document.removeEventListener('keydown', keydown); previous?.focus() }
+    return () => { document.removeEventListener('keydown', keydown); previous?.focus() }
   }, [])
-  return <div className="screen result-screen"><ChannelHead /><div className="pad"><article className="timeline-post"><div className="row"><Avatar seed={p.handle} /><b>{p.name}</b><span className="small muted">только что</span></div><p>{post.text}</p></article></div>
-    <div className="publication-overlay" onClick={close}><div className={`publication-dialog${theme === 'flop' ? ' negative' : ''}`} role="dialog" aria-modal="true" aria-labelledby="publication-title" onClick={event => event.stopPropagation()}>
-      <div className="publication-dialog-heading"><p className="muted" id="publication-title">{theme === 'viral' ? 'Твоя запись залетела' : 'Запись опубликована'}</p><button ref={closeButton} className="icon-button" aria-label="Закрыть результат" onClick={close}><Icon name="close" /></button></div>
-      <PublicationResult result={r} skills={saved?.skills} />
-      <button className="text-button" onClick={() => nav.replace('02-6_thread', { post })}>К обсуждению →</button>
+  return <div className="screen result-screen results-parity-screen"><ChannelHead /><div className="pad"><article className="timeline-post"><div className="row"><Avatar seed={p.handle} /><b>{p.name}</b><span className="small muted">только что</span></div><p>{post.text}</p></article></div>
+    <div className="publication-overlay results-peek-layer"><div className={`publication-dialog results-peek${theme === 'flop' ? ' negative' : ''}`} role="dialog" aria-labelledby="publication-title" onClick={event => event.stopPropagation()}>
+      <div className="publication-dialog-heading"><p className="muted" id="publication-title">Запись опубликована</p><button ref={closeButton} className="icon-button" aria-label="Закрыть результат" onClick={close}><Icon name="close" /></button></div>
+      <PublicationResult result={r} skills={saved?.skills} onDiscussion={() => nav.replace('02-6_thread', { post })} />
     </div></div></div>
 }
 

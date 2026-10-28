@@ -124,6 +124,7 @@ type EntryDraft = NonNullable<ReturnType<typeof useWorldDraft>> & { entryChoice?
 /** Keep the existing NPC-as-player payload: restore the previous NPC before changing roles. */
 function PresetEntryForm({ draft }: { draft: EntryDraft }) {
   const nav = useNav(); const d = draft.definition
+  const { save, saving, error, uncertain } = useWorldSave(draft)
   const choice = draft.entryChoice ?? draft.persona?.star.id
   const selected = draft.persona
   const heroes = [...d.stars, ...(selected ? [selected.star] : [])].sort((a, b) => (draft.heroOrder?.indexOf(a.id) ?? 0) - (draft.heroOrder?.indexOf(b.id) ?? 0))
@@ -137,9 +138,9 @@ function PresetEntryForm({ draft }: { draft: EntryDraft }) {
     }
     setWorldDraft(next)
   }
-  return <><ChooseWorld /><Sheet className="entry-parity entry-profile" title="Твой профиль в мире" onClose={nav.back}><form className="entry-content" onSubmit={event => { event.preventDefault(); nav.push('01-4b_world_setup') }}>
+  return <><ChooseWorld /><Sheet className="entry-parity entry-profile" title="Твой профиль в мире" onClose={saving ? undefined : nav.back}><form className="entry-content" onSubmit={event => { event.preventDefault(); if (choice && d.name.trim() && d.role.trim() && d.avatar.trim() && d.voice.trim() && d.stars.length) void save() }}>
     <div className="entry-world"><WorldCover world={d.templateId!} /><div><h3>{d.title}</h3><p>{d.summary}</p></div></div>
-    <fieldset className="entry-characters"><legend>Кем войдёшь в мир?</legend>
+    <fieldset className="entry-characters" disabled={saving}><legend>Кем войдёшь в мир?</legend>
       {heroes.map(star => <label className="entry-character" key={star.id}><input type="radio" name="character" value={star.id} checked={choice === star.id} onChange={() => choose(star)} /><Avatar seed={star.avatarSeed} world={d.templateId!} avatarStyle={d.avatarStyle} mode="default" size={40} /><span><strong>{star.name}</strong><small>{star.role}</small></span></label>)}
       <label className="entry-character"><input type="radio" name="character" value="custom" checked={choice === 'custom'} onChange={() => choose()} /><span className="entry-anonymous" aria-hidden="true">✦</span><span><strong>Свой персонаж</strong><small>Выбрать имя и роль</small></span></label>
     </fieldset>
@@ -149,7 +150,9 @@ function PresetEntryForm({ draft }: { draft: EntryDraft }) {
       <details className="entry-details"><summary>Кто ты в этом мире · {d.role}</summary><fieldset className="entry-roles"><legend className="sr-only">Роль персонажа</legend>{d.roles.map(role => <label key={role}><input type="radio" name="role" checked={d.role === role} onChange={() => updateWorldDraft({ role })} />{role}</label>)}</fieldset><label>Своя роль<input required aria-label="Кто ты в этом мире" maxLength={80} value={d.role} onChange={event => updateWorldDraft({ role: event.target.value })} /></label></details>
     </div>}
     {choice && <details className="entry-details"><summary>Обращение и портрет</summary><Segmented value={draft.address} onChange={address => setWorldDraft({ ...draft, address })} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} /><p className="small muted">{displayHandle(d.avatar)}</p><AvatarPersonalization enabled={draft.personalizeAvatar !== false} onChange={personalizeAvatar => setWorldDraft({ ...draft, personalizeAvatar })} /></details>}
-    <p className="entry-next">Дальше — настроение и завязка твоей истории.</p><footer><button className="btn" disabled={!choice || !d.name.trim() || !d.role.trim() || !d.avatar.trim() || !d.stars.length} type="submit">{choice ? `Войти как ${d.name || '…'} →` : 'Выбери персонажа'}</button></footer>
+    <details className="entry-details"><summary>Настроение и голос · необязательно</summary><EntryMood definition={d} /><label>Как ты пишешь<input aria-label="Голос персонажа" maxLength={200} value={d.voice} onChange={event => updateWorldDraft({ voice: event.target.value })} /></label></details>
+    {error && <p role="alert">{error}</p>}{uncertain && <Button onClick={() => nav.replace('01-3_world')}>Проверить список миров</Button>}
+    <footer><button className="btn" disabled={saving || uncertain || !choice || !d.name.trim() || !d.role.trim() || !d.avatar.trim() || !d.voice.trim() || !d.stars.length} type="submit">{saving ? 'Сохраняем…' : choice ? `Войти как ${d.name || '…'} →` : 'Выбери персонажа'}</button></footer>
   </form></Sheet></>
 }
 
@@ -160,7 +163,7 @@ function EntryMood({ definition: d }: { definition: WorldDefinition }) {
   </>
 }
 
-function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typeof useWorldDraft>>; quick?: boolean }) {
+function useWorldSave(draft: NonNullable<ReturnType<typeof useWorldDraft>>) {
   const nav = useNav(); const { setPlayer } = useStore(); const d = draft.definition
   const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [uncertain, setUncertain] = useState(false)
   useEffect(() => { if (error) document.querySelector('[role="alert"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }) }, [error])
@@ -179,6 +182,12 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
       else setError(cause instanceof ApiError && cause.status === 409 ? 'Мир изменился или создание с нуля пока недоступно. Твои изменения сохранены в черновике.' : cause instanceof ApiError && cause.status === 503 ? 'Проверка истории временно недоступна. Настройки сохранены — попробуй начать ещё раз чуть позже.' : 'Не получилось сохранить мир. Проверь поля и попробуй снова.')
     } finally { setSaving(false) }
   }
+  return { save, saving, error, uncertain }
+}
+
+function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typeof useWorldDraft>>; quick?: boolean }) {
+  const nav = useNav(); const d = draft.definition
+  const { save, saving, error, uncertain } = useWorldSave(draft)
   if (quick) return <><ChooseWorld /><Sheet className="entry-parity entry-mood" title="Настроение истории" onClose={saving ? undefined : nav.back}><div className="entry-content"><EntryMood definition={d} />
     <div className="entry-summary"><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={40} /><div><b>{d.name}</b><p>{d.title} · {d.role}</p></div></div>
     <details className="entry-details"><summary>Изменить мир</summary><Button secondary onClick={() => nav.push('05-12_world_advanced')}>Расширенные настройки</Button><p className="small muted">Мир можно отредактировать и позже.</p></details>
