@@ -1,3 +1,4 @@
+import { UnseenResults } from './ui/UnseenResults'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NavContext, type Nav, type ScreenId } from './app/nav'
 import { StoreProvider, useStore } from './app/store'
@@ -73,7 +74,7 @@ function Shell() {
     <NavContext.Provider value={nav}>
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'edfccf53-65c6-4eaf-8321-2391bc1758bd'}>
       <AvatarPeople.Provider value={people}><div className="app">
-        <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}>{resultScreen && ResultBackground ? <><ResultBackground /><PublicationFloat /></> : <Screen />}</div><WorldUnlockCelebration />
+        <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}>{resultScreen && ResultBackground ? <><ResultBackground /><PublicationFloat /></> : <Screen />}</div><WorldUnlockCelebration />{player && <UnseenResults />}
         {tab !== undefined && (
           <nav className="tabbar" aria-label="Основная навигация">
             <button aria-label="Миры" aria-current={top.id === '01-3_world' ? 'page' : undefined} className={top.id === '01-3_world' ? 'on' : ''} onClick={() => { tap('tab', { to: '01-3_world' }); nav.tab(5) }}><Icon name="home" /></button>

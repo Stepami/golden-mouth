@@ -1,3 +1,5 @@
+import { ResumePanel } from '../ui/ResumePanel'
+import { profileTarget } from '../app/profileTarget'
 import { WorldCover } from '../ui/WorldCover'
 import { WorldSettings } from '../ui/WorldSettings'
 import { GameHeader } from '../ui/GameHeader'
@@ -108,12 +110,29 @@ function ReplyPreview({ postId }: { postId: string }) {
   return <button className="reply-preview" onClick={() => nav.push('02-6_thread', { postId })}><Avatar seed={preview.avatar} size={28} /><span><strong>{preview.author}</strong><span>{preview.text}</span><small>Ответить · открыть ветку →</small></span></button>
 }
 
-function FeedPostCard({ item }: { item: FeedItem }) {
+export function FeedPostCard({ item }: { item: FeedItem }) {
   const nav = useNav(); const p = usePlayer()
   const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId, returnTo: 'feed' }) : undefined
+  const [profileError, setProfileError] = useState('')
+  const [openingProfile, setOpeningProfile] = useState(false)
+  const profileWorld = useRef(p.worldInstanceId); profileWorld.current = p.worldInstanceId
+  const openProfile = async () => {
+    const startedWorld = p.worldInstanceId
+    if (openingProfile || !item.postId) return
+    setOpeningProfile(true); setProfileError('')
+    try {
+      const target = profileTarget(item.starId ? `Star_${item.starId}` : (await api.post(item.postId)).authorId, p)
+      if (startedWorld !== profileWorld.current) return
+      if (target === 'me') nav.push('05-5_collection')
+      else if (target) nav.push('03-7_npc_profile', { starId: target })
+      else setProfileError('Профиль этого автора недоступен в текущем мире.')
+    } catch { setProfileError('Не удалось открыть профиль. Попробуй ещё раз.') }
+    finally { setOpeningProfile(false) }
+  }
   return <article className="timeline-post tweet">
-    <div className="tweet-rail"><Avatar seed={item.avatar!} world={item.world} size={36} mode={item.starId ? 'default' : 'profile'} /></div>
-    <div className="tweet-main"><div className="post-head"><b>{item.author}</b><span className="post-time">{item.ago && '· ' + postDate(item.ago)}{item.demo && ' · демо'}</span>{open && <button className="profile-link" aria-label="Открыть обсуждение" onClick={open}>↗</button>}</div>{item.role && <div className="tweet-role">{item.role}</div>}
+    <div className="tweet-rail"><button className="avatar-link" disabled={!open || openingProfile} aria-label={`Профиль ${item.author}`} onClick={() => void openProfile()}><Avatar seed={item.avatar!} world={item.world} size={36} mode={item.starId ? 'default' : 'profile'} /></button></div>
+    <div className="tweet-main"><div className="post-head"><b>{item.author}</b><span className="post-time">{item.ago && '· ' + postDate(item.ago)}{item.demo && ' · демо'}</span>{open && <button className="profile-link" disabled={openingProfile} aria-label={`Открыть профиль ${item.author}`} onClick={() => void openProfile()}>↗</button>}</div>{item.role && <div className="tweet-role">{item.role}</div>}
+    {profileError && <p className="small" role="alert">{profileError}</p>}
     {item.repost && <div className="card small"><b>{p.name}</b><p>{item.repost}</p></div>}
     {open ? <button className="tweet-text" onClick={open} aria-label="Открыть пост и комментарии"><p>{item.text}</p></button> : <p className="timeline-text">{item.text}</p>}
     <div className="post-metrics">{open && <button onClick={open} aria-label={`Ответы: ${item.commentCount ?? 0}`}><Icon name="message" size={18} />{item.commentCount ?? 0}</button>}<span title="Реакции аудитории">Реакции {short(item.reactions?.reduce((total,r) => total + r.count,0) ?? 0)}</span>{item.views != null && <span><Icon name="views" size={18} />{short(item.views)}</span>}</div>
@@ -145,7 +164,7 @@ function Feed() {
     <div className="screen post-list-screen feed-screen" ref={gestures.screenRef}>
       <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
       <GameHeader /><div className="page-tabs"><button className="active" aria-current="page">сейчас</button><button onClick={() => nav.replace('03-5_stage')}>мои записи</button></div><div className="feed-write"><Avatar seed={p.handle} size={36} /><span className="muted">Что происходит в твоём мире?</span><button className="btn" onClick={() => nav.push('02-1_compose')}>Написать</button></div>
-      <div className="pad">
+      <ResumePanel /><div className="pad">
         {list.items.map((f, i) => f.kind === 'news'
           ? <Card key={`news-${i}`} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ МИРА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
           : <div className={newIds.includes(f.postId ?? "") ? "feed-arrival" : undefined} key={f.postId ?? `post-${i}`}><FeedPostCard item={f} /></div>)}
@@ -224,7 +243,7 @@ function Stage() {
   return <div className="screen post-list-screen feed-screen" ref={gestures.screenRef}>{pullIndicator}<GameHeader />
     <div className="page-tabs"><button onClick={() => nav.replace('03-3_feed')}>сейчас</button><button className="active" aria-current="page">мои записи</button></div>
 
-    <div className="pad">
+    <ResumePanel /><div className="pad">
       {list.pending === 'first' && !list.ready && <Card>Загружаем записи…</Card>}
       {list.error === 'first' && <Card>Не получилось загрузить записи. Потяни вниз от начала списка, чтобы повторить.</Card>}
       {list.ready && !list.items.length && !list.error && <section className="empty-state"><h2>Твоё первое слово — впереди.</h2><p>Можно начать со своей мысли. Она появится в этом мире.</p><Button onClick={() => nav.push('02-1_compose')}>Написать пост</Button></section>}
@@ -237,7 +256,7 @@ function Me() {
   const p = usePlayer(); const nav = useNav()
   const loadPage = useCallback((cursor: string | undefined, signal: AbortSignal) => api.channelPosts(p.worldInstanceId, cursor, signal), [p.worldInstanceId])
   const list = usePostPages<ChannelPost>(`channel-keyset-v1:${p.id}:${p.worldInstanceId ?? p.world}`, loadPage)
-  return <div className="screen identity-screen"><GameHeader />
+  return <div className="screen identity-screen"><GameHeader /><ResumePanel />
     <section className="social-profile"><div className="profile-cover"><WorldCover world={p.world} alt={`Обложка мира ${worldOf(p.world).title}`} /></div>
       <div className="profile-identity-row"><button className="avatar-edit" aria-label="Настройки персонажа" onClick={() => nav.push('05-8_settings')}><Avatar seed={p.handle} size={64} /></button><button className="profile-edit" onClick={() => nav.push('05-8_settings')}>Редактировать</button></div>
       <h1>{p.name}</h1><p className="profile-handle">{displayHandle(p.handle)}</p><p className="profile-role">{p.role}</p><div className="profile-meta"><span>📍 {worldOf(p.world).title}</span><span><b>{fmt(p.subs)}</b> подписчиков</span>{list.ready && !list.hasNext && <span><b>{list.items.length}</b> записей</span>}</div>

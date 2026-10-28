@@ -9,3 +9,5 @@ import './world'
 import './mechanics'
 
 import './progress'
+
+import './people'

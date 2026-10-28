@@ -33,17 +33,21 @@ export function installWorldTemplates(templates: WorldDocument[]): void {
 }
 
 const serverContent: Partial<Record<WorldId, WorldContent>> = {}
+const aliasedArt = new Set<string>()
 const traitNames = ['Дерзкость', 'Поддержка', 'Загадка', 'Воображение', 'Любопытство', 'Энергия', 'Ирония и расчёт', 'Сухой юмор', 'Самоирония', 'Азарт', 'Внимание']
 export function installWorldContent(worlds: WorldDocument[]): void {
   for (const world of worlds) {
     const template = optionalWorldTemplate(world)
-    if (template && worldArt[template.id]) worldArt[world.id] = worldArt[template.id]
+    if (aliasedArt.has(world.id)) { delete worldArt[world.id]; aliasedArt.delete(world.id) }
+    if (template && worldArt[template.id] && world.id !== template.id) { worldArt[world.id] = worldArt[template.id]; aliasedArt.add(world.id) }
     documents[world.id] = world
     serverContent[world.id] = toWorldContent(world)
   }
 }
 
 export function clearWorldContent(): void {
+  for (const id of aliasedArt) delete worldArt[id]
+  aliasedArt.clear()
   for (const key of Object.keys(documents)) delete documents[key as WorldId]
   for (const key of Object.keys(serverContent)) delete serverContent[key as WorldId]
 }

@@ -1,3 +1,4 @@
+import { ResumePanel } from '../ui/ResumePanel'
 import { characterGuidanceFor } from '../app/characterGuidance'
 import { worldDocumentOf } from '../api/worldContent'
 import { useState } from 'react'
@@ -17,7 +18,7 @@ function Progress() {
   const firstStep = guidance?.firstStep ?? goal?.firstStep
   const [tab, setTab] = useState<'story' | 'results'>(nav.current === '05-13b_results' ? 'results' : 'story')
   const history = resultHistory(p)
-  return <div className="screen progress-screen"><GameHeader compact />{tab === 'results' && <div className="page-tabs"><button onClick={() => setTab('story')}>Твоя история</button><button className="active">История действий</button></div>}
+  return <div className="screen progress-screen"><GameHeader compact /><ResumePanel />{tab === 'results' && <div className="page-tabs"><button onClick={() => setTab('story')}>Твоя история</button><button className="active">История действий</button></div>}
     <div className="progress-content">{tab === 'story' ? <>
       <section className="progress-heading"><h1>Твоя история</h1></section>
       {(guidance || goal) && <section className="arc-overview"><span className="eyebrow">Главная цель · {p.name}</span><h2>{guidance?.goal ?? goal?.goal}</h2><details className="arc-growth-details"><summary>Зачем и как развивать героя</summary><p>{guidance?.why ?? firstStep}</p>{guidance?.growth.map(line => <p key={line}>{line}</p>)}</details></section>}

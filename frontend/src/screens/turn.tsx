@@ -13,7 +13,7 @@ import type { CommentT, Post, PostResult, PublicationFailure } from '../api/type
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
-import { Avatar, BottomCTA, Button, Comment, Gift, TopBar, EnergyBadge, fmt } from '../ui'
+import { Avatar, BottomCTA, Button, Comment, Gift, TopBar, EnergyBadge, Sheet, fmt } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
 import { characterGuidanceFor } from '../app/characterGuidance'
@@ -87,15 +87,18 @@ function Compose() {
 // 02-2: живая реакция 3–4 с, потом итог одной карточкой
 function Live() {
   const nav = useNav(); const { patch, refresh } = useStore(); const p = usePlayer()
-  const text = (nav.params.text as string) ?? firstPost.text
-  const [publicationId] = useState(() => (nav.params.publicationId as string) ?? crypto.randomUUID())
+  const text = typeof nav.params.text === 'string' ? nav.params.text : readPostDraft(draftKey(p)).submittedText ?? ''
+  const [publicationId] = useState(() => (nav.params.publicationId as string) ?? readPostDraft(draftKey(p)).publicationId ?? '')
   const [floats, setFloats] = useState<{ id: number; emoji: string; x: number }[]>([])
   const [comments, setComments] = useState<CommentT[]>([])
   const [typing, setTyping] = useState<string | null>(null)
   const [phase, setPhase] = useState<'generating' | 'moderating' | 'reacting'>('generating')
   const commentsRef = useRef<CommentT[]>([])
   const reactionsRef = useRef<string[]>([])
-  useEffect(() => api.publish(text, publicationId, e => {
+  useEffect(() => {
+    if (!text.trim() || !publicationId) { nav.replace('02-1_compose'); return }
+    let active = true
+    const cancel = api.publish(text, publicationId, e => {
     setPhase('reacting')
     if (e.type === 'react') { reactionsRef.current.push(e.emoji); setFloats(f => [...f, { id: Date.now() + Math.random(), emoji: e.emoji, x: 10 + Math.random() * 70 }]) }
     if (e.type === 'comment') { commentsRef.current.push(e.comment); setComments(c => [...c, e.comment]) }
@@ -115,18 +118,20 @@ function Live() {
         }
         else patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + e.result.delta) })
         rememberResult(p, post, confirmedResult)
-        nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: confirmedResult, post })
+        if (active) nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: confirmedResult, post })
       })()
     }
   }, (state, reason) => { if (state === 'failed') { const saved = readPostDraft(draftKey(p)); if (saved.publicationId === publicationId) savePostDraft(draftKey(p), { text: saved.text, ownWords: saved.ownWords, wantId: saved.wantId }) }; if (reason?.code === 'crisis') { nav.replace(p.ageBand === '14-17' || !p.ageBand ? '06-2_crisis' : '06-3_crisis_adult'); return }; nav.replace('02-2b_publish_error', { text, publicationId, ownWords: nav.params.ownWords, wantId: nav.params.wantId, reason, uncertain: state === 'unknown' }) }, status => {
     if (status === 'ready_for_moderation') setPhase('moderating')
-  }, nav.params.ownWords !== false, typeof nav.params.wantId === 'string' ? nav.params.wantId : undefined), []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, nav.params.ownWords !== false, typeof nav.params.wantId === 'string' ? nav.params.wantId : undefined, nav.params.recoveryOnly === true || typeof nav.params.publicationId !== 'string')
+    return () => { active = false; cancel() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="screen">
       <ChannelHead />
 
       <div className="pad" style={{ position: 'relative' }}>
-        <div className="card" style={{ boxShadow: '0 0 0 2px rgba(255,107,139,.6),0 0 44px rgba(255,107,139,.35)', marginBottom: 12 }}>
+        <div className="card" style={{ border: '1px solid var(--line)', marginBottom: 12 }}>
           <div className="small" style={{ color: 'var(--accent)', marginBottom: 6 }} aria-live="polite">{phase === 'generating' ? 'готовим публикацию' : phase === 'moderating' ? 'проверяем публикацию' : 'только что опубликовано'}</div>{text}
           {phase === 'reacting'
             ? <div className="small muted" role="status" style={{ marginTop: 16 }}>Появляются реакции…</div>
@@ -145,7 +150,8 @@ function Live() {
 
 function PublishError() {
   const nav = useNav()
-  const text = typeof nav.params.text === 'string' ? nav.params.text : firstPost.text.replace(' 🫠', '')
+  const p = usePlayer()
+  const text = typeof nav.params.text === 'string' ? nav.params.text : readPostDraft(draftKey(p)).text
   const uncertain = nav.params.uncertain === true
   const reason = nav.params.reason as PublicationFailure | undefined
   const explanations: Record<string, string> = {
@@ -160,17 +166,14 @@ function PublishError() {
   return (
     <div className="screen no-tab">
       <ChannelHead />
-      <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">не опубликовано</div>{text}</div></div>
-      <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.65)' }}>
-        <div className="sheet" role="alert" aria-live="assertive">
-          <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{uncertain ? 'Проверим публикацию' : 'Пост не опубликован'}</div>
+      <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">{uncertain ? 'Результат уточняется' : 'Не опубликовано'}</div>{text}</div></div>
+      <Sheet title={uncertain ? 'Проверим публикацию' : 'Пост не опубликован'} className="publication-error-sheet" onClose={() => nav.replace('03-5_stage')}>
           <div className="muted" style={{ marginBottom: 20 }}>{explanation}</div>
-          {uncertain && publicationId && <Button onClick={() => nav.replace('02-2_live', { text, publicationId, ownWords: nav.params.ownWords, wantId: nav.params.wantId })}>Проверить статус</Button>}
+          {uncertain && publicationId && <Button onClick={() => nav.replace('02-2_live', { text, publicationId, ownWords: nav.params.ownWords, wantId: nav.params.wantId, recoveryOnly: true })}>Проверить статус</Button>}
           <Button onClick={() => nav.replace('02-1_compose', { text })}>Изменить текст</Button>
           <Button secondary onClick={() => nav.replace('03-5_stage')}>В канал</Button>
 
-        </div>
-      </div>
+      </Sheet>
     </div>
   )
 }
@@ -239,7 +242,7 @@ function Thread() {
   }
   useEffect(() => {
     if (loadedKey !== threadKey) return
-    try { localStorage.setItem(storageKey, JSON.stringify(draft)) } catch { /* optional storage */ }
+    try { localStorage.setItem(storageKey, JSON.stringify({ ...draft, at: Date.now() })) } catch { /* optional storage */ }
   }, [draft, loadedKey, threadKey, storageKey])
   useEffect(() => () => { controller.current?.abort() }, [threadKey])
   useEffect(() => {
