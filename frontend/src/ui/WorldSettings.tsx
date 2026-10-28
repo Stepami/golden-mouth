@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { api } from '../api/client'
 import { worldDocumentOf } from '../api/worldContent'
 import type { WorldDefinition } from '../api/types'
@@ -8,10 +8,19 @@ import { savedTheme, saveTheme, type ThemePreference } from '../app/theme'
 import { Avatar, Button, Sheet } from './index'
 
 export function WorldSettings({ onClose }: { onClose: () => void }) {
-  const p = usePlayer(); const { setPlayer } = useStore(); const nav = useNav()
+  const p = usePlayer(); const { setPlayer, resetPlayer } = useStore(); const nav = useNav()
   const [draft, setDraft] = useState(() => worldDocumentOf(p.world))
   const [theme, setTheme] = useState<ThemePreference>(savedTheme)
   const [saving, setSaving] = useState(false), [error, setError] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false), [deleting, setDeleting] = useState(false)
+  const deletePending = useRef(false)
+  const removeAccount = async () => {
+    if (deletePending.current) return
+    deletePending.current = true; setDeleting(true); setError('')
+    try { await api.deleteAccount(); resetPlayer(); nav.reset('01-2_age') }
+    catch { setError('Не получилось удалить аккаунт. Попробуй ещё раз.') }
+    finally { deletePending.current = false; setDeleting(false) }
+  }
   const change = (key: 'name' | 'avatar' | 'role' | 'title' | 'description' | 'voice', value: string) => setDraft(d => ({ ...d, [key]: value }))
   const save = async () => {
     if (saving) return
@@ -28,6 +37,12 @@ export function WorldSettings({ onClose }: { onClose: () => void }) {
     finally { setSaving(false) }
   }
   const field = (key: 'name' | 'avatar' | 'role' | 'title' | 'description' | 'voice', label: string, maxLength: number, multiline = false) => <label>{label}{multiline ? <textarea value={draft[key]} maxLength={maxLength} disabled={saving} onChange={e => change(key, e.target.value)} /> : <input value={draft[key]} required maxLength={maxLength} disabled={saving} onChange={e => change(key, e.target.value)} />}</label>
+  if (confirmDelete) return <Sheet title="Удалить аккаунт и все данные?" className="account-delete-sheet" onClose={deleting ? undefined : () => { setConfirmDelete(false); setError('') }}>
+    <p>Все твои миры, записи, переписка и прогресс удалятся навсегда. Восстановить их будет нельзя.</p>
+    {error && <p role="alert">{error}</p>}
+    <Button disabled={deleting} style={{ background: 'var(--danger)', marginTop: 16, marginBottom: 8 }} onClick={removeAccount}>{deleting ? 'Удаляем…' : 'Удалить навсегда'}</Button>
+    <Button secondary disabled={deleting} onClick={() => { setConfirmDelete(false); setError('') }}>Отмена</Button>
+  </Sheet>
   return <Sheet title="Настройки мира" className="settings-sheet" onClose={saving ? undefined : onClose}>
     <section className="appearance-setting"><label>Тема приложения</label><div className="appearance-choices">{([['system','Системная'],['light','Светлая'],['dark','Тёмная']] as const).map(([value,label]) => <button key={value} aria-pressed={theme === value} onClick={() => { setTheme(value); saveTheme(value) }}>{label}</button>)}</div></section>
     <form onSubmit={e => { e.preventDefault(); void save() }}>
@@ -39,6 +54,7 @@ export function WorldSettings({ onClose }: { onClose: () => void }) {
       <details className="settings-section"><summary>Персонажи мира</summary>{draft.stars.map(star => <details className="setting-row" key={star.id}><summary>{star.name} · {star.role}</summary>{(['about','voice'] as const).map(key => <label key={key}>{key === 'about' ? 'О персонаже' : 'Голос'}<textarea value={star[key]} disabled={saving} onChange={e => setDraft(d => ({ ...d, stars: d.stars.map(s => s.id === star.id ? { ...s, [key]: e.target.value } : s) }))} /></label>)}</details>)}</details>
       <details className="settings-section"><summary>Правила · только чтение</summary>{draft.rules.map((rule,i) => <p key={i}>{rule.locked ? '🔒 ' : ''}{rule.text}</p>)}<p className="form-help">Изменения сохранят твои записи и прогресс.</p></details>
       <details className="settings-section"><summary>Настройки аккаунта</summary><p className="form-help">Уведомления, обращение, персонализация и данные.</p><button type="button" className="text-button" disabled={saving} onClick={() => { onClose(); nav.push('05-8b_account') }}>Открыть настройки аккаунта →</button></details>
+      <button type="button" className="account-delete-action" disabled={saving} onClick={() => { setError(''); setConfirmDelete(true) }}>Удалить аккаунт и все данные</button>
       {error && <p role="alert">{error}</p>}<footer><Button secondary disabled={saving} onClick={onClose}>Отмена</Button><button className="btn" disabled={saving} type="submit">{saving ? 'Сохраняем…' : 'Сохранить'}</button></footer>
     </form>
   </Sheet>
