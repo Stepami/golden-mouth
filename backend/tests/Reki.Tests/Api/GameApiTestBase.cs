@@ -52,11 +52,9 @@ public abstract class GameApiTestBase(ApiFactory factory)
         }
 
         var response = CreateCommentResponse(includeUnknownArgument: false);
-        var platform = messages.First(message => message.Role == ChatRole.System).Text.Replace("\r\n", "\n", StringComparison.Ordinal);
-        var start = platform.IndexOf("[", StringComparison.Ordinal);
-        var end = platform.IndexOf("\n\nОграничения текущего хода:", StringComparison.Ordinal);
-        using var catalog = JsonDocument.Parse(platform[start..end]);
-        var stars = catalog.RootElement.EnumerateArray().ToArray();
+        using var profile = ParsePlayerLayer(messages.Single(message =>
+            message.Role == ChatRole.System && message.Text.Contains("DATA_JSON:", StringComparison.Ordinal)));
+        var stars = profile.RootElement.GetProperty("world").GetProperty("stars").EnumerateArray().ToArray();
         var persona = stars.FirstOrDefault(star => star.GetProperty("id").GetString() == "sonya");
         if (persona.ValueKind == JsonValueKind.Undefined)
         {
@@ -67,7 +65,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
             .OfType<FunctionCallContent>().Single().Arguments
             ?? throw new InvalidOperationException("The test response has no arguments.");
         arguments["star_id"] = persona.GetProperty("id").GetString();
-        arguments["author"] = persona.GetProperty("name").GetString();
 
         return response;
     }
@@ -78,7 +75,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
             """[{"icon":"🔥","label":"в голосе канала"}]""");
         var arguments = new Dictionary<string, object?>
         {
-            ["author"] = "Соня",
             ["star_id"] = "sonya",
             ["text"] = "Есть голос. Продолжай в том же духе.",
             ["hook"] = "Вернёмся к этой теме через пару постов",
