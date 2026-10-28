@@ -23,6 +23,7 @@ export function GameHeader({ compact = false }: { compact?: boolean }) {
       <button className="game-world" disabled={nav.current === '02-2_live'} onClick={() => setSheet('worlds')}>{worldArt[p.world] ? <img className="header-world-cover" src={worldArt[p.world].smallCover} alt="" /> : <Avatar seed={p.handle} size={36} />}<span><b>{w.title}</b><small>Сменить мир ▾</small></span></button>
       <button className="icon-button" aria-label="Настройки" onClick={() => setSheet('settings')}><Icon name="settings" /><small>Настройки</small></button>
     </div>
+    {compact && <div className="compact-audience"><span>👥 <b>{fmt(p.subs)}</b> {w.title}</span></div>}
     {!compact && <div className="game-resources"><button className="game-resource" aria-label="Как работает энергия" onClick={() => setSheet('energy')}><span>⚡ <b>{p.postsLeft}</b><small> / {p.postsCap}</small></span><small>Энергия · обновится в 09:00 МСК</small></button><div className="game-audience" aria-label={`${fmt(p.subs)} подписчиков`}><span>👥 <b>{fmt(p.subs)}</b></span><small>{w.title}</small></div></div>}
     {!compact && <button className="game-skills" aria-label="Открыть историю и навыки" onClick={() => nav.push('05-13_progress')}>
       {SKILLS.map(({ id, icon, name }) => <span key={id}><span>{icon} {name} <b>ур. {p.skills[id].level}</b></span><i><em style={{ width: `${Math.max(0, Math.min(100, p.skills[id].progress * 100))}%` }} /></i></span>)}<Icon name="arrow" size={20} />

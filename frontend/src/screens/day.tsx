@@ -24,7 +24,7 @@ import { SkillHelp } from '../ui/SkillHelp'
 import { usePlayer, useStore } from '../app/store'
 import { Avatar, Bubble, Button, Card, Chip, Gift, Segmented, SkillBar, Sheet, TopBar, fmt, short } from '../ui'
 import { beginOwnWorld } from '../app/worldDraft'
-import { ChannelHead, Home } from './onboarding'
+import { ChannelHead } from './onboarding'
 import { register } from '.'
 import { TextField } from '../ui/TextField'
 
@@ -100,14 +100,25 @@ function StarCard() {
 
 // 03-3: карточка поста в общей ленте. Открывается с клавиатуры (Enter/Space) и ведёт
 // только на свой postId с доступным ответом. Чужие карточки остаются в ленте.
+function ReplyPreview({ postId }: { postId: string }) {
+  const nav = useNav()
+  const [preview, setPreview] = useState<Awaited<ReturnType<typeof api.post>>['comments'][number]>()
+  useEffect(() => { let active = true; void api.post(postId).then(post => { if (active) setPreview(post.comments.find(comment => !comment.hidden)) }).catch(() => { /* Card remains usable when preview fails. */ }); return () => { active = false } }, [postId])
+  if (!preview) return null
+  return <button className="reply-preview" onClick={() => nav.push('02-6_thread', { postId })}><Avatar seed={preview.avatar} size={28} /><span><strong>{preview.author}</strong><span>{preview.text}</span><small>Ответить · открыть ветку →</small></span></button>
+}
+
 function FeedPostCard({ item }: { item: FeedItem }) {
   const nav = useNav(); const p = usePlayer()
   const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId, returnTo: 'feed' }) : undefined
-  return <article className="timeline-post">
-    <div className="timeline-author"><Avatar seed={item.avatar!} world={item.world} size={40} mode={item.starId ? 'default' : 'profile'} /><div><b>{item.author}</b> <span className="small muted">{item.role}</span><div className="small muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div>{open && <button className="icon-button" aria-label="Открыть обсуждение" onClick={open}>↗</button>}</div>
+  return <article className="timeline-post tweet">
+    <div className="tweet-rail"><Avatar seed={item.avatar!} world={item.world} size={36} mode={item.starId ? 'default' : 'profile'} /></div>
+    <div className="tweet-main"><div className="post-head"><b>{item.author}</b><span className="post-time">{item.ago && '· ' + postDate(item.ago)}{item.demo && ' · демо'}</span>{open && <button className="profile-link" aria-label="Открыть обсуждение" onClick={open}>↗</button>}</div>{item.role && <div className="tweet-role">{item.role}</div>}
     {item.repost && <div className="card small"><b>{p.name}</b><p>{item.repost}</p></div>}
-    <div className="timeline-text"><ExpandableText text={item.text} /></div>
-    <div className="post-metrics">{open && <button onClick={open} aria-label={`Ответы: ${item.commentCount ?? 0}`}><Icon name="message" size={18} />{item.commentCount ?? 0}</button>}<span title="Реакции аудитории">{item.reactions?.map(r => <span className="reaction-count" key={r.emoji}>{r.emoji} {short(r.count)}</span>)}</span>{item.views != null && <span><Icon name="views" size={18} />{short(item.views)}</span>}</div>
+    {open ? <button className="tweet-text" onClick={open} aria-label="Открыть пост и комментарии"><p>{item.text}</p></button> : <p className="timeline-text">{item.text}</p>}
+    <div className="post-metrics">{open && <button onClick={open} aria-label={`Ответы: ${item.commentCount ?? 0}`}><Icon name="message" size={18} />{item.commentCount ?? 0}</button>}<span title="Реакции аудитории">Реакции {short(item.reactions?.reduce((total,r) => total + r.count,0) ?? 0)}</span>{item.views != null && <span><Icon name="views" size={18} />{short(item.views)}</span>}</div>
+    {item.postId && !!item.commentCount && <ReplyPreview postId={item.postId} />}
+    </div>
   </article>
 }
 
@@ -209,15 +220,15 @@ function Stage() {
   const list = usePostPages<ChannelPost>(cacheKey, loadPage)
   const gestures = usePostListGestures(cacheKey, list, list.refresh)
   const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
-  if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home /></div>
   const latestResult = resultHistory(p)[0]
   return <div className="screen post-list-screen feed-screen" ref={gestures.screenRef}>{pullIndicator}<GameHeader />
     <div className="page-tabs"><button onClick={() => nav.replace('03-3_feed')}>сейчас</button><button className="active" aria-current="page">мои записи</button></div>
-    <div className="feed-write"><Avatar seed={p.handle} size={36} /><span className="muted">Что происходит в твоём мире?</span><button className="btn" onClick={() => nav.push('02-1_compose')}>Написать</button></div>
+
     <div className="pad">
       {list.pending === 'first' && !list.ready && <Card>Загружаем записи…</Card>}
       {list.error === 'first' && <Card>Не получилось загрузить записи. Потяни вниз от начала списка, чтобы повторить.</Card>}
-      {list.items.map(post => <article className="timeline-post" key={post.postId}><div className="timeline-author"><Avatar seed={p.handle} size={40} /><div><b>{p.name}</b><div className="small muted">{postDate(post.createdAtUtc)}</div></div><button className="icon-button" aria-label="Открыть обсуждение" onClick={() => nav.push('02-6_thread', { postId: post.postId, returnTo: 'channel' })}>↗</button></div><div className="timeline-text"><ExpandableText text={post.text} /></div><div className="post-metrics"><button onClick={() => nav.push('02-6_thread', { postId: post.postId, returnTo: 'channel' })}><Icon name="message" size={18} />{post.commentCount}</button><span>{post.reactions.map(r => <span className="reaction-count" key={r.emoji}>{r.emoji} {short(r.count)}</span>)}</span><span><Icon name="views" size={18} />{short(post.views)}</span></div>{latestResult?.post.id === post.postId && <PublicationResult result={latestResult.result} skills={latestResult.skills} />}</article>)}
+      {list.ready && !list.items.length && !list.error && <section className="empty-state"><h2>Твоё первое слово — впереди.</h2><p>Можно начать со своей мысли. Она появится в этом мире.</p><Button onClick={() => nav.push('02-1_compose')}>Написать пост</Button></section>}
+      {list.items.map(post => <div className="own-post" key={post.postId}><FeedPostCard item={{ kind:'post',text:post.text,postId:post.postId,author:p.name,avatar:p.handle,ago:post.createdAtUtc,views:post.views,reactions:post.reactions,commentCount:post.commentCount }} />{latestResult?.post.id === post.postId && <div className="own-post-outcome"><PublicationResult result={latestResult.result} skills={latestResult.skills} /></div>}</div>)}
       <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем записи…' : list.error === 'more' ? 'Не получилось загрузить записи. Обнови список.' : list.ready && !list.hasNext ? 'Все записи загружены' : ''}</div>
     </div></div>
 }
