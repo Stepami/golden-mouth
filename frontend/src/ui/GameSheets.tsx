@@ -54,7 +54,7 @@ export function WorldPicker({ onClose }: { onClose: () => void }) {
     <footer className="picker-footer">
       {error && !worlds && <Button disabled={switching} onClick={() => setAttempt(value => value + 1)}>Повторить</Button>}
       {!all && ordered && ordered.length > 3 && <Button disabled={switching} onClick={() => setAll(true)}>Все мои миры · {ordered.length}</Button>}
-      <Button secondary disabled={switching} onClick={() => { onClose(); nav.push('01-3_world') }}>Каталог новых миров →</Button>
+      <button className="picker-catalog" disabled={switching} onClick={() => { onClose(); nav.push('01-3_world') }}>Каталог новых миров →</button>
     </footer>
   </Sheet>
 }
