@@ -2,10 +2,12 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using Reki.Application.Balance;
 using Reki.Application.Posts.GetPublicStoryCard;
 using Reki.Infrastructure.AI;
 using Reki.Infrastructure.Jobs;
@@ -22,6 +24,7 @@ public static class DependencyInjection
         IConfiguration configuration,
         IJsonTypeInfoResolver jsonContext)
     {
+        services.AddSingleton<IOptionsChangeTokenSource<GameBalance>, ConfigurationChangeTokenSource<GameBalance>>();
         services.AddRekiContext(configuration);
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();

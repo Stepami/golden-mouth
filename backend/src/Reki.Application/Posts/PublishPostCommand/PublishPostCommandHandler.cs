@@ -21,11 +21,11 @@ internal sealed class PublishPostCommandHandler(
     IInvitationRepository invitationRepository,
     IPublicationRepository publicationRepository,
     IGameStore store,
-    IOptions<GameBalance> balance,
+    IOptionsMonitor<GameBalance> balance,
+    PostProgressionCalculator progressionCalculator,
     TimeProvider timeProvider,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
-    PostProgressionCalculator progressionCalculator,
     ProductTelemetry analytics,
     PlayerSafetyGuard safety,
     StarTurnPolicy turnPolicy,
@@ -55,13 +55,14 @@ internal sealed class PublishPostCommandHandler(
             throw new RequestConflictException("The publication is not ready for moderation.");
         }
 
+        var currentBalance = balance.CurrentValue;
         var text = publication.Text;
         var ownWords = publication.OwnWords;
         var wantId = publication.WantId;
         var now = timeProvider.GetUtcNow();
         var player = storedPlayer;
 
-        if (player.Energy < balance.Value.PostEnergyCost)
+        if (player.Energy < currentBalance.PostEnergyCost)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }
@@ -103,13 +104,13 @@ internal sealed class PublishPostCommandHandler(
             wantId,
             turn.StarId,
             now,
-            balance.Value.Relations.Minimum,
-            balance.Value.Relations.Maximum,
-            balance.Value.Relations.MaxGainPerDay,
-            balance.Value.Relations.StarCardAt);
-        var updated = player.SpendPost(progression.Skills, balance.Value.PostEnergyCost) with
+            currentBalance.Relations.Minimum,
+            currentBalance.Relations.Maximum,
+            currentBalance.Relations.MaxGainPerDay,
+            currentBalance.Relations.StarCardAt);
+        var updated = player.SpendPost(progression.Skills, currentBalance.PostEnergyCost) with
         {
-            HitOwnWorldMilestone = player.HitOwnWorldMilestone || updatedWorld.Player.Subscribers >= balance.Value.OwnWorldSubscribers,
+            HitOwnWorldMilestone = player.HitOwnWorldMilestone || updatedWorld.Player.Subscribers >= currentBalance.OwnWorldSubscribers,
         };
         var postId = PostId.New(now);
         var starComment = new GameComment(
@@ -152,7 +153,7 @@ internal sealed class PublishPostCommandHandler(
             published,
             request.PublicationId,
             updatedInvite,
-            balance.Value.InviteBonusMaxPerDay,
+            currentBalance.InviteBonusMaxPerDay,
             cancellationToken);
         if (!committed)
         {
