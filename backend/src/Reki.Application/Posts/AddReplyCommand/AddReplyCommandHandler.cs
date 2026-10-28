@@ -149,7 +149,7 @@ internal sealed partial class AddReplyCommandHandler(
             ReplyStatus.Completed,
             request.RequestId,
             Text: null,
-            Post: PostResponseMapper.MapPost(post, world, player.Id),
+            Post: post.MapPost(world, player.Id),
             EnergyLeft: player.Energy,
             Subscribers: world.Player.Subscribers,
             Code: null);
@@ -243,7 +243,7 @@ internal sealed partial class AddReplyCommandHandler(
             playerComment,
             new GameComment(CommentId.New(), playerComment.Id, null, turn.StarId.ToAuthorId(), turn.Text, false, [])
         ];
-        if (turn.AdditionalStarId is { } additional && turn.AdditionalText is { } text)
+        if (turn is { AdditionalStarId: { } additional, AdditionalText: { } text })
         {
             comments.Add(new GameComment(CommentId.New(), null, null, additional.ToAuthorId(), text, false, []));
         }
