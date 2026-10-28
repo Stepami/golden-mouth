@@ -2,6 +2,7 @@ import { rememberResult, resultHistory } from '../app/resultHistory'
 import { PublicationResult } from '../ui/PublicationResult'
 import { SKILLS } from '../ui/GameHeader'
 import { EnergyHelp } from '../ui/GameSheets'
+import { useEditorSkillHelp } from '../ui/useEditorSkillHelp'
 import '../ui/results-parity.css'
 import { usePresetGoal } from '../ui/StoryGoal'
 import { Icon } from '../ui/Icon'
@@ -28,6 +29,7 @@ import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 
 // 02-1: пост, желания дня, «Подскажи» дописывает черновик
 function Compose() {
+  const skillHelp = useEditorSkillHelp('#compose-post-text, #story-writing-text')
   const nav = useNav(); const p = usePlayer()
   const [energyHelp, setEnergyHelp] = useState(false)
   const goal = usePresetGoal(p.world)
@@ -60,14 +62,14 @@ function Compose() {
     <label className="sr-only" htmlFor="story-writing-text">Твоя запись</label><textarea id="story-writing-text" maxLength={500} placeholder="Напиши своими словами…" value={text} onChange={event => edit(event.target.value)} disabled={!!draft.publicationId} />
     {draft.publicationId && <div role="status"><p>У записи ещё нет подтверждённого результата.</p><button className="text-button" onClick={() => nav.replace('02-2b_publish_error', { text: draft.submittedText, publicationId: draft.publicationId, ownWords: draft.submittedOwnWords, wantId: draft.submittedWantId, uncertain: true })}>Проверить статус →</button></div>}
     {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
-    <span className="small muted">{text.length} / 500 · ⚡ −1</span>{p.postsLeft < 1 && <p role="status">Энергия закончилась. Черновик сохранён.</p>}<button className="btn" disabled={!text.trim() || !!draft.publicationId || p.postsLeft < 1} onClick={publish}>Опубликовать</button>
+    <button className="text-button" onClick={() => skillHelp.show()}>Примеры навыков →</button>{skillHelp.sheet}<span className="small muted">{text.length} / 500 · ⚡ −1</span>{p.postsLeft < 1 && <p role="status">Энергия закончилась. Черновик сохранён.</p>}<button className="btn" disabled={!text.trim() || !!draft.publicationId || p.postsLeft < 1} onClick={publish}>Опубликовать</button>
   </div>
   return (
     <div className={`screen no-tab compose-screen results-compose${firstStory ? ' story-compose' : ''}`}>
       <header className="results-compose-heading"><button className="icon-button" aria-label="Закрыть редактор" onClick={nav.canBack ? nav.back : () => nav.replace('03-3_feed')}><Icon name="close" /></button><h1>Новая запись</h1></header>
       <section className="results-compose-resources" aria-label="Ресурсы мира">
         <div className="results-resource-row"><button className="results-energy" onClick={() => setEnergyHelp(true)} aria-label="Как работает энергия"><span>⚡ <b>{p.postsLeft}</b><small> / {p.postsCap}</small></span><small>Энергия</small></button><div className="results-audience"><span>👥 <b>{fmt(p.subs)}</b></span><small>{worldOf(p.world).title}</small></div></div>
-        <button className="results-compose-skills" onClick={() => nav.push('05-13_progress')} aria-label="История и навыки">{SKILLS.map(({ id, icon, name }) => <span key={id}><span>{icon} {name} <b>ур. {p.skills[id].level}</b></span><i><em style={{ width: `${Math.max(0, Math.min(100, p.skills[id].progress * 100))}%` }} /></i></span>)}<Icon name="arrow" size={18} /></button>
+        <div className="results-compose-skills" aria-label="Навыки">{SKILLS.map(({ id, icon, name },index) => <button key={id} onClick={() => skillHelp.show(index)} aria-label={`Пример: ${name}`}><span>{icon} {name} <b>ур. {p.skills[id].level}</b></span><i><em style={{ width: `${Math.max(0, Math.min(100, p.skills[id].progress * 100))}%` }} /></i></button>)}<button aria-label="Как поднять навыки" onClick={() => skillHelp.show()}><Icon name="arrow" size={18} /></button></div>
       </section>
       <div className="results-compose-body">
         <div className="compose-world small muted">Публикация в мире · <b>{worldOf(p.world).title}</b></div>
@@ -79,7 +81,7 @@ function Compose() {
         {draft.publicationId && <div className="results-pending" role="status"><b>Проверим, что с записью.</b><p>Запись могла сохраниться — сначала проверим её статус. Черновик сохранён.</p><button className="text-button" onClick={() => nav.replace('02-2b_publish_error', { text: draft.submittedText, publicationId: draft.publicationId, ownWords: draft.submittedOwnWords, wantId: draft.submittedWantId, uncertain: true })}>Проверить статус →</button></div>}
         <div className="results-compose-bottom"><div className="results-compose-actions"><span className="small muted">Один пост · 1 энергия</span><button className="btn" disabled={!text.trim() || !!draft.publicationId || p.postsLeft < 1} onClick={publish}>Опубликовать</button></div><div className="results-compose-count small muted">{text.length} / 500 · ⚡ −1</div>{p.postsLeft < 1 && <p className="small muted" role="status">Энергия закончилась. Черновик сохранён.</p>}</div>
       </div>
-      {energyHelp && <EnergyHelp onClose={() => setEnergyHelp(false)} />}
+      {energyHelp && <EnergyHelp onClose={() => setEnergyHelp(false)} />}{skillHelp.sheet}
     </div>
   )
 }
@@ -207,6 +209,7 @@ const Viral = () => { const n = useNav(); const r = (n.params.result as PostResu
 
 // 02-6: один SSE-запрос; ответ и AI-реплики публикуются вместе за 1 энергию.
 function Thread() {
+  const skillHelp = useEditorSkillHelp('.thread-reply-input')
   const nav = useNav()
   const player = usePlayer()
   const { patch } = useStore()
@@ -340,8 +343,10 @@ function Thread() {
         {postAuthor && draft.commentId !== null && <button disabled={sending} onClick={() => { edit({ commentId: null }); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.thread-reply-input')?.focus()) }} style={{ background: 'none', border: 'none', color: 'var(--lilac)', marginBottom: 8 }}>К посту</button>}
         {draft.commentId && !targetAvailable && <div className="small muted" role="status" style={{ marginBottom: 8 }}>Этому аккаунту больше нельзя ответить. Выбери другой комментарий — текст ответа сохранён.</div>}
         {replyError && <div className="small" role="alert" style={{ color: 'var(--accent)', marginBottom: 12 }}>{replyError}</div>}
+        <button className="text-button" disabled={sending} onClick={() => skillHelp.show()}>Примеры навыков →</button>
         <Button secondary disabled={sending} onClick={() => nav.replace('02-1_compose')}>Написать следующий пост</Button>
       </div>
+      {skillHelp.sheet}
       <div className="bottom-cta thread-composer" style={{ flexDirection: 'row' }}>
         <div className="card" style={{ flex: 1, padding: '12px 14px' }}><textarea rows={2} className="thread-reply-input" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
         <button className="card thread-reply-send" onClick={send} disabled={sending || !targetAvailable || !draft.text.trim() || (player.postsLeft < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>

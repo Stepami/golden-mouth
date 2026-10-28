@@ -4,7 +4,7 @@ import { WorldSwitchDialog } from '../ui/WorldSwitchDialog'
 import { WorldCover } from '../ui/WorldCover'
 import { useEffect, useState } from 'react'
 import { api, ApiError } from '../api/client'
-import { worldDefinitionOf, worldDocumentOf, worlds } from '../api/worldContent'
+import { worldDefinitionOf, worldDocumentOf, worlds, optionalWorldTemplate } from '../api/worldContent'
 import type { WorldDefinition, WorldDocument } from '../api/types'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
@@ -61,6 +61,10 @@ export function ChooseWorld() {
   }
   const otherWorlds = owned.filter(world => world.id !== currentWorld?.id)
   const resume = async (world: WorldDocument) => { try { const next = await api.me(world.id); setPlayer(next); nav.push('03-5_stage') } catch { setError('Не получилось открыть мир.') } }
+  const savedWorldCard = (world: WorldDocument) => {
+    const art = worldArt[world.id] ?? worldArt[optionalWorldTemplate(world)?.id ?? '']
+    return <button className="continue-world card" key={world.id} onClick={() => resume(world)} aria-current={world.id === currentWorld?.id ? 'true' : undefined}>{art ? <img className="saved-world-cover" src={art.smallCover} alt="" /> : <Avatar seed={world.avatar} avatarStyle={world.avatarStyle} size={44} />}<div><strong>{world.title}</strong><small>{world.name} · {world.role} · 👥 {world.subscribers}</small>{world.id === currentWorld?.id && <em>Сейчас здесь</em>}</div><span aria-hidden="true">→</span></button>
+  }
   return <div className="screen no-tab"><header className="catalog-header"><span className="welcome-brand">реки.</span>{player && <button aria-label="Мой профиль" onClick={() => nav.push('05-5_collection')}><Avatar seed={player.handle} size={36} /></button>}</header>
     <div className="pad world-catalog-page worlds-home">
       {playerState === 'unauthorized' && <p className="small muted" role="status">Можно посмотреть миры. Для создания и сохранения открой Реки в Telegram.</p>}
@@ -97,8 +101,7 @@ export function ChooseWorld() {
 
 
       {getWorldDraft() && <Button secondary onClick={() => nav.push(getWorldDraft()?.definition.templateId === null ? '05-7b_own_world' : '01-4_channel')}>Продолжить настройку</Button>}
-      {currentWorld && <><h2>Твои миры</h2><button className="world-resume card" onClick={() => resume(currentWorld)}><Avatar seed={currentWorld.avatar} avatarStyle={currentWorld.avatarStyle} profile={player ? { address: player.address, ageBand: player.ageBand, personalizeAvatar: avatarPersonalization(player.id) } : undefined} size={48} /><div><b>{currentWorld.name}</b><p className="small muted">{currentWorld.emoji} {currentWorld.title} · {currentWorld.subscribers} подписчиков</p><span>Продолжить →</span></div></button></>}
-      {otherWorlds.length > 0 && <><h2>Другие твои миры</h2><div className="owned-stories">{otherWorlds.map(world => <button className="continue-world card" key={world.id} onClick={() => resume(world)}><Avatar seed={world.avatar} avatarStyle={world.avatarStyle} size={36} /><div><b>{world.name}</b><div className="small muted">{world.emoji} {world.title} · {world.subscribers} подписчиков</div></div><span>Играть →</span></button>)}</div></>}
+      {currentWorld && <section className="saved-worlds"><h2>Твои миры</h2><div className="owned-stories">{[currentWorld, ...otherWorlds].slice(0,2).map(savedWorldCard)}</div>{otherWorlds.length > 1 && <details className="saved-worlds-more" key={player?.id}><summary><span className="show-more">Показать все миры · {otherWorlds.length + 1}</span><span className="show-less">Свернуть</span></summary><div className="owned-stories">{otherWorlds.slice(1).map(savedWorldCard)}</div></details>}</section>}
       <div className="catalog-heading"><h1>Новый мир.<br /><span>Новая компания.</span></h1><p className="muted">Выбери мир, а затем — имя и роль.</p></div><nav className="catalog-categories" aria-label="Категории новых миров">{['Все', 'Тайны', 'Романтика', 'Фэнтези', 'Айти'].map(value => <button key={value} aria-pressed={category === value} onClick={() => setCategory(value)}>{value}</button>)}</nav><div className="world-catalog">{[...worlds].filter(world => category === 'Все' || (category === 'Тайны' || category === 'Романтика' ? world.id === 'b3a1a522-0263-4796-a197-57a8731fc291' : category === 'Айти' ? world.id === '5720946a-ea7c-4a10-9c50-51ce3deefc53' : ['aec9494b-4118-4525-8458-e85d759c8dd9', '8c02a7fb-3b55-4eb0-b957-1b4869ed9834'].includes(world.id))).sort((a, b) => ['b3a1a522-0263-4796-a197-57a8731fc291', 'aec9494b-4118-4525-8458-e85d759c8dd9', '8c02a7fb-3b55-4eb0-b957-1b4869ed9834', '5720946a-ea7c-4a10-9c50-51ce3deefc53'].indexOf(a.id) - ['b3a1a522-0263-4796-a197-57a8731fc291', 'aec9494b-4118-4525-8458-e85d759c8dd9', '8c02a7fb-3b55-4eb0-b957-1b4869ed9834', '5720946a-ea7c-4a10-9c50-51ce3deefc53'].indexOf(b.id)).map((world, index) => { const art = worldArt[world.id]; const definition = worldDefinitionOf(world.id); return <button key={world.id} className="world-cover-card" onClick={() => nav.push('01-3b_world_overview', { ...nav.params, world: world.id })} aria-label={`Обзор мира ${world.title}`}>
         {art && <div className="world-cover-image"><WorldCover world={world.id} catalog priority={index === 0} /><span className="world-mode">Свободное общение</span><span className="world-genre">{art.genre}</span></div>}
         <div className="world-cover-copy"><div className="row"><b>{world.title}</b><span aria-hidden="true">↗</span></div><p>{art?.pitch ?? world.summary}</p><div className="world-roster">{definition.stars.slice(0, 3).map(star => <Avatar key={star.id} seed={star.avatarSeed} avatarStyle={definition.avatarStyle} mode="default" size={26} />)}<span>Выбрать мир →</span></div></div>

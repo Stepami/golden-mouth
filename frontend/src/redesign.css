@@ -380,3 +380,37 @@ button.game-resource { color:var(--text);text-align:left;font:inherit; }
 .action-history article>p { font-size:14px;line-height:1.5; }
 
 @media(max-width:350px) { .settings-sheet .form-pair { grid-template-columns:minmax(0,1fr); } }
+
+/* Current executable reference: welcome motion control, saved-world disclosure, skill examples. */
+.welcome-thesis-wrap { position:relative; }
+.welcome-thesis-wrap .welcome-headline { white-space:pre-line; }
+.welcome-text-motion { position:absolute;right:0;bottom:-24px;width:44px;height:44px;border:0;background:transparent;color:var(--muted);font-size:14px; }
+@media(prefers-reduced-motion:reduce) { .welcome-text-motion { display:none; } }
+.saved-worlds-more summary { cursor:pointer;color:var(--accent);font-size:13px;padding:12px 0;list-style:none;min-height:44px;box-sizing:border-box; }
+.saved-worlds-more summary::-webkit-details-marker { display:none; }
+.saved-worlds-more summary:focus-visible { outline:2px solid var(--accent);outline-offset:2px; }
+.saved-worlds-more .show-less,.saved-worlds-more[open] .show-more { display:none; }
+.saved-worlds-more[open] .show-less { display:inline; }
+.saved-worlds-more:not([open])>.owned-stories { display:none; }
+.saved-worlds .continue-world { text-align:left; }
+.saved-worlds .continue-world>div { min-width:0;flex:1;overflow-wrap:anywhere; }
+.skill-explanation-sheet { width:calc(100% - 24px);max-width:400px;padding:20px;border-radius:24px; }
+.skill-explanation h3 { font-size:18px;margin:16px 0; }
+.skill-explanation p { font-size:13px;line-height:1.5;margin:12px 0; }
+.skill-example-links { display:grid;gap:8px;margin:16px 0; }
+.skill-example-links button { display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px;padding:8px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--text);font:inherit; }
+.skill-example-links span { font-size:12px;color:var(--accent); }
+.results-compose-skills>button { flex:1;min-width:0;min-height:44px;padding:0;text-align:left;background:none;border:0;color:var(--text); }
+.results-compose-skills>button>span { display:block;font-size:10px;line-height:1.5; }
+.results-compose-skills>button:last-child { flex:0 0 32px; }
+
+.saved-worlds { margin:22px 0; }
+.saved-worlds h2 { font-size:20px;letter-spacing:-.5px;margin-bottom:12px; }
+.saved-worlds .owned-stories { display:grid;gap:8px; }
+.saved-worlds .continue-world { margin:0;padding:10px;border-radius:16px;gap:12px; }
+.saved-worlds .saved-world-cover { width:48px;height:60px;object-fit:cover;border-radius:10px; }
+.saved-worlds strong { display:block;font-size:14px; }
+.saved-worlds small { display:block;font-size:10px;line-height:1.5;margin-top:5px;color:var(--text); }
+.saved-worlds em { display:block;font-style:normal;font-size:10px;margin-top:5px;color:var(--accent); }
+
+.saved-worlds-more:not([open])>.owned-stories { display:none; }

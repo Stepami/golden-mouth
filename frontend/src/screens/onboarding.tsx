@@ -39,13 +39,20 @@ const welcomeHeadlines = [
 
 function WelcomeHeadline() {
   const [index, setIndex] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const [reduced, setReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   useEffect(() => {
     const motion = matchMedia('(prefers-reduced-motion: reduce)')
-    if (motion.matches || new URLSearchParams(location.search).has('shot')) return
+    const update = () => setReduced(motion.matches)
+    motion.addEventListener('change', update)
+    return () => motion.removeEventListener('change', update)
+  }, [])
+  useEffect(() => {
+    if (paused || reduced || new URLSearchParams(location.search).has('shot')) return
     const timer = window.setInterval(() => setIndex(i => (i + 1) % welcomeHeadlines.length), 3400)
     return () => window.clearInterval(timer)
-  }, [])
-  return <h1 className="welcome-headline"><span key={index}><Typewriter text={welcomeHeadlines[index].join("\n")} cursor /></span></h1>
+  }, [paused, reduced])
+  return <div className="welcome-thesis-wrap"><h1 className="welcome-headline"><span>{welcomeHeadlines[index].join("\n")}</span></h1>{!reduced && <button className="welcome-text-motion" aria-label={paused ? 'Продолжить смену тезисов' : 'Остановить смену тезисов'} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? '▷' : 'Ⅱ'}</button>}</div>
 }
 
 // 01-1: welcome montage from the approved prototype.
