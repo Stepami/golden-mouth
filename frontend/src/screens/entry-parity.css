@@ -1,0 +1,66 @@
+/* Entry-only parity with the current executable prototype. */
+.entry-parity { color: var(--text); background: var(--bg); }
+.entry-parity .entry-content { padding: 20px 24px 28px; display: flex; flex-direction: column; gap: 18px; }
+.entry-parity .entry-world { display: flex; gap: 14px; align-items: center; }
+.entry-parity .entry-world > img { width: 76px; height: 86px; object-fit: cover; border-radius: 12px; flex-shrink: 0; }
+.entry-parity .entry-world h3 { margin: 0 0 6px; font-size: 18px; }
+.entry-parity .entry-world p, .entry-parity .entry-identity p, .entry-parity .entry-summary p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.entry-parity fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
+.entry-parity legend { font-size: 18px; font-weight: 750; margin-bottom: 12px; }
+.entry-parity .entry-characters { display: grid; gap: 8px; }
+.entry-parity .entry-character { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; cursor: pointer; margin: 0; }
+.entry-parity .entry-character:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--card)); }
+.entry-parity input[type=radio] { width: 16px; height: 16px; min-height: 0; padding: 0; margin: 0; accent-color: var(--accent); flex-shrink: 0; }
+.entry-parity .entry-character strong { display: block; font-size: 14px; }
+.entry-parity .entry-character small { display: block; font-size: 12px; color: var(--muted); line-height: 1.4; margin-top: 3px; }
+.entry-parity .entry-anonymous { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; background: var(--card); font-size: 20px; }
+.entry-parity .entry-custom { display: grid; gap: 16px; }
+.entry-parity .entry-custom > label, .entry-parity .entry-details > label { display: grid; gap: 8px; font-size: 13px; font-weight: 650; }
+.entry-parity .entry-identity, .entry-parity .entry-summary { display: flex; align-items: center; gap: 10px; }
+.entry-parity .entry-details { border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+.entry-parity .entry-details summary { cursor: pointer; font-size: 14px; }
+.entry-parity .entry-details[open] > summary { margin-bottom: 16px; }
+.entry-parity .entry-roles { display: grid; gap: 12px; margin-bottom: 16px; }
+.entry-parity .entry-roles label { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.entry-parity .entry-next, .entry-parity .entry-lead { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0; }
+.entry-parity footer { margin-top: auto; padding-top: 4px; }
+.entry-parity footer .btn { width: 100%; min-height: 48px; border-radius: 24px; }
+.entry-parity.entry-mood h1 { margin: 0; font-size: 28px; line-height: 1.12; letter-spacing: -.7px; }
+.entry-parity .entry-difficulty { display: flex; flex-wrap: wrap; gap: 8px; }
+.entry-parity .entry-difficulty label { display: flex; gap: 7px; align-items: center; font-size: 14px; padding: 12px 10px; border: 1px solid var(--line); border-radius: 12px; }
+.entry-parity .entry-difficulty label:has(input:checked) { border-color: var(--accent); }
+.entry-parity.entry-opening { min-height: 100dvh; box-sizing: border-box; padding: 20px 24px 28px; display: flex; flex-direction: column; gap: 18px; }
+.entry-parity.entry-opening > header { display: flex; gap: 12px; align-items: center; font-size: 15px; }
+.entry-parity.entry-opening > header small { display: block; font-size: 11px; color: var(--muted); margin-top: 3px; }
+.entry-parity .entry-opening-cover { width: 100%; height: 180px; object-fit: cover; border-radius: 18px; }
+.entry-parity.entry-opening > h1 { font-size: 32px; line-height: 1.08; letter-spacing: -.9px; margin: 0; }
+.entry-parity .entry-opening-context { font-size: 15px; line-height: 1.5; margin: 0; }
+.entry-parity .entry-opening-goal { padding: 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+.entry-parity .entry-opening-goal > strong { font-size: 13px; color: var(--muted); }
+.entry-parity .entry-opening-goal > p { font-size: 14px; margin: 7px 0 0; line-height: 1.45; }
+.entry-parity.entry-opening > .btn { margin-top: auto; flex-shrink: 0; width: 100%; min-height: 48px; border-radius: 24px; }
+.entry-own-sheet .own-unlock-lead { font-size: 15px; line-height: 1.5; }
+.entry-own-sheet .unlock-compact { padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+.entry-own-sheet .unlock-followers { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 10px; }
+.entry-own-sheet .unlock-followers > b { color: var(--accent); font-size: 27px; white-space: nowrap; }
+.entry-own-sheet .unlock-followers small { font-size: 13px; color: var(--muted); }
+.entry-own-sheet progress { width: 100%; height: 9px; accent-color: var(--accent); }
+.entry-own-sheet .unlock-friend { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
+@media (max-width: 350px), (max-height: 740px) {
+  .entry-parity .entry-content, .entry-parity.entry-opening { padding: 16px 20px 24px; gap: 14px; }
+  .entry-parity .entry-opening-cover { height: 140px; }
+  .entry-parity.entry-opening > h1 { font-size: 28px; }
+  .entry-parity .entry-opening-context { font-size: 14px; }
+}
+.entry-parity .entry-world > .world-art { width: 76px; height: 86px; border-radius: 12px; flex-shrink: 0; overflow: hidden; }
+.entry-parity .world-art > img { width: 100%; height: 100%; object-fit: cover; }
+.entry-parity input:not([type=radio]):not([type=checkbox]) { min-height: 46px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.sheet.entry-parity { background: var(--card); width: calc(100% - 20px); max-width: 400px; padding: 20px; margin: 10px; border-radius: 28px; max-height: calc(100dvh - 24px); }
+.sheet.entry-parity .entry-content { padding: 0; gap: 18px; }
+.sheet.entry-parity .entry-world > .world-art { width: 62px; height: 72px; }
+.sheet.entry-parity > .sheet-head h2 { font-size: 18px; }
+.sheet.entry-parity .entry-character strong { color: var(--text); }
+.sheet.entry-parity .entry-content footer { position: sticky; bottom: -20px; background: var(--card); padding: 14px 0 4px; }
+.sheet.entry-parity .entry-content footer .btn { font-size: 14px; }
+.entry-parity.entry-opening > header .back { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--card); font-size: 28px; }
+.entry-parity.entry-opening.screen.no-tab { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }

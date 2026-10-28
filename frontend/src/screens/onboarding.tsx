@@ -1,3 +1,4 @@
+import './entry-parity.css'
 import leraPortrait from '../assets/onboarding-lera.jpg'
 import welcomeSki from '../assets/welcome-ski.jpg'
 import { GameHeader } from '../ui/GameHeader'
@@ -124,13 +125,14 @@ function Under14() {
 export function ChannelHead() { return <GameHeader /> }
 export function Home() {
   const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
-  return <div className="screen opening-screen"><div className="top"><button className="back" aria-label="Назад к мирам" onClick={() => nav.replace('01-3_world')}>‹</button><div><b>{worldOf(p.world).title}</b><div className="small muted">Завязка истории</div></div></div><div className="pad">
-    {worldArt[p.world] && <WorldCover world={p.world} className="opening-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}
-    <div className="row opening-persona"><Avatar seed={p.handle} size={42} /><b>Ты — {p.name}</b></div>
-    <h1>Здесь начинается твоя история.</h1><p className="opening-context"><Typewriter text={profile.firstContext} /></p>
-    {goal && <section className="card opening-goal"><span className="small muted">Твоя цель</span><h2>{goal.goal}</h2><p>{goal.firstStep}</p></section>}
+  return <div className="screen no-tab entry-parity entry-opening"><header><button className="back" aria-label="Назад к мирам" onClick={() => nav.replace('01-3_world')}>‹</button><div><b>{worldOf(p.world).title}</b><small>Завязка истории</small></div></header>
+    {worldArt[p.world] && <WorldCover world={p.world} className="entry-opening-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}
+    <div className="entry-identity"><Avatar seed={p.handle} size={42} /><b>Ты — {p.name}</b></div>
+    <h1>{p.role || 'Здесь начинается твоя история.'}</h1><p className="entry-opening-context"><Typewriter text={profile.firstContext} /></p>
+    {goal && <section className="entry-opening-goal"><strong>Первый шаг</strong><p>{goal.firstStep}</p></section>}
     {p.firstPostInviteBonus > 0 && <p className="small muted">Первый пост даст ещё {p.firstPostInviteBonus} энергии.</p>}
-  </div><div className="bottom-cta"><button className="btn" onClick={() => nav.push('02-1_compose', { firstStory: true })}>Начать историю →</button></div></div>
+    <button className="btn" onClick={() => nav.push('02-1_compose', { firstStory: true })}>Написать первый пост →</button>
+  </div>
 }
 
 register({
@@ -145,4 +147,4 @@ register({
   '01-4b_world_setup': { component: withWorldTemplates(WorldSetup), title: 'Мир, голос канала и драма' },
   '01-5_first_star': { component: withWorldTemplates(FirstStar), title: 'Настройка героев' },
   '01-6_home': { component: Home, title: 'Первый экран' },
-}, { '01-6_home': 0, '01-3_world': 5 })
+}, { '01-3_world': 5 })
