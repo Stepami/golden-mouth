@@ -27,7 +27,7 @@ namespace Reki.Tests.Api;
 public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
-    public async Task Publication_BalanceReloadBeforeConfirmation_UsesCurrentBalanceAndPreservesReplayAsync()
+    public async Task Publication_BalanceReloadBeforeConfirmation_UsesCurrentBalanceAsync()
     {
         // Arrange
         const long user = 1094;
