@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddSingleton<ProductTelemetry>();
         services.AddSingleton<StarAgentInstructions>();
         services.AddSingleton<IStarTurnGenerator, StarTurnGenerator>();
+        services.AddSingleton<IStarContentGenerator, StarContentGenerator>();
 
         return services;
     }

@@ -14,7 +14,7 @@ internal sealed class GenerateStarFeedOnFeedOpenedJob(
     IPlayerRepository playerRepository,
     IPostRepository postRepository,
     IWorldRepository worldRepository,
-    IStarTurnGenerator generator) : ITickerFunction<StarFeedRequest>
+    IStarContentGenerator generator) : ITickerFunction<StarFeedRequest>
 {
     public async Task ExecuteAsync(
         TickerFunctionContext<StarFeedRequest> context,

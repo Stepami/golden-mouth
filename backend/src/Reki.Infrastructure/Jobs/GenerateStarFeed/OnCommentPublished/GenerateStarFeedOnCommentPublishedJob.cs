@@ -15,7 +15,7 @@ internal sealed class GenerateStarFeedOnCommentPublishedJob(
     IPlayerRepository playerRepository,
     IPostRepository postRepository,
     IWorldRepository worldRepository,
-    IStarTurnGenerator generator) : ITickerFunction<StarFeedOnCommentPublishedRequest>
+    IStarContentGenerator generator) : ITickerFunction<StarFeedOnCommentPublishedRequest>
 {
     public async Task ExecuteAsync(
         TickerFunctionContext<StarFeedOnCommentPublishedRequest> context,
