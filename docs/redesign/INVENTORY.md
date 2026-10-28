@@ -1,6 +1,6 @@
 # Инвентарь актуального эталона → frontend — #205 / #219
 
-Дата: 28.10.2026. Актуализировано для DEV8003dd2; новый проход — [REVIEW](REVIEW-2026-10-28.md). Это перечень поверхностей и ветвей текущего исполняемого эталона, а не утверждение о полном pixel parity. Исторические README v0.35–41 описывают разные итерации; при расхождении проверялся текущий `app.js`, а не прежнее описание. Например, текущий `welcomeMontage()` снова содержит социальный пост, а `guidedOnboarding()` — два шага Леры.
+Дата: 28.10.2026. Актуализировано после580dbea; финальная адресная сверка кода3b623a9; новый проход — [REVIEW](REVIEW-2026-10-28.md). Это перечень поверхностей и ветвей текущего исполняемого эталона, а не утверждение о полном pixel parity. Исторические README v0.35–41 описывают разные итерации; при расхождении проверялся текущий `app.js`, а не прежнее описание. Например, текущий `welcomeMontage()` снова содержит социальный пост, а `guidedOnboarding()` — два шага Леры.
 
 Источники: `app.html` → `tokens.css`, `app-base.css`, `app.css`, **последним `components.css`**; затем `catalog.js`, `app.js`. `system.html` встраивает эти же поверхности, не отдельную реализацию. `reference.json` с маркетинговым референсом Yope не использовался как макет экранов. Идентичность входных файлов зафиксирована [SHA-256 manifest](evidence/2026-10-28-own-unlock/source-manifest.json), без персональных путей.
 
@@ -21,7 +21,7 @@
 | `cards`, категории и карточки новых миров | `world-catalog`, `WorldCover` | adapted | Базовые кадры/live; фильтры фиксированных пресетов, доступ/персоны с API |
 | `worldsPage`: свои миры, продолжение, раскрытие остальных | `world-resume`, `owned-stories` | adapted | source/live; список не сворачивается до двух карточек |
 | `worldPicker(false/true)`: компактный sheet / все миры | `GameHeader` → WorldPicker | adapted | [8 пар HUD](evidence/2026-10-28-hud-sheets/README.md), live: текущий мир, реальные подписчики, каталог; до3 / все, ошибки и смена другого мира отдельно UI fixtures; сюжетных статусов API нет, обложка только при надёжном соответствии шаблону |
-| `pendingPanel`, `resumeContext`: незавершённый контекст | продолжение черновика мира/публикации | adapted | source + прежние UI-проверки; нет единой карточки всех видов контекста |
+| `pendingPanel`, `resumeContext`: незавершённый контекст | ResumePanel + resumeTarget | adapted | Последний локальный post/reply; pending GET-only приоритет; адресат сохранён,5 storage edge contracts и real recovery PASS |
 | `ownWorldHero`: locked / unlocked | `own-world-prototype` | adapted | live/UI fixture; счётчик только при наличии данных, unlock исключительно серверный |
 | `ownWorldInfo`: карточка условий, счётчик, progress, приглашение, CTA | `own-unlock-modal` | adapted | **pair 320/390 × light/dark**; композиция восстановлена; вместо обещания голоса — текстовый путь, добавлен источник реального счётчика |
 | Own-world sheet: неавторизованный401 / новый пользователь404 | публичный каталог, sheet «—», первый мир | adapted | **live401** с удалённым Authorization запроса, templates200; отдельно404 UI fixture. Нет выдуманного 0, шкалы и перехода в защищённый прогресс |
@@ -45,7 +45,7 @@
 | --- | --- | --- | --- |
 | `resourceHud`, `header`, sticky | `GameHeader` | adapted | live + source; нет кристаллов/дня, отдельный HUD-макет и текущая энергия |
 | `energyMeter`, countdown +1/15 мин | энергия, reset в 09:00 МСК | adapted | **API**; таймер регенерации не рисуется по fixture |
-| `energyPolicyInfo`, `showLimit`: компактная справка | HUD → EnergyHelp; `04-1_limit` сохранён | adapted | [8 пар HUD](evidence/2026-10-28-hud-sheets/README.md), live: компактная справка, реальный остаток, reset09:00МСК, стоимость1, чтение бесплатно; регенерация эталона не реализована; полноэкранный лимит этим проходом не переработан |
+| `energyPolicyInfo`, `showLimit`: компактная справка | HUD и `04-1_limit` → EnergyHelp | adapted | **3b623a9**,4 пары энергии + real DEV; актуальный showLimit также sheet. Дневной reset09:00МСК сохранён вместо регенерации fixture; старый fullscreen с Мирой удалён |
 | `skillHelp` | `SkillHelp` | adapted | Новая типографика/close + live UI; объясняет текущую механику, без покупки кристаллов |
 | `skillExample(0..2)` | объяснения навыков в SkillHelp | adapted | source; нет отдельных per-skill окон с возвратом в редактор |
 | `progressPage`, goal / skills | `05-13_progress` | adapted | 16 primary-пар + real DEV; arc-overview/active/road, статические персональные ориентиры, реальные навыки; без фиктивной стадии и награды |
@@ -71,8 +71,8 @@
 | `feedPage` all / mine, tabs | `03-3_feed`, `03-5_stage` | adapted | live16-state matrix; реальные страницы/курсор вместо local page number |
 | feed loading / empty / error / reload / more | usePostPages | adapted | source + прежние UI-проверки; новое реальное прохождение не воспроизводило все сетевые ошибки |
 | `postCard`, authorLine, time, metrics | FeedPostCard / Stage | adapted | live; серверные views/emoji, нет фиктивного личного like/repost |
-| `peoplePage`: участники | состав NPC в обзоре/редакторе | adapted | source; **отдельной страницы участников нет**, просмотр списка не утверждается как просмотр профиля |
-| `profilePage`: конкретный NPC, relationship, его посты | нет равноценной NPC-страницы | missing | **UI + API**: старый `03-2_star_card` — галерейная Мира, не профиль реального NPC; перенос не заявлен, отношения не подставлены |
+| `peoplePage`: участники | `03-6_participants` | adapted | Реальный состав NPC,8 пар участников/профиля и live320/390×2темы; просмотр списка не означает просмотр профиля |
+| `profilePage`: конкретный NPC и его посты | `03-7_npc_profile` | adapted | Реальный NPC и посты по detail.authorId, cursor; relationships API отсутствует и не подставлен. Галерейная Мира не используется |
 | `compose` blank / draft / suggestions / disabled | `02-1_compose` | adapted | real DEV b413cb0: compose-композиция/ресурсы/author/actionbar; лимит500, без boost/suggestion fixture; draft reopen PASS; 16 новых пар320/390×2темы |
 | `publish`, pending/generating/moderating | `02-2_live` | adapted | live SSE; настоящая операция с request/publication ID |
 | `pendingPanel`, failed / unknown / recover publication | `02-2b_publish_error`, «Проверить статус» | adapted | прежние UI-проверки + source; реальный сетевой обрыв не симулировался как доказательство серверной идемпотентности |
@@ -84,8 +84,8 @@
 | `resultSkillChanges`, before/after/why | не показываются без серверного снимка | missing | **API**: точного XP поста нет; две загрузки профиля не доказательство причинности |
 | `relationshipChanges`, specific NPC delta | отсутствуют | missing | **API**: нет сохранённых изменений отношений/объяснений в результате |
 | Reply result как у поста, skill gains | только готовое обсуждение / обновлённый HUD | missing | **API**: ReplyLiveEvent содержит energyLeft/subscribers, но не полный result/снимок XP; разница аудитории не выдана за весь результат |
-| Отложенный unseen result при другой вкладке/открытой форме | восстановление текущей публикации | adapted | source; **общей очереди unseen results нет**, это отдельный пробел UI/хранения, не покрытый базовыми20 кадрами |
-| `profileHistoryTabs`, `actionHistory` post+reply | история подтверждённых публикаций | adapted | live; локальная, только посты, не полный серверный журнал всех действий |
+| Отложенный unseen result при другой вкладке/открытой форме | UnseenResults | adapted | Локальная подтверждённая FIFO очередь мира, deferred forms/dialogs, seen persistence и world isolation PASS; серверная межустройственная очередь отсутствует |
+| `profileHistoryTabs`, `actionHistory` post+reply | вкладки внутри собственного профиля | adapted | **3b623a9**,4 пары history + real DEV: больше не переход в Progress. Подтверждённые локальные post results; полного журнала ответов/других устройств API нет |
 
 ## Профиль, настройки, состояния и инструменты просмотра
 
@@ -123,7 +123,7 @@
 
 API-пробелы перечислены выше и в [карте контрактов](README.md#границы-которые-требуют-серверной-работы). Они не закрываются CSS и не разрешают новую backend-реализацию.
 
-Продолжение 28.10: список/профиль NPC и контекст продолжения/очередь unseen результатов реализованы как **adapted**; доказательства и API-ограничения — в VALIDATION, раздел Recovery. Остаются различия полноэкранного лимита, настроек/редакторов и отдельных компоновок профиля. Они переданы координатору как конкретный остаток #219. Для замены рабочих маршрутов на новые страницы/окна нужно выбрать поведение, а не молча назвать текущий аналог совпадающим. Новые issues, backend-механики и имитация наград не создавались. #205 и #219 остаются открытыми; весь редизайн не объявлен завершённым.
+Адресный остаток limit/settings/profile проверен заново на текущем executable reference: результаты и конечный список ниже. Старый пункт про полноэкранный limit был устаревшим: текущий showLimit открывает energy sheet. NPC/resume/queue реализованы и не числятся отсутствующими. Новые issues, backend-механики и имитация наград не создавались. #205 и #219 остаются открытыми; весь редизайн не объявлен завершённым.
 
 ### Дополнение: закрытый UI-остаток 28.10
 
@@ -133,3 +133,19 @@ API-пробелы перечислены выше и в [карте контр�
 | pendingPanel / unknown / recovery | adapted | GET-only recovery, реальный offline/completed и32 контролируемых error/status состояний |
 | resumeTarget | adapted | Самый свежий локальный post/reply, pending приоритет, сохранённый адресат;5 edge checks |
 | publicationPeek / unseen queue | adapted | Подтверждённые локальные результаты FIFO, seen, defer forms, world isolation;не серверная межустройственная очередь |
+
+## Конечный список адресного прохода после580dbea
+
+| Расхождение | Решение / причина сохранённого отличия |
+|---|---|
+| Старый полноэкранный limit с Мирой/промо | Исправлено: текущий эталон showLimit → energy help sheet; реальные энергия/reset сохранены |
+| Profile history переводил в Progress | Исправлено: собственные вкладки профиля, без чужой цели/раздела; реальные локальные результаты |
+| Настройки: две колонки на320, раскрытые секции/вложенные NPC | Исправлено:≤350 одна колонка; отступы summary и nested rows; footer внутри sheet |
+| Счётчик «1 записей» | Исправлено: склонение по числу |
+| Editor500 vs prototype2000, HUD day/crystals/boost, energy regeneration | Сохранено намеренно: действующие API/баланс, не CSS-пропуск. Черновик/recovery не менялись;4 пары editor + real local reload/help PASS |
+| Фото профиля/локальная загрузка эталона | Сохранён честный DiceBear/ник и путь настройки; серверное медиа отсутствует; изменение avatar persistence не добавляется молча |
+| Settings account/delete extra sections | Сохранены по явному поручению пользователя; отсутствие этих кнопок в эталоне не основание удалить действующую функцию |
+| History только локальные подтверждённые посты, без результатов ответов | Ограничение API; не заполняется вымышленными событиями/XP |
+| Остальные source-only адаптации: manual pause welcome; collapse списка миров; per-skill examples/return | **Открытые UI-различия вне этого адресного limit/settings/profile прохода**: ротация поддерживает reduced motion, каталог сохраняет все действующие миры, общая справка навыков сохраняет реальный баланс. Это конкретный необязательный следующий frontend scope, не отсутствующая backend-механика и не блокировка DEV. Не объявлены matched |
+
+24 пары шести поверхностей и real DEV четыре width/theme комбинации — в [evidence](evidence/2026-10-28-final-surfaces/README.md). Source-only обозначает уровень доказательства, а не автоматически незавершённую реализацию. Перечисленные API/adapted границы не превращаются в бесконечный frontend остаток.

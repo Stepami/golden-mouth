@@ -94,3 +94,13 @@ Implementation `f923177` is deployed to personal DEV. Source: current executable
 - HUD preserves real energy/skills; prototype crystals/day mechanics are not fabricated. NPC handle/bio/cover use available authoritative world/template data. Custom/edited worlds do not receive unrelated prototype lore or artwork. Fixture pair cover can differ when the fixture does not match a known server template; real DEV template mapping was checked separately.
 
 DEV frontend/readiness HTTP200 and scoped sync checksum passed; backend image/start unchanged. Production, merge, backend and database changes are outside this work. Physical Telegram WebView, real failed-publication outcomes and interrupted-new-publication idempotency remain unverified. Full pixel parity for every reference surface is not claimed.
+
+## Финальная адресная сверка limit/settings/profile, 28.10.2026
+
+Код **3b623a9** после580dbea. [Конечный список](INVENTORY.md#конечный-список-адресного-прохода-после580dbea), [24 пары и реальные проверки](evidence/2026-10-28-final-surfaces/README.md).
+
+Текущий showLimit — справка, поэтому удалён старый полноэкранный экран с Мирой/промо, а не добавлена новая fullscreen-композиция. Profile history сохраняет контекст профиля. Настройки повторяют narrow stack и раскрытия секций; корректно склоняется число записей.
+
+24 контролируемые пары320/390×light/dark: ошибок JS/overflow0. Real DEV без interception: профиль/вкладки, настройки cancel/reopen/Escape, energy help/draft/reload — четыре width/theme комбинации PASS, world/post/account mutation requests0. Это не проверка настоящего нулевого баланса или нового PUT — серверный баланс не менялся; zero route проверен отдельно контролируемыми данными. Backend image/start неизменны; frontend-only sync/checksum и health200. TypeScript/build/diff/secrets PASS, существующее chunk warning>500kB. Эмулятор после QA восстановлен. Физический Telegram WebView штатно недоступен и остаётся непроверенным.
+
+Этот адресный проход завершён; полное pixel parity не заявлено. Конкретные оставшиеся необязательные UI-адаптации и API-границы перечислены без новых issues. Следующий владелец frontend может взять только явно перечисленные UI-пункты; серверные механики требуют отдельного согласованного scope. DEV разрешён до ревью; production только после отдельного согласования со Степаном, подтверждённого пользователем. Merge/review request/backend/DB не выполнялись.

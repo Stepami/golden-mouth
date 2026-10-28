@@ -1,0 +1,151 @@
+{
+  "mode": "controlled UI data; NOT integration",
+  "pairs": 24,
+  "checks": [
+    {
+      "surface": "energy",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "surface": "settings",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "surface": "settings-expanded",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "surface": "profile",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "surface": "history",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "surface": "compose",
+      "theme": "dark",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "surface": "energy",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "surface": "settings",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "surface": "settings-expanded",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "surface": "profile",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "surface": "history",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "surface": "compose",
+      "theme": "dark",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "surface": "energy",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "surface": "settings",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "surface": "settings-expanded",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "surface": "profile",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "surface": "history",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "surface": "compose",
+      "theme": "light",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "surface": "energy",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "surface": "settings",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "surface": "settings-expanded",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "surface": "profile",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "surface": "history",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "surface": "compose",
+      "theme": "light",
+      "width": 390,
+      "overflow": false
+    }
+  ],
+  "errors": []
+}

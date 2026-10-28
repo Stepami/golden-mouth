@@ -1,0 +1,45 @@
+{
+  "commit": "3b623a9",
+  "realBackend": true,
+  "apiInterception": false,
+  "checks": [
+    {
+      "theme": "dark",
+      "width": 320,
+      "profileHistoryContext": true,
+      "settingsCancelAndEscape": true,
+      "energyHelpPreservesDraft": true,
+      "draftReload": true,
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "profileHistoryContext": true,
+      "settingsCancelAndEscape": true,
+      "energyHelpPreservesDraft": true,
+      "draftReload": true,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "profileHistoryContext": true,
+      "settingsCancelAndEscape": true,
+      "energyHelpPreservesDraft": true,
+      "draftReload": true,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "profileHistoryContext": true,
+      "settingsCancelAndEscape": true,
+      "energyHelpPreservesDraft": true,
+      "draftReload": true,
+      "overflow": false
+    }
+  ],
+  "worldPostAccountMutations": [],
+  "errors": []
+}
