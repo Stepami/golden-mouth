@@ -1,0 +1,54 @@
+{
+  "mode": "visual UI fixtures; real backend checked separately",
+  "checks": [
+    {
+      "theme": "dark",
+      "width": 320,
+      "label": "participants",
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "label": "npc",
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "label": "participants",
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "label": "npc",
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "label": "participants",
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "label": "npc",
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "label": "participants",
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "label": "npc",
+      "overflow": false
+    }
+  ],
+  "errors": []
+}

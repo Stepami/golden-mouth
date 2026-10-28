@@ -1,0 +1,11 @@
+{
+  "mode": "UI fixture queue contract; no server mutations",
+  "checks": [
+    "defer while settings dialog open",
+    "FIFO two results once each",
+    "does not interrupt composer",
+    "seen does not reopen on back/reload",
+    "other world isolated"
+  ],
+  "errors": []
+}

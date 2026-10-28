@@ -1,0 +1,10 @@
+{
+  "mode": "local module contract, no API writes",
+  "checks": [
+    "recent post beats stale reply",
+    "recent reply and target retained despite corrupt sibling",
+    "pending publication highest priority and GET-only",
+    "cross-world resume isolated",
+    "history/seen session fallback with unavailable storage"
+  ]
+}

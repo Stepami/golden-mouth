@@ -1,0 +1,398 @@
+{
+  "commit": "f923177",
+  "realBackend": true,
+  "apiInterception": false,
+  "syntheticLocalPendingContextForPreviouslyCompletedRealPublication": true,
+  "checks": [
+    {
+      "realOfflineUnknownPreserved": true
+    },
+    {
+      "realCompletedGetRecovery": true,
+      "createOrModerationPostRequests": 0,
+      "draftCleared": true
+    },
+    {
+      "ownPostStableAuthorIdProfile": true
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "realRosterCount": 2,
+      "profileActualNpc": "Эдуард Калинин",
+      "loadedPosts": 1,
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "realRosterCount": 2,
+      "profileActualNpc": "Эдуард Калинин",
+      "loadedPosts": 1,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "realRosterCount": 2,
+      "profileActualNpc": "Эдуард Калинин",
+      "loadedPosts": 1,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "realRosterCount": 2,
+      "profileActualNpc": "Эдуард Калинин",
+      "loadedPosts": 1,
+      "overflow": false
+    },
+    {
+      "directLiveNoPendingNoPost": true
+    }
+  ],
+  "errors": [],
+  "api": [
+    {
+      "path": "/api/v1/sessions",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/invitation",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/events",
+      "method": "POST",
+      "status": 204
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/publications/a7919115-e941-4562-b202-4b3484473315",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/invitation",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/events",
+      "method": "POST",
+      "status": 204
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/mine",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/sessions",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/events",
+      "method": "POST",
+      "status": 204
+    },
+    {
+      "path": "/api/v1/invitation",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/feed",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-eb71-74a8-8c8b-60545e58517b",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3ef-7d58-a538-bbf0e854bb24",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/sessions",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/invitation",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/events",
+      "method": "POST",
+      "status": 204
+    },
+    {
+      "path": "/api/v1/worlds",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/feed",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3ef-7d58-a538-bbf0e854bb24",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-eb71-74a8-8c8b-60545e58517b",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/sessions",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/events",
+      "method": "POST",
+      "status": 204
+    },
+    {
+      "path": "/api/v1/invitation",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/feed",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-eb71-74a8-8c8b-60545e58517b",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3ef-7d58-a538-bbf0e854bb24",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/sessions",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/events",
+      "method": "POST",
+      "status": 204
+    },
+    {
+      "path": "/api/v1/invitation",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/feed",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-eb71-74a8-8c8b-60545e58517b",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3ef-7d58-a538-bbf0e854bb24",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/posts/01a18147-c3e7-7977-9026-895785ea82bc",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/sessions",
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/me",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/events",
+      "method": "POST",
+      "status": 204
+    },
+    {
+      "path": "/api/v1/invitation",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/api/v1/worlds/templates",
+      "method": "GET",
+      "status": 200
+    }
+  ],
+  "publicationPostRequests": []
+}

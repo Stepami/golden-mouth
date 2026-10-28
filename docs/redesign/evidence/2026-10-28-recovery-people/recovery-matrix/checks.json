@@ -1,0 +1,262 @@
+{
+  "mode": "fault-injection/UI contract matrix, not real backend integration",
+  "checks": [
+    {
+      "theme": "dark",
+      "width": 320,
+      "scenario": "completed",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "scenario": "ready_for_moderation",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "scenario": "generating",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "scenario": "503",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "scenario": "technical_failure",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "scenario": "content_rejected",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "scenario": "limit_reached",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 320,
+      "scenario": "unsafe_generated_content",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "scenario": "completed",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "scenario": "ready_for_moderation",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "scenario": "generating",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "scenario": "503",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "scenario": "technical_failure",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "scenario": "content_rejected",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "scenario": "limit_reached",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "scenario": "unsafe_generated_content",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "scenario": "completed",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "scenario": "ready_for_moderation",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "scenario": "generating",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "scenario": "503",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "scenario": "technical_failure",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "scenario": "content_rejected",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "scenario": "limit_reached",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "scenario": "unsafe_generated_content",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "scenario": "completed",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "scenario": "ready_for_moderation",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "scenario": "generating",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "scenario": "503",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "scenario": "technical_failure",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "scenario": "content_rejected",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "scenario": "limit_reached",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "scenario": "unsafe_generated_content",
+      "createPostRequests": 0,
+      "moderationOnlyWhenReady": true,
+      "preservedDraft": true
+    }
+  ],
+  "errors": []
+}
