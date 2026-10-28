@@ -10,7 +10,7 @@ namespace Reki.Application.Posts.AI;
 
 internal sealed class StarTurnGenerator(
     IChatClient chatClient,
-    StarAgentInstructions instructions,
+    IStarAgentInstructions instructions,
     IOptions<LlmTurnSettings> settings) : IStarTurnGenerator
 {
     [StringSyntax(StringSyntaxAttribute.Json)]

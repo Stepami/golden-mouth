@@ -4,6 +4,7 @@ using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Feed;
 using Reki.Application.Worlds;
 using Reki.Domain.Posts;
+using Reki.Domain.Worlds;
 using TickerQ.Exceptions;
 using TickerQ.Utilities.Base;
 using TickerQ.Utilities.Interfaces;
@@ -40,8 +41,8 @@ internal sealed class GenerateStarFeedOnFeedOpenedJob(
         var own = await postRepository.GetPostsAsync(worldId, star.Id.ToAuthorId(), null, 20, cancellationToken);
         var recent = await postRepository.GetPostsAsync(worldId, null, null, 10, cancellationToken);
         var profile = new StarAgentProfile(world, star.Id, player.Address);
-        var feed = new StarFeedContext(profile, own.Items, recent.Items);
-        var text = await generator.GenerateFeedPostAsync(feed, cancellationToken);
+        var feed = new StarFeedContext(profile, own.Items, recent.Items, StarFeedEventType.FeedOpened);
+        var text = await generator.GenerateContentAsync(feed, cancellationToken);
         if (text is null)
         {
             throw new TerminateExecutionException("The generated feed content is invalid.");
