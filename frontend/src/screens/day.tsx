@@ -1,4 +1,5 @@
 import { WorldCover } from '../ui/WorldCover'
+import { WorldSettings } from '../ui/WorldSettings'
 import { GameHeader } from '../ui/GameHeader'
 import { Icon } from '../ui/Icon'
 import { resultHistory } from '../app/resultHistory'
@@ -221,8 +222,27 @@ function Stage() {
     </div></div>
 }
 
-// 05-5: «Я»: статы, серия неделей, навыки, коллекция, следующий мир
 function Me() {
+  const p = usePlayer(); const nav = useNav()
+  const loadPage = useCallback((cursor: string | undefined, signal: AbortSignal) => api.channelPosts(p.worldInstanceId, cursor, signal), [p.worldInstanceId])
+  const list = usePostPages<ChannelPost>(`channel-keyset-v1:${p.id}:${p.worldInstanceId ?? p.world}`, loadPage)
+  return <div className="screen identity-screen"><GameHeader />
+    <section className="social-profile"><div className="profile-cover"><WorldCover world={p.world} alt={`Обложка мира ${worldOf(p.world).title}`} /></div>
+      <div className="profile-identity-row"><button className="avatar-edit" aria-label="Настройки персонажа" onClick={() => nav.push('05-8_settings')}><Avatar seed={p.handle} size={64} /></button><button className="profile-edit" onClick={() => nav.push('05-8_settings')}>Редактировать</button></div>
+      <h1>{p.name}</h1><p className="profile-handle">{displayHandle(p.handle)}</p><p className="profile-role">{p.role}</p><div className="profile-meta"><span>📍 {worldOf(p.world).title}</span><span><b>{fmt(p.subs)}</b> подписчиков</span>{list.ready && !list.hasNext && <span><b>{list.items.length}</b> записей</span>}</div>
+    </section>
+    <nav className="profile-history-tabs" aria-label="Профиль"><button aria-pressed="true">Записи</button><button onClick={() => nav.push('05-13b_results')}>История действий</button></nav>
+    <div className="profile-posts-heading"><strong>Записи</strong><span>Твой голос в этом мире</span></div>
+    {list.pending === 'first' && !list.ready && <p className="pad" role="status">Загружаем записи…</p>}
+    {list.error && <div className="pad" role="alert"><p>Не удалось загрузить записи.</p><Button secondary onClick={() => void list.refresh()}>Повторить</Button></div>}
+    {list.items.slice(0,2).map(post => <FeedPostCard key={post.postId} item={{ kind: 'post', text: post.text, postId: post.postId, author:p.name, avatar:p.handle, role:p.role, ago:post.createdAtUtc, views:post.views, reactions:post.reactions, commentCount:post.commentCount }} />)}
+    {list.ready && !list.items.length && !list.error && <section className="profile-empty"><h2>Пока нет записей</h2><p>Напиши о том, что происходит в мире.</p><Button onClick={() => nav.push('02-1_compose')}>Написать первый пост</Button></section>}
+    {(list.hasNext || list.items.length > 2) && <button className="text-button profile-all" onClick={() => nav.push('03-5_stage')}>Все мои записи →</button>}
+  </div>
+}
+
+// 05-5: «Я»: статы, серия неделей, навыки, коллекция, следующий мир
+function AccountOverview() {
   const nav = useNav(); const p = usePlayer()
   const [skillHelp, setSkillHelp] = useState(false)
   const { refresh } = useStore()
@@ -259,7 +279,7 @@ function Me() {
 }
 
 // 05-8: настройки: градус драмы, голос канала, обращение, данные, удалить аккаунт
-function Settings() {
+function AccountSettings() {
   const nav = useNav(); const p = usePlayer(); const { patch, resetPlayer } = useStore()
   const personalizeAvatar = useAvatarPersonalization(p.id)
   const [theme, setTheme] = useState<ThemePreference>(savedTheme)
@@ -347,13 +367,17 @@ function Settings() {
   )
 }
 
+function Settings() { const nav = useNav(); return <div className="screen settings-backdrop"><GameHeader compact /><WorldSettings onClose={() => nav.canBack ? nav.back() : nav.replace('03-5_stage')} /></div> }
+
 register({
+  '05-8_settings': { component: Settings, title: 'Настройки мира' },
   '03-1_dm': { component: Dm, title: 'Личка со звездой' },
   '03-2_star_card': { component: StarCard, title: 'Карточка звезды' },
   '03-3_feed': { component: Feed, title: 'Лента мира' },
   '03-4_friends': { component: Friends, title: 'Друзья' },
   '03-4b_friend_channel': { component: FriendChannel, title: 'Канал друга' },
   '03-5_stage': { component: Stage, title: 'Канал и этап' },
+  '05-5b_profile_details': { component: AccountOverview, title: 'Данные игры' },
   '05-5_collection': { component: Me, title: 'Я' },
-  '05-8_settings': { component: Settings, title: 'Настройки' },
+  '05-8b_account': { component: AccountSettings, title: 'Настройки' },
 }, { '03-1_dm': 2, '03-3_feed': 1, '03-4_friends': 3, '03-5_stage': 0, '05-5_collection': 4 })

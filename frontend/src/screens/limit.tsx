@@ -5,7 +5,7 @@ import { worldOf } from '../api/worldContent'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
-import { Avatar, BottomCTA, Button, Card, Gift, TopBar, fmt } from '../ui'
+import { Avatar, BottomCTA, Button, Card, Gift, TopBar, Sheet, fmt } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
 import { useReferralLink } from '../app/useReferralLink'
@@ -104,24 +104,15 @@ function Invite() {
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
   const copy = async () => { if (!link) return; try { if (inTelegram) await copyTextToClipboard(link); else await navigator.clipboard.writeText(link); setCopied(true); setCopyError(false) } catch { setCopyError(true) } }
-  return (
-    <div className="screen no-tab">
-      <TopBar onBack={nav.back} title="Позвать друзей" />
-      <div className="pad">
-        <Card style={{ marginBottom: 20 }}><b>Открой создание своего мира</b><p style={{ marginTop: 12, lineHeight: 1.5 }}>Отправь ссылку другу. Когда он опубликует первый пост, создание мира откроется, а вы оба получите +5 энергии.</p></Card>
-        <div className="label">Друг увидит твою карточку</div>
-        <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420 60%,#12203A)', borderRadius: 16, padding: 14, textAlign: 'center', marginBottom: 12 }}>
-          <Avatar seed={p.handle} size={44} style={{ margin: '0 auto 6px' }} /><b>{p.name}</b>
-          <div style={{ fontSize: 28, fontWeight: 900, background: 'linear-gradient(90deg,var(--accent),#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{fmt(p.subs)}</div>
-          <div className="small">подписчиков · {worldOf(p.world).emoji} {worldOf(p.world).title}</div><div className="small muted" style={{ marginTop: 4 }}>а ты кем будешь?</div>
-        </div>
-        <Card style={{ color: 'var(--muted)', overflowWrap: 'anywhere' }}><span className="small">Твоя ссылка: {link ?? (linkError ? 'Не удалось загрузить' : 'Загружаем…')}</span></Card>
-      </div>
-      {linkError && <div className="pad" role="alert">Не удалось получить твою ссылку.<Button secondary onClick={retry}>Попробовать снова</Button></div>}
-      {copyError && <div className="pad small" role="alert">Не удалось скопировать. Ссылка показана выше.</div>}
-      <BottomCTA secondDisabled={!link} second={copied ? "Ссылка скопирована" : "Скопировать ссылку"} onSecond={copy} main={link ? "Отправить в чат" : "Загружаем ссылку…"} disabled={!link} onMain={() => { if (link) shareInvite(link) }} />
-    </div>
-  )
+  return <div className="screen invite-backdrop"><ChannelHead /><Sheet title="Позови своего человека" className="invite-sheet" onClose={() => nav.canBack ? nav.back() : nav.replace('01-3_world')}>
+    <div className="invite-profile"><Avatar seed={p.handle} size={64} /><strong>{p.name}</strong><span>{fmt(p.subs)} подписчиков · {worldOf(p.world).title}</span></div>
+    <div className="invite-benefits"><span>🪐 <b>Свой мир</b><small>откроется тебе</small></span><span>⚡ <b>+{p.firstPostInviteBonus} энергии</b><small>вам обоим</small></span></div>
+    <p className="invite-caption">После первого поста друга.</p>
+    <div className="referral-link"><span>{link ?? (linkError ? 'Не удалось загрузить ссылку' : 'Загружаем ссылку…')}</span><Button disabled={!link} onClick={copy}>{copied ? 'Ссылка скопирована' : 'Копировать'}</Button></div>
+    {linkError && <div role="alert"><p>Не удалось получить твою ссылку.</p><Button secondary onClick={retry}>Попробовать снова</Button></div>}
+    {copyError && <p role="alert">Не удалось скопировать. Ссылка показана выше.</p>}
+    <button className="text-button invite-send" disabled={!link} onClick={() => { if (link) shareInvite(link) }}>Отправить в чат →</button>
+  </Sheet></div>
 }
 
 // 04-4: друг пришёл по карточке

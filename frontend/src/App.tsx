@@ -56,7 +56,7 @@ function Shell() {
 
   const Screen = SCREENS[top.id]?.component
   const resolvingExistingPlayer = playerState === 'ready' && !explicitStart && top.id === '01-1_invite'
-  if (!Screen || playerState === 'loading' || resolvingExistingPlayer) return <div className="app"><div className="screen"><div className="pad" role="status">Загружаем твою игру…</div></div></div>
+  if (!Screen || playerState === 'loading' || resolvingExistingPlayer) return <div className="app"><div className="screen app-boot" role="status"><div className="boot-emblem" aria-hidden="true">✦</div><h1>Реки</h1><p>Открываем твои миры</p><div className="boot-track" aria-hidden="true"><i /></div></div></div>
   const publicScreen = ['01-1_invite', '01-2_age', '01-2b_under14', '01-2c_guide', '01-3_world', '01-3b_world_overview', '01-4_channel', '01-4b_world_setup', '01-5_first_star', '05-12_world_advanced'].includes(top.id)
   if (playerState === 'unauthorized' && !publicScreen) return <div className="app"><div className="screen"><div className="pad"><p>Для сохранения прогресса открой Реки в Telegram.</p><button className="btn" onClick={() => nav.replace('01-3_world')}>Посмотреть миры</button></div></div></div>
   if (playerState === 'failed') return <div className="app"><div className="screen"><div className="pad"><p>Не получилось загрузить игру.</p><button className="btn" onClick={() => location.reload()}>Попробовать снова</button></div></div></div>
@@ -65,12 +65,14 @@ function Shell() {
     people[player.handle] = { address: player.address, ageBand: player.ageBand, personalizeAvatar }
     people[player.id] = people[player.handle]
   }
-  const tab = top.id === '01-3_world' && !player ? undefined : TAB_OF[top.id]
+  const resultScreen = ['02-3_result', '02-4_flop', '02-5_viral'].includes(top.id)
+  const ResultBackground = SCREENS['03-5_stage']?.component
+  const tab = resultScreen ? 0 : top.id === '01-3_world' && !player ? undefined : TAB_OF[top.id]
   return (
     <NavContext.Provider value={nav}>
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'edfccf53-65c6-4eaf-8321-2391bc1758bd'}>
       <AvatarPeople.Provider value={people}><div className="app">
-        <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration />
+        <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}>{resultScreen && ResultBackground && <ResultBackground />}<Screen /></div><WorldUnlockCelebration />
         {tab !== undefined && (
           <nav className="tabbar" aria-label="Основная навигация">
             <button aria-label="Миры" aria-current={top.id === '01-3_world' ? 'page' : undefined} className={top.id === '01-3_world' ? 'on' : ''} onClick={() => { tap('tab', { to: '01-3_world' }); nav.tab(5) }}><Icon name="home" /></button>
