@@ -4,12 +4,12 @@ import welcomeSki from '../assets/welcome-ski.jpg'
 import { GameHeader } from '../ui/GameHeader'
 import { Typewriter } from '../ui/Typewriter'
 import { displayHandle } from '../app/handle'
-import { usePresetGoal } from '../ui/StoryGoal'
+import { characterGuidanceFor } from '../app/characterGuidance'
 import { WorldCover } from '../ui/WorldCover'
 import { useEffect, useRef, useState } from 'react'
 import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
-import { worldOf, contentOf } from '../api/worldContent'
+import { worldOf, contentOf, worldDocumentOf } from '../api/worldContent'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
 import { Avatar, BottomCTA, Card, fmt } from '../ui'
@@ -124,12 +124,12 @@ function Under14() {
 // 01-6: первый экран: цель, квест, что такое Реки / навыки / коллекция
 export function ChannelHead() { return <GameHeader /> }
 export function Home() {
-  const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
+  const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world); const guidance = characterGuidanceFor(p, worldDocumentOf(p.world))
   return <div className="screen no-tab entry-parity entry-opening"><header><button className="back" aria-label="Назад к мирам" onClick={() => nav.replace('01-3_world')}>‹</button><div><b>{worldOf(p.world).title}</b><small>Завязка истории</small></div></header>
     {worldArt[p.world] && <WorldCover world={p.world} className="entry-opening-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}
     <div className="entry-identity"><Avatar seed={p.handle} size={42} /><b>Ты — {p.name}</b></div>
-    <h1>{p.role || 'Здесь начинается твоя история.'}</h1><p className="entry-opening-context"><Typewriter text={profile.firstContext} /></p>
-    {goal && <section className="entry-opening-goal"><strong>Первый шаг</strong><p>{goal.firstStep}</p></section>}
+    <h1>{guidance?.title || p.role || 'Здесь начинается твоя история.'}</h1><p className="entry-opening-context"><Typewriter text={guidance?.context ?? profile.firstContext} /></p>
+    {guidance && <><section className="entry-opening-goal"><strong>Твоя главная цель</strong><h2>{guidance.goal}</h2><p>{guidance.why}</p><h3>Что предстоит развить</h3>{guidance.growth.map(text => <p key={text}>{text}</p>)}</section><section className="entry-opening-goal"><strong>Первый шаг</strong><p>{guidance.firstStep}</p></section></>}
     {p.firstPostInviteBonus > 0 && <p className="small muted">Первый пост даст ещё {p.firstPostInviteBonus} энергии.</p>}
     <button className="btn" onClick={() => nav.push('02-1_compose', { firstStory: true })}>Написать первый пост →</button>
   </div>
