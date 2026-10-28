@@ -1,0 +1,75 @@
+{
+  "realBackend": true,
+  "apiInterception": false,
+  "checks": [
+    {
+      "theme": "dark",
+      "width": 320,
+      "button": [
+        686.40625,
+        730.40625
+      ],
+      "copy": [
+        730.40625,
+        764
+      ],
+      "padding": "44px",
+      "bottom": "0px",
+      "noCopyOverlap": true,
+      "target44": true,
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "button": [
+        686.40625,
+        730.40625
+      ],
+      "copy": [
+        730.40625,
+        764
+      ],
+      "padding": "44px",
+      "bottom": "0px",
+      "noCopyOverlap": true,
+      "target44": true,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "button": [
+        686.40625,
+        730.40625
+      ],
+      "copy": [
+        730.40625,
+        764
+      ],
+      "padding": "44px",
+      "bottom": "0px",
+      "noCopyOverlap": true,
+      "target44": true,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "button": [
+        686.40625,
+        730.40625
+      ],
+      "copy": [
+        730.40625,
+        764
+      ],
+      "padding": "44px",
+      "bottom": "0px",
+      "noCopyOverlap": true,
+      "target44": true,
+      "overflow": false
+    }
+  ],
+  "errors": []
+}

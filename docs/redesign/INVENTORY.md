@@ -1,6 +1,6 @@
 # Инвентарь актуального эталона → frontend — #205 / #219
 
-Дата: 28.10.2026. Актуализировано после580dbea; финальная адресная сверка кода3b623a9; новый проход — [REVIEW](REVIEW-2026-10-28.md). Это перечень поверхностей и ветвей текущего исполняемого эталона, а не утверждение о полном pixel parity. Исторические README v0.35–41 описывают разные итерации; при расхождении проверялся текущий `app.js`, а не прежнее описание. Например, текущий `welcomeMontage()` снова содержит социальный пост, а `guidedOnboarding()` — два шага Леры.
+Дата: 28.10.2026. Актуализировано после580dbea; актуальный frontend1c32f4b; прежняя адресная сверка3b623a9 сохранена ниже; новый проход — [REVIEW](REVIEW-2026-10-28.md). Это перечень поверхностей и ветвей текущего исполняемого эталона, а не утверждение о полном pixel parity. Исторические README v0.35–41 описывают разные итерации; при расхождении проверялся текущий `app.js`, а не прежнее описание. Например, текущий `welcomeMontage()` снова содержит социальный пост, а `guidedOnboarding()` — два шага Леры.
 
 Источники: `app.html` → `tokens.css`, `app-base.css`, `app.css`, **последним `components.css`**; затем `catalog.js`, `app.js`. `system.html` встраивает эти же поверхности, не отдельную реализацию. `reference.json` с маркетинговым референсом Yope не использовался как макет экранов. Идентичность входных файлов зафиксирована [SHA-256 manifest](evidence/2026-10-28-own-unlock/source-manifest.json), без персональных путей.
 
@@ -14,12 +14,12 @@
 | Эталон / состояния | Приложение | Статус | Основание / конкретное отличие |
 | --- | --- | --- | --- |
 | `welcomeMontage`, welcome: фото, пост, ответ, сообщение | `01-1_invite` | adapted | Исторические базовые кадры + live вход; структура сохранена, текст/набор реплик не идентичны |
-| `setupWelcomeText`: смена текста, reduced motion | `WelcomeHeadline`, Typewriter | adapted | source; ручная пауза тезисов эталона отсутствует, reduced motion есть |
+| `setupWelcomeText`: смена текста, pause, reduced motion | WelcomeHeadline | adapted | **1c32f4b**: manual pause/resume keyboard, live reduced-motion stop/hide,4 пары welcome + real geometry44px/no overlap. Без декоративной печати thesis |
 | `onboardingPage`: колесо возраста, consent, disabled CTA | `01-2_age` | adapted | live + source; собственная проверка 14+, начальное согласие снято |
 | `guidedOnboarding`: Лера 1/2, назад/пропуск | `01-2c_guide` | adapted | Базовые кадры, переходы; два шага, не более ранний трёхшаговый fixture |
 | Каталог для первого входа / возвращения | `01-3_world` | adapted | live; реальные сохранённые миры вместо prototype instances |
 | `cards`, категории и карточки новых миров | `world-catalog`, `WorldCover` | adapted | Базовые кадры/live; фильтры фиксированных пресетов, доступ/персоны с API |
-| `worldsPage`: свои миры, продолжение, раскрытие остальных | `world-resume`, `owned-stories` | adapted | source/live; список не сворачивается до двух карточек |
+| `worldsPage`: свои миры, продолжение, раскрытие остальных | saved-worlds / native details | adapted | **1c32f4b**: текущий первым, первые2 + remainder; controlled4 worlds keyboard expand/collapse/select PASS, real2 worlds/select PASS; реальные данные, без сюжетного status fixture |
 | `worldPicker(false/true)`: компактный sheet / все миры | `GameHeader` → WorldPicker | adapted | [8 пар HUD](evidence/2026-10-28-hud-sheets/README.md), live: текущий мир, реальные подписчики, каталог; до3 / все, ошибки и смена другого мира отдельно UI fixtures; сюжетных статусов API нет, обложка только при надёжном соответствии шаблону |
 | `pendingPanel`, `resumeContext`: незавершённый контекст | ResumePanel + resumeTarget | adapted | Последний локальный post/reply; pending GET-only приоритет; адресат сохранён,5 storage edge contracts и real recovery PASS |
 | `ownWorldHero`: locked / unlocked | `own-world-prototype` | adapted | live/UI fixture; счётчик только при наличии данных, unlock исключительно серверный |
@@ -47,7 +47,7 @@
 | `energyMeter`, countdown +1/15 мин | энергия, reset в 09:00 МСК | adapted | **API**; таймер регенерации не рисуется по fixture |
 | `energyPolicyInfo`, `showLimit`: компактная справка | HUD и `04-1_limit` → EnergyHelp | adapted | **3b623a9**,4 пары энергии + real DEV; актуальный showLimit также sheet. Дневной reset09:00МСК сохранён вместо регенерации fixture; старый fullscreen с Мирой удалён |
 | `skillHelp` | `SkillHelp` | adapted | Новая типографика/close + live UI; объясняет текущую механику, без покупки кристаллов |
-| `skillExample(0..2)` | объяснения навыков в SkillHelp | adapted | source; нет отдельных per-skill окон с возвратом в редактор |
+| `skillExample(0..2)` | SkillHelp / useEditorSkillHelp | adapted | **1c32f4b**: точные3 примера текущего app.js,12 пар, Back/Close/Escape → тот же post/reply editor, текст/курсор/адресат/request ID сохранены; реальные API-переходы проверены отдельно |
 | `progressPage`, goal / skills | `05-13_progress` | adapted | 16 primary-пар + real DEV; arc-overview/active/road, статические персональные ориентиры, реальные навыки; без фиктивной стадии и награды |
 | `progressionTasks`: отметки подцелей | нет ручной отметки | missing | **API/смысл**: подтверждение сюжетных действий не возвращается; нажатие не выдаётся за достижение |
 | `storyDashboard`, pause/resume, chapter claim | контекст/цель без автомата | missing | **API**: нет узла, чекпоинтов, паузы и подтверждённой награды |
@@ -146,6 +146,10 @@ API-пробелы перечислены выше и в [карте контр�
 | Фото профиля/локальная загрузка эталона | Сохранён честный DiceBear/ник и путь настройки; серверное медиа отсутствует; изменение avatar persistence не добавляется молча |
 | Settings account/delete extra sections | Сохранены по явному поручению пользователя; отсутствие этих кнопок в эталоне не основание удалить действующую функцию |
 | History только локальные подтверждённые посты, без результатов ответов | Ограничение API; не заполняется вымышленными событиями/XP |
-| Остальные source-only адаптации: manual pause welcome; collapse списка миров; per-skill examples/return | **Открытые UI-различия вне этого адресного limit/settings/profile прохода**: ротация поддерживает reduced motion, каталог сохраняет все действующие миры, общая справка навыков сохраняет реальный баланс. Это конкретный необязательный следующий frontend scope, не отсутствующая backend-механика и не блокировка DEV. Не объявлены matched |
+| Manual pause welcome / collapse миров / per-skill examples-return | **Исправлены 1c32f4b**,24 пары + real DEV; открытым UI-остатком больше не считаются. API и физический WebView отделены ниже |
 
 24 пары шести поверхностей и real DEV четыре width/theme комбинации — в [evidence](evidence/2026-10-28-final-surfaces/README.md). Source-only обозначает уровень доказательства, а не автоматически незавершённую реализацию. Перечисленные API/adapted границы не превращаются в бесконечный frontend остаток.
+
+## Три последних согласованных UI-пункта — закрыты
+
+**1c32f4b**, [снимки и контракты](evidence/2026-10-28-three-ui/README.md): pause/resume/reduced motion, native collapse/expand/current-first selection,3 skill examples with editor return implemented and verified. Нет оставшихся открытых пунктов из этого согласованного списка. Это не объявление полного pixel parity всех исторических экранов: намеренные API/balance/media/history ограничения выше сохраняются, физический Telegram WebView не проверен. Следующий шаг — просмотр результата пользователем/ревьюером #219; новые server mechanics требуют отдельного согласованного scope. DEV не ждёт разрешения Степана; production по-прежнему требует отдельного согласования, подтверждённого пользователем.

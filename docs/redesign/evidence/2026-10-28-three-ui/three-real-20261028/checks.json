@@ -1,0 +1,40 @@
+{
+  "realBackend": true,
+  "apiInterception": false,
+  "checks": [
+    {
+      "theme": "dark",
+      "width": 320,
+      "actualOwnedWorlds2AndSelection": true,
+      "postAll3ExamplesCloseEscapeAndDraft": true,
+      "replyAll3ExamplesBackCloseEscapeTargetRequestAndDraft": true,
+      "overflow": false
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "actualOwnedWorlds2AndSelection": true,
+      "postAll3ExamplesCloseEscapeAndDraft": true,
+      "replyAll3ExamplesBackCloseEscapeTargetRequestAndDraft": true,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 320,
+      "actualOwnedWorlds2AndSelection": true,
+      "postAll3ExamplesCloseEscapeAndDraft": true,
+      "replyAll3ExamplesBackCloseEscapeTargetRequestAndDraft": true,
+      "overflow": false
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "actualOwnedWorlds2AndSelection": true,
+      "postAll3ExamplesCloseEscapeAndDraft": true,
+      "replyAll3ExamplesBackCloseEscapeTargetRequestAndDraft": true,
+      "overflow": false
+    }
+  ],
+  "worldPostAccountMutations": [],
+  "errors": []
+}
