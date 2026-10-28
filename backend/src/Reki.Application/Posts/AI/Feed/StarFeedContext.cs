@@ -1,6 +1,6 @@
 using Reki.Domain.Posts;
 
-namespace Reki.Application.Posts.AI;
+namespace Reki.Application.Posts.AI.Feed;
 
 public sealed record StarFeedContext(
     StarAgentProfile Agent,

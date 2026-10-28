@@ -1,6 +1,6 @@
 using Reki.Domain.Worlds;
 
-namespace Reki.Application.Posts.AI;
+namespace Reki.Application.Posts.AI.Feed;
 
 public sealed record StarFeedHistoryPost(
     StarId? StarId,

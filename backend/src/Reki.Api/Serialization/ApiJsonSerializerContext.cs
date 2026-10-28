@@ -14,6 +14,7 @@ using Reki.Application.Player;
 using Reki.Application.Player.Responses;
 using Reki.Application.Posts;
 using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Feed;
 using Reki.Application.Posts.Responses.ChannelPost;
 using Reki.Application.Posts.Responses.FeedItem;
 using Reki.Application.Posts.Responses.LiveEvent;

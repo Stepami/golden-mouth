@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
+using Reki.Application.Posts.AI.Feed;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
