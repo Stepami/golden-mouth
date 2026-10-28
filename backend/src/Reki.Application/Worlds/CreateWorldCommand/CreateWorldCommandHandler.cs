@@ -32,7 +32,7 @@ internal sealed class CreateWorldCommandHandler(
         }
 
         var currentBalance = balance.CurrentValue;
-        var instance = source.Instantiate(player.Id, gameDayPeriod.GetPeriodStart(currentBalance));
+        var instance = source.Instantiate(player.Id, gameDayPeriod.PeriodStart);
         var world = instance with
         {
             Player = instance.Player with { Subscribers = currentBalance.Growth.StartingSubscribers },

@@ -92,7 +92,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
             StarPostContext? context = null;
             try
             {
-                context = await CreatePostContextAsync(request, player, world, currentBalance, cancellationToken);
+                context = await CreatePostContextAsync(request, player, world, cancellationToken);
                 await safety.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
             }
             catch (Exception exception)
@@ -125,7 +125,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
                                 request.Id,
                                 new PublicationPart(update.Text, null, null),
                                 cancellationToken);
-                            await PersistActionsAsync(request.Id, update, player, context, currentBalance, cancellationToken);
+                            await PersistActionsAsync(request.Id, update, player, context, cancellationToken);
                         }
                     }
                     catch (Exception exception)
@@ -219,11 +219,10 @@ internal sealed partial class GeneratePublicationCommandHandler(
         GeneratePublication request,
         PlayerProfile player,
         Domain.Worlds.World world,
-        GameBalance currentBalance,
         CancellationToken cancellationToken)
     {
         var recentPosts = await sender.Send(new WorldPostsQuery(world.Id, Cursor: null, PageSize: 3), cancellationToken);
-        var hateEnabled = turnPolicy.IsHateEnabled(player, world, currentBalance);
+        var hateEnabled = turnPolicy.IsHateEnabled(player, world);
         return new StarPostContext(
             request.Text,
             new StarAgentProfile(world, null, player.Address),
@@ -237,7 +236,6 @@ internal sealed partial class GeneratePublicationCommandHandler(
         ChatResponseUpdate update,
         PlayerProfile player,
         StarPostContext context,
-        GameBalance currentBalance,
         CancellationToken cancellationToken)
     {
         foreach (var call in update.Contents.OfType<FunctionCallContent>())
@@ -265,7 +263,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
             };
             if (part.Comment is { } generated)
             {
-                turnPolicy.EnsurePostAllowed(generated, player, context.Agent.World, currentBalance);
+                turnPolicy.EnsurePostAllowed(generated, player, context.Agent.World);
             }
 
             await publicationRepository.AppendPublicationPartAsync(publicationId, part, cancellationToken);

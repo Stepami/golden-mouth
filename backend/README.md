@@ -163,7 +163,7 @@ Migration `2.4.5` removes the retired challenge bonus expiry field from player d
 
 ## Manual runtime balance update (#184)
 
-After deploying #184 once, a valid replacement of `/app/config/balance.json` is reloaded by the standard .NET JSON configuration provider. `IOptionsMonitor<GameBalance>` supplies a new immutable balance for subsequent operations. Each calculation holds one local value, including its helpers. Unfinished publications use the balance and world difficulty at confirmation; completed results replay unchanged. Existing energy is retained until the next daily reset, which uses the new balance.
+After deploying #184 once, a valid replacement of `/app/config/balance.json` is reloaded by the standard .NET JSON configuration provider. `IOptionsMonitor<GameBalance>` supplies a new immutable balance for subsequent operations. Consumers obtain balance through DI and read `CurrentValue` into a method-local variable. Following review, balance is not threaded through helper parameters: a reload between the handler and a helper can therefore make them observe different values. There is no atomic snapshot across the entire confirmation and no cached balance in singleton fields. Unfinished publications use the balance and world difficulty at confirmation; completed results replay unchanged. Existing energy is retained until the next daily reset, which uses the new balance.
 
 Choose the backend container explicitly. Copy its current file for rollback, prepare a complete replacement, validate JSON syntax and review all changed values against the existing balance constraints before applying:
 

@@ -18,7 +18,7 @@ internal sealed partial class ResetGameDayJob(
     public async Task ExecuteAsync(TickerFunctionContext context, CancellationToken cancellationToken = default)
     {
         var currentBalance = balance.CurrentValue;
-        var periodStart = gameDayPeriod.GetPeriodStart(currentBalance);
+        var periodStart = gameDayPeriod.PeriodStart;
         var growth = currentBalance.Growth;
         var restedBefore = periodStart.AddDays(-growth.RestedAfterSkippedDays);
         var playerCount = await players.ResetGameDayAsync(

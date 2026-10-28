@@ -22,6 +22,7 @@ internal sealed class PublishPostCommandHandler(
     IPublicationRepository publicationRepository,
     IGameStore store,
     IOptionsMonitor<GameBalance> balance,
+    PostProgressionCalculator progressionCalculator,
     TimeProvider timeProvider,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
@@ -80,7 +81,7 @@ internal sealed class PublishPostCommandHandler(
             throw;
         }
 
-        turnPolicy.EnsurePostAllowed(turn, player, world, currentBalance);
+        turnPolicy.EnsurePostAllowed(turn, player, world);
 
         var wantCompleted = wantId is not null && world.Player.Wants.Any(want =>
             want.Id == wantId && !want.Done);
@@ -89,14 +90,13 @@ internal sealed class PublishPostCommandHandler(
             throw new RequestConflictException("The selected daily want is unavailable.");
         }
 
-        var progression = PostProgressionCalculator.Calculate(
+        var progression = progressionCalculator.Calculate(
             player,
             world,
             turn,
             ownWords,
             wantCompleted,
-            publication.Id,
-            currentBalance);
+            publication.Id);
         var updatedWorld = world.PublishPost(
             progression.SubscriberDelta,
             progression.Viral,

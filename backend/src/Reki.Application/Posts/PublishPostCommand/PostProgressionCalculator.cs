@@ -1,32 +1,33 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Posts.AI;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Posts.PublishPostCommand;
 
-internal static class PostProgressionCalculator
+internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> balance)
 {
     private static readonly SkillId Brave = SkillId.From("brave");
     private static readonly SkillId Humor = SkillId.From("humor");
     private static readonly SkillId Topic = SkillId.From("topic");
 
-    public static PostProgression Calculate(
+    public PostProgression Calculate(
         PlayerProfile player,
         Domain.Worlds.World gameWorld,
         GeneratedPostTurn turn,
         bool ownWords,
         bool wantCompleted,
-        string publicationId,
-        GameBalance currentBalance)
+        string publicationId)
     {
+        var currentBalance = balance.CurrentValue;
         var world = currentBalance.Difficulties[gameWorld.Difficulty];
         var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
         var postIndex = player.EnergyUsed + 1;
-        var multiplier = GetGrowthMultiplier(gameWorld, postIndex, ownWords, currentBalance);
-        var viral = IsViral(publicationId, quality, world, currentBalance);
+        var multiplier = GetGrowthMultiplier(gameWorld, postIndex, ownWords);
+        var viral = IsViral(publicationId, quality, world);
         var flop = !viral && IsFlop(publicationId, world);
         if (viral)
         {
@@ -49,8 +50,7 @@ internal static class PostProgressionCalculator
             turn,
             postIndex,
             ownWords,
-            wantCompleted,
-            currentBalance);
+            wantCompleted);
         return new PostProgression(subscriberDelta, quality, viral, flop, skills);
     }
 
@@ -75,8 +75,9 @@ internal static class PostProgressionCalculator
     private static bool IsFlop(string publicationId, DifficultyBalance world) =>
         StableRoll(publicationId, "flop") < world.FlopChance;
 
-    private static double GetGrowthMultiplier(Domain.Worlds.World gameWorld, int postIndex, bool ownWords, GameBalance currentBalance)
+    private double GetGrowthMultiplier(Domain.Worlds.World gameWorld, int postIndex, bool ownWords)
     {
+        var currentBalance = balance.CurrentValue;
         double multiplier = 1;
         if (gameWorld.Player.Subscribers < currentBalance.Growth.StarterBelowSubscribers)
         {
@@ -96,21 +97,22 @@ internal static class PostProgressionCalculator
         return multiplier;
     }
 
-    private static bool IsViral(string publicationId, double quality, DifficultyBalance world, GameBalance currentBalance)
+    private bool IsViral(string publicationId, double quality, DifficultyBalance world)
     {
+        var currentBalance = balance.CurrentValue;
         var chance = (currentBalance.Viral.BaseChance + (currentBalance.Viral.ChancePerQuality * quality)) *
                      world.ViralMultiplier;
         return StableRoll(publicationId, "viral") < Math.Clamp(chance, 0, 1);
     }
 
-    private static IReadOnlyDictionary<SkillId, SkillProgress> AddSkillExperience(
+    private IReadOnlyDictionary<SkillId, SkillProgress> AddSkillExperience(
         PlayerProfile player,
         GeneratedPostTurn turn,
         int postIndex,
         bool ownWords,
-        bool wantCompleted,
-        GameBalance currentBalance)
+        bool wantCompleted)
     {
+        var currentBalance = balance.CurrentValue;
         if (postIndex > currentBalance.Skills.ExperiencePostLimit)
         {
             return player.Skills;

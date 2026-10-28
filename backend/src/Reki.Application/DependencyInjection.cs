@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
+using Reki.Application.Posts.PublishPostCommand;
 using Reki.Application.Telemetry;
 
 namespace Reki.Application;
@@ -25,6 +26,7 @@ public static class DependencyInjection
         services.AddSingleton<GameDayPeriod>();
         services.AddSingleton<PlayerSafetyGuard>();
         services.AddSingleton<StarTurnPolicy>();
+        services.AddSingleton<PostProgressionCalculator>();
         services.AddSingleton<ProductTelemetry>();
         services.AddSingleton<StarAgentInstructions>();
         services.AddSingleton<IStarTurnGenerator, StarTurnGenerator>();

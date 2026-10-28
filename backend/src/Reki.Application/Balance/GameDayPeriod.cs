@@ -6,11 +6,18 @@ public sealed class GameDayPeriod(TimeProvider timeProvider, IOptionsMonitor<Gam
 {
     private static readonly TimeSpan MoscowOffset = TimeSpan.FromHours(3);
 
-    public DateTimeOffset PeriodStart => GetPeriodStart(balance.CurrentValue);
-
-    public DateTimeOffset GetPeriodStart(GameBalance currentBalance)
+    public DateTimeOffset PeriodStart
     {
-        var utcNow = timeProvider.GetUtcNow();
+        get
+        {
+            var utcNow = timeProvider.GetUtcNow();
+            return GetPeriodStart(utcNow);
+        }
+    }
+
+    private DateTimeOffset GetPeriodStart(DateTimeOffset utcNow)
+    {
+        var currentBalance = balance.CurrentValue;
         var localNow = utcNow.ToOffset(MoscowOffset);
         var start = new DateTimeOffset(
             localNow.Year,

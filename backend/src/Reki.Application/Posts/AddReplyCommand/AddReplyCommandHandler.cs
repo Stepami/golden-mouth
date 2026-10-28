@@ -54,15 +54,14 @@ internal sealed partial class AddReplyCommandHandler(
             yield break;
         }
 
-        var currentBalance = balance.CurrentValue;
-        EnsureEnergy(player, currentBalance);
+        EnsureEnergy(player);
         var context = new StarReplyContext(
             new StarAgentProfile(world, null, player.Address),
             star.Id,
             post.Text,
             target is null ? [] : post.GetBranch(target.Id),
             request.Text,
-            turnPolicy.IsHateEnabled(player, world, currentBalance));
+            turnPolicy.IsHateEnabled(player, world));
         yield return new ReplyLiveEvent(ReplyStatus.Generating, request.RequestId, null, null, null, null, null);
         var calls = new List<FunctionCallContent>();
         await using var updates = generator.StreamReplyTurnAsync(context, cancellationToken)
@@ -181,8 +180,9 @@ internal sealed partial class AddReplyCommandHandler(
         return (target, star);
     }
 
-    private static void EnsureEnergy(PlayerProfile player, GameBalance currentBalance)
+    private void EnsureEnergy(PlayerProfile player)
     {
+        var currentBalance = balance.CurrentValue;
         if (player.Energy < currentBalance.Thread.EnergyCost)
         {
             throw new RequestConflictException("Insufficient energy.");
@@ -218,13 +218,13 @@ internal sealed partial class AddReplyCommandHandler(
         }
 
         var currentBalance = balance.CurrentValue;
-        var hateEnabled = turnPolicy.IsHateEnabled(player, world, currentBalance);
+        var hateEnabled = turnPolicy.IsHateEnabled(player, world);
         if ((turn.Tone == "hate" || turn.AdditionalTone == "hate") && !hateEnabled)
         {
             throw new RequestConflictException("The world safety settings changed during generation.");
         }
 
-        EnsureEnergy(player, currentBalance);
+        EnsureEnergy(player);
         var bonus = post.Comments.Count(comment =>
                         comment.AuthorId == playerId.ToAuthorId())
                     < currentBalance.Thread.BonusReplies

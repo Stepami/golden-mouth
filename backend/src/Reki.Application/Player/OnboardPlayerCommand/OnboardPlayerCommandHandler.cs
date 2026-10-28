@@ -29,7 +29,7 @@ internal sealed class OnboardPlayerCommandHandler(
 
         var currentBalance = balance.CurrentValue;
         var inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
-        var created = CreatePlayer(request, telegramUserId, gameDayPeriod.GetPeriodStart(currentBalance)) with
+        var created = CreatePlayer(request, telegramUserId, gameDayPeriod.PeriodStart) with
         {
             AgeBand = request.AgeBand,
             Energy = currentBalance.FreePostsPerDay,
