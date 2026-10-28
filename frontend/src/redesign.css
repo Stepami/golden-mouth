@@ -382,9 +382,9 @@ button.game-resource { color:var(--text);text-align:left;font:inherit; }
 @media(max-width:350px) { .settings-sheet .form-pair { grid-template-columns:minmax(0,1fr); } }
 
 /* Current executable reference: welcome motion control, saved-world disclosure, skill examples. */
-.welcome-thesis-wrap { position:relative; }
+.welcome-thesis-wrap { position:relative;padding-bottom:44px; }
 .welcome-thesis-wrap .welcome-headline { white-space:pre-line; }
-.welcome-text-motion { position:absolute;right:0;bottom:-24px;width:44px;height:44px;border:0;background:transparent;color:var(--muted);font-size:14px; }
+.welcome-text-motion { position:absolute;right:0;bottom:0;width:44px;height:44px;border:0;background:transparent;color:var(--muted);font-size:14px; }
 @media(prefers-reduced-motion:reduce) { .welcome-text-motion { display:none; } }
 .saved-worlds-more summary { cursor:pointer;color:var(--accent);font-size:13px;padding:12px 0;list-style:none;min-height:44px;box-sizing:border-box; }
 .saved-worlds-more summary::-webkit-details-marker { display:none; }
@@ -414,3 +414,5 @@ button.game-resource { color:var(--text);text-align:left;font:inherit; }
 .saved-worlds em { display:block;font-style:normal;font-size:10px;margin-top:5px;color:var(--accent); }
 
 .saved-worlds-more:not([open])>.owned-stories { display:none; }
+
+@media(prefers-reduced-motion:reduce) { .welcome-thesis-wrap { padding-bottom:0; } }
