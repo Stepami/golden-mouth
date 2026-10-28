@@ -7,21 +7,29 @@ using TickerQ.Exceptions;
 using TickerQ.Utilities.Base;
 using TickerQ.Utilities.Interfaces;
 
-namespace Reki.Infrastructure.Jobs.GenerateStarFeedPost;
+namespace Reki.Infrastructure.Jobs.GenerateStarFeedOnPostPublished;
 
-internal sealed class GenerateStarFeedPostJob(
+internal sealed class GenerateStarFeedOnPostPublishedJob(
     IPlayerRepository playerRepository,
     IPostRepository postRepository,
     IWorldRepository worldRepository,
-    IStarTurnGenerator generator) : ITickerFunction<StarFeedRequest>
+    IStarTurnGenerator generator) : ITickerFunction<StarFeedOnPostPublishedRequest>
 {
     public async Task ExecuteAsync(
-        TickerFunctionContext<StarFeedRequest> context,
+        TickerFunctionContext<StarFeedOnPostPublishedRequest> context,
         CancellationToken cancellationToken = default)
     {
         var request = context.Request;
+        var source = await postRepository.GetPostAsync(request.SourcePostId, request.WorldId, cancellationToken)
+            ?? throw new TerminateExecutionException("The feed source is unavailable.");
+        if (source.AuthorId != request.PlayerId.ToAuthorId())
+        {
+            throw new TerminateExecutionException("The feed source is invalid.");
+        }
+
         var playerId = request.PlayerId;
         var worldId = request.WorldId;
+        var postId = request.PostId;
         var player = await playerRepository.GetPlayerAsync(playerId, cancellationToken);
         var world = await worldRepository.GetWorldAsync(playerId, worldId, cancellationToken);
         if (player is null || world is null || world.Stars.Count == 0)
@@ -29,19 +37,27 @@ internal sealed class GenerateStarFeedPostJob(
             throw new TerminateExecutionException("The feed world is unavailable.");
         }
 
-        var postId = request.PostId;
         if (await postRepository.GetPostAsync(postId, worldId, cancellationToken) is not null)
         {
             return;
         }
 
-        var recent = await postRepository.GetPostsAsync(worldId, null, null, 20, cancellationToken);
         var star = world.Stars[(int)((uint)context.Id.GetHashCode() % (uint)world.Stars.Count)];
+        var own = await postRepository.GetPostsAsync(worldId, star.Id.ToAuthorId(), null, 20, cancellationToken);
+        var recent = await postRepository.GetPostsAsync(worldId, null, null, 10, cancellationToken);
         var profile = new StarAgentProfile(world, star.Id, player.Address);
-        var text = await generator.GenerateFeedPostAsync(profile, recent.Items, cancellationToken);
+        var replies = source.Comments.Where(item => !item.Hidden).TakeLast(8).ToArray();
+        var feed = new StarFeedContext(profile, own.Items, recent.Items);
+        var text = await generator.GeneratePostReactionAsync(new StarFeedPostContext(feed, source, replies), cancellationToken);
         if (text is null)
         {
             throw new TerminateExecutionException("The generated feed content is invalid.");
+        }
+
+        var normalized = NormalizeText(text);
+        if (own.Items.Any(post => string.Equals(NormalizeText(post.Text), normalized, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
         }
 
         // Recheck ownership after the external call, including deletion while generating.
@@ -52,8 +68,17 @@ internal sealed class GenerateStarFeedPostJob(
             throw new TerminateExecutionException("The feed world is unavailable.");
         }
 
+        var freshSource = await postRepository.GetPostAsync(source.Id, worldId, cancellationToken);
+        if (freshSource is null || freshSource.AuthorId != playerId.ToAuthorId())
+        {
+            throw new TerminateExecutionException("The feed source is unavailable.");
+        }
+
         var createdAt = DateTimeOffset.FromUnixTimeMilliseconds(request.CreatedAtUnixMilliseconds);
         var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, [], createdAt, 0, 0, 1, false, false);
         await postRepository.InsertPostAsync(post, cancellationToken);
     }
+
+    private static string NormalizeText(string text) =>
+        string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 }

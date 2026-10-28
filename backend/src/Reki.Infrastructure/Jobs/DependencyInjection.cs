@@ -2,7 +2,10 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Reki.Application.Posts;
-using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
+using Reki.Infrastructure.Jobs.GenerateStarFeedOnCommentPublished;
+using Reki.Infrastructure.Jobs.GenerateStarFeedOnFeedOpened;
+using Reki.Infrastructure.Jobs.GenerateStarFeedOnPostPublished;
+using Reki.Infrastructure.Jobs.StarFeed;
 using Reki.Infrastructure.Mongo.Options;
 using TickerQ.DependencyInjection;
 using TickerQ.Instrumentation.OpenTelemetry;
@@ -24,8 +27,9 @@ internal static class DependencyInjection
         var jobs = configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
         var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ?? throw new InvalidOperationException("Mongo configuration is required.");
 
-        services.MapTicker<GenerateStarFeedPostJob, StarFeedRequest>()
-            .WithMaxConcurrency(2);
+        services.MapTicker<GenerateStarFeedOnFeedOpenedJob, StarFeedRequest>().WithMaxConcurrency(2);
+        services.MapTicker<GenerateStarFeedOnPostPublishedJob, StarFeedOnPostPublishedRequest>().WithMaxConcurrency(2);
+        services.MapTicker<GenerateStarFeedOnCommentPublishedJob, StarFeedOnCommentPublishedRequest>().WithMaxConcurrency(2);
         services.MapTicker<ResetGameDayJob>(ServiceLifetime.Singleton)
             .WithCron("0 0 9 * * *")
             .WithMaxConcurrency(1);

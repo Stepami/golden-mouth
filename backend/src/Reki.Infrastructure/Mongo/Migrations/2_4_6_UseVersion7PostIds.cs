@@ -7,7 +7,6 @@ using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using Reki.Domain.Posts;
-using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 using Reki.Infrastructure.Mongo.Repositories;
 using TickerQ.Utilities;
 
@@ -180,7 +179,7 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
     private static async Task RewriteTickersAsync(MigrationContext context)
     {
         var collection = context.Database.GetCollection<BsonDocument>(TimeTickers);
-        using var cursor = await collection.FindAsync(context.Session, new BsonDocument("Function", nameof(GenerateStarFeedPostJob)), cancellationToken: context.CancellationToken);
+        using var cursor = await collection.FindAsync(context.Session, new BsonDocument("Function", "GenerateStarFeedPostJob"), cancellationToken: context.CancellationToken);
         await cursor.ForEachAsync(ticker => RewriteTickerAsync(context, collection, ticker), context.CancellationToken);
     }
 

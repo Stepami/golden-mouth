@@ -4,7 +4,6 @@ using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Jobs.GenerateStarFeedPost;
 using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
@@ -55,7 +54,7 @@ internal sealed class UnifyWorldBalance : RekiMigrationBase
 
         await db.GetCollection<BsonDocument>("ticker_TimeTickers").DeleteManyAsync(
             session,
-            new BsonDocument("Function", nameof(GenerateStarFeedPostJob)),
+            new BsonDocument("Function", "GenerateStarFeedPostJob"),
             cancellationToken: cancellationToken);
     }
 
