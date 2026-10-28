@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
+using Reki.Application.Posts.AI.Post;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 

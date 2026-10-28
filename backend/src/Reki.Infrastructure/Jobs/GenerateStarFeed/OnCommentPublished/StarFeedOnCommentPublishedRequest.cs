@@ -3,11 +3,12 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
-namespace Reki.Infrastructure.Jobs.GenerateStarFeedOnPostPublished;
+namespace Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
 
-public sealed record StarFeedOnPostPublishedRequest(
+public sealed record StarFeedOnCommentPublishedRequest(
     PlayerId PlayerId,
     WorldId WorldId,
     PostId PostId,
     [property: JsonRequired] long CreatedAtUnixMilliseconds,
-    PostId SourcePostId);
+    PostId SourcePostId,
+    CommentId SourceCommentId);

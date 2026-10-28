@@ -28,8 +28,9 @@ public static class DependencyInjection
         services.AddSingleton<StarTurnPolicy>();
         services.AddSingleton<PostProgressionCalculator>();
         services.AddSingleton<ProductTelemetry>();
-        services.AddSingleton<StarAgentInstructions>();
+        services.AddSingleton<IStarAgentInstructions, StarAgentInstructions>();
         services.AddSingleton<IStarTurnGenerator, StarTurnGenerator>();
+        services.AddSingleton<IStarContentGenerator, StarContentGenerator>();
 
         return services;
     }

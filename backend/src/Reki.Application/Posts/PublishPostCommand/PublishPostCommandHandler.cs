@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Application.Invites;
-using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Post;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPublication;
 using Reki.Application.Posts.GetWorldPosts;
@@ -29,7 +29,7 @@ internal sealed class PublishPostCommandHandler(
     ProductTelemetry analytics,
     PlayerSafetyGuard safety,
     StarTurnPolicy turnPolicy,
-    IStarFeedScheduler feedScheduler) : ICommandHandler<PublishPost, IReadOnlyList<LiveEvent>>
+    IStarFeedScheduler<ScheduleFromPostRequest> feedScheduler) : ICommandHandler<PublishPost, IReadOnlyList<LiveEvent>>
 {
     public async ValueTask<IReadOnlyList<LiveEvent>> Handle(
         PublishPost request,
@@ -47,7 +47,7 @@ internal sealed class PublishPostCommandHandler(
 
         if (publication is { Status: PublicationStatusType.Completed, Result: not null })
         {
-            return PostResponseMapper.MapLiveEvents(publication.Result, world, storedPlayer.Id);
+            return publication.Result.MapLiveEvents(world, storedPlayer.Id);
         }
 
         if (publication.Status != PublicationStatusType.ReadyForModeration)
@@ -162,8 +162,8 @@ internal sealed class PublishPostCommandHandler(
 
         analytics.TrackWorldAudience(updatedWorld);
         TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
-        await feedScheduler.ScheduleFromPostAsync(player.Id, world.Id, post.Id);
-        return PostResponseMapper.MapLiveEvents(published, updatedWorld, player.Id);
+        await feedScheduler.ScheduleFeedAsync(new ScheduleFromPostRequest(player.Id, world.Id, post.Id));
+        return published.MapLiveEvents(updatedWorld, player.Id);
     }
 
     private static double GetMedian(IReadOnlyList<long> values)
@@ -200,7 +200,7 @@ internal sealed class PublishPostCommandHandler(
                 ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
             });
 
-        foreach ((var skillId, var progress) in after.Skills)
+        foreach (var (skillId, progress) in after.Skills)
         {
             var previousLevel = before.Skills[skillId].Level;
             if (progress.Level > previousLevel)

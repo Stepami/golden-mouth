@@ -14,6 +14,7 @@ using Reki.Application.Player;
 using Reki.Application.Player.Responses;
 using Reki.Application.Posts;
 using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Feed;
 using Reki.Application.Posts.Responses.ChannelPost;
 using Reki.Application.Posts.Responses.FeedItem;
 using Reki.Application.Posts.Responses.LiveEvent;
@@ -33,9 +34,9 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnCommentPublished;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnPostPublished;
-using Reki.Infrastructure.Jobs.StarFeed;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;
 
 namespace Reki.Api.Serialization;
 

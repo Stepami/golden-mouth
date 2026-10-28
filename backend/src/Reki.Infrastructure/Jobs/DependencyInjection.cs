@@ -2,10 +2,12 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Reki.Application.Posts;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnCommentPublished;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnFeedOpened;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnPostPublished;
-using Reki.Infrastructure.Jobs.StarFeed;
+using Reki.Application.Posts.AI.Comment;
+using Reki.Application.Posts.AI.Feed;
+using Reki.Application.Posts.AI.Post;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;
 using Reki.Infrastructure.Mongo.Options;
 using TickerQ.DependencyInjection;
 using TickerQ.Instrumentation.OpenTelemetry;
@@ -22,7 +24,9 @@ internal static class DependencyInjection
         IJsonTypeInfoResolver jsonContext)
     {
         services.AddOptions<JobsOptions>().BindConfiguration(JobsOptions.SectionName);
-        services.AddSingleton<IStarFeedScheduler, StarFeedScheduler>();
+        services.AddSingleton<IStarFeedScheduler<ScheduleFromFeedRequest>, StarFeedOnFeedOpenedScheduler>();
+        services.AddSingleton<IStarFeedScheduler<ScheduleFromPostRequest>, StarFeedOnPostPublishedScheduler>();
+        services.AddSingleton<IStarFeedScheduler<ScheduleFromCommentRequest>, StarFeedOnCommentPublishedScheduler>();
 
         var jobs = configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
         var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ?? throw new InvalidOperationException("Mongo configuration is required.");

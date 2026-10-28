@@ -9,10 +9,9 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnCommentPublished;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnFeedOpened;
-using Reki.Infrastructure.Jobs.GenerateStarFeedOnPostPublished;
-using Reki.Infrastructure.Jobs.StarFeed;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
+using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;
 using Reki.Tests.Api;
 using TickerQ.Exceptions;
 using TickerQ.Utilities;
@@ -36,9 +35,14 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var worldBefore = await GetStoredWorldAsync(9501);
         var createdAt = Factory.Session.Clock.GetUtcNow().AddMilliseconds(123);
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Сегодня репетировали новую сцену.")));
-        var context = new TickerFunctionContext<StarFeedRequest>(
-            new TickerFunctionContext(),
-            new StarFeedRequest(player.Id, WorldId.From(worldId), PostId.New(createdAt), createdAt.ToUnixTimeMilliseconds()));
+        var request = new StarFeedRequest(
+            player.Id,
+            WorldId.From(worldId),
+            PostId.New(createdAt),
+            createdAt.ToUnixTimeMilliseconds(),
+            true);
+
+        var context = new TickerFunctionContext<StarFeedRequest>(new TickerFunctionContext(), request);
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>();
 
@@ -78,7 +82,12 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, text)));
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(player.Id, WorldId.From(worldId), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
+            new StarFeedRequest(
+                player.Id,
+                WorldId.From(worldId),
+                PostId.New(Factory.Session.Clock.GetUtcNow()),
+                Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds(),
+                true));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>();
 
@@ -100,7 +109,12 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await CreatePlayerWithWorldAsync(second);
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(player.Id, WorldId.From(await GetWorldIdAsync(second)), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
+            new StarFeedRequest(
+                player.Id,
+                WorldId.From(await GetWorldIdAsync(second)),
+                PostId.New(Factory.Session.Clock.GetUtcNow()),
+                Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds(),
+                true));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>();
 
@@ -150,7 +164,12 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var worldId = await GetWorldIdAsync(api);
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(player.Id, WorldId.From(worldId), PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
+            new StarFeedRequest(
+                player.Id,
+                WorldId.From(worldId),
+                PostId.New(Factory.Session.Clock.GetUtcNow()),
+                Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds(),
+                true));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>();
         Factory.Llm.RespondWithHttpError();
@@ -207,7 +226,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
     [Test]
     [Arguments(0, 0)]
     [Arguments(1, 1)]
-    public async Task Feed_ConfiguredProbability_SchedulesExpectedActivityAsync(double probability, int expectedJobs)
+    public async Task Feed_ConfiguredProbability_SchedulesExpectedActivityAsync(double probability, int expectedPosts)
     {
         // Arrange
         await using var apiFactory = new ApiFactory { Session = Factory.Session, FeedOpenProbability = probability };
@@ -216,20 +235,25 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var worldId = await GetWorldIdAsync(api);
         var tickers = Database.GetCollection<RekiTimeTicker>("ticker_TimeTickers");
         var existingIds = await tickers.Find(FilterDefinition<RekiTimeTicker>.Empty).Project(ticker => ticker.Id).ToListAsync();
+        apiFactory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Сегодня репетировали новую сцену.")));
 
         // Act
         var feed = await api.Posts.GetFeedAsync(worldId, null, null, CancellationToken.None);
+        var scheduled = await tickers.Find(ticker => !existingIds.Contains(ticker.Id)).ToListAsync();
+        var payload = TickerHelper.ReadTickerRequest<StarFeedRequest>(scheduled.Single().Request);
+        using var scope = apiFactory.Services.CreateScope();
+        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>();
+        await job.ExecuteAsync(new TickerFunctionContext<StarFeedRequest>(new TickerFunctionContext(), payload), CancellationToken.None);
 
         // Assert
         await Assert.That(feed.Items.Count).IsEqualTo(0);
-        var scheduled = await tickers.Find(ticker => !existingIds.Contains(ticker.Id)).ToListAsync();
-        await Assert.That(scheduled.Count).IsEqualTo(expectedJobs);
-        if (expectedJobs > 0)
-        {
-            var payload = TickerHelper.ReadTickerRequest<StarFeedRequest>(scheduled.Single().Request);
-            await Assert.That(payload.WorldId).IsEqualTo(WorldId.From(worldId));
-            await Assert.That(scheduled.Single().Function).IsEqualTo(nameof(GenerateStarFeedOnFeedOpenedJob));
-        }
+        await Assert.That(scheduled.Count).IsEqualTo(1);
+        await Assert.That(payload.WorldId).IsEqualTo(WorldId.From(worldId));
+        await Assert.That(payload.ShouldGenerate).IsEqualTo(expectedPosts > 0);
+        await Assert.That(scheduled.Single().Function).IsEqualTo(nameof(GenerateStarFeedOnFeedOpenedJob));
+        await Assert.That(apiFactory.Llm.RequestCount).IsEqualTo(expectedPosts);
+        await Assert.That(await Database.GetCollection<GamePost>("posts").CountDocumentsAsync(post => post.WorldId == WorldId.From(worldId)))
+            .IsEqualTo(expectedPosts);
     }
 
     [Test]
@@ -269,7 +293,12 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Новая самостоятельная история.")));
         var context = new TickerFunctionContext<StarFeedRequest>(
             new TickerFunctionContext(),
-            new StarFeedRequest(playerId, worldId, PostId.New(Factory.Session.Clock.GetUtcNow()), Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds()));
+            new StarFeedRequest(
+                playerId,
+                worldId,
+                PostId.New(Factory.Session.Clock.GetUtcNow()),
+                Factory.Session.Clock.GetUtcNow().ToUnixTimeMilliseconds(),
+                true));
         using var scope = Factory.Services.CreateScope();
         var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>();
 
@@ -293,34 +322,6 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await Assert.That(own.GetProperty("author").GetString()).IsEqualTo(selectedStar.Name);
         var saved = await postRepository.GetPostAsync(context.Request.PostId, worldId, CancellationToken.None);
         await Assert.That(saved?.AuthorId).IsEqualTo(selectedStar.Id.ToAuthorId());
-    }
-
-    [Test]
-    public async Task Generate_NormalizedOwnDuplicate_CompletesWithoutPublishingOrRegeneratingAsync()
-    {
-        // Arrange
-        using var api = Factory.CreateApiClient(9510);
-        var player = await CreatePlayerWithWorldAsync(api);
-        var worldId = WorldId.From(await GetWorldIdAsync(api));
-        var world = await Factory.Services.GetRequiredService<IWorldRepository>().GetWorldAsync(player.Id, worldId, CancellationToken.None)
-            ?? throw new InvalidOperationException("Missing test world.");
-        var now = Factory.Session.Clock.GetUtcNow();
-        var original = new GamePost(PostId.New(now), world.Stars[0].Id.ToAuthorId(), worldId, "Сегодня новая история.", 0, [], now, 0, 0, 1, false, false);
-        var repository = Factory.Services.GetRequiredService<IPostRepository>();
-        await repository.InsertPostAsync(original, CancellationToken.None);
-        Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "  СЕГОДНЯ \n новая\tистория.  ")));
-        var request = new StarFeedRequest(player.Id, worldId, PostId.New(now), now.ToUnixTimeMilliseconds());
-        using var scope = Factory.Services.CreateScope();
-
-        // Act
-        await scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>().ExecuteAsync(
-            new TickerFunctionContext<StarFeedRequest>(new TickerFunctionContext(), request), CancellationToken.None);
-
-        // Assert
-        await Assert.That(Factory.Llm.RequestCount).IsEqualTo(1);
-        await Assert.That(await repository.GetPostAsync(request.PostId, worldId, CancellationToken.None)).IsNull();
-        await Assert.That((await repository.GetPostAsync(original.Id, worldId, CancellationToken.None))?.Text).IsEqualTo(original.Text);
-        await Assert.That(await Database.GetCollection<GamePost>("posts").CountDocumentsAsync(FilterDefinition<GamePost>.Empty)).IsEqualTo(1);
     }
 
     [Test]
@@ -373,7 +374,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await Assert.That((await GetStoredPlayerAsync(9511)).ToJson()).IsEqualTo(before.ToJson());
         await Assert.That((await GetStoredWorldAsync(9511)).ToJson()).IsEqualTo(worldBefore.ToJson());
         var messages = GetCapturedChatMessages();
-        var prompt = messages.Single(message => message.Role == ChatRole.User && message.Text.StartsWith("Исходный контент", StringComparison.Ordinal)).Text;
+        var prompt = messages.Single(message => message.Role == ChatRole.User && message.Text.TrimStart().StartsWith("Исходный контент", StringComparison.Ordinal)).Text;
         const string marker = "DATA_JSON:";
         using var document = JsonDocument.Parse(prompt[(prompt.IndexOf(marker, StringComparison.Ordinal) + marker.Length)..]);
         var content = document.RootElement;

@@ -1,12 +1,13 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
+using Reki.Application.Posts.AI.Feed;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.AI;
 
-internal sealed class StarAgentInstructions(IOptions<JsonSerializerOptions> jsonOptions)
+internal sealed class StarAgentInstructions(IOptions<JsonSerializerOptions> jsonOptions) : IStarAgentInstructions
 {
     public ChatMessage CreatePlatformPolicy(string turnPolicy, StarAgentProfile profile)
     {

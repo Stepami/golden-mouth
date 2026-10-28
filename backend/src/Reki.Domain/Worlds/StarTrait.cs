@@ -22,9 +22,7 @@ public enum StarTrait
 
     /// <summary>Ирония и расчёт.</summary>
     // This is one named persona trait, matching the content catalog.
-#pragma warning disable AV1115
     IronyAndCalculation,
-#pragma warning restore AV1115
 
     /// <summary>Сухой юмор.</summary>
     DryHumor,

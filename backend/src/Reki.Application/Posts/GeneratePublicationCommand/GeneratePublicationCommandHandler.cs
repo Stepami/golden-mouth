@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Post;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPublication;
 using Reki.Application.Posts.GetWorldPosts;

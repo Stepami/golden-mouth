@@ -94,7 +94,7 @@ services:
     restart: unless-stopped
 
   openobserve:
-    image: dockerhub.timeweb.cloud/openobserve/openobserve:v1.1.2-simd
+    image: dockerhub.timeweb.cloud/openobserve/openobserve:v1.1.2
     environment:
       ZO_DATA_DIR: /data
       ZO_ROOT_USER_EMAIL: ${OPENOBSERVE_EMAIL:?OPENOBSERVE_EMAIL is required}

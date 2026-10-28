@@ -27,3 +27,6 @@ services:
 
   backend:
     image: reki-backend:${REKI_VERSION:-local}
+
+  openobserve:
+    image: dockerhub.timeweb.cloud/openobserve/openobserve:v1.1.2-simd

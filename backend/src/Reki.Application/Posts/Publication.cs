@@ -1,5 +1,5 @@
 using Reki.Application.Exceptions;
-using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Post;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 

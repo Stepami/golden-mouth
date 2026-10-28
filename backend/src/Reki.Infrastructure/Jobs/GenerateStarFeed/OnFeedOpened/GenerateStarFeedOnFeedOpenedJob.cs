@@ -1,37 +1,30 @@
 using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Feed;
 using Reki.Application.Worlds;
 using Reki.Domain.Posts;
+using Reki.Domain.Worlds;
 using TickerQ.Exceptions;
 using TickerQ.Utilities.Base;
 using TickerQ.Utilities.Interfaces;
 
-namespace Reki.Infrastructure.Jobs.GenerateStarFeedOnCommentPublished;
+namespace Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
 
-internal sealed class GenerateStarFeedOnCommentPublishedJob(
+internal sealed class GenerateStarFeedOnFeedOpenedJob(
     IPlayerRepository playerRepository,
     IPostRepository postRepository,
     IWorldRepository worldRepository,
-    IStarTurnGenerator generator) : ITickerFunction<StarFeedOnCommentPublishedRequest>
+    IStarContentGenerator generator) : ITickerFunction<StarFeedRequest>
 {
     public async Task ExecuteAsync(
-        TickerFunctionContext<StarFeedOnCommentPublishedRequest> context,
+        TickerFunctionContext<StarFeedRequest> context,
         CancellationToken cancellationToken = default)
     {
         var request = context.Request;
-        var source = await postRepository.GetPostAsync(request.SourcePostId, request.WorldId, cancellationToken)
-            ?? throw new TerminateExecutionException("The feed source is unavailable.");
-        var comment = source.Comments.FirstOrDefault(item => item.Id == request.SourceCommentId);
-        if (comment is null || comment.Hidden || comment.AuthorId != request.PlayerId.ToAuthorId())
+        if (!request.ShouldGenerate)
         {
-            throw new TerminateExecutionException("The feed comment is unavailable.");
-        }
-
-        var branch = source.GetBranch(comment.Id);
-        if (branch.Any(item => item.Hidden))
-        {
-            throw new TerminateExecutionException("The feed branch is unavailable.");
+            return;
         }
 
         var playerId = request.PlayerId;
@@ -53,19 +46,11 @@ internal sealed class GenerateStarFeedOnCommentPublishedJob(
         var own = await postRepository.GetPostsAsync(worldId, star.Id.ToAuthorId(), null, 20, cancellationToken);
         var recent = await postRepository.GetPostsAsync(worldId, null, null, 10, cancellationToken);
         var profile = new StarAgentProfile(world, star.Id, player.Address);
-        var replies = source.Comments.Where(item => !item.Hidden && item.ParentCommentId == comment.Id).TakeLast(8).ToArray();
-        var feed = new StarFeedContext(profile, own.Items, recent.Items);
-        var text = await generator.GenerateCommentReactionAsync(
-            new StarFeedCommentContext(feed, source, comment, branch.TakeLast(8).ToArray(), replies), cancellationToken);
+        var feed = new StarFeedContext(profile, own.Items, recent.Items, StarFeedEventType.FeedOpened);
+        var text = await generator.GenerateContentAsync(feed, cancellationToken);
         if (text is null)
         {
             throw new TerminateExecutionException("The generated feed content is invalid.");
-        }
-
-        var normalized = NormalizeText(text);
-        if (own.Items.Any(post => string.Equals(NormalizeText(post.Text), normalized, StringComparison.OrdinalIgnoreCase)))
-        {
-            return;
         }
 
         // Recheck ownership after the external call, including deletion while generating.
@@ -76,18 +61,8 @@ internal sealed class GenerateStarFeedOnCommentPublishedJob(
             throw new TerminateExecutionException("The feed world is unavailable.");
         }
 
-        var freshSource = await postRepository.GetPostAsync(source.Id, worldId, cancellationToken);
-        if (freshSource is null ||
-            !freshSource.Comments.Any(item => item.Id == comment.Id && !item.Hidden && item.AuthorId == playerId.ToAuthorId()))
-        {
-            throw new TerminateExecutionException("The feed source is unavailable.");
-        }
-
         var createdAt = DateTimeOffset.FromUnixTimeMilliseconds(request.CreatedAtUnixMilliseconds);
         var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, [], createdAt, 0, 0, 1, false, false);
         await postRepository.InsertPostAsync(post, cancellationToken);
     }
-
-    private static string NormalizeText(string text) =>
-        string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 }
