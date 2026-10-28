@@ -15,7 +15,7 @@ namespace Reki.Infrastructure.Jobs.StarFeed;
 internal sealed partial class StarFeedScheduler(
     ITimeTickerManager<RekiTimeTicker> manager,
     TimeProvider timeProvider,
-    IOptions<GameBalance> options,
+    IOptionsMonitor<GameBalance> options,
     ILogger<StarFeedScheduler> logger) : IStarFeedScheduler
 {
     public async ValueTask ScheduleFromPostAsync(PlayerId playerId, WorldId worldId, PostId sourcePostId)
@@ -44,7 +44,7 @@ internal sealed partial class StarFeedScheduler(
 
     public async ValueTask ScheduleFromFeedAsync(PlayerId playerId, WorldId worldId)
     {
-        if (Random.Shared.NextDouble() >= options.Value.StarFeedOpenProbability)
+        if (Random.Shared.NextDouble() >= options.CurrentValue.StarFeedOpenProbability)
         {
             return;
         }

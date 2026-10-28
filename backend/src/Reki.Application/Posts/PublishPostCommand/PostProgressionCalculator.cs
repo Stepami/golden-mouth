@@ -8,7 +8,7 @@ using Reki.Domain.Player;
 
 namespace Reki.Application.Posts.PublishPostCommand;
 
-internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
+internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> balance)
 {
     private static readonly SkillId Brave = SkillId.From("brave");
     private static readonly SkillId Humor = SkillId.From("humor");
@@ -22,7 +22,8 @@ internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
         bool wantCompleted,
         string publicationId)
     {
-        var world = balance.Value.Difficulties[gameWorld.Difficulty];
+        var currentBalance = balance.CurrentValue;
+        var world = currentBalance.Difficulties[gameWorld.Difficulty];
         var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
         var postIndex = player.EnergyUsed + 1;
         var multiplier = GetGrowthMultiplier(gameWorld, postIndex, ownWords);
@@ -30,19 +31,19 @@ internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
         var flop = !viral && IsFlop(publicationId, world);
         if (viral)
         {
-            multiplier *= balance.Value.Viral.Multiplier * world.ViralMultiplier;
+            multiplier *= currentBalance.Viral.Multiplier * world.ViralMultiplier;
         }
 
-        var decay = balance.Value.Growth.Decay
+        var decay = currentBalance.Growth.Decay
             .First(item => postIndex >= item.From && postIndex <= item.To)
             .Multiplier;
-        var growth = balance.Value.Growth.Coefficient * world.GrowthCoefficient *
+        var growth = currentBalance.Growth.Coefficient * world.GrowthCoefficient *
                      (0.5 + quality) *
-                     Math.Pow(Math.Max(1, gameWorld.Player.Subscribers), balance.Value.Growth.Power) *
+                     Math.Pow(Math.Max(1, gameWorld.Player.Subscribers), currentBalance.Growth.Power) *
                      decay *
                      multiplier;
         var subscriberDelta = flop
-            ? Math.Min(-1, (long)Math.Round(growth * balance.Value.Flop.LossMultiplier))
+            ? Math.Min(-1, (long)Math.Round(growth * currentBalance.Flop.LossMultiplier))
             : Math.Max(1, (long)Math.Round(growth));
         var skills = AddSkillExperience(
             player,
@@ -76,20 +77,21 @@ internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
 
     private double GetGrowthMultiplier(Domain.Worlds.World gameWorld, int postIndex, bool ownWords)
     {
+        var currentBalance = balance.CurrentValue;
         double multiplier = 1;
-        if (gameWorld.Player.Subscribers < balance.Value.Growth.StarterBelowSubscribers)
+        if (gameWorld.Player.Subscribers < currentBalance.Growth.StarterBelowSubscribers)
         {
-            multiplier *= balance.Value.Growth.StarterMultiplier;
+            multiplier *= currentBalance.Growth.StarterMultiplier;
         }
 
         if (ownWords)
         {
-            multiplier *= balance.Value.Growth.OwnWordsMultiplier;
+            multiplier *= currentBalance.Growth.OwnWordsMultiplier;
         }
 
-        if (gameWorld.Player.RestedPostsRemaining > 0 && postIndex <= balance.Value.Growth.RestedFirstPosts)
+        if (gameWorld.Player.RestedPostsRemaining > 0 && postIndex <= currentBalance.Growth.RestedFirstPosts)
         {
-            multiplier *= balance.Value.Growth.RestedMultiplier;
+            multiplier *= currentBalance.Growth.RestedMultiplier;
         }
 
         return multiplier;
@@ -97,7 +99,8 @@ internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
 
     private bool IsViral(string publicationId, double quality, DifficultyBalance world)
     {
-        var chance = (balance.Value.Viral.BaseChance + (balance.Value.Viral.ChancePerQuality * quality)) *
+        var currentBalance = balance.CurrentValue;
+        var chance = (currentBalance.Viral.BaseChance + (currentBalance.Viral.ChancePerQuality * quality)) *
                      world.ViralMultiplier;
         return StableRoll(publicationId, "viral") < Math.Clamp(chance, 0, 1);
     }
@@ -109,30 +112,31 @@ internal sealed class PostProgressionCalculator(IOptions<GameBalance> balance)
         bool ownWords,
         bool wantCompleted)
     {
-        if (postIndex > balance.Value.Skills.ExperiencePostLimit)
+        var currentBalance = balance.CurrentValue;
+        if (postIndex > currentBalance.Skills.ExperiencePostLimit)
         {
             return player.Skills;
         }
 
         var main = GetMainSkill(turn);
-        var multiplier = postIndex <= balance.Value.Skills.FirstPostsCount
-            ? balance.Value.Skills.FirstPostsMultiplier
+        var multiplier = postIndex <= currentBalance.Skills.FirstPostsCount
+            ? currentBalance.Skills.FirstPostsMultiplier
             : 1;
         if (ownWords)
         {
-            multiplier *= balance.Value.Skills.OwnWordsMultiplier;
+            multiplier *= currentBalance.Skills.OwnWordsMultiplier;
         }
 
         if (wantCompleted)
         {
-            multiplier *= balance.Value.Skills.WantDoneMultiplier;
+            multiplier *= currentBalance.Skills.WantDoneMultiplier;
         }
 
         return player.Skills.ToDictionary(
             item => item.Key,
             item => item.Value.AddExperience(
-                (item.Key == main ? balance.Value.Skills.MainExperience : balance.Value.Skills.SideExperience) *
+                (item.Key == main ? currentBalance.Skills.MainExperience : currentBalance.Skills.SideExperience) *
                     multiplier,
-                balance.Value.Skills.LevelThresholds));
+                currentBalance.Skills.LevelThresholds));
     }
 }

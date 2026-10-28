@@ -9,12 +9,13 @@ namespace Reki.Application.Player.UpdateSettingsCommand;
 internal sealed class UpdateSettingsCommandHandler(
     IPlayerRepository playerRepository,
     IRekiContextAccessor rekiContextAccessor,
-    IOptions<GameBalance> balance)
+    IOptionsMonitor<GameBalance> balance)
     : ICommandHandler<UpdateSettings>
 {
     public async ValueTask<Unit> Handle(UpdateSettings request, CancellationToken cancellationToken)
     {
         var player = await rekiContextAccessor.Context.Player;
+        var currentBalance = balance.CurrentValue;
         var updated = player with
         {
             Settings = new PlayerSettings(
@@ -23,7 +24,7 @@ internal sealed class UpdateSettingsCommandHandler(
                 Plus: request.Plus ?? player.Settings.Plus),
             Address = request.Address ?? player.Address,
             Energy = player.Energy + (request.Plus is true && !player.Settings.Plus
-                ? Math.Max(0, balance.Value.PlusPostsPerDay - balance.Value.FreePostsPerDay)
+                ? Math.Max(0, currentBalance.PlusPostsPerDay - currentBalance.FreePostsPerDay)
                 : 0),
             Version = player.Version + 1,
         };

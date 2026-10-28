@@ -1,11 +1,11 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Reki.Api;
-using Reki.Application.Balance;
 using TUnit.AspNetCore;
 
 namespace Reki.Tests;
@@ -41,17 +41,16 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Llm:Model", "gigachat3.5-432b-a28b");
         builder.UseSetting("Llm:Temperature", "0.25");
         builder.UseSetting("Llm:TimeoutSeconds", "1");
+        builder.ConfigureAppConfiguration((_, configuration) =>
+        {
+            configuration.AddInMemoryCollection(FeedOpenProbability is { } probability
+                ? new Dictionary<string, string?> { ["feed:open_probability"] = probability.ToString(CultureInfo.InvariantCulture) }
+                : []);
+        });
         builder.ConfigureServices(services =>
         {
             services.AddFakeLogging();
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
-            if (FeedOpenProbability is { } probability)
-            {
-                services.AddSingleton(provider => Options.Create(
-                    provider.GetRequiredService<IOptionsFactory<GameBalance>>().Create(Options.DefaultName)
-                        with { StarFeedOpenProbability = probability }));
-            }
-
             if (!UseProductionAuthentication)
             {
                 services

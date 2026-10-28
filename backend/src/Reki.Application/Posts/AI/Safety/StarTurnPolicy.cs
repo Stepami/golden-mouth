@@ -6,11 +6,12 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.AI.Safety;
 
-internal sealed class StarTurnPolicy(IOptions<GameBalance> balance, TimeProvider timeProvider)
+internal sealed class StarTurnPolicy(IOptionsMonitor<GameBalance> balance, TimeProvider timeProvider)
 {
     public bool IsHateEnabled(PlayerProfile player, World gameWorld)
     {
-        var profile = balance.Value.Difficulties[gameWorld.Difficulty];
+        var currentBalance = balance.CurrentValue;
+        var profile = currentBalance.Difficulties[gameWorld.Difficulty];
         return gameWorld.Player.Subscribers >= profile.HateFrom && gameWorld.Player.Drama != WorldDrama.Off &&
             (player.HateDisabledUntilUtc is null || player.HateDisabledUntilUtc <= timeProvider.GetUtcNow());
     }

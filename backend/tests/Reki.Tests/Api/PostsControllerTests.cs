@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -25,6 +26,66 @@ namespace Reki.Tests.Api;
 [NotInParallel("ApiState")]
 public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
+    [Test]
+    public async Task Publication_BalanceReloadBeforeConfirmation_UsesCurrentBalanceAsync()
+    {
+        // Arrange
+        const long user = 1094;
+        using var api = Factory.CreateApiClient(user);
+        var player = await CreatePlayerWithWorldAsync(api);
+        var worldId = await GetWorldIdAsync(api);
+        var (_, _, publicationId) = await GenerateAsync(user, "История до обновления баланса.");
+        var configuration = (IConfigurationRoot)Factory.Services.GetRequiredService<IConfiguration>();
+        var changes = new Dictionary<string, string?>
+        {
+            ["energy:post_cost"] = "2",
+            ["posts:free_per_day"] = "30",
+            ["growth:k"] = "0.001",
+            ["viral:base"] = "0",
+            ["viral:per_quality"] = "0",
+            ["difficulties:easy:flop"] = "0",
+            ["difficulties:normal:flop"] = "0",
+            ["difficulties:hard:flop"] = "0",
+        };
+        var previous = changes.Keys.ToDictionary(key => key, key => configuration[key]);
+        try
+        {
+            // Act
+            foreach (var (key, value) in changes)
+            {
+                configuration[key] = value;
+            }
+
+            configuration.Reload();
+            var beforeConfirmation = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+            var result = await api.Posts.ModeratePublicationAsync(publicationId, worldId, CancellationToken.None);
+            var afterConfirmation = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+            var saved = await Database.GetCollection<GamePost>("posts").Find(FilterDefinition<GamePost>.Empty).SingleAsync();
+            configuration["energy:post_cost"] = "99";
+            configuration.Reload();
+            var replay = await api.Posts.ModeratePublicationAsync(publicationId, worldId, CancellationToken.None);
+            var afterReplay = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+
+            // Assert
+            await Assert.That(beforeConfirmation.Energy).IsEqualTo(player.Energy);
+            await Assert.That(afterConfirmation.Energy).IsEqualTo(player.Energy - 2);
+            await Assert.That(saved.SubscriberDelta).IsEqualTo(1);
+            await Assert.That(JsonSerializer.Serialize(replay.ToArray(), ApiJsonSerializerContext.Default.IReadOnlyListLiveEvent))
+                .IsEqualTo(JsonSerializer.Serialize(result.ToArray(), ApiJsonSerializerContext.Default.IReadOnlyListLiveEvent));
+            await Assert.That(afterReplay.Energy).IsEqualTo(afterConfirmation.Energy);
+            await Assert.That(await Database.GetCollection<GamePost>("posts").CountDocumentsAsync(FilterDefinition<GamePost>.Empty)).IsEqualTo(1);
+        }
+        finally
+        {
+            foreach (var (key, value) in previous)
+            {
+                configuration[key] = value;
+            }
+
+            configuration.Reload();
+        }
+    }
+
     [Test]
     public async Task GetFeed_ParallelPlayers_IsolatesRequestContextsAsync()
     {
@@ -1457,7 +1518,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(savedPosts.Sum(post => post["Version"].AsInt32)).IsEqualTo(1);
         await Assert.That((await GetStoredPlayerAsync(user))["EnergyUsed"].AsInt32).IsEqualTo(10);
         await Assert.That((await GetStoredPlayerAsync(user))["Energy"].AsInt32).IsEqualTo(0);
-        var bonus = Factory.Services.GetRequiredService<IOptions<GameBalance>>().Value.Thread.SubscriberBonus;
+        var bonus = Factory.Services.GetRequiredService<IOptionsMonitor<GameBalance>>().CurrentValue.Thread.SubscriberBonus;
         await Assert
             .That(savedWorlds.Sum(world => world["Player"]["Subscribers"].ToInt64()) -
                   worldsBefore.Sum(world => world["Player"]["Subscribers"].ToInt64())).IsEqualTo((long)bonus);
@@ -1500,7 +1561,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         }
 
         await Assert.That((await GetStoredPlayerAsync(user))["EnergyUsed"].AsInt32).IsEqualTo(2);
-        var bonus = Factory.Services.GetRequiredService<IOptions<GameBalance>>().Value.Thread.SubscriberBonus;
+        var bonus = Factory.Services.GetRequiredService<IOptionsMonitor<GameBalance>>().CurrentValue.Thread.SubscriberBonus;
         await Assert.That((await GetStoredWorldAsync(user))["Player"]["Subscribers"].ToInt64())
             .IsEqualTo(beforeWorld["Player"]["Subscribers"].ToInt64() + bonus);
     }
