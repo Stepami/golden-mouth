@@ -9,6 +9,7 @@ import { inTelegram, syncBackButton } from './telegram'
 import { Avatar } from './ui'
 import { Icon } from './ui/Icon'
 import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
+import { PublicationFloat } from './ui/PublicationFloat'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
 import { useAvatarPersonalization } from './app/avatarPersonalization'
 import type { WorldId } from './api/types'
@@ -72,7 +73,7 @@ function Shell() {
     <NavContext.Provider value={nav}>
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'edfccf53-65c6-4eaf-8321-2391bc1758bd'}>
       <AvatarPeople.Provider value={people}><div className="app">
-        <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}>{resultScreen && ResultBackground && <ResultBackground />}<Screen /></div><WorldUnlockCelebration />
+        <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}>{resultScreen && ResultBackground ? <><ResultBackground /><PublicationFloat /></> : <Screen />}</div><WorldUnlockCelebration />
         {tab !== undefined && (
           <nav className="tabbar" aria-label="Основная навигация">
             <button aria-label="Миры" aria-current={top.id === '01-3_world' ? 'page' : undefined} className={top.id === '01-3_world' ? 'on' : ''} onClick={() => { tap('tab', { to: '01-3_world' }); nav.tab(5) }}><Icon name="home" /></button>
