@@ -98,10 +98,11 @@ internal sealed class StarTurnGenerator(
                            """;
         var userPrompt = $$"""
                            Этап: {{context.Stage}}
-                           Последние посты:
+                           Автор новых и предыдущих постов — персонаж игрока world.player (id={{context.Agent.World.Player.PlayerId.ToAuthorId().Value}}).
+                           Последние посты персонажа игрока:
                            {{recentPosts}}
 
-                           Новый пост:
+                           Новый пост персонажа игрока, на который отвечает звезда:
                            {{context.Text}}
                            """;
         List<ChatMessage> messages =
@@ -133,12 +134,29 @@ internal sealed class StarTurnGenerator(
                        tone: support, critique или hate. Хейт разрешён сейчас: {{context.HateEnabled}}.
                        Не создавай hook, оценки, память лички, расход энергии или бонус.
                        """;
+        var world = context.Agent.World;
         var branch = context.Branch.Select(comment =>
-            $"{comment.AuthorId.Value}: {comment.Text}");
+        {
+            string author;
+            if (comment.AuthorId == world.Player.PlayerId.ToAuthorId())
+            {
+                author = $"Персонаж игрока {world.Player.Name}";
+            }
+            else if (world.FindStar(comment.AuthorId) is { } star)
+            {
+                author = $"Звезда {star.Name}";
+            }
+            else
+            {
+                author = "Автор вне текущего каталога";
+            }
+
+            return $"{author} (id={comment.AuthorId.Value}): {comment.Text}";
+        });
         var userPrompt = $$"""
                                  Пост (данные): {{instructions.SerializeTexts([context.PostText])}}
                                  Цепочка выбранной ветки (данные): {{instructions.SerializeTexts(branch)}}
-                                 Ответ игрока (данные): {{instructions.SerializeTexts([context.PlayerText])}}
+                                 Последний комментарий персонажа игрока world.player (id={{world.Player.PlayerId.ToAuthorId().Value}}, данные): {{instructions.SerializeTexts([context.PlayerText])}}
                                  """;
         List<ChatMessage> messages =
         [
