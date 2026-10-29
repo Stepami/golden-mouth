@@ -132,10 +132,6 @@ dotnet_diagnostic.SA1118.severity = none
 [src/Reki.Domain/Worlds/StarTrait.cs]
 dotnet_diagnostic.AV1115.severity = none
 
-[src/Reki.Domain/Player/AddressType.cs]
-# Standard enum serialization must preserve the existing lowercase JSON/BSON values.
-dotnet_diagnostic.SA1300.severity = none
-
 [tests/**/*.cs]
 # Test callbacks may require ref/out parameters, such as ActivityListener.Sample.
 dotnet_diagnostic.AV1562.severity = none

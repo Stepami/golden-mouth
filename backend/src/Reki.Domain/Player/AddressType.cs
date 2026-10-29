@@ -1,9 +1,11 @@
 namespace Reki.Domain.Player;
 
-// Names are the persisted BSON values used by the standard enum serializer.
+// Standard enum serializers use these names; preserve existing lowercase JSON/BSON values without a migration.
+#pragma warning disable SA1300
 public enum AddressType
 {
     she,
     he,
     nick,
 }
+#pragma warning restore SA1300
