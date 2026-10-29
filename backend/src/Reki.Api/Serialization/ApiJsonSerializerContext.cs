@@ -43,6 +43,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(HttpValidationProblemDetails))]
 [JsonSerializable(typeof(ValidationProblemDetails))]
 [JsonSerializable(typeof(StarAgentProfile))]
+[JsonSerializable(typeof(AddressType))]
 [JsonSerializable(typeof(StarFeedHistoryPost[]))]
 [JsonSerializable(typeof(StarFeedSourceContent))]
 [JsonSerializable(typeof(string[]))]
@@ -110,6 +111,7 @@ namespace Reki.Api.Serialization;
 [JsonSourceGenerationOptions(
     Converters =
     [
+        typeof(JsonStringEnumConverter<AddressType>),
         typeof(CamelCaseEnumConverter<WorldDrama>),
         typeof(CamelCaseEnumConverter<WorldDifficulty>),
         typeof(CamelCaseEnumConverter<BirthGroup>),
