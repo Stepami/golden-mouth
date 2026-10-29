@@ -2,7 +2,7 @@ using MongoDB.Driver;
 using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Worlds;
-using Reki.Application.Player;
+using Reki.Domain.Player;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 
@@ -290,9 +290,9 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         await Assert.That(rejected?.StatusCode).IsEqualTo(409);
         await Assert.That((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Count).IsEqualTo(1);
-        await Database.GetCollection<Domain.Player.PlayerProfile>("players").UpdateOneAsync(
+        await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
             item => item.Id == player.Id,
-            Builders<Domain.Player.PlayerProfile>.Update.Set(item => item.HitOwnWorldMilestone, true));
+            Builders<PlayerProfile>.Update.Set(item => item.HitOwnWorldMilestone, true));
         var created = await api.Worlds.CreateWorldAsync(definition, CancellationToken.None);
         await Assert.That((await Database.GetCollection<World>("worlds").Find(world => world.Id == created.Id).SingleAsync()).TemplateId).IsNull();
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).HitOwnWorldMilestone).IsTrue();

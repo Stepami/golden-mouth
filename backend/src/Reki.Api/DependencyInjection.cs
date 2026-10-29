@@ -22,6 +22,7 @@ namespace Reki.Api;
 [OpenApiMarker<PostId>]
 [OpenApiMarker<CommentId>]
 [OpenApiMarker<AuthorId>]
+[OpenApiMarker<Address>]
 [OpenApiMarker<RekiEventId>]
 internal static partial class DependencyInjection
 {

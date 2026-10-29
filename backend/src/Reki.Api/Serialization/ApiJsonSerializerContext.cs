@@ -10,7 +10,6 @@ using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Telemetry.ClientLogBatch;
 using Reki.Api.Requests.Worlds;
 using Reki.Application.Events.Responses;
-using Reki.Application.Player;
 using Reki.Application.Player.Responses;
 using Reki.Application.Posts;
 using Reki.Application.Posts.AI;
@@ -111,7 +110,6 @@ namespace Reki.Api.Serialization;
 [JsonSourceGenerationOptions(
     Converters =
     [
-        typeof(CamelCaseEnumConverter<Address>),
         typeof(CamelCaseEnumConverter<WorldDrama>),
         typeof(CamelCaseEnumConverter<WorldDifficulty>),
         typeof(CamelCaseEnumConverter<BirthGroup>),

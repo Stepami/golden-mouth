@@ -8,7 +8,7 @@ public sealed record PlayerProfile
 
     public required string BirthGroup { get; init; }
 
-    public required string Address { get; init; }
+    public required Address Address { get; init; }
 
     public bool HitOwnWorldMilestone { get; init; }
 

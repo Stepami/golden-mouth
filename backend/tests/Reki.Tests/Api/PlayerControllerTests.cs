@@ -687,7 +687,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                     ?? throw new InvalidOperationException("Missing player.");
         var savedWorld = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
         await Assert.That(savedWorld.Player.Drama).IsEqualTo(WorldDrama.Off);
-        await Assert.That(saved.Address).IsEqualTo("she");
+        await Assert.That(saved.Address).IsEqualTo(Address.She);
         await Assert.That(saved.Settings.Plus).IsFalse();
         await Assert.That(savedWorld.Player.Voice).IsEqualTo("Коротко и тепло");
         await Assert.That(saved.Settings.Notifications).IsEqualTo(player.Settings.Notifications);

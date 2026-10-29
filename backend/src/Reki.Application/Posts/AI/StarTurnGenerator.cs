@@ -136,23 +136,7 @@ internal sealed class StarTurnGenerator(
                        """;
         var world = context.Agent.World;
         var branch = context.Branch.Select(comment =>
-        {
-            string author;
-            if (comment.AuthorId == world.Player.PlayerId.ToAuthorId())
-            {
-                author = $"Персонаж игрока {world.Player.Name}";
-            }
-            else if (world.FindStar(comment.AuthorId) is { } star)
-            {
-                author = $"Звезда {star.Name}";
-            }
-            else
-            {
-                author = "Автор вне текущего каталога";
-            }
-
-            return $"{author} (id={comment.AuthorId.Value}): {comment.Text}";
-        });
+            $"{comment.AuthorId.GetAuthorNamePolicy(world.FindStar(comment.AuthorId)?.Name ?? "вне текущего каталога", world.Player.Name)}: {comment.Text}");
         var userPrompt = $$"""
                                  Пост (данные): {{instructions.SerializeTexts([context.PostText])}}
                                  Цепочка выбранной ветки (данные): {{instructions.SerializeTexts(branch)}}
