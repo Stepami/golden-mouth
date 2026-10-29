@@ -18,8 +18,7 @@ internal sealed class StarAgentInstructions(IOptions<JsonSerializerOptions> json
         var authorPolicy = profile.StarId is { } target
             ? $"Основной автор текущего хода — звезда с id={target.Value}; другая звезда может говорить только в отдельно разрешённой дополнительной реплике со своим ID."
             : "Автора текущего хода выбирай только из world.stars с учётом ограничений хода и tools.";
-        var playerName = JsonSerializer.Serialize(profile.World.Player.Name, jsonOptions.Value);
-        var addressPolicy = profile.Address.GetPlayerNamePolicy(playerName);
+        var addressPolicy = profile.Address.GetPlayerNamePolicy(profile.World.Player.Name);
         var text = $$"""
                      Ты — AI-звезда русскоязычной игры 14+.
                      Приоритет: ограничения платформы и текущего хода, затем доверенный каталог личности,
