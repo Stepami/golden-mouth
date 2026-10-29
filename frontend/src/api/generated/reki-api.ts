@@ -1680,7 +1680,7 @@ export interface OnboardingRequest {
     referralCode?: string | null;
     birthGroup: BirthGroup;
     ageBand?: string | null;
-    address: string;
+    address: OnboardingRequestAddress;
 
     [key: string]: any;
 }
@@ -1701,7 +1701,7 @@ export interface PageResponseOfFeedItemResponse {
 
 export interface PlayerResponse {
     id: string;
-    address: string;
+    address: PlayerResponseAddress;
     energy: number;
     streak: StreakResponse;
     skills: { [key: string]: SkillResponse; };
@@ -1913,7 +1913,7 @@ export interface StreakResponse {
 }
 
 export interface UpdateSettingsRequest {
-    address?: string | null;
+    address?: Address | null;
     notifications?: string | null;
     quiet?: string | null;
     plus?: boolean | null;
@@ -2031,6 +2031,12 @@ export type LiveEventResultLiveEventType = "result";
 export type LiveEventTypingLiveEventType = "typing";
 
 export type LiveEventViewsLiveEventType = "views";
+
+export type OnboardingRequestAddress = "she" | "he" | "nick";
+
+export type PlayerResponseAddress = "she" | "he" | "nick";
+
+export type Address = "she" | "he" | "nick";
 
 export class SwaggerResponse<TResult> {
     status: number;

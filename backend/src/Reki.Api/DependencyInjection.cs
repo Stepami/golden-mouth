@@ -35,6 +35,7 @@ internal static partial class DependencyInjection
             options.CreateSchemaReferenceId = info => info.Kind == JsonTypeInfoKind.None && !info.Type.IsEnum
                 ? null : OpenApiOptions.CreateDefaultSchemaReferenceId(info);
             options.MapVogenTypesInDependencyInjection();
+            options.AddSchemaTransformer<AddressSchemaTransformer>();
             options.AddSchemaTransformer<NullableChallengeSchemaTransformer>();
             options.AddOperationTransformer<OperationMetadataTransformer>();
             options.AddDocumentTransformer<TelegramMiniAppSecurityTransformer>();

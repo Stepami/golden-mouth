@@ -389,7 +389,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var content = document.RootElement;
         await Assert.That(content.GetProperty("text").GetString()).IsEqualTo(source.Text);
         await Assert.That(content.GetProperty("authorId").GetString()).IsEqualTo(source.AuthorId.Value);
-        await Assert.That(messages[0].Text.Contains(sourceEvent == StarFeedEventType.PostPublished ? "исходный пост игрока" : "комментарий игрока", StringComparison.Ordinal)).IsTrue();
+        await Assert.That(messages[0].Text.Contains(sourceEvent == StarFeedEventType.PostPublished ? "исходного поста игрока" : "комментария игрока", StringComparison.Ordinal)).IsTrue();
         if (sourceEvent == StarFeedEventType.CommentPublished)
         {
             await Assert.That(content.GetProperty("comment").GetProperty("text").GetString()).IsEqualTo(comment.Text);
