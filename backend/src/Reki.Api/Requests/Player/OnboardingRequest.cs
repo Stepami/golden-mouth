@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Reki.Application.Player;
+using Reki.Domain.Player;
 
 namespace Reki.Api.Requests.Player;
 

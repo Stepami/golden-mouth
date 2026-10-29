@@ -22,6 +22,7 @@ namespace Reki.Api;
 [OpenApiMarker<PostId>]
 [OpenApiMarker<CommentId>]
 [OpenApiMarker<AuthorId>]
+[OpenApiMarker<Address>]
 [OpenApiMarker<RekiEventId>]
 internal static partial class DependencyInjection
 {
@@ -34,6 +35,7 @@ internal static partial class DependencyInjection
             options.CreateSchemaReferenceId = info => info.Kind == JsonTypeInfoKind.None && !info.Type.IsEnum
                 ? null : OpenApiOptions.CreateDefaultSchemaReferenceId(info);
             options.MapVogenTypesInDependencyInjection();
+            options.AddSchemaTransformer<AddressSchemaTransformer>();
             options.AddSchemaTransformer<NullableChallengeSchemaTransformer>();
             options.AddOperationTransformer<OperationMetadataTransformer>();
             options.AddDocumentTransformer<TelegramMiniAppSecurityTransformer>();

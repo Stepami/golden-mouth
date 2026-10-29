@@ -7,7 +7,7 @@ type Fields<T> = { [K in keyof T as string extends K ? never : number extends K 
 export type SkillId = 'brave' | 'humor' | 'topic'
 export type WorldId = string
 export type WorldDifficulty = 'easy' | 'normal' | 'hard'
-export type Address = Wire.Address
+export type Address = Wire.PlayerResponse['address']
 export type Drama = Wire.WorldDrama
 export interface World {
   id: WorldId; title: string; emoji: string; description: string

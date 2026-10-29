@@ -11,7 +11,7 @@ public static partial class PlayerResponseMapper
     {
         return new PlayerResponse(
             player.Id,
-            Enum.Parse<Address>(player.Address, true),
+            player.Address,
             player.Energy,
             new StreakResponse(player.StreakDays, Enumerable.Range(0, 7).Select(day => day < Math.Min(7, player.StreakDays)).ToArray(), "ещё день — и бонус"),
             MapSkills(player.Skills),

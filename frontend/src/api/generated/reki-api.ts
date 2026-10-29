@@ -1394,8 +1394,6 @@ export class WorldsClient {
     }
 }
 
-export type Address = "she" | "he" | "nick";
-
 export interface AnalyticsBatchRequest {
     session: string;
     platform: string;
@@ -1682,7 +1680,7 @@ export interface OnboardingRequest {
     referralCode?: string | null;
     birthGroup: BirthGroup;
     ageBand?: string | null;
-    address: Address;
+    address: OnboardingRequestAddress;
 
     [key: string]: any;
 }
@@ -1703,7 +1701,7 @@ export interface PageResponseOfFeedItemResponse {
 
 export interface PlayerResponse {
     id: string;
-    address: Address;
+    address: PlayerResponseAddress;
     energy: number;
     streak: StreakResponse;
     skills: { [key: string]: SkillResponse; };
@@ -1915,7 +1913,7 @@ export interface StreakResponse {
 }
 
 export interface UpdateSettingsRequest {
-    address?: UpdateSettingsRequestAddress | null;
+    address?: Address | null;
     notifications?: string | null;
     quiet?: string | null;
     plus?: boolean | null;
@@ -2034,7 +2032,11 @@ export type LiveEventTypingLiveEventType = "typing";
 
 export type LiveEventViewsLiveEventType = "views";
 
-export type UpdateSettingsRequestAddress = "she" | "he" | "nick";
+export type OnboardingRequestAddress = "she" | "he" | "nick";
+
+export type PlayerResponseAddress = "she" | "he" | "nick";
+
+export type Address = "she" | "he" | "nick";
 
 export class SwaggerResponse<TResult> {
     status: number;

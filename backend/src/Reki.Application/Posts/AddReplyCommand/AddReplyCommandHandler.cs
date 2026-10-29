@@ -57,7 +57,7 @@ internal sealed partial class AddReplyCommandHandler(
 
         EnsureEnergy(player);
         var context = new StarReplyContext(
-            new StarAgentProfile(world, null, player.Address),
+            new StarAgentProfile(world, star.Id, player.Address),
             star.Id,
             post.Text,
             target is null ? [] : post.GetBranch(target.Id),
