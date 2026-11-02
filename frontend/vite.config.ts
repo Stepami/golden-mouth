@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { tma } from 'vite-plugin-telegram-mini-app'
 
 export default defineConfig({
+  cacheDir: process.env.REKI_VITE_CACHE_DIR ?? "node_modules/.vite",
   plugins: [
     react(),
     tma({

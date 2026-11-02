@@ -1,20 +1,18 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './screens/all'
-import { App } from './App'
-import { ErrorBoundary } from './app/ErrorBoundary'
-import { installAnalytics } from './app/analytics'
-import { installGlobalHandlers } from './app/log'
-import { initTelegram } from './telegram'
-import './theme.css'
-import './redesign.css'
-import { applySavedTheme } from './app/theme'
+import { StrictMode, lazy, Suspense } from 'react';
+import { createRoot } from 'react-dom/client';
+import BackendApp from './v7/BackendApp';
+import { ErrorBoundary } from './app/ErrorBoundary';
+import { installAnalytics } from './app/analytics';
+import { installGlobalHandlers } from './app/log';
+import { initTelegram } from './telegram';
+import './v7/theme.css';
+import './v7/ui/ui.css';
+import './v7/app.css';
+import './v7/integration.css';
 
-applySavedTheme()
-
-if (new URLSearchParams(location.search).has('shot')) document.documentElement.classList.add('shot')
-if (initTelegram()) {
-  installGlobalHandlers()
-  installAnalytics()
-}
-createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary><App /></ErrorBoundary></StrictMode>)
+// The scenario prototype is an explicit development preview, never an API fallback.
+const DemoApp = import.meta.env.DEV ? lazy(() => import('./v7/DemoApp')) : null;
+document.documentElement.dataset.theme = 'light';
+if (initTelegram()) { installGlobalHandlers(); installAnalytics(); }
+const demo = import.meta.env.DEV && new URLSearchParams(location.search).has('v7demo');
+createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary><Suspense fallback={<p>Открываем Реки…</p>}>{demo && DemoApp ? <DemoApp /> : <BackendApp />}</Suspense></ErrorBoundary></StrictMode>);
