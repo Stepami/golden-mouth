@@ -1,12 +1,11 @@
 using System.Globalization;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Reki.Api;
 using TUnit.AspNetCore;
+using WebMotions.Fake.Authentication.JwtBearer;
 
 namespace Reki.Tests;
 
@@ -41,6 +40,16 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Llm:Model", "gigachat3.5-432b-a28b");
         builder.UseSetting("Llm:Temperature", "0.25");
         builder.UseSetting("Llm:TimeoutSeconds", "1");
+        builder.UseSetting("Auth:Issuer", "http://localhost/");
+        builder.UseSetting("Auth:Audience", "reki-test");
+        builder.UseSetting("Auth:ClientId", "reki-test-client");
+        builder.UseSetting("Auth:SigningKey", Session.SigningKey);
+        builder.UseSetting("Auth:EncryptionKey", Session.EncryptionKey);
+        builder.UseSetting("Auth:TelegramClientId", "reki-telegram-test");
+        builder.UseSetting("Auth:TelegramMetadataProxyUrl", "https://example.invalid/.well-known/openid-configuration");
+        builder.UseSetting("Auth:AccessTokenMinutes", "15");
+        builder.UseSetting("Auth:RefreshTokenDays", "30");
+        builder.UseSetting("Auth:PruneAfterDays", "30");
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(FeedOpenProbability is { } probability
@@ -53,20 +62,12 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
             if (!UseProductionAuthentication)
             {
-                services
-                    .AddAuthentication(options =>
+                services.AddAuthentication(options =>
                     {
-                        options.DefaultAuthenticateScheme = TestAuthenticationHandler.SchemeName;
-                        options.DefaultChallengeScheme = TestAuthenticationHandler.SchemeName;
+                        options.DefaultAuthenticateScheme = FakeJwtBearerDefaults.AuthenticationScheme;
+                        options.DefaultChallengeScheme = FakeJwtBearerDefaults.AuthenticationScheme;
                     })
-                    .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
-                        TestAuthenticationHandler.SchemeName,
-                        _ => { });
-                services.AddAuthorization(options => options.AddPolicy(
-                    "TMiniApp",
-                    new AuthorizationPolicyBuilder(TestAuthenticationHandler.SchemeName)
-                        .RequireAuthenticatedUser()
-                        .Build()));
+                    .AddFakeJwtBearer();
             }
         });
     }

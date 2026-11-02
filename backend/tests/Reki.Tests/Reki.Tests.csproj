@@ -21,6 +21,7 @@
         <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing"/>
         <PackageReference Include="NSubstitute"/>
         <PackageReference Include="WireMock.Net"/>
+        <PackageReference Include="WebMotions.Fake.Authentication.JwtBearer"/>
     </ItemGroup>
 
     <ItemGroup>

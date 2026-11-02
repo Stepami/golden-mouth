@@ -218,7 +218,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(numberedChannel.Items[0].PostId).IsEqualTo(ordered[10].Id);
 
         using var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "1036");
+        http.SetFakeBearerToken(new Dictionary<string, object> { ["telegram_user_id"] = "1036" });
         var invalidParameters = new[]
         {
             "cursor=text", "cursor=00000000000000000000000000000000", "pageSize=0", "pageSize=-1", "pageSize=text",

@@ -1,3 +1,4 @@
+using System.Net;
 using MongoDB.Driver;
 using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
@@ -209,7 +210,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Act
         using var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "1018");
+        http.SetFakeBearerToken(new Dictionary<string, object> { ["telegram_user_id"] = "1018" });
         using var response = await http.GetAsync("/feed");
 
         // Assert

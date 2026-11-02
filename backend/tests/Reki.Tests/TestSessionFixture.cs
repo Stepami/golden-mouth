@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Kot.MongoDB.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
@@ -36,6 +37,10 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
 
     public FakeTimeProvider Clock { get; } = new(
         new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero));
+
+    public string SigningKey { get; } = CreateSigningKey();
+
+    public string EncryptionKey { get; } = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 
     public async Task InitializeAsync()
     {
@@ -86,5 +91,11 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
                 await _mongo.DisposeAsync();
             }
         }
+    }
+
+    private static string CreateSigningKey()
+    {
+        using var rsa = RSA.Create(2048);
+        return rsa.ExportRSAPrivateKeyPem();
     }
 }

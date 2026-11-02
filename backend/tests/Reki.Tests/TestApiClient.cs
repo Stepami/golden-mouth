@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace Reki.Tests;
 
 public sealed class TestApiClient : IDisposable
@@ -42,8 +44,9 @@ public sealed class TestApiClient : IDisposable
 
     private void SetAuthenticatedUser(long userId)
     {
-        _httpClient.DefaultRequestHeaders.Add(
-            TestAuthenticationHandler.UserIdHeaderName,
-            userId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        _httpClient.SetFakeBearerToken(new Dictionary<string, object>
+        {
+            ["telegram_user_id"] = userId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        });
     }
 }
