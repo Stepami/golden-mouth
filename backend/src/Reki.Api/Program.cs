@@ -80,7 +80,7 @@ public partial class Program
         builder.Services
             .AddApplication()
             .AddInfrastructure(builder.Configuration, ApiJsonSerializerContext.Default);
-        builder.Services.AddAppAuth(builder.Configuration, builder.Environment);
+        builder.Services.AddAppAuth();
     }
 
     private static void ConfigureLogging(WebApplicationBuilder builder)
