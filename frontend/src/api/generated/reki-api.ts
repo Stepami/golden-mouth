@@ -20,7 +20,7 @@ export class AuthClient {
     /**
      * @return OK
      */
-    refresh(body: Body, signal?: AbortSignal): Promise<SwaggerResponse<AuthTokenResponse>> {
+    refresh(body: RefreshTokenRequest, signal?: AbortSignal): Promise<SwaggerResponse<AuthTokenResponse>> {
         let url_ = this.baseUrl + "/auth/refresh";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -63,7 +63,7 @@ export class AuthClient {
     /**
      * @return No Content
      */
-    logout(body: Body2, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+    logout(body: LogoutRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/auth/logout";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -92,6 +92,10 @@ export class AuthClient {
         if (status === 204) {
             return response.text().then((_responseText) => {
             return new SwaggerResponse(status, _headers, null as any);
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            return throwException("Bad Request", status, _responseText, _headers);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
@@ -213,7 +217,7 @@ export class ExternalTelegramAuthClient {
     /**
      * @return OK
      */
-    exchangeMiniApp(body: Body3, signal?: AbortSignal): Promise<SwaggerResponse<AuthTokenResponse>> {
+    exchangeMiniApp(body: TokenExchangeRequest, signal?: AbortSignal): Promise<SwaggerResponse<AuthTokenResponse>> {
         let url_ = this.baseUrl + "/auth/external/tg/miniapp";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -256,7 +260,7 @@ export class ExternalTelegramAuthClient {
     /**
      * @return OK
      */
-    exchangeTelegramLogin(body: Body4, signal?: AbortSignal): Promise<SwaggerResponse<AuthTokenResponse>> {
+    exchangeTelegramLogin(body: TokenExchangeRequest, signal?: AbortSignal): Promise<SwaggerResponse<AuthTokenResponse>> {
         let url_ = this.baseUrl + "/auth/external/tg/widget";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1877,6 +1881,13 @@ export interface LiveEventViewsLiveEvent {
     [key: string]: any;
 }
 
+export interface LogoutRequest {
+    client_id: string;
+    refresh_token: string;
+
+    [key: string]: any;
+}
+
 export interface OnboardingRequest {
     referralCode?: string | null;
     birthGroup: BirthGroup;
@@ -2010,6 +2021,14 @@ export interface ReferralResponse {
     [key: string]: any;
 }
 
+export interface RefreshTokenRequest {
+    client_id: string;
+    grant_type: string;
+    refresh_token: string;
+
+    [key: string]: any;
+}
+
 export interface ReplyLiveEvent {
     status: ReplyStatus;
     requestId: string;
@@ -2109,6 +2128,13 @@ export interface StreakResponse {
     days: number;
     week: boolean[];
     nextReward: string;
+
+    [key: string]: any;
+}
+
+export interface TokenExchangeRequest {
+    client_id: string;
+    grant_type: string;
 
     [key: string]: any;
 }
@@ -2219,35 +2245,6 @@ export interface WorldStarResponse {
     voice: string;
     avatarSeed: string;
     relation: number;
-
-    [key: string]: any;
-}
-
-export interface Body {
-    client_id?: string;
-    grant_type?: string;
-    refresh_token?: string;
-
-    [key: string]: any;
-}
-
-export interface Body2 {
-    client_id?: string;
-    refresh_token?: string;
-
-    [key: string]: any;
-}
-
-export interface Body3 {
-    client_id?: string;
-    grant_type?: string;
-
-    [key: string]: any;
-}
-
-export interface Body4 {
-    client_id?: string;
-    grant_type?: string;
 
     [key: string]: any;
 }
