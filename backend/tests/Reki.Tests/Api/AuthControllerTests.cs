@@ -54,6 +54,9 @@ public sealed class AuthControllerTests(ApiFactory factory)
             ["client_id"] = ClientId,
             ["refresh_token"] = refreshed.RefreshToken,
         }));
+        using var issuedAccess = new HttpRequestMessage(HttpMethod.Get, "/me");
+        issuedAccess.Headers.Authorization = new AuthenticationHeaderValue("Bearer", refreshed.AccessToken);
+        using var issuedAccessResponse = await client.SendAsync(issuedAccess);
         using var revoked = await client.PostAsync("/auth/refresh", RefreshForm(refreshed.RefreshToken));
         var otherSession = await RefreshAsync(client, second.RefreshToken);
 
@@ -66,6 +69,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
         await Assert.That(refreshed.AccessToken).IsNotEmpty();
         await Assert.That(refreshed.RefreshToken).IsNotEqualTo(first.RefreshToken);
         await Assert.That(logout.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
+        await Assert.That(issuedAccessResponse.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
         await Assert.That(revoked.IsSuccessStatusCode).IsFalse();
         await Assert.That(otherSession.AccessToken).IsNotEmpty();
     }
