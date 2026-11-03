@@ -1,8 +1,7 @@
-using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
+using Reki.Api.Requests.Auth;
 using Reki.Api.Requests.Player;
 using Reki.Domain.Player;
 using WireMock.RequestBuilders;
@@ -24,8 +23,8 @@ public sealed class AuthControllerTests(ApiFactory factory)
     {
         // Arrange
         var initData = SignInitData(factory.Session.TelegramBotToken, 21001);
-        TokenPair first;
-        TokenPair second;
+        AuthTokenResponse first;
+        AuthTokenResponse second;
         await using (var firstFactory = new ApiFactory
         {
             Session = factory.Session,
@@ -33,8 +32,9 @@ public sealed class AuthControllerTests(ApiFactory factory)
         })
         {
             using var firstClient = firstFactory.CreateClient();
-            first = await ExchangeAsync(firstClient, initData);
-            second = await ExchangeAsync(firstClient, initData);
+            var exchange = new ExternalTelegramAuthClient(firstClient);
+            first = await ExchangeAsync(firstClient, exchange, initData);
+            second = await ExchangeAsync(firstClient, exchange, initData);
         }
 
         await using var productionFactory = new ApiFactory
@@ -43,34 +43,35 @@ public sealed class AuthControllerTests(ApiFactory factory)
             UseProductionAuthentication = true,
         };
         using var client = productionFactory.CreateClient();
+        var auth = new AuthClient(client);
 
         // Act
-        using var me = new HttpRequestMessage(HttpMethod.Get, "/me");
-        me.Headers.Authorization = new AuthenticationHeaderValue("Bearer", first.AccessToken);
-        using var meResponse = await client.SendAsync(me);
-        var refreshed = await RefreshAsync(client, first.RefreshToken);
-        using var logout = await client.PostAsync("/auth/logout", new FormUrlEncodedContent(new Dictionary<string, string>
+        using var playerHttp = productionFactory.CreateClient();
+        var playerClient = new PlayerClient(playerHttp);
+        playerHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", first.AccessToken);
+        var me = await Assert.ThrowsAsync<PlayerApiException>(() => playerClient.GetCurrentPlayerAsync(CancellationToken.None));
+        var refreshed = await auth.RefreshAsync(RefreshRequest(first.RefreshToken), CancellationToken.None);
+        await auth.LogoutAsync(new LogoutRequest
         {
-            ["client_id"] = ClientId,
-            ["refresh_token"] = refreshed.RefreshToken,
-        }));
-        using var issuedAccess = new HttpRequestMessage(HttpMethod.Get, "/me");
-        issuedAccess.Headers.Authorization = new AuthenticationHeaderValue("Bearer", refreshed.AccessToken);
-        using var issuedAccessResponse = await client.SendAsync(issuedAccess);
-        using var revoked = await client.PostAsync("/auth/refresh", RefreshForm(refreshed.RefreshToken));
-        var otherSession = await RefreshAsync(client, second.RefreshToken);
+            ClientId = ClientId,
+            RefreshToken = refreshed.RefreshToken,
+        }, CancellationToken.None);
+        playerHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", refreshed.AccessToken);
+        var issuedAccess = await Assert.ThrowsAsync<PlayerApiException>(() => playerClient.GetCurrentPlayerAsync(CancellationToken.None));
+        var revoked = await Assert.ThrowsAsync<AuthApiException>(() => auth.RefreshAsync(
+            RefreshRequest(refreshed.RefreshToken), CancellationToken.None));
+        var otherSession = await auth.RefreshAsync(RefreshRequest(second.RefreshToken), CancellationToken.None);
 
         // Assert
         await Assert.That(first.AccessToken).IsNotEmpty();
         await Assert.That(first.RefreshToken).IsNotEmpty();
         await Assert.That(first.TokenType).IsEqualTo("Bearer");
         await Assert.That(first.ExpiresIn).IsGreaterThan(0);
-        await Assert.That(meResponse.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+        await Assert.That(me.StatusCode).IsEqualTo(404);
         await Assert.That(refreshed.AccessToken).IsNotEmpty();
         await Assert.That(refreshed.RefreshToken).IsNotEqualTo(first.RefreshToken);
-        await Assert.That(logout.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
-        await Assert.That(issuedAccessResponse.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
-        await Assert.That(revoked.IsSuccessStatusCode).IsFalse();
+        await Assert.That(issuedAccess.StatusCode).IsEqualTo(404);
+        await Assert.That(revoked.StatusCode).IsEqualTo(400);
         await Assert.That(otherSession.AccessToken).IsNotEmpty();
     }
 
@@ -84,23 +85,16 @@ public sealed class AuthControllerTests(ApiFactory factory)
             UseProductionAuthentication = true,
         };
         using var client = productionFactory.CreateClient();
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/auth/external/tg/miniapp")
-        {
-            Content = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["client_id"] = ClientId,
-                ["grant_type"] = MiniAppGrant,
-            }),
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue(
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "TMiniApp",
             SignInitData(factory.Session.TelegramBotToken, 21002) + "tampered");
 
         // Act
-        using var response = await client.SendAsync(request);
+        var rejected = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
+            new ExternalTelegramAuthClient(client).ExchangeMiniAppAsync(MiniAppRequest(), CancellationToken.None));
 
         // Assert
-        await Assert.That(response.IsSuccessStatusCode).IsFalse();
+        await Assert.That(rejected.StatusCode).IsGreaterThanOrEqualTo(400);
     }
 
     [Test]
@@ -123,7 +117,8 @@ public sealed class AuthControllerTests(ApiFactory factory)
             TelegramMetadataProxyUrl = metadata.Url + "/",
         };
         using var client = productionFactory.CreateClient();
-        var mini = await ExchangeAsync(client, SignInitData(factory.Session.TelegramBotToken, 21003));
+        var exchange = new ExternalTelegramAuthClient(client);
+        var mini = await ExchangeAsync(client, exchange, SignInitData(factory.Session.TelegramBotToken, 21003));
         using var miniClient = productionFactory.CreateClient();
         miniClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", mini.AccessToken);
         var onboarding = new OnboardingRequest
@@ -134,18 +129,12 @@ public sealed class AuthControllerTests(ApiFactory factory)
         var player = await new PlayerClient(miniClient).CompleteOnboardingAsync(onboarding, CancellationToken.None);
 
         // Act
-        using var widgetRequest = new HttpRequestMessage(HttpMethod.Post, "/auth/external/tg/widget")
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SignTelegramIdToken(rsa, 21003));
+        var widget = await exchange.ExchangeTelegramLoginAsync(new TokenExchangeRequest
         {
-            Content = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["client_id"] = ClientId,
-                ["grant_type"] = "urn:reki:grant:telegram-login",
-            }),
-        };
-        widgetRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", SignTelegramIdToken(rsa, 21003));
-        using var widgetResponse = await client.SendAsync(widgetRequest);
-        await Assert.That(widgetResponse.StatusCode).IsEqualTo(HttpStatusCode.OK);
-        var widget = await ReadPairAsync(widgetResponse);
+            ClientId = ClientId,
+            GrantType = "urn:reki:grant:telegram-login",
+        }, CancellationToken.None);
         using var widgetClient = productionFactory.CreateClient();
         widgetClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", widget.AccessToken);
         var current = await new PlayerClient(widgetClient).GetCurrentPlayerAsync(CancellationToken.None);
@@ -156,46 +145,27 @@ public sealed class AuthControllerTests(ApiFactory factory)
         await Assert.That(current.Id).IsEqualTo(player.Id);
     }
 
-    private static async Task<TokenPair> ExchangeAsync(HttpClient client, string initData)
+    private static async Task<AuthTokenResponse> ExchangeAsync(
+        HttpClient client,
+        ExternalTelegramAuthClient exchange,
+        string initData)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/auth/external/tg/miniapp")
-        {
-            Content = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["client_id"] = ClientId,
-                ["grant_type"] = MiniAppGrant,
-            }),
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("TMiniApp", initData);
-        using var response = await client.SendAsync(request);
-        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-        return await ReadPairAsync(response);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TMiniApp", initData);
+        return await exchange.ExchangeMiniAppAsync(MiniAppRequest(), CancellationToken.None);
     }
 
-    private static async Task<TokenPair> RefreshAsync(HttpClient client, string refreshToken)
+    private static TokenExchangeRequest MiniAppRequest() => new()
     {
-        using var response = await client.PostAsync("/auth/refresh", RefreshForm(refreshToken));
-        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
-        return await ReadPairAsync(response);
-    }
+        ClientId = ClientId,
+        GrantType = MiniAppGrant,
+    };
 
-    private static FormUrlEncodedContent RefreshForm(string refreshToken) => new(new Dictionary<string, string>
+    private static RefreshTokenRequest RefreshRequest(string refreshToken) => new()
     {
-        ["client_id"] = ClientId,
-        ["grant_type"] = "refresh_token",
-        ["refresh_token"] = refreshToken,
-    });
-
-    private static async Task<TokenPair> ReadPairAsync(HttpResponseMessage response)
-    {
-        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var root = body.RootElement;
-        return new TokenPair(
-            root.GetProperty("access_token").GetString() ?? throw new InvalidOperationException("Access token is missing."),
-            root.GetProperty("refresh_token").GetString() ?? throw new InvalidOperationException("Refresh token is missing."),
-            root.GetProperty("token_type").GetString() ?? throw new InvalidOperationException("Token type is missing."),
-            root.GetProperty("expires_in").GetInt32());
-    }
+        ClientId = ClientId,
+        GrantType = "refresh_token",
+        RefreshToken = refreshToken,
+    };
 
     private static string SignInitData(string botToken, long userId)
     {
@@ -218,6 +188,4 @@ public sealed class AuthControllerTests(ApiFactory factory)
     }
 
     private static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-
-    private sealed record TokenPair(string AccessToken, string RefreshToken, string TokenType, int ExpiresIn);
 }
