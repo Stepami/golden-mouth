@@ -6,6 +6,17 @@ Telegram Mini App игры «Реки». Правила для агента и �
 
 В local Compose Vite-плагин читает общий `TG_PAT`, даёт `@tma.js/sdk` вымышленного игрока и свежий HMAC-подписанный `initData`. Compose передаёт тот же `TG_PAT` в настройку `TgMiniAppAuth` backend; отключения auth для development нет. Production build и nginx не включают эмулятор.
 
+Для локальной проверки браузерного Telegram Login JS через HTTPS укажи пути к доверенному сертификату и ключу PEM для `localhost`, а также публичный Telegram Client ID в локальном `public/runtime-config/config.js` (не коммить локальное значение). Зарегистрируй `https://localhost:5173` в Allowed URLs BotFather. Запусти backend отдельно, затем из `frontend/`:
+
+```powershell
+$env:REKI_HTTPS_CERT_PATH = '<path-to-localhost-cert.pem>'
+$env:REKI_HTTPS_KEY_PATH = '<path-to-localhost-key.pem>'
+$env:REKI_BROWSER_LOGIN = '1'
+npm run dev
+```
+
+Открой `https://localhost:5173`. `REKI_BROWSER_LOGIN=1` отключает только DEV-эмулятор для проверки popup; без него подписанный Mini App сценарий работает как прежде. `/api/v1` остаётся same-origin proxy в backend.
+
 ## Демо-функции (#92)
 
 `features` в runtime config: `dm`, `friends`, `collection` (по умолчанию false). Индексы вкладок остаются постоянными при скрытии. Флаг mockFeed и генератор демо-ленты удалены.
