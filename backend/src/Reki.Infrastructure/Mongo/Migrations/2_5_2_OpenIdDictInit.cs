@@ -1,4 +1,5 @@
 using Kot.MongoDB.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using OpenIddict.Abstractions;
@@ -12,7 +13,7 @@ namespace Reki.Infrastructure.Mongo.Migrations;
 internal sealed class OpenIdDictInit(
     IOptions<AuthOptions> authOptions,
     IOptionsMonitor<OpenIddictMongoDbOptions> mongoOptions,
-    IOpenIddictApplicationManager applications) : RekiMigrationBase
+    IServiceScopeFactory scopeFactory) : RekiMigrationBase
 {
     public override DatabaseVersion Version => new(2, 5, 2);
 
@@ -63,6 +64,8 @@ internal sealed class OpenIdDictInit(
         await db.GetCollection<OpenIddictMongoDbToken>(names.TokensCollectionName)
             .Indexes.CreateManyAsync(tokenIndexes, cancellationToken);
 
+        using var scope = scopeFactory.CreateScope();
+        var applications = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
         var clientId = authOptions.Value.ClientId;
         if (await applications.FindByClientIdAsync(clientId, cancellationToken) is null)
         {
