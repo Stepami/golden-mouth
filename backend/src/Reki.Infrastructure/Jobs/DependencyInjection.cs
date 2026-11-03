@@ -40,6 +40,9 @@ internal static class DependencyInjection
         services.MapTicker<RefreshRegisteredPlayersJob>(ServiceLifetime.Singleton)
             .WithCron("0 * * * * *")
             .WithMaxConcurrency(1);
+        services.MapTicker<PruneAuthJob>()
+            .WithCron("0 0 3 * * *")
+            .WithMaxConcurrency(1);
         services.AddTickerQ<RekiTimeTicker, CronTickerEntity>(options =>
         {
             options.ConfigureScheduler(scheduler => scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));

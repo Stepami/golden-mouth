@@ -1,5 +1,18 @@
 # Развёртывание в production
 
+## Ключи и настройки входа (#123)
+
+Один раз сгенерируй RSA PEM для `AUTH_SIGNING_KEY` и 32 случайных байта в Base64 для `AUTH_ENCRYPTION_KEY`. Храни оба значения только в GitHub Actions Secrets и передавай через Compose environment; при каждом деплое используй те же значения, чтобы действующие refresh-токены оставались читаемыми. Пример одноразовой генерации (вывод не коммить и не публикуй):
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072
+openssl rand -base64 32
+```
+
+В GitHub Actions Variables задай `AUTH_ISSUER` (публичный HTTPS issuer), `TELEGRAM_CLIENT_ID` (публичный ID Telegram Login JS) и `TELEGRAM_METADATA_PROXY_URL` (HTTPS base URL существующего Cloudflare Worker для metadata/JWKS). `TELEGRAM_CLIENT_ID` должен совпадать с `telegramClientId` в runtime config фронтенда; workflow подставляет его в config.js при деплое. В BotFather добавь production origin в Allowed URLs для Login JS. Для id_token flow Telegram Client Secret не требуется. `TG_PAT` остаётся секретом Mini App.
+
+Для локального backend задай те же `Auth__*` настройки через user secrets или environment. HTTP для token endpoint разрешён только в Development. В production forwarded HTTPS принимается от Docker network через `ForwardedHeaders__KnownNetwork` (по умолчанию `172.16.0.0/12`, при другой подсети переопредели).
+
 Production разворачивается на self-hosted GitHub Actions runner, установленном на VDS. Push в `master` запускает проверки бэкенда, фронтенда и секретов. Затем GitVersion вычисляет версию, workflow создаёт тег и выкатывает соответствующий коммит. GitHub Release для уже развёрнутого тега создаётся отдельно ручным workflow `GitHub Release`.
 
 ## Одноразовая настройка сервера
