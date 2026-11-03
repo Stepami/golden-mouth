@@ -42,6 +42,8 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
 
     public string EncryptionKey { get; } = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 
+    public string TelegramBotToken { get; } = $"123456:{Guid.NewGuid():N}";
+
     public async Task InitializeAsync()
     {
         // Match production registration order, including TickerQ's BSON UUID serializer.

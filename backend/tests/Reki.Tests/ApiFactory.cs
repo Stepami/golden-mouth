@@ -1,5 +1,7 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -15,6 +17,8 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
     public required TestSessionFixture Session { get; init; }
 
     public bool UseProductionAuthentication { get; init; }
+
+    public string? TelegramMetadataProxyUrl { get; init; }
 
     public double? FeedOpenProbability { get; init; }
 
@@ -46,10 +50,11 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Auth:SigningKey", Session.SigningKey);
         builder.UseSetting("Auth:EncryptionKey", Session.EncryptionKey);
         builder.UseSetting("Auth:TelegramClientId", "reki-telegram-test");
-        builder.UseSetting("Auth:TelegramMetadataProxyUrl", "https://example.invalid/.well-known/openid-configuration");
+        builder.UseSetting("Auth:TelegramMetadataProxyUrl", TelegramMetadataProxyUrl ?? "https://example.invalid/");
         builder.UseSetting("Auth:AccessTokenMinutes", "15");
         builder.UseSetting("Auth:RefreshTokenDays", "30");
         builder.UseSetting("Auth:PruneAfterDays", "30");
+        builder.UseSetting("TelegramMiniAppAuthorizationOptions:Token", Session.TelegramBotToken);
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(FeedOpenProbability is { } probability
@@ -67,8 +72,13 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
                         options.DefaultAuthenticateScheme = FakeJwtBearerDefaults.AuthenticationScheme;
                         options.DefaultChallengeScheme = FakeJwtBearerDefaults.AuthenticationScheme;
                     })
-                    .AddFakeJwtBearer();
+                    .AddFakeJwtBearer(options => options.BearerValueType = FakeJwtBearerBearerValueType.Jwt);
             }
         });
+        if (TelegramMetadataProxyUrl is not null)
+        {
+            builder.ConfigureTestServices(services =>
+                services.Configure<JwtBearerOptions>("TelegramLogin", options => options.RequireHttpsMetadata = false));
+        }
     }
 }

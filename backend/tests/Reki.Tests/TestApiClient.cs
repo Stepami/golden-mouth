@@ -44,7 +44,7 @@ public sealed class TestApiClient : IDisposable
 
     private void SetAuthenticatedUser(long userId)
     {
-        _httpClient.SetFakeBearerToken(new Dictionary<string, object>
+        _httpClient.SetFakeJwtBearerToken(new Dictionary<string, object>
         {
             ["telegram_user_id"] = userId.ToString(System.Globalization.CultureInfo.InvariantCulture),
         });

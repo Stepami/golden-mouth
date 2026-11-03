@@ -210,7 +210,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Act
         using var http = Factory.CreateClient();
-        http.SetFakeBearerToken(new Dictionary<string, object> { ["telegram_user_id"] = "1018" });
+        http.SetFakeJwtBearerToken(new Dictionary<string, object> { ["telegram_user_id"] = "1018" });
         using var response = await http.GetAsync("/feed");
 
         // Assert

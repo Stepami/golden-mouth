@@ -34,7 +34,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         await using var observedFactory = new ApiFactory { Session = Factory.Session };
         using var client = observedFactory.CreateClient();
-        client.SetFakeBearerToken(new Dictionary<string, object> { ["telegram_user_id"] = "18301" });
+        client.SetFakeJwtBearerToken(new Dictionary<string, object> { ["telegram_user_id"] = "18301" });
         var collector = observedFactory.Services.GetFakeLogCollector();
         collector.Clear();
         var activities = new ConcurrentQueue<Activity>();
