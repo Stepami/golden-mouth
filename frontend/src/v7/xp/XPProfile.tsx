@@ -3,14 +3,15 @@ import type { Player } from '../../api/types';
 import { readLocal, saveLocal } from '../backend';
 import { Button, Progress } from '../ui';
 import { allocate, formatXP, sampleWallet, upgradeCost, validWallet, type XPWallet } from './wallet';
-const names = ['Смелость', 'Юмор', 'В тему'];
+const defaultNames = ['Смелость', 'Юмор', 'В тему'];
 const ids = ['brave', 'humor', 'topic'] as const;
 const zero = (): [number, number, number] => [0, 0, 0];
-export function XPProfile({ player }: { player: Player }) {
+export function XPProfile({ player, plannedSkills }: { player: Player; plannedSkills?: string[] }) {
   const storageKey = `reki:v7:${player.id}:xp-preview:${player.worldInstanceId ?? player.world}`;
   const [wallet, setWallet] = useState<XPWallet | undefined>(() => {
     const saved = readLocal<unknown>(storageKey, undefined); return validWallet(saved) ? saved : undefined;
   });
+  const names = wallet && plannedSkills?.length === 3 ? plannedSkills : defaultNames;
   const [points, setPoints] = useState(zero);
   const [message, setMessage] = useState('');
   const proposed = wallet ? allocate(wallet, points)! : undefined;

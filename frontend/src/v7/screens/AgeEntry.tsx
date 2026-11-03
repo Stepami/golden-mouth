@@ -23,7 +23,6 @@ export function AgeEntry({ initialAge = 18, minimumAge, requireConsent, onBack, 
   };
   return <section className="age-entry">
     <span className="brand-small">реки®</span>
-    <button className="back-button" onClick={() => onBack(age)}>Назад</button>
     <div className="stack"><p className="caption muted">Знакомство</p><h1 className="display">Сколько<br />тебе лет?</h1><p className="muted">Дальше — настроим подборку миров.</p></div>
     <div className="age-entry-wheel">
       <div className="age-entry-selection" aria-hidden="true" />

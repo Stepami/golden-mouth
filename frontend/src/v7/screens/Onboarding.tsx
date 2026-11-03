@@ -20,14 +20,14 @@ export function Onboarding({
     <section className="onboarding">
       <div className="row between">
         <span className="brand-small">реки®</span>
-        <button className="link-button" onClick={() => onDone([])}>
+        {step === 1 && <button className="link-button" onClick={() => onDone([])}>
           Пропустить
-        </button>
+        </button>}
       </div>
-      <div className="onboarding-steps" aria-label={`Шаг ${step + 1} из 2`}>
+      {step === 1 && <div className="onboarding-steps" aria-label={`Шаг ${step + 1} из 2`}>
         <span className="is-active" />
         <span className={step === 1 ? "is-active" : ""} />
-      </div>
+      </div>}
       {step === 0 ? (
         <>
           <div className="onboarding-art">

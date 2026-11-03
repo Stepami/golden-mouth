@@ -2,6 +2,7 @@ import type { FeedItem, WorldDocument, Player, Post as ServerPost } from '../api
 import type { World, Person, Post } from './domain/types';
 import { worldArt } from '../app/worldArt';
 import { presetGoalFor } from '../app/presetGoals';
+import { personaFor } from './persona';
 
 export function worldView(doc: WorldDocument): World {
   const art = worldArt[doc.id];
@@ -13,7 +14,7 @@ export function worldView(doc: WorldDocument): World {
     seedPost: doc.firstPrompt, cast: doc.stars.map(star => ({ id: star.id, name: star.name, handle: star.avatarSeed, role: star.role, boundary: star.about, relation: star.relation })),
   };
 }
-export const playerView = (p: Player): Person => ({ id: 'player', name: p.name, handle: p.handle, role: p.role, boundary: '' });
+export const playerView = (p: Player): Person => ({ id: 'player', name: p.name, handle: p.handle, role: p.role, boundary: '', ...(personaFor(p.id, p.world).avatar ? { avatar: personaFor(p.id, p.world).avatar } : {}) });
 export function feedView(item: FeedItem, player: Person): { post: Post; author: Person; count: number } {
   const mine = item.avatar === player.handle && item.author === player.name;
   return { post: { id: item.postId ?? '', text: item.text, authorId: mine ? 'player' : item.starId ?? item.author ?? 'npc',

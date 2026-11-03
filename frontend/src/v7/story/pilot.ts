@@ -29,7 +29,7 @@ export function pilotBinding(campaign: PilotCampaign): PilotBinding {
 export function boundCampaign(doc: WorldDocument, binding: PilotBinding | undefined): PilotCampaign | undefined {
   if (!binding || binding.packId !== content.packId || binding.version !== content.version || content.worlds.some(w => w.templateId === doc.id)) return;
   const campaign = content.worlds.flatMap(w => w.campaigns).find(c => c.id === binding.campaignId);
-  if (!campaign || doc.description !== campaign.request.description || doc.firstContext !== campaign.request.firstContext) return;
+  if (!campaign || doc.description !== campaign.request.description || doc.firstContext.split('\nЦель персонажа: ')[0] !== campaign.request.firstContext) return;
   const expected = campaign.request.stars.map(s => `${s.id}:${s.name}`).sort();
   const actual = doc.stars.map(s => `${s.id}:${s.name}`).sort();
   if (JSON.stringify(actual) !== JSON.stringify(expected)) return;
