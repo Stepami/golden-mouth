@@ -1,5 +1,6 @@
 import { inTelegram } from '../telegram'
 import { hasInitData } from '../api/auth'
+import { TELEGRAM_APP_URL } from './telegramLinks'
 
 function TelegramMark() {
   return (
@@ -17,7 +18,8 @@ export function TelegramLaunch({ onLogin, busy, ready, error }: { onLogin: () =>
         <div className="telegram-launch__icon"><TelegramMark /></div>
         <h1 id="telegram-launch-title">Твой блог. Твоя история.</h1>
         <p>Пиши посты, знакомься с героями и меняй события своего мира.</p>
-        <button className="telegram-launch__button" disabled={busy || !ready} onClick={onLogin}>{busy ? 'Входим…' : inTelegram && hasInitData() ? 'Войти снова' : 'Войти через Telegram'}</button>
+        <button className="telegram-launch__button" disabled={busy || !ready} onClick={onLogin}>{busy ? 'Входим…' : inTelegram && hasInitData() ? 'Войти снова' : 'Играть в браузере'}</button>
+        {!inTelegram && <a className="telegram-launch__button telegram-launch__button--secondary" href={TELEGRAM_APP_URL}>Открыть в Telegram</a>}
         {error && <p role="alert">{error}</p>}
       </section>
       <p className="telegram-launch__hint">Фанаты и события виртуальные. Посты остаются внутри игры.</p>
