@@ -1,6 +1,7 @@
 using System.Net.ServerSentEvents;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
+using Reki.Api.Requests.Auth;
 using Reki.Api.Requests.Events;
 using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Posts;
@@ -47,11 +48,17 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(StarFeedHistoryPost[]))]
 [JsonSerializable(typeof(StarFeedSourceContent))]
 [JsonSerializable(typeof(string[]))]
+[JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(StarFeedRequest))]
 [JsonSerializable(typeof(StarFeedOnPostPublishedRequest))]
 [JsonSerializable(typeof(StarFeedOnCommentPublishedRequest))]
 [JsonSerializable(typeof(SessionId))]
+[JsonSerializable(typeof(LogoutRequest))]
+[JsonSerializable(typeof(TokenExchangeRequest))]
+[JsonSerializable(typeof(RefreshTokenRequest))]
+[JsonSerializable(typeof(AuthTokenResponse))]
 [JsonSerializable(typeof(Guid))]
+[JsonSerializable(typeof(long))]
 [JsonSerializable(typeof(PlayerId))]
 [JsonSerializable(typeof(PostId))]
 [JsonSerializable(typeof(CommentId))]

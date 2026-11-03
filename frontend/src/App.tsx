@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { NavContext, TABS, type Nav, type ScreenId } from './app/nav'
 import { StoreProvider, useStore } from './app/store'
 import { SCREENS, TAB_OF } from './screens'
@@ -7,6 +7,8 @@ import { setScreen } from './app/log'
 import { TelegramLaunch } from './app/TelegramLaunch'
 import { inTelegram, syncBackButton } from './telegram'
 import { api } from './api/client'
+import { hasAccess, hasInitData, loadTelegramClientId, loginMiniApp, loginWidget, startAuth, subscribeAuth } from './api/auth'
+import { openTelegramLogin, preloadTelegramLogin } from './api/telegramLogin'
 import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
 import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
@@ -81,6 +83,35 @@ function Shell() {
 }
 
 export function App() {
-  if (!inTelegram && !hasExplicitStart()) return <TelegramLaunch />
+  const authenticated = useSyncExternalStore(subscribeAuth, hasAccess)
+  const [ready, setReady] = useState(false)
+  const [telegramClientId, setTelegramClientId] = useState<number | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [authError, setAuthError] = useState('')
+  const explicitStart = hasExplicitStart()
+  useEffect(() => {
+    if (explicitStart) return
+    void startAuth().catch(() => { setAuthError('Не получилось войти. Попробуй ещё раз.') }).finally(() => setReady(true))
+  }, [explicitStart])
+  useEffect(() => {
+    if (inTelegram && hasInitData() || explicitStart) return
+    void Promise.all([preloadTelegramLogin(), loadTelegramClientId()]).then(([, clientId]) => setTelegramClientId(clientId)).catch(() => setAuthError('Не удалось подготовить вход Telegram. Обнови страницу.'))
+  }, [explicitStart])
+  useEffect(() => { if (ready && !authenticated && api.hasPlayer()) api.clearSession() }, [ready, authenticated])
+  const onLogin = () => {
+    if (!(inTelegram && hasInitData()) && telegramClientId === null) return
+    setAuthError('')
+    setBusy(true)
+    if (inTelegram && hasInitData()) {
+      void loginMiniApp().catch(() => setAuthError('Не получилось войти. Попробуй ещё раз.')).finally(() => setBusy(false))
+    } else {
+      openTelegramLogin(telegramClientId!,
+        idToken => { void loginWidget(idToken).catch(() => setAuthError('Не получилось войти. Попробуй ещё раз.')).finally(() => setBusy(false)) },
+        () => { setBusy(false); setAuthError('Вход через Telegram не завершён.') },
+      )
+    }
+  }
+  if (!explicitStart && !ready) return <div className="app"><div className="screen"><div className="pad" role="status">Входим в игру…</div></div></div>
+  if (!explicitStart && !authenticated) return <TelegramLaunch onLogin={onLogin} busy={busy} ready={inTelegram && hasInitData() || telegramClientId !== null} error={authError} />
   return <StoreProvider><Shell /></StoreProvider>
 }

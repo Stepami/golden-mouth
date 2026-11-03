@@ -62,6 +62,8 @@ jobs:
       COMPOSE_FILE: compose.yml:compose.production.yml
       REKI_VERSION: ${{ needs.validate-version.outputs.image-version }}
       TG_PAT: ${{ secrets.TG_PAT }}
+      AUTH_SIGNING_KEY: ${{ secrets.AUTH_SIGNING_KEY }}
+      AUTH_ENCRYPTION_KEY: ${{ secrets.AUTH_ENCRYPTION_KEY }}
       LLM_PAT: ${{ secrets.LLM_PAT }}
       LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
       LLM_MODEL: ${{ secrets.LLM_MODEL }}

@@ -10,9 +10,9 @@ internal sealed class MongoDailyGameEventRepository : IDailyGameEventRepository
 {
     private readonly IMongoCollection<DailyGameEvent> _events;
 
-    public MongoDailyGameEventRepository(MongoCompositionRoot compositionRoot)
+    public MongoDailyGameEventRepository(IMongoDatabase database)
     {
-        _events = compositionRoot.MongoDatabase.GetCollection<DailyGameEvent>(MongoCollections.Events);
+        _events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
     }
 
     public async ValueTask<DailyGameEvent?> GetTodayEventAsync(

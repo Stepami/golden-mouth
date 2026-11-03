@@ -1,29 +1,33 @@
 using System.Collections.Frozen;
+using System.Security.Claims;
 using DotNext.Threading;
+using Microsoft.AspNetCore.Http;
 using Reki.Application.Exceptions;
 using Reki.Application.Player;
 using Reki.Application.RekiContext;
 using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
-using TgMiniAppAuth.AuthContext.User;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Infrastructure.RekiContext;
 
 internal sealed class LazyRekiContext : IRekiContext
 {
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AsyncLazy<PlayerProfile> _player;
     private readonly AsyncLazy<IReadOnlyDictionary<WorldId, World>> _worlds;
 
     public LazyRekiContext(
-        ITelegramUserAccessor telegramUser,
+        IHttpContextAccessor httpContextAccessor,
         IPlayerRepository playerRepository,
         IWorldRepository worldRepository)
     {
+        _httpContextAccessor = httpContextAccessor;
         _player = new AsyncLazy<PlayerProfile>(
             async ct =>
                 await playerRepository.GetPlayerAsync(
-                    TelegramUserId.From(telegramUser.User.Id),
+                    TelegramUserId,
                     ct) ??
                 throw new ResourceNotFoundException("Player not found."),
             resettable: true);
@@ -35,6 +39,17 @@ internal sealed class LazyRekiContext : IRekiContext
                 return worlds.ToFrozenDictionary(world => world.Id);
             },
             resettable: true);
+    }
+
+    public TelegramUserId TelegramUserId
+    {
+        get
+        {
+            var id = _httpContextAccessor.HttpContext?.User.FindFirstValue(AuthConstants.Claims.TelegramUserId);
+            return TelegramUserId.From(long.Parse(
+                id ?? throw new InvalidOperationException("Telegram user claim is missing."),
+                System.Globalization.CultureInfo.InvariantCulture));
+        }
     }
 
     public Task<PlayerProfile> Player =>

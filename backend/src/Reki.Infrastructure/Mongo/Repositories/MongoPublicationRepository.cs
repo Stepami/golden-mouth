@@ -7,9 +7,9 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
 {
     private readonly IMongoCollection<Publication> _publications;
 
-    public MongoPublicationRepository(MongoCompositionRoot compositionRoot)
+    public MongoPublicationRepository(IMongoDatabase database)
     {
-        _publications = compositionRoot.MongoDatabase.GetCollection<Publication>(MongoCollections.Publications);
+        _publications = database.GetCollection<Publication>(MongoCollections.Publications);
     }
 
     public async ValueTask<Publication?> GetPublicationAsync(

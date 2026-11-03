@@ -10,10 +10,12 @@ using OpenTelemetry.Trace;
 using Reki.Application.Balance;
 using Reki.Application.Posts.GetPublicStoryCard;
 using Reki.Infrastructure.AI;
+using Reki.Infrastructure.Auth;
 using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.Mongo;
 using Reki.Infrastructure.RekiContext;
 using Reki.Infrastructure.Rendering;
+using Reki.Infrastructure.Telegram;
 
 namespace Reki.Infrastructure;
 
@@ -25,14 +27,19 @@ public static class DependencyInjection
         IJsonTypeInfoResolver jsonContext)
     {
         services.AddSingleton<IOptionsChangeTokenSource<GameBalance>, ConfigurationChangeTokenSource<GameBalance>>();
-        services.AddRekiContext(configuration);
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
+
+        services
+            .AddRekiContext(configuration)
+            .AddChatClients()
+            .AddJobs(configuration, jsonContext)
+            .AddMongo()
+            .AddAuth()
+            .AddTelegram(configuration);
+
         services.AddObservability();
         services.AddBaseHealthChecks();
-        services.AddChatClients();
-        services.AddJobs(configuration, jsonContext);
-        services.AddMongo();
 
         return services;
     }
@@ -54,7 +61,8 @@ public static class DependencyInjection
             .WithTracing(tracing => tracing
                 .AddSource(MongoTelemetry.ActivitySourceName, "Reki.GenAI", "TickerQ")
                 .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation())
+                .AddHttpClientInstrumentation()
+                .AddProcessor<TelegramBotTelemetry>())
             .WithMetrics(metrics => metrics
                 .AddMeter("Reki.GenAI", "Reki.Product")
                 .AddAspNetCoreInstrumentation()

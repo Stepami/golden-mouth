@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -9,12 +10,12 @@ using Reki.Application.Player.DeletePlayerCommand;
 using Reki.Application.Player.GetReferral;
 using Reki.Application.Player.Responses;
 using Reki.Application.RekiContext;
-using Reki.Domain.Player;
-using TgMiniAppAuth.AuthContext.User;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Api.Controllers;
 
 [ApiController]
+[Authorize(Policy = AuthConstants.Policies.RekiAppJwt)]
 [Produces("application/json")]
 [Route("/")]
 public sealed class PlayerController(
@@ -26,10 +27,9 @@ public sealed class PlayerController(
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
     public async Task<Results<Ok<PlayerResponse>, NotFound<ProblemDetails>>> GetCurrentPlayerAsync(
-        [FromServices] ITelegramUserAccessor telegramUser,
         CancellationToken cancellationToken)
     {
-        var player = await playerRepository.GetPlayerAsync(TelegramUserId.From(telegramUser.User.Id), cancellationToken);
+        var player = await playerRepository.GetPlayerAsync(rekiContext.TelegramUserId, cancellationToken);
         if (player is null)
         {
             var problemDetails = new ProblemDetails
@@ -51,11 +51,10 @@ public sealed class PlayerController(
     [ActionName("CompleteOnboarding")]
     public async Task<Ok<PlayerResponse>> CompleteOnboardingAsync(
         OnboardingRequest request,
-        [FromServices] ITelegramUserAccessor telegramUser,
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(
-            request.ToOnboardPlayer(TelegramUserId.From(telegramUser.User.Id)),
+            request.ToOnboardPlayer(rekiContext.TelegramUserId),
             cancellationToken);
         return TypedResults.Ok(player.ToResponse());
     }

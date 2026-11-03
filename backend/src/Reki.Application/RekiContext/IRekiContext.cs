@@ -5,6 +5,8 @@ namespace Reki.Application.RekiContext;
 
 public interface IRekiContext
 {
+    TelegramUserId TelegramUserId { get; }
+
     Task<PlayerProfile> Player { get; }
 
     Task<IReadOnlyDictionary<WorldId, World>> Worlds { get; }

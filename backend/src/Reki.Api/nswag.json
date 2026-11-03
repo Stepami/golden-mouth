@@ -48,6 +48,7 @@
         "PageResponseOfFeedItemResponse = Reki.Application.Responses.PageResponse<Reki.Application.Posts.Responses.FeedItem.FeedItemResponse>",
         "PageResponseOfChannelPostResponse = Reki.Application.Responses.PageResponse<Reki.Application.Posts.Responses.ChannelPost.ChannelPostResponse>",
         "Microsoft.AspNetCore.Mvc",
+        "Reki.Api.Requests.Auth",
         "Reki.Api.Requests.Events",
         "Reki.Api.Requests.Player",
         "Reki.Api.Requests.Posts",

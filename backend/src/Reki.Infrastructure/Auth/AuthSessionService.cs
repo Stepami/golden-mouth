@@ -1,0 +1,77 @@
+using System.Globalization;
+using System.Security.Claims;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using OpenIddict.Abstractions;
+using Reki.Application.Auth;
+using static OpenIddict.Abstractions.OpenIddictConstants;
+
+namespace Reki.Infrastructure.Auth;
+
+internal sealed class AuthSessionService(
+    IOpenIddictApplicationManager applications,
+    IOpenIddictAuthorizationManager authorizations,
+    IOpenIddictTokenManager tokens,
+    IOptions<AuthOptions> options) : IAuthSessionService
+{
+    public async Task<bool> LogoutAsync(
+        string refreshToken,
+        CancellationToken cancellationToken)
+    {
+        var token = await tokens.FindByReferenceIdAsync(refreshToken, cancellationToken);
+        if (token is null || !await tokens.HasTypeAsync(token, TokenTypeIdentifiers.RefreshToken, cancellationToken))
+        {
+            return false;
+        }
+
+        var authorizationId = await tokens.GetAuthorizationIdAsync(token, cancellationToken);
+        if (authorizationId is not null &&
+            await authorizations.FindByIdAsync(authorizationId, cancellationToken) is { } authorization)
+        {
+            await authorizations.TryRevokeAsync(authorization, cancellationToken);
+        }
+
+        await tokens.TryRevokeAsync(token, cancellationToken);
+        return true;
+    }
+
+    public async Task<ClaimsPrincipal?> IssueAsync(
+        IExternalUserIdProvider externalUserIdProvider,
+        string clientId,
+        CancellationToken cancellationToken)
+    {
+        var application = await applications.FindByClientIdAsync(clientId, cancellationToken);
+        if (application is null)
+        {
+            return null;
+        }
+
+        if (!externalUserIdProvider.TryGetExternalUserId(out var telegramId))
+        {
+            return null;
+        }
+
+        var subject = telegramId.Value.ToString(CultureInfo.InvariantCulture);
+        var identity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType);
+        identity.SetClaim(Claims.Subject, subject);
+        identity.SetClaim(AuthConstants.Claims.TelegramUserId, subject);
+        identity.SetDestinations(claim => claim.Type == AuthConstants.Claims.TelegramUserId
+            ? [Destinations.AccessToken] : []);
+
+        var principal = new ClaimsPrincipal(identity);
+        principal.SetScopes(Scopes.OfflineAccess);
+        principal.SetResources(options.Value.Audience);
+
+        var applicationId = await applications.GetIdAsync(application, cancellationToken)
+            ?? throw new InvalidOperationException("OpenIddict application ID is missing.");
+        var authorization = await authorizations.CreateAsync(
+            identity,
+            subject,
+            applicationId,
+            AuthorizationTypes.Permanent,
+            principal.GetScopes(),
+            cancellationToken);
+        principal.SetAuthorizationId(await authorizations.GetIdAsync(authorization, cancellationToken));
+        return principal;
+    }
+}

@@ -8,9 +8,9 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
 {
     private readonly IMongoCollection<PlayerProfile> _players;
 
-    public MongoPlayerRepository(MongoCompositionRoot compositionRoot)
+    public MongoPlayerRepository(IMongoDatabase database)
     {
-        _players = compositionRoot.MongoDatabase.GetCollection<PlayerProfile>(MongoCollections.Players);
+        _players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
     }
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(

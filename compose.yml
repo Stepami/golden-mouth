@@ -28,7 +28,13 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       Mongo__ConnectionString: ${MONGO_CONNECTION_STRING:-mongodb://mongo:27017/?replicaSet=rs0}
       Mongo__DatabaseName: ${MONGO_DATABASE_NAME:-reki}
-      TelegramMiniAppAuthorizationOptions__Token: ${TG_PAT:-}
+      Telegram__BotToken: ${TG_PAT:-}
+      Telegram__OAuthUrl: https://reki-bot-oauth.stepami.workers.dev/
+      Telegram__ApiUrl: https://reki-bot.stepami.workers.dev/
+      Auth__Issuer: ${AUTH_ISSUER:-https://localhost:5173/}
+      Auth__SigningKey: ${AUTH_SIGNING_KEY:?AUTH_SIGNING_KEY is required}
+      Auth__EncryptionKey: ${AUTH_ENCRYPTION_KEY:?AUTH_ENCRYPTION_KEY is required}
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       Llm__ApiKey: ${LLM_PAT:?LLM_PAT is required}
       Llm__BaseUrl: ${LLM_BASE_URL:?LLM_BASE_URL is required}
       Llm__Model: ${LLM_MODEL:?LLM_MODEL is required}

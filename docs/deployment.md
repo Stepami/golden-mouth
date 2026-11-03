@@ -1,5 +1,18 @@
 # Развёртывание в production
 
+## Ключи и настройки входа (#123)
+
+Один раз сгенерируй RSA PEM для `AUTH_SIGNING_KEY` и 32 случайных байта в Base64 для `AUTH_ENCRYPTION_KEY`. Храни оба значения только в GitHub Actions Secrets и передавай через Compose environment; при каждом деплое используй те же значения, чтобы действующие refresh-токены оставались читаемыми. Пример одноразовой генерации (вывод не коммить и не публикуй):
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072
+openssl rand -base64 32
+```
+
+Публичный production issuer задан в `compose.production.yml`, а URL двух Cloudflare Workers — в общем `compose.yml`; отдельные GitHub Actions Variables для них не нужны. OAuth Worker отдаёт metadata/JWKS со своим `jwks_uri`, Bot API Worker принимает запросы Telegram.Bot по корневому URL. Backend берёт публичный Telegram Client ID из `BotId` SDK, извлечённого из `TG_PAT`; формат токена не является публичным контрактом Telegram. В BotFather добавь production origin в Allowed URLs для Login JS. Для id_token flow Telegram Client Secret не требуется. `TG_PAT` остаётся секретом Mini App и Bot API.
+
+Для локального backend задай `Auth__Issuer`, `Telegram__OAuthUrl` и `Telegram__ApiUrl` через user secrets или environment; локальный Compose читает `AUTH_ISSUER`, а URL Worker берёт из общего `compose.yml`. HTTP для token endpoint разрешён только в Development. В production Compose включает стандартную обработку `X-Forwarded-Proto` через `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`; внешний HTTPS передаётся gateway и frontend. Backend не публикуется напрямую в интернет.
+
 Production разворачивается на self-hosted GitHub Actions runner, установленном на VDS. Push в `master` запускает проверки бэкенда, фронтенда и секретов. Затем GitVersion вычисляет версию, workflow создаёт тег и выкатывает соответствующий коммит. GitHub Release для уже развёрнутого тега создаётся отдельно ручным workflow `GitHub Release`.
 
 ## Одноразовая настройка сервера
