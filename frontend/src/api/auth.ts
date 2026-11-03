@@ -1,17 +1,19 @@
 import { runtimeConfig } from '../app/runtimeConfig'
 
 const refreshKey = 'reki:refresh-token'
+const loggedOutKey = 'reki:logged-out'
 const baseUrl = runtimeConfig.apiBaseUrl
 let initDataRaw = ''
 let accessToken = ''
 let refreshRequest: Promise<boolean> | undefined
 let startupRequest: Promise<boolean> | undefined
-let explicitlyLoggedOut = false
+let explicitlyLoggedOut = sessionStorage.getItem(loggedOutKey) === '1'
 const listeners = new Set<() => void>()
 
 interface TokenResponse { access_token: string; refresh_token: string }
 
 export const setInitData = (raw: string) => { initDataRaw = raw }
+export const hasInitData = () => !!initDataRaw
 export const getAccessToken = () => accessToken
 export const hasAccess = () => !!accessToken
 export function subscribeAuth(listener: () => void): () => void {
@@ -45,11 +47,13 @@ export async function loginMiniApp(): Promise<void> {
   const tokens = await tokenRequest('/auth/external/tg/miniapp', { grant_type: 'urn:reki:grant:telegram-mini-app' }, `TMiniApp ${initDataRaw}`)
   saveTokens(tokens)
   explicitlyLoggedOut = false
+  sessionStorage.removeItem(loggedOutKey)
 }
 export async function loginWidget(idToken: string): Promise<void> {
   const tokens = await tokenRequest('/auth/external/tg/widget', { grant_type: 'urn:reki:grant:telegram-login' }, `Bearer ${idToken}`)
   saveTokens(tokens)
   explicitlyLoggedOut = false
+  sessionStorage.removeItem(loggedOutKey)
 }
 export function refreshAccess(): Promise<boolean> {
   if (refreshRequest) return refreshRequest
@@ -93,5 +97,6 @@ export async function logout(): Promise<void> {
     if (!response.ok) throw new Error(`Logout failed (${response.status})`)
   }
   explicitlyLoggedOut = true
+  sessionStorage.setItem(loggedOutKey, '1')
   clearTokens()
 }

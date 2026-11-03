@@ -293,6 +293,7 @@ function Settings() {
   const [drama, setDrama] = useState<Drama>(p.drama)
   const [del, setDel] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   const deletePending = useRef(false)
   const [deleteError, setDeleteError] = useState('')
   const deleteAccount = async () => {
@@ -301,6 +302,12 @@ function Settings() {
     try { await api.deleteAccount(); resetPlayer(); nav.reset('01-2_age') }
     catch { setDeleteError('Не получилось удалить аккаунт. Попробуй ещё раз.') }
     finally { deletePending.current = false; setDeleting(false) }
+  }
+  const logOut = async () => {
+    setLoggingOut(true); setError('')
+    try { await api.logout() }
+    catch { setError('Не получилось выйти. Попробуй ещё раз.') }
+    finally { setLoggingOut(false) }
   }
   const [panel, setPanel] = useState<'notifications' | 'quiet' | 'support' | 'data' | 'address' | null>(null)
   const [notifications, setNotifications] = useState(p.settings.notifications === 'off' ? 'off' : p.settings.notifications === 'important' ? 'important' : 'all')
@@ -352,6 +359,7 @@ function Settings() {
           <div className="row" style={{ marginBottom: 12 }}><Avatar seed={p.handle} size={48} /><span className="small muted">Выбор сохраняется на этом устройстве.</span></div>
           {row('✨ Реки+', '349 ₽ ›', false, () => nav.push('04-2_fake_door'))}{row('📋 Правила публикаций', '›', false, () => nav.push('06-4_rules'))}{row('🔒 Мои данные и правила', 'скоро ›', false, () => openPanel('data'))}{row('✉ Поддержка', 'скоро ›', true, () => openPanel('support'))}
         </Card>
+        <button onClick={logOut} disabled={loggingOut} className="card" style={{ width: '100%', textAlign: 'center', marginBottom: 12 }}>{loggingOut ? 'Выходим…' : 'Выйти'}</button>
         <button onClick={() => setDel(true)} className="card" style={{ width: '100%', textAlign: 'center', color: 'var(--accent)', background: 'transparent', border: '1px solid #FF6B8B55' }}>Удалить аккаунт и всё</button>
         <div className="small muted" style={{ textAlign: 'center', marginTop: 8 }}>Удалим канал, переписку и коллекцию. Вернуть будет нельзя</div>
       </div>
