@@ -63,3 +63,14 @@
 .resource-with-hint { position: relative; flex-shrink: 0; }
 .resource-tooltip { position: absolute; z-index: 10; top: calc(100% + 8px); right: -12px; width: 210px; max-width: 65vw; padding: 10px 12px; border-radius: 12px; background: var(--color-ink); color: var(--color-paper); font-size: .75rem; line-height: 1.4; visibility: hidden; opacity: 0; pointer-events: none; }
 .resource-with-hint:hover .resource-tooltip, .resource-with-hint:focus-within .resource-tooltip { visibility: visible; opacity: 1; }
+
+.xp-profile { padding-top: 24px; }
+.xp-summary { display: flex; flex-direction: column; gap: 8px; }
+.xp-summary h2 { margin: 0; }
+.xp-balance { font-family: var(--font-heading); font-size: clamp(2rem, 10vw, 3.5rem); line-height: 1.2; overflow-wrap: anywhere; }
+.xp-balance > span:last-child { font-size: 1rem; }
+.xp-preview-label { align-self: flex-start; padding: 4px 8px; background: var(--color-surface); border-radius: 8px; }
+.xp-skill { padding: 16px; border: 1px solid var(--color-divider); border-radius: 20px; }
+.xp-skill-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.xp-skill-actions button { min-width: 48px; min-height: 44px; }
+.xp-skill > .row { flex-wrap: wrap; }
