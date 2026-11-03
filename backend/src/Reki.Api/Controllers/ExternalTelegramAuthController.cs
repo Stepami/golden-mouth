@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -30,7 +32,7 @@ public sealed class ExternalTelegramAuthController(
         [FromServices] ITelegramUserAccessor telegramUser,
         CancellationToken cancellationToken)
     {
-        var principal = await sessions.ExchangeMiniAppAsync(telegramUser.User.Id, request, cancellationToken);
+        var principal = await sessions.IssueAsync(telegramUser.User.Id, request.ClientId, cancellationToken);
         return principal is null ? InvalidGrant() : TypedResults.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
@@ -41,7 +43,13 @@ public sealed class ExternalTelegramAuthController(
         [FromForm] TokenExchangeRequest request,
         CancellationToken cancellationToken)
     {
-        var principal = await sessions.ExchangeWidgetAsync(User, request, cancellationToken);
+        if (!long.TryParse(User.FindFirstValue("id"), NumberStyles.None, CultureInfo.InvariantCulture, out var telegramId) ||
+            telegramId <= 0)
+        {
+            return InvalidGrant();
+        }
+
+        var principal = await sessions.IssueAsync(telegramId, request.ClientId, cancellationToken);
         return principal is null ? InvalidGrant() : TypedResults.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 

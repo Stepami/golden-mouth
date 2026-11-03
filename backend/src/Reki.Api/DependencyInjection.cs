@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization.Metadata;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OpenApi;
 using OpenIddict.Validation.AspNetCore;
@@ -46,15 +47,18 @@ internal static partial class DependencyInjection
                 .AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
                 .RequireAuthenticatedUser())
             .AddPolicy(AuthConstants.MiniAppGrantPolicy, policy =>
-                policy.Requirements.Add(new GrantTypeRequirement(AuthConstants.MiniAppGrant)))
+                policy.RequireAssertion(context => HasGrant(context, AuthConstants.MiniAppGrant)))
             .AddPolicy(AuthConstants.TelegramLoginGrantPolicy, policy =>
-                policy.Requirements.Add(new GrantTypeRequirement(AuthConstants.TelegramLoginGrant)))
+                policy.RequireAssertion(context => HasGrant(context, AuthConstants.TelegramLoginGrant)))
             .AddPolicy(AuthConstants.RefreshGrantPolicy, policy =>
-                policy.Requirements.Add(new GrantTypeRequirement(OpenIddict.Abstractions.OpenIddictConstants.GrantTypes.RefreshToken)));
-        services.AddSingleton<IAuthorizationHandler, GrantTypeAuthorizationHandler>();
+                policy.RequireAssertion(context => HasGrant(context, OpenIddict.Abstractions.OpenIddictConstants.GrantTypes.RefreshToken)));
         services.AddControllers();
         services.AddSerialization();
 
         return services;
     }
+
+    private static bool HasGrant(AuthorizationHandlerContext context, string grantType) =>
+        context.Resource is HttpContext httpContext &&
+        httpContext.GetOpenIddictServerRequest()?.GrantType == grantType;
 }

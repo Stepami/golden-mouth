@@ -20,8 +20,10 @@ public sealed class AuthController(AuthSessionService sessions) : ControllerBase
         [FromForm] RefreshTokenRequest form,
         CancellationToken cancellationToken)
     {
-        var principal = await AuthSessionService.RefreshAsync(HttpContext);
-        return principal is null ? InvalidGrant() : TypedResults.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        return !result.Succeeded || result.Principal is null
+            ? InvalidGrant()
+            : TypedResults.SignIn(result.Principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
     [AllowAnonymous]

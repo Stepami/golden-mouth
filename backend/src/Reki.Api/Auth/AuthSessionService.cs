@@ -1,10 +1,8 @@
 using System.Globalization;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
-using OpenIddict.Server.AspNetCore;
 using Reki.Api.Requests.Auth;
 using Reki.Infrastructure.Auth;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -17,31 +15,6 @@ public sealed class AuthSessionService(
     IOpenIddictTokenManager tokens,
     IOptions<AuthOptions> options)
 {
-    public static async Task<ClaimsPrincipal?> RefreshAsync(HttpContext context)
-    {
-        var result = await context.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-        return result.Succeeded ? result.Principal : null;
-    }
-
-    public Task<ClaimsPrincipal?> ExchangeMiniAppAsync(
-        long telegramId,
-        TokenExchangeRequest request,
-        CancellationToken cancellationToken) => IssueAsync(telegramId, request.ClientId, cancellationToken);
-
-    public Task<ClaimsPrincipal?> ExchangeWidgetAsync(
-        ClaimsPrincipal user,
-        TokenExchangeRequest request,
-        CancellationToken cancellationToken)
-    {
-        if (!long.TryParse(user.FindFirstValue("id"), NumberStyles.None, CultureInfo.InvariantCulture, out var telegramId) ||
-            telegramId <= 0)
-        {
-            return Task.FromResult<ClaimsPrincipal?>(null);
-        }
-
-        return IssueAsync(telegramId, request.ClientId, cancellationToken);
-    }
-
     public async Task<bool> LogoutAsync(LogoutRequest request, CancellationToken cancellationToken)
     {
         if (request.ClientId != options.Value.ClientId)
@@ -66,7 +39,7 @@ public sealed class AuthSessionService(
         return true;
     }
 
-    private async Task<ClaimsPrincipal?> IssueAsync(
+    public async Task<ClaimsPrincipal?> IssueAsync(
         long telegramId,
         string clientId,
         CancellationToken cancellationToken)
