@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { activitiesForWorld, markWorldActivitiesRead, type Activity } from './activity';
 import { submissionFor } from './submission';
-import { screenView } from '../app/analytics';
+import { screenView, setExperiments, tap, event as trackEvent } from '../app/analytics';
 import { setScreen as setLogScreen } from '../app/log';
 import { api, ApiError } from '../api/client';
 import type { Player, WorldDocument, WorldDefinition, Post as ServerPost, FeedItem, PostResult, Address } from '../api/types';
@@ -72,6 +72,7 @@ export default function BackendApp() {
   const feedRequest = useRef(0);
   const threadRequest = useRef(0);
   const interestOnly = useRef(false);
+  useEffect(() => { if (player?.experiments) setExperiments(player.experiments); }, [player?.experiments]);
   const key = player ? `reki:v7:${player.id}` : 'reki:v7:guest';
   const localSave = (name: string, value: unknown) => { if (!saveLocal(`${key}:${name}`, value)) setStorageError(true); };
   const go = (next: Screen) => { setError(''); setStack(s => [...s, screen]); setScreen(next); setToast(undefined); };
@@ -139,14 +140,14 @@ export default function BackendApp() {
   const register = async () => {
     if (!age || busy) return;
     setBusy(true); setError('');
-    try { await api.onboarding({ birthGroup: age === '14-17' ? '14-17' : '18+', ageBand: age, address, referralCode: pendingReferral() }); clearReferral(); if (selected) startHero(selected); }
+    try { await api.onboarding({ birthGroup: age === '14-17' ? '14-17' : '18+', ageBand: age, address, referralCode: pendingReferral() }); clearReferral(); trackEvent('onboarding_step', { step: 'age', ok: true }); if (selected) startHero(selected); }
     catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
   };
   const createWorld = async () => {
     if (!definition || busy) return;
     setBusy(true); setError('');
     try {
-      const p = installPlayer(await api.createWorld(definition)); localSave('qualities', qualities);
+      const p = installPlayer(await api.createWorld(definition)); trackEvent('onboarding_step', { step: 'done', ok: true, world: p.world }); localSave('qualities', qualities);
       const own = await api.ownedWorlds(); installWorldContent(own); setOwned(own);
       setScreen('feed'); setStack([]); await loadFeed(p);
     } catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
@@ -174,15 +175,17 @@ export default function BackendApp() {
   };
   const publish = () => {
     if (!player || !draft.trim() || sending.current) return;
-    if (player.postsLeft <= 0 && !unknown) { setOverlay('resources'); return; }
+    if (player.postsLeft <= 0 && !unknown) { trackEvent('limit_reached'); setOverlay('resources'); return; }
     if (reply) { void sendReply(); return; }
     const k = draftKey(player), saved = readPostDraft(k);
     const command = submissionFor(saved, draft, () => crypto.randomUUID());
     const { id, text, recovery } = command;
+    if (!recovery) trackEvent('post_publish', { len: text.length, own_words: command.ownWords });
     if (!savePostDraft(k, { ...saved, text: draft, publicationId: id, submittedText: text, ownWords: true, submittedOwnWords: recovery ? saved.submittedOwnWords : true })) setStorageError(true);
     sending.current = true; setPending(true); setError(''); setStatus('pending');
     cancel.current = api.publish(text, id, event => {
       if (event.type !== 'result') return;
+      trackEvent('post_result', { delta: event.result.delta, viral: event.result.viral, flop: event.result.flop });
       completePostDraft(k, id, text); setDraft(readPostDraft(k).text);
       setToast(event.result); setUnknown(false); setPending(false); sending.current = false; setStatus('completed');
       const item: Activity = { id: event.result.postId, worldId: player.world, title: event.result.headline, text: `${event.result.delta > 0 ? '+' : ''}${event.result.delta} подписчиков`, read: false };
@@ -279,7 +282,7 @@ export default function BackendApp() {
   const nav = inWorld ? [ { id: 'feed', label: 'Лента', icon: 'feed' as const }, { id: 'goals', label: 'Цели', icon: 'goals' as const }, { id: 'compose', label: 'Написать', icon: 'compose' as const }, { id: 'messages', label: 'Личка', icon: 'messages' as const }, { id: 'activity', label: 'Уведомления', icon: 'activity' as const, badge: activities.filter(a => !a.read && a.worldId === player?.world).length } ] : [ { id: 'catalog', label: 'Главная', icon: 'home' as const }, { id: 'search', label: 'Поиск', icon: 'search' as const }, { id: 'account', label: 'Профиль', icon: 'profile' as const } ];
   if (hash.startsWith('#system')) return <DesignSystem />;
   return <div className="v7-stage"><div className={`app ${showNav ? 'app--nav' : ''}`}><div className="app-body" ref={main}><div className="sr-only" tabIndex={-1} ref={focusHeading}>{titleOf[screen]}</div>{storageError && <Notice title="Не удалось сохранить на устройстве" tone="error">Не закрывай вкладку: черновик остаётся в памяти до перезагрузки.</Notice>}{error && <div className="section"><Notice title="Не получилось завершить действие" tone="error">{error}</Notice>{!booting && !templates.length && <Button onClick={() => void boot()}>Повторить</Button>}</div>}{content}</div>
-    {showNav && <BottomNav items={nav.map(n => ({ ...n, disabled: pending }))} active={screen} onChange={id => id === 'compose' ? openCompose() : go(id as Screen)} />}
+    {showNav && <BottomNav items={nav.map(n => ({ ...n, disabled: pending }))} active={screen} onChange={id => { tap('tab', { to: `v7.${id}` }); id === 'compose' ? openCompose() : go(id as Screen); }} />}
     {toast && <div className="result-toast" role="status"><button className="toast-content" onClick={() => { void openThread(toast.postId); setToast(undefined); }}><span className="toast-check">✓</span><span><strong>{toast.headline}</strong><span className="caption block">{toast.delta > 0 ? '+' : ''}{toast.delta} подписчиков · Читать ответы ↗</span></span></button><button className="toast-close" aria-label="Закрыть уведомление" onClick={() => setToast(undefined)}>×</button></div>}
     {overlay && <Dialog title={{ exit: 'Выйти из мира?', resources: 'Общие ресурсы', skills: 'Навыки и отношения', 'text-size': 'Размер текста', 'local-like': 'Реакция', quote: 'Цитата', about: 'Новая версия' }[overlay]} onClose={() => setOverlay(null)}>
       {overlay === 'exit' ? <><p>Публикации и черновик сохранятся. Вернёшься с того же места.</p><Button disabled={pending} onClick={() => { feedRequest.current++; setWorld(undefined); setScreen('catalog'); setStack([]); setOverlay(null); }}>Выйти к мирам</Button><Button variant="secondary" onClick={() => setOverlay(null)}>Остаться</Button></> : overlay === 'resources' ? <><p>Энергия общая для всех миров. Публикация и ответ расходуют по 1 энергии.</p><div className="resource-details"><span>Энергия <b>{player?.postsLeft ?? '—'}</b></span><span>Кристаллы <b>—</b></span></div><p className="caption muted">Кристаллы появятся после подключения этой механики. Покупки пока недоступны.</p><Button onClick={() => setOverlay(null)}>Продолжить</Button></> : overlay === 'text-size' ? <><div className="row" style={{ flexWrap: 'wrap' }}>{[1, 1.25, 1.5, 2].map(v => <Chip key={v} selected={textScale === v} onClick={() => setTextScale(v)}>{v * 100}%</Chip>)}</div><p>Так будет выглядеть текст в приложении.</p><Button onClick={() => setOverlay(null)}>Готово</Button></> : overlay === 'skills' ? <><p>Навыки растут после подтверждённых сервером действий. Высокий навык не гарантирует согласия собеседника.</p>{world?.cast.map(p => <PersonRow key={p.id} person={p} onClick={() => { setOverlay(null); showPerson(p); }} />)}</> : overlay === 'local-like' ? <><p>Реакция сохранена на этом устройстве. На отношения и награды она пока не влияет.</p><Button onClick={() => setOverlay(null)}>Понятно</Button></> : overlay === 'quote' ? <><QuoteBlock name={quote?.name ?? ''} text={quote?.text ?? ''} /><p className="caption muted">Связь цитирования пока не поддерживается. Можно взять текст как контекст нового поста.</p><Button onClick={() => { setOverlay(null); openCompose(undefined, quote); }}>Написать с этим контекстом</Button></> : <><p>Интерфейс v7. Миры, публикации и ответы работают с сервером. Личка, кристаллы и новая система квестов появятся позже.</p><p className="caption muted">Уведомления и реакции сохраняются на этом устройстве.</p><Button onClick={() => setOverlay(null)}>Понятно</Button></>}
