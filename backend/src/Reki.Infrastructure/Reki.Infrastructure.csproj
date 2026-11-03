@@ -15,6 +15,7 @@
         <PackageReference Include="Microsoft.Extensions.AI.OpenAI"/>
         <PackageReference Include="MongoDB.Analyzer" />
         <PackageReference Include="MongoDB.Driver"/>
+        <PackageReference Include="OpenIddict.MongoDb"/>
         <PackageReference Include="TgMiniAppAuth"/>
         <PackageReference Include="TickerQ" />
         <PackageReference Include="TickerQ.Instrumentation.OpenTelemetry" />

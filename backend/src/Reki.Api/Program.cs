@@ -1,4 +1,6 @@
 using Kot.MongoDB.Migrations;
+using Microsoft.AspNetCore.HttpOverrides;
+using Reki.Api.Auth;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Application;
@@ -59,6 +61,7 @@ public partial class Program
             ConfigurePipeline(app);
             var migrator = app.Services.GetRequiredService<IMigrator>();
             await migrator.MigrateAsync();
+            await OpenIddictInitialization.InitializeAsync(app.Services);
         }
 
         MapApiDocumentation(app);
@@ -70,6 +73,14 @@ public partial class Program
     private static void ConfigureServices(WebApplicationBuilder builder)
     {
         builder.Services.AddHttpContextAccessor();
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
+            if (System.Net.IPNetwork.TryParse(builder.Configuration["ForwardedHeaders:KnownNetwork"], out var network))
+            {
+                options.KnownIPNetworks.Add(network);
+            }
+        });
         builder.Services.AddApi();
         if (OpenApiGeneration.IsRunning)
         {
@@ -79,6 +90,7 @@ public partial class Program
         builder.Services
             .AddApplication()
             .AddInfrastructure(builder.Configuration, ApiJsonSerializerContext.Default);
+        builder.Services.AddAppAuth(builder.Configuration, builder.Environment);
     }
 
     private static void ConfigureLogging(WebApplicationBuilder builder)
@@ -102,6 +114,7 @@ public partial class Program
 
     private static void ConfigurePipeline(WebApplication app)
     {
+        app.UseForwardedHeaders();
         app.UseExceptionHandler();
         app.UseStatusCodePages();
         app.UseSerilogRequestLogging();
