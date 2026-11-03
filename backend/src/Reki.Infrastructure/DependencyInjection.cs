@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddChatClients();
         services.AddJobs(configuration, jsonContext);
         services.AddMongo();
+        services.AddAppAuth();
 
         return services;
     }

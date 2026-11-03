@@ -13,11 +13,16 @@
         <PackageReference Include="Kot.MongoDB.Migrations.DI" />
         <PackageReference Include="Microsoft.Extensions.AI"/>
         <PackageReference Include="Microsoft.Extensions.AI.OpenAI"/>
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer"/>
+        <PackageReference Include="Microsoft.Extensions.Compliance.Redaction"/>
+        <PackageReference Include="Microsoft.Extensions.Http.Diagnostics"/>
         <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions"/>
         <PackageReference Include="MongoDB.Analyzer" />
         <PackageReference Include="MongoDB.Driver"/>
         <PackageReference Include="OpenIddict.MongoDb"/>
+        <PackageReference Include="OpenIddict.AspNetCore"/>
         <PackageReference Include="TgMiniAppAuth"/>
+        <PackageReference Include="Telegram.Bot"/>
         <PackageReference Include="TickerQ" />
         <PackageReference Include="TickerQ.Instrumentation.OpenTelemetry" />
         <PackageReference Include="alexjamesbrown.TickerQ.MongoDB" />

@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 
-namespace Reki.Api.Auth;
+namespace Reki.Application.Auth;
 
 public interface IAuthSessionService
 {

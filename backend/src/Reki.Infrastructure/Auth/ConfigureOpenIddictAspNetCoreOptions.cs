@@ -1,7 +1,8 @@
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using OpenIddict.Server.AspNetCore;
 
-namespace Reki.Api.Auth;
+namespace Reki.Infrastructure.Auth;
 
 internal sealed class ConfigureOpenIddictAspNetCoreOptions(IHostEnvironment environment)
     : IConfigureOptions<OpenIddictServerAspNetCoreOptions>

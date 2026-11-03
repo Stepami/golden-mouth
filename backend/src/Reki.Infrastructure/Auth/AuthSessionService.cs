@@ -3,12 +3,12 @@ using System.Security.Claims;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
-using Reki.Infrastructure.Auth;
+using Reki.Application.Auth;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
-namespace Reki.Api.Auth;
+namespace Reki.Infrastructure.Auth;
 
-public sealed class AuthSessionService(
+internal sealed class AuthSessionService(
     IOpenIddictApplicationManager applications,
     IOpenIddictAuthorizationManager authorizations,
     IOpenIddictTokenManager tokens,

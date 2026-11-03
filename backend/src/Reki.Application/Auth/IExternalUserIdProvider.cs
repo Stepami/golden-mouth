@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace Reki.Api.Auth;
+namespace Reki.Application.Auth;
 
 public interface IExternalUserIdProvider
 {

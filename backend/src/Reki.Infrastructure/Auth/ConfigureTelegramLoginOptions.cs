@@ -2,10 +2,9 @@ using System.Globalization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Reki.Infrastructure.Auth;
 using Telegram.Bot;
 
-namespace Reki.Api.Auth;
+namespace Reki.Infrastructure.Auth;
 
 internal sealed class ConfigureTelegramLoginOptions(
     IOptions<TelegramOptions> telegramOptions,

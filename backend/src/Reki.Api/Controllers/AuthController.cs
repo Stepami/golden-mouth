@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Server.AspNetCore;
-using Reki.Api.Auth;
 using Reki.Api.Requests.Auth;
+using Reki.Application.Auth;
 using Reki.Infrastructure.Auth;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 

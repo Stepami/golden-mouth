@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Options;
-using Reki.Infrastructure.Auth;
 using Telegram.Bot;
 
-namespace Reki.Api.Auth;
+namespace Reki.Infrastructure.Auth;
 
 internal sealed class RekiTelegramBotClient(
     IOptions<TelegramOptions> telegramOptions,

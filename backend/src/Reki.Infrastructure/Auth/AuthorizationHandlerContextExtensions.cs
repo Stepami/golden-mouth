@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 
-namespace Reki.Api.Auth;
+namespace Reki.Infrastructure.Auth;
 
 internal static class AuthorizationHandlerContextExtensions
 {

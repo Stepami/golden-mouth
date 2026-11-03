@@ -1,5 +1,4 @@
 using Kot.MongoDB.Migrations;
-using Reki.Api.Auth;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Application;
@@ -80,7 +79,6 @@ public partial class Program
         builder.Services
             .AddApplication()
             .AddInfrastructure(builder.Configuration, ApiJsonSerializerContext.Default);
-        builder.Services.AddAppAuth();
     }
 
     private static void ConfigureLogging(WebApplicationBuilder builder)

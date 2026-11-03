@@ -2,11 +2,12 @@ using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Server;
-using Reki.Infrastructure.Auth;
 
-namespace Reki.Api.Auth;
+namespace Reki.Infrastructure.Auth;
 
-internal sealed class ConfigureOpenIddictServerOptions(IOptions<AuthOptions> authOptions) : IConfigureOptions<OpenIddictServerOptions>
+internal sealed class ConfigureOpenIddictServerOptions(
+    IOptions<AuthOptions> authOptions) :
+    IConfigureOptions<OpenIddictServerOptions>
 {
     public void Configure(OpenIddictServerOptions options)
     {

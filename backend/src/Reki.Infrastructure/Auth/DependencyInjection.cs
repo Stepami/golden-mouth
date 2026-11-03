@@ -1,10 +1,11 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Diagnostics;
 using Microsoft.Extensions.Http.Logging;
 using OpenIddict.Validation.AspNetCore;
-using Reki.Infrastructure.Auth;
+using Reki.Application.Auth;
 using Telegram.Bot;
 
-namespace Reki.Api.Auth;
+namespace Reki.Infrastructure.Auth;
 
 internal static class DependencyInjection
 {
@@ -31,6 +32,23 @@ internal static class DependencyInjection
                 options.DefaultChallengeScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
             })
             .AddJwtBearer(AuthConstants.Schemes.TelegramLogin);
+        services
+            .AddAuthorizationBuilder()
+            .AddPolicy(
+                AuthConstants.Policies.RekiAppJwt,
+                policy =>
+                    policy
+                        .AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
+                        .RequireAuthenticatedUser())
+            .AddPolicy(
+                AuthConstants.Policies.RekiMiniAppGrant,
+                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.MiniApp)))
+            .AddPolicy(
+                AuthConstants.Policies.RekiTelegramLoginGrant,
+                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.TelegramLogin)))
+            .AddPolicy(
+                AuthConstants.Policies.RekiRefreshGrant,
+                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.Refresh)));
         services.ConfigureOptions<ConfigureTelegramLoginOptions>();
         services.ConfigureOptions<ConfigureOpenIddictServerOptions>();
         services.ConfigureOptions<ConfigureOpenIddictAspNetCoreOptions>();

@@ -1,8 +1,10 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Reki.Application.Auth;
 
-namespace Reki.Api.Auth;
+namespace Reki.Infrastructure.Auth;
 
 internal sealed class TgLoginUserIdProvider(
     IHttpContextAccessor httpContextAccessor) :
