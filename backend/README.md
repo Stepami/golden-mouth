@@ -19,7 +19,7 @@ dotnet restore Reki.slnx
 dotnet run --project src/Reki.Api/Reki.Api.csproj
 ```
 
-Development uses MongoDB for game data. Before starting the API, set `Auth__TelegramClientId`, `Auth__TelegramMetadataProxyUrl`, `Auth__SigningKey` (RSA PEM), and `Auth__EncryptionKey` (32 random bytes in Base64) through environment or user secrets. The issuer above matches the local HTTPS Vite origin; Vite proxies `/api/v1` to the HTTP backend on port 8081. See [deployment key setup](../docs/deployment.md#ключи-и-настройки-входа-123). Mini App exchanges signed `Authorization: TMiniApp <initData raw>` for app tokens at `POST /auth/external/tg/miniapp`; protected game endpoints use `Authorization: Bearer <app access JWT>`. For local HTTPS browser login, follow the [frontend guide](../frontend/README.md#frontend). Logs stay in the console and are not written to MongoDB outside Production. Try:
+Development uses MongoDB for game data. Before starting the API, set `Auth__TelegramMetadataProxyUrl` (Worker `/oauth/` base), `Auth__SigningKey` (RSA PEM), and `Auth__EncryptionKey` (32 random bytes in Base64) through environment or user secrets. The issuer above matches the local HTTPS Vite origin; Vite proxies `/api/v1` to the HTTP backend on port 8081. See [deployment key setup](../docs/deployment.md#ключи-и-настройки-входа-123). Mini App exchanges signed `Authorization: TMiniApp <initData raw>` for app tokens at `POST /auth/external/tg/miniapp`; protected game endpoints use `Authorization: Bearer <app access JWT>`. Browser login reads the public Telegram Client ID from `GET /auth/external/tg/client-id`. For local HTTPS browser login, follow the [frontend guide](../frontend/README.md#frontend). Logs stay in the console and are not written to MongoDB outside Production. Try:
 
 - `GET /health/live`
 - `GET /health/ready`
@@ -38,7 +38,6 @@ $env:OPENOBSERVE_EMAIL = '<chosen local administrator email>'
 $env:OPENOBSERVE_PASSWORD = '<chosen local administrator password>'
 $env:TG_PAT = '<test Telegram bot token>'
 $env:AUTH_ISSUER = '<public API issuer URL>'
-$env:TELEGRAM_CLIENT_ID = '<public Telegram Login client ID>'
 $env:TELEGRAM_METADATA_PROXY_URL = '<Worker base URL>'
 $env:AUTH_SIGNING_KEY = '<RSA private key PEM>'
 $env:AUTH_ENCRYPTION_KEY = '<32-byte Base64 key>'

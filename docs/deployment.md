@@ -9,7 +9,7 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072
 openssl rand -base64 32
 ```
 
-В GitHub Actions Variables задай `AUTH_ISSUER` (публичный HTTPS issuer), `TELEGRAM_CLIENT_ID` (публичный ID Telegram Login JS) и `TELEGRAM_METADATA_PROXY_URL` (HTTPS base URL существующего Cloudflare Worker для metadata/JWKS, с завершающим `/`). Worker указывает свой HTTPS `jwks_uri` в discovery; стандартный JWT backchannel загружает через него оба документа. `TELEGRAM_CLIENT_ID` должен совпадать с `telegramClientId` в runtime config фронтенда; workflow подставляет его в config.js при деплое. В BotFather добавь production origin в Allowed URLs для Login JS. Для id_token flow Telegram Client Secret не требуется. `TG_PAT` остаётся секретом Mini App.
+В GitHub Actions Variables задай `AUTH_ISSUER` (публичный HTTPS issuer) и `TELEGRAM_METADATA_PROXY_URL` (HTTPS base URL существующего Cloudflare Worker для metadata/JWKS, с завершающим `/oauth/`). Worker указывает свой HTTPS `jwks_uri` в discovery; стандартный JWT backchannel загружает через него оба документа. Backend использует тот же Worker с путём `/api/` для Bot API и берёт публичный Telegram Client ID из подтверждённого ответа `getMe`; отдельная переменная Client ID не нужна. В BotFather добавь production origin в Allowed URLs для Login JS. Для id_token flow Telegram Client Secret не требуется. `TG_PAT` остаётся секретом Mini App и Bot API.
 
 Для локального backend задай те же `Auth__*` настройки через user secrets или environment. HTTP для token endpoint разрешён только в Development. В production Compose включает стандартную обработку `X-Forwarded-Proto` через `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`; внешний HTTPS передаётся gateway и frontend. Backend не публикуется напрямую в интернет.
 
