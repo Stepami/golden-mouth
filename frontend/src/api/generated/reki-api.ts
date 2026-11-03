@@ -7,6 +7,101 @@
 /* eslint-disable */
 // ReSharper disable InconsistentNaming
 
+export class AuthClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    /**
+     * @return OK
+     */
+    refresh(body: Body, signal?: AbortSignal): Promise<SwaggerResponse<AuthTokenResponse>> {
+        let url_ = this.baseUrl + "/auth/refresh";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = Object.keys(body as any).map((key) => {
+            return encodeURIComponent(key) + '=' + encodeURIComponent((body as any)[key]);
+        }).join('&')
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processRefresh(_response);
+        });
+    }
+
+    protected processRefresh(response: Response): Promise<SwaggerResponse<AuthTokenResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as AuthTokenResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<AuthTokenResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return No Content
+     */
+    logout(body: Body2, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+        let url_ = this.baseUrl + "/auth/logout";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = Object.keys(body as any).map((key) => {
+            return encodeURIComponent(key) + '=' + encodeURIComponent((body as any)[key]);
+        }).join('&')
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processLogout(_response);
+        });
+    }
+
+    protected processLogout(response: Response): Promise<SwaggerResponse<void>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 204) {
+            return response.text().then((_responseText) => {
+            return new SwaggerResponse(status, _headers, null as any);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
+    }
+}
+
 export class EventsClient {
     private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
     private baseUrl: string;
@@ -102,6 +197,103 @@ export class EventsClient {
             });
         }
         return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
+    }
+}
+
+export class ExternalTelegramAuthClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    /**
+     * @return OK
+     */
+    exchangeMiniApp(body: Body3, signal?: AbortSignal): Promise<SwaggerResponse<AuthTokenResponse>> {
+        let url_ = this.baseUrl + "/auth/external/tg/miniapp";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = Object.keys(body as any).map((key) => {
+            return encodeURIComponent(key) + '=' + encodeURIComponent((body as any)[key]);
+        }).join('&')
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processExchangeMiniApp(_response);
+        });
+    }
+
+    protected processExchangeMiniApp(response: Response): Promise<SwaggerResponse<AuthTokenResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as AuthTokenResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<AuthTokenResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return OK
+     */
+    exchangeTelegramLogin(body: Body4, signal?: AbortSignal): Promise<SwaggerResponse<AuthTokenResponse>> {
+        let url_ = this.baseUrl + "/auth/external/tg/widget";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = Object.keys(body as any).map((key) => {
+            return encodeURIComponent(key) + '=' + encodeURIComponent((body as any)[key]);
+        }).join('&')
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processExchangeTelegramLogin(_response);
+        });
+    }
+
+    protected processExchangeTelegramLogin(response: Response): Promise<SwaggerResponse<AuthTokenResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as AuthTokenResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<AuthTokenResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 }
 
@@ -1421,6 +1613,15 @@ export interface AnswerEventRequest {
     [key: string]: any;
 }
 
+export interface AuthTokenResponse {
+    token_type: string;
+    access_token: string;
+    expires_in: number;
+    refresh_token: string;
+
+    [key: string]: any;
+}
+
 export interface BestCommentResponse {
     avatar: string;
     text: string;
@@ -2018,6 +2219,35 @@ export interface WorldStarResponse {
     voice: string;
     avatarSeed: string;
     relation: number;
+
+    [key: string]: any;
+}
+
+export interface Body {
+    client_id?: string;
+    grant_type?: string;
+    refresh_token?: string;
+
+    [key: string]: any;
+}
+
+export interface Body2 {
+    client_id?: string;
+    refresh_token?: string;
+
+    [key: string]: any;
+}
+
+export interface Body3 {
+    client_id?: string;
+    grant_type?: string;
+
+    [key: string]: any;
+}
+
+export interface Body4 {
+    client_id?: string;
+    grant_type?: string;
 
     [key: string]: any;
 }
