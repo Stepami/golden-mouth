@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Http.Diagnostics;
+using Microsoft.Extensions.Http.Logging;
 using OpenIddict.Validation.AspNetCore;
 using Reki.Infrastructure.Auth;
 using Telegram.Bot;
@@ -13,7 +15,15 @@ internal static class DependencyInjection
 
         services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.SectionName);
         services.AddScoped<AuthSessionService>();
-        services.AddHttpClient<ITelegramBotClient, RekiTelegramBotClient>().RemoveAllLoggers();
+        services.AddRedaction();
+        services.AddDownstreamDependencyMetadata<TelegramBotTelemetry>();
+        services.AddHttpClient<ITelegramBotClient, RekiTelegramBotClient>()
+            .AddExtendedHttpClientLogging(options =>
+            {
+                options.RequestPathParameterRedactionMode = HttpRouteParameterRedactionMode.Strict;
+                options.RequestPathLoggingMode = OutgoingPathLoggingMode.Formatted;
+                options.LogBody = false;
+            });
 
         services.AddAuthentication(options =>
             {

@@ -10,6 +10,7 @@ using OpenTelemetry.Trace;
 using Reki.Application.Balance;
 using Reki.Application.Posts.GetPublicStoryCard;
 using Reki.Infrastructure.AI;
+using Reki.Infrastructure.Auth;
 using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.Mongo;
 using Reki.Infrastructure.RekiContext;
@@ -54,9 +55,8 @@ public static class DependencyInjection
             .WithTracing(tracing => tracing
                 .AddSource(MongoTelemetry.ActivitySourceName, "Reki.GenAI", "TickerQ")
                 .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation(options =>
-                    options.FilterHttpRequestMessage = request =>
-                        request.RequestUri?.AbsolutePath.Contains("/bot", StringComparison.Ordinal) != true))
+                .AddHttpClientInstrumentation()
+                .AddProcessor<TelegramBotTelemetry>())
             .WithMetrics(metrics => metrics
                 .AddMeter("Reki.GenAI", "Reki.Product")
                 .AddAspNetCoreInstrumentation()

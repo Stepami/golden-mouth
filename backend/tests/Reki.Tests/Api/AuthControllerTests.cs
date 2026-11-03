@@ -64,7 +64,6 @@ public sealed class AuthControllerTests(ApiFactory factory)
         var refreshed = await auth.RefreshAsync(RefreshRequest(first.RefreshToken), CancellationToken.None);
         var logoutRequest = new LogoutRequest
         {
-            ClientId = ClientId,
             RefreshToken = refreshed.RefreshToken,
         };
         await auth.LogoutAsync(logoutRequest, CancellationToken.None);

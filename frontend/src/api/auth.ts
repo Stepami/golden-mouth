@@ -100,7 +100,7 @@ export async function logout(): Promise<void> {
   if (refreshToken) {
     const response = await fetch(`${baseUrl}/auth/logout`, {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: runtimeConfig.appClientId, refresh_token: refreshToken }),
+      body: new URLSearchParams({ refresh_token: refreshToken }),
     })
     if (!response.ok) throw new Error(`Logout failed (${response.status})`)
   }

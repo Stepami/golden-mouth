@@ -1919,7 +1919,6 @@ export interface LiveEventViewsLiveEvent {
 }
 
 export interface LogoutRequest {
-    client_id: string;
     refresh_token: string;
 
     [key: string]: any;

@@ -13,6 +13,7 @@
         <PackageReference Include="Kot.MongoDB.Migrations.DI" />
         <PackageReference Include="Microsoft.Extensions.AI"/>
         <PackageReference Include="Microsoft.Extensions.AI.OpenAI"/>
+        <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions"/>
         <PackageReference Include="MongoDB.Analyzer" />
         <PackageReference Include="MongoDB.Driver"/>
         <PackageReference Include="OpenIddict.MongoDb"/>

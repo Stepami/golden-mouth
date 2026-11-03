@@ -142,7 +142,7 @@
 | `POST /auth/external/tg/miniapp` | `Authorization: TMiniApp <raw initData>`; `client_id`, `grant_type=urn:reki:grant:telegram-mini-app` | OpenIddict token JSON |
 | `POST /auth/external/tg/widget` | `Authorization: Bearer <Telegram Login JS id_token>`; `client_id`, `grant_type=urn:reki:grant:telegram-login` | OpenIddict token JSON |
 | `POST /auth/refresh` | `client_id`, `grant_type=refresh_token`, `refresh_token`; access не нужен | Новая пара OpenIddict token JSON |
-| `POST /auth/logout` | `client_id`, `refresh_token`; access не нужен | 204; отозвана текущая refresh-сессия |
+| `POST /auth/logout` | `refresh_token`; access не нужен | 204; отозвана текущая refresh-сессия |
 
 Token JSON содержит `token_type=Bearer`, `access_token`, `expires_in`, `refresh_token`. Mini App проверяется штатным `TgMiniAppAuth` (схема и policy `TMiniApp`) и policy ожидаемого grant type. Telegram Login JS проверяется отдельным JwtBearer с issuer, audience из `Telegram.Bot.BotId`, подписью, сроком и policy ожидаемого grant type; формат токена бота не является публичным контрактом Telegram. Refresh также требует только policy `grant_type=refresh_token`, без действующего access. Игровые контроллеры явно требуют policy `RekiAppJwt` с OpenIddict validation. Текущий Telegram ID игрока — claim `id`, не OIDC `sub`. Refresh и отзыв хранятся OpenIddict в существующей MongoDB. Уже выданный access действует до срока истечения. Текущие значения сроков: 15 минут и 30 дней; постоянные ключи подписи и шифрования поступают только из environment.
 

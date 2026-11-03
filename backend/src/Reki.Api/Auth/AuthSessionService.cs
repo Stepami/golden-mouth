@@ -17,11 +17,6 @@ public sealed class AuthSessionService(
 {
     public async Task<bool> LogoutAsync(LogoutRequest request, CancellationToken cancellationToken)
     {
-        if (request.ClientId != options.Value.ClientId)
-        {
-            return false;
-        }
-
         var token = await tokens.FindByReferenceIdAsync(request.RefreshToken, cancellationToken);
         if (token is null || !await tokens.HasTypeAsync(token, TokenTypeIdentifiers.RefreshToken, cancellationToken))
         {

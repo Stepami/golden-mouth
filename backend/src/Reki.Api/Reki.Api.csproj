@@ -17,6 +17,8 @@
         <PackageReference Include="OpenIddict.AspNetCore"/>
         <PackageReference Include="OpenIddict.MongoDb"/>
         <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all"/>
+        <PackageReference Include="Microsoft.Extensions.Compliance.Redaction"/>
+        <PackageReference Include="Microsoft.Extensions.Http.Diagnostics"/>
         <PackageReference Include="Riok.Mapperly" PrivateAssets="all"/>
         <PackageReference Include="Serilog.AspNetCore"/>
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI"/>
