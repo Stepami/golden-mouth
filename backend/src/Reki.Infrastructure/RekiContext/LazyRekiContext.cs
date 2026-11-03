@@ -13,6 +13,7 @@ namespace Reki.Infrastructure.RekiContext;
 
 internal sealed class LazyRekiContext : IRekiContext
 {
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly AsyncLazy<PlayerProfile> _player;
     private readonly AsyncLazy<IReadOnlyDictionary<WorldId, World>> _worlds;
 
@@ -21,10 +22,7 @@ internal sealed class LazyRekiContext : IRekiContext
         IPlayerRepository playerRepository,
         IWorldRepository worldRepository)
     {
-        var id = httpContextAccessor.HttpContext?.User.FindFirstValue("telegram_user_id");
-        TelegramUserId = TelegramUserId.From(long.Parse(
-            id ?? throw new InvalidOperationException("Telegram user claim is missing."),
-            System.Globalization.CultureInfo.InvariantCulture));
+        _httpContextAccessor = httpContextAccessor;
         _player = new AsyncLazy<PlayerProfile>(
             async ct =>
                 await playerRepository.GetPlayerAsync(
@@ -42,7 +40,16 @@ internal sealed class LazyRekiContext : IRekiContext
             resettable: true);
     }
 
-    public TelegramUserId TelegramUserId { get; }
+    public TelegramUserId TelegramUserId
+    {
+        get
+        {
+            var id = _httpContextAccessor.HttpContext?.User.FindFirstValue("telegram_user_id");
+            return TelegramUserId.From(long.Parse(
+                id ?? throw new InvalidOperationException("Telegram user claim is missing."),
+                System.Globalization.CultureInfo.InvariantCulture));
+        }
+    }
 
     public Task<PlayerProfile> Player =>
         _player.WithCancellation(CancellationToken.None);
