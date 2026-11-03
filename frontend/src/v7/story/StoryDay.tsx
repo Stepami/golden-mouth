@@ -1,3 +1,4 @@
+import { StoryBrief } from './StoryBrief';
 import { Button, Notice } from '../ui';
 import { storyPilot, type PilotCampaign } from './pilot';
 
@@ -7,7 +8,8 @@ export function StoryDay({ campaign, onWrite, onFeed }: {
   onFeed: () => void;
 }) {
   return <>
-    <section className="goal-hero"><p className="caption muted">Сюжетная проба · Вечерело</p><h2>Улица на чужом снимке</h2><p>{storyPilot.premise}</p><h3>Твоя цель</h3><p>{campaign.goal}</p></section>
+    <section className="section stack"><h2>{storyPilot.scenario}</h2><p>{storyPilot.premise}</p></section>
+    <StoryBrief goal={campaign.goal} />
     <section className="section stack story-day">
       <h2>День 1 · {campaign.day.title}</h2>
       <Notice title="Первый день — пробуем историю">Публикации и ответы сохраняются. Зачёт заданий, сюжетный XP и следующий день пока недоступны.</Notice>

@@ -14,3 +14,9 @@ test('older persisted draft can still recover without submittedText', () => {
   const value = submissionFor({ text: 'saved', ownWords: false, publicationId: 'legacy-id' }, 'changed', () => 'duplicate');
   assert.equal(value.id, 'legacy-id'); assert.equal(value.text, 'saved'); assert.equal(value.ownWords, false); assert.equal(value.recovery, true);
 });
+
+test('unchanged prepared text keeps ownWords false; editing switches to own words', () => {
+  const saved = { text: 'prepared', ownWords: false };
+  assert.equal(submissionFor(saved, 'prepared', () => 'new').ownWords, false);
+  assert.equal(submissionFor(saved, 'edited', () => 'new').ownWords, true);
+});

@@ -6,7 +6,7 @@ export function submissionFor(saved: PostDraft, draft: string, newId: () => stri
   return {
     id: saved.publicationId ?? newId(),
     text: recovery ? saved.submittedText ?? saved.text : draft,
-    ownWords: recovery ? saved.submittedOwnWords ?? saved.ownWords : true,
+    ownWords: recovery ? saved.submittedOwnWords ?? saved.ownWords : saved.text === draft ? saved.ownWords : true,
     wantId: recovery ? saved.submittedWantId : undefined,
     recovery,
   };

@@ -74,3 +74,11 @@
 .xp-skill-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .xp-skill-actions button { min-width: 48px; min-height: 44px; }
 .xp-skill > .row { flex-wrap: wrap; }
+
+.publication-card { padding: 20px; border: 1px solid var(--color-divider); border-radius: 20px; }
+.publication-card h2 { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; }
+.publication-card blockquote { margin: 0; padding-left: 12px; border-left: 2px solid var(--color-divider); overflow-wrap: anywhere; white-space: pre-wrap; }
+.publication-card--result { background: var(--color-surface); }
+.publication-card details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.publication-changes { padding-left: 20px; display: grid; gap: 8px; }
+.story-brief h2 { margin: 0; }

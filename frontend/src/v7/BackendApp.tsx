@@ -12,6 +12,8 @@ import { rankCatalog } from './interests';
 import { worldArt } from '../app/worldArt';
 import { storyPilot, campaignFor, pilotDefinition, pilotBinding, boundCampaign, type PilotBinding, type PilotCampaign } from './story/pilot';
 import { StoryDay } from './story/StoryDay';
+import { StoryBrief } from './story/StoryBrief';
+import { PublicationWaiting, PublicationResult, type PublicationReceipt } from './publication/PublicationCards';
 import { XPProfile } from './xp/XPProfile';
 import { WorldProgress, StreakDetails, CrystalExchange, BoosterDetails } from './screens/WorldResources';
 import { blankWorld } from '../app/worldDraft';
@@ -77,6 +79,9 @@ export default function BackendApp() {
   const [likes, setLikes] = useState<string[]>([]);
   const [storageError, setStorageError] = useState(false);
   const [toast, setToast] = useState<PostResult>();
+  const [receipt, setReceipt] = useState<PublicationReceipt>();
+  const [publicationFailed, setPublicationFailed] = useState(false);
+  const [prepared, setPrepared] = useState<{ title: string; prompt: string }>();
   const cancel = useRef<(() => void) | undefined>(undefined);
   const sending = useRef(false);
   const main = useRef<HTMLDivElement>(null);
@@ -118,7 +123,12 @@ export default function BackendApp() {
     return campaign ? { ...view, cover: worldArt[storyPilot.templateId].cover, hero: worldArt[storyPilot.templateId].cover, goal: campaign.goal } : view;
   };
   const ownedView = (doc: WorldDocument) => storyView(doc, player ? pilotFor(doc, player.id) : undefined);
-  const installPlayer = (p: Player) => { setPlayer(p); const doc = worldDocumentOf(p.world); const campaign = pilotFor(doc, p.id); setActiveCampaign(campaign); setWorld(storyView(doc, campaign)); return p; };
+  const installPlayer = (p: Player) => { setPlayer(p); const doc = worldDocumentOf(p.world); const campaign = pilotFor(doc, p.id); setActiveCampaign(campaign); setWorld(storyView(doc, campaign));
+    const draft = readPostDraft(draftKey(p));
+    const savedReceipt = readLocal<PublicationReceipt | undefined>(`reki:v7:${p.id}:result:${p.world}`, undefined);
+    setReceipt(savedReceipt ? { ...savedReceipt, worldId: p.world } : undefined);
+    if (!sending.current) { setDraft(draft.text); setUnknown(!!draft.publicationId); setPublicationFailed(false); }
+    return p; };
   const refresh = async () => { const p = installPlayer(await api.me()); await loadFeed(p); return p; };
   const boot = useCallback(async () => {
     setBooting(true); setError('');
@@ -170,7 +180,7 @@ export default function BackendApp() {
     if (sending.current || busy) return;
     feedRequest.current++; threadRequest.current++;
     localSave('entry-required', true);
-    setWorld(undefined); setActiveCampaign(undefined); setSelected(undefined); setPerson(undefined); setPost(undefined);
+    setWorld(undefined); setReceipt(undefined); setPublicationFailed(false); setActiveCampaign(undefined); setSelected(undefined); setPerson(undefined); setPost(undefined);
     setFeed([]); setCursor(null); setReply(undefined); setQuote(undefined); setToast(undefined);
     setOverlay(null); setUnknown(false); setError(''); setQuery(''); setGenre('Все');
     interestOnly.current = false; setEntryAge(18); setAge(''); setScreen('welcome'); setStack([]);
@@ -199,16 +209,27 @@ export default function BackendApp() {
       if (campaign && !saveLocal(`reki:v7:${created.id}:story:${created.worldInstanceId}`, pilotBinding(campaign))) setStorageError(true);
       const p = installPlayer(created); trackEvent('onboarding_step', { step: 'done', ok: true, world: p.world }); localSave('qualities', qualities);
       const own = await api.ownedWorlds(); installWorldContent(own); setOwned(own);
-      setScreen('feed'); setStack([]); await loadFeed(p);
+      setScreen('goals'); setStack([]); await loadFeed(p);
     } catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
   };
   const replyKey = (target: ReplyTarget) => `${key}:reply:${player?.world}:${target.postId}:${target.commentId ?? 'root'}`;
   const openCompose = (target?: ReplyTarget, context?: { name: string; text: string }) => {
     if (!player || sending.current) return;
-    setReply(target); setQuote(context); setUnknown(false); setStatus('');
+    setPrepared(undefined); setReply(target); setQuote(context); setUnknown(false); setStatus('');
     if (target) { const saved = readLocal<ReplyDraft>(replyKey(target), { text: '' }); setDraft(saved.text); setUnknown(!!saved.requestId); }
     else { const saved = readPostDraft(draftKey(player)); setDraft(saved.text); setUnknown(!!saved.publicationId); }
     go('compose');
+  };
+  const openFirstPost = () => {
+    if (!world || !player || sending.current) return;
+    const quest = activeCampaign?.day.quests[0];
+    openCompose(undefined, { name: 'Первый шаг', text: quest?.prompt ?? world.seedPost });
+    setPrepared({ title: quest?.title ?? 'Первый ход', prompt: quest?.prompt ?? world.seedPost });
+    const saved = readPostDraft(draftKey(player));
+    if (!saved.text.trim() && !saved.publicationId && activeCampaign?.firstPost) {
+      const text = activeCampaign.firstPost; setDraft(text);
+      if (!savePostDraft(draftKey(player), { text, ownWords: false })) setStorageError(true);
+    }
   };
   const updateDraft = (text: string) => {
     setDraft(text);
@@ -231,19 +252,21 @@ export default function BackendApp() {
     const command = submissionFor(saved, draft, () => crypto.randomUUID());
     const { id, text, recovery } = command;
     if (!recovery) trackEvent('post_publish', { len: text.length, own_words: command.ownWords });
-    if (!savePostDraft(k, { ...saved, text: draft, publicationId: id, submittedText: text, ownWords: true, submittedOwnWords: recovery ? saved.submittedOwnWords : true })) setStorageError(true);
-    sending.current = true; setPending(true); setError(''); setStatus('pending');
+    if (!savePostDraft(k, { ...saved, text: draft, publicationId: id, submittedText: text, ownWords: command.ownWords, submittedOwnWords: command.ownWords })) setStorageError(true);
+    sending.current = true; setPending(true); setUnknown(false); setPublicationFailed(false); setError(''); setStatus('pending'); setScreen('feed'); setStack([]);
     cancel.current = api.publish(text, id, event => {
       if (event.type !== 'result') return;
       trackEvent('post_result', { delta: event.result.delta, viral: event.result.viral, flop: event.result.flop });
       completePostDraft(k, id, text); setDraft(readPostDraft(k).text);
-      setToast(event.result); setUnknown(false); setPending(false); sending.current = false; setStatus('completed');
+      const value: PublicationReceipt = { worldId: player.world, result: event.result, before: player.skills };
+      setReceipt(value); saveLocal(`${key}:result:${player.world}`, value);
+      setToast(event.result); setPublicationFailed(false); setUnknown(false); setPending(false); sending.current = false; setStatus('completed');
       const item: Activity = { id: event.result.postId, worldId: player.world, title: event.result.headline, text: `${event.result.delta > 0 ? '+' : ''}${event.result.delta} подписчиков`, read: false };
       setActivities(old => { const next = [item, ...old.filter(a => a.id !== item.id)].slice(0, 100); localSave('activity', next); return next; });
-      setScreen('feed'); setStack([]); void refresh().catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
+      setScreen('feed'); setStack([]); void refresh().then(p => { const updated = { ...value, after: p.skills }; setReceipt(updated); saveLocal(`${key}:result:${player.world}`, updated); }).catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
     }, (state, reason) => {
-      sending.current = false; setPending(false); setUnknown(state === 'unknown');
-      if (state === 'failed') { const latest = readPostDraft(k); savePostDraft(k, { text: latest.text, ownWords: true }); }
+      sending.current = false; setPending(false); setUnknown(state === 'unknown'); setPublicationFailed(state === 'failed');
+      if (state === 'failed') { const latest = readPostDraft(k); savePostDraft(k, { text: latest.text, ownWords: latest.ownWords }); }
       setError(state === 'unknown' ? 'Исход отправки пока неизвестен. Проверь статус — повторный пост не создаётся.' : reason ? 'Не получилось опубликовать: проверка содержания не пройдена. Текст сохранён.' : 'Не получилось опубликовать. Текст сохранён.');
     }, setStatus, command.ownWords, command.wantId, recovery);
   };
@@ -281,7 +304,9 @@ export default function BackendApp() {
       <ResourceBadge type="crystal" value="—" hint="Обменять на энергию и усиление XP · скоро" onClick={() => setOverlay('crystals')} />
       <button className="profile-access" aria-label="Профиль персонажа" onClick={() => go('profile')}><Avatar name={player?.name ?? ''} size="lg" /></button></header>
     {player && <WorldProgress streak={player.streak} storyDay={activeCampaign ? 1 : undefined} onStreak={() => setOverlay('streak')} onBoosters={() => setOverlay('boosters')} />}
-    {activeCampaign && <section className="section stack story-banner"><p className="caption muted">Сюжетная проба · День 1</p><strong>{storyPilot.scenario}</strong><p>{activeCampaign.goal}</p><Button variant="secondary" onClick={() => go('goals')}>Открыть первый день</Button></section>}
+    {!reply && (pending || unknown || publicationFailed) && <PublicationWaiting pending={pending} unknown={unknown} text={draft} status={status} onStop={stopWaiting} onContinue={() => { if (unknown) publish(); else openCompose(); }} />}
+    {receipt && receipt.worldId === player?.world && <PublicationResult receipt={receipt} onRead={() => void openThread(receipt.result.postId)} />}
+    {activeCampaign && <section className="section stack story-banner"><p className="caption muted">Сюжетная проба · День 1</p><strong>{storyPilot.scenario}</strong><Button variant="secondary" onClick={() => go('goals')}>Открыть первый день</Button></section>}
     {feedError && <div className="section"><Notice title="Не удалось обновить ленту" tone="error">{feedError}</Notice></div>}
     {!feed.length && !feedLoading && !feedError && <EmptyState title="Первое слово за тобой" action={<Button onClick={() => openCompose()}>Написать пост</Button>}>{world?.seedPost || 'Расскажи свою версию истории. Здесь появятся публикации и ответы.'}</EmptyState>}
     {feed.map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}
@@ -330,9 +355,9 @@ export default function BackendApp() {
     <label>Градус драмы<select value={definition.drama} onChange={e => setDefinition({ ...definition, drama: e.target.value as WorldDefinition['drama'] })}><option value="soft">Мягко</option><option value="mid">Средне</option><option value="hot">Остро</option><option value="off">Без хейта</option></select></label>
     <Button busy={busy} disabled={!definition.name.trim() || !definition.avatar.trim() || !definition.role.trim() || !definition.title.trim() || !definition.stars.length || definition.stars.some(star => !star.name.trim() || !star.role.trim())} onClick={() => void createWorld()}>Начать историю</Button></section></>;
   else if (screen === 'feed' && player && world) content = renderFeed();
-  else if (screen === 'goals' && activeCampaign) content = <><ScreenHeading title="Первый день" subtitle={world?.title} /><StoryDay campaign={activeCampaign} onWrite={prompt => openCompose(undefined, { name: 'Сюжетная тема', text: prompt })} onFeed={() => go('feed')} /></>;
-  else if (screen === 'goals' && world) content = <><ScreenHeading title="Цели" subtitle={world.title} /><section className="goal-hero"><div className="row"><span className="goal-symbol"><Icon name="goals" /></span><h2>Ваша цель</h2></div><p>{world.goal || 'Найти свой голос и начать разговор.'}</p></section><section className="section stack"><h2 className="section-title">Темы для разговора</h2><p className="caption muted">Вдохновение для постов. Здесь нет обязательного порядка и начисления за квесты.</p>{world.quests.map((q, i) => <button className="quest-row" key={q.id} onClick={() => { setQuote({ name: 'Тема', text: q.prompt }); go('topic'); }}><span className="quest-number">{String(i + 1).padStart(2, '0')}</span><strong>{q.title}</strong><span>↗</span></button>)}<Button onClick={() => openCompose()}>Написать о своём</Button></section></>;
-  else if (screen === 'compose' && player) content = <><ScreenHeading title={reply ? 'Продолжить разговор' : 'Новая публикация'} back={back} /><section className="section stack composer-body">{(reply || quote) && <QuoteBlock name={reply?.name ?? quote!.name} text={reply?.text ?? quote!.text} />}<div className="row"><Avatar name={player.name} /><strong>{player.name}</strong><span className="caption muted">Публично</span></div><label className="sr-only" htmlFor="post-text">Текст публикации</label><textarea id="post-text" className="composer-text" placeholder="Что хочешь сказать?" value={draft} onChange={e => updateDraft(e.target.value)} disabled={pending || unknown} maxLength={reply ? 1000 : 2000} autoFocus /><div className="row between caption muted"><span>Черновик сохраняется</span><span>{draft.length} / {reply ? 1000 : 2000}</span></div>{!reply && <div className="approaches">{(['ask', 'position', 'humor'] as Approach[]).map((a, i) => <Chip key={a} selected={approach === a} onClick={() => setApproach(a)}>{['Вопрос', 'Мнение', 'Шутка'][i]}</Chip>)}</div>}{quote && !reply && <p className="caption muted">Контекст помогает написать пост. Связь цитирования на сервере пока недоступна.</p>}{pending && <div className="pending-line" role="status"><span className="spinner" />{statusLabels[status] ?? 'Отправляем ответ…'}</div>}{pending && <Button variant="secondary" onClick={stopWaiting}>Остановить ожидание</Button>}<Button className="full" size="lg" disabled={!draft.trim()} busy={pending} onClick={publish}>{unknown ? 'Проверить статус' : 'Опубликовать'} <span className="caption">· 1 энергия</span></Button></section></>;
+  else if (screen === 'goals' && activeCampaign) content = <><ScreenHeading title="Первый день" subtitle={world?.title} /><StoryDay campaign={activeCampaign} onWrite={prompt => { if (prompt === activeCampaign.day.quests[0].prompt) openFirstPost(); else openCompose(undefined, { name: 'Сюжетная тема', text: prompt }); }} onFeed={() => go('feed')} /></>;
+  else if (screen === 'goals' && world) content = <><ScreenHeading title="Цели" subtitle={world.title} /><StoryBrief goal={world.goal || 'Найти свой голос и начать разговор.'} /><section className="section"><Button onClick={openFirstPost}>Написать первый пост →</Button></section><section className="section stack"><h2 className="section-title">Темы для разговора</h2><p className="caption muted">Вдохновение для постов. Здесь нет обязательного порядка и начисления за квесты.</p>{world.quests.map((q, i) => <button className="quest-row" key={q.id} onClick={() => { setQuote({ name: 'Тема', text: q.prompt }); go('topic'); }}><span className="quest-number">{String(i + 1).padStart(2, '0')}</span><strong>{q.title}</strong><span>↗</span></button>)}<Button onClick={() => openCompose()}>Написать о своём</Button></section></>;
+  else if (screen === 'compose' && player) content = <><ScreenHeading title={reply ? 'Продолжить разговор' : prepared?.title ?? 'Новая публикация'} back={back} /><section className="section stack composer-body">{prepared && <p>{prepared.prompt}</p>}{(reply || quote) && <QuoteBlock name={reply?.name ?? quote!.name} text={reply?.text ?? quote!.text} />}<div className="row"><Avatar name={player.name} /><strong>{player.name}</strong><span className="caption muted">Публично</span></div><label className="sr-only" htmlFor="post-text">Текст публикации</label><textarea id="post-text" className="composer-text" placeholder="Что хочешь сказать?" value={draft} onChange={e => updateDraft(e.target.value)} disabled={pending || unknown} maxLength={reply ? 1000 : 2000} autoFocus /><div className="row between caption muted"><span>Черновик сохраняется</span><span>{draft.length} / {reply ? 1000 : 2000}</span></div>{!reply && <div className="approaches">{(['ask', 'position', 'humor'] as Approach[]).map((a, i) => <Chip key={a} selected={approach === a} onClick={() => setApproach(a)}>{['Вопрос', 'Мнение', 'Шутка'][i]}</Chip>)}</div>}{quote && !reply && <p className="caption muted">Контекст помогает написать пост. Связь цитирования на сервере пока недоступна.</p>}{pending && <div className="pending-line" role="status"><span className="spinner" />{statusLabels[status] ?? 'Отправляем ответ…'}</div>}{pending && <Button variant="secondary" onClick={stopWaiting}>Остановить ожидание</Button>}<Button className="full" size="lg" disabled={!draft.trim()} busy={pending} onClick={publish}>{unknown ? 'Проверить статус' : 'Опубликовать'} <span className="caption">· 1 энергия</span></Button></section></>;
   else if (screen === 'thread' && player && world) {
     const view = post ? detailView(post, world, playerView(player)) : undefined;
     const postAuthor = post && world.cast.find(p => `Star_${p.id}` === post.authorId);
@@ -354,7 +379,7 @@ export default function BackendApp() {
   if (hash.startsWith('#system')) return <DesignSystem />;
   return <div className="v7-stage"><div className={`app ${showNav ? 'app--nav' : ''}`}><div className="app-body" ref={main}><div className="sr-only" tabIndex={-1} ref={focusHeading}>{titleOf[screen]}</div>{storageError && <Notice title="Не удалось сохранить на устройстве" tone="error">Не закрывай вкладку: черновик остаётся в памяти до перезагрузки.</Notice>}{error && <div className="section"><Notice title="Не получилось завершить действие" tone="error">{error}</Notice>{!booting && !templates.length && <Button onClick={() => void boot()}>Повторить</Button>}</div>}{content}</div>
     {showNav && <BottomNav items={nav.map(n => ({ ...n, disabled: pending }))} active={screen} onChange={id => { tap('tab', { to: `v7.${id}` }); id === 'compose' ? openCompose() : go(id as Screen); }} />}
-    {toast && <div className="result-toast" role="status"><button className="toast-content" onClick={() => { void openThread(toast.postId); setToast(undefined); }}><span className="toast-check">✓</span><span><strong>{toast.headline}</strong><span className="caption block">{toast.delta > 0 ? '+' : ''}{toast.delta} подписчиков · Читать ответы ↗</span></span></button><button className="toast-close" aria-label="Закрыть уведомление" onClick={() => setToast(undefined)}>×</button></div>}
+    {toast && <div className="result-toast" role="status"><button className="toast-content" onClick={() => { void openThread(toast.postId); setToast(undefined); }}><span className="toast-check">✓</span><span><strong>Запись опубликована · Получены реакции</strong><span className="caption block">{toast.delta > 0 ? '+' : ''}{toast.delta} подписчиков · Читать ответы ↗</span></span></button><button className="toast-close" aria-label="Закрыть уведомление" onClick={() => setToast(undefined)}>×</button></div>}
     {overlay && <Dialog title={{ exit: 'Выйти из мира?', resources: 'Общие ресурсы', streak: 'Серия дней', crystals: 'Обмен кристаллов', boosters: 'Бустеры', skills: 'Навыки и отношения', 'text-size': 'Размер текста', 'local-like': 'Реакция', quote: 'Цитата', about: 'Новая версия' }[overlay]} onClose={() => setOverlay(null)}>
       {overlay === 'streak' ? <StreakDetails streak={player!.streak} /> : overlay === 'crystals' ? <CrystalExchange onBoosters={() => setOverlay('boosters')} /> : overlay === 'boosters' ? <BoosterDetails /> : overlay === 'exit' ? <><p>Публикации и черновик сохранятся. Вернёшься с того же места.</p><Button disabled={pending} onClick={() => { feedRequest.current++; setWorld(undefined); setScreen('catalog'); setStack([]); setOverlay(null); }}>Выйти к мирам</Button><Button variant="secondary" onClick={() => setOverlay(null)}>Остаться</Button></> : overlay === 'resources' ? <><p>Энергия общая для всех миров. Публикация и ответ расходуют по 1 энергии.</p><div className="resource-details"><span>Энергия <b>{player?.postsLeft ?? '—'}</b></span><span>Кристаллы <b>—</b></span></div><p className="caption muted">Запас энергии обновляется в 09:00 МСК. Баланс кристаллов и обмен пока недоступны.</p><Button variant="secondary" onClick={() => setOverlay('crystals')}>Кристаллы и обмен</Button><Button variant="secondary" onClick={() => setOverlay('boosters')}>Бустеры</Button><Button onClick={() => setOverlay(null)}>Продолжить</Button></> : overlay === 'text-size' ? <><div className="row" style={{ flexWrap: 'wrap' }}>{[1, 1.25, 1.5, 2].map(v => <Chip key={v} selected={textScale === v} onClick={() => setTextScale(v)}>{v * 100}%</Chip>)}</div><p>Так будет выглядеть текст в приложении.</p><Button onClick={() => setOverlay(null)}>Готово</Button></> : overlay === 'skills' ? <><p>Навыки растут после подтверждённых сервером действий. Высокий навык не гарантирует согласия собеседника.</p>{world?.cast.map(p => <PersonRow key={p.id} person={p} onClick={() => { setOverlay(null); showPerson(p); }} />)}</> : overlay === 'local-like' ? <><p>Реакция сохранена на этом устройстве. На отношения и награды она пока не влияет.</p><Button onClick={() => setOverlay(null)}>Понятно</Button></> : overlay === 'quote' ? <><QuoteBlock name={quote?.name ?? ''} text={quote?.text ?? ''} /><p className="caption muted">Связь цитирования пока не поддерживается. Можно взять текст как контекст нового поста.</p><Button onClick={() => { setOverlay(null); openCompose(undefined, quote); }}>Написать с этим контекстом</Button></> : <><p>Интерфейс v7. Миры, публикации и ответы работают с сервером. Личка, кристаллы и новая система квестов появятся позже.</p><p className="caption muted">Уведомления и реакции сохраняются на этом устройстве.</p><Button onClick={() => setOverlay(null)}>Понятно</Button></>}
     </Dialog>}
