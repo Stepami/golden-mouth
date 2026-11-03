@@ -17,7 +17,6 @@ public sealed class ExternalTelegramAuthController(AuthSessionService sessions) 
 {
     [HttpPost("miniapp", Name = "ExchangeMiniApp")]
     [Authorize(AuthenticationSchemes = "TMiniApp", Policy = "TMiniApp")]
-    [ProducesResponseType<AuthTokenResponse>(StatusCodes.Status200OK)]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> ExchangeMiniAppAsync(
         [FromForm] TokenExchangeRequest request,
         [FromServices] ITelegramUserAccessor telegramUser,
@@ -29,7 +28,6 @@ public sealed class ExternalTelegramAuthController(AuthSessionService sessions) 
 
     [HttpPost("widget", Name = "ExchangeTelegramLogin")]
     [Authorize(AuthenticationSchemes = AuthConstants.TelegramLoginScheme)]
-    [ProducesResponseType<AuthTokenResponse>(StatusCodes.Status200OK)]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> ExchangeTelegramLoginAsync(
         [FromForm] TokenExchangeRequest request,
         CancellationToken cancellationToken)

@@ -16,7 +16,6 @@ public sealed class AuthController(AuthSessionService sessions) : ControllerBase
 {
     [AllowAnonymous]
     [HttpPost("refresh", Name = "RefreshAuth")]
-    [ProducesResponseType<AuthTokenResponse>(StatusCodes.Status200OK)]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> RefreshAsync(
         [FromForm] RefreshTokenRequest form,
         CancellationToken cancellationToken)
@@ -27,7 +26,6 @@ public sealed class AuthController(AuthSessionService sessions) : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("logout", Name = "LogoutAuth")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<Results<NoContent, BadRequest>> LogoutAsync(
         [FromForm] LogoutRequest request,
         CancellationToken cancellationToken) =>
