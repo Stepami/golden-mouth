@@ -569,10 +569,12 @@ export function ProfileScore({
   score,
   skills,
   skillLabels = ["Аргументация", "Эмпатия", "Харизма"],
+  skillProgress,
 }: {
   score: number | null;
   skills: [number, number, number];
   skillLabels?: string[];
+  skillProgress?: [number, number, number];
 }) {
   return (
     <section className="character-score">
@@ -592,7 +594,7 @@ export function ProfileScore({
               <span>{name}</span>
               <span>{skills[i]}</span>
             </div>
-            <Progress label={name} value={skills[i]} max={10} />
+            <Progress label={skillProgress ? `${name}: до следующего уровня` : name} value={skillProgress ? skillProgress[i] : skills[i]} max={skillProgress ? 1 : 10} />
           </div>
         ))}
       </div>
@@ -642,4 +644,16 @@ export function SettingsRow({
       <Icon name="arrow" />
     </button>
   );
+}
+
+/** Visible account action while the real sign-out flow is being prepared. */
+export function NominalSignOut() {
+  const [open, setOpen] = useState(false);
+  return <div className="account-signout">
+    <Button variant="secondary" className="full" onClick={() => setOpen(true)}>Выйти из аккаунта</Button>
+    {open && <Dialog title="Выход из аккаунта" onClose={() => setOpen(false)}>
+      <p>Выход пока недоступен. Аккаунт остаётся подключённым.</p>
+      <Button className="full" onClick={() => setOpen(false)}>Понятно</Button>
+    </Dialog>}
+  </div>;
 }

@@ -3,11 +3,13 @@ import type { World } from "../domain/types";
 export function WorldIntro({
   world,
   resume,
+  busy = false,
   onBack,
   onEnter,
 }: {
   world: World;
   resume: boolean;
+  busy?: boolean;
   onBack: () => void;
   onEnter: (name: string) => void;
 }) {
@@ -15,7 +17,7 @@ export function WorldIntro({
     <div className="world-intro">
       <div className="world-hero">
         <img src={world.hero} alt={world.title} />
-        <button className="back-button hero-back" onClick={onBack}>
+        <button className="back-button hero-back" onClick={onBack} disabled={busy}>
           Назад
         </button>
       </div>
@@ -27,6 +29,7 @@ export function WorldIntro({
       </section>
       <div className="intro-cta">
         <Button
+          busy={busy}
           size="lg"
           className="full"
           onClick={() => onEnter(world.playerName)}

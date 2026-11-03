@@ -872,3 +872,5 @@ html[data-large-text="true"] .character-score {
 .resume-world strong {
   font-weight: 500;
 }
+
+.account-signout { padding-top: 24px; }

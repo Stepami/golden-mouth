@@ -63,6 +63,7 @@ export function SocialAction({
       className={`social-action social-action--${kind}`}
       aria-label={label}
       aria-pressed={kind === "heart" ? !!selected : undefined}
+      disabled={!onClick}
       onClick={activate}
     >
       <span className="social-glyph" aria-hidden="true">

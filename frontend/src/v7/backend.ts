@@ -10,7 +10,7 @@ export function worldView(doc: WorldDocument): World {
   return { id: doc.id, title: doc.title, genre: art?.genre ?? 'Свои истории', cover, hero: cover,
     members: '', tagline: doc.summary, description: doc.description, goal: goal?.goal ?? doc.summary,
     role: doc.role, playerName: doc.name, topic: doc.firstContext, quests: doc.postIdeas.slice(0, 3).map((text, i) => ({ id: String(i), title: text, context: doc.firstContext, prompt: text, draft: '' })),
-    seedPost: doc.firstPrompt, cast: doc.stars.map(star => ({ id: star.id, name: star.name, handle: star.avatarSeed, role: star.role, boundary: star.about })),
+    seedPost: doc.firstPrompt, cast: doc.stars.map(star => ({ id: star.id, name: star.name, handle: star.avatarSeed, role: star.role, boundary: star.about, relation: star.relation })),
   };
 }
 export const playerView = (p: Player): Person => ({ id: 'player', name: p.name, handle: p.handle, role: p.role, boundary: '' });

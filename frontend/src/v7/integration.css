@@ -8,8 +8,8 @@
 .reply-action { padding: 0 20px 12px 64px; }
 .v7-stage .resource-details { display: flex; flex-direction: column; gap: 16px; }
 .v7-stage .world-title { overflow-wrap: anywhere; }
-.v7-stage .world-header .world-switch { min-width: 0; flex: 1; }
-.v7-stage .world-switch strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v7-stage .world-header .world-switch { min-width: 0; }
+.v7-stage .world-switch strong { display: block; white-space: normal; overflow-wrap: anywhere; }
 .v7-stage .world-header { gap: 10px; }
 .v7-stage .quest-row { text-align: left; }
 .v7-stage .app-body > .section:has(> [role="alert"]) { padding-bottom: 0; }

@@ -3,12 +3,16 @@ import { Button, Chip, QuoteBlock } from "../ui";
 export function Onboarding({
   onDone,
   onBack,
+  initialQualities = [],
+  initialStep = 0,
 }: {
   onDone: (qualities: string[]) => void;
   onBack: () => void;
+  initialQualities?: string[];
+  initialStep?: 0 | 1;
 }) {
-  const [step, setStep] = useState(0);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [step, setStep] = useState<0 | 1>(initialStep);
+  const [selected, setSelected] = useState<string[]>(initialQualities);
   return (
     <section className="onboarding">
       <div className="row between">
@@ -83,7 +87,7 @@ export function Onboarding({
           <Button size="lg" className="full" onClick={() => onDone(selected)}>
             Продолжить ↗
           </Button>
-          <button className="link-button" onClick={() => setStep(0)}>
+          <button className="link-button" onClick={() => initialStep === 1 ? onBack() : setStep(0)}>
             Назад
           </button>
         </>

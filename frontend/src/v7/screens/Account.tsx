@@ -1,4 +1,4 @@
-import { ProfileHeader, ResumeWorld, SettingsRow, Button } from "../ui";
+import { ProfileHeader, ResumeWorld, SettingsRow, Button, NominalSignOut } from "../ui";
 import { worlds } from "../domain/worlds";
 import type { GameState, World } from "../domain/types";
 
@@ -65,6 +65,7 @@ export function Account({
           }
           onClick={onInterests}
         />
+        <NominalSignOut />
       </section>
     </>
   );

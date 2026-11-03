@@ -18,7 +18,7 @@ export function initTelegram(): boolean {
     miniApp.setHeaderColor.ifAvailable(document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#000000')
     miniApp.setBgColor.ifAvailable(document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#000000')
     swipeBehavior.mount.ifAvailable(); swipeBehavior.disableVertical.ifAvailable()
-    if (viewport.mount.isAvailable()) viewport.mount().then(() => viewport.expand.ifAvailable()).catch(() => {})
+    if (viewport.mount.isAvailable()) viewport.mount().then(() => { viewport.bindCssVars(); viewport.expand.ifAvailable() }).catch(() => {})
     miniApp.ready.ifAvailable()
   } catch { inTelegram = false }
   return inTelegram

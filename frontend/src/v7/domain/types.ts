@@ -7,6 +7,7 @@ export type Person = {
   avatar?: string;
   role: string;
   boundary: string;
+  relation?: number;
 };
 export type Quest = {
   id: string;

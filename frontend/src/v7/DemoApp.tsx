@@ -369,6 +369,8 @@ export default function App() {
   else if (screen === "onboarding")
     content = (
       <Onboarding
+        initialQualities={state.qualities}
+        initialStep={onboardingEntersWorld ? 0 : 1}
         onBack={back}
         onDone={(qualities) => {
           setState((s) => ({
