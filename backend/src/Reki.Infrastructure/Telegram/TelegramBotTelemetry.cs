@@ -3,7 +3,7 @@ using Microsoft.Extensions.Http.Diagnostics;
 using Microsoft.Extensions.Options;
 using OpenTelemetry;
 
-namespace Reki.Infrastructure.Auth;
+namespace Reki.Infrastructure.Telegram;
 
 public sealed class TelegramBotTelemetry : BaseProcessor<Activity>, IDownstreamDependencyMetadata
 {

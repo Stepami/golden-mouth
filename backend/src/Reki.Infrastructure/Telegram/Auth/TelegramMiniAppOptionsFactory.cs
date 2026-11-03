@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using TgMiniAppAuth.Authentication;
 
-namespace Reki.Infrastructure.Auth;
+namespace Reki.Infrastructure.Telegram.Auth;
 
 internal sealed class TelegramMiniAppOptionsFactory(
     IOptions<TelegramOptions> telegramOptions,

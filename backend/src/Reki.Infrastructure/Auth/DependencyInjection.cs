@@ -1,37 +1,16 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http.Diagnostics;
-using Microsoft.Extensions.Http.Logging;
 using OpenIddict.Validation.AspNetCore;
 using Reki.Application.Auth;
-using Telegram.Bot;
 
 namespace Reki.Infrastructure.Auth;
 
 internal static class DependencyInjection
 {
-    public static IServiceCollection AddAppAuth(this IServiceCollection services)
+    public static IServiceCollection AddAuth(this IServiceCollection services)
     {
-        services.AddKeyedScoped<IExternalUserIdProvider, TgMiniAppUserIdProvider>(AuthConstants.Grants.MiniApp);
-        services.AddKeyedScoped<IExternalUserIdProvider, TgLoginUserIdProvider>(AuthConstants.Grants.TelegramLogin);
-
         services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.SectionName);
         services.AddScoped<IAuthSessionService, AuthSessionService>();
-        services.AddRedaction();
-        services.AddDownstreamDependencyMetadata<TelegramBotTelemetry>();
-        services.AddHttpClient<ITelegramBotClient, RekiTelegramBotClient>()
-            .AddExtendedHttpClientLogging(options =>
-            {
-                options.RequestPathParameterRedactionMode = HttpRouteParameterRedactionMode.Strict;
-                options.RequestPathLoggingMode = OutgoingPathLoggingMode.Formatted;
-                options.LogBody = false;
-            });
 
-        services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer(AuthConstants.Schemes.TelegramLogin);
         services
             .AddAuthorizationBuilder()
             .AddPolicy(
@@ -49,7 +28,7 @@ internal static class DependencyInjection
             .AddPolicy(
                 AuthConstants.Policies.RekiRefreshGrant,
                 policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.Refresh)));
-        services.ConfigureOptions<ConfigureTelegramLoginOptions>();
+
         services.ConfigureOptions<ConfigureOpenIddictServerOptions>();
         services.ConfigureOptions<ConfigureOpenIddictAspNetCoreOptions>();
 

@@ -1,4 +1,4 @@
-namespace Reki.Infrastructure.Auth;
+namespace Reki.Infrastructure.Telegram;
 
 public sealed class TelegramOptions
 {

@@ -2,7 +2,7 @@
 using Reki.Application.Auth;
 using TgMiniAppAuth.AuthContext.User;
 
-namespace Reki.Infrastructure.Auth;
+namespace Reki.Infrastructure.Telegram.Auth;
 
 internal sealed class TgMiniAppUserIdProvider(
     ITelegramUserAccessor telegramUserProvider) :

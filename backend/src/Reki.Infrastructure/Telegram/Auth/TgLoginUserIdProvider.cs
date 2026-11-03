@@ -4,7 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Reki.Application.Auth;
 
-namespace Reki.Infrastructure.Auth;
+namespace Reki.Infrastructure.Telegram.Auth;
 
 internal sealed class TgLoginUserIdProvider(
     IHttpContextAccessor httpContextAccessor) :

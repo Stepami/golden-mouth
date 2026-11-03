@@ -15,6 +15,7 @@ using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.Mongo;
 using Reki.Infrastructure.RekiContext;
 using Reki.Infrastructure.Rendering;
+using Reki.Infrastructure.Telegram;
 
 namespace Reki.Infrastructure;
 
@@ -26,15 +27,19 @@ public static class DependencyInjection
         IJsonTypeInfoResolver jsonContext)
     {
         services.AddSingleton<IOptionsChangeTokenSource<GameBalance>, ConfigurationChangeTokenSource<GameBalance>>();
-        services.AddRekiContext(configuration);
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
+
+        services
+            .AddRekiContext(configuration)
+            .AddChatClients()
+            .AddJobs(configuration, jsonContext)
+            .AddMongo()
+            .AddAuth()
+            .AddTelegram(configuration);
+
         services.AddObservability();
         services.AddBaseHealthChecks();
-        services.AddChatClients();
-        services.AddJobs(configuration, jsonContext);
-        services.AddMongo();
-        services.AddAppAuth();
 
         return services;
     }
