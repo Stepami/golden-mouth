@@ -17,6 +17,8 @@ namespace Reki.Tests;
 
 public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
 {
+    public const long TelegramBotId = 123456;
+
     private readonly MongoFixture _mongo = new();
     private MongoClient? _client;
     private OpenAiStub? _llm;
@@ -42,7 +44,7 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
 
     public string EncryptionKey { get; } = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 
-    public string TelegramBotToken { get; } = $"123456:{Guid.NewGuid():N}";
+    public string TelegramBotToken { get; } = $"{TelegramBotId}:{Guid.NewGuid():N}";
 
     public async Task InitializeAsync()
     {

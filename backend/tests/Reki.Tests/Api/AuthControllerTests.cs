@@ -209,7 +209,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         const string header = """{"alg":"RS256","typ":"JWT","kid":"test-key"}""";
-        var payload = $$"""{"iss":"https://oauth.telegram.org","aud":"reki-telegram-test","iat":{{now}},"exp":{{now + 600}},"id":"{{userId}}"}""";
+        var payload = $$"""{"iss":"https://oauth.telegram.org","aud":"{{TestSessionFixture.TelegramBotId}}","iat":{{now}},"exp":{{now + 600}},"id":"{{userId}}"}""";
         var data = $"{Base64Url(Encoding.UTF8.GetBytes(header))}.{Base64Url(Encoding.UTF8.GetBytes(payload))}";
         var signature = rsa.SignData(Encoding.ASCII.GetBytes(data), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         return $"{data}.{Base64Url(signature)}";
