@@ -44,3 +44,22 @@
 .story-choice input[type="checkbox"] { width: 22px; height: 22px; flex: 0 0 22px; accent-color: var(--color-ink); }
 .story-banner { background: var(--color-surface); border-bottom: 1px solid var(--color-divider); }
 .story-day h3 { margin: 0; overflow-wrap: anywhere; }
+
+.world-progress { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding: 8px 20px; border-bottom: 1px solid var(--color-divider); }
+.streak-access, .boosters-access { display: flex; align-items: center; gap: 8px; min-height: 44px; text-align: left; }
+.streak-access > span:last-child { display: flex; flex-direction: column; gap: 6px; }
+.streak-access strong, .boosters-access { font-size: .875rem; }
+.streak-mini { display: flex; gap: 4px; }
+.streak-mini i { width: 12px; height: 5px; border: 1px solid var(--color-muted); border-radius: 3px; }
+.streak-mini i.is-done { background: var(--color-ink); border-color: var(--color-ink); }
+.boosters-access { flex-wrap: wrap; }
+.boosters-access > span:first-child { font-size: 1.25rem; }
+.story-day-label { order: 3; width: 100%; padding-left: 28px; font-size: .75rem; color: var(--color-muted); }
+.streak-days { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); padding: 0; list-style: none; gap: 4px; }
+.streak-days li { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.streak-rewards { padding-left: 20px; display: grid; gap: 8px; }
+.resource-option { border: 1px solid var(--color-divider); border-radius: 16px; padding: 16px; }
+.resource-option h3 { margin: 0; }
+.resource-with-hint { position: relative; flex-shrink: 0; }
+.resource-tooltip { position: absolute; z-index: 10; top: calc(100% + 8px); right: -12px; width: 210px; max-width: 65vw; padding: 10px 12px; border-radius: 12px; background: var(--color-ink); color: var(--color-paper); font-size: .75rem; line-height: 1.4; visibility: hidden; opacity: 0; pointer-events: none; }
+.resource-with-hint:hover .resource-tooltip, .resource-with-hint:focus-within .resource-tooltip { visibility: visible; opacity: 1; }

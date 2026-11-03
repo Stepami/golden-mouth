@@ -216,25 +216,12 @@ export function Notice({
     </div>
   );
 }
-export function ResourceBadge({
-  type,
-  value,
-  onClick,
-}: {
-  type: "energy" | "crystal";
-  value: string;
-  onClick: () => void;
+export function ResourceBadge({ type, value, onClick, hint }: {
+  type: "energy" | "crystal"; value: string; onClick: () => void; hint?: string;
 }) {
-  return (
-    <button
-      className="resource"
-      aria-label={`${type === "energy" ? "Энергия" : "Кристаллы"}: ${value}`}
-      onClick={onClick}
-    >
-      <Icon name={type} />
-      <b>{value}</b>
-    </button>
-  );
+  const hintId = useId();
+  const button = <button className="resource" aria-label={`${type === "energy" ? "Энергия" : "Кристаллы"}: ${value}`} aria-describedby={hint ? hintId : undefined} onClick={onClick}><Icon name={type} /><b>{value}</b></button>;
+  return hint ? <span className="resource-with-hint">{button}<span className="resource-tooltip" role="tooltip" id={hintId}>{hint}</span></span> : button;
 }
 export function WorldCard({
   world,
