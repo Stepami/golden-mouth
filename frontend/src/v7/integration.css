@@ -25,4 +25,17 @@
 .v7-stage .age-entry-consent { flex-direction: row; align-items: flex-start; gap: 12px; }
 .age-entry-consent input { width: 22px; height: 22px; flex: 0 0 22px; accent-color: var(--color-ink); }
 .age-entry-continue { margin-top: auto; }
+.hero-world { display: flex; gap: 12px; align-items: flex-start; }
+.hero-world > img { width: 64px; height: 64px; border-radius: 16px; object-fit: cover; flex: 0 0 64px; }
+.hero-world-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.hero-world-copy strong { font-family: var(--font-heading); }
+.hero-choices { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: 0; }
+.hero-choices legend { font-family: var(--font-heading); font-weight: 700; margin-bottom: 8px; padding: 0; }
+.hero-choice { flex-direction: row !important; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--color-divider); border-radius: 16px; background: var(--color-paper); cursor: pointer; }
+.hero-choice.is-selected { border-color: var(--color-ink); }
+.hero-choice input[type="radio"] { width: 20px; height: 20px; flex: 0 0 20px; margin: 0; accent-color: var(--color-ink); }
+.hero-choice > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hero-choice small { color: var(--color-muted); }
+.hero-choice-custom { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 50%; display: grid; place-items: center; background: var(--color-surface); font-size: 20px; }
+.hero-address { display: flex; flex-direction: column; gap: 8px; }
 .catalog-preferences { padding: 0 20px 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }

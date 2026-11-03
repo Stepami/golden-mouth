@@ -58,6 +58,8 @@ export default function BackendApp() {
   const [entryAge, setEntryAge] = useState(18);
   const [address, setAddress] = useState<Address>('nick');
   const [definition, setDefinition] = useState<WorldDefinition>();
+  const [heroBase, setHeroBase] = useState<WorldDefinition>();
+  const [heroChoice, setHeroChoice] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [reply, setReply] = useState<ReplyTarget>();
   const [quote, setQuote] = useState<{ name: string; text: string }>();
@@ -132,7 +134,15 @@ export default function BackendApp() {
     setSelected(w); go('intro');
   };
   const startHero = (w: World) => {
-    const def = worldDefinitionOf(w.id); setDefinition(def); go('hero');
+    const def = worldDefinitionOf(w.id); setHeroBase(def); setDefinition(def); setHeroChoice(null); go('hero');
+  };
+  const chooseHero = (star?: WorldDefinition['stars'][number]) => {
+    if (!definition || !heroBase) return;
+    setHeroChoice(star?.id ?? 'custom');
+    if (!star) { setDefinition(heroBase); return; }
+    setDefinition({ ...heroBase, name: star.name, avatar: star.avatarSeed, role: star.role,
+      description: `${heroBase.description}\nПерсона игрока: ${star.name}. ${star.about}`.slice(0, 2000),
+      stars: heroBase.stars.filter(value => value.id !== star.id) });
   };
   const enter = async () => {
     if (!selected || pending || busy) return;
@@ -279,11 +289,24 @@ export default function BackendApp() {
   else if (screen === 'welcome') content = <Onboarding key="entry-welcome" initialStep={0} onTry={() => go('age')} onDone={() => go('age')} onBack={back} />;
   else if (screen === 'age') content = <AgeEntry initialAge={entryAge} minimumAge={14} requireConsent={true} onBack={value => { setEntryAge(value); back(); }} onContinue={continueAge} />;
   else if (screen === 'onboarding') content = <Onboarding key="entry-interests" initialStep={1} initialQualities={qualities} onBack={back} onDone={completeInterests} />;
-  else if (screen === 'hero' && definition) content = <><ScreenHeading title={definition.templateId ? 'Кто ты в этом мире?' : 'Свой мир'} back={back} /><section className="section stack"><TextField label="Имя персонажа" maxLength={80} value={definition.name} onChange={e => setDefinition({ ...definition, name: e.target.value })} /><TextField label="Имя канала" maxLength={80} value={definition.avatar} onChange={e => setDefinition({ ...definition, avatar: e.target.value })} />
-    <label>Роль<select value={definition.roles.includes(definition.role) ? definition.role : ''} onChange={e => setDefinition({ ...definition, role: e.target.value })}><option value="">Свой персонаж</option>{definition.roles.map(role => <option key={role}>{role}</option>)}</select></label>
+  else if (screen === 'hero' && definition && definition.templateId) content = <><ScreenHeading title="Твой профиль в мире" back={back} /><section className="section stack">
+    {selected && <div className="hero-world"><img src={selected.hero} alt="" /><div className="hero-world-copy"><strong>{selected.title}</strong><p className="caption muted">{selected.description}</p></div></div>}
+    <fieldset className="hero-choices"><legend>Кем войдёшь в мир?</legend>
+      {(heroBase ?? definition).stars.map(star => <label key={star.id} className={`hero-choice${heroChoice === star.id ? ' is-selected' : ''}`}><input type="radio" name="hero" checked={heroChoice === star.id} onChange={() => chooseHero(star)} /><Avatar name={star.name} size="lg" /><span><strong>{star.name}</strong><small>{star.role}</small></span></label>)}
+      <label className={`hero-choice${heroChoice === 'custom' ? ' is-selected' : ''}`}><input type="radio" name="hero" checked={heroChoice === 'custom'} onChange={() => chooseHero()} /><span className="hero-choice-custom" aria-hidden="true">✦</span><span><strong>Свой персонаж</strong><small>Выбрать имя и роль</small></span></label>
+    </fieldset>
+    {heroChoice === 'custom' && <div className="stack">
+      <TextField label="Имя персонажа" maxLength={80} value={definition.name} onChange={e => setDefinition({ ...definition, name: e.target.value })} />
+      <TextField label="Имя канала" maxLength={80} value={definition.avatar} onChange={e => setDefinition({ ...definition, avatar: e.target.value })} />
+      <TextField label="Кто ты в этом мире" maxLength={80} value={definition.role} onChange={e => setDefinition({ ...definition, role: e.target.value })} />
+      <div className="hero-address"><p className="caption">Как обращаться</p><div className="row">{([['she', 'она'], ['he', 'он'], ['nick', 'по нику']] as const).map(([id, label]) => <Chip key={id} selected={address === id} onClick={() => setAddress(id)}>{label}</Chip>)}</div></div>
+    </div>}
+    <p className="caption muted">Дальше — завязка твоей истории.</p>
+    <Button busy={busy} disabled={!heroChoice || !definition.stars.length || (heroChoice === 'custom' && (!definition.name.trim() || !definition.avatar.trim() || !definition.role.trim()))} onClick={() => void createWorld()}>{heroChoice ? `Войти как ${definition.name.trim() || '…'} →` : 'Выбери персонажа'}</Button></section></>;
+  else if (screen === 'hero' && definition) content = <><ScreenHeading title="Свой мир" back={back} /><section className="section stack"><TextField label="Имя персонажа" maxLength={80} value={definition.name} onChange={e => setDefinition({ ...definition, name: e.target.value })} /><TextField label="Имя канала" maxLength={80} value={definition.avatar} onChange={e => setDefinition({ ...definition, avatar: e.target.value })} />
     <label>Как обращаться<select value={address} onChange={e => setAddress(e.target.value as Address)}><option value="nick">По имени</option><option value="she">Она</option><option value="he">Он</option></select></label>
-    <TextField label="О персонаже" value={definition.role} maxLength={80} onChange={e => setDefinition({ ...definition, role: e.target.value })} />
-    {!definition.templateId && <><TextField label="Название мира" value={definition.title} onChange={e => setDefinition({ ...definition, title: e.target.value })} /><label>Описание<textarea value={definition.description} onChange={e => setDefinition({ ...definition, description: e.target.value })} maxLength={2000} /></label><TextField label="Место действия" value={definition.where} onChange={e => setDefinition({ ...definition, where: e.target.value })} /><TextField label="Первая завязка" value={definition.firstContext} onChange={e => setDefinition({ ...definition, firstContext: e.target.value })} /><h2>Собеседники</h2>{definition.stars.map((star, index) => <div className="stack" key={star.id}><TextField label={`Имя собеседника ${index + 1}`} value={star.name} onChange={e => setDefinition({ ...definition, stars: definition.stars.map((s, i) => i === index ? { ...s, name: e.target.value } : s) })} /><TextField label="Роль собеседника" value={star.role} onChange={e => setDefinition({ ...definition, stars: definition.stars.map((s, i) => i === index ? { ...s, role: e.target.value } : s) })} /><TextField label="О собеседнике" value={star.about} onChange={e => setDefinition({ ...definition, stars: definition.stars.map((s, i) => i === index ? { ...s, about: e.target.value } : s) })} /></div>)}<Button variant="secondary" disabled={definition.stars.length >= 3} onClick={() => setDefinition({ ...definition, stars: [...definition.stars, { id: crypto.randomUUID(), name: '', role: '', about: '', voice: 'Живо и по делу', avatarSeed: crypto.randomUUID(), trait: 1, relation: 0 }] })}>Добавить собеседника</Button></>}
+    <TextField label="Кто ты в этом мире" value={definition.role} maxLength={80} onChange={e => setDefinition({ ...definition, role: e.target.value })} />
+    <TextField label="Название мира" value={definition.title} onChange={e => setDefinition({ ...definition, title: e.target.value })} /><label>Описание<textarea value={definition.description} onChange={e => setDefinition({ ...definition, description: e.target.value })} maxLength={2000} /></label><TextField label="Место действия" value={definition.where} onChange={e => setDefinition({ ...definition, where: e.target.value })} /><TextField label="Первая завязка" value={definition.firstContext} onChange={e => setDefinition({ ...definition, firstContext: e.target.value })} /><h2>Собеседники</h2>{definition.stars.map((star, index) => <div className="stack" key={star.id}><TextField label={`Имя собеседника ${index + 1}`} value={star.name} onChange={e => setDefinition({ ...definition, stars: definition.stars.map((s, i) => i === index ? { ...s, name: e.target.value } : s) })} /><TextField label="Роль собеседника" value={star.role} onChange={e => setDefinition({ ...definition, stars: definition.stars.map((s, i) => i === index ? { ...s, role: e.target.value } : s) })} /><TextField label="О собеседнике" value={star.about} onChange={e => setDefinition({ ...definition, stars: definition.stars.map((s, i) => i === index ? { ...s, about: e.target.value } : s) })} /></div>)}<Button variant="secondary" disabled={definition.stars.length >= 3} onClick={() => setDefinition({ ...definition, stars: [...definition.stars, { id: crypto.randomUUID(), name: '', role: '', about: '', voice: 'Живо и по делу', avatarSeed: crypto.randomUUID(), trait: 1, relation: 0 }] })}>Добавить собеседника</Button>
     <label>Градус драмы<select value={definition.drama} onChange={e => setDefinition({ ...definition, drama: e.target.value as WorldDefinition['drama'] })}><option value="soft">Мягко</option><option value="mid">Средне</option><option value="hot">Остро</option><option value="off">Без хейта</option></select></label>
     <Button busy={busy} disabled={!definition.name.trim() || !definition.avatar.trim() || !definition.role.trim() || !definition.title.trim() || !definition.stars.length || definition.stars.some(star => !star.name.trim() || !star.role.trim())} onClick={() => void createWorld()}>Начать историю</Button></section></>;
   else if (screen === 'feed' && player && world) content = renderFeed();
