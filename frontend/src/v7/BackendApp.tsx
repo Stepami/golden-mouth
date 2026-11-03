@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { activitiesForWorld, markWorldActivitiesRead, type Activity } from './activity';
 import { submissionFor } from './submission';
+import { screenView } from '../app/analytics';
+import { setScreen as setLogScreen } from '../app/log';
 import { api, ApiError } from '../api/client';
 import type { Player, WorldDocument, WorldDefinition, Post as ServerPost, FeedItem, PostResult, Address } from '../api/types';
 import { worlds, worldDefinitionOf, worldDocumentOf, installWorldContent } from '../api/worldContent';
@@ -75,6 +77,10 @@ export default function BackendApp() {
   const go = (next: Screen) => { setError(''); setStack(s => [...s, screen]); setScreen(next); setToast(undefined); };
   const back = useCallback(() => { if (pending || busy) return; setError(''); setScreen(stack.at(-1) ?? (world ? 'feed' : 'catalog')); setStack(s => s.slice(0, -1)); }, [stack, world, pending, busy]);
   useEffect(() => syncBackButton(stack.length > 0 && !pending, back), [back, stack.length, pending]);
+  useEffect(() => {
+    if (booting || hash.startsWith('#system')) return;
+    const id = `v7.${screen}`; setLogScreen(id); screenView(id);
+  }, [screen, booting, hash]);
   useEffect(() => { main.current?.scrollTo(0, 0); focusHeading.current?.focus({ preventScroll: true }); }, [screen]);
   useEffect(() => { document.documentElement.style.setProperty('--text-scale', String(textScale)); document.documentElement.dataset.largeText = String(textScale > 1); if (!saveLocal('reki-text-scale', textScale)) setStorageError(true); }, [textScale]);
   useEffect(() => () => { cancel.current?.(); }, []);
