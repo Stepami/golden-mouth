@@ -1,6 +1,4 @@
 using System.Text.Json.Serialization.Metadata;
-using Microsoft.AspNetCore;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OpenApi;
 using OpenIddict.Validation.AspNetCore;
 using Reki.Api.Auth;
@@ -12,6 +10,7 @@ using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 using Vogen;
+using static OpenIddict.Abstractions.OpenIddictConstants;
 
 [assembly: VogenDefaults(openApiSchemaCustomizations: OpenApiSchemaCustomizations.GenerateOpenApiMappingExtensionMethod)]
 
@@ -26,7 +25,7 @@ namespace Reki.Api;
 [OpenApiMarker<AuthorId>]
 [OpenApiMarker<Address>]
 [OpenApiMarker<RekiEventId>]
-internal static partial class DependencyInjection
+internal static class DependencyInjection
 {
     public static IServiceCollection AddApi(this IServiceCollection services)
     {
@@ -43,23 +42,26 @@ internal static partial class DependencyInjection
             options.AddOperationTransformer<AuthOperationTransformer>();
             options.AddDocumentTransformer<TelegramMiniAppSecurityTransformer>();
         });
-        services.AddAuthorizationBuilder()
-            .AddPolicy(AuthConstants.AppJwtPolicy, policy => policy
-                .AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
-                .RequireAuthenticatedUser())
-            .AddPolicy(AuthConstants.MiniAppGrantPolicy, policy =>
-                policy.RequireAssertion(context => HasGrant(context, AuthConstants.MiniAppGrant)))
-            .AddPolicy(AuthConstants.TelegramLoginGrantPolicy, policy =>
-                policy.RequireAssertion(context => HasGrant(context, AuthConstants.TelegramLoginGrant)))
-            .AddPolicy(AuthConstants.RefreshGrantPolicy, policy =>
-                policy.RequireAssertion(context => HasGrant(context, OpenIddict.Abstractions.OpenIddictConstants.GrantTypes.RefreshToken)));
+        services
+            .AddAuthorizationBuilder()
+            .AddPolicy(
+                AuthConstants.AppJwtPolicy,
+                policy =>
+                    policy
+                        .AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
+                        .RequireAuthenticatedUser())
+            .AddPolicy(
+                AuthConstants.MiniAppGrantPolicy,
+                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.MiniAppGrant)))
+            .AddPolicy(
+                AuthConstants.TelegramLoginGrantPolicy,
+                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.TelegramLoginGrant)))
+            .AddPolicy(
+                AuthConstants.RefreshGrantPolicy,
+                policy => policy.RequireAssertion(context => context.HasGrant(GrantTypes.RefreshToken)));
         services.AddControllers();
         services.AddSerialization();
 
         return services;
     }
-
-    private static bool HasGrant(AuthorizationHandlerContext context, string grantType) =>
-        context.Resource is HttpContext httpContext &&
-        httpContext.GetOpenIddictServerRequest()?.GrantType == grantType;
 }
