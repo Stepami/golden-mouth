@@ -6,6 +6,9 @@ import { setScreen as setLogScreen } from '../app/log';
 import { api, ApiError } from '../api/client';
 import type { Player, WorldDocument, WorldDefinition, Post as ServerPost, FeedItem, PostResult, Address } from '../api/types';
 import { worlds, worldDefinitionOf, worldDocumentOf, installWorldContent } from '../api/worldContent';
+import { ageBand as ageBandOf } from '../app/ageBand';
+import { AgeEntry } from './screens/AgeEntry';
+import { rankCatalog } from './interests';
 import { blankWorld } from '../app/worldDraft';
 import { pendingReferral, clearReferral } from '../app/referral';
 import { draftKey, readPostDraft, savePostDraft, completePostDraft } from '../app/postDraft';
@@ -19,12 +22,12 @@ import { WorldIntro } from './screens/WorldIntro';
 import { DesignSystem } from './screens/DesignSystem';
 import { NominalSignOut, Avatar, Badge, BottomNav, Button, Chip, Dialog, EmptyState, Icon, Notice, PersonRow, PostCard, ProfileHeader, ProfileScore, Progress, QuoteBlock, ResourceBadge, ResumeWorld, ScreenHeading, SettingsRow, TextField, WorldCard } from './ui';
 
-type Screen = 'catalog' | 'search' | 'intro' | 'onboarding' | 'register' | 'hero' | 'feed' | 'goals' | 'compose' | 'thread' | 'topic' | 'profile' | 'character' | 'messages' | 'activity' | 'account';
+type Screen = 'welcome' | 'age' | 'catalog' | 'search' | 'intro' | 'onboarding' | 'hero' | 'feed' | 'goals' | 'compose' | 'thread' | 'topic' | 'profile' | 'character' | 'messages' | 'activity' | 'account';
 type ReplyTarget = { postId: string; commentId: string | null; name: string; text: string };
 type ReplyDraft = { text: string; requestId?: string; submittedText?: string };
 const skillLabels = ['Смелость', 'Юмор', 'В тему'];
 const statusLabels: Record<string, string> = { pending: 'Персонажи читают публикацию…', ready_for_moderation: 'Готовим результат…', completed: 'Публикация готова', failed: 'Публикация не отправлена' };
-const titleOf: Record<Screen, string> = { catalog: 'Миры', search: 'Поиск', intro: 'Вход в мир', onboarding: 'Знакомство', register: 'О себе', hero: 'Ваш персонаж', feed: 'Лента', goals: 'Цели', compose: 'Новая публикация', thread: 'Обсуждение', topic: 'Тема', profile: 'Профиль персонажа', character: 'Собеседник', messages: 'Личка', activity: 'Уведомления', account: 'Профиль' };
+const titleOf: Record<Screen, string> = { catalog: 'Миры', search: 'Поиск', intro: 'Вход в мир', onboarding: 'Знакомство', welcome: 'Знакомство', age: 'Возраст', hero: 'Ваш персонаж', feed: 'Лента', goals: 'Цели', compose: 'Новая публикация', thread: 'Обсуждение', topic: 'Тема', profile: 'Профиль персонажа', character: 'Собеседник', messages: 'Личка', activity: 'Уведомления', account: 'Профиль' };
 
 export default function BackendApp() {
   const [hash, setHash] = useState(location.hash);
@@ -52,6 +55,7 @@ export default function BackendApp() {
   const [qualities, setQualities] = useState<string[]>([]);
   const [textScale, setTextScale] = useState(() => readLocal('reki-text-scale', 1));
   const [age, setAge] = useState('');
+  const [entryAge, setEntryAge] = useState(18);
   const [address, setAddress] = useState<Address>('nick');
   const [definition, setDefinition] = useState<WorldDefinition>();
   const [draft, setDraft] = useState('');
@@ -73,7 +77,7 @@ export default function BackendApp() {
   const threadRequest = useRef(0);
   const interestOnly = useRef(false);
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments); }, [player?.experiments]);
-  const key = player ? `reki:v7:${player.id}` : 'reki:v7:guest';
+  const key = `reki:v7:${player?.id ?? api.playerId() ?? 'guest'}`;
   const localSave = (name: string, value: unknown) => { if (!saveLocal(`${key}:${name}`, value)) setStorageError(true); };
   const go = (next: Screen) => { setError(''); setStack(s => [...s, screen]); setScreen(next); setToast(undefined); };
   const back = useCallback(() => { if (pending || busy) return; setError(''); setScreen(stack.at(-1) ?? (world ? 'feed' : 'catalog')); setStack(s => s.slice(0, -1)); }, [stack, world, pending, busy]);
@@ -108,12 +112,15 @@ export default function BackendApp() {
       await api.loadWorldTemplates();
       setTemplates(worlds.map(w => { const { templateId, ...rest } = worldDefinitionOf(w.id); return worldView({ ...rest, id: templateId!, subscribers: 0 }); }));
       try {
-        const p = await api.me(); installPlayer(p);
+        const p = await api.me();
+        if (readLocal(`reki:v7:${p.id}:entry-required`, false)) { setPlayer(p); setWorld(undefined); setScreen('welcome'); setStack([]); }
+        else installPlayer(p);
         const own = api.ownedWorldsSnapshot() ?? []; installWorldContent(own); setOwned(own);
         // The catalogue is the agreed returning-player entry. Resume chooses a concrete world instance.
       } catch (cause) {
         if (!(cause instanceof ApiError) || ![401, 404].includes(cause.status)) throw cause;
         if (api.hasPlayer()) { const own = await api.ownedWorlds(); installWorldContent(own); setOwned(own); }
+        setScreen('welcome'); setStack([]);
       }
     } catch (cause) { setError(errorText(cause)); }
     finally { setBooting(false); }
@@ -134,19 +141,36 @@ export default function BackendApp() {
       setBusy(true); setError('');
       try { const p = installPlayer(await api.me(existing.id)); setFeed([]); setScreen('feed'); setStack([]); await loadFeed(p); }
       catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
-    } else if (!api.hasPlayer()) { interestOnly.current = false; go('onboarding'); }
-    else startHero(selected);
+    } else startHero(selected);
   };
-  const register = async () => {
-    if (!age || busy) return;
-    setBusy(true); setError('');
-    try { await api.onboarding({ birthGroup: age === '14-17' ? '14-17' : '18+', ageBand: age, address, referralCode: pendingReferral() }); clearReferral(); trackEvent('onboarding_step', { step: 'age', ok: true }); if (selected) startHero(selected); }
-    catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
+  const beginEntry = () => {
+    if (sending.current || busy) return;
+    feedRequest.current++; threadRequest.current++;
+    localSave('entry-required', true);
+    setWorld(undefined); setSelected(undefined); setPerson(undefined); setPost(undefined);
+    setFeed([]); setCursor(null); setReply(undefined); setQuote(undefined); setToast(undefined);
+    setOverlay(null); setUnknown(false); setError(''); setQuery(''); setGenre('Все');
+    interestOnly.current = false; setEntryAge(18); setAge(''); setScreen('welcome'); setStack([]);
+  };
+  const completeInterests = (values: string[]) => {
+    setQualities(values); localSave('qualities', values);
+    if (interestOnly.current) { back(); interestOnly.current = false; return; }
+    localSave('entry-required', false); setWorld(undefined); setScreen('catalog'); setStack([]);
+  };
+  const continueAge = (value: number) => {
+    setEntryAge(value); setAge(ageBandOf(value) ?? '');
+    interestOnly.current = false; setStack(['welcome', 'age']); setScreen('onboarding'); setError('');
   };
   const createWorld = async () => {
     if (!definition || busy) return;
     setBusy(true); setError('');
     try {
+      if (!api.hasPlayer()) {
+        if (!age) { setError('Проверь возраст перед началом истории.'); setScreen('age'); return; }
+        await api.onboarding({ birthGroup: age === '14-17' ? '14-17' : '18+', ageBand: age, address, referralCode: pendingReferral() });
+        clearReferral(); trackEvent('onboarding_step', { step: 'age', ok: true });
+        saveLocal(`reki:v7:${api.playerId()}:qualities`, qualities); saveLocal(`reki:v7:${api.playerId()}:entry-required`, false);
+      }
       const p = installPlayer(await api.createWorld(definition)); trackEvent('onboarding_step', { step: 'done', ok: true, world: p.world }); localSave('qualities', qualities);
       const own = await api.ownedWorlds(); installWorldContent(own); setOwned(own);
       setScreen('feed'); setStack([]); await loadFeed(p);
@@ -241,20 +265,23 @@ export default function BackendApp() {
   let content: ReactNode;
   if (booting) content = <EmptyState title="Открываем твои миры"><span className="spinner" /> Ещё немного…</EmptyState>;
   else if (screen === 'catalog' || screen === 'search') {
-    const entries = catalogEntries(templates, plannedWorlds);
+    const entries = rankCatalog(catalogEntries(templates, plannedWorlds), qualities);
     const filtered = filterCatalog(entries, query, genre);
     content = <><ScreenHeading title={screen === 'search' ? 'Найти свой мир' : 'Миры'} />
       {screen === 'search' && <div className="search-field"><TextField label="Название или тема" value={query} onChange={e => setQuery(e.target.value)} placeholder="Магия, приключения, общение…" /></div>}
+      {screen === 'catalog' && <section className="catalog-preferences"><p className="caption muted">{qualities.length ? `Для тебя · ${qualities.join(' · ')}` : 'Все миры'}</p><button className="link-button" onClick={() => { interestOnly.current = true; go('onboarding'); }}>Изменить интересы</button></section>}
       {screen === 'catalog' && owned.length > 0 && <section className="saved-worlds"><h2 className="section-title">Мои миры</h2>{owned.map(d => <ResumeWorld key={d.id} world={worldView(d)} subtitle={d.name} onClick={() => void openWorld(worldView(d))} />)}</section>}
       <div className="filter-strip">{['Все', ...new Set(entries.map(({ world }) => world.genre))].map(g => <Chip key={g} selected={genre === g} onClick={() => setGenre(g)}>{g}</Chip>)}</div>
       {filtered.length ? <div className="world-grid">{filtered.map(({ key, world: w, available }) => <WorldCard key={key} world={w} disabled={!available} selected={available && selected?.id === w.id} onClick={available ? () => void openWorld(w) : undefined} />)}</div> : <EmptyState title="Такого мира пока нет" action={<Button onClick={() => { setQuery(''); setGenre('Все'); if (!templates.length) void boot(); }}>Сбросить поиск</Button>}>Попробуй другое название или убери фильтр.</EmptyState>}
       {player?.hitOwnWorldMilestone && <div className="section"><Button onClick={() => { setDefinition({ ...blankWorld(), name: player.name, avatar: player.handle, stars: [{ id: crypto.randomUUID(), name: '', role: '', about: '', voice: 'Живо и по делу', avatarSeed: 'guide', trait: 1, relation: 0 }] }); go('hero'); }}>Создать свой мир</Button></div>}
     </>;
   } else if (screen === 'intro' && selected) content = <WorldIntro world={selected} busy={busy} resume={owned.some(d => d.id === selected.id)} onBack={back} onEnter={() => void enter()} />;
-  else if (screen === 'onboarding') content = <Onboarding initialQualities={interestOnly.current ? qualities : []} initialStep={interestOnly.current ? 1 : 0} onBack={back} onDone={values => { setQualities(values); if (interestOnly.current) { localSave('qualities', values); back(); } else go('register'); }} />;
-  else if (screen === 'register') content = <><ScreenHeading title="Немного о себе" back={back} /><section className="section stack"><p>Реки — для игроков от 14 лет. Возраст помогает подобрать подходящее общение.</p><label>Возраст<select value={age} onChange={e => setAge(e.target.value)}><option value="">Выбрать</option>{['14-17', '18-24', '25-34', '35-44', '45+'].map(v => <option key={v}>{v}</option>)}</select></label><label>Как обращаться<select value={address} onChange={e => setAddress(e.target.value as Address)}><option value="nick">По имени</option><option value="she">Она</option><option value="he">Он</option></select></label><Button disabled={!age} busy={busy} onClick={() => void register()}>Продолжить</Button></section></>;
+  else if (screen === 'welcome') content = <Onboarding key="entry-welcome" initialStep={0} onTry={() => go('age')} onDone={() => go('age')} onBack={back} />;
+  else if (screen === 'age') content = <AgeEntry initialAge={entryAge} minimumAge={14} requireConsent={true} onBack={value => { setEntryAge(value); back(); }} onContinue={continueAge} />;
+  else if (screen === 'onboarding') content = <Onboarding key="entry-interests" initialStep={1} initialQualities={qualities} onBack={back} onDone={completeInterests} />;
   else if (screen === 'hero' && definition) content = <><ScreenHeading title={definition.templateId ? 'Кто ты в этом мире?' : 'Свой мир'} back={back} /><section className="section stack"><TextField label="Имя персонажа" maxLength={80} value={definition.name} onChange={e => setDefinition({ ...definition, name: e.target.value })} /><TextField label="Имя канала" maxLength={80} value={definition.avatar} onChange={e => setDefinition({ ...definition, avatar: e.target.value })} />
     <label>Роль<select value={definition.roles.includes(definition.role) ? definition.role : ''} onChange={e => setDefinition({ ...definition, role: e.target.value })}><option value="">Свой персонаж</option>{definition.roles.map(role => <option key={role}>{role}</option>)}</select></label>
+    <label>Как обращаться<select value={address} onChange={e => setAddress(e.target.value as Address)}><option value="nick">По имени</option><option value="she">Она</option><option value="he">Он</option></select></label>
     <TextField label="О персонаже" value={definition.role} maxLength={80} onChange={e => setDefinition({ ...definition, role: e.target.value })} />
     {!definition.templateId && <><TextField label="Название мира" value={definition.title} onChange={e => setDefinition({ ...definition, title: e.target.value })} /><label>Описание<textarea value={definition.description} onChange={e => setDefinition({ ...definition, description: e.target.value })} maxLength={2000} /></label><TextField label="Место действия" value={definition.where} onChange={e => setDefinition({ ...definition, where: e.target.value })} /><TextField label="Первая завязка" value={definition.firstContext} onChange={e => setDefinition({ ...definition, firstContext: e.target.value })} /><h2>Собеседники</h2>{definition.stars.map((star, index) => <div className="stack" key={star.id}><TextField label={`Имя собеседника ${index + 1}`} value={star.name} onChange={e => setDefinition({ ...definition, stars: definition.stars.map((s, i) => i === index ? { ...s, name: e.target.value } : s) })} /><TextField label="Роль собеседника" value={star.role} onChange={e => setDefinition({ ...definition, stars: definition.stars.map((s, i) => i === index ? { ...s, role: e.target.value } : s) })} /><TextField label="О собеседнике" value={star.about} onChange={e => setDefinition({ ...definition, stars: definition.stars.map((s, i) => i === index ? { ...s, about: e.target.value } : s) })} /></div>)}<Button variant="secondary" disabled={definition.stars.length >= 3} onClick={() => setDefinition({ ...definition, stars: [...definition.stars, { id: crypto.randomUUID(), name: '', role: '', about: '', voice: 'Живо и по делу', avatarSeed: crypto.randomUUID(), trait: 1, relation: 0 }] })}>Добавить собеседника</Button></>}
     <label>Градус драмы<select value={definition.drama} onChange={e => setDefinition({ ...definition, drama: e.target.value as WorldDefinition['drama'] })}><option value="soft">Мягко</option><option value="mid">Средне</option><option value="hot">Остро</option><option value="off">Без хейта</option></select></label>
@@ -274,10 +301,10 @@ export default function BackendApp() {
   else if (screen === 'topic' && world) content = <><div className="topic-header"><button className="back-button" onClick={back}>Назад</button><img className="topic-cover" src={world.hero} alt="" /><h1>{quote?.name ?? world.title}</h1><p>{quote?.text ?? world.topic}</p></div><section className="topic-people">{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}<Button className="full" onClick={() => openCompose(undefined, quote)}>Написать</Button></section></>;
   else if (screen === 'messages' && world) content = <><ScreenHeading title="Личка" /><EmptyState title="Сначала — общий разговор" action={<Button onClick={() => go('feed')}>Вернуться в ленту</Button>}>Личные сообщения скоро появятся.</EmptyState><section className="section"><h2 className="section-title">Собеседники</h2>{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}</section></>;
   else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={worldActivities.length > 0 && <button className="link-button caption" onClick={() => { const next = markWorldActivitiesRead(activities, player?.world); setActivities(next); localSave('activity', next); }}>Прочитать всё</button>} />{!worldActivities.length && <EmptyState title="Пока тихо">Здесь появятся результаты твоих публикаций на этом устройстве.</EmptyState>}{worldActivities.map(a => <button key={a.id} className={`activity-row ${a.read ? '' : 'activity-row--unread'}`} onClick={() => void openThread(a.id)}><span className="activity-marker"><Icon name="activity" /></span><span className="grow"><strong>{a.title}</strong><p>{a.text}</p><span className="caption muted">Открыть публикацию ↗</span></span></button>)}</>;
-  else if (screen === 'account') content = <><ProfileHeader name={player?.name ?? 'Твой профиль'} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? owned.map(d => <ResumeWorld key={d.id} world={worldView(d)} subtitle={d.name} onClick={() => void openWorld(worldView(d))} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}</section><section className="account-settings"><SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => setOverlay('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><NominalSignOut /></section></>;
+  else if (screen === 'account') content = <><ProfileHeader name={player?.name ?? 'Твой профиль'} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? owned.map(d => <ResumeWorld key={d.id} world={worldView(d)} subtitle={d.name} onClick={() => void openWorld(worldView(d))} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}</section><section className="account-settings"><SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => setOverlay('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><NominalSignOut onSignOut={beginEntry} disabled={pending || busy} /></section></>;
   else content = <EmptyState title="Выбери мир" action={<Button onClick={() => go('catalog')}>К мирам</Button>}>Продолжи сохранённую историю или начни новую.</EmptyState>;
 
-  const inWorld = !!world && !['catalog', 'search', 'account', 'intro', 'onboarding', 'register', 'hero'].includes(screen);
+  const inWorld = !!world && !['catalog', 'search', 'account', 'intro', 'onboarding', 'welcome', 'age', 'hero'].includes(screen);
   const showNav = !booting && ['catalog', 'search', 'account', 'feed', 'goals', 'messages', 'activity'].includes(screen);
   const nav = inWorld ? [ { id: 'feed', label: 'Лента', icon: 'feed' as const }, { id: 'goals', label: 'Цели', icon: 'goals' as const }, { id: 'compose', label: 'Написать', icon: 'compose' as const }, { id: 'messages', label: 'Личка', icon: 'messages' as const }, { id: 'activity', label: 'Уведомления', icon: 'activity' as const, badge: activities.filter(a => !a.read && a.worldId === player?.world).length } ] : [ { id: 'catalog', label: 'Главная', icon: 'home' as const }, { id: 'search', label: 'Поиск', icon: 'search' as const }, { id: 'account', label: 'Профиль', icon: 'profile' as const } ];
   if (hash.startsWith('#system')) return <DesignSystem />;

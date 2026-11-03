@@ -659,10 +659,10 @@ export function SettingsRow({
 }
 
 /** Visible account action while the real sign-out flow is being prepared. */
-export function NominalSignOut() {
+export function NominalSignOut({ onSignOut, disabled = false }: { onSignOut?: () => void; disabled?: boolean } = {}) {
   const [open, setOpen] = useState(false);
   return <div className="account-signout">
-    <Button variant="secondary" className="full" onClick={event => { event.currentTarget.focus({ preventScroll: true }); setOpen(true); }}>Выйти из аккаунта</Button>
+    <Button variant="secondary" className="full" disabled={disabled} onClick={event => { event.currentTarget.focus({ preventScroll: true }); if (onSignOut) onSignOut(); else setOpen(true); }}>Выйти из аккаунта</Button>
     {open && <Dialog title="Выход из аккаунта" onClose={() => setOpen(false)}>
       <p>Выход пока недоступен. Аккаунт остаётся подключённым.</p>
       <Button className="full" onClick={() => setOpen(false)}>Понятно</Button>

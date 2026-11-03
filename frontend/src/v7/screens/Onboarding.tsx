@@ -1,15 +1,18 @@
 import { useState } from "react";
+import { communicationInterests } from "../interests";
 import { Button, Chip, QuoteBlock } from "../ui";
 export function Onboarding({
   onDone,
   onBack,
   initialQualities = [],
   initialStep = 0,
+  onTry,
 }: {
   onDone: (qualities: string[]) => void;
   onBack: () => void;
   initialQualities?: string[];
   initialStep?: 0 | 1;
+  onTry?: () => void;
 }) {
   const [step, setStep] = useState<0 | 1>(initialStep);
   const [selected, setSelected] = useState<string[]>(initialQualities);
@@ -47,7 +50,7 @@ export function Onboarding({
             отношения с персонажами.
           </p>
           <p className="caption muted">Твои собеседники — AI-персонажи.</p>
-          <Button size="lg" className="full" onClick={() => setStep(1)}>
+          <Button size="lg" className="full" onClick={() => onTry ? onTry() : setStep(1)}>
             Попробовать ↗
           </Button>
         </>
@@ -63,14 +66,7 @@ export function Onboarding({
           </h1>
           <p className="muted">Выбери то, что тебе близко.</p>
           <div className="quality-grid">
-            {[
-              "Смелее высказываться",
-              "Лучше слышать других",
-              "Увереннее убеждать",
-              "Находить общий язык",
-              "Легче шутить",
-              "Быть собой",
-            ].map((q) => (
+            {communicationInterests.map((q) => (
               <Chip
                 key={q}
                 selected={selected.includes(q)}
