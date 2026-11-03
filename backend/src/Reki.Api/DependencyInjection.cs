@@ -40,6 +40,7 @@ internal static partial class DependencyInjection
             options.AddSchemaTransformer<AddressSchemaTransformer>();
             options.AddSchemaTransformer<NullableChallengeSchemaTransformer>();
             options.AddOperationTransformer<OperationMetadataTransformer>();
+            options.AddOperationTransformer<AuthOperationTransformer>();
             options.AddDocumentTransformer<TelegramMiniAppSecurityTransformer>();
         });
         services.AddAuthorizationBuilder()
