@@ -10,9 +10,9 @@ internal sealed class MongoPostRepository : IPostRepository
 {
     private readonly IMongoCollection<GamePost> _posts;
 
-    public MongoPostRepository(MongoCompositionRoot compositionRoot)
+    public MongoPostRepository(IMongoDatabase database)
     {
-        _posts = compositionRoot.MongoDatabase.GetCollection<GamePost>(MongoCollections.Posts);
+        _posts = database.GetCollection<GamePost>(MongoCollections.Posts);
     }
 
     public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken) =>

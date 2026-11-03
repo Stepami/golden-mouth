@@ -11,10 +11,10 @@ internal sealed class MongoWorldRepository : IWorldRepository
     private readonly IMongoCollection<World> _worlds;
     private readonly IMongoCollection<World> _templates;
 
-    public MongoWorldRepository(MongoCompositionRoot compositionRoot)
+    public MongoWorldRepository(IMongoDatabase database)
     {
-        _worlds = compositionRoot.MongoDatabase.GetCollection<World>(MongoCollections.Worlds);
-        _templates = compositionRoot.MongoDatabase.GetCollection<World>(MongoCollections.WorldTemplates);
+        _worlds = database.GetCollection<World>(MongoCollections.Worlds);
+        _templates = database.GetCollection<World>(MongoCollections.WorldTemplates);
     }
 
     public async ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken) =>
