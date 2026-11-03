@@ -192,14 +192,19 @@ export default function BackendApp() {
     const requestId = saved.requestId ?? crypto.randomUUID(), text = saved.submittedText ?? draft;
     saveLocal(k, { text: draft, requestId, submittedText: text });
     sending.current = true; setPending(true); setError('');
+    let terminalFailure = false;
     try {
       const controller = new AbortController(); cancel.current = () => controller.abort();
-      const result = await api.reply(reply.postId, reply.commentId, requestId, text, { signal: controller.signal });
+      const result = await api.reply(reply.postId, reply.commentId, requestId, text, { signal: controller.signal, onEvent: event => { if (event.status === 'failed') terminalFailure = true; } });
       if (!result.post) throw new Error('Missing reply');
       setPost({ ...result.post, id: result.post.postId }); saveLocal(k, { text: '' }); setDraft(''); setReply(undefined); setScreen('thread'); setStack(s => s.filter(x => x !== 'compose'));
       setUnknown(false);
       void refresh().catch(() => setFeedError('Ответ сохранён. Обнови ленту, чтобы увидеть актуальные данные.'));
-    } catch (cause) { setUnknown(true); setError(errorText(cause) + ' Черновик сохранён; повтор проверяет тот же ответ.'); }
+    } catch (cause) {
+      const rejected = terminalFailure || cause instanceof ApiError && cause.status >= 400 && cause.status < 500 && cause.status !== 409;
+      if (rejected) saveLocal(k, { text: draft });
+      setUnknown(!rejected); setError(rejected ? 'Ответ не отправлен. Текст сохранён — можно изменить его или попробовать снова.' : errorText(cause) + ' Черновик сохранён; повтор проверяет тот же ответ.');
+    }
     finally { sending.current = false; setPending(false); }
   };
   const stopWaiting = () => { cancel.current?.(); sending.current = false; setPending(false); setUnknown(true); setError('Ожидание остановлено. Запрос мог сохраниться на сервере — проверь статус, чтобы продолжить без дубликата.'); };
