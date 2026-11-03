@@ -23,6 +23,7 @@ internal static class DependencyInjection
                 IsValidKeys(options),
                 "Auth configuration is invalid.")
             .ValidateOnStart();
+        services.AddScoped<AuthSessionService>();
 
         var auth = configuration.GetRequiredSection(AuthOptions.SectionName).Get<AuthOptions>()
             ?? throw new InvalidOperationException("Auth configuration is required.");
