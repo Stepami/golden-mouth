@@ -14,6 +14,9 @@ internal static class DependencyInjection
         IConfiguration configuration,
         IWebHostEnvironment environment)
     {
+        services.AddKeyedScoped<IExternalUserIdProvider, TgMiniAppUserIdProvider>(AuthConstants.MiniAppGrant);
+        services.AddKeyedScoped<IExternalUserIdProvider, TgLoginUserIdProvider>(AuthConstants.TelegramLoginGrant);
+
         services.AddOptions<AuthOptions>()
             .BindConfiguration(AuthOptions.SectionName)
             .ValidateDataAnnotations()

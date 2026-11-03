@@ -40,7 +40,7 @@ public sealed class AuthSessionService(
     }
 
     public async Task<ClaimsPrincipal?> IssueAsync(
-        long telegramId,
+        IExternalUserIdProvider externalUserIdProvider,
         string clientId,
         CancellationToken cancellationToken)
     {
@@ -50,7 +50,12 @@ public sealed class AuthSessionService(
             return null;
         }
 
-        var subject = telegramId.ToString(CultureInfo.InvariantCulture);
+        if (!externalUserIdProvider.TryGetExternalUserId(out var telegramId))
+        {
+            return null;
+        }
+
+        var subject = telegramId.Value.ToString(CultureInfo.InvariantCulture);
         var identity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType);
         identity.SetClaim(Claims.Subject, subject);
         identity.SetClaim(AuthConstants.TelegramUserIdClaim, subject);
