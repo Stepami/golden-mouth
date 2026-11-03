@@ -12,8 +12,8 @@ internal sealed class ConfigureOpenIddictServerOptions(IOptions<AuthOptions> aut
     {
         var auth = authOptions.Value;
         options.Issuer = new Uri(auth.Issuer);
-        options.AccessTokenLifetime = TimeSpan.FromMinutes(auth.AccessTokenMinutes);
-        options.RefreshTokenLifetime = TimeSpan.FromDays(auth.RefreshTokenDays);
+        options.AccessTokenLifetime = auth.AccessTokenLifetime;
+        options.RefreshTokenLifetime = auth.RefreshTokenLifetime;
 
         using var rsa = RSA.Create();
         rsa.ImportFromPem(auth.SigningKey);

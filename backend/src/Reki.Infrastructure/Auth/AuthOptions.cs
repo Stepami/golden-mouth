@@ -10,15 +10,11 @@ public sealed class AuthOptions
 
     public string ClientId { get; set; } = "reki-app";
 
-    public string TelegramMetadataProxyUrl { get; set; } = string.Empty;
-
-    public string TelegramBotApiUrl { get; set; } = string.Empty;
-
     public string SigningKey { get; set; } = string.Empty;
 
     public string EncryptionKey { get; set; } = string.Empty;
 
-    public int AccessTokenMinutes { get; set; } = 15;
+    public TimeSpan AccessTokenLifetime { get; set; } = TimeSpan.FromMinutes(15);
 
-    public int RefreshTokenDays { get; set; } = 30;
+    public TimeSpan RefreshTokenLifetime { get; set; } = TimeSpan.FromDays(30);
 }

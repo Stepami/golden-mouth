@@ -8,7 +8,7 @@ using Telegram.Bot;
 namespace Reki.Api.Auth;
 
 internal sealed class ConfigureTelegramLoginOptions(
-    IOptions<AuthOptions> authOptions,
+    IOptions<TelegramOptions> telegramOptions,
     ITelegramBotClient bot) : IConfigureNamedOptions<JwtBearerOptions>
 {
     public void Configure(JwtBearerOptions options) => Configure(AuthConstants.Schemes.TelegramLogin, options);
@@ -22,7 +22,7 @@ internal sealed class ConfigureTelegramLoginOptions(
 
         options.MapInboundClaims = false;
         options.MetadataAddress = new Uri(
-            new Uri(authOptions.Value.TelegramMetadataProxyUrl),
+            new Uri(telegramOptions.Value.OAuthUrl),
             ".well-known/openid-configuration").ToString();
         options.TokenValidationParameters = new TokenValidationParameters
         {

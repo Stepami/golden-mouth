@@ -9,9 +9,9 @@ public sealed class TelegramBotTelemetry : BaseProcessor<Activity>, IDownstreamD
 {
     private readonly string _host;
 
-    public TelegramBotTelemetry(IOptions<AuthOptions> authOptions)
+    public TelegramBotTelemetry(IOptions<TelegramOptions> telegramOptions)
     {
-        _host = new Uri(authOptions.Value.TelegramBotApiUrl).Host;
+        _host = new Uri(telegramOptions.Value.ApiUrl).Host;
         UniqueHostNameSuffixes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { _host };
         RequestMetadata = new HashSet<RequestMetadata>
         {

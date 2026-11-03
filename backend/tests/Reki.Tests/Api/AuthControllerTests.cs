@@ -177,7 +177,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
         {
             Session = factory.Session,
             UseProductionAuthentication = true,
-            TelegramMetadataProxyUrl = metadata.Url + "/",
+            TelegramOAuthUrl = metadata.Url + "/",
         };
         using var client = productionFactory.CreateClient();
         var exchange = new ExternalTelegramAuthClient(client);

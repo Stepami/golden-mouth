@@ -1,15 +1,13 @@
 using Microsoft.Extensions.Options;
 using Reki.Infrastructure.Auth;
 using Telegram.Bot;
-using TgMiniAppAuth.Authentication;
 
 namespace Reki.Api.Auth;
 
 internal sealed class RekiTelegramBotClient(
-    IOptions<TelegramMiniAppAuthorizationOptions> tgMiniAppOptions,
-    IOptions<AuthOptions> authOptions,
+    IOptions<TelegramOptions> telegramOptions,
     HttpClient httpClient) : TelegramBotClient(
         new TelegramBotClientOptions(
-            tgMiniAppOptions.Value.Token,
-            authOptions.Value.TelegramBotApiUrl),
+            telegramOptions.Value.BotToken,
+            telegramOptions.Value.ApiUrl),
         httpClient);

@@ -29,8 +29,6 @@ services:
     image: reki-backend:${REKI_VERSION:-local}
     environment:
       Auth__Issuer: https://reki-app.ru/
-      Auth__TelegramMetadataProxyUrl: https://reki-bot-oauth.stepami.workers.dev/
-      Auth__TelegramBotApiUrl: https://reki-bot.stepami.workers.dev/
 
   openobserve:
     image: dockerhub.timeweb.cloud/openobserve/openobserve:v1.1.2-simd

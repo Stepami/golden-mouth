@@ -22,7 +22,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
 
     public bool UseProductionEnvironment { get; init; }
 
-    public string? TelegramMetadataProxyUrl { get; init; }
+    public string? TelegramOAuthUrl { get; init; }
 
     public double? FeedOpenProbability { get; init; }
 
@@ -58,11 +58,11 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Auth:ClientId", "reki-test-client");
         builder.UseSetting("Auth:SigningKey", Session.SigningKey);
         builder.UseSetting("Auth:EncryptionKey", Session.EncryptionKey);
-        builder.UseSetting("Auth:TelegramMetadataProxyUrl", TelegramMetadataProxyUrl ?? "https://example.invalid/");
-        builder.UseSetting("Auth:TelegramBotApiUrl", "https://example.invalid/");
-        builder.UseSetting("Auth:AccessTokenMinutes", "15");
-        builder.UseSetting("Auth:RefreshTokenDays", "30");
-        builder.UseSetting("TelegramMiniAppAuthorizationOptions:Token", Session.TelegramBotToken);
+        builder.UseSetting("Telegram:OAuthUrl", TelegramOAuthUrl ?? "https://example.invalid/");
+        builder.UseSetting("Telegram:ApiUrl", "https://example.invalid/");
+        builder.UseSetting("Telegram:BotToken", Session.TelegramBotToken);
+        builder.UseSetting("Auth:AccessTokenLifetime", "00:15:00");
+        builder.UseSetting("Auth:RefreshTokenLifetime", "30.00:00:00");
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(FeedOpenProbability is { } probability
@@ -87,7 +87,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
                         .Build()));
             }
         });
-        if (TelegramMetadataProxyUrl is not null)
+        if (TelegramOAuthUrl is not null)
         {
             builder.ConfigureTestServices(services =>
                 services.Configure<JwtBearerOptions>(AuthConstants.Schemes.TelegramLogin, options => options.RequireHttpsMetadata = false));
