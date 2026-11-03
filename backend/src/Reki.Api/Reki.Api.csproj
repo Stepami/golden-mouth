@@ -13,12 +13,10 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi"/>
-        <PackageReference Include="OpenIddict.AspNetCore"/>
         <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all"/>
         <PackageReference Include="Riok.Mapperly" PrivateAssets="all"/>
         <PackageReference Include="Serilog.AspNetCore"/>
         <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI"/>
-        <PackageReference Include="Telegram.Bot"/>
     </ItemGroup>
 
     <ItemGroup>
