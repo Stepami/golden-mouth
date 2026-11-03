@@ -6,11 +6,15 @@ Telegram Mini App игры «Реки». Правила для агента и �
 
 В local Compose Vite-плагин читает общий `TG_PAT`, даёт `@tma.js/sdk` вымышленного игрока и свежий HMAC-подписанный `initData`. Compose передаёт тот же `TG_PAT` в настройку `TgMiniAppAuth` backend; отключения auth для development нет. Production build и nginx не включают эмулятор.
 
-Для локальной проверки браузерного Telegram Login JS через HTTPS укажи пути к доверенному сертификату и ключу PEM для `localhost`, а также публичный Telegram Client ID в локальном `public/runtime-config/config.js` (не коммить локальное значение). Зарегистрируй `https://localhost:5173` в Allowed URLs BotFather. Запусти backend отдельно, затем из `frontend/`:
+Для локальной проверки браузерного Telegram Login JS через HTTPS установи [mkcert по официальной инструкции](https://github.com/FiloSottile/mkcert#installation). Укажи публичный Telegram Client ID в локальном `public/runtime-config/config.js` (не коммить локальное значение) и зарегистрируй `https://localhost:5173` в Allowed URLs BotFather. Запусти backend отдельно, затем из `frontend/` в PowerShell:
 
 ```powershell
-$env:REKI_HTTPS_CERT_PATH = '<path-to-localhost-cert.pem>'
-$env:REKI_HTTPS_KEY_PATH = '<path-to-localhost-key.pem>'
+mkcert -install
+$localCertDir = Join-Path $env:LOCALAPPDATA 'Reki\dev-https'
+New-Item -ItemType Directory -Force -Path $localCertDir | Out-Null
+$env:REKI_HTTPS_CERT_PATH = Join-Path $localCertDir 'localhost.pem'
+$env:REKI_HTTPS_KEY_PATH = Join-Path $localCertDir 'localhost-key.pem'
+mkcert -cert-file $env:REKI_HTTPS_CERT_PATH -key-file $env:REKI_HTTPS_KEY_PATH localhost 127.0.0.1 ::1
 $env:REKI_BROWSER_LOGIN = '1'
 npm run dev
 ```
