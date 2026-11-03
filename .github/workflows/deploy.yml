@@ -62,8 +62,6 @@ jobs:
       COMPOSE_FILE: compose.yml:compose.production.yml
       REKI_VERSION: ${{ needs.validate-version.outputs.image-version }}
       TG_PAT: ${{ secrets.TG_PAT }}
-      AUTH_ISSUER: ${{ vars.AUTH_ISSUER }}
-      TELEGRAM_METADATA_PROXY_URL: ${{ vars.TELEGRAM_METADATA_PROXY_URL }}
       AUTH_SIGNING_KEY: ${{ secrets.AUTH_SIGNING_KEY }}
       AUTH_ENCRYPTION_KEY: ${{ secrets.AUTH_ENCRYPTION_KEY }}
       LLM_PAT: ${{ secrets.LLM_PAT }}

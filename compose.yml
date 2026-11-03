@@ -29,8 +29,8 @@ services:
       Mongo__ConnectionString: ${MONGO_CONNECTION_STRING:-mongodb://mongo:27017/?replicaSet=rs0}
       Mongo__DatabaseName: ${MONGO_DATABASE_NAME:-reki}
       TelegramMiniAppAuthorizationOptions__Token: ${TG_PAT:-}
-      Auth__Issuer: ${AUTH_ISSUER:?AUTH_ISSUER is required}
-      Auth__TelegramMetadataProxyUrl: ${TELEGRAM_METADATA_PROXY_URL:?TELEGRAM_METADATA_PROXY_URL is required}
+      Auth__Issuer: ${AUTH_ISSUER:-}
+      Auth__TelegramMetadataProxyUrl: ${TELEGRAM_METADATA_PROXY_URL:-}
       Auth__SigningKey: ${AUTH_SIGNING_KEY:?AUTH_SIGNING_KEY is required}
       Auth__EncryptionKey: ${AUTH_ENCRYPTION_KEY:?AUTH_ENCRYPTION_KEY is required}
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
