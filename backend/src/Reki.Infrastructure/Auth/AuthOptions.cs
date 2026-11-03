@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Reki.Api.Auth;
+namespace Reki.Infrastructure.Auth;
 
 public sealed class AuthOptions
 {

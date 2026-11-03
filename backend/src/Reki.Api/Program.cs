@@ -61,7 +61,6 @@ public partial class Program
             ConfigurePipeline(app);
             var migrator = app.Services.GetRequiredService<IMigrator>();
             await migrator.MigrateAsync();
-            await OpenIddictInitialization.InitializeAsync(app.Services);
         }
 
         MapApiDocumentation(app);

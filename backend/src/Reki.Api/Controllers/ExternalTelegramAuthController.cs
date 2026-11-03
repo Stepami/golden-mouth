@@ -8,6 +8,7 @@ using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using Reki.Api.Auth;
 using Reki.Api.Requests.Auth;
+using Reki.Infrastructure.Auth;
 using TgMiniAppAuth.AuthContext.User;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 

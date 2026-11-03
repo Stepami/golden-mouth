@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Validation.AspNetCore;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Api.Auth;
 
@@ -38,6 +39,8 @@ internal static class DependencyInjection
                 options.MetadataAddress = new Uri(
                     telegramProxyBase,
                     ".well-known/openid-configuration").ToString();
+
+                // Telegram discovery advertises Telegram's JWKS URL, so the backchannel must route that request via the Worker too.
                 options.BackchannelHttpHandler = new TelegramMetadataProxyHandler(telegramProxyBase);
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
