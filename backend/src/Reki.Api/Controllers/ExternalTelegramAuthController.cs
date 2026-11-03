@@ -14,7 +14,7 @@ namespace Reki.Api.Controllers;
 [ApiController]
 [Produces("application/json")]
 [Route("auth/external/tg")]
-public sealed class ExternalTelegramAuthController(AuthSessionService sessions) : ControllerBase
+public sealed class ExternalTelegramAuthController(IAuthSessionService sessions) : ControllerBase
 {
     private const string Scheme = OpenIddictServerAspNetCoreDefaults.AuthenticationScheme;
 

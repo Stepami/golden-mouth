@@ -14,7 +14,7 @@ internal static class DependencyInjection
         services.AddKeyedScoped<IExternalUserIdProvider, TgLoginUserIdProvider>(AuthConstants.Grants.TelegramLogin);
 
         services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.SectionName);
-        services.AddScoped<AuthSessionService>();
+        services.AddScoped<IAuthSessionService, AuthSessionService>();
         services.AddRedaction();
         services.AddDownstreamDependencyMetadata<TelegramBotTelemetry>();
         services.AddHttpClient<ITelegramBotClient, RekiTelegramBotClient>()

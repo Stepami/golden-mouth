@@ -13,7 +13,7 @@ namespace Reki.Api.Controllers;
 [ApiController]
 [Produces("application/json")]
 [Route("auth")]
-public sealed class AuthController(AuthSessionService sessions) : ControllerBase
+public sealed class AuthController(IAuthSessionService sessions) : ControllerBase
 {
     [Authorize(Policy = AuthConstants.Policies.RekiRefreshGrant)]
     [HttpPost("refresh", Name = "RefreshAuth")]
@@ -32,7 +32,7 @@ public sealed class AuthController(AuthSessionService sessions) : ControllerBase
     public async Task<Results<NoContent, BadRequest>> LogoutAsync(
         [FromForm] LogoutRequest request,
         CancellationToken cancellationToken) =>
-        await sessions.LogoutAsync(request, cancellationToken)
+        await sessions.LogoutAsync(request.RefreshToken, cancellationToken)
             ? TypedResults.NoContent()
             : TypedResults.BadRequest();
 

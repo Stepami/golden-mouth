@@ -3,7 +3,6 @@ using System.Security.Claims;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
-using Reki.Api.Requests.Auth;
 using Reki.Infrastructure.Auth;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -13,11 +12,13 @@ public sealed class AuthSessionService(
     IOpenIddictApplicationManager applications,
     IOpenIddictAuthorizationManager authorizations,
     IOpenIddictTokenManager tokens,
-    IOptions<AuthOptions> options)
+    IOptions<AuthOptions> options) : IAuthSessionService
 {
-    public async Task<bool> LogoutAsync(LogoutRequest request, CancellationToken cancellationToken)
+    public async Task<bool> LogoutAsync(
+        string refreshToken,
+        CancellationToken cancellationToken)
     {
-        var token = await tokens.FindByReferenceIdAsync(request.RefreshToken, cancellationToken);
+        var token = await tokens.FindByReferenceIdAsync(refreshToken, cancellationToken);
         if (token is null || !await tokens.HasTypeAsync(token, TokenTypeIdentifiers.RefreshToken, cancellationToken))
         {
             return false;
