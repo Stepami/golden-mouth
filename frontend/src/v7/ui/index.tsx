@@ -239,23 +239,27 @@ export function ResourceBadge({
 export function WorldCard({
   world,
   selected,
+  disabled = false,
   onClick,
 }: {
   world: World;
   selected?: boolean;
-  onClick: () => void;
+  disabled?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
+      type="button"
       className={`world-card ${selected ? "world-card--selected" : ""}`}
-      onClick={onClick}
-      aria-label={`Открыть мир ${world.title}`}
+      disabled={disabled}
+      onClick={disabled ? undefined : onClick}
+      aria-label={disabled ? `${world.title} — скоро` : `Открыть мир ${world.title}`}
     >
       <img className="world-cover" src={world.cover} alt="" />
       <span className="world-title">{world.title}</span>
       <span className="world-members">
-        <Icon name="member" />
-        {world.members || "Открыть мир"}
+        {!disabled && <Icon name="member" />}
+        {disabled ? "Скоро" : world.members || "Открыть мир"}
       </span>
     </button>
   );

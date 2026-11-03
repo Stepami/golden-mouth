@@ -8,6 +8,8 @@ import { pendingReferral, clearReferral } from '../app/referral';
 import { draftKey, readPostDraft, savePostDraft, completePostDraft } from '../app/postDraft';
 import { syncBackButton } from '../telegram';
 import { worldView, playerView, feedView, detailView, errorText, readLocal, saveLocal } from './backend';
+import { worlds as plannedWorlds } from './domain/worlds';
+import { catalogEntries, filterCatalog } from './catalog';
 import type { World, Person, Post, Approach } from './domain/types';
 import { Onboarding } from './screens/Onboarding';
 import { WorldIntro } from './screens/WorldIntro';
@@ -229,12 +231,13 @@ export default function BackendApp() {
   let content: ReactNode;
   if (booting) content = <EmptyState title="Открываем твои миры"><span className="spinner" /> Ещё немного…</EmptyState>;
   else if (screen === 'catalog' || screen === 'search') {
-    const filtered = templates.filter(w => (genre === 'Все' || w.genre === genre) && `${w.title} ${w.description}`.toLocaleLowerCase('ru').includes(query.toLocaleLowerCase('ru')));
+    const entries = catalogEntries(templates, plannedWorlds);
+    const filtered = filterCatalog(entries, query, genre);
     content = <><ScreenHeading title={screen === 'search' ? 'Найти свой мир' : 'Миры'} />
       {screen === 'search' && <div className="search-field"><TextField label="Название или тема" value={query} onChange={e => setQuery(e.target.value)} placeholder="Магия, приключения, общение…" /></div>}
       {screen === 'catalog' && owned.length > 0 && <section className="saved-worlds"><h2 className="section-title">Мои миры</h2>{owned.map(d => <ResumeWorld key={d.id} world={worldView(d)} subtitle={d.name} onClick={() => void openWorld(worldView(d))} />)}</section>}
-      <div className="filter-strip">{['Все', ...new Set(templates.map(w => w.genre))].map(g => <Chip key={g} selected={genre === g} onClick={() => setGenre(g)}>{g}</Chip>)}</div>
-      {filtered.length ? <div className="world-grid">{filtered.map(w => <WorldCard key={w.id} world={w} selected={selected?.id === w.id} onClick={() => void openWorld(w)} />)}</div> : <EmptyState title="Такого мира пока нет" action={<Button onClick={() => { setQuery(''); setGenre('Все'); if (!templates.length) void boot(); }}>Сбросить поиск</Button>}>Попробуй другое название или убери фильтр.</EmptyState>}
+      <div className="filter-strip">{['Все', ...new Set(entries.map(({ world }) => world.genre))].map(g => <Chip key={g} selected={genre === g} onClick={() => setGenre(g)}>{g}</Chip>)}</div>
+      {filtered.length ? <div className="world-grid">{filtered.map(({ key, world: w, available }) => <WorldCard key={key} world={w} disabled={!available} selected={available && selected?.id === w.id} onClick={available ? () => void openWorld(w) : undefined} />)}</div> : <EmptyState title="Такого мира пока нет" action={<Button onClick={() => { setQuery(''); setGenre('Все'); if (!templates.length) void boot(); }}>Сбросить поиск</Button>}>Попробуй другое название или убери фильтр.</EmptyState>}
       {player?.hitOwnWorldMilestone && <div className="section"><Button onClick={() => { setDefinition({ ...blankWorld(), name: player.name, avatar: player.handle, stars: [{ id: crypto.randomUUID(), name: '', role: '', about: '', voice: 'Живо и по делу', avatarSeed: 'guide', trait: 1, relation: 0 }] }); go('hero'); }}>Создать свой мир</Button></div>}
     </>;
   } else if (screen === 'intro' && selected) content = <WorldIntro world={selected} resume={owned.some(d => d.id === selected.id)} onBack={back} onEnter={() => void enter()} />;

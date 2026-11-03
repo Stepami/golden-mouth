@@ -245,11 +245,11 @@
     background var(--duration-normal),
     transform var(--duration-normal);
 }
-.world-card:hover,
+.world-card:not(:disabled):hover,
 .world-card--selected {
   background: var(--color-accent);
 }
-.world-card:active {
+.world-card:not(:disabled):active {
   transform: scale(0.985);
 }
 .world-cover {
@@ -260,8 +260,12 @@
   margin-bottom: 12px;
   transition: border-radius var(--duration-normal);
 }
-.world-card:hover .world-cover {
+.world-card:not(:disabled):hover .world-cover {
   border-radius: 32px;
+}
+.world-card:disabled {
+  cursor: default;
+  opacity: 1;
 }
 .world-title {
   font-size: 1.25rem;
