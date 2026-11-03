@@ -4,6 +4,8 @@ MVP backend scaffold for the Reki Telegram Mini App. The solution separates API 
 
 ## Run locally
 
+Before starting only MongoDB via Compose, set the required Compose environment variables listed under **Run in Docker** below. Compose interpolates the whole file even when only `mongo` is selected.
+
 ```powershell
 cd ..
 docker compose up --detach mongo
