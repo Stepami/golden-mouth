@@ -10,7 +10,7 @@ import { ageBand as ageBandOf } from '../app/ageBand';
 import { AgeEntry } from './screens/AgeEntry';
 import { rankCatalog } from './interests';
 import { worldArt } from '../app/worldArt';
-import { storyPilot, campaignFor, pilotDefinition, pilotBinding, boundCampaign, type PilotBinding, type PilotCampaign } from './story/pilot';
+import { storyForTemplate, storyForCampaign, campaignFor, pilotDefinition, pilotBinding, boundCampaign, type PilotBinding, type PilotCampaign } from './story/pilot';
 import { StoryDay } from './story/StoryDay';
 import { StoryBrief } from './story/StoryBrief';
 import { PublicationWaiting, PublicationResult, type PublicationReceipt } from './publication/PublicationCards';
@@ -120,7 +120,7 @@ export default function BackendApp() {
   const pilotFor = (doc: WorldDocument, playerId: string) => boundCampaign(doc, readLocal<PilotBinding | undefined>(`reki:v7:${playerId}:story:${doc.id}`, undefined));
   const storyView = (doc: WorldDocument, campaign?: PilotCampaign) => {
     const view = worldView(doc);
-    return campaign ? { ...view, cover: worldArt[storyPilot.templateId].cover, hero: worldArt[storyPilot.templateId].cover, goal: campaign.goal } : view;
+    return campaign ? { ...view, cover: worldArt[storyForCampaign(campaign!).templateId].cover, hero: worldArt[storyForCampaign(campaign!).templateId].cover, goal: campaign.goal } : view;
   };
   const ownedView = (doc: WorldDocument) => storyView(doc, player ? pilotFor(doc, player.id) : undefined);
   const installPlayer = (p: Player) => { setPlayer(p); const doc = worldDocumentOf(p.world); const campaign = pilotFor(doc, p.id); setActiveCampaign(campaign); setWorld(storyView(doc, campaign));
@@ -158,11 +158,12 @@ export default function BackendApp() {
   const startHero = (w: World) => {
     const def = worldDefinitionOf(w.id); setHeroBase(def); setDefinition(def); setHeroChoice(null); setPilotSelected(false); go('hero');
   };
-  const chooseHero = (star?: WorldDefinition['stars'][number]) => {
+  const chooseHero = (choice?: { id: string }) => {
     if (!definition || !heroBase) return;
-    setHeroChoice(star?.id ?? 'custom');
-    if (pilotSelected) { setDefinition(pilotDefinition(heroBase, star?.id ?? 'custom')); return; }
-    if (!star) { setDefinition(heroBase); return; }
+    setHeroChoice(choice?.id ?? 'custom');
+    if (pilotSelected) { setDefinition(pilotDefinition(heroBase, choice?.id ?? 'custom')); return; }
+    if (!choice) { setDefinition(heroBase); return; }
+    const star = heroBase.stars.find(star => star.id === choice.id); if (!star) return;
     setDefinition({ ...heroBase, name: star.name, avatar: star.avatarSeed, role: star.role,
       description: `${heroBase.description}\nПерсона игрока: ${star.name}. ${star.about}`.slice(0, 2000),
       stars: heroBase.stars.filter(value => value.id !== star.id) });
@@ -205,7 +206,7 @@ export default function BackendApp() {
         saveLocal(`reki:v7:${api.playerId()}:qualities`, qualities); saveLocal(`reki:v7:${api.playerId()}:entry-required`, false);
       }
       const created = await api.createWorld(definition);
-      const campaign = pilotSelected && heroChoice && definition.templateId === storyPilot.templateId ? campaignFor(heroChoice) : undefined;
+      const campaign = pilotSelected && heroChoice && storyForTemplate(definition.templateId) ? campaignFor(heroChoice, definition.templateId) : undefined;
       if (campaign && !saveLocal(`reki:v7:${created.id}:story:${created.worldInstanceId}`, pilotBinding(campaign))) setStorageError(true);
       const p = installPlayer(created); trackEvent('onboarding_step', { step: 'done', ok: true, world: p.world }); localSave('qualities', qualities);
       const own = await api.ownedWorlds(); installWorldContent(own); setOwned(own);
@@ -306,7 +307,7 @@ export default function BackendApp() {
     {player && <WorldProgress streak={player.streak} storyDay={activeCampaign ? 1 : undefined} onStreak={() => setOverlay('streak')} onBoosters={() => setOverlay('boosters')} />}
     {!reply && (pending || unknown || publicationFailed) && <PublicationWaiting pending={pending} unknown={unknown} text={draft} status={status} onStop={stopWaiting} onContinue={() => { if (unknown) publish(); else openCompose(); }} />}
     {receipt && receipt.worldId === player?.world && <PublicationResult receipt={receipt} onRead={() => void openThread(receipt.result.postId)} />}
-    {activeCampaign && <section className="section stack story-banner"><p className="caption muted">Сюжетная проба · День 1</p><strong>{storyPilot.scenario}</strong><Button variant="secondary" onClick={() => go('goals')}>Открыть первый день</Button></section>}
+    {activeCampaign && <section className="section stack story-banner"><p className="caption muted">Сюжетная проба · День 1</p><strong>{storyForCampaign(activeCampaign).scenario}</strong><Button variant="secondary" onClick={() => go('goals')}>Открыть первый день</Button></section>}
     {feedError && <div className="section"><Notice title="Не удалось обновить ленту" tone="error">{feedError}</Notice></div>}
     {!feed.length && !feedLoading && !feedError && <EmptyState title="Первое слово за тобой" action={<Button onClick={() => openCompose()}>Написать пост</Button>}>{world?.seedPost || 'Расскажи свою версию истории. Здесь появятся публикации и ответы.'}</EmptyState>}
     {feed.map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}
@@ -315,6 +316,7 @@ export default function BackendApp() {
   </>;
 
   const worldActivities = activitiesForWorld(activities, player?.world);
+  const selectedStory = storyForTemplate(definition?.templateId);
   let content: ReactNode;
   if (booting) content = <EmptyState title="Открываем твои миры"><span className="spinner" /> Ещё немного…</EmptyState>;
   else if (screen === 'catalog' || screen === 'search') {
@@ -334,9 +336,9 @@ export default function BackendApp() {
   else if (screen === 'onboarding') content = <Onboarding key="entry-interests" initialStep={1} initialQualities={qualities} onBack={back} onDone={completeInterests} />;
   else if (screen === 'hero' && definition && definition.templateId) content = <><ScreenHeading title="Твой профиль в мире" back={back} /><section className="section stack">
     {selected && <div className="hero-world"><img src={selected.hero} alt="" /><div className="hero-world-copy"><strong>{selected.title}</strong><p className="caption muted">{selected.description}</p></div></div>}
-    {definition.templateId === storyPilot.templateId && <section className="story-choice stack"><label className="hero-choice"><input type="checkbox" checked={pilotSelected} onChange={e => { setPilotSelected(e.target.checked); setHeroChoice(null); setDefinition(heroBase); }} /><span><strong>{storyPilot.scenario}</strong><small>Новая сюжетная проба</small></span></label>{pilotSelected && <><p>{storyPilot.premise}</p><p className="caption muted">Создаётся отдельный мир. Доступны завязка, публикации и разговоры первого дня. Зачёт и продолжение появятся позже.</p></>}</section>}
+    {selectedStory && <section className="story-choice stack"><label className="hero-choice"><input type="checkbox" checked={pilotSelected} onChange={e => { setPilotSelected(e.target.checked); setHeroChoice(null); setDefinition(heroBase); }} /><span><strong>{selectedStory.scenario}</strong><small>Новая сюжетная проба</small></span></label>{pilotSelected && <><p>{selectedStory.premise}</p><p className="caption muted">Создаётся отдельный мир. Доступны завязка, публикации и разговоры первого дня. Зачёт и продолжение появятся позже.</p></>}</section>}
     <fieldset className="hero-choices"><legend>Кем войдёшь в мир?</legend>
-      {(heroBase ?? definition).stars.map(star => <label key={star.id} className={`hero-choice${heroChoice === star.id ? ' is-selected' : ''}`}><input type="radio" name="hero" checked={heroChoice === star.id} onChange={() => chooseHero(star)} /><Avatar name={star.name} size="lg" /><span><strong>{star.name}</strong><small>{pilotSelected ? campaignFor(star.id)?.request.role ?? star.role : star.role}</small></span></label>)}
+      {(pilotSelected && selectedStory ? selectedStory.campaigns.filter(c => c.roleId !== 'own').map(c => ({ id: c.roleId, name: c.heroName, role: c.roleName })) : (heroBase ?? definition).stars).map(star => <label key={star.id} className={`hero-choice${heroChoice === star.id ? ' is-selected' : ''}`}><input type="radio" name="hero" checked={heroChoice === star.id} onChange={() => chooseHero(star)} /><Avatar name={star.name} size="lg" /><span><strong>{star.name}</strong><small>{pilotSelected ? campaignFor(star.id, definition.templateId)?.request.role ?? star.role : star.role}</small></span></label>)}
       <label className={`hero-choice${heroChoice === 'custom' ? ' is-selected' : ''}`}><input type="radio" name="hero" checked={heroChoice === 'custom'} onChange={() => chooseHero()} /><span className="hero-choice-custom" aria-hidden="true">✦</span><span><strong>Свой персонаж</strong><small>Выбрать имя и роль</small></span></label>
     </fieldset>
     {heroChoice === 'custom' && <div className="stack">
@@ -345,7 +347,7 @@ export default function BackendApp() {
       <TextField label="Кто ты в этом мире" maxLength={80} value={definition.role} onChange={e => setDefinition({ ...definition, role: e.target.value })} />
       <div className="hero-address"><p className="caption">Как обращаться</p><div className="row">{([['she', 'она'], ['he', 'он'], ['nick', 'по нику']] as const).map(([id, label]) => <Chip key={id} selected={address === id} onClick={() => setAddress(id)}>{label}</Chip>)}</div></div>
     </div>}
-    {pilotSelected && campaignFor(heroChoice) && <div className="stack"><h2>Твоя цель</h2><p>{campaignFor(heroChoice)!.goal}</p><p className="caption muted">Собеседники: {definition.stars.map(star => star.name).join(' · ')}</p></div>}
+    {pilotSelected && campaignFor(heroChoice, definition.templateId) && <div className="stack"><h2>Твоя цель</h2><p>{campaignFor(heroChoice, definition.templateId)!.goal}</p><p className="caption muted">Собеседники: {definition.stars.map(star => star.name).join(' · ')}</p></div>}
     <p className="caption muted">Дальше — завязка твоей истории.</p>
     <Button busy={busy} disabled={!heroChoice || !definition.stars.length || (heroChoice === 'custom' && (!definition.name.trim() || !definition.avatar.trim() || !definition.role.trim()))} onClick={() => void createWorld()}>{heroChoice ? `Войти как ${definition.name.trim() || '…'} →` : 'Выбери персонажа'}</Button></section></>;
   else if (screen === 'hero' && definition) content = <><ScreenHeading title="Свой мир" back={back} /><section className="section stack"><TextField label="Имя персонажа" maxLength={80} value={definition.name} onChange={e => setDefinition({ ...definition, name: e.target.value })} /><TextField label="Имя канала" maxLength={80} value={definition.avatar} onChange={e => setDefinition({ ...definition, avatar: e.target.value })} />

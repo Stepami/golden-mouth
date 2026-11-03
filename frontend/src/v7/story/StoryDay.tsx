@@ -1,14 +1,15 @@
 import { StoryBrief } from './StoryBrief';
 import { Button, Notice } from '../ui';
-import { storyPilot, type PilotCampaign } from './pilot';
+import { storyForCampaign, type PilotCampaign } from './pilot';
 
 export function StoryDay({ campaign, onWrite, onFeed }: {
   campaign: PilotCampaign;
   onWrite: (prompt: string) => void;
   onFeed: () => void;
 }) {
+  const story = storyForCampaign(campaign);
   return <>
-    <section className="section stack"><h2>{storyPilot.scenario}</h2><p>{storyPilot.premise}</p></section>
+    <section className="section stack"><h2>{story.scenario}</h2><p>{story.premise}</p></section>
     <StoryBrief goal={campaign.goal} />
     <section className="section stack story-day">
       <h2>День 1 · {campaign.day.title}</h2>
@@ -21,6 +22,7 @@ export function StoryDay({ campaign, onWrite, onFeed }: {
         <Button variant="secondary" onClick={() => onWrite(quest.prompt)}>Написать по теме</Button>
       </article>)}
       <Button variant="secondary" onClick={onFeed}>Посмотреть публикации и ответы</Button>
+      <details className="story-roadmap"><summary>Посмотреть сюжет на 7 дней</summary><div className="stack"><p className="caption muted">Авторский план продолжения. Дни 2–7 пока нельзя проходить: сюжетный зачёт ещё не подключён.</p>{campaign.days.slice(1).map(day => <article className="story-step stack" key={day.day}><h3>День {day.day} · {day.title}</h3>{day.quests.map(quest => <div className="stack" key={quest.id}><strong>{quest.title}</strong><p>{quest.prompt}</p><p className="caption muted">{quest.criterion}</p></div>)}</article>)}</div></details>
       <Button disabled>Продолжение истории — скоро</Button>
     </section>
   </>;
