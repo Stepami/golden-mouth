@@ -1,12 +1,15 @@
 using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using Reki.Api.Requests.Auth;
 using Reki.Infrastructure.Auth;
+using Telegram.Bot;
+using Telegram.Bot.Exceptions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Reki.Api.Auth;
@@ -15,7 +18,9 @@ public sealed class AuthSessionService(
     IOpenIddictApplicationManager applications,
     IOpenIddictAuthorizationManager authorizations,
     IOpenIddictTokenManager tokens,
-    IOptions<AuthOptions> options)
+    IOptions<AuthOptions> options,
+    ITelegramBotClient bot,
+    IMemoryCache cache)
 {
     public static async Task<ClaimsPrincipal?> RefreshAsync(
         HttpContext context,
@@ -28,6 +33,30 @@ public sealed class AuthSessionService(
 
         var result = await context.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         return result.Succeeded ? result.Principal : null;
+    }
+
+    public async Task<long?> GetTelegramClientIdAsync(CancellationToken cancellationToken)
+    {
+        if (cache.TryGetValue("telegram-client-id", out long cachedId))
+        {
+            return cachedId;
+        }
+
+        try
+        {
+            var me = await bot.GetMe(cancellationToken);
+            if (me.Id != bot.BotId)
+            {
+                return null;
+            }
+
+            cache.Set("telegram-client-id", me.Id);
+            return me.Id;
+        }
+        catch (RequestException)
+        {
+            return null;
+        }
     }
 
     public Task<ClaimsPrincipal?> ExchangeMiniAppAsync(

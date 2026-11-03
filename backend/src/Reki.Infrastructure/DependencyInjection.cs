@@ -54,7 +54,9 @@ public static class DependencyInjection
             .WithTracing(tracing => tracing
                 .AddSource(MongoTelemetry.ActivitySourceName, "Reki.GenAI", "TickerQ")
                 .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation())
+                .AddHttpClientInstrumentation(options =>
+                    options.FilterHttpRequestMessage = request =>
+                        request.RequestUri?.AbsolutePath.Contains("/bot", StringComparison.Ordinal) != true))
             .WithMetrics(metrics => metrics
                 .AddMeter("Reki.GenAI", "Reki.Product")
                 .AddAspNetCoreInstrumentation()

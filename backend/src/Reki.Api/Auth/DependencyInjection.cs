@@ -1,7 +1,9 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Validation.AspNetCore;
 using Reki.Infrastructure.Auth;
+using Telegram.Bot;
 
 namespace Reki.Api.Auth;
 
@@ -24,10 +26,19 @@ internal static class DependencyInjection
                 "Auth configuration is invalid.")
             .ValidateOnStart();
         services.AddScoped<AuthSessionService>();
+        services.AddMemoryCache();
 
         var auth = configuration.GetRequiredSection(AuthOptions.SectionName).Get<AuthOptions>()
             ?? throw new InvalidOperationException("Auth configuration is required.");
         var telegramProxyBase = new Uri(auth.TelegramMetadataProxyUrl);
+        var botApiProxyBase = new Uri(telegramProxyBase, "../api/");
+        var botToken = configuration["TelegramMiniAppAuthorizationOptions:Token"]
+            ?? throw new InvalidOperationException("Telegram bot token is required.");
+        var botOptions = new TelegramBotClientOptions(botToken, botApiProxyBase.ToString());
+        services.AddSingleton(botOptions);
+        services.AddSingleton<ITelegramBotClient>(_ => new TelegramBotClient(
+            botOptions,
+            new HttpClient(new TelegramBotApiProxyHandler(botApiProxyBase))));
 
         services.AddAuthentication(options =>
             {
@@ -45,7 +56,7 @@ internal static class DependencyInjection
                     ValidateIssuer = true,
                     ValidIssuer = "https://oauth.telegram.org",
                     ValidateAudience = true,
-                    ValidAudience = auth.TelegramClientId,
+                    ValidAudience = botOptions.BotId.ToString(CultureInfo.InvariantCulture),
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
                     ValidAlgorithms = [SecurityAlgorithms.RsaSha256],

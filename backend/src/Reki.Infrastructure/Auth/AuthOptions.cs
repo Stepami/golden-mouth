@@ -14,9 +14,6 @@ public sealed class AuthOptions
     public string ClientId { get; set; } = "reki-app";
 
     [Required]
-    public string TelegramClientId { get; set; } = string.Empty;
-
-    [Required]
     public string TelegramMetadataProxyUrl { get; set; } = string.Empty;
 
     [Required]

@@ -15,6 +15,17 @@ namespace Reki.Api.Controllers;
 [Route("auth/external/tg")]
 public sealed class ExternalTelegramAuthController(AuthSessionService sessions) : ControllerBase
 {
+    [AllowAnonymous]
+    [HttpGet("client-id", Name = "GetTelegramClientId")]
+    public async Task<Results<Ok<long>, ProblemHttpResult>> GetTelegramClientIdAsync(
+        CancellationToken cancellationToken)
+    {
+        var clientId = await sessions.GetTelegramClientIdAsync(cancellationToken);
+        return clientId is { } id
+            ? TypedResults.Ok(id)
+            : TypedResults.Problem("Telegram login is unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+
     [HttpPost("miniapp", Name = "ExchangeMiniApp")]
     [Authorize(AuthenticationSchemes = "TMiniApp", Policy = "TMiniApp")]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> ExchangeMiniAppAsync(

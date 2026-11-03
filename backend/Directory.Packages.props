@@ -40,6 +40,7 @@
         <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="$(SkiaVersion)"/>
         <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.3.1"/>
         <PackageVersion Include="TgMiniAppAuth" Version="0.0.8"/>
+        <PackageVersion Include="Telegram.Bot" Version="22.10.3.3"/>
         <PackageVersion Include="Vogen" Version="8.0.7"/>
         <!--OpenTelemetry-->
         <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OtelVersion)"/>
