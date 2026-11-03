@@ -217,6 +217,43 @@ export class ExternalTelegramAuthClient {
     /**
      * @return OK
      */
+    getTelegramClientId(signal?: AbortSignal): Promise<SwaggerResponse<number>> {
+        let url_ = this.baseUrl + "/auth/external/tg/client-id";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            signal,
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetTelegramClientId(_response);
+        });
+    }
+
+    protected processGetTelegramClientId(response: Response): Promise<SwaggerResponse<number>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as number;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<number>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return OK
+     */
     exchangeMiniApp(body: TokenExchangeRequest, signal?: AbortSignal): Promise<SwaggerResponse<AuthTokenResponse>> {
         let url_ = this.baseUrl + "/auth/external/tg/miniapp";
         url_ = url_.replace(/[?&]$/, "");
