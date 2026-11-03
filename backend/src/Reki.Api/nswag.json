@@ -43,7 +43,12 @@
       "className": "{controller}Client",
       "operationGenerationMode": "MultipleClientsFromOperationId",
       "includedOperationIds": [],
-      "excludedOperationIds": [],
+      "excludedOperationIds": [
+        "Auth_Refresh",
+        "Auth_Logout",
+        "ExternalTelegramAuth_ExchangeMiniApp",
+        "ExternalTelegramAuth_ExchangeTelegramLogin"
+      ],
       "additionalNamespaceUsages": [
         "PageResponseOfFeedItemResponse = Reki.Application.Responses.PageResponse<Reki.Application.Posts.Responses.FeedItem.FeedItemResponse>",
         "PageResponseOfChannelPostResponse = Reki.Application.Responses.PageResponse<Reki.Application.Posts.Responses.ChannelPost.ChannelPostResponse>",

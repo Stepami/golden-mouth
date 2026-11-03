@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization.Metadata;
-using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OpenApi;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
@@ -8,7 +8,6 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
-using TgMiniAppAuth;
 using Vogen;
 
 [assembly: VogenDefaults(openApiSchemaCustomizations: OpenApiSchemaCustomizations.GenerateOpenApiMappingExtensionMethod)]
@@ -40,9 +39,9 @@ internal static partial class DependencyInjection
             options.AddOperationTransformer<OperationMetadataTransformer>();
             options.AddDocumentTransformer<TelegramMiniAppSecurityTransformer>();
         });
-        services
-            .AddControllers(options => options.Filters.Add(
-                new AuthorizeFilter(TgMiniAppAuthConstants.AuthenticationScheme)));
+        services.AddAuthorizationBuilder().SetFallbackPolicy(
+            new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+        services.AddControllers();
         services.AddSerialization();
 
         return services;

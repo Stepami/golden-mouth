@@ -22,6 +22,18 @@ internal sealed class TelegramMiniAppSecurityTransformer : IOpenApiDocumentTrans
                 In = ParameterLocation.Header,
                 Description = "Enter TMiniApp followed by a space and the raw Telegram initData.",
             };
+        document.Components.SecuritySchemes["AppBearer"] = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+        };
+        document.Components.SecuritySchemes["TelegramLogin"] = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+        };
 
         var anonymousOperations = context.DescriptionGroups
             .SelectMany(group => group.Items)
@@ -38,9 +50,15 @@ internal sealed class TelegramMiniAppSecurityTransformer : IOpenApiDocumentTrans
             }
 
             operation.Security ??= [];
+            var scheme = operation.OperationId switch
+            {
+                "ExternalTelegramAuth_ExchangeMiniApp" => TgMiniAppAuthConstants.AuthenticationScheme,
+                "ExternalTelegramAuth_ExchangeTelegramLogin" => "TelegramLogin",
+                _ => "AppBearer",
+            };
             operation.Security.Add(new OpenApiSecurityRequirement
             {
-                [new OpenApiSecuritySchemeReference(TgMiniAppAuthConstants.AuthenticationScheme, document)] = [],
+                [new OpenApiSecuritySchemeReference(scheme, document)] = [],
             });
         }
 
