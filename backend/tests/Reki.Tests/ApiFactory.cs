@@ -56,11 +56,9 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Auth:ClientId", "reki-test-client");
         builder.UseSetting("Auth:SigningKey", Session.SigningKey);
         builder.UseSetting("Auth:EncryptionKey", Session.EncryptionKey);
-        builder.UseSetting("Auth:TelegramClientId", "reki-telegram-test");
-        builder.UseSetting("Auth:TelegramMetadataProxyUrl", TelegramMetadataProxyUrl ?? "https://example.invalid/");
+        builder.UseSetting("Auth:TelegramMetadataProxyUrl", TelegramMetadataProxyUrl ?? "https://example.invalid/oauth/");
         builder.UseSetting("Auth:AccessTokenMinutes", "15");
         builder.UseSetting("Auth:RefreshTokenDays", "30");
-        builder.UseSetting("Auth:PruneAfterDays", "30");
         builder.UseSetting("TelegramMiniAppAuthorizationOptions:Token", Session.TelegramBotToken);
         builder.ConfigureAppConfiguration((_, configuration) =>
         {

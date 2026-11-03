@@ -125,23 +125,51 @@ public sealed class AuthControllerTests(ApiFactory factory)
     }
 
     [Test]
+    public async Task TelegramClientId_Anonymous_ReturnsBotIdFromGetMeAsync()
+    {
+        // Arrange
+        using var worker = WireMockServer.Start();
+        worker.Given(Request.Create().WithPath(new WireMock.Matchers.RegexMatcher("^/api/bot[^/]+/getMe$")))
+            .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
+                .WithBody($$$"""{"ok":true,"result":{"id":{{{TestSessionFixture.TelegramBotId}}},"is_bot":true,"first_name":"Test"}}"""));
+        await using var productionFactory = new ApiFactory
+        {
+            Session = factory.Session,
+            UseProductionAuthentication = true,
+            TelegramMetadataProxyUrl = worker.Url + "/oauth/",
+        };
+        using var client = productionFactory.CreateClient();
+
+        // Act
+        var botId = await new ExternalTelegramAuthClient(client).GetTelegramClientIdAsync(CancellationToken.None);
+        var repeated = await new ExternalTelegramAuthClient(client).GetTelegramClientIdAsync(CancellationToken.None);
+
+        // Assert
+        await Assert.That(botId).IsEqualTo(TestSessionFixture.TelegramBotId);
+        await Assert.That(repeated).IsEqualTo(botId);
+        await Assert.That(worker.LogEntries.Count()).IsEqualTo(1);
+        await Assert.That(productionFactory.Services.GetFakeLogCollector().GetSnapshot()
+            .Any(log => log.Message.Contains(factory.Session.TelegramBotToken, StringComparison.Ordinal))).IsFalse();
+    }
+
+    [Test]
     public async Task TelegramLogin_ValidIdToken_OpensExistingProfileAsync()
     {
         // Arrange
         using var rsa = RSA.Create(2048);
         using var metadata = WireMockServer.Start();
         var key = rsa.ExportParameters(false);
-        metadata.Given(Request.Create().WithPath("/.well-known/openid-configuration").UsingGet())
+        metadata.Given(Request.Create().WithPath("/oauth/.well-known/openid-configuration").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
-                .WithBody($$"""{"issuer":"https://oauth.telegram.org","jwks_uri":"{{metadata.Url}}/.well-known/jwks.json"}"""));
-        metadata.Given(Request.Create().WithPath("/.well-known/jwks.json").UsingGet())
+                .WithBody($$"""{"issuer":"https://oauth.telegram.org","jwks_uri":"{{metadata.Url}}/oauth/.well-known/jwks.json"}"""));
+        metadata.Given(Request.Create().WithPath("/oauth/.well-known/jwks.json").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
                 .WithBody($$"""{"keys":[{"kty":"RSA","use":"sig","kid":"test-key","alg":"RS256","n":"{{Base64Url(key.Modulus ?? throw new InvalidOperationException("RSA modulus is missing."))}}","e":"{{Base64Url(key.Exponent ?? throw new InvalidOperationException("RSA exponent is missing."))}}"}]}"""));
         await using var productionFactory = new ApiFactory
         {
             Session = factory.Session,
             UseProductionAuthentication = true,
-            TelegramMetadataProxyUrl = metadata.Url + "/",
+            TelegramMetadataProxyUrl = metadata.Url + "/oauth/",
         };
         using var client = productionFactory.CreateClient();
         var exchange = new ExternalTelegramAuthClient(client);
