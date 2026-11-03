@@ -18,6 +18,8 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
 
     public bool UseProductionAuthentication { get; init; }
 
+    public bool UseProductionEnvironment { get; init; }
+
     public string? TelegramMetadataProxyUrl { get; init; }
 
     public double? FeedOpenProbability { get; init; }
@@ -35,7 +37,12 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Development");
+        builder.UseEnvironment(UseProductionEnvironment ? "Production" : "Development");
+        if (UseProductionEnvironment)
+        {
+            builder.UseSetting("ForwardedHeaders_Enabled", "true");
+        }
+
         builder.UseSetting("Jobs:ExecutionEnabled", "false");
         builder.UseSetting("Mongo:ConnectionString", MongoConnectionString);
         builder.UseSetting("Mongo:DatabaseName", DatabaseName);
@@ -44,7 +51,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Llm:Model", "gigachat3.5-432b-a28b");
         builder.UseSetting("Llm:Temperature", "0.25");
         builder.UseSetting("Llm:TimeoutSeconds", "1");
-        builder.UseSetting("Auth:Issuer", "http://localhost/");
+        builder.UseSetting("Auth:Issuer", UseProductionEnvironment ? "https://localhost/" : "http://localhost/");
         builder.UseSetting("Auth:Audience", "reki-test");
         builder.UseSetting("Auth:ClientId", "reki-test-client");
         builder.UseSetting("Auth:SigningKey", Session.SigningKey);

@@ -103,6 +103,28 @@ public sealed class AuthControllerTests(ApiFactory factory)
     }
 
     [Test]
+    public async Task MiniApp_ForwardedHttpsInProduction_IssuesTokensAsync()
+    {
+        // Arrange
+        await using var productionFactory = new ApiFactory
+        {
+            Session = factory.Session,
+            UseProductionAuthentication = true,
+            UseProductionEnvironment = true,
+        };
+        using var client = productionFactory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Forwarded-Proto", "https");
+        var exchange = new ExternalTelegramAuthClient(client);
+
+        // Act
+        var token = await ExchangeAsync(client, exchange, SignInitData(factory.Session.TelegramBotToken, 21004));
+
+        // Assert
+        await Assert.That(token.AccessToken).IsNotEmpty();
+        await Assert.That(token.RefreshToken).IsNotEmpty();
+    }
+
+    [Test]
     public async Task TelegramLogin_ValidIdToken_OpensExistingProfileAsync()
     {
         // Arrange
@@ -111,7 +133,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
         var key = rsa.ExportParameters(false);
         metadata.Given(Request.Create().WithPath("/.well-known/openid-configuration").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
-                .WithBody("""{"issuer":"https://oauth.telegram.org","jwks_uri":"https://oauth.telegram.org/.well-known/jwks.json"}"""));
+                .WithBody($$"""{"issuer":"https://oauth.telegram.org","jwks_uri":"{{metadata.Url}}/.well-known/jwks.json"}"""));
         metadata.Given(Request.Create().WithPath("/.well-known/jwks.json").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
                 .WithBody($$"""{"keys":[{"kty":"RSA","use":"sig","kid":"test-key","alg":"RS256","n":"{{Base64Url(key.Modulus ?? throw new InvalidOperationException("RSA modulus is missing."))}}","e":"{{Base64Url(key.Exponent ?? throw new InvalidOperationException("RSA exponent is missing."))}}"}]}"""));
