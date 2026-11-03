@@ -9,7 +9,7 @@ openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072
 openssl rand -base64 32
 ```
 
-В GitHub Actions Variables задай `AUTH_ISSUER` (публичный HTTPS issuer), `TELEGRAM_CLIENT_ID` (публичный ID Telegram Login JS) и `TELEGRAM_METADATA_PROXY_URL` (HTTPS base URL существующего Cloudflare Worker для metadata/JWKS). `TELEGRAM_CLIENT_ID` должен совпадать с `telegramClientId` в runtime config фронтенда; workflow подставляет его в config.js при деплое. В BotFather добавь production origin в Allowed URLs для Login JS. Для id_token flow Telegram Client Secret не требуется. `TG_PAT` остаётся секретом Mini App.
+В GitHub Actions Variables задай `AUTH_ISSUER` (публичный HTTPS issuer), `TELEGRAM_CLIENT_ID` (публичный ID Telegram Login JS) и `TELEGRAM_METADATA_PROXY_URL` (HTTPS base URL существующего Cloudflare Worker для metadata/JWKS, с завершающим `/`). Worker возвращает исходный `jwks_uri` Telegram, поэтому backend направляет и discovery, и JWKS через Worker в JWT backchannel. `TELEGRAM_CLIENT_ID` должен совпадать с `telegramClientId` в runtime config фронтенда; workflow подставляет его в config.js при деплое. В BotFather добавь production origin в Allowed URLs для Login JS. Для id_token flow Telegram Client Secret не требуется. `TG_PAT` остаётся секретом Mini App.
 
 Для локального backend задай те же `Auth__*` настройки через user secrets или environment. HTTP для token endpoint разрешён только в Development. В production forwarded HTTPS принимается от Docker network через `ForwardedHeaders__KnownNetwork` (по умолчанию `172.16.0.0/12`, при другой подсети переопредели).
 
