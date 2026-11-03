@@ -21,24 +21,21 @@ internal static class DependencyInjection
                 options =>
                 Uri.TryCreate(options.Issuer, UriKind.Absolute, out _) &&
                 Uri.TryCreate(options.TelegramMetadataProxyUrl, UriKind.Absolute, out _) &&
+                Uri.TryCreate(options.TelegramBotApiUrl, UriKind.Absolute, out _) &&
                 options.AccessTokenMinutes > 0 && options.RefreshTokenDays > 0 &&
                 IsValidKeys(options),
                 "Auth configuration is invalid.")
             .ValidateOnStart();
         services.AddScoped<AuthSessionService>();
-        services.AddMemoryCache();
 
         var auth = configuration.GetRequiredSection(AuthOptions.SectionName).Get<AuthOptions>()
             ?? throw new InvalidOperationException("Auth configuration is required.");
         var telegramProxyBase = new Uri(auth.TelegramMetadataProxyUrl);
-        var botApiProxyBase = new Uri(telegramProxyBase, "../api/");
         var botToken = configuration["TelegramMiniAppAuthorizationOptions:Token"]
             ?? throw new InvalidOperationException("Telegram bot token is required.");
-        var botOptions = new TelegramBotClientOptions(botToken, botApiProxyBase.ToString());
+        var botOptions = new TelegramBotClientOptions(botToken, auth.TelegramBotApiUrl);
         services.AddSingleton(botOptions);
-        services.AddSingleton<ITelegramBotClient>(_ => new TelegramBotClient(
-            botOptions,
-            new HttpClient(new TelegramBotApiProxyHandler(botApiProxyBase))));
+        services.AddSingleton<ITelegramBotClient>(_ => new TelegramBotClient(botOptions));
 
         services.AddAuthentication(options =>
             {

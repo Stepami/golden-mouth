@@ -48,9 +48,19 @@ public sealed class AuthControllerTests(ApiFactory factory)
         // Act
         using var playerHttp = productionFactory.CreateClient();
         var playerClient = new PlayerClient(playerHttp);
+        var anonymousGame = await Assert.ThrowsAsync<PlayerApiException>(() => playerClient.GetCurrentPlayerAsync(CancellationToken.None))
+            ?? throw new InvalidOperationException("Expected a protected player response.");
         playerHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", first.AccessToken);
         var me = await Assert.ThrowsAsync<PlayerApiException>(() => playerClient.GetCurrentPlayerAsync(CancellationToken.None))
             ?? throw new InvalidOperationException("Expected a missing profile response.");
+        var wrongRefreshRequest = new RefreshTokenRequest
+        {
+            ClientId = ClientId,
+            GrantType = MiniAppGrant,
+            RefreshToken = first.RefreshToken,
+        };
+        var wrongRefreshGrant = await Assert.ThrowsAsync<AuthApiException>(() => auth.RefreshAsync(
+            wrongRefreshRequest, CancellationToken.None)) ?? throw new InvalidOperationException("Expected a rejected refresh grant.");
         var refreshed = await auth.RefreshAsync(RefreshRequest(first.RefreshToken), CancellationToken.None);
         var logoutRequest = new LogoutRequest
         {
@@ -72,6 +82,8 @@ public sealed class AuthControllerTests(ApiFactory factory)
         await Assert.That(first.TokenType).IsEqualTo("Bearer");
         await Assert.That(first.ExpiresIn).IsGreaterThan(0);
         await Assert.That(me.StatusCode).IsEqualTo(404);
+        await Assert.That(anonymousGame.StatusCode).IsEqualTo(401);
+        await Assert.That(wrongRefreshGrant.StatusCode).IsEqualTo(401);
         await Assert.That(refreshed.AccessToken).IsNotEmpty();
         await Assert.That(refreshed.RefreshToken).IsNotEqualTo(first.RefreshToken);
         await Assert.That(issuedAccess.StatusCode).IsEqualTo(404);
@@ -97,9 +109,17 @@ public sealed class AuthControllerTests(ApiFactory factory)
         var rejected = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
             new ExternalTelegramAuthClient(client).ExchangeMiniAppAsync(MiniAppRequest(), CancellationToken.None))
             ?? throw new InvalidOperationException("Expected a rejected Mini App proof.");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "TMiniApp",
+            SignInitData(factory.Session.TelegramBotToken, 21002));
+        var wrongGrant = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
+            new ExternalTelegramAuthClient(client).ExchangeMiniAppAsync(
+                new TokenExchangeRequest { ClientId = ClientId, GrantType = "urn:reki:grant:telegram-login" }, CancellationToken.None))
+            ?? throw new InvalidOperationException("Expected a rejected Mini App grant.");
 
         // Assert
         await Assert.That(rejected.StatusCode).IsGreaterThanOrEqualTo(400);
+        await Assert.That(wrongGrant.StatusCode).IsEqualTo(403);
     }
 
     [Test]
@@ -125,30 +145,19 @@ public sealed class AuthControllerTests(ApiFactory factory)
     }
 
     [Test]
-    public async Task TelegramClientId_Anonymous_ReturnsBotIdFromGetMeAsync()
+    public async Task TelegramClientId_Anonymous_ReturnsSdkBotIdAsync()
     {
         // Arrange
-        using var worker = WireMockServer.Start();
-        worker.Given(Request.Create().WithPath(new WireMock.Matchers.RegexMatcher("^/api/bot[^/]+/getMe$")))
-            .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
-                .WithBody($$$"""{"ok":true,"result":{"id":{{{TestSessionFixture.TelegramBotId}}},"is_bot":true,"first_name":"Test"}}"""));
-        await using var productionFactory = new ApiFactory
-        {
-            Session = factory.Session,
-            UseProductionAuthentication = true,
-            TelegramMetadataProxyUrl = worker.Url + "/oauth/",
-        };
-        using var client = productionFactory.CreateClient();
+        using var client = factory.CreateClient();
 
         // Act
         var botId = await new ExternalTelegramAuthClient(client).GetTelegramClientIdAsync(CancellationToken.None);
-        var repeated = await new ExternalTelegramAuthClient(client).GetTelegramClientIdAsync(CancellationToken.None);
+        using var openApi = await client.GetAsync("/openapi/v1.json");
 
         // Assert
         await Assert.That(botId).IsEqualTo(TestSessionFixture.TelegramBotId);
-        await Assert.That(repeated).IsEqualTo(botId);
-        await Assert.That(worker.LogEntries.Count()).IsEqualTo(1);
-        await Assert.That(productionFactory.Services.GetFakeLogCollector().GetSnapshot()
+        await Assert.That(openApi.IsSuccessStatusCode).IsTrue();
+        await Assert.That(factory.Services.GetFakeLogCollector().GetSnapshot()
             .Any(log => log.Message.Contains(factory.Session.TelegramBotToken, StringComparison.Ordinal))).IsFalse();
     }
 
@@ -159,17 +168,17 @@ public sealed class AuthControllerTests(ApiFactory factory)
         using var rsa = RSA.Create(2048);
         using var metadata = WireMockServer.Start();
         var key = rsa.ExportParameters(false);
-        metadata.Given(Request.Create().WithPath("/oauth/.well-known/openid-configuration").UsingGet())
+        metadata.Given(Request.Create().WithPath("/.well-known/openid-configuration").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
-                .WithBody($$"""{"issuer":"https://oauth.telegram.org","jwks_uri":"{{metadata.Url}}/oauth/.well-known/jwks.json"}"""));
-        metadata.Given(Request.Create().WithPath("/oauth/.well-known/jwks.json").UsingGet())
+                .WithBody($$"""{"issuer":"https://oauth.telegram.org","jwks_uri":"{{metadata.Url}}/.well-known/jwks.json"}"""));
+        metadata.Given(Request.Create().WithPath("/.well-known/jwks.json").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
                 .WithBody($$"""{"keys":[{"kty":"RSA","use":"sig","kid":"test-key","alg":"RS256","n":"{{Base64Url(key.Modulus ?? throw new InvalidOperationException("RSA modulus is missing."))}}","e":"{{Base64Url(key.Exponent ?? throw new InvalidOperationException("RSA exponent is missing."))}}"}]}"""));
         await using var productionFactory = new ApiFactory
         {
             Session = factory.Session,
             UseProductionAuthentication = true,
-            TelegramMetadataProxyUrl = metadata.Url + "/oauth/",
+            TelegramMetadataProxyUrl = metadata.Url + "/",
         };
         using var client = productionFactory.CreateClient();
         var exchange = new ExternalTelegramAuthClient(client);
@@ -185,18 +194,27 @@ public sealed class AuthControllerTests(ApiFactory factory)
 
         // Act
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SignTelegramIdToken(rsa, 21003));
+        var rawTelegramGame = await Assert.ThrowsAsync<PlayerApiException>(() =>
+            new PlayerClient(client).GetCurrentPlayerAsync(CancellationToken.None))
+            ?? throw new InvalidOperationException("Expected a rejected Telegram identity token on game API.");
         var widgetRequest = new TokenExchangeRequest
         {
             ClientId = ClientId,
             GrantType = "urn:reki:grant:telegram-login",
         };
         var widget = await exchange.ExchangeTelegramLoginAsync(widgetRequest, CancellationToken.None);
+        var wrongGrant = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
+            exchange.ExchangeTelegramLoginAsync(
+                new TokenExchangeRequest { ClientId = ClientId, GrantType = MiniAppGrant }, CancellationToken.None))
+            ?? throw new InvalidOperationException("Expected a rejected Telegram Login grant.");
         using var widgetClient = productionFactory.CreateClient();
         widgetClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", widget.AccessToken);
         var current = await new PlayerClient(widgetClient).GetCurrentPlayerAsync(CancellationToken.None);
 
         // Assert
         await Assert.That(widget.TokenType).IsEqualTo("Bearer");
+        await Assert.That(rawTelegramGame.StatusCode).IsEqualTo(401);
+        await Assert.That(wrongGrant.StatusCode).IsEqualTo(403);
         await Assert.That(widget.RefreshToken).IsNotEmpty();
         await Assert.That(current.Id).IsEqualTo(player.Id);
     }

@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OpenApi;
+using OpenIddict.Validation.AspNetCore;
+using Reki.Api.Auth;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Domain.Events;
@@ -39,8 +41,17 @@ internal static partial class DependencyInjection
             options.AddOperationTransformer<OperationMetadataTransformer>();
             options.AddDocumentTransformer<TelegramMiniAppSecurityTransformer>();
         });
-        services.AddAuthorizationBuilder().SetFallbackPolicy(
-            new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+        services.AddAuthorizationBuilder()
+            .AddPolicy(AuthConstants.AppJwtPolicy, policy => policy
+                .AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
+                .RequireAuthenticatedUser())
+            .AddPolicy(AuthConstants.MiniAppGrantPolicy, policy =>
+                policy.Requirements.Add(new GrantTypeRequirement(AuthConstants.MiniAppGrant)))
+            .AddPolicy(AuthConstants.TelegramLoginGrantPolicy, policy =>
+                policy.Requirements.Add(new GrantTypeRequirement(AuthConstants.TelegramLoginGrant)))
+            .AddPolicy(AuthConstants.RefreshGrantPolicy, policy =>
+                policy.Requirements.Add(new GrantTypeRequirement(OpenIddict.Abstractions.OpenIddictConstants.GrantTypes.RefreshToken)));
+        services.AddSingleton<IAuthorizationHandler, GrantTypeAuthorizationHandler>();
         services.AddControllers();
         services.AddSerialization();
 

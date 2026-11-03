@@ -31,6 +31,7 @@ services:
       TelegramMiniAppAuthorizationOptions__Token: ${TG_PAT:-}
       Auth__Issuer: ${AUTH_ISSUER:-}
       Auth__TelegramMetadataProxyUrl: ${TELEGRAM_METADATA_PROXY_URL:-}
+      Auth__TelegramBotApiUrl: ${TELEGRAM_BOT_API_URL:-}
       Auth__SigningKey: ${AUTH_SIGNING_KEY:?AUTH_SIGNING_KEY is required}
       Auth__EncryptionKey: ${AUTH_ENCRYPTION_KEY:?AUTH_ENCRYPTION_KEY is required}
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"

@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
@@ -56,7 +57,8 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Auth:ClientId", "reki-test-client");
         builder.UseSetting("Auth:SigningKey", Session.SigningKey);
         builder.UseSetting("Auth:EncryptionKey", Session.EncryptionKey);
-        builder.UseSetting("Auth:TelegramMetadataProxyUrl", TelegramMetadataProxyUrl ?? "https://example.invalid/oauth/");
+        builder.UseSetting("Auth:TelegramMetadataProxyUrl", TelegramMetadataProxyUrl ?? "https://example.invalid/");
+        builder.UseSetting("Auth:TelegramBotApiUrl", "https://example.invalid/");
         builder.UseSetting("Auth:AccessTokenMinutes", "15");
         builder.UseSetting("Auth:RefreshTokenDays", "30");
         builder.UseSetting("TelegramMiniAppAuthorizationOptions:Token", Session.TelegramBotToken);
@@ -78,6 +80,10 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
                         options.DefaultChallengeScheme = FakeJwtBearerDefaults.AuthenticationScheme;
                     })
                     .AddFakeJwtBearer(options => options.BearerValueType = FakeJwtBearerBearerValueType.Jwt);
+                services.PostConfigure<AuthorizationOptions>(options =>
+                    options.AddPolicy("RekiAppJwt", new AuthorizationPolicyBuilder(FakeJwtBearerDefaults.AuthenticationScheme)
+                        .RequireAuthenticatedUser()
+                        .Build()));
             }
         });
         if (TelegramMetadataProxyUrl is not null)

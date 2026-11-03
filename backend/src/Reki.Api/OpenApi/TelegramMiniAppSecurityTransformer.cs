@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
+using Reki.Api.Auth;
 using TgMiniAppAuth;
 
 namespace Reki.Api.OpenApi;
@@ -35,27 +36,44 @@ internal sealed class TelegramMiniAppSecurityTransformer : IOpenApiDocumentTrans
             BearerFormat = "JWT",
         };
 
-        var anonymousOperations = context.DescriptionGroups
+        var endpointSecurity = context.DescriptionGroups
             .SelectMany(group => group.Items)
-            .Where(description => description.ActionDescriptor.EndpointMetadata.OfType<IAllowAnonymous>().Any())
-            .Select(description => description.ActionDescriptor.RouteValues)
-            .Select(values => $"{values["controller"]}_{values["action"]}")
-            .ToHashSet(StringComparer.Ordinal);
+            .ToDictionary(
+                description => $"{description.ActionDescriptor.RouteValues["controller"]}_{description.ActionDescriptor.RouteValues["action"]}",
+                description =>
+                {
+                    var metadata = description.ActionDescriptor.EndpointMetadata;
+                    if (metadata.OfType<IAllowAnonymous>().Any())
+                    {
+                        return string.Empty;
+                    }
+
+                    var authorization = metadata.OfType<IAuthorizeData>().ToArray();
+                    if (authorization.Any(item => item.Policy == AuthConstants.AppJwtPolicy))
+                    {
+                        return "AppBearer";
+                    }
+
+                    if (authorization.Any(item => item.AuthenticationSchemes == AuthConstants.TelegramLoginScheme))
+                    {
+                        return AuthConstants.TelegramLoginScheme;
+                    }
+
+                    return authorization.Any(item => item.AuthenticationSchemes == TgMiniAppAuthConstants.AuthenticationScheme)
+                        ? TgMiniAppAuthConstants.AuthenticationScheme
+                        : string.Empty;
+                },
+                StringComparer.Ordinal);
         foreach (var operation in document.Paths.Values.SelectMany(path =>
                      path.Operations?.Values.AsEnumerable() ?? Enumerable.Empty<OpenApiOperation>()))
         {
-            if (operation.OperationId is { } operationId && anonymousOperations.Contains(operationId))
+            if (operation.OperationId is not { } operationId ||
+                !endpointSecurity.TryGetValue(operationId, out var scheme) || scheme.Length == 0)
             {
                 continue;
             }
 
             operation.Security ??= [];
-            var scheme = operation.OperationId switch
-            {
-                "ExternalTelegramAuth_ExchangeMiniApp" => TgMiniAppAuthConstants.AuthenticationScheme,
-                "ExternalTelegramAuth_ExchangeTelegramLogin" => "TelegramLogin",
-                _ => "AppBearer",
-            };
             operation.Security.Add(new OpenApiSecurityRequirement
             {
                 [new OpenApiSecuritySchemeReference(scheme, document)] = [],

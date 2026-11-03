@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Server.AspNetCore;
 using Reki.Api.Auth;
 using Reki.Api.Requests.Auth;
+using Telegram.Bot;
 using TgMiniAppAuth.AuthContext.User;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -13,21 +14,17 @@ namespace Reki.Api.Controllers;
 [ApiController]
 [Produces("application/json")]
 [Route("auth/external/tg")]
-public sealed class ExternalTelegramAuthController(AuthSessionService sessions) : ControllerBase
+public sealed class ExternalTelegramAuthController(
+    AuthSessionService sessions,
+    ITelegramBotClient bot) : ControllerBase
 {
     [AllowAnonymous]
     [HttpGet("client-id", Name = "GetTelegramClientId")]
-    public async Task<Results<Ok<long>, ProblemHttpResult>> GetTelegramClientIdAsync(
-        CancellationToken cancellationToken)
-    {
-        var clientId = await sessions.GetTelegramClientIdAsync(cancellationToken);
-        return clientId is { } id
-            ? TypedResults.Ok(id)
-            : TypedResults.Problem("Telegram login is unavailable.", statusCode: StatusCodes.Status503ServiceUnavailable);
-    }
+    public Ok<long> GetTelegramClientId() => TypedResults.Ok(bot.BotId);
 
     [HttpPost("miniapp", Name = "ExchangeMiniApp")]
     [Authorize(AuthenticationSchemes = "TMiniApp", Policy = "TMiniApp")]
+    [Authorize(Policy = AuthConstants.MiniAppGrantPolicy)]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> ExchangeMiniAppAsync(
         [FromForm] TokenExchangeRequest request,
         [FromServices] ITelegramUserAccessor telegramUser,
@@ -39,6 +36,7 @@ public sealed class ExternalTelegramAuthController(AuthSessionService sessions) 
 
     [HttpPost("widget", Name = "ExchangeTelegramLogin")]
     [Authorize(AuthenticationSchemes = AuthConstants.TelegramLoginScheme)]
+    [Authorize(Policy = AuthConstants.TelegramLoginGrantPolicy)]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> ExchangeTelegramLoginAsync(
         [FromForm] TokenExchangeRequest request,
         CancellationToken cancellationToken)

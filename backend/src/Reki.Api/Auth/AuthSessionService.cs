@@ -1,15 +1,12 @@
 using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using Reki.Api.Requests.Auth;
 using Reki.Infrastructure.Auth;
-using Telegram.Bot;
-using Telegram.Bot.Exceptions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Reki.Api.Auth;
@@ -18,62 +15,25 @@ public sealed class AuthSessionService(
     IOpenIddictApplicationManager applications,
     IOpenIddictAuthorizationManager authorizations,
     IOpenIddictTokenManager tokens,
-    IOptions<AuthOptions> options,
-    ITelegramBotClient bot,
-    IMemoryCache cache)
+    IOptions<AuthOptions> options)
 {
-    public static async Task<ClaimsPrincipal?> RefreshAsync(
-        HttpContext context,
-        RefreshTokenRequest request)
+    public static async Task<ClaimsPrincipal?> RefreshAsync(HttpContext context)
     {
-        if (request.GrantType != GrantTypes.RefreshToken)
-        {
-            return null;
-        }
-
         var result = await context.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         return result.Succeeded ? result.Principal : null;
-    }
-
-    public async Task<long?> GetTelegramClientIdAsync(CancellationToken cancellationToken)
-    {
-        if (cache.TryGetValue("telegram-client-id", out long cachedId))
-        {
-            return cachedId;
-        }
-
-        try
-        {
-            var me = await bot.GetMe(cancellationToken);
-            if (me.Id != bot.BotId)
-            {
-                return null;
-            }
-
-            cache.Set("telegram-client-id", me.Id);
-            return me.Id;
-        }
-        catch (RequestException)
-        {
-            return null;
-        }
     }
 
     public Task<ClaimsPrincipal?> ExchangeMiniAppAsync(
         long telegramId,
         TokenExchangeRequest request,
-        CancellationToken cancellationToken) =>
-        request.GrantType == AuthConstants.MiniAppGrant
-            ? IssueAsync(telegramId, request.ClientId, cancellationToken)
-            : Task.FromResult<ClaimsPrincipal?>(null);
+        CancellationToken cancellationToken) => IssueAsync(telegramId, request.ClientId, cancellationToken);
 
     public Task<ClaimsPrincipal?> ExchangeWidgetAsync(
         ClaimsPrincipal user,
         TokenExchangeRequest request,
         CancellationToken cancellationToken)
     {
-        if (request.GrantType != AuthConstants.TelegramLoginGrant ||
-            !long.TryParse(user.FindFirstValue("id"), NumberStyles.None, CultureInfo.InvariantCulture, out var telegramId) ||
+        if (!long.TryParse(user.FindFirstValue("id"), NumberStyles.None, CultureInfo.InvariantCulture, out var telegramId) ||
             telegramId <= 0)
         {
             return Task.FromResult<ClaimsPrincipal?>(null);

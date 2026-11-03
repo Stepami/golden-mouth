@@ -17,6 +17,9 @@ public sealed class AuthOptions
     public string TelegramMetadataProxyUrl { get; set; } = string.Empty;
 
     [Required]
+    public string TelegramBotApiUrl { get; set; } = string.Empty;
+
+    [Required]
     public string SigningKey { get; set; } = string.Empty;
 
     [Required]

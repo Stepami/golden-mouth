@@ -14,13 +14,13 @@ namespace Reki.Api.Controllers;
 [Route("auth")]
 public sealed class AuthController(AuthSessionService sessions) : ControllerBase
 {
-    [AllowAnonymous]
+    [Authorize(Policy = AuthConstants.RefreshGrantPolicy)]
     [HttpPost("refresh", Name = "RefreshAuth")]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> RefreshAsync(
         [FromForm] RefreshTokenRequest form,
         CancellationToken cancellationToken)
     {
-        var principal = await AuthSessionService.RefreshAsync(HttpContext, form);
+        var principal = await AuthSessionService.RefreshAsync(HttpContext);
         return principal is null ? InvalidGrant() : TypedResults.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 

@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Reki.Api.Auth;
 using Reki.Api.Requests.Worlds;
 using Reki.Application.RekiContext;
 using Reki.Application.Worlds;
@@ -12,6 +13,7 @@ using Reki.Domain.Worlds;
 namespace Reki.Api.Controllers;
 
 [ApiController]
+[Authorize(Policy = AuthConstants.AppJwtPolicy)]
 [Produces("application/json")]
 [Route("worlds")]
 public sealed class WorldsController(
