@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { activitiesForWorld, markWorldActivitiesRead, type Activity } from './activity';
-import { submissionFor } from './submission';
+import { submissionFor, publicationError } from './submission';
 import { screenView, setExperiments, tap, event as trackEvent } from '../app/analytics';
 import { setScreen as setLogScreen } from '../app/log';
 import { api, ApiError } from '../api/client';
@@ -267,7 +267,7 @@ export default function BackendApp() {
     }, (state, reason) => {
       sending.current = false; setPending(false); setUnknown(state === 'unknown'); setPublicationFailed(state === 'failed');
       if (state === 'failed') { const latest = readPostDraft(k); savePostDraft(k, { text: latest.text, ownWords: latest.ownWords }); }
-      setError(state === 'unknown' ? 'Исход отправки пока неизвестен. Проверь статус — повторный пост не создаётся.' : reason ? 'Не получилось опубликовать: проверка содержания не пройдена. Текст сохранён.' : 'Не получилось опубликовать. Текст сохранён.');
+      setError(publicationError(state, reason));
     }, setStatus, command.ownWords, command.wantId, recovery);
   };
   const sendReply = async () => {

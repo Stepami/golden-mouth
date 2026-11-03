@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { submissionFor } from '../src/v7/submission.ts';
+import { submissionFor, publicationError } from '../src/v7/submission.ts';
 
 test('new publication does not submit retired quest selection', () => {
   const value = submissionFor({ text: 'before', ownWords: false, wantId: 'retired' }, 'new text', () => 'fresh');
@@ -19,4 +19,12 @@ test('unchanged prepared text keeps ownWords false; editing switches to own word
   const saved = { text: 'prepared', ownWords: false };
   assert.equal(submissionFor(saved, 'prepared', () => 'new').ownWords, false);
   assert.equal(submissionFor(saved, 'edited', () => 'new').ownWords, true);
+});
+
+test('technical and generated-response failures do not blame the player text', () => {
+  assert.match(publicationError('failed', { code: 'technical_failure' }), /реакцию персонажей/);
+  assert.match(publicationError('failed', { code: 'unsafe_generated_content' }), /безопасную реакцию/);
+  assert.match(publicationError('failed', { code: 'content_rejected' }), /не прошла проверку содержания/);
+  assert.doesNotMatch(publicationError('failed', { code: 'future_code' }), /проверку содержания/);
+  assert.match(publicationError('unknown', { code: 'content_rejected' }), /Исход отправки пока неизвестен/);
 });
