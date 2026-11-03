@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Server.AspNetCore;
 using Reki.Api.Auth;
 using Reki.Api.Requests.Auth;
+using Reki.Infrastructure.Auth;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Reki.Api.Controllers;
@@ -14,7 +15,7 @@ namespace Reki.Api.Controllers;
 [Route("auth")]
 public sealed class AuthController(AuthSessionService sessions) : ControllerBase
 {
-    [Authorize(Policy = AuthConstants.RefreshGrantPolicy)]
+    [Authorize(Policy = AuthConstants.Policies.RekiRefreshGrant)]
     [HttpPost("refresh", Name = "RefreshAuth")]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> RefreshAsync(
         [FromForm] RefreshTokenRequest form,

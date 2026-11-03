@@ -1,4 +1,5 @@
 using System.Net;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Tests;
 
@@ -46,7 +47,7 @@ public sealed class TestApiClient : IDisposable
     {
         _httpClient.SetFakeJwtBearerToken(new Dictionary<string, object>
         {
-            ["telegram_user_id"] = userId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            [AuthConstants.Claims.TelegramUserId] = userId.ToString(System.Globalization.CultureInfo.InvariantCulture),
         });
     }
 }

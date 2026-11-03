@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Server.AspNetCore;
 using Reki.Api.Auth;
 using Reki.Api.Requests.Auth;
+using Reki.Infrastructure.Auth;
 using Telegram.Bot;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -24,11 +25,11 @@ public sealed class ExternalTelegramAuthController(AuthSessionService sessions) 
         TypedResults.Ok(bot.BotId);
 
     [HttpPost("miniapp", Name = "ExchangeMiniApp")]
-    [Authorize(AuthenticationSchemes = "TMiniApp", Policy = "TMiniApp")]
-    [Authorize(Policy = AuthConstants.MiniAppGrantPolicy)]
+    [Authorize(AuthenticationSchemes = AuthConstants.Schemes.MiniApp, Policy = AuthConstants.Policies.MiniApp)]
+    [Authorize(Policy = AuthConstants.Policies.RekiMiniAppGrant)]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> ExchangeMiniAppAsync(
         [FromForm] TokenExchangeRequest request,
-        [FromKeyedServices(AuthConstants.MiniAppGrant)] IExternalUserIdProvider externalUserIdProvider,
+        [FromKeyedServices(AuthConstants.Grants.MiniApp)] IExternalUserIdProvider externalUserIdProvider,
         CancellationToken cancellationToken)
     {
         var principal = await sessions.IssueAsync(
@@ -41,11 +42,11 @@ public sealed class ExternalTelegramAuthController(AuthSessionService sessions) 
     }
 
     [HttpPost("widget", Name = "ExchangeTelegramLogin")]
-    [Authorize(AuthenticationSchemes = AuthConstants.TelegramLoginScheme)]
-    [Authorize(Policy = AuthConstants.TelegramLoginGrantPolicy)]
+    [Authorize(AuthenticationSchemes = AuthConstants.Schemes.TelegramLogin)]
+    [Authorize(Policy = AuthConstants.Policies.RekiTelegramLoginGrant)]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> ExchangeTelegramLoginAsync(
         [FromForm] TokenExchangeRequest request,
-        [FromKeyedServices(AuthConstants.TelegramLoginGrant)] IExternalUserIdProvider externalUserIdProvider,
+        [FromKeyedServices(AuthConstants.Grants.TelegramLogin)] IExternalUserIdProvider externalUserIdProvider,
         CancellationToken cancellationToken)
     {
         var principal = await sessions.IssueAsync(

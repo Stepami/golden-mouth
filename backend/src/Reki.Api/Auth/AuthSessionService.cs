@@ -58,8 +58,8 @@ public sealed class AuthSessionService(
         var subject = telegramId.Value.ToString(CultureInfo.InvariantCulture);
         var identity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType);
         identity.SetClaim(Claims.Subject, subject);
-        identity.SetClaim(AuthConstants.TelegramUserIdClaim, subject);
-        identity.SetDestinations(claim => claim.Type == AuthConstants.TelegramUserIdClaim
+        identity.SetClaim(AuthConstants.Claims.TelegramUserId, subject);
+        identity.SetDestinations(claim => claim.Type == AuthConstants.Claims.TelegramUserId
             ? [Destinations.AccessToken] : []);
 
         var principal = new ClaimsPrincipal(identity);

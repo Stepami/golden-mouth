@@ -8,6 +8,7 @@ using Reki.Application.RekiContext;
 using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Infrastructure.RekiContext;
 
@@ -44,7 +45,7 @@ internal sealed class LazyRekiContext : IRekiContext
     {
         get
         {
-            var id = _httpContextAccessor.HttpContext?.User.FindFirstValue("telegram_user_id");
+            var id = _httpContextAccessor.HttpContext?.User.FindFirstValue(AuthConstants.Claims.TelegramUserId);
             return TelegramUserId.From(long.Parse(
                 id ?? throw new InvalidOperationException("Telegram user claim is missing."),
                 System.Globalization.CultureInfo.InvariantCulture));

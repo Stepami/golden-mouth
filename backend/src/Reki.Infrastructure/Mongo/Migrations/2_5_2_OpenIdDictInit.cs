@@ -77,8 +77,8 @@ internal sealed class OpenIdDictInit(
                 {
                     Permissions.Endpoints.Token,
                     Permissions.GrantTypes.RefreshToken,
-                    Permissions.Prefixes.GrantType + "urn:reki:grant:telegram-mini-app",
-                    Permissions.Prefixes.GrantType + "urn:reki:grant:telegram-login",
+                    Permissions.Prefixes.GrantType + AuthConstants.Grants.MiniApp,
+                    Permissions.Prefixes.GrantType + AuthConstants.Grants.TelegramLogin,
                 },
             };
             await applications.CreateAsync(descriptor, cancellationToken);

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Reki.Api;
+using Reki.Infrastructure.Auth;
 using TUnit.AspNetCore;
 using WebMotions.Fake.Authentication.JwtBearer;
 
@@ -81,7 +82,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
                     })
                     .AddFakeJwtBearer(options => options.BearerValueType = FakeJwtBearerBearerValueType.Jwt);
                 services.PostConfigure<AuthorizationOptions>(options =>
-                    options.AddPolicy("RekiAppJwt", new AuthorizationPolicyBuilder(FakeJwtBearerDefaults.AuthenticationScheme)
+                    options.AddPolicy(AuthConstants.Policies.RekiAppJwt, new AuthorizationPolicyBuilder(FakeJwtBearerDefaults.AuthenticationScheme)
                         .RequireAuthenticatedUser()
                         .Build()));
             }
@@ -89,7 +90,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         if (TelegramMetadataProxyUrl is not null)
         {
             builder.ConfigureTestServices(services =>
-                services.Configure<JwtBearerOptions>("TelegramLogin", options => options.RequireHttpsMetadata = false));
+                services.Configure<JwtBearerOptions>(AuthConstants.Schemes.TelegramLogin, options => options.RequireHttpsMetadata = false));
         }
     }
 }

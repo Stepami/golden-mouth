@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
-using Reki.Api.Auth;
-using TgMiniAppAuth;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Api.OpenApi;
 
@@ -15,21 +14,21 @@ internal sealed class TelegramMiniAppSecurityTransformer : IOpenApiDocumentTrans
     {
         document.Components ??= new OpenApiComponents();
         document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
-        document.Components.SecuritySchemes[TgMiniAppAuthConstants.AuthenticationScheme] =
+        document.Components.SecuritySchemes[AuthConstants.Schemes.MiniApp] =
             new OpenApiSecurityScheme
             {
                 Type = SecuritySchemeType.ApiKey,
                 Name = "Authorization",
                 In = ParameterLocation.Header,
-                Description = "Enter TMiniApp followed by a space and the raw Telegram initData.",
+                Description = $"Enter {AuthConstants.Schemes.MiniApp} followed by a space and the raw Telegram initData.",
             };
-        document.Components.SecuritySchemes["AppBearer"] = new OpenApiSecurityScheme
+        document.Components.SecuritySchemes[AuthConstants.Schemes.AppBearer] = new OpenApiSecurityScheme
         {
             Type = SecuritySchemeType.Http,
             Scheme = "bearer",
             BearerFormat = "JWT",
         };
-        document.Components.SecuritySchemes["TelegramLogin"] = new OpenApiSecurityScheme
+        document.Components.SecuritySchemes[AuthConstants.Schemes.TelegramLogin] = new OpenApiSecurityScheme
         {
             Type = SecuritySchemeType.Http,
             Scheme = "bearer",
@@ -49,18 +48,18 @@ internal sealed class TelegramMiniAppSecurityTransformer : IOpenApiDocumentTrans
                     }
 
                     var authorization = metadata.OfType<IAuthorizeData>().ToArray();
-                    if (authorization.Any(item => item.Policy == AuthConstants.AppJwtPolicy))
+                    if (authorization.Any(item => item.Policy == AuthConstants.Policies.RekiAppJwt))
                     {
-                        return "AppBearer";
+                        return AuthConstants.Schemes.AppBearer;
                     }
 
-                    if (authorization.Any(item => item.AuthenticationSchemes == AuthConstants.TelegramLoginScheme))
+                    if (authorization.Any(item => item.AuthenticationSchemes == AuthConstants.Schemes.TelegramLogin))
                     {
-                        return AuthConstants.TelegramLoginScheme;
+                        return AuthConstants.Schemes.TelegramLogin;
                     }
 
-                    return authorization.Any(item => item.AuthenticationSchemes == TgMiniAppAuthConstants.AuthenticationScheme)
-                        ? TgMiniAppAuthConstants.AuthenticationScheme
+                    return authorization.Any(item => item.AuthenticationSchemes == AuthConstants.Schemes.MiniApp)
+                        ? AuthConstants.Schemes.MiniApp
                         : string.Empty;
                 },
                 StringComparer.Ordinal);

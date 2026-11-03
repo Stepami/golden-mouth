@@ -4,6 +4,7 @@ using System.Text;
 using Reki.Api.Requests.Auth;
 using Reki.Api.Requests.Player;
 using Reki.Domain.Player;
+using Reki.Infrastructure.Auth;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -16,7 +17,6 @@ namespace Reki.Tests.Api;
 public sealed class AuthControllerTests(ApiFactory factory)
 {
     private const string ClientId = "reki-test-client";
-    private const string MiniAppGrant = "urn:reki:grant:telegram-mini-app";
 
     [Test]
     public async Task MiniApp_CompleteSessionLifecycle_KeepsOtherSessionAsync()
@@ -56,7 +56,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
         var wrongRefreshRequest = new RefreshTokenRequest
         {
             ClientId = ClientId,
-            GrantType = MiniAppGrant,
+            GrantType = AuthConstants.Grants.MiniApp,
             RefreshToken = first.RefreshToken,
         };
         var wrongRefreshGrant = await Assert.ThrowsAsync<AuthApiException>(() => auth.RefreshAsync(
@@ -102,7 +102,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
         };
         using var client = productionFactory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "TMiniApp",
+            AuthConstants.Schemes.MiniApp,
             SignInitData(factory.Session.TelegramBotToken, 21002) + "tampered");
 
         // Act
@@ -110,11 +110,11 @@ public sealed class AuthControllerTests(ApiFactory factory)
             new ExternalTelegramAuthClient(client).ExchangeMiniAppAsync(MiniAppRequest(), CancellationToken.None))
             ?? throw new InvalidOperationException("Expected a rejected Mini App proof.");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "TMiniApp",
+            AuthConstants.Schemes.MiniApp,
             SignInitData(factory.Session.TelegramBotToken, 21002));
         var wrongGrant = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
             new ExternalTelegramAuthClient(client).ExchangeMiniAppAsync(
-                new TokenExchangeRequest { ClientId = ClientId, GrantType = "urn:reki:grant:telegram-login" }, CancellationToken.None))
+                new TokenExchangeRequest { ClientId = ClientId, GrantType = AuthConstants.Grants.TelegramLogin }, CancellationToken.None))
             ?? throw new InvalidOperationException("Expected a rejected Mini App grant.");
 
         // Assert
@@ -170,7 +170,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
         var key = rsa.ExportParameters(false);
         metadata.Given(Request.Create().WithPath("/.well-known/openid-configuration").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
-                .WithBody($$"""{"issuer":"https://oauth.telegram.org","jwks_uri":"{{metadata.Url}}/.well-known/jwks.json"}"""));
+                .WithBody($$"""{"issuer":"{{AuthConstants.Issuers.Telegram}}","jwks_uri":"{{metadata.Url}}/.well-known/jwks.json"}"""));
         metadata.Given(Request.Create().WithPath("/.well-known/jwks.json").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
                 .WithBody($$"""{"keys":[{"kty":"RSA","use":"sig","kid":"test-key","alg":"RS256","n":"{{Base64Url(key.Modulus ?? throw new InvalidOperationException("RSA modulus is missing."))}}","e":"{{Base64Url(key.Exponent ?? throw new InvalidOperationException("RSA exponent is missing."))}}"}]}"""));
@@ -200,12 +200,12 @@ public sealed class AuthControllerTests(ApiFactory factory)
         var widgetRequest = new TokenExchangeRequest
         {
             ClientId = ClientId,
-            GrantType = "urn:reki:grant:telegram-login",
+            GrantType = AuthConstants.Grants.TelegramLogin,
         };
         var widget = await exchange.ExchangeTelegramLoginAsync(widgetRequest, CancellationToken.None);
         var wrongGrant = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
             exchange.ExchangeTelegramLoginAsync(
-                new TokenExchangeRequest { ClientId = ClientId, GrantType = MiniAppGrant }, CancellationToken.None))
+                new TokenExchangeRequest { ClientId = ClientId, GrantType = AuthConstants.Grants.MiniApp }, CancellationToken.None))
             ?? throw new InvalidOperationException("Expected a rejected Telegram Login grant.");
         using var widgetClient = productionFactory.CreateClient();
         widgetClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", widget.AccessToken);
@@ -224,20 +224,20 @@ public sealed class AuthControllerTests(ApiFactory factory)
         ExternalTelegramAuthClient exchange,
         string initData)
     {
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("TMiniApp", initData);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(AuthConstants.Schemes.MiniApp, initData);
         return await exchange.ExchangeMiniAppAsync(MiniAppRequest(), CancellationToken.None);
     }
 
     private static TokenExchangeRequest MiniAppRequest() => new()
     {
         ClientId = ClientId,
-        GrantType = MiniAppGrant,
+        GrantType = AuthConstants.Grants.MiniApp,
     };
 
     private static RefreshTokenRequest RefreshRequest(string refreshToken) => new()
     {
         ClientId = ClientId,
-        GrantType = "refresh_token",
+        GrantType = AuthConstants.Grants.Refresh,
         RefreshToken = refreshToken,
     };
 
@@ -255,7 +255,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         const string header = """{"alg":"RS256","typ":"JWT","kid":"test-key"}""";
-        var payload = $$"""{"iss":"https://oauth.telegram.org","aud":"{{TestSessionFixture.TelegramBotId}}","iat":{{now}},"exp":{{now + 600}},"id":"{{userId}}"}""";
+        var payload = $$"""{"iss":"{{AuthConstants.Issuers.Telegram}}","aud":"{{TestSessionFixture.TelegramBotId}}","iat":{{now}},"exp":{{now + 600}},"id":"{{userId}}"}""";
         var data = $"{Base64Url(Encoding.UTF8.GetBytes(header))}.{Base64Url(Encoding.UTF8.GetBytes(payload))}";
         var signature = rsa.SignData(Encoding.ASCII.GetBytes(data), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         return $"{data}.{Base64Url(signature)}";

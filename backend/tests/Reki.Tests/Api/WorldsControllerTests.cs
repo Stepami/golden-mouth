@@ -6,6 +6,7 @@ using Reki.Api.Requests.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Tests.Api;
 
@@ -210,7 +211,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Act
         using var http = Factory.CreateClient();
-        http.SetFakeJwtBearerToken(new Dictionary<string, object> { ["telegram_user_id"] = "1018" });
+        http.SetFakeJwtBearerToken(new Dictionary<string, object> { [AuthConstants.Claims.TelegramUserId] = "1018" });
         using var response = await http.GetAsync("/feed");
 
         // Assert

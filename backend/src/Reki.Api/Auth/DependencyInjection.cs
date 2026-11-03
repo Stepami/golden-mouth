@@ -14,8 +14,8 @@ internal static class DependencyInjection
         IConfiguration configuration,
         IWebHostEnvironment environment)
     {
-        services.AddKeyedScoped<IExternalUserIdProvider, TgMiniAppUserIdProvider>(AuthConstants.MiniAppGrant);
-        services.AddKeyedScoped<IExternalUserIdProvider, TgLoginUserIdProvider>(AuthConstants.TelegramLoginGrant);
+        services.AddKeyedScoped<IExternalUserIdProvider, TgMiniAppUserIdProvider>(AuthConstants.Grants.MiniApp);
+        services.AddKeyedScoped<IExternalUserIdProvider, TgLoginUserIdProvider>(AuthConstants.Grants.TelegramLogin);
 
         services.AddOptions<AuthOptions>()
             .BindConfiguration(AuthOptions.SectionName)
@@ -45,7 +45,7 @@ internal static class DependencyInjection
                 options.DefaultAuthenticateScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
             })
-            .AddJwtBearer(AuthConstants.TelegramLoginScheme, options =>
+            .AddJwtBearer(AuthConstants.Schemes.TelegramLogin, options =>
             {
                 options.MapInboundClaims = false;
                 options.MetadataAddress = new Uri(
@@ -54,7 +54,7 @@ internal static class DependencyInjection
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
-                    ValidIssuer = "https://oauth.telegram.org",
+                    ValidIssuer = AuthConstants.Issuers.Telegram,
                     ValidateAudience = true,
                     ValidAudience = botOptions.BotId.ToString(CultureInfo.InvariantCulture),
                     ValidateLifetime = true,
@@ -74,8 +74,8 @@ internal static class DependencyInjection
             {
                 options.SetIssuer(auth.Issuer)
                     .SetTokenEndpointUris("auth/external/tg/miniapp", "auth/external/tg/widget", "auth/refresh")
-                    .AllowCustomFlow(AuthConstants.MiniAppGrant)
-                    .AllowCustomFlow(AuthConstants.TelegramLoginGrant)
+                    .AllowCustomFlow(AuthConstants.Grants.MiniApp)
+                    .AllowCustomFlow(AuthConstants.Grants.TelegramLogin)
                     .AllowRefreshTokenFlow()
                     .SetAccessTokenLifetime(TimeSpan.FromMinutes(auth.AccessTokenMinutes))
                     .SetRefreshTokenLifetime(TimeSpan.FromDays(auth.RefreshTokenDays))

@@ -2,17 +2,17 @@ using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Reki.Api.Auth;
 using Reki.Api.Requests.Telemetry;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Telemetry.ClientLogBatch;
 using Reki.Application.RekiContext;
 using Reki.Domain.Telemetry;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Api.Controllers;
 
 [ApiController]
-[Authorize(Policy = AuthConstants.AppJwtPolicy)]
+[Authorize(Policy = AuthConstants.Policies.RekiAppJwt)]
 [Produces("application/json")]
 [Route("/")]
 public sealed partial class TelemetryController(

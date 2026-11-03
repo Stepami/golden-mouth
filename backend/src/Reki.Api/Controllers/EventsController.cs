@@ -3,18 +3,18 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Reki.Api.Auth;
 using Reki.Api.Requests.Events;
 using Reki.Application.Events;
 using Reki.Application.Events.GetTodayEvent;
 using Reki.Application.Events.Responses;
 using Reki.Domain.Events;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Api.Controllers;
 
 [ApiController]
-[Authorize(Policy = AuthConstants.AppJwtPolicy)]
+[Authorize(Policy = AuthConstants.Policies.RekiAppJwt)]
 [Produces("application/json")]
 [Route("events")]
 public sealed class EventsController(

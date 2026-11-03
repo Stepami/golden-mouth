@@ -20,6 +20,7 @@ using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Tests.Api;
 
@@ -34,7 +35,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         await using var observedFactory = new ApiFactory { Session = Factory.Session };
         using var client = observedFactory.CreateClient();
-        client.SetFakeJwtBearerToken(new Dictionary<string, object> { ["telegram_user_id"] = "18301" });
+        client.SetFakeJwtBearerToken(new Dictionary<string, object> { [AuthConstants.Claims.TelegramUserId] = "18301" });
         var collector = observedFactory.Services.GetFakeLogCollector();
         collector.Clear();
         var activities = new ConcurrentQueue<Activity>();

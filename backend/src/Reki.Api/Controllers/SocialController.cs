@@ -2,17 +2,17 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Reki.Api.Auth;
 using Reki.Api.Requests.Social;
 using Reki.Application.Social.Responses;
 using Reki.Application.Social.Responses.Challenge;
 using Reki.Application.Social.Responses.Dm;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Api.Controllers;
 
 [ApiController]
-[Authorize(Policy = AuthConstants.AppJwtPolicy)]
+[Authorize(Policy = AuthConstants.Policies.RekiAppJwt)]
 [Produces("application/json")]
 [Route("/")]
 public sealed class SocialController : ControllerBase

@@ -9,8 +9,8 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Auth;
 using Vogen;
-using static OpenIddict.Abstractions.OpenIddictConstants;
 
 [assembly: VogenDefaults(openApiSchemaCustomizations: OpenApiSchemaCustomizations.GenerateOpenApiMappingExtensionMethod)]
 
@@ -45,20 +45,20 @@ internal static class DependencyInjection
         services
             .AddAuthorizationBuilder()
             .AddPolicy(
-                AuthConstants.AppJwtPolicy,
+                AuthConstants.Policies.RekiAppJwt,
                 policy =>
                     policy
                         .AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
                         .RequireAuthenticatedUser())
             .AddPolicy(
-                AuthConstants.MiniAppGrantPolicy,
-                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.MiniAppGrant)))
+                AuthConstants.Policies.RekiMiniAppGrant,
+                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.MiniApp)))
             .AddPolicy(
-                AuthConstants.TelegramLoginGrantPolicy,
-                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.TelegramLoginGrant)))
+                AuthConstants.Policies.RekiTelegramLoginGrant,
+                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.TelegramLogin)))
             .AddPolicy(
-                AuthConstants.RefreshGrantPolicy,
-                policy => policy.RequireAssertion(context => context.HasGrant(GrantTypes.RefreshToken)));
+                AuthConstants.Policies.RekiRefreshGrant,
+                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.Refresh)));
         services.AddControllers();
         services.AddSerialization();
 
