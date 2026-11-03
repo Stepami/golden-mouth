@@ -85,6 +85,7 @@ public partial class Program
     {
         builder.Host.UseSerilog(
             ConfigureLogger,
+            preserveStaticLogger: true,
             writeToProviders: true);
     }
 
