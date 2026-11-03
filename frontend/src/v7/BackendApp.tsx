@@ -350,20 +350,20 @@ export default function BackendApp() {
   else if (screen === 'welcome') content = <Onboarding key="entry-welcome" initialStep={0} onTry={() => go('age')} onDone={() => go('age')} onBack={back} />;
   else if (screen === 'age') content = <AgeEntry initialAge={entryAge} minimumAge={14} requireConsent={true} onBack={value => { setEntryAge(value); back(); }} onContinue={continueAge} />;
   else if (screen === 'onboarding') content = <Onboarding key="entry-interests" initialStep={1} initialQualities={qualities} onBack={back} onDone={completeInterests} />;
-  else if (screen === 'hero' && definition && definition.templateId) content = <><ScreenHeading title="Твой профиль в мире" back={back} /><section className="section stack">
-    {selected && <div className="hero-world"><img src={selected.hero} alt="" /><div className="hero-world-copy"><strong>{selected.title}</strong><p className="caption muted">{selected.description}</p></div></div>}
-    <HeroPicker options={heroOptions} selected={heroChoice} onChoose={id => chooseHero(id === 'custom' ? undefined : { id })} cover={selected?.hero ?? ''} worldId={definition.templateId} style={definition.avatarStyle} seed={heroSeed || definition.avatar} customAvatar={heroAvatar} removed={avatarRemoved} skills={heroSkills} goal={heroGoal} />
-    {heroChoice === 'custom' && <div className="stack">
+  else if (screen === 'hero' && definition && definition.templateId) content = <><ScreenHeading title="Твой персонаж" back={back} /><section className="section hero-editor">
+    {selected && <div className="hero-world"><img src={selected.hero} alt="" /><div className="hero-world-copy"><strong>{selected.title}</strong><p className="caption muted">Новая история</p></div></div>}
+    <HeroPicker options={heroOptions} selected={heroChoice} onChoose={id => chooseHero(id === 'custom' ? undefined : { id })} worldId={definition.templateId} style={definition.avatarStyle} seed={heroSeed || definition.avatar} customAvatar={heroAvatar} removed={avatarRemoved} skills={heroSkills} goal={heroGoal} />
+    {heroChoice === 'custom' && <div className="persona-form"><section className="persona-block persona-identity"><div className="persona-section-title"><h2>Создай своего героя</h2></div>
       <TextField label="Имя персонажа" maxLength={80} value={definition.name} onChange={e => setDefinition({ ...definition, name: e.target.value })} />
       <TextField label="Имя канала" maxLength={80} value={definition.avatar} onChange={e => setDefinition({ ...definition, avatar: e.target.value })} />
       <TextField label="Твоя цель в истории" maxLength={500} value={heroGoal} onChange={e => setHeroGoal(e.target.value)} placeholder="Моя миссия — спасти Хогвартс" />
-      <SkillPicker selected={heroSkills} onChange={setHeroSkills} />
+      </section><SkillPicker selected={heroSkills} onChange={setHeroSkills} />
       <AvatarEditor onGenerate={() => { setHeroSeed(crypto.randomUUID()); setHeroAvatar(undefined); setAvatarRemoved(false); }} onUpload={src => { setHeroAvatar(src); setAvatarRemoved(false); }} onRemove={() => { setHeroAvatar(undefined); setAvatarRemoved(true); }} />
-      <div className="hero-address"><p className="caption">Как обращаться</p><div className="row">{([['she', 'она'], ['he', 'он'], ['nick', 'по нику']] as const).map(([id, label]) => <Chip key={id} selected={address === id} onClick={() => setAddress(id)}>{label}</Chip>)}</div></div>
+      <div className="hero-address persona-block"><p className="caption">Как обращаться</p><div className="row">{([['she', 'она'], ['he', 'он'], ['nick', 'по нику']] as const).map(([id, label]) => <Chip key={id} selected={address === id} onClick={() => setAddress(id)}>{label}</Chip>)}</div></div>
     </div>}
-    {pilotSelected && campaignFor(heroChoice, definition.templateId) && <div className="stack"><p className="caption muted">Собеседники: {definition.stars.map(star => star.name).join(' · ')}</p></div>}
-    <p className="caption muted">Дальше — завязка твоей истории.</p>
-    <Button busy={busy} disabled={!heroChoice || !definition.stars.length || (heroChoice === 'custom' && (!definition.name.trim() || !definition.avatar.trim() || !heroGoal.trim() || heroSkills.length !== 3))} onClick={() => void createWorld()}>{heroChoice ? `Войти как ${definition.name.trim() || '…'} →` : 'Выбери персонажа'}</Button></section></>;
+    {pilotSelected && campaignFor(heroChoice, definition.templateId) && <div className="hero-cast"><p className="caption muted">Собеседники: {definition.stars.map(star => star.name).join(' · ')}</p></div>}
+    <div className="hero-entry-actions"><p className="caption muted">Дальше — первый день твоей истории</p>
+    <Button busy={busy} disabled={!heroChoice || !definition.stars.length || (heroChoice === 'custom' && (!definition.name.trim() || !definition.avatar.trim() || !heroGoal.trim() || heroSkills.length !== 3))} onClick={() => void createWorld()}>{heroChoice ? `Войти как ${definition.name.trim() || '…'} →` : 'Выбери персонажа'}</Button></div></section></>;
   else if (screen === 'hero' && definition) content = <><ScreenHeading title="Свой мир" back={back} /><section className="section stack"><TextField label="Имя персонажа" maxLength={80} value={definition.name} onChange={e => setDefinition({ ...definition, name: e.target.value })} /><TextField label="Имя канала" maxLength={80} value={definition.avatar} onChange={e => setDefinition({ ...definition, avatar: e.target.value })} />
     <label>Как обращаться<select value={address} onChange={e => setAddress(e.target.value as Address)}><option value="nick">По имени</option><option value="she">Она</option><option value="he">Он</option></select></label>
     <TextField label="Кто ты в этом мире" value={definition.role} maxLength={80} onChange={e => setDefinition({ ...definition, role: e.target.value })} />
