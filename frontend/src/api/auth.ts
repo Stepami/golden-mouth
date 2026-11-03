@@ -7,6 +7,7 @@ let initDataRaw = ''
 let accessToken = ''
 let refreshRequest: Promise<boolean> | undefined
 let startupRequest: Promise<boolean> | undefined
+let telegramClientIdRequest: Promise<number> | undefined
 let explicitlyLoggedOut = sessionStorage.getItem(loggedOutKey) === '1'
 const listeners = new Set<() => void>()
 
@@ -21,6 +22,13 @@ export function subscribeAuth(listener: () => void): () => void {
   return () => { listeners.delete(listener) }
 }
 const notify = () => { for (const listener of listeners) listener() }
+
+export function loadTelegramClientId(): Promise<number> {
+  return telegramClientIdRequest ??= fetch(`${baseUrl}/auth/external/tg/client-id`, { cache: 'no-store' }).then(async response => {
+    if (!response.ok) throw new Error(`Telegram client ID unavailable (${response.status})`)
+    return response.json() as Promise<number>
+  })
+}
 
 function storedRefresh(): string | null {
   try { return localStorage.getItem(refreshKey) } catch { return null }
