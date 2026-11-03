@@ -123,6 +123,7 @@
   overflow: hidden;
   flex-shrink: 0;
   font-weight: 600;
+  font-size: min(1rem, 16px);
 }
 .avatar img {
   width: 100%;
@@ -132,17 +133,17 @@
 .avatar--sm {
   width: 32px;
   height: 32px;
-  font-size: 0.8125rem;
+  font-size: min(0.8125rem, 13px);
 }
 .avatar--lg {
   width: 56px;
   height: 56px;
-  font-size: 1.25rem;
+  font-size: min(1.25rem, 20px);
 }
 .avatar--xl {
   width: 80px;
   height: 80px;
-  font-size: 1.625rem;
+  font-size: min(1.625rem, 26px);
 }
 .progress {
   height: 6px;
@@ -478,7 +479,8 @@
   box-shadow: var(--shadow-overlay);
   color: var(--color-ink);
   background: var(--color-paper);
-  animation: sheet-in var(--duration-normal) var(--ease-out);
+  /* Keep modal content visible immediately, including in WebKit. */
+  animation: none;
 }
 .dialog::backdrop {
   background: #17191855;
@@ -874,3 +876,6 @@ html[data-large-text="true"] .character-score {
 }
 
 .account-signout { padding-top: 24px; }
+
+/* Long headings must reflow at the supported 200% text size. */
+.display, .title { overflow-wrap: anywhere; }

@@ -403,8 +403,20 @@ export function BottomNav({
   active: string;
   onChange: (id: string) => void;
 }) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = ref.current;
+    const app = nav?.closest<HTMLElement>(".app");
+    if (!nav || !app) return;
+    const measure = () => app.style.setProperty("--rendered-nav-height", `${nav.getBoundingClientRect().height}px`);
+    measure();
+    const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(measure);
+    observer?.observe(nav);
+    window.addEventListener("resize", measure);
+    return () => { observer?.disconnect(); window.removeEventListener("resize", measure); app.style.removeProperty("--rendered-nav-height"); };
+  }, []);
   return (
-    <nav className="bottom-nav" aria-label="Основная навигация">
+    <nav ref={ref} className="bottom-nav" aria-label="Основная навигация">
       {items.map((item) => (
         <button
           key={item.id}
@@ -584,7 +596,7 @@ export function ProfileScore({
         <span>Счёт</span>
         <div>
           <b>{score ?? "—"}</b>
-          <span>/100</span>
+          {score !== null && <span>/100</span>}
         </div>
       </div>
       <div className="character-skills">
@@ -636,7 +648,7 @@ export function SettingsRow({
   onClick: () => void;
 }) {
   return (
-    <button className="settings-row" onClick={onClick}>
+    <button className="settings-row" onClick={event => { event.currentTarget.focus({ preventScroll: true }); onClick(); }}>
       <span className="grow">
         <strong>{label}</strong>
         {value && <span className="caption muted block">{value}</span>}
@@ -650,7 +662,7 @@ export function SettingsRow({
 export function NominalSignOut() {
   const [open, setOpen] = useState(false);
   return <div className="account-signout">
-    <Button variant="secondary" className="full" onClick={() => setOpen(true)}>Выйти из аккаунта</Button>
+    <Button variant="secondary" className="full" onClick={event => { event.currentTarget.focus({ preventScroll: true }); setOpen(true); }}>Выйти из аккаунта</Button>
     {open && <Dialog title="Выход из аккаунта" onClose={() => setOpen(false)}>
       <p>Выход пока недоступен. Аккаунт остаётся подключённым.</p>
       <Button className="full" onClick={() => setOpen(false)}>Понятно</Button>

@@ -715,7 +715,7 @@
 }
 .result-toast {
   position: absolute;
-  bottom: calc(88px + var(--safe-bottom));
+  bottom: calc(var(--rendered-nav-height, calc(var(--nav-height) + var(--safe-bottom))) + 12px);
   left: 16px;
   right: 16px;
   background: var(--color-ink);
@@ -728,7 +728,9 @@
   text-align: left;
   box-shadow: var(--shadow-overlay);
   z-index: 6;
-  animation: sheet-in var(--duration-normal) var(--ease-out);
+  animation: none;
+  max-height: calc(100% - var(--rendered-nav-height, var(--nav-height)) - 24px);
+  overflow: auto;
 }
 .toast-check {
   border-radius: 50%;
