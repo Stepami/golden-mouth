@@ -43,6 +43,7 @@
       "className": "{controller}Client",
       "operationGenerationMode": "MultipleClientsFromOperationId",
       "includedOperationIds": [],
+      "excludedOperationIds": [],
       "additionalNamespaceUsages": [
         "PageResponseOfFeedItemResponse = Reki.Application.Responses.PageResponse<Reki.Application.Posts.Responses.FeedItem.FeedItemResponse>",
         "PageResponseOfChannelPostResponse = Reki.Application.Responses.PageResponse<Reki.Application.Posts.Responses.ChannelPost.ChannelPostResponse>",
