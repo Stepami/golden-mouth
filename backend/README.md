@@ -10,13 +10,16 @@ Before starting only MongoDB via Compose, set the required Compose environment v
 cd ..
 docker compose up --detach mongo
 cd backend
+$env:ASPNETCORE_ENVIRONMENT = 'Development'
+$env:ASPNETCORE_URLS = 'http://127.0.0.1:8081'
+$env:Auth__Issuer = 'https://localhost:5173/'
 $env:TelegramMiniAppAuthorizationOptions__Token = '<telegram bot token>'
 dotnet tool restore
 dotnet restore Reki.slnx
 dotnet run --project src/Reki.Api/Reki.Api.csproj
 ```
 
-Development uses MongoDB for game data. Before starting the API, set `Auth__Issuer`, `Auth__TelegramClientId`, `Auth__TelegramMetadataProxyUrl`, `Auth__SigningKey` (RSA PEM), and `Auth__EncryptionKey` (32 random bytes in Base64) through environment or user secrets. See [deployment key setup](../docs/deployment.md#ключи-и-настройки-входа-123). Mini App exchanges signed `Authorization: TMiniApp <initData raw>` for app tokens at `POST /auth/external/tg/miniapp`; protected game endpoints use `Authorization: Bearer <app access JWT>`. For local HTTPS browser login, follow the [frontend guide](../frontend/README.md#frontend). Logs stay in the console and are not written to MongoDB outside Production. Try:
+Development uses MongoDB for game data. Before starting the API, set `Auth__TelegramClientId`, `Auth__TelegramMetadataProxyUrl`, `Auth__SigningKey` (RSA PEM), and `Auth__EncryptionKey` (32 random bytes in Base64) through environment or user secrets. The issuer above matches the local HTTPS Vite origin; Vite proxies `/api/v1` to the HTTP backend on port 8081. See [deployment key setup](../docs/deployment.md#ключи-и-настройки-входа-123). Mini App exchanges signed `Authorization: TMiniApp <initData raw>` for app tokens at `POST /auth/external/tg/miniapp`; protected game endpoints use `Authorization: Bearer <app access JWT>`. For local HTTPS browser login, follow the [frontend guide](../frontend/README.md#frontend). Logs stay in the console and are not written to MongoDB outside Production. Try:
 
 - `GET /health/live`
 - `GET /health/ready`
