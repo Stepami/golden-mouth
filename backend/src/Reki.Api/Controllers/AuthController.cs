@@ -51,7 +51,7 @@ public sealed class AuthController(
         }
 
         var token = await tokens.FindByReferenceIdAsync(request.RefreshToken, cancellationToken);
-        if (token is null || !await tokens.HasTypeAsync(token, TokenTypeHints.RefreshToken, cancellationToken))
+        if (token is null || !await tokens.HasTypeAsync(token, TokenTypeIdentifiers.RefreshToken, cancellationToken))
         {
             return BadRequest();
         }

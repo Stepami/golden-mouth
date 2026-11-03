@@ -25,6 +25,7 @@ internal static class DependencyInjection
 
         var auth = configuration.GetRequiredSection(AuthOptions.SectionName).Get<AuthOptions>()
             ?? throw new InvalidOperationException("Auth configuration is required.");
+        var telegramProxyBase = new Uri(auth.TelegramMetadataProxyUrl);
 
         services.AddAuthentication(options =>
             {
@@ -35,9 +36,9 @@ internal static class DependencyInjection
             {
                 options.MapInboundClaims = false;
                 options.MetadataAddress = new Uri(
-                    new Uri(auth.TelegramMetadataProxyUrl),
+                    telegramProxyBase,
                     ".well-known/openid-configuration").ToString();
-                options.BackchannelHttpHandler = new TelegramMetadataProxyHandler(new Uri(auth.TelegramMetadataProxyUrl));
+                options.BackchannelHttpHandler = new TelegramMetadataProxyHandler(telegramProxyBase);
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
