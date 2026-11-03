@@ -1,5 +1,7 @@
 export interface RuntimeConfig {
   apiBaseUrl: string
+  appClientId: string
+  telegramClientId: number
   features: { dm: boolean; friends: boolean; collection: boolean }
 }
 
@@ -11,6 +13,8 @@ declare global {
 
 const fallbackConfig: Readonly<RuntimeConfig> = Object.freeze({
   apiBaseUrl: '/api/v1',
+  appClientId: 'reki-app',
+  telegramClientId: 0,
   features: { dm: false, friends: false, collection: false },
 })
 
@@ -32,7 +36,9 @@ function readRuntimeConfig(): Readonly<RuntimeConfig> {
     typeof source?.features?.[key as keyof RuntimeConfig['features']] === 'boolean'
       ? source.features[key as keyof RuntimeConfig['features']] : fallback,
   ])) as RuntimeConfig['features']
-  return Object.freeze({ apiBaseUrl, features: Object.freeze(features) })
+  const appClientId = typeof source?.appClientId === 'string' && source.appClientId ? source.appClientId : fallbackConfig.appClientId
+  const telegramClientId = typeof source?.telegramClientId === 'number' ? source.telegramClientId : fallbackConfig.telegramClientId
+  return Object.freeze({ apiBaseUrl, appClientId, telegramClientId, features: Object.freeze(features) })
 }
 
 export const runtimeConfig = readRuntimeConfig()

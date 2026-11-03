@@ -1,6 +1,6 @@
 import { error, warn } from '../app/log'
 import { runtimeConfig } from '../app/runtimeConfig'
-import { telegramAuthHeaders } from './auth'
+import { getAccessToken, refreshAccess } from './auth'
 import { EventsClient, PlayerClient, PostsClient, SocialClient, TelemetryClient, WorldsClient } from './generated/reki-api'
 import type { PublicationFailure, StartPublicationRequest, ReplyRequest, SwaggerResponse } from './generated/reki-api'
 import { assertSession, sessionGeneration } from './session'
@@ -21,8 +21,14 @@ export function transport(telemetry = false) {
   return { async fetch(url: RequestInfo, init: RequestInit = {}): Promise<Response> {
     const headers = new Headers(init.headers)
     const path = new URL(String(url), baseUrl).pathname.slice(new URL(baseUrl).pathname.replace(/\/$/, '').length)
-    if (path !== '/worlds/templates' && path !== '/sessions') for (const [key, value] of Object.entries(telegramAuthHeaders())) headers.set(key, value)
-    const response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
+    const anonymous = path === '/sessions'
+    const firstToken = getAccessToken()
+    if (!anonymous && firstToken) headers.set('Authorization', `Bearer ${firstToken}`)
+    let response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
+    if (!anonymous && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
+      headers.set('Authorization', `Bearer ${getAccessToken()}`)
+      response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
+    }
     if (response.ok) return response
     let failure: PublicationFailure | undefined
     try {
