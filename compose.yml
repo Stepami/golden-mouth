@@ -34,7 +34,7 @@ services:
       Auth__TelegramMetadataProxyUrl: ${TELEGRAM_METADATA_PROXY_URL:?TELEGRAM_METADATA_PROXY_URL is required}
       Auth__SigningKey: ${AUTH_SIGNING_KEY:?AUTH_SIGNING_KEY is required}
       Auth__EncryptionKey: ${AUTH_ENCRYPTION_KEY:?AUTH_ENCRYPTION_KEY is required}
-      ForwardedHeaders__KnownNetwork: ${FORWARDED_HEADERS_KNOWN_NETWORK:-172.16.0.0/12}
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       Llm__ApiKey: ${LLM_PAT:?LLM_PAT is required}
       Llm__BaseUrl: ${LLM_BASE_URL:?LLM_BASE_URL is required}
       Llm__Model: ${LLM_MODEL:?LLM_MODEL is required}

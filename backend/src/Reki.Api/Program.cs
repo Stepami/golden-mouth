@@ -1,5 +1,4 @@
 using Kot.MongoDB.Migrations;
-using Microsoft.AspNetCore.HttpOverrides;
 using Reki.Api.Auth;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
@@ -72,14 +71,6 @@ public partial class Program
     private static void ConfigureServices(WebApplicationBuilder builder)
     {
         builder.Services.AddHttpContextAccessor();
-        builder.Services.Configure<ForwardedHeadersOptions>(options =>
-        {
-            options.ForwardedHeaders = ForwardedHeaders.XForwardedProto;
-            if (System.Net.IPNetwork.TryParse(builder.Configuration["ForwardedHeaders:KnownNetwork"], out var network))
-            {
-                options.KnownIPNetworks.Add(network);
-            }
-        });
         builder.Services.AddApi();
         if (OpenApiGeneration.IsRunning)
         {
@@ -113,7 +104,6 @@ public partial class Program
 
     private static void ConfigurePipeline(WebApplication app)
     {
-        app.UseForwardedHeaders();
         app.UseExceptionHandler();
         app.UseStatusCodePages();
         app.UseSerilogRequestLogging();
