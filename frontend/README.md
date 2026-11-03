@@ -6,7 +6,7 @@ Telegram Mini App игры «Реки». Правила для агента и �
 
 В local Compose Vite-плагин читает общий `TG_PAT`, даёт `@tma.js/sdk` вымышленного игрока и свежий HMAC-подписанный `initData`. Compose передаёт тот же `TG_PAT` в настройку `TgMiniAppAuth` backend; отключения auth для development нет. Production build и nginx не включают эмулятор.
 
-Для локальной проверки браузерного Telegram Login JS через HTTPS установи [mkcert по официальной инструкции](https://github.com/FiloSottile/mkcert#installation). Укажи публичный Telegram Client ID в локальном `public/runtime-config/config.js` (не коммить локальное значение) и зарегистрируй `https://localhost:5173` в Allowed URLs BotFather. Запусти backend отдельно, затем из `frontend/` в PowerShell:
+Для локальной проверки браузерного Telegram Login JS через HTTPS установи [mkcert по официальной инструкции](https://github.com/FiloSottile/mkcert#installation). Зарегистрируй `https://localhost:5173` в Allowed URLs BotFather. Публичный Telegram Client ID фронт получит от backend через `GET /api/v1/auth/external/tg/client-id`. Запусти backend отдельно, затем из `frontend/` в PowerShell:
 
 ```powershell
 mkcert -install
