@@ -49,17 +49,21 @@ public sealed class AuthControllerTests(ApiFactory factory)
         using var playerHttp = productionFactory.CreateClient();
         var playerClient = new PlayerClient(playerHttp);
         playerHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", first.AccessToken);
-        var me = await Assert.ThrowsAsync<PlayerApiException>(() => playerClient.GetCurrentPlayerAsync(CancellationToken.None));
+        var me = await Assert.ThrowsAsync<PlayerApiException>(() => playerClient.GetCurrentPlayerAsync(CancellationToken.None))
+            ?? throw new InvalidOperationException("Expected a missing profile response.");
         var refreshed = await auth.RefreshAsync(RefreshRequest(first.RefreshToken), CancellationToken.None);
-        await auth.LogoutAsync(new LogoutRequest
+        var logoutRequest = new LogoutRequest
         {
             ClientId = ClientId,
             RefreshToken = refreshed.RefreshToken,
-        }, CancellationToken.None);
+        };
+        await auth.LogoutAsync(logoutRequest, CancellationToken.None);
         playerHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", refreshed.AccessToken);
-        var issuedAccess = await Assert.ThrowsAsync<PlayerApiException>(() => playerClient.GetCurrentPlayerAsync(CancellationToken.None));
+        var issuedAccess = await Assert.ThrowsAsync<PlayerApiException>(() => playerClient.GetCurrentPlayerAsync(CancellationToken.None))
+            ?? throw new InvalidOperationException("Expected a missing profile response.");
         var revoked = await Assert.ThrowsAsync<AuthApiException>(() => auth.RefreshAsync(
-            RefreshRequest(refreshed.RefreshToken), CancellationToken.None));
+            RefreshRequest(refreshed.RefreshToken), CancellationToken.None))
+            ?? throw new InvalidOperationException("Expected a rejected refresh response.");
         var otherSession = await auth.RefreshAsync(RefreshRequest(second.RefreshToken), CancellationToken.None);
 
         // Assert
@@ -91,7 +95,8 @@ public sealed class AuthControllerTests(ApiFactory factory)
 
         // Act
         var rejected = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
-            new ExternalTelegramAuthClient(client).ExchangeMiniAppAsync(MiniAppRequest(), CancellationToken.None));
+            new ExternalTelegramAuthClient(client).ExchangeMiniAppAsync(MiniAppRequest(), CancellationToken.None))
+            ?? throw new InvalidOperationException("Expected a rejected Mini App proof.");
 
         // Assert
         await Assert.That(rejected.StatusCode).IsGreaterThanOrEqualTo(400);
@@ -130,11 +135,12 @@ public sealed class AuthControllerTests(ApiFactory factory)
 
         // Act
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SignTelegramIdToken(rsa, 21003));
-        var widget = await exchange.ExchangeTelegramLoginAsync(new TokenExchangeRequest
+        var widgetRequest = new TokenExchangeRequest
         {
             ClientId = ClientId,
             GrantType = "urn:reki:grant:telegram-login",
-        }, CancellationToken.None);
+        };
+        var widget = await exchange.ExchangeTelegramLoginAsync(widgetRequest, CancellationToken.None);
         using var widgetClient = productionFactory.CreateClient();
         widgetClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", widget.AccessToken);
         var current = await new PlayerClient(widgetClient).GetCurrentPlayerAsync(CancellationToken.None);
