@@ -1,0 +1,120 @@
+{
+  "status": "historical proposal; not runtime configuration; product decisions pending",
+  "source": "mechanics snapshot of authored story framework, 2026-11-02/03",
+  "sourceSha256": "04be7e24d8f7dfd4b7b8687b25af2ea37b2eefe66a170e8b762901742bf332d1",
+  "precedence": "Direct user decisions and current game-flow/balance override this snapshot. Do not import into runtime.",
+  "proposal": {
+    "energy": {
+      "natural_cap": 10,
+      "regen_seconds": 600,
+      "per_crystal": 2
+    },
+    "xp": {
+      "initial_skill": 1,
+      "max_skill": 100,
+      "cost_base_cents": 200,
+      "cost_step_cents": 8,
+      "quest_base": [
+        10,
+        12,
+        14
+      ],
+      "tier_bonus_percent": 15,
+      "boost_percent": [
+        0,
+        25,
+        50,
+        75,
+        100,
+        200
+      ],
+      "alternative_percent": 75,
+      "price_crystals_for_100_percent": 8
+    },
+    "story": {
+      "day_weights": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        3
+      ],
+      "initial_involved_npcs": 1,
+      "max_npcs": 3,
+      "unlock_interval_days": 7
+    },
+    "followers": {
+      "cap": 1000000,
+      "base_gain": 90,
+      "scale": 1000,
+      "power": 0.72,
+      "heat_bonus_max": 0.25,
+      "booster_social_coefficient": 0.1,
+      "churn_fraction": 0.003,
+      "churn_offset": 50,
+      "failed_churn_probability": 0.6,
+      "pending_quality": 0.2,
+      "alternative_quality": 0.55,
+      "sandbox_quality": 0.3
+    },
+    "npc": {
+      "interest_weight": 0.45,
+      "trust_weight": 0.25,
+      "feasibility_weight": 0.3,
+      "conflict_penalty": 0.4,
+      "agree_threshold": 0.65,
+      "limited_threshold": 0.4
+    },
+    "loot": {
+      "energy_probability": 0.45,
+      "energy_amount": 2,
+      "crystal_probability": 0.35,
+      "crystal_amount": 1,
+      "booster_probability": 0.2,
+      "booster_weights": [
+        0.55,
+        0.25,
+        0.12,
+        0.06,
+        0.02
+      ]
+    },
+    "virality": {
+      "probabilities": [
+        0.9,
+        0.09,
+        0.01
+      ],
+      "ranges": [
+        [
+          0.8,
+          1.2
+        ],
+        [
+          1.5,
+          2.5
+        ],
+        [
+          4.0,
+          6.0
+        ]
+      ]
+    }
+  }
+}
