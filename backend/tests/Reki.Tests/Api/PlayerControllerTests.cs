@@ -20,6 +20,7 @@ using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Tests.Api;
 
@@ -34,7 +35,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         await using var observedFactory = new ApiFactory { Session = Factory.Session };
         using var client = observedFactory.CreateClient();
-        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "18301");
+        client.SetFakeJwtBearerToken(new Dictionary<string, object> { [AuthConstants.Claims.TelegramUserId] = "18301" });
         var collector = observedFactory.Services.GetFakeLogCollector();
         collector.Clear();
         var activities = new ConcurrentQueue<Activity>();
@@ -687,7 +688,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                     ?? throw new InvalidOperationException("Missing player.");
         var savedWorld = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
         await Assert.That(savedWorld.Player.Drama).IsEqualTo(WorldDrama.Off);
-        await Assert.That(saved.Address).IsEqualTo("she");
+        await Assert.That(saved.Address).IsEqualTo(Address.She);
         await Assert.That(saved.Settings.Plus).IsFalse();
         await Assert.That(savedWorld.Player.Voice).IsEqualTo("Коротко и тепло");
         await Assert.That(saved.Settings.Notifications).IsEqualTo(player.Settings.Notifications);

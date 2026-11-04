@@ -1,5 +1,18 @@
 # Развёртывание в production
 
+## Ключи и настройки входа (#123)
+
+Один раз сгенерируй RSA PEM для `AUTH_SIGNING_KEY` и 32 случайных байта в Base64 для `AUTH_ENCRYPTION_KEY`. Храни оба значения только в GitHub Actions Secrets и передавай через Compose environment; при каждом деплое используй те же значения, чтобы действующие refresh-токены оставались читаемыми. Пример одноразовой генерации (вывод не коммить и не публикуй):
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072
+openssl rand -base64 32
+```
+
+Публичный production issuer задан в `compose.production.yml`, а URL двух Cloudflare Workers — в общем `compose.yml`; отдельные GitHub Actions Variables для них не нужны. OAuth Worker отдаёт metadata/JWKS со своим `jwks_uri`, Bot API Worker принимает запросы Telegram.Bot по корневому URL. Backend берёт публичный Telegram Client ID из `BotId` SDK, извлечённого из `TG_PAT`; формат токена не является публичным контрактом Telegram. В BotFather добавь production origin в Allowed URLs для Login JS. Для id_token flow Telegram Client Secret не требуется. `TG_PAT` остаётся секретом Mini App и Bot API.
+
+Для локального backend задай `Auth__Issuer`, `Telegram__OAuthUrl` и `Telegram__ApiUrl` через user secrets или environment; локальный Compose читает `AUTH_ISSUER`, а URL Worker берёт из общего `compose.yml`. HTTP для token endpoint разрешён только в Development. В production Compose включает стандартную обработку `X-Forwarded-Proto` через `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`; внешний HTTPS передаётся gateway и frontend. Backend не публикуется напрямую в интернет.
+
 Production разворачивается на self-hosted GitHub Actions runner, установленном на VDS. Push в `master` запускает проверки бэкенда, фронтенда и секретов. Затем GitVersion вычисляет версию, workflow создаёт тег и выкатывает соответствующий коммит. GitHub Release для уже развёрнутого тега создаётся отдельно ручным workflow `GitHub Release`.
 
 ## Одноразовая настройка сервера
@@ -270,7 +283,7 @@ Deployment job использует `runs-on: reki-prod`. Добавь custom la
 
 При переносе на RU-сервер Multitool вызывается напрямую через `LLM_BASE_URL`; production Compose не подменяет hostname провайдера через `extra_hosts`. Переменная `LLM_PROXY_IP` для нового deployment не нужна. Старый тег может содержать прежние Compose/workflow: первый deployment на новой площадке должен использовать тег с обновлённой конфигурацией.
 
-OpenObserve закреплён на `dockerhub.timeweb.cloud/openobserve/openobserve:v1.1.2-simd`. Это согласованное обновление с `v1.0.4` на `v1.1.2` вместе со сменой registry на зеркало Timeweb. На x86-64 SIMD-образ требует AVX-512: перед запуском на другой машине проверить CPU и доступность образа; при локальной разработке используется тот же `compose.yml`. Перед первым запуском новой версии сохранить исходный backup данных; возврат старого image сам по себе не откатывает изменения данных новой версии.
+OpenObserve закреплён на версии `v1.1.2` из зеркала Timeweb. По умолчанию `compose.yml` использует обычный образ `dockerhub.timeweb.cloud/openobserve/openobserve:v1.1.2`, совместимый с локальной разработкой без AVX-512. В `compose.production.yml` образ переопределён на `dockerhub.timeweb.cloud/openobserve/openobserve:v1.1.2-simd`. На x86-64 SIMD-образ требует AVX-512: перед переносом production на другую машину проверить CPU и доступность образа. Это согласованное обновление с `v1.0.4` на `v1.1.2` вместе со сменой registry на зеркало Timeweb. Перед первым запуском новой версии сохранить исходный backup данных; возврат старого image сам по себе не откатывает изменения данных новой версии.
 
 После успешного запуска Compose и установки renewal hook deployment выполняет `docker system prune -af`: удаляет остановленные контейнеры, неиспользуемые сети, все неиспользуемые images и build cache. Флаг `--volumes` не используется, Docker volumes сохраняются. Очистка относится ко всему Docker daemon runner; старые images для отката после неё придётся загрузить или собрать заново. Если deployment или установка hook завершились ошибкой, шаг очистки пропускается.
 

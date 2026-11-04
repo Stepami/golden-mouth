@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Comment;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPost;
 using Reki.Application.Posts.Responses.ReplyLiveEvent;
@@ -19,7 +20,7 @@ namespace Reki.Application.Posts.AddReplyCommand;
 
 internal sealed partial class AddReplyCommandHandler(
     IGameStore store,
-    IOptions<GameBalance> balance,
+    IOptionsMonitor<GameBalance> balance,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
     PlayerSafetyGuard safety,
@@ -27,7 +28,7 @@ internal sealed partial class AddReplyCommandHandler(
     IStarTurnGenerator generator,
     ILogger<AddReplyCommandHandler> logger,
     ProductTelemetry telemetry,
-    IStarFeedScheduler feedScheduler) : IStreamCommandHandler<AddReply, ReplyLiveEvent>
+    IStarFeedScheduler<ScheduleFromCommentRequest> feedScheduler) : IStreamCommandHandler<AddReply, ReplyLiveEvent>
 {
     public async IAsyncEnumerable<ReplyLiveEvent> Handle(
         AddReply request,
@@ -56,7 +57,7 @@ internal sealed partial class AddReplyCommandHandler(
 
         EnsureEnergy(player);
         var context = new StarReplyContext(
-            new StarAgentProfile(world, null, player.Address),
+            new StarAgentProfile(world, star.Id, player.Address),
             star.Id,
             post.Text,
             target is null ? [] : post.GetBranch(target.Id),
@@ -149,7 +150,7 @@ internal sealed partial class AddReplyCommandHandler(
             ReplyStatus.Completed,
             request.RequestId,
             Text: null,
-            Post: PostResponseMapper.MapPost(post, world, player.Id),
+            Post: post.MapPost(world, player.Id),
             EnergyLeft: player.Energy,
             Subscribers: world.Player.Subscribers,
             Code: null);
@@ -180,6 +181,15 @@ internal sealed partial class AddReplyCommandHandler(
         return (target, star);
     }
 
+    private void EnsureEnergy(PlayerProfile player)
+    {
+        var currentBalance = balance.CurrentValue;
+        if (player.Energy < currentBalance.Thread.EnergyCost)
+        {
+            throw new RequestConflictException("Insufficient energy.");
+        }
+    }
+
     private async ValueTask<ReplyLiveEvent> CommitAsync(
         AddReply request,
         GeneratedReplyTurn turn,
@@ -208,6 +218,7 @@ internal sealed partial class AddReplyCommandHandler(
             throw new RequestConflictException("The world changed during generation.");
         }
 
+        var currentBalance = balance.CurrentValue;
         var hateEnabled = turnPolicy.IsHateEnabled(player, world);
         if ((turn.Tone == "hate" || turn.AdditionalTone == "hate") && !hateEnabled)
         {
@@ -217,8 +228,8 @@ internal sealed partial class AddReplyCommandHandler(
         EnsureEnergy(player);
         var bonus = post.Comments.Count(comment =>
                         comment.AuthorId == playerId.ToAuthorId())
-                    < balance.Value.Thread.BonusReplies
-            ? balance.Value.Thread.SubscriberBonus
+                    < currentBalance.Thread.BonusReplies
+            ? currentBalance.Thread.SubscriberBonus
             : 0;
         var playerComment = new GameComment(
             CommentId.New(),
@@ -233,13 +244,13 @@ internal sealed partial class AddReplyCommandHandler(
             playerComment,
             new GameComment(CommentId.New(), playerComment.Id, null, turn.StarId.ToAuthorId(), turn.Text, false, [])
         ];
-        if (turn.AdditionalStarId is { } additional && turn.AdditionalText is { } text)
+        if (turn is { AdditionalStarId: { } additional, AdditionalText: { } text })
         {
             comments.Add(new GameComment(CommentId.New(), null, null, additional.ToAuthorId(), text, false, []));
         }
 
         var updatedPost = post.AddComments(comments);
-        var updatedPlayer = player.SpendEnergy(balance.Value.Thread.EnergyCost);
+        var updatedPlayer = player.SpendEnergy(currentBalance.Thread.EnergyCost);
         var updatedWorld = world.AwardThreadBonus(bonus);
         if (await store.TryCommitReplyAsync(
                 updatedPost,
@@ -252,7 +263,7 @@ internal sealed partial class AddReplyCommandHandler(
                 cancellationToken))
         {
             telemetry.TrackWorldAudience(updatedWorld);
-            await feedScheduler.ScheduleFromCommentAsync(playerId, world.Id, post.Id, playerComment.Id);
+            await feedScheduler.ScheduleFeedAsync(new ScheduleFromCommentRequest(playerId, world.Id, post.Id, playerComment.Id));
             return Completed(request, updatedPost, updatedWorld, updatedPlayer);
         }
 
@@ -279,14 +290,6 @@ internal sealed partial class AddReplyCommandHandler(
                        throw new RequestConflictException("The saved reply disappeared.");
         EnsureSameRequest(existing, request, playerId);
         return Completed(request, post, world, player);
-    }
-
-    private void EnsureEnergy(PlayerProfile player)
-    {
-        if (player.Energy < balance.Value.Thread.EnergyCost)
-        {
-            throw new RequestConflictException("Insufficient energy.");
-        }
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Thread generation failed")]

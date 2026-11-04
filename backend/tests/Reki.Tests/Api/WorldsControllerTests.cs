@@ -1,10 +1,12 @@
+using System.Net;
 using MongoDB.Driver;
 using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Worlds;
-using Reki.Application.Player;
+using Reki.Domain.Player;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Auth;
 
 namespace Reki.Tests.Api;
 
@@ -209,7 +211,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Act
         using var http = Factory.CreateClient();
-        http.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeaderName, "1018");
+        http.SetFakeJwtBearerToken(new Dictionary<string, object> { [AuthConstants.Claims.TelegramUserId] = "1018" });
         using var response = await http.GetAsync("/feed");
 
         // Assert
@@ -290,9 +292,9 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         await Assert.That(rejected?.StatusCode).IsEqualTo(409);
         await Assert.That((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Count).IsEqualTo(1);
-        await Database.GetCollection<Domain.Player.PlayerProfile>("players").UpdateOneAsync(
+        await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
             item => item.Id == player.Id,
-            Builders<Domain.Player.PlayerProfile>.Update.Set(item => item.HitOwnWorldMilestone, true));
+            Builders<PlayerProfile>.Update.Set(item => item.HitOwnWorldMilestone, true));
         var created = await api.Worlds.CreateWorldAsync(definition, CancellationToken.None);
         await Assert.That((await Database.GetCollection<World>("worlds").Find(world => world.Id == created.Id).SingleAsync()).TemplateId).IsNull();
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).HitOwnWorldMilestone).IsTrue();
@@ -311,7 +313,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Fixed publication seed produces a positive turn; flops must not unlock the milestone.
         var generation = await GenerateWithIdAsync(1093, "Расскажу о сегодняшней репетиции", "00000000-0000-0000-0000-000000000001");
-        await Assert.That(generation.StatusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
+        await Assert.That(generation.StatusCode).IsEqualTo(HttpStatusCode.OK);
         var definition = (await CreateWorldDefinitionAsync(api)) with { Difficulty = WorldDifficulty.Hard };
         await api.Worlds.UpdateWorldAsync(id.ToString(), definition, CancellationToken.None);
         await api.Posts.ModeratePublicationAsync(generation.PublicationId, id.ToString(), CancellationToken.None);

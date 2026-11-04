@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization.Metadata;
-using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.OpenApi;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
@@ -8,7 +7,6 @@ using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
-using TgMiniAppAuth;
 using Vogen;
 
 [assembly: VogenDefaults(openApiSchemaCustomizations: OpenApiSchemaCustomizations.GenerateOpenApiMappingExtensionMethod)]
@@ -22,8 +20,9 @@ namespace Reki.Api;
 [OpenApiMarker<PostId>]
 [OpenApiMarker<CommentId>]
 [OpenApiMarker<AuthorId>]
+[OpenApiMarker<Address>]
 [OpenApiMarker<RekiEventId>]
-internal static partial class DependencyInjection
+internal static class DependencyInjection
 {
     public static IServiceCollection AddApi(this IServiceCollection services)
     {
@@ -34,13 +33,13 @@ internal static partial class DependencyInjection
             options.CreateSchemaReferenceId = info => info.Kind == JsonTypeInfoKind.None && !info.Type.IsEnum
                 ? null : OpenApiOptions.CreateDefaultSchemaReferenceId(info);
             options.MapVogenTypesInDependencyInjection();
+            options.AddSchemaTransformer<AddressSchemaTransformer>();
             options.AddSchemaTransformer<NullableChallengeSchemaTransformer>();
             options.AddOperationTransformer<OperationMetadataTransformer>();
+            options.AddOperationTransformer<AuthOperationTransformer>();
             options.AddDocumentTransformer<TelegramMiniAppSecurityTransformer>();
         });
-        services
-            .AddControllers(options => options.Filters.Add(
-                new AuthorizeFilter(TgMiniAppAuthConstants.AuthenticationScheme)));
+        services.AddControllers();
         services.AddSerialization();
 
         return services;

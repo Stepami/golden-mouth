@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
+using NSubstitute;
 using Reki.Application.Balance;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
@@ -945,7 +946,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             ["Version"] = 7,
         };
         await database.GetCollection<BsonDocument>("players").InsertOneAsync(legacy);
-        var migration = new StoreRemainingEnergy(Options.Create(CreateEnergyBalance() with { FreePostsPerDay = 17, PlusPostsPerDay = 30 }));
+        var migration = new StoreRemainingEnergy(CreateBalanceMonitor(CreateEnergyBalance() with { FreePostsPerDay = 17, PlusPostsPerDay = 30 }));
 
         // Act
         await migration.UpAsync(database, session, CancellationToken.None);
@@ -980,7 +981,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             ["ChallengeDailyBonus"] = 3,
         };
         await database.GetCollection<BsonDocument>("players").InsertOneAsync(legacy);
-        var migration = new StoreRemainingEnergy(Options.Create(CreateEnergyBalance()));
+        var migration = new StoreRemainingEnergy(CreateBalanceMonitor(CreateEnergyBalance()));
 
         // Act
         await migration.UpAsync(database, session, CancellationToken.None);
@@ -1018,7 +1019,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await invites.InsertManyAsync(originals, cancellationToken: CancellationToken.None);
         }
 
-        var migration = new AddBonusAmountToInvite(Options.Create(CreateEnergyBalance() with { InviteBonusBoth = 17 }));
+        var migration = new AddBonusAmountToInvite(CreateBalanceMonitor(CreateEnergyBalance() with { InviteBonusBoth = 17 }));
 
         // Act
         await migration.UpAsync(database, session, CancellationToken.None);
@@ -1193,6 +1194,13 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         return document;
     }
 
+    private static IOptionsMonitor<GameBalance> CreateBalanceMonitor(GameBalance value)
+    {
+        var monitor = Substitute.For<IOptionsMonitor<GameBalance>>();
+        monitor.CurrentValue.Returns(value);
+        return monitor;
+    }
+
     private static BsonDocument CreateTicker(string id, string postId, bool legacyFormat = false) => new()
     {
         ["_id"] = id,
@@ -1254,8 +1262,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         {
             new InitialGameIndexes(), new RemoveLegacyChallengeIndex(), new SeedWorldTemplates(), new ConsolidateWorldSchema(),
             new RepairLegacyDocuments(), new NestWorldDocuments(), new MoveReferralStateToInvites(), new UnifyPostContent(),
-            new CreateGameDayIndexes(), new StoreRemainingEnergy(Options.Create(CreateEnergyBalance())),
-            new AddBonusAmountToInvite(Options.Create(CreateEnergyBalance())),
+            new CreateGameDayIndexes(), new StoreRemainingEnergy(CreateBalanceMonitor(CreateEnergyBalance())),
+            new AddBonusAmountToInvite(CreateBalanceMonitor(CreateEnergyBalance())),
         };
         if (includeRelease)
         {

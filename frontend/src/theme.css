@@ -20,6 +20,8 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
 .telegram-launch h1 { max-width: 300px; margin: 0 auto 12px; font-size: 32px; line-height: 1.08; letter-spacing: -.03em; }
 .telegram-launch__content p { max-width: 330px; margin: 0 auto 30px; color: var(--muted); font-size: 16px; line-height: 1.5; }
 .telegram-launch__button { display: block; width: 100%; padding: 15px 20px; border-radius: 14px; background: #2AABEE; color: #fff; font-size: 16px; font-weight: 700; line-height: 1.4; text-align: center; text-decoration: none; }
+.telegram-launch__button--secondary { margin-top: 12px; background: var(--card2); border: 1px solid var(--line2); }
+.telegram-launch__button:disabled { opacity: .6; }
 .telegram-launch__button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 .telegram-launch__hint { align-self: end; max-width: 290px; margin: 0 auto; color: var(--muted); font-size: 13px; line-height: 1.45; text-align: center; }
 

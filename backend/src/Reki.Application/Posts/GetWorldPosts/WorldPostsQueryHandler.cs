@@ -1,5 +1,6 @@
 using Mediator;
 using Reki.Application.Exceptions;
+using Reki.Application.Posts.AI.Feed;
 using Reki.Application.RekiContext;
 
 namespace Reki.Application.Posts.GetWorldPosts;
@@ -7,7 +8,7 @@ namespace Reki.Application.Posts.GetWorldPosts;
 internal sealed class WorldPostsQueryHandler(
     IPostRepository postRepository,
     IRekiContextAccessor rekiContextAccessor,
-    IStarFeedScheduler feedScheduler)
+    IStarFeedScheduler<ScheduleFromFeedRequest> feedScheduler)
     : IQueryHandler<WorldPostsQuery, WorldPostsPage>
 {
     public async ValueTask<WorldPostsPage> Handle(
@@ -21,9 +22,9 @@ internal sealed class WorldPostsQueryHandler(
 
         if (request.Feed)
         {
-            await feedScheduler.ScheduleFromFeedAsync(
+            await feedScheduler.ScheduleFeedAsync(new ScheduleFromFeedRequest(
                 world.Player.PlayerId,
-                world.Id);
+                world.Id));
         }
 
         return await postRepository.GetPostsAsync(

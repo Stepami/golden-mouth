@@ -1,4 +1,3 @@
-using Reki.Application.Player;
 using Reki.Application.Player.ClaimPlusInterestCommand;
 using Reki.Application.Player.OnboardPlayerCommand;
 using Reki.Application.Player.UpdateSettingsCommand;
@@ -11,14 +10,11 @@ namespace Reki.Api.Requests.Player;
 internal static partial class PlayerRequestMapper
 {
     public static OnboardPlayer ToOnboardPlayer(this OnboardingRequest source, TelegramUserId telegramUserId) =>
-        new(telegramUserId, source.BirthGroup.ToStorageValue(), source.Address.ToString().ToLowerInvariant(), source.ReferralCode, source.AgeBand);
+        new(telegramUserId, source.BirthGroup.ToStorageValue(), source.Address, source.ReferralCode, source.AgeBand);
 
-    [MapProperty(nameof(UpdateSettingsRequest.Address), nameof(UpdateSettings.Address), Use = nameof(MapAddress))]
     public static partial UpdateSettings ToUpdateSettings(this UpdateSettingsRequest source);
 
     public static ClaimPlusInterest ToClaimPlusInterest(this PlusInterestRequest? source) => new(source?.Interest ?? true);
-
-    private static string? MapAddress(Address? source) => source?.ToString().ToLowerInvariant();
 
     private static string ToStorageValue(this BirthGroup source) => source switch
     {

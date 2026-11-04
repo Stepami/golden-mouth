@@ -8,6 +8,7 @@ using Vogen;
 
 namespace Reki.Infrastructure.Mongo;
 
+[BsonSerializer<Address>]
 [BsonSerializer<AuthorId>]
 [BsonSerializer<CommentId>]
 [BsonSerializer<RekiEventId>]

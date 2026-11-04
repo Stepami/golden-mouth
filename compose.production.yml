@@ -27,3 +27,8 @@ services:
 
   backend:
     image: reki-backend:${REKI_VERSION:-local}
+    environment:
+      Auth__Issuer: https://reki-app.ru/
+
+  openobserve:
+    image: dockerhub.timeweb.cloud/openobserve/openobserve:v1.1.2-simd

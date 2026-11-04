@@ -7,13 +7,14 @@ namespace Reki.Application.Player.ClaimPlusInterestCommand;
 
 internal sealed class ClaimPlusInterestCommandHandler(
     IPlayerRepository playerRepository,
-    IOptions<GameBalance> balance,
+    IOptionsMonitor<GameBalance> balance,
     IRekiContextAccessor rekiContextAccessor) : ICommandHandler<ClaimPlusInterest, int>
 {
     public async ValueTask<int> Handle(
         ClaimPlusInterest request,
         CancellationToken cancellationToken)
     {
+        var currentBalance = balance.CurrentValue;
         var storedPlayer = await rekiContextAccessor.Context.Player;
         var player = storedPlayer;
 
@@ -27,7 +28,7 @@ internal sealed class ClaimPlusInterestCommandHandler(
             }
         }
 
-        var updated = player.ClaimPlusInterestBonus(balance.Value.PlusInterestBonus);
+        var updated = player.ClaimPlusInterestBonus(currentBalance.PlusInterestBonus);
         if (ReferenceEquals(updated, player))
         {
             return 0;

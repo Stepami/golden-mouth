@@ -2,7 +2,7 @@ using Microsoft.Extensions.Options;
 
 namespace Reki.Application.Balance;
 
-public sealed class GameDayPeriod(TimeProvider timeProvider, IOptions<GameBalance> balance)
+public sealed class GameDayPeriod(TimeProvider timeProvider, IOptionsMonitor<GameBalance> balance)
 {
     private static readonly TimeSpan MoscowOffset = TimeSpan.FromHours(3);
 
@@ -17,14 +17,15 @@ public sealed class GameDayPeriod(TimeProvider timeProvider, IOptions<GameBalanc
 
     private DateTimeOffset GetPeriodStart(DateTimeOffset utcNow)
     {
+        var currentBalance = balance.CurrentValue;
         var localNow = utcNow.ToOffset(MoscowOffset);
         var start = new DateTimeOffset(
             localNow.Year,
             localNow.Month,
             localNow.Day,
-            balance.Value.PostsResetTimeMoscow.Hour,
-            balance.Value.PostsResetTimeMoscow.Minute,
-            balance.Value.PostsResetTimeMoscow.Second,
+            currentBalance.PostsResetTimeMoscow.Hour,
+            currentBalance.PostsResetTimeMoscow.Minute,
+            currentBalance.PostsResetTimeMoscow.Second,
             MoscowOffset);
 
         return (localNow < start ? start.AddDays(-1) : start).ToUniversalTime();

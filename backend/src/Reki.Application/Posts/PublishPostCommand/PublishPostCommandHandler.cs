@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Application.Invites;
-using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Post;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPublication;
 using Reki.Application.Posts.GetWorldPosts;
@@ -21,15 +21,15 @@ internal sealed class PublishPostCommandHandler(
     IInvitationRepository invitationRepository,
     IPublicationRepository publicationRepository,
     IGameStore store,
-    IOptions<GameBalance> balance,
+    IOptionsMonitor<GameBalance> balance,
+    PostProgressionCalculator progressionCalculator,
     TimeProvider timeProvider,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
-    PostProgressionCalculator progressionCalculator,
     ProductTelemetry analytics,
     PlayerSafetyGuard safety,
     StarTurnPolicy turnPolicy,
-    IStarFeedScheduler feedScheduler) : ICommandHandler<PublishPost, IReadOnlyList<LiveEvent>>
+    IStarFeedScheduler<ScheduleFromPostRequest> feedScheduler) : ICommandHandler<PublishPost, IReadOnlyList<LiveEvent>>
 {
     public async ValueTask<IReadOnlyList<LiveEvent>> Handle(
         PublishPost request,
@@ -47,7 +47,7 @@ internal sealed class PublishPostCommandHandler(
 
         if (publication is { Status: PublicationStatusType.Completed, Result: not null })
         {
-            return PostResponseMapper.MapLiveEvents(publication.Result, world, storedPlayer.Id);
+            return publication.Result.MapLiveEvents(world, storedPlayer.Id);
         }
 
         if (publication.Status != PublicationStatusType.ReadyForModeration)
@@ -55,13 +55,14 @@ internal sealed class PublishPostCommandHandler(
             throw new RequestConflictException("The publication is not ready for moderation.");
         }
 
+        var currentBalance = balance.CurrentValue;
         var text = publication.Text;
         var ownWords = publication.OwnWords;
         var wantId = publication.WantId;
         var now = timeProvider.GetUtcNow();
         var player = storedPlayer;
 
-        if (player.Energy < balance.Value.PostEnergyCost)
+        if (player.Energy < currentBalance.PostEnergyCost)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }
@@ -103,13 +104,13 @@ internal sealed class PublishPostCommandHandler(
             wantId,
             turn.StarId,
             now,
-            balance.Value.Relations.Minimum,
-            balance.Value.Relations.Maximum,
-            balance.Value.Relations.MaxGainPerDay,
-            balance.Value.Relations.StarCardAt);
-        var updated = player.SpendPost(progression.Skills, balance.Value.PostEnergyCost) with
+            currentBalance.Relations.Minimum,
+            currentBalance.Relations.Maximum,
+            currentBalance.Relations.MaxGainPerDay,
+            currentBalance.Relations.StarCardAt);
+        var updated = player.SpendPost(progression.Skills, currentBalance.PostEnergyCost) with
         {
-            HitOwnWorldMilestone = player.HitOwnWorldMilestone || updatedWorld.Player.Subscribers >= balance.Value.OwnWorldSubscribers,
+            HitOwnWorldMilestone = player.HitOwnWorldMilestone || updatedWorld.Player.Subscribers >= currentBalance.OwnWorldSubscribers,
         };
         var postId = PostId.New(now);
         var starComment = new GameComment(
@@ -152,7 +153,7 @@ internal sealed class PublishPostCommandHandler(
             published,
             request.PublicationId,
             updatedInvite,
-            balance.Value.InviteBonusMaxPerDay,
+            currentBalance.InviteBonusMaxPerDay,
             cancellationToken);
         if (!committed)
         {
@@ -161,8 +162,8 @@ internal sealed class PublishPostCommandHandler(
 
         analytics.TrackWorldAudience(updatedWorld);
         TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
-        await feedScheduler.ScheduleFromPostAsync(player.Id, world.Id, post.Id);
-        return PostResponseMapper.MapLiveEvents(published, updatedWorld, player.Id);
+        await feedScheduler.ScheduleFeedAsync(new ScheduleFromPostRequest(player.Id, world.Id, post.Id));
+        return published.MapLiveEvents(updatedWorld, player.Id);
     }
 
     private static double GetMedian(IReadOnlyList<long> values)
@@ -199,7 +200,7 @@ internal sealed class PublishPostCommandHandler(
                 ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
             });
 
-        foreach ((var skillId, var progress) in after.Skills)
+        foreach (var (skillId, progress) in after.Skills)
         {
             var previousLevel = before.Skills[skillId].Level;
             if (progress.Level > previousLevel)

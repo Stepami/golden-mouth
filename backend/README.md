@@ -4,24 +4,29 @@ MVP backend scaffold for the Reki Telegram Mini App. The solution separates API 
 
 ## Run locally
 
+Before starting only MongoDB via Compose, set the required Compose environment variables listed under **Run in Docker** below. Compose interpolates the whole file even when only `mongo` is selected.
+
 ```powershell
 cd ..
 docker compose up --detach mongo
 cd backend
-$env:TelegramMiniAppAuthorizationOptions__Token = '<telegram bot token>'
+$env:ASPNETCORE_ENVIRONMENT = 'Development'
+$env:ASPNETCORE_URLS = 'http://127.0.0.1:8081'
+$env:Auth__Issuer = 'https://localhost:5173/'
+$env:Telegram__BotToken = '<telegram bot token>'
 dotnet tool restore
 dotnet restore Reki.slnx
 dotnet run --project src/Reki.Api/Reki.Api.csproj
 ```
 
-Development uses MongoDB for game data. Logs stay in the console and are not written to MongoDB outside Production. Protected game endpoints accept Telegram Mini App init data in `Authorization: TMiniApp <initData raw>`; set the bot token outside the repository before starting the API. Try:
+Development uses MongoDB for game data. Before starting the API outside Compose, set `Telegram__OAuthUrl` (OAuth Worker root), `Telegram__ApiUrl` (Bot API Worker root), `Auth__SigningKey` (RSA PEM), and `Auth__EncryptionKey` (32 random bytes in Base64) through environment or user secrets. The issuer above matches the local HTTPS Vite origin; Vite proxies `/api/v1` to the HTTP backend on port 8081. See [deployment key setup](../docs/deployment.md#ключи-и-настройки-входа-123). Mini App exchanges signed `Authorization: TMiniApp <initData raw>` for app tokens at `POST /auth/external/tg/miniapp`; protected game endpoints use `Authorization: Bearer <app access JWT>`. Browser login reads the public Telegram Client ID from `GET /auth/external/tg/client-id`. For local HTTPS browser login, follow the [frontend guide](../frontend/README.md#frontend). Logs stay in the console and are not written to MongoDB outside Production. Try:
 
 - `GET /health/live`
 - `GET /health/ready`
 - `GET /openapi/v1.json`
 - `GET /swagger/`
 
-The exact local address is printed by ASP.NET Core when the service starts.
+OpenAPI JSON and Swagger UI are available only in Development. Production does not serve these routes. Build-time OpenAPI generation for NSwag clients remains available. The exact local address is printed by ASP.NET Core when the service starts.
 
 ## Run in Docker
 
@@ -32,6 +37,9 @@ cd ..
 $env:OPENOBSERVE_EMAIL = '<chosen local administrator email>'
 $env:OPENOBSERVE_PASSWORD = '<chosen local administrator password>'
 $env:TG_PAT = '<test Telegram bot token>'
+$env:AUTH_ISSUER = '<local issuer URL>'
+$env:AUTH_SIGNING_KEY = '<RSA private key PEM>'
+$env:AUTH_ENCRYPTION_KEY = '<32-byte Base64 key>'
 $env:LLM_PAT = '<provider API key>'
 $env:LLM_BASE_URL = '<OpenAI-compatible provider URL>'
 $env:LLM_MODEL = '<model identifier>'
@@ -40,7 +48,7 @@ docker compose up --build
 
 Compose passes the required `LLM_PAT`, `LLM_BASE_URL`, and `LLM_MODEL` environment variables only to the backend container. Set `LLM_TIMEOUT_SECONDS` if the provider needs more than the default 20 seconds. Do not commit provider credentials or endpoints.
 
-The API is available at `http://localhost:8081`, and OpenObserve at `http://localhost:5080`. Set `TG_PAT`, the LLM variables, `OPENOBSERVE_EMAIL`, and `OPENOBSERVE_PASSWORD` outside the repository before starting Compose. OpenTelemetry sends logs, metrics, and traces to Collector over the internal Compose network. Product events use the `product` log stream; other application and framework logs use `backend`. Set `MONGO_CONNECTION_STRING` outside the repository to override the bundled MongoDB service.
+The API is available at `http://localhost:8081`, and OpenObserve at `http://localhost:5080`. Set the Telegram, auth, LLM and OpenObserve variables outside the repository before starting Compose. OpenTelemetry sends logs, metrics, and traces to Collector over the internal Compose network. Product events use the `product` log stream; other application and framework logs use `backend`. Set `MONGO_CONNECTION_STRING` outside the repository to override the bundled MongoDB service.
 
 OTLP export is configured with the standard `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_PROTOCOL`, and `OTEL_SERVICE_NAME` variables. MongoDB driver activities and `Microsoft.Extensions.AI` GenAI spans/metrics are enabled; prompts, responses, tool arguments, Mongo query text, tokens, and connection strings are not exported.
 
@@ -160,3 +168,22 @@ Persistence ports live beside their application features. Each Mongo repository 
 Direct messages, friends, star conversation memory, and challenges have no Application handlers, repositories, domain implementation, or AI calls. Their controller routes and wire contracts remain: friends return an empty list, active challenge returns null (empty HTTP 200), direct-message reads return an empty DTO, sending returns a null reply and zero replies left, and other writes return empty HTTP 200 without side effects. Standard authentication and request validation remain.
 
 Migration `2.4.5` removes the retired challenge bonus expiry field from player documents while preserving existing energy. Daily reset grants only the base energy for the player's plan. Old social collections are retained for historical migrations and transactional account deletion using raw BSON; deployment does not purge their contents. Reserved balance configuration and historical achievement definitions remain for compatibility, with no active challenge or DM behavior.
+
+## Manual runtime balance update (#184)
+
+After deploying #184 once, a valid replacement of `/app/config/balance.json` is reloaded by the standard .NET JSON configuration provider. `IOptionsMonitor<GameBalance>` supplies a new immutable balance for subsequent operations. Consumers obtain balance through DI and read `CurrentValue` into a method-local variable. Following review, balance is not threaded through helper parameters: a reload between the handler and a helper can therefore make them observe different values. There is no atomic snapshot across the entire confirmation and no cached balance in singleton fields. Unfinished publications use the balance and world difficulty at confirmation; completed results replay unchanged. Existing energy is retained until the next daily reset, which uses the new balance.
+
+Choose the backend container explicitly. Copy its current file for rollback, prepare a complete replacement, validate JSON syntax and review all changed values against the existing balance constraints before applying:
+
+```sh
+container='<backend-container>'
+docker cp "$container:/app/config/balance.json" balance.previous.json
+# Edit a copy named balance.next.json; retain all required sections.
+python3 -m json.tool balance.next.json >/dev/null
+docker cp balance.next.json "$container:/app/config/balance.next.json"
+docker exec --user root "$container" sh -c 'chmod 0444 /app/config/balance.next.json && mv /app/config/balance.next.json /app/config/balance.json'
+```
+
+The image runs as `app`; replacing the file can require the explicit root connection above. Wait a few seconds for the standard file-change notification, then verify the changed parameter with the next relevant game operation and check container logs for validation errors. The process and container must remain running. JSON syntax validation alone does not validate game values: an invalid JSON file or balance can cause errors; there is no automatic rollback or last-known-good cache. To roll back, repeat the replacement using `balance.previous.json`.
+
+The edit is lost when the container is recreated. Save the same intended values in `docs/config/balance.json` so the next image preserves them. No volume, management API, custom watcher or delivery automation is introduced. Changing `posts.reset_time_msk` requires a process restart and coordination with the existing TickerQ schedule; hot reload does not rebuild cron schedules.

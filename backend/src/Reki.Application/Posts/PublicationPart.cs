@@ -1,4 +1,4 @@
-using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Post;
 
 namespace Reki.Application.Posts;
 

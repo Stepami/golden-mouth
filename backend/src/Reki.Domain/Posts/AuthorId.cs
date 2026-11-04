@@ -8,6 +8,25 @@ namespace Reki.Domain.Posts;
 [ValueObject<string>(comparison: ComparisonGeneration.Omit)]
 public readonly partial struct AuthorId
 {
+    public string GetAuthorNamePolicy(string authorName, string playerName)
+    {
+        string author;
+        if (Value.StartsWith("Player_", StringComparison.Ordinal))
+        {
+            author = $"Персонаж игрока {playerName}";
+        }
+        else if (Value.StartsWith("Star_", StringComparison.Ordinal))
+        {
+            author = $"Звезда {authorName}";
+        }
+        else
+        {
+            author = "Автор вне текущего каталога";
+        }
+
+        return $"{author} (id={Value})";
+    }
+
     /// <summary>Создаёт идентификатор автора из <see cref="PlayerId"/>.</summary>
     /// <param name="playerId">Исходный идентификатор игрока.</param>
     /// <returns>Проверенный идентификатор автора-игрока.</returns>

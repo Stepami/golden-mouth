@@ -13,7 +13,7 @@ internal sealed class OnboardPlayerCommandHandler(
     IInvitationRepository invitationRepository,
     IPlayerRepository playerRepository,
     GameDayPeriod gameDayPeriod,
-    IOptions<GameBalance> balance,
+    IOptionsMonitor<GameBalance> balance,
     TimeProvider timeProvider,
     ProductTelemetry analytics) : ICommandHandler<OnboardPlayer, PlayerProfile>
 {
@@ -27,16 +27,17 @@ internal sealed class OnboardPlayerCommandHandler(
             throw new RequestConflictException("Onboarding has already been completed.");
         }
 
+        var currentBalance = balance.CurrentValue;
         var inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
         var created = CreatePlayer(request, telegramUserId, gameDayPeriod.PeriodStart) with
         {
             AgeBand = request.AgeBand,
-            Energy = balance.Value.FreePostsPerDay,
+            Energy = currentBalance.FreePostsPerDay,
         };
         await playerRepository.CreatePlayerAsync(created, cancellationToken);
         if (inviter is not null)
         {
-            var invite = Invitation.Create(inviter.Id, created.Id, timeProvider.GetUtcNow(), balance.Value.InviteBonusBoth);
+            var invite = Invitation.Create(inviter.Id, created.Id, timeProvider.GetUtcNow(), currentBalance.InviteBonusBoth);
             await invitationRepository.CreateInviteAsync(invite, cancellationToken);
         }
 

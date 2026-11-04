@@ -1,3 +1,5 @@
+import { inTelegram } from '../telegram'
+import { hasInitData } from '../api/auth'
 import { TELEGRAM_APP_URL } from './telegramLinks'
 
 function TelegramMark() {
@@ -8,15 +10,20 @@ function TelegramMark() {
   )
 }
 
-export function TelegramLaunch() {
+export function TelegramLaunch({ onLogin, onRestart, pending, resumable, prepareFailed, busy, ready, error }: {
+  onLogin: () => void; onRestart: () => void; pending: boolean; resumable: boolean; prepareFailed: boolean; busy: boolean; ready: boolean; error: string
+}) {
   return (
     <main className="telegram-launch">
       <div className="telegram-launch__brand">реки</div>
       <section className="telegram-launch__content" aria-labelledby="telegram-launch-title">
         <div className="telegram-launch__icon"><TelegramMark /></div>
         <h1 id="telegram-launch-title">Твой блог. Твоя история.</h1>
-        <p>Пиши посты, знакомься с героями и меняй события своего мира.</p>
-        <a className="telegram-launch__button" href={TELEGRAM_APP_URL}>Открыть в Telegram</a>
+        <p>{pending ? 'Подтверждение Telegram получено. Если используешь VPN, отключи его и продолжи вход.' : 'Пиши посты, знакомься с героями и меняй события своего мира.'}</p>
+        <button className="telegram-launch__button" disabled={busy || !ready} onClick={onLogin}>{busy ? 'Входим…' : pending ? 'Продолжить вход' : resumable ? 'Повторить вход' : prepareFailed ? 'Подготовить вход снова' : inTelegram && hasInitData() ? 'Войти снова' : 'Играть в браузере'}</button>
+        {pending && <button className="telegram-launch__button telegram-launch__button--secondary" disabled={busy} onClick={onRestart}>Войти заново</button>}
+        {!inTelegram && <a className="telegram-launch__button telegram-launch__button--secondary" href={TELEGRAM_APP_URL}>Открыть в Telegram</a>}
+        {error && <p role="alert">{error}</p>}
       </section>
       <p className="telegram-launch__hint">Фанаты и события виртуальные. Посты остаются внутри игры.</p>
     </main>

@@ -9,9 +9,9 @@ internal sealed class MongoInvitationRepository : IInvitationRepository
 {
     private readonly IMongoCollection<Invitation> _invites;
 
-    public MongoInvitationRepository(MongoCompositionRoot compositionRoot)
+    public MongoInvitationRepository(IMongoDatabase database)
     {
-        _invites = compositionRoot.MongoDatabase.GetCollection<Invitation>(MongoCollections.Invites);
+        _invites = database.GetCollection<Invitation>(MongoCollections.Invites);
     }
 
     public async ValueTask CreateInviteAsync(Invitation invite, CancellationToken cancellationToken) =>

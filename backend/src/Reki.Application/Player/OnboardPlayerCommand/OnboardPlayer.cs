@@ -6,6 +6,6 @@ namespace Reki.Application.Player.OnboardPlayerCommand;
 public sealed record OnboardPlayer(
     TelegramUserId TelegramUserId,
     string BirthGroup,
-    string Address,
+    Address Address,
     string? ReferralCode,
     string? AgeBand) : ICommand<PlayerProfile>;

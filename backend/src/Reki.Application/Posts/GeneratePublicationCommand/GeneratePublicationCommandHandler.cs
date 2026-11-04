@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Post;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPublication;
 using Reki.Application.Posts.GetWorldPosts;
@@ -20,7 +21,7 @@ namespace Reki.Application.Posts.GeneratePublicationCommand;
 
 internal sealed partial class GeneratePublicationCommandHandler(
     IPublicationRepository publicationRepository,
-    IOptions<GameBalance> balance,
+    IOptionsMonitor<GameBalance> balance,
     TimeProvider timeProvider,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
@@ -56,7 +57,8 @@ internal sealed partial class GeneratePublicationCommandHandler(
             yield break;
         }
 
-        if (player.Energy < balance.Value.PostEnergyCost)
+        var currentBalance = balance.CurrentValue;
+        if (player.Energy < currentBalance.PostEnergyCost)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }
@@ -245,7 +247,8 @@ internal sealed partial class GeneratePublicationCommandHandler(
                 StarToolCallParser.StarCommentAction comment => new PublicationPart(
                     null,
                     new GeneratedPostTurn(
-                        comment.Author,
+                        (context.Agent.World.FindStar(comment.StarId)
+                            ?? throw new AiServiceUnavailableException("The model returned a forbidden identity.")).Name,
                         comment.StarId,
                         comment.Text,
                         comment.Hook,

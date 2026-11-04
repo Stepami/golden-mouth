@@ -122,17 +122,15 @@ dotnet_diagnostic.S6960.severity = none
 # Mediator fixes the asynchronous interface member name as Handle; handlers cannot append Async.
 dotnet_diagnostic.AV1755.severity = none
 
-[src/Reki.Application/Common/AI/StarToolCallParser.cs]
-# Tool action records stay nested so the strict parser and its internal result types form one unit.
-dotnet_diagnostic.SA1201.severity = none
-
 [src/Reki.Infrastructure/Mongo/Migrations/*.cs]
 # Migration filenames include their version; class names remain stable for migration history.
 dotnet_diagnostic.SA1649.severity = none
 
-[src/Reki.Api/Mapping/ApiMapper.cs]
-# API mappings are injected as one Mapperly-backed service, including handwritten composition mappings.
-dotnet_diagnostic.S2325.severity = none
+[src/Reki.Application/Posts/AI/**/*.cs]
+dotnet_diagnostic.SA1118.severity = none
+
+[src/Reki.Domain/Worlds/StarTrait.cs]
+dotnet_diagnostic.AV1115.severity = none
 
 [tests/**/*.cs]
 # Test callbacks may require ref/out parameters, such as ActivityListener.Sample.

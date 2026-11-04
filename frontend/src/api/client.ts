@@ -4,6 +4,7 @@ import { clearPlayerDrafts } from '../app/postDraft';
 import { clearWorldDrafts } from '../app/worldDraft';
 import { clearAvatarPersonalization } from '../app/avatarPersonalization';
 import { clearReferral } from '../app/referral';
+import { clearTokens, logout as revokeSession } from './auth';
 import { clearApiCache } from '../app/useApi';
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics';
 import { clearWorldContent, installWorldContent, installWorldTemplates } from './worldContent';
@@ -116,6 +117,32 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     });
 }
 export const api = {
+    clearSession: () => {
+        const playerId = sessionIdentity?.id ?? sessionPlayer?.id;
+        endSession();
+        playerRequests.clear();
+        clearApiCache();
+        if (playerId) {
+            clearPlayerDrafts(playerId);
+            clearAvatarPersonalization(playerId);
+            try {
+                localStorage.removeItem(`reki:selected-world:v2:${playerId}`);
+                localStorage.removeItem(`reki:own-world-unlock-seen:${playerId}`);
+            }
+            catch { /* optional storage */ }
+        }
+        clearWorldDrafts('onboarding');
+        clearWorldContent();
+        sessionPlayer = undefined;
+        sessionIdentity = undefined;
+        ownedWorldSnapshot = undefined;
+        setTelemetryPlayerAvailable(false);
+        setAnalyticsWorld(undefined);
+    },
+    logout: async () => {
+        await revokeSession();
+        api.clearSession();
+    },
     loadWorldTemplates: loadTemplates,
     me: (worldId?: string): Promise<Player> => {
         const key = worldId ?? sessionPlayer?.worldInstanceId ?? '';
@@ -367,28 +394,10 @@ export const api = {
         return api.saveWorld(id, { ...definition, templateId: null, ...patch });
     },
     deleteAccount: async () => {
-        const playerId = sessionIdentity?.id ?? sessionPlayer?.id;
         await data(sdk.player.deleteCurrentPlayer());
         // Invalidate requests only after the server confirms deletion. Failed deletion keeps the game intact.
-        endSession();
-        playerRequests.clear();
-        clearApiCache();
-        if (playerId) {
-            clearPlayerDrafts(playerId);
-            clearAvatarPersonalization(playerId);
-            try {
-                localStorage.removeItem(`reki:selected-world:v2:${playerId}`);
-                localStorage.removeItem(`reki:own-world-unlock-seen:${playerId}`);
-            }
-            catch { /* optional storage */ }
-        }
-        clearWorldDrafts('onboarding');
+        api.clearSession();
+        clearTokens();
         clearReferral();
-        clearWorldContent();
-        sessionPlayer = undefined;
-        sessionIdentity = undefined;
-        ownedWorldSnapshot = undefined;
-        setTelemetryPlayerAvailable(false);
-        setAnalyticsWorld(undefined);
     },
 };
