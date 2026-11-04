@@ -7,7 +7,7 @@ import {initialInventory} from '../src/v7/storyplay/boosters.ts';
 import {legacyCurriculum} from '../src/v7/storyplay/curriculum.ts';
 import {parseQuestOutcome} from '../src/v7/publication/outcomes.ts';
 import type {World} from '../src/v7/domain/types.ts';
-test('all16roles: ordered3quest days, escrow XP, one release, manual levels and two short NPC unlocks',()=>{
+test('all16roles: ordered3quest days, escrow XP, one release, manual levels and no early NPC unlocks',()=>{
  for(const c of storyPack.worlds.flatMap(w=>w.campaigns)){
   let s={...freshStory(c.id),enabled:true};const first=c.days[0];const context={id:`${c.id}:day1`,questIds:first.quests.map(q=>q.id),unlockActor:c.actorOrder.find(a=>!c.initialActors.includes(a))};
   assert.equal(finishQuest(s,first.quests[1].id,'out-of-order',12,false,context),s);
@@ -17,7 +17,7 @@ test('all16roles: ordered3quest days, escrow XP, one release, manual levels and 
   s=spendStoryXP(s,[1,0,0]);assert.equal(s.total,3600);assert.equal(s.available,3400);assert.equal(s.levels[0],2);
   const second=c.days[1],next={id:`${c.id}:day2`,requires:context.id,questIds:second.quests.map(q=>q.id),unlockActor:c.actorOrder.find(a=>!c.initialActors.includes(a)&&!s.followingActors!.includes(a))};
   assert.equal(finishQuest({...freshStory(c.id),enabled:true},second.quests[0].id,'too-early',10,false,next).total,0);
-  second.quests.forEach((q,i)=>{s=finishQuest(s,q.id,`${c.id}:b${i}`,q.baseXP,false,next);});assert.equal(s.closedDays!.length,2);assert.equal(new Set(s.followingActors).size,2);
+  second.quests.forEach((q,i)=>{s=finishQuest(s,q.id,`${c.id}:b${i}`,q.baseXP,false,next);});assert.equal(s.closedDays!.length,2);assert.equal(new Set(s.followingActors).size,0);
  }
 });
 test('gift probabilities and one account-day claim survive world switches without reroll',()=>{

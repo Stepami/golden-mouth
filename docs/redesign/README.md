@@ -7,6 +7,7 @@
 - [Дизайн-система: правила применения и приёмка](DESIGN-SYSTEM.md).
 - [Границы DEV и backend-зависимости](DEV-READINESS.md).
 - [Степану: техническое ревью backend](BACKEND-REVIEW.md).
+- [Последние решения и критерии partial](QUEST-OUTCOMES.md).
 - [Несведённые бизнес-решения перед backend](BUSINESS-DECISIONS.md).
 - [Сюжетная frontend-проба](v7-story-pilot.md).
 - [Интеграция интерфейса с API](../reviews/roman-v7-integration.md).

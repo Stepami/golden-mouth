@@ -2,6 +2,10 @@
   "_doc": "Все числа баланса одним местом. Источник: docs/game-flow.md и симуляции docs/balance-sim. Бэкенд читает этот конфиг из /app/config/balance.json внутри Docker image. После внедрения #184 валидная ручная замена runtime-файла применяется без рестарта; правка временная, те же значения сохраняются здесь для следующего image. Изменение времени сброса требует рестарта; инструкция в backend/README.md.",
   "story_economy_proposal": {
     "status": "frontend-preview; backend implementation required",
+    "partial_closes_quest": true, "partial_can_improve": true,
+    "difficulty_change": "next_story_day", "story_day_quests": 3, "npc_unlock_interval_story_days": 7,
+    "xp_booster_consumed_on_quest_failure": true,
+    "gift_timezone": "Europe/Moscow", "gift_reset_local_time": "00:00", "full_energy_gift": "inventory_item",
     "energy_cap": 10, "energy_regen_seconds": 600, "initial_crystals": 10,
     "booster_xp_percent": [25, 50, 75, 100, 200], "booster_crystal_price_per_100_percent": 8,
     "energy_exchange_offer": { "crystals": 3, "energy": 10, "direction_pending_confirmation": false, "mode": "refill_to_cap" }

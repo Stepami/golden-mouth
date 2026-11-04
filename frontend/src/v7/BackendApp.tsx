@@ -12,7 +12,7 @@ import { rankCatalog } from './interests';
 import { worldArt } from '../app/worldArt';
 import { storyForTemplate, storyForCampaign, campaignFor, pilotDefinition, pilotBinding, boundCampaign, type PilotBinding, type PilotCampaign } from './story/pilot';
 import { StoryOpening, StoryMap, PlayMode, StoryWallet, XPFlight, TypingDraft } from './storyplay/StorySurfaces';
-import { freshStory, isStoryPlay, repairClosedDays, finishQuest, buyBooster, grantDemoCrystals, spendStoryXP, type StoryPlay } from './storyplay/model';
+import { freshStory, isStoryPlay, repairClosedDays, finishQuest, freezeStoryDay, buyBooster, grantDemoCrystals, spendStoryXP, type StoryPlay } from './storyplay/model';
 import './storyplay/storyplay.css';
 import './portraits.css';
 import './social/social.css';
@@ -115,6 +115,8 @@ export default function BackendApp() {
   const [gainAnimation,setGainAnimation]=useState<{delta:number;nonce:string}>();
   const [accountVisible,setAccountVisible]=useState(5);
   const [giftReveal,setGiftReveal]=useState('');
+  const [giftDay,setGiftDay]=useState(()=>moscowDay());
+  useEffect(()=>{const timer=setInterval(()=>setGiftDay(moscowDay()),30000);return()=>clearInterval(timer);},[]);
   useEffect(()=>{if(!giftReveal)return;const t=setTimeout(()=>setGiftReveal(''),3200);return()=>clearTimeout(t);},[giftReveal]);
   const [receipt, setReceipt] = useState<PublicationReceipt>();
   const [publicationFailed, setPublicationFailed] = useState(false);
@@ -234,20 +236,20 @@ export default function BackendApp() {
     const inventory = initialInventory(readLocal(inventoryKey,storyInventory));
     const before = {...repairClosedDays(isStoryPlay(saved,curriculum.id)?saved:play,curriculum.days.map(d=>({id:`${curriculum.id}:day${d.day}`,questIds:d.quests.map(q=>q.id)}))),...inventory};
     const next = change(before); if (next === before) return;
-    setStoryState(next); setStoryOwner(storyKey); const inventoryNext = {crystals:next.crystals,boosters:next.boosters,bonusUsed:next.bonusUsed,boosterStock:stockOf(next),openingGrant:true,loginGiftDays:inventory.loginGiftDays,lastGift:inventory.lastGift,energyGift:inventory.energyGift}; setStoryInventory(inventoryNext); if (!saveLocal(storyKey,next) || !saveLocal(inventoryKey,inventoryNext)) setStorageError(true);
+    setStoryState(next); setStoryOwner(storyKey); const inventoryNext = {crystals:next.crystals,boosters:next.boosters,bonusUsed:next.bonusUsed,boosterStock:stockOf(next),openingGrant:true,loginGiftDays:inventory.loginGiftDays,lastGift:inventory.lastGift,energyGift:inventory.energyGift,energyBoosters:inventory.energyBoosters}; setStoryInventory(inventoryNext); if (!saveLocal(storyKey,next) || !saveLocal(inventoryKey,inventoryNext)) setStorageError(true);
   };
   const openSeriesGift = () => {
     if(!preview||!player||!play.enabled)return;
     const before=initialInventory(readLocal(inventoryKey,storyInventory));
     const next=claimSeriesGift(before,moscowDay(),seriesGiftFor(player.id,moscowDay()));
     setStoryInventory(next);if(!saveLocal(inventoryKey,next))setStorageError(true);
-    if(next!==before){const g=next.lastGift!.gift;setGiftReveal(g.kind==='crystals'?`+${g.amount} кристалл в пробе`:g.kind==='energy'?`+${g.amount} энергии пробы`:'Новый бустер в инвентаре');}
+    if(next!==before){const g=next.lastGift!.gift;setGiftReveal(g.kind==='crystals'?`+${g.amount} кристалл в пробе`:g.kind==='energy'?`Запас энергии +${g.amount} · в инвентаре`:'Новый бустер в инвентаре');}
   };
   const creditQuest = (actionId: string, reference?: {questId?:string; mode?:string; booster?:boolean|BoosterId}) => {
     if (!preview || !curriculum || reference?.mode !== 'story') return;
     const quest = allQuests.find(q => q.id === reference.questId); if (!quest) return;
     let reward: {amount:number;title:string;questId:string} | undefined;
-    updateStory(before => { const day=curriculum.days.find(d=>d.quests.some(q=>q.id===quest.id))!; const next = finishQuest(before,quest.id,actionId,quest.baseXP,reference.booster??false,{id:`${curriculum.id}:day${day.day}`,questIds:day.quests.map(q=>q.id),requires:day.day>1?`${curriculum.id}:day${day.day-1}`:undefined,unlockActor:curriculum.actorOrder?.find(id=>!curriculum.initialActors?.includes(id)&&!(before.followingActors??[]).includes(id))}); if(next!==before) reward={amount:(next.total-before.total)/100,title:quest.title,questId:quest.id}; return next; });
+    updateStory(before => { const day=curriculum.days.find(d=>d.quests.some(q=>q.id===quest.id))!; const next = finishQuest(before,quest.id,actionId,quest.baseXP,reference.booster??false,{id:`${curriculum.id}:day${day.day}`,number:day.day,questIds:day.quests.map(q=>q.id),requires:day.day>1?`${curriculum.id}:day${day.day-1}`:undefined,unlockActor:curriculum.actorOrder?.find(id=>!curriculum.initialActors?.includes(id)&&!(before.followingActors??[]).includes(id))}); if(next!==before) reward={amount:(next.total-before.total)/100,title:quest.title,questId:quest.id}; return next; });
     if(reward) { setRewardAnimation({amount:reward.amount,nonce:actionId}); setSelectedBooster(undefined); }
     return reward;
   };
@@ -332,11 +334,16 @@ export default function BackendApp() {
     const template = optionalWorldTemplate({...doc,firstContext:doc.firstContext.split('\nЦель персонажа: ')[0]});
     const starter = starterFor(template?.id,world);
     openCompose(undefined, { name: 'Квест', text: quest?.prompt ?? starter.prompt });
-    setPrepared({ title: quest?.title ?? starter.title, prompt: quest?.prompt ?? starter.prompt, questId: quest?.id, xp: quest?.baseXP ?? starter.xp });
+    const award=quest?play.questAwards?.[quest.id]:undefined;
+    setPrepared({ title: quest?.title ?? starter.title, prompt: quest?.prompt ?? starter.prompt, questId: quest?.id, xp: award?.status==='partial'?(award.capCents-award.baseCents)/100:quest?.baseXP ?? starter.xp });
     const saved = readPostDraft(draftKey(player));
     if (!saved.publicationId && saved.text === activeCampaign?.firstPost && !saved.ownWords) setAnimateDraft(true);
+    const questDay=curriculum?.days.find(d=>d.quests.some(q=>q.id===quest?.id));
+    const dayId=questDay&&curriculum?`${curriculum.id}:day${questDay.day}`:undefined;
+    if(preview&&dayId)updateStory(s=>freezeStoryDay(s,dayId));
+    const dayLevels=dayId?play.dayLevels?.[dayId]??play.levels:play.levels;
     const focus = quest?.focusSkill === 'secondary' ? 1 : quest?.focusSkill === 'tertiary' ? 2 : 0;
-    const eligible = quest?.drafts.filter(d => d.minSkill <= play.levels[focus]).sort((a,b)=>b.minSkill-a.minSkill)[0];
+    const eligible = quest?.drafts.filter(d => d.minSkill <= dayLevels[focus]).sort((a,b)=>b.minSkill-a.minSkill)[0];
     const preparedText = eligible?.text || activeCampaign?.firstPost || starter.draft;
     if (!saved.text.trim() && !saved.publicationId) {
       const text = preparedText; setDraft(text); setAnimateDraft(true);
@@ -394,7 +401,7 @@ export default function BackendApp() {
     if (!player || !reply || sending.current) return;
     const k = replyKey(reply), saved = readLocal<ReplyDraft>(k, { text: '' });
     const requestId = saved.requestId ?? crypto.randomUUID(), text = saved.submittedText ?? draft;
-    if (!saved.requestId && curriculum) localSave(`story-action:${player.world}:${requestId}`,{questId:currentQuest?.actionKinds.includes('comment') ? currentQuest.id : undefined,mode:playMode,booster:selectedBooster});
+    if (!saved.requestId && curriculum) localSave(`story-action:${player.world}:${requestId}`,{questId:currentQuest?.id,mode:playMode,booster:selectedBooster});
     saveLocal(k, { text: draft, requestId, submittedText: text, beforeSubscribers:saved.beforeSubscribers??player.subs });
     sending.current = true; setPending(true); setError('');
     let terminalFailure = false;
@@ -435,7 +442,7 @@ export default function BackendApp() {
       <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><ResourceBadge type="energy" value={preview?`${player?.postsLeft??0}/10`:String(player?.postsLeft??'—')} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/><span>{preview?'+1 / 10 мин · план':'Общий запас'}</span></div>
       <ResourceBadge type="crystal" value={preview && curriculum ? String(play.crystals) : '—'} hint={preview?"Кристаллы локальной пробы и бустеры":"Кристаллы и обмен появятся позже"} onClick={() => openResource('crystals')} />
       <button className="profile-access" data-unspent={curriculum && play.available>0 ? "true" : undefined} aria-label={curriculum && play.enabled ? `Профиль персонажа: ${formatXP(play.total)} XP, ${activeCampaign?`цель ${goalProgress}%`:`квесты ${play.completed.length}/${allQuests.length}`}. Потратить XP на навыки` : "Профиль персонажа"} onClick={() => go('profile')} style={curriculum && play.enabled ? { background: `conic-gradient(var(--color-progress) ${goalProgress}%,var(--color-divider) 0)` } : undefined}><Avatar name={player?.name ?? ''} src={player ? personaFor(player.id, player.world).avatar : undefined} size="lg" />{curriculum && play.enabled && <span className="story-avatar-label">{formatXP(play.total)} XP · {activeCampaign?`${goalProgress}%`:`${play.completed.length}/${allQuests.length}`}</span>}</button></header>
-    {player && <WorldProgress streak={player.streak} storyDay={preview?stageDay:undefined} boosterCount={preview && curriculum ? String(play.boosters) : '—'} onStreak={() => setOverlay('streak')} onGift={play.enabled?openSeriesGift:undefined} giftClaimed={storyInventory.loginGiftDays?.includes(moscowDay())} onBoosters={() => openResource('boosters')} />}
+    {player && <WorldProgress streak={player.streak} storyDay={preview?stageDay:undefined} boosterCount={preview && curriculum ? String(play.boosters+(play.energyBoosters?.length??0)) : '—'} onStreak={() => setOverlay('streak')} onGift={play.enabled?openSeriesGift:undefined} giftClaimed={storyInventory.loginGiftDays?.includes(giftDay)} onBoosters={() => openResource('boosters')} />}
     </div>
     {curriculum&&play.enabled&&play.available>0&&<section className="section"><div className="xp-day-ready"><strong>{formatXP(play.available)} XP можно направить на навыки</strong><Button onClick={()=>go('profile')}>Выбрать улучшения</Button></div></section>}
     {curriculum && <section className="story-tools"><button className="map-access" onClick={() => setOverlay('map')}>Карта мира <span aria-hidden="true">↗</span></button><button className="local-play-badge" onClick={() => openResource('boosters')}>{preview?(play.enabled?'Локальная проба':'Включить сюжетную пробу'):'План истории'}</button></section>}
@@ -503,7 +510,7 @@ export default function BackendApp() {
       const author: Person = comment.me ? playerView(player) : world.cast.find(p => `Star_${p.id}` === comment.authorId) ?? { id: comment.authorId ?? comment.id, name: comment.author, handle: comment.avatar ?? '', role: comment.role ?? '', boundary: '' };
       return <div key={comment.id} className={comment.parentCommentId ? 'thread-nested' : ''}>{comment.parentCommentId && <p className="reply-to caption muted">↳ Ответ на реплику</p>}{card({ id: comment.id, parentId: post.id, authorId: author.id, text: comment.hidden ? 'Комментарий скрыт' : comment.text, createdAt: '', likes: 0 }, author, 0, true)}{comment.star && !comment.hidden && world.cast.some(p => `Star_${p.id}` === comment.authorId) && <div className="reply-action"><Button variant="ghost" onClick={() => openCompose({ postId: post.id, commentId: comment.id, name: author.name, text: comment.text })}>Ответить {author.name}</Button></div>}</div>;
     })}{post && !post.comments.length && <EmptyState title="Здесь ещё нет ответов">Персонажи могут продолжить разговор после публикации.</EmptyState>}{postAuthor && post && <div className="section"><Button className="full" onClick={() => openCompose({ postId: post.id, commentId: null, name: postAuthor.name, text: post.text })}>Начать разговор с автором</Button></div>}</>;
-  } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={personaFor(player.id, player.world).avatar} onBack={back} /><WorldProgress streak={player.streak} storyDay={preview?stageDay:undefined} boosterCount={preview?String(play.boosters):'—'} onStreak={()=>setOverlay('streak')} onGift={play.enabled?openSeriesGift:undefined} giftClaimed={storyInventory.loginGiftDays?.includes(moscowDay())} onBoosters={()=>openResource('boosters')}/><section className="section channel-stat-section"><ChannelAudience value={player.subs}/></section><section className="profile-details"><button className="profile-goal" onClick={() => go('goals')}><strong>Твоя цель</strong><p>{world.goal}</p></button></section>{curriculum&&<section className="section"><h2 className="section-title">Твой путь</h2><StoryMap preview={preview} campaign={curriculum} actors={world.cast} state={play} currentId={currentQuest?.id} onSelect={id=>openQuest(id)}/></section>}{preview?<StoryWallet state={play} labels={storyLabels} onEnable={() => updateStory(v=>({...v,enabled:true}))} onSpend={points=>updateStory(v=>spendStoryXP(v,points))}/>:<CurrentSkills skills={player.skills} labels={['Смелость','Юмор','В тему']}/>}<section className="section"><Button variant="secondary" onClick={()=>go('account')}>Настройки профиля</Button></section></>;
+  } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={personaFor(player.id, player.world).avatar} onBack={back} /><WorldProgress streak={player.streak} storyDay={preview?stageDay:undefined} boosterCount={preview?String(play.boosters+(play.energyBoosters?.length??0)):'—'} onStreak={()=>setOverlay('streak')} onGift={play.enabled?openSeriesGift:undefined} giftClaimed={storyInventory.loginGiftDays?.includes(giftDay)} onBoosters={()=>openResource('boosters')}/><section className="section channel-stat-section"><ChannelAudience value={player.subs}/></section><section className="profile-details"><button className="profile-goal" onClick={() => go('goals')}><strong>Твоя цель</strong><p>{world.goal}</p></button></section>{curriculum&&<section className="section"><h2 className="section-title">Твой путь</h2><StoryMap preview={preview} campaign={curriculum} actors={world.cast} state={play} currentId={currentQuest?.id} onSelect={id=>openQuest(id)}/></section>}{preview?<StoryWallet state={play} labels={storyLabels} onEnable={() => updateStory(v=>({...v,enabled:true}))} onSpend={points=>updateStory(v=>spendStoryXP(v,points))}/>:<CurrentSkills skills={player.skills} labels={['Смелость','Юмор','В тему']}/>}<section className="section"><Button variant="secondary" onClick={()=>go('account')}>Настройки профиля</Button></section></>;
   else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><ChannelAudience value={person.subscribers}/><span className="caption muted">@{person.handle} · AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
   else if (screen === 'topic' && world) content = <><div className="topic-header"><button className="back-button" onClick={back}>Назад</button><img className="topic-cover" src={world.hero} alt="" /><h1>{quote?.name ?? world.title}</h1><p>{quote?.text ?? world.topic}</p></div><section className="topic-people">{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}<Button className="full" onClick={() => openCompose(undefined, quote)}>Написать</Button></section></>;
   else if (screen === 'messages' && world) content = <><ScreenHeading title="Личка" /><EmptyState title="Сначала — общий разговор" action={<Button onClick={() => go('feed')}>Вернуться в ленту</Button>}>Личные сообщения скоро появятся.</EmptyState><section className="section"><h2 className="section-title">Собеседники</h2>{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}</section></>;

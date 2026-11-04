@@ -11,11 +11,11 @@ export function BoosterArt({id}:{id:BoosterId}){
 export function OwnedBoosterPicker({state,selected,onSelect,onStore,available,known=available,sandbox}:{state:StoryPlay;selected?:BoosterId;onSelect:(id?:BoosterId)=>void;onStore:()=>void;available:boolean;known?:boolean;sandbox:boolean}){
  const [open,setOpen]=useState(false),item=boosterCatalog.find(b=>b.id===selected);
  const owned=boosterCatalog.filter(b=>stockCount(state,b.id)>0);
- return <section className={`owned-boosters${sandbox?' is-sandbox':''}`}><div className="row between"><h3>Бустеры</h3><span className="caption muted">{known?state.boosters:'—'} в наличии</span></div>
+ return <section className={`owned-boosters${sandbox?' is-sandbox':''}`}><div className="row between"><h3>Бустеры XP</h3><span className="caption muted">{known?state.boosters:'—'} в наличии</span></div>
  <button className={`owned-booster-main${item?' is-selected':''}`} onClick={()=>available&&owned.length&&!sandbox?setOpen(v=>!v):onStore()}>
   <BoosterArt id={item?.id??owned[0]?.id??'spark'}/><span><strong>{item?item.name:'Выбрать бустер'}</strong><small>{item?`+${item.percent}% XP за этот квест`:sandbox?'В песочнице сюжетный XP не начисляется':owned.length?'Из твоего инвентаря':'Посмотреть каталог'}</small></span><span aria-hidden="true">⌄</span>
  </button>
  {open&&!sandbox&&<div className="owned-booster-list"><button className="booster-none" onClick={()=>{onSelect(undefined);setOpen(false);}}>Без бустера</button>{owned.map(b=><button key={b.id} className="owned-booster-option" onClick={()=>{onSelect(b.id);setOpen(false);}}><BoosterArt id={b.id}/><span><strong>{b.name}</strong><small>+{b.percent}% XP</small></span><b>×{stockCount(state,b.id)}</b></button>)}</div>}
- {selected&&!sandbox&&<p className="caption muted">Применится при зачёте. При ошибке останется в инвентаре.</p>}
+ {selected&&!sandbox&&<p className="caption muted">Расходуется при подтверждённом исходе, даже если квест не выполнен. Технический отказ до результата не расходует бустер.</p>}
  <Button variant="ghost" onClick={onStore}>Каталог бустеров</Button></section>;
 }

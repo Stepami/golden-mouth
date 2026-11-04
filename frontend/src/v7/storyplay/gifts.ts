@@ -10,6 +10,6 @@ export function seriesGiftFor(accountId:string,day:string){return drawSeriesGift
 export function claimSeriesGift(value:Inventory,day:string,gift:SeriesGift):Inventory {
  if(value.loginGiftDays?.includes(day))return value;const s=initialInventory(value),stock=stockOf(s);
  if(gift.kind==='booster')stock[gift.boosterId]=(stock[gift.boosterId]??0)+1;
- return {...s,loginGiftDays:[...(s.loginGiftDays??[]),day],lastGift:{day,gift},crystals:s.crystals+(gift.kind==='crystals'?gift.amount:0),energyGift:(s.energyGift??0)+(gift.kind==='energy'?gift.amount:0),boosterStock:stock,boosters:totalStock(stock)};
+ return {...s,loginGiftDays:[...(s.loginGiftDays??[]),day],lastGift:{day,gift},crystals:s.crystals+(gift.kind==='crystals'?gift.amount:0),energyBoosters:gift.kind==='energy'?[...(s.energyBoosters??[]),{id:`energy-gift:${day}`,amount:gift.amount,day}]:s.energyBoosters,boosterStock:stock,boosters:totalStock(stock)};
 }
-export const moscowDay=()=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+export const moscowDay=(date:Date=new Date())=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);

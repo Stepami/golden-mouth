@@ -1,0 +1,5 @@
+import {Button} from '../ui';
+import type {EnergyBooster} from './boosters';
+export function EnergyInventory({items}:{items:EnergyBooster[]}){
+ return <section className="energy-inventory"><h2>Запас энергии <span className="caption muted">{items.length} в наличии</span></h2><p className="caption muted">Энергетические подарки хранятся здесь и не теряются при полном запасе.</p>{items.map(item=><article className="inventory-item energy-pack" key={item.id}><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="31" fill="var(--color-surface)"/><path d="m36 8-20 28h15l-3 20 20-29H33Z" fill="var(--color-energy)"/></svg><div><h3>Запас энергии</h3><strong>+{item.amount} энергии</strong><p className="caption muted">Подарок серии{item.day==='legacy'?'':` · ${item.day}`}</p></div><Button variant="secondary" disabled>Применение скоро</Button></article>)}{!items.length&&<p>Пока нет энергетических подарков.</p>}<p className="caption muted">Подарки в этой DEV-пробе сохранены на устройстве. Реальный расход предмета и пополнение энергии требуют серверного подтверждения.</p></section>;
+}
