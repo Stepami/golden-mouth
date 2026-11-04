@@ -13,7 +13,7 @@ export function WorldProgress({ streak, storyDay, boosterCount = '—', onStreak
     <button className="streak-access" onClick={onStreak} aria-label={`Серия: ${dayCount(streak.days)}. Посмотреть дни и награды`}>
       <span aria-hidden="true">🔥</span><span><strong>Серия · {dayCount(streak.days)}</strong><span className="streak-mini" aria-hidden="true">{Array.from({ length: 7 }, (_, i) => <i key={i} className={streak.week[i] ? 'is-done' : ''} />)}</span></span>
     </button>
-    {onGift&&<button className={`gift-access${giftClaimed?' is-claimed':''}`} onClick={onGift} disabled={giftClaimed} aria-label={giftClaimed?'Подарок сегодня получен':'Забрать подарок серии — локальная проба'}><span aria-hidden="true">🎁</span><small>{giftClaimed?'Получен':'Забрать'}</small></button>}
+    {onGift&&<button className={`gift-access${giftClaimed?' is-claimed':''}`} onClick={onGift} disabled={giftClaimed} aria-label={giftClaimed?'Подарок сегодня получен':'Забрать подарок серии — локальная проба'}><svg viewBox="0 0 32 32" aria-hidden="true"><g fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M6 14h20v14H6zM4 9h24v5H4zM16 9v19"/><path d="M16 9C8 10 6 5 9 3c3-2 7 6 7 6s4-8 7-6c3 2 1 7-7 6Z"/></g></svg><small>{giftClaimed?'Получен':'Забрать'}</small></button>}
     {storyDay !== undefined && <span className="story-day-label">День сюжета {storyDay}</span>}
     <button className="boosters-access" onClick={onBoosters}><span aria-hidden="true">✦</span> Бустеры <span className="caption muted">{boosterCount}</span></button>
   </div>;

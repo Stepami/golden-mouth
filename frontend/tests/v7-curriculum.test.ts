@@ -33,3 +33,15 @@ test('unknown or malformed API grades never become a successful quest outcome',(
  assert.equal(parseQuestOutcome({status:'success',title:'q'}),undefined);assert.equal(parseQuestOutcome({status:'failed',title:'q',reason:'no',xp:-10}),undefined);
  assert.equal(parseQuestOutcome({status:'partial',title:'q',reason:'Нужна смета',xp:7.5})?.status,'partial');
 });
+test('all authored roles complete seven ordered days without duplicate rewards',()=>{
+ let count=0;
+ for(const c of storyPack.worlds.flatMap(w=>w.campaigns)){
+  let s={...freshStory(c.id),enabled:true},sum=0;
+  for(const day of c.days){const ctx={id:`${c.id}:day${day.day}`,requires:day.day>1?`${c.id}:day${day.day-1}`:undefined,questIds:day.quests.map(q=>q.id)};
+   for(const q of day.quests){const before=s;s=finishQuest(s,q.id,q.id,q.baseXP,false,ctx);assert.notEqual(s,before,`${c.id}/${q.id}`);assert.equal(finishQuest(s,q.id,`${q.id}-retry`,q.baseXP,false,ctx),s);sum+=q.baseXP*100;count++;}
+   assert.equal(s.pendingXP,0);assert.equal(s.total,sum);assert.equal(s.available,sum);assert.deepEqual(s.levels,[1,1,1]);
+  }
+  assert.equal(s.closedDays!.length,7);assert.equal(s.completed.length,21);
+ }
+ assert.equal(count,336);
+});

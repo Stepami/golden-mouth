@@ -49,7 +49,7 @@ import { NominalSignOut, Avatar, Badge, BottomNav, Button, Chip, Dialog, EmptySt
 
 type Screen = 'welcome' | 'age' | 'catalog' | 'search' | 'intro' | 'onboarding' | 'hero' | 'story-skills' | 'feed' | 'goals' | 'compose' | 'thread' | 'topic' | 'profile' | 'character' | 'messages' | 'activity' | 'account' | ResourcePageName;
 type ReplyTarget = { postId: string; commentId: string | null; name: string; text: string };
-type ReplyDraft = { text: string; requestId?: string; submittedText?: string };
+type ReplyDraft = { text: string; requestId?: string; submittedText?: string; beforeSubscribers?:number };
 const statusLabels: Record<string, string> = { pending: 'Персонажи читают публикацию…', ready_for_moderation: 'Готовим результат…', completed: 'Публикация готова', failed: 'Публикация не отправлена' };
 const titleOf: Record<Screen, string> = { catalog: 'Миры', search: 'Поиск', intro: 'Вход в мир', onboarding: 'Знакомство', welcome: 'Знакомство', age: 'Возраст', hero: 'Ваш персонаж', 'story-skills': 'Навыки персонажа', feed: 'Лента', goals: 'Цели', compose: 'Новая публикация', thread: 'Обсуждение', topic: 'Тема', profile: 'Профиль персонажа', character: 'Собеседник', messages: 'Личка', activity: 'Уведомления', account: 'Профиль', resources:'Энергия',crystals:'Кристаллы',boosters:'Бустеры' };
 
@@ -387,14 +387,17 @@ export default function BackendApp() {
     const k = replyKey(reply), saved = readLocal<ReplyDraft>(k, { text: '' });
     const requestId = saved.requestId ?? crypto.randomUUID(), text = saved.submittedText ?? draft;
     if (!saved.requestId && curriculum) localSave(`story-action:${player.world}:${requestId}`,{questId:currentQuest?.actionKinds.includes('comment') ? currentQuest.id : undefined,mode:playMode,booster:selectedBooster});
-    saveLocal(k, { text: draft, requestId, submittedText: text });
+    saveLocal(k, { text: draft, requestId, submittedText: text, beforeSubscribers:saved.beforeSubscribers??player.subs });
     sending.current = true; setPending(true); setError('');
     let terminalFailure = false;
     try {
       const controller = new AbortController(); cancel.current = () => controller.abort();
       const result = await api.reply(reply.postId, reply.commentId, requestId, text, { signal: controller.signal, onEvent: event => { if (event.status === 'failed') terminalFailure = true; } });
       if (!result.post) throw new Error('Missing reply');
-      creditQuest(requestId,readLocal(`${key}:story-action:${player.world}:${requestId}`,undefined));
+      const reward=creditQuest(requestId,readLocal(`${key}:story-action:${player.world}:${requestId}`,undefined));
+      const delta=result.subscribers==null?undefined:result.subscribers-(saved.beforeSubscribers??player.subs);
+      const value:PublicationReceipt={worldId:player.world,actionKind:'comment',audienceKnown:delta!==undefined,before:player.skills,questReward:reward,questOutcome:reward?{status:'success',source:'local',title:reward.title,reason:'Комментарий сохранён. Шаг закрыт в сюжетной пробе.',xp:reward.amount}:{status:'unverified',source:'server',title:'Твой комментарий',reason:playMode==='sandbox'?'Комментарий сохранён в песочнице. Сюжетный XP не начисляется.':'Комментарий сохранён. Серверная оценка квеста пока не возвращается.'},result:{postId:reply.postId,delta:delta??0,headline:'Комментарий сохранён',whys:[],ribbons:[],viral:false,flop:false,views:result.post.views}};
+      setReceipt(value);saveLocal(`${key}:result:${player.world}`,value);if(delta)setGainAnimation({delta,nonce:requestId});
       setPost({ ...result.post, id: result.post.postId }); saveLocal(k, { text: '' }); setDraft(''); setReply(undefined); setScreen('thread'); setStack(s => s.filter(x => x !== 'compose'));
       setUnknown(false);
       void refresh().catch(() => setFeedError('Ответ сохранён. Обнови ленту, чтобы увидеть актуальные данные.'));
@@ -482,7 +485,7 @@ export default function BackendApp() {
   else if (screen === 'thread' && player && world) {
     const view = post ? detailView(post, world, playerView(player)) : undefined;
     const postAuthor = post && world.cast.find(p => `Star_${p.id}` === post.authorId);
-    content = <><ScreenHeading title="Обсуждение" back={back} />{threadLoading && <div className="pending-line" role="status">Загружаем обсуждение…</div>}{view && card(view.post, view.author, post!.comments.length)}{post?.comments.map(comment => {
+    content = <><ScreenHeading title="Обсуждение" back={back} />{receipt?.actionKind==='comment'&&receipt.worldId===player.world&&receipt.result.postId===post?.id&&<PublicationResult receipt={receipt} animateReward={!!rewardAnimation} animateFollowers={!!gainAnimation} onRead={()=>document.querySelector('.thread-nested')?.scrollIntoView({block:'center'})}/>}{threadLoading && <div className="pending-line" role="status">Загружаем обсуждение…</div>}{view && card(view.post, view.author, post!.comments.length)}{post?.comments.map(comment => {
       const author: Person = comment.me ? playerView(player) : world.cast.find(p => `Star_${p.id}` === comment.authorId) ?? { id: comment.authorId ?? comment.id, name: comment.author, handle: comment.avatar ?? '', role: comment.role ?? '', boundary: '' };
       return <div key={comment.id} className={comment.parentCommentId ? 'thread-nested' : ''}>{comment.parentCommentId && <p className="reply-to caption muted">↳ Ответ на реплику</p>}{card({ id: comment.id, parentId: post.id, authorId: author.id, text: comment.hidden ? 'Комментарий скрыт' : comment.text, createdAt: '', likes: 0 }, author, 0, true)}{comment.star && !comment.hidden && world.cast.some(p => `Star_${p.id}` === comment.authorId) && <div className="reply-action"><Button variant="ghost" onClick={() => openCompose({ postId: post.id, commentId: comment.id, name: author.name, text: comment.text })}>Ответить {author.name}</Button></div>}</div>;
     })}{post && !post.comments.length && <EmptyState title="Здесь ещё нет ответов">Персонажи могут продолжить разговор после публикации.</EmptyState>}{postAuthor && post && <div className="section"><Button className="full" onClick={() => openCompose({ postId: post.id, commentId: null, name: postAuthor.name, text: post.text })}>Начать разговор с автором</Button></div>}</>;

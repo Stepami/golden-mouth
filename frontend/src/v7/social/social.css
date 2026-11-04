@@ -33,3 +33,8 @@
 @media(max-width:360px){.world-hud .world-progress{padding-left:14px;padding-right:14px;gap:6px}.world-hud .streak-access strong{font-size:13px}.world-hud .boosters-access{font-size:12px}.world-hud .story-day-label{width:100%;text-align:right}}
 .reading-control{margin-top:12px;font-size:14px;color:var(--color-muted)}
 .intro-description:focus-visible{outline:2px solid var(--color-ink);outline-offset:4px;border-radius:8px}
+.world-hud .gift-access,.gift-access{background:transparent;position:relative;color:var(--color-ink);padding:6px 10px;gap:5px;border-radius:14px}
+.gift-access svg{width:30px;height:30px;display:block;overflow:visible;animation:gift-invite 5s ease-in-out infinite}
+.gift-access:not(.is-claimed):before{content:'';position:absolute;width:36px;height:36px;top:3px;left:50%;transform:translateX(-50%);border-radius:50%;background:var(--color-accent);z-index:0}.gift-access svg,.gift-access small{position:relative;z-index:1}.gift-access small{font-size:12px;font-weight:500}.gift-access.is-claimed svg{animation:none}
+@keyframes gift-invite{0%,82%,100%{transform:rotate(0)}86%{transform:rotate(-9deg)}90%{transform:rotate(9deg)}94%{transform:rotate(-5deg)}}
+@media(prefers-reduced-motion:reduce){.gift-access svg{animation:none}}
