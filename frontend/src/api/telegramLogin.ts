@@ -7,13 +7,25 @@ declare global { interface Window { Telegram?: { Login: TelegramLoginSdk } } }
 let loading: Promise<void> | undefined
 export function preloadTelegramLogin(): Promise<void> {
   if (window.Telegram?.Login) return Promise.resolve()
-  return loading ??= new Promise((resolve, reject) => {
+  return loading ??= new Promise<void>((resolve, reject) => {
     const script = document.createElement('script')
+    const timeout = setTimeout(() => { script.remove(); reject(new Error('Telegram Login SDK timed out')) }, 15_000)
     script.src = 'https://reki-bot-oauth.stepami.workers.dev/js/telegram-login.js?6'
     script.async = true
-    script.onload = () => window.Telegram?.Login ? resolve() : reject(new Error('Telegram Login SDK unavailable'))
-    script.onerror = () => reject(new Error('Telegram Login SDK failed to load'))
+    script.onload = () => {
+      clearTimeout(timeout)
+      if (window.Telegram?.Login) resolve()
+      else { script.remove(); reject(new Error('Telegram Login SDK unavailable')) }
+    }
+    script.onerror = () => {
+      clearTimeout(timeout)
+      script.remove()
+      reject(new Error('Telegram Login SDK failed to load'))
+    }
     document.head.append(script)
+  }).catch(error => {
+    loading = undefined
+    throw error
   })
 }
 
