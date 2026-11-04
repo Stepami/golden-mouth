@@ -8,6 +8,9 @@ public sealed record ReplyRequest
     public CommentId? CommentId { get; init; }
 
     [Required]
+    public required AuthorId AuthorId { get; init; }
+
+    [Required]
     [StringLength(64, MinimumLength = 1)]
     public required string RequestId { get; init; }
 

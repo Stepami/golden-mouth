@@ -16,8 +16,8 @@ import { ApiError, data, stream } from './transport';
 export { ApiError } from './transport';
 import { sessionGeneration, assertSession, endSession } from './session';
 import { parse } from 'valibot';
-import { publicationEvent, replyEvent } from './streamEvents';
-import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PublicationState, PublicationStatus, PublicationFailure, ReplyLiveEvent, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
+import { publicationEvent, starGenerationEvent } from './streamEvents';
+import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PublicationState, PublicationStatus, PublicationFailure, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
 let sessionPlayer: Player | undefined;
 let sessionIdentity: PlayerDocument | undefined;
 let ownedWorldSnapshot: WorldDocument[] | undefined;
@@ -289,52 +289,67 @@ export const api = {
         }, 0);
         return () => { clearTimeout(start); ctrl.abort(); };
     },
-    reply: async (postId: string, commentId: string | null, requestId: string, text: string, options: {
+    reply: async (postId: string, commentId: string | null, requestId: string, text: string, starAuthorId: string, options: {
         signal?: AbortSignal;
-        onEvent?: (event: ReplyLiveEvent) => void;
-    } = {}): Promise<ReplyLiveEvent> => {
-        const signal = options.signal;
+        onSaved?: (saved: { post: PostDetailResponse; energyLeft: number; subscribers: number }) => void;
+        onTyping?: (authorId: string | null) => void;
+        additionalStarId?: string;
+        onAdditionalStar?: (starId: string | null) => void;
+    } = {}): Promise<{ post: PostDetailResponse; energyLeft: number; subscribers: number }> => {
         const player = sessionPlayer;
-        if (!player)
-            throw new Error('Player must be loaded');
-        const update = (event: ReplyLiveEvent) => {
-            options.onEvent?.(event);
-            if (event.status === 'completed' && event.energyLeft != null && event.subscribers != null && sessionPlayer?.id === player.id && sessionPlayer.worldInstanceId === player.worldInstanceId) {
-                sessionPlayer = { ...sessionPlayer, postsLeft: event.energyLeft, subs: event.subscribers };
-            }
+        const replyWorldId = player?.worldInstanceId;
+        if (!player || !replyWorldId) throw new Error('World must be loaded before this request');
+        const save = async (authorId: string, parentCommentId: string | null, id: string, content: string) => {
+            const result = await data(sdk.posts.replyToPost(postId, replyWorldId, { authorId, commentId: parentCommentId, requestId: id, text: content }, options.signal));
+            const saved = { post: map.post(result.post), energyLeft: Number(result.energyLeft), subscribers: Number(result.subscribers) };
+            if (sessionPlayer?.id === player.id && sessionPlayer.worldInstanceId === replyWorldId)
+                sessionPlayer = { ...sessionPlayer, postsLeft: saved.energyLeft, subs: saved.subscribers };
+            options.onSaved?.(saved);
+            return { ...saved, commentId: result.commentId };
         };
-        const replyWorldId = player.worldInstanceId;
-        if (!replyWorldId)
-            throw new Error('World must be loaded before this request');
-        let completed: ReplyLiveEvent | undefined;
+        const generate = async (authorId: string, sourceCommentId: string, additional: boolean) => {
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    options.onTyping?.(authorId);
+                    let completed: { text: string; additionalStarId?: string | null } | undefined;
+                    const response = await stream({ url: '/posts/{postId}/replies/generation', path: { postId }, query: { worldId: replyWorldId }, body: { authorId, sourceCommentId, additional } }, options.signal);
+                    await readSse(response, value => parse(starGenerationEvent, value), event => {
+                        if (event.status === 'failed') {
+                            const failure = new Error(event.code ?? 'ai_unavailable');
+                            failure.name = event.code ?? 'ai_unavailable';
+                            throw failure;
+                        }
+                        if (event.status === 'completed' && event.text) completed = { text: event.text, additionalStarId: event.additionalStarId };
+                    });
+                    if (!completed) throw new Error('Generation stream ended before completion');
+                    return completed;
+                } catch (cause) {
+                    const code = cause instanceof Error ? cause.name : '';
+                    if (attempt === 1 || options.signal?.aborted || code === 'AbortError' || code === 'unsafe_generated_content' || code === 'unsafe_input' || code === 'crisis' || (cause instanceof ApiError && cause.status >= 400 && cause.status < 500)) throw cause;
+                }
+            }
+            throw new Error('Generation failed');
+        };
+        const playerReply = await save(`Player_${player.id.replaceAll('-', '')}`, commentId, requestId, text);
         try {
-            const response = await stream({ url: '/posts/{postId}/replies', path: { postId }, query: { worldId: replyWorldId }, body: { requestId, commentId, text } }, signal);
-            await readSse(response, value => map.reply(parse(replyEvent, value)), event => {
-                update(event);
-                if (event.status === 'failed')
-                    throw new Error('Reply generation failed');
-                if (event.status === 'completed' && event.post && event.energyLeft != null && event.subscribers != null)
-                    completed = event;
-            });
-            if (!completed)
-                throw new Error('Reply stream ended before completion');
-            return completed;
-        }
-        catch (cause) {
-            if (signal?.aborted || (cause instanceof Error && cause.name === 'AbortError') || (cause instanceof ApiError && cause.status >= 400 && cause.status < 500))
-                throw cause;
-            // A lost final SSE event does not imply that the transaction failed.
-            const post = await data(sdk.posts.getPost(postId, replyWorldId)).then(map.post);
-            const saved = post.comments.find(comment => comment.requestId === requestId && comment.parentCommentId === commentId && comment.text === text);
-            if (!saved)
-                throw cause;
-            const [identity, worlds] = await Promise.all([data(sdk.player.getCurrentPlayer()).then(map.player), data(sdk.worlds.getOwnedWorlds()).then(worlds => worlds.map(map.world))]);
-            const world = worlds.find(value => value.id === player.worldInstanceId);
-            if (!world)
-                throw cause;
-            const event: ReplyLiveEvent = { status: 'completed', requestId, post, energyLeft: identity.energy, subscribers: world.subscribers };
-            update(event);
-            return event;
+            const mainId = `${requestId}-star`;
+            const main = playerReply.post.comments.some(comment => comment.requestId === mainId) && options.additionalStarId
+                ? { text: '', additionalStarId: options.additionalStarId }
+                : await generate(starAuthorId, playerReply.commentId, false);
+            options.onAdditionalStar?.(main.additionalStarId ?? null);
+            let latest = playerReply.post.comments.some(comment => comment.requestId === mainId)
+                ? playerReply : await save(starAuthorId, playerReply.commentId, mainId, main.text);
+            if (main.additionalStarId) {
+                const extraId = `${requestId}-extra`;
+                if (!latest.post.comments.some(comment => comment.requestId === extraId)) {
+                    const additionalAuthorId = `Star_${main.additionalStarId}`;
+                    const additional = await generate(additionalAuthorId, playerReply.commentId, true);
+                    latest = await save(additionalAuthorId, null, extraId, additional.text);
+                }
+            }
+            return latest;
+        } finally {
+            options.onTyping?.(null);
         }
     },
     report: (commentId: string, reason: string) => data(sdk.telemetry.reportComment({ commentId, reason })),

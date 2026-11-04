@@ -32,7 +32,6 @@ export const post = (value: Input<Wire.PostDetailResponse>): Ui.PostDetailRespon
 export const channelPost = (value: Input<Wire.ChannelPostResponse>): Ui.ChannelPost => ({ ...value, views: number(value.views), commentCount: number(value.commentCount), reactions: value.reactions.map(reaction) })
 export const result = (value: Input<Wire.PostResultResponse>): Ui.PostResult => ({ ...value, delta: number(value.delta), views: number(value.views), bestComment: value.bestComment ?? undefined, hook: value.hook ?? undefined, ribbons: value.ribbons.map(ribbon => ({ ...ribbon, sub: ribbon.sub ?? undefined })) })
 export const publication = (value: Input<Wire.PublicationStatusResponse>): Ui.PublicationState => ({ ...value, failure: value.failure ?? undefined, result: value.result ? result(value.result) : null })
-export const reply = (value: Input<Wire.ReplyLiveEvent>): Ui.ReplyLiveEvent => ({ ...value, energyLeft: value.energyLeft == null ? value.energyLeft : number(value.energyLeft), subscribers: value.subscribers == null ? value.subscribers : number(value.subscribers), post: value.post ? post(value.post) : null })
 export function live(value: Awaited<ReturnType<import('./generated/reki-api').PostsClient['moderatePublication']>>['result'][number]): Ui.LiveEvent {
   switch (value.type) {
     case 'views': return { ...value, type: value.type, views: number(value.views) }

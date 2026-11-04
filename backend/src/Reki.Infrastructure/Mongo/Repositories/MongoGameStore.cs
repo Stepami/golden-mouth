@@ -174,12 +174,11 @@ internal sealed class MongoGameStore : IGameStore
             using var session = await _client.StartSessionAsync(
                 cancellationToken: cancellationToken);
             session.StartTransaction();
-            var requestIdField = new StringFieldDefinition<GamePost, string>("Comments.RequestId");
             var postFilter = Builders<GamePost>.Filter.And(
                 Builders<GamePost>.Filter.Eq(item => item.Id, updatedPost.Id),
                 Builders<GamePost>.Filter.Eq(item => item.WorldId, updatedWorld.Id),
                 Builders<GamePost>.Filter.Eq(item => item.Version, expectedPostVersion),
-                Builders<GamePost>.Filter.Ne(requestIdField, requestId));
+                Builders<GamePost>.Filter.Not(Builders<GamePost>.Filter.ElemMatch(item => item.Comments, comment => comment.RequestId == requestId)));
             var postResult = await _posts.ReplaceOneAsync(
                 session,
                 postFilter,

@@ -40,9 +40,6 @@ export type PostDetailResponse = Omit<Fields<Wire.PostDetailResponse>, 'views' |
 }
 export type Post = Omit<PostDetailResponse, 'postId'> & { id: string; inRivers?: boolean; at?: string }
 export type ChannelPost = Omit<Fields<Wire.ChannelPostResponse>, 'views' | 'commentCount' | 'reactions'> & { views: number; commentCount: number; reactions: Reaction[] }
-export type ReplyLiveEvent = Pick<Fields<Wire.ReplyLiveEvent>, 'status' | 'requestId'> & Partial<Pick<Fields<Wire.ReplyLiveEvent>, 'text' | 'code'>> & {
-  post?: PostDetailResponse | null; energyLeft?: number | null; subscribers?: number | null
-}
 export type Why = Wire.WhyResponse
 export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views' | 'ribbons' | 'bestComment' | 'hook'> & {
   delta: number; views: number
