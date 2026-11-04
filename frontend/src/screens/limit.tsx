@@ -5,11 +5,13 @@ import { worldOf } from '../api/worldContent'
 import { useNav } from '../app/nav'
 import { usePlayer, useStore } from '../app/store'
 import { inTelegram } from '../telegram'
-import { Avatar, BottomCTA, Button, Card, Gift, TopBar, fmt } from '../ui'
+import { Avatar, BottomCTA, Button, Card, Gift, TopBar, Sheet, fmt } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
+import { EnergyHelp } from '../ui/GameSheets'
+import { GameHeader } from '../ui/GameHeader'
 
 const shareInvite = (link: string) => {
   track('invite_sent')
@@ -17,23 +19,10 @@ const shareInvite = (link: string) => {
   if (inTelegram) shareURL.ifAvailable(link, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`)
 }
 
-// 04-1: «звёзды отдыхают»; звёздам не пишем, бесплатное остаётся
+// Current reference showLimit opens energy help; retain the real daily-reset policy.
 function Limit() {
   const nav = useNav()
-  return (
-    <div className="screen no-tab">
-      <ChannelHead />
-      <div style={{ padding: '14px 20px', textAlign: 'center' }}>
-        <Avatar seed="mira" mode="default" size={72} style={{ margin: '2px auto 10px' }} />
-        <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Мира ответит утром</div>
-        <div className="muted" style={{ marginBottom: 14 }}>Она сказала «надо подумать 👀». Энергия на сегодня закончилась. В 9:00 запас обновится</div>
-        <Card style={{ textAlign: 'left', marginBottom: 12 }}><div className="small" style={{ color: 'var(--soft)', marginBottom: 4 }}>А пока бесплатно</div>читать треды · комментировать друзей · листать ленту</Card>
-        <Gift style={{ textAlign: 'left', fontSize: 15, padding: '12px 14px' }}>Позови друга: +5 энергии вам обоим прямо сегодня<div style={{ fontWeight: 600, fontSize: 12, marginTop: 2 }}>как только он сделает первый пост · до 3 друзей в день</div></Gift>
-        <button onClick={() => nav.push('04-2_fake_door')} style={{ marginTop: 14, fontSize: 14, color: 'var(--muted2)', background: 'none', border: 'none' }}>Реки+: +10 энергии и все миры ›</button>
-      </div>
-      <BottomCTA main="Позвать друга" onMain={() => nav.push('04-3_invite')} />
-    </div>
-  )
+  return <div className="screen"><GameHeader /><EnergyHelp onClose={() => nav.canBack ? nav.back() : nav.replace('03-3_feed')} /></div>
 }
 
 // 04-2: Реки+ тарифом; платёжки нет, «Хочу» пишет интерес и даёт +5 энергии
@@ -57,9 +46,9 @@ function FakeDoor() {
     finally { setBusy(false) }
   }
   const plan = (name: string, price: string, rows: [string, boolean][], hi?: boolean) => (
-    <div className="card" style={{ flex: 1, padding: 12, ...(hi ? { border: '2px solid var(--accent)', background: 'linear-gradient(160deg,#2A1A2E,#1A1A24)' } : { border: '1px solid #33323F' }) }}>
+    <div className="card" style={{ flex: 1, padding: 12, ...(hi ? { border: '2px solid var(--accent)', background: 'linear-gradient(160deg,#2A1A2E,var(--card))' } : { border: '1px solid var(--line)' }) }}>
       <b>{name}</b><div style={{ fontSize: 20, fontWeight: 900, margin: '2px 0 8px' }}>{price}</div>
-      {rows.map(([t, on]) => <div key={t} className="small" style={{ marginBottom: 5, color: on ? undefined : '#55536A' }}>{on ? '✓' : '—'} {t}</div>)}
+      {rows.map(([t, on]) => <div key={t} className="small" style={{ marginBottom: 5, color: on ? undefined : 'var(--line)' }}>{on ? '✓' : '—'} {t}</div>)}
     </div>
   )
   return (
@@ -72,7 +61,7 @@ function FakeDoor() {
           {plan('Реки+', '349 ₽/мес', [['20 энергии в день', true], ['+5 за друга', true], ['свой стиль канала', true], ['все миры сразу', true]], true)}
         </div>
         <div className="muted small" style={{ marginBottom: 12 }}>Реки+ ещё в работе, деньги не списываются. Можно оставить интерес к запуску. Рассылка в боте появится позже</div>
-        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#1F2A26,#1A1A24)', border: '1px solid #6BFFB855' }}><b className="up">{sent ? message : 'Можно получить +5 энергии один раз'}</b></Card>
+        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#1F2A26,var(--card))', border: '1px solid #6BFFB855' }}><b className="up">{sent ? message : 'Можно получить +5 энергии один раз'}</b></Card>
         {error && <p className="small" role="alert">{error}</p>}
         <Button onClick={() => take(true)} disabled={sent || busy} style={{ marginBottom: 8 }}>Хочу Реки+</Button>
         <button className="muted small" onClick={() => take(false)} disabled={sent || busy} style={{ background: 'none', border: 'none' }}>Забрать только +5 энергии</button>
@@ -104,24 +93,15 @@ function Invite() {
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
   const copy = async () => { if (!link) return; try { if (inTelegram) await copyTextToClipboard(link); else await navigator.clipboard.writeText(link); setCopied(true); setCopyError(false) } catch { setCopyError(true) } }
-  return (
-    <div className="screen no-tab">
-      <TopBar onBack={nav.back} title="Позвать друзей" />
-      <div className="pad">
-        <Card style={{ marginBottom: 20 }}><b>Открой создание своего мира</b><p style={{ marginTop: 12, lineHeight: 1.5 }}>Отправь ссылку другу. Когда он опубликует первый пост, создание мира откроется, а вы оба получите +5 энергии.</p></Card>
-        <div className="label">Друг увидит твою карточку</div>
-        <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420 60%,#12203A)', borderRadius: 16, padding: 14, textAlign: 'center', marginBottom: 12 }}>
-          <Avatar seed={p.handle} size={44} style={{ margin: '0 auto 6px' }} /><b>{p.name}</b>
-          <div style={{ fontSize: 28, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent' }}>{fmt(p.subs)}</div>
-          <div className="small">подписчиков · {worldOf(p.world).emoji} {worldOf(p.world).title}</div><div className="small muted" style={{ marginTop: 4 }}>а ты кем будешь?</div>
-        </div>
-        <Card style={{ color: 'var(--muted)', overflowWrap: 'anywhere' }}><span className="small">Твоя ссылка: {link ?? (linkError ? 'Не удалось загрузить' : 'Загружаем…')}</span></Card>
-      </div>
-      {linkError && <div className="pad" role="alert">Не удалось получить твою ссылку.<Button secondary onClick={retry}>Попробовать снова</Button></div>}
-      {copyError && <div className="pad small" role="alert">Не удалось скопировать. Ссылка показана выше.</div>}
-      <BottomCTA secondDisabled={!link} second={copied ? "Ссылка скопирована" : "Скопировать ссылку"} onSecond={copy} main={link ? "Отправить в чат" : "Загружаем ссылку…"} disabled={!link} onMain={() => { if (link) shareInvite(link) }} />
-    </div>
-  )
+  return <div className="screen invite-backdrop"><ChannelHead /><Sheet title="Позови своего человека" className="invite-sheet" onClose={() => nav.canBack ? nav.back() : nav.replace('01-3_world')}>
+    <div className="invite-profile"><Avatar seed={p.handle} size={64} /><strong>{p.name}</strong><span>{fmt(p.subs)} подписчиков · {worldOf(p.world).title}</span></div>
+    <div className="invite-benefits"><span>🪐 <b>Свой мир</b><small>откроется тебе</small></span><span>⚡ <b>+{p.firstPostInviteBonus} энергии</b><small>вам обоим</small></span></div>
+    <p className="invite-caption">После первого поста друга.</p>
+    <div className="referral-link"><span>{link ?? (linkError ? 'Не удалось загрузить ссылку' : 'Загружаем ссылку…')}</span><Button disabled={!link} onClick={copy}>{copied ? 'Ссылка скопирована' : 'Копировать'}</Button></div>
+    {linkError && <div role="alert"><p>Не удалось получить твою ссылку.</p><Button secondary onClick={retry}>Попробовать снова</Button></div>}
+    {copyError && <p role="alert">Не удалось скопировать. Ссылка показана выше.</p>}
+    <button className="text-button invite-send" disabled={!link} onClick={() => { if (link) shareInvite(link) }}>Отправить в чат →</button>
+  </Sheet></div>
 }
 
 // 04-4: друг пришёл по карточке
@@ -131,7 +111,7 @@ function FriendJoined() {
     <div className="screen no-tab">
       <ChannelHead />
       <div className="sheet-bg" style={{ alignItems: 'center' }}><div className="sheet" style={{ textAlign: 'center', padding: 24 }}>
-        <div className="row" style={{ justifyContent: 'center', gap: 0, marginBottom: 12 }}><Avatar seed={p.handle} size={64} style={{ border: '3px solid #1A1A24' }} /><Avatar seed="katya" size={64} style={{ marginLeft: -14, border: '3px solid #1A1A24' }} /></div>
+        <div className="row" style={{ justifyContent: 'center', gap: 0, marginBottom: 12 }}><Avatar seed={p.handle} size={64} style={{ border: '3px solid var(--card)' }} /><Avatar seed="katya" size={64} style={{ marginLeft: -14, border: '3px solid var(--card)' }} /></div>
         <div style={{ fontSize: 22, fontWeight: 900 }}>Катя пришла по твоей карточке!</div>
         <div className="muted" style={{ margin: '6px 0 16px' }}>Она завела канал в Академии и сделала первый пост</div>
         <Gift style={{ fontSize: 20, padding: 14 }}>+5 энергии тебе и ей</Gift>
@@ -143,7 +123,7 @@ function FriendJoined() {
 }
 
 register({
-  '04-1_limit': { component: Limit, title: 'Лимит: звёзды отдыхают' },
+  '04-1_limit': { component: Limit, title: 'Как работает энергия' },
   '04-2_fake_door': { component: FakeDoor, title: 'Реки+' },
   '04-2b_plus_push': { component: PlusPush, title: 'Бот: Реки+ открыт' },
   '04-3_invite': { component: Invite, title: 'Позвать друзей' },

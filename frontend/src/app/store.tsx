@@ -1,9 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { selectDraftOwner } from './worldDraft'
+import { clearResultHistory } from './resultHistory'
 import { api } from '../api/client'
 import type { Player } from '../api/types'
 
-export type PlayerState = 'loading' | 'ready' | 'missing' | 'failed'
+export type PlayerState = 'loading' | 'ready' | 'missing' | 'unauthorized' | 'failed'
 interface Store { player: Player | null; playerState: PlayerState; setPlayer: (p: Player) => void; resetPlayer: () => void; patch: (p: Partial<Player>) => void; refresh: () => Promise<Player | undefined>; unlockCelebration: boolean; dismissUnlockCelebration: () => void }
 const unlockSeen = new Set<string>()
 const Ctx = createContext<Store>(null!)
@@ -17,6 +18,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [unlockPlayerId, setUnlockPlayerId] = useState<string | null>(null)
   const resetPlayer = useCallback(() => {
     generation.current++
+    clearResultHistory()
     if (player) unlockSeen.delete(player.id)
     selectDraftOwner('onboarding')
     setPlayerValue(null); setPlayerState('missing'); setUnlockPlayerId(null)
@@ -45,7 +47,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       if (started !== generation.current) return
       selectDraftOwner(api.playerId() ?? 'onboarding')
-      setPlayerState(prev => prev === 'ready' ? 'ready' : (e as { status?: number })?.status === 404 ? 'missing' : 'failed')
+      setPlayerState(prev => prev === 'ready' ? 'ready' : (e as { status?: number })?.status === 404 ? 'missing' : (e as { status?: number })?.status === 401 ? 'unauthorized' : 'failed')
     }
   }, [setPlayer])
   useEffect(() => { void refresh() }, [refresh])

@@ -84,8 +84,8 @@ async function readSse<T>(response: Response, decode: (value: unknown) => T, onE
             break;
     }
 }
-async function publicationState(id: string): Promise<PublicationState> {
-    return map.publication(await data(sdk.posts.getPublicationStatus(id)));
+async function publicationState(id: string, signal?: AbortSignal): Promise<PublicationState> {
+    return map.publication(await data(sdk.posts.getPublicationStatus(id, signal)));
 }
 const playerRequests = new Map<string, Promise<Player>>();
 async function loadPlayer(worldId?: string): Promise<Player> {
@@ -109,6 +109,10 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)) ?? ownedWorlds[0];
     if (!world)
         throw new ApiError(404, 'GET', '/worlds');
+    // Saved-world routes also need the authoritative template match for covers/guidance.
+    // A catalogue outage must not prevent opening the actual saved world.
+    await loadTemplates().catch(() => undefined);
+    assertSession(generation);
     installWorldContent([world]);
     return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, difficulty: world.difficulty, avatarStyle: world.avatarStyle,
         world: world.id, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
@@ -171,7 +175,7 @@ export const api = {
         return api.me(world.id);
     },
     /** Р“РµРЅРµСЂР°С†РёСЏ, Р·Р°С‚РµРј РјРѕРґРµСЂР°С†РёСЏ Рё Р°РЅРёРјР°С†РёСЏ РјР°СЃСЃРёРІР° СЂРµР°РєС†РёР№; РїСЂРё РѕР±СЂС‹РІРµ СЃРІРµСЂСЏРµРј СЃРѕС…СЂР°РЅС‘РЅРЅС‹Р№ СЃС‚Р°С‚СѓСЃ. */
-    publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true, wantId?: string): () => void {
+    publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true, wantId?: string, recoveryOnly = false): () => void {
         const generation = sessionGeneration();
         const ctrl = new AbortController();
         let deliveredResult = false;
@@ -225,7 +229,7 @@ export const api = {
                 return;
             let state: PublicationState;
             try {
-                state = await publicationState(publicationId);
+                state = await publicationState(publicationId, ctrl.signal);
             }
             catch {
                 if (generation === sessionGeneration())
@@ -256,6 +260,19 @@ export const api = {
             void (async () => {
                 try {
                     assertSession(generation);
+                    if (recoveryOnly) {
+                        const state = await publicationState(publicationId, ctrl.signal);
+                        if (ctrl.signal.aborted) return;
+                        assertSession(generation);
+                        onStatus?.(state.status);
+                        if (state.status === 'completed' && state.result) {
+                            deliveredResult = true;
+                            onEvent({ type: 'result', result: state.result });
+                        } else if (state.status === 'ready_for_moderation') await moderation();
+                        else if (state.status === 'failed') onError('failed', state.failure);
+                        else onError('unknown');
+                        return;
+                    }
                     const r = await stream({ url: '/posts/publications', query: { worldId: worldId() }, body: { publicationId, text, ownWords, wantId } }, ctrl.signal);
                     let lastStatus: PublicationStatus | null = null;
                     let failure: PublicationFailure | undefined;

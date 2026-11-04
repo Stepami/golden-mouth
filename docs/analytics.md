@@ -48,6 +48,8 @@
 | `event_answered`, `challenge_post` | событие дня, пост в зарубу | kind, own |
 | `report`, `crisis_shown` | жалоба, кризис | reason, adult |
 
+В интерфейсе v7 поле `screen` использует `v7.<route>`: например `v7.catalog`, `v7.account`, `v7.feed`, `v7.compose`, `v7.thread`. Смена экранов сохраняет действующие `screen_view`/`screen_leave`; загрузочный экран и служебная библиотека компонентов не считаются игровыми экранами. Тексты игрока, имена и содержимое публикаций не передаются.
+
 ## Что пишет бэкенд сам
 
 `player_created` (группа возраста; событие создаётся до появления мира), `player_deleted` (после удаления данных и профиля; служебное событие), `world_created` (после сохранения мира: внутренний `world_id`, `template_id` = UUID шаблона (null для мира с нуля), `difficulty` = easy/normal/hard, возраст), `invite_converted`, `post_scored` (три шкалы, quality, дневной индекс расхода энергии в prop_post_index; ответы в треде тоже сдвигают индекс), `level_up`, `card_earned`, `stage_reached`, `hate_wave`, `challenge_started`, `challenge_finished`, `notification_sent`, `notification_opened`, `plus_shown`. Сервер видит то, чего не видит фронт: оценки модели, конверсию приглашений, уведомления.

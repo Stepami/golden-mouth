@@ -1,11 +1,15 @@
+import './entry-parity.css'
+import leraPortrait from '../assets/onboarding-lera.jpg'
+import welcomeSki from '../assets/welcome-ski.jpg'
+import { GameHeader } from '../ui/GameHeader'
+import { Typewriter } from '../ui/Typewriter'
 import { displayHandle } from '../app/handle'
-import { usePresetGoal } from '../ui/StoryGoal'
+import { characterGuidanceFor } from '../app/characterGuidance'
 import { WorldCover } from '../ui/WorldCover'
-import approvedIntro from '../assets/intro-school-approved.png'
 import { useEffect, useRef, useState } from 'react'
 import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
-import { worldOf, contentOf } from '../api/worldContent'
+import { worldOf, contentOf, worldDocumentOf } from '../api/worldContent'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
 import { Avatar, BottomCTA, Card, fmt } from '../ui'
@@ -21,70 +25,94 @@ function Steps({ n, back = true }: { n: number; back?: boolean }) {
   return (
     <div className="row" style={{ padding: '10px 16px 0', height: 40 }}>
       {back && <button className="back" onClick={nav.back} style={{ background: 'none', border: 'none', fontSize: 24, color: 'var(--soft)' }} aria-label="Назад">‹</button>}
-      <div style={{ marginLeft: 'auto' }} aria-label={`Шаг ${n} из 5`}>{[1, 2, 3, 4, 5].map(i => <i key={i} style={{ display: 'inline-block', width: i === n ? 18 : 6, height: 6, borderRadius: 3, marginLeft: 5, background: i <= n ? 'var(--accent)' : '#33323F' }} />)}</div>
+      <div style={{ marginLeft: 'auto' }} aria-label={`Шаг ${n} из 5`}>{[1, 2, 3, 4, 5].map(i => <i key={i} style={{ display: 'inline-block', width: i === n ? 18 : 6, height: 6, borderRadius: 3, marginLeft: 5, background: i <= n ? 'var(--accent)' : 'var(--line)' }} />)}</div>
     </div>
   )
 }
 
-/** Exact portrait windows from the approved sketch; no regenerated character artwork. */
-function IntroPortrait({ character }: { character: 'masha' | 'gosha' }) {
-  const masha = character === 'masha'
-  return <svg className={`intro-portrait intro-portrait-${character}`} viewBox={masha ? '85 626 116 116' : '142 931 168 168'} role="img" aria-label={masha ? 'Маша' : 'Гоша в круглых очках с волшебной палочкой'}>
-    <image href={approvedIntro} width="1036" height="1518" />
-  </svg>
+const welcomeHeadlines = [
+  ['Пиши.', 'Тебя услышат.'],
+  ['Будь собой.', 'Или попробуй иначе.'],
+  ['Собери своих.', 'По характеру.'],
+  ['А что, если', 'первым написать?'],
+]
+
+function WelcomeHeadline() {
+  const [index, setIndex] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const [reduced, setReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
+  useEffect(() => {
+    const motion = matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setReduced(motion.matches)
+    motion.addEventListener('change', update)
+    return () => motion.removeEventListener('change', update)
+  }, [])
+  useEffect(() => {
+    if (paused || reduced || new URLSearchParams(location.search).has('shot')) return
+    const timer = window.setInterval(() => setIndex(i => (i + 1) % welcomeHeadlines.length), 3400)
+    return () => window.clearInterval(timer)
+  }, [paused, reduced])
+  return <div className="welcome-thesis-wrap"><h1 className="welcome-headline"><span>{welcomeHeadlines[index].join("\n")}</span></h1>{!reduced && <button className="welcome-text-motion" aria-label={paused ? 'Продолжить смену тезисов' : 'Остановить смену тезисов'} aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? '▷' : 'Ⅱ'}</button>}</div>
 }
 
-// 01-1: approved school mini-dialogue, preserving the existing welcome layout.
+// 01-1: welcome montage from the approved prototype.
 function Invite() {
   const nav = useNav()
-  return <div className="screen no-tab welcome"><div className="pad">
-    <div className="brand">реки</div><h1>Твой пост<br />запускает историю.</h1>
-    <p className="muted">Веди блог в вымышленном мире.<br />Пиши посты — персонажи ответят.</p>
-    <div className="welcome-post card" aria-label="Пример игрового поста">
-      <div className="row"><IntroPortrait character="masha" /><div><b>Маша · Школа чародеев</b><div className="small muted">Пример игрового поста</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
-      <p>Выложила фото тайной комнаты. Утром дверь исчезла. Кто-нибудь ещё её видел? 👀</p>
-      <div className="row"><span className="react">🔥 2,4k</span><span className="react">💀 890</span><span className="react">🫶 1,2k</span></div>
-      <div className="welcome-reply"><IntroPortrait character="gosha" /><div><b>Гоша · ученик школы магии</b><div>Я. И оставил там свою палочку. Пойдём искать дверь — только Георгине пока не говори.</div></div></div>
+  return <main className="welcome-screen">
+    <div className="welcome-brand">реки.</div>
+    <div className="welcome-scene">
+      <article className="welcome-social-post"><div className="row"><span className="welcome-self">ты</span><div><b>Твой пост</b><small className="muted">только что</small></div><span className="muted" style={{ marginLeft: 'auto' }}>···</span></div><p>Хочу в горы. Кто со мной? 🏔️</p><img src={welcomeSki} alt="Друзья на горнолыжном склоне" /><small className="muted">♡ 12　Макс и ещё 11</small></article>
+      <article className="welcome-social-reply"><span className="welcome-max">М</span><div><b>Макс</b><p>С тобой — хоть на край света. Горы тоже подойдут 😏</p></div></article>
+      <div className="welcome-notification"><span>↗</span><div><b>Макс написал тебе</b><small className="muted">Вдвоём поедем? 👀</small></div><b className="welcome-unread">1</b></div>
     </div>
-    <p className="small muted welcome-disclaimer">Персонажи и фанаты виртуальные.<br />Посты остаются внутри игры.</p>
-    <p className="welcome-world-choice">Выбери мир или создай свой</p>
-  </div><BottomCTA main="Начать играть" onMain={() => nav.push('01-2_age')} /></div>
+    <div className="welcome-promise"><p className="small muted">Твой блог. Твоя компания.</p><WelcomeHeadline /><p className="muted">Здесь нет реальных собеседников — только ИИ. Пробуй общение без оглядки на знакомых.</p></div>
+    <button className="btn" onClick={() => nav.push('01-2_age')}>Попробовать →</button>
+  </main>
 }
 
-// 01-2: год рождения, согласие не отмечено заранее; младше 14 → 01-2b
+// 01-2: возраст, согласие не отмечено заранее; младше 14 → 01-2b
 function Age() {
   const nav = useNav()
-  const currentYear = new Date().getFullYear()
-  const years = Array.from({ length: 91 }, (_, i) => currentYear - 10 - i)
-  const [year, setYear] = useState(2010)
+  const ages = Array.from({ length: 92 }, (_, i) => i + 8)
+  const [age, setAge] = useState(18)
   const [agree, setAgree] = useState(false)
   const wheel = useRef<HTMLDivElement>(null)
-  useEffect(() => { if (wheel.current) wheel.current.scrollTop = years.indexOf(2010) * 38 }, [])
-  const onWheel = () => { const el = wheel.current; if (el) setYear(years[Math.min(years.length - 1, Math.max(0, Math.round(el.scrollTop / 38)))]) }
-  const age = new Date().getFullYear() - year
-  return (
-    <div className="screen no-tab">
-      <Steps n={1} back={false} />
-      <div style={{ padding: '4px 20px' }}>
-        <div className="brand" style={{ fontSize: 26 }}>Реки</div>
-        <div style={{ fontSize: 24, fontWeight: 800, margin: '14px 0 6px' }}>Год рождения</div>
-        <div className="muted" style={{ marginBottom: 10 }}>Чтобы звёзды говорили с тобой как надо</div>
-        <div ref={wheel} onScroll={onWheel} style={{ height: 230, overflowY: 'auto', scrollSnapType: 'y mandatory', background: '#14141B', borderRadius: 18, textAlign: 'center', padding: '96px 0' }}>
-          {years.map(y => <div key={y} onClick={() => setYear(y)} style={{ scrollSnapAlign: 'center', height: 38, lineHeight: '38px', fontSize: y === year ? 22 : 18, fontWeight: y === year ? 800 : 400, color: y === year ? 'var(--text)' : 'var(--muted)', background: y === year ? '#22222D' : 'none', borderRadius: 10, margin: '0 12px' }}>{y}</div>)}
-        </div>
-        <Card style={{ marginTop: 18 }}>
-          <b>Сохраним твою игру?</b>
-          <div className="small muted" style={{ margin: '6px 0 10px' }}>Храним только Telegram ID и игру, сервер в России. Удалить всё можно в профиле в один тап. <span style={{ color: '#8CC8FF' }}>Подробнее</span></div>
-          <label className="row" style={{ gap: 8 }}>
-            <button onClick={() => setAgree(!agree)} aria-pressed={agree} style={{ width: 22, height: 22, borderRadius: 6, border: agree ? 'none' : '2px solid #55536A', background: agree ? 'var(--grad)' : 'none', color: '#fff', fontSize: 14 }}>{agree ? '✓' : ''}</button>
-            <span className="small">Согласие на обработку данных</span>
-          </label>
-        </Card>
-        {!agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
-      </div>
-      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 14 }); nav.push(age < 14 ? '01-2b_under14' : '01-3_world', { group: age < 18 ? '14-17' : '18+', ageBand: ageBand(age) }) }} />
+  useEffect(() => { if (wheel.current) wheel.current.scrollTop = (18 - 8) * 44 }, [])
+  const selectAge = (value: number) => {
+    setAge(value)
+    wheel.current?.scrollTo({ top: (value - 8) * 44, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+  }
+  return <main className="age-screen">
+    <div className="welcome-brand">реки.</div>
+    <button className="age-back icon-button" aria-label="Назад" onClick={nav.back}>‹</button>
+    <div className="age-copy"><p className="small muted">Знакомство · 1 / 1</p><h1>Сколько<br />тебе лет?</h1><p className="muted">Дальше — выбор первого мира.</p></div>
+    <div className="age-wheel">
+      <div ref={wheel} className="age-wheel-list" role="listbox" aria-label="Твой возраст" tabIndex={0}
+        onKeyDown={event => { if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) { event.preventDefault(); selectAge(event.key === 'Home' ? 8 : event.key === 'End' ? 99 : Math.max(8, Math.min(99, age + (event.key === 'ArrowDown' ? 1 : -1)))) } }}
+        onScroll={() => { if (wheel.current) setAge(Math.max(8, Math.min(99, 8 + Math.round(wheel.current.scrollTop / 44)))) }}>
+        {ages.map(value => <button key={value} role="option" aria-selected={value === age} tabIndex={-1} onClick={() => selectAge(value)}>{value}</button>)}
+      </div><span className="age-wheel-unit" aria-hidden="true">лет</span>
     </div>
-  )
+    <label className="age-consent"><input type="checkbox" checked={agree} onChange={event => setAgree(event.target.checked)} /><span>Даю согласие на обработку персональных данных.</span></label>
+    <button className="btn" disabled={!agree} onClick={() => { track('onboarding_step', { step: 'age', ok: age >= 14 }); nav.push(age < 14 ? '01-2b_under14' : '01-2c_guide', { group: age < 18 ? '14-17' : '18+', ageBand: ageBand(age) }) }}>Продолжить →</button>
+  </main>
+}
+
+function LeraGuide() {
+  const nav = useNav()
+  const [step, setStep] = useState(0)
+  const finish = () => nav.push('01-3_world', nav.params)
+  const title = step ? 'Теперь выбери мир' : 'Привет, я Лера!'
+  const paragraphs = step
+    ? ['В каждом мире — своя сюжетная линия и уникальные персонажи. Выбери, куда хочешь попасть.']
+    : ['Коротко расскажу про Реки.', 'Здесь твой блог читают только ИИ-персонажи. Пиши то, что хочется, знакомься и пробуй разные роли.', 'Время здесь идёт быстрее: можно за вечер набрать аудиторию и посмотреть, каково это — когда тебя знают.']
+  return <main className="lera-screen">
+    <div className="lera-top"><button className="back" aria-label="Назад" onClick={() => step ? setStep(0) : nav.back()}>‹</button><span>{step + 1} / 2</span><button onClick={finish}>Пропустить</button></div>
+    <div className="lera-person"><img src={leraPortrait} alt="Лера" /><span className="muted">Лера</span></div>
+    <div className="lera-speech" key={step}><h1><Typewriter text={title} /></h1>{paragraphs.map((text, index) => <p key={index} className={index ? 'lera-detail' : undefined}><Typewriter text={text} /></p>)}</div>
+    <div className="lera-dots" aria-label={`Шаг ${step + 1} из 2`}>{[0, 1].map(n => <i key={n} className={n === step ? 'active' : ''} />)}</div>
+    <button className="btn" onClick={() => step ? finish() : setStep(1)}>{step ? 'Выбрать мир →' : 'Вперёд →'}</button>
+  </main>
 }
 
 function Under14() {
@@ -101,29 +129,23 @@ function Under14() {
 }
 
 // 01-6: первый экран: цель, квест, что такое Реки / навыки / коллекция
-export function ChannelHead() {
-  const p = useStore().player!; const nav = useNav()
-  const w = worldOf(p.world)
-  return (
-    <div className="top channel-header">
-      <Avatar seed={p.handle} size={36} />
-      <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div>
-      <div className="energy-badge" aria-label={`Осталось ${p.postsLeft} энергии`}>⚡ {p.postsLeft}</div>
-    </div>
-  )
-}
+export function ChannelHead() { return <GameHeader /> }
 export function Home() {
-  const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
-  return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
-    <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{profile.firstContext}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
-      {p.firstPostInviteBonus > 0 && <p>🎁 Первый пост даст ещё {p.firstPostInviteBonus} энергии</p>}
-    </div><p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>
-  </div><div className="bottom-cta" style={{ bottom: 78 }}><button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button></div></div>
+  const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world); const guidance = characterGuidanceFor(p, worldDocumentOf(p.world))
+  return <div className="screen no-tab entry-parity entry-opening"><header><button className="back" aria-label="Назад к мирам" onClick={() => nav.replace('01-3_world')}>‹</button><div><b>{worldOf(p.world).title}</b><small>Завязка истории</small></div></header>
+    {worldArt[p.world] && <WorldCover world={p.world} className="entry-opening-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}
+    <div className="entry-identity"><Avatar seed={p.handle} size={42} /><b>Ты — {p.name}</b></div>
+    <h1>{guidance?.title || p.role || 'Здесь начинается твоя история.'}</h1><p className="entry-opening-context"><Typewriter text={guidance?.context ?? profile.firstContext} /></p>
+    {guidance && <><section className="entry-opening-goal"><strong>Твоя главная цель</strong><h2>{guidance.goal}</h2><p>{guidance.why}</p><h3>Что предстоит развить</h3>{guidance.growth.map(text => <p key={text}>{text}</p>)}</section><section className="entry-opening-goal"><strong>Первый шаг</strong><p>{guidance.firstStep}</p></section></>}
+    {p.firstPostInviteBonus > 0 && <p className="small muted">Первый пост даст ещё {p.firstPostInviteBonus} энергии.</p>}
+    <button className="btn" onClick={() => nav.push('02-1_compose', { firstStory: true })}>Написать первый пост →</button>
+  </div>
 }
 
 register({
   '01-1_invite': { component: Invite, title: 'Приглашение от друга' },
-  '01-2_age': { component: Age, title: 'Год рождения и согласие' },
+  '01-2c_guide': { component: LeraGuide, title: 'Знакомство с Лерой' },
+  '01-2_age': { component: Age, title: 'Возраст и согласие' },
   '01-2b_under14': { component: Under14, title: 'Младше 14' },
   '01-3_world': { component: withWorldTemplates(World, true), title: 'Выбор мира' },
   '01-3b_world_overview': { component: withWorldTemplates(WorldOverview), title: 'Обзор мира' },
@@ -132,4 +154,4 @@ register({
   '01-4b_world_setup': { component: withWorldTemplates(WorldSetup), title: 'Мир, голос канала и драма' },
   '01-5_first_star': { component: withWorldTemplates(FirstStar), title: 'Настройка героев' },
   '01-6_home': { component: Home, title: 'Первый экран' },
-}, { '01-6_home': 0, '01-3_world': 5 })
+}, { '01-3_world': 5 })
