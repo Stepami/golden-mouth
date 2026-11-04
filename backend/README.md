@@ -26,7 +26,7 @@ Development uses MongoDB for game data. Before starting the API outside Compose,
 - `GET /openapi/v1.json`
 - `GET /swagger/`
 
-The exact local address is printed by ASP.NET Core when the service starts.
+The OpenAPI JSON and Swagger UI are available only in Development. Production does not serve these routes. The build-time OpenAPI document is still generated for NSwag clients. The exact local address is printed by ASP.NET Core when the service starts.
 
 ## Run in Docker
 

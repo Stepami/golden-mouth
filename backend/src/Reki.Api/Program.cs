@@ -114,12 +114,19 @@ public partial class Program
 
     private static void MapApiDocumentation(WebApplication app)
     {
-        app.MapOpenApi();
-        app.UseSwaggerUI(options =>
+        if (app.Environment.IsDevelopment() || OpenApiGeneration.IsRunning)
         {
-            options.RoutePrefix = "swagger";
-            options.SwaggerEndpoint("/openapi/v1.json", "Reki API v1");
-        });
+            app.MapOpenApi();
+        }
+
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseSwaggerUI(options =>
+            {
+                options.RoutePrefix = "swagger";
+                options.SwaggerEndpoint("/openapi/v1.json", "Reki API v1");
+            });
+        }
     }
 
     [LoggerMessage(
