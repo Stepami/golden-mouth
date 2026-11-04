@@ -8,6 +8,7 @@ export type Person = {
   role: string;
   boundary: string;
   relation?: number;
+  subscribers?: number;
 };
 export type Quest = {
   id: string;

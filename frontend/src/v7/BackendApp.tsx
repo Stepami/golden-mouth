@@ -12,17 +12,25 @@ import { rankCatalog } from './interests';
 import { worldArt } from '../app/worldArt';
 import { storyForTemplate, storyForCampaign, campaignFor, pilotDefinition, pilotBinding, boundCampaign, type PilotBinding, type PilotCampaign } from './story/pilot';
 import { StoryOpening, StoryMap, PlayMode, StoryWallet, XPFlight, TypingDraft } from './storyplay/StorySurfaces';
-import { freshStory, isStoryPlay, finishQuest, buyBooster, grantDemoCrystals, spendStoryXP, type StoryPlay } from './storyplay/model';
+import { freshStory, isStoryPlay, repairClosedDays, finishQuest, buyBooster, grantDemoCrystals, spendStoryXP, type StoryPlay } from './storyplay/model';
 import './storyplay/storyplay.css';
 import './portraits.css';
+import './social/social.css';
+import {ChannelAudience,formatAudience} from './social/ChannelAudience';
+import {ReactionTicker,type ReactionNotice} from './social/ReactionTicker';
+import {ResultReview} from './publication/ResultReview';
+import {parseQuestOutcome} from './publication/outcomes';
+import {FollowersFlight} from './publication/RewardMotion';
 import { ResourcePages, type ResourcePageName } from './screens/ResourcePages';
 import { OwnedBoosterPicker } from './storyplay/BoosterPicker';
 import { initialInventory, stockOf, type BoosterId, type Inventory } from './storyplay/boosters';
+import {SeriesGiftCard} from './storyplay/SeriesGiftCard';
+import {claimSeriesGift,seriesGiftFor,moscowDay} from './storyplay/gifts';
+import {legacyCurriculum} from './storyplay/curriculum';
 import { starterFor } from './storyplay/starters';
 import { StoryBrief } from './story/StoryBrief';
 import { PublicationWaiting, PublicationResult, type PublicationReceipt } from './publication/PublicationCards';
 import {formatXP} from './xp/wallet';
-import { XPProfile } from './xp/XPProfile';
 import { HeroPicker, SkillPicker, AvatarEditor, heroPortrait } from './screens/HeroPicker';
 import { personaFor, savePersona } from './persona';
 import { WorldProgress, StreakDetails } from './screens/WorldResources';
@@ -95,6 +103,9 @@ export default function BackendApp() {
   const [likes, setLikes] = useState<string[]>([]);
   const [storageError, setStorageError] = useState(false);
   const [toast, setToast] = useState<PostResult>();
+  const [reactionNotice,setReactionNotice]=useState<ReactionNotice>();
+  const [gainAnimation,setGainAnimation]=useState<{delta:number;nonce:string}>();
+  const [accountVisible,setAccountVisible]=useState(5);
   const [receipt, setReceipt] = useState<PublicationReceipt>();
   const [publicationFailed, setPublicationFailed] = useState(false);
   const [prepared, setPrepared] = useState<{ title: string; prompt: string; questId?: string; xp?: number }>();
@@ -118,7 +129,7 @@ export default function BackendApp() {
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments); }, [player?.experiments]);
   const key = `reki:v7:${player?.id ?? api.playerId() ?? 'guest'}`;
   const localSave = (name: string, value: unknown) => { if (!saveLocal(`${key}:${name}`, value)) setStorageError(true); };
-  const go = (next: Screen) => { setError(''); setStack(s => [...s, screen]); setScreen(next); setToast(undefined); };
+  const go = (next: Screen) => { setError(''); setStack(s => [...s, screen]); setScreen(next); setToast(undefined); setReactionNotice(undefined); };
   const openResource = (next: ResourcePageName) => {
     if(screen==='compose'){setAnimateDraft(false);setTypingDraft(false);}
     if(['resources','crystals','boosters'].includes(screen)){setScreen(next);setError('');}else go(next);
@@ -126,7 +137,7 @@ export default function BackendApp() {
   const back = useCallback(() => { if (pending || busy) return; setError(''); setScreen(stack.at(-1) ?? (world ? 'feed' : 'catalog')); setStack(s => s.slice(0, -1)); }, [stack, world, pending, busy]);
   useEffect(() => syncBackButton(stack.length > 0 && screen !== 'age' && !pending, back), [back, stack.length, pending, screen]);
   useEffect(() => {
-    if (booting || hash.startsWith('#system')) return;
+    if (booting || hash.startsWith('#system') || hash.startsWith('#result-review')) return;
     const id = `v7.${screen}`; setLogScreen(id); screenView(id);
   }, [screen, booting, hash]);
   useEffect(() => { main.current?.scrollTo(0, 0); focusHeading.current?.focus({ preventScroll: true }); }, [screen]);
@@ -134,7 +145,7 @@ export default function BackendApp() {
   useEffect(() => () => { cancel.current?.(); }, []);
   useEffect(() => {
     if (!player) return;
-    setActivities(readLocal(`${key}:activity`, [])); setLikes(readLocal(`${key}:likes`, [])); setQualities(readLocal(`${key}:qualities`, []));
+    setAccountVisible(5); setActivities(readLocal(`${key}:activity`, [])); setLikes(readLocal(`${key}:likes`, [])); setQualities(readLocal(`${key}:qualities`, []));
   }, [key, !!player]);
 
   const loadFeed = useCallback(async (p: Player, more?: string) => {
@@ -184,21 +195,23 @@ export default function BackendApp() {
   }, []);
   useEffect(() => { void boot(); }, [boot]);
 
+  useEffect(()=>{if(!gainAnimation)return;const timer=setTimeout(()=>setGainAnimation(undefined),2100);return()=>clearTimeout(timer);},[gainAnimation?.nonce]);
   useEffect(() => { if (!rewardAnimation) return; const timer=setTimeout(()=>setRewardAnimation(undefined),1800); return()=>clearTimeout(timer); },[rewardAnimation?.nonce]);
-  const storyKey = player && activeCampaign ? `${key}:story-play:${player.world}:${activeCampaign.id}` : '';
+  const curriculum = activeCampaign || (world ? legacyCurriculum(world,player?optionalWorldTemplate({...worldDocumentOf(player.world),firstContext:worldDocumentOf(player.world).firstContext.split('\nЦель персонажа: ')[0]})?.id:undefined) : undefined);
+  const storyKey = player && curriculum ? `${key}:story-play:${player.world}:${curriculum.id}` : '';
   const inventoryKey = `${key}:story-inventory`;
-  const playBase = activeCampaign && storyOwner === storyKey && storyState.campaignId === activeCampaign.id ? storyState : freshStory(activeCampaign?.id ?? '');
+  const playBase = curriculum && storyOwner === storyKey && storyState.campaignId === curriculum.id ? storyState : {...freshStory(curriculum?.id??''),enabled:import.meta.env.DEV};
   const play = {...playBase,...storyInventory};
-  const allQuests = activeCampaign?.days.flatMap(day => day.quests) ?? [];
+  const allQuests = curriculum?.days.flatMap(day => day.quests) ?? [];
   const currentQuest = allQuests.find(q => !play.completed.includes(q.id));
   const editorQuest = allQuests.find(q => q.id === prepared?.questId) ?? currentQuest;
   const storyLabels = player && personaFor(player.id, player.world).skills?.length === 3 ? personaFor(player.id, player.world).skills! : ['Смелость','Юмор','В тему'];
-  const stageDay = activeCampaign ? Math.ceil((activeCampaign.days.find(day => day.quests.some(q => q.id === currentQuest?.id))?.day ?? 7) / 3) : undefined;
+  const stageDay = curriculum ? (curriculum?.days.find(day => day.quests.some(q => q.id === currentQuest?.id))?.day??curriculum.days.at(-1)?.day??1) : undefined;
   const goalProgress = activeCampaign ? Math.floor(activeCampaign.days.reduce((sum,day) => sum + day.quests.filter(q => play.completed.includes(q.id)).length * day.weight / 3,0) / activeCampaign.goalWeights.reduce((a,b)=>a+b,0) * 100) : 0;
   useEffect(() => {
-    if (!activeCampaign || !storyKey) { setStoryState(freshStory('')); setStoryOwner(''); return; }
+    if (!curriculum || !storyKey) { setStoryState(freshStory('')); setStoryOwner(''); return; }
     const saved = readLocal<unknown>(storyKey, undefined);
-    const initial = isStoryPlay(saved,activeCampaign.id) ? saved : freshStory(activeCampaign.id);
+    const initial = repairClosedDays(isStoryPlay(saved,curriculum.id) ? saved : {...freshStory(curriculum.id),enabled:import.meta.env.DEV},curriculum.days.map(d=>({id:`${curriculum.id}:day${d.day}`,questIds:d.quests.map(q=>q.id)})));
     setStoryState(initial); setStoryOwner(storyKey);
     const inventory = readLocal<Inventory | undefined>(inventoryKey,undefined);
     const shared=initialInventory(inventory??{crystals:initial.crystals,boosters:initial.boosters,boosterStock:initial.boosterStock,bonusUsed:initial.bonusUsed});
@@ -206,18 +219,24 @@ export default function BackendApp() {
     setSelectedBooster(undefined); setRewardAnimation(undefined);
   }, [storyKey]);
   const updateStory = (change: (state: StoryPlay) => StoryPlay) => {
-    if (!storyKey || !activeCampaign) return;
+    if (!storyKey || !curriculum) return;
     const saved = readLocal<unknown>(storyKey, undefined);
     const inventory = initialInventory(readLocal(inventoryKey,storyInventory));
-    const before = {...(isStoryPlay(saved,activeCampaign.id) ? saved : play),...inventory};
+    const before = {...repairClosedDays(isStoryPlay(saved,curriculum.id)?saved:play,curriculum.days.map(d=>({id:`${curriculum.id}:day${d.day}`,questIds:d.quests.map(q=>q.id)}))),...inventory};
     const next = change(before); if (next === before) return;
-    setStoryState(next); setStoryOwner(storyKey); const inventoryNext = {crystals:next.crystals,boosters:next.boosters,bonusUsed:next.bonusUsed,boosterStock:stockOf(next),openingGrant:true}; setStoryInventory(inventoryNext); if (!saveLocal(storyKey,next) || !saveLocal(inventoryKey,inventoryNext)) setStorageError(true);
+    setStoryState(next); setStoryOwner(storyKey); const inventoryNext = {crystals:next.crystals,boosters:next.boosters,bonusUsed:next.bonusUsed,boosterStock:stockOf(next),openingGrant:true,loginGiftDays:inventory.loginGiftDays,lastGift:inventory.lastGift,energyGift:inventory.energyGift}; setStoryInventory(inventoryNext); if (!saveLocal(storyKey,next) || !saveLocal(inventoryKey,inventoryNext)) setStorageError(true);
+  };
+  const openSeriesGift = () => {
+    if(!player||!play.enabled)return;
+    const before=initialInventory(readLocal(inventoryKey,storyInventory));
+    const next=claimSeriesGift(before,moscowDay(),seriesGiftFor(player.id,moscowDay()));
+    setStoryInventory(next);if(!saveLocal(inventoryKey,next))setStorageError(true);
   };
   const creditQuest = (actionId: string, reference?: {questId?:string; mode?:string; booster?:boolean|BoosterId}) => {
-    if (!activeCampaign || reference?.mode !== 'story') return;
+    if (!curriculum || reference?.mode !== 'story') return;
     const quest = allQuests.find(q => q.id === reference.questId); if (!quest) return;
     let reward: {amount:number;title:string;questId:string} | undefined;
-    updateStory(before => { const next = finishQuest(before,quest.id,actionId,quest.baseXP,reference.booster??false); if(next!==before) reward={amount:(next.total-before.total)/100,title:quest.title,questId:quest.id}; return next; });
+    updateStory(before => { const day=curriculum.days.find(d=>d.quests.some(q=>q.id===quest.id))!; const next = finishQuest(before,quest.id,actionId,quest.baseXP,reference.booster??false,{id:`${curriculum.id}:day${day.day}`,questIds:day.quests.map(q=>q.id),requires:day.day>1?`${curriculum.id}:day${day.day-1}`:undefined,unlockActor:curriculum.actorOrder?.find(id=>!curriculum.initialActors?.includes(id)&&!(before.followingActors??[]).includes(id))}); if(next!==before) reward={amount:(next.total-before.total)/100,title:quest.title,questId:quest.id}; return next; });
     if(reward) { setRewardAnimation({amount:reward.amount,nonce:actionId}); setSelectedBooster(undefined); }
     return reward;
   };
@@ -313,7 +332,7 @@ export default function BackendApp() {
       if (!savePostDraft(draftKey(player),{text,ownWords:false})) setStorageError(true);
     }
   };
-  const openFirstPost = () => { setStoryOnboarding(false); openQuest(currentQuest?.id); };
+  const openFirstPost = () => { setStoryOnboarding(false); if(curriculum&&!currentQuest){setPlayMode('sandbox');openCompose(undefined,{name:'Свободная история',text:'Доступный эпизод завершён. Можно продолжить разговор в песочнице.'});return;} openQuest(currentQuest?.id); };
   const updateDraft = (text: string) => {
     setDraft(text);
     if (!player) return;
@@ -334,7 +353,7 @@ export default function BackendApp() {
     const k = draftKey(player), saved = readPostDraft(k);
     const command = submissionFor(saved, draft, () => crypto.randomUUID());
     const { id, text, recovery } = command;
-    if (!recovery && activeCampaign) localSave(`story-action:${player.world}:${id}`,{questId:editorQuest?.id,mode:playMode,booster:selectedBooster});
+    if (!recovery && curriculum) localSave(`story-action:${player.world}:${id}`,{questId:editorQuest?.id,mode:playMode,booster:selectedBooster});
     if (!recovery) trackEvent('post_publish', { len: text.length, own_words: command.ownWords });
     if (!savePostDraft(k, { ...saved, text: draft, publicationId: id, submittedText: text, ownWords: command.ownWords, submittedOwnWords: command.ownWords })) setStorageError(true);
     sending.current = true; setPending(true); setUnknown(false); setPublicationFailed(false); setError(''); setStatus('pending'); setScreen('feed'); setStack([]);
@@ -342,13 +361,18 @@ export default function BackendApp() {
       if (event.type !== 'result') return;
       trackEvent('post_result', { delta: event.result.delta, viral: event.result.viral, flop: event.result.flop });
       completePostDraft(k, id, text); setDraft(readPostDraft(k).text);
-      const reward = creditQuest(event.result.postId,readLocal(`${key}:story-action:${player.world}:${id}`,undefined));
-      const value: PublicationReceipt = { worldId: player.world, result: event.result, before: player.skills, questReward: reward };
+      const serverOutcome=parseQuestOutcome((event.result as unknown as {questOutcome?:unknown}).questOutcome);
+      const reward = serverOutcome?undefined:creditQuest(event.result.postId,readLocal(`${key}:story-action:${player.world}:${id}`,undefined));
+      const value: PublicationReceipt = { worldId: player.world, result: event.result, before: player.skills, questReward: reward,questOutcome:serverOutcome??(reward?{status:'success',source:'local',title:reward.title,reason:'Действие сохранено. Шаг закрыт в сюжетной пробе.',xp:reward.amount}:{status:'unverified',source:'server',title:editorQuest?.title??'Твоя запись',reason:playMode==='sandbox'?'Свободная запись в песочнице: сюжетный XP не начисляется.':'Пост опубликован, но серверный исход квеста пока не возвращается.'}) };
       setReceipt(value); saveLocal(`${key}:result:${player.world}`, value);
-      setToast(event.result); setPublicationFailed(false); setUnknown(false); setPending(false); sending.current = false; setStatus('completed');
-      const item: Activity = { id: event.result.postId, worldId: player.world, title: event.result.headline, text: `${event.result.delta > 0 ? '+' : ''}${event.result.delta} подписчиков`, read: false };
+      setToast(event.result); setGainAnimation({delta:event.result.delta,nonce:event.result.postId});
+      const best=event.result.bestComment;
+      const actor=best?world?.cast.find(p=>p.handle===best.avatar||p.id===best.avatar):undefined;
+      if(best&&actor){const notice:ReactionNotice={id:event.result.postId,postId:event.result.postId,worldId:player.world,kind:'reaction',actorName:actor.name,text:best.text,relation:actor.relation};setReactionNotice(notice);}
+      setPublicationFailed(false); setUnknown(false); setPending(false); sending.current = false; setStatus('completed');
+      const item: Activity = { id: event.result.postId, worldId: player.world, title: actor ? `${actor.name} отвечает на твою запись` : event.result.headline, text: best?.text ?? `${event.result.delta > 0 ? '+' : ''}${event.result.delta} подписчиков`, read: false, ...(actor&&best?{kind:'reaction' as const,actorName:actor.name,relation:actor.relation}: {}) };
       setActivities(old => { const next = [item, ...old.filter(a => a.id !== item.id)].slice(0, 100); localSave('activity', next); return next; });
-      setScreen('feed'); setStack([]); void refresh().then(p => { const updated = { ...value, after: p.skills }; setReceipt(updated); saveLocal(`${key}:result:${player.world}`, updated); }).catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
+      setScreen('feed'); setStack([]); void refresh().then(p => { const updated = { ...value, after: p.skills }; setReceipt(updated); saveLocal(`${key}:result:${player.world}`, updated); const freshActor=best?worldDocumentOf(p.world).stars.find(s=>s.avatarSeed===best.avatar):undefined; if(freshActor){setReactionNotice(n=>n?.id===event.result.postId?{...n,relation:freshActor.relation}:n);setActivities(old=>{const next=old.map(a=>a.id===event.result.postId&&a.worldId===player.world?{...a,relation:freshActor.relation}:a);localSave('activity',next);return next;});} }).catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
     }, (state, reason) => {
       sending.current = false; setPending(false); setUnknown(state === 'unknown'); setPublicationFailed(state === 'failed');
       if (state === 'failed') { const latest = readPostDraft(k); savePostDraft(k, { text: latest.text, ownWords: latest.ownWords }); }
@@ -359,7 +383,7 @@ export default function BackendApp() {
     if (!player || !reply || sending.current) return;
     const k = replyKey(reply), saved = readLocal<ReplyDraft>(k, { text: '' });
     const requestId = saved.requestId ?? crypto.randomUUID(), text = saved.submittedText ?? draft;
-    if (!saved.requestId && activeCampaign) localSave(`story-action:${player.world}:${requestId}`,{questId:currentQuest?.actionKinds.includes('comment') ? currentQuest.id : undefined,mode:playMode,booster:selectedBooster});
+    if (!saved.requestId && curriculum) localSave(`story-action:${player.world}:${requestId}`,{questId:currentQuest?.actionKinds.includes('comment') ? currentQuest.id : undefined,mode:playMode,booster:selectedBooster});
     saveLocal(k, { text: draft, requestId, submittedText: text });
     sending.current = true; setPending(true); setError('');
     let terminalFailure = false;
@@ -387,15 +411,16 @@ export default function BackendApp() {
 
   useEffect(()=>{if(!energyNudge)return;const timer=setTimeout(()=>setEnergyNudge(0),6000);return()=>clearTimeout(timer);},[energyNudge]);
   const renderFeed = () => <>
-    <header className="world-header"><button className="world-switch" onClick={() => setOverlay('exit')}><strong>{world?.title} ⌄</strong><span>Мой мир</span></button>
+    <header className="world-header"><button className="world-switch" onClick={() => setOverlay('exit')}><strong>{world?.title} ⌄</strong><span className="channel-sidebar-count"><Icon name="member"/><b className="channel-count-target">{formatAudience(player?.subs??0)}</b><span className="channel-count-label">подписчиков</span></span></button>
       <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><ResourceBadge type="energy" value={`${player?.postsLeft??0}/10`} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/><span>+1 / 10 мин · план</span><span className="sr-only">Новый режим восстановления требует подключения backend</span></div>
-      <ResourceBadge type="crystal" value={activeCampaign ? String(play.crystals) : '—'} hint={activeCampaign ? "Кристаллы локальной пробы и бустеры" : "Обменять на энергию и усиление XP · скоро"} onClick={() => openResource('crystals')} />
-      <button className="profile-access" data-unspent={activeCampaign && play.available>0 ? "true" : undefined} aria-label={activeCampaign && play.enabled ? `Профиль персонажа: ${formatXP(play.total)} XP, цель ${goalProgress}%. Потратить XP на навыки` : "Профиль персонажа"} onClick={() => go('profile')} style={activeCampaign && play.enabled ? { background: `conic-gradient(var(--color-progress) ${goalProgress}%,var(--color-divider) 0)` } : undefined}><Avatar name={player?.name ?? ''} src={player ? personaFor(player.id, player.world).avatar : undefined} size="lg" />{activeCampaign && play.enabled && <span className="story-avatar-label">{formatXP(play.total)} XP · {goalProgress}%</span>}</button></header>
-    {player && <WorldProgress streak={player.streak} storyDay={stageDay} boosterCount={activeCampaign ? String(play.boosters) : '—'} onStreak={() => setOverlay('streak')} onBoosters={() => openResource('boosters')} />}
-    {activeCampaign && <section className="story-tools"><button className="map-access" onClick={() => setOverlay('map')}>Карта мира <span aria-hidden="true">↗</span></button><button className="local-play-badge" onClick={() => openResource('boosters')}>{play.enabled ? 'Локальная проба' : 'Включить сюжетную пробу'}</button></section>}
+      <ResourceBadge type="crystal" value={curriculum ? String(play.crystals) : '—'} hint={activeCampaign ? "Кристаллы локальной пробы и бустеры" : "Обменять на энергию и усиление XP · скоро"} onClick={() => openResource('crystals')} />
+      <button className="profile-access" data-unspent={curriculum && play.available>0 ? "true" : undefined} aria-label={curriculum && play.enabled ? `Профиль персонажа: ${formatXP(play.total)} XP, ${activeCampaign?`цель ${goalProgress}%`:`квесты ${play.completed.length}/${allQuests.length}`}. Потратить XP на навыки` : "Профиль персонажа"} onClick={() => go('profile')} style={curriculum && play.enabled ? { background: `conic-gradient(var(--color-progress) ${goalProgress}%,var(--color-divider) 0)` } : undefined}><Avatar name={player?.name ?? ''} src={player ? personaFor(player.id, player.world).avatar : undefined} size="lg" />{curriculum && play.enabled && <span className="story-avatar-label">{formatXP(play.total)} XP · {activeCampaign?`${goalProgress}%`:`${play.completed.length}/${allQuests.length}`}</span>}</button></header>
+    {player && <WorldProgress streak={player.streak} storyDay={stageDay} boosterCount={curriculum ? String(play.boosters) : '—'} onStreak={() => setOverlay('streak')} onBoosters={() => openResource('boosters')} />}
+    {curriculum&&play.enabled&&play.available>0&&<section className="section"><div className="xp-day-ready"><strong>{formatXP(play.available)} XP можно направить на навыки</strong><Button onClick={()=>go('profile')}>Выбрать улучшения</Button></div></section>}
+    {curriculum && <section className="story-tools"><button className="map-access" onClick={() => setOverlay('map')}>Карта мира <span aria-hidden="true">↗</span></button><button className="local-play-badge" onClick={() => openResource('boosters')}>{play.enabled ? 'Локальная проба' : 'Включить сюжетную пробу'}</button></section>}
     {player?.postsLeft===0&&draft.trim()&&!pending&&<section className="section"><div className="energy-draft-notice"><strong>Черновик ждёт энергии</strong><p className="caption muted">Не отправлен</p><blockquote className="energy-draft-text">{draft}</blockquote><p>Текст сохранён. Нажми на энергию вверху, чтобы посмотреть восстановление и обмен.</p><Button variant="secondary" onClick={()=>reply?openCompose(reply):openFirstPost()}>Вернуться к черновику</Button></div></section>}
     {!reply && (pending || unknown || publicationFailed) && <PublicationWaiting pending={pending} unknown={unknown} text={draft} status={status} onStop={stopWaiting} onContinue={() => { if (unknown) publish(); else openCompose(); }} />}
-    {receipt && receipt.worldId === player?.world && <PublicationResult receipt={receipt} animateReward={rewardAnimation?.nonce===receipt.result.postId} onRead={() => void openThread(receipt.result.postId)} />}
+    {receipt && receipt.worldId === player?.world && <PublicationResult receipt={receipt} animateReward={rewardAnimation?.nonce===receipt.result.postId} animateFollowers={gainAnimation?.nonce===receipt.result.postId} onRead={() => void openThread(receipt.result.postId)} />}
     {feedError && <div className="section"><Notice title="Не удалось обновить ленту" tone="error">{feedError}</Notice></div>}
     {!feed.length && !feedLoading && !feedError && <EmptyState title="Первое слово за тобой" action={<Button onClick={() => openCompose()}>Написать пост</Button>}>{world?.seedPost || 'Расскажи свою версию истории. Здесь появятся публикации и ответы.'}</EmptyState>}
     {feed.map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}
@@ -403,7 +428,7 @@ export default function BackendApp() {
     <div className="section"><Button variant="secondary" busy={feedLoading} onClick={() => void loadFeed(player!, cursor ?? undefined)}>{cursor ? 'Показать ещё' : 'Обновить ленту'}</Button></div>
   </>;
 
-  const worldActivities = activitiesForWorld(activities, player?.world);
+  const worldActivities = activitiesForWorld(activities, player?.world).filter(a=>a.kind==='reaction'||a.kind==='mention'||a.kind==='follow');
   const selectedStory = storyForTemplate(definition?.templateId);
   const heroOptions = definition ? [...(pilotSelected && selectedStory ? selectedStory.campaigns.filter(c => c.roleId !== 'own').map(c => ({ id: c.roleId, name: c.heroName, role: c.roleName, goal: c.goal })) : (heroBase ?? definition).stars.map(s => ({ id: s.id, name: s.name, role: s.role, goal: selected?.goal || '' }))), { id: 'custom', name: heroChoice === 'custom' ? definition.name || 'Свой персонаж' : 'Свой персонаж', role: 'Твоя история', goal: selected?.goal || '' }] : [];
   let content: ReactNode;
@@ -447,8 +472,8 @@ export default function BackendApp() {
   else if (screen === 'goals' && activeCampaign) content = <StoryOpening firstVisit={storyOnboarding} playerName={player?.name ?? activeCampaign.heroName} avatar={player ? personaFor(player.id,player.world).avatar : undefined} worldTitle={world?.title || storyForCampaign(activeCampaign).scenario} campaign={activeCampaign} goal={world?.goal || activeCampaign.goal} skills={storyLabels} step="mission" onNext={() => go('story-skills')} onBack={back} />;
   else if (screen === 'story-skills' && activeCampaign) content = <StoryOpening firstVisit={storyOnboarding} playerName={player?.name ?? activeCampaign.heroName} avatar={player ? personaFor(player.id,player.world).avatar : undefined} worldTitle={world?.title || storyForCampaign(activeCampaign).scenario} campaign={activeCampaign} goal={world?.goal || activeCampaign.goal} skills={storyLabels} step="skills" onNext={openFirstPost} onBack={back} />;
   else if (screen === 'goals' && world) content = <><ScreenHeading title="Цели" subtitle={world.title} /><StoryBrief goal={world.goal || 'Найти свой голос и начать разговор.'} /><section className="section"><Button onClick={openFirstPost}>Написать первый пост →</Button></section></>;
-  else if (['resources','crystals','boosters'].includes(screen)) content = <ResourcePages page={screen as ResourcePageName} energy={player?.postsLeft} state={play} activeStory={!!activeCampaign} selectedBooster={selectedBooster} onPage={openResource} onBack={back} onEnable={()=>updateStory(v=>({...v,enabled:true}))} onDisable={()=>{updateStory(v=>({...v,enabled:false}));setSelectedBooster(undefined);}} onGrant={()=>updateStory(grantDemoCrystals)} onBuy={id=>updateStory(s=>buyBooster(s,id))} onToggle={setSelectedBooster} onChooseWorld={()=>go('catalog')}/>;
-  else if (screen === 'compose' && player) content = <><ScreenHeading title={reply ? 'Продолжить разговор' : prepared?.title ?? 'Новая публикация'} back={back} /><section className="section stack composer-body">{prepared && <div className={`quest-editor-brief${playMode==='sandbox'?' is-sandbox':''}`}><div className="row between"><strong>Текущий квест</strong>{prepared.xp && <span className="quest-xp">{prepared.xp} XP за выполнение</span>}</div><p>{prepared.prompt}</p><details className="quest-reward-info"><summary>Как начисляется XP</summary><p className="caption muted">Начисление доступно в отдельно включаемой сюжетной пробе. Для старых миров без сюжетной привязки здесь показана награда будущего зачёта.</p></details></div>}{(reply || quote) && !prepared && <QuoteBlock name={reply?.name ?? quote!.name} text={reply?.text ?? quote!.text} />}<div className="row"><Avatar name={player.name} src={personaFor(player.id, player.world).avatar} /><strong>{player.name}</strong><span className="caption muted">Публично</span></div><label className="sr-only" htmlFor="post-text">Текст публикации</label>{!reply ? <TypingDraft value={draft} animate={animateDraft} disabled={pending || unknown} onChange={text => { setAnimateDraft(false); updateDraft(text); }} onTyping={setTypingDraft} /> : <textarea id="post-text" className="composer-text" value={draft} onChange={e => updateDraft(e.target.value)} disabled={pending || unknown} maxLength={1000} autoFocus />}<div className="row between caption muted"><span>Черновик сохраняется</span><span>{draft.length} / {reply ? 1000 : 2000}</span></div>{activeCampaign && <PlayMode value={playMode} onChange={mode=>{setPlayMode(mode);if(mode==='sandbox')setSelectedBooster(undefined);}}/>}<OwnedBoosterPicker state={play} selected={selectedBooster} onSelect={setSelectedBooster} onStore={()=>openResource('boosters')} known={!!activeCampaign} available={!!activeCampaign&&play.enabled} sandbox={playMode==='sandbox'}/>
+  else if (['resources','crystals','boosters'].includes(screen)) content = <ResourcePages page={screen as ResourcePageName} energy={player?.postsLeft} state={play} activeStory={!!curriculum} selectedBooster={selectedBooster} onPage={openResource} onBack={back} onEnable={()=>updateStory(v=>({...v,enabled:true}))} onDisable={()=>{updateStory(v=>({...v,enabled:false}));setSelectedBooster(undefined);}} onGrant={()=>updateStory(grantDemoCrystals)} onBuy={id=>updateStory(s=>buyBooster(s,id))} onToggle={setSelectedBooster} onChooseWorld={()=>go('catalog')}/>;
+  else if (screen === 'compose' && player) content = <><ScreenHeading title={reply ? 'Продолжить разговор' : prepared?.title ?? 'Новая публикация'} back={back} /><section className="section stack composer-body">{prepared && <div className={`quest-editor-brief${playMode==='sandbox'?' is-sandbox':''}`}><div className="row between"><strong>Текущий квест</strong>{prepared.xp && <span className="quest-xp">{prepared.xp} XP за выполнение</span>}</div><p>{prepared.prompt}</p><details className="quest-reward-info"><summary>Как начисляется XP</summary><p className="caption muted">Начисление доступно в отдельно включаемой сюжетной пробе. Для старых миров без сюжетной привязки здесь показана награда будущего зачёта.</p></details></div>}{(reply || quote) && !prepared && <QuoteBlock name={reply?.name ?? quote!.name} text={reply?.text ?? quote!.text} />}<div className="row"><Avatar name={player.name} src={personaFor(player.id, player.world).avatar} /><strong>{player.name}</strong><span className="caption muted">Публично</span></div><label className="sr-only" htmlFor="post-text">Текст публикации</label>{!reply ? <TypingDraft value={draft} animate={animateDraft} disabled={pending || unknown} onChange={text => { setAnimateDraft(false); updateDraft(text); }} onTyping={setTypingDraft} /> : <textarea id="post-text" className="composer-text" value={draft} onChange={e => updateDraft(e.target.value)} disabled={pending || unknown} maxLength={1000} autoFocus />}<div className="row between caption muted"><span>Черновик сохраняется</span><span>{draft.length} / {reply ? 1000 : 2000}</span></div>{curriculum && <PlayMode value={playMode} onChange={mode=>{setPlayMode(mode);if(mode==='sandbox')setSelectedBooster(undefined);}}/>}<OwnedBoosterPicker state={play} selected={selectedBooster} onSelect={setSelectedBooster} onStore={()=>openResource('boosters')} known={!!curriculum} available={!!curriculum&&play.enabled} sandbox={playMode==='sandbox'}/>
 {quote && !reply && !prepared && <p className="caption muted">Контекст помогает написать пост. Связь цитирования на сервере пока недоступна.</p>}{pending && <div className="pending-line" role="status"><span className="spinner" />{statusLabels[status] ?? 'Отправляем ответ…'}</div>}{pending && <Button variant="secondary" onClick={stopWaiting}>Остановить ожидание</Button>}<Button className="full" size="lg" disabled={!draft.trim() || typingDraft} busy={pending} onClick={publish}>{unknown ? 'Проверить статус' : 'Опубликовать'} <span className="caption">· 1 энергия</span></Button></section></>;
   else if (screen === 'thread' && player && world) {
     const view = post ? detailView(post, world, playerView(player)) : undefined;
@@ -457,24 +482,26 @@ export default function BackendApp() {
       const author: Person = comment.me ? playerView(player) : world.cast.find(p => `Star_${p.id}` === comment.authorId) ?? { id: comment.authorId ?? comment.id, name: comment.author, handle: comment.avatar ?? '', role: comment.role ?? '', boundary: '' };
       return <div key={comment.id} className={comment.parentCommentId ? 'thread-nested' : ''}>{comment.parentCommentId && <p className="reply-to caption muted">↳ Ответ на реплику</p>}{card({ id: comment.id, parentId: post.id, authorId: author.id, text: comment.hidden ? 'Комментарий скрыт' : comment.text, createdAt: '', likes: 0 }, author, 0, true)}{comment.star && !comment.hidden && world.cast.some(p => `Star_${p.id}` === comment.authorId) && <div className="reply-action"><Button variant="ghost" onClick={() => openCompose({ postId: post.id, commentId: comment.id, name: author.name, text: comment.text })}>Ответить {author.name}</Button></div>}</div>;
     })}{post && !post.comments.length && <EmptyState title="Здесь ещё нет ответов">Персонажи могут продолжить разговор после публикации.</EmptyState>}{postAuthor && post && <div className="section"><Button className="full" onClick={() => openCompose({ postId: post.id, commentId: null, name: postAuthor.name, text: post.text })}>Начать разговор с автором</Button></div>}</>;
-  } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={personaFor(player.id, player.world).avatar} onBack={back} />{activeCampaign ? <StoryWallet state={play} labels={storyLabels} onEnable={() => updateStory(s => ({...s,enabled:true}))} onSpend={points => updateStory(s => spendStoryXP(s,points))}/> : <XPProfile key={`${player.id}:${player.world}`} player={player} plannedSkills={personaFor(player.id, player.world).skills} />}<section className="profile-details"><button className="profile-goal" onClick={() => go('goals')}><strong>Ваша цель</strong><p>{world.goal}</p></button>{personaFor(player.id, player.world).skills?.length ? <p className="caption">Навыки для прокачки: {personaFor(player.id, player.world).skills!.join(' · ')}</p> : null}<SettingsRow label="Подписчики" value={String(player.subs)} onClick={() => setOverlay('skills')} /><Button variant="secondary" onClick={() => { go('account'); }}>Настройки профиля</Button></section></>;
-  else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><span className="caption muted">@{person.handle} · AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
+  } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={personaFor(player.id, player.world).avatar} onBack={back} /><section className="section channel-stat-section"><ChannelAudience value={player.subs}/></section><StoryWallet state={play} labels={storyLabels} onEnable={() => updateStory(v=>({...v,enabled:true}))} onSpend={points=>updateStory(v=>spendStoryXP(v,points))}/>{curriculum&&<section className="section"><h2 className="section-title">Твой путь</h2><StoryMap campaign={curriculum} actors={world?.cast??[]} state={play} currentId={currentQuest?.id} onSelect={id=>openQuest(id)}/></section>}<section className="section">{play.enabled&&<SeriesGiftCard inventory={storyInventory} onClaim={openSeriesGift}/>}</section><section className="profile-details"><button className="profile-goal" onClick={() => go('goals')}><strong>Ваша цель</strong><p>{world.goal}</p></button>{personaFor(player.id, player.world).skills?.length ? <p className="caption">Навыки для прокачки: {personaFor(player.id, player.world).skills!.join(' · ')}</p> : null}<Button variant="secondary" onClick={() => { go('account'); }}>Настройки профиля</Button></section></>;
+  else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><ChannelAudience value={person.subscribers}/><span className="caption muted">@{person.handle} · AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
   else if (screen === 'topic' && world) content = <><div className="topic-header"><button className="back-button" onClick={back}>Назад</button><img className="topic-cover" src={world.hero} alt="" /><h1>{quote?.name ?? world.title}</h1><p>{quote?.text ?? world.topic}</p></div><section className="topic-people">{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}<Button className="full" onClick={() => openCompose(undefined, quote)}>Написать</Button></section></>;
   else if (screen === 'messages' && world) content = <><ScreenHeading title="Личка" /><EmptyState title="Сначала — общий разговор" action={<Button onClick={() => go('feed')}>Вернуться в ленту</Button>}>Личные сообщения скоро появятся.</EmptyState><section className="section"><h2 className="section-title">Собеседники</h2>{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}</section></>;
-  else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={worldActivities.length > 0 && <button className="link-button caption" onClick={() => { const next = markWorldActivitiesRead(activities, player?.world); setActivities(next); localSave('activity', next); }}>Прочитать всё</button>} />{!worldActivities.length && <EmptyState title="Пока тихо">Здесь появятся результаты твоих публикаций на этом устройстве.</EmptyState>}{worldActivities.map(a => <button key={a.id} className={`activity-row ${a.read ? '' : 'activity-row--unread'}`} onClick={() => void openThread(a.id)}><span className="activity-marker"><Icon name="activity" /></span><span className="grow"><strong>{a.title}</strong><p>{a.text}</p><span className="caption muted">Открыть публикацию ↗</span></span></button>)}</>;
-  else if (screen === 'account') content = <><ProfileHeader name={player?.name ?? 'Твой профиль'} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? owned.map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} onClick={() => void openWorld(ownedView(d))} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}</section><section className="account-settings"><SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => openResource('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><NominalSignOut onSignOut={beginEntry} disabled={pending || busy} /></section></>;
+  else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={worldActivities.length > 0 && <button className="link-button caption" onClick={() => { const next = markWorldActivitiesRead(activities, player?.world); setActivities(next); localSave('activity', next); }}>Прочитать всё</button>} />{!worldActivities.length && <EmptyState title="Пока тихо">Здесь появятся реакции персонажей и доступные упоминания твоего канала.</EmptyState>}{worldActivities.map(a=><ReactionTicker key={a.id} inline notice={{id:a.id,postId:a.id,worldId:a.worldId,kind:a.kind??'reaction',actorName:a.actorName??a.title,text:a.text,relation:a.relation}} onOpen={()=>void openThread(a.id)} onClose={()=>{const next=activities.map(v=>v.id===a.id?{...v,read:true}:v);setActivities(next);localSave('activity',next);}}/>)}</>;
+  else if (screen === 'account') content = <><ProfileHeader name={player?.name ?? 'Твой профиль'} avatar={player?personaFor(player.id,player.world).avatar:undefined} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? owned.slice(0,accountVisible).map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} onClick={() => void openWorld(ownedView(d))} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}{owned.length>accountVisible&&<Button variant="secondary" onClick={()=>setAccountVisible(n=>n+5)}>Показать ещё {Math.min(5,owned.length-accountVisible)}</Button>}</section><section className="account-settings"><SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => openResource('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><NominalSignOut onSignOut={beginEntry} disabled={pending || busy} /></section></>;
   else content = <EmptyState title="Выбери мир" action={<Button onClick={() => go('catalog')}>К мирам</Button>}>Продолжи сохранённую историю или начни новую.</EmptyState>;
 
   const inWorld = !!world && !['catalog', 'search', 'account', 'intro', 'onboarding', 'welcome', 'age', 'hero'].includes(screen);
   const showNav = !booting && !(storyOnboarding && ['goals','story-skills'].includes(screen)) && ['catalog', 'search', 'account', 'feed', 'goals', 'story-skills', 'messages', 'activity'].includes(screen);
-  const nav = inWorld ? [ { id: 'feed', label: 'Лента', icon: 'feed' as const }, { id: 'goals', label: 'Цели', icon: 'goals' as const }, { id: 'compose', label: 'Написать', icon: 'compose' as const }, { id: 'activity', label: 'Уведомления', icon: 'activity' as const, badge: activities.filter(a => !a.read && a.worldId === player?.world).length } ] : [ { id: 'catalog', label: 'Главная', icon: 'home' as const }, { id: 'search', label: 'Поиск', icon: 'search' as const }, { id: 'account', label: 'Профиль', icon: 'profile' as const } ];
+  const nav = inWorld ? [ { id: 'feed', label: 'Лента', icon: 'feed' as const }, { id: 'goals', label: 'Цели', icon: 'goals' as const }, { id: 'compose', label: 'Написать', icon: 'compose' as const }, { id: 'activity', label: 'Уведомления', icon: 'activity' as const, badge: worldActivities.filter(a=>!a.read).length } ] : [ { id: 'catalog', label: 'Главная', icon: 'home' as const }, { id: 'search', label: 'Поиск', icon: 'search' as const }, { id: 'account', label: 'Профиль', icon: 'profile' as const } ];
+  if(import.meta.env.DEV&&hash.startsWith('#result-review'))return <ResultReview/>;
   if (hash.startsWith('#system')) return <DesignSystem />;
   return <div className="v7-stage"><div className={`app ${showNav ? 'app--nav' : ''}`}><div className="app-body" ref={main}><div className="sr-only" tabIndex={-1} ref={focusHeading}>{titleOf[screen]}</div>{storageError && <Notice title="Не удалось сохранить на устройстве" tone="error">Не закрывай вкладку: черновик остаётся в памяти до перезагрузки.</Notice>}{error && <div className="section"><Notice title="Не получилось завершить действие" tone="error">{error}</Notice>{!booting && !templates.length && <Button onClick={() => void boot()}>Повторить</Button>}</div>}{content}</div>
-    {showNav && <BottomNav items={nav.map(n => ({ ...n, disabled: pending }))} active={screen === 'story-skills' ? 'goals' : screen} onChange={id => { tap('tab', { to: `v7.${id}` }); id === 'compose' ? (activeCampaign && playMode==='story' ? openFirstPost() : openCompose()) : go(id as Screen); }} />}
-    {toast && <div className="result-toast" role="status"><button className="toast-content" onClick={() => { void openThread(toast.postId); setToast(undefined); }}><span className="toast-check">✓</span><span><strong>Запись опубликована · Получены реакции</strong><span className="caption block">{toast.delta > 0 ? '+' : ''}{toast.delta} подписчиков · Читать ответы ↗</span></span></button><button className="toast-close" aria-label="Закрыть уведомление" onClick={() => setToast(undefined)}>×</button></div>}
+    {showNav && <BottomNav items={nav.map(n => ({ ...n, disabled: pending }))} active={screen === 'story-skills' ? 'goals' : screen} onChange={id => { tap('tab', { to: `v7.${id}` }); id === 'compose' ? (curriculum && playMode==='story' ? openFirstPost() : openCompose()) : go(id as Screen); }} />}
+    {reactionNotice&&<ReactionTicker notice={reactionNotice} onOpen={()=>{void openThread(reactionNotice.postId);setReactionNotice(undefined);}} onClose={()=>setReactionNotice(undefined)}/>}
+    {gainAnimation&&<FollowersFlight delta={gainAnimation.delta} nonce={gainAnimation.nonce}/>}
     {rewardAnimation && <XPFlight amount={rewardAnimation.amount} nonce={rewardAnimation.nonce} />}
     {overlay && <Dialog title={{ exit: 'Выйти из мира?', streak: 'Серия дней', map: 'Карта мира', skills: 'Навыки и отношения', 'text-size': 'Размер текста', 'local-like': 'Реакция', quote: 'Цитата', about: 'Новая версия' }[overlay]} onClose={() => setOverlay(null)}>
-      {overlay === 'streak' ? <StreakDetails streak={player!.streak} /> : overlay === 'map' && activeCampaign ? <StoryMap campaign={activeCampaign} state={play} currentId={currentQuest?.id} onSelect={id => { setOverlay(null); openQuest(id); }}/> : overlay === 'exit' ? <><p>Публикации и черновик сохранятся. Вернёшься с того же места.</p><Button disabled={pending} onClick={() => { feedRequest.current++; setWorld(undefined); setScreen('catalog'); setStack([]); setOverlay(null); }}>Выйти к мирам</Button><Button variant="secondary" onClick={() => setOverlay(null)}>Остаться</Button></> : overlay === 'text-size' ? <><div className="row" style={{ flexWrap: 'wrap' }}>{[1, 1.25, 1.5, 2].map(v => <Chip key={v} selected={textScale === v} onClick={() => setTextScale(v)}>{v * 100}%</Chip>)}</div><p>Так будет выглядеть текст в приложении.</p><Button onClick={() => setOverlay(null)}>Готово</Button></> : overlay === 'skills' ? <><p>Навыки растут после подтверждённых сервером действий. Высокий навык не гарантирует согласия собеседника.</p>{world?.cast.map(p => <PersonRow key={p.id} person={p} onClick={() => { setOverlay(null); showPerson(p); }} />)}</> : overlay === 'local-like' ? <><p>Реакция сохранена на этом устройстве. На отношения и награды она пока не влияет.</p><Button onClick={() => setOverlay(null)}>Понятно</Button></> : overlay === 'quote' ? <><QuoteBlock name={quote?.name ?? ''} text={quote?.text ?? ''} /><p className="caption muted">Связь цитирования пока не поддерживается. Можно взять текст как контекст нового поста.</p><Button onClick={() => { setOverlay(null); openCompose(undefined, quote); }}>Написать с этим контекстом</Button></> : <><p>Интерфейс v7. Миры, публикации и ответы работают с сервером. Личка, кристаллы и новая система квестов появятся позже.</p><p className="caption muted">Уведомления и реакции сохраняются на этом устройстве.</p><Button onClick={() => setOverlay(null)}>Понятно</Button></>}
+      {overlay === 'streak' ? <><StreakDetails streak={player!.streak}/>{play.enabled&&<SeriesGiftCard inventory={storyInventory} onClaim={openSeriesGift}/>}</> : overlay === 'map' && curriculum ? <StoryMap campaign={curriculum} actors={world?.cast??[]} state={play} currentId={currentQuest?.id} onSelect={id => { setOverlay(null); openQuest(id); }}/> : overlay === 'exit' ? <><p>Публикации и черновик сохранятся. Вернёшься с того же места.</p><Button disabled={pending} onClick={() => { feedRequest.current++; setWorld(undefined); setScreen('catalog'); setStack([]); setOverlay(null); }}>Выйти к мирам</Button><Button variant="secondary" onClick={() => setOverlay(null)}>Остаться</Button></> : overlay === 'text-size' ? <><div className="row" style={{ flexWrap: 'wrap' }}>{[1, 1.25, 1.5, 2].map(v => <Chip key={v} selected={textScale === v} onClick={() => setTextScale(v)}>{v * 100}%</Chip>)}</div><p>Так будет выглядеть текст в приложении.</p><Button onClick={() => setOverlay(null)}>Готово</Button></> : overlay === 'skills' ? <><p>Навыки растут после подтверждённых сервером действий. Высокий навык не гарантирует согласия собеседника.</p>{world?.cast.map(p => <PersonRow key={p.id} person={p} onClick={() => { setOverlay(null); showPerson(p); }} />)}</> : overlay === 'local-like' ? <><p>Реакция сохранена на этом устройстве. На отношения и награды она пока не влияет.</p><Button onClick={() => setOverlay(null)}>Понятно</Button></> : overlay === 'quote' ? <><QuoteBlock name={quote?.name ?? ''} text={quote?.text ?? ''} /><p className="caption muted">Связь цитирования пока не поддерживается. Можно взять текст как контекст нового поста.</p><Button onClick={() => { setOverlay(null); openCompose(undefined, quote); }}>Написать с этим контекстом</Button></> : <><p>Интерфейс v7. Миры, публикации и ответы работают с сервером. Личка, кристаллы и новая система квестов появятся позже.</p><p className="caption muted">Уведомления и реакции сохраняются на этом устройстве.</p><Button onClick={() => setOverlay(null)}>Понятно</Button></>}
     </Dialog>}
   </div></div>;
 }

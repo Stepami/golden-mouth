@@ -4,7 +4,7 @@
     "status": "frontend-preview; backend implementation required",
     "energy_cap": 10, "energy_regen_seconds": 600, "initial_crystals": 10,
     "booster_xp_percent": [25, 50, 75, 100, 200], "booster_crystal_price_per_100_percent": 8,
-    "energy_exchange_offer": { "crystals": 3, "energy": 10, "direction_pending_confirmation": true }
+    "energy_exchange_offer": { "crystals": 3, "energy": 10, "direction_pending_confirmation": false, "mode": "refill_to_cap" }
   },
   "feed": { "open_probability": 0.25 },
   "energy": { "post_cost": 1, "comment_cost": 1 },

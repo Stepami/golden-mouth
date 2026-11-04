@@ -1097,6 +1097,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "hp_hermione",
+            "hp_ron",
+            "hp_draco"
+          ],
+          "initialActors": [
+            "hp_hermione"
           ]
         },
         {
@@ -1992,6 +2000,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "hp_hermione",
+            "hp_ron",
+            "hp_draco"
+          ],
+          "initialActors": [
+            "hp_hermione"
           ]
         },
         {
@@ -3081,6 +3097,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "hp_harry",
+            "hp_ron",
+            "hp_draco"
+          ],
+          "initialActors": [
+            "hp_harry"
           ]
         },
         {
@@ -4170,6 +4194,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "hp_hermione",
+            "hp_harry",
+            "hp_draco"
+          ],
+          "initialActors": [
+            "hp_hermione"
           ]
         }
       ]
@@ -5269,6 +5301,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "isabella",
+            "eduard",
+            "yakov"
+          ],
+          "initialActors": [
+            "isabella"
           ]
         },
         {
@@ -6358,6 +6398,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "eduard",
+            "author",
+            "yakov"
+          ],
+          "initialActors": [
+            "eduard"
           ]
         },
         {
@@ -7447,6 +7495,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "isabella",
+            "author",
+            "yakov"
+          ],
+          "initialActors": [
+            "isabella"
           ]
         },
         {
@@ -8536,6 +8592,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "isabella",
+            "author",
+            "eduard"
+          ],
+          "initialActors": [
+            "isabella"
           ]
         }
       ]
@@ -9635,6 +9699,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "jon",
+            "diana",
+            "james"
+          ],
+          "initialActors": [
+            "jon"
           ]
         },
         {
@@ -10724,6 +10796,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "jon",
+            "envoy",
+            "james"
+          ],
+          "initialActors": [
+            "jon"
           ]
         },
         {
@@ -11813,6 +11893,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "diana",
+            "envoy",
+            "james"
+          ],
+          "initialActors": [
+            "diana"
           ]
         },
         {
@@ -12902,6 +12990,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "jon",
+            "envoy",
+            "diana"
+          ],
+          "initialActors": [
+            "jon"
           ]
         }
       ]
@@ -14001,6 +14097,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "alexey_nl",
+            "greedy_wolf",
+            "2kotleti_news"
+          ],
+          "initialActors": [
+            "alexey_nl"
           ]
         },
         {
@@ -15090,6 +15194,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "alexey_nl",
+            "author",
+            "2kotleti_news"
+          ],
+          "initialActors": [
+            "alexey_nl"
           ]
         },
         {
@@ -16179,6 +16291,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "greedy_wolf",
+            "author",
+            "alexey_nl"
+          ],
+          "initialActors": [
+            "greedy_wolf"
           ]
         },
         {
@@ -17268,6 +17388,14 @@
             1,
             1,
             3
+          ],
+          "actorOrder": [
+            "2kotleti_news",
+            "author",
+            "greedy_wolf"
+          ],
+          "initialActors": [
+            "2kotleti_news"
           ]
         }
       ]

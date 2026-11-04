@@ -22,8 +22,7 @@ export function StreakDetails({ streak }: { streak: Player['streak'] }) {
     <p>В серии {dayCount(streak.days)}. Пропуск ставит её на паузу — серия не сгорает.</p>
     <ol className="streak-days" aria-label="Семь отметок серии">{Array.from({ length: 7 }, (_, i) => <li key={i}><span aria-hidden="true">{streak.week[i] ? '🔥' : '○'}</span><span className="caption">{i + 1}</span><span className="sr-only">{streak.week[i] ? 'Есть отметка' : 'Нет отметки'}</span></li>)}</ol>
     <p className="caption muted">Отметки серии, не календарь посещений.</p>
-    <h3>Награды серии</h3>
-    <ul className="streak-rewards"><li>3 дня — +2 энергии</li><li>7 дней — карточка «Неделя в эфире»</li><li>14 дней — рамка аватарки</li><li>30 дней — звезда-гость</li></ul>
+    <h3>Подарки за возвращение</h3><p>Каждый день серии — случайный подарок: энергия, кристаллы или бустер. Пропуск не отнимает уже полученные награды.</p>
   </div>;
 }
 export function CrystalExchange({ onBoosters }: { onBoosters: () => void }) {

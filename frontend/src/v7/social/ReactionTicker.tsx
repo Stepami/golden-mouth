@@ -1,0 +1,9 @@
+import {useEffect,useRef,useState} from 'react';
+import {Avatar} from '../ui';
+export type ReactionNotice={id:string;postId:string;worldId:string;kind:'reaction'|'mention'|'follow';actorName:string;text:string;relation?:number;local?:boolean};
+import {relationEmoji} from './emotions';
+export function ReactionTicker({notice,onOpen,onClose,inline=false}:{notice:ReactionNotice;onOpen:()=>void;onClose:()=>void;inline?:boolean}){
+ const viewport=useRef<HTMLSpanElement>(null),text=useRef<HTMLSpanElement>(null);const[distance,setDistance]=useState(0);
+ useEffect(()=>{const measure=()=>setDistance(Math.max(0,(text.current?.scrollWidth??0)-(viewport.current?.clientWidth??0)));measure();const observer=new ResizeObserver(measure);if(viewport.current)observer.observe(viewport.current);return()=>observer.disconnect();},[notice.id,notice.text]);
+ return <aside className={`reaction-ticker${inline?' reaction-ticker--inline':''}`} role={inline?'article':'status'}><button className="reaction-ticker-open" onClick={onOpen}><span className="reaction-emotion" aria-hidden="true">{notice.relation&&notice.relation!==0?<span className="reaction-portrait"><Avatar name={notice.actorName} size="sm"/><small>{relationEmoji(notice.relation)}</small></span>:relationEmoji(notice.relation)}</span><span className="reaction-ticker-copy"><strong>{notice.actorName}{notice.kind==='mention'?' упоминает тебя':notice.kind==='follow'?' подписывается на канал':' отвечает на твою запись'}</strong><span className={`reaction-ticker-viewport${distance?' is-scrolling':''}`} ref={viewport} style={{'--ticker-distance':`${-distance}px`,'--ticker-time':`${Math.max(8,distance/28)}s`} as React.CSSProperties}><span ref={text}>{notice.text}</span></span></span></button><button className="reaction-ticker-close" aria-label="Закрыть реакцию" onClick={onClose}>×</button></aside>;
+}

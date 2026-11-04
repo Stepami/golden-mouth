@@ -2,6 +2,7 @@ import type { FeedItem, WorldDocument, Player, Post as ServerPost } from '../api
 import type { World, Person, Post } from './domain/types';
 import { worldArt } from '../app/worldArt';
 import { presetGoalFor } from '../app/presetGoals';
+import {channelSubscribers} from './social/audience';
 import { personaFor } from './persona';
 
 export function worldView(doc: WorldDocument): World {
@@ -11,10 +12,10 @@ export function worldView(doc: WorldDocument): World {
   return { id: doc.id, title: doc.title, genre: art?.genre ?? 'Свои истории', cover, hero: cover,
     members: '', tagline: doc.summary, description: doc.description, goal: goal?.goal ?? doc.summary,
     role: doc.role, playerName: doc.name, topic: doc.firstContext, quests: doc.postIdeas.slice(0, 3).map((text, i) => ({ id: String(i), title: text, context: doc.firstContext, prompt: text, draft: '' })),
-    seedPost: doc.firstPrompt, cast: doc.stars.map(star => ({ id: star.id, name: star.name, handle: star.avatarSeed, role: star.role, boundary: star.about, relation: star.relation })),
+    seedPost: doc.firstPrompt, cast: doc.stars.map(star => ({ id: star.id, name: star.name, handle: star.avatarSeed, role: star.role, boundary: star.about, relation: star.relation, subscribers:channelSubscribers(star) })),
   };
 }
-export const playerView = (p: Player): Person => ({ id: 'player', name: p.name, handle: p.handle, role: p.role, boundary: '', ...(personaFor(p.id, p.world).avatar ? { avatar: personaFor(p.id, p.world).avatar } : {}) });
+export const playerView = (p: Player): Person => ({ id: 'player', name: p.name, handle: p.handle, role: p.role, boundary: '', subscribers:p.subs, ...(personaFor(p.id, p.world).avatar ? { avatar: personaFor(p.id, p.world).avatar } : {}) });
 export function feedView(item: FeedItem, player: Person): { post: Post; author: Person; count: number } {
   const mine = item.avatar === player.handle && item.author === player.name;
   return { post: { id: item.postId ?? '', text: item.text, authorId: mine ? 'player' : item.starId ?? item.author ?? 'npc',
