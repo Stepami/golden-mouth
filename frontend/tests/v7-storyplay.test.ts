@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {initialInventory} from '../src/v7/storyplay/boosters.ts';
 import { freshStory, finishQuest, grantDemoCrystals, buyBooster, spendStoryXP, isStoryPlay } from '../src/v7/storyplay/model.ts';
 test('local story is opt-in; credit is idempotent by both quest and saved action', () => {
   const off = freshStory('campaign'); assert.equal(finishQuest(off,'q1','post1',10,false),off);
@@ -9,13 +10,16 @@ test('local story is opt-in; credit is idempotent by both quest and saved action
   assert.equal(finishQuest(first,'q2','post1',10,false),first);
   assert.deepEqual(on.completed,[]);
 });
-test('test crystals are one-time, purchases cannot overdraft and booster consumes only on credit', () => {
-  let s = grantDemoCrystals({...freshStory('campaign'),enabled:true});
-  assert.equal(s.crystals,24); assert.equal(grantDemoCrystals(s),s);
-  s=buyBooster(s); assert.equal(s.crystals,16); assert.equal(s.boosters,1);
-  const credited=finishQuest(s,'q','post',10,true); assert.equal(credited.total,2000); assert.equal(credited.boosters,0);
-  assert.equal(finishQuest(credited,'q','post',10,true),credited);
-  s=buyBooster(buyBooster(s)); assert.equal(s.crystals,0); assert.equal(buyBooster(s),s);
+test('new inventory gives ten crystals once, stock distinguishes booster effects', () => {
+  const start=initialInventory(); assert.equal(start.crystals,10);
+  assert.equal(initialInventory({...start,crystals:0}).crystals,0);
+  const funded={...freshStory('campaign'),...start,enabled:true};
+  const purchased=buyBooster(funded,'spark'); assert.equal(purchased.crystals,8); assert.equal(purchased.boosterStock?.spark,1);
+  const credited=finishQuest(purchased,'q','post',10,'spark'); assert.equal(credited.total,1250); assert.equal(credited.boosters,0);
+  assert.equal(finishQuest(credited,'q','post',10,'spark'),credited);
+  const focus=buyBooster(funded); assert.equal(focus.crystals,2); assert.equal(buyBooster(focus),focus);
+  assert.equal(finishQuest(focus,'q','other',10,true).total,2000);
+  const bonus=grantDemoCrystals(funded); assert.equal(bonus.crystals,34); assert.equal(grantDemoCrystals(bonus),bonus);
 });
 test('skill allocation shares the actual local quest wallet and never reduces cumulative XP', () => {
   const s=finishQuest({...freshStory('campaign'),enabled:true},'q','post',10,false);

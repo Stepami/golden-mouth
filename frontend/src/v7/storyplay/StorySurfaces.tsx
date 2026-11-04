@@ -4,6 +4,8 @@ import { formatXP, upgradeCost } from '../xp/wallet';
 import type { StoryPlay } from './model';
 import type { PilotCampaign } from '../story/pilot';
 import { storyForCampaign } from '../story/pilot';
+import { boosterCatalog, stockCount, type BoosterId } from './boosters';
+import { BoosterArt } from './BoosterPicker';
 
 const openingCopy: Record<string,{title:string;premise:string}> = {
   sorcerers: { title:'Спаси Хогвартс', premise:'Школу хотят превратить в отель. Ты можешь помочь вернуть её ученикам.' },
@@ -43,8 +45,10 @@ export function StoryMap({ campaign, state, currentId, onSelect }: { campaign: P
 export function PlayMode({ value, onChange }: { value:'story'|'sandbox'; onChange:(mode:'story'|'sandbox')=>void }) {
   return <div className="play-mode"><div className="row"><Chip selected={value==='story'} onClick={()=>onChange('story')}>Сюжет</Chip><Chip selected={value==='sandbox'} onClick={()=>onChange('sandbox')}>Песочница</Chip></div><details><summary aria-label="О сюжете и песочнице">i</summary><p>Сюжет — выполняй текущий квест. В локальной пробе подтверждённая публикация или ответ могут закрыть его. Песочница — свободный разговор без сюжетного XP.</p></details></div>;
 }
-export function DemoInventory({ state, onEnable, onDisable, onGrant, onBuy, selected, onSelect }: { state:StoryPlay; onEnable:()=>void; onDisable:()=>void; onGrant:()=>void; onBuy:()=>void; selected:boolean; onSelect:()=>void }) {
-  return <div className="stack"><p className="local-story-notice">Локальная проба. Это тестовый инвентарь, не серверные покупки.</p>{!state.enabled?<Button onClick={onEnable}>Включить локальную пробу</Button>:<><div className="inventory-balance"><span>Кристаллы <b>{state.crystals}</b></span><span>Бустеры <b>{state.boosters}</b></span></div><article className="inventory-item stack"><h3>Удвоение сюжетного XP</h3><p>+100% XP за один квест. Не гарантирует согласие персонажа.</p><Button disabled={state.crystals<8} onClick={onBuy}>Купить за 8 кристаллов</Button><Button variant="secondary" disabled={!state.boosters} onClick={onSelect}>{selected?'Убрать бустер':'Использовать в следующем действии'}</Button></article>{!state.bonusUsed&&<Button variant="ghost" onClick={onGrant}>Добавить 24 тестовых кристалла</Button>}<Button variant="ghost" onClick={onDisable}>Выключить локальную пробу</Button><p className="caption muted">Бустер списывается только при зачёте в пробе. При ошибке отправки остаётся в инвентаре.</p></>}</div>;
+export function DemoInventory({state,onEnable,onDisable,onGrant,onBuy,selected,onSelect}:{state:StoryPlay;onEnable:()=>void;onDisable:()=>void;onGrant:()=>void;onBuy:(id?:BoosterId)=>void;selected?:BoosterId;onSelect:(id?:BoosterId)=>void}) {
+ return <div className="stack"><p className="local-story-notice">Локальная проба. Это тестовый инвентарь, не серверные покупки.</p><div className="inventory-balance"><span>Кристаллы <b>{state.crystals}</b></span><span>Бустеры <b>{state.boosters}</b></span></div>
+ {!state.enabled?<Button onClick={onEnable}>Включить локальную пробу</Button>:<>{boosterCatalog.map(b=><article className="inventory-item stack" key={b.id}><div className="booster-product-head"><BoosterArt id={b.id}/><div><h3>{b.name}</h3><p>+{b.percent}% XP за квест</p><small>В наличии: {stockCount(state,b.id)}</small></div></div><Button disabled={state.crystals<b.price} onClick={()=>onBuy(b.id)}>Купить за {b.price} {b.price===2||b.price===4?'кристалла':'кристаллов'}</Button><Button variant="secondary" disabled={!stockCount(state,b.id)} onClick={()=>onSelect(selected===b.id?undefined:b.id)}>{selected===b.id?'Убрать бустер':'Использовать в следующем действии'}</Button></article>)}{!state.bonusUsed&&<Button variant="ghost" onClick={onGrant}>Добавить 24 тестовых кристалла</Button>}<Button variant="ghost" onClick={onDisable}>Выключить локальную пробу</Button><p className="caption muted">Бустер списывается только при зачёте. Ошибка отправки его сохраняет.</p></>}
+ </div>;
 }
 export function StoryWallet({ state, labels, onEnable, onSpend }: { state:StoryPlay; labels:string[]; onEnable:()=>void; onSpend:(points:[number,number,number])=>void }) {
   const [points,setPoints]=useState<[number,number,number]>([0,0,0]); const [message,setMessage]=useState('');
@@ -53,13 +57,13 @@ export function StoryWallet({ state, labels, onEnable, onSpend }: { state:StoryP
 }
 export function QuestReward({ amount, title, animate=false }: { amount:number; title:string; animate?:boolean }) {
   const [count,setCount]=useState(animate?0:amount);
-  useEffect(()=>{const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;if(reduced||!animate){setCount(amount);return;}let frame=0;const start=performance.now();const tick=(now:number)=>{const t=Math.min(1,(now-start)/600);setCount(Math.round(amount*t));if(t<1)frame=requestAnimationFrame(tick);};frame=requestAnimationFrame(tick);return()=>cancelAnimationFrame(frame);},[amount,animate]);
-  return <div className="quest-reward" role="status"><span>✓ Квест закрыт в пробе</span><strong>{title}</strong><b aria-hidden="true">+{count} XP</b><span className="sr-only">Получено {amount} XP</span></div>;
+  useEffect(()=>{const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;if(reduced||!animate){setCount(amount);return;}let frame=0;const start=performance.now();const tick=(now:number)=>{const t=Math.min(1,(now-start)/600);setCount(Math.round(amount*t*10)/10);if(t<1)frame=requestAnimationFrame(tick);};frame=requestAnimationFrame(tick);return()=>cancelAnimationFrame(frame);},[amount,animate]);
+  return <div className="quest-reward" role="status"><span>✓ Квест закрыт в пробе</span><strong>{title}</strong><b aria-hidden="true">+{formatXP(Math.round(count*100))} XP</b><span className="sr-only">Получено {amount} XP</span></div>;
 }
 export function XPFlight({ amount, nonce }: { amount:number; nonce:string }) {
   const [position,setPosition]=useState<{x:number;y:number;dx:number;dy:number}>();
   useEffect(()=>{if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const a=document.querySelector('.quest-reward')?.getBoundingClientRect(),b=document.querySelector('.profile-access')?.getBoundingClientRect();if(a&&b)setPosition({x:a.x+a.width/2,y:a.y+20,dx:b.x+b.width/2-a.x-a.width/2,dy:b.y+b.height/2-a.y-20});const timer=setTimeout(()=>setPosition(undefined),1700);return()=>clearTimeout(timer);},[nonce]);
-  return position?<span className="xp-flight" style={{left:position.x,top:position.y,'--fly-x':`${position.dx}px`,'--fly-y':`${position.dy}px`} as React.CSSProperties}>+{amount} XP</span>:null;
+  return position?<span className="xp-flight" style={{left:position.x,top:position.y,'--fly-x':`${position.dx}px`,'--fly-y':`${position.dy}px`} as React.CSSProperties}>+{formatXP(Math.round(amount*100))} XP</span>:null;
 }
 export function TypingDraft({ value, animate, disabled, onChange, onTyping }: { value:string; animate:boolean; disabled:boolean; onChange:(text:string)=>void; onTyping:(active:boolean)=>void }) {
   const [limit,setLimit]=useState(()=>animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches?0:value.length);
