@@ -4,11 +4,12 @@ import type {BoosterId} from '../storyplay/boosters';
 import type { StoryPlay } from '../storyplay/model';
 import './resourcePages.css';
 export type ResourcePageName = 'resources'|'crystals'|'boosters';
-export function ResourcePages({page,energy,state,activeStory,selectedBooster,onPage,onBack,onEnable,onDisable,onGrant,onBuy,onToggle,onChooseWorld}: {
- page:ResourcePageName;energy?:number;state:StoryPlay;activeStory:boolean;selectedBooster?:BoosterId;
+export function ResourcePages({preview=false,page,energy,state,activeStory,selectedBooster,onPage,onBack,onEnable,onDisable,onGrant,onBuy,onToggle,onChooseWorld}: {
+ preview?:boolean;page:ResourcePageName;energy?:number;state:StoryPlay;activeStory:boolean;selectedBooster?:BoosterId;
  onPage:(page:ResourcePageName)=>void;onBack:()=>void;onEnable:()=>void;onDisable:()=>void;onGrant:()=>void;onBuy:(id?:BoosterId)=>void;onToggle:(id?:BoosterId)=>void;onChooseWorld:()=>void;
 }) {
  const title={resources:'Энергия',crystals:'Кристаллы',boosters:'Бустеры'}[page];
+ if(!import.meta.env.DEV||!preview)return <><ScreenHeading title={title} back={onBack}/><section className="section resource-page"><nav className="resource-tabs" aria-label="Ресурсы">{([['resources','Энергия'],['crystals','Кристаллы'],['boosters','Бустеры']] as const).map(([id,label])=><Chip key={id} selected={page===id} onClick={()=>onPage(id)}>{label}</Chip>)}</nav>{page==='resources'?<><div className="resource-balance"><span className="resource-symbol resource-symbol--energy" aria-hidden="true">ϟ</span><div><strong>{energy??'—'}</strong><span>энергии доступно</span></div></div><h2>{energy===0?'Энергия закончилась':'Для следующих ходов'}</h2><p>Публикация и ответ расходуют по 1 энергии. Запас общий для всех миров. Читать ленту можно бесплатно.</p><p className="caption muted">Запас обновляется по действующим правилам аккаунта.</p></>:<><h2>{page==='crystals'?'Кристаллы появятся позже':'Бустеры появятся позже'}</h2><p>Обмен и инвентарь пока недоступны.</p></>}<Button variant="secondary" onClick={onBack}>Вернуться</Button></section></>;
  const demo=activeStory&&state.enabled;
  return <><ScreenHeading title={title} back={onBack}/><section className="section resource-page">
   <nav className="resource-tabs" aria-label="Ресурсы">{([['resources','Энергия'],['crystals','Кристаллы'],['boosters','Бустеры']] as const).map(([id,label])=><Chip key={id} selected={page===id} onClick={()=>onPage(id)}>{label}</Chip>)}</nav>

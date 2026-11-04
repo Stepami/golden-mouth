@@ -38,3 +38,7 @@
 .gift-access:not(.is-claimed):before{content:'';position:absolute;width:36px;height:36px;top:3px;left:50%;transform:translateX(-50%);border-radius:50%;background:var(--color-accent);z-index:0}.gift-access svg,.gift-access small{position:relative;z-index:1}.gift-access small{font-size:12px;font-weight:500}.gift-access.is-claimed svg{animation:none}
 @keyframes gift-invite{0%,82%,100%{transform:rotate(0)}86%{transform:rotate(-9deg)}90%{transform:rotate(9deg)}94%{transform:rotate(-5deg)}}
 @media(prefers-reduced-motion:reduce){.gift-access svg{animation:none}}
+.post-meta{display:flex;align-items:center;gap:8px}.post-report{width:44px;min-height:44px;display:grid;place-items:center;border:0;background:transparent;border-radius:50%;font-size:24px;color:var(--color-muted)}.post-report:hover{background:var(--color-surface)}.post-report:focus-visible{outline:2px solid var(--color-ink);outline-offset:2px}
+.account-delete-confirm{background:var(--color-error);color:white}
+
+.current-skills{display:grid;gap:20px;margin:18px 0}.current-skills article{display:grid;gap:10px}.current-skills article>div:first-child{font-size:17px}.current-skills article>div:first-child span{color:var(--color-muted);font-size:15px}

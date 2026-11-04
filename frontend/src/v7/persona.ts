@@ -10,3 +10,5 @@ export function savePersona(playerId: string, worldId: string, value: Persona): 
   const k = key(playerId, worldId); memory.set(k, value);
   try { localStorage.setItem(k, JSON.stringify(value)); return true; } catch { return false; }
 }
+
+export function clearPersonas(playerId:string){for(const k of memory.keys())if(k.startsWith(`reki:v7:${playerId}:`))memory.delete(k);}

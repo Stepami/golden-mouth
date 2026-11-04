@@ -34,24 +34,24 @@ export function StoryOpening({ campaign, goal, skills, step, onNext, onBack, pla
     </>:<>
       <h1 className="display">Твои навыки</h1><div className="opening-skills">{skills.map((name,i)=><article key={name}><span aria-hidden="true">{['↗','✳','◎'][i]}</span><div><h2>{name}</h2><p>{descriptions[name]||'Развивай навык, чтобы открывать новые подходы к цели.'}</p></div></article>)}</div>
       <p className="opening-explanation">Развивай навыки — открывай более острые квесты.</p>
-      <details className="opening-xp-info"><summary>Как работает XP <span aria-hidden="true">+</span></summary><p>XP за квесты можно распределять между навыками. Сейчас сюжетный XP и улучшения доступны в отдельно включаемой локальной пробе; серверные навыки остаются прежними.</p></details>
+      <details className="opening-xp-info"><summary>Как работает XP <span aria-hidden="true">+</span></summary><p>{import.meta.env.DEV?'XP за квесты можно распределять между навыками в локальной пробе; серверные навыки остаются прежними.':'Навыки развиваются после подтверждённых действий. Ручное распределение XP появится позже.'}</p></details>
     </>}
     <footer className="opening-actions"><Button onClick={onNext}>{step==='mission'?'Дальше: твои навыки':firstVisit?'К первому квесту':'К текущему квесту'}</Button></footer>
   </section>;
 }
-export function StoryMap({ campaign, state, currentId, onSelect,actors=[] }: { campaign: Curriculum; actors?:Person[]; state: StoryPlay; currentId?: string; onSelect: (id: string) => void }) {
+export function StoryMap({ campaign, state, currentId, onSelect,actors=[],preview=true }: { preview?:boolean; campaign: Curriculum; actors?:Person[]; state: StoryPlay; currentId?: string; onSelect: (id: string) => void }) {
   const quests=campaign.days.flatMap(d=>d.quests),availableIndex=quests.findIndex(q=>!state.completed.includes(q.id));
   const currentDay=Math.max(0,campaign.days.findIndex(d=>d.quests.some(q=>q.id===currentId)));
   const [selectedDay,setSelectedDay]=useState(currentDay);
   const day=campaign.days[selectedDay]??campaign.days[0];
-  const complete=day.quests.every(q=>state.completed.includes(q.id));
+  const complete=preview&&day.quests.every(q=>state.completed.includes(q.id));
   const actorId=campaign.actorOrder?.filter(id=>!campaign.initialActors?.includes(id))[selectedDay];
   return <div className="story-map vector-map"><p className="caption muted">Твой маршрут · {campaign.days.length} дней · по 3 квеста</p>
-    <nav className="vector-days" aria-label="Дни истории">{campaign.days.map((d,i)=>{const done=d.quests.every(q=>state.completed.includes(q.id));return <button key={d.day} aria-pressed={selectedDay===i} className={`${selectedDay===i?'is-selected ':''}${done?'is-done':''}`} onClick={()=>setSelectedDay(i)}><span>{done?'✓':d.day}</span><small>День {d.day}</small></button>;})}</nav>
-    <section className="vector-detail"><h3>День {day.day}<span className="caption muted">{day.quests.filter(q=>state.completed.includes(q.id)).length}/3</span></h3>
-    <div className="vector-quests">{day.quests.map((q,i)=><button key={q.id} disabled={availableIndex<0||quests.findIndex(v=>v.id===q.id)>availableIndex} className={`vector-quest${q.id===currentId?' is-current':''}${state.completed.includes(q.id)?' is-done':''}`} onClick={()=>onSelect(q.id)}><span className="vector-node">{state.completed.includes(q.id)?'✓':i+1}</span><span>{q.title}<small>{q.baseXP} XP</small></span><span aria-hidden="true">↗</span></button>)}</div>
-    <div className="vector-milestone"><strong>{complete?'День пройден':'Награда дня'}</strong><span>XP для развития навыков{actorId?` · ${actors.find(a=>a.id===actorId)?.name??'новый персонаж'} подпишется в пробе`:''}</span></div></section>
-    <p className="caption muted">Локальный маршрут · прогресс сохраняется на этом устройстве.</p></div>;
+    <nav className="vector-days" aria-label="Дни истории">{campaign.days.map((d,i)=>{const done=preview&&d.quests.every(q=>state.completed.includes(q.id));return <button key={d.day} aria-pressed={selectedDay===i} className={`${selectedDay===i?'is-selected ':''}${done?'is-done':''}`} onClick={()=>setSelectedDay(i)}><span>{done?'✓':d.day}</span><small>День {d.day}</small></button>;})}</nav>
+    <section className="vector-detail"><h3>День {day.day}<span className="caption muted">{preview?`${day.quests.filter(q=>state.completed.includes(q.id)).length}/3`:'План'}</span></h3>
+    <div className="vector-quests">{day.quests.map((q,i)=><button key={q.id} disabled={!preview||availableIndex<0||quests.findIndex(v=>v.id===q.id)>availableIndex} className={`vector-quest${preview&&q.id===currentId?' is-current':''}${preview&&state.completed.includes(q.id)?' is-done':''}`} onClick={()=>onSelect(q.id)}><span className="vector-node">{preview&&state.completed.includes(q.id)?'✓':i+1}</span><span>{q.title}{preview&&<small>{q.baseXP} XP</small>}</span><span aria-hidden="true">↗</span></button>)}</div>
+    {preview&&<div className="vector-milestone"><strong>{complete?'День пройден':'Награда дня'}</strong><span>XP для развития навыков{actorId?` · ${actors.find(a=>a.id===actorId)?.name??'новый персонаж'} подпишется в пробе`:''}</span></div>}</section>
+    <p className="caption muted">{preview?'Локальный маршрут · прогресс сохраняется на этом устройстве.':'План истории. Отслеживание квестов появится позже.'}</p></div>;
 
 }
 export function PlayMode({ value, onChange }: { value:'story'|'sandbox'; onChange:(mode:'story'|'sandbox')=>void }) {

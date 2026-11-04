@@ -299,6 +299,7 @@ export function PostCard({
   onQuote,
   onAuthor,
   onTopic,
+  onReport,
   quoted,
   compact = false,
 }: {
@@ -310,6 +311,7 @@ export function PostCard({
   onQuote?: () => void;
   onAuthor?: () => void;
   onTopic?: () => void;
+  onReport?: () => void;
   quoted?: { name: string; text: string };
   compact?: boolean;
 }) {
@@ -335,7 +337,7 @@ export function PostCard({
           >
             {author.name}
           </button>
-          <span className="caption muted nowrap">{post.createdAt}</span>
+          <span className="post-meta"><span className="caption muted nowrap">{post.createdAt}</span>{onReport&&<button className="post-report" aria-label={`Пожаловаться на реплику ${author.name}`} onClick={onReport}>⋯</button>}</span>
         </div>
         <div className="caption muted">
           @{author.handle.replace(/^@/, "")} · {post.authorId === "player" ? "Вы" : "AI-персонаж"}
@@ -633,13 +635,15 @@ export function SettingsRow({
   label,
   value,
   onClick,
+  disabled=false,
 }: {
   label: string;
   value?: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
-    <button className="settings-row" onClick={event => { event.currentTarget.focus({ preventScroll: true }); onClick(); }}>
+    <button disabled={disabled} className="settings-row" onClick={event => { event.currentTarget.focus({ preventScroll: true }); onClick(); }}>
       <span className="grow">
         <strong>{label}</strong>
         {value && <span className="caption muted block">{value}</span>}
