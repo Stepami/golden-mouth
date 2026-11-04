@@ -20,6 +20,7 @@ namespace Reki.Application.Posts.AddReplyCommand;
 
 internal sealed partial class AddReplyCommandHandler(
     IGameStore store,
+    TimeProvider timeProvider,
     IOptionsMonitor<GameBalance> balance,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
@@ -151,7 +152,7 @@ internal sealed partial class AddReplyCommandHandler(
             request.RequestId,
             Text: null,
             Post: post.MapPost(world, player.Id),
-            EnergyLeft: player.Energy,
+            EnergyLeft: player.Wallet.Energy,
             Subscribers: world.Player.Subscribers,
             Code: null);
 
@@ -184,7 +185,7 @@ internal sealed partial class AddReplyCommandHandler(
     private void EnsureEnergy(PlayerProfile player)
     {
         var currentBalance = balance.CurrentValue;
-        if (player.Energy < currentBalance.Thread.EnergyCost)
+        if (player.Wallet.Energy < currentBalance.Thread.EnergyCost)
         {
             throw new RequestConflictException("Insufficient energy.");
         }
@@ -250,7 +251,7 @@ internal sealed partial class AddReplyCommandHandler(
         }
 
         var updatedPost = post.AddComments(comments);
-        var updatedPlayer = player.SpendEnergy(currentBalance.Thread.EnergyCost);
+        var updatedPlayer = player.SpendEnergy(currentBalance.Thread.EnergyCost, timeProvider.GetUtcNow());
         var updatedWorld = world.AwardThreadBonus(bonus);
         if (await store.TryCommitReplyAsync(
                 updatedPost,

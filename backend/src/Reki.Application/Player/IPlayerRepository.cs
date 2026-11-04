@@ -27,11 +27,15 @@ public interface IPlayerRepository
         int expectedVersion,
         CancellationToken cancellationToken);
 
+    ValueTask<PlayerWallet?> TryExchangeEnergyAsync(TelegramUserId telegramUserId, DateTimeOffset now, CancellationToken cancellationToken);
+
+    ValueTask<IReadOnlyList<PlayerProfile>> GetPlayersForEnergyRecoveryAsync(DateTimeOffset dueBefore, CancellationToken cancellationToken);
+
+    ValueTask<bool> TrySaveEnergyRecoveryAsync(PlayerProfile player, PlayerWallet wallet, CancellationToken cancellationToken);
+
     ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
 
     ValueTask<long> ResetGameDayAsync(
         DateTimeOffset periodStart,
-        int freeEnergy,
-        int plusEnergy,
         CancellationToken cancellationToken);
 }

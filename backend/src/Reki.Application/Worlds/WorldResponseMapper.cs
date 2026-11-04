@@ -17,6 +17,7 @@ public static partial class WorldResponseMapper
 
     [MapperIgnoreSource(nameof(WorldStar.RelationGainedInPeriod))]
     [MapperIgnoreSource(nameof(WorldStar.RelationPeriodStartedAtUtc))]
+    [MapperIgnoreTarget(nameof(WorldStarResponse.ChannelSubscribers))]
     private static partial WorldStarResponse MapStar(WorldStar source);
 
     private static partial WorldRuleResponse MapRule(WorldRule source);

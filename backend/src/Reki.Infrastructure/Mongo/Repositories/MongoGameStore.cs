@@ -126,15 +126,20 @@ internal sealed class MongoGameStore : IGameStore
                     cancellationToken: transactionCancellationToken);
                 if (inviterUses < inviteBonusMaxPerDay)
                 {
-                    var inviterUpdate = Builders<PlayerProfile>.Update
-                        .Set(item => item.HitOwnWorldMilestone, true)
-                        .Inc(item => item.Energy, updatedInvite.BonusAmount)
-                        .Inc(item => item.Version, 1);
-                    await _players.UpdateOneAsync(
-                        transactionSession,
-                        item => item.Id == updatedInvite.InviterId,
-                        inviterUpdate,
-                        cancellationToken: transactionCancellationToken);
+                    var inviter = await _players.Find(transactionSession, item => item.Id == updatedInvite.InviterId)
+                        .FirstOrDefaultAsync(transactionCancellationToken);
+                    if (inviter is not null)
+                    {
+                        var inviterUpdate = Builders<PlayerProfile>.Update
+                            .Set(item => item.HitOwnWorldMilestone, true)
+                            .Set(item => item.Wallet.Energy, inviter.Wallet.Replenish(updatedInvite.BonusAmount).Energy)
+                            .Inc(item => item.Version, 1);
+                        await _players.UpdateOneAsync(
+                            transactionSession,
+                            item => item.Id == updatedInvite.InviterId,
+                            inviterUpdate,
+                            cancellationToken: transactionCancellationToken);
+                    }
                 }
 
                 var inviteUpdate = Builders<Invitation>.Update

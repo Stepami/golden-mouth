@@ -187,3 +187,8 @@ docker exec --user root "$container" sh -c 'chmod 0444 /app/config/balance.next.
 The image runs as `app`; replacing the file can require the explicit root connection above. Wait a few seconds for the standard file-change notification, then verify the changed parameter with the next relevant game operation and check container logs for validation errors. The process and container must remain running. JSON syntax validation alone does not validate game values: an invalid JSON file or balance can cause errors; there is no automatic rollback or last-known-good cache. To roll back, repeat the replacement using `balance.previous.json`.
 
 The edit is lost when the container is recreated. Save the same intended values in `docs/config/balance.json` so the next image preserves them. No volume, management API, custom watcher or delivery automation is introduced. Changing `posts.reset_time_msk` requires a process restart and coordination with the existing TickerQ schedule; hot reload does not rebuild cron schedules.
+
+### Узкая проверка кошелька энергии (#205)
+
+Из `backend/`: `dotnet test --project tests/Reki.Tests/Reki.Tests.csproj -c Release --treenode-filter '/*/*/EnergyWalletControllerTests/*'`.
+По умолчанию используется прежний Testcontainers MongoDB. Для локальной проверки без Docker можно передать `REKI_TEST_MONGO_CONNECTION` со строкой подключения к отдельному тестовому MongoDB replica set: fixture создаёт уникальную БД и удаляет её после запуска, процесс внешнего MongoDB не запускает и не останавливает. Тесты не обращаются к реальному LLM.

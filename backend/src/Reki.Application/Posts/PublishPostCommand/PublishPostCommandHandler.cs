@@ -62,7 +62,7 @@ internal sealed class PublishPostCommandHandler(
         var now = timeProvider.GetUtcNow();
         var player = storedPlayer;
 
-        if (player.Energy < currentBalance.PostEnergyCost)
+        if (player.Wallet.Energy < currentBalance.PostEnergyCost)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }
@@ -108,7 +108,7 @@ internal sealed class PublishPostCommandHandler(
             currentBalance.Relations.Maximum,
             currentBalance.Relations.MaxGainPerDay,
             currentBalance.Relations.StarCardAt);
-        var updated = player.SpendPost(progression.Skills, currentBalance.PostEnergyCost) with
+        var updated = player.SpendPost(progression.Skills, currentBalance.PostEnergyCost, timeProvider.GetUtcNow()) with
         {
             HitOwnWorldMilestone = player.HitOwnWorldMilestone || updatedWorld.Player.Subscribers >= currentBalance.OwnWorldSubscribers,
         };
@@ -143,7 +143,7 @@ internal sealed class PublishPostCommandHandler(
         var published = new PublishedPost(post, hook, turn.StarName, turn.Reaction, turn.Reasons);
         var invite = await invitationRepository.GetPendingInviteAsync(player.Id, cancellationToken);
         var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
-        updated = updated with { Energy = updated.Energy + (updatedInvite?.BonusAmount ?? 0) };
+        updated = updated with { Wallet = updated.Wallet.Replenish(updatedInvite?.BonusAmount ?? 0) };
 
         var committed = await store.TryCommitPostAsync(
             updated,
@@ -195,7 +195,7 @@ internal sealed class PublishPostCommandHandler(
                 ["humor"] = turn.Humor.ToString("0.###", CultureInfo.InvariantCulture),
                 ["topic"] = turn.Topic.ToString("0.###", CultureInfo.InvariantCulture),
                 ["quality"] = post.Quality.ToString("0.###", CultureInfo.InvariantCulture),
-                ["post_index"] = after.EnergyUsed.ToString(CultureInfo.InvariantCulture),
+                ["post_index"] = after.Wallet.EnergyUsed.ToString(CultureInfo.InvariantCulture),
                 ["id"] = post.Id.Value.ToString("N"),
                 ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
             });

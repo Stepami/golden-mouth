@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using Kot.MongoDB.Migrations;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
@@ -1171,6 +1172,60 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await Assert.That((await indexes.ToListAsync()).Select(document => document.ToJson()))
                 .IsEquivalentTo(expected.Select(document => document.ToJson()));
         }
+    }
+
+    [Test]
+    [Arguments(0, 0)]
+    [Arguments(6, 6)]
+    [Arguments(21, 10)]
+    public async Task EmbedWallet_LegacyProfile_PreservesProgressOnceAsync(int energy, int expectedEnergy)
+    {
+        // Arrange
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        var clock = new FakeTimeProvider(CreatedAt);
+        var players = database.GetCollection<BsonDocument>("players");
+        var old = new BsonDocument
+        {
+            ["_id"] = "wallet-owner", ["Energy"] = energy, ["EnergyUsed"] = 7,
+            ["Version"] = 12, ["Skills"] = new BsonDocument("brave", new BsonDocument("Experience", 42)),
+            ["Settings"] = new BsonDocument("Plus", true), ["PostsPeriodStartedAtUtc"] = ReferralTimestamp(CreatedAt.AddDays(-1)),
+        };
+        await players.InsertOneAsync(old);
+        var worlds = database.GetCollection<BsonDocument>("worlds");
+        await worlds.InsertManyAsync(new[]
+        {
+            new BsonDocument { ["_id"] = "first-world", ["PlayerId"] = "wallet-owner", ["Subscribers"] = 77 },
+            new BsonDocument { ["_id"] = "second-world", ["PlayerId"] = "wallet-owner", ["Subscribers"] = 99 },
+        });
+        var beforeWorlds = await worlds.Find(FilterDefinition<BsonDocument>.Empty).Sort("{_id:1}").ToListAsync();
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        var migration = new EmbedPlayerWallet(clock);
+
+        // Act
+        await migration.UpAsync(database, session, CancellationToken.None);
+        var saved = await ReadAsync(database, "players", "wallet-owner");
+        await players.UpdateOneAsync(new BsonDocument("_id", "wallet-owner"), Builders<BsonDocument>.Update.Set("Wallet.Crystals", 7));
+        var afterSpend = await ReadAsync(database, "players", "wallet-owner");
+        clock.Advance(TimeSpan.FromDays(1));
+        await migration.UpAsync(database, session, CancellationToken.None);
+        var repeated = await ReadAsync(database, "players", "wallet-owner");
+
+        // Assert
+        await Assert.That(saved["Wallet"]["Energy"].AsInt32).IsEqualTo(expectedEnergy);
+        await Assert.That(saved["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(7);
+        await Assert.That(saved["Wallet"]["Crystals"].AsInt32).IsEqualTo(10);
+        await Assert.That(saved["Wallet"]["EnergyUpdatedAtUtc"]).IsEqualTo(ReferralTimestamp(CreatedAt.ToUniversalTime()));
+        await Assert.That(saved["Version"].AsInt32).IsEqualTo(13);
+        await Assert.That(saved["Skills"]).IsEqualTo(old["Skills"]);
+        await Assert.That(saved["Settings"]).IsEqualTo(old["Settings"]);
+        await Assert.That(saved["PostsPeriodStartedAtUtc"]).IsEqualTo(old["PostsPeriodStartedAtUtc"]);
+        await Assert.That(saved.Contains("Energy")).IsFalse();
+        await Assert.That(saved.Contains("EnergyUsed")).IsFalse();
+        await Assert.That(saved.Contains("Crystals")).IsFalse();
+        await Assert.That(repeated).IsEqualTo(afterSpend);
+        var afterWorlds = await worlds.Find(FilterDefinition<BsonDocument>.Empty).Sort("{_id:1}").ToListAsync();
+        await Assert.That(afterWorlds.SequenceEqual(beforeWorlds)).IsTrue();
     }
 
     private static async Task AssertRetiredSocialCollectionsAbsentAsync(IMongoDatabase database)
