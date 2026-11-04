@@ -1,3 +1,4 @@
+import {ReadingDescription} from "./ReadingDescription";
 import { Button } from "../ui";
 import type { World } from "../domain/types";
 export function WorldIntro({
@@ -23,9 +24,7 @@ export function WorldIntro({
       </div>
       <section className="intro-sheet">
         <h1 className="display">{world.title}</h1>
-        <div className="intro-description">
-          <p>{world.description}</p>
-        </div>
+        <ReadingDescription text={world.description}/>
       </section>
       <div className="intro-cta">
         <Button

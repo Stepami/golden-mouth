@@ -31,3 +31,5 @@
 .world-hud .story-day-label{font-size:12px;color:var(--color-muted);order:4;width:auto;margin-left:auto}
 .world-hud .streak-access{gap:7px}.world-hud .streak-access strong{font-size:15px}.world-hud .streak-mini{gap:3px}.world-hud .boosters-access{font-size:14px;gap:5px}.world-hud .gift-access{padding:4px 8px}
 @media(max-width:360px){.world-hud .world-progress{padding-left:14px;padding-right:14px;gap:6px}.world-hud .streak-access strong{font-size:13px}.world-hud .boosters-access{font-size:12px}.world-hud .story-day-label{width:100%;text-align:right}}
+.reading-control{margin-top:12px;font-size:14px;color:var(--color-muted)}
+.intro-description:focus-visible{outline:2px solid var(--color-ink);outline-offset:4px;border-radius:8px}
