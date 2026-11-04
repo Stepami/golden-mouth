@@ -10,8 +10,8 @@ using Reki.Api.Serialization;
 using Reki.Application.Player;
 using Reki.Application.Player.Responses;
 using Reki.Application.Posts.Responses.LiveEvent;
-using Reki.Application.Posts.Responses.ReplyGeneration;
-using Reki.Application.Posts.Responses.ReplyLiveEvent;
+using Reki.Application.Posts.Responses.Reply;
+using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.Worlds;
 using Reki.Application.Worlds.Responses;
 using Reki.Domain.Player;
@@ -116,11 +116,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
 
     protected static async Task<string> GetWorldIdAsync(TestApiClient api) =>
         (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().Id.ToString();
-
-    protected static IReadOnlyList<ReplyLiveEvent> ParseReplyEvents(string body) =>
-        body.Split('\n').Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
-            .Select(line => JsonSerializer.Deserialize(line[6..], ApiJsonSerializerContext.Default.ReplyLiveEvent)
-                ?? throw new InvalidOperationException("The reply event was empty.")).ToArray();
 
     protected static IReadOnlyList<ReplyGenerationLiveEvent> ParseReplyGenerationEvents(string body) =>
         body.Split('\n').Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
@@ -229,7 +224,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             .Find(new BsonDocument("_id", new BsonBinaryData(Guid.Parse(postId), GuidRepresentation.Standard)))
             .SingleAsync();
 
-    protected async Task<ReplyLiveEvent> ReplyAsync(
+    protected async Task<ReplyResponse> ReplyAsync(
         long telegramUserId,
         string postId,
         string commentId,
@@ -253,7 +248,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         var target = response.Post.Comments.Single(item => item.Id == Domain.Posts.CommentId.From(commentId));
         if (response.Post.Comments.Any(item => item.ParentCommentId == response.CommentId && item.AuthorId == target.AuthorId))
         {
-            return new ReplyLiveEvent(ReplyStatus.Completed, replyId, null, response.Post, response.EnergyLeft, response.Subscribers, null);
+            return response;
         }
 
         using var generation = await api.Posts.GenerateReplyAsync(
@@ -284,7 +279,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
                 Text = completed.Text ?? throw new InvalidOperationException("No generated text."),
             },
             CancellationToken.None);
-        return new ReplyLiveEvent(ReplyStatus.Completed, replyId, null, star.Post, star.EnergyLeft, star.Subscribers, null);
+        return star;
     }
 
     protected IReadOnlyList<ChatMessage> GetCapturedChatMessages()

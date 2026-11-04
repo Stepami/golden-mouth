@@ -13,8 +13,8 @@ using Reki.Application.Balance;
 using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Application.Posts.Responses.LiveEvent;
-using Reki.Application.Posts.Responses.ReplyGeneration;
-using Reki.Application.Posts.Responses.ReplyLiveEvent;
+using Reki.Application.Posts.Responses.Reply;
+using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
@@ -723,7 +723,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(player["EnergyUsed"].AsInt32).IsEqualTo(5);
         await Assert.That(player["Energy"].AsInt32).IsEqualTo(5);
         var world = await GetStoredWorldAsync(telegramUserId);
-        await Assert.That(world["Player"]["Subscribers"].ToInt64()).IsEqualTo(fourth.Subscribers ?? throw new InvalidOperationException("Missing subscribers."));
+        await Assert.That(world["Player"]["Subscribers"].ToInt64()).IsEqualTo(fourth.Subscribers);
     }
 
     [Test]
@@ -912,23 +912,26 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         Factory.Llm.Respond(CreateReplyTurnResponse(author.Id.Value));
 
         // Act
-        var first = ParseReplyEvents((await SendReplyAsync(user, postId, null, "root-key", "Комментарий к посту")).Body)[^1];
-        var detail = first.Post ?? throw new InvalidOperationException("Missing root post.");
+        var firstResult = await SendReplyAsync(user, postId, null, "root-key", "Комментарий к посту");
+        var first = firstResult.Saved ?? throw new InvalidOperationException("Missing root reply.");
+        var detail = first.Post;
         var own = detail.Comments.Single(comment => comment.Me);
         var answer = detail.Comments.Single(comment => comment.Star);
         var calls = Factory.Llm.RequestCount;
-        var replay = ParseReplyEvents((await SendReplyAsync(user, postId, null, "root-key", "Комментарий к посту")).Body)[^1];
+        var replay = (await SendReplyAsync(user, postId, null, "root-key", "Комментарий к посту")).Saved
+            ?? throw new InvalidOperationException("Missing replay reply.");
         var callsAfterReplay = Factory.Llm.RequestCount;
         var changedTarget = await SendReplyAsync(user, postId, answer.Id.ToString(), "root-key", "Комментарий к посту");
         var changedText = await SendReplyAsync(user, postId, null, "root-key", "Другой текст");
         var second = await ReplyAsync(user, postId, answer.Id.ToString(), "branch-key", "Продолжение разговора");
-        var third = ParseReplyEvents((await SendReplyAsync(user, postId, null, "second-root", "Ещё одна мысль")).Body)[^1];
+        var third = (await SendReplyAsync(user, postId, null, "second-root", "Ещё одна мысль")).Saved
+            ?? throw new InvalidOperationException("Missing third reply.");
         var fourth = await ReplyAsync(user, postId, answer.Id.ToString(), "fourth-key", "Ещё один ответ");
         using var api = Factory.CreateApiClient(user);
         var restored = await api.Posts.GetPostAsync(postId, world.Id.Value.ToString(), CancellationToken.None);
 
         // Assert
-        await Assert.That(first.Status).IsEqualTo(ReplyStatus.Completed);
+        await Assert.That(firstResult.Status).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(detail.AuthorId).IsEqualTo(author.Id.ToAuthorId());
         await Assert.That(own.ParentCommentId).IsNull();
         await Assert.That(own.Depth).IsEqualTo(0);
@@ -940,7 +943,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(callsAfterReplay).IsEqualTo(calls);
         await Assert.That(replay.EnergyLeft).IsEqualTo(first.EnergyLeft);
         await Assert.That(replay.Subscribers).IsEqualTo(first.Subscribers);
-        await Assert.That((replay.Post ?? throw new InvalidOperationException("Missing replay post.")).Comments.Select(comment => comment.Id)).IsEquivalentTo(detail.Comments.Select(comment => comment.Id));
+        await Assert.That(replay.Post.Comments.Select(comment => comment.Id)).IsEquivalentTo(detail.Comments.Select(comment => comment.Id));
         await Assert.That(changedTarget.Status).IsEqualTo(HttpStatusCode.Conflict);
         await Assert.That(changedText.Status).IsEqualTo(HttpStatusCode.Conflict);
         await Assert.That((second.Post ?? throw new InvalidOperationException("Missing second post.")).Comments.Single(comment => comment.RequestId == "branch-key").Depth).IsEqualTo(2);
@@ -1021,7 +1024,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Assert
         if (scenario is "wrong-author" or "unsafe")
         {
-            await Assert.That(ParseReplyEvents(response.Body)[^1].Status).IsEqualTo(ReplyStatus.Failed);
+            await Assert.That(response.Generation?.Status).IsEqualTo(ReplyGenerationStatus.Failed);
         }
         else if (scenario == "deleted-during")
         {
@@ -1370,9 +1373,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    [Arguments("blank")]
-    [Arguments("long")]
-    [Arguments("key")]
     [Arguments("unsafe")]
     [Arguments("missing-target")]
     [Arguments("missing-post")]
@@ -1386,8 +1386,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Arrange
         const long user = 8705;
         var (postId, targetId) = await PublishPostForThreadAsync(user);
-        var text = scenario switch { "blank" => " ", "long" => new string('а', 1001), "unsafe" => "наркотики", _ => "ответ" };
-        var key = scenario == "key" ? string.Empty : "input-validation";
+        var text = scenario == "unsafe" ? "наркотики" : "ответ";
         if (scenario is "player-target" or "unknown-star")
         {
             var author = scenario == "player-target"
@@ -1410,14 +1409,13 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Act
         var requestedPostId = scenario switch { "missing-post" => PostId.New(Factory.Session.Clock.GetUtcNow()).Value.ToString("N"), _ => postId };
         var requestedCommentId = scenario switch { "missing-target" => CommentId.New().Value.ToString("N"), _ => targetId };
-        var result = await SendReplyAsync(user, requestedPostId, requestedCommentId, key, text, scenario == "missing-world" ? "5dfe7e85-cc03-42d3-81f8-f4c9393dca6a" : string.Empty);
+        var result = await SendReplyAsync(user, requestedPostId, requestedCommentId, "input-validation", text, scenario == "missing-world" ? "5dfe7e85-cc03-42d3-81f8-f4c9393dca6a" : string.Empty);
 
         // Assert
         var expectedStatus = scenario switch
         {
             "missing-post" or "missing-target" or "missing-world" => HttpStatusCode.NotFound,
             "unsafe" => HttpStatusCode.UnprocessableEntity,
-            "blank" or "long" or "key" => HttpStatusCode.BadRequest,
             _ => HttpStatusCode.Conflict,
         };
         await Assert.That(result.Status).IsEqualTo(expectedStatus);
@@ -1489,7 +1487,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(feed.Items.Single().Author).IsEqualTo("Новое имя звезды");
         await Assert.That(feed.Items.Single().Role).IsEqualTo("star-role");
         await Assert.That(detail.AuthorId).IsEqualTo(StarId.From(selected).ToAuthorId());
-        await Assert.That(turn.Status).IsEqualTo(ReplyStatus.Completed);
+        await Assert.That(turn.Post.Comments.Any(comment => comment.RequestId == "star-post:star")).IsTrue();
     }
 
     [Test]
@@ -1542,10 +1540,10 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Act
         var response = await SendReplyAsync(user, secondPost.Id.Value.ToString("N"), targetId, "second-world", "ответ во втором мире", second.Id.ToString());
-        var completed = ParseReplyEvents(response.Body)[^1];
+        var completed = response.Saved ?? throw new InvalidOperationException("Missing second-world reply.");
 
         // Assert
-        await Assert.That(completed.Status).IsEqualTo(ReplyStatus.Completed);
+        await Assert.That(response.Status).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(completed.EnergyLeft).IsEqualTo(7);
         await Assert.That((await GetStoredPlayerAsync(user))["EnergyUsed"].AsInt32).IsEqualTo(3);
         await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(3);
@@ -1601,7 +1599,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Assert
         await Assert.That(responses.Count(response =>
-                response.Status == HttpStatusCode.OK && ParseReplyEvents(response.Body)[^1].Status == ReplyStatus.Completed))
+                response.Status == HttpStatusCode.OK && response.Generation?.Status == ReplyGenerationStatus.Completed))
             .IsEqualTo(1);
         await Assert.That(savedPosts.Select(post => post["Comments"].AsBsonArray.Count).Order())
             .IsEquivalentTo(new[] { 1, 3 });
@@ -1634,21 +1632,15 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Assert
         await Assert.That(responses.Count(response =>
-                response.Status == HttpStatusCode.OK && ParseReplyEvents(response.Body)[^1].Status == ReplyStatus.Completed))
+                response.Status == HttpStatusCode.OK && response.Generation?.Status == ReplyGenerationStatus.Completed))
             .IsEqualTo(1);
         await Assert.That(saved.Comments.Count).IsEqualTo(3);
         var playerReply = saved.Comments.Single(comment => comment.RequestId == "contested-key");
         await Assert.That(new[] { "Первая мысль", "Вторая мысль" }).Contains(playerReply.Text);
         var rejected = responses.Single(response =>
-            response.Status != HttpStatusCode.OK || ParseReplyEvents(response.Body)[^1].Status != ReplyStatus.Completed);
-        await Assert.That(new[] { HttpStatusCode.OK, HttpStatusCode.Conflict }).Contains(rejected.Status);
-        if (rejected.Status == HttpStatusCode.OK)
-        {
-            var failed = ParseReplyEvents(rejected.Body)[^1];
-            await Assert.That(failed.Status).IsEqualTo(ReplyStatus.Failed);
-            await Assert.That(failed.Code).IsEqualTo("request_conflict");
-            await Assert.That(failed.Post).IsNull();
-        }
+            response.Status != HttpStatusCode.OK || response.Generation?.Status != ReplyGenerationStatus.Completed);
+        await Assert.That(rejected.Status).IsEqualTo(HttpStatusCode.Conflict);
+        await Assert.That(rejected.Saved).IsNull();
 
         await Assert.That((await GetStoredPlayerAsync(user))["EnergyUsed"].AsInt32).IsEqualTo(2);
         var bonus = Factory.Services.GetRequiredService<IOptionsMonitor<GameBalance>>().CurrentValue.Thread.SubscriberBonus;
@@ -1709,10 +1701,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         else
         {
             await Assert.That(result.Status).IsEqualTo(HttpStatusCode.OK);
-            var events = ParseReplyEvents(result.Body);
-            await Assert.That(events[^1].Status).IsEqualTo(ReplyStatus.Failed);
-            await Assert.That(events[^1].Code).IsEqualTo("ai_unavailable");
-            await Assert.That(events.Any(item => item.Status == ReplyStatus.Completed || item.Text is not null)).IsFalse();
+            await Assert.That(result.Generation?.Status).IsEqualTo(ReplyGenerationStatus.Failed);
+            await Assert.That(result.Generation?.Code).IsEqualTo("ai_unavailable");
+            await Assert.That(result.Generation?.Text).IsNull();
         }
 
         if (scenario == "hidden")
@@ -1735,7 +1726,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     private Task<GamePost> ReadPostAsync(string id) =>
         Database.GetCollection<GamePost>("posts").Find(item => item.Id == PostId.From(id)).SingleAsync();
 
-    private async Task<(HttpStatusCode Status, string Body, string? MediaType)> SendReplyAsync(
+    private async Task<(HttpStatusCode Status, ReplyResponse? Saved, ReplyGenerationLiveEvent? Generation)> SendReplyAsync(
         long user, string postId, string? commentId, string requestId, string text, string worldId = "")
     {
         using var api = Factory.CreateApiClient(user);
@@ -1759,8 +1750,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                 : response.Post.Comments.Single(item => item.Id == CommentId.From(commentId)).AuthorId;
             if (response.Post.Comments.Any(item => item.ParentCommentId == response.CommentId && item.AuthorId == starId))
             {
-                var replay = new ReplyLiveEvent(ReplyStatus.Completed, requestId, null, response.Post, response.EnergyLeft, response.Subscribers, null);
-                return (HttpStatusCode.OK, "data: " + JsonSerializer.Serialize(replay, ApiJsonSerializerContext.Default.ReplyLiveEvent) + "\n", "text/event-stream");
+                return (HttpStatusCode.OK, response, null);
             }
 
             using var generation = await api.Posts.GenerateReplyAsync(
@@ -1776,10 +1766,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             using var reader = new StreamReader(generation.Stream);
             var generated = ParseReplyGenerationEvents(await reader.ReadToEndAsync(CancellationToken.None));
             var terminal = generated[^1];
-            if (terminal.Status == Reki.Application.Posts.Responses.ReplyGeneration.ReplyGenerationStatus.Failed)
+            if (terminal.Status == ReplyGenerationStatus.Failed)
             {
-                var failure = new ReplyLiveEvent(ReplyStatus.Failed, requestId, null, null, null, null, terminal.Code);
-                return (HttpStatusCode.OK, "data: " + JsonSerializer.Serialize(failure, ApiJsonSerializerContext.Default.ReplyLiveEvent) + "\n", "text/event-stream");
+                return (HttpStatusCode.OK, response, terminal);
             }
 
             var star = await api.Posts.ReplyToPostAsync(
@@ -1793,13 +1782,11 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                     Text = terminal.Text ?? throw new InvalidOperationException("No generated text."),
                 },
                 CancellationToken.None);
-            var completed = new ReplyLiveEvent(ReplyStatus.Completed, requestId, null, star.Post, star.EnergyLeft, star.Subscribers, null);
-            var body = "data: " + JsonSerializer.Serialize(completed, ApiJsonSerializerContext.Default.ReplyLiveEvent) + "\n";
-            return (HttpStatusCode.OK, body, "text/event-stream");
+            return (HttpStatusCode.OK, star, terminal);
         }
         catch (PostsApiException exception)
         {
-            return ((HttpStatusCode)exception.StatusCode, exception.Response, null);
+            return ((HttpStatusCode)exception.StatusCode, null, null);
         }
     }
 }

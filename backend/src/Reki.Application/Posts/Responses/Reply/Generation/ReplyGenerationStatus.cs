@@ -1,4 +1,4 @@
-namespace Reki.Application.Posts.Responses.ReplyGeneration;
+namespace Reki.Application.Posts.Responses.Reply.Generation;
 
 public enum ReplyGenerationStatus
 {

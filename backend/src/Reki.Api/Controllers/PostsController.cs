@@ -15,7 +15,7 @@ using Reki.Application.Posts.Responses.PostDetail;
 using Reki.Application.Posts.Responses.PublicationStatus;
 using Reki.Application.Posts.Responses.PublicationStatusLiveEvent;
 using Reki.Application.Posts.Responses.Reply;
-using Reki.Application.Posts.Responses.ReplyGeneration;
+using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.RekiContext;
 using Reki.Application.Responses;
 using Reki.Domain.Posts;

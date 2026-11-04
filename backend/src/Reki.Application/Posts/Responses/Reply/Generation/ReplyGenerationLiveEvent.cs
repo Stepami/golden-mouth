@@ -1,7 +1,7 @@
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
-namespace Reki.Application.Posts.Responses.ReplyGeneration;
+namespace Reki.Application.Posts.Responses.Reply.Generation;
 
 public sealed record ReplyGenerationLiveEvent(
     ReplyGenerationStatus Status,

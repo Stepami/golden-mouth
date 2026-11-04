@@ -26,12 +26,6 @@ internal sealed class AddReplyCommandHandler(
 {
     public async ValueTask<ReplyResponse> Handle(AddReply request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.RequestId) || request.RequestId.Length > 64 ||
-            string.IsNullOrWhiteSpace(request.Text) || request.Text.Length > 1000)
-        {
-            throw new RequestConflictException("The reply request is invalid.");
-        }
-
         var context = rekiContextAccessor.Context;
         var player = await context.Player;
         var world = (await context.Worlds).GetValueOrDefault(request.WorldId)
@@ -75,11 +69,7 @@ internal sealed class AddReplyCommandHandler(
         var updatedPost = post.AddComments([comment]);
         if (!isPlayer)
         {
-            if (!await posts.TrySaveReplyAsync(updatedPost, post.Version, request.RequestId, cancellationToken))
-            {
-                return await ReplayOrConflictAsync(request, cancellationToken);
-            }
-
+            await posts.SaveReplyAsync(updatedPost, cancellationToken);
             return Completed(comment, updatedPost, world, player);
         }
 

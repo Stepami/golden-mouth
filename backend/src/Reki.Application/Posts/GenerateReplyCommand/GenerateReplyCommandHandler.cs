@@ -7,7 +7,7 @@ using Reki.Application.Posts.AddReplyCommand;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPost;
-using Reki.Application.Posts.Responses.ReplyGeneration;
+using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.RekiContext;
 
 namespace Reki.Application.Posts.GenerateReplyCommand;

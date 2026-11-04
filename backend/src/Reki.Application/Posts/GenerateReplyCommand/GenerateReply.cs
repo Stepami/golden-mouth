@@ -1,5 +1,5 @@
 using Mediator;
-using Reki.Application.Posts.Responses.ReplyGeneration;
+using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
