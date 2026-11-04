@@ -31,7 +31,7 @@ public static class DependencyInjection
         services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
 
         services
-            .AddRekiContext(configuration)
+            .AddRekiContext()
             .AddChatClients()
             .AddJobs(configuration, jsonContext)
             .AddMongo()
