@@ -1,15 +1,38 @@
 import { useEffect, useState } from 'react';
-import { Button, Chip, Progress } from '../ui';
+import { Avatar, Button, Chip, Icon, Progress } from '../ui';
 import { formatXP, upgradeCost } from '../xp/wallet';
 import type { StoryPlay } from './model';
 import type { PilotCampaign } from '../story/pilot';
 import { storyForCampaign } from '../story/pilot';
 
-export function StoryOpening({ campaign, goal, skills, step, onNext, onBack }: { campaign: PilotCampaign; goal: string; skills: string[]; step: 'mission'|'skills'; onNext: () => void; onBack: () => void }) {
-  const story = storyForCampaign(campaign);
-  return <section className="section story-opening">
-    {step === 'mission' ? <><p className="caption muted">{story.title}</p><h1 className="display">{story.scenario}</h1><p>{story.premise}</p><div className="opening-goal"><h2>К чему ты идёшь</h2><p>{goal}</p></div><p>Чтобы достичь главной цели персонажа, проходи квесты. Каждый — новый шаг в истории.</p></> : <><p className="caption muted">Твой персонаж</p><h1 className="display">Навыки меняют<br />ход истории</h1><div className="opening-skills">{skills.map((name,i)=><article key={name}><span aria-hidden="true">{['↗','✳','◎'][i]}</span><div><h2>{name}</h2><p>{({Смелость:'Задавай прямые вопросы и действуй первым.',Юмор:'Находи общий язык и снимай напряжение.','В тему':'Замечай детали и обосновывай позицию.',Дипломатия:'Согласовывай интересы и находи общий язык.',Фристайл:'Пробуй неожиданные формулировки и собственный стиль.'} as Record<string,string>)[name] || 'Развивай этот навык, чтобы выбирать новые подходы к цели.'}</p></div></article>)}</div><p>Чем выше навыки, тем острее квесты и сложнее решения.</p><p className="caption muted">XP можно направлять на выбранные навыки. Сюжетная экономика доступна как локальная проба.</p></>}
-    <div className="opening-actions"><Button onClick={onNext}>{step === 'mission' ? 'Какие навыки развивать' : 'К первому квесту'}</Button>{step === 'skills' && <Button variant="ghost" onClick={onBack}>Назад к цели</Button>}</div>
+const openingCopy: Record<string,{title:string;premise:string}> = {
+  sorcerers: { title:'Спаси Хогвартс', premise:'Школу хотят превратить в отель. Ты можешь помочь вернуть её ученикам.' },
+  evening: { title:'Улица на чужом снимке', premise:'На ночном фото появилась давно снесённая улица. Воспоминания жителей не совпадают. Разберись, что произошло.' },
+  houses: { title:'Две печати одного совета', premise:'Два дома получили письма с одним обещанным престолом. Печати одинаковые, подписи разные. Выясни, какому обещанию можно доверять.' },
+  it: { title:'Демо, которое можно повторить', premise:'Громкий анонс «Смены» уже вышел, доказательств ещё нет. Разберись, что действительно показали и какой результат можно повторить.' },
+};
+export function StoryOpening({ campaign, goal, skills, step, onNext, onBack, playerName, avatar, worldTitle, firstVisit=false }: {
+  campaign:PilotCampaign; goal:string; skills:string[]; step:'mission'|'skills'; onNext:()=>void; onBack:()=>void;
+  playerName:string; avatar?:string; worldTitle:string; firstVisit?:boolean;
+}) {
+  const story=storyForCampaign(campaign), copy=openingCopy[story.worldKey];
+  const descriptions:Record<string,string>={Смелость:'Задавай прямые вопросы и проявляй инициативу.',Юмор:'Находи общий язык и снимай напряжение.','В тему':'Замечай детали и обосновывай позицию.',Дипломатия:'Согласовывай интересы и находи общий язык.',Фристайл:'Пробуй неожиданные формулировки и собственный стиль.'};
+  return <section className="section story-opening" aria-label={step==='mission'?'Знакомство с историей':'Знакомство с навыками'}>
+    <header className="opening-header">
+      {step==='skills'&&<button className="opening-back" onClick={onBack} aria-label="Назад к цели">←</button>}
+      <Avatar name={playerName} src={avatar}/><div className="opening-identity"><strong>{worldTitle}</strong><span>{playerName}</span></div>
+      <span className="opening-pagination" aria-label={`Шаг ${step==='mission'?1:2} из 2`}>{step==='mission'?1:2} <span>из 2</span></span>
+    </header>
+    {step==='mission'?<>
+      <h1 className="display">{copy?.title ?? story.scenario}</h1><p className="opening-premise">{copy?.premise ?? story.premise}</p>
+      <div className="opening-goal"><div className="opening-goal-label"><Icon name="goals"/><h2>Твоя цель</h2></div><p>{goal}</p></div>
+      <p className="opening-explanation">Проходи квесты, чтобы приблизиться к своей цели.</p>
+    </>:<>
+      <h1 className="display">Твои навыки</h1><div className="opening-skills">{skills.map((name,i)=><article key={name}><span aria-hidden="true">{['↗','✳','◎'][i]}</span><div><h2>{name}</h2><p>{descriptions[name]||'Развивай навык, чтобы открывать новые подходы к цели.'}</p></div></article>)}</div>
+      <p className="opening-explanation">Развивай навыки — открывай более острые квесты.</p>
+      <details className="opening-xp-info"><summary>Как работает XP <span aria-hidden="true">+</span></summary><p>XP за квесты можно распределять между навыками. Сейчас сюжетный XP и улучшения доступны в отдельно включаемой локальной пробе; серверные навыки остаются прежними.</p></details>
+    </>}
+    <footer className="opening-actions"><Button onClick={onNext}>{step==='mission'?'Дальше: твои навыки':firstVisit?'К первому квесту':'К текущему квесту'}</Button></footer>
   </section>;
 }
 export function StoryMap({ campaign, state, currentId, onSelect }: { campaign: PilotCampaign; state: StoryPlay; currentId?: string; onSelect: (id: string) => void }) {
