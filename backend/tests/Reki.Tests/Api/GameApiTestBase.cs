@@ -44,13 +44,10 @@ public abstract class GameApiTestBase(ApiFactory factory)
 
     protected static ChatResponse CreateChatResponse(IEnumerable<ChatMessage> messages)
     {
-        var threadReply = messages.Any(message => message.Text.Contains("Вызови thread_reply", StringComparison.Ordinal));
+        var threadReply = messages.Any(message => message.Text.Contains("Ответь обычным текстом", StringComparison.Ordinal));
         if (threadReply)
         {
-            var policy = messages.First(message => message.Role == ChatRole.System).Text;
-            const string marker = "Ответь выбранной звездой ";
-            var selected = policy[(policy.IndexOf(marker, StringComparison.Ordinal) + marker.Length)..];
-            return CreateReplyTurnResponse(selected[..selected.IndexOf('.')]);
+            return CreateReplyTextResponse();
         }
 
         var response = CreateCommentResponse(includeUnknownArgument: false);
@@ -96,23 +93,8 @@ public abstract class GameApiTestBase(ApiFactory factory)
         return new ChatResponse(new ChatMessage(ChatRole.Assistant, [call]));
     }
 
-    protected static ChatResponse CreateReplyTurnResponse(string starId, Action<IDictionary<string, object?>>? customize = null)
-    {
-        var arguments = new Dictionary<string, object?>
-        {
-            ["star_id"] = starId,
-            ["text"] = "Спасибо за ответ. Продолжим обсуждение.",
-            ["tone"] = "support",
-            ["emoji"] = string.Empty,
-            ["additional_star_id"] = string.Empty,
-            ["additional_text"] = string.Empty,
-            ["additional_tone"] = string.Empty,
-        };
-        customize?.Invoke(arguments);
-        return new ChatResponse(new ChatMessage(
-            ChatRole.Assistant,
-            [new FunctionCallContent("test-reply-call", "thread_reply", arguments)]));
-    }
+    protected static ChatResponse CreateReplyTextResponse(string text = "Спасибо за ответ. Продолжим обсуждение.") =>
+        new(new ChatMessage(ChatRole.Assistant, text));
 
     protected static async Task<string> GetWorldIdAsync(TestApiClient api) =>
         (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().Id.ToString();

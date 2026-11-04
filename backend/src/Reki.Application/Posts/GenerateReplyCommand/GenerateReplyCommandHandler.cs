@@ -1,14 +1,15 @@
 using System.Runtime.CompilerServices;
+using System.Text;
 using Mediator;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Reki.Application.Exceptions;
-using Reki.Application.Posts.AddReplyCommand;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPost;
 using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.RekiContext;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.GenerateReplyCommand;
 
@@ -19,6 +20,8 @@ internal sealed partial class GenerateReplyCommandHandler(
     IStarTurnGenerator generator,
     ILogger<GenerateReplyCommandHandler> logger) : IStreamCommandHandler<GenerateReply, ReplyGenerationLiveEvent>
 {
+    private const double AdditionalStarProbability = 0.5;
+
     public async IAsyncEnumerable<ReplyGenerationLiveEvent> Handle(
         GenerateReply request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -33,15 +36,23 @@ internal sealed partial class GenerateReplyCommandHandler(
         var source = post.Comments.FirstOrDefault(item =>
                 item.Id == request.SourceCommentId && !item.Hidden && item.AuthorId == player.Id.ToAuthorId())
             ?? throw new ResourceNotFoundException("Player comment not found.");
-        if (!request.Additional)
+        var primary = source.ParentCommentId is { } parentId
+            ? world.FindStar(post.Comments.First(item => item.Id == parentId).AuthorId)
+            : world.FindStar(post.AuthorId);
+        if (primary is null)
         {
-            var expected = source.ParentCommentId is { } parentId
-                ? world.FindStar(post.Comments.First(item => item.Id == parentId).AuthorId)
-                : world.FindStar(post.AuthorId);
-            if (expected?.Id != star.Id)
-            {
-                throw new RequestConflictException("The star does not belong to the selected thread.");
-            }
+            throw new RequestConflictException("The thread star is no longer in this world.");
+        }
+
+        var others = world.Stars.Where(item => item.Id != primary.Id).ToArray();
+        var bytes = source.Id.Value.ToByteArray();
+        StarId? additionalStarId = others.Length > 0 &&
+                                   BitConverter.ToUInt32(bytes, 0) / 4294967296d < AdditionalStarProbability
+            ? others[(int)(BitConverter.ToUInt32(bytes, 4) % (uint)others.Length)].Id
+            : null;
+        if (request.Additional ? additionalStarId != star.Id : primary.Id != star.Id)
+        {
+            throw new RequestConflictException("The star does not belong to the selected thread.");
         }
 
         var branch = source.ParentCommentId is { } parent ? post.GetBranch(parent) : [];
@@ -54,7 +65,8 @@ internal sealed partial class GenerateReplyCommandHandler(
             turnPolicy.IsHateEnabled(player, world),
             request.Additional);
         yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Generating, request.AuthorId, null, null, null);
-        var calls = new List<FunctionCallContent>();
+        var text = new StringBuilder();
+        var hasToolCall = false;
         await using var updates = generator.StreamReplyTurnAsync(turnContext, cancellationToken)
             .GetAsyncEnumerator(cancellationToken);
         while (true)
@@ -84,19 +96,27 @@ internal sealed partial class GenerateReplyCommandHandler(
                 break;
             }
 
-            calls.AddRange(updates.Current.Contents.OfType<FunctionCallContent>());
+            text.Append(string.Concat(updates.Current.Contents.OfType<TextContent>().Select(chunk => chunk.Text)));
+            hasToolCall |= updates.Current.Contents.Any(content => content is FunctionCallContent);
+
             yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Generating, request.AuthorId, null, null, null);
         }
 
         ReplyGenerationLiveEvent outcome;
         try
         {
-            var turn = ReplyTurnPolicy.Parse(calls, turnContext);
+            var reply = text.ToString().Trim();
+            if (hasToolCall || reply.Length is 0 or > 500)
+            {
+                throw new AiServiceUnavailableException("The model returned an invalid thread reply.");
+            }
+
+            PlayerSafetyGuard.EnsureOutputAllowed([reply]);
             outcome = new ReplyGenerationLiveEvent(
                 ReplyGenerationStatus.Completed,
                 request.AuthorId,
-                turn.Text,
-                turn.AdditionalStarId,
+                reply,
+                request.Additional ? null : additionalStarId,
                 null);
         }
         catch (UnsafeGeneratedContentException)

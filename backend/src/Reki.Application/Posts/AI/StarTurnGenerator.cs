@@ -4,8 +4,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
-using Reki.Application.Posts.AddReplyCommand;
 using Reki.Application.Posts.GeneratePublicationCommand;
+using Reki.Application.Posts.GenerateReplyCommand;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.AI;
@@ -15,25 +15,6 @@ internal sealed class StarTurnGenerator(
     IStarAgentInstructions instructions,
     IOptions<LlmTurnSettings> settings) : IStarTurnGenerator
 {
-    [StringSyntax(StringSyntaxAttribute.Json)]
-    private const string ThreadReplySchema =
-        """
-        {
-          "type": "object",
-          "properties": {
-            "star_id": { "type": "string", "minLength": 1, "maxLength": 64 },
-            "text": { "type": "string", "minLength": 1, "maxLength": 500 },
-            "tone": { "type": "string", "enum": ["support", "critique", "hate"] },
-            "emoji": { "type": "string", "maxLength": 8 },
-            "additional_star_id": { "type": "string", "maxLength": 64 },
-            "additional_text": { "type": "string", "maxLength": 500 },
-            "additional_tone": { "type": "string", "enum": ["", "support", "critique", "hate"] }
-          },
-          "required": ["star_id", "text", "tone", "emoji", "additional_star_id", "additional_text", "additional_tone"],
-          "additionalProperties": false
-        }
-        """;
-
     [StringSyntax(StringSyntaxAttribute.Json)]
     private const string ReactSchema =
         """
@@ -126,16 +107,14 @@ internal sealed class StarTurnGenerator(
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var policy = $$"""
-                       Вызови thread_reply ровно один раз. Ответь выбранной звездой {{context.TargetStarId.Value}}.
+                       Ответь обычным текстом от лица выбранной звезды {{context.TargetStarId.Value}}.
                        Реплика отвечает на последний комментарий игрока в выбранной ветке, а не оценивает пост.
                        Если ветка пустая, это корневой комментарий игрока к твоему посту: ответь как автор поста.
-                       Это дополнительная звезда: {{context.Additional}}. Если true, поля additional_star_id,
-                       additional_text, additional_tone и emoji передай пустыми строками.
-                       Если false, можешь выбрать одну ДРУГУЮ звезду текущего каталога для отдельной
-                       корневой реплики. Её текст сейчас не пиши: additional_text и additional_tone пустые.
-                       Необязательные поля передавай пустой строкой.
-                       tone: support, critique или hate. Хейт разрешён сейчас: {{context.HateEnabled}}.
-                       Не создавай hook, оценки, память лички, расход энергии или бонус.
+                       Это дополнительная звезда: {{context.Additional}}. Если true, напиши самостоятельную
+                       корневую реплику к посту с учётом комментария игрока.
+                       Хейт разрешён сейчас: {{context.HateEnabled}}.
+                       Верни только текст реплики до 500 символов. Не вызывай инструменты и не создавай
+                       hook, оценки, память лички, расход энергии или бонус.
                        """;
         var world = context.Agent.World;
         var branch = context.Branch.Select(comment =>
@@ -151,9 +130,7 @@ internal sealed class StarTurnGenerator(
             instructions.CreatePlayerOwnedLayer(context.Agent),
             new(ChatRole.User, userPrompt),
         ];
-        var options = CreateOptions(
-            ChatToolMode.RequireSpecific("thread_reply"),
-            CreateThreadReplyTools(context));
+        var options = new ChatOptions { Temperature = settings.Value.Temperature };
         await foreach (var update in chatClient.GetStreamingResponseAsync(messages, options, cancellationToken))
         {
             yield return update;
@@ -166,31 +143,12 @@ internal sealed class StarTurnGenerator(
         Create(
             "comment",
             "Оценить пост и оставить комментарий звезды. Экономику считает сервер.",
-            CreateStarSchema(CommentSchema, world.Stars.Select(star => star.Id.Value), null)),
+            CreateStarSchema(CommentSchema, world.Stars.Select(star => star.Id.Value))),
     ];
-
-    private static IReadOnlyList<AITool> CreateThreadReplyTools(StarReplyContext context) =>
-    [
-        Create(
-            "thread_reply",
-            "Ответить в треде; необязательные поля передаются пустой строкой.",
-            CreateStarSchema(
-                ThreadReplySchema,
-                [context.TargetStarId.Value],
-                AdditionalStars(context))),
-    ];
-
-    private static IEnumerable<string> AdditionalStars(StarReplyContext context) =>
-        context.Additional
-            ? [string.Empty]
-            : [string.Empty, .. context.Agent.World.Stars
-                .Where(star => star.Id != context.TargetStarId)
-                .Select(star => star.Id.Value)];
 
     private static string CreateStarSchema(
         string schema,
-        IEnumerable<string> starIds,
-        IEnumerable<string>? additionalStarIds)
+        IEnumerable<string> starIds)
     {
         var document = JsonNode.Parse(schema)
             ?? throw new InvalidOperationException("The tool schema is missing.");
@@ -199,13 +157,6 @@ internal sealed class StarTurnGenerator(
         var starProperty = properties["star_id"]
             ?? throw new InvalidOperationException("The tool schema star identity is missing.");
         starProperty["enum"] = CreateAllowedIds(starIds);
-        if (additionalStarIds is not null)
-        {
-            var additionalStarProperty = properties["additional_star_id"]
-                ?? throw new InvalidOperationException("The tool schema additional star identity is missing.");
-            additionalStarProperty["enum"] = CreateAllowedIds(additionalStarIds);
-        }
-
         return document.ToJsonString();
     }
 

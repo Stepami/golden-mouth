@@ -909,7 +909,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             original with { AuthorId = author.Id.ToAuthorId(), Comments = [] });
         var beforePlayer = await GetStoredPlayerAsync(user);
         var beforeWorld = await GetStoredWorldAsync(user);
-        Factory.Llm.Respond(CreateReplyTurnResponse(author.Id.Value));
+        Factory.Llm.Respond(CreateReplyTextResponse());
 
         // Act
         var firstResult = await SendReplyAsync(user, postId, null, "root-key", "Комментарий к посту");
@@ -961,7 +961,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     [Arguments("deleted-during")]
     [Arguments("energy")]
     [Arguments("foreign-world")]
-    [Arguments("wrong-author")]
     [Arguments("unsafe")]
     public async Task AddReply_InvalidRootComment_DoesNotPublishOrChargeAsync(string scenario)
     {
@@ -997,15 +996,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                     world with { Stars = world.Stars.Where(star => star.Id != author.Id).ToArray(), Version = world.Version + 1 });
             }
 
-            return CreateReplyTurnResponse(
-                scenario == "wrong-author" ? world.Stars[1].Id.Value : author.Id.Value,
-                args =>
-                {
-                    if (scenario == "unsafe")
-                    {
-                        args["text"] = "наркотики";
-                    }
-                });
+            return CreateReplyTextResponse(scenario == "unsafe" ? "наркотики" : "Спасибо за ответ.");
         });
         var beforePost = await GetStoredPostAsync(postId);
         var beforePlayer = await GetStoredPlayerAsync(user);
@@ -1022,7 +1013,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             scenario == "foreign-world" ? "5dfe7e85-cc03-42d3-81f8-f4c9393dca6a" : world.Id.Value.ToString());
 
         // Assert
-        if (scenario is "wrong-author" or "unsafe")
+        if (scenario == "unsafe")
         {
             await Assert.That(response.Generation?.Status).IsEqualTo(ReplyGenerationStatus.Failed);
         }
@@ -1036,7 +1027,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             await Assert.That(Factory.Llm.RequestCount).IsEqualTo(calls);
         }
 
-        if (scenario is "wrong-author" or "unsafe" or "deleted-during")
+        if (scenario is "unsafe" or "deleted-during")
         {
             await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(beforePost["Comments"].AsBsonArray.Count + 1);
             await Assert.That((await GetStoredPlayerAsync(user))["Energy"].AsInt32).IsLessThan(beforePlayer["Energy"].AsInt32);
@@ -1050,10 +1041,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    [Arguments(false, false)]
-    [Arguments(true, true)]
-    [Arguments(true, false)]
-    public async Task AddReply_ValidTurn_PersistsSeparateCommentsAsync(bool optional, bool reaction)
+    public async Task AddReply_ValidTurn_PersistsSeparateCommentsAsync()
     {
         // Arrange
         const long user = 8701;
@@ -1063,20 +1051,12 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var world = await Database.GetCollection<World>("worlds").Find(FilterDefinition<World>.Empty).SingleAsync();
         var selected = world.FindStar((await ReadPostAsync(postId)).Comments[0].AuthorId)
             ?? throw new InvalidOperationException("Missing selected star.");
-        var other = world.Stars.First(star => star.Id != selected.Id);
         Factory.Llm.Respond(messages =>
         {
             var policy = messages.First(message => message.Role == ChatRole.System).Text;
-            if (policy.Contains("Это дополнительная звезда: True", StringComparison.Ordinal))
-            {
-                return CreateReplyTurnResponse(other.Id.Value);
-            }
-
-            return CreateReplyTurnResponse(selected.Id.Value, args =>
-            {
-                args["emoji"] = reaction ? "💡" : string.Empty;
-                args["additional_star_id"] = optional ? other.Id.Value : string.Empty;
-            });
+            return CreateReplyTextResponse(policy.Contains("Это дополнительная звезда: True", StringComparison.Ordinal)
+                ? "Есть ещё один взгляд на тему."
+                : "Спасибо за ответ. Продолжим обсуждение.");
         });
         using var api = Factory.CreateApiClient(user);
         var worldId = world.Id.Value.ToString();
@@ -1109,7 +1089,24 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var primary = primaryEvents[^1];
         await Assert.That(primaryEvents[0].Status).IsEqualTo(ReplyGenerationStatus.Generating);
         await Assert.That(primary.Status).IsEqualTo(ReplyGenerationStatus.Completed);
-        await Assert.That(primary.AdditionalStarId).IsEqualTo(optional ? other.Id : null);
+        await Assert.That(Factory.Llm.GetLastRequest().TryGetProperty("tools", out _)).IsFalse();
+        using var repeatedStream = await api.Posts.GenerateReplyAsync(
+            postId,
+            worldId,
+            new GenerateReplyRequest
+            {
+                AuthorId = selected.Id.ToAuthorId(),
+                SourceCommentId = playerReply.CommentId,
+                Additional = false,
+            },
+            CancellationToken.None);
+        using var repeatedReader = new StreamReader(repeatedStream.Stream);
+        var repeated = ParseReplyGenerationEvents(await repeatedReader.ReadToEndAsync(CancellationToken.None))[^1];
+        await Assert.That(repeated.AdditionalStarId).IsEqualTo(primary.AdditionalStarId);
+        var other = world.Stars.SingleOrDefault(star => star.Id == primary.AdditionalStarId);
+        await Assert.That(primary.AdditionalStarId is null || other is not null).IsTrue();
+        await Assert.That(primary.AdditionalStarId is null || other?.Id != selected.Id).IsTrue();
+        var optional = other is not null;
         var starReply = await api.Posts.ReplyToPostAsync(
             postId,
             worldId,
@@ -1121,14 +1118,14 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                 Text = primary.Text ?? throw new InvalidOperationException("Missing generated text."),
             },
             CancellationToken.None);
-        if (optional)
+        if (other is { } additionalStar)
         {
             using var additionalStream = await api.Posts.GenerateReplyAsync(
                 postId,
                 worldId,
                 new GenerateReplyRequest
                 {
-                    AuthorId = other.Id.ToAuthorId(),
+                    AuthorId = additionalStar.Id.ToAuthorId(),
                     SourceCommentId = playerReply.CommentId,
                     Additional = true,
                 },
@@ -1159,9 +1156,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(savedPlayer.Reactions.Count).IsEqualTo(0);
         await Assert.That(savedStar.Id).IsEqualTo(starReply.CommentId);
         await Assert.That(savedStar.Depth).IsEqualTo(2);
-        if (optional)
+        if (other is { } chosenStar)
         {
-            await Assert.That(detail.Comments.Single(item => item.AuthorId == other.Id.ToAuthorId()).ParentCommentId).IsNull();
+            await Assert.That(detail.Comments.Single(item => item.AuthorId == chosenStar.Id.ToAuthorId()).ParentCommentId).IsNull();
         }
 
         await Assert.That((await GetStoredPlayerAsync(user))["EnergyUsed"].AsInt32)
@@ -1225,19 +1222,10 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    [Arguments("wrong-star")]
-    [Arguments("missing-key")]
-    [Arguments("accounting")]
     [Arguments("unsafe")]
-    [Arguments("foreign-extra")]
-    [Arguments("same-extra")]
-    [Arguments("partial-extra")]
-    [Arguments("hate")]
     [Arguments("long-text")]
-    [Arguments("long-emoji")]
-    [Arguments("non-string")]
     [Arguments("wrong-tool")]
-    [Arguments("no-tool")]
+    [Arguments("empty")]
     public async Task AddReply_InvalidModelTurn_PreservesSavedPlayerCommentAsync(string violation)
     {
         // Arrange
@@ -1248,91 +1236,15 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var world = await GetStoredWorldAsync(user);
         var selected = world["Stars"].AsBsonArray.Single(star =>
             StarId.From(star["_id"].AsString).ToAuthorId().Value == before["Comments"][0]["AuthorId"].AsString)["_id"].AsString;
-        var response = CreateReplyTurnResponse(selected, args =>
+        var response = violation switch
         {
-            switch (violation)
-            {
-                case "wrong-star":
-                {
-                    args["star_id"] = "outside-world";
-                    break;
-                }
-
-                case "missing-key":
-                {
-                    args.Remove("emoji");
-                    break;
-                }
-
-                case "accounting":
-                {
-                    args["energy_spent"] = 0;
-                    break;
-                }
-
-                case "unsafe":
-                {
-                    args["text"] = "наркотики";
-                    break;
-                }
-
-                case "foreign-extra":
-                {
-                    args["additional_star_id"] = "outside-world";
-                    args["additional_text"] = "ответ";
-                    args["additional_tone"] = "support";
-                    break;
-                }
-
-                case "same-extra":
-                {
-                    args["additional_star_id"] = selected;
-                    args["additional_text"] = "ответ";
-                    args["additional_tone"] = "support";
-                    break;
-                }
-
-                case "partial-extra":
-                {
-                    args["additional_text"] = "ответ без автора";
-                    break;
-                }
-
-                case "hate":
-                {
-                    args["tone"] = "hate";
-                    break;
-                }
-
-                case "long-text":
-                {
-                    args["text"] = new string('а', 501);
-                    break;
-                }
-
-                case "long-emoji":
-                {
-                    args["emoji"] = new string('а', 9);
-                    break;
-                }
-
-                case "non-string":
-                {
-                    args["text"] = 42;
-                    break;
-                }
-            }
-        });
-        if (violation == "wrong-tool")
-        {
-            var arguments = response.Messages[0].Contents.OfType<FunctionCallContent>().Single().Arguments;
-            response = new ChatResponse(new ChatMessage(ChatRole.Assistant, [new FunctionCallContent("wrong", "comment", arguments)]));
-        }
-
-        if (violation == "no-tool")
-        {
-            response = new ChatResponse(new ChatMessage(ChatRole.Assistant, "без вызова инструмента"));
-        }
+            "unsafe" => CreateReplyTextResponse("наркотики"),
+            "long-text" => CreateReplyTextResponse(new string('а', 501)),
+            "wrong-tool" => new ChatResponse(new ChatMessage(
+                ChatRole.Assistant,
+                [new FunctionCallContent("wrong", "comment", new Dictionary<string, object?>())])),
+            _ => CreateReplyTextResponse(" "),
+        };
 
         Factory.Llm.Respond(response);
 
@@ -1457,7 +1369,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var storedPost = await GetStoredPostAsync(postId);
         var selected = (world.FindStar(AuthorId.From(storedPost["Comments"][0]["AuthorId"].AsString))
             ?? throw new InvalidOperationException("Missing selected star.")).Id.Value;
-        Factory.Llm.Respond(CreateReplyTurnResponse(selected, args => args["emoji"] = "💡"));
+        Factory.Llm.Respond(CreateReplyTextResponse());
         await ReplyAsync(user, postId, targetId, "metadata", "мой ответ");
         var updated = world with
         {
@@ -1512,7 +1424,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(prompt).Contains("пост для треда");
         await Assert.That(prompt).Contains(post.Comments[0].Text);
         await Assert.That(prompt).Contains("player-response-marker");
-        await Assert.That(prompt).Contains("thread_reply");
+        await Assert.That(prompt).Contains("Ответь обычным текстом");
         await Assert.That(prompt).Contains("DATA_JSON:");
         await Assert.That(prompt.Contains("unrelated-sibling-marker", StringComparison.Ordinal)).IsFalse();
         await Assert.That(prompt.Contains("любит короткие посты", StringComparison.Ordinal)).IsFalse();
@@ -1651,7 +1563,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     [Test]
     [Arguments("hidden")]
     [Arguments("http-error")]
-    [Arguments("duplicate-turn")]
     public async Task AddReply_InvalidTargetOrGeneration_PreservesWholeStateAsync(string scenario)
     {
         // Arrange
@@ -1662,25 +1573,14 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         {
             var target = post.Comments[0] with
             {
-                Hidden = scenario == "hidden",
-
+                Hidden = true,
             };
             post = post with { Comments = [target] };
             await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(item => item.Id == post.Id, post);
         }
-        else if (scenario == "http-error")
-        {
-            Factory.Llm.RespondWithHttpError();
-        }
         else
         {
-            var world = await Database.GetCollection<World>("worlds").Find(item => item.Id == post.WorldId).SingleAsync();
-            var selected = world.FindStar(post.Comments[0].AuthorId)
-                ?? throw new InvalidOperationException("Missing selected star.");
-            var response = CreateReplyTurnResponse(selected.Id.Value);
-            var call = response.Messages[0].Contents.OfType<FunctionCallContent>().Single();
-            response.Messages[0].Contents.Add(new FunctionCallContent("duplicate", call.Name, call.Arguments));
-            Factory.Llm.Respond(response);
+            Factory.Llm.RespondWithHttpError();
         }
 
         var beforePost = await GetStoredPostAsync(postId);
