@@ -6,15 +6,15 @@ export function dayCount(value: number) {
   const ending = n % 100 >= 11 && n % 100 <= 14 ? 'дней' : n % 10 === 1 ? 'день' : n % 10 >= 2 && n % 10 <= 4 ? 'дня' : 'дней';
   return `${n} ${ending}`;
 }
-export function WorldProgress({ streak, storyDay, onStreak, onBoosters }: {
-  streak: Player['streak']; storyDay?: number; onStreak: () => void; onBoosters: () => void;
+export function WorldProgress({ streak, storyDay, boosterCount = '—', onStreak, onBoosters }: {
+  streak: Player['streak']; storyDay?: number; boosterCount?: string; onStreak: () => void; onBoosters: () => void;
 }) {
   return <div className="world-progress">
     <button className="streak-access" onClick={onStreak} aria-label={`Серия: ${dayCount(streak.days)}. Посмотреть дни и награды`}>
       <span aria-hidden="true">🔥</span><span><strong>Серия · {dayCount(streak.days)}</strong><span className="streak-mini" aria-hidden="true">{Array.from({ length: 7 }, (_, i) => <i key={i} className={streak.week[i] ? 'is-done' : ''} />)}</span></span>
     </button>
     {storyDay !== undefined && <span className="story-day-label">День сюжета {storyDay}</span>}
-    <button className="boosters-access" onClick={onBoosters}><span aria-hidden="true">✦</span> Бустеры <span className="caption muted">Скоро</span></button>
+    <button className="boosters-access" onClick={onBoosters}><span aria-hidden="true">✦</span> Бустеры <span className="caption muted">{boosterCount}</span></button>
   </div>;
 }
 export function StreakDetails({ streak }: { streak: Player['streak'] }) {
@@ -36,5 +36,5 @@ export function CrystalExchange({ onBoosters }: { onBoosters: () => void }) {
   </div>;
 }
 export function BoosterDetails() {
-  return <div className="stack"><p>Бустеры будут усиливать сюжетный XP за действие. Они не гарантируют согласие персонажа или выполнение задания.</p><section className="resource-option stack"><h3>Бустер сюжетного XP</h3><p className="caption muted">Инвентарь, сила усиления и применение пока недоступны.</p><Button disabled>Применить бустер — скоро</Button></section></div>;
+  return <div className="stack"><p>Бустеры будут усиливать сюжетный XP за действие. Они не гарантируют согласие персонажа или выполнение задания.</p><section className="resource-option stack"><h3>Бустер сюжетного XP</h3><p className="caption muted">Инвентарь, сила усиления и применение пока недоступны.</p><Button disabled>Нет подключённого инвентаря</Button></section></div>;
 }

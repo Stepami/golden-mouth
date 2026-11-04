@@ -41,7 +41,7 @@ test('first day contains authored hints only: no synthetic outcome, XP or comple
     assert.equal(c.day.quests.length, 3);
     for (const q of c.day.quests) {
       assert.ok(q.prompt && q.criterion);
-      assert.ok(!('approaches' in q)); assert.ok(!('completed' in q)); assert.ok(!('baseXP' in q));
+      assert.ok(!('approaches' in q)); assert.ok(!('completed' in q)); assert.ok(q.baseXP > 0); assert.ok(q.drafts.length > 0);
     }
   }
 });
