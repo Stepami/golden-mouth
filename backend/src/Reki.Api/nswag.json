@@ -72,6 +72,8 @@
         "Reki.Application.Posts.Responses.PostResult",
         "Reki.Application.Posts.Responses.PublicationStatus",
         "Reki.Application.Posts.Responses.ReplyLiveEvent",
+        "Reki.Application.Posts.Responses.Reply",
+        "Reki.Application.Posts.Responses.ReplyGeneration",
         "Reki.Application.Posts.Responses.LiveEvent",
         "Reki.Application.Posts.Responses.PublicationStatusLiveEvent"
       ],

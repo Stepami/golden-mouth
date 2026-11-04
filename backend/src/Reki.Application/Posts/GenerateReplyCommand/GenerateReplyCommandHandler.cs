@@ -1,0 +1,117 @@
+using System.Runtime.CompilerServices;
+using Mediator;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
+using Reki.Application.Exceptions;
+using Reki.Application.Posts.AddReplyCommand;
+using Reki.Application.Posts.AI;
+using Reki.Application.Posts.AI.Safety;
+using Reki.Application.Posts.GetPost;
+using Reki.Application.Posts.Responses.ReplyGeneration;
+using Reki.Application.RekiContext;
+
+namespace Reki.Application.Posts.GenerateReplyCommand;
+
+internal sealed partial class GenerateReplyCommandHandler(
+    ISender sender,
+    IRekiContextAccessor rekiContextAccessor,
+    StarTurnPolicy turnPolicy,
+    IStarTurnGenerator generator,
+    ILogger<GenerateReplyCommandHandler> logger) : IStreamCommandHandler<GenerateReply, ReplyGenerationLiveEvent>
+{
+    public async IAsyncEnumerable<ReplyGenerationLiveEvent> Handle(
+        GenerateReply request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var rekiContext = rekiContextAccessor.Context;
+        var player = await rekiContext.Player;
+        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+            ?? throw new ResourceNotFoundException("World not found.");
+        var post = await sender.Send(new PostQuery(request.PostId, world.Id), cancellationToken);
+        var star = world.FindStar(request.AuthorId)
+            ?? throw new RequestConflictException("The author is not a star of this world.");
+        var source = post.Comments.FirstOrDefault(item =>
+                item.Id == request.SourceCommentId && !item.Hidden && item.AuthorId == player.Id.ToAuthorId())
+            ?? throw new ResourceNotFoundException("Player comment not found.");
+        if (!request.Additional)
+        {
+            var expected = source.ParentCommentId is { } parentId
+                ? world.FindStar(post.Comments.First(item => item.Id == parentId).AuthorId)
+                : world.FindStar(post.AuthorId);
+            if (expected?.Id != star.Id)
+            {
+                throw new RequestConflictException("The star does not belong to the selected thread.");
+            }
+        }
+
+        var branch = source.ParentCommentId is { } parent ? post.GetBranch(parent) : [];
+        var turnContext = new StarReplyContext(
+            new StarAgentProfile(world, star.Id, player.Address),
+            star.Id,
+            post.Text,
+            branch,
+            source.Text,
+            turnPolicy.IsHateEnabled(player, world),
+            request.Additional);
+        yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Generating, request.AuthorId, null, null, null);
+        var calls = new List<FunctionCallContent>();
+        await using var updates = generator.StreamReplyTurnAsync(turnContext, cancellationToken)
+            .GetAsyncEnumerator(cancellationToken);
+        while (true)
+        {
+            bool hasUpdate;
+            var failed = false;
+            try
+            {
+                hasUpdate = await updates.MoveNextAsync();
+            }
+            catch (Exception exception) when (exception is not (OutOfMemoryException or AccessViolationException) &&
+                                              (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested))
+            {
+                GenerationFailed();
+                failed = true;
+                hasUpdate = false;
+            }
+
+            if (failed)
+            {
+                yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Failed, request.AuthorId, null, null, "ai_unavailable");
+                yield break;
+            }
+
+            if (!hasUpdate)
+            {
+                break;
+            }
+
+            calls.AddRange(updates.Current.Contents.OfType<FunctionCallContent>());
+            yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Generating, request.AuthorId, null, null, null);
+        }
+
+        ReplyGenerationLiveEvent outcome;
+        try
+        {
+            var turn = ReplyTurnPolicy.Parse(calls, turnContext);
+            outcome = new ReplyGenerationLiveEvent(
+                ReplyGenerationStatus.Completed,
+                request.AuthorId,
+                turn.Text,
+                turn.AdditionalStarId,
+                null);
+        }
+        catch (UnsafeGeneratedContentException)
+        {
+            outcome = new ReplyGenerationLiveEvent(ReplyGenerationStatus.Failed, request.AuthorId, null, null, "unsafe_generated_content");
+        }
+        catch (AiServiceUnavailableException)
+        {
+            GenerationFailed();
+            outcome = new ReplyGenerationLiveEvent(ReplyGenerationStatus.Failed, request.AuthorId, null, null, "ai_unavailable");
+        }
+
+        yield return outcome;
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Thread generation failed")]
+    private partial void GenerationFailed();
+}

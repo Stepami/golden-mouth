@@ -60,4 +60,16 @@ internal sealed class MongoPostRepository : IPostRepository
 
     public async ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken) =>
         await _posts.Find(item => item.Id == postId).FirstOrDefaultAsync(cancellationToken);
+
+    public async ValueTask<bool> TrySaveReplyAsync(GamePost post, int expectedVersion, string requestId, CancellationToken cancellationToken)
+    {
+        var requestIdField = new StringFieldDefinition<GamePost, string>("Comments.RequestId");
+        var filter = Builders<GamePost>.Filter.And(
+            Builders<GamePost>.Filter.Eq(item => item.Id, post.Id),
+            Builders<GamePost>.Filter.Eq(item => item.WorldId, post.WorldId),
+            Builders<GamePost>.Filter.Eq(item => item.Version, expectedVersion),
+            Builders<GamePost>.Filter.Ne(requestIdField, requestId));
+        var result = await _posts.ReplaceOneAsync(filter, post, cancellationToken: cancellationToken);
+        return result.MatchedCount == 1;
+    }
 }

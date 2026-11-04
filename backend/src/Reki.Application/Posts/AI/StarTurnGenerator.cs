@@ -129,8 +129,11 @@ internal sealed class StarTurnGenerator(
                        Вызови thread_reply ровно один раз. Ответь выбранной звездой {{context.TargetStarId.Value}}.
                        Реплика отвечает на последний комментарий игрока в выбранной ветке, а не оценивает пост.
                        Если ветка пустая, это корневой комментарий игрока к твоему посту: ответь как автор поста.
-                       Можешь поставить одну emoji-реакцию на ответ игрока и добавить один корневой комментарий
-                       ДРУГОЙ звезды текущего каталога. Необязательные поля передавай пустой строкой.
+                       Это дополнительная звезда: {{context.Additional}}. Если true, поля additional_star_id,
+                       additional_text, additional_tone и emoji передай пустыми строками.
+                       Если false, можешь выбрать одну ДРУГУЮ звезду текущего каталога для отдельной
+                       корневой реплики. Её текст сейчас не пиши: additional_text и additional_tone пустые.
+                       Необязательные поля передавай пустой строкой.
                        tone: support, critique или hate. Хейт разрешён сейчас: {{context.HateEnabled}}.
                        Не создавай hook, оценки, память лички, расход энергии или бонус.
                        """;
@@ -174,10 +177,15 @@ internal sealed class StarTurnGenerator(
             CreateStarSchema(
                 ThreadReplySchema,
                 [context.TargetStarId.Value],
-                [string.Empty, .. context.Agent.World.Stars
-                    .Where(star => star.Id != context.TargetStarId)
-                    .Select(star => star.Id.Value)])),
+                AdditionalStars(context))),
     ];
+
+    private static IEnumerable<string> AdditionalStars(StarReplyContext context) =>
+        context.Additional
+            ? [string.Empty]
+            : [string.Empty, .. context.Agent.World.Stars
+                .Where(star => star.Id != context.TargetStarId)
+                .Select(star => star.Id.Value)];
 
     private static string CreateStarSchema(
         string schema,

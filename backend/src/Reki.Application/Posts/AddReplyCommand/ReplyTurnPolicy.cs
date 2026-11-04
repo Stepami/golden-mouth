@@ -26,9 +26,9 @@ public static class ReplyTurnPolicy
         var otherText = Read(args, "additional_text", 500, true);
         var otherTone = Read(args, "additional_tone", 10, true);
         if (star != context.TargetStarId.Value || !AllowedTone(tone, context.HateEnabled) ||
-            (other.Length == 0 && (otherText.Length != 0 || otherTone.Length != 0)) ||
-            (other.Length != 0 && (other == star || !context.Agent.World.Stars.Any(item => item.Id.Value == other) ||
-                                   otherText.Length == 0 || !AllowedTone(otherTone, context.HateEnabled))))
+            otherText.Length != 0 || otherTone.Length != 0 ||
+            (context.Additional && (other.Length != 0 || emoji.Length != 0)) ||
+            (other.Length != 0 && (other == star || !context.Agent.World.Stars.Any(item => item.Id.Value == other))))
         {
             throw new AiServiceUnavailableException("The model returned a forbidden identity or tone.");
         }

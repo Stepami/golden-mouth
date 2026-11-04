@@ -1,15 +1,11 @@
-using System.Runtime.CompilerServices;
 using Mediator;
-using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
-using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Comment;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPost;
-using Reki.Application.Posts.Responses.ReplyLiveEvent;
+using Reki.Application.Posts.Responses.Reply;
 using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
 using Reki.Domain.Player;
@@ -18,21 +14,17 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.AddReplyCommand;
 
-internal sealed partial class AddReplyCommandHandler(
+internal sealed class AddReplyCommandHandler(
     IGameStore store,
+    IPostRepository posts,
     IOptionsMonitor<GameBalance> balance,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
     PlayerSafetyGuard safety,
-    StarTurnPolicy turnPolicy,
-    IStarTurnGenerator generator,
-    ILogger<AddReplyCommandHandler> logger,
     ProductTelemetry telemetry,
-    IStarFeedScheduler<ScheduleFromCommentRequest> feedScheduler) : IStreamCommandHandler<AddReply, ReplyLiveEvent>
+    IStarFeedScheduler<ScheduleFromCommentRequest> feedScheduler) : ICommandHandler<AddReply, ReplyResponse>
 {
-    public async IAsyncEnumerable<ReplyLiveEvent> Handle(
-        AddReply request,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+    public async ValueTask<ReplyResponse> Handle(AddReply request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.RequestId) || request.RequestId.Length > 64 ||
             string.IsNullOrWhiteSpace(request.Text) || request.Text.Length > 1000)
@@ -40,258 +32,128 @@ internal sealed partial class AddReplyCommandHandler(
             throw new RequestConflictException("The reply request is invalid.");
         }
 
-        var rekiContext = rekiContextAccessor.Context;
-        var storedPlayer = await rekiContext.Player;
-        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+        var context = rekiContextAccessor.Context;
+        var player = await context.Player;
+        var world = (await context.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var post = await sender.Send(new PostQuery(request.PostId, world.Id), cancellationToken);
-        var (target, star) = ValidateTarget(post, world, request.TargetCommentId);
-        await safety.EnsureInputAllowedAsync(storedPlayer, [request.Text], cancellationToken);
-        var player = storedPlayer;
+        var isPlayer = request.AuthorId == player.Id.ToAuthorId();
+        if (!isPlayer && world.FindStar(request.AuthorId) is null)
+        {
+            throw new RequestConflictException("The reply author is not in this world.");
+        }
+
         if (post.FindRequest(request.RequestId) is { } existing)
         {
-            EnsureSameRequest(existing, request, player.Id);
-            yield return await ReplayAsync(request, player.Id, cancellationToken);
-            yield break;
+            EnsureSameRequest(existing, request);
+            return Completed(existing, post, world, player);
         }
 
-        EnsureEnergy(player);
-        var context = new StarReplyContext(
-            new StarAgentProfile(world, star.Id, player.Address),
-            star.Id,
-            post.Text,
-            target is null ? [] : post.GetBranch(target.Id),
+        ValidateTarget(post, world, request.TargetCommentId, isPlayer);
+        if (isPlayer)
+        {
+            await safety.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
+        }
+        else
+        {
+            PlayerSafetyGuard.EnsureOutputAllowed([request.Text]);
+        }
+
+        if (isPlayer && player.Energy < balance.CurrentValue.Thread.EnergyCost)
+        {
+            throw new RequestConflictException("Insufficient energy.");
+        }
+
+        var comment = new GameComment(
+            CommentId.New(),
+            request.TargetCommentId,
+            request.RequestId,
+            request.AuthorId,
             request.Text,
-            turnPolicy.IsHateEnabled(player, world));
-        yield return new ReplyLiveEvent(ReplyStatus.Generating, request.RequestId, null, null, null, null, null);
-        var calls = new List<FunctionCallContent>();
-        await using var updates = generator.StreamReplyTurnAsync(context, cancellationToken)
-            .GetAsyncEnumerator(cancellationToken);
-        while (true)
+            false,
+            []);
+        var updatedPost = post.AddComments([comment]);
+        if (!isPlayer)
         {
-            bool hasUpdate;
-            var failed = false;
-            try
+            if (!await posts.TrySaveReplyAsync(updatedPost, post.Version, request.RequestId, cancellationToken))
             {
-                hasUpdate = await updates.MoveNextAsync();
-                if (hasUpdate)
-                {
-                    calls.AddRange(updates.Current.Contents.OfType<FunctionCallContent>());
-                }
+                return await ReplayOrConflictAsync(request, cancellationToken);
             }
 
-            // Provider exceptions after SSE headers need a safe terminal event; cancellation and
-            // critical runtime failures propagate instead of being presented as a model error.
-            catch (Exception exception) when (exception is not (OutOfMemoryException or AccessViolationException) &&
-                                              (exception is not OperationCanceledException ||
-                                               !cancellationToken.IsCancellationRequested))
-            {
-                GenerationFailed();
-                hasUpdate = false;
-                failed = true;
-            }
-
-            if (failed)
-            {
-                yield return new ReplyLiveEvent(ReplyStatus.Failed, request.RequestId, null, null, null, null, "ai_unavailable");
-                yield break;
-            }
-
-            if (!hasUpdate)
-            {
-                break;
-            }
-
-            yield return new ReplyLiveEvent(ReplyStatus.Generating, request.RequestId, null, null, null, null, null);
+            return Completed(comment, updatedPost, world, player);
         }
 
-        GeneratedReplyTurn? turn = null;
-        var unsafeContent = false;
-        try
+        var currentBalance = balance.CurrentValue;
+        var bonus = post.Comments.Count(item => item.AuthorId == request.AuthorId) < currentBalance.Thread.BonusReplies
+            ? currentBalance.Thread.SubscriberBonus : 0;
+        var updatedPlayer = player.SpendEnergy(currentBalance.Thread.EnergyCost);
+        var updatedWorld = world.AwardThreadBonus(bonus);
+        if (!await store.TryCommitReplyAsync(
+                updatedPost,
+                post.Version,
+                request.RequestId,
+                updatedPlayer,
+                player.Version,
+                updatedWorld,
+                world.Version,
+                cancellationToken))
         {
-            turn = ReplyTurnPolicy.Parse(calls, context);
-        }
-        catch (AiServiceUnavailableException)
-        {
-            GenerationFailed();
-        }
-        catch (UnsafeGeneratedContentException)
-        {
-            unsafeContent = true;
+            return await ReplayOrConflictAsync(request, cancellationToken);
         }
 
-        if (turn is null)
-        {
-            yield return new ReplyLiveEvent(ReplyStatus.Failed, request.RequestId, null, null, null, null, unsafeContent ? "unsafe_generated_content" : "ai_unavailable");
-            yield break;
-        }
-
-        // The preview is safe but remains unpublished until the transaction succeeds.
-        yield return new ReplyLiveEvent(ReplyStatus.Generating, request.RequestId, turn.Text, null, null, null, null);
-        ReplyLiveEvent outcome;
-        try
-        {
-            outcome = await CommitAsync(request, turn, player.Id, cancellationToken);
-        }
-        catch (RequestConflictException)
-        {
-            outcome = new ReplyLiveEvent(ReplyStatus.Failed, request.RequestId, null, null, null, null, "request_conflict");
-        }
-
-        yield return outcome;
+        telemetry.TrackWorldAudience(updatedWorld);
+        await feedScheduler.ScheduleFeedAsync(new ScheduleFromCommentRequest(player.Id, world.Id, post.Id, comment.Id));
+        return Completed(comment, updatedPost, updatedWorld, updatedPlayer);
     }
 
-    private static ReplyLiveEvent Completed(
-        AddReply request,
-        GamePost post,
-        World world,
-        PlayerProfile player) =>
-        new(
-            ReplyStatus.Completed,
-            request.RequestId,
-            Text: null,
-            Post: post.MapPost(world, player.Id),
-            EnergyLeft: player.Energy,
-            Subscribers: world.Player.Subscribers,
-            Code: null);
+    private static ReplyResponse Completed(GameComment comment, GamePost post, World world, PlayerProfile player) =>
+        new(comment.Id, comment.AuthorId, post.MapPost(world, player.Id), player.Energy, world.Player.Subscribers);
 
-    private static void EnsureSameRequest(GameComment comment, AddReply request, PlayerId playerId)
+    private static void EnsureSameRequest(GameComment comment, AddReply request)
     {
-        if (comment.AuthorId != playerId.ToAuthorId() || comment.ParentCommentId != request.TargetCommentId ||
+        if (comment.AuthorId != request.AuthorId || comment.ParentCommentId != request.TargetCommentId ||
             !string.Equals(comment.Text, request.Text, StringComparison.Ordinal))
         {
             throw new RequestConflictException("The request identifier belongs to another reply.");
         }
     }
 
-    private static (GameComment? Comment, WorldStar Star) ValidateTarget(GamePost post, World world, CommentId? targetId)
+    private static void ValidateTarget(GamePost post, World world, CommentId? targetId, bool isPlayer)
     {
         if (targetId is null)
         {
-            var author = world.FindStar(post.AuthorId)
-                         ?? throw new RequestConflictException("The post author is not a star of this world.");
-            return (null, author);
+            if (isPlayer && world.FindStar(post.AuthorId) is null)
+            {
+                throw new RequestConflictException("The post author is not a star of this world.");
+            }
+
+            return;
         }
 
-        var target = post.Comments.FirstOrDefault(comment => comment.Id == targetId && !comment.Hidden)
-                     ?? throw new ResourceNotFoundException("Comment not found.");
-        var star = world.FindStar(target.AuthorId)
-                   ?? throw new RequestConflictException("The target is not a star of this world.");
-
-        return (target, star);
-    }
-
-    private void EnsureEnergy(PlayerProfile player)
-    {
-        var currentBalance = balance.CurrentValue;
-        if (player.Energy < currentBalance.Thread.EnergyCost)
+        var target = post.Comments.FirstOrDefault(item => item.Id == targetId && !item.Hidden)
+            ?? throw new ResourceNotFoundException("Comment not found.");
+        if (isPlayer && world.FindStar(target.AuthorId) is null)
         {
-            throw new RequestConflictException("Insufficient energy.");
+            throw new RequestConflictException("The target is not a star of this world.");
+        }
+
+        if (!isPlayer && target.AuthorId != world.Player.PlayerId.ToAuthorId())
+        {
+            throw new RequestConflictException("A star can reply only to the player.");
         }
     }
 
-    private async ValueTask<ReplyLiveEvent> CommitAsync(
-        AddReply request,
-        GeneratedReplyTurn turn,
-        PlayerId playerId,
-        CancellationToken cancellationToken)
+    private async ValueTask<ReplyResponse> ReplayOrConflictAsync(AddReply request, CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var rekiContext = rekiContextAccessor.Context;
-        rekiContext.Reload();
-        var storedPlayer = await rekiContext.Player;
-        var player = storedPlayer;
-        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+        var context = rekiContextAccessor.Context;
+        context.Reload();
+        var player = await context.Player;
+        var world = (await context.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var post = await sender.Send(new PostQuery(request.PostId, world.Id), cancellationToken);
-        if (post.FindRequest(request.RequestId) is { } existing)
-        {
-            EnsureSameRequest(existing, request, playerId);
-            return await ReplayAsync(request, playerId, cancellationToken);
-        }
-
-        await safety.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
-        var (target, star) = ValidateTarget(post, world, request.TargetCommentId);
-        if (star.Id != turn.StarId ||
-            (turn.AdditionalStarId is { } other && world.FindStar(other) is null))
-        {
-            throw new RequestConflictException("The world changed during generation.");
-        }
-
-        var currentBalance = balance.CurrentValue;
-        var hateEnabled = turnPolicy.IsHateEnabled(player, world);
-        if ((turn.Tone == "hate" || turn.AdditionalTone == "hate") && !hateEnabled)
-        {
-            throw new RequestConflictException("The world safety settings changed during generation.");
-        }
-
-        EnsureEnergy(player);
-        var bonus = post.Comments.Count(comment =>
-                        comment.AuthorId == playerId.ToAuthorId())
-                    < currentBalance.Thread.BonusReplies
-            ? currentBalance.Thread.SubscriberBonus
-            : 0;
-        var playerComment = new GameComment(
-            CommentId.New(),
-            target?.Id,
-            request.RequestId,
-            playerId.ToAuthorId(),
-            request.Text,
-            false,
-            turn.Emoji is { } emoji ? [new CommentReaction(turn.StarId.ToAuthorId(), emoji)] : []);
-        List<GameComment> comments =
-        [
-            playerComment,
-            new GameComment(CommentId.New(), playerComment.Id, null, turn.StarId.ToAuthorId(), turn.Text, false, [])
-        ];
-        if (turn is { AdditionalStarId: { } additional, AdditionalText: { } text })
-        {
-            comments.Add(new GameComment(CommentId.New(), null, null, additional.ToAuthorId(), text, false, []));
-        }
-
-        var updatedPost = post.AddComments(comments);
-        var updatedPlayer = player.SpendEnergy(currentBalance.Thread.EnergyCost);
-        var updatedWorld = world.AwardThreadBonus(bonus);
-        if (await store.TryCommitReplyAsync(
-                updatedPost,
-                post.Version,
-                request.RequestId,
-                updatedPlayer,
-                storedPlayer.Version,
-                updatedWorld,
-                world.Version,
-                cancellationToken))
-        {
-            telemetry.TrackWorldAudience(updatedWorld);
-            await feedScheduler.ScheduleFeedAsync(new ScheduleFromCommentRequest(playerId, world.Id, post.Id, playerComment.Id));
-            return Completed(request, updatedPost, updatedWorld, updatedPlayer);
-        }
-
-        return new ReplyLiveEvent(ReplyStatus.Failed, request.RequestId, null, null, null, null, "request_conflict");
+        var existing = post.FindRequest(request.RequestId)
+            ?? throw new RequestConflictException("The reply could not be saved.");
+        EnsureSameRequest(existing, request);
+        return Completed(existing, post, world, player);
     }
-
-    /// <summary>
-    /// Seeing the saved request proves that its energy and bonus transaction has committed.
-    /// Read the dependent state afterwards rather than returning the preflight snapshot.
-    /// </summary>
-    private async ValueTask<ReplyLiveEvent> ReplayAsync(
-        AddReply request,
-        PlayerId playerId,
-        CancellationToken cancellationToken)
-    {
-        var post = await sender.Send(new PostQuery(request.PostId, request.WorldId), cancellationToken);
-        var rekiContext = rekiContextAccessor.Context;
-        rekiContext.Reload();
-        var storedPlayer = await rekiContext.Player;
-        var player = storedPlayer;
-        var world = (await rekiContext.Worlds).GetValueOrDefault(post.WorldId)
-            ?? throw new ResourceNotFoundException("World not found.");
-        var existing = post.FindRequest(request.RequestId) ??
-                       throw new RequestConflictException("The saved reply disappeared.");
-        EnsureSameRequest(existing, request, playerId);
-        return Completed(request, post, world, player);
-    }
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Thread generation failed")]
-    private partial void GenerationFailed();
 }

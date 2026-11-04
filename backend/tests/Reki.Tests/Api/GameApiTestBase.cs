@@ -10,6 +10,7 @@ using Reki.Api.Serialization;
 using Reki.Application.Player;
 using Reki.Application.Player.Responses;
 using Reki.Application.Posts.Responses.LiveEvent;
+using Reki.Application.Posts.Responses.ReplyGeneration;
 using Reki.Application.Posts.Responses.ReplyLiveEvent;
 using Reki.Application.Worlds;
 using Reki.Application.Worlds.Responses;
@@ -121,6 +122,11 @@ public abstract class GameApiTestBase(ApiFactory factory)
             .Select(line => JsonSerializer.Deserialize(line[6..], ApiJsonSerializerContext.Default.ReplyLiveEvent)
                 ?? throw new InvalidOperationException("The reply event was empty.")).ToArray();
 
+    protected static IReadOnlyList<ReplyGenerationLiveEvent> ParseReplyGenerationEvents(string body) =>
+        body.Split('\n').Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
+            .Select(line => JsonSerializer.Deserialize(line[6..], ApiJsonSerializerContext.Default.ReplyGenerationLiveEvent)
+                ?? throw new InvalidOperationException("The generation event was empty.")).ToArray();
+
     protected async Task<PlayerResponse> CreatePlayerWithWorldAsync(
         TestApiClient api,
         WorldTemplate world = WorldTemplate.Stage,
@@ -231,14 +237,54 @@ public abstract class GameApiTestBase(ApiFactory factory)
         string text)
     {
         using var api = Factory.CreateApiClient(telegramUserId);
-        using var response = await api.Posts.ReplyToPostAsync(
+        var player = await GetStoredPlayerAsync(telegramUserId);
+        var worldId = await GetWorldIdAsync(api);
+        var response = await api.Posts.ReplyToPostAsync(
             postId,
-            await GetWorldIdAsync(api),
-            new ReplyRequest { CommentId = Domain.Posts.CommentId.From(commentId), RequestId = replyId, Text = text },
+            worldId,
+            new ReplyRequest
+            {
+                AuthorId = PlayerId.From(player["_id"].AsBsonBinaryData.ToGuid()).ToAuthorId(),
+                CommentId = Domain.Posts.CommentId.From(commentId),
+                RequestId = replyId,
+                Text = text,
+            },
             CancellationToken.None);
-        using var reader = new StreamReader(response.Stream);
-        var body = await reader.ReadToEndAsync(CancellationToken.None);
-        return ParseReplyEvents(body).Last(item => item.Status == ReplyStatus.Completed);
+        var target = response.Post.Comments.Single(item => item.Id == Domain.Posts.CommentId.From(commentId));
+        if (response.Post.Comments.Any(item => item.ParentCommentId == response.CommentId && item.AuthorId == target.AuthorId))
+        {
+            return new ReplyLiveEvent(ReplyStatus.Completed, replyId, null, response.Post, response.EnergyLeft, response.Subscribers, null);
+        }
+
+        using var generation = await api.Posts.GenerateReplyAsync(
+            postId,
+            worldId,
+            new GenerateReplyRequest
+            {
+                AuthorId = target.AuthorId,
+                SourceCommentId = response.CommentId,
+                Additional = false,
+            },
+            CancellationToken.None);
+        using var reader = new StreamReader(generation.Stream);
+        var events = (await reader.ReadToEndAsync(CancellationToken.None)).Split('\n')
+            .Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
+            .Select(line => JsonSerializer.Deserialize(line[6..], ApiJsonSerializerContext.Default.ReplyGenerationLiveEvent))
+            .ToArray();
+        var completed = events.Last(item => item?.Status == ReplyGenerationStatus.Completed)
+            ?? throw new InvalidOperationException("No generated star reply.");
+        var star = await api.Posts.ReplyToPostAsync(
+            postId,
+            worldId,
+            new ReplyRequest
+            {
+                AuthorId = completed.AuthorId,
+                CommentId = response.CommentId,
+                RequestId = replyId + ":star",
+                Text = completed.Text ?? throw new InvalidOperationException("No generated text."),
+            },
+            CancellationToken.None);
+        return new ReplyLiveEvent(ReplyStatus.Completed, replyId, null, star.Post, star.EnergyLeft, star.Subscribers, null);
     }
 
     protected IReadOnlyList<ChatMessage> GetCapturedChatMessages()

@@ -21,6 +21,8 @@ using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Application.Posts.Responses.PostDetail;
 using Reki.Application.Posts.Responses.PublicationStatus;
 using Reki.Application.Posts.Responses.PublicationStatusLiveEvent;
+using Reki.Application.Posts.Responses.Reply;
+using Reki.Application.Posts.Responses.ReplyGeneration;
 using Reki.Application.Posts.Responses.ReplyLiveEvent;
 using Reki.Application.Responses;
 using Reki.Application.Social.Responses;
@@ -79,6 +81,11 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(PublicationStatusType))]
 [JsonSerializable(typeof(LiveEventType))]
 [JsonSerializable(typeof(ReplyRequest))]
+[JsonSerializable(typeof(GenerateReplyRequest))]
+[JsonSerializable(typeof(ReplyResponse))]
+[JsonSerializable(typeof(ReplyGenerationStatus))]
+[JsonSerializable(typeof(ReplyGenerationLiveEvent))]
+[JsonSerializable(typeof(SseItem<ReplyGenerationLiveEvent>))]
 [JsonSerializable(typeof(ReplyStatus))]
 [JsonSerializable(typeof(ReplyLiveEvent))]
 [JsonSerializable(typeof(SseItem<ReplyLiveEvent>))]
@@ -127,6 +134,7 @@ namespace Reki.Api.Serialization;
         typeof(CamelCaseEnumConverter<GameEventKind>),
         typeof(CamelCaseEnumConverter<LiveEventType>),
         typeof(CamelCaseEnumConverter<ReplyStatus>),
+        typeof(CamelCaseEnumConverter<ReplyGenerationStatus>),
         typeof(CamelCaseEnumConverter<ClientLogLevel>),
         typeof(KebabCaseEnumConverter<LaunchSurface>),
         typeof(SnakeCaseEnumConverter<PublicationStatusType>)
