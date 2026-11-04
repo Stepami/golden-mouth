@@ -14,6 +14,7 @@ import { storyForTemplate, storyForCampaign, campaignFor, pilotDefinition, pilot
 import { StoryOpening, StoryMap, PlayMode, DemoInventory, StoryWallet, XPFlight, TypingDraft } from './storyplay/StorySurfaces';
 import { freshStory, isStoryPlay, finishQuest, buyBooster, grantDemoCrystals, spendStoryXP, type StoryPlay } from './storyplay/model';
 import './storyplay/storyplay.css';
+import './portraits.css';
 import { StoryBrief } from './story/StoryBrief';
 import { PublicationWaiting, PublicationResult, type PublicationReceipt } from './publication/PublicationCards';
 import { XPProfile } from './xp/XPProfile';

@@ -1,3 +1,4 @@
+import { defaultPortrait } from '../portraits';
 import { SocialAction } from "./SocialAction";
 export { SocialAction } from "./SocialAction";
 import {
@@ -107,12 +108,15 @@ export function Avatar({
   src?: string;
   size?: "sm" | "md" | "lg" | "xl";
 }) {
+  const [generated,setGenerated] = useState<{name:string;uri:string}>();
   const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [src]);
+  useEffect(() => { let active=true; if(!src) void defaultPortrait(name).then(uri=>{if(active)setGenerated({name,uri});}).catch(()=>{}); return()=>{active=false;}; },[name,src]);
+  const image = src || (generated?.name===name ? generated.uri : undefined);
+  useEffect(() => setFailed(false), [image]);
   return (
     <span className={`avatar avatar--${size}`} aria-hidden="true">
-      {src && !failed ? (
-        <img src={src} alt="" onError={() => setFailed(true)} />
+      {image && !failed ? (
+        <img src={image} alt="" onError={() => setFailed(true)} />
       ) : (
         name
           .split(" ")
