@@ -1,6 +1,5 @@
 import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import BackendApp from './v7/BackendApp';
 import AuthenticatedApp from './v7/AuthenticatedApp';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { installAnalytics } from './app/analytics';
@@ -16,4 +15,4 @@ const DemoApp = import.meta.env.DEV ? lazy(() => import('./v7/DemoApp')) : null;
 document.documentElement.dataset.theme = 'light';
 if (initTelegram()) { installGlobalHandlers(); installAnalytics(); }
 const demo = import.meta.env.DEV && new URLSearchParams(location.search).has('v7demo');
-createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary><Suspense fallback={<p>Открываем Реки…</p>}>{demo && DemoApp ? <DemoApp /> : import.meta.env.PROD ? <AuthenticatedApp /> : <BackendApp />}</Suspense></ErrorBoundary></StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary><Suspense fallback={<p>Открываем Реки…</p>}>{demo && DemoApp ? <DemoApp /> : <AuthenticatedApp />}</Suspense></ErrorBoundary></StrictMode>);

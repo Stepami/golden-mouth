@@ -26,6 +26,6 @@
 
 Generated client зависит от нового backend-контракта. Пока233не merged, база frontend PR234 — ветка233; его diff остаётся frontend-only. После233merge перевести234наmaster. Не удалять базовую ветку до завершения зависимости.
 
-Backend: локально219/219, frontend93/93, production build и secret scan PASS. Docker smoke не запускался: daemon Air недоступен; shared DEV/Mini для backend-экспериментов не использовался. CI проверяется отдельно по HEAD каждого PR; queued не означает success. Кошелёк и миграция не развёрнуты на DEV/production. Проверка полного UI↔новый backend остаётся отдельным шагом после разрешённого rollout.
+Backend: локально219/219, frontend93/93, production build и secret scan PASS. Docker smoke не запускался: daemon Air недоступен; shared DEV/Mini для backend-экспериментов не использовался. CI backend0f5943f и объединённого кодового коммита frontend ea72882: build/test/scan SUCCESS. Последующие frontend-изменения проверяются своим HEAD; статус очереди не считается успехом. Кошелёк и миграция не развёрнуты на DEV/production. Проверка полного UI↔новый backend остаётся отдельным шагом после разрешённого rollout.
 
 XP, квестовые награды, inventory и подарки не реализуются этим backend-PR. Они описаны отдельно в [QUEST-OUTCOMES](QUEST-OUTCOMES.md) и [BUSINESS-DECISIONS](BUSINESS-DECISIONS.md). Новый WalletView не включает локальные тестовые покупки в публичную сборку; отсутствие маршрута старого API не создаёт фиктивный баланс.
