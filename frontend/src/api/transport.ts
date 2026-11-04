@@ -17,17 +17,17 @@ export function publicationFailure(value: unknown): PublicationFailure | undefin
     ? { code: value.code, category: value.category, policyVersion: value.policyVersion } : undefined
 }
 const baseUrl = new URL(runtimeConfig.apiBaseUrl, window.location.origin).href
-export function transport(telemetry = false) {
+export function transport(telemetry = false, retryUnauthorized = true) {
   return { async fetch(url: RequestInfo, init: RequestInit = {}): Promise<Response> {
     const headers = new Headers(init.headers)
     const path = new URL(String(url), baseUrl).pathname.slice(new URL(baseUrl).pathname.replace(/\/$/, '').length)
     const anonymous = path === '/sessions'
     const firstToken = getAccessToken()
     if (!anonymous && firstToken) headers.set('Authorization', `Bearer ${firstToken}`)
-    let response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
-    if (!anonymous && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
+    let response = await fetch(url, { ...init, headers, cache:path.startsWith('/me/energy')?'no-store':init.cache, ...(telemetry ? { keepalive: true } : {}) })
+    if (retryUnauthorized && !anonymous && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
       headers.set('Authorization', `Bearer ${getAccessToken()}`)
-      response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
+      response = await fetch(url, { ...init, headers, cache:path.startsWith('/me/energy')?'no-store':init.cache, ...(telemetry ? { keepalive: true } : {}) })
     }
     if (response.ok) return response
     let failure: PublicationFailure | undefined
@@ -66,3 +66,6 @@ export async function stream(input: { url: '/posts/publications'; query: { world
   assertSession(generation)
   return response
 }
+
+// Exchanges must never be replayed implicitly, including authentication recovery.
+export const walletExchangeClient = new PlayerClient(baseUrl, transport(false, false))

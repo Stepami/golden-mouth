@@ -1,3 +1,5 @@
+import {useEnergyWallet} from './energy/useEnergyWallet';
+import {EnergyCountdown} from './energy/WalletView';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { activitiesForWorld, markWorldActivitiesRead, type Activity } from './activity';
 import { submissionFor, publicationError } from './submission';
@@ -58,6 +60,8 @@ type ReplyDraft = { text: string; requestId?: string; submittedText?: string; be
 const statusLabels: Record<string, string> = { pending: 'Персонажи читают публикацию…', ready_for_moderation: 'Готовим результат…', completed: 'Публикация готова', failed: 'Публикация не отправлена' };
 const titleOf: Record<Screen, string> = { catalog: 'Миры', search: 'Поиск', intro: 'Вход в мир', onboarding: 'Знакомство', welcome: 'Знакомство', age: 'Возраст', hero: 'Ваш персонаж', 'story-skills': 'Навыки персонажа', feed: 'Лента', goals: 'Цели', compose: 'Новая публикация', thread: 'Обсуждение', topic: 'Тема', profile: 'Профиль персонажа', character: 'Собеседник', messages: 'Личка', activity: 'Уведомления', account: 'Профиль', resources:'Энергия',crystals:'Кристаллы',boosters:'Бустеры' };
 
+const walletClient={read:()=>api.energyWallet(),exchange:()=>api.exchangeEnergy()};
+
 export default function BackendApp() {
   const preview = import.meta.env.DEV;
   const [deleteOpen,setDeleteOpen]=useState(false);
@@ -72,6 +76,7 @@ export default function BackendApp() {
   const [selectedVariant, setSelectedVariant] = useState(false);
   const [player, setPlayer] = useState<Player>();
   const [world, setWorld] = useState<World>();
+  const accountEnergy=useEnergyWallet(player?.id,walletClient,w=>setPlayer(p=>p?{...p,postsLeft:w.amount,postsCap:w.cap}:p));
   const [booting, setBooting] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -143,6 +148,7 @@ export default function BackendApp() {
   const localSave = (name: string, value: unknown) => { if (!saveLocal(`${key}:${name}`, value)) setStorageError(true); };
   const go = (next: Screen) => { setError(''); setStack(s => [...s, screen]); setScreen(next); setToast(undefined); setReactionNotice(undefined); };
   const openResource = (next: ResourcePageName) => {
+    void accountEnergy.refresh();
     if(screen==='compose'){setAnimateDraft(false);setTypingDraft(false);}
     if(['resources','crystals','boosters'].includes(screen)){setScreen(next);setError('');}else go(next);
   };
@@ -185,7 +191,7 @@ export default function BackendApp() {
     setReceipt(receiptForRelease(savedReceipt ? { ...savedReceipt, worldId: p.world } : undefined,preview));
     if (!sending.current) { setDraft(draft.text); setUnknown(!!draft.publicationId); setPublicationFailed(false); }
     return p; };
-  const refresh = async () => { const p = installPlayer(await api.me()); await loadFeed(p); return p; };
+  const refresh = async () => { const p = installPlayer(await api.me()); await loadFeed(p); await accountEnergy.refresh(); return p; };
   const boot = useCallback(async () => {
     setBooting(true); setError('');
     try {
@@ -439,8 +445,8 @@ export default function BackendApp() {
   useEffect(()=>{if(!energyNudge)return;const timer=setTimeout(()=>setEnergyNudge(0),6000);return()=>clearTimeout(timer);},[energyNudge]);
   const renderFeed = () => <>
     <div className="world-hud"><header className="world-header"><button className="world-switch" onClick={() => setOverlay('exit')}><strong>{world?.title} ⌄</strong><span className="channel-sidebar-count"><Icon name="member"/><b className="channel-count-target">{formatAudience(player?.subs??0)}</b><span className="channel-count-label">подписчиков</span></span></button>
-      <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><ResourceBadge type="energy" value={preview?`${player?.postsLeft??0}/10`:String(player?.postsLeft??'—')} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/><span>{preview?'+1 / 10 мин · план':'Общий запас'}</span></div>
-      <ResourceBadge type="crystal" value={preview && curriculum ? String(play.crystals) : '—'} hint={preview?"Кристаллы локальной пробы и бустеры":"Кристаллы и обмен появятся позже"} onClick={() => openResource('crystals')} />
+      <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><ResourceBadge type="energy" value={accountEnergy.wallet?`${accountEnergy.wallet.amount}/${accountEnergy.wallet.cap}`:String(player?.postsLeft??'—')} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/>{accountEnergy.wallet?<EnergyCountdown wallet={accountEnergy.wallet}/>:<span>Общий запас</span>}</div>
+      <ResourceBadge type="crystal" value={accountEnergy.wallet?String(accountEnergy.wallet.crystals):preview && curriculum ? String(play.crystals) : '—'} hint={preview?"Кристаллы локальной пробы и бустеры":"Кристаллы и обмен появятся позже"} onClick={() => openResource('crystals')} />
       <button className="profile-access" data-unspent={curriculum && play.available>0 ? "true" : undefined} aria-label={curriculum && play.enabled ? `Профиль персонажа: ${formatXP(play.total)} XP, ${activeCampaign?`цель ${goalProgress}%`:`квесты ${play.completed.length}/${allQuests.length}`}. Потратить XP на навыки` : "Профиль персонажа"} onClick={() => go('profile')} style={curriculum && play.enabled ? { background: `conic-gradient(var(--color-progress) ${goalProgress}%,var(--color-divider) 0)` } : undefined}><Avatar name={player?.name ?? ''} src={player ? personaFor(player.id, player.world).avatar : undefined} size="lg" />{curriculum && play.enabled && <span className="story-avatar-label">{formatXP(play.total)} XP · {activeCampaign?`${goalProgress}%`:`${play.completed.length}/${allQuests.length}`}</span>}</button></header>
     {player && <WorldProgress streak={player.streak} storyDay={preview?stageDay:undefined} boosterCount={preview && curriculum ? String(play.boosters+(play.energyBoosters?.length??0)) : '—'} onStreak={() => setOverlay('streak')} onGift={play.enabled?openSeriesGift:undefined} giftClaimed={storyInventory.loginGiftDays?.includes(giftDay)} onBoosters={() => openResource('boosters')} />}
     </div>
@@ -500,7 +506,7 @@ export default function BackendApp() {
   else if (screen === 'goals' && activeCampaign) content = <StoryOpening firstVisit={storyOnboarding} playerName={player?.name ?? activeCampaign.heroName} avatar={player ? personaFor(player.id,player.world).avatar : undefined} worldTitle={world?.title || storyForCampaign(activeCampaign).scenario} campaign={activeCampaign} goal={world?.goal || activeCampaign.goal} skills={storyLabels} step="mission" onNext={() => go('story-skills')} onBack={back} />;
   else if (screen === 'story-skills' && activeCampaign) content = <StoryOpening firstVisit={storyOnboarding} playerName={player?.name ?? activeCampaign.heroName} avatar={player ? personaFor(player.id,player.world).avatar : undefined} worldTitle={world?.title || storyForCampaign(activeCampaign).scenario} campaign={activeCampaign} goal={world?.goal || activeCampaign.goal} skills={storyLabels} step="skills" onNext={openFirstPost} onBack={back} />;
   else if (screen === 'goals' && world) content = <><ScreenHeading title="Цели" subtitle={world.title} /><StoryBrief goal={world.goal || 'Найти свой голос и начать разговор.'} /><section className="section"><Button onClick={openFirstPost}>Написать первый пост →</Button></section></>;
-  else if (['resources','crystals','boosters'].includes(screen)) content = <ResourcePages preview={preview} page={screen as ResourcePageName} energy={player?.postsLeft} state={play} activeStory={!!curriculum} selectedBooster={selectedBooster} onPage={openResource} onBack={back} onEnable={()=>updateStory(v=>({...v,enabled:true}))} onDisable={()=>{updateStory(v=>({...v,enabled:false}));setSelectedBooster(undefined);}} onGrant={()=>updateStory(grantDemoCrystals)} onBuy={id=>updateStory(s=>buyBooster(s,id))} onToggle={setSelectedBooster} onChooseWorld={()=>go('catalog')}/>;
+  else if (['resources','crystals','boosters'].includes(screen)) content = <ResourcePages wallet={accountEnergy.wallet} exchangeBusy={accountEnergy.busy} exchangeMessage={accountEnergy.message} onExchange={()=>void accountEnergy.exchange()} onWalletRefresh={()=>void accountEnergy.refresh()} preview={preview} page={screen as ResourcePageName} energy={player?.postsLeft} state={play} activeStory={!!curriculum} selectedBooster={selectedBooster} onPage={openResource} onBack={back} onEnable={()=>updateStory(v=>({...v,enabled:true}))} onDisable={()=>{updateStory(v=>({...v,enabled:false}));setSelectedBooster(undefined);}} onGrant={()=>updateStory(grantDemoCrystals)} onBuy={id=>updateStory(s=>buyBooster(s,id))} onToggle={setSelectedBooster} onChooseWorld={()=>go('catalog')}/>;
   else if (screen === 'compose' && player) content = <><ScreenHeading title={reply ? 'Продолжить разговор' : playMode==='sandbox' ? 'Новая публикация' : prepared?.title ?? 'Новая публикация'} back={back} /><section className="section stack composer-body">{prepared && playMode==='story' && <div className="quest-editor-brief"><div className="row between"><strong>Текущий квест</strong>{preview && prepared.xp && <span className="quest-xp">{prepared.xp} XP за выполнение</span>}</div><p>{prepared.prompt}</p>{preview&&<details className="quest-reward-info"><summary>Как начисляется XP</summary><p className="caption muted">Начисление доступно в отдельно включаемой сюжетной пробе. Для старых миров без сюжетной привязки здесь показана награда будущего зачёта.</p></details>}</div>}{(reply || quote) && !prepared && <QuoteBlock name={reply?.name ?? quote!.name} text={reply?.text ?? quote!.text} />}<div className="row"><Avatar name={player.name} src={personaFor(player.id, player.world).avatar} /><strong>{player.name}</strong><span className="caption muted">Публично</span></div><label className="sr-only" htmlFor="post-text">Текст публикации</label>{!reply ? <TypingDraft value={draft} animate={animateDraft} disabled={pending || unknown} onChange={text => { setAnimateDraft(false); updateDraft(text); }} onTyping={setTypingDraft} /> : <textarea id="post-text" className="composer-text" value={draft} onChange={e => updateDraft(e.target.value)} disabled={pending || unknown} maxLength={1000} autoFocus />}<div className="row between caption muted"><span>Черновик сохраняется</span><span>{draft.length} / {reply ? 1000 : 2000}</span></div>{preview && curriculum && <PlayMode value={playMode} onChange={mode=>{setPlayMode(mode);if(mode==='sandbox')setSelectedBooster(undefined);}}/>}{preview && playMode==='story'&&<OwnedBoosterPicker state={play} selected={selectedBooster} onSelect={setSelectedBooster} onStore={()=>openResource('boosters')} known={!!curriculum} available={!!curriculum&&play.enabled} sandbox={false}/> }
 {quote && !reply && !prepared && <p className="caption muted">Контекст помогает написать пост. Связь цитирования на сервере пока недоступна.</p>}{pending && <div className="pending-line" role="status"><span className="spinner" />{statusLabels[status] ?? 'Отправляем ответ…'}</div>}{pending && <Button variant="secondary" onClick={stopWaiting}>Остановить ожидание</Button>}<Button className="full" size="lg" disabled={!draft.trim() || typingDraft} busy={pending} onClick={publish}>{unknown ? 'Проверить статус' : 'Опубликовать'} <span className="caption">· 1 энергия</span></Button></section></>;
   else if (screen === 'thread' && player && world) {

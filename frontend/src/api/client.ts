@@ -9,7 +9,7 @@ import { clearApiCache } from '../app/useApi';
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics';
 import { clearWorldContent, installWorldContent, installWorldTemplates } from './worldContent';
 import { error } from '../app/log';
-import { sdk } from './transport';
+import { sdk, walletExchangeClient } from './transport';
 import type * as Wire from './generated/reki-api';
 import * as map from './mappers';
 import { ApiError, data, stream } from './transport';
@@ -114,7 +114,7 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     await loadTemplates().catch(() => undefined);
     assertSession(generation);
     installWorldContent([world]);
-    return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, difficulty: world.difficulty, avatarStyle: world.avatarStyle,
+    return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: player.energyWallet?.cap ?? Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, difficulty: world.difficulty, avatarStyle: world.avatarStyle,
         world: world.id, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
         wants: world.wants, collection: world.achievements, bio: '', type: 'СЃРІРѕР№ РіРѕР»РѕСЃ',
         voice: world.voice, drama: world.drama,
@@ -147,6 +147,8 @@ export const api = {
         await revokeSession();
         api.clearSession();
     },
+    energyWallet: () => data(sdk.player.getEnergyWallet()).then(map.energyWallet),
+    exchangeEnergy: () => data(walletExchangeClient.exchangeEnergy()).then(value=>({...value,wallet:value.wallet?map.energyWallet(value.wallet):null})),
     loadWorldTemplates: loadTemplates,
     me: (worldId?: string): Promise<Player> => {
         const key = worldId ?? sessionPlayer?.worldInstanceId ?? '';

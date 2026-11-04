@@ -1,22 +1,26 @@
+import {WalletView} from '../energy/WalletView';
+import type {EnergyWallet} from '../energy/exchange';
 import { Button, Chip, ScreenHeading } from '../ui';
 import { DemoInventory } from '../storyplay/StorySurfaces';
 import type {BoosterId} from '../storyplay/boosters';
 import type { StoryPlay } from '../storyplay/model';
 import './resourcePages.css';
 export type ResourcePageName = 'resources'|'crystals'|'boosters';
-export function ResourcePages({preview=false,page,energy,state,activeStory,selectedBooster,onPage,onBack,onEnable,onDisable,onGrant,onBuy,onToggle,onChooseWorld}: {
+export function ResourcePages({wallet,exchangeBusy=false,exchangeMessage='',onExchange=()=>{},onWalletRefresh=()=>{},preview=false,page,energy,state,activeStory,selectedBooster,onPage,onBack,onEnable,onDisable,onGrant,onBuy,onToggle,onChooseWorld}: {
+ wallet?:EnergyWallet;exchangeBusy?:boolean;exchangeMessage?:string;onExchange?:()=>void;onWalletRefresh?:()=>void;
  preview?:boolean;page:ResourcePageName;energy?:number;state:StoryPlay;activeStory:boolean;selectedBooster?:BoosterId;
  onPage:(page:ResourcePageName)=>void;onBack:()=>void;onEnable:()=>void;onDisable:()=>void;onGrant:()=>void;onBuy:(id?:BoosterId)=>void;onToggle:(id?:BoosterId)=>void;onChooseWorld:()=>void;
 }) {
  const title={resources:'Энергия',crystals:'Кристаллы',boosters:'Бустеры'}[page];
- if(!import.meta.env.DEV||!preview)return <><ScreenHeading title={title} back={onBack}/><section className="section resource-page"><nav className="resource-tabs" aria-label="Ресурсы">{([['resources','Энергия'],['crystals','Кристаллы'],['boosters','Бустеры']] as const).map(([id,label])=><Chip key={id} selected={page===id} onClick={()=>onPage(id)}>{label}</Chip>)}</nav>{page==='resources'?<><div className="resource-balance"><span className="resource-symbol resource-symbol--energy" aria-hidden="true">ϟ</span><div><strong>{energy??'—'}</strong><span>энергии доступно</span></div></div><h2>{energy===0?'Энергия закончилась':'Для следующих ходов'}</h2><p>Публикация и ответ расходуют по 1 энергии. Запас общий для всех миров. Читать ленту можно бесплатно.</p><p className="caption muted">Запас обновляется по действующим правилам аккаунта.</p></>:<><h2>{page==='crystals'?'Кристаллы появятся позже':'Бустеры появятся позже'}</h2><p>Обмен и инвентарь пока недоступны.</p></>}<Button variant="secondary" onClick={onBack}>Вернуться</Button></section></>;
+ if(!import.meta.env.DEV||!preview)return <><ScreenHeading title={title} back={onBack}/><section className="section resource-page">{!wallet&&exchangeMessage&&<p role="status">{exchangeMessage}</p>}<nav className="resource-tabs" aria-label="Ресурсы">{([['resources','Энергия'],['crystals','Кристаллы'],['boosters','Бустеры']] as const).map(([id,label])=><Chip key={id} selected={page===id} onClick={()=>onPage(id)}>{label}</Chip>)}</nav>{wallet&&page!=='boosters'?<WalletView wallet={wallet} busy={exchangeBusy} message={exchangeMessage} onExchange={onExchange} onRefresh={onWalletRefresh}/>:page==='resources'?<><div className="resource-balance"><span className="resource-symbol resource-symbol--energy" aria-hidden="true">ϟ</span><div><strong>{energy??'—'}</strong><span>энергии доступно</span></div></div><h2>{energy===0?'Энергия закончилась':'Для следующих ходов'}</h2><p>Публикация и ответ расходуют по 1 энергии. Запас общий для всех миров. Читать ленту можно бесплатно.</p><p className="caption muted">Запас обновляется по действующим правилам аккаунта.</p></>:<><h2>{page==='crystals'?'Кристаллы появятся позже':'Бустеры появятся позже'}</h2><p>Обмен и инвентарь пока недоступны.</p></>}<Button variant="ghost" disabled={exchangeBusy} onClick={onWalletRefresh}>Обновить баланс</Button><Button variant="secondary" onClick={onBack}>Вернуться</Button></section></>;
+ const walletView=wallet?<WalletView wallet={wallet} busy={exchangeBusy} message={exchangeMessage} onExchange={onExchange} onRefresh={onWalletRefresh}/>:undefined;
  const demo=activeStory&&state.enabled;
  return <><ScreenHeading title={title} back={onBack}/><section className="section resource-page">
   <nav className="resource-tabs" aria-label="Ресурсы">{([['resources','Энергия'],['crystals','Кристаллы'],['boosters','Бустеры']] as const).map(([id,label])=><Chip key={id} selected={page===id} onClick={()=>onPage(id)}>{label}</Chip>)}</nav>
-  {page==='resources'?<>
+  {wallet&&page!=='boosters'?walletView:page==='resources'?<>
    <div className="resource-balance"><span className="resource-symbol resource-symbol--energy" aria-hidden="true">ϟ</span><div><strong>{energy??'—'}</strong><span>энергии доступно</span></div></div>
    <h2>{energy===0?'Энергия закончилась':'Для твоих следующих ходов'}</h2><p>Публикация и ответ расходуют по 1 энергии. Запас общий для всех миров; чтение ленты бесплатно.</p>
-   <div className="resource-explanation"><strong>Правило мира: максимум 10</strong><p>В новой сюжетной экономике восстанавливается 1 энергия каждые 10 минут. Действующий DEV backend пока обновляет запас в 09:00 МСК.</p></div>
+   <div className="resource-explanation"><strong>Правило мира: максимум 10</strong><p>Новый кошелёк восстанавливает 1 энергию каждые 10 минут. Баланс кошелька пока недоступен в этой среде.</p></div>
    <article className="resource-product"><div><h3>10 энергии</h3><p>Предложение обмена на 3 кристалла. Начисление серверной энергии ещё не подключено.</p></div><strong>3 ◇</strong><Button disabled>Обменять на 10 энергии</Button></article><Button variant="secondary" onClick={()=>onPage('crystals')}>Кристаллы и обмен</Button>
   </>:page==='crystals'?<>
    <div className="resource-balance"><span className="resource-symbol resource-symbol--crystal" aria-hidden="true">◇</span><div><strong>{activeStory?state.crystals:'—'}</strong><span>{activeStory?'кристаллов в пробе':'баланс не подключён'}</span></div></div>
