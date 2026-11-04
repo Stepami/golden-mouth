@@ -58,7 +58,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var shouldReset = secondsAfterReset >= 0;
         var period = shouldReset ? reset.AddDays(Math.Floor((double)secondsAfterReset / (24 * 60 * 60))) : player.PostsPeriodStartedAtUtc;
         await Assert.That(saved.EnergyUsed).IsEqualTo(shouldReset ? 0 : 7);
-        await Assert.That(saved.Energy).IsEqualTo(shouldReset ? 10 : 8);
+        await Assert.That(saved.Energy).IsEqualTo(8);
         await Assert.That(saved.Version).IsEqualTo(player.Version + (shouldReset ? 1 : 0));
         await Assert.That(saved.PostsPeriodStartedAtUtc).IsEqualTo(period);
         await Assert.That(saved.PlusInterestClaimed).IsTrue();
@@ -139,30 +139,32 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
     }
 
     [Test]
-    public async Task GetPlayerWorlds_StaleDay_DoesNotWriteResetAsync()
+    public async Task GetPlayerWorlds_StaleDay_RegeneratesWithoutDailyResetAsync()
     {
         using var api = Factory.CreateApiClient(9304);
         var response = await CreatePlayerWithWorldAsync(api);
         var players = Database.GetCollection<PlayerProfile>("players");
         var player = await players.Find(item => item.Id == response.Id).SingleAsync();
         await players.ReplaceOneAsync(item => item.Id == player.Id, player with { EnergyUsed = 7, Energy = 8 });
-        var beforePlayer = await Database.GetCollection<BsonDocument>("players").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
         var beforeWorld = await Database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
         Factory.Session.Clock.SetUtcNow(player.PostsPeriodStartedAtUtc.AddDays(1));
 
         var current = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         var owned = await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None);
 
-        await Assert.That(current.Energy).IsEqualTo(8);
+        await Assert.That(current.Energy).IsEqualTo(10);
         await Assert.That(owned.Count).IsEqualTo(1);
-        await Assert.That(await Database.GetCollection<BsonDocument>("players").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(beforePlayer);
+        var afterPlayer = await players.Find(item => item.Id == player.Id).SingleAsync();
+        await Assert.That(afterPlayer.EnergyUsed).IsEqualTo(7);
+        await Assert.That(afterPlayer.PostsPeriodStartedAtUtc).IsEqualTo(player.PostsPeriodStartedAtUtc);
+        await Assert.That(afterPlayer.Skills.ToBsonDocument()).IsEqualTo(player.Skills.ToBsonDocument());
         await Assert.That(await Database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(beforeWorld);
     }
 
     [Test]
-    [Arguments(false, 10)]
-    [Arguments(true, 20)]
-    public async Task Reset_SetsCurrentBalanceEnergyAsync(bool plus, int expectedEnergy)
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task Reset_PreservesAccountEnergyAsync(bool plus)
     {
         // Arrange
         using var api = Factory.CreateApiClient(9308);
@@ -172,7 +174,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var reset = player.PostsPeriodStartedAtUtc.AddDays(1);
         await players.ReplaceOneAsync(item => item.Id == player.Id, player with
         {
-            Energy = 31,
+            Energy = 6,
             EnergyUsed = 4,
             Settings = player.Settings with { Plus = plus },
         });
@@ -183,16 +185,16 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
 
         // Assert
         var saved = await players.Find(item => item.Id == player.Id).SingleAsync();
-        await Assert.That(saved.Energy).IsEqualTo(expectedEnergy);
+        await Assert.That(saved.Energy).IsEqualTo(6);
         await Assert.That(saved.EnergyUsed).IsEqualTo(0);
         await Assert.That(saved.PostsPeriodStartedAtUtc).IsEqualTo(reset);
         await Assert.That(saved.Version).IsEqualTo(player.Version + 1);
         await ResetGameDayAsync();
-        await Assert.That((await players.Find(item => item.Id == player.Id).SingleAsync()).Energy).IsEqualTo(expectedEnergy);
+        await Assert.That((await players.Find(item => item.Id == player.Id).SingleAsync()).Energy).IsEqualTo(6);
     }
 
     [Test]
-    public async Task Reset_ChangedBalance_AppliesOnlyAtNextPeriodAsync()
+    public async Task Reset_ChangedDailyBalance_DoesNotChangeEnergyPolicyAsync()
     {
         // Arrange
         using var api = Factory.CreateApiClient(9310);
@@ -220,10 +222,10 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
             // Assert
             await Assert.That(notified?.FreePostsPerDay).IsEqualTo(12);
             await Assert.That(beforeReset.Energy).IsEqualTo(6);
-            await Assert.That(afterReset.Energy).IsEqualTo(12);
+            await Assert.That(afterReset.Energy).IsEqualTo(10);
             var stored = await players.Find(item => item.Id == player.Id).SingleAsync();
             await Assert.That(stored.EnergyUsed).IsEqualTo(0);
-            await Assert.That(stored.Version).IsEqualTo(player.Version + 1);
+            await Assert.That(stored.Version).IsEqualTo(player.Version + 2);
         }
         finally
         {

@@ -20,6 +20,7 @@ namespace Reki.Application.Posts.AddReplyCommand;
 
 internal sealed partial class AddReplyCommandHandler(
     IGameStore store,
+    TimeProvider timeProvider,
     IOptionsMonitor<GameBalance> balance,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
@@ -250,7 +251,7 @@ internal sealed partial class AddReplyCommandHandler(
         }
 
         var updatedPost = post.AddComments(comments);
-        var updatedPlayer = player.SpendEnergy(currentBalance.Thread.EnergyCost);
+        var updatedPlayer = player.SpendEnergy(currentBalance.Thread.EnergyCost, timeProvider.GetUtcNow());
         var updatedWorld = world.AwardThreadBonus(bonus);
         if (await store.TryCommitReplyAsync(
                 updatedPost,

@@ -27,11 +27,11 @@ public interface IPlayerRepository
         int expectedVersion,
         CancellationToken cancellationToken);
 
+    ValueTask<bool> TrySaveWalletAsync(PlayerProfile player, PlayerProfile updated, CancellationToken cancellationToken);
+
     ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
 
     ValueTask<long> ResetGameDayAsync(
         DateTimeOffset periodStart,
-        int freeEnergy,
-        int plusEnergy,
         CancellationToken cancellationToken);
 }

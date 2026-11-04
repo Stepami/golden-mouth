@@ -32,7 +32,9 @@ internal sealed class OnboardPlayerCommandHandler(
         var created = CreatePlayer(request, telegramUserId, gameDayPeriod.PeriodStart) with
         {
             AgeBand = request.AgeBand,
-            Energy = currentBalance.FreePostsPerDay,
+            Energy = EnergyWallet.Cap,
+            EnergyUpdatedAtUtc = timeProvider.GetUtcNow(),
+            Crystals = EnergyWallet.InitialCrystals,
         };
         await playerRepository.CreatePlayerAsync(created, cancellationToken);
         if (inviter is not null)

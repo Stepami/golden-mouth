@@ -16,6 +16,12 @@ public sealed record PlayerProfile
 
     public int Energy { get; init; }
 
+    public DateTimeOffset? EnergyUpdatedAtUtc { get; init; }
+
+    public int? Crystals { get; init; }
+
+    public IReadOnlyList<string> EnergyExchangeRequestIds { get; init; } = [];
+
     public DateTimeOffset PostsPeriodStartedAtUtc { get; init; }
 
     public bool PlusInterestClaimed { get; init; }
@@ -45,7 +51,7 @@ public sealed record PlayerProfile
 
         return this with
         {
-            Energy = Energy + bonus,
+            Energy = Math.Min(EnergyWallet.Cap, Energy + bonus),
             PlusInterestClaimed = true,
             Version = Version + 1,
         };
@@ -68,10 +74,10 @@ public sealed record PlayerProfile
         };
     }
 
-    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, int cost) =>
-        SpendEnergy(cost) with { Skills = skills };
+    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, int cost, DateTimeOffset now) =>
+        SpendEnergy(cost, now) with { Skills = skills };
 
-    public PlayerProfile SpendEnergy(int cost)
+    public PlayerProfile SpendEnergy(int cost, DateTimeOffset now)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(cost);
         if (Energy < cost)
@@ -79,6 +85,12 @@ public sealed record PlayerProfile
             throw new InvalidOperationException("Insufficient energy.");
         }
 
-        return this with { Energy = Energy - cost, EnergyUsed = EnergyUsed + cost, Version = Version + 1 };
+        return this with
+        {
+            Energy = Energy - cost,
+            EnergyUpdatedAtUtc = Energy >= EnergyWallet.Cap ? now : EnergyUpdatedAtUtc,
+            EnergyUsed = EnergyUsed + cost,
+            Version = Version + 1,
+        };
     }
 }

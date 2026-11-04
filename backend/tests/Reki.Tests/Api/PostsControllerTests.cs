@@ -1513,7 +1513,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task AddReply_NewGameDay_ResetsConsumedEnergyAsync()
+    public async Task AddReply_NewGameDay_RegeneratesEnergyAsync()
     {
         // Arrange
         const long user = 8711;

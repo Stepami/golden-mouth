@@ -353,11 +353,11 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(inviterAfterOnboarding.Energy).IsEqualTo(10);
         await Assert.That(inviterAfterOnboarding.HitOwnWorldMilestone).IsFalse();
         await Assert.That(inviter.HitOwnWorldMilestone).IsTrue();
-        await Assert.That(inviter.Energy).IsEqualTo(15);
-        await Assert.That(friend.Energy).IsEqualTo(14);
+        await Assert.That(inviter.Energy).IsEqualTo(10);
+        await Assert.That(friend.Energy).IsEqualTo(10);
         await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
-        await Assert.That(storedInviter["Energy"].AsInt32).IsEqualTo(15);
-        await Assert.That(storedFriend["Energy"].AsInt32).IsEqualTo(13);
+        await Assert.That(storedInviter["Energy"].AsInt32).IsEqualTo(10);
+        await Assert.That(storedFriend["Energy"].AsInt32).IsEqualTo(9);
         var invite = await GetStoredInviteAsync(storedFriend["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
         await Assert.That(invite["InviterBonusUsed"].AsBoolean).IsTrue();
         await Assert.That(invite["InviteeBonusUsed"].AsBoolean).IsTrue();
@@ -386,13 +386,13 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var storedInviter = await GetStoredPlayerAsync(inviterUserId);
 
         // Assert
-        await Assert.That(inviter.Energy).IsEqualTo(25);
+        await Assert.That(inviter.Energy).IsEqualTo(10);
         await Assert.That(storedInviter.Contains("InviteBonusesEarnedInPeriod")).IsFalse();
-        await Assert.That(storedInviter["Energy"].AsInt32).IsEqualTo(25);
-        await Assert.That(fourthFriend["Energy"].AsInt32).IsEqualTo(14);
+        await Assert.That(storedInviter["Energy"].AsInt32).IsEqualTo(10);
+        await Assert.That(fourthFriend["Energy"].AsInt32).IsEqualTo(10);
         using var fourthApi = Factory.CreateApiClient(8016);
         await Assert.That((await fourthApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(14);
+            .IsEqualTo(10);
     }
 
     [Test]
@@ -408,7 +408,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var players = Database.GetCollection<BsonDocument>("players");
         await players.UpdateManyAsync(
             Builders<BsonDocument>.Filter.In("_id", new[] { inviter.Id, friend.Id }.Select(id => new BsonBinaryData(id.Value, GuidRepresentation.Standard))),
-            Builders<BsonDocument>.Update.Set("Energy", 17));
+            Builders<BsonDocument>.Update.Set("Energy", 4));
         if (alreadyUsed)
         {
             var now = Factory.Session.Clock.GetUtcNow();
@@ -423,7 +423,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         await PublishAsync(8561, "пост с существующим бонусом");
 
-        var expectedEnergy = alreadyUsed ? 17 : 22;
+        var expectedEnergy = alreadyUsed ? 4 : 9;
         await Assert.That((await GetStoredPlayerAsync(8560))["Energy"].AsInt32).IsEqualTo(expectedEnergy);
         await Assert.That((await GetStoredPlayerAsync(8561))["Energy"].AsInt32).IsEqualTo(expectedEnergy - 1);
         await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
@@ -447,11 +447,11 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         await Task.WhenAll(friendIds.Select(friendId => PublishAsync(friendId, "одновременный первый пост")));
 
-        await Assert.That((await GetStoredPlayerAsync(8570))["Energy"].AsInt32).IsEqualTo(25);
+        await Assert.That((await GetStoredPlayerAsync(8570))["Energy"].AsInt32).IsEqualTo(10);
         foreach (var friendId in friendIds)
         {
             var friend = await GetStoredPlayerAsync(friendId);
-            await Assert.That(friend["Energy"].AsInt32).IsEqualTo(14);
+            await Assert.That(friend["Energy"].AsInt32).IsEqualTo(10);
             await Assert.That(friend["EnergyUsed"].AsInt32).IsEqualTo(1);
             var invite = await GetStoredInviteAsync(friend["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
             await Assert.That(invite["InviteeBonusUsed"].AsBoolean).IsTrue();
@@ -460,7 +460,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     }
 
     [Test]
-    public async Task Settings_WhenPlusIsEnabled_UsesPlusDailyLimitAsync()
+    public async Task Settings_WhenPlusIsEnabled_KeepsEnergyCapAsync()
     {
         using var api = Factory.CreateApiClient(1005);
         await CreatePlayerWithWorldAsync(api);
@@ -471,7 +471,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var response = await api.Player.GetCurrentPlayerAsync(
             CancellationToken.None);
 
-        await Assert.That(response.Energy).IsEqualTo(20);
+        await Assert.That(response.Energy).IsEqualTo(10);
     }
 
     [Test]
@@ -596,6 +596,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var api = Factory.CreateApiClient(8402);
         await CreatePlayerWithWorldAsync(api);
+        await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(
+            new BsonDocument("TelegramUserId", 8402L), Builders<BsonDocument>.Update.Set("Energy", 5));
         var playerRepository = Factory.Services.GetRequiredService<IPlayerRepository>();
         foreach (var interest in new[] { false, true, true })
         {
@@ -605,7 +607,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                         ?? throw new InvalidOperationException("Missing player.");
             await Assert.That(saved.PlusNotifyRequested).IsEqualTo(interest);
             var current = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
-            await Assert.That(current.Energy).IsEqualTo(15);
+            await Assert.That(current.Energy).IsEqualTo(10);
         }
 
         using var legacyApi = Factory.CreateApiClient(8403);
@@ -622,6 +624,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         using var api = Factory.CreateApiClient(8404);
         await CreatePlayerWithWorldAsync(api);
+        await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(
+            new BsonDocument("TelegramUserId", 8404L), Builders<BsonDocument>.Update.Set("Energy", 5));
 
         // Act
         var calls = Enumerable.Range(0, 2).Select(_ =>
@@ -633,7 +637,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         await Assert.That(bonuses).IsEqualTo(5);
         var current = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(current.Energy).IsEqualTo(15);
+        await Assert.That(current.Energy).IsEqualTo(10);
     }
 
     [Test]
@@ -651,7 +655,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             item => item.Id == player.Id,
             player with
             {
-                Energy = 25,
+                Energy = 8,
                 EnergyUsed = 2,
                 Settings = player.Settings with { Plus = true },
             },
@@ -694,7 +698,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(saved.Settings.Notifications).IsEqualTo(player.Settings.Notifications);
         await Assert.That(saved.Settings.Quiet).IsEqualTo(player.Settings.Quiet);
         await Assert.That(savedWorld.Player.Subscribers).IsEqualTo(1234);
-        await Assert.That(saved.Energy).IsEqualTo(25);
+        await Assert.That(saved.Energy).IsEqualTo(8);
         await Assert.That(saved.EnergyUsed).IsEqualTo(2);
     }
 
@@ -733,7 +737,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             {
                 PostsPeriodStartedAtUtc = player.PostsPeriodStartedAtUtc.AddDays(-1),
                 EnergyUsed = 8,
-                Energy = 25,
+                Energy = 4,
                 PlusInterestClaimed = alreadyClaimed,
                 PlusNotifyRequested = true,
             },
@@ -768,7 +772,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                     ?? throw new InvalidOperationException("Missing player.");
         await Assert.That(saved.PlusInterestClaimed).IsTrue();
         await Assert.That(saved.PlusNotifyRequested).IsTrue();
-        await Assert.That(saved.Energy).IsEqualTo(alreadyClaimed ? 10 : 15);
+        await Assert.That(saved.Energy).IsEqualTo(alreadyClaimed ? 4 : 9);
         await Assert.That(saved.EnergyUsed).IsEqualTo(0);
         await Assert.That(saved.PostsPeriodStartedAtUtc).IsEqualTo(player.PostsPeriodStartedAtUtc);
         _ = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id == world.Id);
@@ -806,9 +810,9 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(repeated.OfType<ResultLiveEvent>().Single().Result.PostId)
             .IsEqualTo(postId);
         await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(15);
+            .IsEqualTo(10);
         await Assert.That((await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(14);
+            .IsEqualTo(10);
         var invite = await Database.GetCollection<Invitation>("invites")
             .Find(item => item.InviteeId == friend.Id).SingleAsync();
         await Assert.That(invite.InviterBonusUsedAtUtc).IsEqualTo(usedAt);
@@ -843,7 +847,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
         await PublishAsync(8521, "пост перед сбросом");
         await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(15);
+            .IsEqualTo(10);
 
         // Act
         Factory.Session.Clock.SetUtcNow(reset.AddSeconds(secondsAfterReset));
@@ -852,8 +856,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var currentFriend = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Assert
-        await Assert.That(currentInviter.Energy).IsEqualTo(secondsAfterReset < 0 ? 15 : 10);
-        await Assert.That(currentFriend.Energy).IsEqualTo(secondsAfterReset < 0 ? 14 : 10);
+        await Assert.That(currentInviter.Energy).IsEqualTo(10);
+        await Assert.That(currentFriend.Energy).IsEqualTo(10);
         await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
         var invite = await Database.GetCollection<Invitation>("invites")
             .Find(item => item.InviteeId == friend.Id).SingleAsync();
@@ -899,9 +903,9 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         Factory.Llm.Respond(CreateChatResponse);
         await PublishAsync(8531, "успешный первый пост");
         await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(15);
+            .IsEqualTo(10);
         var success = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(success.Energy).IsEqualTo(14);
+        await Assert.That(success.Energy).IsEqualTo(10);
         await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
     }
 
@@ -923,9 +927,9 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Assert
         await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(15);
+            .IsEqualTo(10);
         var current = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(current.Energy).IsEqualTo(14);
+        await Assert.That(current.Energy).IsEqualTo(10);
         var invitation = await Database.GetCollection<Invitation>("invites")
             .Find(item => item.InviteeId == friend.Id).SingleAsync();
         await Assert.That(invitation.InviterBonusUsedAtUtc).IsEqualTo(reset);
@@ -952,9 +956,9 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var disabled = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Assert
-        await Assert.That(enabled.Energy).IsEqualTo(16);
-        await Assert.That(repeated.Energy).IsEqualTo(16);
-        await Assert.That(disabled.Energy).IsEqualTo(16);
+        await Assert.That(enabled.Energy).IsEqualTo(10);
+        await Assert.That(repeated.Energy).IsEqualTo(10);
+        await Assert.That(disabled.Energy).IsEqualTo(10);
         var stored = await GetStoredPlayerAsync(8580);
         await Assert.That(stored["EnergyUsed"].AsInt32).IsEqualTo(4);
         await Assert.That(stored.Contains("DailyBonus")).IsFalse();

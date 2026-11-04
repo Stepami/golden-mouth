@@ -18,7 +18,27 @@ public static partial class PlayerResponseMapper
             MapSettings(player.Settings),
             new Dictionary<string, string>(),
             player.HitOwnWorldMilestone,
-            player.AgeBand ?? (player.BirthGroup == "14-17" ? "14-17" : "18+"));
+            player.AgeBand ?? (player.BirthGroup == "14-17" ? "14-17" : "18+"),
+            player.ToEnergyWalletResponse());
+    }
+
+    public static EnergyWalletResponse ToEnergyWalletResponse(this PlayerProfile player)
+    {
+        var crystals = player.Crystals ?? throw new InvalidOperationException("Wallet has not been initialized.");
+        var reason = crystals < EnergyWallet.ExchangeCost ? "insufficient_crystals" : null;
+        if (player.Energy >= EnergyWallet.Cap)
+        {
+            reason = "energy_full";
+        }
+
+        return new EnergyWalletResponse(
+            player.Energy,
+            EnergyWallet.Cap,
+            player.Energy < EnergyWallet.Cap ? player.EnergyUpdatedAtUtc?.AddSeconds(EnergyWallet.RegenSeconds) : null,
+            EnergyWallet.RegenSeconds,
+            crystals,
+            player.Version,
+            new EnergyExchangeQuoteResponse(EnergyWallet.ExchangeCost, EnergyWallet.Cap, reason is null, reason));
     }
 
     private static partial IReadOnlyDictionary<SkillId, SkillResponse> MapSkills(IReadOnlyDictionary<SkillId, SkillProgress> source);

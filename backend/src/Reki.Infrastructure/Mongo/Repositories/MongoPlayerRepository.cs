@@ -8,18 +8,36 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
 {
     private readonly IMongoCollection<PlayerProfile> _players;
 
-    public MongoPlayerRepository(IMongoDatabase database)
+    private readonly TimeProvider _timeProvider;
+
+    public MongoPlayerRepository(IMongoDatabase database, TimeProvider timeProvider)
     {
         _players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
+        _timeProvider = timeProvider;
     }
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
         TelegramUserId telegramUserId,
         CancellationToken cancellationToken) =>
-        await _players.Find(item => item.TelegramUserId == telegramUserId).FirstOrDefaultAsync(cancellationToken);
+        await GetWithEnergyAsync(Builders<PlayerProfile>.Filter.Eq(item => item.TelegramUserId, telegramUserId), cancellationToken);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
+        await GetWithEnergyAsync(Builders<PlayerProfile>.Filter.Eq(item => item.Id, playerId), cancellationToken);
+
+    public async ValueTask<bool> TrySaveWalletAsync(PlayerProfile player, PlayerProfile updated, CancellationToken cancellationToken)
+    {
+        var update = Builders<PlayerProfile>.Update
+            .Set(item => item.Energy, updated.Energy)
+            .Set(item => item.EnergyUpdatedAtUtc, updated.EnergyUpdatedAtUtc)
+            .Set(item => item.Crystals, updated.Crystals)
+            .Set(item => item.EnergyExchangeRequestIds, updated.EnergyExchangeRequestIds)
+            .Inc(item => item.Version, 1);
+        var result = await _players.UpdateOneAsync(
+            item => item.Id == player.Id && item.Version == player.Version,
+            update,
+            cancellationToken: cancellationToken);
+        return result.MatchedCount == 1;
+    }
 
     public async ValueTask CreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
         await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
@@ -45,6 +63,7 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
     {
         var filter = Builders<PlayerProfile>.Filter.And(
             Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id),
+            Builders<PlayerProfile>.Filter.Eq(item => item.Version, player.Version),
             Builders<PlayerProfile>.Filter.Ne(item => item.PlusInterestClaimed, updated.PlusInterestClaimed));
         var update = Builders<PlayerProfile>.Update
             .Inc(item => item.Energy, updated.Energy - player.Energy)
@@ -65,8 +84,6 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
 
     public async ValueTask<long> ResetGameDayAsync(
         DateTimeOffset periodStart,
-        int freeEnergy,
-        int plusEnergy,
         CancellationToken cancellationToken)
     {
         var filter = Builders<PlayerProfile>.Filter.Lt(player => player.PostsPeriodStartedAtUtc, periodStart);
@@ -74,14 +91,25 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
             .Set(player => player.EnergyUsed, 0)
             .Set(player => player.PostsPeriodStartedAtUtc, periodStart)
             .Inc(player => player.Version, 1);
-        var free = await _players.UpdateManyAsync(
-            filter & Builders<PlayerProfile>.Filter.Ne(player => player.Settings.Plus, true),
-            update.Set(player => player.Energy, freeEnergy),
-            cancellationToken: cancellationToken);
-        var plus = await _players.UpdateManyAsync(
-            filter & Builders<PlayerProfile>.Filter.Eq(player => player.Settings.Plus, true),
-            update.Set(player => player.Energy, plusEnergy),
-            cancellationToken: cancellationToken);
-        return free.ModifiedCount + plus.ModifiedCount;
+        var result = await _players.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
+        return result.ModifiedCount;
+    }
+
+    private async ValueTask<PlayerProfile?> GetWithEnergyAsync(FilterDefinition<PlayerProfile> filter, CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            var player = await _players.Find(filter).FirstOrDefaultAsync(cancellationToken);
+            if (player is null)
+            {
+                return null;
+            }
+
+            var updated = EnergyWallet.Refresh(player, _timeProvider.GetUtcNow());
+            if (ReferenceEquals(player, updated) || await TrySaveWalletAsync(player, updated, cancellationToken))
+            {
+                return updated;
+            }
+        }
     }
 }

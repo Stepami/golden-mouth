@@ -23,8 +23,6 @@ internal sealed partial class ResetGameDayJob(
         var restedBefore = periodStart.AddDays(-growth.RestedAfterSkippedDays);
         var playerCount = await players.ResetGameDayAsync(
             periodStart,
-            currentBalance.FreePostsPerDay,
-            currentBalance.PlusPostsPerDay,
             cancellationToken);
         var worldCount = await worlds.ResetGameDayAsync(
             periodStart,
