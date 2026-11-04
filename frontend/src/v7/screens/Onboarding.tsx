@@ -24,10 +24,6 @@ export function Onboarding({
           Пропустить
         </button>}
       </div>
-      {step === 1 && <div className="onboarding-steps" aria-label={`Шаг ${step + 1} из 2`}>
-        <span className="is-active" />
-        <span className={step === 1 ? "is-active" : ""} />
-      </div>}
       {step === 0 ? (
         <>
           <div className="onboarding-art">

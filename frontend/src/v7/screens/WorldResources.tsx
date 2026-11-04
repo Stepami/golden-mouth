@@ -6,13 +6,14 @@ export function dayCount(value: number) {
   const ending = n % 100 >= 11 && n % 100 <= 14 ? 'дней' : n % 10 === 1 ? 'день' : n % 10 >= 2 && n % 10 <= 4 ? 'дня' : 'дней';
   return `${n} ${ending}`;
 }
-export function WorldProgress({ streak, storyDay, boosterCount = '—', onStreak, onBoosters }: {
-  streak: Player['streak']; storyDay?: number; boosterCount?: string; onStreak: () => void; onBoosters: () => void;
+export function WorldProgress({ streak, storyDay, boosterCount = '—', onStreak, onBoosters, onGift, giftClaimed=false }: {
+  streak: Player['streak']; storyDay?: number; boosterCount?: string; onStreak: () => void; onBoosters: () => void; onGift?:()=>void; giftClaimed?:boolean;
 }) {
   return <div className="world-progress">
     <button className="streak-access" onClick={onStreak} aria-label={`Серия: ${dayCount(streak.days)}. Посмотреть дни и награды`}>
       <span aria-hidden="true">🔥</span><span><strong>Серия · {dayCount(streak.days)}</strong><span className="streak-mini" aria-hidden="true">{Array.from({ length: 7 }, (_, i) => <i key={i} className={streak.week[i] ? 'is-done' : ''} />)}</span></span>
     </button>
+    {onGift&&<button className={`gift-access${giftClaimed?' is-claimed':''}`} onClick={onGift} disabled={giftClaimed} aria-label={giftClaimed?'Подарок сегодня получен':'Забрать подарок серии — локальная проба'}><span aria-hidden="true">🎁</span><small>{giftClaimed?'Получен':'Забрать'}</small></button>}
     {storyDay !== undefined && <span className="story-day-label">День сюжета {storyDay}</span>}
     <button className="boosters-access" onClick={onBoosters}><span aria-hidden="true">✦</span> Бустеры <span className="caption muted">{boosterCount}</span></button>
   </div>;
