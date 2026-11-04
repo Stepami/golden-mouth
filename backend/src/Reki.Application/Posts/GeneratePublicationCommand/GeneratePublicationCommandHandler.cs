@@ -58,7 +58,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
         }
 
         var currentBalance = balance.CurrentValue;
-        if (player.Energy < currentBalance.PostEnergyCost)
+        if (player.Wallet.Energy < currentBalance.PostEnergyCost)
         {
             throw new RequestConflictException("The daily post limit has been reached.");
         }

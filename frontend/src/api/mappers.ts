@@ -28,7 +28,7 @@ export function player(value: Input<Wire.PlayerResponse>): Ui.PlayerDocument {
 }
 export function energyWallet(value: Input<Wire.EnergyWalletResponse>): Wire.EnergyWalletResponse {
   return { ...value, amount: number(value.amount), cap: number(value.cap), regenSeconds: number(value.regenSeconds),
-    crystals: number(value.crystals), stateVersion: number(value.stateVersion),
+    crystals: number(value.crystals),
     exchangeQuote: { ...value.exchangeQuote, crystalCost: number(value.exchangeQuote.crystalCost), targetEnergy: number(value.exchangeQuote.targetEnergy) },
   }
 }

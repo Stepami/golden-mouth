@@ -40,7 +40,7 @@ using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;
 
 namespace Reki.Api.Serialization;
 
-[JsonSerializable(typeof(ExchangeEnergyRequest))]
+[JsonSerializable(typeof(EnergyExchangeResponse))]
 [JsonSerializable(typeof(EnergyWalletResponse))]
 [JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(HttpValidationProblemDetails))]

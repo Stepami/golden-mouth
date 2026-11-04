@@ -3,4 +3,4 @@ using Reki.Application.Player.Responses;
 
 namespace Reki.Application.Player.ExchangeEnergyCommand;
 
-public sealed record ExchangeEnergy(string RequestId, int StateVersion) : ICommand<EnergyWalletResponse>;
+public sealed record ExchangeEnergy : ICommand<EnergyExchangeResponse>;

@@ -152,7 +152,7 @@ internal sealed partial class AddReplyCommandHandler(
             request.RequestId,
             Text: null,
             Post: post.MapPost(world, player.Id),
-            EnergyLeft: player.Energy,
+            EnergyLeft: player.Wallet.Energy,
             Subscribers: world.Player.Subscribers,
             Code: null);
 
@@ -185,7 +185,7 @@ internal sealed partial class AddReplyCommandHandler(
     private void EnsureEnergy(PlayerProfile player)
     {
         var currentBalance = balance.CurrentValue;
-        if (player.Energy < currentBalance.Thread.EnergyCost)
+        if (player.Wallet.Energy < currentBalance.Thread.EnergyCost)
         {
             throw new RequestConflictException("Insufficient energy.");
         }

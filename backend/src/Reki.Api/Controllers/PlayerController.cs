@@ -69,10 +69,9 @@ public sealed class PlayerController(
     }
 
     [HttpPost("me/energy/exchange", Name = "ExchangeEnergy")]
-    public async Task<Ok<EnergyWalletResponse>> ExchangeEnergyAsync(
-        ExchangeEnergyRequest request, CancellationToken cancellationToken)
+    public async Task<Ok<EnergyExchangeResponse>> ExchangeEnergyAsync(CancellationToken cancellationToken)
     {
-        var result = await sender.Send(new ExchangeEnergy(request.RequestId, request.StateVersion), cancellationToken);
+        var result = await sender.Send(new ExchangeEnergy(), cancellationToken);
         return TypedResults.Ok(result);
     }
 

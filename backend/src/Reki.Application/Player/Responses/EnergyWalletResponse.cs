@@ -7,5 +7,4 @@ public sealed record EnergyWalletResponse(
     DateTimeOffset? NextEnergyAtUtc,
     int RegenSeconds,
     int Crystals,
-    int StateVersion,
     EnergyExchangeQuoteResponse ExchangeQuote);

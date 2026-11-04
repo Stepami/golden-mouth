@@ -1,13 +1,10 @@
 @baseUrl = http://localhost:8080
 @accessToken = replace-with-local-test-token
 
-### Latest authoritative snapshot
+### Latest authoritative snapshot (GET never grants energy)
 GET {{baseUrl}}/me/energy
 Authorization: Bearer {{accessToken}}
 
-### Use stateVersion from GET; retain requestId when retrying this operation
+### One explicit button press; no body, no automatic retry
 POST {{baseUrl}}/me/energy/exchange
 Authorization: Bearer {{accessToken}}
-Content-Type: application/json
-
-{"requestId":"local-energy-exchange-1","stateVersion":1}

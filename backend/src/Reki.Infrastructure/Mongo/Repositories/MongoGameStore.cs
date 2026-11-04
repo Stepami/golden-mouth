@@ -132,7 +132,7 @@ internal sealed class MongoGameStore : IGameStore
                     {
                         var inviterUpdate = Builders<PlayerProfile>.Update
                             .Set(item => item.HitOwnWorldMilestone, true)
-                            .Set(item => item.Energy, Math.Min(EnergyWallet.Cap, inviter.Energy + updatedInvite.BonusAmount))
+                            .Set(item => item.Wallet.Energy, inviter.Wallet.Replenish(updatedInvite.BonusAmount).Energy)
                             .Inc(item => item.Version, 1);
                         await _players.UpdateOneAsync(
                             transactionSession,

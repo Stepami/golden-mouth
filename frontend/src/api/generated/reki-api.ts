@@ -507,18 +507,14 @@ export class PlayerClient {
     /**
      * @return OK
      */
-    exchangeEnergy(body: ExchangeEnergyRequest, signal?: AbortSignal): Promise<SwaggerResponse<EnergyWalletResponse>> {
+    exchangeEnergy(signal?: AbortSignal): Promise<SwaggerResponse<EnergyExchangeResponse>> {
         let url_ = this.baseUrl + "/me/energy/exchange";
         url_ = url_.replace(/[?&]$/, "");
 
-        const content_ = JSON.stringify(body);
-
         let options_: RequestInit = {
-            body: content_,
             method: "POST",
             signal,
             headers: {
-                "Content-Type": "application/json",
                 "Accept": "application/json"
             }
         };
@@ -528,13 +524,13 @@ export class PlayerClient {
         });
     }
 
-    protected processExchangeEnergy(response: Response): Promise<SwaggerResponse<EnergyWalletResponse>> {
+    protected processExchangeEnergy(response: Response): Promise<SwaggerResponse<EnergyExchangeResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as EnergyWalletResponse;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as EnergyExchangeResponse;
             return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
@@ -542,7 +538,7 @@ export class PlayerClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<SwaggerResponse<EnergyWalletResponse>>(new SwaggerResponse(status, _headers, null as any));
+        return Promise.resolve<SwaggerResponse<EnergyExchangeResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
@@ -1906,21 +1902,20 @@ export interface EnergyExchangeQuoteResponse {
     [key: string]: any;
 }
 
+export interface EnergyExchangeResponse {
+    exchanged: boolean;
+    wallet: EnergyWalletResponse | null;
+
+    [key: string]: any;
+}
+
 export interface EnergyWalletResponse {
     amount: number;
     cap: number;
     nextEnergyAtUtc: string | null;
     regenSeconds: number;
     crystals: number;
-    stateVersion: number;
     exchangeQuote: EnergyExchangeQuoteResponse;
-
-    [key: string]: any;
-}
-
-export interface ExchangeEnergyRequest {
-    requestId: string;
-    stateVersion: number;
 
     [key: string]: any;
 }

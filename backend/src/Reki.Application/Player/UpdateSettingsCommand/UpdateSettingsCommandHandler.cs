@@ -25,7 +25,7 @@ internal sealed class UpdateSettingsCommandHandler(
                 Quiet: request.Quiet ?? player.Settings.Quiet,
                 Plus: request.Plus ?? player.Settings.Plus),
             Address = request.Address ?? player.Address,
-            Energy = Math.Min(EnergyWallet.Cap, player.Energy + bonus),
+            Wallet = player.Wallet.Replenish(bonus),
             Version = player.Version + 1,
         };
         await playerRepository.TryReplacePlayerAsync(updated, player.Version, cancellationToken);

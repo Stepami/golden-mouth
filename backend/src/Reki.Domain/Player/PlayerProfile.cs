@@ -12,15 +12,7 @@ public sealed record PlayerProfile
 
     public bool HitOwnWorldMilestone { get; init; }
 
-    public int EnergyUsed { get; init; }
-
-    public int Energy { get; init; }
-
-    public DateTimeOffset? EnergyUpdatedAtUtc { get; init; }
-
-    public int? Crystals { get; init; }
-
-    public IReadOnlyList<string> EnergyExchangeRequestIds { get; init; } = [];
+    public required PlayerWallet Wallet { get; init; }
 
     public DateTimeOffset PostsPeriodStartedAtUtc { get; init; }
 
@@ -51,7 +43,7 @@ public sealed record PlayerProfile
 
         return this with
         {
-            Energy = Math.Min(EnergyWallet.Cap, Energy + bonus),
+            Wallet = Wallet.Replenish(bonus),
             PlusInterestClaimed = true,
             Version = Version + 1,
         };
@@ -79,18 +71,6 @@ public sealed record PlayerProfile
 
     public PlayerProfile SpendEnergy(int cost, DateTimeOffset now)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(cost);
-        if (Energy < cost)
-        {
-            throw new InvalidOperationException("Insufficient energy.");
-        }
-
-        return this with
-        {
-            Energy = Energy - cost,
-            EnergyUpdatedAtUtc = Energy >= EnergyWallet.Cap ? now : EnergyUpdatedAtUtc,
-            EnergyUsed = EnergyUsed + cost,
-            Version = Version + 1,
-        };
+        return this with { Wallet = Wallet.Spend(cost, now), Version = Version + 1 };
     }
 }

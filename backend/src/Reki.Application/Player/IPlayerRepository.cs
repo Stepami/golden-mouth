@@ -27,7 +27,11 @@ public interface IPlayerRepository
         int expectedVersion,
         CancellationToken cancellationToken);
 
-    ValueTask<bool> TrySaveWalletAsync(PlayerProfile player, PlayerProfile updated, CancellationToken cancellationToken);
+    ValueTask<PlayerWallet?> TryExchangeEnergyAsync(TelegramUserId telegramUserId, DateTimeOffset now, CancellationToken cancellationToken);
+
+    ValueTask<IReadOnlyList<PlayerProfile>> GetPlayersForEnergyRecoveryAsync(DateTimeOffset dueBefore, CancellationToken cancellationToken);
+
+    ValueTask<bool> TrySaveEnergyRecoveryAsync(PlayerProfile player, PlayerWallet wallet, CancellationToken cancellationToken);
 
     ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
 

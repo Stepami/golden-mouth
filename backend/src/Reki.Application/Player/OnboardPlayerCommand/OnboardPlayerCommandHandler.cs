@@ -29,12 +29,9 @@ internal sealed class OnboardPlayerCommandHandler(
 
         var currentBalance = balance.CurrentValue;
         var inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
-        var created = CreatePlayer(request, telegramUserId, gameDayPeriod.PeriodStart) with
+        var created = CreatePlayer(request, telegramUserId, gameDayPeriod.PeriodStart, timeProvider.GetUtcNow()) with
         {
             AgeBand = request.AgeBand,
-            Energy = EnergyWallet.Cap,
-            EnergyUpdatedAtUtc = timeProvider.GetUtcNow(),
-            Crystals = EnergyWallet.InitialCrystals,
         };
         await playerRepository.CreatePlayerAsync(created, cancellationToken);
         if (inviter is not null)
@@ -50,11 +47,13 @@ internal sealed class OnboardPlayerCommandHandler(
     private static PlayerProfile CreatePlayer(
         OnboardPlayer request,
         TelegramUserId telegramUserId,
-        DateTimeOffset periodStart)
+        DateTimeOffset periodStart,
+        DateTimeOffset now)
     {
         var player = new PlayerProfile
         {
             Id = PlayerId.New(),
+            Wallet = PlayerWallet.Create(now),
             TelegramUserId = telegramUserId,
             BirthGroup = request.BirthGroup,
             Address = request.Address,
