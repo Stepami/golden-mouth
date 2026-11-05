@@ -1,6 +1,6 @@
 # Исправления ревью кошелька от04.11
 
-Источник: [11 замечаний Stepami](https://github.com/Stepami/golden-mouth/pull/233#issuecomment-6632806249). Backend-кандидат [#233](https://github.com/Stepami/golden-mouth/pull/233), код `0f5943f`. Интеграция UI — [#234](https://github.com/Stepami/golden-mouth/pull/234). Ниже — внесённые исправления, не новое решение ревьюера о принятии PR.
+Источник: [11 замечаний Stepami](https://github.com/Stepami/golden-mouth/pull/233#issuecomment-6632806249). Backend-кандидат [#233](https://github.com/Stepami/golden-mouth/pull/233), код `ccb0199`. Интеграция UI — [#234](https://github.com/Stepami/golden-mouth/pull/234). Ниже — внесённые исправления, не новое решение ревьюера о принятии PR.
 
 | Пункт | Что изменено |
 |---|---|
@@ -13,9 +13,22 @@
 | 10 | UI читает кошелёк при возвращении/focus/online, открытии ресурсов, после игровых действий и ожидаемого nextAt. Если job задержалась — ограниченный опрос, без клиентского прибавления энергии. |
 | 11 | OpenAPI/клиенты сгенерированы штатно; контракт/HTTP-примеры и документация обновлены. |
 
+## Второе ревью05.11
+
+| Замечание | Исправление |
+|---|---|
+| Удалить .http | Все tracked .http удалены; *.http добавлено в gitignore. Такие файлы остаются локальными. |
+| Лишняя ручка/кверя | Чтение только через GET /me.energyWallet; фронт и generated client актуализированы. |
+| Exchange через telegramUserId | Условная запись выбирает аккаунт по PlayerId. |
+| Вся пачка recovery в памяти | Репозиторий возвращает IAsyncEnumerable, Mongo cursor читается потоком с cancellation. |
+| Зачем MongoFixture | Изменение было только ради локального Mongo без Docker. Оно убрано: исходный Docker-only fixture восстановлен. |
+| Зачем Find пригласившего | Чтение вводилось для вычисления cap. Теперь оно не нужно: min(cap,energy+bonus) обновляется атомарно в прежней транзакции. Нет загрузки профиля, PostCommitResult или prepare/retry цикла. |
+
+Соблюдён свежий root AGENTS: минимум кода, без новых обёрток и новых тестов в этом проходе. Обновлены необходимые существующие проверки под контракт. Новое сохранение/генерация комментариев #247 сохранено; frontend v7 отдельно показывает сохранённый комментарий, даже если ответ NPC ещё не готов.
+
 ## Актуальный контракт
 
-- GET /me/energy → amount,cap,nextEnergyAtUtc,regenSeconds,crystals,exchangeQuote{crystalCost,targetEnergy,available,unavailableReason}.
+- GET /me → поле energyWallet{amount,cap,nextEnergyAtUtc,regenSeconds,crystals,exchangeQuote{crystalCost,targetEnergy,available,unavailableReason}}. Отдельный GET /me/energy и его query удалены.
 - POST /me/energy/exchange **без тела** → {exchanged,wallet}. Успех:true+snapshot; ожидаемый отказ:false+null, после него UI читает свежий snapshot/quote.
 - Причины quote: energy_full / insufficient_crystals. Полный запас и нехватка валюты ничего не списывают.
 - Один запрос заполняет **до10** за3кристалла. Это не +10 и не курс2энергии/кристалл. Новые аккаунты10/10и10кристаллов; создание мира валюту не выдаёт; бонусы ограниченыcap10.
@@ -26,6 +39,6 @@
 
 Generated client зависит от нового backend-контракта. Пока233не merged, база frontend PR234 — ветка233; его diff остаётся frontend-only. После233merge перевести234наmaster. Не удалять базовую ветку до завершения зависимости.
 
-Backend: локально219/219, frontend93/93, production build и secret scan PASS. Docker smoke не запускался: daemon Air недоступен; shared DEV/Mini для backend-экспериментов не использовался. CI backend0f5943f и объединённого кодового коммита frontend ea72882: build/test/scan SUCCESS. Последующие frontend-изменения проверяются своим HEAD; статус очереди не считается успехом. Кошелёк и миграция не развёрнуты на DEV/production. Проверка полного UI↔новый backend остаётся отдельным шагом после разрешённого rollout.
+Первый проход: backend219/219 локально. Во втором проходе Docker-only fixture восстановлен; новый полный backend-прогон подтверждается CI, не заявляется как локальный. Frontend: существующие93/93, production build и secret scan PASS. Docker smoke не запускался: daemon Air недоступен; shared DEV/Mini для backend-экспериментов не использовался. CI backend ccb0199: build/test/scan SUCCESS. Последующие frontend-изменения проверяются своим HEAD; статус очереди не считается успехом. Кошелёк и миграция не развёрнуты на DEV/production. Проверка полного UI↔новый backend остаётся отдельным шагом после разрешённого rollout.
 
 XP, квестовые награды, inventory и подарки не реализуются этим backend-PR. Они описаны отдельно в [QUEST-OUTCOMES](QUEST-OUTCOMES.md) и [BUSINESS-DECISIONS](BUSINESS-DECISIONS.md). Новый WalletView не включает локальные тестовые покупки в публичную сборку; отсутствие маршрута старого API не создаёт фиктивный баланс.
