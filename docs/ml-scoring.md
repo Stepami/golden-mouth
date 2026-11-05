@@ -4,9 +4,9 @@
 
 ## Запуск моделей
 
-Контейнер `infinity` готовит все четыре модели сам. Его entrypoint скачивает NLI и экспортирует ONNX в `infinity-models:/nli/onnx/model.onnx`, сверяет результат с исходной моделью и затем запускает Infinity для загрузки остальных трёх моделей. Готовый ONNX повторно используется при следующих стартах. Это небольшой startup-скрипт контейнера, не встроенная команда экспорта Infinity.
+Штатный Infinity хостит четыре модели: первые три через torch, NLI через optimum. Готовый FP32 ONNX опубликован в приватном [Stepami/rubert-tiny-bilingual-nli-onnx](https://huggingface.co/Stepami/rubert-tiny-bilingual-nli-onnx); это экспорт исходного cointegrated checkpoint без дообучения. Для загрузки нужен HF_TOKEN с правом чтения, заданный вне Git. В контейнере нет пользовательского entrypoint и экспорта при запуске; `--onnx-disable-optimize` оставляет скачанный граф без дополнительной преобразованной копии.
 
-Backend подключает тот же volume только для чтения в `/models`: ONNX находится в `/models/nli/onnx/model.onnx`, словарь — в `/models/nli/vocab.txt`. Он ждёт healthy Infinity, поэтому не стартует до завершения подготовки. Модели не попадают в репозиторий, локальная папка `ml/` и ручной Python-запуск не нужны. Первый запуск требует интернета; удаление volume удаляет кэш моделей. NLI остаётся в backend ради правильного парного входа, описанного ниже.
+HF_HOME Infinity — `/models-cache`, volume — `infinity-models`. Backend подключает его read-only в `/models` и читает стандартный HF cache: `hub/models--Stepami--rubert-tiny-bilingual-nli-onnx/snapshots/<revision>/model.onnx` и `vocab.txt`. Revision одинаков в настройке модели Infinity и путях backend; он закреплён в Compose. Backend ждёт healthy Infinity, поэтому файлы доступны до его запуска. Модели не попадают в репозиторий; папок `ml/`, `infinity/` и ручного Python-запуска нет. Первый запуск требует интернета; удаление volume удаляет кэш. Backend использует локальный ONNX для правильных NLI-пар, а не строковый `/classify` четвёртой модели.
 
 ## Контракты
 
@@ -15,7 +15,7 @@ Backend подключает тот же volume только для чтения
 | `IEmbeddingGenerator<string, Embedding<float>>`, OpenAI-клиент Infinity | `cointegrated/rubert-tiny2` | Нормированный CLS, 312 измерений, без префикса |
 | `ITextSignalsScorer`, `/classify` Infinity | `cointegrated/rubert-tiny-toxicity` | Независимые non-toxic, insult, obscenity, threat, dangerous |
 | Тот же scorer | `cointegrated/rubert-tiny2-cedr-emotion-detection` | Независимые no_emotion, joy, sadness, surprise, fear, anger |
-| `INliScorer`, локальный ONNX | `cointegrated/rubert-tiny-bilingual-nli` | Entailment и not_entailment каждой пары |
+| `INliScorer`, ONNX из общего HF cache | `Stepami/rubert-tiny-bilingual-nli-onnx` — экспорт `cointegrated/rubert-tiny-bilingual-nli` | Entailment и not_entailment каждой пары |
 
 NLI принимает premise и список hypotheses с настоящими парными input_ids/attention_mask/token_type_ids. Строковый `/classify` Infinity не сохраняет сегменты пары, поэтому NLI работает в существующем backend. Not_entailment не означает доказанное противоречие. Клиент ограничивает пару 512 токенами, гипотезу 254, остаток получает premise; возвращает результат каждой пары без скрытого агрегирования окон. Обработка длинных постов без потери важных фактов — #245. Клиенты не принимают игровых решений и не обращаются в Mongo.
 
