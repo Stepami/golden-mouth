@@ -43,7 +43,13 @@ export function ChooseWorld() {
         {art && <div className="world-cover-image"><WorldCover world={world.id} catalog priority={index === 0} /><span className="world-genre">{world.emoji} {art.genre}</span></div>}
         <div className="world-cover-copy"><div className="row"><b>{world.title}</b><span className="small muted">{{ easy: 'Легко', normal: 'Средне', hard: 'Сложно' }[world.difficulty]}</span></div><p>{art?.pitch ?? world.summary}</p><div className="world-roster">{definition.stars.slice(0, 3).map(star => <Avatar key={star.id} seed={star.avatarSeed} avatarStyle={definition.avatarStyle} mode="default" size={26} />)}<span>Обзор мира →</span></div></div>
       </button> })}</div>
-      <div className="card own-world-unlock"><h2>✦ Создай свой мир</h2>{player?.hitOwnWorldMilestone ? <><p className="small muted">Придумай место, героев и начало истории.</p><Button onClick={() => startOwn()}>Создать свой мир</Button></> : <><p className="small muted own-unlock-summary">Откроется после 500 подписчиков в одном канале или после первого поста приглашённого друга.</p>{player && <><progress aria-label="Подписчики до открытия своего мира" value={Math.min(500, Math.max(player.subs, ...owned.map(world => world.subscribers)))} max={500} /><span className="small muted">{Math.min(500, Math.max(player.subs, ...owned.map(world => world.subscribers)))} / 500</span><button className="text-link" onClick={() => nav.push('04-3_invite')}>Пригласить друга →</button></>}</>}
+      <div className="card own-world-unlock"><h2>✦ Создай свой мир</h2>{player?.hitOwnWorldMilestone ? <><p className="small muted">Придумай место, героев и начало истории.</p><Button onClick={() => startOwn()}>Создать свой мир</Button></> : <>
+        <div className="own-unlock-goal"><b>Пригласи 1 друга</b><span>0/1</span></div>
+        <progress aria-label="Друзья с первым постом до открытия своего мира" value={0} max={1} />
+        <p className="small muted">Мир откроется, когда друг опубликует первый пост.</p>
+        {player && <Button onClick={() => nav.push('04-3_invite')}>Пригласить друга</Button>}
+        <p className="small muted own-unlock-alternative">Или набери 500 подписчиков в одном мире.</p>
+      </>}
         {isDevWorldPrototype && new URLSearchParams(location.search).has('devtools') && <details className="editor-extra"><summary>DEV: пример настройки</summary><Button secondary onClick={() => startOwn(true)}>Попробовать быструю настройку · DEV</Button></details>}
       </div>
       {error && <p role="alert">{error}</p>}
