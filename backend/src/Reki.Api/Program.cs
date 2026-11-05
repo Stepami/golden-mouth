@@ -16,9 +16,12 @@ public partial class Program
 
     public static async Task Main(string[] args)
     {
-        var bootstrapLogger = CreateInitialLogger();
-        using var loggerFactory = LoggerFactory.Create(builder =>
-            builder.AddSerilog(bootstrapLogger, dispose: true));
+        using var loggerFactory = LoggerFactory.Create(
+            builder => builder.AddSerilog(
+                new LoggerConfiguration()
+                    .WriteTo.Console()
+                    .CreateLogger(),
+                dispose: true));
         var logger = loggerFactory.CreateLogger<Program>();
         try
         {
@@ -28,13 +31,6 @@ public partial class Program
         {
             LogServiceStopped(logger, exception);
         }
-    }
-
-    private static Serilog.ILogger CreateInitialLogger()
-    {
-        return new LoggerConfiguration()
-            .WriteTo.Console()
-            .CreateLogger();
     }
 
     private static async Task RunAsync(string[] arguments)
@@ -50,76 +46,51 @@ public partial class Program
             optional: false,
             reloadOnChange: true);
 
-        ConfigureServices(builder);
-        ConfigureLogging(builder);
+        builder.Services.AddApi();
+        if (!OpenApiGeneration.IsRunning)
+        {
+            builder.Services
+                .AddApplication()
+                .AddInfrastructure(builder.Configuration, ApiJsonSerializerContext.Default);
+        }
+
+        builder.Host.UseSerilog(
+            (context, services, loggerConfiguration) => loggerConfiguration
+                .ReadFrom.Configuration(context.Configuration)
+                .ReadFrom.Services(services)
+                .Enrich.FromLogContext()
+                .WriteTo.Console(),
+            preserveStaticLogger: true,
+            writeToProviders: true);
 
         var app = builder.Build();
         if (!OpenApiGeneration.IsRunning)
         {
-            ConfigurePipeline(app);
+            app.UseExceptionHandler();
+            app.UseStatusCodePages();
+            app.UseSerilogRequestLogging();
+            app.UseTickerQ();
+
+            app.UseAuthentication();
+            app.UseAuthorization();
+
             var migrator = app.Services.GetRequiredService<IMigrator>();
             await migrator.MigrateAsync();
         }
 
-        MapApiDocumentation(app);
+        if (app.Environment.IsDevelopment())
+        {
+            app.MapOpenApi();
+            app.UseSwaggerUI(options =>
+            {
+                options.RoutePrefix = "swagger";
+                options.SwaggerEndpoint("/openapi/v1.json", "Reki API v1");
+            });
+        }
+
         app.MapControllers();
 
         await app.RunAsync();
-    }
-
-    private static void ConfigureServices(WebApplicationBuilder builder)
-    {
-        builder.Services.AddHttpContextAccessor();
-        builder.Services.AddApi();
-        if (OpenApiGeneration.IsRunning)
-        {
-            return;
-        }
-
-        builder.Services
-            .AddApplication()
-            .AddInfrastructure(builder.Configuration, ApiJsonSerializerContext.Default);
-    }
-
-    private static void ConfigureLogging(WebApplicationBuilder builder)
-    {
-        builder.Host.UseSerilog(
-            ConfigureLogger,
-            preserveStaticLogger: true,
-            writeToProviders: true);
-    }
-
-    private static void ConfigureLogger(
-        HostBuilderContext context,
-        IServiceProvider services,
-        LoggerConfiguration loggerConfiguration)
-    {
-        loggerConfiguration
-            .ReadFrom.Configuration(context.Configuration)
-            .ReadFrom.Services(services)
-            .Enrich.FromLogContext()
-            .WriteTo.Console();
-    }
-
-    private static void ConfigurePipeline(WebApplication app)
-    {
-        app.UseExceptionHandler();
-        app.UseStatusCodePages();
-        app.UseSerilogRequestLogging();
-        app.UseTickerQ();
-
-        app.UseAuthentication();
-        app.UseAuthorization();
-    }
-
-    private static void MapApiDocumentation(WebApplication app)
-    {
-        app.MapOpenApi();
-        app.UseSwaggerUI(options =>
-        {
-            options.RoutePrefix = "swagger";
-            options.SwaggerEndpoint("/openapi/v1.json", "Reki API v1");
-        });
     }
 
     [LoggerMessage(

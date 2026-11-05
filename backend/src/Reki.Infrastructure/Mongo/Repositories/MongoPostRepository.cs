@@ -60,4 +60,9 @@ internal sealed class MongoPostRepository : IPostRepository
 
     public async ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken) =>
         await _posts.Find(item => item.Id == postId).FirstOrDefaultAsync(cancellationToken);
+
+    public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken)
+    {
+        await _posts.ReplaceOneAsync(item => item.Id == post.Id && item.WorldId == post.WorldId, post, cancellationToken: cancellationToken);
+    }
 }

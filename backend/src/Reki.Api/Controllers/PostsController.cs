@@ -14,7 +14,8 @@ using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Application.Posts.Responses.PostDetail;
 using Reki.Application.Posts.Responses.PublicationStatus;
 using Reki.Application.Posts.Responses.PublicationStatusLiveEvent;
-using Reki.Application.Posts.Responses.ReplyLiveEvent;
+using Reki.Application.Posts.Responses.Reply;
+using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.RekiContext;
 using Reki.Application.Responses;
 using Reki.Domain.Posts;
@@ -68,17 +69,27 @@ public sealed class PostsController(ISender sender) : ControllerBase
 
     [HttpPost("posts/{postId}/replies", Name = "ReplyToPost")]
     [ActionName("ReplyToPost")]
-    public ServerSentEventsResult<ReplyLiveEvent> ReplyToPost(
+    public async Task<Ok<ReplyResponse>> ReplyToPostAsync(
         PostId postId,
         ReplyRequest request,
         [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken)
     {
-        var result = sender.CreateStream(
+        var result = await sender.Send(
             request.ToAddReply(postId, worldId),
             cancellationToken);
-        return TypedResults.ServerSentEvents(result);
+        return TypedResults.Ok(result);
     }
+
+    [HttpPost("posts/{postId}/replies/generation", Name = "GenerateReply")]
+    [ActionName("GenerateReply")]
+    public ServerSentEventsResult<ReplyGenerationLiveEvent> GenerateReply(
+        PostId postId,
+        GenerateReplyRequest request,
+        [FromQuery, BindRequired] WorldId worldId,
+        CancellationToken cancellationToken) =>
+        TypedResults.ServerSentEvents(sender.CreateStream(
+            request.ToGenerateReply(postId, worldId), cancellationToken));
 
     [HttpGet("feed", Name = "GetFeed")]
     [ActionName("GetFeed")]
