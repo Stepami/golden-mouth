@@ -167,7 +167,6 @@ services:
       --no-compile --no-bettertransformer --no-model-warmup --onnx-disable-optimize
     environment:
       HF_HOME: /models-cache
-      HF_TOKEN: ${HF_TOKEN:?HF_TOKEN is required for the private NLI model}
       DO_NOT_TRACK: "1"
     volumes:
       - infinity-models:/models-cache

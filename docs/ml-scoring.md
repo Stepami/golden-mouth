@@ -4,7 +4,7 @@
 
 ## Запуск моделей
 
-Штатный Infinity хостит четыре модели: первые три через torch, NLI через optimum. Готовый FP32 ONNX опубликован в приватном [Stepami/rubert-tiny-bilingual-nli-onnx](https://huggingface.co/Stepami/rubert-tiny-bilingual-nli-onnx); это экспорт исходного cointegrated checkpoint без дообучения. Для загрузки нужен HF_TOKEN с правом чтения, заданный вне Git. В контейнере нет пользовательского entrypoint и экспорта при запуске; `--onnx-disable-optimize` оставляет скачанный граф без дополнительной преобразованной копии.
+Штатный Infinity хостит четыре модели: первые три через torch, NLI через optimum. Готовый FP32 ONNX опубликован в публичном [Stepami/rubert-tiny-bilingual-nli-onnx](https://huggingface.co/Stepami/rubert-tiny-bilingual-nli-onnx); это экспорт исходного cointegrated checkpoint без дообучения. Для загрузки токен Hugging Face не нужен. В контейнере нет пользовательского entrypoint и экспорта при запуске; `--onnx-disable-optimize` оставляет скачанный граф без дополнительной преобразованной копии.
 
 HF_HOME Infinity — `/models-cache`, volume — `infinity-models`. Backend подключает его read-only в `/models` и читает стандартный HF cache: `hub/models--Stepami--rubert-tiny-bilingual-nli-onnx/snapshots/<revision>/model.onnx` и `vocab.txt`. Revision одинаков в настройке модели Infinity и путях backend; он закреплён в Compose. Backend ждёт healthy Infinity, поэтому файлы доступны до его запуска. Модели не попадают в репозиторий; папок `ml/`, `infinity/` и ручного Python-запуска нет. Первый запуск требует интернета; удаление volume удаляет кэш. Backend использует локальный ONNX для правильных NLI-пар, а не строковый `/classify` четвёртой модели.
 
