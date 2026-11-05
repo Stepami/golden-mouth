@@ -1,0 +1,122 @@
+[
+  {
+    "id": "air_course",
+    "kind": "air",
+    "entailment": {
+      "call_to_action": 0.20164433121681213,
+      "vague_benefit": 0.15521571040153503,
+      "self_pity": 0.034163665026426315,
+      "constructive": 0.16040940582752228
+    }
+  },
+  {
+    "id": "air_ai",
+    "kind": "air",
+    "entailment": {
+      "call_to_action": 0.08524162322282791,
+      "vague_benefit": 0.3796122670173645,
+      "self_pity": 0.022168347612023354,
+      "constructive": 0.02888454683125019
+    }
+  },
+  {
+    "id": "air_club",
+    "kind": "air",
+    "entailment": {
+      "call_to_action": 0.35587963461875916,
+      "vague_benefit": 0.08723841607570648,
+      "self_pity": 0.037032030522823334,
+      "constructive": 0.12017106264829636
+    }
+  },
+  {
+    "id": "ad_critique",
+    "kind": "other",
+    "entailment": {
+      "call_to_action": 0.1360873132944107,
+      "vague_benefit": 0.42944595217704773,
+      "self_pity": 0.019946454092860222,
+      "constructive": 0.050633158534765244
+    }
+  },
+  {
+    "id": "ai_analysis",
+    "kind": "other",
+    "entailment": {
+      "call_to_action": 0.10707718133926392,
+      "vague_benefit": 0.10898227989673615,
+      "self_pity": 0.010821337811648846,
+      "constructive": 0.04681698605418205
+    }
+  },
+  {
+    "id": "ticket_sale",
+    "kind": "other",
+    "entailment": {
+      "call_to_action": 0.2826177477836609,
+      "vague_benefit": 0.07862085849046707,
+      "self_pity": 0.012091394513845444,
+      "constructive": 0.2997501492500305
+    }
+  },
+  {
+    "id": "whine_1",
+    "kind": "whine",
+    "entailment": {
+      "call_to_action": 0.04298285022377968,
+      "vague_benefit": 0.19133321940898895,
+      "self_pity": 0.07376787811517715,
+      "constructive": 0.019640419632196426
+    }
+  },
+  {
+    "id": "whine_2",
+    "kind": "whine",
+    "entailment": {
+      "call_to_action": 0.06614717841148376,
+      "vague_benefit": 0.256357342004776,
+      "self_pity": 0.08055343478918076,
+      "constructive": 0.041592005640268326
+    }
+  },
+  {
+    "id": "whine_3",
+    "kind": "whine",
+    "entailment": {
+      "call_to_action": 0.031609028577804565,
+      "vague_benefit": 0.32339972257614136,
+      "self_pity": 0.05305205658078194,
+      "constructive": 0.05220702663064003
+    }
+  },
+  {
+    "id": "bad_news_plan",
+    "kind": "other",
+    "entailment": {
+      "call_to_action": 0.403656542301178,
+      "vague_benefit": 0.1354217231273651,
+      "self_pity": 0.03513973951339722,
+      "constructive": 0.2970995604991913
+    }
+  },
+  {
+    "id": "ask_support",
+    "kind": "other",
+    "entailment": {
+      "call_to_action": 0.32126185297966003,
+      "vague_benefit": 0.5705776214599609,
+      "self_pity": 0.05037086457014084,
+      "constructive": 0.07942815870046616
+    }
+  },
+  {
+    "id": "idea_critique",
+    "kind": "other",
+    "entailment": {
+      "call_to_action": 0.061484601348638535,
+      "vague_benefit": 0.34421518445014954,
+      "self_pity": 0.01093260943889618,
+      "constructive": 0.01860181614756584
+    }
+  }
+]

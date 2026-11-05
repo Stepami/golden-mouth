@@ -1,19 +1,30 @@
 """Run RuBERT NLI with real premise/hypothesis token type IDs, not Infinity strings."""
 
+import argparse
 import json
 from pathlib import Path
 
 import torch
 from optimum.onnxruntime import ORTModelForSequenceClassification
-from transformers import AutoTokenizer
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 
 folder = Path(__file__).parent
-model_path = "/models/rubert-nli"
+parser = argparse.ArgumentParser()
+parser.add_argument("--model-path", default="/models/rubert-nli")
+parser.add_argument("--backend", choices=("onnx", "torch"), default="onnx")
+parser.add_argument("--output-name", default="rubert-paired")
+args = parser.parse_args()
+model_path = args.model_path
 tokenizer = AutoTokenizer.from_pretrained(model_path)
-model = ORTModelForSequenceClassification.from_pretrained(
-    model_path, file_name="onnx/model.onnx", provider="CPUExecutionProvider"
+model = (
+    ORTModelForSequenceClassification.from_pretrained(
+        model_path, file_name="onnx/model.onnx", provider="CPUExecutionProvider"
+    )
+    if args.backend == "onnx"
+    else AutoModelForSequenceClassification.from_pretrained(model_path).eval()
 )
+entailment_index = next(index for index, label in model.config.id2label.items() if label == "entailment")
 
 
 def score(pairs):
@@ -29,7 +40,7 @@ def score(pairs):
             return_tensors="pt",
         )
         probabilities = torch.softmax(model(**tokens).logits, dim=-1).tolist()
-        scores.extend(probability[0] for probability in probabilities)
+        scores.extend(probability[entailment_index] for probability in probabilities)
     return scores
 
 
@@ -53,7 +64,7 @@ for index, post in enumerate(posts):
     }
     results.append(result)
 
-(folder / "issue-244-rubert-paired-outputs.json").write_text(
+(folder / f"issue-244-{args.output_name}-outputs.json").write_text(
     json.dumps(results, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
 )
 for result in results:
@@ -77,7 +88,7 @@ for index, case in enumerate(causes):
     }
     cause_results.append(result)
 
-(folder / "issue-244-rubert-paired-causes.json").write_text(
+(folder / f"issue-244-{args.output_name}-causes.json").write_text(
     json.dumps(cause_results, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
 )
 for result in cause_results:
