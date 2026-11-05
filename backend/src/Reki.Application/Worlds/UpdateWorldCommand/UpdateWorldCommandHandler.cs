@@ -35,9 +35,9 @@ internal sealed class UpdateWorldCommandHandler(
                     Relation = previous?.Relation ?? 0,
                     RelationGainedInPeriod = previous?.RelationGainedInPeriod ?? 0,
                     RelationPeriodStartedAtUtc = previous?.RelationPeriodStartedAtUtc ?? world.Player.PeriodStartedAtUtc,
-                    Embedding = sameProfile ? previous!.Embedding : null,
-                    EmbeddingRevision = sameProfile ? previous!.EmbeddingRevision : null,
-                    EmbeddingTextHash = sameProfile ? previous!.EmbeddingTextHash : null,
+                    Embedding = sameProfile ? previous?.Embedding : null,
+                    EmbeddingRevision = sameProfile ? previous?.EmbeddingRevision : null,
+                    EmbeddingTextHash = sameProfile ? previous?.EmbeddingTextHash : null,
                 };
             }).ToArray(),
             Player = world.Player with
