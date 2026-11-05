@@ -39,13 +39,22 @@ services:
       Llm__BaseUrl: ${LLM_BASE_URL:?LLM_BASE_URL is required}
       Llm__Model: ${LLM_MODEL:?LLM_MODEL is required}
       Llm__TimeoutSeconds: ${LLM_TIMEOUT_SECONDS:-20}
+      Embedding__BaseUrl: http://infinity:7997/
+      Embedding__Model: embedding
+      Infinity__BaseUrl: http://infinity:7997/
+      Nli__ModelPath: /models/hub/models--Stepami--rubert-tiny-bilingual-nli-onnx/snapshots/7af4923a3c2c4b6ffc633dbc37e0a2009337f4e2/model.onnx
+      Nli__VocabPath: /models/hub/models--Stepami--rubert-tiny-bilingual-nli-onnx/snapshots/7af4923a3c2c4b6ffc633dbc37e0a2009337f4e2/vocab.txt
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OTEL_SERVICE_NAME: reki-backend
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8081}:8080"
+    volumes:
+      - infinity-models:/models:ro
     depends_on:
       mongo:
+        condition: service_healthy
+      infinity:
         condition: service_healthy
     healthcheck:
       test:
@@ -63,12 +72,46 @@ services:
 
   mongo:
     image: mongo:9.0.4-resolute
-    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    command: >-
+      mongod --replSet rs0 --bind_ip_all
+      --setParameter mongotHost=mongot:27028
+      --setParameter searchIndexManagementHostAndPort=mongot:27028
+      --setParameter skipAuthenticationToSearchIndexManagementServer=true
+      --setParameter useGrpcForSearch=true --setParameter searchTLSMode=disabled
+    environment:
+      MONGO_SEARCH_PASSWORD: reki1vector2search3
+    post_start:
+      - command:
+          - sh
+          - -euc
+          - |
+            umask 077
+            printf '%s' "$$MONGO_SEARCH_PASSWORD" > /secrets/passwordFile
+            for attempt in $$(seq 1 60); do
+              if mongosh --quiet 'mongodb://localhost:27017/admin?directConnection=true' --eval 'quit(db.hello().isWritablePrimary ? 0 : 1)' >/dev/null 2>&1; then
+                break
+              fi
+              sleep 1
+            done
+            mongosh --quiet 'mongodb://mongo:27017/admin?replicaSet=rs0' --eval '
+              const admin = db.getSiblingDB("admin");
+              const user = {pwd: process.env.MONGO_SEARCH_PASSWORD, roles: ["searchCoordinator"]};
+              if (admin.getUser("mongotUser")) {
+                admin.updateUser("mongotUser", user);
+              } else {
+                admin.createUser({user: "mongotUser", ...user});
+              }
+            '
+        user: root
     ports:
       - "127.0.0.1:${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo-data:/data/db
       - mongo-config:/data/configdb
+      - mongot-secrets:/secrets
+    networks:
+      - default
+      - search-internal
     healthcheck:
       test:
         - CMD
@@ -76,7 +119,7 @@ services:
         - --quiet
         - --eval
         - >-
-          if (db.hello().isWritablePrimary) quit(0);
+          if (db.hello().isWritablePrimary) quit(db.getSiblingDB('admin').getUser('mongotUser') ? 0 : 1);
           try { rs.status(); } catch (error) {
             if (error.codeName !== 'NotYetInitialized') throw error;
             rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'mongo:27017'}]});
@@ -87,6 +130,52 @@ services:
       timeout: 5s
       retries: 5
       start_period: 3m
+    restart: unless-stopped
+
+  mongot:
+    image: mongodb/mongodb-community-search:1.70.1
+    configs:
+      - source: mongot-config
+        target: /mongot-community/config.default.yml
+    volumes:
+      - mongot-data:/data/mongot
+      - mongot-secrets:/secrets:ro
+    networks:
+      - search-internal
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health | grep -q SERVING"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 1m
+    restart: unless-stopped
+
+  infinity:
+    image: michaelf34/infinity:0.0.78-cpu
+    cpus: 2
+    mem_limit: 2g
+    command: >-
+      v2
+      --model-id cointegrated/rubert-tiny2 --served-model-name embedding --engine torch --revision e8ed3b0c8bbf4fb6984c3de043bf7d2f4e5969ae
+      --model-id cointegrated/rubert-tiny-toxicity --served-model-name toxicity --engine torch --revision 5d37eff844868e243467e4c38898bad46c271af2
+      --model-id cointegrated/rubert-tiny2-cedr-emotion-detection --served-model-name emotion --engine torch --revision 453ae93ca895c98cda29522c72b6fbc5a08067b9
+      --model-id Stepami/rubert-tiny-bilingual-nli-onnx --served-model-name nli --engine optimum --revision 7af4923a3c2c4b6ffc633dbc37e0a2009337f4e2
+      --device cpu --pooling-method cls --batch-size 4
+      --no-compile --no-bettertransformer --no-model-warmup --onnx-disable-optimize
+    environment:
+      HF_HOME: /models-cache
+      DO_NOT_TRACK: "1"
+    volumes:
+      - infinity-models:/models-cache
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7997/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10m
     restart: unless-stopped
 
   otel-collector:
@@ -114,4 +203,37 @@ services:
 volumes:
   mongo-data:
   mongo-config:
+  infinity-models:
+  mongot-data:
+  mongot-secrets:
   openobserve-data:
+
+configs:
+  mongot-config:
+    content: |
+      syncSource:
+        replicaSet:
+          hostAndPort: "mongo:27017"
+          scramAuth:
+            username: "mongotUser"
+            passwordFile: "/secrets/passwordFile"
+            authSource: "admin"
+            tls:
+              enabled: false
+        replicationReader:
+          readPreference: "secondaryPreferred"
+      storage:
+        dataPath: "/data/mongot"
+      server:
+        grpc:
+          address: "0.0.0.0:27028"
+          tls:
+            mode: "disabled"
+      healthCheck:
+        address: "0.0.0.0:8080"
+      logging:
+        verbosity: INFO
+
+networks:
+  search-internal:
+    internal: true

@@ -94,7 +94,7 @@ jobs:
 
       - name: Deploy release
         shell: bash
-        run: docker compose up --detach --no-build --remove-orphans --wait --wait-timeout 180
+        run: docker compose up --detach --no-build --remove-orphans --wait --wait-timeout 900
 
       - name: Install OpenObserve certificate renewal hook
         shell: bash

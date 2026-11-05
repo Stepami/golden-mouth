@@ -6,8 +6,12 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using NSubstitute;
 using Reki.Api;
+using Reki.Application.Posts.ML;
 using Reki.Infrastructure.Auth;
+using Reki.Infrastructure.ML.Nli;
 using TUnit.AspNetCore;
 using WebMotions.Fake.Authentication.JwtBearer;
 
@@ -73,6 +77,8 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         {
             services.AddFakeLogging();
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
+            services.RemoveAll<IValidateOptions<NliOptions>>();
+            services.Replace(ServiceDescriptor.Singleton(Substitute.For<INliScorer>()));
             if (!UseProductionAuthentication)
             {
                 services.AddAuthentication(options =>

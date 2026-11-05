@@ -2,7 +2,7 @@ using Microsoft.Extensions.AI;
 using OpenAI.Chat;
 using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
-namespace Reki.Infrastructure.AI;
+namespace Reki.Infrastructure.AI.Chat;
 
 /// <summary>
 /// DeepSeek включает режим размышления по умолчанию, а в нём запрещён принудительный выбор
