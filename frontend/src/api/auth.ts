@@ -20,6 +20,8 @@ interface TokenResponse { access_token: string; refresh_token: string }
 
 export const setInitData = (raw: string) => { initDataRaw = raw }
 export const hasInitData = () => !!initDataRaw
+// Signed legacy credentials are opt-in for the isolated DEV backend only.
+export const getDevMiniAppAuthorization = () => runtimeConfig.devLegacyMiniAppAuth && initDataRaw ? `TMiniApp ${initDataRaw}` : undefined
 export const getAccessToken = () => accessToken
 export const hasAccess = () => !!accessToken
 export function subscribeAuth(listener: () => void): () => void {

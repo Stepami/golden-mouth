@@ -1,6 +1,6 @@
 import { error, warn } from '../app/log'
 import { runtimeConfig } from '../app/runtimeConfig'
-import { getAccessToken, refreshAccess } from './auth'
+import { getAccessToken, getDevMiniAppAuthorization, refreshAccess } from './auth'
 import { EventsClient, PlayerClient, PostsClient, SocialClient, TelemetryClient, WorldsClient } from './generated/reki-api'
 import type { GenerateReplyRequest, PublicationFailure, StartPublicationRequest, SwaggerResponse } from './generated/reki-api'
 import { assertSession, sessionGeneration } from './session'
@@ -22,10 +22,12 @@ export function transport(telemetry = false, retryUnauthorized = true) {
     const headers = new Headers(init.headers)
     const path = new URL(String(url), baseUrl).pathname.slice(new URL(baseUrl).pathname.replace(/\/$/, '').length)
     const anonymous = path === '/sessions'
+    const devAuthorization = getDevMiniAppAuthorization()
     const firstToken = getAccessToken()
-    if (!anonymous && firstToken) headers.set('Authorization', `Bearer ${firstToken}`)
+    if (!anonymous && devAuthorization) headers.set('Authorization', devAuthorization)
+    else if (!anonymous && firstToken) headers.set('Authorization', `Bearer ${firstToken}`)
     let response = await fetch(url, { ...init, headers, cache:path==='/me'||path.startsWith('/me/energy')?'no-store':init.cache, ...(telemetry ? { keepalive: true } : {}) })
-    if (retryUnauthorized && !anonymous && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
+    if (retryUnauthorized && !anonymous && !devAuthorization && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
       headers.set('Authorization', `Bearer ${getAccessToken()}`)
       response = await fetch(url, { ...init, headers, cache:path==='/me'||path.startsWith('/me/energy')?'no-store':init.cache, ...(telemetry ? { keepalive: true } : {}) })
     }
