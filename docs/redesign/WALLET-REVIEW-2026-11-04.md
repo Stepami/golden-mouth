@@ -18,7 +18,7 @@
 | Замечание | Исправление |
 |---|---|
 | Удалить .http | Все tracked .http удалены; *.http добавлено в gitignore. Такие файлы остаются локальными. |
-| Лишняя ручка/кверя | Чтение только через GET /me.energyWallet; фронт и generated client актуализированы. |
+| Лишняя ручка/кверя | Чтение только через GET /me (поле energyWallet); фронт и generated client актуализированы. |
 | Exchange через telegramUserId | Условная запись выбирает аккаунт по PlayerId. |
 | Вся пачка recovery в памяти | Репозиторий возвращает IAsyncEnumerable, Mongo cursor читается потоком с cancellation. |
 | Зачем MongoFixture | Изменение было только ради локального Mongo без Docker. Оно убрано: исходный Docker-only fixture восстановлен. |
