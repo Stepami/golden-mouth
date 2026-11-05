@@ -17,7 +17,7 @@ internal sealed class RefreshEmbeddingsJob(
     IEmbeddingGenerator<string, Embedding<float>> generator,
     IOptions<EmbeddingOptions> options) : ITickerFunction
 {
-    private const string Revision = "mini-frida/32a8238/categorize-v1";
+    private const string Revision = "rubert-tiny2/e8ed3b0/cls-v1";
 
     public async Task ExecuteAsync(TickerFunctionContext context, CancellationToken cancellationToken = default)
     {
@@ -83,8 +83,7 @@ internal sealed class RefreshEmbeddingsJob(
 
     private async Task<float[]> EmbedAsync(string text, CancellationToken cancellationToken)
     {
-        var input = text.StartsWith("categorize: ", StringComparison.Ordinal) ? text : $"categorize: {text}";
-        var result = await generator.GenerateAsync([input], cancellationToken: cancellationToken);
+        var result = await generator.GenerateAsync([text], cancellationToken: cancellationToken);
         return result[0].Vector.ToArray();
     }
 }

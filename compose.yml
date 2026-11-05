@@ -40,13 +40,18 @@ services:
       Llm__Model: ${LLM_MODEL:?LLM_MODEL is required}
       Llm__TimeoutSeconds: ${LLM_TIMEOUT_SECONDS:-20}
       Embedding__BaseUrl: http://infinity:7997/
-      Embedding__Model: frida
+      Embedding__Model: embedding
       Embedding__Enabled: "true"
+      Nli__Enabled: "true"
+      Nli__ModelPath: /models/nli/onnx/model.onnx
+      Nli__VocabPath: /models/nli/vocab.txt
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OTEL_SERVICE_NAME: reki-backend
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8081}:8080"
+    volumes:
+      - ./ml/models/nli:/models/nli:ro
     depends_on:
       mongo:
         condition: service_healthy
@@ -153,34 +158,47 @@ services:
   infinity:
     image: michaelf34/infinity:0.0.78-cpu
     cpus: 2
-    mem_limit: 2500m
+    mem_limit: 2g
     command:
       - v2
       - --model-id
-      - /models/frida
+      - /models/embedding
       - --served-model-name
-      - frida
+      - embedding
       - --engine
       - torch
       - --device
       - cpu
       - --pooling-method
-      - mean
+      - cls
       - --no-compile
       - --no-bettertransformer
       - --no-model-warmup
       - --batch-size
       - "4"
       - --model-id
-      - /models/horizon
+      - /models/toxicity
       - --served-model-name
-      - horizon
+      - toxicity
       - --engine
-      - optimum
+      - torch
       - --device
       - cpu
       - --no-compile
-      - --onnx-disable-optimize
+      - --no-bettertransformer
+      - --no-model-warmup
+      - --batch-size
+      - "4"
+      - --model-id
+      - /models/emotion
+      - --served-model-name
+      - emotion
+      - --engine
+      - torch
+      - --device
+      - cpu
+      - --no-compile
+      - --no-bettertransformer
       - --no-model-warmup
       - --batch-size
       - "4"

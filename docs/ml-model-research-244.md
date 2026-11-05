@@ -2,7 +2,7 @@
 
 Дата: 05.11.2026. Статус: исследование и предложение; игровые правила и `balance.json` этим документом не меняются. Источник действующих правил — [game-flow.md](game-flow.md) и [config/balance.json](config/balance.json). Все приведённые тексты синтетические, тексты игроков не использовались.
 
-**Выбор моделей для текущей инфраструктуры:** mini-frida остаётся для эмбеддингов, а прежняя MiniLM заменена на Horizon small для NLI. Это закреплено в [Compose](../compose.yml), [загрузке локальных файлов](../ml/prepare_models.py) и [.NET-клиенте](../backend/src/Reki.Infrastructure/AI/InfinityNliClient.cs). Смена модели не включает новые правила отписок.
+**Выбор моделей для текущей инфраструктуры по решению владельца проекта:** `rubert-tiny2` для эмбеддингов, `rubert-tiny-toxicity` и `rubert-tiny2-cedr-emotion-detection` для однотекстовых классификаций в Infinity; `rubert-tiny-bilingual-nli` с настоящей парной BERT-токенизацией в .NET backend. Файлы и ревизии закреплены в [скрипте подготовки](../ml/prepare_models.py), сервисы — в [Compose](../compose.yml). Смена моделей не включает новые правила отписок.
 
 ## Задача и ограничения
 
@@ -28,9 +28,9 @@
 
 | Модель | Артефакт и лицензия | RAM после запросов | При 8 одновременных запросах | Итог для признаков |
 |---|---|---:|---:|---|
-| [mini-frida](https://huggingface.co/sergeyzh/rubert-mini-frida) | `32a82388a9f99c99eca74494731f7ee6e9a9fe3a`, Safetensors, MIT, 312-мерный нормированный вектор | Вместе с выбранной NLI | — | Оставить для повтора, выбора звезды и проверки темы. |
+| [mini-frida](https://huggingface.co/sergeyzh/rubert-mini-frida) | `32a82388a9f99c99eca74494731f7ee6e9a9fe3a`, Safetensors, MIT, 312-мерный нормированный вектор | Вместе с прежней NLI | — | Предыдущая рекомендация для повтора и темы; позже заменена по решению владельца. |
 | [MiniLM NLI](https://huggingface.co/MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli) | INT8 [ONNX-экспорт](https://huggingface.co/onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX) `ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e`, MIT | 1,66 GiB | 16,0 req/s; p95 563 мс | Быстрая исходная модель, но на игровых примерах признаки пересекаются; заменена в Compose. |
-| [Horizon small](https://huggingface.co/Horizon-Labs/multilingual-zeroshot-small) | `17af5f8a728d101ce33a9bffad227b0cd005e95e`, INT8 ONNX, Apache-2.0 | 1,58 GiB с mini-frida | 6,3 req/s; p95 1484 мс | Выбрана для NLI-инфраструктуры: лучше видит выпад против аудитории, «нытьё» требует проверки границ. |
+| [Horizon small](https://huggingface.co/Horizon-Labs/multilingual-zeroshot-small) | `17af5f8a728d101ce33a9bffad227b0cd005e95e`, INT8 ONNX, Apache-2.0 | 1,58 GiB с mini-frida | 6,3 req/s; p95 1484 мс | Прежний выбор NLI-инфраструктуры; заменена по решению владельца проекта. |
 | [Horizon base](https://huggingface.co/Horizon-Labs/multilingual-zeroshot-base) | `a9a5a24e58c794a0f7532d3de842236435a9ae22`, INT8 ONNX, Apache-2.0 | 3,00 GiB | 2,5 req/s; p95 3609 мс | Лучше отделяет выпад против аудитории, но на тех же 2 CPU сильно сокращает запас по нагрузке. |
 | [mDeBERTa](https://huggingface.co/MoritzLaurer/mDeBERTa-v3-base-mnli-xnli) | `8adb042d524ecd5c26d3e3ba0e3fbcf7e2d0864c`, INT8 ONNX, MIT | 3,17 GiB | Полный прогон не делали; медиана короткого batch 188 мс | Не улучшила нужные игровые признаки на корпусе. Не рекомендую. |
 
@@ -96,7 +96,7 @@ whining = NLI(«автор жалуется на свои неудачи и жа
 
 Дополнительно проверена [multilingual E5-small](https://huggingface.co/intfloat/multilingual-e5-small) `614241f622f53c4eeff9890bdc4f31cfecc418b3` (MIT, 384 измерения). Она вместе с Horizon small загрузилась в одном Infinity при лимите 3,5 GiB и заняла около 2,0 GiB после запросов; короткий эмбеддинг — медиана 22 мс против 13 мс у mini-frida. Для асимметричного сравнения поста с миром использовались рекомендованные префиксы `query: ` / `passage: `, для повторов — `query: ` на обоих постах. На трёх перефразированных парах E5 дала `0,929–0,948`, ближайшая другая пара того же мира — `0,918`; у mini-frida соответственно `0,761–0,825` против `0,719`. На фактических опорах миров E5 дала сильное пересечение тематических и посторонних примеров, в том числе при симметричном `query: ` / `query: `. [Сырые результаты темы](balance-sim/issue-244-topic-e5.txt), [симметричный вариант](balance-sim/issue-244-topic-e5-symmetric.txt), [скрипт повтора](balance-sim/issue_244_repeat_probe.py). Пространство E5 несовместимо с уже подготовленными векторами mini-frida; подтверждённой выгоды для этой игры нет.
 
-**Выбор для инфраструктуры #244:** mini-frida остаётся эмбеддинг-моделью; NLI-классификатор меняется с MiniLM на Horizon small. Это две закреплённые локальные модели в одном Infinity с лимитом 2,5 GiB. Horizon small возвращает две метки, поэтому .NET-контракт и разделитель пары обновлены. Выбор модели **не означает**, что новые причины отписок уже пригодны для автоматического штрафа: «воздуханство» и «нытьё» требуют большего корпуса и симуляции. Horizon base остаётся ориентиром качества, но при 2 CPU даёт только 2,5 req/s на проверенной нагрузке.
+**Предыдущий выбор до решения о четырёх моделях:** mini-frida для эмбеддингов и Horizon small для NLI. Он сохранён в этом разделе как результат сравнения, но больше не описывает текущий Compose. Игровые причины отписок всё ещё требуют большего корпуса и симуляции.
 
 ### Дополнительный прямой прогон RuBERT NLI
 
@@ -112,4 +112,21 @@ whining = NLI(«автор жалуется на свои неудачи и жа
 
 Как и у большой RuBERT, `tokenizer(premise, hypothesis)` и строка `premise + "[SEP]" + hypothesis` имеют одинаковые `input_ids`, но разный `token_type_ids`: гипотеза получает сегмент `1` только при парном вызове. На явном отрицании правильный прямой PyTorch-вызов дал `not_entailment = 0,926`, строковый `/classify` Infinity — `0,544`. В текущем формате `/classify` эта модель тоже несовместима с корректным NLI-входом.
 
-[Прямой прогон с правильной парой](balance-sim/issue_244_rubert_paired_probe.py) на [23 игровых постах](balance-sim/issue-244-rubert-tiny-paired-outputs.json) и [12 новых причинах](balance-sim/issue-244-rubert-tiny-paired-causes.json) не дал нужной разделимости: пост против аудитории получил entailment `0,647`, конструктивная критика решения — `0,597`; по саможалости три целевых поста получили `0,053–0,081`, просьба о поддержке — `0,050`. Для воздухантства пара «призыв + мутная выгода» также пересеклась с критикой рекламы и честной продажей билета. Малый размер и RAM здесь не компенсируют потери точности. Runtime-модель остаётся Horizon small.
+[Прямой прогон с правильной парой](balance-sim/issue_244_rubert_paired_probe.py) на [23 игровых постах](balance-sim/issue-244-rubert-tiny-paired-outputs.json) и [12 новых причинах](balance-sim/issue-244-rubert-tiny-paired-causes.json) не дал нужной разделимости: пост против аудитории получил entailment `0,647`, конструктивная критика решения — `0,597`; по саможалости три целевых поста получили `0,053–0,081`, просьба о поддержке — `0,050`. Для воздухантства пара «призыв + мутная выгода» также пересеклась с критикой рекламы и честной продажей билета. Эти результаты ограничивают применение выбранной позже модели как автоматической причины отписки.
+
+## Выбранный набор из четырёх моделей
+
+05.11.2026 владелец проекта выбрал следующие checkpoint несмотря на ограничения игровых пилотов выше:
+
+| Роль | Checkpoint и ревизия | Лицензия в карточке | Размещение |
+|---|---|---|---|
+| Эмбеддинг | [cointegrated/rubert-tiny2](https://huggingface.co/cointegrated/rubert-tiny2) `e8ed3b0c8bbf4fb6984c3de043bf7d2f4e5969ae` | MIT | Infinity `embedding`, CLS pooling, L2, 312 измерений |
+| NLI | [cointegrated/rubert-tiny-bilingual-nli](https://huggingface.co/cointegrated/rubert-tiny-bilingual-nli) `3907306f5e5d65e281a524c536883b766c89ded2` | не указана | .NET backend, парный tokenizer + локальный ONNX |
+| Токсичность | [cointegrated/rubert-tiny-toxicity](https://huggingface.co/cointegrated/rubert-tiny-toxicity) `5d37eff844868e243467e4c38898bad46c271af2` | MIT | Infinity `toxicity`, 5 независимых меток |
+| Эмоции | [cointegrated/rubert-tiny2-cedr-emotion-detection](https://huggingface.co/cointegrated/rubert-tiny2-cedr-emotion-detection) `453ae93ca895c98cda29522c72b6fbc5a08067b9` | не указана | Infinity `emotion`, 6 независимых меток |
+
+Три модели Infinity вместе были healthy при лимите 2 GiB и после пробных запросов занимали около 487–509 MiB. Эмбеддинг `rubert-tiny2` совпал с исходным `SentenceTransformer` на синтетическом тексте без расхождения. Для NLI экспорт исходного Safetensors в локальный ONNX выполнен офлайн в закреплённом образе; `.NET BertTokenizer` дал те же `input_ids` и `token_type_ids`, что Hugging Face на трёх парах. `.NET ONNX Runtime` вернул `not_entailment = 0,925619` для явного отрицания, как исходный PyTorch. Отдельного Python-сервиса нет.
+
+При этом [пилот `rubert-tiny2` на теме](balance-sim/issue-244-topic-tiny2.txt) дал **пересечение** тематических и посторонних примеров: минимум тематических `0,523`, максимум явных посторонних `0,600`; mini-frida на тех же примерах давала `0,319` и `0,289`. Зазор трёх повторов до самой похожей другой пары у `rubert-tiny2` — `0,010`, у mini-frida — `0,042`. На [синтетических причинах отписки](balance-sim/issue-244-four-model-classifiers.json) эмоция `sadness` составила `0,977` у одной жалобы, но `0,968` у плохой новости с планом и `0,974` у просьбы о поддержке; другая жалоба получила только `0,075`. Модель токсичности почти не отреагировала на эти случаи, потому что это не её классы `insult/obscenity/threat/dangerous`. Прямой парный NLI-прогон выше также не даёт безопасных порогов. Эти сигналы **не включены** в правило отписок.
+
+Карточки NLI и эмоций не указывают лицензию. Это не помешало выполнить прямое решение владельца о внедрении локального контура, но условия использования checkpoint для выпуска нужно прояснить отдельно. Текущий `balance.json` и случайный провал не менялись.

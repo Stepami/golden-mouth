@@ -1,5 +1,7 @@
 # Issue #244: синтетический корпус и сигналы моделей
 
+Результаты mini-frida, MiniLM и Horizon ниже — история сравнения. Текущий выбранный набор из четырёх RuBERT-моделей и его ограничения описаны в [модельной спецификации](../ml-model-research-244.md).
+
 05.11.2026. [Корпус](issue-244-corpus.json) содержит 23 вымышленных поста четырёх миров: обычные записи, три близких повтора, обращения против аудитории, критику решений, пустые обещания, посты не в тему, юмор, смелую позицию, короткий и длинный текст. Тексты игроков не использовались. [Скрипт](issue_244_collect.py) обращается к локальному Infinity v2; [выходы](issue-244-model-outputs.json) получены с закреплённых mini-frida и MiniLM. Для NLI сохранены также [первая](issue-244-model-outputs-v1.json) и [вторая](issue-244-model-outputs-v2.json) формулировки гипотез.
 
 | Сигнал | Наблюдение на корпусе | Вывод |
@@ -28,7 +30,7 @@ MiniLM прошла техническую проверку: очевидная 
 
 05.11.2026, Docker Desktop: 2 CPU, 7,76 GiB доступно Engine. Каждая модель работала **вместе с mini-frida в одном Infinity v2**, без прогрева и ONNX-оптимизации, batch size 4. Для больших моделей лимит контейнера — 5 GiB; для MiniLM и Horizon small — 2,5 GiB. Все запросы использовали один и тот же синтетический корпус. Это локальные замеры, а не прогноз производительности целевого сервера.
 
-Крупные артефакты: [Horizon base](https://huggingface.co/Horizon-Labs/multilingual-zeroshot-base) `a9a5a24e58c794a0f7532d3de842236435a9ae22` (Apache-2.0, INT8 ONNX 641 MB) и [mDeBERTa](https://huggingface.co/MoritzLaurer/mDeBERTa-v3-base-mnli-xnli) `8adb042d524ecd5c26d3e3ba0e3fbcf7e2d0864c` (MIT, INT8 ONNX 339 MB). Они загружались из локальных файлов без сети внутри Infinity. Это экспериментальные кандидаты; итоговый выбор NLI-инфраструктуры после исследования — Horizon small, см. [спецификацию](../ml-model-research-244.md).
+Крупные артефакты: [Horizon base](https://huggingface.co/Horizon-Labs/multilingual-zeroshot-base) `a9a5a24e58c794a0f7532d3de842236435a9ae22` (Apache-2.0, INT8 ONNX 641 MB) и [mDeBERTa](https://huggingface.co/MoritzLaurer/mDeBERTa-v3-base-mnli-xnli) `8adb042d524ecd5c26d3e3ba0e3fbcf7e2d0864c` (MIT, INT8 ONNX 339 MB). Они загружались из локальных файлов без сети внутри Infinity. Это экспериментальные кандидаты; последующий выбор набора из четырёх RuBERT-моделей описан в [спецификации](../ml-model-research-244.md).
 
 | NLI | RAM Infinity после запросов | 48 запросов при concurrency 8 | p95 при concurrency 8 | Качество на корпусе |
 |---|---:|---:|---:|---|

@@ -43,7 +43,19 @@ internal static class DependencyInjection
             return client.GetEmbeddingClient(options.Model).AsIEmbeddingGenerator();
         });
 
-        services.AddHttpClient<INliScorer, InfinityNliClient>((sp, client) =>
+        services
+            .AddOptions<NliOptions>()
+            .BindConfiguration(NliOptions.SectionName)
+            .Validate(
+                options => !options.Enabled ||
+                           (File.Exists(options.ModelPath) && File.Exists(options.VocabPath)),
+                "Nli model and vocabulary files must exist when enabled.")
+            .ValidateOnStart();
+        services.AddSingleton<LocalNliScorer>();
+        services.AddSingleton<INliScorer>(sp => sp.GetRequiredService<LocalNliScorer>());
+        services.AddHealthChecks().AddCheck<LocalNliScorer>("nli", null, ["ready"]);
+
+        services.AddHttpClient<ITextSignalsScorer, InfinityClassifierClient>((sp, client) =>
         {
             client.BaseAddress = new Uri(sp.GetRequiredService<IOptions<EmbeddingOptions>>().Value.BaseUrl);
         });
