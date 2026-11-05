@@ -55,8 +55,8 @@ import { DesignSystem } from './screens/DesignSystem';
 import { NominalSignOut, Avatar, Badge, BottomNav, Button, Chip, Dialog, EmptyState, Icon, Notice, PersonRow, PostCard, ProfileHeader, Progress, QuoteBlock, ResourceBadge, ResumeWorld, ScreenHeading, SettingsRow, TextField, WorldCard } from './ui';
 
 type Screen = 'welcome' | 'age' | 'catalog' | 'search' | 'intro' | 'onboarding' | 'hero' | 'story-skills' | 'feed' | 'goals' | 'compose' | 'thread' | 'topic' | 'profile' | 'character' | 'messages' | 'activity' | 'account' | ResourcePageName;
-type ReplyTarget = { postId: string; commentId: string | null; name: string; text: string };
-type ReplyDraft = { text: string; requestId?: string; submittedText?: string; beforeSubscribers?:number };
+type ReplyTarget = { postId: string; commentId: string | null; name: string; text: string; authorId:string };
+type ReplyDraft = { text: string; requestId?: string; submittedText?: string; beforeSubscribers?:number; additionalStarId?:string };
 const statusLabels: Record<string, string> = { pending: 'Персонажи читают публикацию…', ready_for_moderation: 'Готовим результат…', completed: 'Публикация готова', failed: 'Публикация не отправлена' };
 const titleOf: Record<Screen, string> = { catalog: 'Миры', search: 'Поиск', intro: 'Вход в мир', onboarding: 'Знакомство', welcome: 'Знакомство', age: 'Возраст', hero: 'Ваш персонаж', 'story-skills': 'Навыки персонажа', feed: 'Лента', goals: 'Цели', compose: 'Новая публикация', thread: 'Обсуждение', topic: 'Тема', profile: 'Профиль персонажа', character: 'Собеседник', messages: 'Личка', activity: 'Уведомления', account: 'Профиль', resources:'Энергия',crystals:'Кристаллы',boosters:'Бустеры' };
 
@@ -405,29 +405,34 @@ export default function BackendApp() {
   };
   const sendReply = async () => {
     if (!player || !reply || sending.current) return;
-    const k = replyKey(reply), saved = readLocal<ReplyDraft>(k, { text: '' });
-    const requestId = saved.requestId ?? crypto.randomUUID(), text = saved.submittedText ?? draft;
-    if (!saved.requestId && curriculum) localSave(`story-action:${player.world}:${requestId}`,{questId:currentQuest?.id,mode:playMode,booster:selectedBooster});
-    saveLocal(k, { text: draft, requestId, submittedText: text, beforeSubscribers:saved.beforeSubscribers??player.subs });
-    sending.current = true; setPending(true); setError('');
-    let terminalFailure = false;
-    try {
-      const controller = new AbortController(); cancel.current = () => controller.abort();
-      const result = await api.reply(reply.postId, reply.commentId, requestId, text, { signal: controller.signal, onEvent: event => { if (event.status === 'failed') terminalFailure = true; } });
-      if (!result.post) throw new Error('Missing reply');
-      const reward=creditQuest(requestId,readLocal(`${key}:story-action:${player.world}:${requestId}`,undefined));
-      const delta=result.subscribers==null?undefined:result.subscribers-(saved.beforeSubscribers??player.subs);
-      const value:PublicationReceipt={worldId:player.world,actionKind:'comment',audienceKnown:delta!==undefined,before:player.skills,questReward:reward,questOutcome:reward?{status:'success',source:'local',title:reward.title,reason:'Комментарий сохранён. Шаг закрыт в сюжетной пробе.',xp:reward.amount}:{status:'unverified',source:'server',title:'Твой комментарий',reason:playMode==='sandbox'?'Комментарий сохранён в песочнице. Сюжетный XP не начисляется.':'Комментарий сохранён. Серверная оценка квеста пока не возвращается.'},result:{postId:reply.postId,delta:delta??0,headline:'Комментарий сохранён',whys:[],ribbons:[],viral:false,flop:false,views:result.post.views}};
-      setReceipt(value);saveLocal(`${key}:result:${player.world}`,value);if(delta)setGainAnimation({delta,nonce:requestId});
-      setPost({ ...result.post, id: result.post.postId }); saveLocal(k, { text: '' }); setDraft(''); setReply(undefined); setScreen('thread'); setStack(s => s.filter(x => x !== 'compose'));
-      setUnknown(false);
-      void refresh().catch(() => setFeedError('Ответ сохранён. Обнови ленту, чтобы увидеть актуальные данные.'));
-    } catch (cause) {
-      const rejected = terminalFailure || cause instanceof ApiError && cause.status >= 400 && cause.status < 500 && cause.status !== 409;
-      if (rejected) saveLocal(k, { text: draft });
-      setUnknown(!rejected); setError(rejected ? 'Ответ не отправлен. Текст сохранён — можно изменить его или попробовать снова.' : errorText(cause) + ' Черновик сохранён; повтор проверяет тот же ответ.');
+    const target=reply,k=replyKey(target),saved=readLocal<ReplyDraft>(k,{text:''});
+    const requestId=saved.requestId??crypto.randomUUID(),text=saved.submittedText??draft;
+    if(!saved.requestId&&curriculum)localSave(`story-action:${player.world}:${requestId}`,{questId:currentQuest?.id,mode:playMode,booster:selectedBooster});
+    saveLocal(k,{...saved,text:draft,requestId,submittedText:text,beforeSubscribers:saved.beforeSubscribers??player.subs});
+    sending.current=true;setPending(true);setError('');setReceipt(undefined);setStatus('Сохраняем комментарий…');
+    let snapshot:Awaited<ReturnType<typeof api.reply>>|undefined,completed=false;
+    try{
+      const controller=new AbortController();cancel.current=()=>controller.abort();
+      snapshot=await api.reply(target.postId,target.commentId,requestId,text,target.authorId,{
+        signal:controller.signal,additionalStarId:saved.additionalStarId,
+        onSaved:value=>{const first=!snapshot;snapshot=value;if(first)void accountEnergy.refresh();setPost({...value.post,id:value.post.postId});setPlayer(p=>p?{...p,postsLeft:value.energyLeft,subs:value.subscribers}:p);setScreen('thread');setStack(v=>v.filter(x=>x!=='compose'));},
+        onTyping:authorId=>setStatus(authorId?`${world?.cast.find(p=>`Star_${p.id}`===authorId)?.name??'Персонаж'} печатает…`:''),
+        onAdditionalStar:id=>saveLocal(k,{...readLocal<ReplyDraft>(k,{text}),additionalStarId:id??undefined}),
+      });
+      completed=true;saveLocal(k,{text:''});setDraft('');setReply(undefined);setUnknown(false);setScreen('thread');setStack(v=>v.filter(x=>x!=='compose'));
+    }catch(cause){
+      if(snapshot){setUnknown(true);setError('Комментарий сохранён. Ответ персонажа пока не готов — можно продолжить получение с той же попыткой.');}
+      else{const rejected=cause instanceof ApiError&&cause.status>=400&&cause.status<500&&cause.status!==409;if(rejected)saveLocal(k,{text:draft});setUnknown(!rejected);setError(rejected?'Комментарий не сохранён. Текст оставлен для исправления.':errorText(cause)+' Текст и попытка сохранены.');}
+    }finally{
+      if(snapshot){
+        const reward=completed?creditQuest(requestId,readLocal(`${key}:story-action:${player.world}:${requestId}`,undefined)):undefined;
+        const delta=snapshot.subscribers-(saved.beforeSubscribers??player.subs);
+        const value:PublicationReceipt={worldId:player.world,actionKind:'comment',audienceKnown:true,before:player.skills,questReward:reward,questOutcome:reward?{status:'success',source:'local',title:reward.title,reason:'Комментарий и реакция сохранены. Шаг закрыт в сюжетной пробе.',xp:reward.amount}:{status:'unverified',source:'server',title:'Твой комментарий',reason:completed?'Комментарий и реакция сохранены. Серверная оценка квеста пока не возвращается.':'Комментарий сохранён. Получение реакции ещё не завершено.'},result:{postId:target.postId,delta,headline:'Комментарий сохранён',whys:[],ribbons:[],viral:false,flop:false,views:snapshot.post.views}};
+        setReceipt(value);saveLocal(`${key}:result:${player.world}`,value);if(delta)setGainAnimation({delta,nonce:requestId});
+        void refresh().catch(()=>setFeedError('Комментарий сохранён. Обнови ленту, чтобы получить актуальные данные.'));
+      }
+      sending.current=false;setPending(false);
     }
-    finally { sending.current = false; setPending(false); }
   };
   const stopWaiting = () => { cancel.current?.(); sending.current = false; setPending(false); setUnknown(true); setError('Ожидание остановлено. Запрос мог сохраниться на сервере — проверь статус, чтобы продолжить без дубликата.'); };
   const deleteAccount = async () => {
@@ -512,10 +517,10 @@ export default function BackendApp() {
   else if (screen === 'thread' && player && world) {
     const view = post ? detailView(post, world, playerView(player)) : undefined;
     const postAuthor = post && world.cast.find(p => `Star_${p.id}` === post.authorId);
-    content = <><ScreenHeading title="Обсуждение" back={back} />{receipt?.actionKind==='comment'&&receipt.worldId===player.world&&receipt.result.postId===post?.id&&<PublicationResult receipt={receipt} animateReward={!!rewardAnimation} animateFollowers={!!gainAnimation} onRead={()=>document.querySelector('.thread-nested')?.scrollIntoView({block:'center'})}/>}{threadLoading && <div className="pending-line" role="status">Загружаем обсуждение…</div>}{view && card(view.post, view.author, post!.comments.length)}{post?.comments.map(comment => {
+    content = <><ScreenHeading title="Обсуждение" back={back} />{pending&&<div className="section pending-line" role="status"><span className="spinner"/>{status||'Получаем ответ персонажа…'}<Button variant="ghost" onClick={stopWaiting}>Остановить ожидание</Button></div>}{reply&&unknown&&!pending&&<section className="section"><Button onClick={()=>openCompose(reply)}>Продолжить получение ответа</Button><p className="caption muted">Сохранённый комментарий повторно не публикуется.</p></section>}{receipt?.actionKind==='comment'&&receipt.worldId===player.world&&receipt.result.postId===post?.id&&<PublicationResult receipt={receipt} animateReward={!!rewardAnimation} animateFollowers={!!gainAnimation} onRead={()=>document.querySelector('.thread-nested')?.scrollIntoView({block:'center'})}/>}{threadLoading && <div className="pending-line" role="status">Загружаем обсуждение…</div>}{view && card(view.post, view.author, post!.comments.length)}{post?.comments.map(comment => {
       const author: Person = comment.me ? playerView(player) : world.cast.find(p => `Star_${p.id}` === comment.authorId) ?? { id: comment.authorId ?? comment.id, name: comment.author, handle: comment.avatar ?? '', role: comment.role ?? '', boundary: '' };
-      return <div key={comment.id} className={comment.parentCommentId ? 'thread-nested' : ''}>{comment.parentCommentId && <p className="reply-to caption muted">↳ Ответ на реплику</p>}{card({ id: comment.id, parentId: post.id, authorId: author.id, text: comment.hidden ? 'Комментарий скрыт' : comment.text, createdAt: '', likes: 0 }, author, 0, true)}{comment.star && !comment.hidden && world.cast.some(p => `Star_${p.id}` === comment.authorId) && <div className="reply-action"><Button variant="ghost" onClick={() => openCompose({ postId: post.id, commentId: comment.id, name: author.name, text: comment.text })}>Ответить {author.name}</Button></div>}</div>;
-    })}{post && !post.comments.length && <EmptyState title="Здесь ещё нет ответов">Персонажи могут продолжить разговор после публикации.</EmptyState>}{postAuthor && post && <div className="section"><Button className="full" onClick={() => openCompose({ postId: post.id, commentId: null, name: postAuthor.name, text: post.text })}>Начать разговор с автором</Button></div>}</>;
+      return <div key={comment.id} className={comment.parentCommentId ? 'thread-nested' : ''}>{comment.parentCommentId && <p className="reply-to caption muted">↳ Ответ на реплику</p>}{card({ id: comment.id, parentId: post.id, authorId: author.id, text: comment.hidden ? 'Комментарий скрыт' : comment.text, createdAt: '', likes: 0 }, author, 0, true)}{comment.star && !comment.hidden && world.cast.some(p => `Star_${p.id}` === comment.authorId) && <div className="reply-action"><Button variant="ghost" onClick={() => openCompose({ postId: post.id, commentId: comment.id, name: author.name, text: comment.text, authorId:`Star_${author.id}` })}>Ответить {author.name}</Button></div>}</div>;
+    })}{post && !post.comments.length && <EmptyState title="Здесь ещё нет ответов">Персонажи могут продолжить разговор после публикации.</EmptyState>}{postAuthor && post && <div className="section"><Button className="full" onClick={() => openCompose({ postId: post.id, commentId: null, name: postAuthor.name, text: post.text, authorId:`Star_${postAuthor.id}` })}>Начать разговор с автором</Button></div>}</>;
   } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={personaFor(player.id, player.world).avatar} onBack={back} /><WorldProgress streak={player.streak} storyDay={preview?stageDay:undefined} boosterCount={preview?String(play.boosters+(play.energyBoosters?.length??0)):'—'} onStreak={()=>setOverlay('streak')} onGift={play.enabled?openSeriesGift:undefined} giftClaimed={storyInventory.loginGiftDays?.includes(giftDay)} onBoosters={()=>openResource('boosters')}/><section className="section channel-stat-section"><ChannelAudience value={player.subs}/></section><section className="profile-details"><button className="profile-goal" onClick={() => go('goals')}><strong>Твоя цель</strong><p>{world.goal}</p></button></section>{curriculum&&<section className="section"><h2 className="section-title">Твой путь</h2><StoryMap preview={preview} campaign={curriculum} actors={world.cast} state={play} currentId={currentQuest?.id} onSelect={id=>openQuest(id)}/></section>}{preview?<StoryWallet state={play} labels={storyLabels} onEnable={() => updateStory(v=>({...v,enabled:true}))} onSpend={points=>updateStory(v=>spendStoryXP(v,points))}/>:<CurrentSkills skills={player.skills} labels={['Смелость','Юмор','В тему']}/>}<section className="section"><Button variant="secondary" onClick={()=>go('account')}>Настройки профиля</Button></section></>;
   else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><ChannelAudience value={person.subscribers}/><span className="caption muted">@{person.handle} · AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
   else if (screen === 'topic' && world) content = <><div className="topic-header"><button className="back-button" onClick={back}>Назад</button><img className="topic-cover" src={world.hero} alt="" /><h1>{quote?.name ?? world.title}</h1><p>{quote?.text ?? world.topic}</p></div><section className="topic-people">{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}<Button className="full" onClick={() => openCompose(undefined, quote)}>Написать</Button></section></>;
