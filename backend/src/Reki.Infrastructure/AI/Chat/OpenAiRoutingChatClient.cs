@@ -4,7 +4,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using OpenAI;
 
-namespace Reki.Infrastructure.AI;
+namespace Reki.Infrastructure.AI.Chat;
 
 internal class OpenAiRoutingChatClient(
     IOptions<LlmOptions> options,

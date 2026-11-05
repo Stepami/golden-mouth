@@ -2,7 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Reki.Application.Posts.AI;
 
-namespace Reki.Infrastructure.AI;
+namespace Reki.Infrastructure.ML;
 
 internal sealed partial class InfinityClassifierClient(HttpClient client) : ITextSignalsScorer
 {

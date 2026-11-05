@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Reki.Infrastructure.AI;
+namespace Reki.Infrastructure.AI.Embedding;
 
 internal sealed class EmbeddingOptions
 {

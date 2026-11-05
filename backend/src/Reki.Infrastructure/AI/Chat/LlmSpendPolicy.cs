@@ -2,7 +2,7 @@ using System.ClientModel.Primitives;
 using System.Diagnostics;
 using System.Globalization;
 
-namespace Reki.Infrastructure.AI;
+namespace Reki.Infrastructure.AI.Chat;
 
 /// <summary>Enriches the existing GenAI span with gateway-reported ruble costs.</summary>
 internal sealed class LlmSpendPolicy : PipelinePolicy

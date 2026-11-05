@@ -3,7 +3,7 @@ using Microsoft.Extensions.AI;
 using OpenAI.Chat;
 using ChatMessage = Microsoft.Extensions.AI.ChatMessage;
 
-namespace Reki.Infrastructure.AI;
+namespace Reki.Infrastructure.AI.Chat;
 
 /// <summary>Requests streaming usage and records gateway cost from the final usage chunk.</summary>
 internal sealed class LlmSpendChatClient(IChatClient innerClient) : DelegatingChatClient(innerClient)

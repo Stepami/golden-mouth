@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Reki.Infrastructure.AI;
+namespace Reki.Infrastructure.AI.Chat;
 
 /// <summary>Writes discovered gateway costs to the existing GenAI span.</summary>
 internal static class LlmSpendWriter

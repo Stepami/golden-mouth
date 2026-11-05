@@ -9,9 +9,11 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Reki.Application.Balance;
 using Reki.Application.Posts.GetPublicStoryCard;
-using Reki.Infrastructure.AI;
+using Reki.Infrastructure.AI.Chat;
+using Reki.Infrastructure.AI.Embedding;
 using Reki.Infrastructure.Auth;
 using Reki.Infrastructure.Jobs;
+using Reki.Infrastructure.ML;
 using Reki.Infrastructure.Mongo;
 using Reki.Infrastructure.RekiContext;
 using Reki.Infrastructure.Rendering;
@@ -33,6 +35,8 @@ public static class DependencyInjection
         services
             .AddRekiContext()
             .AddChatClients()
+            .AddEmbeddingClients()
+            .AddMlScorers()
             .AddJobs(configuration, jsonContext)
             .AddMongo()
             .AddAuth()

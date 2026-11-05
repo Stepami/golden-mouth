@@ -5,7 +5,7 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 using Microsoft.ML.Tokenizers;
 using Reki.Application.Posts.AI;
 
-namespace Reki.Infrastructure.AI;
+namespace Reki.Infrastructure.ML;
 
 internal sealed class LocalNliScorer : INliScorer, IHealthCheck, IDisposable
 {
