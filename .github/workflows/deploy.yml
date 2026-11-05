@@ -67,6 +67,8 @@ jobs:
       LLM_PAT: ${{ secrets.LLM_PAT }}
       LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
       LLM_MODEL: ${{ secrets.LLM_MODEL }}
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      MONGO_SEARCH_PASSWORD: ${{ secrets.MONGO_SEARCH_PASSWORD }}
       OPENOBSERVE_EMAIL: ${{ secrets.OPENOBSERVE_EMAIL }}
       OPENOBSERVE_PASSWORD: ${{ secrets.OPENOBSERVE_PASSWORD }}
 
@@ -94,7 +96,7 @@ jobs:
 
       - name: Deploy release
         shell: bash
-        run: docker compose up --detach --no-build --remove-orphans --wait --wait-timeout 180
+        run: docker compose up --detach --no-build --remove-orphans --wait --wait-timeout 900
 
       - name: Install OpenObserve certificate renewal hook
         shell: bash
