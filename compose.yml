@@ -79,7 +79,7 @@ services:
       --setParameter skipAuthenticationToSearchIndexManagementServer=true
       --setParameter useGrpcForSearch=true --setParameter searchTLSMode=disabled
     environment:
-      MONGO_SEARCH_PASSWORD: ${MONGO_SEARCH_PASSWORD:?MONGO_SEARCH_PASSWORD is required}
+      MONGO_SEARCH_PASSWORD: reki1vector2search3
     post_start:
       - command:
           - sh
