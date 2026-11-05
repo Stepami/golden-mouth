@@ -8,4 +8,4 @@ public interface INliScorer
         CancellationToken cancellationToken);
 }
 
-public sealed record NliScores(double Entailment, double Neutral, double Contradiction);
+public sealed record NliScores(double Entailment, double NotEntailment);

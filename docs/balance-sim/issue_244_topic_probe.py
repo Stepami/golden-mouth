@@ -1,10 +1,18 @@
 """Compare synthetic posts with separate anchors from the actual presets."""
 
+import argparse
 import json
 import re
 import urllib.request
 from pathlib import Path
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--base", default="http://127.0.0.1:7998")
+parser.add_argument("--model", default="frida")
+parser.add_argument("--query-prefix", default="categorize: ")
+parser.add_argument("--anchor-prefix", default="categorize: ")
+args = parser.parse_args()
 
 folder = Path(__file__).parent
 source = (folder.parents[1] / "backend/src/Reki.Infrastructure/Mongo/Migrations/2_5_1_RefreshWorldContent.Data.cs").read_text(encoding="utf-8")
@@ -37,11 +45,11 @@ posts += [
     {"id": "i_food", "world": "it", "case": "holdout_ambiguous", "text": "Сегодня придумал рецепт двойной котлеты для бургера."},
 ]
 references = [(world, group, text) for world, groups in anchors.items() for group, texts in groups.items() for text in texts]
-inputs = ["categorize: " + text for _, _, text in references]
-inputs += ["categorize: " + post["text"] for post in posts]
+inputs = [args.anchor_prefix + text for _, _, text in references]
+inputs += [args.query_prefix + post["text"] for post in posts]
 request = urllib.request.Request(
-    "http://127.0.0.1:7998/embeddings",
-    json.dumps({"model": "frida", "input": inputs}, ensure_ascii=False).encode("utf-8"),
+    args.base + "/embeddings",
+    json.dumps({"model": args.model, "input": inputs}, ensure_ascii=False).encode("utf-8"),
     {"Content-Type": "application/json"},
 )
 with urllib.request.urlopen(request, timeout=120) as response:
@@ -61,10 +69,19 @@ for post, vector in zip(posts, vectors[len(references) :]):
     scores = {name: max(similarity(vector, anchor) for anchor in values) for name, values in groups.items()}
     core = max(scores[name] for name in ("summary", "description", "first_context"))
     all_anchors = max(core, scores["post_ideas"], scores["demo_posts"])
+    other_anchors = max(
+        similarity(vector, anchor)
+        for world, other_groups in reference_vectors.items()
+        if world != post["world"]
+        for group, values in other_groups.items()
+        if group != "combined"
+        for anchor in values
+    )
     print(
         f"{post['id']:<3} {post['case']:<17} combined={scores['combined']:.3f} "
         f"core={core:.3f} summary={scores['summary']:.3f} "
         f"description={scores['description']:.3f} first={scores['first_context']:.3f} "
         f"ideas={scores['post_ideas']:.3f} "
-        f"demo={scores['demo_posts']:.3f} all={all_anchors:.3f}"
+        f"demo={scores['demo_posts']:.3f} all={all_anchors:.3f} "
+        f"other={other_anchors:.3f} margin={all_anchors - other_anchors:.3f}"
     )

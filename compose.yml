@@ -172,9 +172,9 @@ services:
       - --batch-size
       - "4"
       - --model-id
-      - /models/minilm
+      - /models/horizon
       - --served-model-name
-      - minilm
+      - horizon
       - --engine
       - optimum
       - --device

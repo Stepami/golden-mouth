@@ -15,9 +15,9 @@ snapshot_download(
 )
 
 snapshot_download(
-    "onnx-community/multilingual-MiniLMv2-L6-mnli-xnli-ONNX",
-    revision="ca5daf3d11b6c4b3143b1f4602a2edfb64c3ad7e",
-    local_dir=models / "minilm",
+    "Horizon-Labs/multilingual-zeroshot-small",
+    revision="17af5f8a728d101ce33a9bffad227b0cd005e95e",
+    local_dir=models / "horizon",
     allow_patterns=[
         "config.json",
         "special_tokens_map.json",

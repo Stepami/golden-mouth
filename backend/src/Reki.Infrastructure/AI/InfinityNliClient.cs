@@ -15,11 +15,11 @@ internal sealed partial class InfinityNliClient(HttpClient client) : INliScorer
         const int windowStep = 600;
         var windows = Enumerable.Range(0, (premise.Length + windowStep - 1) / windowStep)
             .Select(index => premise.Substring(index * windowStep, Math.Min(windowLength, premise.Length - (index * windowStep))));
-        var input = windows.SelectMany(window => hypotheses.Select(hypothesis => $"{window} </s></s> {hypothesis}"))
+        var input = windows.SelectMany(window => hypotheses.Select(hypothesis => $"{window}<eos>{hypothesis}"))
             .ToArray();
         using var response = await client.PostAsJsonAsync(
             "classify",
-            new ClassifyRequest("minilm", input),
+            new ClassifyRequest("horizon", input),
             InfinityNliJsonContext.Default.ClassifyRequest,
             cancellationToken);
         response.EnsureSuccessStatusCode();
@@ -31,8 +31,7 @@ internal sealed partial class InfinityNliClient(HttpClient client) : INliScorer
                 .Where((_, row) => row % hypotheses.Count == index)
                 .Select(scores => new NliScores(
                     scores.Single(score => score.Label == "entailment").Score,
-                    scores.Single(score => score.Label == "neutral").Score,
-                    scores.Single(score => score.Label == "contradiction").Score))
+                    scores.Single(score => score.Label == "not_entailment").Score))
                 .OrderByDescending(scores => scores.Entailment)
                 .First())
             .ToArray();
