@@ -10,8 +10,7 @@ internal sealed class RestoreEnergyJob(IPlayerRepository players, TimeProvider t
     public async Task ExecuteAsync(TickerFunctionContext context, CancellationToken cancellationToken = default)
     {
         var now = timeProvider.GetUtcNow();
-        var due = await players.GetPlayersForEnergyRecoveryAsync(now.AddSeconds(-PlayerWallet.RegenSeconds), cancellationToken);
-        foreach (var player in due)
+        await foreach (var player in players.GetPlayersForEnergyRecoveryAsync(now.AddSeconds(-PlayerWallet.RegenSeconds), cancellationToken))
         {
             var wallet = player.Wallet.Restore(now);
             await players.TrySaveEnergyRecoveryAsync(player, wallet, cancellationToken);

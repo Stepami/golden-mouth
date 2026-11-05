@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using MongoDB.Driver;
 using Reki.Application.Player;
 using Reki.Domain.Player;
@@ -22,10 +23,10 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
         await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<PlayerWallet?> TryExchangeEnergyAsync(
-        TelegramUserId telegramUserId, DateTimeOffset now, CancellationToken cancellationToken)
+        PlayerId playerId, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var filter = Builders<PlayerProfile>.Filter.And(
-            Builders<PlayerProfile>.Filter.Eq(item => item.TelegramUserId, telegramUserId),
+            Builders<PlayerProfile>.Filter.Eq(item => item.Id, playerId),
             Builders<PlayerProfile>.Filter.Lt(item => item.Wallet.Energy, PlayerWallet.Cap),
             Builders<PlayerProfile>.Filter.Gte(item => item.Wallet.Crystals, PlayerWallet.ExchangeCost));
         var update = Builders<PlayerProfile>.Update
@@ -44,10 +45,18 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
             cancellationToken);
     }
 
-    public async ValueTask<IReadOnlyList<PlayerProfile>> GetPlayersForEnergyRecoveryAsync(
-        DateTimeOffset dueBefore, CancellationToken cancellationToken) =>
-        await _players.Find(item => item.Wallet.Energy < PlayerWallet.Cap && item.Wallet.EnergyUpdatedAtUtc <= dueBefore)
-            .ToListAsync(cancellationToken);
+    public async IAsyncEnumerable<PlayerProfile> GetPlayersForEnergyRecoveryAsync(
+        DateTimeOffset dueBefore, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        using var cursor = await _players.FindAsync(
+            item => item.Wallet.Energy < PlayerWallet.Cap && item.Wallet.EnergyUpdatedAtUtc <= dueBefore,
+            cancellationToken: cancellationToken);
+        await foreach (var player in cursor.ToAsyncEnumerable().WithCancellation(cancellationToken))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return player;
+        }
+    }
 
     public async ValueTask<bool> TrySaveEnergyRecoveryAsync(
         PlayerProfile player, PlayerWallet wallet, CancellationToken cancellationToken)

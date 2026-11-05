@@ -8,7 +8,6 @@ using Reki.Application.Invites;
 using Reki.Application.Player;
 using Reki.Application.Player.DeletePlayerCommand;
 using Reki.Application.Player.ExchangeEnergyCommand;
-using Reki.Application.Player.GetEnergyWallet;
 using Reki.Application.Player.GetReferral;
 using Reki.Application.Player.Responses;
 using Reki.Application.RekiContext;
@@ -59,13 +58,6 @@ public sealed class PlayerController(
             request.ToOnboardPlayer(rekiContext.TelegramUserId),
             cancellationToken);
         return TypedResults.Ok(player.ToResponse());
-    }
-
-    [HttpGet("me/energy", Name = "GetEnergyWallet")]
-    public async Task<Ok<EnergyWalletResponse>> GetEnergyWalletAsync(CancellationToken cancellationToken)
-    {
-        var result = await sender.Send(new EnergyWalletQuery(), cancellationToken);
-        return TypedResults.Ok(result);
     }
 
     [HttpPost("me/energy/exchange", Name = "ExchangeEnergy")]

@@ -470,43 +470,6 @@ export class PlayerClient {
     /**
      * @return OK
      */
-    getEnergyWallet(signal?: AbortSignal): Promise<SwaggerResponse<EnergyWalletResponse>> {
-        let url_ = this.baseUrl + "/me/energy";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            signal,
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetEnergyWallet(_response);
-        });
-    }
-
-    protected processGetEnergyWallet(response: Response): Promise<SwaggerResponse<EnergyWalletResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as EnergyWalletResponse;
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<EnergyWalletResponse>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
-     * @return OK
-     */
     exchangeEnergy(signal?: AbortSignal): Promise<SwaggerResponse<EnergyExchangeResponse>> {
         let url_ = this.baseUrl + "/me/energy/exchange";
         url_ = url_.replace(/[?&]$/, "");

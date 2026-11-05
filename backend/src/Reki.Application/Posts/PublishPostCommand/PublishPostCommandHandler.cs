@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Application.Invites;
+using Reki.Application.Player;
 using Reki.Application.Posts.AI.Post;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPublication;
@@ -19,6 +20,7 @@ namespace Reki.Application.Posts.PublishPostCommand;
 
 internal sealed class PublishPostCommandHandler(
     IInvitationRepository invitationRepository,
+    IPlayerRepository playerRepository,
     IPublicationRepository publicationRepository,
     IGameStore store,
     IOptionsMonitor<GameBalance> balance,
@@ -145,17 +147,31 @@ internal sealed class PublishPostCommandHandler(
         var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
         updated = updated with { Wallet = updated.Wallet.Replenish(updatedInvite?.BonusAmount ?? 0) };
 
-        var committed = await store.TryCommitPostAsync(
-            updated,
-            player.Version,
-            updatedWorld,
-            world.Version,
-            published,
-            request.PublicationId,
-            updatedInvite,
-            currentBalance.InviteBonusMaxPerDay,
-            cancellationToken);
-        if (!committed)
+        PostCommitResult committed;
+        do
+        {
+            var inviter = updatedInvite is null ? null
+                : await playerRepository.GetPlayerAsync(updatedInvite.InviterId, cancellationToken);
+            var rewardedInviter = inviter is null ? null : inviter with
+            {
+                Wallet = inviter.Wallet.Replenish(updatedInvite?.BonusAmount ?? 0),
+                HitOwnWorldMilestone = true,
+            };
+            committed = await store.TryCommitPostAsync(
+                updated,
+                player.Version,
+                updatedWorld,
+                world.Version,
+                published,
+                request.PublicationId,
+                updatedInvite,
+                rewardedInviter,
+                currentBalance.InviteBonusMaxPerDay,
+                cancellationToken);
+        }
+        while (committed == PostCommitResult.InviterChanged);
+
+        if (committed != PostCommitResult.Committed)
         {
             throw new RequestConflictException("The player state changed while publishing the post.");
         }

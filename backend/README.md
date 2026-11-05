@@ -191,4 +191,4 @@ The edit is lost when the container is recreated. Save the same intended values 
 ### Узкая проверка кошелька энергии (#205)
 
 Из `backend/`: `dotnet test --project tests/Reki.Tests/Reki.Tests.csproj -c Release --treenode-filter '/*/*/EnergyWalletControllerTests/*'`.
-По умолчанию используется прежний Testcontainers MongoDB. Для локальной проверки без Docker можно передать `REKI_TEST_MONGO_CONNECTION` со строкой подключения к отдельному тестовому MongoDB replica set: fixture создаёт уникальную БД и удаляет её после запуска, процесс внешнего MongoDB не запускает и не останавливает. Тесты не обращаются к реальному LLM.
+Проверки используют штатный Testcontainers MongoDB и требуют Docker daemon. Отдельного подключения к внешнему MongoDB в fixture нет; без локального Docker выполняются build/style, а component tests проверяются CI. Тесты не обращаются к реальному LLM.

@@ -3,3 +3,6 @@ docs/design/src/__pycache__/
 .env
 
 bot-description-before.json
+
+# Local HTTP requests may contain credentials.
+*.http
