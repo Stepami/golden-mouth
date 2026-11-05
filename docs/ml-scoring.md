@@ -13,11 +13,13 @@ HF_HOME Infinity — `/models-cache`, volume — `infinity-models`. Backend по
 | Контракт backend | Модель | Результат |
 |---|---|---|
 | `IEmbeddingGenerator<string, Embedding<float>>`, OpenAI-клиент Infinity | `cointegrated/rubert-tiny2` | Нормированный CLS, 312 измерений, без префикса |
-| `ITextSignalsScorer`, `/classify` Infinity | `cointegrated/rubert-tiny-toxicity` | Независимые non-toxic, insult, obscenity, threat, dangerous |
-| Тот же scorer | `cointegrated/rubert-tiny2-cedr-emotion-detection` | Независимые no_emotion, joy, sadness, surprise, fear, anger |
+| `IClassifier`, `/classify` Infinity, модель `toxicity` | `cointegrated/rubert-tiny-toxicity` | Независимые non-toxic, insult, obscenity, threat, dangerous |
+| `IClassifier`, модель `emotion` | `cointegrated/rubert-tiny2-cedr-emotion-detection` | Независимые no_emotion, joy, sadness, surprise, fear, anger |
 | `INliScorer`, ONNX из общего HF cache | `Stepami/rubert-tiny-bilingual-nli-onnx` — экспорт `cointegrated/rubert-tiny-bilingual-nli` | Entailment и not_entailment каждой пары |
 
 NLI принимает premise и список hypotheses с настоящими парными input_ids/attention_mask/token_type_ids. Строковый `/classify` Infinity не сохраняет сегменты пары, поэтому NLI работает в существующем backend. Not_entailment не означает доказанное противоречие. Клиент ограничивает пару 512 токенами, гипотезу 254, остаток получает premise; возвращает результат каждой пары без скрытого агрегирования окон. Обработка длинных постов без потери важных фактов — #245. Клиенты не принимают игровых решений и не обращаются в Mongo.
+
+Адрес классификатора задаётся отдельно через `Infinity:BaseUrl` (`Infinity__BaseUrl` в Compose). `Embedding:BaseUrl` остаётся настройкой embedding-клиента; обе секции в Compose указывают на один контейнер Infinity.
 
 ## Четыре причины
 

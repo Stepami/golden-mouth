@@ -38,6 +38,7 @@ using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;
+using Reki.Infrastructure.ML.Classifier;
 
 namespace Reki.Api.Serialization;
 
@@ -118,6 +119,8 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(ResultLiveEvent))]
 [JsonSerializable(typeof(AnalyticsBatchRequest))]
 [JsonSerializable(typeof(ClientLogBatchRequest))]
+[JsonSerializable(typeof(ClassifyRequest))]
+[JsonSerializable(typeof(ClassifyResponse))]
 [JsonSourceGenerationOptions(
     Converters =
     [

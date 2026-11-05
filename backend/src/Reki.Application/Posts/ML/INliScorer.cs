@@ -1,4 +1,4 @@
-namespace Reki.Application.Posts.AI;
+namespace Reki.Application.Posts.ML;
 
 public interface INliScorer
 {

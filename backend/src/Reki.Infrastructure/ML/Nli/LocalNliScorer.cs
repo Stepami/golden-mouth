@@ -2,9 +2,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using Microsoft.ML.Tokenizers;
-using Reki.Application.Posts.AI;
+using Reki.Application.Posts.ML;
 
-namespace Reki.Infrastructure.ML;
+namespace Reki.Infrastructure.ML.Nli;
 
 internal sealed class LocalNliScorer : INliScorer, IDisposable
 {

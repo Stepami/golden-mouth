@@ -1,7 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Reki.Application.Posts.AI;
-using Reki.Infrastructure.AI.Embedding;
+using Reki.Application.Posts.ML;
+using Reki.Infrastructure.ML.Classifier;
+using Reki.Infrastructure.ML.Nli;
 
 namespace Reki.Infrastructure.ML;
 
@@ -18,9 +19,18 @@ internal static class DependencyInjection
             .ValidateOnStart();
         services.AddSingleton<INliScorer, LocalNliScorer>();
 
-        services.AddHttpClient<ITextSignalsScorer, InfinityClassifierClient>((sp, client) =>
+        services
+            .AddOptions<InfinityOptions>()
+            .BindConfiguration(InfinityOptions.SectionName)
+            .ValidateDataAnnotations()
+            .Validate(
+                options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var uri) &&
+                           uri.Scheme is "http" or "https",
+                "Infinity:BaseUrl must be an absolute HTTP or HTTPS URI.")
+            .ValidateOnStart();
+        services.AddHttpClient<IClassifier, InfinityClassifier>((sp, client) =>
         {
-            client.BaseAddress = new Uri(sp.GetRequiredService<IOptions<EmbeddingOptions>>().Value.BaseUrl);
+            client.BaseAddress = new Uri(sp.GetRequiredService<IOptions<InfinityOptions>>().Value.BaseUrl);
         });
 
         return services;

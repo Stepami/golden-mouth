@@ -1,4 +1,4 @@
-namespace Reki.Infrastructure.ML;
+namespace Reki.Infrastructure.ML.Nli;
 
 internal sealed class NliOptions
 {
