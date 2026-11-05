@@ -1,8 +1,10 @@
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Reki.Application.Posts.AI;
+using Reki.Infrastructure.AI.Chat;
+using Reki.Infrastructure.AI.Embedding;
 
-namespace Reki.Infrastructure.AI.Chat;
+namespace Reki.Infrastructure.AI;
 
 internal static class DependencyInjection
 {
@@ -34,6 +36,28 @@ internal static class DependencyInjection
                 configure: telemetry => telemetry.EnableSensitiveData = false)
             .Use(innerClient => new DeepSeekThinkingChatClient(innerClient))
             .Use(client => new LlmSpendChatClient(client));
+        return services;
+    }
+
+    public static IServiceCollection AddEmbeddingClients(this IServiceCollection services)
+    {
+        services
+            .AddOptions<EmbeddingOptions>()
+            .BindConfiguration(EmbeddingOptions.SectionName)
+            .ValidateDataAnnotations()
+            .Validate(
+                options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var uri) &&
+                           uri.Scheme is "http" or "https",
+                "Embedding:BaseUrl must be an absolute HTTP or HTTPS URI.")
+            .ValidateOnStart();
+
+        services.AddSingleton<RekiOpenAiEmbedder>();
+        services.AddEmbeddingGenerator(sp => sp.GetRequiredService<RekiOpenAiEmbedder>().GetEmbeddingGenerator())
+            .UseLogging()
+            .UseOpenTelemetry(
+                sourceName: "Reki.Embed",
+                configure: telemetry => telemetry.EnableSensitiveData = false);
+
         return services;
     }
 }

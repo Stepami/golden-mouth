@@ -9,8 +9,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Reki.Application.Balance;
 using Reki.Application.Posts.GetPublicStoryCard;
-using Reki.Infrastructure.AI.Chat;
-using Reki.Infrastructure.AI.Embedding;
+using Reki.Infrastructure.AI;
 using Reki.Infrastructure.Auth;
 using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.ML;
@@ -43,19 +42,13 @@ public static class DependencyInjection
             .AddTelegram(configuration);
 
         services.AddObservability();
-        services.AddBaseHealthChecks();
-
-        return services;
-    }
-
-    private static void AddBaseHealthChecks(this IServiceCollection services)
-    {
-        services
-            .AddHealthChecks()
+        services.AddHealthChecks()
             .AddCheck(
                 "self",
                 () => HealthCheckResult.Healthy(),
                 ["live"]);
+
+        return services;
     }
 
     private static void AddObservability(this IServiceCollection services)
