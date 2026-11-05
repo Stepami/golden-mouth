@@ -41,7 +41,6 @@ services:
       Llm__TimeoutSeconds: ${LLM_TIMEOUT_SECONDS:-20}
       Embedding__BaseUrl: http://infinity:7997/
       Embedding__Model: embedding
-      Nli__Enabled: "true"
       Nli__ModelPath: /models/hub/models--Stepami--rubert-tiny-bilingual-nli-onnx/snapshots/7af4923a3c2c4b6ffc633dbc37e0a2009337f4e2/model.onnx
       Nli__VocabPath: /models/hub/models--Stepami--rubert-tiny-bilingual-nli-onnx/snapshots/7af4923a3c2c4b6ffc633dbc37e0a2009337f4e2/vocab.txt
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -7,25 +6,19 @@ using Reki.Application.Posts.AI;
 
 namespace Reki.Infrastructure.ML;
 
-internal sealed class LocalNliScorer : INliScorer, IHealthCheck, IDisposable
+internal sealed class LocalNliScorer : INliScorer, IDisposable
 {
-    private readonly bool _enabled;
-    private readonly BertTokenizer? _tokenizer;
-    private readonly InferenceSession? _session;
+    private readonly BertTokenizer _tokenizer;
+    private readonly SessionOptions _sessionOptions;
+    private readonly InferenceSession _session;
 
     public LocalNliScorer(IOptions<NliOptions> options)
     {
-        _enabled = options.Value.Enabled;
-        if (!_enabled)
-        {
-            return;
-        }
-
         _tokenizer = BertTokenizer.Create(
             options.Value.VocabPath,
             new BertOptions { LowerCaseBeforeTokenization = false, ApplyBasicTokenization = true });
-        using var sessionOptions = new SessionOptions { IntraOpNumThreads = 1, InterOpNumThreads = 1 };
-        _session = new InferenceSession(options.Value.ModelPath, sessionOptions);
+        _sessionOptions = new SessionOptions { IntraOpNumThreads = 1, InterOpNumThreads = 1 };
+        _session = new InferenceSession(options.Value.ModelPath, _sessionOptions);
     }
 
     public ValueTask<IReadOnlyList<NliScores>> ScoreAsync(
@@ -34,9 +27,7 @@ internal sealed class LocalNliScorer : INliScorer, IHealthCheck, IDisposable
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var tokenizer = _tokenizer ?? throw new InvalidOperationException("The NLI model is disabled.");
-        var session = _session ?? throw new InvalidOperationException("The NLI model is disabled.");
-        var rows = hypotheses.Select(hypothesis => EncodePair(tokenizer, premise, hypothesis))
+        var rows = hypotheses.Select(hypothesis => EncodePair(_tokenizer, premise, hypothesis))
             .ToArray();
         var width = rows.Max(row => row.Ids.Length);
         var inputIds = new long[rows.Length * width];
@@ -56,7 +47,7 @@ internal sealed class LocalNliScorer : INliScorer, IHealthCheck, IDisposable
             NamedOnnxValue.CreateFromTensor("attention_mask", new DenseTensor<long>(attentionMask, [rows.Length, width])),
             NamedOnnxValue.CreateFromTensor("token_type_ids", new DenseTensor<long>(tokenTypes, [rows.Length, width])),
         };
-        using var output = session.Run(inputs);
+        using var output = _session.Run(inputs);
         var logits = output.Single().AsTensor<float>().ToArray();
         var scores = new NliScores[hypotheses.Count];
         for (var index = 0; index < rows.Length; index++)
@@ -83,12 +74,9 @@ internal sealed class LocalNliScorer : INliScorer, IHealthCheck, IDisposable
         }
     }
 
-    public Task<HealthCheckResult> CheckHealthAsync(
-        HealthCheckContext context,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult(!_enabled || _session is not null
-            ? HealthCheckResult.Healthy()
-            : HealthCheckResult.Unhealthy("The NLI model is unavailable."));
-
-    public void Dispose() => _session?.Dispose();
+    public void Dispose()
+    {
+        _sessionOptions.Dispose();
+        _session.Dispose();
+    }
 }

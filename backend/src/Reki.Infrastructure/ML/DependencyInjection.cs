@@ -13,13 +13,10 @@ internal static class DependencyInjection
             .AddOptions<NliOptions>()
             .BindConfiguration(NliOptions.SectionName)
             .Validate(
-                options => !options.Enabled ||
-                           (File.Exists(options.ModelPath) && File.Exists(options.VocabPath)),
-                "Nli model and vocabulary files must exist when enabled.")
+                options => File.Exists(options.ModelPath) && File.Exists(options.VocabPath),
+                "Nli model and vocabulary files must exist.")
             .ValidateOnStart();
-        services.AddSingleton<LocalNliScorer>();
-        services.AddSingleton<INliScorer>(sp => sp.GetRequiredService<LocalNliScorer>());
-        services.AddHealthChecks().AddCheck<LocalNliScorer>("nli", null, ["ready"]);
+        services.AddSingleton<INliScorer, LocalNliScorer>();
 
         services.AddHttpClient<ITextSignalsScorer, InfinityClassifierClient>((sp, client) =>
         {
