@@ -1,9 +1,16 @@
 """Compare fixed NLI hypothesis phrasings on the synthetic corpus only."""
 
+import argparse
 import json
 import urllib.request
 from pathlib import Path
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--model", default="horizon")
+parser.add_argument("--base", default="http://127.0.0.1:7998")
+parser.add_argument("--separator", default="<eos>")
+args = parser.parse_args()
 
 posts = json.loads((Path(__file__).parent / "issue-244-corpus.json").read_text(encoding="utf-8"))["posts"]
 hypotheses = {
@@ -34,10 +41,10 @@ hypotheses = {
 }
 
 for category, variants in hypotheses.items():
-    inputs = [post["text"] + "<eos>" + variant for variant in variants for post in posts]
+    inputs = [post["text"] + args.separator + variant for variant in variants for post in posts]
     request = urllib.request.Request(
-        "http://127.0.0.1:7998/classify",
-        json.dumps({"model": "horizon", "input": inputs}, ensure_ascii=False).encode("utf-8"),
+        args.base + "/classify",
+        json.dumps({"model": args.model, "input": inputs}, ensure_ascii=False).encode("utf-8"),
         {"Content-Type": "application/json"},
     )
     with urllib.request.urlopen(request, timeout=120) as response:

@@ -1,10 +1,82 @@
 [
-  {"id":"it-against","world":"it","case":"against_audience","text":"Пользователи Смены ничего не понимают; их замечания не нужны при оценке сервиса.","horizon_en":0.485,"horizon_ru":0.534},
-  {"id":"it-critique","world":"it","case":"critique_idea","text":"План проверки Смены не годится: в нём нет повторного опыта и открытых данных.","horizon_en":0.006,"horizon_ru":0.040},
-  {"id":"school-against","world":"sorcerers","case":"against_audience","text":"Ученикам незачем задавать вопросы о правилах мастерской. Пусть просто слушаются.","horizon_en":0.325,"horizon_ru":0.227},
-  {"id":"school-critique","world":"sorcerers","case":"critique_idea","text":"Правило мастерской слишком расплывчато: нужно отдельно описать работу с опасными заклинаниями.","horizon_en":0.003,"horizon_ru":0.005},
-  {"id":"evening-against","world":"evening","case":"against_audience","text":"Зрителям не стоит жаловаться на перенос матча, их мнение не важно.","horizon_en":0.943,"horizon_ru":0.965},
-  {"id":"evening-critique","world":"evening","case":"critique_idea","text":"Открыть матч в полдень неудобно: многие не успеют после работы.","horizon_en":0.009,"horizon_ru":0.041},
-  {"id":"houses-against","world":"houses","case":"against_audience","text":"Совет не должен слушать жителей домов при обсуждении договора.","horizon_en":0.051,"horizon_ru":0.072},
-  {"id":"houses-critique","world":"houses","case":"critique_idea","text":"Совет ошибся в расчёте расходов, поэтому договор нужно исправить до голосования.","horizon_en":0.009,"horizon_ru":0.008}
+  {
+    "id": "it-against",
+    "world": "it",
+    "case": "against_audience",
+    "text": "Пользователи Смены ничего не понимают; их замечания не нужны при оценке сервиса.",
+    "horizon_en": 0.485,
+    "horizon_ru": 0.534,
+    "horizon_base_en": 0.728116512298584,
+    "horizon_base_ru": 0.760964572429657
+  },
+  {
+    "id": "it-critique",
+    "world": "it",
+    "case": "critique_idea",
+    "text": "План проверки Смены не годится: в нём нет повторного опыта и открытых данных.",
+    "horizon_en": 0.006,
+    "horizon_ru": 0.04,
+    "horizon_base_en": 0.006241415627300739,
+    "horizon_base_ru": 0.009846784174442291
+  },
+  {
+    "id": "school-against",
+    "world": "sorcerers",
+    "case": "against_audience",
+    "text": "Ученикам незачем задавать вопросы о правилах мастерской. Пусть просто слушаются.",
+    "horizon_en": 0.325,
+    "horizon_ru": 0.227,
+    "horizon_base_en": 0.3251394033432007,
+    "horizon_base_ru": 0.20830802619457245
+  },
+  {
+    "id": "school-critique",
+    "world": "sorcerers",
+    "case": "critique_idea",
+    "text": "Правило мастерской слишком расплывчато: нужно отдельно описать работу с опасными заклинаниями.",
+    "horizon_en": 0.003,
+    "horizon_ru": 0.005,
+    "horizon_base_en": 0.0028263754211366177,
+    "horizon_base_ru": 0.0031845341436564922
+  },
+  {
+    "id": "evening-against",
+    "world": "evening",
+    "case": "against_audience",
+    "text": "Зрителям не стоит жаловаться на перенос матча, их мнение не важно.",
+    "horizon_en": 0.943,
+    "horizon_ru": 0.965,
+    "horizon_base_en": 0.905378520488739,
+    "horizon_base_ru": 0.9617681503295898
+  },
+  {
+    "id": "evening-critique",
+    "world": "evening",
+    "case": "critique_idea",
+    "text": "Открыть матч в полдень неудобно: многие не успеют после работы.",
+    "horizon_en": 0.009,
+    "horizon_ru": 0.041,
+    "horizon_base_en": 0.0014874223852530122,
+    "horizon_base_ru": 0.0014603824820369482
+  },
+  {
+    "id": "houses-against",
+    "world": "houses",
+    "case": "against_audience",
+    "text": "Совет не должен слушать жителей домов при обсуждении договора.",
+    "horizon_en": 0.051,
+    "horizon_ru": 0.072,
+    "horizon_base_en": 0.09646502137184143,
+    "horizon_base_ru": 0.12423145025968552
+  },
+  {
+    "id": "houses-critique",
+    "world": "houses",
+    "case": "critique_idea",
+    "text": "Совет ошибся в расчёте расходов, поэтому договор нужно исправить до голосования.",
+    "horizon_en": 0.009,
+    "horizon_ru": 0.008,
+    "horizon_base_en": 0.0008264781208708882,
+    "horizon_base_ru": 0.0015923231840133667
+  }
 ]

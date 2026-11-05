@@ -1,0 +1,669 @@
+[
+  {
+    "id": "e1",
+    "world": "evening",
+    "case": "ordinary",
+    "topic_similarity": 0.6285384375705056,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9777576327323914,
+        "entailment": 0.022242413833737373
+      },
+      "empty_promise": {
+        "not_entailment": 0.9935503005981445,
+        "entailment": 0.006449636071920395
+      },
+      "topic": {
+        "not_entailment": 0.6434922814369202,
+        "entailment": 0.3565077483654022
+      },
+      "humor": {
+        "not_entailment": 0.993922233581543,
+        "entailment": 0.006077746860682964
+      },
+      "brave": {
+        "not_entailment": 0.8602696657180786,
+        "entailment": 0.13973040878772736
+      }
+    }
+  },
+  {
+    "id": "e2",
+    "world": "evening",
+    "case": "near_repeat",
+    "topic_similarity": 0.6573756699390594,
+    "repeat_similarity": 0.7611140570608702,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9857529997825623,
+        "entailment": 0.014247062616050243
+      },
+      "empty_promise": {
+        "not_entailment": 0.9911134839057922,
+        "entailment": 0.00888654962182045
+      },
+      "topic": {
+        "not_entailment": 0.7641856074333191,
+        "entailment": 0.2358144223690033
+      },
+      "humor": {
+        "not_entailment": 0.9928086996078491,
+        "entailment": 0.007191319949924946
+      },
+      "brave": {
+        "not_entailment": 0.9727275967597961,
+        "entailment": 0.02727246657013893
+      }
+    }
+  },
+  {
+    "id": "e3",
+    "world": "evening",
+    "case": "against_audience",
+    "topic_similarity": 0.62499302860685,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.540955126285553,
+        "entailment": 0.459044873714447
+      },
+      "empty_promise": {
+        "not_entailment": 0.9907265901565552,
+        "entailment": 0.00927340891212225
+      },
+      "topic": {
+        "not_entailment": 0.9408722519874573,
+        "entailment": 0.059127748012542725
+      },
+      "humor": {
+        "not_entailment": 0.9623331427574158,
+        "entailment": 0.037666819989681244
+      },
+      "brave": {
+        "not_entailment": 0.9343559145927429,
+        "entailment": 0.06564412266016006
+      }
+    }
+  },
+  {
+    "id": "e4",
+    "world": "evening",
+    "case": "critique_idea",
+    "topic_similarity": 0.5745614644961556,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9983236193656921,
+        "entailment": 0.0016763429157435894
+      },
+      "empty_promise": {
+        "not_entailment": 0.9970136880874634,
+        "entailment": 0.0029862893279641867
+      },
+      "topic": {
+        "not_entailment": 0.9039415121078491,
+        "entailment": 0.09605848789215088
+      },
+      "humor": {
+        "not_entailment": 0.9945579767227173,
+        "entailment": 0.005442014895379543
+      },
+      "brave": {
+        "not_entailment": 0.84034264087677,
+        "entailment": 0.159657284617424
+      }
+    }
+  },
+  {
+    "id": "e5",
+    "world": "evening",
+    "case": "empty_promise",
+    "topic_similarity": 0.4126093008746008,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9559409022331238,
+        "entailment": 0.04405904561281204
+      },
+      "empty_promise": {
+        "not_entailment": 0.6807147264480591,
+        "entailment": 0.31928524374961853
+      },
+      "topic": {
+        "not_entailment": 0.9682967066764832,
+        "entailment": 0.03170330822467804
+      },
+      "humor": {
+        "not_entailment": 0.9869974851608276,
+        "entailment": 0.013002492487430573
+      },
+      "brave": {
+        "not_entailment": 0.9768930673599243,
+        "entailment": 0.023106984794139862
+      }
+    }
+  },
+  {
+    "id": "e6",
+    "world": "evening",
+    "case": "off_topic",
+    "topic_similarity": 0.05415559805945431,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9773474335670471,
+        "entailment": 0.02265256643295288
+      },
+      "empty_promise": {
+        "not_entailment": 0.9920698404312134,
+        "entailment": 0.007930194959044456
+      },
+      "topic": {
+        "not_entailment": 0.9787119030952454,
+        "entailment": 0.02128807082772255
+      },
+      "humor": {
+        "not_entailment": 0.9894812107086182,
+        "entailment": 0.010518773458898067
+      },
+      "brave": {
+        "not_entailment": 0.9709354043006897,
+        "entailment": 0.029064640402793884
+      }
+    }
+  },
+  {
+    "id": "e7",
+    "world": "evening",
+    "case": "humor",
+    "topic_similarity": 0.4103620202392131,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9901078939437866,
+        "entailment": 0.009892139583826065
+      },
+      "empty_promise": {
+        "not_entailment": 0.9807174801826477,
+        "entailment": 0.019282549619674683
+      },
+      "topic": {
+        "not_entailment": 0.9696551561355591,
+        "entailment": 0.030344825237989426
+      },
+      "humor": {
+        "not_entailment": 0.9838511347770691,
+        "entailment": 0.016148880124092102
+      },
+      "brave": {
+        "not_entailment": 0.9842392206192017,
+        "entailment": 0.01576077751815319
+      }
+    }
+  },
+  {
+    "id": "e8",
+    "world": "evening",
+    "case": "brave",
+    "topic_similarity": 0.466028730264457,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9989047050476074,
+        "entailment": 0.0010952501324936748
+      },
+      "empty_promise": {
+        "not_entailment": 0.9872038960456848,
+        "entailment": 0.012796145863831043
+      },
+      "topic": {
+        "not_entailment": 0.8878762722015381,
+        "entailment": 0.11212372034788132
+      },
+      "humor": {
+        "not_entailment": 0.9913985729217529,
+        "entailment": 0.008601434528827667
+      },
+      "brave": {
+        "entailment": 0.7691283822059631,
+        "not_entailment": 0.23087166249752045
+      }
+    }
+  },
+  {
+    "id": "s1",
+    "world": "sorcerers",
+    "case": "ordinary",
+    "topic_similarity": 0.652632520414895,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9923681616783142,
+        "entailment": 0.007631889544427395
+      },
+      "empty_promise": {
+        "not_entailment": 0.9967191815376282,
+        "entailment": 0.0032808587420731783
+      },
+      "topic": {
+        "not_entailment": 0.947699248790741,
+        "entailment": 0.052300747483968735
+      },
+      "humor": {
+        "not_entailment": 0.9981986880302429,
+        "entailment": 0.0018012808868661523
+      },
+      "brave": {
+        "not_entailment": 0.9950239658355713,
+        "entailment": 0.0049760350957512856
+      }
+    }
+  },
+  {
+    "id": "s2",
+    "world": "sorcerers",
+    "case": "near_repeat",
+    "topic_similarity": 0.5820709720942098,
+    "repeat_similarity": 0.8252093803691651,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9971132278442383,
+        "entailment": 0.002886768663302064
+      },
+      "empty_promise": {
+        "not_entailment": 0.99775630235672,
+        "entailment": 0.002243687631562352
+      },
+      "topic": {
+        "not_entailment": 0.9336665272712708,
+        "entailment": 0.06633351743221283
+      },
+      "humor": {
+        "not_entailment": 0.995962917804718,
+        "entailment": 0.004037074279040098
+      },
+      "brave": {
+        "not_entailment": 0.9274420738220215,
+        "entailment": 0.07255785912275314
+      }
+    }
+  },
+  {
+    "id": "s3",
+    "world": "sorcerers",
+    "case": "empty_promise",
+    "topic_similarity": 0.542379546059052,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9721060991287231,
+        "entailment": 0.027893930673599243
+      },
+      "empty_promise": {
+        "not_entailment": 0.8773998022079468,
+        "entailment": 0.12260017544031143
+      },
+      "topic": {
+        "not_entailment": 0.9816270470619202,
+        "entailment": 0.018372897058725357
+      },
+      "humor": {
+        "not_entailment": 0.9808158278465271,
+        "entailment": 0.019184188917279243
+      },
+      "brave": {
+        "not_entailment": 0.9667829871177673,
+        "entailment": 0.033216942101716995
+      }
+    }
+  },
+  {
+    "id": "s4",
+    "world": "sorcerers",
+    "case": "humor",
+    "topic_similarity": 0.5055864406100101,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9910252094268799,
+        "entailment": 0.008974802680313587
+      },
+      "empty_promise": {
+        "not_entailment": 0.9075050354003906,
+        "entailment": 0.09249493479728699
+      },
+      "topic": {
+        "not_entailment": 0.7639381885528564,
+        "entailment": 0.23606182634830475
+      },
+      "humor": {
+        "not_entailment": 0.8236965537071228,
+        "entailment": 0.17630349099636078
+      },
+      "brave": {
+        "not_entailment": 0.6616184711456299,
+        "entailment": 0.33838146924972534
+      }
+    }
+  },
+  {
+    "id": "h1",
+    "world": "houses",
+    "case": "ordinary",
+    "topic_similarity": 0.6860375613414381,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9947403073310852,
+        "entailment": 0.005259661935269833
+      },
+      "empty_promise": {
+        "not_entailment": 0.9964120984077454,
+        "entailment": 0.003587863175198436
+      },
+      "topic": {
+        "not_entailment": 0.8829360604286194,
+        "entailment": 0.11706392467021942
+      },
+      "humor": {
+        "not_entailment": 0.9993225336074829,
+        "entailment": 0.00067754031624645
+      },
+      "brave": {
+        "not_entailment": 0.9887222051620483,
+        "entailment": 0.011277759447693825
+      }
+    }
+  },
+  {
+    "id": "h2",
+    "world": "houses",
+    "case": "against_audience",
+    "topic_similarity": 0.5507892865147013,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.5869067907333374,
+        "entailment": 0.4130931794643402
+      },
+      "empty_promise": {
+        "not_entailment": 0.8611763715744019,
+        "entailment": 0.13882358372211456
+      },
+      "topic": {
+        "not_entailment": 0.9247161746025085,
+        "entailment": 0.07528385519981384
+      },
+      "humor": {
+        "not_entailment": 0.8294700384140015,
+        "entailment": 0.17053000628948212
+      },
+      "brave": {
+        "not_entailment": 0.9727246165275574,
+        "entailment": 0.027275310829281807
+      }
+    }
+  },
+  {
+    "id": "h3",
+    "world": "houses",
+    "case": "critique_idea",
+    "topic_similarity": 0.46346278692956305,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9825893640518188,
+        "entailment": 0.01741069182753563
+      },
+      "empty_promise": {
+        "not_entailment": 0.9389259815216064,
+        "entailment": 0.061073966324329376
+      },
+      "topic": {
+        "not_entailment": 0.8955805897712708,
+        "entailment": 0.10441938042640686
+      },
+      "humor": {
+        "not_entailment": 0.9167029857635498,
+        "entailment": 0.08329693973064423
+      },
+      "brave": {
+        "not_entailment": 0.9837471842765808,
+        "entailment": 0.01625283993780613
+      }
+    }
+  },
+  {
+    "id": "h4",
+    "world": "houses",
+    "case": "off_topic",
+    "topic_similarity": 0.2144729326356476,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9828453660011292,
+        "entailment": 0.017154553905129433
+      },
+      "empty_promise": {
+        "not_entailment": 0.9945205450057983,
+        "entailment": 0.005479409359395504
+      },
+      "topic": {
+        "not_entailment": 0.993633508682251,
+        "entailment": 0.006366523448377848
+      },
+      "humor": {
+        "not_entailment": 0.9671313166618347,
+        "entailment": 0.03286869823932648
+      },
+      "brave": {
+        "not_entailment": 0.9041653275489807,
+        "entailment": 0.09583467245101929
+      }
+    }
+  },
+  {
+    "id": "i1",
+    "world": "it",
+    "case": "ordinary",
+    "topic_similarity": 0.3995288150451862,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9974374771118164,
+        "entailment": 0.0025625061243772507
+      },
+      "empty_promise": {
+        "not_entailment": 0.9934409260749817,
+        "entailment": 0.006559095345437527
+      },
+      "topic": {
+        "not_entailment": 0.9181262254714966,
+        "entailment": 0.08187375217676163
+      },
+      "humor": {
+        "not_entailment": 0.9988861680030823,
+        "entailment": 0.0011138709960505366
+      },
+      "brave": {
+        "not_entailment": 0.9964660406112671,
+        "entailment": 0.003533925861120224
+      }
+    }
+  },
+  {
+    "id": "i2",
+    "world": "it",
+    "case": "near_repeat",
+    "topic_similarity": 0.39717735460900894,
+    "repeat_similarity": 0.7755862262671357,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9983466863632202,
+        "entailment": 0.0016532862791791558
+      },
+      "empty_promise": {
+        "not_entailment": 0.9855390787124634,
+        "entailment": 0.014460907317698002
+      },
+      "topic": {
+        "not_entailment": 0.9056627750396729,
+        "entailment": 0.09433725476264954
+      },
+      "humor": {
+        "not_entailment": 0.9971644282341003,
+        "entailment": 0.0028356099501252174
+      },
+      "brave": {
+        "not_entailment": 0.9500976800918579,
+        "entailment": 0.049902379512786865
+      }
+    }
+  },
+  {
+    "id": "i3",
+    "world": "it",
+    "case": "empty_promise",
+    "topic_similarity": 0.5055901874959555,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9725881814956665,
+        "entailment": 0.02741178125143051
+      },
+      "empty_promise": {
+        "not_entailment": 0.8937650322914124,
+        "entailment": 0.10623491555452347
+      },
+      "topic": {
+        "not_entailment": 0.9497790336608887,
+        "entailment": 0.050220973789691925
+      },
+      "humor": {
+        "not_entailment": 0.993148148059845,
+        "entailment": 0.006851875223219395
+      },
+      "brave": {
+        "not_entailment": 0.9821755290031433,
+        "entailment": 0.017824513837695122
+      }
+    }
+  },
+  {
+    "id": "i4",
+    "world": "it",
+    "case": "critique_idea",
+    "topic_similarity": 0.4452173944811285,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9975670576095581,
+        "entailment": 0.00243300455622375
+      },
+      "empty_promise": {
+        "not_entailment": 0.9462279677391052,
+        "entailment": 0.053771987557411194
+      },
+      "topic": {
+        "not_entailment": 0.92983078956604,
+        "entailment": 0.07016925513744354
+      },
+      "humor": {
+        "not_entailment": 0.9976075887680054,
+        "entailment": 0.002392369322478771
+      },
+      "brave": {
+        "not_entailment": 0.9552661776542664,
+        "entailment": 0.04473375529050827
+      }
+    }
+  },
+  {
+    "id": "i5",
+    "world": "it",
+    "case": "humor",
+    "topic_similarity": 0.552447861864445,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9925249218940735,
+        "entailment": 0.007475084159523249
+      },
+      "empty_promise": {
+        "not_entailment": 0.9640111327171326,
+        "entailment": 0.03598883002996445
+      },
+      "topic": {
+        "not_entailment": 0.9054574966430664,
+        "entailment": 0.0945425033569336
+      },
+      "humor": {
+        "not_entailment": 0.9814791679382324,
+        "entailment": 0.01852089911699295
+      },
+      "brave": {
+        "not_entailment": 0.9492513537406921,
+        "entailment": 0.05074869096279144
+      }
+    }
+  },
+  {
+    "id": "i6",
+    "world": "it",
+    "case": "long",
+    "topic_similarity": 0.3543529467201885,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9881730675697327,
+        "entailment": 0.011826989240944386
+      },
+      "empty_promise": {
+        "not_entailment": 0.796700119972229,
+        "entailment": 0.20329983532428741
+      },
+      "topic": {
+        "not_entailment": 0.8244703412055969,
+        "entailment": 0.17552964389324188
+      },
+      "humor": {
+        "not_entailment": 0.9932896494865417,
+        "entailment": 0.00671040453016758
+      },
+      "brave": {
+        "not_entailment": 0.8789385557174683,
+        "entailment": 0.12106144428253174
+      }
+    }
+  },
+  {
+    "id": "i7",
+    "world": "it",
+    "case": "short",
+    "topic_similarity": 0.44909882312971316,
+    "repeat_similarity": null,
+    "nli_scores": {
+      "against_audience": {
+        "not_entailment": 0.9942019581794739,
+        "entailment": 0.005797972436994314
+      },
+      "empty_promise": {
+        "not_entailment": 0.9843155741691589,
+        "entailment": 0.015684371814131737
+      },
+      "topic": {
+        "not_entailment": 0.8977353572845459,
+        "entailment": 0.10226462781429291
+      },
+      "humor": {
+        "not_entailment": 0.9665655493736267,
+        "entailment": 0.03343447670340538
+      },
+      "brave": {
+        "not_entailment": 0.9347012042999268,
+        "entailment": 0.06529872864484787
+      }
+    }
+  }
+]
