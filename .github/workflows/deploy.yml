@@ -105,7 +105,7 @@ jobs:
             nginx:1.29.1-alpine \
             -c 'install -m 755 /source /target/reload-openobserve-gateway.sh'
 
-      - name: Clean up old release images
+      - name: Clean up old release images and build cache
         shell: bash
         run: |
           for image in reki-backend reki-frontend; do
@@ -113,6 +113,7 @@ jobs:
               awk -v current="$image:$REKI_VERSION" '$0 != current' |
               xargs -r docker image rm --no-prune
           done
+          docker builder prune -af --keep-storage 5GB
 
       - name: Show container status on failure
         if: failure()
