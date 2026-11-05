@@ -24,10 +24,10 @@ export function transport(telemetry = false, retryUnauthorized = true) {
     const anonymous = path === '/sessions'
     const firstToken = getAccessToken()
     if (!anonymous && firstToken) headers.set('Authorization', `Bearer ${firstToken}`)
-    let response = await fetch(url, { ...init, headers, cache:path.startsWith('/me/energy')?'no-store':init.cache, ...(telemetry ? { keepalive: true } : {}) })
+    let response = await fetch(url, { ...init, headers, cache:path==='/me'||path.startsWith('/me/energy')?'no-store':init.cache, ...(telemetry ? { keepalive: true } : {}) })
     if (retryUnauthorized && !anonymous && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
       headers.set('Authorization', `Bearer ${getAccessToken()}`)
-      response = await fetch(url, { ...init, headers, cache:path.startsWith('/me/energy')?'no-store':init.cache, ...(telemetry ? { keepalive: true } : {}) })
+      response = await fetch(url, { ...init, headers, cache:path==='/me'||path.startsWith('/me/energy')?'no-store':init.cache, ...(telemetry ? { keepalive: true } : {}) })
     }
     if (response.ok) return response
     let failure: PublicationFailure | undefined

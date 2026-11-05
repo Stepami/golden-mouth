@@ -8,7 +8,7 @@ export function useEnergyWallet(owner:string|undefined,client:WalletClient,onSna
  const install=useCallback((value:EnergyWallet)=>{setRefreshError('');setWallet(value);notify.current(value);},[]);
  const refresh=useCallback(()=>{
   if(!owner||exchanging.current)return Promise.resolve();if(flight.current)return flight.current;
-  const token=generation.current,readVersion=revision.current;const run=(async()=>{try{const next=await client.read();if(token===generation.current&&readVersion===revision.current)install(next);}catch(cause){if(token===generation.current&&(cause as {status?:number}|null)?.status!==404)setRefreshError('Не удалось обновить кошелёк. Проверь связь и обнови баланс.');}})();
+  const token=generation.current,readVersion=revision.current;const run=(async()=>{try{const next=await client.read();if(token===generation.current&&readVersion===revision.current)install(next);}catch(cause){if(token===generation.current&&(cause as {status?:number}|null)?.status!==404&&(cause as {code?:string}|null)?.code!=='wallet_unavailable')setRefreshError('Не удалось обновить кошелёк. Проверь связь и обнови баланс.');}})();
   flight.current=run;void run.finally(()=>{if(flight.current===run)flight.current=undefined;});return run;
  },[owner,client,install]);
  useEffect(()=>{generation.current++;exchanging.current=false;flight.current=undefined;setWallet(undefined);setMessage('');setRefreshError('');setBusy(false);void refresh();return()=>{generation.current++;};},[owner,refresh]);

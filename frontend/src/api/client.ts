@@ -147,7 +147,7 @@ export const api = {
         await revokeSession();
         api.clearSession();
     },
-    energyWallet: () => data(sdk.player.getEnergyWallet()).then(map.energyWallet),
+    energyWallet: () => data(sdk.player.getCurrentPlayer()).then(player=>{if(!player.energyWallet)throw Object.assign(new Error('Wallet is not supported by this API'),{code:'wallet_unavailable'});return map.energyWallet(player.energyWallet);}),
     exchangeEnergy: () => data(walletExchangeClient.exchangeEnergy()).then(value=>({...value,wallet:value.wallet?map.energyWallet(value.wallet):null})),
     loadWorldTemplates: loadTemplates,
     me: (worldId?: string): Promise<Player> => {
