@@ -63,12 +63,19 @@ public static class DependencyInjection
         services.AddMetrics();
         services.AddOpenTelemetry()
             .WithTracing(tracing => tracing
-                .AddSource(MongoTelemetry.ActivitySourceName, "Reki.GenAI", "TickerQ")
+                .AddSource(
+                    MongoTelemetry.ActivitySourceName,
+                    "Reki.GenAI",
+                    "Reki.Embed",
+                    "TickerQ")
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddProcessor<TelegramBotTelemetry>())
             .WithMetrics(metrics => metrics
-                .AddMeter("Reki.GenAI", "Reki.Product")
+                .AddMeter(
+                    "Reki.GenAI",
+                    "Reki.Embed",
+                    "Reki.Product")
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation())

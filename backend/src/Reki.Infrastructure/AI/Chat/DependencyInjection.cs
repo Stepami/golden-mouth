@@ -28,6 +28,7 @@ internal static class DependencyInjection
             .AddSingleton<LlmSpendPolicy>()
             .AddSingleton<OpenAiRoutingChatClient>()
             .AddChatClient(sp => sp.GetRequiredService<OpenAiRoutingChatClient>())
+            .UseLogging()
             .UseOpenTelemetry(
                 sourceName: "Reki.GenAI",
                 configure: telemetry => telemetry.EnableSensitiveData = false)

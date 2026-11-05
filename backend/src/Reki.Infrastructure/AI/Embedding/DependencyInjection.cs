@@ -1,8 +1,5 @@
-using System.ClientModel;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using OpenAI;
 
 namespace Reki.Infrastructure.AI.Embedding;
 
@@ -20,14 +17,12 @@ internal static class DependencyInjection
                 "Embedding:BaseUrl must be an absolute HTTP or HTTPS URI.")
             .ValidateOnStart();
 
-        services.AddSingleton(sp =>
-        {
-            var options = sp.GetRequiredService<IOptions<EmbeddingOptions>>().Value;
-            var client = new OpenAIClient(
-                new ApiKeyCredential("local"),
-                new OpenAIClientOptions { Endpoint = new Uri(options.BaseUrl) });
-            return client.GetEmbeddingClient(options.Model).AsIEmbeddingGenerator();
-        });
+        services.AddSingleton<RekiOpenAiEmbedder>();
+        services.AddEmbeddingGenerator(sp => sp.GetRequiredService<RekiOpenAiEmbedder>().GetEmbeddingGenerator())
+            .UseLogging()
+            .UseOpenTelemetry(
+                sourceName: "Reki.Embed",
+                configure: telemetry => telemetry.EnableSensitiveData = false);
 
         return services;
     }
