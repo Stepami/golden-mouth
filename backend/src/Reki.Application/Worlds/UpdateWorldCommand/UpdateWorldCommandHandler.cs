@@ -29,15 +29,11 @@ internal sealed class UpdateWorldCommandHandler(
             Stars = definition.Stars.Select(star =>
             {
                 var previous = world.FindStar(star.Id);
-                var sameProfile = previous is not null && SameProfile(star, previous);
                 return star with
                 {
                     Relation = previous?.Relation ?? 0,
                     RelationGainedInPeriod = previous?.RelationGainedInPeriod ?? 0,
                     RelationPeriodStartedAtUtc = previous?.RelationPeriodStartedAtUtc ?? world.Player.PeriodStartedAtUtc,
-                    Embedding = sameProfile ? previous?.Embedding : null,
-                    EmbeddingRevision = sameProfile ? previous?.EmbeddingRevision : null,
-                    EmbeddingTextHash = sameProfile ? previous?.EmbeddingTextHash : null,
                 };
             }).ToArray(),
             Player = world.Player with
@@ -64,8 +60,4 @@ internal sealed class UpdateWorldCommandHandler(
 
         return Unit.Value;
     }
-
-    private static bool SameProfile(Reki.Domain.Worlds.WorldStar first, Reki.Domain.Worlds.WorldStar second) =>
-        first.Name == second.Name && first.Role == second.Role && first.Trait == second.Trait &&
-        first.About == second.About && first.Voice == second.Voice;
 }

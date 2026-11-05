@@ -36,11 +36,7 @@ internal sealed class LocalNliScorer : INliScorer, IHealthCheck, IDisposable
         cancellationToken.ThrowIfCancellationRequested();
         var tokenizer = _tokenizer ?? throw new InvalidOperationException("The NLI model is disabled.");
         var session = _session ?? throw new InvalidOperationException("The NLI model is disabled.");
-        const int windowLength = 700;
-        const int windowStep = 600;
-        var windows = Enumerable.Range(0, Math.Max(1, (premise.Length + windowStep - 1) / windowStep))
-            .Select(index => premise.Substring(index * windowStep, Math.Min(windowLength, premise.Length - (index * windowStep))));
-        var rows = windows.SelectMany(window => hypotheses.Select(hypothesis => EncodePair(tokenizer, window, hypothesis)))
+        var rows = hypotheses.Select(hypothesis => EncodePair(tokenizer, premise, hypothesis))
             .ToArray();
         var width = rows.Max(row => row.Ids.Length);
         var inputIds = new long[rows.Length * width];
@@ -62,7 +58,7 @@ internal sealed class LocalNliScorer : INliScorer, IHealthCheck, IDisposable
         };
         using var output = session.Run(inputs);
         var logits = output.Single().AsTensor<float>().ToArray();
-        var best = new NliScores?[hypotheses.Count];
+        var scores = new NliScores[hypotheses.Count];
         for (var index = 0; index < rows.Length; index++)
         {
             var notEntailmentLogit = logits[index * 2];
@@ -71,21 +67,15 @@ internal sealed class LocalNliScorer : INliScorer, IHealthCheck, IDisposable
             var notEntailment = Math.Exp(notEntailmentLogit - maximum);
             var entailment = Math.Exp(entailmentLogit - maximum);
             var total = notEntailment + entailment;
-            var score = new NliScores(entailment / total, notEntailment / total);
-            var hypothesisIndex = index % hypotheses.Count;
-            if (best[hypothesisIndex] is not { } current || score.Entailment > current.Entailment)
-            {
-                best[hypothesisIndex] = score;
-            }
+            scores[index] = new NliScores(entailment / total, notEntailment / total);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return ValueTask.FromResult<IReadOnlyList<NliScores>>(
-            best.Select(score => score ?? throw new InvalidOperationException("The NLI score is missing.")).ToArray());
+        return ValueTask.FromResult<IReadOnlyList<NliScores>>(scores);
 
         static (long[] Ids, long[] Types) EncodePair(BertTokenizer tokenizer, string premise, string hypothesis)
         {
-            var second = tokenizer.EncodeToIds(hypothesis, false, true, true).Take(128).ToArray();
+            var second = tokenizer.EncodeToIds(hypothesis, false, true, true).Take(254).ToArray();
             var first = tokenizer.EncodeToIds(premise, false, true, true).Take(512 - second.Length - 3).ToArray();
             var ids = tokenizer.BuildInputsWithSpecialTokens(first, second).Select(value => (long)value).ToArray();
             var types = tokenizer.CreateTokenTypeIdsFromSequences(first, second).Select(value => (long)value).ToArray();

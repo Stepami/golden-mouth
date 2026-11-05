@@ -1,3 +1,0 @@
-player_posts_single: vectors=132 calls=132 elapsed_s=3.9 call_p50_ms=31 call_p95_ms=47
-star_profiles_single: vectors=199 calls=199 elapsed_s=22.0 call_p50_ms=109 call_p95_ms=125
-world_anchors_batch4: vectors=658 calls=165 elapsed_s=6.5 call_p50_ms=47 call_p95_ms=63

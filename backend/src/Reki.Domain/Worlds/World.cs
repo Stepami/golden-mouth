@@ -47,9 +47,6 @@ public sealed record World
                 Relation = 0,
                 RelationGainedInPeriod = 0,
                 RelationPeriodStartedAtUtc = periodStart,
-                Embedding = null,
-                EmbeddingRevision = null,
-                EmbeddingTextHash = null,
             }).ToArray(),
             Player = Player with
             {

@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Reki.Domain.Worlds;
 
 public sealed record WorldStar(
@@ -25,13 +23,4 @@ public sealed record WorldStar(
         0,
         0,
         DateTimeOffset.MinValue);
-
-    [JsonIgnore]
-    public float[]? Embedding { get; init; }
-
-    [JsonIgnore]
-    public string? EmbeddingRevision { get; init; }
-
-    [JsonIgnore]
-    public string? EmbeddingTextHash { get; init; }
 }

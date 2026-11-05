@@ -41,7 +41,6 @@ services:
       Llm__TimeoutSeconds: ${LLM_TIMEOUT_SECONDS:-20}
       Embedding__BaseUrl: http://infinity:7997/
       Embedding__Model: embedding
-      Embedding__Enabled: "true"
       Nli__Enabled: "true"
       Nli__ModelPath: /models/nli/onnx/model.onnx
       Nli__VocabPath: /models/nli/vocab.txt
@@ -56,8 +55,6 @@ services:
       mongo:
         condition: service_healthy
       infinity:
-        condition: service_healthy
-      mongot:
         condition: service_healthy
     networks:
       - default

@@ -38,10 +38,7 @@ internal static class DependencyInjection
         services.AddSingleton<IDailyGameEventRepository, MongoDailyGameEventRepository>();
         services.AddSingleton(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoClient);
         services.AddSingleton(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoDatabase);
-        services.AddSingleton<PostVectorSearch>();
-        services.AddHostedService(sp => sp.GetRequiredService<PostVectorSearch>());
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);
-        services.AddHealthChecks().AddCheck<PostVectorSearch>("vector-search", null, ["ready"], TimeSpan.FromSeconds(3));
 
         services
             .AddMongoMigrations(

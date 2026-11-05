@@ -34,7 +34,7 @@ internal static class DependencyInjection
             .Validate(options => Uri.TryCreate(options.BaseUrl, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https", "Embedding:BaseUrl must be an absolute HTTP or HTTPS URI.")
             .ValidateOnStart();
 
-        services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(sp =>
+        services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<IOptions<EmbeddingOptions>>().Value;
             var client = new OpenAIClient(

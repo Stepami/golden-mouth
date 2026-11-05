@@ -1,6 +1,4 @@
-using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Application.Exceptions;
 using Reki.Application.Posts;
 using Reki.Application.Posts.GetWorldPosts;
 using Reki.Domain.Posts;
@@ -15,38 +13,6 @@ internal sealed class MongoPostRepository : IPostRepository
     public MongoPostRepository(IMongoDatabase database)
     {
         _posts = database.GetCollection<GamePost>(MongoCollections.Posts);
-    }
-
-    public async IAsyncEnumerable<GamePost> ScanPostsAsync(
-        string revision,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
-    {
-        var filter = Builders<GamePost>.Filter.Eq(item => item.Embedding, null) |
-                     Builders<GamePost>.Filter.Ne(item => item.EmbeddingRevision, revision);
-        filter &= Builders<GamePost>.Filter.Regex(item => item.AuthorId, new BsonRegularExpression("^Player_"));
-        await foreach (var post in _posts.Find(filter).ToAsyncEnumerable().WithCancellation(cancellationToken))
-        {
-            yield return post;
-        }
-    }
-
-    public async ValueTask<bool> TrySetEmbeddingAsync(
-        GamePost post,
-        float[] embedding,
-        string revision,
-        string textHash,
-        CancellationToken cancellationToken)
-    {
-        var update = Builders<GamePost>.Update
-            .Set(item => item.Embedding, embedding)
-            .Set(item => item.EmbeddingRevision, revision)
-            .Set(item => item.EmbeddingTextHash, textHash)
-            .Inc(item => item.Version, 1);
-        var result = await _posts.UpdateOneAsync(
-            item => item.Id == post.Id && item.WorldId == post.WorldId && item.Version == post.Version,
-            update,
-            cancellationToken: cancellationToken);
-        return result.ModifiedCount == 1;
     }
 
     public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken) =>
@@ -97,13 +63,6 @@ internal sealed class MongoPostRepository : IPostRepository
 
     public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken)
     {
-        var result = await _posts.ReplaceOneAsync(
-            item => item.Id == post.Id && item.WorldId == post.WorldId && item.Version == post.Version - 1,
-            post,
-            cancellationToken: cancellationToken);
-        if (result.MatchedCount != 1)
-        {
-            throw new RequestConflictException("Post changed concurrently.");
-        }
+        await _posts.ReplaceOneAsync(item => item.Id == post.Id && item.WorldId == post.WorldId, post, cancellationToken: cancellationToken);
     }
 }

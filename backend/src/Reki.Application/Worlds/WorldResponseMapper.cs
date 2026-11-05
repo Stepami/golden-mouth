@@ -17,9 +17,6 @@ public static partial class WorldResponseMapper
 
     [MapperIgnoreSource(nameof(WorldStar.RelationGainedInPeriod))]
     [MapperIgnoreSource(nameof(WorldStar.RelationPeriodStartedAtUtc))]
-    [MapperIgnoreSource(nameof(WorldStar.Embedding))]
-    [MapperIgnoreSource(nameof(WorldStar.EmbeddingRevision))]
-    [MapperIgnoreSource(nameof(WorldStar.EmbeddingTextHash))]
     private static partial WorldStarResponse MapStar(WorldStar source);
 
     private static partial WorldRuleResponse MapRule(WorldRule source);

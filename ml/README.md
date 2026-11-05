@@ -1,10 +1,11 @@
-# Локальные модели для Infinity v2
+# Локальные модели
 
-Все четыре модели публичные, токен Hugging Face для загрузки не нужен. До запуска Compose установите `huggingface_hub==0.36.0` и выполните `python ml/prepare_models.py` из корня репозитория. Скрипт скачивает закреплённые Safetensors в игнорируемую Git папку `ml/models/` и офлайн экспортирует парную NLI-модель в ONNX через закреплённый Docker-образ Infinity. Игровой запрос ничего не скачивает.
+Установить `huggingface_hub==0.36.0`, выполнить `python ml/prepare_models.py` из корня репозитория. Нужен работающий Docker: скрипт скачивает четыре публичных checkpoint и экспортирует NLI в ONNX. Токен Hugging Face не требуется. Веса остаются в игнорируемом `ml/models/`.
 
-- `embedding`: [cointegrated/rubert-tiny2](https://huggingface.co/cointegrated/rubert-tiny2) (MIT), исходный Safetensors, CLS pooling, L2-нормализация, 312 измерений. Префикс не нужен. Infinity обслуживает `/embeddings`.
-- `nli`: [cointegrated/rubert-tiny-bilingual-nli](https://huggingface.co/cointegrated/rubert-tiny-bilingual-nli), две метки. Внутри backend `Microsoft.ML.Tokenizers` строит `input_ids` **и** `token_type_ids` для пары, `Microsoft.ML.OnnxRuntime` исполняет локальный `onnx/model.onnx`. Строковый Infinity `/classify` для этого checkpoint не годится: он выдаёт нулевой сегмент гипотезе.
-- `toxicity`: [cointegrated/rubert-tiny-toxicity](https://huggingface.co/cointegrated/rubert-tiny-toxicity) (MIT). Infinity `/classify` возвращает независимые метки `non-toxic`, `insult`, `obscenity`, `threat`, `dangerous`.
-- `emotion`: [cointegrated/rubert-tiny2-cedr-emotion-detection](https://huggingface.co/cointegrated/rubert-tiny2-cedr-emotion-detection). Infinity `/classify` возвращает независимые метки `no_emotion`, `joy`, `sadness`, `surprise`, `fear`, `anger`.
+Один Infinity v2 обслуживает rubert-tiny2 (`/embeddings`, модель `embedding`), toxicity и CEDR emotion (`/classify`, модели `toxicity`/`emotion`). NLI исполняется в существующем backend: строковый `/classify` Infinity не передаёт необходимые парные token_type_ids. Отдельного Python-сервиса нет.
 
-В карточках `nli` и `emotion` лицензия не указана; выбранный набор внедрён по прямому решению владельца проекта, условия использования для выпуска нужно уточнить. Согласованы четыре причины: ругань, близкий повтор, грусть и тревога. Пороги и небольшой минус по сложности и драме записаны в `balance.json:unsubscribe`, [симуляция](../docs/balance-sim/issue-244-balance.md). Текущий runtime ещё использует случайный flop; подключение новых чисел выполняется в #245. [Исследование](../docs/ml-model-research-244.md) отдельно описывает границы моделей и ограничения малого корпуса.
+Для Compose дополнительно задать `MONGO_SEARCH_PASSWORD` в окружении. MongoDB Search требует `mongot`; одноразовый bootstrap создаёт служебного пользователя и файл пароля в Docker volume. Это настройка инфраструктуры, не миграция документов. ML и Search не имеют внешних портов. Остальные переменные и запуск приложения описаны в корневом README.
+
+Вне Compose задать `Embedding:BaseUrl` для доступного Infinity. Локальный NLI включается через `Nli:Enabled`, `Nli:ModelPath` и `Nli:VocabPath`; по умолчанию выключен для запуска без весов.
+
+Клиенты только возвращают scores/векторы; публикация пока ими не пользуется. [Спецификация #245](../docs/ml-scoring.md), [новый баланс](../docs/config/balance-new.json). Действующий баланс не меняется. Индексы, поля документов, миграция и backfill в PR не входят.

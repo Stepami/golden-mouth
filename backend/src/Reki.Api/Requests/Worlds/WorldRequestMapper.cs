@@ -103,9 +103,6 @@ internal static partial class WorldRequestMapper
     [MapValue(nameof(WorldStar.Relation), 0)]
     [MapValue(nameof(WorldStar.RelationGainedInPeriod), 0)]
     [MapValue(nameof(WorldStar.RelationPeriodStartedAtUtc), Use = nameof(InitialRelationPeriod))]
-    [MapperIgnoreTarget(nameof(WorldStar.Embedding))]
-    [MapperIgnoreTarget(nameof(WorldStar.EmbeddingRevision))]
-    [MapperIgnoreTarget(nameof(WorldStar.EmbeddingTextHash))]
     private static partial WorldStar MapStar(WorldStarRequest source);
 
     [MapperIgnoreSource(nameof(WantRequest.Done))]

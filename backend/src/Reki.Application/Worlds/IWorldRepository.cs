@@ -5,8 +5,6 @@ namespace Reki.Application.Worlds;
 
 public interface IWorldRepository
 {
-    IAsyncEnumerable<World> ScanWorldsAsync(CancellationToken cancellationToken);
-
     ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken);
 
     ValueTask<World?> GetWorldAsync(
