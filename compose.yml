@@ -50,7 +50,7 @@ services:
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8081}:8080"
     volumes:
-      - ./ml/models/nli:/models/nli:ro
+      - infinity-models:/models:ro
     depends_on:
       mongo:
         condition: service_healthy
@@ -134,6 +134,7 @@ services:
 
   infinity:
     image: michaelf34/infinity:0.0.78-cpu
+    entrypoint: ["python", "/opt/infinity/entrypoint.py"]
     cpus: 2
     mem_limit: 2g
     command: >-
@@ -148,6 +149,7 @@ services:
       DO_NOT_TRACK: "1"
     volumes:
       - infinity-models:/models-cache
+      - ./infinity/entrypoint.py:/opt/infinity/entrypoint.py:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7997/health', timeout=3)"]
       interval: 30s

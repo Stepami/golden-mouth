@@ -34,7 +34,7 @@ Docker images собираются только во время deployment на 
 
 Перед первым запуском задай логин и пароль администратора OpenObserve. Эти же данные Collector использует только внутри Compose-сети для отправки OTLP. Настройки OpenAI-compatible LLM передаются в Compose из переменных окружения, а не задаются моделью в файлах Compose. Затем из корня репозитория запусти:
 
-Для ML/Search сначала подготовь локальные модели и `MONGO_SEARCH_PASSWORD` по [ml/README.md](ml/README.md).
+Для Search задай `MONGO_SEARCH_PASSWORD`. Контейнер Infinity сам скачает модели, подготовит ONNX для backend и сохранит всё в общем Docker volume; ручная подготовка моделей не нужна. Первый запуск требует интернета. [Контракты моделей и устройство volume](docs/ml-scoring.md).
 
 ```powershell
 $env:OPENOBSERVE_EMAIL = '<выбранный email администратора>'
