@@ -36,6 +36,8 @@ Docker images собираются только во время deployment на 
 
 Для Search задай `MONGO_SEARCH_PASSWORD`, для приватной NLI-модели — `HF_TOKEN` с правом чтения (можно в локальном `.env`). Штатный Infinity скачает и загрузит все четыре модели, включая готовый ONNX, в общий Docker volume. Скриптов подготовки нет. Первый запуск требует интернета. [Контракты моделей и устройство volume](docs/ml-scoring.md).
 
+Для MongoDB/Search нужен Compose 2.30+: настройки `mongot` заданы через `configs.content`, инициализация служебного пользователя — внутри `mongo.post_start`. Всё находится в `compose.yml`, дополнительных файлов конфигурации Mongo нет.
+
 ```powershell
 $env:OPENOBSERVE_EMAIL = '<выбранный email администратора>'
 $env:OPENOBSERVE_PASSWORD = '<случайный длинный пароль>'

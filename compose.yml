@@ -81,14 +81,33 @@ services:
     environment:
       MONGO_SEARCH_PASSWORD: ${MONGO_SEARCH_PASSWORD:?MONGO_SEARCH_PASSWORD is required}
     post_start:
-      - command: sh /bootstrap-search.sh
+      - command:
+          - sh
+          - -euc
+          - |
+            umask 077
+            printf '%s' "$$MONGO_SEARCH_PASSWORD" > /secrets/passwordFile
+            for attempt in $$(seq 1 60); do
+              if mongosh --quiet 'mongodb://localhost:27017/admin?directConnection=true' --eval 'quit(db.hello().isWritablePrimary ? 0 : 1)' >/dev/null 2>&1; then
+                break
+              fi
+              sleep 1
+            done
+            mongosh --quiet 'mongodb://mongo:27017/admin?replicaSet=rs0' --eval '
+              const admin = db.getSiblingDB("admin");
+              const user = {pwd: process.env.MONGO_SEARCH_PASSWORD, roles: ["searchCoordinator"]};
+              if (admin.getUser("mongotUser")) {
+                admin.updateUser("mongotUser", user);
+              } else {
+                admin.createUser({user: "mongotUser", ...user});
+              }
+            '
         user: root
     ports:
       - "127.0.0.1:${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo-data:/data/db
       - mongo-config:/data/configdb
-      - ./mongo-search/bootstrap.sh:/bootstrap-search.sh:ro
       - mongot-secrets:/secrets
     networks:
       - default
@@ -115,8 +134,10 @@ services:
 
   mongot:
     image: mongodb/mongodb-community-search:1.70.1
+    configs:
+      - source: mongot-config
+        target: /mongot-community/config.default.yml
     volumes:
-      - ./mongo-search/mongot.yml:/mongot-community/config.default.yml:ro
       - mongot-data:/data/mongot
       - mongot-secrets:/secrets:ro
     networks:
@@ -187,6 +208,32 @@ volumes:
   mongot-data:
   mongot-secrets:
   openobserve-data:
+
+configs:
+  mongot-config:
+    content: |
+      syncSource:
+        replicaSet:
+          hostAndPort: "mongo:27017"
+          scramAuth:
+            username: "mongotUser"
+            passwordFile: "/secrets/passwordFile"
+            authSource: "admin"
+            tls:
+              enabled: false
+        replicationReader:
+          readPreference: "secondaryPreferred"
+      storage:
+        dataPath: "/data/mongot"
+      server:
+        grpc:
+          address: "0.0.0.0:27028"
+          tls:
+            mode: "disabled"
+      healthCheck:
+        address: "0.0.0.0:8080"
+      logging:
+        verbosity: INFO
 
 networks:
   search-internal:
