@@ -17,6 +17,14 @@ internal sealed class MongoWorldRepository : IWorldRepository
         _templates = database.GetCollection<World>(MongoCollections.WorldTemplates);
     }
 
+    public async IAsyncEnumerable<World> ScanWorldsAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await foreach (var world in _worlds.Find(Builders<World>.Filter.Empty).ToAsyncEnumerable().WithCancellation(cancellationToken))
+        {
+            yield return world;
+        }
+    }
+
     public async ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken) =>
         await _worlds.InsertOneAsync(world, cancellationToken: cancellationToken);
 

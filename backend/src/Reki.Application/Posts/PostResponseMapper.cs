@@ -83,6 +83,9 @@ public static partial class PostResponseMapper
     [MapperIgnoreSource(nameof(GamePost.Viral))]
     [MapperIgnoreSource(nameof(GamePost.Flop))]
     [MapperIgnoreSource(nameof(GamePost.Version))]
+    [MapperIgnoreSource(nameof(GamePost.Embedding))]
+    [MapperIgnoreSource(nameof(GamePost.EmbeddingRevision))]
+    [MapperIgnoreSource(nameof(GamePost.EmbeddingTextHash))]
     public static partial ChannelPostResponse MapChannelPost(this GamePost post);
 
     public static IReadOnlyList<ReactionResponse> CreateReactions(this GamePost post) =>

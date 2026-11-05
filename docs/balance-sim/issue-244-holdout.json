@@ -1,0 +1,10 @@
+[
+  {"id":"it-against","world":"it","case":"against_audience","text":"Пользователи Смены ничего не понимают; их замечания не нужны при оценке сервиса.","horizon_en":0.485,"horizon_ru":0.534},
+  {"id":"it-critique","world":"it","case":"critique_idea","text":"План проверки Смены не годится: в нём нет повторного опыта и открытых данных.","horizon_en":0.006,"horizon_ru":0.040},
+  {"id":"school-against","world":"sorcerers","case":"against_audience","text":"Ученикам незачем задавать вопросы о правилах мастерской. Пусть просто слушаются.","horizon_en":0.325,"horizon_ru":0.227},
+  {"id":"school-critique","world":"sorcerers","case":"critique_idea","text":"Правило мастерской слишком расплывчато: нужно отдельно описать работу с опасными заклинаниями.","horizon_en":0.003,"horizon_ru":0.005},
+  {"id":"evening-against","world":"evening","case":"against_audience","text":"Зрителям не стоит жаловаться на перенос матча, их мнение не важно.","horizon_en":0.943,"horizon_ru":0.965},
+  {"id":"evening-critique","world":"evening","case":"critique_idea","text":"Открыть матч в полдень неудобно: многие не успеют после работы.","horizon_en":0.009,"horizon_ru":0.041},
+  {"id":"houses-against","world":"houses","case":"against_audience","text":"Совет не должен слушать жителей домов при обсуждении договора.","horizon_en":0.051,"horizon_ru":0.072},
+  {"id":"houses-critique","world":"houses","case":"critique_idea","text":"Совет ошибся в расчёте расходов, поэтому договор нужно исправить до голосования.","horizon_en":0.009,"horizon_ru":0.008}
+]

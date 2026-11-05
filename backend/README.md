@@ -30,7 +30,7 @@ OpenAPI JSON and Swagger UI are available only in Development. Production does n
 
 ## Run in Docker
 
-The project-wide Compose file lives in the repository root and starts the frontend, backend, MongoDB, OpenTelemetry Collector, and OpenObserve together:
+The project-wide Compose file lives in the repository root and starts the frontend, backend, MongoDB, mongot, Infinity v2, OpenTelemetry Collector, and OpenObserve together. First download the public local models with `python ml/prepare_models.py` as described in [ml/README.md](../ml/README.md):
 
 ```powershell
 cd ..
@@ -43,10 +43,11 @@ $env:AUTH_ENCRYPTION_KEY = '<32-byte Base64 key>'
 $env:LLM_PAT = '<provider API key>'
 $env:LLM_BASE_URL = '<OpenAI-compatible provider URL>'
 $env:LLM_MODEL = '<model identifier>'
+$env:MONGO_SEARCH_PASSWORD = '<random password for the internal Search user>'
 docker compose up --build
 ```
 
-Compose passes the required `LLM_PAT`, `LLM_BASE_URL`, and `LLM_MODEL` environment variables only to the backend container. Set `LLM_TIMEOUT_SECONDS` if the provider needs more than the default 20 seconds. Do not commit provider credentials or endpoints.
+Compose passes the required `LLM_PAT`, `LLM_BASE_URL`, and `LLM_MODEL` environment variables only to the backend container. The one-shot Search bootstrap uses `MONGO_SEARCH_PASSWORD` to create the `searchCoordinator` user and a Linux volume with restricted password-file permissions. Set `LLM_TIMEOUT_SECONDS` if the provider needs more than the default 20 seconds. Do not commit provider credentials or endpoints.
 
 The API is available at `http://localhost:8081`, and OpenObserve at `http://localhost:5080`. Set the Telegram, auth, LLM and OpenObserve variables outside the repository before starting Compose. OpenTelemetry sends logs, metrics, and traces to Collector over the internal Compose network. Product events use the `product` log stream; other application and framework logs use `backend`. Set `MONGO_CONNECTION_STRING` outside the repository to override the bundled MongoDB service.
 

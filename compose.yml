@@ -39,6 +39,9 @@ services:
       Llm__BaseUrl: ${LLM_BASE_URL:?LLM_BASE_URL is required}
       Llm__Model: ${LLM_MODEL:?LLM_MODEL is required}
       Llm__TimeoutSeconds: ${LLM_TIMEOUT_SECONDS:-20}
+      Embedding__BaseUrl: http://infinity:7997/
+      Embedding__Model: frida
+      Embedding__Enabled: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
       OTEL_SERVICE_NAME: reki-backend
@@ -47,6 +50,13 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+      infinity:
+        condition: service_healthy
+      mongot:
+        condition: service_healthy
+    networks:
+      - default
+      - ml-internal
     healthcheck:
       test:
         - CMD-SHELL
@@ -63,12 +73,29 @@ services:
 
   mongo:
     image: mongo:9.0.4-resolute
-    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    command:
+      - mongod
+      - --replSet
+      - rs0
+      - --bind_ip_all
+      - --setParameter
+      - mongotHost=mongot:27028
+      - --setParameter
+      - searchIndexManagementHostAndPort=mongot:27028
+      - --setParameter
+      - skipAuthenticationToSearchIndexManagementServer=true
+      - --setParameter
+      - useGrpcForSearch=true
+      - --setParameter
+      - searchTLSMode=disabled
     ports:
       - "127.0.0.1:${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo-data:/data/db
       - mongo-config:/data/configdb
+    networks:
+      - default
+      - search-internal
     healthcheck:
       test:
         - CMD
@@ -87,6 +114,90 @@ services:
       timeout: 5s
       retries: 5
       start_period: 3m
+    restart: unless-stopped
+
+  mongo-search-bootstrap:
+    image: mongo:9.0.4-resolute
+    entrypoint: ["sh", "/bootstrap.sh"]
+    environment:
+      MONGO_SEARCH_PASSWORD: ${MONGO_SEARCH_PASSWORD:?MONGO_SEARCH_PASSWORD is required}
+    volumes:
+      - ./mongo-search/bootstrap.sh:/bootstrap.sh:ro
+      - mongot-secrets:/secrets
+    networks:
+      - search-internal
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: "no"
+
+  mongot:
+    image: mongodb/mongodb-community-search:1.70.1
+    volumes:
+      - ./mongo-search/mongot.yml:/mongot-community/config.default.yml:ro
+      - mongot-data:/data/mongot
+      - mongot-secrets:/secrets:ro
+    networks:
+      - search-internal
+    depends_on:
+      mongo-search-bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health | grep -q SERVING"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 1m
+    restart: unless-stopped
+
+  infinity:
+    image: michaelf34/infinity:0.0.78-cpu
+    cpus: 2
+    mem_limit: 2500m
+    command:
+      - v2
+      - --model-id
+      - /models/frida
+      - --served-model-name
+      - frida
+      - --engine
+      - torch
+      - --device
+      - cpu
+      - --pooling-method
+      - mean
+      - --no-compile
+      - --no-bettertransformer
+      - --no-model-warmup
+      - --batch-size
+      - "4"
+      - --model-id
+      - /models/minilm
+      - --served-model-name
+      - minilm
+      - --engine
+      - optimum
+      - --device
+      - cpu
+      - --no-compile
+      - --onnx-disable-optimize
+      - --no-model-warmup
+      - --batch-size
+      - "4"
+    environment:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      DO_NOT_TRACK: "1"
+    volumes:
+      - ./ml/models:/models:ro
+    networks:
+      - ml-internal
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7997/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 2m
     restart: unless-stopped
 
   otel-collector:
@@ -114,4 +225,12 @@ services:
 volumes:
   mongo-data:
   mongo-config:
+  mongot-data:
+  mongot-secrets:
   openobserve-data:
+
+networks:
+  search-internal:
+    internal: true
+  ml-internal:
+    internal: true

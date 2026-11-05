@@ -34,13 +34,19 @@ Docker images собираются только во время deployment на 
 
 Перед первым запуском задай логин и пароль администратора OpenObserve. Эти же данные Collector использует только внутри Compose-сети для отправки OTLP. Настройки OpenAI-compatible LLM передаются в Compose из переменных окружения, а не задаются моделью в файлах Compose. Затем из корня репозитория запусти:
 
+Публичные ML-модели заранее загрузить командой `python ml/prepare_models.py` после установки `huggingface_hub==0.36.0`. Инструкция — в [ml/README.md](ml/README.md). На игровом запросе Infinity ничего не скачивает.
+
 ```powershell
 $env:OPENOBSERVE_EMAIL = '<выбранный email администратора>'
 $env:OPENOBSERVE_PASSWORD = '<случайный длинный пароль>'
 $env:TG_PAT = '123456:reki-test-bot-tg-token'
+$env:AUTH_ISSUER = '<локальный адрес приложения>'
+$env:AUTH_SIGNING_KEY = '<RSA private key PEM>'
+$env:AUTH_ENCRYPTION_KEY = '<32-byte Base64 key>'
 $env:LLM_PAT = '<ключ провайдера>'
 $env:LLM_BASE_URL = '<OpenAI-compatible URL провайдера>'
 $env:LLM_MODEL = '<идентификатор модели>'
+$env:MONGO_SEARCH_PASSWORD = '<случайный пароль для внутреннего пользователя Search>'
 docker compose up --build
 ```
 
@@ -48,13 +54,14 @@ docker compose up --build
 
 Локальный Vite dev server эмулирует Telegram Mini App, каждый раз создаёт свежий HMAC-подписанный `initData` для вымышленного игрока и отправляет запросы в backend. Backend проверяет подпись штатным `TgMiniAppAuth`; auth bypass нет. `TG_PAT` — единый вход Compose: Vite читает его при подписи, а Compose передаёт то же значение в настройку `TgMiniAppAuth` backend. Показанное значение фиктивное, не связано с Telegram и не даёт доступа ни к одному боту.
 
-Compose запустит пять постоянно работающих сервисов и одноразовую инициализацию MongoDB:
+Compose запустит семь постоянно работающих сервисов и одноразовую инициализацию пользователя MongoDB Search:
 
 - фронтенд: `http://localhost:8080`;
 - бэкенд: `http://localhost:8081` (`/health/live`, `/health/ready`, `/swagger/`);
 - OpenObserve: `http://localhost:5080` (логи, метрики и трейсы);
 - OpenTelemetry Collector во внутренней Compose-сети;
 - MongoDB: `mongodb://127.0.0.1:27017/reki` для локального подключения через Compass; внутри Compose-сети — `mongo:27017`.
+- Infinity v2 и `mongot` доступны только внутри Compose-сетей; Search хранит индекс в отдельном томе. `/health/ready` бэкенда ждёт готовности HNSW-индекса.
 
 При первом запуске OpenObserve создаёт root-пользователя из `OPENOBSERVE_EMAIL` и `OPENOBSERVE_PASSWORD`; отдельный ingestion token для MVP не нужен.
 
@@ -71,7 +78,7 @@ window.__REKI_CONFIG__ = Object.freeze({
 })
 ```
 
-Данные MongoDB, её служебная конфигурация и данные OpenObserve хранятся в именованных volumes `reki_mongo-data`, `reki_mongo-config` и `reki_openobserve-data`.
+Данные MongoDB, её служебная конфигурация, индекс и внутренний пароль Search, а также данные OpenObserve хранятся в именованных volumes `reki_mongo-data`, `reki_mongo-config`, `reki_mongot-data`, `reki_mongot-secrets` и `reki_openobserve-data`.
 
 Остановить проект без удаления данных:
 

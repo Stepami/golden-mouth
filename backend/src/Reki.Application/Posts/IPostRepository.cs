@@ -6,6 +6,15 @@ namespace Reki.Application.Posts;
 
 public interface IPostRepository
 {
+    IAsyncEnumerable<GamePost> ScanPostsAsync(string revision, CancellationToken cancellationToken);
+
+    ValueTask<bool> TrySetEmbeddingAsync(
+        GamePost post,
+        float[] embedding,
+        string revision,
+        string textHash,
+        CancellationToken cancellationToken);
+
     ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken);
 
     /// <summary>

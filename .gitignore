@@ -1,5 +1,6 @@
 docs/design/src/journey_*.html
 docs/design/src/__pycache__/
 .env
+ml/models/
 
 bot-description-before.json

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Reki.Domain.Worlds;
 
 namespace Reki.Domain.Posts;
@@ -17,6 +18,15 @@ public sealed record GamePost(
     bool Flop,
     int Version = 0)
 {
+    [JsonIgnore]
+    public float[]? Embedding { get; init; }
+
+    [JsonIgnore]
+    public string? EmbeddingRevision { get; init; }
+
+    [JsonIgnore]
+    public string? EmbeddingTextHash { get; init; }
+
     public GameComment? FindRequest(string requestId) =>
         Comments.FirstOrDefault(item => string.Equals(item.RequestId, requestId, StringComparison.Ordinal));
 
