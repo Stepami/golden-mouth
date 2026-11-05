@@ -69,7 +69,11 @@ internal sealed class AddReplyCommandHandler(
         var updatedPost = post.AddComments([comment]);
         if (!isPlayer)
         {
-            await posts.SaveReplyAsync(updatedPost, cancellationToken);
+            if (!await posts.TrySaveReplyAsync(updatedPost, post.Version, cancellationToken))
+            {
+                return await ReplayOrConflictAsync(request, cancellationToken);
+            }
+
             return Completed(comment, updatedPost, world, player);
         }
 

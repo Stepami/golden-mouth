@@ -375,6 +375,49 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(detail.Reactions.Count).IsEqualTo(1);
         await Assert.That(detail.Comments.Count).IsEqualTo(3);
         await Assert.That(detail.Comments.Any(comment => comment.Me && comment.Text == "мой ответ")).IsTrue();
+
+        var worldId = await GetWorldIdAsync(api);
+        var energyBefore = (await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy;
+        var request = new CreatePostRequest { RequestId = Guid.NewGuid().ToString(), Text = "Новый пост", OwnWords = true };
+        var created = await api.Posts.CreatePostAsync(worldId, request, CancellationToken.None);
+        var repeatedPost = await api.Posts.CreatePostAsync(worldId, request, CancellationToken.None);
+        await Assert.That(repeatedPost.PostId).IsEqualTo(created.PostId);
+        var createdId = created.PostId.ToString();
+        var pending = await api.Posts.GetPostAsync(createdId, worldId, CancellationToken.None);
+        await Assert.That(pending.EvaluationApplied).IsFalse();
+        await Assert.That(pending.Comments.Count).IsEqualTo(0);
+        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(energyBefore - 1);
+
+        var generationRequest = new GenerateReplyRequest { AuthorId = null, SourceCommentId = null, Additional = false };
+        using var stream = await api.Posts.GenerateReplyAsync(createdId, worldId, generationRequest, CancellationToken.None);
+        using var reader = new StreamReader(stream.Stream);
+        var generated = ParseReplyGenerationEvents(await reader.ReadToEndAsync(CancellationToken.None))[^1];
+        await Assert.That(generated.Status).IsEqualTo(ReplyGenerationStatus.Completed);
+        var applied = await api.Posts.GetPostAsync(createdId, worldId, CancellationToken.None);
+        await Assert.That(applied.EvaluationApplied).IsTrue();
+        var worldAfter = await GetStoredWorldAsync(telegramUserId);
+        await api.Posts.ReplyToPostAsync(
+            createdId,
+            worldId,
+            new ReplyRequest
+            {
+                AuthorId = generated.AuthorId ?? throw new InvalidOperationException("Missing generated author."),
+                CommentId = null,
+                RequestId = "visible-post:star",
+                Text = generated.Text ?? throw new InvalidOperationException("Missing generated text."),
+            },
+            CancellationToken.None);
+        using var replayStream = await api.Posts.GenerateReplyAsync(createdId, worldId, generationRequest, CancellationToken.None);
+        using var replayReader = new StreamReader(replayStream.Stream);
+        var replay = ParseReplyGenerationEvents(await replayReader.ReadToEndAsync(CancellationToken.None))[^1];
+        await Assert.That(replay.Status).IsEqualTo(ReplyGenerationStatus.Completed);
+        await Assert.That(replay.AuthorId).IsEqualTo(generated.AuthorId);
+        await Assert.That(replay.Text).IsEqualTo(generated.Text);
+        var final = await api.Posts.GetPostAsync(createdId, worldId, CancellationToken.None);
+        await Assert.That(final.Comments.Count).IsEqualTo(1);
+        await Assert.That(final.Comments[0].Text).IsEqualTo(generated.Text);
+        await Assert.That((await GetStoredWorldAsync(telegramUserId))["Player"]["Subscribers"]).IsEqualTo(worldAfter["Player"]["Subscribers"]);
+        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(energyBefore - 1);
     }
 
     [Test]
@@ -482,6 +525,30 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var player = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(player.Energy).IsEqualTo(10);
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(1);
+
+        var worldId = await GetWorldIdAsync(api);
+        var created = await api.Posts.CreatePostAsync(
+            worldId,
+            new CreatePostRequest
+            {
+                RequestId = Guid.NewGuid().ToString(),
+                Text = "безопасный пост",
+                OwnWords = true,
+            },
+            CancellationToken.None);
+        var postId = created.PostId.ToString();
+        using var stream = await api.Posts.GenerateReplyAsync(
+            postId,
+            worldId,
+            new GenerateReplyRequest { AuthorId = null, SourceCommentId = null, Additional = false },
+            CancellationToken.None);
+        using var reader = new StreamReader(stream.Stream);
+        var failure = ParseReplyGenerationEvents(await reader.ReadToEndAsync(CancellationToken.None))[^1];
+        await Assert.That(failure.Status).IsEqualTo(ReplyGenerationStatus.Failed);
+        var post = await api.Posts.GetPostAsync(postId, worldId, CancellationToken.None);
+        await Assert.That(post.EvaluationApplied).IsFalse();
+        await Assert.That(post.Comments.Count).IsEqualTo(0);
+        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(9);
     }
 
     [Test]
@@ -1112,7 +1179,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             worldId,
             new ReplyRequest
             {
-                AuthorId = primary.AuthorId,
+                AuthorId = primary.AuthorId ?? throw new InvalidOperationException("Missing generated author."),
                 CommentId = playerReply.CommentId,
                 RequestId = "valid-turn:star",
                 Text = primary.Text ?? throw new InvalidOperationException("Missing generated text."),
@@ -1138,7 +1205,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                 worldId,
                 new ReplyRequest
                 {
-                    AuthorId = additional.AuthorId,
+                    AuthorId = additional.AuthorId ?? throw new InvalidOperationException("Missing generated author."),
                     CommentId = null,
                     RequestId = "valid-turn:additional",
                     Text = additional.Text ?? throw new InvalidOperationException("Missing additional text."),
@@ -1676,7 +1743,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                 requestedWorld,
                 new ReplyRequest
                 {
-                    AuthorId = terminal.AuthorId,
+                    AuthorId = terminal.AuthorId ?? throw new InvalidOperationException("Missing generated author."),
                     CommentId = response.CommentId,
                     RequestId = requestId + ":star",
                     Text = terminal.Text ?? throw new InvalidOperationException("No generated text."),

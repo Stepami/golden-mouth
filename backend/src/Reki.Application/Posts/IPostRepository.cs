@@ -6,6 +6,8 @@ namespace Reki.Application.Posts;
 
 public interface IPostRepository
 {
+    ValueTask<GamePost?> GetByRequestAsync(WorldId worldId, AuthorId authorId, string requestId, CancellationToken cancellationToken);
+
     ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken);
 
     /// <summary>
@@ -30,5 +32,5 @@ public interface IPostRepository
     /// <summary>Reads a story candidate; the caller must verify world ownership before exposing it.</summary>
     ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken);
 
-    ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken);
+    ValueTask<bool> TrySaveReplyAsync(GamePost post, int expectedVersion, CancellationToken cancellationToken);
 }

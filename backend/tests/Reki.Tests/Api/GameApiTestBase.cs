@@ -255,7 +255,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             worldId,
             new ReplyRequest
             {
-                AuthorId = completed.AuthorId,
+                AuthorId = completed.AuthorId ?? throw new InvalidOperationException("No generated author."),
                 CommentId = response.CommentId,
                 RequestId = replyId + ":star",
                 Text = completed.Text ?? throw new InvalidOperationException("No generated text."),

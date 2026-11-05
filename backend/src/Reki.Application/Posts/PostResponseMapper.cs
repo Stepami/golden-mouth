@@ -69,7 +69,8 @@ public static partial class PostResponseMapper
             CreateReactions(post),
             post.Views,
             post.Comments.Count,
-            null);
+            null,
+            post.EvaluationApplied);
     }
 
     [MapProperty(nameof(GamePost.Id), nameof(ChannelPostResponse.PostId))]
@@ -83,10 +84,18 @@ public static partial class PostResponseMapper
     [MapperIgnoreSource(nameof(GamePost.Viral))]
     [MapperIgnoreSource(nameof(GamePost.Flop))]
     [MapperIgnoreSource(nameof(GamePost.Version))]
+    [MapperIgnoreSource(nameof(GamePost.RequestId))]
+    [MapperIgnoreSource(nameof(GamePost.OwnWords))]
+    [MapperIgnoreSource(nameof(GamePost.EnergyIndex))]
+    [MapperIgnoreSource(nameof(GamePost.WantId))]
+    [MapperIgnoreSource(nameof(GamePost.PredictedAuthorId))]
+    [MapperIgnoreSource(nameof(GamePost.Emoji))]
+    [MapperIgnoreSource(nameof(GamePost.Hook))]
+    [MapperIgnoreSource(nameof(GamePost.Reasons))]
     public static partial ChannelPostResponse MapChannelPost(this GamePost post);
 
     public static IReadOnlyList<ReactionResponse> CreateReactions(this GamePost post) =>
-        [new ReactionResponse("🔥", post.Viral ? 3 : 1)];
+        post.EvaluationApplied ? CreateAppliedReactions(post) : [];
 
     public static IReadOnlyList<LiveEvent> MapLiveEvents(this PublishedPost published, World world, PlayerId playerId)
     {
@@ -109,7 +118,31 @@ public static partial class PostResponseMapper
             post.Text,
             post.Views,
             CreateReactions(post),
-            post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray());
+            post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray(),
+            post.EvaluationApplied,
+            post.EvaluationApplied && post.RequestId is not null ? MapSavedResult(post, world) : null);
+
+    private static PostResultResponse MapSavedResult(GamePost post, World world)
+    {
+        var comment = post.Comments.FirstOrDefault();
+        var best = comment is null ? null : new BestCommentResponse(ResolveAuthor(comment.AuthorId, world).Avatar, comment.Text);
+        return new PostResultResponse(
+            post.Id,
+            post.SubscriberDelta,
+            post.Viral ? "Пост залетел" : GetNonViralHeadline(post),
+            post.Reasons.Select(reason => new WhyResponse(reason.Icon, reason.Label, post.SubscriberDelta.ToString("+0;-0;0", CultureInfo.InvariantCulture))).ToArray(),
+            post.Viral ? [new RibbonResponse("🚀", "залёт", null)] : [],
+            best,
+            post.Viral,
+            post.Flop,
+            post.Views,
+            post.Hook);
+    }
+
+    private static string GetNonViralHeadline(GamePost post) => post.Flop ? "Пост не залетел" : "Канал растёт";
+
+    private static IReadOnlyList<ReactionResponse> CreateAppliedReactions(GamePost post) =>
+        [new ReactionResponse(post.Emoji ?? "🔥", post.Viral ? 3 : 1)];
 
     private static CommentResponse MapComment(GamePost post, GameComment comment, World world, PlayerId playerId)
     {

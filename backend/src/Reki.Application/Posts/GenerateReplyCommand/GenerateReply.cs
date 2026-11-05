@@ -8,6 +8,6 @@ namespace Reki.Application.Posts.GenerateReplyCommand;
 public sealed record GenerateReply(
     PostId PostId,
     WorldId WorldId,
-    AuthorId AuthorId,
-    CommentId SourceCommentId,
+    AuthorId? AuthorId,
+    CommentId? SourceCommentId,
     bool Additional) : IStreamCommand<ReplyGenerationLiveEvent>;

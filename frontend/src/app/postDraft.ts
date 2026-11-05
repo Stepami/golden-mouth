@@ -1,5 +1,5 @@
 import { clearWorldDrafts } from './worldDraft'
-export interface PostDraft { text: string; publicationId?: string; submittedText?: string; ownWords: boolean; submittedOwnWords?: boolean; wantId?: string; submittedWantId?: string }
+export interface PostDraft { text: string; publicationId?: string; submittedText?: string; ownWords: boolean; submittedOwnWords?: boolean; wantId?: string; submittedWantId?: string; postId?: string; replyRequestId?: string; replyAuthorId?: string; replyText?: string }
 const memory = new Map<string, PostDraft>()
 const prefix = 'reki:post-draft:v2:'
 export const draftKey = (player: { id: string; worldInstanceId?: string; world: string }) => `${prefix}${player.id}:${player.worldInstanceId ?? player.world}`

@@ -166,16 +166,7 @@ internal sealed class PublishPostCommandHandler(
         return published.MapLiveEvents(updatedWorld, player.Id);
     }
 
-    private static double GetMedian(IReadOnlyList<long> values)
-    {
-        var ordered = values.Order().ToArray();
-        var middle = ordered.Length / 2;
-        return ordered.Length % 2 == 0
-            ? Math.Max(1, (ordered[middle - 1] + ordered[middle]) / 2.0)
-            : Math.Max(1, ordered[middle]);
-    }
-
-    private static void TrackProgression(
+    internal static void TrackProgression(
         PlayerProfile before,
         PlayerProfile after,
         World beforeWorld,
@@ -227,5 +218,14 @@ internal sealed class PublishPostCommandHandler(
                 "card_earned",
                 new Dictionary<string, string> { ["card"] = achievement.Id, ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant() });
         }
+    }
+
+    private static double GetMedian(IReadOnlyList<long> values)
+    {
+        var ordered = values.Order().ToArray();
+        var middle = ordered.Length / 2;
+        return ordered.Length % 2 == 0
+            ? Math.Max(1, (ordered[middle - 1] + ordered[middle]) / 2.0)
+            : Math.Max(1, ordered[middle]);
     }
 }

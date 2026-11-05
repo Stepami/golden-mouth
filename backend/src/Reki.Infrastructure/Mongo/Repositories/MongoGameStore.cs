@@ -31,6 +31,90 @@ internal sealed class MongoGameStore : IGameStore
         _invites = database.GetCollection<Invitation>(MongoCollections.Invites);
     }
 
+    public async ValueTask<bool> TryCreatePostAsync(GamePost post, PlayerProfile player, int expectedPlayerVersion, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
+            session.StartTransaction();
+            if ((await _players.ReplaceOneAsync(session, item => item.Id == player.Id && item.Version == expectedPlayerVersion, player, cancellationToken: cancellationToken)).MatchedCount != 1)
+            {
+                await session.AbortTransactionAsync(cancellationToken);
+                return false;
+            }
+
+            await _posts.InsertOneAsync(session, post, cancellationToken: cancellationToken);
+            await session.CommitTransactionAsync(cancellationToken);
+            return true;
+        }
+        catch (MongoException exception) when (exception.HasErrorLabel("TransientTransactionError") || exception is MongoWriteException { WriteError.Category: ServerErrorCategory.DuplicateKey })
+        {
+            return false;
+        }
+    }
+
+    public async ValueTask<bool> TryApplyPostAsync(GamePost post, int expectedPostVersion, PlayerProfile player, int expectedPlayerVersion, World world, int expectedWorldVersion, Invitation? updatedInvite, int inviteBonusMaxPerDay, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
+            session.StartTransaction();
+            if ((await _posts.ReplaceOneAsync(session, item => item.Id == post.Id && item.Version == expectedPostVersion && !item.EvaluationApplied, post, cancellationToken: cancellationToken)).MatchedCount != 1 ||
+                (await _players.ReplaceOneAsync(session, item => item.Id == player.Id && item.Version == expectedPlayerVersion, player, cancellationToken: cancellationToken)).MatchedCount != 1 ||
+                (await _worlds.ReplaceOneAsync(session, item => item.Id == world.Id && item.Player.PlayerId == player.Id && item.Version == expectedWorldVersion, world, cancellationToken: cancellationToken)).MatchedCount != 1)
+            {
+                await session.AbortTransactionAsync(cancellationToken);
+                return false;
+            }
+
+            if (updatedInvite is not null)
+            {
+                var start = player.PostsPeriodStartedAtUtc;
+                var end = start.AddDays(1);
+                var inviterUses = await _invites.CountDocumentsAsync(
+                    session,
+                    item => item.InviterId == updatedInvite.InviterId && item.InviterBonusUsed &&
+                            item.InviterBonusUsedAtUtc >= start && item.InviterBonusUsedAtUtc < end,
+                    cancellationToken: cancellationToken);
+                if (inviterUses < inviteBonusMaxPerDay)
+                {
+                    var inviterUpdate = Builders<PlayerProfile>.Update
+                        .Set(item => item.HitOwnWorldMilestone, true)
+                        .Inc(item => item.Energy, updatedInvite.BonusAmount)
+                        .Inc(item => item.Version, 1);
+                    await _players.UpdateOneAsync(
+                        session,
+                        item => item.Id == updatedInvite.InviterId,
+                        inviterUpdate,
+                        cancellationToken: cancellationToken);
+                }
+
+                var inviteUpdate = Builders<Invitation>.Update
+                    .Set(item => item.InviterBonusUsed, updatedInvite.InviterBonusUsed)
+                    .Set(item => item.InviteeBonusUsed, updatedInvite.InviteeBonusUsed)
+                    .Set(item => item.InviterBonusUsedAtUtc, updatedInvite.InviterBonusUsedAtUtc)
+                    .Set(item => item.InviteeBonusUsedAtUtc, updatedInvite.InviteeBonusUsedAtUtc);
+                var inviteResult = await _invites.UpdateOneAsync(
+                    session,
+                    item => item.Id == updatedInvite.Id && !item.InviteeBonusUsed,
+                    inviteUpdate,
+                    cancellationToken: cancellationToken);
+                if (inviteResult.ModifiedCount != 1)
+                {
+                    await session.AbortTransactionAsync(cancellationToken);
+                    return false;
+                }
+            }
+
+            await session.CommitTransactionAsync(cancellationToken);
+            return true;
+        }
+        catch (MongoException exception) when (exception.HasErrorLabel("TransientTransactionError"))
+        {
+            return false;
+        }
+    }
+
     public async ValueTask DeletePlayerAsync(
         PlayerProfile player,
         CancellationToken cancellationToken)

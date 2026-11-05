@@ -5,7 +5,7 @@ namespace Reki.Application.Posts.Responses.Reply.Generation;
 
 public sealed record ReplyGenerationLiveEvent(
     ReplyGenerationStatus Status,
-    AuthorId AuthorId,
+    AuthorId? AuthorId,
     string? Text,
     StarId? AdditionalStarId,
     string? Code);

@@ -13,4 +13,5 @@ public sealed record FeedItemResponse(
     IReadOnlyList<ReactionResponse>? Reactions,
     long? Views,
     int? CommentCount,
-    string? Repost);
+    string? Repost,
+    bool EvaluationApplied);

@@ -15,6 +15,7 @@ using Reki.Application.Player.Responses;
 using Reki.Application.Posts;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Feed;
+using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.ChannelPost;
 using Reki.Application.Posts.Responses.FeedItem;
 using Reki.Application.Posts.Responses.LiveEvent;
@@ -80,6 +81,8 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(PublicationStatusResponse))]
 [JsonSerializable(typeof(PublicationStatusType))]
 [JsonSerializable(typeof(LiveEventType))]
+[JsonSerializable(typeof(CreatePostRequest))]
+[JsonSerializable(typeof(CreatePostResponse))]
 [JsonSerializable(typeof(ReplyRequest))]
 [JsonSerializable(typeof(GenerateReplyRequest))]
 [JsonSerializable(typeof(ReplyResponse))]

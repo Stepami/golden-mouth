@@ -1,6 +1,6 @@
 // Р¤Р°СЃР°Рґ API РїРѕРІРµСЂС… NSwag Fetch-РєР»РёРµРЅС‚Р°.
 // Р’Рѕ С„СЂРѕРЅС‚Рµ РќР•Рў СЃРµРєСЂРµС‚РѕРІ: runtime config РІРёРґРµРЅ РІ Р±СЂР°СѓР·РµСЂРµ. РљР»СЋС‡Рё LLM Рё С‚РѕРєРµРЅ Р±РѕС‚Р° Р¶РёРІСѓС‚ С‚РѕР»СЊРєРѕ РЅР° Р±СЌРєРµРЅРґРµ.
-import { clearPlayerDrafts } from '../app/postDraft';
+import { clearPlayerDrafts, readPostDraft, savePostDraft, type PostDraft } from '../app/postDraft';
 import { clearWorldDrafts } from '../app/worldDraft';
 import { clearAvatarPersonalization } from '../app/avatarPersonalization';
 import { clearReferral } from '../app/referral';
@@ -16,8 +16,8 @@ import { ApiError, data, stream } from './transport';
 export { ApiError } from './transport';
 import { sessionGeneration, assertSession, endSession } from './session';
 import { parse } from 'valibot';
-import { publicationEvent, starGenerationEvent } from './streamEvents';
-import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PublicationState, PublicationStatus, PublicationFailure, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
+import { starGenerationEvent } from './streamEvents';
+import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PublicationStatus, PublicationFailure, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
 let sessionPlayer: Player | undefined;
 let sessionIdentity: PlayerDocument | undefined;
 let ownedWorldSnapshot: WorldDocument[] | undefined;
@@ -83,9 +83,6 @@ async function readSse<T>(response: Response, decode: (value: unknown) => T, onE
         if (done)
             break;
     }
-}
-async function publicationState(id: string): Promise<PublicationState> {
-    return map.publication(await data(sdk.posts.getPublicationStatus(id)));
 }
 const playerRequests = new Map<string, Promise<Player>>();
 async function loadPlayer(worldId?: string): Promise<Player> {
@@ -170,123 +167,83 @@ export const api = {
         const world = map.world(await data(sdk.worlds.createWorld(definition)));
         return api.me(world.id);
     },
-    /** Р“РµРЅРµСЂР°С†РёСЏ, Р·Р°С‚РµРј РјРѕРґРµСЂР°С†РёСЏ Рё Р°РЅРёРјР°С†РёСЏ РјР°СЃСЃРёРІР° СЂРµР°РєС†РёР№; РїСЂРё РѕР±СЂС‹РІРµ СЃРІРµСЂСЏРµРј СЃРѕС…СЂР°РЅС‘РЅРЅС‹Р№ СЃС‚Р°С‚СѓСЃ. */
-    publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true, wantId?: string): () => void {
+    publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true, wantId?: string, draftKey?: string): () => void {
         const generation = sessionGeneration();
         const ctrl = new AbortController();
-        let deliveredResult = false;
-        const pause = (ms: number): Promise<void> => {
-            if (ctrl.signal.aborted)
-                return Promise.reject(new DOMException('Aborted', 'AbortError'));
-            if (document.hidden)
-                return Promise.resolve();
-            return new Promise((resolve, reject) => {
-                const finish = () => { clearTimeout(timer); ctrl.signal.removeEventListener('abort', onAbort); document.removeEventListener('visibilitychange', onVisibilityChange); };
-                const onAbort = () => { finish(); reject(new DOMException('Aborted', 'AbortError')); };
-                const onVisibilityChange = () => {
-                    if (document.hidden) {
-                        finish();
-                        resolve();
-                    }
-                };
-                const timer = setTimeout(() => { finish(); resolve(); }, ms);
-                ctrl.signal.addEventListener('abort', onAbort, { once: true });
-                document.addEventListener('visibilitychange', onVisibilityChange);
-                if (ctrl.signal.aborted)
-                    onAbort();
-                else if (document.hidden)
-                    onVisibilityChange();
-            });
-        };
-        const moderation = async () => {
-            const events = (await data(sdk.posts.moderatePublication(publicationId, worldId(), ctrl.signal))).map(map.live);
-            let lastShownAt = 0;
-            const minimumGap: Record<LiveEvent['type'], number> = {
-                views: 750, react: 800, comment: 950, typing: 950, result: 1300,
+        const start = setTimeout(() => { void (async () => {
+            let saved = draftKey ? readPostDraft(draftKey) : undefined;
+            const update = (change: Partial<PostDraft>) => {
+                assertSession(generation);
+                if (draftKey && saved) { saved = { ...saved, ...change }; savePostDraft(draftKey, saved); }
             };
-            for (const event of events) {
-                assertSession(generation);
-                if (ctrl.signal.aborted)
-                    throw new DOMException('Aborted', 'AbortError');
-                const remaining = minimumGap[event.type] - (performance.now() - lastShownAt);
-                if (lastShownAt && remaining > 0)
-                    await pause(remaining);
-                assertSession(generation);
-                lastShownAt = performance.now();
-                if (event.type === 'result')
-                    deliveredResult = true;
-                onEvent(event);
-            }
-            if (!deliveredResult)
-                throw new Error('Post response has no result');
-        };
-        const recover = async (): Promise<void> => {
-            if (generation !== sessionGeneration())
-                return;
-            let state: PublicationState;
             try {
-                state = await publicationState(publicationId);
-            }
-            catch {
-                if (generation === sessionGeneration())
-                    onError('unknown');
-                return;
-            }
-            if (generation !== sessionGeneration())
-                return;
-            if (state.status === 'completed' && state.result) {
-                if (!deliveredResult) {
-                    deliveredResult = true;
-                    onEvent({ type: 'result', result: state.result });
+                const currentWorld = worldId();
+                const postId = saved?.postId ?? (await data(sdk.posts.createPost(currentWorld, { requestId: publicationId, text, ownWords, wantId }, ctrl.signal))).postId;
+                update({ postId, replyRequestId: saved?.replyRequestId ?? crypto.randomUUID() });
+                assertSession(generation);
+                onStatus?.('pending');
+                let post = await data(sdk.posts.getPost(postId, currentWorld, ctrl.signal));
+                const replyId = saved?.replyRequestId ?? `${publicationId}-first`;
+                if (!post.comments.some(comment => comment.requestId === replyId || (post.evaluationApplied && !comment.parentCommentId && comment.authorId?.startsWith('Star_')))) {
+                    if (!saved?.replyText || !saved.replyAuthorId) {
+                        let completed: { text: string; authorId: string } | undefined;
+                        for (let attempt = 0; attempt < 2; attempt++) {
+                            try {
+                                const response = await stream({ url: '/posts/{postId}/replies/generation', path: { postId }, query: { worldId: currentWorld }, body: { authorId: null, sourceCommentId: null, additional: false } }, ctrl.signal);
+                                await readSse(response, value => parse(starGenerationEvent, value), event => {
+                                    if (event.status === 'failed') { const failure = new Error(event.code ?? 'ai_unavailable'); failure.name = event.code ?? 'ai_unavailable'; throw failure; }
+                                    if (event.status === 'completed' && event.text && event.authorId) completed = { text: event.text, authorId: event.authorId };
+                                });
+                                if (!completed) throw new Error('Generation stream ended before completion');
+                                break;
+                            } catch (cause) {
+                                const code = cause instanceof Error ? cause.name : '';
+                                if (attempt === 1 || ctrl.signal.aborted || ['AbortError', 'unsafe_generated_content', 'unsafe_input', 'crisis'].includes(code) || (cause instanceof ApiError && cause.status >= 400 && cause.status < 500)) throw cause;
+                            }
+                        }
+                        if (!completed) throw new Error('Generation failed');
+                        update({ replyText: completed.text, replyAuthorId: completed.authorId });
+                    }
+                    if (!saved?.replyText || !saved.replyAuthorId) throw new Error('Generated comment is unavailable');
+                    const reply = await data(sdk.posts.replyToPost(postId, currentWorld, { authorId: saved.replyAuthorId, commentId: null, requestId: replyId, text: saved.replyText }, ctrl.signal));
+                    post = reply.post;
                 }
-            }
-            else if (state.status === 'ready_for_moderation') {
-                onError('unknown');
-            }
-            else if (state.status === 'failed') {
-                onError('failed', state.failure);
-            }
-            else {
-                onError('unknown');
-            }
-        };
-        // StrictMode immediately unmounts the first effect in development.
-        // Defer the request so that probe does not create an abandoned publication.
-        const start = setTimeout(() => {
-            void (async () => {
-                try {
+                post = await data(sdk.posts.getPost(postId, currentWorld, ctrl.signal));
+                if (!post.evaluationApplied || !post.result) throw new Error('Evaluation is pending');
+                const events: LiveEvent[] = [
+                    { type: 'views', views: Number(post.views) },
+                    ...post.reactions.map(reaction => ({ type: 'react' as const, emoji: reaction.emoji, count: Number(reaction.count) })),
+                    ...post.comments.flatMap(comment => [{ type: 'typing' as const, who: comment.author }, { type: 'comment' as const, comment: map.comment(comment) }]),
+                    { type: 'result', result: map.result(post.result) },
+                ];
+                const gaps: Record<LiveEvent['type'], number> = { views: 750, react: 800, comment: 950, typing: 950, result: 1300 };
+                let lastShownAt = 0;
+                for (const event of events) {
                     assertSession(generation);
-                    const r = await stream({ url: '/posts/publications', query: { worldId: worldId() }, body: { publicationId, text, ownWords, wantId } }, ctrl.signal);
-                    let lastStatus: PublicationStatus | null = null;
-                    let failure: PublicationFailure | undefined;
-                    await readSse(r, value => parse(publicationEvent, value), event => { lastStatus = event.type; failure = event.failure ?? undefined; onStatus?.(event.type); });
-                    if (lastStatus === 'failed') {
-                        onError('failed', failure);
-                        return;
-                    }
-                    if (lastStatus === 'completed') {
-                        await recover();
-                        return;
-                    }
-                    if (lastStatus !== 'ready_for_moderation') {
-                        await recover();
-                        return;
-                    }
-                    await moderation();
+                    if (ctrl.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+                    const delay = gaps[event.type] - (performance.now() - lastShownAt);
+                    if (lastShownAt && delay > 0 && !document.hidden) await new Promise<void>((resolve, reject) => {
+                        const finish = () => { clearTimeout(timer); ctrl.signal.removeEventListener('abort', abort); document.removeEventListener('visibilitychange', hidden); };
+                        const abort = () => { finish(); reject(new DOMException('Aborted', 'AbortError')); };
+                        const hidden = () => { if (document.hidden) { finish(); resolve(); } };
+                        const timer = setTimeout(() => { finish(); resolve(); }, delay);
+                        ctrl.signal.addEventListener('abort', abort, { once: true });
+                        document.addEventListener('visibilitychange', hidden);
+                        if (ctrl.signal.aborted) abort(); else hidden();
+                    });
+                    assertSession(generation);
+                    if (ctrl.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+                    lastShownAt = performance.now();
+                    onEvent(event);
                 }
-                catch (e) {
-                    if (generation !== sessionGeneration() || (e instanceof Error && e.name === 'AbortError'))
-                        return;
-                    error('sse_error', e);
-                    if (e instanceof ApiError && e.failure)
-                        onError('failed', e.failure);
-                    else if (e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 409)
-                        onError('failed');
-                    else
-                        await recover();
-                }
-            })();
-        }, 0);
+            } catch (cause) {
+                if (generation !== sessionGeneration() || ctrl.signal.aborted) return;
+                error('sse_error', cause);
+                const failure = cause instanceof ApiError ? cause.failure : cause instanceof Error && ['unsafe_generated_content', 'unsafe_input', 'crisis'].includes(cause.name) ? { code: cause.name, category: '', policyVersion: '' } : undefined;
+                const prePublication = !saved?.postId && cause instanceof ApiError && cause.status >= 400 && cause.status < 500 && cause.status !== 409;
+                onError(prePublication ? 'failed' : 'unknown', failure);
+            }
+        })(); }, 0);
         return () => { clearTimeout(start); ctrl.abort(); };
     },
     reply: async (postId: string, commentId: string | null, requestId: string, text: string, starAuthorId: string, options: {

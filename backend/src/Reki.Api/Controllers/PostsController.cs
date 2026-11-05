@@ -5,9 +5,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Requests.Posts;
 using Reki.Application.Posts;
+using Reki.Application.Posts.CreatePostCommand;
 using Reki.Application.Posts.GetPostDetail;
 using Reki.Application.Posts.GetPublicationStatus;
 using Reki.Application.Posts.PublishPostCommand;
+using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.ChannelPost;
 using Reki.Application.Posts.Responses.FeedItem;
 using Reki.Application.Posts.Responses.LiveEvent;
@@ -30,6 +32,11 @@ namespace Reki.Api.Controllers;
 [Route("/")]
 public sealed class PostsController(ISender sender) : ControllerBase
 {
+    [HttpPost("posts", Name = "CreatePost")]
+    [ActionName("CreatePost")]
+    public async Task<Ok<CreatePostResponse>> CreatePostAsync(CreatePostRequest request, [FromQuery, BindRequired] WorldId worldId, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await sender.Send(new CreatePost(worldId, request.RequestId, request.Text, request.OwnWords, request.WantId), cancellationToken));
+
     [HttpPost("posts/publications", Name = "GeneratePublication")]
     [ActionName("GeneratePublication")]
     public ServerSentEventsResult<PublicationStatusLiveEvent> GeneratePublication(

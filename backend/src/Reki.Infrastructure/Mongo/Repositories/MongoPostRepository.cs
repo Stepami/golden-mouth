@@ -15,6 +15,9 @@ internal sealed class MongoPostRepository : IPostRepository
         _posts = database.GetCollection<GamePost>(MongoCollections.Posts);
     }
 
+    public async ValueTask<GamePost?> GetByRequestAsync(WorldId worldId, AuthorId authorId, string requestId, CancellationToken cancellationToken) =>
+        await _posts.Find(item => item.WorldId == worldId && item.AuthorId == authorId && item.RequestId == requestId).FirstOrDefaultAsync(cancellationToken);
+
     public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken) =>
         await _posts.InsertOneAsync(post, cancellationToken: cancellationToken);
 
@@ -61,8 +64,9 @@ internal sealed class MongoPostRepository : IPostRepository
     public async ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken) =>
         await _posts.Find(item => item.Id == postId).FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken)
+    public async ValueTask<bool> TrySaveReplyAsync(GamePost post, int expectedVersion, CancellationToken cancellationToken)
     {
-        await _posts.ReplaceOneAsync(item => item.Id == post.Id && item.WorldId == post.WorldId, post, cancellationToken: cancellationToken);
+        var result = await _posts.ReplaceOneAsync(item => item.Id == post.Id && item.WorldId == post.WorldId && item.Version == expectedVersion, post, cancellationToken: cancellationToken);
+        return result.MatchedCount == 1;
     }
 }

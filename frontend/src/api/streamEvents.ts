@@ -8,6 +8,6 @@ export const publicationEvent = v.object({
   type: v.picklist(['pending', 'ready_for_moderation', 'completed', 'failed']), publicationId: v.string(), failure: v.nullish(failure),
 }) satisfies v.GenericSchema<unknown, PublicationStatusLiveEvent>
 export const starGenerationEvent = v.object({
-  status: v.picklist(['generating', 'completed', 'failed']), authorId: v.string(),
+  status: v.picklist(['generating', 'completed', 'failed']), authorId: v.nullable(v.string()),
   text: v.nullable(v.string()), additionalStarId: v.nullable(v.string()), code: v.nullable(v.string()),
 }) satisfies v.GenericSchema<unknown, ReplyGenerationLiveEvent>
