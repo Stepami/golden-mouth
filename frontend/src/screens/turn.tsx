@@ -143,7 +143,7 @@ function Live() {
           {floats.map(f => <span key={f.id} className="float-react" style={{ left: `${f.x}%`, bottom: 0, fontSize: 24 }}>{f.emoji}</span>)}
         </div>
         {comments.map(c => <Comment key={c.id} seed={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} me={c.me} />)}
-        {typing && <div className="muted small row" style={{ gap: 8 }}>{typing} печатает…</div>}
+        {typing && <div className="muted small row" style={{ gap: 8 }}>{typing} печатает...</div>}
       </div>
       <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }} aria-live="polite">{phase === 'generating' ? 'звезда готовит ответ' : phase === 'moderating' ? 'скоро появятся реакции' : 'Собираем итог…'}</div>
     </div>
@@ -207,7 +207,7 @@ const Result = () => { const n = useNav(); const r = (n.params.result as PostRes
 const Flop = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.flop; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? 'сегодня сдавала пробник по ЕГЭ, всё сложно' }} theme="flop" /> }
 const Viral = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.viral; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="viral" /> }
 
-// 02-6: один SSE-запрос; ответ и AI-реплики публикуются вместе за 1 энергию.
+// 02-6: комментарий игрока сохраняется сразу, затем каждая звезда генерируется и сохраняется отдельно.
 function Thread() {
   const skillHelp = useEditorSkillHelp('.thread-reply-input')
   const nav = useNav()
@@ -219,12 +219,12 @@ function Thread() {
   const starIds = stars.map(star => star.id).join('\0')
   const threadKey = `${player.id}:${player.worldInstanceId ?? player.world}:${postId ?? 'mock'}`
   const storageKey = `reki:reply-draft:${threadKey}`
-  type Draft = { requestId: string; commentId: string | null; text: string; submitted: boolean }
+  type Draft = { requestId: string; commentId: string | null; text: string; submitted: boolean; additionalStarId?: string }
   const fresh = (): Draft => ({ requestId: crypto.randomUUID(), commentId: null, text: '', submitted: false })
   const readDraft = (): Draft => {
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as Draft | null
-      if (saved && typeof saved.requestId === 'string' && saved.requestId.length > 0 && saved.requestId.length <= 64 && typeof saved.text === 'string' && saved.text.length <= 1000 && (saved.commentId === null || typeof saved.commentId === 'string')) return { ...saved, submitted: saved.submitted === true }
+      if (saved && typeof saved.requestId === 'string' && saved.requestId.length > 0 && saved.requestId.length <= 64 && typeof saved.text === 'string' && saved.text.length <= 1000 && (saved.commentId === null || typeof saved.commentId === 'string')) return { ...saved, submitted: saved.submitted === true, additionalStarId: typeof saved.additionalStarId === 'string' ? saved.additionalStarId : undefined }
     } catch { /* Хранилище может быть недоступно. */ }
     return fresh()
   }
@@ -234,14 +234,14 @@ function Thread() {
   const [loadedKey, setLoadedKey] = useState(threadKey)
   const [reloadToken, setReloadToken] = useState(0)
   const [sending, setSending] = useState(false)
-  const [preview, setPreview] = useState('')
+  const [typingName, setTypingName] = useState<string | null>(null)
   const [replyError, setReplyError] = useState('')
   const controller = useRef<AbortController | null>(null)
   const activeKey = useRef(threadKey)
   activeKey.current = threadKey
   if (loadedKey !== threadKey) {
     setLoadedKey(threadKey); setPost(publishedPost ?? (postId ? null : firstPost))
-    setLoad(postId ? 'loading' : 'ready'); setDraft(readDraft()); setSending(false); setPreview(''); setReplyError('')
+    setLoad(postId ? 'loading' : 'ready'); setDraft(readDraft()); setSending(false); setTypingName(null); setReplyError('')
   }
   useEffect(() => {
     if (loadedKey !== threadKey) return
@@ -256,7 +256,8 @@ function Thread() {
       if (!alive) return
       setPost(found); setLoad('ready')
       const saved = found.comments.find(comment => comment.requestId === draft.requestId && (comment.parentCommentId ?? null) === draft.commentId && comment.text === draft.text)
-      if (saved) setDraft(fresh())
+      if (saved && found.comments.some(comment => comment.requestId === `${draft.requestId}-star`) &&
+        (!draft.additionalStarId || found.comments.some(comment => comment.requestId === `${draft.requestId}-extra`))) setDraft(fresh())
     }).catch((cause: unknown) => {
       if (alive) setLoad((cause as { status?: number })?.status === 404 ? 'unavailable' : 'error')
     })
@@ -273,7 +274,7 @@ function Thread() {
     setDraft(current => {
       const next = { ...current, ...change }
       return next.text === current.text && next.commentId === current.commentId
-        ? current : { ...next, requestId: crypto.randomUUID(), submitted: false }
+        ? current : { ...next, requestId: crypto.randomUUID(), submitted: false, additionalStarId: undefined }
     })
     setReplyError('')
   }
@@ -283,21 +284,42 @@ function Thread() {
     const ctrl = new AbortController()
     controller.current = ctrl
     const key = threadKey
-    setSending(true); setReplyError(''); setPreview(''); setDraft(current => ({ ...current, submitted: true }))
+    let playerSaved = false
+    setSending(true); setReplyError(''); setTypingName(null); setDraft(current => ({ ...current, submitted: true }))
     try {
-      const event = await api.reply(post.id, draft.commentId, draft.requestId, draft.text, { signal: ctrl.signal,
-        onEvent: update => { if (!ctrl.signal.aborted && activeKey.current === key && update.status === 'generating' && update.text) setPreview(update.text) } })
+      const starAuthorId = draft.commentId === null ? postAuthor?.id : target?.authorId
+      if (!starAuthorId) throw new Error('Star is unavailable')
+      const event = await api.reply(post.id, draft.commentId, draft.requestId, draft.text, `Star_${starAuthorId.replace(/^Star_/, '')}`, { signal: ctrl.signal,
+        additionalStarId: draft.additionalStarId,
+        onAdditionalStar: starId => {
+          if (!ctrl.signal.aborted && activeKey.current === key)
+            setDraft(current => current.requestId === draft.requestId ? { ...current, additionalStarId: starId ?? undefined } : current)
+        },
+        onSaved: saved => {
+          if (ctrl.signal.aborted || activeKey.current !== key) return
+          if (saved.post.comments.some(comment => comment.requestId === draft.requestId)) playerSaved = true
+          const { postId: id, ...detail } = saved.post
+          setPost({ ...detail, id }); patch({ subs: saved.subscribers, postsLeft: saved.energyLeft })
+        },
+        onTyping: authorId => {
+          if (ctrl.signal.aborted || activeKey.current !== key) return
+          setTypingName(authorId ? stars.find(star => `Star_${star.id}` === authorId)?.name ?? recipient ?? 'Звезда' : null)
+        } })
       if (ctrl.signal.aborted || activeKey.current !== key) return
-      if (!event.post || event.energyLeft == null || event.subscribers == null) throw new Error('No saved reply returned')
       const { postId: id, ...detail } = event.post
       setPost({ ...detail, id }); patch({ subs: event.subscribers, postsLeft: event.energyLeft })
-      setDraft(fresh()); setPreview('')
+      setDraft(fresh()); setTypingName(null)
       try { localStorage.removeItem(storageKey) } catch { /* optional storage */ }
     } catch (cause) {
       if (ctrl.signal.aborted || activeKey.current !== key) return
       const status = (cause as { status?: number })?.status
-      setReplyError(status === 409 ? 'Ответ пока не сохранён. Проверь энергию и попробуй снова.' : status === 422 ? 'Так не получится, попробуй по-другому.' : 'Не удалось подтвердить ответ. Попробуй снова: сохранённый ответ не расходует энергию повторно.')
-      setPreview('')
+      setReplyError(playerSaved && cause instanceof Error && cause.name === 'unsafe_generated_content'
+        ? 'Комментарий сохранён. Ответ звезды не прошёл проверку 14+.'
+        : playerSaved ? 'Комментарий сохранён. Ответ звезды пока не появился. Попробуй снова.'
+          : status === 409 ? 'Комментарий пока не сохранён. Проверь энергию и попробуй снова.'
+            : status === 422 ? 'Так не получится, попробуй по-другому.'
+              : 'Не удалось подтвердить комментарий. Попробуй снова: сохранённый комментарий не расходует энергию повторно.')
+      setTypingName(null)
     } finally {
       if (!ctrl.signal.aborted && activeKey.current === key) setSending(false)
       if (controller.current === ctrl) controller.current = null
@@ -338,7 +360,7 @@ function Thread() {
           {!!comment.reactions?.length && <div className="small" style={{ margin: '-6px 0 12px 44px' }}>{comment.reactions.map(reaction => <span key={`${reaction.authorId}:${reaction.emoji}`} title={reaction.author} className="react">{reaction.emoji} {reaction.author}</span>)}</div>}
           {isStarComment(comment) && <button className="small" disabled={sending} onClick={() => focusReply(comment.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: draft.commentId === comment.id ? 'var(--accent)' : 'var(--lilac)' }}>{draft.commentId === comment.id ? 'Отвечаешь этому комментарию' : `Ответить герою ${comment.author}`}</button>}
         </div>)}
-        {sending && <div className="card" role="status" aria-live="polite"><div className="small muted">{recipient ?? 'Звезда'} готовит ответ…</div><div className="live-current" aria-hidden="true"><span /></div>{preview && <><p>{preview}</p><div className="small muted">Ответ ещё не опубликован</div></>}</div>}
+        {typingName && <div className="card" role="status" aria-live="polite"><div className="small muted">{typingName} печатает...</div><div className="live-current" aria-hidden="true"><span /></div></div>}
         {targetAvailable && <div className="small muted" style={{ marginBottom: 8 }}>{draft.commentId === null ? 'Комментарий к посту' : 'Отвечаешь'}: {recipient}</div>}
         {postAuthor && draft.commentId !== null && <button disabled={sending} onClick={() => { edit({ commentId: null }); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.thread-reply-input')?.focus()) }} style={{ background: 'none', border: 'none', color: 'var(--lilac)', marginBottom: 8 }}>К посту</button>}
         {draft.commentId && !targetAvailable && <div className="small muted" role="status" style={{ marginBottom: 8 }}>Этому аккаунту больше нельзя ответить. Выбери другой комментарий — текст ответа сохранён.</div>}

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.AI;
-using Reki.Application.Posts.AddReplyCommand;
 using Reki.Application.Posts.GeneratePublicationCommand;
+using Reki.Application.Posts.GenerateReplyCommand;
 
 namespace Reki.Application.Posts.AI;
 

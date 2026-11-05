@@ -2,7 +2,7 @@ using Reki.Application.Posts.AI;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
-namespace Reki.Application.Posts.AddReplyCommand;
+namespace Reki.Application.Posts.GenerateReplyCommand;
 
 public sealed record StarReplyContext(
     StarAgentProfile Agent,
@@ -10,4 +10,5 @@ public sealed record StarReplyContext(
     string PostText,
     IReadOnlyList<GameComment> Branch,
     string PlayerText,
-    bool HateEnabled);
+    bool HateEnabled,
+    bool Additional = false);

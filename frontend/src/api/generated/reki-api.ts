@@ -470,43 +470,6 @@ export class PlayerClient {
     /**
      * @return OK
      */
-    getEnergyWallet(signal?: AbortSignal): Promise<SwaggerResponse<EnergyWalletResponse>> {
-        let url_ = this.baseUrl + "/me/energy";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            signal,
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetEnergyWallet(_response);
-        });
-    }
-
-    protected processGetEnergyWallet(response: Response): Promise<SwaggerResponse<EnergyWalletResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as EnergyWalletResponse;
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<EnergyWalletResponse>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
-     * @return OK
-     */
     exchangeEnergy(signal?: AbortSignal): Promise<SwaggerResponse<EnergyExchangeResponse>> {
         let url_ = this.baseUrl + "/me/energy/exchange";
         url_ = url_.replace(/[?&]$/, "");
@@ -844,8 +807,56 @@ export class PostsClient {
     /**
      * @return OK
      */
-    replyToPost(postId: string, worldId: string, body: ReplyRequest, signal?: AbortSignal): Promise<SwaggerResponse<FileResponse>> {
+    replyToPost(postId: string, worldId: string, body: ReplyRequest, signal?: AbortSignal): Promise<SwaggerResponse<ReplyResponse>> {
         let url_ = this.baseUrl + "/posts/{postId}/replies?";
+        if (postId === undefined || postId === null)
+            throw new globalThis.Error("The parameter 'postId' must be defined.");
+        url_ = url_.replace("{postId}", encodeURIComponent("" + postId));
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
+            url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processReplyToPost(_response);
+        });
+    }
+
+    protected processReplyToPost(response: Response): Promise<SwaggerResponse<ReplyResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ReplyResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<ReplyResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return OK
+     */
+    generateReply(postId: string, worldId: string, body: GenerateReplyRequest, signal?: AbortSignal): Promise<SwaggerResponse<FileResponse>> {
+        let url_ = this.baseUrl + "/posts/{postId}/replies/generation?";
         if (postId === undefined || postId === null)
             throw new globalThis.Error("The parameter 'postId' must be defined.");
         url_ = url_.replace("{postId}", encodeURIComponent("" + postId));
@@ -868,11 +879,11 @@ export class PostsClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processReplyToPost(_response);
+            return this.processGenerateReply(_response);
         });
     }
 
-    protected processReplyToPost(response: Response): Promise<SwaggerResponse<FileResponse>> {
+    protected processGenerateReply(response: Response): Promise<SwaggerResponse<FileResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -1971,6 +1982,14 @@ export interface GameEventResponse {
     [key: string]: any;
 }
 
+export interface GenerateReplyRequest {
+    authorId: string;
+    sourceCommentId: string;
+    additional: boolean;
+
+    [key: string]: any;
+}
+
 export interface InvitationResponse {
     bonus: number;
 
@@ -2167,27 +2186,36 @@ export interface RefreshTokenRequest {
     [key: string]: any;
 }
 
-export interface ReplyLiveEvent {
-    status: ReplyStatus;
-    requestId: string;
+export interface ReplyGenerationLiveEvent {
+    status: ReplyGenerationStatus;
+    authorId: string;
     text: string | null;
-    post: PostDetailResponse | null;
-    energyLeft: number | null;
-    subscribers: number | null;
+    additionalStarId: string | null;
     code: string | null;
 
     [key: string]: any;
 }
 
+export type ReplyGenerationStatus = "generating" | "completed" | "failed";
+
 export interface ReplyRequest {
     commentId?: string | null;
+    authorId: string;
     requestId: string;
     text: string;
 
     [key: string]: any;
 }
 
-export type ReplyStatus = "generating" | "completed" | "failed";
+export interface ReplyResponse {
+    commentId: string;
+    authorId: string;
+    post: PostDetailResponse;
+    energyLeft: number;
+    subscribers: number;
+
+    [key: string]: any;
+}
 
 export interface ReportRequest {
     commentId: string;
@@ -2227,8 +2255,8 @@ export interface SseItemOfPublicationStatusLiveEvent {
     [key: string]: any;
 }
 
-export interface SseItemOfReplyLiveEvent {
-    data?: ReplyLiveEvent;
+export interface SseItemOfReplyGenerationLiveEvent {
+    data?: ReplyGenerationLiveEvent;
     eventId?: string | null;
     eventType?: string | null;
     reconnectionInterval?: string | null;

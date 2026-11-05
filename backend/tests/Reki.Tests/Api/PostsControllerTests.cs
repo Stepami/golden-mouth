@@ -13,7 +13,8 @@ using Reki.Application.Balance;
 using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Application.Posts.Responses.LiveEvent;
-using Reki.Application.Posts.Responses.ReplyLiveEvent;
+using Reki.Application.Posts.Responses.Reply;
+using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
@@ -717,13 +718,13 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That((fourth.Post ?? throw new InvalidOperationException("Missing reply post.")).Comments.Select(comment => comment.Depth)).IsEquivalentTo(Enumerable.Range(0, 9));
         var stored = await GetStoredPostAsync(postId);
         await Assert.That(stored["Comments"].AsBsonArray.Count).IsEqualTo(9);
-        await Assert.That(stored["Version"].AsInt32).IsEqualTo(4);
+        await Assert.That(stored["Version"].AsInt32).IsEqualTo(8);
         await Assert.That(stored.Contains("ThreadReplies")).IsFalse();
         var player = await GetStoredPlayerAsync(telegramUserId);
         await Assert.That(player["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(5);
         await Assert.That(player["Wallet"]["Energy"].AsInt32).IsEqualTo(5);
         var world = await GetStoredWorldAsync(telegramUserId);
-        await Assert.That(world["Player"]["Subscribers"].ToInt64()).IsEqualTo(fourth.Subscribers ?? throw new InvalidOperationException("Missing subscribers."));
+        await Assert.That(world["Player"]["Subscribers"].ToInt64()).IsEqualTo(fourth.Subscribers);
     }
 
     [Test]
@@ -738,6 +739,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var worldId = await GetWorldIdAsync(strangerApi);
         var request = new ReplyRequest
         {
+            AuthorId = PlayerId.From((await GetStoredPlayerAsync(strangerUserId))["_id"].AsBsonBinaryData.ToGuid()).ToAuthorId(),
             CommentId = commentId is null ? null : CommentId.From(commentId),
             RequestId = "thread-foreign-post",
             Text = "чужой пост",
@@ -908,26 +910,29 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             original with { AuthorId = author.Id.ToAuthorId(), Comments = [] });
         var beforePlayer = await GetStoredPlayerAsync(user);
         var beforeWorld = await GetStoredWorldAsync(user);
-        Factory.Llm.Respond(CreateReplyTurnResponse(author.Id.Value));
+        Factory.Llm.Respond(CreateReplyTextResponse());
 
         // Act
-        var first = ParseReplyEvents((await SendReplyAsync(user, postId, null, "root-key", "Комментарий к посту")).Body)[^1];
-        var detail = first.Post ?? throw new InvalidOperationException("Missing root post.");
+        var firstResult = await SendReplyAsync(user, postId, null, "root-key", "Комментарий к посту");
+        var first = firstResult.Saved ?? throw new InvalidOperationException("Missing root reply.");
+        var detail = first.Post;
         var own = detail.Comments.Single(comment => comment.Me);
         var answer = detail.Comments.Single(comment => comment.Star);
         var calls = Factory.Llm.RequestCount;
-        var replay = ParseReplyEvents((await SendReplyAsync(user, postId, null, "root-key", "Комментарий к посту")).Body)[^1];
+        var replay = (await SendReplyAsync(user, postId, null, "root-key", "Комментарий к посту")).Saved
+            ?? throw new InvalidOperationException("Missing replay reply.");
         var callsAfterReplay = Factory.Llm.RequestCount;
         var changedTarget = await SendReplyAsync(user, postId, answer.Id.ToString(), "root-key", "Комментарий к посту");
         var changedText = await SendReplyAsync(user, postId, null, "root-key", "Другой текст");
         var second = await ReplyAsync(user, postId, answer.Id.ToString(), "branch-key", "Продолжение разговора");
-        var third = ParseReplyEvents((await SendReplyAsync(user, postId, null, "second-root", "Ещё одна мысль")).Body)[^1];
+        var third = (await SendReplyAsync(user, postId, null, "second-root", "Ещё одна мысль")).Saved
+            ?? throw new InvalidOperationException("Missing third reply.");
         var fourth = await ReplyAsync(user, postId, answer.Id.ToString(), "fourth-key", "Ещё один ответ");
         using var api = Factory.CreateApiClient(user);
         var restored = await api.Posts.GetPostAsync(postId, world.Id.Value.ToString(), CancellationToken.None);
 
         // Assert
-        await Assert.That(first.Status).IsEqualTo(ReplyStatus.Completed);
+        await Assert.That(firstResult.Status).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(detail.AuthorId).IsEqualTo(author.Id.ToAuthorId());
         await Assert.That(own.ParentCommentId).IsNull();
         await Assert.That(own.Depth).IsEqualTo(0);
@@ -939,7 +944,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(callsAfterReplay).IsEqualTo(calls);
         await Assert.That(replay.EnergyLeft).IsEqualTo(first.EnergyLeft);
         await Assert.That(replay.Subscribers).IsEqualTo(first.Subscribers);
-        await Assert.That((replay.Post ?? throw new InvalidOperationException("Missing replay post.")).Comments.Select(comment => comment.Id)).IsEquivalentTo(detail.Comments.Select(comment => comment.Id));
+        await Assert.That(replay.Post.Comments.Select(comment => comment.Id)).IsEquivalentTo(detail.Comments.Select(comment => comment.Id));
         await Assert.That(changedTarget.Status).IsEqualTo(HttpStatusCode.Conflict);
         await Assert.That(changedText.Status).IsEqualTo(HttpStatusCode.Conflict);
         await Assert.That((second.Post ?? throw new InvalidOperationException("Missing second post.")).Comments.Single(comment => comment.RequestId == "branch-key").Depth).IsEqualTo(2);
@@ -957,7 +962,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     [Arguments("deleted-during")]
     [Arguments("energy")]
     [Arguments("foreign-world")]
-    [Arguments("wrong-author")]
     [Arguments("unsafe")]
     public async Task AddReply_InvalidRootComment_DoesNotPublishOrChargeAsync(string scenario)
     {
@@ -993,15 +997,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
                     world with { Stars = world.Stars.Where(star => star.Id != author.Id).ToArray(), Version = world.Version + 1 });
             }
 
-            return CreateReplyTurnResponse(
-                scenario == "wrong-author" ? world.Stars[1].Id.Value : author.Id.Value,
-                args =>
-                {
-                    if (scenario == "unsafe")
-                    {
-                        args["text"] = "наркотики";
-                    }
-                });
+            return CreateReplyTextResponse(scenario == "unsafe" ? "наркотики" : "Спасибо за ответ.");
         });
         var beforePost = await GetStoredPostAsync(postId);
         var beforePlayer = await GetStoredPlayerAsync(user);
@@ -1018,9 +1014,13 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             scenario == "foreign-world" ? "5dfe7e85-cc03-42d3-81f8-f4c9393dca6a" : world.Id.Value.ToString());
 
         // Assert
-        if (scenario is "wrong-author" or "unsafe" or "deleted-during")
+        if (scenario == "unsafe")
         {
-            await Assert.That(ParseReplyEvents(response.Body)[^1].Status).IsEqualTo(ReplyStatus.Failed);
+            await Assert.That(response.Generation?.Status).IsEqualTo(ReplyGenerationStatus.Failed);
+        }
+        else if (scenario == "deleted-during")
+        {
+            await Assert.That(response.Status).IsEqualTo(HttpStatusCode.Conflict);
         }
         else
         {
@@ -1028,130 +1028,146 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             await Assert.That(Factory.Llm.RequestCount).IsEqualTo(calls);
         }
 
-        await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(beforePost);
-        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"]).IsEqualTo(beforePlayer["Wallet"]["Energy"]);
-        await Assert.That((await GetStoredWorldAsync(user))["Player"]["Subscribers"]).IsEqualTo(beforeWorld["Player"]["Subscribers"]);
+        if (scenario is "unsafe" or "deleted-during")
+        {
+            await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(beforePost["Comments"].AsBsonArray.Count + 1);
+            await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"].AsInt32).IsLessThan(beforePlayer["Wallet"]["Energy"].AsInt32);
+        }
+        else
+        {
+            await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(beforePost);
+            await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"]).IsEqualTo(beforePlayer["Wallet"]["Energy"]);
+            await Assert.That((await GetStoredWorldAsync(user))["Player"]["Subscribers"]).IsEqualTo(beforeWorld["Player"]["Subscribers"]);
+        }
     }
 
     [Test]
-    [Arguments(false, false)]
-    [Arguments(true, true)]
-    [Arguments(true, false)]
-    public async Task AddReply_ValidTurn_PersistsCanonicalTreeAsync(bool optional, bool reaction)
+    public async Task AddReply_ValidTurn_PersistsSeparateCommentsAsync()
     {
         // Arrange
         const long user = 8701;
         var (postId, targetId) = await PublishPostForThreadAsync(user);
         var beforePlayer = await GetStoredPlayerAsync(user);
+        var beforeWorld = await GetStoredWorldAsync(user);
         var world = await Database.GetCollection<World>("worlds").Find(FilterDefinition<World>.Empty).SingleAsync();
-        var original = await GetStoredPostAsync(postId);
-        var selected = (world.FindStar(AuthorId.From(original["Comments"][0]["AuthorId"].AsString))
-            ?? throw new InvalidOperationException("Missing selected star.")).Id.Value;
-        var other = world.Stars.First(star => star.Id.Value != selected);
-        Factory.Llm.Respond(CreateReplyTurnResponse(selected, args =>
+        var selected = world.FindStar((await ReadPostAsync(postId)).Comments[0].AuthorId)
+            ?? throw new InvalidOperationException("Missing selected star.");
+        Factory.Llm.Respond(messages =>
         {
-            if (optional)
-            {
-                args["emoji"] = reaction ? "💡" : string.Empty;
-                args["additional_star_id"] = other.Id.Value;
-                args["additional_text"] = "Есть ещё один взгляд на тему.";
-                args["additional_tone"] = "critique";
-            }
-        }));
+            var policy = messages.First(message => message.Role == ChatRole.System).Text;
+            return CreateReplyTextResponse(policy.Contains("Это дополнительная звезда: True", StringComparison.Ordinal)
+                ? "Есть ещё один взгляд на тему."
+                : "Спасибо за ответ. Продолжим обсуждение.");
+        });
+        using var api = Factory.CreateApiClient(user);
+        var worldId = world.Id.Value.ToString();
 
         // Act
-        var response = await SendReplyAsync(user, postId, targetId, "valid-turn", "Ответ на мысль звезды");
-        var events = ParseReplyEvents(response.Body);
-        var completed = events[^1];
-        var stored = await GetStoredPostAsync(postId);
-        using var api = Factory.CreateApiClient(user);
-        var detail = await api.Posts.GetPostAsync(postId, world.Id.Value.ToString(), CancellationToken.None);
+        var playerReply = await api.Posts.ReplyToPostAsync(
+            postId,
+            worldId,
+            new ReplyRequest
+            {
+                AuthorId = world.Player.PlayerId.ToAuthorId(),
+                CommentId = CommentId.From(targetId),
+                RequestId = "valid-turn",
+                Text = "Ответ на мысль звезды",
+            },
+            CancellationToken.None);
+        await Assert.That(playerReply.Post.Comments.Count).IsEqualTo(2);
+        using var primaryStream = await api.Posts.GenerateReplyAsync(
+            postId,
+            worldId,
+            new GenerateReplyRequest
+            {
+                AuthorId = selected.Id.ToAuthorId(),
+                SourceCommentId = playerReply.CommentId,
+                Additional = false,
+            },
+            CancellationToken.None);
+        using var primaryReader = new StreamReader(primaryStream.Stream);
+        var primaryEvents = ParseReplyGenerationEvents(await primaryReader.ReadToEndAsync(CancellationToken.None));
+        var primary = primaryEvents[^1];
+        await Assert.That(primaryEvents[0].Status).IsEqualTo(ReplyGenerationStatus.Generating);
+        await Assert.That(primary.Status).IsEqualTo(ReplyGenerationStatus.Completed);
+        await Assert.That(Factory.Llm.GetLastRequest().TryGetProperty("tools", out _)).IsFalse();
+        using var repeatedStream = await api.Posts.GenerateReplyAsync(
+            postId,
+            worldId,
+            new GenerateReplyRequest
+            {
+                AuthorId = selected.Id.ToAuthorId(),
+                SourceCommentId = playerReply.CommentId,
+                Additional = false,
+            },
+            CancellationToken.None);
+        using var repeatedReader = new StreamReader(repeatedStream.Stream);
+        var repeated = ParseReplyGenerationEvents(await repeatedReader.ReadToEndAsync(CancellationToken.None))[^1];
+        await Assert.That(repeated.AdditionalStarId).IsEqualTo(primary.AdditionalStarId);
+        var other = world.Stars.SingleOrDefault(star => star.Id == primary.AdditionalStarId);
+        await Assert.That(primary.AdditionalStarId is null || other is not null).IsTrue();
+        await Assert.That(primary.AdditionalStarId is null || other?.Id != selected.Id).IsTrue();
+        var optional = other is not null;
+        var starReply = await api.Posts.ReplyToPostAsync(
+            postId,
+            worldId,
+            new ReplyRequest
+            {
+                AuthorId = primary.AuthorId,
+                CommentId = playerReply.CommentId,
+                RequestId = "valid-turn:star",
+                Text = primary.Text ?? throw new InvalidOperationException("Missing generated text."),
+            },
+            CancellationToken.None);
+        if (other is { } additionalStar)
+        {
+            using var additionalStream = await api.Posts.GenerateReplyAsync(
+                postId,
+                worldId,
+                new GenerateReplyRequest
+                {
+                    AuthorId = additionalStar.Id.ToAuthorId(),
+                    SourceCommentId = playerReply.CommentId,
+                    Additional = true,
+                },
+                CancellationToken.None);
+            using var additionalReader = new StreamReader(additionalStream.Stream);
+            var additional = ParseReplyGenerationEvents(await additionalReader.ReadToEndAsync(CancellationToken.None))[^1];
+            await Assert.That(additional.Status).IsEqualTo(ReplyGenerationStatus.Completed);
+            await api.Posts.ReplyToPostAsync(
+                postId,
+                worldId,
+                new ReplyRequest
+                {
+                    AuthorId = additional.AuthorId,
+                    CommentId = null,
+                    RequestId = "valid-turn:additional",
+                    Text = additional.Text ?? throw new InvalidOperationException("Missing additional text."),
+                },
+                CancellationToken.None);
+        }
 
         // Assert
-        var properties = Factory.Llm.GetLastRequest().GetProperty("tools").EnumerateArray().Single()
-            .GetProperty("function").GetProperty("parameters").GetProperty("properties");
-        await Assert.That(properties.GetProperty("star_id").GetProperty("enum").EnumerateArray()
-            .Select(id => id.GetString() ?? throw new InvalidOperationException("Missing allowed star ID."))).IsEquivalentTo(new[] { selected });
-        await Assert.That(properties.GetProperty("additional_star_id").GetProperty("enum").EnumerateArray()
-            .Select(id => id.GetString() ?? throw new InvalidOperationException("Missing allowed star ID."))).IsEquivalentTo(
-                world.Stars.Where(star => star.Id.Value != selected).Select(star => star.Id.Value).Prepend(string.Empty));
-        await Assert.That(response.Status).IsEqualTo(HttpStatusCode.OK);
-        await Assert.That(response.MediaType).IsEqualTo("text/event-stream");
-        await Assert.That(response.Body).Contains("\"status\":\"generating\"");
-        await Assert.That(response.Body).Contains("\"status\":\"completed\"");
-        await Assert.That(events[0].Status).IsEqualTo(ReplyStatus.Generating);
-        await Assert.That(events.Any(item => item.Status == ReplyStatus.Generating && item.Text == "Спасибо за ответ. Продолжим обсуждение.")).IsTrue();
-        await Assert.That(completed.Status).IsEqualTo(ReplyStatus.Completed);
-        await Assert.That(completed.RequestId).IsEqualTo("valid-turn");
-        await Assert.That((completed.Post ?? throw new InvalidOperationException("Missing completed post.")).Comments.Count).IsEqualTo(optional ? 4 : 3);
-        await Assert.That(detail.Comments.Select(comment => comment.Id)).IsEquivalentTo((completed.Post ?? throw new InvalidOperationException("Missing completed post.")).Comments.Select(comment => comment.Id));
-        var playerReply = detail.Comments.Single(comment => comment.RequestId == "valid-turn");
-        var starReply = detail.Comments.Single(comment => comment.ParentCommentId == playerReply.Id);
-        await Assert.That(playerReply.ParentCommentId).IsEqualTo(CommentId.From(targetId));
-        await Assert.That(playerReply.Me).IsTrue();
-        await Assert.That(playerReply.Star).IsFalse();
-        await Assert.That(playerReply.Depth).IsEqualTo(1);
-        await Assert.That(starReply.AuthorId).IsEqualTo(StarId.From(selected).ToAuthorId());
-        await Assert.That(starReply.RequestId).IsNull();
-        await Assert.That(starReply.Me).IsFalse();
-        await Assert.That(starReply.Depth).IsEqualTo(2);
-        var selectedProfile = world.Stars.Single(star => star.Id.Value == selected);
-        await Assert.That(playerReply.AuthorId).IsEqualTo(world.Player.PlayerId.ToAuthorId());
-        await Assert.That(playerReply.Author).IsEqualTo(world.Player.Name);
-        await Assert.That(playerReply.Avatar).IsEqualTo(world.Player.Avatar);
-        await Assert.That(playerReply.Role).IsEqualTo(world.Player.Role);
-        await Assert.That(starReply.Author).IsEqualTo(selectedProfile.Name);
-        await Assert.That(starReply.Avatar).IsEqualTo(selectedProfile.AvatarSeed);
-        await Assert.That(starReply.Role).IsEqualTo(selectedProfile.Role);
-        await Assert.That(starReply.Star).IsTrue();
-        var finalPost = completed.Post ?? throw new InvalidOperationException("Missing completed post.");
-        var finalPlayer = finalPost.Comments.Single(comment => comment.Id == playerReply.Id);
-        var finalStar = finalPost.Comments.Single(comment => comment.Id == starReply.Id);
-        await Assert.That(finalPlayer.AuthorId).IsEqualTo(world.Player.PlayerId.ToAuthorId());
-        await Assert.That(finalPlayer.Author).IsEqualTo(world.Player.Name);
-        await Assert.That(finalPlayer.Avatar).IsEqualTo(world.Player.Avatar);
-        await Assert.That(finalPlayer.Role).IsEqualTo(world.Player.Role);
-        await Assert.That(finalPlayer.Me).IsTrue();
-        await Assert.That(finalStar.AuthorId).IsEqualTo(StarId.From(selected).ToAuthorId());
-        await Assert.That(finalStar.Author).IsEqualTo(selectedProfile.Name);
-        await Assert.That(finalStar.Avatar).IsEqualTo(selectedProfile.AvatarSeed);
-        await Assert.That(finalStar.Role).IsEqualTo(selectedProfile.Role);
-        await Assert.That(finalStar.Me).IsFalse();
-
-        await Assert.That(playerReply.Reactions.Count).IsEqualTo(reaction ? 1 : 0);
-        if (optional)
+        var detail = await api.Posts.GetPostAsync(postId, worldId, CancellationToken.None);
+        await Assert.That(detail.Comments.Count).IsEqualTo(optional ? 4 : 3);
+        var savedPlayer = detail.Comments.Single(item => item.Id == playerReply.CommentId);
+        var savedStar = detail.Comments.Single(item => item.AuthorId == selected.Id.ToAuthorId() && item.ParentCommentId == savedPlayer.Id);
+        await Assert.That(savedPlayer.AuthorId).IsEqualTo(world.Player.PlayerId.ToAuthorId());
+        await Assert.That(savedPlayer.ParentCommentId).IsEqualTo(CommentId.From(targetId));
+        await Assert.That(savedPlayer.Reactions.Count).IsEqualTo(0);
+        await Assert.That(savedStar.Id).IsEqualTo(starReply.CommentId);
+        await Assert.That(savedStar.Depth).IsEqualTo(2);
+        if (other is { } chosenStar)
         {
-            if (reaction)
-            {
-                await Assert.That(playerReply.Reactions.Single().Emoji).IsEqualTo("💡");
-                await Assert.That(playerReply.Reactions.Single().AuthorId).IsEqualTo(StarId.From(selected).ToAuthorId());
-            }
-
-            var additional = detail.Comments.Single(comment => comment.AuthorId == other.Id.ToAuthorId());
-            await Assert.That(additional.ParentCommentId).IsNull();
-            await Assert.That(additional.Depth).IsEqualTo(0);
-            await Assert.That(additional.RequestId).IsNull();
-            await Assert.That(additional.Text).IsEqualTo("Есть ещё один взгляд на тему.");
-            await Assert.That((completed.Post ?? throw new InvalidOperationException("Missing completed post.")).Comments.Single(comment => comment.Id == additional.Id).Text).IsEqualTo("Есть ещё один взгляд на тему.");
-            await Assert.That(stored["Comments"].AsBsonArray.Single(comment => comment["_id"].AsBsonBinaryData.ToGuid().ToString("N") == additional.Id.ToString())["Text"].AsString).IsEqualTo("Есть ещё один взгляд на тему.");
+            await Assert.That(detail.Comments.Single(item => item.AuthorId == chosenStar.Id.ToAuthorId()).ParentCommentId).IsNull();
         }
 
-        var player = await GetStoredPlayerAsync(user);
-        await Assert.That(player["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(beforePlayer["Wallet"]["EnergyUsed"].AsInt32 + 1);
-        await Assert.That(completed.EnergyLeft).IsEqualTo(8);
-        var storedOwn = stored["Comments"].AsBsonArray.Single(item => item["RequestId"].IsString && item["RequestId"].AsString == "valid-turn");
-        await Assert.That(storedOwn["AuthorId"].BsonType).IsEqualTo(BsonType.String);
-        await Assert.That(storedOwn["AuthorId"].AsString).IsEqualTo($"Player_{beforePlayer["_id"].AsBsonBinaryData.ToGuid().ToString("N")}");
-        var storedStar = stored["Comments"].AsBsonArray.Single(item => item["ParentCommentId"] == storedOwn["_id"]);
-        await Assert.That(storedStar["AuthorId"].BsonType).IsEqualTo(BsonType.String);
-        await Assert.That(storedStar["AuthorId"].AsString).IsEqualTo($"Star_{selected}");
-        await Assert.That(stored["Version"].AsInt32).IsEqualTo(1);
-        await Assert.That(stored.Contains("ThreadReplies")).IsFalse();
-        foreach (var comment in stored["Comments"].AsBsonArray.Select(value => value.AsBsonDocument))
-        {
-            await Assert.That(comment["AuthorId"].BsonType).IsEqualTo(BsonType.String);
-            await Assert.That(comment.Contains("EnergySpent") || comment.Contains("SubscriberBonus") || comment.Contains("Me") || comment.Contains("Star") || comment.Contains("Author") || comment.Contains("Avatar") || comment.Contains("Handle") || comment.Contains("OriginCommentId")).IsFalse();
-        }
+        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32)
+            .IsEqualTo(beforePlayer["Wallet"]["EnergyUsed"].AsInt32 + 1);
+        var bonus = Factory.Services.GetRequiredService<IOptionsMonitor<GameBalance>>().CurrentValue.Thread.SubscriberBonus;
+        await Assert.That((await GetStoredWorldAsync(user))["Player"]["Subscribers"].ToInt64())
+            .IsEqualTo(beforeWorld["Player"]["Subscribers"].ToInt64() + bonus);
+        await Assert.That((await GetStoredPostAsync(postId))["Version"].AsInt32).IsEqualTo(optional ? 3 : 2);
     }
 
     [Test]
@@ -1207,20 +1223,11 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    [Arguments("wrong-star")]
-    [Arguments("missing-key")]
-    [Arguments("accounting")]
     [Arguments("unsafe")]
-    [Arguments("foreign-extra")]
-    [Arguments("same-extra")]
-    [Arguments("partial-extra")]
-    [Arguments("hate")]
     [Arguments("long-text")]
-    [Arguments("long-emoji")]
-    [Arguments("non-string")]
     [Arguments("wrong-tool")]
-    [Arguments("no-tool")]
-    public async Task AddReply_InvalidModelTurn_FailsWithoutPublishingOrChargingAsync(string violation)
+    [Arguments("empty")]
+    public async Task AddReply_InvalidModelTurn_PreservesSavedPlayerCommentAsync(string violation)
     {
         // Arrange
         const long user = 8704;
@@ -1230,111 +1237,55 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var world = await GetStoredWorldAsync(user);
         var selected = world["Stars"].AsBsonArray.Single(star =>
             StarId.From(star["_id"].AsString).ToAuthorId().Value == before["Comments"][0]["AuthorId"].AsString)["_id"].AsString;
-        var response = CreateReplyTurnResponse(selected, args =>
+        var response = violation switch
         {
-            switch (violation)
-            {
-                case "wrong-star":
-                {
-                    args["star_id"] = "outside-world";
-                    break;
-                }
-
-                case "missing-key":
-                {
-                    args.Remove("emoji");
-                    break;
-                }
-
-                case "accounting":
-                {
-                    args["energy_spent"] = 0;
-                    break;
-                }
-
-                case "unsafe":
-                {
-                    args["text"] = "наркотики";
-                    break;
-                }
-
-                case "foreign-extra":
-                {
-                    args["additional_star_id"] = "outside-world";
-                    args["additional_text"] = "ответ";
-                    args["additional_tone"] = "support";
-                    break;
-                }
-
-                case "same-extra":
-                {
-                    args["additional_star_id"] = selected;
-                    args["additional_text"] = "ответ";
-                    args["additional_tone"] = "support";
-                    break;
-                }
-
-                case "partial-extra":
-                {
-                    args["additional_text"] = "ответ без автора";
-                    break;
-                }
-
-                case "hate":
-                {
-                    args["tone"] = "hate";
-                    break;
-                }
-
-                case "long-text":
-                {
-                    args["text"] = new string('а', 501);
-                    break;
-                }
-
-                case "long-emoji":
-                {
-                    args["emoji"] = new string('а', 9);
-                    break;
-                }
-
-                case "non-string":
-                {
-                    args["text"] = 42;
-                    break;
-                }
-            }
-        });
-        if (violation == "wrong-tool")
-        {
-            var arguments = response.Messages[0].Contents.OfType<FunctionCallContent>().Single().Arguments;
-            response = new ChatResponse(new ChatMessage(ChatRole.Assistant, [new FunctionCallContent("wrong", "comment", arguments)]));
-        }
-
-        if (violation == "no-tool")
-        {
-            response = new ChatResponse(new ChatMessage(ChatRole.Assistant, "без вызова инструмента"));
-        }
+            "unsafe" => CreateReplyTextResponse("наркотики"),
+            "long-text" => CreateReplyTextResponse(new string('а', 501)),
+            "wrong-tool" => new ChatResponse(new ChatMessage(
+                ChatRole.Assistant,
+                [new FunctionCallContent("wrong", "comment", new Dictionary<string, object?>())])),
+            _ => CreateReplyTextResponse(" "),
+        };
 
         Factory.Llm.Respond(response);
 
         // Act
-        var result = await SendReplyAsync(user, postId, targetId, "invalid-model", "безопасный ответ");
-        var terminal = ParseReplyEvents(result.Body)[^1];
+        using var api = Factory.CreateApiClient(user);
+        var worldId = await GetWorldIdAsync(api);
+        var saved = await api.Posts.ReplyToPostAsync(
+            postId,
+            worldId,
+            new ReplyRequest
+            {
+                AuthorId = PlayerId.From(player["_id"].AsBsonBinaryData.ToGuid()).ToAuthorId(),
+                CommentId = CommentId.From(targetId),
+                RequestId = "invalid-model",
+                Text = "безопасный ответ",
+            },
+            CancellationToken.None);
+        using var generation = await api.Posts.GenerateReplyAsync(
+            postId,
+            worldId,
+            new GenerateReplyRequest
+            {
+                AuthorId = StarId.From(selected).ToAuthorId(),
+                SourceCommentId = saved.CommentId,
+                Additional = false,
+            },
+            CancellationToken.None);
+        using var reader = new StreamReader(generation.Stream);
+        var terminal = ParseReplyGenerationEvents(await reader.ReadToEndAsync(CancellationToken.None))[^1];
 
         // Assert
-        await Assert.That(terminal.Status).IsEqualTo(ReplyStatus.Failed);
+        await Assert.That(terminal.Status).IsEqualTo(ReplyGenerationStatus.Failed);
         await Assert.That(terminal.Code).IsEqualTo(violation == "unsafe" ? "unsafe_generated_content" : "ai_unavailable");
-        await Assert.That(terminal.Post).IsNull();
-        await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(before);
-        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"]).IsEqualTo(player["Wallet"]["EnergyUsed"]);
-        await Assert.That((await GetStoredWorldAsync(user))["Player"]["Subscribers"]).IsEqualTo(world["Player"]["Subscribers"]);
+        var after = await GetStoredPostAsync(postId);
+        await Assert.That(after["Comments"].AsBsonArray.Count).IsEqualTo(before["Comments"].AsBsonArray.Count + 1);
+        await Assert.That(after["Comments"].AsBsonArray[^1]["RequestId"].AsString).IsEqualTo("invalid-model");
+        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32).IsGreaterThan(player["Wallet"]["EnergyUsed"].AsInt32);
     }
 
     [Test]
-    [Arguments("blank")]
-    [Arguments("long")]
-    [Arguments("key")]
     [Arguments("unsafe")]
     [Arguments("missing-target")]
     [Arguments("missing-post")]
@@ -1348,8 +1299,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Arrange
         const long user = 8705;
         var (postId, targetId) = await PublishPostForThreadAsync(user);
-        var text = scenario switch { "blank" => " ", "long" => new string('а', 1001), "unsafe" => "наркотики", _ => "ответ" };
-        var key = scenario == "key" ? string.Empty : "input-validation";
+        var text = scenario == "unsafe" ? "наркотики" : "ответ";
         if (scenario is "player-target" or "unknown-star")
         {
             var author = scenario == "player-target"
@@ -1372,14 +1322,13 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Act
         var requestedPostId = scenario switch { "missing-post" => PostId.New(Factory.Session.Clock.GetUtcNow()).Value.ToString("N"), _ => postId };
         var requestedCommentId = scenario switch { "missing-target" => CommentId.New().Value.ToString("N"), _ => targetId };
-        var result = await SendReplyAsync(user, requestedPostId, requestedCommentId, key, text, scenario == "missing-world" ? "5dfe7e85-cc03-42d3-81f8-f4c9393dca6a" : string.Empty);
+        var result = await SendReplyAsync(user, requestedPostId, requestedCommentId, "input-validation", text, scenario == "missing-world" ? "5dfe7e85-cc03-42d3-81f8-f4c9393dca6a" : string.Empty);
 
         // Assert
         var expectedStatus = scenario switch
         {
             "missing-post" or "missing-target" or "missing-world" => HttpStatusCode.NotFound,
             "unsafe" => HttpStatusCode.UnprocessableEntity,
-            "blank" or "long" or "key" => HttpStatusCode.BadRequest,
             _ => HttpStatusCode.Conflict,
         };
         await Assert.That(result.Status).IsEqualTo(expectedStatus);
@@ -1421,7 +1370,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var storedPost = await GetStoredPostAsync(postId);
         var selected = (world.FindStar(AuthorId.From(storedPost["Comments"][0]["AuthorId"].AsString))
             ?? throw new InvalidOperationException("Missing selected star.")).Id.Value;
-        Factory.Llm.Respond(CreateReplyTurnResponse(selected, args => args["emoji"] = "💡"));
+        Factory.Llm.Respond(CreateReplyTextResponse());
         await ReplyAsync(user, postId, targetId, "metadata", "мой ответ");
         var updated = world with
         {
@@ -1444,13 +1393,14 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(own.Author).IsEqualTo("Новое имя");
         await Assert.That(own.Avatar).IsEqualTo("new-avatar");
         await Assert.That(own.Role).IsEqualTo("new-role");
-        await Assert.That(own.Reactions.Single().Author).IsEqualTo("Новое имя звезды");
-        await Assert.That(own.Reactions.Single().Avatar).IsEqualTo("star-avatar");
+        var starReply = detail.Comments.Single(comment => comment.ParentCommentId == own.Id);
+        await Assert.That(starReply.Author).IsEqualTo("Новое имя звезды");
+        await Assert.That(starReply.Avatar).IsEqualTo("star-avatar");
         await Assert.That(detail.Comments[0].Author).IsEqualTo("Новое имя звезды");
         await Assert.That(feed.Items.Single().Author).IsEqualTo("Новое имя звезды");
         await Assert.That(feed.Items.Single().Role).IsEqualTo("star-role");
         await Assert.That(detail.AuthorId).IsEqualTo(StarId.From(selected).ToAuthorId());
-        await Assert.That(turn.Status).IsEqualTo(ReplyStatus.Completed);
+        await Assert.That(turn.Post.Comments.Any(comment => comment.RequestId == "star-post:star")).IsTrue();
     }
 
     [Test]
@@ -1475,7 +1425,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(prompt).Contains("пост для треда");
         await Assert.That(prompt).Contains(post.Comments[0].Text);
         await Assert.That(prompt).Contains("player-response-marker");
-        await Assert.That(prompt).Contains("thread_reply");
+        await Assert.That(prompt).Contains("Ответь обычным текстом");
         await Assert.That(prompt).Contains("DATA_JSON:");
         await Assert.That(prompt.Contains("unrelated-sibling-marker", StringComparison.Ordinal)).IsFalse();
         await Assert.That(prompt.Contains("любит короткие посты", StringComparison.Ordinal)).IsFalse();
@@ -1503,10 +1453,10 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Act
         var response = await SendReplyAsync(user, secondPost.Id.Value.ToString("N"), targetId, "second-world", "ответ во втором мире", second.Id.ToString());
-        var completed = ParseReplyEvents(response.Body)[^1];
+        var completed = response.Saved ?? throw new InvalidOperationException("Missing second-world reply.");
 
         // Assert
-        await Assert.That(completed.Status).IsEqualTo(ReplyStatus.Completed);
+        await Assert.That(response.Status).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(completed.EnergyLeft).IsEqualTo(7);
         await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(3);
         await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(3);
@@ -1563,11 +1513,11 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Assert
         await Assert.That(responses.Count(response =>
-                response.Status == HttpStatusCode.OK && ParseReplyEvents(response.Body)[^1].Status == ReplyStatus.Completed))
+                response.Status == HttpStatusCode.OK && response.Generation?.Status == ReplyGenerationStatus.Completed))
             .IsEqualTo(1);
         await Assert.That(savedPosts.Select(post => post["Comments"].AsBsonArray.Count).Order())
             .IsEquivalentTo(new[] { 1, 3 });
-        await Assert.That(savedPosts.Sum(post => post["Version"].AsInt32)).IsEqualTo(1);
+        await Assert.That(savedPosts.Sum(post => post["Version"].AsInt32)).IsEqualTo(2);
         await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(10);
         await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"].AsInt32).IsEqualTo(0);
         var bonus = Factory.Services.GetRequiredService<IOptionsMonitor<GameBalance>>().CurrentValue.Thread.SubscriberBonus;
@@ -1596,21 +1546,15 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Assert
         await Assert.That(responses.Count(response =>
-                response.Status == HttpStatusCode.OK && ParseReplyEvents(response.Body)[^1].Status == ReplyStatus.Completed))
+                response.Status == HttpStatusCode.OK && response.Generation?.Status == ReplyGenerationStatus.Completed))
             .IsEqualTo(1);
         await Assert.That(saved.Comments.Count).IsEqualTo(3);
         var playerReply = saved.Comments.Single(comment => comment.RequestId == "contested-key");
         await Assert.That(new[] { "Первая мысль", "Вторая мысль" }).Contains(playerReply.Text);
         var rejected = responses.Single(response =>
-            response.Status != HttpStatusCode.OK || ParseReplyEvents(response.Body)[^1].Status != ReplyStatus.Completed);
-        await Assert.That(new[] { HttpStatusCode.OK, HttpStatusCode.Conflict }).Contains(rejected.Status);
-        if (rejected.Status == HttpStatusCode.OK)
-        {
-            var failed = ParseReplyEvents(rejected.Body)[^1];
-            await Assert.That(failed.Status).IsEqualTo(ReplyStatus.Failed);
-            await Assert.That(failed.Code).IsEqualTo("request_conflict");
-            await Assert.That(failed.Post).IsNull();
-        }
+            response.Status != HttpStatusCode.OK || response.Generation?.Status != ReplyGenerationStatus.Completed);
+        await Assert.That(rejected.Status).IsEqualTo(HttpStatusCode.Conflict);
+        await Assert.That(rejected.Saved).IsNull();
 
         await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(2);
         var bonus = Factory.Services.GetRequiredService<IOptionsMonitor<GameBalance>>().CurrentValue.Thread.SubscriberBonus;
@@ -1621,7 +1565,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     [Test]
     [Arguments("hidden")]
     [Arguments("http-error")]
-    [Arguments("duplicate-turn")]
     public async Task AddReply_InvalidTargetOrGeneration_PreservesWholeStateAsync(string scenario)
     {
         // Arrange
@@ -1632,25 +1575,14 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         {
             var target = post.Comments[0] with
             {
-                Hidden = scenario == "hidden",
-
+                Hidden = true,
             };
             post = post with { Comments = [target] };
             await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(item => item.Id == post.Id, post);
         }
-        else if (scenario == "http-error")
-        {
-            Factory.Llm.RespondWithHttpError();
-        }
         else
         {
-            var world = await Database.GetCollection<World>("worlds").Find(item => item.Id == post.WorldId).SingleAsync();
-            var selected = world.FindStar(post.Comments[0].AuthorId)
-                ?? throw new InvalidOperationException("Missing selected star.");
-            var response = CreateReplyTurnResponse(selected.Id.Value);
-            var call = response.Messages[0].Contents.OfType<FunctionCallContent>().Single();
-            response.Messages[0].Contents.Add(new FunctionCallContent("duplicate", call.Name, call.Arguments));
-            Factory.Llm.Respond(response);
+            Factory.Llm.RespondWithHttpError();
         }
 
         var beforePost = await GetStoredPostAsync(postId);
@@ -1671,15 +1603,22 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         else
         {
             await Assert.That(result.Status).IsEqualTo(HttpStatusCode.OK);
-            var events = ParseReplyEvents(result.Body);
-            await Assert.That(events[^1].Status).IsEqualTo(ReplyStatus.Failed);
-            await Assert.That(events[^1].Code).IsEqualTo("ai_unavailable");
-            await Assert.That(events.Any(item => item.Status == ReplyStatus.Completed || item.Text is not null)).IsFalse();
+            await Assert.That(result.Generation?.Status).IsEqualTo(ReplyGenerationStatus.Failed);
+            await Assert.That(result.Generation?.Code).IsEqualTo("ai_unavailable");
+            await Assert.That(result.Generation?.Text).IsNull();
         }
 
-        await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(beforePost);
-        await Assert.That(await GetStoredPlayerAsync(user)).IsEqualTo(beforePlayer);
-        await Assert.That(await GetStoredWorldAsync(user)).IsEqualTo(beforeWorld);
+        if (scenario == "hidden")
+        {
+            await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(beforePost);
+            await Assert.That(await GetStoredPlayerAsync(user)).IsEqualTo(beforePlayer);
+            await Assert.That(await GetStoredWorldAsync(user)).IsEqualTo(beforeWorld);
+        }
+        else
+        {
+            await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(beforePost["Comments"].AsBsonArray.Count + 1);
+            await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(beforePlayer["Wallet"]["EnergyUsed"].AsInt32 + 1);
+        }
     }
 
     private Task<PlayerProfile> ReadPlayerAsync(long user) =>
@@ -1689,25 +1628,67 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     private Task<GamePost> ReadPostAsync(string id) =>
         Database.GetCollection<GamePost>("posts").Find(item => item.Id == PostId.From(id)).SingleAsync();
 
-    private async Task<(HttpStatusCode Status, string Body, string? MediaType)> SendReplyAsync(
+    private async Task<(HttpStatusCode Status, ReplyResponse? Saved, ReplyGenerationLiveEvent? Generation)> SendReplyAsync(
         long user, string postId, string? commentId, string requestId, string text, string worldId = "")
     {
         using var api = Factory.CreateApiClient(user);
         var requestedWorld = worldId.Length == 0 ? await GetWorldIdAsync(api) : worldId;
         try
         {
-            using var response = await api.Posts.ReplyToPostAsync(
+            var player = await GetStoredPlayerAsync(user);
+            var response = await api.Posts.ReplyToPostAsync(
                 postId,
                 requestedWorld,
-                new ReplyRequest { RequestId = requestId, CommentId = commentId is null ? null : CommentId.From(commentId), Text = text },
+                new ReplyRequest
+                {
+                    AuthorId = PlayerId.From(player["_id"].AsBsonBinaryData.ToGuid()).ToAuthorId(),
+                    RequestId = requestId,
+                    CommentId = commentId is null ? null : CommentId.From(commentId),
+                    Text = text,
+                },
                 CancellationToken.None);
-            using var reader = new StreamReader(response.Stream);
-            var mediaType = response.Headers.TryGetValue("Content-Type", out var values) ? values.Single().Split(';')[0] : null;
-            return ((HttpStatusCode)response.StatusCode, await reader.ReadToEndAsync(CancellationToken.None), mediaType);
+            var starId = commentId is null
+                ? response.Post.AuthorId
+                : response.Post.Comments.Single(item => item.Id == CommentId.From(commentId)).AuthorId;
+            if (response.Post.Comments.Any(item => item.ParentCommentId == response.CommentId && item.AuthorId == starId))
+            {
+                return (HttpStatusCode.OK, response, null);
+            }
+
+            using var generation = await api.Posts.GenerateReplyAsync(
+                postId,
+                requestedWorld,
+                new GenerateReplyRequest
+                {
+                    AuthorId = starId,
+                    SourceCommentId = response.CommentId,
+                    Additional = false,
+                },
+                CancellationToken.None);
+            using var reader = new StreamReader(generation.Stream);
+            var generated = ParseReplyGenerationEvents(await reader.ReadToEndAsync(CancellationToken.None));
+            var terminal = generated[^1];
+            if (terminal.Status == ReplyGenerationStatus.Failed)
+            {
+                return (HttpStatusCode.OK, response, terminal);
+            }
+
+            var star = await api.Posts.ReplyToPostAsync(
+                postId,
+                requestedWorld,
+                new ReplyRequest
+                {
+                    AuthorId = terminal.AuthorId,
+                    CommentId = response.CommentId,
+                    RequestId = requestId + ":star",
+                    Text = terminal.Text ?? throw new InvalidOperationException("No generated text."),
+                },
+                CancellationToken.None);
+            return (HttpStatusCode.OK, star, terminal);
         }
         catch (PostsApiException exception)
         {
-            return ((HttpStatusCode)exception.StatusCode, exception.Response, null);
+            return ((HttpStatusCode)exception.StatusCode, null, null);
         }
     }
 }

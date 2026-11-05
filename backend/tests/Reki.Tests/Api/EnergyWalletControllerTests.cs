@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Application.Player;
+using Reki.Application.Player.Responses;
 using Reki.Domain.Player;
 using Reki.Infrastructure.Jobs;
 
@@ -19,10 +21,10 @@ public sealed class EnergyWalletControllerTests(ApiFactory factory) : GameApiTes
         var onboarded = await CreatePlayerWithWorldAsync(api);
 
         // Act
-        var initial = await api.Player.GetEnergyWalletAsync(CancellationToken.None);
+        var initial = await ReadWalletAsync(api);
         await SetWalletAsync(28401, 4, 7);
         await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
-        var after = await api.Player.GetEnergyWalletAsync(CancellationToken.None);
+        var after = await ReadWalletAsync(api);
         var worlds = await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None);
 
         // Assert
@@ -49,7 +51,7 @@ public sealed class EnergyWalletControllerTests(ApiFactory factory) : GameApiTes
         Factory.Session.Clock.Advance(TimeSpan.FromDays(1));
 
         // Act
-        var first = await api.Player.GetEnergyWalletAsync(CancellationToken.None);
+        var first = await ReadWalletAsync(api);
         await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None);
         var after = await GetStoredPlayerAsync(28402);
@@ -79,7 +81,7 @@ public sealed class EnergyWalletControllerTests(ApiFactory factory) : GameApiTes
 
         // Act
         await RestoreEnergyAsync();
-        var wallet = await api.Player.GetEnergyWalletAsync(CancellationToken.None);
+        var wallet = await ReadWalletAsync(api);
         var after = await GetStoredPlayerAsync(28403);
         await RestoreEnergyAsync();
         var repeated = await GetStoredPlayerAsync(28403);
@@ -105,11 +107,11 @@ public sealed class EnergyWalletControllerTests(ApiFactory factory) : GameApiTes
         await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
             player => player.TelegramUserId == TelegramUserId.From(28404),
             Builders<PlayerProfile>.Update.Set(player => player.PostsPeriodStartedAtUtc, Factory.Session.Clock.GetUtcNow().AddDays(-2)));
-        var before = await api.Player.GetEnergyWalletAsync(CancellationToken.None);
+        var before = await ReadWalletAsync(api);
 
         // Act
         await ResetGameDayAsync();
-        var after = await api.Player.GetEnergyWalletAsync(CancellationToken.None);
+        var after = await ReadWalletAsync(api);
         var stored = await GetStoredPlayerAsync(28404);
 
         // Assert
@@ -157,7 +159,7 @@ public sealed class EnergyWalletControllerTests(ApiFactory factory) : GameApiTes
 
         // Act
         var result = await api.Player.ExchangeEnergyAsync(CancellationToken.None);
-        var wallet = await api.Player.GetEnergyWalletAsync(CancellationToken.None);
+        var wallet = await ReadWalletAsync(api);
         var after = await GetStoredPlayerAsync(28406);
 
         // Assert
@@ -228,13 +230,13 @@ public sealed class EnergyWalletControllerTests(ApiFactory factory) : GameApiTes
 
         // Act
         await PublishAsync(28409, "пост после полного запаса");
-        var afterPost = await api.Player.GetEnergyWalletAsync(CancellationToken.None);
+        var afterPost = await ReadWalletAsync(api);
         Factory.Session.Clock.Advance(TimeSpan.FromSeconds(599));
         await RestoreEnergyAsync();
-        var beforeTick = await api.Player.GetEnergyWalletAsync(CancellationToken.None);
+        var beforeTick = await ReadWalletAsync(api);
         Factory.Session.Clock.Advance(TimeSpan.FromSeconds(1));
         await RestoreEnergyAsync();
-        var afterTick = await api.Player.GetEnergyWalletAsync(CancellationToken.None);
+        var afterTick = await ReadWalletAsync(api);
 
         // Assert
         await Assert.That(afterPost.Amount).IsEqualTo(9);
@@ -244,6 +246,37 @@ public sealed class EnergyWalletControllerTests(ApiFactory factory) : GameApiTes
         await Assert.That(afterTick.NextEnergyAtUtc).IsNull();
         await Assert.That((await GetStoredPlayerAsync(28409))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(1);
     }
+
+    [Test]
+    public async Task Recovery_CanceledCursor_StopsWithoutWritingProfilesAsync()
+    {
+        // Arrange
+        using var first = Factory.CreateApiClient(28410);
+        using var second = Factory.CreateApiClient(28411);
+        await CreatePlayerWithWorldAsync(first);
+        await CreatePlayerWithWorldAsync(second);
+        await SetWalletAsync(28410, 0, 7);
+        await SetWalletAsync(28411, 0, 7);
+        var before = await GetStoredPlayerAsync(28410);
+        Factory.Session.Clock.Advance(TimeSpan.FromSeconds(601));
+        using var cancellation = new CancellationTokenSource();
+        var players = Factory.Services.GetRequiredService<IPlayerRepository>();
+        await using var stream = players.GetPlayersForEnergyRecoveryAsync(
+            Factory.Session.Clock.GetUtcNow().AddSeconds(-600), cancellation.Token).GetAsyncEnumerator(cancellation.Token);
+
+        // Act
+        var hasFirst = await stream.MoveNextAsync();
+        await cancellation.CancelAsync();
+        await Assert.That(async () => await stream.MoveNextAsync()).Throws<OperationCanceledException>();
+
+        // Assert
+        await Assert.That(hasFirst).IsTrue();
+        await Assert.That(await GetStoredPlayerAsync(28410)).IsEqualTo(before);
+    }
+
+    private static async Task<EnergyWalletResponse> ReadWalletAsync(TestApiClient api) =>
+        (await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).EnergyWallet
+        ?? throw new InvalidOperationException("The player response has no wallet.");
 
     private Task SetWalletAsync(long userId, int energy, int crystals) =>
         Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
