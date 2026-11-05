@@ -25,6 +25,25 @@
   },
   "viral": { "base": 0.03, "per_quality": 0.06, "x": 3, "near_miss_band": 0.15 },
   "flop": { "loss_x": -0.3 },
+  "unsubscribe": {
+    "_doc": "ML-баланс #244 для подключения в #245. Текущий PostProgressionCalculator этот раздел не читает: до переключения runtime действуют flop и difficulties.*.flop. loss_x — положительная доля обычного прироста до множителя залёта. Итоговый минус ограничен долей текущих подписчиков с минимумом 1, фактическая потеря не больше имеющейся аудитории. Причина исключает залёт; причины не складываются.",
+    "reason_priority": ["angry_abuse", "near_copy"],
+    "emotion_tie_break": "sad_tone",
+    "loss_x": { "easy": 0.08, "normal": 0.12, "hard": 0.16 },
+    "max_subscriber_fraction": { "easy": 0.005, "normal": 0.01, "hard": 0.015 },
+    "drama": {
+      "off": { "threshold_steps": 0, "loss_multiplier": 0.5 },
+      "soft": { "threshold_steps": 1, "loss_multiplier": 0.75 },
+      "mid": { "threshold_steps": 2, "loss_multiplier": 1.0 },
+      "hot": { "threshold_steps": 3, "loss_multiplier": 1.25 }
+    },
+    "threshold_reduction_per_step": { "angry_abuse": 0.05, "near_copy_cosine": 0.01, "near_copy_nli": 0.015, "sad_tone": 0.01, "anxious_tone": 0.01 },
+    "thresholds": {
+      "easy": { "angry_abuse": 0.9, "near_copy_cosine": 0.98, "near_copy_nli": 0.95, "sad_tone": 0.98, "anxious_tone": 0.96 },
+      "normal": { "angry_abuse": 0.8, "near_copy_cosine": 0.96, "near_copy_nli": 0.9, "sad_tone": 0.96, "anxious_tone": 0.94 },
+      "hard": { "angry_abuse": 0.7, "near_copy_cosine": 0.94, "near_copy_nli": 0.85, "sad_tone": 0.94, "anxious_tone": 0.92 }
+    }
+  },
   "skills": {
     "ids": ["brave", "humor", "topic"],
     "levels_xp": [0, 8, 20, 36, 56, 80, 110, 150, 200, 270],
