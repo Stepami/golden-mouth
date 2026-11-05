@@ -266,7 +266,16 @@ function Me() {
           {[[`⚡ ${p.postsLeft}`, 'энергии'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
         </div>
         <div className="profile-task-row"><div><b>💡 О чём написать</b><p className="small muted">{p.wants[0]?.text ?? "Поделись событием из своего мира"}</p></div><button className="text-link small" onClick={() => nav.push('02-1_compose')}>Написать →</button></div><p className="small muted energy-help">Пост и ответ расходуют энергию. Новый запас — в 09:00 МСК.</p>
-        <Card style={{ marginBottom: 12 }}><b>{p.hitOwnWorldMilestone ? '✨ Свой мир открыт' : '✨ Создай свой мир'}</b><p className="small muted">{p.hitOwnWorldMilestone ? 'Доступ подтверждён. Можно придумать свою историю.' : 'Первый пост приглашённого друга или 500 подписчиков в одном мире.'}</p>{!p.hitOwnWorldMilestone && <><progress aria-label="Подписчики до открытия своего мира" value={Math.min(500, p.subs)} max={500} /><div className="small muted">Этот мир: {Math.min(500, p.subs)} / 500</div></>}<button className="text-link" onClick={() => { if (p.hitOwnWorldMilestone) { beginOwnWorld(p); nav.push('05-7b_own_world', {}) } else nav.push('04-3_invite') }}>{p.hitOwnWorldMilestone ? 'Создать свой мир →' : 'Пригласить друга →'}</button></Card>
+        <div className="card own-world-unlock" style={{ marginTop: 0, marginBottom: 12 }}><b>{p.hitOwnWorldMilestone ? '✨ Свой мир открыт' : '✨ Создай свой мир'}</b>{p.hitOwnWorldMilestone ? <>
+          <p className="small muted">Доступ подтверждён. Можно придумать свою историю.</p>
+          <button className="text-link" onClick={() => { beginOwnWorld(p); nav.push('05-7b_own_world', {}) }}>Создать свой мир →</button>
+        </> : <>
+          <div className="own-unlock-goal"><b>Пригласи 1 друга</b><span>0/1</span></div>
+          <progress aria-label="Друзья с первым постом до открытия своего мира" value={0} max={1} />
+          <p className="small muted">Мир откроется, когда друг опубликует первый пост.</p>
+          <Button onClick={() => nav.push('04-3_invite')}>Пригласить друга</Button>
+          <p className="small muted own-unlock-alternative">Или набери 500 подписчиков в одном мире.</p>
+        </>}</div>
         <div className="profile-world-settings"><Button secondary onClick={() => nav.push('05-11_world_rules')}>Настройки мира</Button></div>
         <Card style={{ marginBottom: 10 }}>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Серия {p.streak.days} дня</b><span className="small" style={{ color: 'var(--gift)' }}>{p.streak.nextReward}</span></div>
