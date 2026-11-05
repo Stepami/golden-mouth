@@ -56,9 +56,6 @@ services:
         condition: service_healthy
       infinity:
         condition: service_healthy
-    networks:
-      - default
-      - ml-internal
     healthcheck:
       test:
         - CMD-SHELL
@@ -75,26 +72,24 @@ services:
 
   mongo:
     image: mongo:9.0.4-resolute
-    command:
-      - mongod
-      - --replSet
-      - rs0
-      - --bind_ip_all
-      - --setParameter
-      - mongotHost=mongot:27028
-      - --setParameter
-      - searchIndexManagementHostAndPort=mongot:27028
-      - --setParameter
-      - skipAuthenticationToSearchIndexManagementServer=true
-      - --setParameter
-      - useGrpcForSearch=true
-      - --setParameter
-      - searchTLSMode=disabled
+    command: >-
+      mongod --replSet rs0 --bind_ip_all
+      --setParameter mongotHost=mongot:27028
+      --setParameter searchIndexManagementHostAndPort=mongot:27028
+      --setParameter skipAuthenticationToSearchIndexManagementServer=true
+      --setParameter useGrpcForSearch=true --setParameter searchTLSMode=disabled
+    environment:
+      MONGO_SEARCH_PASSWORD: ${MONGO_SEARCH_PASSWORD:?MONGO_SEARCH_PASSWORD is required}
+    post_start:
+      - command: sh /bootstrap-search.sh
+        user: root
     ports:
       - "127.0.0.1:${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo-data:/data/db
       - mongo-config:/data/configdb
+      - ./mongo-search/bootstrap.sh:/bootstrap-search.sh:ro
+      - mongot-secrets:/secrets
     networks:
       - default
       - search-internal
@@ -105,7 +100,7 @@ services:
         - --quiet
         - --eval
         - >-
-          if (db.hello().isWritablePrimary) quit(0);
+          if (db.hello().isWritablePrimary) quit(db.getSiblingDB('admin').getUser('mongotUser') ? 0 : 1);
           try { rs.status(); } catch (error) {
             if (error.codeName !== 'NotYetInitialized') throw error;
             rs.initiate({_id: 'rs0', members: [{_id: 0, host: 'mongo:27017'}]});
@@ -118,21 +113,6 @@ services:
       start_period: 3m
     restart: unless-stopped
 
-  mongo-search-bootstrap:
-    image: mongo:9.0.4-resolute
-    entrypoint: ["sh", "/bootstrap.sh"]
-    environment:
-      MONGO_SEARCH_PASSWORD: ${MONGO_SEARCH_PASSWORD:?MONGO_SEARCH_PASSWORD is required}
-    volumes:
-      - ./mongo-search/bootstrap.sh:/bootstrap.sh:ro
-      - mongot-secrets:/secrets
-    networks:
-      - search-internal
-    depends_on:
-      mongo:
-        condition: service_healthy
-    restart: "no"
-
   mongot:
     image: mongodb/mongodb-community-search:1.70.1
     volumes:
@@ -142,8 +122,8 @@ services:
     networks:
       - search-internal
     depends_on:
-      mongo-search-bootstrap:
-        condition: service_completed_successfully
+      mongo:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health | grep -q SERVING"]
       interval: 30s
@@ -156,63 +136,24 @@ services:
     image: michaelf34/infinity:0.0.78-cpu
     cpus: 2
     mem_limit: 2g
-    command:
-      - v2
-      - --model-id
-      - /models/embedding
-      - --served-model-name
-      - embedding
-      - --engine
-      - torch
-      - --device
-      - cpu
-      - --pooling-method
-      - cls
-      - --no-compile
-      - --no-bettertransformer
-      - --no-model-warmup
-      - --batch-size
-      - "4"
-      - --model-id
-      - /models/toxicity
-      - --served-model-name
-      - toxicity
-      - --engine
-      - torch
-      - --device
-      - cpu
-      - --no-compile
-      - --no-bettertransformer
-      - --no-model-warmup
-      - --batch-size
-      - "4"
-      - --model-id
-      - /models/emotion
-      - --served-model-name
-      - emotion
-      - --engine
-      - torch
-      - --device
-      - cpu
-      - --no-compile
-      - --no-bettertransformer
-      - --no-model-warmup
-      - --batch-size
-      - "4"
+    command: >-
+      v2
+      --model-id cointegrated/rubert-tiny2 --served-model-name embedding --revision e8ed3b0c8bbf4fb6984c3de043bf7d2f4e5969ae
+      --model-id cointegrated/rubert-tiny-toxicity --served-model-name toxicity --revision 5d37eff844868e243467e4c38898bad46c271af2
+      --model-id cointegrated/rubert-tiny2-cedr-emotion-detection --served-model-name emotion --revision 453ae93ca895c98cda29522c72b6fbc5a08067b9
+      --engine torch --device cpu --pooling-method cls --batch-size 4
+      --no-compile --no-bettertransformer --no-model-warmup
     environment:
-      HF_HUB_OFFLINE: "1"
-      TRANSFORMERS_OFFLINE: "1"
+      HF_HOME: /models-cache
       DO_NOT_TRACK: "1"
     volumes:
-      - ./ml/models:/models:ro
-    networks:
-      - ml-internal
+      - infinity-models:/models-cache
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7997/health', timeout=3)"]
       interval: 30s
       timeout: 5s
       retries: 5
-      start_period: 2m
+      start_period: 10m
     restart: unless-stopped
 
   otel-collector:
@@ -240,12 +181,11 @@ services:
 volumes:
   mongo-data:
   mongo-config:
+  infinity-models:
   mongot-data:
   mongot-secrets:
   openobserve-data:
 
 networks:
   search-internal:
-    internal: true
-  ml-internal:
     internal: true
