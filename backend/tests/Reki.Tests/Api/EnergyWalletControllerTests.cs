@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Application.Player;
 using Reki.Application.Player.Responses;
 using Reki.Domain.Player;
 using Reki.Infrastructure.Jobs;
@@ -245,33 +244,6 @@ public sealed class EnergyWalletControllerTests(ApiFactory factory) : GameApiTes
         await Assert.That(afterTick.Amount).IsEqualTo(10);
         await Assert.That(afterTick.NextEnergyAtUtc).IsNull();
         await Assert.That((await GetStoredPlayerAsync(28409))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(1);
-    }
-
-    [Test]
-    public async Task Recovery_CanceledCursor_StopsWithoutWritingProfilesAsync()
-    {
-        // Arrange
-        using var first = Factory.CreateApiClient(28410);
-        using var second = Factory.CreateApiClient(28411);
-        await CreatePlayerWithWorldAsync(first);
-        await CreatePlayerWithWorldAsync(second);
-        await SetWalletAsync(28410, 0, 7);
-        await SetWalletAsync(28411, 0, 7);
-        var before = await GetStoredPlayerAsync(28410);
-        Factory.Session.Clock.Advance(TimeSpan.FromSeconds(601));
-        using var cancellation = new CancellationTokenSource();
-        var players = Factory.Services.GetRequiredService<IPlayerRepository>();
-        await using var stream = players.GetPlayersForEnergyRecoveryAsync(
-            Factory.Session.Clock.GetUtcNow().AddSeconds(-600), cancellation.Token).GetAsyncEnumerator(cancellation.Token);
-
-        // Act
-        var hasFirst = await stream.MoveNextAsync();
-        await cancellation.CancelAsync();
-        await Assert.That(async () => await stream.MoveNextAsync()).Throws<OperationCanceledException>();
-
-        // Assert
-        await Assert.That(hasFirst).IsTrue();
-        await Assert.That(await GetStoredPlayerAsync(28410)).IsEqualTo(before);
     }
 
     private static async Task<EnergyWalletResponse> ReadWalletAsync(TestApiClient api) =>

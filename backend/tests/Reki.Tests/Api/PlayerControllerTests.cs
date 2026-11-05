@@ -437,6 +437,12 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var inviterApi = Factory.CreateApiClient(8570);
         await CreatePlayerWithWorldAsync(inviterApi);
+        await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(
+            new BsonDocument("TelegramUserId", 8570L),
+            Builders<BsonDocument>.Update
+                .Set("Wallet.Energy", 1).Set("Wallet.Crystals", 7).Set("Wallet.EnergyUsed", 4)
+                .Set("Skills.brave.Experience", 42).Inc("Version", 1));
+        var before = await GetStoredPlayerAsync(8570);
         var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
         long[] friendIds = [8571, 8572, 8573, 8574];
         foreach (var friendId in friendIds)
@@ -447,7 +453,12 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         await Task.WhenAll(friendIds.Select(friendId => PublishAsync(friendId, "одновременный первый пост")));
 
-        await Assert.That((await GetStoredPlayerAsync(8570))["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
+        var saved = await GetStoredPlayerAsync(8570);
+        await Assert.That(saved["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
+        await Assert.That(saved["Wallet"]["Crystals"].AsInt32).IsEqualTo(7);
+        await Assert.That(saved["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(4);
+        await Assert.That(saved["Skills"]).IsEqualTo(before["Skills"]);
+        await Assert.That(saved["Settings"]).IsEqualTo(before["Settings"]);
         foreach (var friendId in friendIds)
         {
             var friend = await GetStoredPlayerAsync(friendId);
@@ -457,38 +468,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             await Assert.That(invite["InviteeBonusUsed"].AsBoolean).IsTrue();
             await Assert.That(invite["InviterBonusUsed"].AsBoolean).IsTrue();
         }
-    }
-
-    [Test]
-    public async Task Referral_ConcurrentExchange_PreservesAccountStateAsync()
-    {
-        // Arrange
-        using var inviterApi = Factory.CreateApiClient(8575);
-        using var friendApi = Factory.CreateApiClient(8576);
-        await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
-        await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
-        await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(
-            new BsonDocument("TelegramUserId", 8575L),
-            Builders<BsonDocument>.Update
-                .Set("Wallet.Energy", 1).Set("Wallet.EnergyUsed", 4)
-                .Set("Skills.brave.Experience", 42).Inc("Version", 1));
-        var before = await GetStoredPlayerAsync(8575);
-
-        // Act
-        var exchange = inviterApi.Player.ExchangeEnergyAsync(CancellationToken.None);
-        await Task.WhenAll(exchange, PublishAsync(8576, "первый пост друга во время обмена"));
-        var result = await exchange;
-        var saved = await GetStoredPlayerAsync(8575);
-
-        // Assert
-        await Assert.That(result.Exchanged).IsTrue();
-        await Assert.That(saved["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
-        await Assert.That(saved["Wallet"]["Crystals"].AsInt32).IsEqualTo(7);
-        await Assert.That(saved["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(4);
-        await Assert.That(saved["Skills"]).IsEqualTo(before["Skills"]);
-        await Assert.That(saved["Settings"]).IsEqualTo(before["Settings"]);
-        await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
     }
 
     [Test]

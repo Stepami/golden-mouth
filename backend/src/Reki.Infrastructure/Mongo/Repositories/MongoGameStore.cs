@@ -1,7 +1,7 @@
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application;
 using Reki.Application.Posts;
-using Reki.Application.Posts.PublishPostCommand;
 using Reki.Domain.Events;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
@@ -71,7 +71,7 @@ internal sealed class MongoGameStore : IGameStore
         }
     }
 
-    public async ValueTask<PostCommitResult> TryCommitPostAsync(
+    public async ValueTask<bool> TryCommitPostAsync(
         PlayerProfile updatedPlayer,
         int expectedPlayerVersion,
         World updatedWorld,
@@ -79,7 +79,6 @@ internal sealed class MongoGameStore : IGameStore
         PublishedPost published,
         string publicationId,
         Invitation? updatedInvite,
-        PlayerProfile? updatedInviter,
         int inviteBonusMaxPerDay,
         CancellationToken cancellationToken)
     {
@@ -87,7 +86,7 @@ internal sealed class MongoGameStore : IGameStore
         using var session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
         return await session.WithTransactionAsync(CommitAsync, cancellationToken: cancellationToken);
 
-        async Task<PostCommitResult> CommitAsync(IClientSessionHandle transactionSession, CancellationToken transactionCancellationToken)
+        async Task<bool> CommitAsync(IClientSessionHandle transactionSession, CancellationToken transactionCancellationToken)
         {
             var readyFilter = Builders<Publication>.Filter.And(
                 Builders<Publication>.Filter.Eq(item => item.Id, publicationId),
@@ -106,7 +105,7 @@ internal sealed class MongoGameStore : IGameStore
             if (publicationResult.ModifiedCount != 1)
             {
                 await transactionSession.AbortTransactionAsync(transactionCancellationToken);
-                return PostCommitResult.StateChanged;
+                return false;
             }
 
             if ((await _players.ReplaceOneAsync(transactionSession, item => item.Id == updatedPlayer.Id && item.Version == expectedPlayerVersion, updatedPlayer, cancellationToken: transactionCancellationToken)).MatchedCount != 1 ||
@@ -114,7 +113,7 @@ internal sealed class MongoGameStore : IGameStore
                 .MatchedCount != 1)
             {
                 await transactionSession.AbortTransactionAsync(transactionCancellationToken);
-                return PostCommitResult.StateChanged;
+                return false;
             }
 
             if (updatedInvite is not null)
@@ -126,22 +125,26 @@ internal sealed class MongoGameStore : IGameStore
                     item => item.InviterId == updatedInvite.InviterId && item.InviterBonusUsed &&
                             item.InviterBonusUsedAtUtc >= start && item.InviterBonusUsedAtUtc < end,
                     cancellationToken: transactionCancellationToken);
-                if (inviterUses < inviteBonusMaxPerDay && updatedInviter is not null)
+                if (inviterUses < inviteBonusMaxPerDay)
                 {
-                    var inviterUpdate = Builders<PlayerProfile>.Update
-                        .Set(item => item.HitOwnWorldMilestone, updatedInviter.HitOwnWorldMilestone)
-                        .Set(item => item.Wallet.Energy, updatedInviter.Wallet.Energy)
-                        .Inc(item => item.Version, 1);
-                    var inviterResult = await _players.UpdateOneAsync(
+                    var inviterUpdate = Builders<PlayerProfile>.Update.Pipeline(new[]
+                    {
+                        new BsonDocument("$set", new BsonDocument
+                        {
+                            [nameof(PlayerProfile.HitOwnWorldMilestone)] = true,
+                            [$"{nameof(PlayerProfile.Wallet)}.{nameof(PlayerWallet.Energy)}"] = new BsonDocument("$min", new BsonArray
+                            {
+                                PlayerWallet.Cap,
+                                new BsonDocument("$add", new BsonArray { "$Wallet.Energy", updatedInvite.BonusAmount }),
+                            }),
+                            [nameof(PlayerProfile.Version)] = new BsonDocument("$add", new BsonArray { "$Version", 1 }),
+                        }),
+                    });
+                    await _players.UpdateOneAsync(
                         transactionSession,
-                        item => item.Id == updatedInviter.Id && item.Version == updatedInviter.Version,
+                        item => item.Id == updatedInvite.InviterId,
                         inviterUpdate,
                         cancellationToken: transactionCancellationToken);
-                    if (inviterResult.MatchedCount != 1)
-                    {
-                        await transactionSession.AbortTransactionAsync(transactionCancellationToken);
-                        return PostCommitResult.InviterChanged;
-                    }
                 }
 
                 var inviteUpdate = Builders<Invitation>.Update
@@ -157,12 +160,12 @@ internal sealed class MongoGameStore : IGameStore
                 if (inviteResult.ModifiedCount != 1)
                 {
                     await transactionSession.AbortTransactionAsync(transactionCancellationToken);
-                    return PostCommitResult.StateChanged;
+                    return false;
                 }
             }
 
             await _posts.InsertOneAsync(transactionSession, post, cancellationToken: transactionCancellationToken);
-            return PostCommitResult.Committed;
+            return true;
         }
     }
 
