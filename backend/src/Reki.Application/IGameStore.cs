@@ -1,5 +1,4 @@
 using Reki.Application.Posts;
-using Reki.Application.Posts.PublishPostCommand;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
@@ -12,7 +11,7 @@ public interface IGameStore
 {
     ValueTask DeletePlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
 
-    ValueTask<PostCommitResult> TryCommitPostAsync(
+    ValueTask<bool> TryCommitPostAsync(
         PlayerProfile updatedPlayer,
         int expectedPlayerVersion,
         World updatedWorld,
@@ -20,7 +19,6 @@ public interface IGameStore
         PublishedPost published,
         string publicationId,
         Invitation? updatedInvite,
-        PlayerProfile? updatedInviter,
         int inviteBonusMaxPerDay,
         CancellationToken cancellationToken);
 
