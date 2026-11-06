@@ -1,6 +1,6 @@
 using Reki.Domain.Player;
 
-namespace Reki.Application.Posts.PublishPostCommand;
+namespace Reki.Application.Posts;
 
 public sealed record PostProgression(
     long SubscriberDelta,

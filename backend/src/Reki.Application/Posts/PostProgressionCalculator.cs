@@ -6,7 +6,7 @@ using Reki.Application.Balance;
 using Reki.Application.Posts.AI.Post;
 using Reki.Domain.Player;
 
-namespace Reki.Application.Posts.PublishPostCommand;
+namespace Reki.Application.Posts;
 
 internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> balance)
 {

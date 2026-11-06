@@ -60,50 +60,10 @@ internal sealed class MongoGameStore : IGameStore
             using var session = await _client.StartSessionAsync(cancellationToken: cancellationToken);
             session.StartTransaction();
             if ((await _posts.ReplaceOneAsync(session, item => item.Id == post.Id && item.Version == expectedPostVersion && !item.EvaluationApplied, post, cancellationToken: cancellationToken)).MatchedCount != 1 ||
-                (await _players.ReplaceOneAsync(session, item => item.Id == player.Id && item.Version == expectedPlayerVersion, player, cancellationToken: cancellationToken)).MatchedCount != 1 ||
-                (await _worlds.ReplaceOneAsync(session, item => item.Id == world.Id && item.Player.PlayerId == player.Id && item.Version == expectedWorldVersion, world, cancellationToken: cancellationToken)).MatchedCount != 1)
+                !await SaveProgressAsync(session, player, expectedPlayerVersion, world, expectedWorldVersion, updatedInvite, inviteBonusMaxPerDay, cancellationToken))
             {
                 await session.AbortTransactionAsync(cancellationToken);
                 return false;
-            }
-
-            if (updatedInvite is not null)
-            {
-                var start = player.PostsPeriodStartedAtUtc;
-                var end = start.AddDays(1);
-                var inviterUses = await _invites.CountDocumentsAsync(
-                    session,
-                    item => item.InviterId == updatedInvite.InviterId && item.InviterBonusUsed &&
-                            item.InviterBonusUsedAtUtc >= start && item.InviterBonusUsedAtUtc < end,
-                    cancellationToken: cancellationToken);
-                if (inviterUses < inviteBonusMaxPerDay)
-                {
-                    var inviterUpdate = Builders<PlayerProfile>.Update
-                        .Set(item => item.HitOwnWorldMilestone, true)
-                        .Inc(item => item.Energy, updatedInvite.BonusAmount)
-                        .Inc(item => item.Version, 1);
-                    await _players.UpdateOneAsync(
-                        session,
-                        item => item.Id == updatedInvite.InviterId,
-                        inviterUpdate,
-                        cancellationToken: cancellationToken);
-                }
-
-                var inviteUpdate = Builders<Invitation>.Update
-                    .Set(item => item.InviterBonusUsed, updatedInvite.InviterBonusUsed)
-                    .Set(item => item.InviteeBonusUsed, updatedInvite.InviteeBonusUsed)
-                    .Set(item => item.InviterBonusUsedAtUtc, updatedInvite.InviterBonusUsedAtUtc)
-                    .Set(item => item.InviteeBonusUsedAtUtc, updatedInvite.InviteeBonusUsedAtUtc);
-                var inviteResult = await _invites.UpdateOneAsync(
-                    session,
-                    item => item.Id == updatedInvite.Id && !item.InviteeBonusUsed,
-                    inviteUpdate,
-                    cancellationToken: cancellationToken);
-                if (inviteResult.ModifiedCount != 1)
-                {
-                    await session.AbortTransactionAsync(cancellationToken);
-                    return false;
-                }
             }
 
             await session.CommitTransactionAsync(cancellationToken);
@@ -191,51 +151,10 @@ internal sealed class MongoGameStore : IGameStore
                 return false;
             }
 
-            if ((await _players.ReplaceOneAsync(transactionSession, item => item.Id == updatedPlayer.Id && item.Version == expectedPlayerVersion, updatedPlayer, cancellationToken: transactionCancellationToken)).MatchedCount != 1 ||
-                (await _worlds.ReplaceOneAsync(transactionSession, item => item.Id == updatedWorld.Id && item.Player.PlayerId == updatedPlayer.Id && item.Version == expectedWorldVersion, updatedWorld, cancellationToken: transactionCancellationToken))
-                .MatchedCount != 1)
+            if (!await SaveProgressAsync(transactionSession, updatedPlayer, expectedPlayerVersion, updatedWorld, expectedWorldVersion, updatedInvite, inviteBonusMaxPerDay, transactionCancellationToken))
             {
                 await transactionSession.AbortTransactionAsync(transactionCancellationToken);
                 return false;
-            }
-
-            if (updatedInvite is not null)
-            {
-                var start = updatedPlayer.PostsPeriodStartedAtUtc;
-                var end = start.AddDays(1);
-                var inviterUses = await _invites.CountDocumentsAsync(
-                    transactionSession,
-                    item => item.InviterId == updatedInvite.InviterId && item.InviterBonusUsed &&
-                            item.InviterBonusUsedAtUtc >= start && item.InviterBonusUsedAtUtc < end,
-                    cancellationToken: transactionCancellationToken);
-                if (inviterUses < inviteBonusMaxPerDay)
-                {
-                    var inviterUpdate = Builders<PlayerProfile>.Update
-                        .Set(item => item.HitOwnWorldMilestone, true)
-                        .Inc(item => item.Energy, updatedInvite.BonusAmount)
-                        .Inc(item => item.Version, 1);
-                    await _players.UpdateOneAsync(
-                        transactionSession,
-                        item => item.Id == updatedInvite.InviterId,
-                        inviterUpdate,
-                        cancellationToken: transactionCancellationToken);
-                }
-
-                var inviteUpdate = Builders<Invitation>.Update
-                    .Set(item => item.InviterBonusUsed, updatedInvite.InviterBonusUsed)
-                    .Set(item => item.InviteeBonusUsed, updatedInvite.InviteeBonusUsed)
-                    .Set(item => item.InviterBonusUsedAtUtc, updatedInvite.InviterBonusUsedAtUtc)
-                    .Set(item => item.InviteeBonusUsedAtUtc, updatedInvite.InviteeBonusUsedAtUtc);
-                var inviteResult = await _invites.UpdateOneAsync(
-                    transactionSession,
-                    item => item.Id == updatedInvite.Id && !item.InviteeBonusUsed,
-                    inviteUpdate,
-                    cancellationToken: transactionCancellationToken);
-                if (inviteResult.ModifiedCount != 1)
-                {
-                    await transactionSession.AbortTransactionAsync(transactionCancellationToken);
-                    return false;
-                }
             }
 
             await _posts.InsertOneAsync(transactionSession, post, cancellationToken: transactionCancellationToken);
@@ -289,5 +208,62 @@ internal sealed class MongoGameStore : IGameStore
         {
             return false;
         }
+    }
+
+    private async ValueTask<bool> SaveProgressAsync(
+        IClientSessionHandle session,
+        PlayerProfile player,
+        int expectedPlayerVersion,
+        World world,
+        int expectedWorldVersion,
+        Invitation? updatedInvite,
+        int inviteBonusMaxPerDay,
+        CancellationToken cancellationToken)
+    {
+        if ((await _players.ReplaceOneAsync(session, item => item.Id == player.Id && item.Version == expectedPlayerVersion, player, cancellationToken: cancellationToken)).MatchedCount != 1 ||
+            (await _worlds.ReplaceOneAsync(session, item => item.Id == world.Id && item.Player.PlayerId == player.Id && item.Version == expectedWorldVersion, world, cancellationToken: cancellationToken)).MatchedCount != 1)
+        {
+            return false;
+        }
+
+        if (updatedInvite is not null)
+        {
+            var start = player.PostsPeriodStartedAtUtc;
+            var end = start.AddDays(1);
+            var inviterUses = await _invites.CountDocumentsAsync(
+                session,
+                item => item.InviterId == updatedInvite.InviterId && item.InviterBonusUsed &&
+                        item.InviterBonusUsedAtUtc >= start && item.InviterBonusUsedAtUtc < end,
+                cancellationToken: cancellationToken);
+            if (inviterUses < inviteBonusMaxPerDay)
+            {
+                var inviterUpdate = Builders<PlayerProfile>.Update
+                    .Set(item => item.HitOwnWorldMilestone, true)
+                    .Inc(item => item.Energy, updatedInvite.BonusAmount)
+                    .Inc(item => item.Version, 1);
+                await _players.UpdateOneAsync(
+                    session,
+                    item => item.Id == updatedInvite.InviterId,
+                    inviterUpdate,
+                    cancellationToken: cancellationToken);
+            }
+
+            var inviteUpdate = Builders<Invitation>.Update
+                .Set(item => item.InviterBonusUsed, updatedInvite.InviterBonusUsed)
+                .Set(item => item.InviteeBonusUsed, updatedInvite.InviteeBonusUsed)
+                .Set(item => item.InviterBonusUsedAtUtc, updatedInvite.InviterBonusUsedAtUtc)
+                .Set(item => item.InviteeBonusUsedAtUtc, updatedInvite.InviteeBonusUsedAtUtc);
+            var inviteResult = await _invites.UpdateOneAsync(
+                session,
+                item => item.Id == updatedInvite.Id && !item.InviteeBonusUsed,
+                inviteUpdate,
+                cancellationToken: cancellationToken);
+            if (inviteResult.ModifiedCount != 1)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

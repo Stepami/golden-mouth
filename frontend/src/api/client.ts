@@ -84,6 +84,32 @@ async function readSse<T>(response: Response, decode: (value: unknown) => T, onE
             break;
     }
 }
+async function generateReply(postId: string, worldId: string, body: Wire.GenerateReplyRequest, signal?: AbortSignal, onTyping?: () => void) {
+    const generation = sessionGeneration();
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            assertSession(generation);
+            onTyping?.();
+            let completed: { text: string; authorId: string | null; additionalStarId: string | null } | undefined;
+            const response = await stream({ url: '/posts/{postId}/replies/generation', path: { postId }, query: { worldId }, body }, signal);
+            await readSse(response, value => parse(starGenerationEvent, value), event => {
+                if (event.status === 'failed') {
+                    const failure = new Error(event.code ?? 'ai_unavailable');
+                    failure.name = event.code ?? 'ai_unavailable';
+                    throw failure;
+                }
+                if (event.status === 'completed' && event.text) completed = { text: event.text, authorId: event.authorId, additionalStarId: event.additionalStarId };
+            });
+            if (!completed || (!body.authorId && !completed.authorId)) throw new Error('Generation stream ended before completion');
+            assertSession(generation);
+            return completed;
+        } catch (cause) {
+            const code = cause instanceof Error ? cause.name : '';
+            if (attempt === 1 || signal?.aborted || ['AbortError', 'unsafe_generated_content', 'unsafe_input', 'crisis'].includes(code) || (cause instanceof ApiError && cause.status >= 400 && cause.status < 500)) throw cause;
+        }
+    }
+    throw new Error('Generation failed');
+}
 const playerRequests = new Map<string, Promise<Player>>();
 async function loadPlayer(worldId?: string): Promise<Player> {
     const generation = sessionGeneration();
@@ -179,30 +205,15 @@ export const api = {
             try {
                 const currentWorld = worldId();
                 const postId = saved?.postId ?? (await data(sdk.posts.createPost(currentWorld, { requestId: publicationId, text, ownWords, wantId }, ctrl.signal))).postId;
-                update({ postId, replyRequestId: saved?.replyRequestId ?? crypto.randomUUID() });
+                update({ postId });
                 assertSession(generation);
                 onStatus?.('pending');
                 let post = await data(sdk.posts.getPost(postId, currentWorld, ctrl.signal));
-                const replyId = saved?.replyRequestId ?? `${publicationId}-first`;
+                const replyId = `${publicationId}-first`;
                 if (!post.comments.some(comment => comment.requestId === replyId || (post.evaluationApplied && !comment.parentCommentId && comment.authorId?.startsWith('Star_')))) {
                     if (!saved?.replyText || !saved.replyAuthorId) {
-                        let completed: { text: string; authorId: string } | undefined;
-                        for (let attempt = 0; attempt < 2; attempt++) {
-                            try {
-                                const response = await stream({ url: '/posts/{postId}/replies/generation', path: { postId }, query: { worldId: currentWorld }, body: { authorId: null, sourceCommentId: null, additional: false } }, ctrl.signal);
-                                await readSse(response, value => parse(starGenerationEvent, value), event => {
-                                    if (event.status === 'failed') { const failure = new Error(event.code ?? 'ai_unavailable'); failure.name = event.code ?? 'ai_unavailable'; throw failure; }
-                                    if (event.status === 'completed' && event.text && event.authorId) completed = { text: event.text, authorId: event.authorId };
-                                });
-                                if (!completed) throw new Error('Generation stream ended before completion');
-                                break;
-                            } catch (cause) {
-                                const code = cause instanceof Error ? cause.name : '';
-                                if (attempt === 1 || ctrl.signal.aborted || ['AbortError', 'unsafe_generated_content', 'unsafe_input', 'crisis'].includes(code) || (cause instanceof ApiError && cause.status >= 400 && cause.status < 500)) throw cause;
-                            }
-                        }
-                        if (!completed) throw new Error('Generation failed');
-                        update({ replyText: completed.text, replyAuthorId: completed.authorId });
+                        const completed = await generateReply(postId, currentWorld, { authorId: null, sourceCommentId: null, additional: false }, ctrl.signal);
+                        update({ replyText: completed.text, replyAuthorId: completed.authorId ?? undefined });
                     }
                     if (!saved?.replyText || !saved.replyAuthorId) throw new Error('Generated comment is unavailable');
                     const reply = await data(sdk.posts.replyToPost(postId, currentWorld, { authorId: saved.replyAuthorId, commentId: null, requestId: replyId, text: saved.replyText }, ctrl.signal));
@@ -264,35 +275,12 @@ export const api = {
             options.onSaved?.(saved);
             return { ...saved, commentId: result.commentId };
         };
-        const generate = async (authorId: string, sourceCommentId: string, additional: boolean) => {
-            for (let attempt = 0; attempt < 2; attempt++) {
-                try {
-                    options.onTyping?.(authorId);
-                    let completed: { text: string; additionalStarId?: string | null } | undefined;
-                    const response = await stream({ url: '/posts/{postId}/replies/generation', path: { postId }, query: { worldId: replyWorldId }, body: { authorId, sourceCommentId, additional } }, options.signal);
-                    await readSse(response, value => parse(starGenerationEvent, value), event => {
-                        if (event.status === 'failed') {
-                            const failure = new Error(event.code ?? 'ai_unavailable');
-                            failure.name = event.code ?? 'ai_unavailable';
-                            throw failure;
-                        }
-                        if (event.status === 'completed' && event.text) completed = { text: event.text, additionalStarId: event.additionalStarId };
-                    });
-                    if (!completed) throw new Error('Generation stream ended before completion');
-                    return completed;
-                } catch (cause) {
-                    const code = cause instanceof Error ? cause.name : '';
-                    if (attempt === 1 || options.signal?.aborted || code === 'AbortError' || code === 'unsafe_generated_content' || code === 'unsafe_input' || code === 'crisis' || (cause instanceof ApiError && cause.status >= 400 && cause.status < 500)) throw cause;
-                }
-            }
-            throw new Error('Generation failed');
-        };
         const playerReply = await save(`Player_${player.id.replaceAll('-', '')}`, commentId, requestId, text);
         try {
             const mainId = `${requestId}-star`;
             const main = playerReply.post.comments.some(comment => comment.requestId === mainId) && options.additionalStarId
                 ? { text: '', additionalStarId: options.additionalStarId }
-                : await generate(starAuthorId, playerReply.commentId, false);
+                : await generateReply(postId, replyWorldId, { authorId: starAuthorId, sourceCommentId: playerReply.commentId, additional: false }, options.signal, () => options.onTyping?.(starAuthorId));
             options.onAdditionalStar?.(main.additionalStarId ?? null);
             let latest = playerReply.post.comments.some(comment => comment.requestId === mainId)
                 ? playerReply : await save(starAuthorId, playerReply.commentId, mainId, main.text);
@@ -300,7 +288,7 @@ export const api = {
                 const extraId = `${requestId}-extra`;
                 if (!latest.post.comments.some(comment => comment.requestId === extraId)) {
                     const additionalAuthorId = `Star_${main.additionalStarId}`;
-                    const additional = await generate(additionalAuthorId, playerReply.commentId, true);
+                    const additional = await generateReply(postId, replyWorldId, { authorId: additionalAuthorId, sourceCommentId: playerReply.commentId, additional: true }, options.signal, () => options.onTyping?.(additionalAuthorId));
                     latest = await save(additionalAuthorId, null, extraId, additional.text);
                 }
             }
