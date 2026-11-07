@@ -4,16 +4,12 @@ using Reki.Domain.Player;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 
-internal sealed class MongoPublicationRepository : IPublicationRepository
+internal sealed class MongoPublicationRepository(
+    IMongoDatabase database,
+    MongoSessionProvider sessionProvider) : IPublicationRepository
 {
-    private readonly IMongoCollection<Publication> _publications;
-    private readonly MongoSessionProvider _sessionProvider;
-
-    public MongoPublicationRepository(IMongoDatabase database, MongoSessionProvider sessionProvider)
-    {
-        _publications = database.GetCollection<Publication>(MongoCollections.Publications);
-        _sessionProvider = sessionProvider;
-    }
+    private readonly IMongoCollection<Publication> _publications =
+        database.GetCollection<Publication>(MongoCollections.Publications);
 
     public async ValueTask<Publication?> GetPublicationAsync(
         string id,
@@ -84,9 +80,9 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
             .Set(item => item.Text, string.Empty)
             .Set(item => item.Parts, []);
         await _publications.UpdateOneAsync(
-            _sessionProvider.Session, filter, update, cancellationToken: cancellationToken);
+            sessionProvider.Session, filter, update, cancellationToken: cancellationToken);
     }
 
     public async ValueTask DeletePublicationsAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await _publications.DeleteManyAsync(_sessionProvider.Session, item => item.PlayerId == playerId, cancellationToken: cancellationToken);
+        await _publications.DeleteManyAsync(sessionProvider.Session, item => item.PlayerId == playerId, cancellationToken: cancellationToken);
 }

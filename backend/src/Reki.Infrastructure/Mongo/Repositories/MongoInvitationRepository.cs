@@ -5,16 +5,12 @@ using Reki.Domain.Player;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 
-internal sealed class MongoInvitationRepository : IInvitationRepository
+internal sealed class MongoInvitationRepository(
+    IMongoDatabase database,
+    MongoSessionProvider sessionProvider) : IInvitationRepository
 {
-    private readonly IMongoCollection<Invitation> _invites;
-    private readonly MongoSessionProvider _sessionProvider;
-
-    public MongoInvitationRepository(IMongoDatabase database, MongoSessionProvider sessionProvider)
-    {
-        _invites = database.GetCollection<Invitation>(MongoCollections.Invites);
-        _sessionProvider = sessionProvider;
-    }
+    private readonly IMongoCollection<Invitation> _invites =
+        database.GetCollection<Invitation>(MongoCollections.Invites);
 
     public async ValueTask CreateInviteAsync(Invitation invite, CancellationToken cancellationToken) =>
         await _invites.InsertOneAsync(invite, cancellationToken: cancellationToken);
@@ -29,7 +25,7 @@ internal sealed class MongoInvitationRepository : IInvitationRepository
         DateTimeOffset periodEnd,
         CancellationToken cancellationToken) =>
         await _invites.CountDocumentsAsync(
-            _sessionProvider.Session,
+            sessionProvider.Session,
             item => item.InviterId == inviterId && item.InviterBonusUsed &&
                     item.InviterBonusUsedAtUtc >= periodStart && item.InviterBonusUsedAtUtc < periodEnd,
             cancellationToken: cancellationToken);
@@ -42,7 +38,7 @@ internal sealed class MongoInvitationRepository : IInvitationRepository
             .Set(item => item.InviterBonusUsedAtUtc, invite.InviterBonusUsedAtUtc)
             .Set(item => item.InviteeBonusUsedAtUtc, invite.InviteeBonusUsedAtUtc);
         await _invites.UpdateOneAsync(
-            _sessionProvider.Session,
+            sessionProvider.Session,
             item => item.Id == invite.Id,
             update,
             cancellationToken: cancellationToken);
@@ -50,7 +46,7 @@ internal sealed class MongoInvitationRepository : IInvitationRepository
 
     public async ValueTask DeleteInvitesAsync(PlayerId playerId, CancellationToken cancellationToken) =>
         await _invites.DeleteManyAsync(
-            _sessionProvider.Session,
+            sessionProvider.Session,
             item => item.InviterId == playerId || item.InviteeId == playerId,
             cancellationToken: cancellationToken);
 }

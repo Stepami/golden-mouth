@@ -6,19 +6,15 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 
-internal sealed class MongoPostRepository : IPostRepository
+internal sealed class MongoPostRepository(
+    IMongoDatabase database,
+    MongoSessionProvider sessionProvider) : IPostRepository
 {
-    private readonly IMongoCollection<GamePost> _posts;
-    private readonly MongoSessionProvider _sessionProvider;
-
-    public MongoPostRepository(IMongoDatabase database, MongoSessionProvider sessionProvider)
-    {
-        _posts = database.GetCollection<GamePost>(MongoCollections.Posts);
-        _sessionProvider = sessionProvider;
-    }
+    private readonly IMongoCollection<GamePost> _posts =
+        database.GetCollection<GamePost>(MongoCollections.Posts);
 
     public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken) =>
-        await (_sessionProvider.Current is { } session
+        await (sessionProvider.Current is { } session
             ? _posts.InsertOneAsync(session, post, cancellationToken: cancellationToken)
             : _posts.InsertOneAsync(post, cancellationToken: cancellationToken));
 
@@ -67,11 +63,11 @@ internal sealed class MongoPostRepository : IPostRepository
 
     public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken) =>
         await _posts.ReplaceOneAsync(
-            _sessionProvider, item => item.Id == post.Id && item.WorldId == post.WorldId, post, cancellationToken);
+            sessionProvider, item => item.Id == post.Id && item.WorldId == post.WorldId, post, cancellationToken);
 
     public async ValueTask DeletePostsAsync(IReadOnlyCollection<WorldId> worldIds, CancellationToken cancellationToken) =>
         await _posts.DeleteManyAsync(
-            _sessionProvider.Session,
+            sessionProvider.Session,
             Builders<GamePost>.Filter.In(item => item.WorldId, worldIds),
             cancellationToken: cancellationToken);
 }

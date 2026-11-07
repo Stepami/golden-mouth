@@ -4,16 +4,12 @@ using Reki.Domain.Player;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 
-internal sealed class MongoPlayerRepository : IPlayerRepository
+internal sealed class MongoPlayerRepository(
+    IMongoDatabase database,
+    MongoSessionProvider sessionProvider) : IPlayerRepository
 {
-    private readonly IMongoCollection<PlayerProfile> _players;
-    private readonly MongoSessionProvider _sessionProvider;
-
-    public MongoPlayerRepository(IMongoDatabase database, MongoSessionProvider sessionProvider)
-    {
-        _players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
-        _sessionProvider = sessionProvider;
-    }
+    private readonly IMongoCollection<PlayerProfile> _players =
+        database.GetCollection<PlayerProfile>(MongoCollections.Players);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
         TelegramUserId telegramUserId,
@@ -50,7 +46,7 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
     }
 
     public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
-        await _players.ReplaceOneAsync(_sessionProvider, item => item.Id == player.Id, player, cancellationToken);
+        await _players.ReplaceOneAsync(sessionProvider, item => item.Id == player.Id, player, cancellationToken);
 
     public async ValueTask AddInviteBonusAsync(PlayerId playerId, int bonusAmount, CancellationToken cancellationToken)
     {
@@ -59,14 +55,14 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
             .Inc(item => item.Energy, bonusAmount)
             .Inc(item => item.Version, 1);
         await _players.UpdateOneAsync(
-            _sessionProvider.Session,
+            sessionProvider.Session,
             item => item.Id == playerId,
             update,
             cancellationToken: cancellationToken);
     }
 
     public async ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await _players.DeleteOneAsync(_sessionProvider.Session, item => item.Id == playerId, cancellationToken: cancellationToken);
+        await _players.DeleteOneAsync(sessionProvider.Session, item => item.Id == playerId, cancellationToken: cancellationToken);
 
     public async ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken) =>
         await _players.CountDocumentsAsync(FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken);

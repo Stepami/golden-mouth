@@ -6,25 +6,22 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 
-internal sealed class MongoWorldRepository : IWorldRepository
+internal sealed class MongoWorldRepository(
+    IMongoDatabase database,
+    MongoSessionProvider sessionProvider) : IWorldRepository
 {
-    private readonly IMongoCollection<World> _worlds;
-    private readonly IMongoCollection<World> _templates;
-    private readonly MongoSessionProvider _sessionProvider;
+    private readonly IMongoCollection<World> _worlds =
+        database.GetCollection<World>(MongoCollections.Worlds);
 
-    public MongoWorldRepository(IMongoDatabase database, MongoSessionProvider sessionProvider)
-    {
-        _worlds = database.GetCollection<World>(MongoCollections.Worlds);
-        _templates = database.GetCollection<World>(MongoCollections.WorldTemplates);
-        _sessionProvider = sessionProvider;
-    }
+    private readonly IMongoCollection<World> _templates =
+        database.GetCollection<World>(MongoCollections.WorldTemplates);
 
     public async ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken) =>
         await _worlds.InsertOneAsync(world, cancellationToken: cancellationToken);
 
     public async ValueTask ReplaceWorldAsync(World world, CancellationToken cancellationToken) =>
         await _worlds.ReplaceOneAsync(
-            _sessionProvider,
+            sessionProvider,
             item => item.Id == world.Id && item.Player.PlayerId == world.Player.PlayerId,
             world,
             cancellationToken);
@@ -47,11 +44,11 @@ internal sealed class MongoWorldRepository : IWorldRepository
     }
 
     public async ValueTask<IReadOnlyList<WorldId>> GetWorldIdsAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await _worlds.Find(_sessionProvider.Session, item => item.Player.PlayerId == playerId)
+        await _worlds.Find(sessionProvider.Session, item => item.Player.PlayerId == playerId)
             .Project(item => item.Id).ToListAsync(cancellationToken);
 
     public async ValueTask DeleteWorldsAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await _worlds.DeleteManyAsync(_sessionProvider.Session, item => item.Player.PlayerId == playerId, cancellationToken: cancellationToken);
+        await _worlds.DeleteManyAsync(sessionProvider.Session, item => item.Player.PlayerId == playerId, cancellationToken: cancellationToken);
 
     public async ValueTask<long> ResetGameDayAsync(
         DateTimeOffset periodStart,
