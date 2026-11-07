@@ -2,7 +2,7 @@ import { error, warn } from '../app/log'
 import { runtimeConfig } from '../app/runtimeConfig'
 import { getAccessToken, refreshAccess } from './auth'
 import { EventsClient, PlayerClient, PostsClient, SocialClient, TelemetryClient, WorldsClient } from './generated/reki-api'
-import type { GenerateReplyRequest, PublicationFailure, StartPublicationRequest, SwaggerResponse } from './generated/reki-api'
+import type { GenerateReplyRequest, PublicationFailure, SwaggerResponse } from './generated/reki-api'
 import { assertSession, sessionGeneration } from './session'
 
 export class ApiError extends Error {
@@ -56,10 +56,9 @@ export async function data<T>(request: Promise<SwaggerResponse<T>>, authenticate
 }
 // Fetch generation buffers file responses into Blob. Keep SSE streaming through
 // this small adapter; REST requests and wire DTOs use the generated client.
-export async function stream(input: { url: '/posts/publications'; query: { worldId: string }; body: StartPublicationRequest }
-  | { url: '/posts/{postId}/replies/generation'; path: { postId: string }; query: { worldId: string }; body: GenerateReplyRequest }, signal?: AbortSignal): Promise<Response> {
+export async function stream(input: { url: '/posts/{postId}/replies/generation'; path: { postId: string }; query: { worldId: string }; body: GenerateReplyRequest }, signal?: AbortSignal): Promise<Response> {
   const generation = sessionGeneration()
-  const path = 'path' in input ? input.url.replace('{postId}', encodeURIComponent(input.path.postId)) : input.url
+  const path = input.url.replace('{postId}', encodeURIComponent(input.path.postId))
   const response = await http.fetch(`${baseUrl}${path}?worldId=${encodeURIComponent(input.query.worldId)}`, {
     method: 'POST', body: JSON.stringify(input.body), signal, headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
   })

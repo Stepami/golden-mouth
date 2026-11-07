@@ -12,6 +12,9 @@ using TickerQ.DependencyInjection;
 using TickerQ.MongoDB.DependencyInjection;
 using TickerQ.Utilities.Entities;
 using TUnit.Core.Interfaces;
+using WireMock.RequestBuilders;
+using WireMock.ResponseBuilders;
+using WireMock.Server;
 
 namespace Reki.Tests;
 
@@ -20,6 +23,7 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
     public const long TelegramBotId = 123456;
 
     private readonly MongoFixture _mongo = new();
+    private readonly WireMockServer _classifier = WireMockServer.Start();
     private MongoClient? _client;
     private OpenAiStub? _llm;
 
@@ -37,6 +41,8 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
 
     public OpenAiStub Llm => _llm ??= new OpenAiStub();
 
+    public string ClassifierUrl => _classifier.Url ?? throw new InvalidOperationException("Classifier stub has no URL.");
+
     public FakeTimeProvider Clock { get; } = new(
         new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero));
 
@@ -48,6 +54,10 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
 
     public async Task InitializeAsync()
     {
+        _classifier.Given(Request.Create().WithPath("/classify").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200).WithHeader("Content-Type", "application/json")
+                .WithBody("""{"data":[[{"label":"insult","score":0.05},{"label":"anger","score":0.05},{"label":"sadness","score":0.05},{"label":"fear","score":0.05}]]}"""));
+
         // Match production registration order, including TickerQ's BSON UUID serializer.
         new ServiceCollection().AddTickerQ<RekiTimeTicker, CronTickerEntity>(options =>
             options.AddOperationalStore(store => store.UseExistingMongoClient(DatabaseName)));
@@ -89,6 +99,7 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
             try
             {
                 _llm?.Dispose();
+                _classifier.Dispose();
             }
             finally
             {

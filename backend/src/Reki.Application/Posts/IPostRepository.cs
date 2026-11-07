@@ -6,6 +6,8 @@ namespace Reki.Application.Posts;
 
 public interface IPostRepository
 {
+    ValueTask<GamePost?> GetByRequestAsync(WorldId worldId, AuthorId authorId, string requestId, CancellationToken cancellationToken);
+
     ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken);
 
     /// <summary>

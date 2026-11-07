@@ -337,6 +337,7 @@ exec(open(os.path.join(D, 'journey_v28.py'), encoding='utf-8').read())  # #189 b
 exec(open(os.path.join(D, 'journey_v29.py'), encoding='utf-8').read())  # #215 mechanical difficulty
 exec(open(os.path.join(D, 'journey_v30.py'), encoding='utf-8').read())  # #242 separate reply generation
 exec(open(os.path.join(D, 'journey_v31.py'), encoding='utf-8').read())  # #250 invite one friend first
+exec(open(os.path.join(D, 'journey_v32.py'), encoding='utf-8').read())  # #243 ML result before star comment
 
 CH = os.environ.get('CHROME_BIN') or shutil.which('google-chrome') or shutil.which('chrome')
 if not CH and os.name == 'nt':

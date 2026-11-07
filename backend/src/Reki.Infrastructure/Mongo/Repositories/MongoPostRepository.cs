@@ -13,6 +13,9 @@ internal sealed class MongoPostRepository(
     private readonly IMongoCollection<GamePost> _posts =
         database.GetCollection<GamePost>(MongoCollections.Posts);
 
+    public async ValueTask<GamePost?> GetByRequestAsync(WorldId worldId, AuthorId authorId, string requestId, CancellationToken cancellationToken) =>
+        await _posts.Find(post => post.WorldId == worldId && post.AuthorId == authorId && post.RequestId == requestId).FirstOrDefaultAsync(cancellationToken);
+
     public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken) =>
         await (sessionProvider.Current is { } session
             ? _posts.InsertOneAsync(session, post, cancellationToken: cancellationToken)

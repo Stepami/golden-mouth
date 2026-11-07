@@ -28,9 +28,9 @@ export function player(value: Input<Wire.PlayerResponse>): Ui.PlayerDocument {
 }
 export const reaction = (value: Input<Wire.ReactionResponse>): Ui.Reaction => ({ ...value, count: number(value.count) })
 export const comment = (value: Input<Wire.CommentResponse>): Ui.CommentT => ({ ...value, depth: number(value.depth) })
-export const post = (value: Input<Wire.PostDetailResponse>): Ui.PostDetailResponse => ({ ...value, views: number(value.views), reactions: value.reactions.map(reaction), comments: value.comments.map(comment) })
+export const post = (value: Input<Wire.PostDetailResponse>): Ui.PostDetailResponse => ({ ...value, result: value.result ? result(value.result) : null, views: number(value.views), reactions: value.reactions.map(reaction), comments: value.comments.map(comment) })
 export const channelPost = (value: Input<Wire.ChannelPostResponse>): Ui.ChannelPost => ({ ...value, views: number(value.views), commentCount: number(value.commentCount), reactions: value.reactions.map(reaction) })
-export const result = (value: Input<Wire.PostResultResponse>): Ui.PostResult => ({ ...value, delta: number(value.delta), views: number(value.views), bestComment: value.bestComment ?? undefined, hook: value.hook ?? undefined, ribbons: value.ribbons.map(ribbon => ({ ...ribbon, sub: ribbon.sub ?? undefined })) })
+export const result = (value: Input<Wire.PostResultResponse>): Ui.PostResult => ({ ...value, delta: number(value.delta), views: number(value.views), bestComment: value.bestComment ?? undefined, ribbons: value.ribbons.map(ribbon => ({ ...ribbon, sub: ribbon.sub ?? undefined })) })
 export const publication = (value: Input<Wire.PublicationStatusResponse>): Ui.PublicationState => ({ ...value, failure: value.failure ?? undefined, result: value.result ? result(value.result) : null })
 export function live(value: Awaited<ReturnType<import('./generated/reki-api').PostsClient['moderatePublication']>>['result'][number]): Ui.LiveEvent {
   switch (value.type) {

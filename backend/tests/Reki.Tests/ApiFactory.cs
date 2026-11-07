@@ -57,6 +57,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Llm:Model", "gigachat3.5-432b-a28b");
         builder.UseSetting("Llm:Temperature", "0.25");
         builder.UseSetting("Llm:TimeoutSeconds", "1");
+        builder.UseSetting("Infinity:BaseUrl", Session.ClassifierUrl);
         builder.UseSetting("Auth:Issuer", UseProductionEnvironment ? "https://localhost/" : "http://localhost/");
         builder.UseSetting("Auth:Audience", "reki-test");
         builder.UseSetting("Auth:ClientId", "reki-test-client");
@@ -78,7 +79,11 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
             services.AddFakeLogging();
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
             services.RemoveAll<IValidateOptions<NliOptions>>();
-            services.Replace(ServiceDescriptor.Singleton(Substitute.For<INliScorer>()));
+            var nli = Substitute.For<INliScorer>();
+            nli.ScoreAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+                .Returns(call => ValueTask.FromResult<IReadOnlyList<NliScores>>(
+                    call.ArgAt<IReadOnlyList<string>>(1).Select(_ => new NliScores(0.7, 0.3)).ToArray()));
+            services.Replace(ServiceDescriptor.Singleton(nli));
             if (!UseProductionAuthentication)
             {
                 services.AddAuthentication(options =>

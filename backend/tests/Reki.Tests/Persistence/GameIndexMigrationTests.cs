@@ -459,7 +459,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
         var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(17L);
+        await Assert.That(historyCount).IsEqualTo(18L);
     }
 
     [Test]
@@ -1277,6 +1277,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             migrations.Add(new RemoveChallengeBonus());
             migrations.Add(new RemoveUnusedSocialCollections());
             migrations.Add(new CreatePostCursorIndexes());
+            migrations.Add(new PostRequestIndex());
         }
 
         return MigratorBuilder.FromMongoClient(client, options).LoadMigrations(migrations).Build();
@@ -1293,6 +1294,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         yield return ("worlds", "ix_worlds_player", new BsonDocument("Player.PlayerId", 1), false);
         yield return ("posts", "ix_posts_world_id", new BsonDocument { { "WorldId", 1 }, { "_id", -1 } }, false);
         yield return ("posts", "ix_posts_world_author_id", new BsonDocument { { "WorldId", 1 }, { "AuthorId", 1 }, { "_id", -1 } }, false);
+        yield return ("posts", "ux_posts_request", new BsonDocument { { "WorldId", 1 }, { "AuthorId", 1 }, { "RequestId", 1 } }, true);
         yield return ("events", "ix_events_world_day", new BsonDocument { { "PlayerId", 1 }, { "WorldId", 1 }, { "DayStartedAtUtc", 1 } }, false);
         yield return ("invites", "ux_invites_invitee", new BsonDocument("InviteeId", 1), true);
         yield return ("invites", "ix_invites_inviter", new BsonDocument("InviterId", 1), false);
@@ -1327,6 +1329,11 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             options.PartialFilterExpression = new BsonDocument("InviteeId", new BsonDocument("$type", "string"));
         }
 
+        if (name == "ux_posts_request")
+        {
+            options.PartialFilterExpression = new BsonDocument("RequestId", new BsonDocument("$type", "string"));
+        }
+
         return database.GetCollection<BsonDocument>(collection).Indexes.CreateOneAsync(
             new CreateIndexModel<BsonDocument>(keys, options), cancellationToken: CancellationToken.None);
     }
@@ -1344,6 +1351,11 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await Assert.That(indexes.Any(item => item["name"] == "ix_posts_world_created")).IsFalse();
             await Assert.That(indexes.Any(item => item["name"] == "ix_invites_player")).IsFalse();
             await Assert.That(index.GetValue("unique", false).AsBoolean).IsEqualTo(unique);
+            if (name == "ux_posts_request")
+            {
+                await Assert.That(index["partialFilterExpression"]).IsEqualTo(new BsonDocument("RequestId", new BsonDocument("$type", "string")));
+            }
+
             if (name == "ix_publications_expiry")
             {
                 await Assert.That(index["expireAfterSeconds"].ToInt64()).IsEqualTo(0L);

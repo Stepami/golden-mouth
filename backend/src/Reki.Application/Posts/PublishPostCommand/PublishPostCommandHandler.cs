@@ -76,7 +76,7 @@ internal sealed class PublishPostCommandHandler(
         try
         {
             await safety.EnsureInputAllowedAsync(player, [publication.Text], cancellationToken);
-            PlayerSafetyGuard.EnsureOutputAllowed([turn.Comment, turn.Hook]);
+            PlayerSafetyGuard.EnsureOutputAllowed([turn.Comment]);
         }
         catch (Exception exception) when (exception is ContentRejectedException or UnsafeGeneratedContentException)
         {
@@ -95,10 +95,11 @@ internal sealed class PublishPostCommandHandler(
             throw new RequestConflictException("The selected daily want is unavailable.");
         }
 
+        var scores = new PostScores(turn.Brave, turn.Humor, turn.Topic);
         var progression = progressionCalculator.Calculate(
             player,
             world,
-            turn,
+            scores,
             ownWords,
             wantCompleted,
             publication.Id);
@@ -143,9 +144,7 @@ internal sealed class PublishPostCommandHandler(
             reachRatio,
             progression.Viral,
             progression.Flop);
-        var hook = turn.Hook;
-
-        var published = new PublishedPost(post, hook, turn.StarName, turn.Reaction, turn.Reasons);
+        var published = new PublishedPost(post, turn.StarName, turn.Reaction, turn.Reasons);
         var invite = await invitationRepository.GetPendingInviteAsync(player.Id, cancellationToken);
         var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
         updated = updated with { Energy = updated.Energy + (updatedInvite?.BonusAmount ?? 0) };
@@ -179,27 +178,18 @@ internal sealed class PublishPostCommandHandler(
             cancellationToken);
 
         analytics.TrackWorldAudience(updatedWorld);
-        TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);
+        TrackProgression(player, updated, world, updatedWorld, post, scores, analytics);
         await feedScheduler.ScheduleFeedAsync(new ScheduleFromPostRequest(player.Id, world.Id, post.Id));
         return published.MapLiveEvents(updatedWorld, player.Id);
     }
 
-    private static double GetMedian(IReadOnlyList<long> values)
-    {
-        var ordered = values.Order().ToArray();
-        var middle = ordered.Length / 2;
-        return ordered.Length % 2 == 0
-            ? Math.Max(1, (ordered[middle - 1] + ordered[middle]) / 2.0)
-            : Math.Max(1, ordered[middle]);
-    }
-
-    private static void TrackProgression(
+    internal static void TrackProgression(
         PlayerProfile before,
         PlayerProfile after,
         World beforeWorld,
         World afterWorld,
         GamePost post,
-        GeneratedPostTurn turn,
+        PostScores scores,
         ProductTelemetry analytics)
     {
         analytics.TrackPlayer(
@@ -209,9 +199,9 @@ internal sealed class PublishPostCommandHandler(
             {
                 ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty,
                 ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant(),
-                ["brave"] = turn.Brave.ToString("0.###", CultureInfo.InvariantCulture),
-                ["humor"] = turn.Humor.ToString("0.###", CultureInfo.InvariantCulture),
-                ["topic"] = turn.Topic.ToString("0.###", CultureInfo.InvariantCulture),
+                ["brave"] = scores.Brave.ToString("0.###", CultureInfo.InvariantCulture),
+                ["humor"] = scores.Humor.ToString("0.###", CultureInfo.InvariantCulture),
+                ["topic"] = scores.Topic.ToString("0.###", CultureInfo.InvariantCulture),
                 ["quality"] = post.Quality.ToString("0.###", CultureInfo.InvariantCulture),
                 ["post_index"] = after.EnergyUsed.ToString(CultureInfo.InvariantCulture),
                 ["id"] = post.Id.Value.ToString("N"),
@@ -245,5 +235,14 @@ internal sealed class PublishPostCommandHandler(
                 "card_earned",
                 new Dictionary<string, string> { ["card"] = achievement.Id, ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant() });
         }
+    }
+
+    private static double GetMedian(IReadOnlyList<long> values)
+    {
+        var ordered = values.Order().ToArray();
+        var middle = ordered.Length / 2;
+        return ordered.Length % 2 == 0
+            ? Math.Max(1, (ordered[middle - 1] + ordered[middle]) / 2.0)
+            : Math.Max(1, ordered[middle]);
     }
 }

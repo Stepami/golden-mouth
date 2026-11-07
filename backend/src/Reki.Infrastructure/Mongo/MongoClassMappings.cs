@@ -3,6 +3,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using Reki.Application.Posts;
+using Reki.Application.Posts.AI.Post;
 using Reki.Domain.Events;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
@@ -41,6 +42,24 @@ internal static class MongoClassMappings
             new BsonValueObjectConversions.TelegramUserIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.WorldIdBsonSerializer());
+        if (!BsonClassMap.IsClassMapRegistered(typeof(GeneratedPostTurn)))
+        {
+            BsonClassMap.RegisterClassMap<GeneratedPostTurn>(map =>
+            {
+                map.AutoMap();
+                map.SetIgnoreExtraElements(true);
+            });
+        }
+
+        if (!BsonClassMap.IsClassMapRegistered(typeof(PublishedPost)))
+        {
+            BsonClassMap.RegisterClassMap<PublishedPost>(map =>
+            {
+                map.AutoMap();
+                map.SetIgnoreExtraElements(true);
+            });
+        }
+
         RegisterWithMongoId<PlayerProfile, PlayerId>(item => item.Id);
         RegisterWithMongoId<GamePost, PostId>(item => item.Id);
         RegisterWithMongoId<Publication, string>(item => item.Id);

@@ -145,7 +145,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
                     var complete = await sender.Send(new PublicationQuery(request.Id), cancellationToken)
                                    ?? throw new InvalidOperationException("The publication disappeared during generation.");
                     var turn = complete.AssembleTurn();
-                    PlayerSafetyGuard.EnsureOutputAllowed([turn.Comment, turn.Hook]);
+                    PlayerSafetyGuard.EnsureOutputAllowed([turn.Comment]);
                     await publicationRepository.MarkPublicationReadyAsync(request.Id, cancellationToken);
                     ready = true;
                 }
@@ -244,7 +244,6 @@ internal sealed partial class GeneratePublicationCommandHandler(
                             ?? throw new AiServiceUnavailableException("The model returned a forbidden identity.")).Name,
                         comment.StarId,
                         comment.Text,
-                        comment.Hook,
                         string.Empty,
                         comment.Brave,
                         comment.Humor,

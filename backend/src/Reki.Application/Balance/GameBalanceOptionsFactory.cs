@@ -21,7 +21,7 @@ internal sealed class GameBalanceOptionsFactory(
         var posts = configuration.GetRequiredSection("posts");
         var growth = configuration.GetRequiredSection("growth");
         var viral = configuration.GetRequiredSection("viral");
-        var flop = configuration.GetRequiredSection("flop");
+        var flop = configuration.GetSection("flop");
         var skills = configuration.GetRequiredSection("skills");
         var relations = configuration.GetRequiredSection("relations");
         var challenge = configuration.GetRequiredSection("challenge");
@@ -66,7 +66,20 @@ internal sealed class GameBalanceOptionsFactory(
                     item.GetValue<double>("k"),
                     item.GetValue<double>("flop"),
                     item.GetValue<double>("viral_x"),
-                    item.GetValue<long>("hate_from")));
+                    item.GetValue<long>("hate_from"),
+                    item.GetValue<double>("loss_x"),
+                    item.GetValue<double>("max_subscriber_fraction"),
+                    item.GetValue<double>("thresholds:angry_abuse", 1),
+                    item.GetValue<double>("thresholds:sad_tone", 1),
+                    item.GetValue<double>("thresholds:anxious_tone", 1),
+                    item.GetValue<double>("threshold_reduction_per_step:angry_abuse"),
+                    item.GetValue<double>("threshold_reduction_per_step:sad_tone"),
+                    item.GetValue<double>("threshold_reduction_per_step:anxious_tone"))
+                {
+                    Drama = item.GetSection("drama").GetChildren().ToDictionary(
+                        drama => Enum.Parse<WorldDrama>(drama.Key, ignoreCase: true),
+                        drama => new DramaBalance(drama.GetValue<int>("threshold_steps"), drama.GetValue<double>("loss_multiplier"))),
+                });
 
         if (decay.Count == 0 || levelThresholds.Count != 10 ||
             difficulties.Count != 3 || Enum.GetValues<WorldDifficulty>().Any(value => !difficulties.ContainsKey(value)) ||

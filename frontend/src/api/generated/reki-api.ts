@@ -636,6 +636,51 @@ export class PostsClient {
     /**
      * @return OK
      */
+    createPost(worldId: string, body: CreatePostRequest, signal?: AbortSignal): Promise<SwaggerResponse<PostDetailResponse>> {
+        let url_ = this.baseUrl + "/posts?";
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
+            url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCreatePost(_response);
+        });
+    }
+
+    protected processCreatePost(response: Response): Promise<SwaggerResponse<PostDetailResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PostDetailResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<PostDetailResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return OK
+     */
     generatePublication(worldId: string, body: StartPublicationRequest, signal?: AbortSignal): Promise<SwaggerResponse<FileResponse>> {
         let url_ = this.baseUrl + "/posts/publications?";
         if (worldId === undefined || worldId === null)
@@ -1811,6 +1856,15 @@ export interface CommentResponse {
     [key: string]: any;
 }
 
+export interface CreatePostRequest {
+    requestId: string;
+    text: string;
+    ownWords?: boolean;
+    wantId?: string | null;
+
+    [key: string]: any;
+}
+
 export interface CreateWorldRequest {
     templateId?: string | null;
     name: string;
@@ -1920,7 +1974,7 @@ export interface GameEventResponse {
 
 export interface GenerateReplyRequest {
     authorId: string;
-    sourceCommentId: string;
+    sourceCommentId?: string | null;
     additional: boolean;
 
     [key: string]: any;
@@ -2044,6 +2098,8 @@ export interface PostDetailResponse {
     views: number;
     reactions: ReactionResponse[];
     comments: CommentResponse[];
+    predictedAuthorId: string | null;
+    result: PostResultResponse | null;
 
     [key: string]: any;
 }
@@ -2058,7 +2114,6 @@ export interface PostResultResponse {
     viral: boolean;
     flop: boolean;
     views: number;
-    hook: string | null;
 
     [key: string]: any;
 }

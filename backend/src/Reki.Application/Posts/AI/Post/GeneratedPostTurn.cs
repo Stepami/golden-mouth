@@ -6,7 +6,6 @@ public sealed record GeneratedPostTurn(
     string StarName,
     StarId StarId,
     string Comment,
-    string Hook,
     string Reaction,
     double Brave,
     double Humor,

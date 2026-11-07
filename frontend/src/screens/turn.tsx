@@ -1,7 +1,7 @@
 import { StoryGoal } from '../ui/StoryGoal'
 import { useEffect, useRef, useState } from 'react'
 import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
-import { api } from '../api/client'
+import { api, ApiError } from '../api/client'
 import { firstPost, results } from '../api/mock'
 import type { CommentT, Post, PostResult, PublicationFailure } from '../api/types'
 import { useNav } from '../app/nav'
@@ -58,57 +58,34 @@ function Live() {
   const nav = useNav(); const { patch, refresh } = useStore(); const p = usePlayer()
   const text = (nav.params.text as string) ?? firstPost.text
   const [publicationId] = useState(() => (nav.params.publicationId as string) ?? crypto.randomUUID())
-  const [floats, setFloats] = useState<{ id: number; emoji: string; x: number }[]>([])
-  const [comments, setComments] = useState<CommentT[]>([])
-  const [typing, setTyping] = useState<string | null>(null)
-  const [phase, setPhase] = useState<'generating' | 'moderating' | 'reacting'>('generating')
-  const commentsRef = useRef<CommentT[]>([])
-  const reactionsRef = useRef<string[]>([])
-  useEffect(() => api.publish(text, publicationId, e => {
-    setPhase('reacting')
-    if (e.type === 'react') { reactionsRef.current.push(e.emoji); setFloats(f => [...f, { id: Date.now() + Math.random(), emoji: e.emoji, x: 10 + Math.random() * 70 }]) }
-    if (e.type === 'comment') { commentsRef.current.push(e.comment); setComments(c => [...c, e.comment]) }
-    if (e.type === 'typing') setTyping(e.who)
-    if (e.type === 'result') {
-      const post: Post = { id: e.result.postId, text, views: e.result.views,
-        reactions: [...new Set(reactionsRef.current)].map(emoji => ({ emoji, count: reactionsRef.current.filter(value => value === emoji).length })),
-        comments: commentsRef.current, at: 'только что' }
-      completePostDraft(draftKey(p), publicationId, text)
-      track('post_result', { delta: e.result.delta, viral: e.result.viral, flop: e.result.flop })
-      void (async () => {
-        let confirmedResult = e.result
+  useEffect(() => {
+    const ctrl = new AbortController()
+    const start = setTimeout(() => { void (async () => {
+      try {
+        const post = await api.publish(text, publicationId, nav.params.ownWords !== false, typeof nav.params.wantId === 'string' ? nav.params.wantId : undefined, ctrl.signal)
+        if (ctrl.signal.aborted) return
+        if (!post.result) throw new Error('Post has no result')
+        completePostDraft(draftKey(p), publicationId, text)
+        track('post_result', { delta: post.result.delta, viral: post.result.viral, flop: post.result.flop })
+        let result = post.result
         if (apiBaseUrl) {
           const latest = await refresh()
-          if (latest) confirmedResult = { ...e.result, completedWants: latest.wants.filter(want => want.done && p.wants.some(before => before.id === want.id && !before.done)).map(({ id, text, reward }) => ({ id, text, reward })) }
-
-        }
-        else patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + e.result.delta) })
-        nav.replace(e.result.viral ? '02-5_viral' : e.result.flop ? '02-4_flop' : '02-3_result', { result: confirmedResult, post })
-      })()
-    }
-  }, (state, reason) => { if (state === 'failed') { const saved = readPostDraft(draftKey(p)); if (saved.publicationId === publicationId) savePostDraft(draftKey(p), { text: saved.text, ownWords: saved.ownWords, wantId: saved.wantId }) }; if (reason?.code === 'crisis') { nav.replace(p.ageBand === '14-17' || !p.ageBand ? '06-2_crisis' : '06-3_crisis_adult'); return }; nav.replace('02-2b_publish_error', { text, publicationId, ownWords: nav.params.ownWords, wantId: nav.params.wantId, reason, uncertain: state === 'unknown' }) }, status => {
-    if (status === 'ready_for_moderation') setPhase('moderating')
-  }, nav.params.ownWords !== false, typeof nav.params.wantId === 'string' ? nav.params.wantId : undefined), []) // eslint-disable-line react-hooks/exhaustive-deps
-  return (
-    <div className="screen">
-      <ChannelHead />
-
-      <div className="pad" style={{ position: 'relative' }}>
-        <div className="card" style={{ boxShadow: '0 0 0 2px rgba(255,107,139,.6),0 0 44px rgba(255,107,139,.35)', marginBottom: 12 }}>
-          <div className="small" style={{ color: 'var(--accent)', marginBottom: 6 }} aria-live="polite">{phase === 'generating' ? 'готовим публикацию' : phase === 'moderating' ? 'проверяем публикацию' : 'только что опубликовано'}</div>{text}
-          {phase === 'reacting'
-            ? <div className="small muted" role="status" style={{ marginTop: 16 }}>Появляются реакции…</div>
-            : <div className="live-current" aria-hidden="true"><span /></div>}
-        </div>
-        <div style={{ position: 'absolute', right: 14, top: 120, width: 120, height: 200, pointerEvents: 'none' }}>
-          {floats.map(f => <span key={f.id} className="float-react" style={{ left: `${f.x}%`, bottom: 0, fontSize: 24 }}>{f.emoji}</span>)}
-        </div>
-        {comments.map(c => <Comment key={c.id} seed={c.avatar} name={c.author} handle={c.handle} text={c.text} star={c.star} me={c.me} />)}
-        {typing && <div className="muted small row" style={{ gap: 8 }}>{typing} печатает...</div>}
-      </div>
-      <div className="small muted" style={{ position: 'fixed', bottom: 96, left: 0, right: 0, textAlign: 'center' }} aria-live="polite">{phase === 'generating' ? 'звезда готовит ответ' : phase === 'moderating' ? 'скоро появятся реакции' : 'Собираем итог…'}</div>
-    </div>
-  )
+          if (ctrl.signal.aborted) return
+          if (latest) result = { ...result, completedWants: latest.wants.filter(want => want.done && p.wants.some(before => before.id === want.id && !before.done)).map(({ id, text, reward }) => ({ id, text, reward })) }
+        } else patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + result.delta) })
+        nav.replace(result.viral ? '02-5_viral' : result.flop ? '02-4_flop' : '02-3_result', { result, post, publicationId })
+      } catch (cause) {
+        if (ctrl.signal.aborted) return
+        const failure = cause instanceof ApiError ? cause.failure : undefined
+        const failed = cause instanceof ApiError && cause.status >= 400 && cause.status < 500 && cause.status !== 409
+        if (failed) { const saved = readPostDraft(draftKey(p)); if (saved.publicationId === publicationId) savePostDraft(draftKey(p), { text: saved.text, ownWords: saved.ownWords, wantId: saved.wantId }) }
+        if (failure?.code === 'crisis') { nav.replace(p.ageBand === '14-17' || !p.ageBand ? '06-2_crisis' : '06-3_crisis_adult'); return }
+        nav.replace('02-2b_publish_error', { text, publicationId, ownWords: nav.params.ownWords, wantId: nav.params.wantId, reason: failure, uncertain: !failed })
+      }
+    })() }, 0)
+    return () => { clearTimeout(start); ctrl.abort() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  return <div className="screen"><ChannelHead /><div className="pad"><div className="card"><div className="small" role="status">Публикуем пост…</div>{text}<div className="live-current" aria-hidden="true"><span /></div></div></div></div>
 }
 
 function PublishError() {
@@ -160,11 +137,16 @@ const haptic = (kind: 'success' | 'warning' | 'light') => { if (!inTelegram) ret
 function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'normal' | 'flop' | 'viral' }) {
   const nav = useNav()
   const closeButton = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    const publicationId = typeof nav.params.publicationId === 'string' ? nav.params.publicationId : undefined
+    if (!publicationId || !post.predictedAuthorId || post.comments.some(comment => comment.star && !comment.parentCommentId)) return
+    const ctrl = new AbortController()
+    const start = setTimeout(() => { void api.firstComment(post, publicationId, ctrl.signal).catch(() => {}) }, 0)
+    return () => { clearTimeout(start); ctrl.abort() }
+  }, [post.id]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { closeButton.current?.focus(); const close = (event: KeyboardEvent) => { if (event.key === 'Escape') nav.replace('03-5_stage') }; document.addEventListener('keydown', close); return () => document.removeEventListener('keydown', close) }, [nav])
   const viral = theme === 'viral'
   const shown = useCount(Math.abs(r.delta))
-  const additive = r.whys.filter(why => /^[+−-]\d+(?:[.,]\d+)?$/.test(why.value))
-  const explainsDelta = additive.length > 0 && additive.reduce((sum, why) => sum + Number(why.value.replace('−', '-').replace(',', '.')), 0) === r.delta
   useEffect(() => { haptic(r.delta >= 0 ? 'success' : 'warning'); const ts = r.whys.map((_, i) => setTimeout(() => haptic('light'), 850 + i * 150)); return () => ts.forEach(clearTimeout) }, [r])
   return (
     <div className="screen no-tab">
@@ -180,7 +162,7 @@ function ResultCard({ r, post, theme }: { r: PostResult; post: Post; theme: 'nor
           {viral && <div className="confetti" aria-hidden>{Array.from({ length: 18 }, (_, i) => <i key={i} style={{ left: `${(i * 53) % 100}%`, animationDelay: `${(i % 6) * 0.12}s`, background: ['#FF6B8B', '#9B6BFF', '#FFD66B', '#6BFFB8'][i % 4] }} />)}</div>}
 
           <div className="result-awards" aria-live="polite">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
-          <details className="result-details"><summary>Разбор поста</summary>          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[w.icon] ?? w.icon} {w.label} {(!/^[+−-]/.test(w.value) || explainsDelta) && <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b>}</span>)}</div>
+          <details className="result-details"><summary>Разбор поста</summary>          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[w.icon] ?? w.icon} {w.label} {w.value && <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b>}</span>)}</div>
           {r.bestComment && <div className="row" style={{ margin: '8px 0 12px' }}><Avatar seed={r.bestComment.avatar} size={28} mode="default" /><span className="small">«{r.bestComment.text}»</span></div>}
           </details>
           {viral ? <>
@@ -318,6 +300,14 @@ function Thread() {
       if (controller.current === ctrl) controller.current = null
     }
   }
+  const resumeFirst = async () => {
+    if (!post || sending) return
+    const ctrl = new AbortController(); controller.current = ctrl
+    setSending(true); setReplyError('')
+    try { const updated = await api.firstComment(post, undefined, ctrl.signal); if (!ctrl.signal.aborted) setPost(updated) }
+    catch (cause) { if (!ctrl.signal.aborted) setReplyError(cause instanceof Error && cause.name === 'unsafe_generated_content' ? 'Ответ не прошёл проверку 14+. Попробуй позже.' : 'Не удалось получить ответ. Попробуй снова.') }
+    finally { if (!ctrl.signal.aborted) setSending(false); if (controller.current === ctrl) controller.current = null }
+  }
   const tutorialKey = `reki:thread-help:${player.id}`
   const [showHelp, setShowHelp] = useState(() => { try { return localStorage.getItem(tutorialKey) !== 'seen' } catch { return true } })
   const dismissHelp = () => { setShowHelp(false); try { localStorage.setItem(tutorialKey, 'seen') } catch { /* memory fallback */ } }
@@ -346,6 +336,7 @@ function Thread() {
       <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions"><EnergyBadge value={player.postsLeft} /><button className="thread-exit" onClick={goBack}>{fromFeed ? 'В ленту →' : 'В канал →'}</button></div>} />
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div></div>
+        {post.predictedAuthorId && post.authorId === `Player_${player.id.replaceAll('-', '')}` && !post.comments.some(comment => comment.star && !comment.parentCommentId) && <div className="card"><p>Первый ответ ещё не появился.</p><Button disabled={sending} onClick={resumeFirst}>Получить ответ</Button></div>}
         {showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
         {!showHelp && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
         {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>

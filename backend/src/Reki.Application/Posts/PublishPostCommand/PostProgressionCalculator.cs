@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
-using Reki.Application.Posts.AI.Post;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Posts.PublishPostCommand;
@@ -17,18 +16,19 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
     public PostProgression Calculate(
         PlayerProfile player,
         Domain.Worlds.World gameWorld,
-        GeneratedPostTurn turn,
+        PostScores scores,
         bool ownWords,
         bool wantCompleted,
-        string publicationId)
+        string publicationId,
+        bool? flagged = null)
     {
         var currentBalance = balance.CurrentValue;
         var world = currentBalance.Difficulties[gameWorld.Difficulty];
-        var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
+        var quality = Math.Clamp((scores.Brave + scores.Humor + scores.Topic) / 3, 0, 1);
         var postIndex = player.EnergyUsed + 1;
         var multiplier = GetGrowthMultiplier(gameWorld, postIndex, ownWords);
-        var viral = IsViral(publicationId, quality, world);
-        var flop = !viral && IsFlop(publicationId, world);
+        var flop = flagged ?? IsFlop(publicationId, world);
+        var viral = !flop && IsViral(publicationId, quality, world);
         if (viral)
         {
             multiplier *= currentBalance.Viral.Multiplier * world.ViralMultiplier;
@@ -42,26 +42,30 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
                      Math.Pow(Math.Max(1, gameWorld.Player.Subscribers), currentBalance.Growth.Power) *
                      decay *
                      multiplier;
+        var drama = world.Drama?.GetValueOrDefault(gameWorld.Player.Drama);
+        var loss = flagged is null ? currentBalance.Flop.LossMultiplier : world.LossMultiplier * (drama?.LossMultiplier ?? 1);
+        var calculatedLoss = Math.Max(1, (long)Math.Round(growth * loss));
+        var cap = flagged is null ? gameWorld.Player.Subscribers : Math.Max(1, (long)Math.Floor(gameWorld.Player.Subscribers * world.MaxSubscriberFraction * (drama?.LossMultiplier ?? 1)));
         var subscriberDelta = flop
-            ? Math.Min(-1, (long)Math.Round(growth * currentBalance.Flop.LossMultiplier))
+            ? -Math.Min(gameWorld.Player.Subscribers, Math.Min(calculatedLoss, cap))
             : Math.Max(1, (long)Math.Round(growth));
         var skills = AddSkillExperience(
             player,
-            turn,
+            scores,
             postIndex,
             ownWords,
             wantCompleted);
         return new PostProgression(subscriberDelta, quality, viral, flop, skills);
     }
 
-    private static SkillId GetMainSkill(GeneratedPostTurn turn)
+    private static SkillId GetMainSkill(PostScores scores)
     {
-        if (turn.Brave >= turn.Humor && turn.Brave >= turn.Topic)
+        if (scores.Brave >= scores.Humor && scores.Brave >= scores.Topic)
         {
             return Brave;
         }
 
-        return turn.Humor >= turn.Topic ? Humor : Topic;
+        return scores.Humor >= scores.Topic ? Humor : Topic;
     }
 
     private static double StableRoll(string publicationId, string purpose)
@@ -107,7 +111,7 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
 
     private IReadOnlyDictionary<SkillId, SkillProgress> AddSkillExperience(
         PlayerProfile player,
-        GeneratedPostTurn turn,
+        PostScores scores,
         int postIndex,
         bool ownWords,
         bool wantCompleted)
@@ -118,7 +122,7 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
             return player.Skills;
         }
 
-        var main = GetMainSkill(turn);
+        var main = GetMainSkill(scores);
         var multiplier = postIndex <= currentBalance.Skills.FirstPostsCount
             ? currentBalance.Skills.FirstPostsMultiplier
             : 1;

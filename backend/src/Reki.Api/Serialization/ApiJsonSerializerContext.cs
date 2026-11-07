@@ -80,6 +80,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(PublicationStatusResponse))]
 [JsonSerializable(typeof(PublicationStatusType))]
 [JsonSerializable(typeof(LiveEventType))]
+[JsonSerializable(typeof(CreatePostRequest))]
 [JsonSerializable(typeof(ReplyRequest))]
 [JsonSerializable(typeof(GenerateReplyRequest))]
 [JsonSerializable(typeof(ReplyResponse))]

@@ -11,7 +11,6 @@ internal static class StarToolCallParser
     [
         "star_id",
         "text",
-        "hook",
         "tone",
         "brave",
         "humor",
@@ -51,7 +50,6 @@ internal static class StarToolCallParser
         return new StarCommentAction(
             StarId.From(GetString(arguments, "star_id", 40, allowEmpty: false)),
             GetString(arguments, "text", 500, allowEmpty: false),
-            GetString(arguments, "hook", 240, allowEmpty: false),
             GetTone(arguments),
             GetScore(arguments, "brave"),
             GetScore(arguments, "humor"),
@@ -199,7 +197,6 @@ internal static class StarToolCallParser
     internal sealed record StarCommentAction(
         StarId StarId,
         string Text,
-        string Hook,
         string Tone,
         double Brave,
         double Humor,

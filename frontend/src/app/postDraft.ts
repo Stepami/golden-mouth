@@ -22,8 +22,26 @@ export function completePostDraft(key: string, publicationId: string, text: stri
 }
 export function clearPlayerDrafts(id: string) {
   clearWorldDrafts(id)
+  for (const key of firstComments.keys()) if (key.startsWith(`reki:first-comment:${id}:`)) firstComments.delete(key)
   for (const key of memory.keys()) if (key.startsWith(`${prefix}${id}:`)) memory.delete(key)
-  try { for (const key of Object.keys(localStorage)) if (key.startsWith(`${prefix}${id}:`) || key.startsWith(`reki:reply-draft:${id}:`)) localStorage.removeItem(key)
+  try { for (const key of Object.keys(localStorage)) if (key.startsWith(`${prefix}${id}:`) || key.startsWith(`reki:reply-draft:${id}:`) || key.startsWith(`reki:first-comment:${id}:`)) localStorage.removeItem(key)
     sessionStorage.removeItem(`reki:world-setup:v2:${id}`)
   } catch { /* memory fallback */ }
+}
+
+export interface FirstCommentDraft { requestId: string; authorId: string; text?: string }
+const firstComments = new Map<string, FirstCommentDraft>()
+const firstKey = (playerId: string, postId: string) => `reki:first-comment:${playerId}:${postId}`
+export function readFirstComment(playerId: string, postId: string): FirstCommentDraft | undefined {
+  const key = firstKey(playerId, postId)
+  if (firstComments.has(key)) return firstComments.get(key)
+  try { const saved = JSON.parse(localStorage.getItem(key) ?? 'null') as FirstCommentDraft | null; if (saved) { firstComments.set(key, saved); return saved } } catch { /* memory fallback */ }
+}
+export function saveFirstComment(playerId: string, postId: string, draft: FirstCommentDraft) {
+  const key = firstKey(playerId, postId); firstComments.set(key, draft)
+  try { localStorage.setItem(key, JSON.stringify(draft)) } catch { /* memory fallback */ }
+}
+export function clearFirstComment(playerId: string, postId: string) {
+  const key = firstKey(playerId, postId); firstComments.delete(key)
+  try { localStorage.removeItem(key) } catch { /* memory fallback */ }
 }

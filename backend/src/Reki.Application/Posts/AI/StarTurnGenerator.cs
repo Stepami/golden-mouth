@@ -36,7 +36,6 @@ internal sealed class StarTurnGenerator(
           "properties": {
             "star_id": { "type": "string", "minLength": 1, "maxLength": 40 },
             "text": { "type": "string", "minLength": 1, "maxLength": 500 },
-            "hook": { "type": "string", "minLength": 1, "maxLength": 240 },
             "tone": { "type": "string", "enum": ["support", "critique", "hate"] },
             "brave": { "type": "number", "minimum": 0, "maximum": 1 },
             "humor": { "type": "number", "minimum": 0, "maximum": 1 },
@@ -57,7 +56,7 @@ internal sealed class StarTurnGenerator(
             },
             "on_topic": { "type": "boolean" }
           },
-          "required": ["star_id", "text", "hook", "tone", "brave", "humor", "topic", "why", "on_topic"],
+          "required": ["star_id", "text", "tone", "brave", "humor", "topic", "why", "on_topic"],
           "additionalProperties": false
         }
         """;
@@ -109,12 +108,13 @@ internal sealed class StarTurnGenerator(
         var policy = $$"""
                        Ответь обычным текстом от лица выбранной звезды {{context.TargetStarId.Value}}.
                        Реплика отвечает на последний комментарий игрока в выбранной ветке, а не оценивает пост.
-                       Если ветка пустая, это корневой комментарий игрока к твоему посту: ответь как автор поста.
+                       Если последний текст совпадает с постом, напиши первый комментарий к этому посту.
+                       Иначе при пустой ветке ответь на корневой комментарий игрока к твоему посту.
                        Это дополнительная звезда: {{context.Additional}}. Если true, напиши самостоятельную
                        корневую реплику к посту с учётом комментария игрока.
                        Хейт разрешён сейчас: {{context.HateEnabled}}.
                        Верни только текст реплики до 500 символов. Не вызывай инструменты и не создавай
-                       hook, оценки, память лички, расход энергии или бонус.
+                       оценки, память лички, расход энергии или бонус.
                        """;
         var world = context.Agent.World;
         var branch = context.Branch.Select(comment =>

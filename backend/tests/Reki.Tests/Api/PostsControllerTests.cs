@@ -335,6 +335,43 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(detail.Reactions.Count).IsEqualTo(1);
         await Assert.That(detail.Comments.Count).IsEqualTo(3);
         await Assert.That(detail.Comments.Any(comment => comment.Me && comment.Text == "мой ответ")).IsTrue();
+
+        var worldId = await GetWorldIdAsync(api);
+        var before = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        var request = new CreatePostRequest { RequestId = Guid.NewGuid().ToString(), Text = "Новый пост", OwnWords = true };
+        var created = await api.Posts.CreatePostAsync(worldId, request, CancellationToken.None);
+        var replay = await api.Posts.CreatePostAsync(worldId, request, CancellationToken.None);
+        await Assert.That(replay.PostId).IsEqualTo(created.PostId);
+        await Assert.That(created.Result).IsNotNull();
+        await Assert.That(created.Comments.Count).IsEqualTo(0);
+        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(before.Energy - 1);
+        var saved = await api.Posts.GetPostAsync(created.PostId.ToString(), worldId, CancellationToken.None);
+        await Assert.That(saved.Result).IsNotNull();
+        var author = created.PredictedAuthorId ?? throw new InvalidOperationException("Missing predicted star.");
+        using var generation = await api.Posts.GenerateReplyAsync(
+            created.PostId.ToString(),
+            worldId,
+            new GenerateReplyRequest { AuthorId = author, SourceCommentId = null, Additional = false },
+            CancellationToken.None);
+        using var reader = new StreamReader(generation.Stream);
+        var generated = ParseReplyGenerationEvents(await reader.ReadToEndAsync(CancellationToken.None))[^1];
+        await Assert.That(generated.Status).IsEqualTo(ReplyGenerationStatus.Completed);
+        await Assert.That(generated.AuthorId).IsEqualTo(author);
+        await api.Posts.ReplyToPostAsync(
+            created.PostId.ToString(),
+            worldId,
+            new ReplyRequest
+            {
+                AuthorId = author,
+                CommentId = null,
+                RequestId = "first-star-comment",
+                Text = generated.Text ?? throw new InvalidOperationException("Missing generated text."),
+            },
+            CancellationToken.None);
+        var final = await api.Posts.GetPostAsync(created.PostId.ToString(), worldId, CancellationToken.None);
+        await Assert.That(final.Comments.Count).IsEqualTo(1);
+        await Assert.That(final.Comments[0].Text).IsEqualTo(generated.Text);
+        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(before.Energy - 1);
     }
 
     [Test]
@@ -442,6 +479,32 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var player = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(player.Energy).IsEqualTo(10);
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(1);
+
+        var worldId = await GetWorldIdAsync(api);
+        var created = await api.Posts.CreatePostAsync(
+            worldId,
+            new CreatePostRequest { RequestId = Guid.NewGuid().ToString(), Text = "безопасный пост", OwnWords = true },
+            CancellationToken.None);
+        var beforeWorld = await GetStoredWorldAsync(telegramUserId);
+        Factory.Llm.RespondWithTimeout();
+        using var stream = await api.Posts.GenerateReplyAsync(
+            created.PostId.ToString(),
+            worldId,
+            new GenerateReplyRequest
+            {
+                AuthorId = created.PredictedAuthorId ?? throw new InvalidOperationException("Missing predicted star."),
+                SourceCommentId = null,
+                Additional = false,
+            },
+            CancellationToken.None);
+        using var reader = new StreamReader(stream.Stream);
+        var failed = ParseReplyGenerationEvents(await reader.ReadToEndAsync(CancellationToken.None))[^1];
+        await Assert.That(failed.Status).IsEqualTo(ReplyGenerationStatus.Failed);
+        var saved = await api.Posts.GetPostAsync(created.PostId.ToString(), worldId, CancellationToken.None);
+        await Assert.That(saved.Result).IsNotNull();
+        await Assert.That(saved.Comments.Count).IsEqualTo(0);
+        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(9);
+        await Assert.That((await GetStoredWorldAsync(telegramUserId))["Player"]["Subscribers"]).IsEqualTo(beforeWorld["Player"]["Subscribers"]);
     }
 
     [Test]

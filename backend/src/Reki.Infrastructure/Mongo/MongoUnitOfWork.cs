@@ -35,7 +35,8 @@ internal sealed class MongoUnitOfWork(
                 },
                 cancellationToken: cancellationToken);
         }
-        catch (MongoException exception) when (exception.HasErrorLabel("TransientTransactionError"))
+        catch (MongoException exception) when (exception.HasErrorLabel("TransientTransactionError") ||
+                                                exception is MongoWriteException { WriteError.Category: ServerErrorCategory.DuplicateKey })
         {
             throw new UnitOfWorkException("The transaction could not be completed.", exception);
         }

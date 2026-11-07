@@ -76,7 +76,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
         {
             ["star_id"] = "sonya",
             ["text"] = "Есть голос. Продолжай в том же духе.",
-            ["hook"] = "Вернёмся к этой теме через пару постов",
             ["tone"] = "support",
             ["brave"] = 0.7,
             ["humor"] = 0.6,

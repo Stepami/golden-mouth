@@ -17,7 +17,9 @@ internal sealed class MongoPlayerRepository(
         await _players.Find(item => item.TelegramUserId == telegramUserId).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
+        await (sessionProvider.Current is { } session
+            ? _players.Find(session, item => item.Id == playerId)
+            : _players.Find(item => item.Id == playerId)).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask CreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
         await _players.InsertOneAsync(player, cancellationToken: cancellationToken);

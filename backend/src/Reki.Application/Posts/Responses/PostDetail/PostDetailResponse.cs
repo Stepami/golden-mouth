@@ -1,4 +1,5 @@
 using Reki.Application.Posts.Responses.Comment;
+using Reki.Application.Posts.Responses.PostResult;
 using Reki.Domain.Posts;
 
 namespace Reki.Application.Posts.Responses.PostDetail;
@@ -9,4 +10,6 @@ public sealed record PostDetailResponse(
     string Text,
     long Views,
     IReadOnlyList<ReactionResponse> Reactions,
-    IReadOnlyList<CommentResponse> Comments);
+    IReadOnlyList<CommentResponse> Comments,
+    AuthorId? PredictedAuthorId,
+    PostResultResponse? Result);

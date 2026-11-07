@@ -83,10 +83,16 @@ public static partial class PostResponseMapper
     [MapperIgnoreSource(nameof(GamePost.Viral))]
     [MapperIgnoreSource(nameof(GamePost.Flop))]
     [MapperIgnoreSource(nameof(GamePost.Version))]
+    [MapperIgnoreSource(nameof(GamePost.RequestId))]
+    [MapperIgnoreSource(nameof(GamePost.OwnWords))]
+    [MapperIgnoreSource(nameof(GamePost.WantId))]
+    [MapperIgnoreSource(nameof(GamePost.PredictedAuthorId))]
+    [MapperIgnoreSource(nameof(GamePost.Reason))]
+    [MapperIgnoreSource(nameof(GamePost.ReactionEmoji))]
     public static partial ChannelPostResponse MapChannelPost(this GamePost post);
 
     public static IReadOnlyList<ReactionResponse> CreateReactions(this GamePost post) =>
-        [new ReactionResponse("🔥", post.Viral ? 3 : 1)];
+        [new ReactionResponse(post.ReactionEmoji ?? "🔥", post.Viral ? 3 : 1)];
 
     public static IReadOnlyList<LiveEvent> MapLiveEvents(this PublishedPost published, World world, PlayerId playerId)
     {
@@ -109,7 +115,34 @@ public static partial class PostResponseMapper
             post.Text,
             post.Views,
             CreateReactions(post),
-            post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray());
+            post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray(),
+            post.PredictedAuthorId,
+            post.RequestId is null ? null : MapSavedResult(post));
+
+    private static PostResultResponse MapSavedResult(GamePost post) =>
+        new(
+            post.Id,
+            post.SubscriberDelta,
+            post.Flop ? "Пост не залетел" : GetHeadline(post),
+            post.Reason is null ? [] : [new WhyResponse("💬", GetReason(post.Reason), post.SubscriberDelta.ToString("+0;-0;0", CultureInfo.InvariantCulture))],
+            post.Viral ? [new RibbonResponse("🚀", "залёт", null)] : [],
+            null,
+            post.Viral,
+            post.Flop,
+            post.Views);
+
+    private static string GetReason(string reason) => reason switch
+    {
+        "brave" => "смело",
+        "humor" => "смешно",
+        "topic" => "в тему",
+        "angry_abuse" => "резкие оскорбления",
+        "sad_tone" => "грустный тон",
+        "anxious_tone" => "тревожный тон",
+        _ => reason,
+    };
+
+    private static string GetHeadline(GamePost post) => post.Viral ? "Пост залетел" : "Канал растёт";
 
     private static CommentResponse MapComment(GamePost post, GameComment comment, World world, PlayerId playerId)
     {
@@ -176,7 +209,6 @@ public static partial class PostResponseMapper
             best,
             post.Viral,
             post.Flop,
-            post.Views,
-            source.Hook);
+            post.Views);
     }
 }

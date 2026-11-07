@@ -35,16 +35,16 @@ export type CommentReaction = Wire.CommentReactionResponse
 // Demo comments can omit server-enriched author/thread metadata.
 type CommentMetadata = 'star' | 'me' | 'hidden' | 'parentCommentId' | 'requestId' | 'authorId' | 'role' | 'reactions'
 export type CommentT = Omit<Fields<Wire.CommentResponse>, CommentMetadata | 'depth'> & Partial<Pick<Fields<Wire.CommentResponse>, CommentMetadata>> & { depth?: number }
-export type PostDetailResponse = Omit<Fields<Wire.PostDetailResponse>, 'views' | 'reactions' | 'comments' | 'authorId'> & {
-  authorId?: string; views: number; reactions: Reaction[]; comments: CommentT[]
+export type PostDetailResponse = Omit<Fields<Wire.PostDetailResponse>, 'views' | 'reactions' | 'comments' | 'authorId' | 'result' | 'predictedAuthorId'> & {
+  result?: PostResult | null; predictedAuthorId?: string | null; authorId?: string; views: number; reactions: Reaction[]; comments: CommentT[]
 }
 export type Post = Omit<PostDetailResponse, 'postId'> & { id: string; inRivers?: boolean; at?: string }
 export type ChannelPost = Omit<Fields<Wire.ChannelPostResponse>, 'views' | 'commentCount' | 'reactions'> & { views: number; commentCount: number; reactions: Reaction[] }
 export type Why = Wire.WhyResponse
-export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views' | 'ribbons' | 'bestComment' | 'hook'> & {
+export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views' | 'ribbons' | 'bestComment'> & {
   delta: number; views: number
   ribbons: (Omit<Fields<Wire.RibbonResponse>, 'sub'> & { sub?: string })[]
-  bestComment?: Wire.BestCommentResponse; hook?: string
+  bestComment?: Wire.BestCommentResponse
   completedWants?: Pick<Want, 'id' | 'text' | 'reward'>[]
 }
 type UiLiveEvent<E> = E extends { type: 'views' } ? Omit<E, 'views'> & { views: number }

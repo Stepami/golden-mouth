@@ -17,6 +17,18 @@ public sealed record GamePost(
     bool Flop,
     int Version = 0)
 {
+    public string? RequestId { get; init; }
+
+    public bool OwnWords { get; init; }
+
+    public string? WantId { get; init; }
+
+    public AuthorId? PredictedAuthorId { get; init; }
+
+    public string? Reason { get; init; }
+
+    public string? ReactionEmoji { get; init; }
+
     public GameComment? FindRequest(string requestId) =>
         Comments.FirstOrDefault(item => string.Equals(item.RequestId, requestId, StringComparison.Ordinal));
 
