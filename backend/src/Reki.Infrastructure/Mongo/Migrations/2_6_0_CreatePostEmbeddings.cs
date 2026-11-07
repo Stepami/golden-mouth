@@ -10,8 +10,7 @@ using Reki.Infrastructure.Mongo.Repositories;
 namespace Reki.Infrastructure.Mongo.Migrations;
 
 internal sealed class CreatePostEmbeddings(
-    IEncodeSerializer<GamePost> serializer,
-    IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator) : RekiMigrationBase
+    IRekiEmbeddingGenerator<GamePost> embeddingGenerator) : RekiMigrationBase
 {
     private const string IndexName = "ix_posts_embedding";
 
@@ -24,20 +23,20 @@ internal sealed class CreatePostEmbeddings(
         if (!(await indexes.ToListAsync(cancellationToken)).Any(index => index["name"] == IndexName))
         {
             await posts.SearchIndexes.CreateOneAsync(
-                new CreateVectorSearchIndexModel<GamePost>("embedding", IndexName, VectorSimilarity.Cosine, 312),
+                new CreateVectorSearchIndexModel<GamePost>("_embedding", IndexName, VectorSimilarity.Cosine, 312),
                 cancellationToken);
         }
 
         // Persist each embedding outside the migration transaction so a long backfill can resume.
         var documents = db.GetCollection<BsonDocument>(MongoCollections.Posts);
-        var missing = Builders<GamePost>.Filter.Exists("embedding", false);
+        var missing = Builders<GamePost>.Filter.Exists("_embedding", false);
         await foreach (var post in posts.AsQueryable().Where(_ => missing.Inject()).ToAsyncEnumerable().WithCancellation(cancellationToken))
         {
-            var embedding = await embeddingGenerator.GenerateVectorAsync(
-                serializer.Serialize(post), cancellationToken: cancellationToken);
+            var embedding = await embeddingGenerator
+                .GenerateVectorAsync(post, cancellationToken: cancellationToken);
             await documents.UpdateOneAsync(
                 new BsonDocument("_id", new BsonBinaryData(post.Id.Value, GuidRepresentation.Standard)),
-                Builders<BsonDocument>.Update.Set("embedding", new BsonArray(embedding.ToArray())),
+                Builders<BsonDocument>.Update.Set("_embedding", new BsonArray(embedding.ToArray())),
                 cancellationToken: cancellationToken);
         }
     }

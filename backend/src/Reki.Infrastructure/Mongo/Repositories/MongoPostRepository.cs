@@ -1,6 +1,8 @@
+using Microsoft.Extensions.AI;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Posts;
+using Reki.Application.Posts.AI;
 using Reki.Application.Posts.GetWorldPosts;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -9,15 +11,20 @@ namespace Reki.Infrastructure.Mongo.Repositories;
 
 internal sealed class MongoPostRepository(
     IMongoDatabase database,
-    MongoSessionProvider sessionProvider) : IPostRepository
+    MongoSessionProvider sessionProvider,
+    IRekiEmbeddingGenerator<GamePost> embeddingGenerator) : IPostRepository
 {
+    private static readonly ProjectionDefinition<GamePost> WithoutEmbedding =
+        Builders<GamePost>.Projection.Exclude("_embedding");
+
     private readonly IMongoCollection<GamePost> _posts =
         database.GetCollection<GamePost>(MongoCollections.Posts);
 
-    public async ValueTask InsertPostAsync(GamePost post, ReadOnlyMemory<float> embedding, CancellationToken cancellationToken)
+    public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken)
     {
+        var embedding = await embeddingGenerator.GenerateVectorAsync(post, cancellationToken: cancellationToken);
         var document = post.ToBsonDocument();
-        document["embedding"] = new BsonArray(embedding.ToArray());
+        document["_embedding"] = new BsonArray(embedding.ToArray());
         var posts = database.GetCollection<BsonDocument>(MongoCollections.Posts);
         await (sessionProvider.Current is { } session
             ? posts.InsertOneAsync(session, document, cancellationToken: cancellationToken)
@@ -47,7 +54,7 @@ internal sealed class MongoPostRepository(
             .Find(filter)
             .SortByDescending(item => item.Id)
             .Limit(limit)
-            .Project<GamePost>(Builders<GamePost>.Projection.Exclude("embedding"))
+            .Project<GamePost>(WithoutEmbedding)
             .ToListAsync(cancellationToken);
         var hasNext = posts.Count > pageSize;
         if (hasNext)
@@ -63,12 +70,12 @@ internal sealed class MongoPostRepository(
         WorldId worldId,
         CancellationToken cancellationToken) =>
         await _posts.Find(item => item.Id == postId && item.WorldId == worldId)
-            .Project<GamePost>(Builders<GamePost>.Projection.Exclude("embedding"))
+            .Project<GamePost>(WithoutEmbedding)
             .FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken) =>
         await _posts.Find(item => item.Id == postId)
-            .Project<GamePost>(Builders<GamePost>.Projection.Exclude("embedding"))
+            .Project<GamePost>(WithoutEmbedding)
             .FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken)

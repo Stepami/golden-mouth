@@ -280,7 +280,6 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         {
             await postRepository.InsertPostAsync(
                 new GamePost(PostId.New(Factory.Session.Clock.GetUtcNow()), author, worldId, text, 0, [], Factory.Session.Clock.GetUtcNow(), 0, 0, 1, false, false),
-                Enumerable.Repeat(1f, 312).ToArray(),
                 CancellationToken.None);
         }
 
@@ -288,7 +287,6 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         {
             await postRepository.InsertPostAsync(
                 new GamePost(PostId.New(Factory.Session.Clock.GetUtcNow().AddMinutes(index + 1)), otherStar.Id.ToAuthorId(), worldId, $"Другая запись {index}", 0, [], Factory.Session.Clock.GetUtcNow(), 0, 0, 1, false, false),
-                Enumerable.Repeat(1f, 312).ToArray(),
                 CancellationToken.None);
         }
 
@@ -344,7 +342,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var unrelated = new GameComment(CommentId.New(), null, null, world.Stars[1].Id.ToAuthorId(), "Другая ветка", false, []);
         var source = new GamePost(PostId.New(now), sourceEvent == StarFeedEventType.CommentPublished ? world.Stars[0].Id.ToAuthorId() : player.Id.ToAuthorId(), worldId, "Я нашёл старую карту.", 0, [parent, comment, answer, unrelated], now, 0, 0, 1, false, false);
         var repository = Factory.Services.GetRequiredService<IPostRepository>();
-        await repository.InsertPostAsync(source, Enumerable.Repeat(1f, 312).ToArray(), CancellationToken.None);
+        await repository.InsertPostAsync(source, CancellationToken.None);
         var postId = PostId.New(now);
         Factory.Session.Clock.Advance(TimeSpan.FromHours(4));
         Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "На новой карте я тоже не вижу мост.")));
@@ -440,7 +438,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var repository = Factory.Services.GetRequiredService<IPostRepository>();
         if (scenario != "missing-post")
         {
-            await repository.InsertPostAsync(post, Enumerable.Repeat(1f, 312).ToArray(), CancellationToken.None);
+            await repository.InsertPostAsync(post, CancellationToken.None);
         }
 
         var isComment = scenario.EndsWith("comment", StringComparison.Ordinal);

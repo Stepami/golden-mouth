@@ -1,12 +1,10 @@
 using System.Globalization;
 using Mediator;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Application.Invites;
 using Reki.Application.Player;
-using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Post;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPublication;
@@ -28,8 +26,6 @@ internal sealed class PublishPostCommandHandler(
     IPlayerRepository playerRepository,
     IWorldRepository worldRepository,
     IPostRepository postRepository,
-    IEncodeSerializer<GamePost> encodeSerializer,
-    IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
     IOptionsMonitor<GameBalance> balance,
     PostProgressionCalculator progressionCalculator,
     TimeProvider timeProvider,
@@ -148,8 +144,6 @@ internal sealed class PublishPostCommandHandler(
             progression.Viral,
             progression.Flop);
         var hook = turn.Hook;
-        var embedding = await embeddingGenerator.GenerateVectorAsync(
-            encodeSerializer.Serialize(post), cancellationToken: cancellationToken);
 
         var published = new PublishedPost(post, hook, turn.StarName, turn.Reaction, turn.Reasons);
         var invite = await invitationRepository.GetPendingInviteAsync(player.Id, cancellationToken);
@@ -179,7 +173,7 @@ internal sealed class PublishPostCommandHandler(
                     await invitationRepository.UseInviteBonusAsync(updatedInvite, token);
                 }
 
-                await postRepository.InsertPostAsync(post, embedding, token);
+                await postRepository.InsertPostAsync(post, token);
                 return Unit.Value;
             },
             cancellationToken);

@@ -6,7 +6,7 @@ namespace Reki.Application.Posts;
 
 public interface IPostRepository
 {
-    ValueTask InsertPostAsync(GamePost post, ReadOnlyMemory<float> embedding, CancellationToken cancellationToken);
+    ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken);
 
     /// <summary>
     /// Reads posts in a world whose ownership the application has already verified.
