@@ -101,23 +101,27 @@ internal sealed class CreatePostCommandHandler(
         updated = updated with { Energy = updated.Energy + (updatedInvite?.BonusAmount ?? 0) };
         await unitOfWork.ExecuteAsync(
             async token =>
-        {
-            await players.ReplacePlayerAsync(updated, token);
-            await worlds.ReplaceWorldAsync(updatedWorld, token);
-            if (updatedInvite is not null)
             {
-                var periodStart = updated.PostsPeriodStartedAtUtc;
-                var inviterUses = await invitations.CountInviterBonusesAsync(updatedInvite.InviterId, periodStart, periodStart.AddDays(1), token);
-                if (inviterUses < currentBalance.InviteBonusMaxPerDay)
+                await players.ReplacePlayerAsync(updated, token);
+                await worlds.ReplaceWorldAsync(updatedWorld, token);
+                if (updatedInvite is not null)
                 {
-                    await players.AddInviteBonusAsync(updatedInvite.InviterId, updatedInvite.BonusAmount, token);
+                    var periodStart = updated.PostsPeriodStartedAtUtc;
+                    var inviterUses = await invitations.CountInviterBonusesAsync(
+                        updatedInvite.InviterId,
+                        periodStart,
+                        periodStart.AddDays(1),
+                        token);
+                    if (inviterUses < currentBalance.InviteBonusMaxPerDay)
+                    {
+                        await players.AddInviteBonusAsync(updatedInvite.InviterId, updatedInvite.BonusAmount, token);
+                    }
+
+                    await invitations.UseInviteBonusAsync(updatedInvite, token);
                 }
 
-                await invitations.UseInviteBonusAsync(updatedInvite, token);
-            }
-
-            await posts.InsertPostAsync(post, embedding, token);
-            return Unit.Value;
+                await posts.InsertPostAsync(post, embedding, token);
+                return Unit.Value;
             },
             cancellationToken);
         telemetry.TrackWorldAudience(updatedWorld);
