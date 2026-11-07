@@ -28,7 +28,7 @@ internal sealed class UpdateSettingsCommandHandler(
                 : 0),
             Version = player.Version + 1,
         };
-        await playerRepository.TryReplacePlayerAsync(updated, player.Version, cancellationToken);
+        await playerRepository.ReplacePlayerAsync(updated, cancellationToken);
         return Unit.Value;
     }
 }

@@ -4,14 +4,12 @@ using Reki.Domain.Player;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 
-internal sealed class MongoPlayerRepository : IPlayerRepository
+internal sealed class MongoPlayerRepository(
+    IMongoDatabase database,
+    MongoSessionProvider sessionProvider) : IPlayerRepository
 {
-    private readonly IMongoCollection<PlayerProfile> _players;
-
-    public MongoPlayerRepository(IMongoDatabase database)
-    {
-        _players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
-    }
+    private readonly IMongoCollection<PlayerProfile> _players =
+        database.GetCollection<PlayerProfile>(MongoCollections.Players);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
         TelegramUserId telegramUserId,
@@ -29,36 +27,42 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
         PlayerProfile updated,
         CancellationToken cancellationToken)
     {
-        var filter = Builders<PlayerProfile>.Filter.And(
-            Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id),
-            Builders<PlayerProfile>.Filter.Ne(item => item.PlusNotifyRequested, updated.PlusNotifyRequested));
         var update = Builders<PlayerProfile>.Update
             .Set(item => item.PlusNotifyRequested, updated.PlusNotifyRequested)
             .Inc(item => item.Version, updated.Version - player.Version);
-        await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+        await _players.UpdateOneAsync(item => item.Id == player.Id, update, cancellationToken: cancellationToken);
     }
 
-    public async ValueTask<bool> TryClaimPlusInterestAsync(
+    public async ValueTask ClaimPlusInterestAsync(
         PlayerProfile player,
         PlayerProfile updated,
         CancellationToken cancellationToken)
     {
-        var filter = Builders<PlayerProfile>.Filter.And(
-            Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id),
-            Builders<PlayerProfile>.Filter.Ne(item => item.PlusInterestClaimed, updated.PlusInterestClaimed));
         var update = Builders<PlayerProfile>.Update
             .Inc(item => item.Energy, updated.Energy - player.Energy)
             .Set(item => item.PlusInterestClaimed, updated.PlusInterestClaimed)
             .Inc(item => item.Version, updated.Version - player.Version);
-        var result = await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
-        return result.ModifiedCount == 1;
+        await _players.UpdateOneAsync(item => item.Id == player.Id, update, cancellationToken: cancellationToken);
     }
 
-    public async ValueTask<bool> TryReplacePlayerAsync(PlayerProfile player, int expectedVersion, CancellationToken cancellationToken)
+    public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
+        await _players.ReplaceOneAsync(sessionProvider, item => item.Id == player.Id, player, cancellationToken);
+
+    public async ValueTask AddInviteBonusAsync(PlayerId playerId, int bonusAmount, CancellationToken cancellationToken)
     {
-        var result = await _players.ReplaceOneAsync(item => item.Id == player.Id && item.Version == expectedVersion, player, cancellationToken: cancellationToken);
-        return result.MatchedCount == 1;
+        var update = Builders<PlayerProfile>.Update
+            .Set(item => item.HitOwnWorldMilestone, true)
+            .Inc(item => item.Energy, bonusAmount)
+            .Inc(item => item.Version, 1);
+        await _players.UpdateOneAsync(
+            sessionProvider.Session,
+            item => item.Id == playerId,
+            update,
+            cancellationToken: cancellationToken);
     }
+
+    public async ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
+        await _players.DeleteOneAsync(sessionProvider.Session, item => item.Id == playerId, cancellationToken: cancellationToken);
 
     public async ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken) =>
         await _players.CountDocumentsAsync(FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken);

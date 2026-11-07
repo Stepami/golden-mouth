@@ -1,16 +1,15 @@
 using MongoDB.Driver;
 using Reki.Application.Posts;
+using Reki.Domain.Player;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 
-internal sealed class MongoPublicationRepository : IPublicationRepository
+internal sealed class MongoPublicationRepository(
+    IMongoDatabase database,
+    MongoSessionProvider sessionProvider) : IPublicationRepository
 {
-    private readonly IMongoCollection<Publication> _publications;
-
-    public MongoPublicationRepository(IMongoDatabase database)
-    {
-        _publications = database.GetCollection<Publication>(MongoCollections.Publications);
-    }
+    private readonly IMongoCollection<Publication> _publications =
+        database.GetCollection<Publication>(MongoCollections.Publications);
 
     public async ValueTask<Publication?> GetPublicationAsync(
         string id,
@@ -20,20 +19,10 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async ValueTask<bool> TryCreatePublicationAsync(
+    public async ValueTask CreatePublicationAsync(
         Publication publication,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _publications.InsertOneAsync(publication, cancellationToken: cancellationToken);
-            return true;
-        }
-        catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
-        {
-            return false;
-        }
-    }
+        CancellationToken cancellationToken) =>
+        await _publications.InsertOneAsync(publication, cancellationToken: cancellationToken);
 
     public async ValueTask AppendPublicationPartAsync(
         string id,
@@ -41,14 +30,10 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
         CancellationToken cancellationToken)
     {
         var update = Builders<Publication>.Update.Push(item => item.Parts, part);
-        var result = await _publications.UpdateOneAsync(
-            item => item.Id == id && item.Status == PublicationStatusType.Pending,
+        await _publications.UpdateOneAsync(
+            item => item.Id == id,
             update,
             cancellationToken: cancellationToken);
-        if (result.ModifiedCount != 1)
-        {
-            throw new InvalidOperationException("The publication is no longer pending.");
-        }
     }
 
     public async ValueTask MarkPublicationReadyAsync(string id, CancellationToken cancellationToken)
@@ -56,14 +41,10 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
         var update = Builders<Publication>.Update
             .Set(item => item.Status, PublicationStatusType.ReadyForModeration)
             .Set(item => item.ExpiresAtUtc, null);
-        var result = await _publications.UpdateOneAsync(
-            item => item.Id == id && item.Status == PublicationStatusType.Pending,
+        await _publications.UpdateOneAsync(
+            item => item.Id == id,
             update,
             cancellationToken: cancellationToken);
-        if (result.ModifiedCount != 1)
-        {
-            throw new InvalidOperationException("The publication could not be marked ready.");
-        }
     }
 
     public async ValueTask MarkPublicationFailedAsync(
@@ -79,8 +60,29 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
             .Set(item => item.Parts, [])
             .Set(item => item.ExpiresAtUtc, expiresAtUtc);
         await _publications.UpdateOneAsync(
-            item => item.Id == id && item.Status != PublicationStatusType.Completed,
+            item => item.Id == id,
             update,
             cancellationToken: cancellationToken);
     }
+
+    public async ValueTask CompletePublicationAsync(
+        string id,
+        PlayerId playerId,
+        PublishedPost published,
+        CancellationToken cancellationToken)
+    {
+        var filter = Builders<Publication>.Filter.And(
+            Builders<Publication>.Filter.Eq(item => item.Id, id),
+            Builders<Publication>.Filter.Eq(item => item.PlayerId, playerId));
+        var update = Builders<Publication>.Update
+            .Set(item => item.Status, PublicationStatusType.Completed)
+            .Set(item => item.Result, published)
+            .Set(item => item.Text, string.Empty)
+            .Set(item => item.Parts, []);
+        await _publications.UpdateOneAsync(
+            sessionProvider.Session, filter, update, cancellationToken: cancellationToken);
+    }
+
+    public async ValueTask DeletePublicationsAsync(PlayerId playerId, CancellationToken cancellationToken) =>
+        await _publications.DeleteManyAsync(sessionProvider.Session, item => item.PlayerId == playerId, cancellationToken: cancellationToken);
 }

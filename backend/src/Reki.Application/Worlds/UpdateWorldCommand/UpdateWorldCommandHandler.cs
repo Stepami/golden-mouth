@@ -53,10 +53,7 @@ internal sealed class UpdateWorldCommandHandler(
                 }).ToArray(),
             },
         };
-        if (!await worldRepository.TryReplaceWorldAsync(updated, world.Version, cancellationToken))
-        {
-            throw new RequestConflictException("World changed concurrently.");
-        }
+        await worldRepository.ReplaceWorldAsync(updated, cancellationToken);
 
         return Unit.Value;
     }

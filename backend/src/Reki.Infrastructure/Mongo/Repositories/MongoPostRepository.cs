@@ -6,17 +6,17 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 
-internal sealed class MongoPostRepository : IPostRepository
+internal sealed class MongoPostRepository(
+    IMongoDatabase database,
+    MongoSessionProvider sessionProvider) : IPostRepository
 {
-    private readonly IMongoCollection<GamePost> _posts;
-
-    public MongoPostRepository(IMongoDatabase database)
-    {
-        _posts = database.GetCollection<GamePost>(MongoCollections.Posts);
-    }
+    private readonly IMongoCollection<GamePost> _posts =
+        database.GetCollection<GamePost>(MongoCollections.Posts);
 
     public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken) =>
-        await _posts.InsertOneAsync(post, cancellationToken: cancellationToken);
+        await (sessionProvider.Current is { } session
+            ? _posts.InsertOneAsync(session, post, cancellationToken: cancellationToken)
+            : _posts.InsertOneAsync(post, cancellationToken: cancellationToken));
 
     public async ValueTask<WorldPostsPage> GetPostsAsync(
         WorldId worldId,
@@ -61,8 +61,13 @@ internal sealed class MongoPostRepository : IPostRepository
     public async ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken) =>
         await _posts.Find(item => item.Id == postId).FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken)
-    {
-        await _posts.ReplaceOneAsync(item => item.Id == post.Id && item.WorldId == post.WorldId, post, cancellationToken: cancellationToken);
-    }
+    public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken) =>
+        await _posts.ReplaceOneAsync(
+            sessionProvider, item => item.Id == post.Id && item.WorldId == post.WorldId, post, cancellationToken);
+
+    public async ValueTask DeletePostsAsync(IReadOnlyCollection<WorldId> worldIds, CancellationToken cancellationToken) =>
+        await _posts.DeleteManyAsync(
+            sessionProvider.Session,
+            Builders<GamePost>.Filter.In(item => item.WorldId, worldIds),
+            cancellationToken: cancellationToken);
 }

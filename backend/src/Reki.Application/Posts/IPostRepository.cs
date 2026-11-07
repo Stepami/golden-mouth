@@ -31,4 +31,6 @@ public interface IPostRepository
     ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken);
 
     ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken);
+
+    ValueTask DeletePostsAsync(IReadOnlyCollection<WorldId> worldIds, CancellationToken cancellationToken);
 }

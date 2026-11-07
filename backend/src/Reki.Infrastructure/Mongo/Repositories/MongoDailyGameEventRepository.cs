@@ -6,14 +6,12 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 
-internal sealed class MongoDailyGameEventRepository : IDailyGameEventRepository
+internal sealed class MongoDailyGameEventRepository(
+    IMongoDatabase database,
+    MongoSessionProvider sessionProvider) : IDailyGameEventRepository
 {
-    private readonly IMongoCollection<DailyGameEvent> _events;
-
-    public MongoDailyGameEventRepository(IMongoDatabase database)
-    {
-        _events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
-    }
+    private readonly IMongoCollection<DailyGameEvent> _events =
+        database.GetCollection<DailyGameEvent>(MongoCollections.Events);
 
     public async ValueTask<DailyGameEvent?> GetTodayEventAsync(
         PlayerId playerId,
@@ -43,10 +41,10 @@ internal sealed class MongoDailyGameEventRepository : IDailyGameEventRepository
         CancellationToken cancellationToken)
     {
         var options = new ReplaceOptions { IsUpsert = true };
-        await _events.ReplaceOneAsync(
-            item => item.Id == gameEvent.Id,
-            gameEvent,
-            options,
-            cancellationToken);
+        var filter = Builders<DailyGameEvent>.Filter.Eq(item => item.Id, gameEvent.Id);
+        await _events.ReplaceOneAsync(filter, gameEvent, options, cancellationToken);
     }
+
+    public async ValueTask DeleteEventsAsync(PlayerId playerId, CancellationToken cancellationToken) =>
+        await _events.DeleteManyAsync(sessionProvider.Session, item => item.PlayerId == playerId, cancellationToken: cancellationToken);
 }

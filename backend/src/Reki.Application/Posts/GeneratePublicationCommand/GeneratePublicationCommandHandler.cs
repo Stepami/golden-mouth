@@ -75,14 +75,7 @@ internal sealed partial class GeneratePublicationCommandHandler(
             null,
             timeProvider.GetUtcNow().Add(FailedRetention).UtcDateTime,
             world.Id);
-        if (!await publicationRepository.TryCreatePublicationAsync(publication, cancellationToken))
-        {
-            existing = await sender.Send(new PublicationQuery(request.Id), cancellationToken)
-                ?? throw new RequestConflictException("The publication changed concurrently.");
-            EnsureSameRequest(existing, player, requestHash);
-            yield return new PublicationStatusLiveEvent(existing.Status, request.Id, existing.Failure);
-            yield break;
-        }
+        await publicationRepository.CreatePublicationAsync(publication, cancellationToken);
 
         yield return new PublicationStatusLiveEvent(PublicationStatusType.Pending, request.Id);
         var failure = new PublicationFailure("technical_failure", "uncertain", PublicationSafetyPolicy.Version);
