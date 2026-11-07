@@ -14,8 +14,7 @@ internal sealed partial class NearCopyFlopTest(
     public async Task<bool> IsFlopAsync(GamePost post)
     {
         var current = context.Current;
-        var history = await posts.FindSimilarPostsAsync(
-            post.WorldId, post.AuthorId, current.Embedding, analysis.Threshold("near_copy_cosine"), current.CancellationToken);
+        var history = await posts.FindSimilarPostsAsync(post, analysis.Threshold("near_copy_cosine"), current.CancellationToken);
         var numbers = Numbers(post.Text);
         foreach (var candidateText in history.Select(candidate => candidate.Text))
         {

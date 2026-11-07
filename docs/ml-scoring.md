@@ -6,7 +6,7 @@
 
 Этап `feat/embed` сохраняет вектор при создании поста игрока или звезды. `IEncodeSerializer<T>` в `Reki.Application.Posts.AI` определяет вход: для `GamePost` и `GameComment` — `Text`, для `WorldStar` — имя, роль и описание. Реализации находятся в `Posts/AI/Serializers`.
 
-Обычный `IPostRepository.InsertPostAsync` рассчитывает вектор через `IRekiEmbeddingGenerator<GamePost>` и сохраняет техническое поле `posts._embedding`. Новый POST один раз получает эмбеддинг до UoW, использует его для поиска повторов и обязательного автора и передаёт в перегрузку сохранения с готовым вектором. Доменные модели и публичный API векторов не содержат; обычные чтения исключают поле projection, сохранение комментариев его не перезаписывает.
+`IPostRepository.InsertPostAsync(GamePost, CancellationToken)` сам рассчитывает вектор через `IRekiEmbeddingGenerator<GamePost>` и сохраняет техническое поле `posts._embedding`. `FindSimilarPostsAsync(GamePost, threshold, CancellationToken)` рассчитывает вектор запроса внутри Mongo-репозитория, а `IStarVectorStore.GetRelevantCommenterAsync(World, GamePost)` — внутри стора звёзд. Хендлер и ML-скорер передают пост, а не готовый вектор; перегрузок с эмбеддингом нет. Доменные модели и публичный API векторов не содержат; обычные чтения исключают поле projection, сохранение комментариев его не перезаписывает. `PredictedAuthorId` и `FlopReason` — nullable-параметры конструктора `GamePost`.
 
 Миграция 2.6.0 создаёт cosine-индекс `ix_posts_embedding` на 312 измерений и последовательно дополняет старые посты без вектора через `IAsyncEnumerable`. Заполнение выполняется вне транзакции мигратора и возобновляется по отсутствующему полю. Этот этап рассчитывает векторы без поиска повторов и подбора звёзд.
 

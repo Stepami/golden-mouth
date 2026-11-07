@@ -11,9 +11,9 @@ internal sealed class PostScorer(
     PostTextAnalysis analysis,
     IEnumerable<IFlopTest> flopTests)
 {
-    public async Task<PostScore> ScoreAsync(GamePost post, World world, ReadOnlyMemory<float> embedding, GameBalance balance, CancellationToken cancellationToken)
+    public async Task<PostScore> ScoreAsync(GamePost post, World world, GameBalance balance, CancellationToken cancellationToken)
     {
-        context.Current = new PostScoringData(world, balance, embedding, cancellationToken);
+        context.Current = new PostScoringData(world, balance, cancellationToken);
         var topic = $"{world.Interface.Title}. {world.Interface.Description}. {world.Player.Role}";
         var skills = await analysis.SkillsAsync(post.Text, topic, cancellationToken);
         var emotion = await analysis.ClassifyAsync(ClassifierModels.EmotionModel, post.Text);

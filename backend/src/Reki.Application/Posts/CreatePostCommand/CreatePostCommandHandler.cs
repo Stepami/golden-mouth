@@ -1,12 +1,10 @@
 using System.Globalization;
 using Mediator;
-using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Application.Invites;
 using Reki.Application.Player;
-using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Post;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.CreatePostCommand.Progression;
@@ -32,7 +30,6 @@ internal sealed class CreatePostCommandHandler(
     IOptionsMonitor<GameBalance> balance,
     PostProgressionCalculator progressionCalculator,
     PostScorer scorer,
-    IRekiEmbeddingGenerator<GamePost> embedder,
     IStarVectorStore stars,
     IRekiContextAccessor contextAccessor,
     PlayerSafetyGuard safety,
@@ -73,9 +70,8 @@ internal sealed class CreatePostCommandHandler(
             1,
             false,
             false);
-        var embedding = await embedder.GenerateVectorAsync(post, cancellationToken: cancellationToken);
-        var score = await scorer.ScoreAsync(post, world, embedding, currentBalance, cancellationToken);
-        var starId = await stars.GetRelevantCommenterAsync(world, embedding);
+        var score = await scorer.ScoreAsync(post, world, currentBalance, cancellationToken);
+        var starId = await stars.GetRelevantCommenterAsync(world, post);
         var progression = progressionCalculator.Calculate(
             player, world, score, request.OwnWords, wantCompleted, post.Id.ToString(), score.FlopReason is not null);
         var updatedWorld = world.PublishPost(
@@ -122,7 +118,7 @@ internal sealed class CreatePostCommandHandler(
                     await invitations.UseInviteBonusAsync(updatedInvite, token);
                 }
 
-                await posts.InsertPostAsync(post, embedding, token);
+                await posts.InsertPostAsync(post, token);
                 return Unit.Value;
             },
             cancellationToken);

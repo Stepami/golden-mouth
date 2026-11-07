@@ -23,11 +23,6 @@ internal sealed class MongoPostRepository(
     public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken)
     {
         var embedding = await embeddingGenerator.GenerateVectorAsync(post, cancellationToken: cancellationToken);
-        await InsertPostAsync(post, embedding, cancellationToken);
-    }
-
-    public async ValueTask InsertPostAsync(GamePost post, ReadOnlyMemory<float> embedding, CancellationToken cancellationToken)
-    {
         var document = post.ToBsonDocument();
         document["_embedding"] = new BsonArray(embedding.ToArray());
         var posts = database.GetCollection<BsonDocument>(MongoCollections.Posts);
@@ -37,14 +32,11 @@ internal sealed class MongoPostRepository(
     }
 
     public async ValueTask<IReadOnlyList<PostSimilarity>> FindSimilarPostsAsync(
-        WorldId worldId,
-        AuthorId authorId,
-        ReadOnlyMemory<float> embedding,
-        double threshold,
-        CancellationToken cancellationToken)
+        GamePost post, double threshold, CancellationToken cancellationToken)
     {
-        var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId) &
-                     Builders<GamePost>.Filter.Eq(item => item.AuthorId, authorId) &
+        var embedding = await embeddingGenerator.GenerateVectorAsync(post, cancellationToken: cancellationToken);
+        var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, post.WorldId) &
+                     Builders<GamePost>.Filter.Eq(item => item.AuthorId, post.AuthorId) &
                      Builders<GamePost>.Filter.Exists("_embedding", true);
         var match = filter.Render(new RenderArgs<GamePost>(_posts.DocumentSerializer, _posts.Settings.SerializerRegistry));
         var pipeline = new[]

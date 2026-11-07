@@ -2,6 +2,7 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Domain.Posts;
 
+#pragma warning disable AV1553 // Existing posts and star posts do not have a flop reason.
 public sealed record GamePost(
     PostId Id,
     AuthorId AuthorId,
@@ -16,12 +17,11 @@ public sealed record GamePost(
     bool Viral,
     bool Flop,
     int Version = 0,
-    string ReactionEmoji = "🔥")
+    string ReactionEmoji = "🔥",
+    AuthorId? PredictedAuthorId = null,
+    string? FlopReason = null)
+#pragma warning restore AV1553
 {
-    public AuthorId? PredictedAuthorId { get; init; }
-
-    public string? FlopReason { get; init; }
-
     public GameComment? FindRequest(string requestId) =>
         Comments.FirstOrDefault(item => string.Equals(item.RequestId, requestId, StringComparison.Ordinal));
 
