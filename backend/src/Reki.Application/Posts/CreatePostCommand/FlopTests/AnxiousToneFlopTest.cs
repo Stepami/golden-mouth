@@ -12,6 +12,7 @@ internal sealed class AnxiousToneFlopTest(PostTextAnalysis analysis, PostScoring
     {
         var emotion = await analysis.ClassifyAsync(ClassifierModels.EmotionModel, post.Text);
         return emotion["fear"] >= analysis.Threshold("anxious_tone")
-            ? FlopTestResult.Flop("anxious_tone") : FlopTestResult.Ok;
+            ? FlopTestResult.Flop("anxious_tone")
+            : FlopTestResult.Ok;
     }
 }

@@ -19,6 +19,7 @@ internal sealed class AngryAbuseFlopTest(PostTextAnalysis analysis, PostScoringC
         var toxicity = await analysis.ClassifyAsync(ClassifierModels.ToxicityModel, text);
         var emotion = await analysis.ClassifyAsync(ClassifierModels.EmotionModel, text);
         return Math.Min(toxicity["insult"], emotion["anger"]) >= analysis.Threshold("angry_abuse")
-            ? FlopTestResult.Flop("angry_abuse") : FlopTestResult.Ok;
+            ? FlopTestResult.Flop("angry_abuse")
+            : FlopTestResult.Ok;
     }
 }

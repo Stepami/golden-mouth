@@ -8,3 +8,10 @@ public interface IFlopTest
 
     Task<FlopTestResult> IsFlopAsync(GamePost post);
 }
+
+public sealed record FlopTestResult(bool IsFlop, string Reason)
+{
+    public static readonly FlopTestResult Ok = new(false, string.Empty);
+
+    public static FlopTestResult Flop(string reason) => new(true, reason);
+}
