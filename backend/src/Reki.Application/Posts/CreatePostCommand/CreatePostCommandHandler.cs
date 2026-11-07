@@ -134,11 +134,22 @@ internal sealed class CreatePostCommandHandler(
             "anxious_tone" => "Тревожный тон",
             _ => null,
         };
+        var whys = new List<WhyResponse>();
+        if (reason is not null)
+        {
+            whys.Add(new WhyResponse("🤔", reason, post.SubscriberDelta.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        if (score.Topic >= currentBalance.Difficulties[world.Difficulty].TopicMinCosine)
+        {
+            whys.Add(new WhyResponse("🎯", "В тему", string.Empty));
+        }
+
         var result = new PostResultResponse(
             post.Id,
             post.SubscriberDelta,
             post.Flop ? "Аудитория сократилась" : headline,
-            reason is null ? [] : [new WhyResponse("🤔", reason, post.SubscriberDelta.ToString(CultureInfo.InvariantCulture))],
+            whys,
             post.Viral ? [new RibbonResponse("🚀", "залёт", null)] : [],
             null,
             post.Viral,

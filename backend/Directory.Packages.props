@@ -23,6 +23,7 @@
         <PackageVersion Include="OpenIddict.AspNetCore" Version="$(OpenIddictVersion)"/>
         <PackageVersion Include="OpenIddict.MongoDb" Version="$(OpenIddictVersion)"/>
         <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(MicrosoftExtensionsVersion)"/>
+        <PackageVersion Include="System.Numerics.Tensors" Version="$(MicrosoftExtensionsVersion)"/>
         <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="$(MicrosoftExtensionsVersion)"/>
         <PackageVersion Include="System.Security.Cryptography.Xml" Version="$(MicrosoftExtensionsVersion)"/>
         <PackageVersion Include="DotNext.Threading" Version="6.11.1"/>

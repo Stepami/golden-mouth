@@ -14,6 +14,10 @@ internal sealed class MongoPostRepository(
     MongoSessionProvider sessionProvider,
     IRekiEmbeddingGenerator<GamePost> embeddingGenerator) : IPostRepository
 {
+    private const int SimilarityLimit = 20;
+    private const int SimilarityCandidates = 400;
+    private const string EmbeddingIndex = "ix_posts_embedding";
+
     private static readonly ProjectionDefinition<GamePost> WithoutEmbedding =
         Builders<GamePost>.Projection.Exclude("_embedding");
 
@@ -36,16 +40,30 @@ internal sealed class MongoPostRepository(
     {
         var embedding = await embeddingGenerator.GenerateVectorAsync(post, cancellationToken: cancellationToken);
         var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, post.WorldId) &
-                     Builders<GamePost>.Filter.Eq(item => item.AuthorId, post.AuthorId) &
-                     Builders<GamePost>.Filter.Exists("_embedding", true);
+                     Builders<GamePost>.Filter.Eq(item => item.AuthorId, post.AuthorId);
         var match = filter.Render(new RenderArgs<GamePost>(_posts.DocumentSerializer, _posts.Settings.SerializerRegistry));
+        var score = new BsonDocument("$subtract", new BsonArray
+        {
+            new BsonDocument("$multiply", new BsonArray { new BsonDocument("$meta", "vectorSearchScore"), 2 }),
+            1,
+        });
         var pipeline = new[]
         {
-            new BsonDocument("$match", match),
-            new BsonDocument("$set", new BsonDocument("score", new BsonDocument(
-                "$similarityCosine", new BsonArray { "$_embedding", new BsonArray(embedding.ToArray()) }))),
+            new BsonDocument("$vectorSearch", new BsonDocument
+            {
+                { "index", EmbeddingIndex },
+                { "path", "_embedding" },
+                { "queryVector", new BsonArray(embedding.ToArray()) },
+                { "numCandidates", SimilarityCandidates },
+                { "limit", SimilarityLimit },
+                { "filter", match },
+            }),
+            new BsonDocument("$project", new BsonDocument
+            {
+                { "Text", 1 },
+                { "score", score },
+            }),
             new BsonDocument("$match", new BsonDocument("score", new BsonDocument("$gte", threshold))),
-            new BsonDocument("$project", new BsonDocument { { "Text", 1 }, { "score", 1 } }),
         };
         using var cursor = await database.GetCollection<BsonDocument>(MongoCollections.Posts)
             .AggregateAsync<BsonDocument>(pipeline, cancellationToken: cancellationToken);

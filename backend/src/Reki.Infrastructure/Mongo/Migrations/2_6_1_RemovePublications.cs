@@ -7,7 +7,7 @@ namespace Reki.Infrastructure.Mongo.Migrations;
 
 internal sealed class RemovePublications : RekiMigrationBase
 {
-    public override DatabaseVersion Version => new(2, 7, 0);
+    public override DatabaseVersion Version => new(2, 6, 1);
 
     public override async Task UpAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken)
     {

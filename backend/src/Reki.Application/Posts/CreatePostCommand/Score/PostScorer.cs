@@ -13,8 +13,7 @@ internal sealed class PostScorer(
     public async Task<PostScore> ScoreAsync(GamePost post, World world, GameBalance balance, CancellationToken cancellationToken)
     {
         context.Current = new PostScoringData(world, balance, cancellationToken);
-        var topic = $"{world.Interface.Title}. {world.Interface.Description}. {world.Player.Role}";
-        var skills = await analysis.SkillsAsync(post.Text, topic, cancellationToken);
+        var skills = await analysis.SkillsAsync(post, world, cancellationToken);
         var emotion = await analysis.ClassifyAsync(ClassifierModels.EmotionModel, post.Text);
         var result = await flopTests.OrderBy(test => test.Priority)
             .ToAsyncEnumerable()

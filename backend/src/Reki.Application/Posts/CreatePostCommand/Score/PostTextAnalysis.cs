@@ -1,11 +1,18 @@
+using System.Numerics.Tensors;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.AI;
+using Reki.Application.Posts.AI;
 using Reki.Application.Posts.ML;
+using Reki.Domain.Posts;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.CreatePostCommand.Score;
 
 internal sealed partial class PostTextAnalysis(
     IClassifier classifier,
     INliScorer nli,
+    IRekiEmbeddingGenerator<World> worldEmbedder,
+    IRekiEmbeddingGenerator<GamePost> postEmbedder,
     PostScoringContext context)
 {
     public static IEnumerable<string> Windows(string text)
@@ -38,17 +45,23 @@ internal sealed partial class PostTextAnalysis(
         return scores;
     }
 
-    public async Task<double[]> SkillsAsync(string text, string topic, CancellationToken cancellationToken)
+    public async Task<double[]> SkillsAsync(
+        GamePost post,
+        World world,
+        CancellationToken cancellationToken)
     {
-        string[] hypotheses = ["Автор смело выражает своё мнение.", "Текст содержит юмор или шутку.", $"Текст связан с темой: {topic}"];
+        string[] hypotheses = ["Автор смело выражает своё мнение.", "Текст содержит юмор или шутку."];
         var scores = new double[hypotheses.Length];
-        foreach (var window in Windows(text))
+        foreach (var window in Windows(post.Text))
         {
             var result = await nli.ScoreAsync(window, hypotheses, cancellationToken);
             MergeSkills(scores, result);
         }
 
-        return scores;
+        var postVector = await postEmbedder.GenerateVectorAsync(post, cancellationToken: cancellationToken);
+        var worldVector = await worldEmbedder.GenerateVectorAsync(world, cancellationToken: cancellationToken);
+        var topic = TensorPrimitives.CosineSimilarity(postVector.Span, worldVector.Span);
+        return [scores[0], scores[1], topic];
     }
 
     private static void Merge(Dictionary<string, double> scores, IReadOnlyDictionary<string, double> values)

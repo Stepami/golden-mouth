@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddSingleton<IEncodeSerializer<GamePost>, GamePostEncodeSerializer>();
         services.AddSingleton<IEncodeSerializer<WorldStar>, WorldStarEncodeSerializer>();
         services.AddSingleton<IEncodeSerializer<GameComment>, GameCommentEncodeSerializer>();
+        services.AddSingleton<IEncodeSerializer<World>, WorldEncodeSerializer>();
         services.AddSingleton<IStarVectorStore, StarVectorStore>();
 
         return services;

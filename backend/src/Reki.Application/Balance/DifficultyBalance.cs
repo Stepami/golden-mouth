@@ -9,6 +9,7 @@ public sealed record DifficultyBalance(
     long HateFrom,
     double LossMultiplier,
     double MaxSubscriberFraction,
+    double TopicMinCosine,
     IReadOnlyDictionary<string, double> Thresholds,
     IReadOnlyDictionary<string, double> ThresholdReductionPerStep,
     IReadOnlyDictionary<WorldDrama, DramaBalance> Drama,

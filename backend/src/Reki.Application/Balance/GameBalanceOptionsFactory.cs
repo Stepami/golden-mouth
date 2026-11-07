@@ -68,6 +68,7 @@ internal sealed class GameBalanceOptionsFactory(
                     item.GetValue<long>("hate_from"),
                     item.GetValue<double>("loss_x"),
                     item.GetValue<double>("max_subscriber_fraction"),
+                    item.GetValue<double>("topic_min_cosine"),
                     item.GetRequiredSection("thresholds").GetChildren().ToDictionary(entry => entry.Key, entry => entry.Get<double>()),
                     item.GetRequiredSection("threshold_reduction_per_step").GetChildren().ToDictionary(entry => entry.Key, entry => entry.Get<double>()),
                     item.GetRequiredSection("drama").GetChildren().ToDictionary(
