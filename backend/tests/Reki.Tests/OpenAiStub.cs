@@ -10,12 +10,24 @@ namespace Reki.Tests;
 public sealed class OpenAiStub : IDisposable
 {
     private readonly WireMockServer _server = WireMockServer.Start();
+    private readonly WireMockServer _embeddingServer = WireMockServer.Start();
     private readonly Lock _requestGate = new();
     private int _generation;
     private int _requestCount;
     private string? _lastRequest;
 
+    public OpenAiStub()
+    {
+        var zeros = string.Join(',', Enumerable.Repeat("0", 311));
+        _embeddingServer.Given(Request.Create().WithPath("/v1/embeddings").UsingPost())
+            .RespondWith(Response.Create().WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody($$$"""{"object":"list","model":"embedding","data":[{"object":"embedding","index":0,"embedding":[1,{{{zeros}}}]}],"usage":{"prompt_tokens":1,"total_tokens":1}}"""));
+    }
+
     public string BaseUrl => $"{_server.Url}/v1";
+
+    public string EmbeddingBaseUrl => $"{_embeddingServer.Url}/v1";
 
     public int RequestCount
     {
@@ -93,7 +105,11 @@ public sealed class OpenAiStub : IDisposable
 
     public IReadOnlyList<ChatMessage> GetLastMessages() => ReadMessages(GetLastRequest());
 
-    public void Dispose() => _server.Dispose();
+    public void Dispose()
+    {
+        _server.Dispose();
+        _embeddingServer.Dispose();
+    }
 
     public void RespondWithHttpError()
     {

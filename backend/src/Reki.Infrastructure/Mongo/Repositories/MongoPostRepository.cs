@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Posts;
 using Reki.Application.Posts.GetWorldPosts;
@@ -13,10 +14,15 @@ internal sealed class MongoPostRepository(
     private readonly IMongoCollection<GamePost> _posts =
         database.GetCollection<GamePost>(MongoCollections.Posts);
 
-    public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken) =>
+    public async ValueTask InsertPostAsync(GamePost post, ReadOnlyMemory<float> embedding, CancellationToken cancellationToken)
+    {
+        var document = post.ToBsonDocument();
+        document["embedding"] = new BsonArray(embedding.ToArray());
+        var posts = database.GetCollection<BsonDocument>(MongoCollections.Posts);
         await (sessionProvider.Current is { } session
-            ? _posts.InsertOneAsync(session, post, cancellationToken: cancellationToken)
-            : _posts.InsertOneAsync(post, cancellationToken: cancellationToken));
+            ? posts.InsertOneAsync(session, document, cancellationToken: cancellationToken)
+            : posts.InsertOneAsync(document, cancellationToken: cancellationToken));
+    }
 
     public async ValueTask<WorldPostsPage> GetPostsAsync(
         WorldId worldId,
@@ -41,6 +47,7 @@ internal sealed class MongoPostRepository(
             .Find(filter)
             .SortByDescending(item => item.Id)
             .Limit(limit)
+            .Project<GamePost>(Builders<GamePost>.Projection.Exclude("embedding"))
             .ToListAsync(cancellationToken);
         var hasNext = posts.Count > pageSize;
         if (hasNext)
@@ -56,14 +63,24 @@ internal sealed class MongoPostRepository(
         WorldId worldId,
         CancellationToken cancellationToken) =>
         await _posts.Find(item => item.Id == postId && item.WorldId == worldId)
+            .Project<GamePost>(Builders<GamePost>.Projection.Exclude("embedding"))
             .FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken) =>
-        await _posts.Find(item => item.Id == postId).FirstOrDefaultAsync(cancellationToken);
+        await _posts.Find(item => item.Id == postId)
+            .Project<GamePost>(Builders<GamePost>.Projection.Exclude("embedding"))
+            .FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken) =>
-        await _posts.ReplaceOneAsync(
-            sessionProvider, item => item.Id == post.Id && item.WorldId == post.WorldId, post, cancellationToken);
+    public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken)
+    {
+        var filter = Builders<GamePost>.Filter.Where(item => item.Id == post.Id && item.WorldId == post.WorldId);
+        var update = Builders<GamePost>.Update
+            .Set(item => item.Comments, post.Comments)
+            .Set(item => item.Version, post.Version);
+        await (sessionProvider.Current is { } session
+            ? _posts.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken)
+            : _posts.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));
+    }
 
     public async ValueTask DeletePostsAsync(IReadOnlyCollection<WorldId> worldIds, CancellationToken cancellationToken) =>
         await _posts.DeleteManyAsync(

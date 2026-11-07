@@ -1,3 +1,4 @@
+using Microsoft.Extensions.AI;
 using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Application.Posts.AI;
@@ -16,7 +17,9 @@ internal sealed class GenerateStarFeedOnPostPublishedJob(
     IPlayerRepository playerRepository,
     IPostRepository postRepository,
     IWorldRepository worldRepository,
-    IStarContentGenerator generator) : ITickerFunction<StarFeedOnPostPublishedRequest>
+    IStarContentGenerator generator,
+    IEncodeSerializer<GamePost> encodeSerializer,
+    IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator) : ITickerFunction<StarFeedOnPostPublishedRequest>
 {
     public async Task ExecuteAsync(
         TickerFunctionContext<StarFeedOnPostPublishedRequest> context,
@@ -73,6 +76,8 @@ internal sealed class GenerateStarFeedOnPostPublishedJob(
 
         var createdAt = DateTimeOffset.FromUnixTimeMilliseconds(request.CreatedAtUnixMilliseconds);
         var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, [], createdAt, 0, 0, 1, false, false);
-        await postRepository.InsertPostAsync(post, cancellationToken);
+        var embedding = await embeddingGenerator.GenerateVectorAsync(
+            encodeSerializer.Serialize(post), cancellationToken: cancellationToken);
+        await postRepository.InsertPostAsync(post, embedding, cancellationToken);
     }
 }
