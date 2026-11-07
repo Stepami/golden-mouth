@@ -27,16 +27,16 @@ internal sealed class DeletePlayerCommandHandler(
         var player = await rekiContextAccessor.Context.Player;
         await unitOfWork.ExecuteAsync(
             async token =>
-        {
-            var worldIds = await worlds.GetWorldIdsAsync(player.Id, token);
-            await posts.DeletePostsAsync(worldIds, token);
-            await publications.DeletePublicationsAsync(player.Id, token);
-            await events.DeleteEventsAsync(player.Id, token);
-            await worlds.DeleteWorldsAsync(player.Id, token);
-            await invitations.DeleteInvitesAsync(player.Id, token);
-            await players.DeletePlayerAsync(player.Id, token);
-            return Unit.Value;
-        },
+            {
+                var worldIds = await worlds.GetWorldIdsAsync(player.Id, token);
+                await posts.DeletePostsAsync(worldIds, token);
+                await publications.DeletePublicationsAsync(player.Id, token);
+                await events.DeleteEventsAsync(player.Id, token);
+                await worlds.DeleteWorldsAsync(player.Id, token);
+                await invitations.DeleteInvitesAsync(player.Id, token);
+                await players.DeletePlayerAsync(player.Id, token);
+                return Unit.Value;
+            },
             cancellationToken);
         telemetry.Track(player.Id, "player_deleted", new Dictionary<string, string>());
         return Unit.Value;

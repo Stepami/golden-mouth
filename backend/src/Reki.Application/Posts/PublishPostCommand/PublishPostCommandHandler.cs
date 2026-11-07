@@ -152,33 +152,40 @@ internal sealed class PublishPostCommandHandler(
 
         await unitOfWork.ExecuteAsync(
             async token =>
-        {
-            if (!await publicationRepository.TryCompletePublicationAsync(request.PublicationId, updated.Id, published, token) ||
-                !await playerRepository.TryReplacePlayerAsync(updated, player.Version, token) ||
-                !await worldRepository.TryReplaceWorldAsync(updatedWorld, world.Version, token))
             {
-                throw new RequestConflictException("The player state changed while publishing the post.");
-            }
-
-            if (updatedInvite is not null)
-            {
-                var periodStart = updated.PostsPeriodStartedAtUtc;
-                var inviterUses = await invitationRepository.CountInviterBonusesAsync(
-                    updatedInvite.InviterId, periodStart, periodStart.AddDays(1), token);
-                if (inviterUses < currentBalance.InviteBonusMaxPerDay)
-                {
-                    await playerRepository.AddInviteBonusAsync(updatedInvite.InviterId, updatedInvite.BonusAmount, token);
-                }
-
-                if (!await invitationRepository.TryUseInviteBonusAsync(updatedInvite, token))
+                if (!await publicationRepository.TryCompletePublicationAsync(
+                        request.PublicationId,
+                        updated.Id,
+                        published,
+                        token) ||
+                    !await playerRepository.TryReplacePlayerAsync(updated, player.Version, token) ||
+                    !await worldRepository.TryReplaceWorldAsync(updatedWorld, world.Version, token))
                 {
                     throw new RequestConflictException("The player state changed while publishing the post.");
                 }
-            }
 
-            await postRepository.InsertPostAsync(post, token);
-            return Unit.Value;
-        },
+                if (updatedInvite is not null)
+                {
+                    var periodStart = updated.PostsPeriodStartedAtUtc;
+                    var inviterUses = await invitationRepository.CountInviterBonusesAsync(
+                        updatedInvite.InviterId, periodStart, periodStart.AddDays(1), token);
+                    if (inviterUses < currentBalance.InviteBonusMaxPerDay)
+                    {
+                        await playerRepository.AddInviteBonusAsync(
+                            updatedInvite.InviterId,
+                            updatedInvite.BonusAmount,
+                            token);
+                    }
+
+                    if (!await invitationRepository.TryUseInviteBonusAsync(updatedInvite, token))
+                    {
+                        throw new RequestConflictException("The player state changed while publishing the post.");
+                    }
+                }
+
+                await postRepository.InsertPostAsync(post, token);
+                return Unit.Value;
+            },
             cancellationToken);
 
         analytics.TrackWorldAudience(updatedWorld);

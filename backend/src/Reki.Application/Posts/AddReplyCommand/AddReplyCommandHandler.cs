@@ -86,16 +86,16 @@ internal sealed class AddReplyCommandHandler(
         {
             await unitOfWork.ExecuteAsync(
                 async token =>
-            {
-                if (!await posts.TrySaveReplyAsync(updatedPost, post.Version, request.RequestId, token) ||
-                    !await players.TryReplacePlayerAsync(updatedPlayer, player.Version, token) ||
-                    !await worlds.TryReplaceWorldAsync(updatedWorld, world.Version, token))
                 {
-                    throw new RequestConflictException("The reply could not be saved.");
-                }
+                    if (!await posts.TrySaveReplyAsync(updatedPost, post.Version, request.RequestId, token) ||
+                        !await players.TryReplacePlayerAsync(updatedPlayer, player.Version, token) ||
+                        !await worlds.TryReplaceWorldAsync(updatedWorld, world.Version, token))
+                    {
+                        throw new RequestConflictException("The reply could not be saved.");
+                    }
 
-                return Unit.Value;
-            },
+                    return Unit.Value;
+                },
                 cancellationToken);
         }
         catch (Exception exception) when (exception is RequestConflictException or UnitOfWorkException)
