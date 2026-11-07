@@ -19,7 +19,7 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
         string id,
         CancellationToken cancellationToken)
     {
-        return await _publications.Find(_sessionProvider, item => item.Id == id)
+        return await _publications.Find(item => item.Id == id)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -45,10 +45,9 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
     {
         var update = Builders<Publication>.Update.Push(item => item.Parts, part);
         var result = await _publications.UpdateOneAsync(
-            _sessionProvider,
             item => item.Id == id && item.Status == PublicationStatusType.Pending,
             update,
-            cancellationToken);
+            cancellationToken: cancellationToken);
         if (result.ModifiedCount != 1)
         {
             throw new InvalidOperationException("The publication is no longer pending.");
@@ -61,10 +60,9 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
             .Set(item => item.Status, PublicationStatusType.ReadyForModeration)
             .Set(item => item.ExpiresAtUtc, null);
         var result = await _publications.UpdateOneAsync(
-            _sessionProvider,
             item => item.Id == id && item.Status == PublicationStatusType.Pending,
             update,
-            cancellationToken);
+            cancellationToken: cancellationToken);
         if (result.ModifiedCount != 1)
         {
             throw new InvalidOperationException("The publication could not be marked ready.");
@@ -84,10 +82,9 @@ internal sealed class MongoPublicationRepository : IPublicationRepository
             .Set(item => item.Parts, [])
             .Set(item => item.ExpiresAtUtc, expiresAtUtc);
         await _publications.UpdateOneAsync(
-            _sessionProvider,
             item => item.Id == id && item.Status != PublicationStatusType.Completed,
             update,
-            cancellationToken);
+            cancellationToken: cancellationToken);
     }
 
     public async ValueTask<bool> TryCompletePublicationAsync(

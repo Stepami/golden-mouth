@@ -18,10 +18,10 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
         TelegramUserId telegramUserId,
         CancellationToken cancellationToken) =>
-        await _players.Find(_sessionProvider, item => item.TelegramUserId == telegramUserId).FirstOrDefaultAsync(cancellationToken);
+        await _players.Find(item => item.TelegramUserId == telegramUserId).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await _players.Find(_sessionProvider, item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
+        await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask CreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
         await _players.InsertOneAsync(_sessionProvider, player, cancellationToken);
@@ -37,7 +37,7 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
         var update = Builders<PlayerProfile>.Update
             .Set(item => item.PlusNotifyRequested, updated.PlusNotifyRequested)
             .Inc(item => item.Version, updated.Version - player.Version);
-        await _players.UpdateOneAsync(_sessionProvider, filter, update, cancellationToken);
+        await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
     }
 
     public async ValueTask<bool> TryClaimPlusInterestAsync(
@@ -52,7 +52,7 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
             .Inc(item => item.Energy, updated.Energy - player.Energy)
             .Set(item => item.PlusInterestClaimed, updated.PlusInterestClaimed)
             .Inc(item => item.Version, updated.Version - player.Version);
-        var result = await _players.UpdateOneAsync(_sessionProvider, filter, update, cancellationToken);
+        var result = await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
         return result.ModifiedCount == 1;
     }
 
@@ -95,15 +95,13 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
             .Set(player => player.PostsPeriodStartedAtUtc, periodStart)
             .Inc(player => player.Version, 1);
         var free = await _players.UpdateManyAsync(
-            _sessionProvider,
             filter & Builders<PlayerProfile>.Filter.Ne(player => player.Settings.Plus, true),
             update.Set(player => player.Energy, freeEnergy),
-            cancellationToken);
+            cancellationToken: cancellationToken);
         var plus = await _players.UpdateManyAsync(
-            _sessionProvider,
             filter & Builders<PlayerProfile>.Filter.Eq(player => player.Settings.Plus, true),
             update.Set(player => player.Energy, plusEnergy),
-            cancellationToken);
+            cancellationToken: cancellationToken);
         return free.ModifiedCount + plus.ModifiedCount;
     }
 }

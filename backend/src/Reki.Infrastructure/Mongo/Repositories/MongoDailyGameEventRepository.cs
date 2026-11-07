@@ -35,7 +35,7 @@ internal sealed class MongoDailyGameEventRepository : IDailyGameEventRepository
         }
 
         return await _events
-            .Find(_sessionProvider, filter)
+            .Find(filter)
             .SortByDescending(item => item.DayStartedAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }

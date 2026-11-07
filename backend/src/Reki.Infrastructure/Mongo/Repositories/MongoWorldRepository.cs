@@ -30,19 +30,19 @@ internal sealed class MongoWorldRepository : IWorldRepository
 
     public async ValueTask<World?> GetWorldAsync(PlayerId playerId, WorldId worldId, CancellationToken cancellationToken)
     {
-        return await _worlds.Find(_sessionProvider, item => item.Player.PlayerId == playerId && item.Id == worldId)
+        return await _worlds.Find(item => item.Player.PlayerId == playerId && item.Id == worldId)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async ValueTask<IReadOnlyList<World>> GetWorldTemplatesAsync(CancellationToken cancellationToken)
     {
-        return await _templates.Find(_sessionProvider, item => item.Player.PlayerId == PlayerId.From(Guid.Empty) &&
+        return await _templates.Find(item => item.Player.PlayerId == PlayerId.From(Guid.Empty) &&
             item.TemplateId == null && !item.IsArchived).ToListAsync(cancellationToken);
     }
 
     public async ValueTask<IReadOnlyList<World>> GetWorldsAsync(PlayerId playerId, CancellationToken cancellationToken)
     {
-        return await _worlds.Find(_sessionProvider, item => item.Player.PlayerId == playerId).ToListAsync(cancellationToken);
+        return await _worlds.Find(item => item.Player.PlayerId == playerId).ToListAsync(cancellationToken);
     }
 
     public async ValueTask<IReadOnlyList<WorldId>> GetWorldIdsAsync(PlayerId playerId, CancellationToken cancellationToken) =>
@@ -68,15 +68,13 @@ internal sealed class MongoWorldRepository : IWorldRepository
             .Set(world => world.Stars.AllElements().RelationPeriodStartedAtUtc, periodStart)
             .Inc(world => world.Version, 1);
         var returning = await _worlds.UpdateManyAsync(
-            _sessionProvider,
             filter & rested,
             update.Set(world => world.Player.RestedPostsRemaining, restedPosts),
-            cancellationToken);
+            cancellationToken: cancellationToken);
         var active = await _worlds.UpdateManyAsync(
-            _sessionProvider,
             filter & Builders<World>.Filter.Not(rested),
             update.Set(world => world.Player.RestedPostsRemaining, 0),
-            cancellationToken);
+            cancellationToken: cancellationToken);
         return returning.ModifiedCount + active.ModifiedCount;
     }
 }

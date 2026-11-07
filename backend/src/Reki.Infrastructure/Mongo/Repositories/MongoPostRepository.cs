@@ -40,7 +40,7 @@ internal sealed class MongoPostRepository : IPostRepository
         }
 
         var posts = await _posts
-            .Find(_sessionProvider, filter)
+            .Find(filter)
             .SortByDescending(item => item.Id)
             .Limit(limit)
             .ToListAsync(cancellationToken);
@@ -57,11 +57,11 @@ internal sealed class MongoPostRepository : IPostRepository
         PostId postId,
         WorldId worldId,
         CancellationToken cancellationToken) =>
-        await _posts.Find(_sessionProvider, item => item.Id == postId && item.WorldId == worldId)
+        await _posts.Find(item => item.Id == postId && item.WorldId == worldId)
             .FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken) =>
-        await _posts.Find(_sessionProvider, item => item.Id == postId).FirstOrDefaultAsync(cancellationToken);
+        await _posts.Find(item => item.Id == postId).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<bool> TrySaveReplyAsync(
         GamePost post,
