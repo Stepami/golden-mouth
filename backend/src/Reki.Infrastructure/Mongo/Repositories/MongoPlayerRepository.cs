@@ -79,7 +79,9 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
         await _players.DeleteOneAsync(_sessionProvider.Session, item => item.Id == playerId, cancellationToken: cancellationToken);
 
     public async ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken) =>
-        await _players.CountDocumentsAsync(_sessionProvider, FilterDefinition<PlayerProfile>.Empty, cancellationToken);
+        await (_sessionProvider.Current is { } session
+            ? _players.CountDocumentsAsync(session, FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken)
+            : _players.CountDocumentsAsync(FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken));
 
     public async ValueTask<long> ResetGameDayAsync(
         DateTimeOffset periodStart,

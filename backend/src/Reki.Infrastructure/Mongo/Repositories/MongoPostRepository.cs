@@ -83,7 +83,9 @@ internal sealed class MongoPostRepository : IPostRepository
                 Builders<GamePost>.Filter.ElemMatch(item => item.Comments, comment => comment.RequestId == requestId));
         }
 
-        var result = await _posts.ReplaceOneAsync(_sessionProvider, filter, post, cancellationToken);
+        var result = await (_sessionProvider.Current is { } session
+            ? _posts.ReplaceOneAsync(session, filter, post, cancellationToken: cancellationToken)
+            : _posts.ReplaceOneAsync(filter, post, cancellationToken: cancellationToken));
         return result.MatchedCount == 1;
     }
 

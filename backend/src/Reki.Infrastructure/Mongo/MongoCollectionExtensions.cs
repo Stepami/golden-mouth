@@ -60,47 +60,10 @@ internal static class MongoCollectionExtensions
     public static Task<ReplaceOneResult> ReplaceOneAsync<T>(
         this IMongoCollection<T> collection,
         MongoSessionProvider sessionProvider,
-        FilterDefinition<T> filter,
-        T replacement,
-        CancellationToken cancellationToken) =>
-        collection.ReplaceOneAsync(sessionProvider, filter, replacement, null, cancellationToken);
-
-    public static Task<ReplaceOneResult> ReplaceOneAsync<T>(
-        this IMongoCollection<T> collection,
-        MongoSessionProvider sessionProvider,
         Expression<Func<T, bool>> filter,
         T replacement,
         CancellationToken cancellationToken) =>
-        collection.ReplaceOneAsync(
-            sessionProvider, new ExpressionFilterDefinition<T>(filter), replacement, null, cancellationToken);
-
-    public static Task<ReplaceOneResult> ReplaceOneAsync<T>(
-        this IMongoCollection<T> collection,
-        MongoSessionProvider sessionProvider,
-        FilterDefinition<T> filter,
-        T replacement,
-        ReplaceOptions? options,
-        CancellationToken cancellationToken) =>
         sessionProvider.Current is { } session
-            ? collection.ReplaceOneAsync(session, filter, replacement, options, cancellationToken)
-            : collection.ReplaceOneAsync(filter, replacement, options, cancellationToken);
-
-    public static Task<ReplaceOneResult> ReplaceOneAsync<T>(
-        this IMongoCollection<T> collection,
-        MongoSessionProvider sessionProvider,
-        Expression<Func<T, bool>> filter,
-        T replacement,
-        ReplaceOptions? options,
-        CancellationToken cancellationToken) =>
-        collection.ReplaceOneAsync(
-            sessionProvider, new ExpressionFilterDefinition<T>(filter), replacement, options, cancellationToken);
-
-    public static Task<long> CountDocumentsAsync<T>(
-        this IMongoCollection<T> collection,
-        MongoSessionProvider sessionProvider,
-        FilterDefinition<T> filter,
-        CancellationToken cancellationToken) =>
-        sessionProvider.Current is { } session
-            ? collection.CountDocumentsAsync(session, filter, cancellationToken: cancellationToken)
-            : collection.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
+            ? collection.ReplaceOneAsync(session, filter, replacement, cancellationToken: cancellationToken)
+            : collection.ReplaceOneAsync(filter, replacement, cancellationToken: cancellationToken);
 }
