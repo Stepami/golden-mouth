@@ -1,4 +1,4 @@
-namespace Reki.Application.Posts.CreatePostCommand;
+namespace Reki.Application.Posts.CreatePostCommand.Score;
 
 internal sealed class PostScoringContext
 {

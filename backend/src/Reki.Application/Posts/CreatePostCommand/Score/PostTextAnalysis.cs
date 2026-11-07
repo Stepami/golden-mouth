@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using Reki.Application.Posts.ML;
 
-namespace Reki.Application.Posts.CreatePostCommand;
+namespace Reki.Application.Posts.CreatePostCommand.Score;
 
 internal sealed partial class PostTextAnalysis(
     IClassifier classifier,

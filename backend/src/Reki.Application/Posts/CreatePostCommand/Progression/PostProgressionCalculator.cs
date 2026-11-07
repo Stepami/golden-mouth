@@ -3,10 +3,10 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
-using Reki.Application.Posts.CreatePostCommand;
+using Reki.Application.Posts.CreatePostCommand.Score;
 using Reki.Domain.Player;
 
-namespace Reki.Application.Posts.PublishPostCommand;
+namespace Reki.Application.Posts.CreatePostCommand.Progression;
 
 internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> balance)
 {

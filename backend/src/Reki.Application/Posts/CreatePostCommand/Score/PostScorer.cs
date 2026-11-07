@@ -1,9 +1,10 @@
 using Reki.Application.Balance;
+using Reki.Application.Posts.CreatePostCommand.FlopTests;
 using Reki.Application.Posts.ML;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
-namespace Reki.Application.Posts.CreatePostCommand;
+namespace Reki.Application.Posts.CreatePostCommand.Score;
 
 internal sealed class PostScorer(
     PostScoringContext context,

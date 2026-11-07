@@ -4,7 +4,7 @@ using Reki.Application.Posts.AI;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
-namespace Reki.Application.Worlds;
+namespace Reki.Application.Posts.ML;
 
 internal sealed class StarVectorStore(
     VectorStore vectorStore,

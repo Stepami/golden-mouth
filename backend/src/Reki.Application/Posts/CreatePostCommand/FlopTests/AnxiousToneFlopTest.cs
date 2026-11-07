@@ -1,7 +1,8 @@
+using Reki.Application.Posts.CreatePostCommand.Score;
 using Reki.Application.Posts.ML;
 using Reki.Domain.Posts;
 
-namespace Reki.Application.Posts.CreatePostCommand;
+namespace Reki.Application.Posts.CreatePostCommand.FlopTests;
 
 internal sealed class AnxiousToneFlopTest(PostTextAnalysis analysis) : IFlopTest
 {

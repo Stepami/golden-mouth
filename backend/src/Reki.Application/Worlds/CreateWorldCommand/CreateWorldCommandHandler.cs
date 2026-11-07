@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
+using Reki.Application.Posts.ML;
 using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
 using Reki.Domain.Worlds;

@@ -1,10 +1,15 @@
 using System.Text.RegularExpressions;
+using Reki.Application.Posts.CreatePostCommand.Score;
 using Reki.Application.Posts.ML;
 using Reki.Domain.Posts;
 
-namespace Reki.Application.Posts.CreatePostCommand;
+namespace Reki.Application.Posts.CreatePostCommand.FlopTests;
 
-internal sealed partial class NearCopyFlopTest(IPostRepository posts, INliScorer nli, PostTextAnalysis analysis, PostScoringContext context) : IFlopTest
+internal sealed partial class NearCopyFlopTest(
+    IPostRepository posts,
+    INliScorer nli,
+    PostTextAnalysis analysis,
+    PostScoringContext context) : IFlopTest
 {
     public async Task<bool> IsFlopAsync(GamePost post)
     {
