@@ -336,10 +336,10 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         var world = await Factory.Services.GetRequiredService<IWorldRepository>().GetWorldAsync(player.Id, worldId, CancellationToken.None)
             ?? throw new InvalidOperationException("Missing test world.");
         var now = Factory.Session.Clock.GetUtcNow();
-        var parent = new GameComment(CommentId.New(), null, null, world.Stars[0].Id.ToAuthorId(), "Какая деталь карты странная?", false, []);
-        var comment = new GameComment(CommentId.New(), parent.Id, "source-reply", player.Id.ToAuthorId(), "На карте нет моста.", false, []);
-        var answer = new GameComment(CommentId.New(), comment.Id, null, world.Stars[0].Id.ToAuthorId(), "Я проверю мост по старому плану.", false, []);
-        var unrelated = new GameComment(CommentId.New(), null, null, world.Stars[1].Id.ToAuthorId(), "Другая ветка", false, []);
+        var parent = new GameComment(CommentId.New(), null, null, world.Stars[0].Id.ToAuthorId(), "Какая деталь карты странная?", false, [], null);
+        var comment = new GameComment(CommentId.New(), parent.Id, "source-reply", player.Id.ToAuthorId(), "На карте нет моста.", false, [], null);
+        var answer = new GameComment(CommentId.New(), comment.Id, null, world.Stars[0].Id.ToAuthorId(), "Я проверю мост по старому плану.", false, [], null);
+        var unrelated = new GameComment(CommentId.New(), null, null, world.Stars[1].Id.ToAuthorId(), "Другая ветка", false, [], null);
         var source = new GamePost(PostId.New(now), sourceEvent == StarFeedEventType.CommentPublished ? world.Stars[0].Id.ToAuthorId() : player.Id.ToAuthorId(), worldId, "Я нашёл старую карту.", 0, [parent, comment, answer, unrelated], now, 0, 0, 1, false, false);
         var repository = Factory.Services.GetRequiredService<IPostRepository>();
         await repository.InsertPostAsync(source, CancellationToken.None);
@@ -433,7 +433,8 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
             scenario == "foreign-comment" ? world.Stars[0].Id.ToAuthorId() : player.Id.ToAuthorId(),
             "Источник",
             scenario == "hidden-comment",
-            []);
+            [],
+            null);
         var post = new GamePost(PostId.New(now), scenario == "foreign-author" ? world.Stars[0].Id.ToAuthorId() : player.Id.ToAuthorId(), scenario == "foreign-world" ? WorldId.From(Guid.NewGuid()) : worldId, "Исходный пост", 0, [comment], now, 0, 0, 1, false, false);
         var repository = Factory.Services.GetRequiredService<IPostRepository>();
         if (scenario != "missing-post")
