@@ -98,7 +98,7 @@ internal sealed class AddReplyCommandHandler(
             },
                 cancellationToken);
         }
-        catch (Exception exception) when (exception is RequestConflictException or TransactionConflictException)
+        catch (Exception exception) when (exception is RequestConflictException or UnitOfWorkException)
         {
             return await ReplayOrConflictAsync(request, cancellationToken);
         }

@@ -37,7 +37,7 @@ internal sealed class MongoUnitOfWork(
         }
         catch (MongoException exception) when (exception.HasErrorLabel("TransientTransactionError"))
         {
-            throw new TransactionConflictException("The transaction could not be completed.", exception);
+            throw new UnitOfWorkException("The transaction could not be completed.", exception);
         }
     }
 }
