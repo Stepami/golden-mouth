@@ -27,6 +27,10 @@ public interface IPlayerRepository
         int expectedVersion,
         CancellationToken cancellationToken);
 
+    ValueTask AddInviteBonusAsync(PlayerId playerId, int bonusAmount, CancellationToken cancellationToken);
+
+    ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
+
     ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
 
     ValueTask<long> ResetGameDayAsync(

@@ -1,3 +1,5 @@
+using Reki.Domain.Player;
+
 namespace Reki.Application.Posts;
 
 public interface IPublicationRepository
@@ -18,4 +20,12 @@ public interface IPublicationRepository
         DateTime expiresAtUtc,
         PublicationFailure failure,
         CancellationToken cancellationToken);
+
+    ValueTask<bool> TryCompletePublicationAsync(
+        string id,
+        PlayerId playerId,
+        PublishedPost published,
+        CancellationToken cancellationToken);
+
+    ValueTask DeletePublicationsAsync(PlayerId playerId, CancellationToken cancellationToken);
 }

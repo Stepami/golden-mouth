@@ -2,12 +2,14 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
+using Reki.Application.Player;
 using Reki.Application.Posts.AI.Comment;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPost;
 using Reki.Application.Posts.Responses.Reply;
 using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
+using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -15,8 +17,10 @@ using Reki.Domain.Worlds;
 namespace Reki.Application.Posts.AddReplyCommand;
 
 internal sealed class AddReplyCommandHandler(
-    IGameStore store,
+    IUnitOfWork unitOfWork,
     IPostRepository posts,
+    IPlayerRepository players,
+    IWorldRepository worlds,
     IOptionsMonitor<GameBalance> balance,
     ISender sender,
     IRekiContextAccessor rekiContextAccessor,
@@ -69,7 +73,7 @@ internal sealed class AddReplyCommandHandler(
         var updatedPost = post.AddComments([comment]);
         if (!isPlayer)
         {
-            await posts.SaveReplyAsync(updatedPost, cancellationToken);
+            await posts.TrySaveReplyAsync(updatedPost, null, null, cancellationToken);
             return Completed(comment, updatedPost, world, player);
         }
 
@@ -78,15 +82,23 @@ internal sealed class AddReplyCommandHandler(
             ? currentBalance.Thread.SubscriberBonus : 0;
         var updatedPlayer = player.SpendEnergy(currentBalance.Thread.EnergyCost);
         var updatedWorld = world.AwardThreadBonus(bonus);
-        if (!await store.TryCommitReplyAsync(
-                updatedPost,
-                post.Version,
-                request.RequestId,
-                updatedPlayer,
-                player.Version,
-                updatedWorld,
-                world.Version,
-                cancellationToken))
+        try
+        {
+            await unitOfWork.ExecuteAsync(
+                async token =>
+            {
+                if (!await posts.TrySaveReplyAsync(updatedPost, post.Version, request.RequestId, token) ||
+                    !await players.TryReplacePlayerAsync(updatedPlayer, player.Version, token) ||
+                    !await worlds.TryReplaceWorldAsync(updatedWorld, world.Version, token))
+                {
+                    throw new RequestConflictException("The reply could not be saved.");
+                }
+
+                return Unit.Value;
+            },
+                cancellationToken);
+        }
+        catch (Exception exception) when (exception is RequestConflictException or TransactionConflictException)
         {
             return await ReplayOrConflictAsync(request, cancellationToken);
         }

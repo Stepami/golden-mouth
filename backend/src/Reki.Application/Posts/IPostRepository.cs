@@ -30,5 +30,11 @@ public interface IPostRepository
     /// <summary>Reads a story candidate; the caller must verify world ownership before exposing it.</summary>
     ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken);
 
-    ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken);
+    ValueTask<bool> TrySaveReplyAsync(
+        GamePost post,
+        int? expectedVersion,
+        string? requestId,
+        CancellationToken cancellationToken);
+
+    ValueTask DeletePostsAsync(IReadOnlyCollection<WorldId> worldIds, CancellationToken cancellationToken);
 }

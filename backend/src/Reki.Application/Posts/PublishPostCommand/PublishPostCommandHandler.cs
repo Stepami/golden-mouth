@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Application.Invites;
+using Reki.Application.Player;
 using Reki.Application.Posts.AI.Post;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPublication;
@@ -11,6 +12,7 @@ using Reki.Application.Posts.GetWorldPosts;
 using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
+using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -20,7 +22,10 @@ namespace Reki.Application.Posts.PublishPostCommand;
 internal sealed class PublishPostCommandHandler(
     IInvitationRepository invitationRepository,
     IPublicationRepository publicationRepository,
-    IGameStore store,
+    IUnitOfWork unitOfWork,
+    IPlayerRepository playerRepository,
+    IWorldRepository worldRepository,
+    IPostRepository postRepository,
     IOptionsMonitor<GameBalance> balance,
     PostProgressionCalculator progressionCalculator,
     TimeProvider timeProvider,
@@ -145,20 +150,36 @@ internal sealed class PublishPostCommandHandler(
         var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
         updated = updated with { Energy = updated.Energy + (updatedInvite?.BonusAmount ?? 0) };
 
-        var committed = await store.TryCommitPostAsync(
-            updated,
-            player.Version,
-            updatedWorld,
-            world.Version,
-            published,
-            request.PublicationId,
-            updatedInvite,
-            currentBalance.InviteBonusMaxPerDay,
-            cancellationToken);
-        if (!committed)
+        await unitOfWork.ExecuteAsync(
+            async token =>
         {
-            throw new RequestConflictException("The player state changed while publishing the post.");
-        }
+            if (!await publicationRepository.TryCompletePublicationAsync(request.PublicationId, updated.Id, published, token) ||
+                !await playerRepository.TryReplacePlayerAsync(updated, player.Version, token) ||
+                !await worldRepository.TryReplaceWorldAsync(updatedWorld, world.Version, token))
+            {
+                throw new RequestConflictException("The player state changed while publishing the post.");
+            }
+
+            if (updatedInvite is not null)
+            {
+                var periodStart = updated.PostsPeriodStartedAtUtc;
+                var inviterUses = await invitationRepository.CountInviterBonusesAsync(
+                    updatedInvite.InviterId, periodStart, periodStart.AddDays(1), token);
+                if (inviterUses < currentBalance.InviteBonusMaxPerDay)
+                {
+                    await playerRepository.AddInviteBonusAsync(updatedInvite.InviterId, updatedInvite.BonusAmount, token);
+                }
+
+                if (!await invitationRepository.TryUseInviteBonusAsync(updatedInvite, token))
+                {
+                    throw new RequestConflictException("The player state changed while publishing the post.");
+                }
+            }
+
+            await postRepository.InsertPostAsync(post, token);
+            return Unit.Value;
+        },
+            cancellationToken);
 
         analytics.TrackWorldAudience(updatedWorld);
         TrackProgression(player, updated, world, updatedWorld, post, turn, analytics);

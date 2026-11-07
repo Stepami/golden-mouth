@@ -7,22 +7,24 @@ namespace Reki.Infrastructure.Mongo.Repositories;
 internal sealed class MongoPlayerRepository : IPlayerRepository
 {
     private readonly IMongoCollection<PlayerProfile> _players;
+    private readonly MongoSessionProvider _sessionProvider;
 
-    public MongoPlayerRepository(IMongoDatabase database)
+    public MongoPlayerRepository(IMongoDatabase database, MongoSessionProvider sessionProvider)
     {
         _players = database.GetCollection<PlayerProfile>(MongoCollections.Players);
+        _sessionProvider = sessionProvider;
     }
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
         TelegramUserId telegramUserId,
         CancellationToken cancellationToken) =>
-        await _players.Find(item => item.TelegramUserId == telegramUserId).FirstOrDefaultAsync(cancellationToken);
+        await _players.Find(_sessionProvider, item => item.TelegramUserId == telegramUserId).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
+        await _players.Find(_sessionProvider, item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask CreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
-        await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
+        await _players.InsertOneAsync(_sessionProvider, player, cancellationToken);
 
     public async ValueTask SavePlusNotificationAsync(
         PlayerProfile player,
@@ -35,7 +37,7 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
         var update = Builders<PlayerProfile>.Update
             .Set(item => item.PlusNotifyRequested, updated.PlusNotifyRequested)
             .Inc(item => item.Version, updated.Version - player.Version);
-        await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+        await _players.UpdateOneAsync(_sessionProvider, filter, update, cancellationToken);
     }
 
     public async ValueTask<bool> TryClaimPlusInterestAsync(
@@ -50,18 +52,34 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
             .Inc(item => item.Energy, updated.Energy - player.Energy)
             .Set(item => item.PlusInterestClaimed, updated.PlusInterestClaimed)
             .Inc(item => item.Version, updated.Version - player.Version);
-        var result = await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+        var result = await _players.UpdateOneAsync(_sessionProvider, filter, update, cancellationToken);
         return result.ModifiedCount == 1;
     }
 
     public async ValueTask<bool> TryReplacePlayerAsync(PlayerProfile player, int expectedVersion, CancellationToken cancellationToken)
     {
-        var result = await _players.ReplaceOneAsync(item => item.Id == player.Id && item.Version == expectedVersion, player, cancellationToken: cancellationToken);
+        var result = await _players.ReplaceOneAsync(_sessionProvider, item => item.Id == player.Id && item.Version == expectedVersion, player, cancellationToken);
         return result.MatchedCount == 1;
     }
 
+    public async ValueTask AddInviteBonusAsync(PlayerId playerId, int bonusAmount, CancellationToken cancellationToken)
+    {
+        var update = Builders<PlayerProfile>.Update
+            .Set(item => item.HitOwnWorldMilestone, true)
+            .Inc(item => item.Energy, bonusAmount)
+            .Inc(item => item.Version, 1);
+        await _players.UpdateOneAsync(
+            _sessionProvider.Session,
+            item => item.Id == playerId,
+            update,
+            cancellationToken: cancellationToken);
+    }
+
+    public async ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
+        await _players.DeleteOneAsync(_sessionProvider.Session, item => item.Id == playerId, cancellationToken: cancellationToken);
+
     public async ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken) =>
-        await _players.CountDocumentsAsync(FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken);
+        await _players.CountDocumentsAsync(_sessionProvider, FilterDefinition<PlayerProfile>.Empty, cancellationToken);
 
     public async ValueTask<long> ResetGameDayAsync(
         DateTimeOffset periodStart,
@@ -75,13 +93,15 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
             .Set(player => player.PostsPeriodStartedAtUtc, periodStart)
             .Inc(player => player.Version, 1);
         var free = await _players.UpdateManyAsync(
+            _sessionProvider,
             filter & Builders<PlayerProfile>.Filter.Ne(player => player.Settings.Plus, true),
             update.Set(player => player.Energy, freeEnergy),
-            cancellationToken: cancellationToken);
+            cancellationToken);
         var plus = await _players.UpdateManyAsync(
+            _sessionProvider,
             filter & Builders<PlayerProfile>.Filter.Eq(player => player.Settings.Plus, true),
             update.Set(player => player.Energy, plusEnergy),
-            cancellationToken: cancellationToken);
+            cancellationToken);
         return free.ModifiedCount + plus.ModifiedCount;
     }
 }

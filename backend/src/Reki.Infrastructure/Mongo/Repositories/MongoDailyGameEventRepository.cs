@@ -9,10 +9,12 @@ namespace Reki.Infrastructure.Mongo.Repositories;
 internal sealed class MongoDailyGameEventRepository : IDailyGameEventRepository
 {
     private readonly IMongoCollection<DailyGameEvent> _events;
+    private readonly MongoSessionProvider _sessionProvider;
 
-    public MongoDailyGameEventRepository(IMongoDatabase database)
+    public MongoDailyGameEventRepository(IMongoDatabase database, MongoSessionProvider sessionProvider)
     {
         _events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
+        _sessionProvider = sessionProvider;
     }
 
     public async ValueTask<DailyGameEvent?> GetTodayEventAsync(
@@ -33,7 +35,7 @@ internal sealed class MongoDailyGameEventRepository : IDailyGameEventRepository
         }
 
         return await _events
-            .Find(filter)
+            .Find(_sessionProvider, filter)
             .SortByDescending(item => item.DayStartedAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -44,9 +46,13 @@ internal sealed class MongoDailyGameEventRepository : IDailyGameEventRepository
     {
         var options = new ReplaceOptions { IsUpsert = true };
         await _events.ReplaceOneAsync(
+            _sessionProvider,
             item => item.Id == gameEvent.Id,
             gameEvent,
             options,
             cancellationToken);
     }
+
+    public async ValueTask DeleteEventsAsync(PlayerId playerId, CancellationToken cancellationToken) =>
+        await _events.DeleteManyAsync(_sessionProvider.Session, item => item.PlayerId == playerId, cancellationToken: cancellationToken);
 }
