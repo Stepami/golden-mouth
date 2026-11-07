@@ -46,9 +46,7 @@ internal sealed class MongoDailyGameEventRepository : IDailyGameEventRepository
     {
         var options = new ReplaceOptions { IsUpsert = true };
         var filter = Builders<DailyGameEvent>.Filter.Eq(item => item.Id, gameEvent.Id);
-        await (_sessionProvider.Current is { } session
-            ? _events.ReplaceOneAsync(session, filter, gameEvent, options, cancellationToken)
-            : _events.ReplaceOneAsync(filter, gameEvent, options, cancellationToken));
+        await _events.ReplaceOneAsync(filter, gameEvent, options, cancellationToken);
     }
 
     public async ValueTask DeleteEventsAsync(PlayerId playerId, CancellationToken cancellationToken) =>
