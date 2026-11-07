@@ -4,5 +4,7 @@ namespace Reki.Application.Posts.CreatePostCommand;
 
 public interface IFlopTest
 {
-    Task<bool> IsFlopAsync(GamePost post);
+    int Priority { get; }
+
+    Task<FlopTestResult> IsFlopAsync(GamePost post);
 }

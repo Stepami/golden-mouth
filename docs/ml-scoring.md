@@ -79,9 +79,20 @@ delta = -loss
 ```csharp
 public interface IFlopTest
 {
-    Task<bool> IsFlopAsync(GamePost post);
+    int Priority { get; }
+
+    Task<FlopTestResult> IsFlopAsync(GamePost post);
+}
+
+public sealed record FlopTestResult(bool IsFlop, string Reason)
+{
+    public static readonly FlopTestResult Ok = new(false, string.Empty);
+
+    public static FlopTestResult Flop(string reason) => new(true, reason);
 }
 ```
+
+Проверки выполняются последовательно асинхронным LINQ в порядке `Priority` до первого `IsFlop=true`. Каждая реализация возвращает свою причину; скорер не проверяет конкретные типы. Проверка без причины возвращает `FlopTestResult.Ok`; при отсутствии сработавшей проверки причина поста остаётся null. Приоритеты из баланса и сравнение эмоций сохраняются.
 
 `POST /posts?worldId=…` принимает `{text, ownWords, wantId}` и возвращает `{post, result, predictedAuthorId}`. Хендлер линейно вызывает ML-оценку, проверки причин, существующий расчёт прогресса и подбор обязательного автора, затем сохраняет пост и экономику через существующий UoW. Нет requestId/replay создания поста, конкурентных проверок или recovery-состояний. Ошибка ML не создаёт фиктивный успешный итог. Промежуточные scores не включаются в публичный результат.
 

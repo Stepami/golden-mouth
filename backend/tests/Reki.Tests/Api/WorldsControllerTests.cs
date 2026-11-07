@@ -212,7 +212,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         // Act
         using var http = Factory.CreateClient();
         http.SetFakeJwtBearerToken(new Dictionary<string, object> { [AuthConstants.Claims.TelegramUserId] = "1018" });
-        using var response = await http.GetAsync("/feed");
+        using var response = await http.GetAsync("/posts/feed");
 
         // Assert
         await Assert.That((int)response.StatusCode).IsEqualTo(400);

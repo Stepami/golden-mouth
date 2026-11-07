@@ -11,7 +11,9 @@ internal sealed partial class NearCopyFlopTest(
     PostTextAnalysis analysis,
     PostScoringContext context) : IFlopTest
 {
-    public async Task<bool> IsFlopAsync(GamePost post)
+    public int Priority => context.Current.Balance.Difficulties[context.Current.World.Difficulty].ReasonPriority.ToList().IndexOf("near_copy");
+
+    public async Task<FlopTestResult> IsFlopAsync(GamePost post)
     {
         var current = context.Current;
         var history = await posts.FindSimilarPostsAsync(post, analysis.Threshold("near_copy_cosine"), current.CancellationToken);
@@ -25,11 +27,11 @@ internal sealed partial class NearCopyFlopTest(
 
             if (await EntailsAsync(post.Text, candidateText) && await EntailsAsync(candidateText, post.Text))
             {
-                return true;
+                return FlopTestResult.Flop("near_copy");
             }
         }
 
-        return false;
+        return FlopTestResult.Ok;
     }
 
     private static string[] Numbers(string text) => Number().Matches(text).Select(match => match.Value).ToArray();

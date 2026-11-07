@@ -24,10 +24,10 @@ namespace Reki.Api.Controllers;
 [ApiController]
 [Authorize(Policy = AuthConstants.Policies.RekiAppJwt)]
 [Produces("application/json")]
-[Route("/")]
+[Route("posts")]
 public sealed class PostsController(ISender sender) : ControllerBase
 {
-    [HttpPost("posts", Name = "CreatePost")]
+    [HttpPost(Name = "CreatePost")]
     [ActionName("CreatePost")]
     public async Task<Ok<CreatePostResponse>> CreatePostAsync(
         CreatePostRequest request,
@@ -35,7 +35,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await sender.Send(new CreatePost(request.Text, request.OwnWords, request.WantId, worldId), cancellationToken));
 
-    [HttpPost("posts/{postId}/replies", Name = "ReplyToPost")]
+    [HttpPost("{postId}/replies", Name = "ReplyToPost")]
     [ActionName("ReplyToPost")]
     public async Task<Ok<ReplyResponse>> ReplyToPostAsync(
         PostId postId,
@@ -49,7 +49,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         return TypedResults.Ok(result);
     }
 
-    [HttpPost("posts/{postId}/replies/generation", Name = "GenerateReply")]
+    [HttpPost("{postId}/replies/generation", Name = "GenerateReply")]
     [ActionName("GenerateReply")]
     public ServerSentEventsResult<ReplyGenerationLiveEvent> GenerateReply(
         PostId postId,
@@ -75,7 +75,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         return TypedResults.Ok(new PageResponse<FeedItemResponse>(response, result.NextCursor));
     }
 
-    [HttpGet("posts/mine", Name = "GetChannelPosts")]
+    [HttpGet("mine", Name = "GetChannelPosts")]
     [ActionName("GetChannelPosts")]
     public async Task<Ok<PageResponse<ChannelPostResponse>>> GetChannelPostsAsync(
         [FromQuery] WorldPostsRequest request,
@@ -88,7 +88,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         return TypedResults.Ok(new PageResponse<ChannelPostResponse>(response, result.NextCursor));
     }
 
-    [HttpGet("posts/{postId}", Name = "GetPost")]
+    [HttpGet("{postId}", Name = "GetPost")]
     [ActionName("GetPost")]
     public async Task<Ok<PostDetailResponse>> GetPostAsync(
         PostId postId,

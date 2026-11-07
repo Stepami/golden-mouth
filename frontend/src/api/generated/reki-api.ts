@@ -785,7 +785,7 @@ export class PostsClient {
      * @return OK
      */
     getFeed(worldId: string, cursor?: string | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
-        let url_ = this.baseUrl + "/feed?";
+        let url_ = this.baseUrl + "/posts/feed?";
         if (worldId === undefined || worldId === null)
             throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
         else

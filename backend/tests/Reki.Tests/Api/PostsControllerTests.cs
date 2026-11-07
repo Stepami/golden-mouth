@@ -119,7 +119,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             "cursor=text", "cursor=00000000000000000000000000000000", "pageSize=0", "pageSize=-1", "pageSize=text",
             "cursor=123456789012345678901234", "pageSize=2147483647", "pageSize=2147483648",
         };
-        var invalidRequests = new[] { "/feed", "/posts/mine" }
+        var invalidRequests = new[] { "/posts/feed", "/posts/mine" }
             .SelectMany(route => invalidParameters.Select(parameters => $"{route}?worldId={worldId}&{parameters}"));
         foreach (var url in invalidRequests)
         {
