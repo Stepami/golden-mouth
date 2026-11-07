@@ -60,7 +60,8 @@ internal sealed partial class PostTextAnalysis(
 
         var postVector = await postEmbedder.GenerateVectorAsync(post, cancellationToken: cancellationToken);
         var worldVector = await worldEmbedder.GenerateVectorAsync(world, cancellationToken: cancellationToken);
-        var topic = TensorPrimitives.CosineSimilarity(postVector.Span, worldVector.Span);
+        var similarity = TensorPrimitives.CosineSimilarity(postVector.Span, worldVector.Span);
+        var topic = similarity >= context.Current.Balance.Difficulties[world.Difficulty].TopicMinCosine ? 1d : 0d;
         return [scores[0], scores[1], topic];
     }
 

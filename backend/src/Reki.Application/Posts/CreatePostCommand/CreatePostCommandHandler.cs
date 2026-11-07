@@ -140,7 +140,7 @@ internal sealed class CreatePostCommandHandler(
             whys.Add(new WhyResponse("🤔", reason, post.SubscriberDelta.ToString(CultureInfo.InvariantCulture)));
         }
 
-        if (score.Topic >= currentBalance.Difficulties[world.Difficulty].TopicMinCosine)
+        if (score.Topic > 0)
         {
             whys.Add(new WhyResponse("🎯", "В тему", string.Empty));
         }
