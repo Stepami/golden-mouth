@@ -17,7 +17,7 @@ internal sealed class PostScorer(
         var topic = $"{world.Interface.Title}. {world.Interface.Description}. {world.Player.Role}";
         var skills = await analysis.SkillsAsync(post.Text, topic, cancellationToken);
         var emotion = await analysis.ClassifyAsync(ClassifierModels.EmotionModel, post.Text);
-        var reason = (string?)null;
+        string? reason = null;
         var priority = balance.Difficulties[world.Difficulty].ReasonPriority.ToList();
         foreach (var test in flopTests.OrderBy(test => test switch
                  {
