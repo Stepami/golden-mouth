@@ -6,6 +6,7 @@ using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.AI.Serializers;
 using Reki.Application.Posts.PublishPostCommand;
 using Reki.Application.Telemetry;
+using Reki.Application.Worlds;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
@@ -37,6 +38,7 @@ public static class DependencyInjection
         services.AddSingleton<IEncodeSerializer<GamePost>, GamePostEncodeSerializer>();
         services.AddSingleton<IEncodeSerializer<WorldStar>, WorldStarEncodeSerializer>();
         services.AddSingleton<IEncodeSerializer<GameComment>, GameCommentEncodeSerializer>();
+        services.AddSingleton<IStarVectorStore, StarVectorStore>();
 
         return services;
     }

@@ -22,7 +22,15 @@ public sealed class OpenAiStub : IDisposable
         _embeddingServer.Given(Request.Create().WithPath("/v1/embeddings").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")
-                .WithBody($$$"""{"object":"list","model":"embedding","data":[{"object":"embedding","index":0,"embedding":[1,{{{zeros}}}]}],"usage":{"prompt_tokens":1,"total_tokens":1}}"""));
+                .WithBody(request =>
+                {
+                    using var document = JsonDocument.Parse(request.Body ?? throw new InvalidOperationException("Missing embedding request body."));
+                    var input = document.RootElement.GetProperty("input");
+                    var count = input.ValueKind == JsonValueKind.Array ? input.GetArrayLength() : 1;
+                    var embeddings = Enumerable.Range(0, count).Select(index =>
+                        $$$"""{"object":"embedding","index":{{{index}}},"embedding":[1,{{{zeros}}}]}""");
+                    return $$$"""{"object":"list","model":"embedding","data":[{{{string.Join(',', embeddings)}}}],"usage":{"prompt_tokens":1,"total_tokens":1}}""";
+                }));
     }
 
     public string BaseUrl => $"{_server.Url}/v1";

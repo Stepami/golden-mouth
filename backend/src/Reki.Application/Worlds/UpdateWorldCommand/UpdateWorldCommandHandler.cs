@@ -6,7 +6,8 @@ namespace Reki.Application.Worlds.UpdateWorldCommand;
 
 internal sealed class UpdateWorldCommandHandler(
     IWorldRepository worldRepository,
-    IRekiContextAccessor contextAccessor)
+    IRekiContextAccessor contextAccessor,
+    IStarVectorStore starVectorStore)
     : ICommandHandler<UpdateWorld>
 {
     public async ValueTask<Unit> Handle(UpdateWorld request, CancellationToken cancellationToken)
@@ -54,6 +55,7 @@ internal sealed class UpdateWorldCommandHandler(
             },
         };
         await worldRepository.ReplaceWorldAsync(updated, cancellationToken);
+        await starVectorStore.WarmUpAsync(updated);
 
         return Unit.Value;
     }

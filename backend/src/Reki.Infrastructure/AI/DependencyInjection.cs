@@ -59,6 +59,6 @@ internal static class DependencyInjection
                 configure: telemetry => telemetry.EnableSensitiveData = false);
         services.AddSingleton(typeof(IRekiEmbeddingGenerator<>), typeof(RekiEmbeddingGenerator<>));
 
-        return services;
+        return services.AddInMemoryVectorStore();
     }
 }
