@@ -23,12 +23,43 @@ internal sealed class MongoPostRepository(
     public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken)
     {
         var embedding = await embeddingGenerator.GenerateVectorAsync(post, cancellationToken: cancellationToken);
+        await InsertPostAsync(post, embedding, cancellationToken);
+    }
+
+    public async ValueTask InsertPostAsync(GamePost post, ReadOnlyMemory<float> embedding, CancellationToken cancellationToken)
+    {
         var document = post.ToBsonDocument();
         document["_embedding"] = new BsonArray(embedding.ToArray());
         var posts = database.GetCollection<BsonDocument>(MongoCollections.Posts);
         await (sessionProvider.Current is { } session
             ? posts.InsertOneAsync(session, document, cancellationToken: cancellationToken)
             : posts.InsertOneAsync(document, cancellationToken: cancellationToken));
+    }
+
+    public async ValueTask<IReadOnlyList<PostSimilarity>> FindSimilarPostsAsync(
+        WorldId worldId,
+        AuthorId authorId,
+        ReadOnlyMemory<float> embedding,
+        double threshold,
+        CancellationToken cancellationToken)
+    {
+        var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId) &
+                     Builders<GamePost>.Filter.Eq(item => item.AuthorId, authorId) &
+                     Builders<GamePost>.Filter.Exists("_embedding", true);
+        var match = filter.Render(new RenderArgs<GamePost>(_posts.DocumentSerializer, _posts.Settings.SerializerRegistry));
+        var pipeline = new[]
+        {
+            new BsonDocument("$match", match),
+            new BsonDocument("$set", new BsonDocument("score", new BsonDocument(
+                "$similarityCosine", new BsonArray { "$_embedding", new BsonArray(embedding.ToArray()) }))),
+            new BsonDocument("$match", new BsonDocument("score", new BsonDocument("$gte", threshold))),
+            new BsonDocument("$project", new BsonDocument { { "Text", 1 }, { "score", 1 } }),
+        };
+        using var cursor = await database.GetCollection<BsonDocument>(MongoCollections.Posts)
+            .AggregateAsync<BsonDocument>(pipeline, cancellationToken: cancellationToken);
+        var documents = await cursor.ToListAsync(cancellationToken);
+        return documents.Select(item => new PostSimilarity(
+            PostId.From(item["_id"].AsGuid), item["Text"].AsString, item["score"].ToDouble())).ToArray();
     }
 
     public async ValueTask<WorldPostsPage> GetPostsAsync(

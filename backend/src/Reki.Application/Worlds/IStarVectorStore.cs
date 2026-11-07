@@ -11,6 +11,8 @@ public interface IStarVectorStore
         World world,
         GamePost post);
 
+    Task<StarId> GetRelevantCommenterAsync(World world, ReadOnlyMemory<float> embedding);
+
     Task<StarId?> GetRelevantAdditionalReplierAsync(
         World world,
         StarId starToExclude,

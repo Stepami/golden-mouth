@@ -30,18 +30,7 @@ export const reaction = (value: Input<Wire.ReactionResponse>): Ui.Reaction => ({
 export const comment = (value: Input<Wire.CommentResponse>): Ui.CommentT => ({ ...value, depth: number(value.depth) })
 export const post = (value: Input<Wire.PostDetailResponse>): Ui.PostDetailResponse => ({ ...value, views: number(value.views), reactions: value.reactions.map(reaction), comments: value.comments.map(comment) })
 export const channelPost = (value: Input<Wire.ChannelPostResponse>): Ui.ChannelPost => ({ ...value, views: number(value.views), commentCount: number(value.commentCount), reactions: value.reactions.map(reaction) })
-export const result = (value: Input<Wire.PostResultResponse>): Ui.PostResult => ({ ...value, delta: number(value.delta), views: number(value.views), bestComment: value.bestComment ?? undefined, hook: value.hook ?? undefined, ribbons: value.ribbons.map(ribbon => ({ ...ribbon, sub: ribbon.sub ?? undefined })) })
-export const publication = (value: Input<Wire.PublicationStatusResponse>): Ui.PublicationState => ({ ...value, failure: value.failure ?? undefined, result: value.result ? result(value.result) : null })
-export function live(value: Awaited<ReturnType<import('./generated/reki-api').PostsClient['moderatePublication']>>['result'][number]): Ui.LiveEvent {
-  switch (value.type) {
-    case 'views': return { ...value, type: value.type, views: number(value.views) }
-    case 'comment': return { ...value, type: value.type, comment: comment(value.comment) }
-    case 'result': return { ...value, type: value.type, result: result(value.result) }
-    case 'react': return { type: value.type, emoji: value.emoji }
-    case 'typing': return { type: value.type, who: value.who }
-    default: throw new Error('Unknown live event')
-  }
-}
+export const result = (value: Input<Wire.PostResultResponse>): Ui.PostResult => ({ ...value, delta: number(value.delta), views: number(value.views), bestComment: value.bestComment ?? undefined, ribbons: value.ribbons.map(ribbon => ({ ...ribbon, sub: ribbon.sub ?? undefined })) })
 export function friend(value: Input<Wire.FriendResponse>): Ui.Friend {
   if (value.pronoun !== 'её' && value.pronoun !== 'его') throw new Error('Unknown friend pronoun')
   return { ...value, pronoun: value.pronoun, subs: number(value.subs) }

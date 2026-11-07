@@ -25,8 +25,6 @@ internal sealed class OperationMetadataTransformer : IOpenApiOperationTransforme
         {
             operation.Description = operation.OperationId switch
             {
-                "Posts_GeneratePublication" => "Server-sent events. Each data frame is a PublicationStatusLiveEvent JSON object. " +
-                    "Do not automatically repeat this POST on disconnect; query the durable publication status instead.",
                 "Posts_GenerateReply" => "Server-sent events. Each data frame is a ReplyGenerationLiveEvent JSON object. " +
                     "Retry a technical or network failure once with the same authorId and sourceCommentId. " +
                     "Do not retry unsafe_generated_content automatically. The player's saved comment remains committed.",

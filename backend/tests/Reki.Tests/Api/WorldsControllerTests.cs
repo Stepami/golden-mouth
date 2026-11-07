@@ -311,12 +311,9 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             Builders<World>.Update.Set(world => world.Player.Subscribers, 499));
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).HitOwnWorldMilestone).IsFalse();
 
-        // Fixed publication seed produces a positive turn; flops must not unlock the milestone.
-        var generation = await GenerateWithIdAsync(1093, "Расскажу о сегодняшней репетиции", "00000000-0000-0000-0000-000000000001");
-        await Assert.That(generation.StatusCode).IsEqualTo(HttpStatusCode.OK);
         var definition = (await CreateWorldDefinitionAsync(api)) with { Difficulty = WorldDifficulty.Hard };
         await api.Worlds.UpdateWorldAsync(id.ToString(), definition, CancellationToken.None);
-        await api.Posts.ModeratePublicationAsync(generation.PublicationId, id.ToString(), CancellationToken.None);
+        await PublishAsync(1093, "Расскажу о сегодняшней репетиции");
         var scored = Factory.Services.GetFakeLogCollector().GetSnapshot().Single(record =>
             record.GetStructuredStateValue("event_name") == "post_scored" && record.GetStructuredStateValue("player_id") == player.Id.ToString());
         await Assert.That(scored.GetStructuredStateValue("difficulty")).IsEqualTo("hard");

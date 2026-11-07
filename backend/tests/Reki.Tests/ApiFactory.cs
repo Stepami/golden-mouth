@@ -80,7 +80,24 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
             services.AddFakeLogging();
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
             services.RemoveAll<IValidateOptions<NliOptions>>();
-            services.Replace(ServiceDescriptor.Singleton(Substitute.For<INliScorer>()));
+            var nli = Substitute.For<INliScorer>();
+            nli.ScoreAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+                .Returns(call => ValueTask.FromResult<IReadOnlyList<NliScores>>(
+                    call.ArgAt<IReadOnlyList<string>>(1).Select(_ => new NliScores(0.5, 0.5)).ToArray()));
+            services.Replace(ServiceDescriptor.Singleton(nli));
+            var classifier = Substitute.For<IClassifier>();
+            classifier.ClassifyAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(Task.FromResult<IReadOnlyDictionary<string, double>>(new Dictionary<string, double>
+                {
+                    ["insult"] = 0,
+                    ["anger"] = 0,
+                    ["sadness"] = 0,
+                    ["fear"] = 0,
+                    ["surprise"] = 0,
+                    ["joy"] = 0,
+                    ["no_emotion"] = 1,
+                }));
+            services.Replace(ServiceDescriptor.Singleton(classifier));
             if (!UseProductionAuthentication)
             {
                 services.AddAuthentication(options =>

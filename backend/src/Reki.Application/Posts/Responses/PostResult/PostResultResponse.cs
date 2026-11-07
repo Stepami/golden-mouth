@@ -11,6 +11,5 @@ public sealed record PostResultResponse(
     BestCommentResponse? BestComment,
     bool Viral,
     bool Flop,
-    long Views,
-    string? Hook);
+    long Views);
 

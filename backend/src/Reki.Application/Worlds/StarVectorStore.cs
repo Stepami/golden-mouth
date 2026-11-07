@@ -54,6 +54,11 @@ internal sealed class StarVectorStore(
     {
         var embedding = await postEmbedder.GenerateVectorAsync(post);
 
+        return await GetRelevantCommenterAsync(world, embedding);
+    }
+
+    public async Task<StarId> GetRelevantCommenterAsync(World world, ReadOnlyMemory<float> embedding)
+    {
         var collection = vectorStore.GetCollection<StarId, StarEntry>(world.Id.ToString(), _definition);
         if (!await collection.CollectionExistsAsync())
         {

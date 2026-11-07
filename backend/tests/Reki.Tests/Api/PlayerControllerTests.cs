@@ -9,10 +9,8 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Api.Requests.Player;
-using Reki.Api.Requests.Posts;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Application.Player;
-using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
 using Reki.Domain.Invites;
@@ -467,12 +465,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             new UpdateSettingsRequest { Address = Address.She },
             CancellationToken.None);
         await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
-        using var publication = await api.Posts.GeneratePublicationAsync(
-            await GetWorldIdAsync(api),
-            new StartPublicationRequest { PublicationId = Guid.NewGuid().ToString("N"), Text = "Новый пост", OwnWords = true },
-            CancellationToken.None);
-        using var reader = new StreamReader(publication.Stream);
-        await reader.ReadToEndAsync();
+        await PublishAsync(8400, "Новый пост");
         using var profile = ParsePlayerLayer(GetCapturedChatMessages()[1]);
         await Assert.That(profile.RootElement.GetProperty("address").GetString()).IsEqualTo("she");
     }
@@ -641,54 +634,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     }
 
     [Test]
-    public async Task Referral_RepeatedModeration_GrantsEachSideOnceAsync()
-    {
-        // Arrange
-        using var inviterApi = Factory.CreateApiClient(8501);
-        using var friendApi = Factory.CreateApiClient(8502);
-        await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
-        var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
-        var generation = await GenerateAsync(8502, "первый пост");
-        var worldId = await GetWorldIdAsync(friendApi);
-        var usedAt = Factory.Session.Clock.GetUtcNow();
-
-        // Act
-        var first = await friendApi.Posts.ModeratePublicationAsync(
-            generation.PublicationId,
-            worldId,
-            CancellationToken.None);
-        var repeated =
-            await friendApi.Posts.ModeratePublicationAsync(generation.PublicationId, worldId, CancellationToken.None);
-
-        // Assert
-        var postId = first.OfType<ResultLiveEvent>().Single().Result.PostId;
-        await Assert.That(repeated.OfType<ResultLiveEvent>().Single().Result.PostId)
-            .IsEqualTo(postId);
-        await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(15);
-        await Assert.That((await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(14);
-        var invite = await Database.GetCollection<Invitation>("invites")
-            .Find(item => item.InviteeId == friend.Id).SingleAsync();
-        await Assert.That(invite.InviterBonusUsedAtUtc).IsEqualTo(usedAt);
-        await Assert.That(invite.InviteeBonusUsedAtUtc).IsEqualTo(usedAt);
-        await Assert.That(await Database.GetCollection<BsonDocument>("posts").CountDocumentsAsync(
-            new BsonDocument("AuthorId", friend.Id.ToAuthorId().Value))).IsEqualTo(1L);
-        Factory.Session.Clock.SetUtcNow(usedAt.AddDays(1));
-        await ResetGameDayAsync();
-        await friendApi.Posts.ModeratePublicationAsync(generation.PublicationId, worldId, CancellationToken.None);
-        var saved = await Database.GetCollection<Invitation>("invites")
-            .Find(item => item.InviteeId == friend.Id).SingleAsync();
-        await Assert.That(saved.InviterBonusUsedAtUtc).IsEqualTo(usedAt);
-        await Assert.That(saved.InviteeBonusUsedAtUtc).IsEqualTo(usedAt);
-        await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(10);
-        await Assert.That((await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(10);
-    }
-
-    [Test]
     [Arguments(-1)]
     [Arguments(0)]
     public async Task Referral_DayBoundary_UsesSixUtcResetAsync(int secondsAfterReset)
@@ -721,48 +666,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(invite.InviteeBonusUsed).IsTrue();
         await Assert.That(invite.InviterBonusUsedAtUtc).IsEqualTo(reset.AddSeconds(-2));
         await Assert.That(invite.InviteeBonusUsedAtUtc).IsEqualTo(reset.AddSeconds(-2));
-    }
-
-    [Test]
-    public async Task Referral_FailedGeneration_PreservesBonusForSuccessfulRetryAsync()
-    {
-        // Arrange
-        using var inviterApi = Factory.CreateApiClient(8530);
-        using var friendApi = Factory.CreateApiClient(8531);
-        await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
-        var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
-        var unsafeResponse = CreateCommentResponse(false);
-        var call = unsafeResponse.Messages.SelectMany(message => message.Contents).OfType<FunctionCallContent>()
-            .Single();
-        (call.Arguments ?? throw new InvalidOperationException("Missing arguments."))["text"] = "наркотики";
-        Factory.Llm.Respond(unsafeResponse);
-
-        // Act
-        var failed = await GenerateAsync(8531, "безопасный пост");
-
-        // Assert
-        await Assert.That(failed.Body).Contains("\"type\":\"failed\"");
-        await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(10);
-        var pending = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(pending.Energy).IsEqualTo(10);
-        await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(5);
-        var invite = await Database.GetCollection<Invitation>("invites")
-            .Find(item => item.InviteeId == friend.Id).SingleAsync();
-        await Assert.That(invite.InviterBonusUsed).IsFalse();
-        await Assert.That(invite.InviteeBonusUsed).IsFalse();
-        await Assert.That(invite.InviterBonusUsedAtUtc).IsNull();
-        await Assert.That(invite.InviteeBonusUsedAtUtc).IsNull();
-        await Assert.That(await Database.GetCollection<BsonDocument>("posts").CountDocumentsAsync(
-            new BsonDocument("AuthorId", friend.Id.ToAuthorId().Value))).IsEqualTo(0L);
-        Factory.Llm.Respond(CreateChatResponse);
-        await PublishAsync(8531, "успешный первый пост");
-        await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(15);
-        var success = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(success.Energy).IsEqualTo(14);
-        await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
     }
 
     [Test]
