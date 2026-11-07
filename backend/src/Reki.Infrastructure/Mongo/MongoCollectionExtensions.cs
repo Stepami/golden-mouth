@@ -5,16 +5,7 @@ namespace Reki.Infrastructure.Mongo;
 
 internal static class MongoCollectionExtensions
 {
-    public static Task InsertOneAsync<T>(
-        this IMongoCollection<T> collection,
-        MongoSessionProvider sessionProvider,
-        T document,
-        CancellationToken cancellationToken) =>
-        sessionProvider.Current is { } session
-            ? collection.InsertOneAsync(session, document, cancellationToken: cancellationToken)
-            : collection.InsertOneAsync(document, cancellationToken: cancellationToken);
-
-    public static Task<ReplaceOneResult> ReplaceOneAsync<T>(
+    public static Task ReplaceOneAsync<T>(
         this IMongoCollection<T> collection,
         MongoSessionProvider sessionProvider,
         Expression<Func<T, bool>> filter,

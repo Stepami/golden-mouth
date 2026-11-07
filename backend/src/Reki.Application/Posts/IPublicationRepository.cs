@@ -6,7 +6,7 @@ public interface IPublicationRepository
 {
     ValueTask<Publication?> GetPublicationAsync(string id, CancellationToken cancellationToken);
 
-    ValueTask<bool> TryCreatePublicationAsync(Publication publication, CancellationToken cancellationToken);
+    ValueTask CreatePublicationAsync(Publication publication, CancellationToken cancellationToken);
 
     ValueTask AppendPublicationPartAsync(
         string id,
@@ -21,7 +21,7 @@ public interface IPublicationRepository
         PublicationFailure failure,
         CancellationToken cancellationToken);
 
-    ValueTask<bool> TryCompletePublicationAsync(
+    ValueTask CompletePublicationAsync(
         string id,
         PlayerId playerId,
         PublishedPost published,

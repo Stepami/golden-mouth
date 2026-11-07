@@ -73,7 +73,7 @@ internal sealed class AddReplyCommandHandler(
         var updatedPost = post.AddComments([comment]);
         if (!isPlayer)
         {
-            await posts.TrySaveReplyAsync(updatedPost, null, null, cancellationToken);
+            await posts.SaveReplyAsync(updatedPost, cancellationToken);
             return Completed(comment, updatedPost, world, player);
         }
 
@@ -82,26 +82,15 @@ internal sealed class AddReplyCommandHandler(
             ? currentBalance.Thread.SubscriberBonus : 0;
         var updatedPlayer = player.SpendEnergy(currentBalance.Thread.EnergyCost);
         var updatedWorld = world.AwardThreadBonus(bonus);
-        try
-        {
-            await unitOfWork.ExecuteAsync(
-                async token =>
-                {
-                    if (!await posts.TrySaveReplyAsync(updatedPost, post.Version, request.RequestId, token) ||
-                        !await players.TryReplacePlayerAsync(updatedPlayer, player.Version, token) ||
-                        !await worlds.TryReplaceWorldAsync(updatedWorld, world.Version, token))
-                    {
-                        throw new RequestConflictException("The reply could not be saved.");
-                    }
-
-                    return Unit.Value;
-                },
-                cancellationToken);
-        }
-        catch (Exception exception) when (exception is RequestConflictException or UnitOfWorkException)
-        {
-            return await ReplayOrConflictAsync(request, cancellationToken);
-        }
+        await unitOfWork.ExecuteAsync(
+            async token =>
+            {
+                await posts.SaveReplyAsync(updatedPost, token);
+                await players.ReplacePlayerAsync(updatedPlayer, token);
+                await worlds.ReplaceWorldAsync(updatedWorld, token);
+                return Unit.Value;
+            },
+            cancellationToken);
 
         telemetry.TrackWorldAudience(updatedWorld);
         await feedScheduler.ScheduleFeedAsync(new ScheduleFromCommentRequest(player.Id, world.Id, post.Id, comment.Id));
@@ -143,19 +132,5 @@ internal sealed class AddReplyCommandHandler(
         {
             throw new RequestConflictException("A star can reply only to the player.");
         }
-    }
-
-    private async ValueTask<ReplyResponse> ReplayOrConflictAsync(AddReply request, CancellationToken cancellationToken)
-    {
-        var context = rekiContextAccessor.Context;
-        context.Reload();
-        var player = await context.Player;
-        var world = (await context.Worlds).GetValueOrDefault(request.WorldId)
-            ?? throw new ResourceNotFoundException("World not found.");
-        var post = await sender.Send(new PostQuery(request.PostId, world.Id), cancellationToken);
-        var existing = post.FindRequest(request.RequestId)
-            ?? throw new RequestConflictException("The reply could not be saved.");
-        EnsureSameRequest(existing, request);
-        return Completed(existing, post, world, player);
     }
 }

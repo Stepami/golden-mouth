@@ -24,43 +24,33 @@ internal sealed class MongoPlayerRepository : IPlayerRepository
         await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask CreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
-        await _players.InsertOneAsync(_sessionProvider, player, cancellationToken);
+        await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
 
     public async ValueTask SavePlusNotificationAsync(
         PlayerProfile player,
         PlayerProfile updated,
         CancellationToken cancellationToken)
     {
-        var filter = Builders<PlayerProfile>.Filter.And(
-            Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id),
-            Builders<PlayerProfile>.Filter.Ne(item => item.PlusNotifyRequested, updated.PlusNotifyRequested));
         var update = Builders<PlayerProfile>.Update
             .Set(item => item.PlusNotifyRequested, updated.PlusNotifyRequested)
             .Inc(item => item.Version, updated.Version - player.Version);
-        await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
+        await _players.UpdateOneAsync(item => item.Id == player.Id, update, cancellationToken: cancellationToken);
     }
 
-    public async ValueTask<bool> TryClaimPlusInterestAsync(
+    public async ValueTask ClaimPlusInterestAsync(
         PlayerProfile player,
         PlayerProfile updated,
         CancellationToken cancellationToken)
     {
-        var filter = Builders<PlayerProfile>.Filter.And(
-            Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id),
-            Builders<PlayerProfile>.Filter.Ne(item => item.PlusInterestClaimed, updated.PlusInterestClaimed));
         var update = Builders<PlayerProfile>.Update
             .Inc(item => item.Energy, updated.Energy - player.Energy)
             .Set(item => item.PlusInterestClaimed, updated.PlusInterestClaimed)
             .Inc(item => item.Version, updated.Version - player.Version);
-        var result = await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
-        return result.ModifiedCount == 1;
+        await _players.UpdateOneAsync(item => item.Id == player.Id, update, cancellationToken: cancellationToken);
     }
 
-    public async ValueTask<bool> TryReplacePlayerAsync(PlayerProfile player, int expectedVersion, CancellationToken cancellationToken)
-    {
-        var result = await _players.ReplaceOneAsync(_sessionProvider, item => item.Id == player.Id && item.Version == expectedVersion, player, cancellationToken);
-        return result.MatchedCount == 1;
-    }
+    public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
+        await _players.ReplaceOneAsync(_sessionProvider, item => item.Id == player.Id, player, cancellationToken);
 
     public async ValueTask AddInviteBonusAsync(PlayerId playerId, int bonusAmount, CancellationToken cancellationToken)
     {

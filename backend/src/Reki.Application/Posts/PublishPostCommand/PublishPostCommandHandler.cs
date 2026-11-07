@@ -153,16 +153,9 @@ internal sealed class PublishPostCommandHandler(
         await unitOfWork.ExecuteAsync(
             async token =>
             {
-                if (!await publicationRepository.TryCompletePublicationAsync(
-                        request.PublicationId,
-                        updated.Id,
-                        published,
-                        token) ||
-                    !await playerRepository.TryReplacePlayerAsync(updated, player.Version, token) ||
-                    !await worldRepository.TryReplaceWorldAsync(updatedWorld, world.Version, token))
-                {
-                    throw new RequestConflictException("The player state changed while publishing the post.");
-                }
+                await publicationRepository.CompletePublicationAsync(request.PublicationId, updated.Id, published, token);
+                await playerRepository.ReplacePlayerAsync(updated, token);
+                await worldRepository.ReplaceWorldAsync(updatedWorld, token);
 
                 if (updatedInvite is not null)
                 {
@@ -177,10 +170,7 @@ internal sealed class PublishPostCommandHandler(
                             token);
                     }
 
-                    if (!await invitationRepository.TryUseInviteBonusAsync(updatedInvite, token))
-                    {
-                        throw new RequestConflictException("The player state changed while publishing the post.");
-                    }
+                    await invitationRepository.UseInviteBonusAsync(updatedInvite, token);
                 }
 
                 await postRepository.InsertPostAsync(post, token);

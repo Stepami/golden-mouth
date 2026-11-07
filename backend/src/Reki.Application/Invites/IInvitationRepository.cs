@@ -15,7 +15,7 @@ public interface IInvitationRepository
         DateTimeOffset periodEnd,
         CancellationToken cancellationToken);
 
-    ValueTask<bool> TryUseInviteBonusAsync(Invitation invite, CancellationToken cancellationToken);
+    ValueTask UseInviteBonusAsync(Invitation invite, CancellationToken cancellationToken);
 
     ValueTask DeleteInvitesAsync(PlayerId playerId, CancellationToken cancellationToken);
 }

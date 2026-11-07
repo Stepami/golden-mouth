@@ -18,7 +18,9 @@ internal sealed class MongoPostRepository : IPostRepository
     }
 
     public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken) =>
-        await _posts.InsertOneAsync(_sessionProvider, post, cancellationToken);
+        await (_sessionProvider.Current is { } session
+            ? _posts.InsertOneAsync(session, post, cancellationToken: cancellationToken)
+            : _posts.InsertOneAsync(post, cancellationToken: cancellationToken));
 
     public async ValueTask<WorldPostsPage> GetPostsAsync(
         WorldId worldId,
@@ -63,31 +65,9 @@ internal sealed class MongoPostRepository : IPostRepository
     public async ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken) =>
         await _posts.Find(item => item.Id == postId).FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask<bool> TrySaveReplyAsync(
-        GamePost post,
-        int? expectedVersion,
-        string? requestId,
-        CancellationToken cancellationToken)
-    {
-        var filter = Builders<GamePost>.Filter.And(
-            Builders<GamePost>.Filter.Eq(item => item.Id, post.Id),
-            Builders<GamePost>.Filter.Eq(item => item.WorldId, post.WorldId));
-        if (expectedVersion is { } version)
-        {
-            filter &= Builders<GamePost>.Filter.Eq(item => item.Version, version);
-        }
-
-        if (requestId is not null)
-        {
-            filter &= Builders<GamePost>.Filter.Not(
-                Builders<GamePost>.Filter.ElemMatch(item => item.Comments, comment => comment.RequestId == requestId));
-        }
-
-        var result = await (_sessionProvider.Current is { } session
-            ? _posts.ReplaceOneAsync(session, filter, post, cancellationToken: cancellationToken)
-            : _posts.ReplaceOneAsync(filter, post, cancellationToken: cancellationToken));
-        return result.MatchedCount == 1;
-    }
+    public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken) =>
+        await _posts.ReplaceOneAsync(
+            _sessionProvider, item => item.Id == post.Id && item.WorldId == post.WorldId, post, cancellationToken);
 
     public async ValueTask DeletePostsAsync(IReadOnlyCollection<WorldId> worldIds, CancellationToken cancellationToken) =>
         await _posts.DeleteManyAsync(

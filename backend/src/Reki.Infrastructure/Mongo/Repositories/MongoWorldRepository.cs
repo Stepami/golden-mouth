@@ -20,13 +20,14 @@ internal sealed class MongoWorldRepository : IWorldRepository
     }
 
     public async ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken) =>
-        await _worlds.InsertOneAsync(_sessionProvider, world, cancellationToken);
+        await _worlds.InsertOneAsync(world, cancellationToken: cancellationToken);
 
-    public async ValueTask<bool> TryReplaceWorldAsync(World world, int expectedVersion, CancellationToken cancellationToken)
-    {
-        var result = await _worlds.ReplaceOneAsync(_sessionProvider, item => item.Id == world.Id && item.Player.PlayerId == world.Player.PlayerId && item.Version == expectedVersion, world, cancellationToken);
-        return result.MatchedCount == 1;
-    }
+    public async ValueTask ReplaceWorldAsync(World world, CancellationToken cancellationToken) =>
+        await _worlds.ReplaceOneAsync(
+            _sessionProvider,
+            item => item.Id == world.Id && item.Player.PlayerId == world.Player.PlayerId,
+            world,
+            cancellationToken);
 
     public async ValueTask<World?> GetWorldAsync(PlayerId playerId, WorldId worldId, CancellationToken cancellationToken)
     {

@@ -17,15 +17,12 @@ public interface IPlayerRepository
         PlayerProfile updated,
         CancellationToken cancellationToken);
 
-    ValueTask<bool> TryClaimPlusInterestAsync(
+    ValueTask ClaimPlusInterestAsync(
         PlayerProfile player,
         PlayerProfile updated,
         CancellationToken cancellationToken);
 
-    ValueTask<bool> TryReplacePlayerAsync(
-        PlayerProfile player,
-        int expectedVersion,
-        CancellationToken cancellationToken);
+    ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
 
     ValueTask AddInviteBonusAsync(PlayerId playerId, int bonusAmount, CancellationToken cancellationToken);
 

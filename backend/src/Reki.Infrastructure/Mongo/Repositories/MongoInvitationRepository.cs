@@ -17,7 +17,7 @@ internal sealed class MongoInvitationRepository : IInvitationRepository
     }
 
     public async ValueTask CreateInviteAsync(Invitation invite, CancellationToken cancellationToken) =>
-        await _invites.InsertOneAsync(_sessionProvider, invite, cancellationToken);
+        await _invites.InsertOneAsync(invite, cancellationToken: cancellationToken);
 
     public async ValueTask<Invitation?> GetPendingInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken) =>
         await _invites.Find(item => item.InviteeId == inviteeId && !item.InviteeBonusUsed)
@@ -34,19 +34,18 @@ internal sealed class MongoInvitationRepository : IInvitationRepository
                     item.InviterBonusUsedAtUtc >= periodStart && item.InviterBonusUsedAtUtc < periodEnd,
             cancellationToken: cancellationToken);
 
-    public async ValueTask<bool> TryUseInviteBonusAsync(Invitation invite, CancellationToken cancellationToken)
+    public async ValueTask UseInviteBonusAsync(Invitation invite, CancellationToken cancellationToken)
     {
         var update = Builders<Invitation>.Update
             .Set(item => item.InviterBonusUsed, invite.InviterBonusUsed)
             .Set(item => item.InviteeBonusUsed, invite.InviteeBonusUsed)
             .Set(item => item.InviterBonusUsedAtUtc, invite.InviterBonusUsedAtUtc)
             .Set(item => item.InviteeBonusUsedAtUtc, invite.InviteeBonusUsedAtUtc);
-        var result = await _invites.UpdateOneAsync(
+        await _invites.UpdateOneAsync(
             _sessionProvider.Session,
-            item => item.Id == invite.Id && !item.InviteeBonusUsed,
+            item => item.Id == invite.Id,
             update,
             cancellationToken: cancellationToken);
-        return result.ModifiedCount == 1;
     }
 
     public async ValueTask DeleteInvitesAsync(PlayerId playerId, CancellationToken cancellationToken) =>
