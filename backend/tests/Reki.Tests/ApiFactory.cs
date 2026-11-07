@@ -57,6 +57,8 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Llm:Model", "gigachat3.5-432b-a28b");
         builder.UseSetting("Llm:Temperature", "0.25");
         builder.UseSetting("Llm:TimeoutSeconds", "1");
+        builder.UseSetting("Embedding:BaseUrl", Llm.EmbeddingBaseUrl);
+        builder.UseSetting("Embedding:Model", "embedding");
         builder.UseSetting("Auth:Issuer", UseProductionEnvironment ? "https://localhost/" : "http://localhost/");
         builder.UseSetting("Auth:Audience", "reki-test");
         builder.UseSetting("Auth:ClientId", "reki-test-client");

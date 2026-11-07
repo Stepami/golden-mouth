@@ -3,8 +3,12 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
+using Reki.Application.Posts.AI.Serializers;
 using Reki.Application.Posts.PublishPostCommand;
 using Reki.Application.Telemetry;
+using Reki.Application.Worlds;
+using Reki.Domain.Posts;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application;
 
@@ -31,6 +35,10 @@ public static class DependencyInjection
         services.AddSingleton<IStarAgentInstructions, StarAgentInstructions>();
         services.AddSingleton<IStarTurnGenerator, StarTurnGenerator>();
         services.AddSingleton<IStarContentGenerator, StarContentGenerator>();
+        services.AddSingleton<IEncodeSerializer<GamePost>, GamePostEncodeSerializer>();
+        services.AddSingleton<IEncodeSerializer<WorldStar>, WorldStarEncodeSerializer>();
+        services.AddSingleton<IEncodeSerializer<GameComment>, GameCommentEncodeSerializer>();
+        services.AddSingleton<IStarVectorStore, StarVectorStore>();
 
         return services;
     }

@@ -13,8 +13,8 @@ internal sealed class CreateWorldCommandHandler(
     IRekiContextAccessor rekiContextAccessor,
     GameDayPeriod gameDayPeriod,
     IOptionsMonitor<GameBalance> balance,
-    ProductTelemetry telemetry)
-    : ICommandHandler<CreateWorld, World>
+    ProductTelemetry telemetry,
+    IStarVectorStore starVectorStore) : ICommandHandler<CreateWorld, World>
 {
     public async ValueTask<World> Handle(CreateWorld request, CancellationToken cancellationToken)
     {
@@ -40,6 +40,7 @@ internal sealed class CreateWorldCommandHandler(
         await worldRepository.InsertWorldAsync(world, cancellationToken);
         telemetry.TrackPlayer(player, "world_created", new Dictionary<string, string> { ["template_id"] = world.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = world.Difficulty.ToString().ToLowerInvariant() }, world.Id);
         telemetry.TrackWorldAudience(world);
+        await starVectorStore.WarmUpAsync(world);
         return world;
     }
 }

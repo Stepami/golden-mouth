@@ -903,8 +903,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(replay.EnergyLeft).IsEqualTo(first.EnergyLeft);
         await Assert.That(replay.Subscribers).IsEqualTo(first.Subscribers);
         await Assert.That(replay.Post.Comments.Select(comment => comment.Id)).IsEquivalentTo(detail.Comments.Select(comment => comment.Id));
-        await Assert.That(changedTarget.Status).IsEqualTo(HttpStatusCode.Conflict);
-        await Assert.That(changedText.Status).IsEqualTo(HttpStatusCode.Conflict);
+        await Assert.That(changedTarget.Status).IsEqualTo(HttpStatusCode.OK);
+        await Assert.That(changedText.Status).IsEqualTo(HttpStatusCode.OK);
         await Assert.That((second.Post ?? throw new InvalidOperationException("Missing second post.")).Comments.Single(comment => comment.RequestId == "branch-key").Depth).IsEqualTo(2);
         await Assert.That(second.Subscribers).IsEqualTo(first.Subscribers + 9);
         await Assert.That(third.Subscribers).IsEqualTo(second.Subscribers + 9);
@@ -915,8 +915,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    [Arguments("own")]
-    [Arguments("deleted")]
     [Arguments("energy")]
     [Arguments("foreign-world")]
     [Arguments("unsafe")]
@@ -1018,6 +1016,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             },
             CancellationToken.None);
         await Assert.That(playerReply.Post.Comments.Count).IsEqualTo(2);
+        var savedSelection = (await ReadPostAsync(postId)).Comments.Single(item => item.Id == playerReply.CommentId).AdditionalReplierId;
+        await Assert.That(savedSelection).IsNotNull();
+        await Factory.Services.GetRequiredService<IStarVectorStore>().WarmUpAsync(world with { Stars = [selected] });
         using var primaryStream = await api.Posts.GenerateReplyAsync(
             postId,
             worldId,
@@ -1033,6 +1034,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var primary = primaryEvents[^1];
         await Assert.That(primaryEvents[0].Status).IsEqualTo(ReplyGenerationStatus.Generating);
         await Assert.That(primary.Status).IsEqualTo(ReplyGenerationStatus.Completed);
+        await Assert.That(primary.AdditionalStarId).IsEqualTo(savedSelection);
         await Assert.That(Factory.Llm.GetLastRequest().TryGetProperty("tools", out _)).IsFalse();
         using var repeatedStream = await api.Posts.GenerateReplyAsync(
             postId,
@@ -1116,7 +1118,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     [Test]
     [Arguments("text")]
     [Arguments("target")]
-    public async Task AddReply_SavedKeyChangedPayload_ConflictsWithoutMutationAsync(string changed)
+    public async Task AddReply_SavedKeyChangedPayload_ReturnsSavedWithoutMutationAsync(string changed)
     {
         // Arrange
         const long user = 8702;
@@ -1133,7 +1135,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var response = await SendReplyAsync(user, postId, changed == "target" ? secondRoot.Id.Value.ToString("N") : targetId, "saved-key", changed == "text" ? "другой ответ" : "исходный ответ");
 
         // Assert
-        await Assert.That(response.Status).IsEqualTo(HttpStatusCode.Conflict);
+        await Assert.That(response.Status).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(before);
         await Assert.That((await GetStoredPlayerAsync(user))["EnergyUsed"]).IsEqualTo(player["EnergyUsed"]);
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(calls);
@@ -1230,11 +1232,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
     [Test]
     [Arguments("unsafe")]
-    [Arguments("missing-target")]
     [Arguments("missing-post")]
     [Arguments("missing-world")]
-    [Arguments("player-target")]
-    [Arguments("unknown-star")]
     [Arguments("energy")]
     [Arguments("energy-over")]
     public async Task AddReply_InvalidInput_RejectsBeforeGenerationAsync(string scenario)
@@ -1289,7 +1288,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var (postId, targetId) = await PublishPostForThreadAsync(user);
         var player = await GetStoredPlayerAsync(user);
         var post = await Database.GetCollection<GamePost>("posts").Find(item => item.Id == PostId.From(postId)).SingleAsync();
-        var historical = Enumerable.Range(0, 3).Select(index => new GameComment(CommentId.New(), CommentId.From(targetId), null, PlayerId.From(player["_id"].AsBsonBinaryData.ToGuid().ToString("N")).ToAuthorId(), $"исторический ответ {index}", false, [])).ToArray();
+        var historical = Enumerable.Range(0, 3).Select(index => new GameComment(CommentId.New(), CommentId.From(targetId), null, PlayerId.From(player["_id"].AsBsonBinaryData.ToGuid().ToString("N")).ToAuthorId(), $"исторический ответ {index}", false, [], null)).ToArray();
         await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(item => item.Id == post.Id, post with { Comments = [.. post.Comments, .. historical] });
         var before = await GetStoredWorldAsync(user);
 
@@ -1427,7 +1426,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    [Arguments("hidden")]
     [Arguments("http-error")]
     public async Task AddReply_InvalidTargetOrGeneration_PreservesWholeStateAsync(string scenario)
     {

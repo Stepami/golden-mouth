@@ -57,7 +57,8 @@ internal static class DependencyInjection
             .UseOpenTelemetry(
                 sourceName: "Reki.Embed",
                 configure: telemetry => telemetry.EnableSensitiveData = false);
+        services.AddSingleton(typeof(IRekiEmbeddingGenerator<>), typeof(RekiEmbeddingGenerator<>));
 
-        return services;
+        return services.AddInMemoryVectorStore();
     }
 }

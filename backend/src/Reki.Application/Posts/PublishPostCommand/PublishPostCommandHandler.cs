@@ -125,7 +125,8 @@ internal sealed class PublishPostCommandHandler(
             turn.StarId.ToAuthorId(),
             turn.Comment,
             false,
-            []);
+            [],
+            null);
         var recentPosts = await sender.Send(new WorldPostsQuery(world.Id, Cursor: null, PageSize: 20), cancellationToken);
         var recentViews = recentPosts.Items.Select(post => post.Views).ToArray();
         var views = Math.Max(48, updatedWorld.Player.Subscribers);

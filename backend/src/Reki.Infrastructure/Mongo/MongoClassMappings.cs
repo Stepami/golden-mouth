@@ -42,7 +42,7 @@ internal static class MongoClassMappings
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.WorldIdBsonSerializer());
         RegisterWithMongoId<PlayerProfile, PlayerId>(item => item.Id);
-        RegisterWithMongoId<GamePost, PostId>(item => item.Id);
+        RegisterWithMongoId<GamePost, PostId>(item => item.Id, ignoreExtraElements: true);
         RegisterWithMongoId<Publication, string>(item => item.Id);
         RegisterWithMongoId<DailyGameEvent, RekiEventId>(item => item.Id);
         RegisterWithMongoId<World, WorldId>(item => item.Id);
@@ -50,7 +50,8 @@ internal static class MongoClassMappings
     }
 
     private static void RegisterWithMongoId<TDocument, TId>(
-        Expression<Func<TDocument, TId>> idExpression)
+        Expression<Func<TDocument, TId>> idExpression,
+        bool ignoreExtraElements = false)
     {
         if (BsonClassMap.IsClassMapRegistered(typeof(TDocument)))
         {
@@ -61,6 +62,7 @@ internal static class MongoClassMappings
         {
             classMap.AutoMap();
             classMap.MapIdMember(idExpression);
+            classMap.SetIgnoreExtraElements(ignoreExtraElements);
         });
     }
 }
