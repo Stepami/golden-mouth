@@ -1,5 +1,5 @@
 import { clearWorldDrafts } from './worldDraft'
-export interface PostDraft { text: string; publicationId?: string; submittedText?: string; ownWords: boolean; submittedOwnWords?: boolean; wantId?: string; submittedWantId?: string }
+export interface PostDraft { text: string; ownWords: boolean; wantId?: string }
 const memory = new Map<string, PostDraft>()
 const prefix = 'reki:post-draft:v2:'
 export const draftKey = (player: { id: string; worldInstanceId?: string; world: string }) => `${prefix}${player.id}:${player.worldInstanceId ?? player.world}`
@@ -15,9 +15,8 @@ export function savePostDraft(key: string, draft: PostDraft) {
   memory.set(key, { ...draft })
   try { localStorage.setItem(key, JSON.stringify(draft)); return true } catch { return false }
 }
-export function completePostDraft(key: string, publicationId: string, text: string) {
+export function completePostDraft(key: string, text: string) {
   const current = readPostDraft(key)
-  if (current.publicationId !== publicationId) return
   savePostDraft(key, current.text === text ? { text: '', ownWords: true } : { text: current.text, ownWords: current.ownWords, wantId: current.wantId })
 }
 export function clearPlayerDrafts(id: string) {

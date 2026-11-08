@@ -21,7 +21,6 @@ internal sealed class GameBalanceOptionsFactory(
         var posts = configuration.GetRequiredSection("posts");
         var growth = configuration.GetRequiredSection("growth");
         var viral = configuration.GetRequiredSection("viral");
-        var flop = configuration.GetRequiredSection("flop");
         var skills = configuration.GetRequiredSection("skills");
         var relations = configuration.GetRequiredSection("relations");
         var challenge = configuration.GetRequiredSection("challenge");
@@ -66,7 +65,17 @@ internal sealed class GameBalanceOptionsFactory(
                     item.GetValue<double>("k"),
                     item.GetValue<double>("flop"),
                     item.GetValue<double>("viral_x"),
-                    item.GetValue<long>("hate_from")));
+                    item.GetValue<long>("hate_from"),
+                    item.GetValue<double>("loss_x"),
+                    item.GetValue<double>("max_subscriber_fraction"),
+                    item.GetValue<double>("topic_min_cosine"),
+                    item.GetRequiredSection("thresholds").GetChildren().ToDictionary(entry => entry.Key, entry => entry.Get<double>()),
+                    item.GetRequiredSection("threshold_reduction_per_step").GetChildren().ToDictionary(entry => entry.Key, entry => entry.Get<double>()),
+                    item.GetRequiredSection("drama").GetChildren().ToDictionary(
+                        entry => Enum.Parse<WorldDrama>(entry.Key, ignoreCase: true),
+                        entry => new DramaBalance(entry.GetValue<double>("hate_x"), entry.GetValue<int>("threshold_steps"), entry.GetValue<double>("loss_multiplier"))),
+                    item.GetSection("reason_priority").GetChildren().Select(entry => entry.Value ?? string.Empty).ToArray(),
+                    item["emotion_tie_break"] ?? "sad_tone"));
 
         if (decay.Count == 0 || levelThresholds.Count != 10 ||
             difficulties.Count != 3 || Enum.GetValues<WorldDifficulty>().Any(value => !difficulties.ContainsKey(value)) ||
@@ -99,8 +108,7 @@ internal sealed class GameBalanceOptionsFactory(
                 viral.GetValue<double>("base"),
                 viral.GetValue<double>("per_quality"),
                 viral.GetValue<double>("x")),
-            new FlopBalance(
-                flop.GetValue<double>("loss_x")),
+            new FlopBalance(0),
             new SkillBalance(
                 levelThresholds,
                 skills.GetValue<double>("xp_per_post_main"),

@@ -9,7 +9,6 @@ using Reki.Api.Requests.Worlds;
 using Reki.Api.Serialization;
 using Reki.Application.Player;
 using Reki.Application.Player.Responses;
-using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Application.Posts.Responses.Reply;
 using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.Worlds;
@@ -269,43 +268,38 @@ public abstract class GameApiTestBase(ApiFactory factory)
         return Factory.Llm.GetLastMessages();
     }
 
-    protected Task<(System.Net.HttpStatusCode StatusCode, string Body, string PublicationId)> GenerateAsync(long telegramUserId, string text) =>
-        GenerateWithIdAsync(telegramUserId, text, Guid.NewGuid().ToString());
-
-    protected async Task<(System.Net.HttpStatusCode StatusCode, string Body, string PublicationId)> GenerateWithIdAsync(
-        long telegramUserId,
-        string text,
-        string publicationId)
+    protected async Task<(System.Net.HttpStatusCode StatusCode, string Body, string PublicationId)> GenerateAsync(long telegramUserId, string text)
     {
         using var api = Factory.CreateApiClient(telegramUserId);
         try
         {
-            using var response = await api.Posts.GeneratePublicationAsync(
-                await GetWorldIdAsync(api),
-                new StartPublicationRequest { PublicationId = publicationId, Text = text },
-                CancellationToken.None);
-            using var reader = new StreamReader(response.Stream);
-            return ((System.Net.HttpStatusCode)response.StatusCode, await reader.ReadToEndAsync(CancellationToken.None), publicationId);
+            await api.Posts.CreatePostAsync(await GetWorldIdAsync(api), new CreatePostRequest { Text = text }, CancellationToken.None);
+            return (System.Net.HttpStatusCode.OK, string.Empty, string.Empty);
         }
         catch (PostsApiException exception)
         {
-            return ((System.Net.HttpStatusCode)exception.StatusCode, exception.Response, publicationId);
+            return ((System.Net.HttpStatusCode)exception.StatusCode, exception.Response, string.Empty);
         }
     }
 
-    protected Task PublishAsync(long telegramUserId, string text) =>
-        PublishWithIdAsync(telegramUserId, text, Guid.NewGuid().ToString());
-
-    protected async Task PublishWithIdAsync(long telegramUserId, string text, string requestedPublicationId)
+    protected async Task PublishAsync(long telegramUserId, string text)
     {
-        (var statusCode, var generation, var publicationId) =
-            await GenerateWithIdAsync(telegramUserId, text, requestedPublicationId);
-        await Assert.That(statusCode).IsEqualTo(System.Net.HttpStatusCode.OK);
-        await Assert.That(generation).Contains("\"type\":\"ready_for_moderation\"");
         using var api = Factory.CreateApiClient(telegramUserId);
-        var events = await api.Posts.ModeratePublicationAsync(
-            publicationId, await GetWorldIdAsync(api), CancellationToken.None);
-        await Assert.That(events.OfType<ResultLiveEvent>().Any()).IsTrue();
+        var worldId = await GetWorldIdAsync(api);
+        var created = await api.Posts.CreatePostAsync(worldId, new CreatePostRequest { Text = text }, CancellationToken.None);
+        using var generation = await api.Posts.GenerateReplyAsync(
+            created.Post.PostId.ToString(),
+            worldId,
+            new GenerateReplyRequest { AuthorId = created.PredictedAuthorId, SourceCommentId = null, Additional = false },
+            CancellationToken.None);
+        using var reader = new StreamReader(generation.Stream);
+        var completed = ParseReplyGenerationEvents(await reader.ReadToEndAsync(CancellationToken.None))
+            .Last(item => item.Status == ReplyGenerationStatus.Completed);
+        await api.Posts.ReplyToPostAsync(
+            created.Post.PostId.ToString(),
+            worldId,
+            new ReplyRequest { AuthorId = completed.AuthorId, Text = completed.Text ?? string.Empty, RequestId = Guid.NewGuid().ToString("N") },
+            CancellationToken.None);
     }
 
     protected async Task AssertCollectionHasNoPlayerAsync(string collectionName, BsonDocument filter)

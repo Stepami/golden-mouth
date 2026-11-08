@@ -41,21 +41,12 @@ export type PostDetailResponse = Omit<Fields<Wire.PostDetailResponse>, 'views' |
 export type Post = Omit<PostDetailResponse, 'postId'> & { id: string; inRivers?: boolean; at?: string }
 export type ChannelPost = Omit<Fields<Wire.ChannelPostResponse>, 'views' | 'commentCount' | 'reactions'> & { views: number; commentCount: number; reactions: Reaction[] }
 export type Why = Wire.WhyResponse
-export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views' | 'ribbons' | 'bestComment' | 'hook'> & {
+export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views' | 'ribbons' | 'bestComment'> & {
   delta: number; views: number
   ribbons: (Omit<Fields<Wire.RibbonResponse>, 'sub'> & { sub?: string })[]
-  bestComment?: Wire.BestCommentResponse; hook?: string
+  bestComment?: Wire.BestCommentResponse
   completedWants?: Pick<Want, 'id' | 'text' | 'reward'>[]
 }
-type UiLiveEvent<E> = E extends { type: 'views' } ? Omit<E, 'views'> & { views: number }
-  : E extends { type: 'comment' } ? Omit<E, 'comment'> & { comment: CommentT }
-  : E extends { type: 'result' } ? Omit<E, 'result'> & { result: PostResult } : E
-type WireLiveEvent = Awaited<ReturnType<import('./generated/reki-api').PostsClient['moderatePublication']>>['result'][number]
-type Discriminated<T> = T extends { type?: infer Kind } ? Omit<Fields<T>, 'type'> & { type: NonNullable<Kind> } : never
-export type LiveEvent = UiLiveEvent<Discriminated<WireLiveEvent>>
-export type PublicationStatus = Wire.PublicationStatusType
-export type PublicationFailure = Wire.PublicationFailure
-export type PublicationState = Omit<Fields<Wire.PublicationStatusResponse>, 'result' | 'failure'> & { result: PostResult | null; failure?: PublicationFailure }
 export type Friend = Omit<Fields<Wire.FriendResponse>, 'subs' | 'pronoun'> & { subs: number; pronoun: 'её' | 'его' }
 export type Challenge = Omit<Fields<NonNullable<Wire.ChallengeResponse>>, 'rival' | 'day' | 'days' | 'myScore' | 'rivalScore'> & { rival: Friend; day: number; days: number; myScore: number; rivalScore: number }
 export type GameEvent = Wire.GameEventResponse

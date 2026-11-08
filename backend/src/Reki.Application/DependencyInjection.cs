@@ -4,9 +4,12 @@ using Reki.Application.Balance;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.AI.Serializers;
-using Reki.Application.Posts.PublishPostCommand;
+using Reki.Application.Posts.CreatePostCommand;
+using Reki.Application.Posts.CreatePostCommand.FlopTests;
+using Reki.Application.Posts.CreatePostCommand.Progression;
+using Reki.Application.Posts.CreatePostCommand.Score;
+using Reki.Application.Posts.ML;
 using Reki.Application.Telemetry;
-using Reki.Application.Worlds;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
@@ -31,6 +34,13 @@ public static class DependencyInjection
         services.AddSingleton<PlayerSafetyGuard>();
         services.AddSingleton<StarTurnPolicy>();
         services.AddSingleton<PostProgressionCalculator>();
+        services.AddSingleton<PostScoringContext>();
+        services.AddSingleton<PostTextAnalysis>();
+        services.AddSingleton<PostScorer>();
+        services.AddSingleton<IFlopTest, AngryAbuseFlopTest>();
+        services.AddSingleton<IFlopTest, NearCopyFlopTest>();
+        services.AddSingleton<IFlopTest, SadToneFlopTest>();
+        services.AddSingleton<IFlopTest, AnxiousToneFlopTest>();
         services.AddSingleton<ProductTelemetry>();
         services.AddSingleton<IStarAgentInstructions, StarAgentInstructions>();
         services.AddSingleton<IStarTurnGenerator, StarTurnGenerator>();
@@ -38,6 +48,7 @@ public static class DependencyInjection
         services.AddSingleton<IEncodeSerializer<GamePost>, GamePostEncodeSerializer>();
         services.AddSingleton<IEncodeSerializer<WorldStar>, WorldStarEncodeSerializer>();
         services.AddSingleton<IEncodeSerializer<GameComment>, GameCommentEncodeSerializer>();
+        services.AddSingleton<IEncodeSerializer<World>, WorldEncodeSerializer>();
         services.AddSingleton<IStarVectorStore, StarVectorStore>();
 
         return services;

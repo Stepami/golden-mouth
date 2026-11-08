@@ -8,8 +8,7 @@ public sealed record GenerateReplyRequest
     [Required]
     public required AuthorId AuthorId { get; init; }
 
-    [Required]
-    public required CommentId SourceCommentId { get; init; }
+    public CommentId? SourceCommentId { get; init; }
 
     public required bool Additional { get; init; }
 }

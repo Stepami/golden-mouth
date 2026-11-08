@@ -1,7 +1,6 @@
 using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Application.Posts;
 using Reki.Domain.Events;
 using Reki.Domain.Posts;
 using Reki.Infrastructure.Mongo.Repositories;
@@ -20,7 +19,7 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
         var database = db;
         var players = database.GetCollection<BsonDocument>(MongoCollections.Players);
         var posts = database.GetCollection<GamePost>(MongoCollections.Posts);
-        var publications = database.GetCollection<Publication>(MongoCollections.Publications);
+        var publications = database.GetCollection<BsonDocument>(MongoCollections.Publications);
         var memories = database.GetCollection<BsonDocument>("stars_memory");
         var events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
         var challenges = database.GetCollection<BsonDocument>("challenges");
@@ -53,8 +52,8 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
             playerWorldKey,
             "ix_players_world");
         var postIndex = IndexFactory.Create(postKeys, "ix_posts_player_created");
-        var publicationExpiryIndex = new CreateIndexModel<Publication>(
-            Builders<Publication>.IndexKeys.Ascending(item => item.ExpiresAtUtc),
+        var publicationExpiryIndex = new CreateIndexModel<BsonDocument>(
+            Builders<BsonDocument>.IndexKeys.Ascending("ExpiresAtUtc"),
             new CreateIndexOptions { Name = "ix_publications_expiry", ExpireAfter = TimeSpan.Zero });
         var memoryIndex = IndexFactory.Create(
             memoryKeys,

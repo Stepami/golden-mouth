@@ -30,30 +30,29 @@ internal sealed partial class GenerateReplyCommandHandler(
         var post = await sender.Send(new PostQuery(request.PostId, world.Id), cancellationToken);
         var star = world.FindStar(request.AuthorId)
             ?? throw new RequestConflictException("The author is not a star of this world.");
-        var source = post.Comments.FirstOrDefault(item =>
-                item.Id == request.SourceCommentId && !item.Hidden && item.AuthorId == player.Id.ToAuthorId())
-            ?? throw new ResourceNotFoundException("Player comment not found.");
-        var primary = source.ParentCommentId is { } parentId
-            ? world.FindStar(post.Comments.First(item => item.Id == parentId).AuthorId)
-            : world.FindStar(post.AuthorId);
-        if (primary is null)
+        var source = request.SourceCommentId is { } sourceId
+            ? post.Comments.FirstOrDefault(item => item.Id == sourceId && !item.Hidden && item.AuthorId == player.Id.ToAuthorId())
+                ?? throw new ResourceNotFoundException("Player comment not found.")
+            : null;
+        if (source is not null)
         {
-            throw new RequestConflictException("The thread star is no longer in this world.");
+            var primary = source.ParentCommentId is { } parentId
+                ? world.FindStar(post.Comments.First(item => item.Id == parentId).AuthorId)
+                : world.FindStar(post.AuthorId);
+            if (primary is null || (request.Additional ? source.AdditionalReplierId != star.Id : primary.Id != star.Id))
+            {
+                throw new RequestConflictException("The star does not belong to the selected thread.");
+            }
         }
 
-        var additionalStarId = source.AdditionalReplierId;
-        if (request.Additional ? additionalStarId != star.Id : primary.Id != star.Id)
-        {
-            throw new RequestConflictException("The star does not belong to the selected thread.");
-        }
-
-        var branch = source.ParentCommentId is { } parent ? post.GetBranch(parent) : [];
+        var additionalStarId = source?.AdditionalReplierId;
+        var branch = source?.ParentCommentId is { } parent ? post.GetBranch(parent) : [];
         var turnContext = new StarReplyContext(
             new StarAgentProfile(world, star.Id, player.Address),
             star.Id,
             post.Text,
             branch,
-            source.Text,
+            source?.Text,
             turnPolicy.IsHateEnabled(player, world),
             request.Additional);
         yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Generating, request.AuthorId, null, null, null);

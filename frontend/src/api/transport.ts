@@ -2,19 +2,14 @@ import { error, warn } from '../app/log'
 import { runtimeConfig } from '../app/runtimeConfig'
 import { getAccessToken, refreshAccess } from './auth'
 import { EventsClient, PlayerClient, PostsClient, SocialClient, TelemetryClient, WorldsClient } from './generated/reki-api'
-import type { GenerateReplyRequest, PublicationFailure, StartPublicationRequest, SwaggerResponse } from './generated/reki-api'
+import type { GenerateReplyRequest, SwaggerResponse } from './generated/reki-api'
 import { assertSession, sessionGeneration } from './session'
 
 export class ApiError extends Error {
-  constructor(public readonly status: number, method: string, path: string, public readonly failure?: PublicationFailure) {
+  constructor(public readonly status: number, method: string, path: string, public readonly problemType?: string) {
     super(`${method} ${path.replace(/\/[\w-]{16,}/g, '/:id')} ${status}`)
     this.name = 'ApiError'
   }
-}
-export function publicationFailure(value: unknown): PublicationFailure | undefined {
-  if (typeof value !== 'object' || value === null || !('code' in value) || !('category' in value) || !('policyVersion' in value)) return undefined
-  return typeof value.code === 'string' && typeof value.category === 'string' && typeof value.policyVersion === 'string'
-    ? { code: value.code, category: value.category, policyVersion: value.policyVersion } : undefined
 }
 const baseUrl = new URL(runtimeConfig.apiBaseUrl, window.location.origin).href
 export function transport(telemetry = false) {
@@ -25,17 +20,17 @@ export function transport(telemetry = false) {
     const firstToken = getAccessToken()
     if (!anonymous && firstToken) headers.set('Authorization', `Bearer ${firstToken}`)
     let response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
-    if (!anonymous && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
+    if (!anonymous && !(path === '/posts' && init.method === 'POST') && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
       headers.set('Authorization', `Bearer ${getAccessToken()}`)
       response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
     }
     if (response.ok) return response
-    let failure: PublicationFailure | undefined
+    let problemType: string | undefined
     try {
       const body: unknown = await response.clone().json()
-      if (typeof body === 'object' && body !== null && 'failure' in body) failure = publicationFailure(body.failure)
+      if (typeof body === 'object' && body !== null && 'type' in body && typeof body.type === 'string') problemType = body.type
     } catch { /* Non-JSON transport error. */ }
-    const cause = new ApiError(response.status, init.method ?? 'GET', path, failure)
+    const cause = new ApiError(response.status, init.method ?? 'GET', path, problemType)
     if (!telemetry) {
       if (response.status >= 500) error('api_error', cause, { status: response.status })
       else if (response.status !== 404 || path !== '/me') warn('api_error', { status: response.status, msg: cause.message })
@@ -56,10 +51,9 @@ export async function data<T>(request: Promise<SwaggerResponse<T>>, authenticate
 }
 // Fetch generation buffers file responses into Blob. Keep SSE streaming through
 // this small adapter; REST requests and wire DTOs use the generated client.
-export async function stream(input: { url: '/posts/publications'; query: { worldId: string }; body: StartPublicationRequest }
-  | { url: '/posts/{postId}/replies/generation'; path: { postId: string }; query: { worldId: string }; body: GenerateReplyRequest }, signal?: AbortSignal): Promise<Response> {
+export async function stream(input: { url: '/posts/{postId}/replies/generation'; path: { postId: string }; query: { worldId: string }; body: GenerateReplyRequest }, signal?: AbortSignal): Promise<Response> {
   const generation = sessionGeneration()
-  const path = 'path' in input ? input.url.replace('{postId}', encodeURIComponent(input.path.postId)) : input.url
+  const path = input.url.replace('{postId}', encodeURIComponent(input.path.postId))
   const response = await http.fetch(`${baseUrl}${path}?worldId=${encodeURIComponent(input.query.worldId)}`, {
     method: 'POST', body: JSON.stringify(input.body), signal, headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
   })

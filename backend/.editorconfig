@@ -132,6 +132,9 @@ dotnet_diagnostic.SA1118.severity = none
 [src/Reki.Domain/Worlds/StarTrait.cs]
 dotnet_diagnostic.AV1115.severity = none
 
+[src/Reki.Domain/Posts/GamePost.cs]
+dotnet_diagnostic.AV1553.severity = none
+
 [tests/**/*.cs]
 # Test callbacks may require ref/out parameters, such as ActivityListener.Sample.
 dotnet_diagnostic.AV1562.severity = none

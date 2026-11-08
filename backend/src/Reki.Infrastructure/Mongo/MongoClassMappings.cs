@@ -2,7 +2,6 @@ using System.Linq.Expressions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
-using Reki.Application.Posts;
 using Reki.Domain.Events;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
@@ -43,7 +42,6 @@ internal static class MongoClassMappings
             new BsonValueObjectConversions.WorldIdBsonSerializer());
         RegisterWithMongoId<PlayerProfile, PlayerId>(item => item.Id);
         RegisterWithMongoId<GamePost, PostId>(item => item.Id, ignoreExtraElements: true);
-        RegisterWithMongoId<Publication, string>(item => item.Id);
         RegisterWithMongoId<DailyGameEvent, RekiEventId>(item => item.Id);
         RegisterWithMongoId<World, WorldId>(item => item.Id);
         RegisterWithMongoId<Invitation, InvitationId>(item => item.Id);

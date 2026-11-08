@@ -13,7 +13,6 @@ internal sealed class DeletePlayerCommandHandler(
     IPlayerRepository players,
     IWorldRepository worlds,
     IPostRepository posts,
-    IPublicationRepository publications,
     IDailyGameEventRepository events,
     IInvitationRepository invitations,
     IRekiContextAccessor rekiContextAccessor,
@@ -30,7 +29,6 @@ internal sealed class DeletePlayerCommandHandler(
             {
                 var worldIds = await worlds.GetWorldIdsAsync(player.Id, token);
                 await posts.DeletePostsAsync(worldIds, token);
-                await publications.DeletePublicationsAsync(player.Id, token);
                 await events.DeleteEventsAsync(player.Id, token);
                 await worlds.DeleteWorldsAsync(player.Id, token);
                 await invitations.DeleteInvitesAsync(player.Id, token);

@@ -15,7 +15,7 @@
     <ItemGroup>
         <PackageReference Include="TUnit"/>
         <PackageReference Include="TUnit.AspNetCore"/>
-        <PackageReference Include="Testcontainers.MongoDb"/>
+        <PackageReference Include="Testcontainers"/>
         <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing"/>
         <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing"/>
         <PackageReference Include="NSubstitute"/>

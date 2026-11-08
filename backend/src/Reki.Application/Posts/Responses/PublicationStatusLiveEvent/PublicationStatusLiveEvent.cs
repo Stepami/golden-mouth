@@ -1,7 +1,0 @@
-namespace Reki.Application.Posts.Responses.PublicationStatusLiveEvent;
-
-/// <summary>A generation-stage status delivered over SSE.</summary>
-public sealed record PublicationStatusLiveEvent(
-    PublicationStatusType Type,
-    string PublicationId,
-    PublicationFailure? Failure = null);

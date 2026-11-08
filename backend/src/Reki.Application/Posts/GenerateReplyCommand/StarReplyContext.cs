@@ -9,6 +9,6 @@ public sealed record StarReplyContext(
     StarId TargetStarId,
     string PostText,
     IReadOnlyList<GameComment> Branch,
-    string PlayerText,
+    string? PlayerText,
     bool HateEnabled,
     bool Additional = false);
