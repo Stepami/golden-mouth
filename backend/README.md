@@ -90,7 +90,7 @@ Migration `2.4.7` drops the retired `stars_memory` and `challenges` collections,
 
 ## Test infrastructure
 
-API component tests share one `ApiFactory`, WireMock server and MongoDB database per test session. `TestSessionFixture` owns the MongoDB container/client, WireMock and resettable clock; TUnit disposes the dependent API factory before these resources at session end. The host starts lazily for the first API test and applies startup migrations once.
+API component tests share one `ApiFactory`, WireMock server and MongoDB database per test session. The test fixture runs MongoDB Atlas Local 8.3.11 in one Testcontainers container with MongoDB and Search; production Compose uses MongoDB 9.0.4. The container health check does not guarantee that a newly created search index is ready. `TestSessionFixture` owns the MongoDB container/client, WireMock and resettable clock; TUnit disposes the dependent API factory before these resources at session end. The host starts lazily for the first API test and applies startup migrations once.
 
 Migration tests belong to `ParallelGroup("Migrations", Order = 0)` and use isolated temporary databases on the same MongoDB container. API tests belong to `ParallelGroup("Api", Order = 1)` and share `NotInParallel("ApiState")`, so their setup, execution and teardown do not overlap. Unit tests keep the default parallel execution. A filtered API test also works independently of the migration-test group.
 

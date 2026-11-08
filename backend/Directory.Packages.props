@@ -70,7 +70,7 @@
         <PackageVersion Include="Microsoft.Extensions.Diagnostics.Testing" Version="$(MicrosoftTestingVersion)"/>
         <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="$(MicrosoftTestingVersion)"/>
         <PackageVersion Include="NSubstitute" Version="6.2.0"/>
-        <PackageVersion Include="Testcontainers.MongoDb" Version="4.16.0"/>
+        <PackageVersion Include="Testcontainers" Version="4.16.0"/>
         <PackageVersion Include="TUnit" Version="$(TUnitVersion)"/>
         <PackageVersion Include="TUnit.AspNetCore" Version="$(TUnitVersion)"/>
         <PackageVersion Include="WireMock.Net" Version="2.30.0"/>
