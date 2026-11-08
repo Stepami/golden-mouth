@@ -13,13 +13,22 @@ internal sealed class AddPostEmbeddingFilters : RekiMigrationBase
 
     public override async Task UpAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken)
     {
-        var posts = db.GetCollection<BsonDocument>(MongoCollections.Posts);
         var definition = new BsonDocument("fields", new BsonArray
         {
             new BsonDocument { { "type", "vector" }, { "path", "_embedding" }, { "numDimensions", 312 }, { "similarity", "cosine" } },
             new BsonDocument { { "type", "filter" }, { "path", "WorldId" } },
             new BsonDocument { { "type", "filter" }, { "path", "AuthorId" } },
         });
-        await posts.SearchIndexes.UpdateAsync(IndexName, definition, cancellationToken);
+
+        // The driver update API omits the index type required by Atlas Local.
+        await db.RunCommandAsync<BsonDocument>(
+            new BsonDocument
+            {
+                { "updateSearchIndex", MongoCollections.Posts },
+                { "name", IndexName },
+                { "type", "vectorSearch" },
+                { "definition", definition },
+            },
+            cancellationToken: cancellationToken);
     }
 }
