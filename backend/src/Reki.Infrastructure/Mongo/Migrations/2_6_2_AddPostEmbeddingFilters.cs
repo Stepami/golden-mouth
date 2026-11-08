@@ -20,22 +20,6 @@ internal sealed class AddPostEmbeddingFilters : RekiMigrationBase
             new BsonDocument { { "type", "filter" }, { "path", "WorldId" } },
             new BsonDocument { { "type", "filter" }, { "path", "AuthorId" } },
         });
-        using var indexes = await posts.SearchIndexes.ListAsync(cancellationToken: cancellationToken);
-        var previous = (await indexes.ToListAsync(cancellationToken)).First(index => index["name"] == IndexName);
-        var version = previous["latestDefinitionVersion"]["version"].ToInt32();
         await posts.SearchIndexes.UpdateAsync(IndexName, definition, cancellationToken);
-
-        // An updated index can remain queryable using its previous definition while rebuilding.
-        while (true)
-        {
-            using var currentIndexes = await posts.SearchIndexes.ListAsync(cancellationToken: cancellationToken);
-            var current = (await currentIndexes.ToListAsync(cancellationToken)).First(index => index["name"] == IndexName);
-            if (current["latestDefinitionVersion"]["version"].ToInt32() > version && current["status"] == "READY")
-            {
-                break;
-            }
-
-            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-        }
     }
 }
