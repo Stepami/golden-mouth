@@ -47,8 +47,8 @@
       "max_subscriber_fraction": 0.005,
       "reason_priority": ["angry_abuse", "near_copy"],
       "emotion_tie_break": "sad_tone",
-      "thresholds": {"angry_abuse": 0.9, "near_copy_cosine": 0.98, "near_copy_nli": 0.95, "sad_tone": 0.98, "anxious_tone": 0.96},
-      "threshold_reduction_per_step": {"angry_abuse": 0.05, "near_copy_cosine": 0.01, "near_copy_nli": 0.015, "sad_tone": 0.01, "anxious_tone": 0.01},
+      "thresholds": {"angry_abuse": 0.9, "near_copy_cosine": 0.98, "sad_tone": 0.98, "anxious_tone": 0.96},
+      "threshold_reduction_per_step": {"angry_abuse": 0.05, "near_copy_cosine": 0.01, "sad_tone": 0.01, "anxious_tone": 0.01},
       "drama": {
         "off": {"hate_x": 0, "threshold_steps": 0, "loss_multiplier": 0.5},
         "soft": {"hate_x": 0.5, "threshold_steps": 1, "loss_multiplier": 0.75},
@@ -66,8 +66,8 @@
       "max_subscriber_fraction": 0.01,
       "reason_priority": ["angry_abuse", "near_copy"],
       "emotion_tie_break": "sad_tone",
-      "thresholds": {"angry_abuse": 0.8, "near_copy_cosine": 0.96, "near_copy_nli": 0.9, "sad_tone": 0.96, "anxious_tone": 0.94},
-      "threshold_reduction_per_step": {"angry_abuse": 0.05, "near_copy_cosine": 0.01, "near_copy_nli": 0.015, "sad_tone": 0.01, "anxious_tone": 0.01},
+      "thresholds": {"angry_abuse": 0.8, "near_copy_cosine": 0.96, "sad_tone": 0.96, "anxious_tone": 0.94},
+      "threshold_reduction_per_step": {"angry_abuse": 0.05, "near_copy_cosine": 0.01, "sad_tone": 0.01, "anxious_tone": 0.01},
       "drama": {
         "off": {"hate_x": 0, "threshold_steps": 0, "loss_multiplier": 0.5},
         "soft": {"hate_x": 0.5, "threshold_steps": 1, "loss_multiplier": 0.75},
@@ -85,8 +85,8 @@
       "max_subscriber_fraction": 0.015,
       "reason_priority": ["angry_abuse", "near_copy"],
       "emotion_tie_break": "sad_tone",
-      "thresholds": {"angry_abuse": 0.7, "near_copy_cosine": 0.94, "near_copy_nli": 0.85, "sad_tone": 0.94, "anxious_tone": 0.92},
-      "threshold_reduction_per_step": {"angry_abuse": 0.05, "near_copy_cosine": 0.01, "near_copy_nli": 0.015, "sad_tone": 0.01, "anxious_tone": 0.01},
+      "thresholds": {"angry_abuse": 0.7, "near_copy_cosine": 0.94, "sad_tone": 0.94, "anxious_tone": 0.92},
+      "threshold_reduction_per_step": {"angry_abuse": 0.05, "near_copy_cosine": 0.01, "sad_tone": 0.01, "anxious_tone": 0.01},
       "drama": {
         "off": {"hate_x": 0, "threshold_steps": 0, "loss_multiplier": 0.5},
         "soft": {"hate_x": 0.5, "threshold_steps": 1, "loss_multiplier": 0.75},
