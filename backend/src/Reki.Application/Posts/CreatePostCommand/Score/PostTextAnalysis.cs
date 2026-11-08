@@ -21,6 +21,11 @@ internal sealed partial class PostTextAnalysis(
         for (var start = 0; start < words.Length; start += 80)
         {
             yield return string.Join(' ', words.Skip(start).Take(100));
+
+            if (start + 100 >= words.Length)
+            {
+                yield break;
+            }
         }
     }
 
