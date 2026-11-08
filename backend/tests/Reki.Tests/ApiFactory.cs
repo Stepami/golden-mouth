@@ -1,4 +1,5 @@
 using System.Globalization;
+using Kot.MongoDB.Migrations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
@@ -78,6 +79,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.ConfigureServices(services =>
         {
             services.AddFakeLogging();
+            services.Replace(ServiceDescriptor.Singleton<IMigrationInstantiator, AtlasLocalMigrationInstantiator>());
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
             services.RemoveAll<IValidateOptions<NliOptions>>();
             var nli = Substitute.For<INliScorer>();
