@@ -72,8 +72,16 @@ internal sealed class CreatePostCommandHandler(
             false);
         var score = await scorer.ScoreAsync(post, world, currentBalance, cancellationToken);
         var starId = await stars.GetRelevantCommenterAsync(world, post);
+        var flopReason = score.FlopReason ?? (score.Topic > 0 ? null : "off_topic");
+        var flop = flopReason is not null;
         var progression = progressionCalculator.Calculate(
-            player, world, score, request.OwnWords, wantCompleted, post.Id.ToString(), score.FlopReason is not null);
+            player,
+            world,
+            score,
+            request.OwnWords,
+            wantCompleted,
+            post.Id.ToString(),
+            flop);
         var updatedWorld = world.PublishPost(
             progression.SubscriberDelta,
             progression.Viral,
@@ -92,7 +100,7 @@ internal sealed class CreatePostCommandHandler(
         post = post with
         {
             SubscriberDelta = progression.SubscriberDelta, Quality = progression.Quality, Viral = progression.Viral,
-            Flop = progression.Flop, ReactionEmoji = score.Emoji, PredictedAuthorId = starId.ToAuthorId(), FlopReason = score.FlopReason,
+            Flop = progression.Flop, ReactionEmoji = score.Emoji, PredictedAuthorId = starId.ToAuthorId(), FlopReason = flopReason,
         };
         var invite = await invitations.GetPendingInviteAsync(player.Id, cancellationToken);
         var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
@@ -140,10 +148,10 @@ internal sealed class CreatePostCommandHandler(
             whys.Add(new WhyResponse("🤔", reason, post.SubscriberDelta.ToString(CultureInfo.InvariantCulture)));
         }
 
-        if (score.Topic > 0)
-        {
-            whys.Add(new WhyResponse("🎯", "В тему", string.Empty));
-        }
+        whys.Add(
+            score.Topic > 0
+                ? new WhyResponse("🎯", "В тему", string.Empty)
+                : new WhyResponse("👎", "Не в тему", string.Empty));
 
         var result = new PostResultResponse(
             post.Id,
