@@ -4,7 +4,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using TUnit.Core.Interfaces;
 
-namespace Reki.Tests;
+namespace Reki.Tests.Persistence;
 
 public sealed class MongoFixture : IAsyncInitializer, IAsyncDisposable
 {

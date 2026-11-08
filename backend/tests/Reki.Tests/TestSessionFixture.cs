@@ -8,6 +8,7 @@ using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.Mongo;
 using Reki.Infrastructure.Mongo.Migrations;
+using Reki.Tests.Persistence;
 using TickerQ.DependencyInjection;
 using TickerQ.MongoDB.DependencyInjection;
 using TickerQ.Utilities.Entities;

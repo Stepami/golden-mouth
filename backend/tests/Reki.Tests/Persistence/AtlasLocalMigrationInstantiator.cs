@@ -6,7 +6,7 @@ using Reki.Domain.Posts;
 using Reki.Infrastructure.Mongo.Migrations;
 using Reki.Infrastructure.Mongo.Repositories;
 
-namespace Reki.Tests;
+namespace Reki.Tests.Persistence;
 
 internal sealed class AtlasLocalMigrationInstantiator(IServiceProvider services) : IMigrationInstantiator
 {

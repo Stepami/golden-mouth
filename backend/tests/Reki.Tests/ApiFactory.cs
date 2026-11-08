@@ -13,6 +13,7 @@ using Reki.Api;
 using Reki.Application.Posts.ML;
 using Reki.Infrastructure.Auth;
 using Reki.Infrastructure.ML.Nli;
+using Reki.Tests.Persistence;
 using TUnit.AspNetCore;
 using WebMotions.Fake.Authentication.JwtBearer;
 
