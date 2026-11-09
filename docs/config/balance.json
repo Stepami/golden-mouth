@@ -35,6 +35,16 @@
   },
   "viral": { "base": 0.03, "per_quality": 0.06, "x": 3, "near_miss_band": 0.15 },
   "flop": { "loss_x": -0.3 },
+  "short_cycle_skills": {
+    "status": "agreed-first-test-2026-11-09; backend implementation and DEV verification required",
+    "initial_level": 1,
+    "max_level": 10,
+    "progress_per_confirmed_manifestation": 10,
+    "level_thresholds_total": [0, 10, 30, 60, 100, 150, 210, 280, 360, 450],
+    "free_feed_uses_same_progression": true,
+    "unmanifested_skill_gain": 0,
+    "quest_completion_extra_gain": 0
+  },
   "skills": {
     "ids": ["brave", "humor", "topic"],
     "levels_xp": [0, 8, 20, 36, 56, 80, 110, 150, 200, 270],
