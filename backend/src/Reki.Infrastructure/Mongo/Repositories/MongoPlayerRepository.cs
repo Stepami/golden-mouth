@@ -20,7 +20,7 @@ internal sealed class MongoPlayerRepository(
         await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask CreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
-        await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
+        await _players.InsertOneAsync(sessionProvider.Session, player, cancellationToken: cancellationToken);
 
     public async ValueTask SavePlusNotificationAsync(
         PlayerProfile player,
@@ -73,8 +73,7 @@ internal sealed class MongoPlayerRepository(
         int plusEnergy,
         CancellationToken cancellationToken)
     {
-        var filter = Builders<PlayerProfile>.Filter.Eq(player => player.OnboardingCompleted, true) &
-            Builders<PlayerProfile>.Filter.Lt(player => player.PostsPeriodStartedAtUtc, periodStart);
+        var filter = Builders<PlayerProfile>.Filter.Lt(player => player.PostsPeriodStartedAtUtc, periodStart);
         var update = Builders<PlayerProfile>.Update
             .Set(player => player.EnergyUsed, 0)
             .Set(player => player.PostsPeriodStartedAtUtc, periodStart)

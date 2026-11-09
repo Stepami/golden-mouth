@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using OpenIddict.Validation.AspNetCore;
 using Reki.Application.Auth;
@@ -10,6 +11,8 @@ internal static class DependencyInjection
     {
         services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.SectionName);
         services.AddScoped<IAuthSessionService, AuthSessionService>();
+        services.AddKeyedScoped<IExternalUserIdProvider, OnboardingExternalUserIdProvider>(AuthConstants.Schemes.Onboarding);
+        services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, OnboardingBasicHandler>(AuthConstants.Schemes.Onboarding, null);
 
         services
             .AddAuthorizationBuilder()

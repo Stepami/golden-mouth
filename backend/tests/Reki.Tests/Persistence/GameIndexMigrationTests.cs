@@ -448,7 +448,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             .Find(new BsonDocument("_id", "test-player")).SingleAsync(CancellationToken.None);
         await Assert.That(savedPlayer["_id"]).IsEqualTo(player["_id"]);
         await Assert.That(savedPlayer["ExternalUserIds"]).IsEqualTo(new BsonArray { "telegram:12345" });
-        await Assert.That(savedPlayer["OnboardingCompleted"].AsBoolean).IsTrue();
         await Assert.That(savedPlayer.Contains("TelegramUserId")).IsFalse();
         await Assert.That(savedPlayer.Contains("World")).IsFalse();
         await Assert.That(savedPlayer.Contains("ChallengeBonusUntilUtc")).IsFalse();

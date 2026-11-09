@@ -22,17 +22,18 @@ internal sealed class OnboardPlayerCommandHandler(
         OnboardPlayer request,
         CancellationToken cancellationToken)
     {
-        var player = await playerRepository.GetPlayerAsync(request.PlayerId, cancellationToken)
-            ?? throw new ResourceNotFoundException("Player not found.");
-        if (player.OnboardingCompleted)
+        if (await playerRepository.GetPlayerAsync(request.ExternalUserId, cancellationToken) is not null)
         {
             throw new RequestConflictException("Onboarding has already been completed.");
         }
 
         var currentBalance = balance.CurrentValue;
-        var inviter = await ResolveInviterAsync(request, player.Id, cancellationToken);
-        var completed = player with
+        var inviter = await ResolveInviterAsync(request, cancellationToken);
+        var completed = new PlayerProfile
         {
+            Id = PlayerId.New(),
+            ExternalUserIds = [request.ExternalUserId],
+            Settings = new PlayerSettings("all", "22:00-09:00", false),
             BirthGroup = request.BirthGroup,
             Address = request.Address,
             AgeBand = request.AgeBand,
@@ -45,12 +46,11 @@ internal sealed class OnboardPlayerCommandHandler(
                 [SkillId.From("humor")] = new(1, 0, 0),
                 [SkillId.From("topic")] = new(1, 0, 0),
             },
-            OnboardingCompleted = true,
         };
         await unitOfWork.ExecuteAsync(
             async token =>
             {
-                await playerRepository.ReplacePlayerAsync(completed, token);
+                await playerRepository.CreatePlayerAsync(completed, token);
 
                 if (inviter is not null)
                 {
@@ -62,13 +62,12 @@ internal sealed class OnboardPlayerCommandHandler(
             },
             cancellationToken);
 
-        analytics.TrackPlayer(completed, "onboarding_completed", new Dictionary<string, string>(), referred: inviter is not null);
+        analytics.TrackPlayer(completed, "player_created", new Dictionary<string, string>(), referred: inviter is not null);
         return completed;
     }
 
     private async ValueTask<PlayerProfile?> ResolveInviterAsync(
         OnboardPlayer request,
-        PlayerId playerId,
         CancellationToken cancellationToken)
     {
         var code = request.ReferralCode;
@@ -79,8 +78,6 @@ internal sealed class OnboardPlayerCommandHandler(
         }
 
         var inviter = await playerRepository.GetPlayerAsync(PlayerId.From(code[4..]), cancellationToken);
-        return inviter is not null && inviter.Id != playerId
-            ? inviter
-            : null;
+        return inviter;
     }
 }

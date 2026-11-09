@@ -4,7 +4,7 @@ import { clearPlayerDrafts } from '../app/postDraft';
 import { clearWorldDrafts } from '../app/worldDraft';
 import { clearAvatarPersonalization } from '../app/avatarPersonalization';
 import { clearReferral } from '../app/referral';
-import { clearTokens, logout as revokeSession } from './auth';
+import { clearTokens, logout as revokeSession, registerPlayer } from './auth';
 import { clearApiCache } from '../app/useApi';
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics';
 import { clearWorldContent, installWorldContent, installWorldTemplates } from './worldContent';
@@ -115,8 +115,6 @@ async function loadPlayer(worldId?: string): Promise<Player | undefined> {
         ownedWorldSnapshot = undefined;
     sessionIdentity = player;
     setTelemetryPlayerAvailable(true);
-    if (!player.onboardingCompleted)
-        return undefined;
     clearReferral();
     const [ownedWorlds, invitation] = await Promise.all([
         data(sdk.worlds.getOwnedWorlds()).then(worlds => worlds.map(map.world)),
@@ -185,13 +183,12 @@ export const api = {
     },
     playerId: (): string | undefined => sessionIdentity?.id,
     hasPlayer: (): boolean => sessionIdentity !== undefined,
-    onboardingCompleted: (): boolean => sessionIdentity?.onboardingCompleted === true,
-    onboardingProfile: () => sessionIdentity?.onboardingCompleted ? sessionIdentity : undefined,
+    onboardingProfile: () => sessionIdentity,
     onboarding: async (body: Wire.OnboardingRequest): Promise<PlayerDocument> => {
-        if (sessionIdentity?.onboardingCompleted)
+        if (sessionIdentity)
             throw new Error('Onboarding has already been completed');
         sessionIdentity =
-            map.player(await data(sdk.player.completeOnboarding(body)));
+            map.player(await registerPlayer(body));
         setTelemetryPlayerAvailable(true);
         return sessionIdentity;
     },

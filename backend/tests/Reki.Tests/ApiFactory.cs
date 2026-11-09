@@ -46,27 +46,12 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         PlayerId? playerId = null;
         if (telegramUserId is { } id)
         {
-            var externalId = ExternalUserId.From($"telegram:{id}");
+            var externalId = ExternalUserId.Telegram(id);
             var players = Session.Database.GetCollection<PlayerProfile>("players");
-            var player = players.Find(item => item.ExternalUserIds.Contains(externalId)).FirstOrDefault();
-            if (player is null)
-            {
-                player = new PlayerProfile
-                {
-                    Id = PlayerId.New(),
-                    ExternalUserIds = [externalId],
-                    BirthGroup = string.Empty,
-                    Address = Address.Nick,
-                    Skills = new Dictionary<SkillId, SkillProgress>(),
-                    Settings = new PlayerSettings("all", "22:00-09:00", false),
-                };
-                players.InsertOne(player);
-            }
-
-            playerId = player.Id;
+            playerId = players.Find(item => item.ExternalUserIds.Contains(externalId)).FirstOrDefault()?.Id ?? PlayerId.New();
         }
 
-        return new TestApiClient(client, playerId);
+        return new TestApiClient(client, playerId, telegramUserId, this);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

@@ -12,7 +12,6 @@ using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Auth;
 
 namespace Reki.Tests.Api;
 
@@ -113,7 +112,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(numberedChannel.Items[0].PostId).IsEqualTo(ordered[10].Id);
 
         using var http = Factory.CreateClient();
-        http.SetFakeJwtBearerToken(new Dictionary<string, object> { [AuthConstants.Claims.TelegramUserId] = "1036" });
+        http.SetFakeJwtBearerToken(new Dictionary<string, object> { ["sub"] = (await GetStoredPlayerAsync(1036))["_id"].AsBsonBinaryData.ToGuid().ToString("N") });
         var invalidParameters = new[]
         {
             "cursor=text", "cursor=00000000000000000000000000000000", "pageSize=0", "pageSize=-1", "pageSize=text",

@@ -336,6 +336,45 @@ export class ExternalTelegramAuthClient {
         }
         return Promise.resolve<SwaggerResponse<AuthTokenResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
+
+    /**
+     * @return OK
+     */
+    completeOnboarding(body: OnboardingRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+        let url_ = this.baseUrl + "/onboarding";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCompleteOnboarding(_response);
+        });
+    }
+
+    protected processCompleteOnboarding(response: Response): Promise<SwaggerResponse<void>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return new SwaggerResponse(status, _headers, null as any);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
+    }
 }
 
 export class PlayerClient {
@@ -418,47 +457,6 @@ export class PlayerClient {
             });
         }
         return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
-     * @return OK
-     */
-    completeOnboarding(body: OnboardingRequest, signal?: AbortSignal): Promise<SwaggerResponse<PlayerResponse>> {
-        let url_ = this.baseUrl + "/onboarding";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_: RequestInit = {
-            body: content_,
-            method: "POST",
-            signal,
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCompleteOnboarding(_response);
-        });
-    }
-
-    protected processCompleteOnboarding(response: Response): Promise<SwaggerResponse<PlayerResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlayerResponse;
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<PlayerResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
@@ -1894,7 +1892,6 @@ export interface PlayerResponse {
     experiments: { [key: string]: string; };
     hitOwnWorldMilestone?: boolean;
     ageBand?: string;
-    onboardingCompleted?: boolean;
 
     [key: string]: any;
 }

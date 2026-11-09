@@ -22,15 +22,15 @@ namespace Reki.Tests.Api;
 public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
-    public async Task Me_BeforeOnboarding_ReturnsMinimalProfileAsync()
+    public async Task Me_RegisteredPlayer_ReturnsProfileAsync()
     {
         using var api = Factory.CreateApiClient(18301);
+        await api.RegisterAsync(new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None);
 
         var player = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
-        await Assert.That(player.OnboardingCompleted).IsFalse();
-        await Assert.That(player.Energy).IsEqualTo(0);
-        await Assert.That(player.Skills.Count).IsEqualTo(0);
+        await Assert.That(player.Energy).IsEqualTo(10);
+        await Assert.That(player.Skills.Count).IsEqualTo(3);
         await Assert.That(await Database.GetCollection<BsonDocument>("players")
             .CountDocumentsAsync(new BsonDocument("ExternalUserIds", "telegram:18301"), cancellationToken: CancellationToken.None))
             .IsEqualTo(1L);
@@ -68,10 +68,10 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var before = await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
 
         // Act
-        PlayerApiException? exception = null;
+        int? statusCode = null;
         try
         {
-            await api.Player.CompleteOnboardingAsync(
+            await new ExternalTelegramAuthClient(Factory.CreateClient()).CompleteOnboardingAsync(
                 new OnboardingRequest
                 {
                     BirthGroup = BirthGroup.Teen,
@@ -79,13 +79,19 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                 },
                 CancellationToken.None);
         }
-        catch (PlayerApiException caught)
+        catch (ExternalTelegramAuthApiException caught)
         {
-            exception = caught;
+            statusCode = caught.StatusCode;
         }
 
         // Assert
-        await Assert.That(exception?.StatusCode).IsEqualTo(StatusCodes.Status401Unauthorized);
+        await Assert.That(statusCode).IsEqualTo(StatusCodes.Status401Unauthorized);
+        using var malformedClient = Factory.CreateClient();
+        malformedClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", "not-base64!");
+        var malformed = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
+            new ExternalTelegramAuthClient(malformedClient).CompleteOnboardingAsync(
+                new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None));
+        await Assert.That(malformed?.StatusCode).IsEqualTo(StatusCodes.Status401Unauthorized);
         var after = await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
         await Assert.That(after).IsEqualTo(before);
     }
@@ -95,7 +101,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         const long userId = 10101;
         using var api = Factory.CreateApiClient(userId);
-        await api.Player.CompleteOnboardingAsync(
+        await api.RegisterAsync(
             new OnboardingRequest
             {
                 BirthGroup = BirthGroup.Adult,
@@ -114,7 +120,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         const long telegramUserId = 1001;
         using var api = Factory.CreateApiClient(telegramUserId);
 
-        var response = await api.Player.CompleteOnboardingAsync(
+        var response = await api.RegisterAsync(
             new OnboardingRequest
             {
                 BirthGroup = BirthGroup.Teen,
@@ -407,7 +413,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Settings_PlayerPreferences_PersistAsync()
     {
         using var api = Factory.CreateApiClient(8400);
-        await api.Player.CompleteOnboardingAsync(
+        await api.RegisterAsync(
             new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick },
             CancellationToken.None);
         foreach (var address in new[] { Address.She, Address.He, Address.Nick })
@@ -523,8 +529,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         // Arrange
         using var api = Factory.CreateApiClient(8411);
-        await Database.GetCollection<PlayerProfile>("players").DeleteOneAsync(
-            player => player.ExternalUserIds.Contains(ExternalUserId.From("telegram:8411")));
 
         // Act
         var response = await Assert.ThrowsAsync<PlayerApiException>(() => api.Player.UpdateSettingsAsync(new UpdateSettingsRequest(), CancellationToken.None));
@@ -749,6 +753,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Invitation_BeforeOnboarding_ReturnsEmptyAsync()
     {
         using var api = Factory.CreateApiClient(8583);
+        await api.RegisterAsync(new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None);
         var response = await api.Player.GetInvitationAsync(CancellationToken.None);
         await Assert.That(response.Bonus).IsEqualTo(0);
     }

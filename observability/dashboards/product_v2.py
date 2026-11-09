@@ -89,18 +89,12 @@ def make(sql_panel, box, promql_panel):
  stick AS (SELECT w.observed_days,count(DISTINCT v.player_id) AS mau,count(v.player_id) AS active_profile_days, sum(CASE WHEN v.player_id IS NOT NULL AND v.day>=w.today-7 THEN 1 ELSE 0 END) AS active_days_7d FROM coverage w LEFT JOIN (SELECT v.* FROM visits v JOIN selected s ON v.player_id=s.player_id) v ON v.day>=w.today-w.observed_days AND v.day<w.today GROUP BY w.observed_days)
  SELECT observed_days,mau,active_profile_days,round(1.0*active_profile_days/nullif(observed_days,0),2) AS mean_dau,round(1.0*active_days_7d/nullif(least(7,observed_days),0),2) AS mean_dau_7d,
  round(100.0*active_profile_days/nullif(observed_days*mau,0),1) AS stickiness_pct FROM stick""",34,12)
- add('funnel','Воронка: регистрация → онбординг → 1 / 3 / 10 постов','Регистрация и посты используют выбранную базу. Онбординг считается только среди новых регистраций с player_created.completed=false: users — завершившие, base — новые игроки. Старые регистрации не считаются отказами от онбординга. Переключатель первого наблюдения предназначен для старой истории; это прохождение, не retention.',
- """, onboarding AS (SELECT player_id,
- max(CASE WHEN event_name='player_created' AND prop_completed='false' THEN 1 ELSE 0 END) AS new_registration,
- max(CASE WHEN event_name='onboarding_completed' THEN 1 ELSE 0 END) AS completed
- FROM raw GROUP BY player_id),
- progression AS (SELECT c.player_id,count(p.post_id) AS posts,max(o.new_registration) AS new_registration,max(o.completed) AS completed
- FROM cohort c LEFT JOIN posts p ON c.player_id=p.player_id LEFT JOIN onboarding o ON c.player_id=o.player_id GROUP BY c.player_id), stages AS (
+ add('funnel','Воронка: регистрация → 1 / 3 / 10 постов','По умолчанию подтверждённые сервером регистрации. Переключатель базы позволяет смотреть старую историю по первому наблюдению; это приближение, не доказанная регистрация. Все этапы используют одну базу; это прохождение, не retention.',
+ """, progression AS (SELECT c.player_id,count(p.post_id) AS posts FROM cohort c LEFT JOIN posts p ON c.player_id=p.player_id GROUP BY c.player_id), stages AS (
  SELECT 0 AS ord,CASE WHEN '${cohort_origin}'='observed' THEN 'Первое наблюдение' ELSE 'Регистрация' END AS stage,count(*) AS users,count(*) AS base FROM progression UNION ALL
- SELECT 1,'Онбординг · новые регистрации',count(CASE WHEN new_registration=1 AND completed=1 THEN 1 END),count(CASE WHEN new_registration=1 THEN 1 END) FROM progression UNION ALL
- SELECT 2,'Первый пост',count(CASE WHEN posts>=1 THEN 1 END),count(*) FROM progression UNION ALL
- SELECT 3,'Три поста',count(CASE WHEN posts>=3 THEN 1 END),count(*) FROM progression UNION ALL
- SELECT 4,'Десять постов',count(CASE WHEN posts>=10 THEN 1 END),count(*) FROM progression)
+ SELECT 1,'Первый пост',count(CASE WHEN posts>=1 THEN 1 END),count(*) FROM progression UNION ALL
+ SELECT 2,'Три поста',count(CASE WHEN posts>=3 THEN 1 END),count(*) FROM progression UNION ALL
+ SELECT 3,'Десять постов',count(CASE WHEN posts>=10 THEN 1 END),count(*) FROM progression)
  SELECT stage,users,base,round(100.0*users/nullif(base,0),1) AS conversion_pct FROM stages ORDER BY ord""",46,14)
  add('retention','Возврат когорт: D1 / D3 / D7','Когорты по дням МСК. Переключатель базы: подтверждённая регистрация или первое наблюдение для старой истории. Точный день возврата. Возвращение в день регистрации не D1. Текущий день исключён из eligible. Разные знаменатели показаны явно; не объединять в воронку.',
  """, cohort_days AS (SELECT player_id,floor((cohort_at+10800000000)/86400000000) AS registered_day FROM cohort), returns AS (

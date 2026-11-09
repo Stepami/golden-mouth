@@ -4,7 +4,7 @@ using Reki.Domain.Player;
 namespace Reki.Application.Player.OnboardPlayerCommand;
 
 public sealed record OnboardPlayer(
-    PlayerId PlayerId,
+    ExternalUserId ExternalUserId,
     string BirthGroup,
     Address Address,
     string? ReferralCode,

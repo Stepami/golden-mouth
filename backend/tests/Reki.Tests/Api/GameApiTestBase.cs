@@ -108,7 +108,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         WorldTemplate world = WorldTemplate.Stage,
         string referralCode = "")
     {
-        var player = await api.Player.CompleteOnboardingAsync(
+        var player = await api.RegisterAsync(
             new OnboardingRequest
             {
                 BirthGroup = BirthGroup.Teen,

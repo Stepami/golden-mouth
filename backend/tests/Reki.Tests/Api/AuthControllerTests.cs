@@ -1,6 +1,9 @@
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using Reki.Api.Requests.Auth;
 using Reki.Api.Requests.Player;
 using Reki.Domain.Player;
@@ -37,6 +40,18 @@ public sealed class AuthControllerTests(ApiFactory factory)
         {
             using var firstClient = firstFactory.CreateClient();
             var exchange = new ExternalTelegramAuthClient(firstClient);
+            var missing = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() => ExchangeAsync(firstClient, exchange, initData))
+                ?? throw new InvalidOperationException("Expected registration_required.");
+            await Assert.That(missing.StatusCode).IsEqualTo(400);
+            using var body = JsonDocument.Parse(missing.Response);
+            await Assert.That(body.RootElement.GetProperty("error").GetString()).IsEqualTo("registration_required");
+            var externalId = body.RootElement.GetProperty("external_user_id").GetString()
+                ?? throw new InvalidOperationException("External ID is missing.");
+            await Assert.That(externalId).IsEqualTo("telegram:21001");
+            await Assert.That(await factory.Session.Database.GetCollection<BsonDocument>("players")
+                .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
+            firstClient.DefaultRequestHeaders.Authorization = Basic(externalId);
+            await exchange.CompleteOnboardingAsync(new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None);
             first = await ExchangeAsync(firstClient, exchange, initData);
             second = await ExchangeAsync(firstClient, exchange, initData);
         }
@@ -82,14 +97,12 @@ public sealed class AuthControllerTests(ApiFactory factory)
         await Assert.That(first.RefreshToken).IsNotEmpty();
         await Assert.That(first.TokenType).IsEqualTo("Bearer");
         await Assert.That(first.ExpiresIn).IsGreaterThan(0);
-        await Assert.That(me.OnboardingCompleted).IsFalse();
-        await Assert.That(me.Energy).IsEqualTo(0);
+        await Assert.That(me.Energy).IsEqualTo(10);
         await Assert.That(anonymousGame.StatusCode).IsEqualTo(401);
         await Assert.That(wrongRefreshGrant.StatusCode).IsEqualTo(401);
         await Assert.That(refreshed.AccessToken).IsNotEmpty();
         await Assert.That(refreshed.RefreshToken).IsNotEqualTo(first.RefreshToken);
         await Assert.That(issuedAccess.Id).IsEqualTo(me.Id);
-        await Assert.That(issuedAccess.OnboardingCompleted).IsFalse();
         await Assert.That(revoked.StatusCode).IsEqualTo(400);
         await Assert.That(otherSession.AccessToken).IsNotEmpty();
         playerHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherSession.AccessToken);
@@ -106,9 +119,11 @@ public sealed class AuthControllerTests(ApiFactory factory)
             UseProductionAuthentication = true,
         };
         using var client = productionFactory.CreateClient();
+        var initData = SignInitData(factory.Session.TelegramBotToken, 21002);
+        var tampered = initData[..^1] + (initData[^1] == '0' ? "1" : "0");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             AuthConstants.Schemes.MiniApp,
-            SignInitData(factory.Session.TelegramBotToken, 21002) + "tampered");
+            tampered);
 
         // Act
         var rejected = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
@@ -116,7 +131,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
             ?? throw new InvalidOperationException("Expected a rejected Mini App proof.");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             AuthConstants.Schemes.MiniApp,
-            SignInitData(factory.Session.TelegramBotToken, 21002));
+            initData);
         var wrongGrant = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
             new ExternalTelegramAuthClient(client).ExchangeMiniAppAsync(
                 new TokenExchangeRequest { ClientId = ClientId, GrantType = AuthConstants.Grants.TelegramLogin }, CancellationToken.None))
@@ -124,6 +139,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
 
         // Assert
         await Assert.That(rejected.StatusCode).IsGreaterThanOrEqualTo(400);
+        await Assert.That(rejected.Response.Contains("external_user_id", StringComparison.Ordinal)).IsFalse();
         await Assert.That(wrongGrant.StatusCode).IsEqualTo(403);
     }
 
@@ -142,7 +158,10 @@ public sealed class AuthControllerTests(ApiFactory factory)
         var exchange = new ExternalTelegramAuthClient(client);
 
         // Act
-        var token = await ExchangeAsync(client, exchange, SignInitData(factory.Session.TelegramBotToken, 21004));
+        var initData = SignInitData(factory.Session.TelegramBotToken, 21004);
+        client.DefaultRequestHeaders.Authorization = Basic(ExternalUserId.Telegram(21004).Value);
+        await exchange.CompleteOnboardingAsync(new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None);
+        var token = await ExchangeAsync(client, exchange, initData);
 
         // Assert
         await Assert.That(token.AccessToken).IsNotEmpty();
@@ -187,18 +206,13 @@ public sealed class AuthControllerTests(ApiFactory factory)
         };
         using var client = productionFactory.CreateClient();
         var exchange = new ExternalTelegramAuthClient(client);
-        var mini = await ExchangeAsync(client, exchange, SignInitData(factory.Session.TelegramBotToken, 21003));
-        using var miniClient = productionFactory.CreateClient();
-        miniClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", mini.AccessToken);
-        var onboarding = new OnboardingRequest
-        {
-            BirthGroup = BirthGroup.Teen,
-            Address = Address.Nick,
-        };
-        var miniPlayer = await new PlayerClient(miniClient).GetCurrentPlayerAsync(CancellationToken.None);
-        var player = await new PlayerClient(miniClient).CompleteOnboardingAsync(onboarding, CancellationToken.None);
-
-        // Act
+        using var invalidKey = RSA.Create(2048);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SignTelegramIdToken(invalidKey, 21003));
+        var rejectedProof = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
+            exchange.ExchangeTelegramLoginAsync(new TokenExchangeRequest { ClientId = ClientId, GrantType = AuthConstants.Grants.TelegramLogin }, CancellationToken.None))
+            ?? throw new InvalidOperationException("Expected a rejected Widget proof.");
+        await Assert.That(rejectedProof.StatusCode).IsGreaterThanOrEqualTo(400);
+        await Assert.That(rejectedProof.Response.Contains("external_user_id", StringComparison.Ordinal)).IsFalse();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SignTelegramIdToken(rsa, 21003));
         var rawTelegramGame = await Assert.ThrowsAsync<PlayerApiException>(() =>
             new PlayerClient(client).GetCurrentPlayerAsync(CancellationToken.None))
@@ -208,6 +222,28 @@ public sealed class AuthControllerTests(ApiFactory factory)
             ClientId = ClientId,
             GrantType = AuthConstants.Grants.TelegramLogin,
         };
+        var missing = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
+            exchange.ExchangeTelegramLoginAsync(widgetRequest, CancellationToken.None))
+            ?? throw new InvalidOperationException("Expected registration_required.");
+        await Assert.That(missing.StatusCode).IsEqualTo(400);
+        using var body = JsonDocument.Parse(missing.Response);
+        await Assert.That(body.RootElement.GetProperty("error").GetString()).IsEqualTo("registration_required");
+        var externalId = body.RootElement.GetProperty("external_user_id").GetString()
+                ?? throw new InvalidOperationException("External ID is missing.");
+        await Assert.That(externalId).IsEqualTo("telegram:21003");
+        await Assert.That(await factory.Session.Database.GetCollection<BsonDocument>("players")
+            .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
+        client.DefaultRequestHeaders.Authorization = Basic(externalId);
+        await exchange.CompleteOnboardingAsync(
+            new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None);
+        var initData = SignInitData(factory.Session.TelegramBotToken, 21003);
+        var mini = await ExchangeAsync(client, exchange, initData);
+        using var miniClient = productionFactory.CreateClient();
+        miniClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", mini.AccessToken);
+        var miniPlayer = await new PlayerClient(miniClient).GetCurrentPlayerAsync(CancellationToken.None);
+
+        // Act
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", SignTelegramIdToken(rsa, 21003));
         var widget = await exchange.ExchangeTelegramLoginAsync(widgetRequest, CancellationToken.None);
         var wrongGrant = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
             exchange.ExchangeTelegramLoginAsync(
@@ -222,11 +258,11 @@ public sealed class AuthControllerTests(ApiFactory factory)
         await Assert.That(rawTelegramGame.StatusCode).IsEqualTo(401);
         await Assert.That(wrongGrant.StatusCode).IsEqualTo(403);
         await Assert.That(widget.RefreshToken).IsNotEmpty();
-        await Assert.That(miniPlayer.OnboardingCompleted).IsFalse();
-        await Assert.That(player.Id).IsEqualTo(miniPlayer.Id);
-        await Assert.That(current.Id).IsEqualTo(player.Id);
-        await Assert.That(current.OnboardingCompleted).IsTrue();
+        await Assert.That(current.Id).IsEqualTo(miniPlayer.Id);
     }
+
+    private static AuthenticationHeaderValue Basic(string externalUserId) =>
+        new("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes(externalUserId)));
 
     private static async Task<AuthTokenResponse> ExchangeAsync(
         HttpClient client,

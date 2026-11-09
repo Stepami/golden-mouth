@@ -33,15 +33,9 @@ current_profiles AS (SELECT s.player_id, w.subscribers FROM selected s
  LEFT JOIN world_audience w ON s.player_id = w.player_id),
 cohort AS (SELECT *, CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END AS cohort_at FROM selected CROSS JOIN clock WHERE CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END IS NOT NULL
  AND floor((CASE WHEN '${cohort_origin}'='observed' THEN first_seen ELSE registered_at END + 10800000000) / 86400000000) >= today - cast('${days}' AS INT) + 1)
-, onboarding AS (SELECT player_id,
- max(CASE WHEN event_name='player_created' AND prop_completed='false' THEN 1 ELSE 0 END) AS new_registration,
- max(CASE WHEN event_name='onboarding_completed' THEN 1 ELSE 0 END) AS completed
- FROM raw GROUP BY player_id),
- progression AS (SELECT c.player_id,count(p.post_id) AS posts,max(o.new_registration) AS new_registration,max(o.completed) AS completed
- FROM cohort c LEFT JOIN posts p ON c.player_id=p.player_id LEFT JOIN onboarding o ON c.player_id=o.player_id GROUP BY c.player_id), stages AS (
+, progression AS (SELECT c.player_id,count(p.post_id) AS posts FROM cohort c LEFT JOIN posts p ON c.player_id=p.player_id GROUP BY c.player_id), stages AS (
  SELECT 0 AS ord,CASE WHEN '${cohort_origin}'='observed' THEN 'Первое наблюдение' ELSE 'Регистрация' END AS stage,count(*) AS users,count(*) AS base FROM progression UNION ALL
- SELECT 1,'Онбординг · новые регистрации',count(CASE WHEN new_registration=1 AND completed=1 THEN 1 END),count(CASE WHEN new_registration=1 THEN 1 END) FROM progression UNION ALL
- SELECT 2,'Первый пост',count(CASE WHEN posts>=1 THEN 1 END),count(*) FROM progression UNION ALL
- SELECT 3,'Три поста',count(CASE WHEN posts>=3 THEN 1 END),count(*) FROM progression UNION ALL
- SELECT 4,'Десять постов',count(CASE WHEN posts>=10 THEN 1 END),count(*) FROM progression)
+ SELECT 1,'Первый пост',count(CASE WHEN posts>=1 THEN 1 END),count(*) FROM progression UNION ALL
+ SELECT 2,'Три поста',count(CASE WHEN posts>=3 THEN 1 END),count(*) FROM progression UNION ALL
+ SELECT 3,'Десять постов',count(CASE WHEN posts>=10 THEN 1 END),count(*) FROM progression)
  SELECT stage,users,base,round(100.0*users/nullif(base,0),1) AS conversion_pct FROM stages ORDER BY ord

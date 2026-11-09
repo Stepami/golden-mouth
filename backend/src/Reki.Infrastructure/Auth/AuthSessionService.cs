@@ -1,12 +1,9 @@
-using System.Globalization;
 using System.Security.Claims;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using MongoDB.Driver;
 using OpenIddict.Abstractions;
 using Reki.Application.Auth;
 using Reki.Application.Player;
-using Reki.Application.Telemetry;
 using Reki.Domain.Player;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -17,8 +14,7 @@ internal sealed class AuthSessionService(
     IOpenIddictAuthorizationManager authorizations,
     IOpenIddictTokenManager tokens,
     IOptions<AuthOptions> options,
-    IPlayerRepository players,
-    ProductTelemetry telemetry) : IAuthSessionService
+    IPlayerRepository players) : IAuthSessionService
 {
     public async Task<bool> LogoutAsync(
         string refreshToken,
@@ -42,44 +38,16 @@ internal sealed class AuthSessionService(
     }
 
     public async Task<ClaimsPrincipal?> IssueAsync(
-        IExternalUserIdProvider externalUserIdProvider,
+        ExternalUserId externalUserId,
         string clientId,
         CancellationToken cancellationToken)
     {
-        var application = await applications.FindByClientIdAsync(clientId, cancellationToken);
-        if (application is null)
-        {
-            return null;
-        }
-
-        if (!externalUserIdProvider.TryGetExternalUserId(out var telegramId))
-        {
-            return null;
-        }
-
-        var externalId = ExternalUserId.From($"telegram:{telegramId.Value.ToString(CultureInfo.InvariantCulture)}");
-        var player = await players.GetPlayerAsync(externalId, cancellationToken);
+        var application = await applications.FindByClientIdAsync(clientId, cancellationToken)
+            ?? throw new InvalidOperationException("OpenIddict application is missing.");
+        var player = await players.GetPlayerAsync(externalUserId, cancellationToken);
         if (player is null)
         {
-            player = new PlayerProfile
-            {
-                Id = PlayerId.New(),
-                ExternalUserIds = [externalId],
-                BirthGroup = string.Empty,
-                Address = Address.Nick,
-                Skills = new Dictionary<SkillId, SkillProgress>(),
-                Settings = new PlayerSettings("all", "22:00-09:00", false),
-            };
-            try
-            {
-                await players.CreatePlayerAsync(player, cancellationToken);
-                telemetry.Track(player.Id, "player_created", new Dictionary<string, string> { ["completed"] = "false" });
-            }
-            catch (MongoWriteException exception) when (exception.WriteError.Category == ServerErrorCategory.DuplicateKey)
-            {
-                player = await players.GetPlayerAsync(externalId, cancellationToken)
-                    ?? throw new InvalidOperationException("External identity was not found after a duplicate insert.");
-            }
+            return null;
         }
 
         var subject = player.Id.ToString();

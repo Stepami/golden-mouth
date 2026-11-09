@@ -1,4 +1,5 @@
 import { runtimeConfig } from '../app/runtimeConfig'
+import type { OnboardingRequest, PlayerResponse } from './generated/reki-api'
 
 const refreshKey = 'reki:refresh-token'
 const loggedOutKey = 'reki:logged-out'
@@ -7,6 +8,7 @@ const authTimeoutMs = 15_000
 const baseUrl = runtimeConfig.apiBaseUrl
 let initDataRaw = ''
 let accessToken = ''
+let registrationExternalId = ''
 let refreshRequest: Promise<boolean> | undefined
 let startupRequest: Promise<boolean> | undefined
 let telegramClientIdRequest: Promise<number> | undefined
@@ -18,10 +20,11 @@ const listeners = new Set<() => void>()
 
 interface TokenResponse { access_token: string; refresh_token: string }
 
-export const setInitData = (raw: string) => { initDataRaw = raw }
+export const setInitData = (raw: string) => { if (raw !== initDataRaw) registrationExternalId = ''; initDataRaw = raw }
 export const hasInitData = () => !!initDataRaw
 export const getAccessToken = () => accessToken
 export const hasAccess = () => !!accessToken
+export const needsRegistration = () => !!registrationExternalId
 export function subscribeAuth(listener: () => void): () => void {
   listeners.add(listener)
   return () => { listeners.delete(listener) }
@@ -35,6 +38,7 @@ export function clearPendingWidgetLogin() {
   pendingWidgetToken = ''
   clearTimeout(pendingExpiryTimer)
   sessionStorage.removeItem(pendingLoginKey)
+  registrationExternalId = ''
   notify()
 }
 
@@ -73,29 +77,36 @@ function storedRefresh(): string | null {
 function saveTokens(tokens: TokenResponse) {
   localStorage.setItem(refreshKey, tokens.refresh_token)
   accessToken = tokens.access_token
+  registrationExternalId = ''
   clearPendingWidgetLogin()
 }
 export function clearTokens() {
   accessToken = ''
+  registrationExternalId = ''
   try { localStorage.removeItem(refreshKey) } catch { /* storage unavailable */ }
   notify()
 }
-async function tokenRequest(path: string, fields: Record<string, string>, authorization: string): Promise<TokenResponse> {
+async function tokenRequest(path: string, fields: Record<string, string>, authorization: string): Promise<TokenResponse | undefined> {
   const response = await fetch(`${baseUrl}${path}`, {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: authorization },
     body: new URLSearchParams({ client_id: runtimeConfig.appClientId, ...fields }),
     signal: AbortSignal.timeout(authTimeoutMs),
   })
-  if (!response.ok) throw new Error(`Authorization failed (${response.status})`)
+  if (!response.ok) {
+    const body = response.status === 400 ? await response.json().catch(() => null) as { error?: string; external_user_id?: string } | null : null
+    if (body?.error === 'registration_required' && body.external_user_id) { registrationExternalId = body.external_user_id; notify(); return undefined }
+    throw new Error(`Authorization failed (${response.status})`)
+  }
   return response.json() as Promise<TokenResponse>
 }
 export async function loginMiniApp(): Promise<void> {
   const tokens = await tokenRequest('/auth/external/tg/miniapp', { grant_type: 'urn:reki:grant:telegram-mini-app' }, `TMiniApp ${initDataRaw}`)
-  saveTokens(tokens)
+  if (tokens) saveTokens(tokens)
   explicitlyLoggedOut = false
   sessionStorage.removeItem(loggedOutKey)
 }
 export async function loginWidget(idToken: string): Promise<void> {
+  registrationExternalId = ''
   sessionStorage.setItem(pendingLoginKey, idToken)
   pendingWidgetToken = idToken
   schedulePendingExpiry()
@@ -110,7 +121,7 @@ export function resumeWidgetLogin(): Promise<void> {
   widgetRequest = (async () => {
     const tokens = await tokenRequest('/auth/external/tg/widget', { grant_type: 'urn:reki:grant:telegram-login' }, `Bearer ${idToken}`)
     if (pendingWidgetToken !== idToken) return
-    saveTokens(tokens)
+    if (tokens) saveTokens(tokens)
     explicitlyLoggedOut = false
     sessionStorage.removeItem(loggedOutKey)
   })().finally(() => { widgetRequest = undefined })
@@ -154,10 +165,27 @@ export function startAuth(): Promise<boolean> {
     }
     if (initDataRaw && !explicitlyLoggedOut) {
       await loginMiniApp()
-      return true
+      return hasAccess()
     }
     return false
   })().finally(() => { startupRequest = undefined })
+}
+export async function registerPlayer(body: OnboardingRequest): Promise<PlayerResponse> {
+  if (!hasAccess()) {
+    if (!registrationExternalId) throw new Error('Registration identity unavailable')
+    const authorization = `Basic ${btoa(String.fromCharCode(...new TextEncoder().encode(registrationExternalId)))}`
+    const response = await fetch(`${baseUrl}/onboarding`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: authorization },
+      body: JSON.stringify(body), signal: AbortSignal.timeout(authTimeoutMs),
+    })
+    if (!response.ok && response.status !== 409) throw new Error(`Registration failed (${response.status})`)
+    if (pendingWidgetToken) await resumeWidgetLogin()
+    else await loginMiniApp()
+    if (!hasAccess()) throw new Error('Registration could not be confirmed')
+  }
+  const response = await fetch(`${baseUrl}/me`, { headers: { Authorization: `Bearer ${accessToken}` } })
+  if (!response.ok) throw new Error(`Profile unavailable (${response.status})`)
+  return response.json() as Promise<PlayerResponse>
 }
 export async function logout(): Promise<void> {
   const refreshToken = storedRefresh()

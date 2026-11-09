@@ -94,7 +94,7 @@ function Under14() {
       <div className="brand" style={{ fontSize: 26 }}>Реки</div>
       <div style={{ fontSize: 64, margin: '40px 0 14px' }}>🌱</div>
       <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 10 }}>Пока рановато</div>
-      <div className="muted">Реки для тех, кому есть 14. Сохранён только профиль для входа, год рождения не сохранён. Возвращайся, когда исполнится 14</div>
+      <div className="muted">Реки для тех, кому есть 14. Мы ничего не сохранили. Возвращайся, когда исполнится 14, мы будем ждать</div>
       <BottomCTA main="Понятно" onMain={() => nav.replace('01-1_invite')} />
     </div>
   )

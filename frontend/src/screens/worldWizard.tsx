@@ -22,7 +22,7 @@ export function ChooseWorld() {
   const [pending, setPending] = useState<boolean | null>(null)
   useEffect(() => { let alive = true; if (player) api.ownedWorlds().then(found => { if (alive) setOwned(found) }).catch(() => { if (alive) setError('Не получилось загрузить твои миры.') }); return () => { alive = false } }, [player?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   function startOwn(previewOnly = false, confirmed = false) {
-    selectDraftOwner(player?.id ?? (api.onboardingCompleted() ? api.playerId() : undefined) ?? 'onboarding')
+    selectDraftOwner(player?.id ?? api.playerId() ?? 'onboarding')
     const previous = getWorldDraft()
     if (!confirmed && previous && (previous.definition.templateId !== null || previous.editingId)) { setPending(previewOnly); return }
     const restored = savedWorldDraft('custom')
@@ -77,14 +77,16 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
     if (saving || uncertain) return
     if (draft.previewOnly) { nav.push('05-7c_world_preview'); return }
     setSaving(true); setError('')
+    let creatingWorld = false
     try {
-      if (!api.onboardingCompleted()) { const identity = await api.onboarding({ birthGroup: draft.group, ageBand: draft.ageBand, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); clearWorldDrafts('onboarding'); selectDraftOwner(identity.id); setWorldDraft(draft) }
+      if (!api.hasPlayer()) { const identity = await api.onboarding({ birthGroup: draft.group, ageBand: draft.ageBand, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); clearWorldDrafts('onboarding'); selectDraftOwner(identity.id); setWorldDraft(draft) }
       await api.settings({ address: draft.address })
+      creatingWorld = !draft.editingId
       const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d)
       setAvatarPersonalization(player.id, draft.personalizeAvatar !== false)
       setWorldDraft(null); setPlayer(player); nav.replace('03-5_stage')
     } catch (cause) {
-      if (!draft.editingId && !(cause instanceof ApiError)) { setUncertain(true); setError('Не удалось подтвердить создание. Сначала проверь список миров: повтор может создать ещё один экземпляр.') }
+      if (creatingWorld && !(cause instanceof ApiError)) { setUncertain(true); setError('Не удалось подтвердить создание. Сначала проверь список миров: повтор может создать ещё один экземпляр.') }
       else setError(cause instanceof ApiError && cause.status === 409 ? 'Мир изменился или создание с нуля пока недоступно. Твои изменения сохранены в черновике.' : cause instanceof ApiError && cause.status === 503 ? 'Проверка истории временно недоступна. Настройки сохранены — попробуй начать ещё раз чуть позже.' : 'Не получилось сохранить мир. Проверь поля и попробуй снова.')
     } finally { setSaving(false) }
   }

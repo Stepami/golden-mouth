@@ -11,10 +11,9 @@ internal sealed class PostDetailQueryHandler(ISender sender, IRekiContextAccesso
     public async ValueTask<PostDetailResponse> Handle(PostDetailQuery request, CancellationToken cancellationToken)
     {
         var rekiContext = rekiContextAccessor.Context;
-        var player = await rekiContext.Player;
         var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var post = await sender.Send(new PostQuery(request.PostId, world.Id), cancellationToken);
-        return post.MapPost(world, player.Id);
+        return post.MapPost(world, rekiContext.PlayerId);
     }
 }

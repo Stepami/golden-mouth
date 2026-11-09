@@ -6,8 +6,6 @@ public sealed record PlayerProfile
 
     public required IReadOnlyList<ExternalUserId> ExternalUserIds { get; init; }
 
-    public bool OnboardingCompleted { get; init; }
-
     public required string BirthGroup { get; init; }
 
     public required Address Address { get; init; }

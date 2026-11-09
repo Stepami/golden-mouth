@@ -8,13 +8,13 @@ internal sealed class ReportCommentCommandHandler(
     IRekiContextAccessor rekiContextAccessor)
     : ICommandHandler<ReportComment>
 {
-    public async ValueTask<Unit> Handle(
+    public ValueTask<Unit> Handle(
         ReportComment request,
         CancellationToken cancellationToken)
     {
-        var player = await rekiContextAccessor.Context.Player;
-        telemetry.Track(player.Id, "report", new Dictionary<string, string>());
-        return Unit.Value;
+        var playerId = rekiContextAccessor.Context.PlayerId;
+        telemetry.Track(playerId, "report", new Dictionary<string, string>());
+        return ValueTask.FromResult(Unit.Value);
     }
 }
 

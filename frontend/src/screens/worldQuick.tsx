@@ -23,7 +23,7 @@ export function WorldOverview() {
   if (!world) return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={nav.back} /><div className="pad"><Button onClick={() => nav.replace('01-3_world')}>Выбрать мир</Button></div></div>
   const d = worldDefinitionOf(world); const art = worldArt[d.templateId ?? '']; const goal = presetGoalFor(d)
   const begin = (confirmed = false) => {
-    selectDraftOwner(player?.id ?? (api.onboardingCompleted() ? api.playerId() : undefined) ?? 'onboarding')
+    selectDraftOwner(player?.id ?? api.playerId() ?? 'onboarding')
     const previous = getWorldDraft()
     if (!confirmed && previous && (previous.definition.templateId !== world || previous.editingId)) { setConfirmSwitch(true); return }
     const restored = savedWorldDraft(world)

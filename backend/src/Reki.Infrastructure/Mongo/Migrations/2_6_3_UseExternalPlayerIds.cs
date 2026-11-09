@@ -23,7 +23,6 @@ internal sealed class UseExternalPlayerIds : RekiMigrationBase
         var initialize = new BsonDocument("$set", new BsonDocument
         {
             { "ExternalUserIds", new BsonArray { externalId } },
-            { "OnboardingCompleted", true },
         });
 
         // Index DDL runs outside the migration transaction, so the backfill must be visible to it.

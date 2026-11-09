@@ -28,24 +28,11 @@ public sealed class PlayerController(
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken) =>
         TypedResults.Ok((await rekiContext.Player).ToResponse());
 
-    [HttpPost("onboarding", Name = "CompleteOnboarding")]
-    [ActionName("CompleteOnboarding")]
-    public async Task<Ok<PlayerResponse>> CompleteOnboardingAsync(
-        OnboardingRequest request,
-        CancellationToken cancellationToken)
-    {
-        var player = await sender.Send(
-            request.ToOnboardPlayer((await rekiContext.Player).Id),
-            cancellationToken);
-        return TypedResults.Ok(player.ToResponse());
-    }
-
     [HttpGet("invitation", Name = "GetInvitation")]
     [ActionName("GetInvitation")]
     public async Task<Ok<InvitationResponse>> GetInvitationAsync(CancellationToken cancellationToken)
     {
-        var player = await rekiContext.Player;
-        var invitation = await invitationRepository.GetPendingInviteAsync(player.Id, cancellationToken);
+        var invitation = await invitationRepository.GetPendingInviteAsync(rekiContext.PlayerId, cancellationToken);
         return TypedResults.Ok(new InvitationResponse(invitation?.BonusAmount ?? 0));
     }
 
