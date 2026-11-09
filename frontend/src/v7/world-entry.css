@@ -2,10 +2,8 @@
 .app--prologue .app-body { padding: 0; }
 .world-prologue { position: relative; isolation: isolate; min-height: 100%; display: flex; flex-direction: column; background: #101010; color: #f3f5f7; overflow: hidden; }
 .prologue-image, .prologue-shade { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; }
-.prologue-image { object-position: 51% center; transform: scale(1); transition: transform 360ms var(--ease-out); }
-.world-prologue--1 .prologue-image { transform: scale(1.05); }
-.prologue-shade { z-index: -1; background: linear-gradient(180deg, #0006 0%, #0000 30%, #0007 60%, #101010d9 84%, #101010 100%); }
-.world-prologue--1 .prologue-shade { background: linear-gradient(180deg, #0007, #10101066 35%, #101010e8 74%, #101010); }
+.prologue-image { object-position: 51% center; }
+.prologue-shade { z-index: -1; background: linear-gradient(180deg, #0007, #10101066 35%, #101010e8 74%, #101010); }
 .prologue-header { padding: calc(16px + var(--safe-top)) 20px 0; }
 .prologue-progress { display: flex; gap: 6px; margin-bottom: 14px; }
 .prologue-progress > span { flex: 1; height: 3px; border-radius: 3px; background: #ffffff40; }
@@ -14,13 +12,10 @@
 .prologue-header .eyebrow { font-size: .6875rem; text-align: center; }
 .prologue-back { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; background: #10101080; border: 1px solid #ffffff30; font-size: 1.25rem; }
 .prologue-page { white-space: nowrap; }
-.prologue-scenes { position:relative; display:grid; flex:1; align-items:end; padding:clamp(80px,18dvh,160px) 24px 0; perspective:800px; }
-.world-prologue--1 .prologue-scenes { padding-top:clamp(48px,12dvh,112px); }
-.prologue-scene { grid-area:1/1; display:flex; flex-direction:column; gap:var(--space-3); transform-origin:center 35%; transition:transform 280ms var(--ease-out),opacity 180ms ease-out; }
-.prologue-scene.is-past { opacity: 0; transform: translateY(-16px) scale(.98); pointer-events: none; }
-.prologue-scene.is-next { opacity: 0; transform: translateY(16px) scale(1.02); pointer-events: none; }
-.prologue-scene:not(.is-current) { position: absolute; inset: auto 24px 24px; }
-.prologue-scene h1 { font: 600 clamp(2.5rem, 10vw, 3rem)/1.03 var(--font-narrow); letter-spacing: -.035em; overflow-wrap: anywhere; }
+.prologue-scenes { position:relative; display:grid; flex:1; align-items:end; padding:clamp(32px,6dvh,64px) 24px 0; }
+.prologue-scene { grid-area:1/1; display:flex; flex-direction:column; gap:var(--space-3); opacity:0; pointer-events:none; transition:opacity 100ms cubic-bezier(.4,0,.2,1); }
+.prologue-scene.is-current { opacity:1; pointer-events:auto; transition:opacity 180ms cubic-bezier(.4,0,.2,1) 100ms; }
+.prologue-scene h1 { font: 600 clamp(2.5rem, 10vw, 3rem)/1.03 var(--font-narrow); letter-spacing: -.035em; overflow-wrap: anywhere; outline:none; }
 .prologue-scene h2 { margin:0; font:600 1.875rem/1.06 var(--font-body); letter-spacing:-.035em; outline:none; text-wrap:balance; }
 .prologue-chapter-heading { display:grid; gap:var(--space-1); }
 .prologue-lead { margin:0; font-size:1rem; line-height:1.45; max-width:31ch; }
@@ -29,6 +24,7 @@
 .prologue-actions { padding:var(--space-8) 24px calc(16px + var(--safe-bottom)); display:flex; flex-direction:column; gap:var(--space-1); }
 .prologue-actions .prologue-next { min-height: 56px; justify-content: space-between; background: var(--color-accent); color: #171918; }
 .prologue-skip { min-height: 44px; color: #b3b7bb; font-size: .875rem; }
+.prologue-secondary { min-height:44px; display:grid; }
 .world-prologue :focus-visible { outline-color: #f3f5f7; }
 .hero-portrait { touch-action: pan-y; cursor: grab; }
 .hero-portrait:active { cursor: grabbing; }
