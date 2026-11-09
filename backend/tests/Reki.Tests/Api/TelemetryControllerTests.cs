@@ -62,7 +62,7 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
         await Assert.That(events[0].StructuredState?.Any(property => property.Key == "registration_source") ?? false).IsFalse();
         var registration = productEvents
             .Single(record => record.GetStructuredStateValue("player_id") == player.Id.ToString() &&
-                record.GetStructuredStateValue("event_name") == "player_created");
+                record.GetStructuredStateValue("event_name") == "onboarding_completed");
         await Assert.That(registration.GetStructuredStateValue("registration_source")).IsEqualTo("direct");
         var deleted = productEvents
             .Any(record => record.GetStructuredStateValue("player_id") == player.Id.ToString() &&

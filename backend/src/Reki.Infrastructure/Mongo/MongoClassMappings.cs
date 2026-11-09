@@ -37,7 +37,7 @@ internal static class MongoClassMappings
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.StarIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.TelegramUserIdBsonSerializer());
+            new BsonValueObjectConversions.ExternalUserIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.WorldIdBsonSerializer());
         RegisterWithMongoId<PlayerProfile, PlayerId>(item => item.Id);

@@ -297,7 +297,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         var player = await Database
             .GetCollection<BsonDocument>("players")
-            .Find(new BsonDocument("TelegramUserId", telegramUserId))
+            .Find(new BsonDocument("ExternalUserIds", $"telegram:{telegramUserId}"))
             .SingleAsync();
 
         await Assert.That(statusCode).IsNotEqualTo(HttpStatusCode.OK);

@@ -50,14 +50,14 @@ function Shell() {
   useEffect(() => { setScreen(top.id); screenView(top.id) }, [top.id])
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments) }, [player?.experiments])
   useEffect(() => {
-    if (playerState !== 'ready' || explicitStart || top.id !== '01-1_invite') return
+    if ((playerState !== 'ready' && !(playerState === 'missing' && api.onboardingCompleted())) || explicitStart || top.id !== '01-1_invite') return
     setStack([{ id: '01-3_world', params: {} }])
   }, [explicitStart, playerState, top.id])
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1 && top.id !== '02-6_thread', back), [stack.length, top.id, back])
 
   const Screen = SCREENS[top.id]?.component
-  const resolvingExistingPlayer = playerState === 'ready' && !explicitStart && top.id === '01-1_invite'
+  const resolvingExistingPlayer = (playerState === 'ready' || playerState === 'missing' && api.onboardingCompleted()) && !explicitStart && top.id === '01-1_invite'
   if (!Screen || playerState === 'loading' || resolvingExistingPlayer) return <div className="app"><div className="screen"><div className="pad" role="status">Загружаем твою игру…</div></div></div>
   if (playerState === 'failed') return <div className="app"><div className="screen"><div className="pad"><p>Не получилось загрузить игру.</p><button className="btn" onClick={() => location.reload()}>Попробовать снова</button></div></div></div>
   const people: React.ContextType<typeof AvatarPeople> = {}

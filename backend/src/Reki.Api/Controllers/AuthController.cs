@@ -22,7 +22,8 @@ public sealed class AuthController(IAuthSessionService sessions) : ControllerBas
         CancellationToken cancellationToken)
     {
         var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-        return !result.Succeeded || result.Principal is null
+        return !result.Succeeded || result.Principal is null ||
+               result.Principal.HasClaim(claim => claim.Type == AuthConstants.Claims.TelegramUserId)
             ? InvalidGrant()
             : TypedResults.SignIn(result.Principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }

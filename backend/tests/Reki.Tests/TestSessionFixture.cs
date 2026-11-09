@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using OpenIddict.MongoDb;
 using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.Mongo;
@@ -64,7 +65,8 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
         var collections = await cursor.ToListAsync(cancellationToken);
         await Task.WhenAll(collections.Where(name =>
                 !name.StartsWith("ticker_", StringComparison.Ordinal) && name != "world_templates" &&
-                name != options.MigrationsCollectionName && name != options.MigrationsLockCollectionName)
+                name != options.MigrationsCollectionName && name != options.MigrationsLockCollectionName &&
+                name != new OpenIddictMongoDbOptions().ApplicationsCollectionName)
             .Select(collection => Database.GetCollection<BsonDocument>(collection)
                 .DeleteManyAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken)));
     }

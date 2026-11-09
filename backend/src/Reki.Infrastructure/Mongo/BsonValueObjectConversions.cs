@@ -18,6 +18,6 @@ namespace Reki.Infrastructure.Mongo;
 [BsonSerializer<SessionId>]
 [BsonSerializer<SkillId>]
 [BsonSerializer<StarId>]
-[BsonSerializer<TelegramUserId>]
+[BsonSerializer<ExternalUserId>]
 [BsonSerializer<WorldId>]
 internal partial class BsonValueObjectConversions;

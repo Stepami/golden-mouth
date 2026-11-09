@@ -26,9 +26,7 @@ internal sealed class LazyRekiContext : IRekiContext
         _httpContextAccessor = httpContextAccessor;
         _player = new AsyncLazy<PlayerProfile>(
             async ct =>
-                await playerRepository.GetPlayerAsync(
-                    TelegramUserId,
-                    ct) ??
+                await ResolvePlayerAsync(playerRepository, ct) ??
                 throw new ResourceNotFoundException("Player not found."),
             resettable: true);
         _worlds = new AsyncLazy<IReadOnlyDictionary<WorldId, World>>(
@@ -41,17 +39,6 @@ internal sealed class LazyRekiContext : IRekiContext
             resettable: true);
     }
 
-    public TelegramUserId TelegramUserId
-    {
-        get
-        {
-            var id = _httpContextAccessor.HttpContext?.User.FindFirstValue(AuthConstants.Claims.TelegramUserId);
-            return TelegramUserId.From(long.Parse(
-                id ?? throw new InvalidOperationException("Telegram user claim is missing."),
-                System.Globalization.CultureInfo.InvariantCulture));
-        }
-    }
-
     public Task<PlayerProfile> Player =>
         _player.WithCancellation(CancellationToken.None);
 
@@ -62,5 +49,19 @@ internal sealed class LazyRekiContext : IRekiContext
     {
         _player.Reset();
         _worlds.Reset();
+    }
+
+    private async ValueTask<PlayerProfile?> ResolvePlayerAsync(IPlayerRepository repository, CancellationToken cancellationToken)
+    {
+        var user = _httpContextAccessor.HttpContext?.User;
+        var legacyId = user?.FindFirstValue(AuthConstants.Claims.TelegramUserId);
+        if (legacyId is not null)
+        {
+            return await repository.GetPlayerAsync(ExternalUserId.From($"telegram:{legacyId}"), cancellationToken);
+        }
+
+        var subject = user?.FindFirstValue(OpenIddict.Abstractions.OpenIddictConstants.Claims.Subject)
+            ?? throw new InvalidOperationException("Player subject is missing.");
+        return await repository.GetPlayerAsync(PlayerId.From(subject), cancellationToken);
     }
 }

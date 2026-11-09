@@ -22,13 +22,14 @@ export function ChooseWorld() {
   const [pending, setPending] = useState<boolean | null>(null)
   useEffect(() => { let alive = true; if (player) api.ownedWorlds().then(found => { if (alive) setOwned(found) }).catch(() => { if (alive) setError('Не получилось загрузить твои миры.') }); return () => { alive = false } }, [player?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   function startOwn(previewOnly = false, confirmed = false) {
-    selectDraftOwner(player?.id ?? 'onboarding')
+    selectDraftOwner(player?.id ?? (api.onboardingCompleted() ? api.playerId() : undefined) ?? 'onboarding')
     const previous = getWorldDraft()
     if (!confirmed && previous && (previous.definition.templateId !== null || previous.editingId)) { setPending(previewOnly); return }
     const restored = savedWorldDraft('custom')
     if (restored && !!restored.previewOnly === previewOnly) { setWorldDraft(restored); nav.push('05-7b_own_world', {}); return }
     const definition = blankWorld()
-    setWorldDraft({ definition, heroOrder: [], advanced: !previewOnly, previewOnly, address: player?.address ?? 'nick', group: player?.ageBand ? (player.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: player?.ageBand ?? nav.params.ageBand as AgeBand | undefined, personalizeAvatar: player ? avatarPersonalization(player.id) : true })
+    const profile = player ?? api.onboardingProfile()
+    setWorldDraft({ definition, heroOrder: [], advanced: !previewOnly, previewOnly, address: profile?.address ?? 'nick', group: profile ? (profile.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: profile?.ageBand ?? nav.params.ageBand as AgeBand | undefined, personalizeAvatar: player ? avatarPersonalization(player.id) : true })
     nav.push('05-7b_own_world', {})
   }
   const currentWorld = player ? owned.find(world => world.id === player.worldInstanceId) ?? { ...worldDocumentOf(player.world), id: player.worldInstanceId ?? player.world, name: player.name, avatar: player.handle, subscribers: player.subs } : undefined
@@ -77,7 +78,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
     if (draft.previewOnly) { nav.push('05-7c_world_preview'); return }
     setSaving(true); setError('')
     try {
-      if (!api.hasPlayer()) { const identity = await api.onboarding({ birthGroup: draft.group, ageBand: draft.ageBand, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); clearWorldDrafts('onboarding'); selectDraftOwner(identity.id); setWorldDraft(draft) }
+      if (!api.onboardingCompleted()) { const identity = await api.onboarding({ birthGroup: draft.group, ageBand: draft.ageBand, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); clearWorldDrafts('onboarding'); selectDraftOwner(identity.id); setWorldDraft(draft) }
       await api.settings({ address: draft.address })
       const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d)
       setAvatarPersonalization(player.id, draft.personalizeAvatar !== false)

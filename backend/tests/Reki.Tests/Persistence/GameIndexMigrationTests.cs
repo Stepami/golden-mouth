@@ -447,6 +447,9 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var savedPlayer = await database.GetCollection<BsonDocument>("players")
             .Find(new BsonDocument("_id", "test-player")).SingleAsync(CancellationToken.None);
         await Assert.That(savedPlayer["_id"]).IsEqualTo(player["_id"]);
+        await Assert.That(savedPlayer["ExternalUserIds"]).IsEqualTo(new BsonArray { "telegram:12345" });
+        await Assert.That(savedPlayer["OnboardingCompleted"].AsBoolean).IsTrue();
+        await Assert.That(savedPlayer.Contains("TelegramUserId")).IsFalse();
         await Assert.That(savedPlayer.Contains("World")).IsFalse();
         await Assert.That(savedPlayer.Contains("ChallengeBonusUntilUtc")).IsFalse();
         var worlds = await database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("Player.PlayerId", "test-player")).ToListAsync(CancellationToken.None);
@@ -459,7 +462,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
         var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(17L);
+        await Assert.That(historyCount).IsEqualTo(18L);
     }
 
     [Test]
@@ -1277,6 +1280,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             migrations.Add(new RemoveChallengeBonus());
             migrations.Add(new RemoveUnusedSocialCollections());
             migrations.Add(new CreatePostCursorIndexes());
+            migrations.Add(new UseExternalPlayerIds());
         }
 
         return MigratorBuilder.FromMongoClient(client, options).LoadMigrations(migrations).Build();
@@ -1284,7 +1288,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
     private static IEnumerable<(string Collection, string Name, BsonDocument Keys, bool Unique)> ExpectedIndexes()
     {
-        yield return ("players", "ux_players_telegram_user", new BsonDocument("TelegramUserId", 1), true);
+        yield return ("players", "ux_players_external_user", new BsonDocument("ExternalUserIds", 1), true);
         yield return ("publications", "ix_publications_expiry", new BsonDocument("ExpiresAtUtc", 1), false);
         yield return ("events", "ix_events_player_day",
             new BsonDocument { { "PlayerId", 1 }, { "DayStartedAtUtc", -1 } }, false);
@@ -1305,6 +1309,12 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await CreateIndexAsync(database, "invites", "ix_invites_player", new BsonDocument("PlayerId", 1), false);
         foreach (var (collection, name, keys, unique) in ExpectedIndexes())
         {
+            if (name == "ux_players_external_user")
+            {
+                await CreateIndexAsync(database, "players", "ux_players_telegram_user", new BsonDocument("TelegramUserId", 1), true);
+                continue;
+            }
+
             await CreateIndexAsync(database, collection, name, name == "ix_worlds_player" ? new BsonDocument("PlayerId", 1) : keys, unique);
         }
     }
@@ -1340,6 +1350,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             var indexes = await cursor.ToListAsync(CancellationToken.None);
             var index = indexes.Single(item => item["name"] == name);
             await Assert.That(index["key"]).IsEqualTo(keys);
+            await Assert.That(indexes.Any(item => item["name"] == "ux_players_telegram_user")).IsFalse();
             await Assert.That(indexes.Any(item => item["name"] == "ix_posts_player_created")).IsFalse();
             await Assert.That(indexes.Any(item => item["name"] == "ix_posts_world_created")).IsFalse();
             await Assert.That(indexes.Any(item => item["name"] == "ix_invites_player")).IsFalse();

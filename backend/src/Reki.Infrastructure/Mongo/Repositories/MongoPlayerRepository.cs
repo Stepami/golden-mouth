@@ -12,9 +12,9 @@ internal sealed class MongoPlayerRepository(
         database.GetCollection<PlayerProfile>(MongoCollections.Players);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
-        TelegramUserId telegramUserId,
+        ExternalUserId externalUserId,
         CancellationToken cancellationToken) =>
-        await _players.Find(item => item.TelegramUserId == telegramUserId).FirstOrDefaultAsync(cancellationToken);
+        await _players.Find(item => item.ExternalUserIds.Contains(externalUserId)).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
         await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
@@ -73,7 +73,8 @@ internal sealed class MongoPlayerRepository(
         int plusEnergy,
         CancellationToken cancellationToken)
     {
-        var filter = Builders<PlayerProfile>.Filter.Lt(player => player.PostsPeriodStartedAtUtc, periodStart);
+        var filter = Builders<PlayerProfile>.Filter.Eq(player => player.OnboardingCompleted, true) &
+            Builders<PlayerProfile>.Filter.Lt(player => player.PostsPeriodStartedAtUtc, periodStart);
         var update = Builders<PlayerProfile>.Update
             .Set(player => player.EnergyUsed, 0)
             .Set(player => player.PostsPeriodStartedAtUtc, periodStart)

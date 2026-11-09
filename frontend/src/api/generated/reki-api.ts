@@ -377,12 +377,6 @@ export class PlayerClient {
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlayerResponse;
             return new SwaggerResponse(status, _headers, result200);
             });
-        } else if (status === 404) {
-            return response.text().then((_responseText) => {
-            let result404: any = null;
-            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
-            return throwException("Not Found", status, _responseText, _headers, result404);
-            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
@@ -1900,6 +1894,7 @@ export interface PlayerResponse {
     experiments: { [key: string]: string; };
     hitOwnWorldMilestone?: boolean;
     ageBand?: string;
+    onboardingCompleted?: boolean;
 
     [key: string]: any;
 }

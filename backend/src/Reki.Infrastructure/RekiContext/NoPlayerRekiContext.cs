@@ -7,8 +7,6 @@ namespace Reki.Infrastructure.RekiContext;
 
 internal sealed class NoPlayerRekiContext : IRekiContext
 {
-    public TelegramUserId TelegramUserId => throw new ResourceNotFoundException("Player not found.");
-
     public Task<PlayerProfile> Player { get; } =
         Task.FromException<PlayerProfile>(
             new ResourceNotFoundException("Player not found."));

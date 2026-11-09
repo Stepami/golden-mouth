@@ -5,7 +5,7 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Telemetry;
 
-internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, TimeProvider timeProvider)
+public sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger, TimeProvider timeProvider)
 {
     private readonly int _maxAttributeLength = 64;
     private readonly HashSet<string> _events = new(StringComparer.Ordinal)
@@ -24,6 +24,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
         "notification_opened",
         "notification_sent",
         "onboarding_step",
+        "onboarding_completed",
         "player_created",
         "player_deleted",
         "plus_bonus_only",
@@ -90,7 +91,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
                 continue;
             }
 
-            if (entry.Name is "post_scored" or "player_created" or "player_deleted" or "world_created" or "level_up" or "card_earned" or "post_failed" || !_events.Contains(entry.Name))
+            if (entry.Name is "post_scored" or "player_created" or "onboarding_completed" or "player_deleted" or "world_created" or "level_up" or "card_earned" or "post_failed" || !_events.Contains(entry.Name))
             {
                 continue;
             }
@@ -146,7 +147,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
         attributes["difficulty"] = ReadDifficulty(properties);
         attributes["template_id"] = ReadTemplateId(properties);
         attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
-        if (eventName == "player_created" && referred is { } isReferral)
+        if (eventName == "onboarding_completed" && referred is { } isReferral)
         {
             attributes["registration_source"] = isReferral ? "referral" : "direct";
         }

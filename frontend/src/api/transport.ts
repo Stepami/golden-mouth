@@ -33,7 +33,7 @@ export function transport(telemetry = false) {
     const cause = new ApiError(response.status, init.method ?? 'GET', path, problemType)
     if (!telemetry) {
       if (response.status >= 500) error('api_error', cause, { status: response.status })
-      else if (response.status !== 404 || path !== '/me') warn('api_error', { status: response.status, msg: cause.message })
+      else warn('api_error', { status: response.status, msg: cause.message })
     }
     throw cause
   } }

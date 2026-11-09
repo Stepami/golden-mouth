@@ -18,6 +18,10 @@ public sealed class AuthControllerTests(ApiFactory factory)
 {
     private const string ClientId = "reki-test-client";
 
+    [After(Test)]
+    public Task ClearGameDataAsync(CancellationToken cancellationToken) =>
+        factory.Session.ClearGameDataAsync(cancellationToken);
+
     [Test]
     public async Task MiniApp_CompleteSessionLifecycle_KeepsOtherSessionAsync()
     {
@@ -51,8 +55,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
         var anonymousGame = await Assert.ThrowsAsync<PlayerApiException>(() => playerClient.GetCurrentPlayerAsync(CancellationToken.None))
             ?? throw new InvalidOperationException("Expected a protected player response.");
         playerHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", first.AccessToken);
-        var me = await Assert.ThrowsAsync<PlayerApiException>(() => playerClient.GetCurrentPlayerAsync(CancellationToken.None))
-            ?? throw new InvalidOperationException("Expected a missing profile response.");
+        var me = await playerClient.GetCurrentPlayerAsync(CancellationToken.None);
         var wrongRefreshRequest = new RefreshTokenRequest
         {
             ClientId = ClientId,
@@ -68,8 +71,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
         };
         await auth.LogoutAsync(logoutRequest, CancellationToken.None);
         playerHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", refreshed.AccessToken);
-        var issuedAccess = await Assert.ThrowsAsync<PlayerApiException>(() => playerClient.GetCurrentPlayerAsync(CancellationToken.None))
-            ?? throw new InvalidOperationException("Expected a missing profile response.");
+        var issuedAccess = await playerClient.GetCurrentPlayerAsync(CancellationToken.None);
         var revoked = await Assert.ThrowsAsync<AuthApiException>(() => auth.RefreshAsync(
             RefreshRequest(refreshed.RefreshToken), CancellationToken.None))
             ?? throw new InvalidOperationException("Expected a rejected refresh response.");
@@ -80,14 +82,18 @@ public sealed class AuthControllerTests(ApiFactory factory)
         await Assert.That(first.RefreshToken).IsNotEmpty();
         await Assert.That(first.TokenType).IsEqualTo("Bearer");
         await Assert.That(first.ExpiresIn).IsGreaterThan(0);
-        await Assert.That(me.StatusCode).IsEqualTo(404);
+        await Assert.That(me.OnboardingCompleted).IsFalse();
+        await Assert.That(me.Energy).IsEqualTo(0);
         await Assert.That(anonymousGame.StatusCode).IsEqualTo(401);
         await Assert.That(wrongRefreshGrant.StatusCode).IsEqualTo(401);
         await Assert.That(refreshed.AccessToken).IsNotEmpty();
         await Assert.That(refreshed.RefreshToken).IsNotEqualTo(first.RefreshToken);
-        await Assert.That(issuedAccess.StatusCode).IsEqualTo(404);
+        await Assert.That(issuedAccess.Id).IsEqualTo(me.Id);
+        await Assert.That(issuedAccess.OnboardingCompleted).IsFalse();
         await Assert.That(revoked.StatusCode).IsEqualTo(400);
         await Assert.That(otherSession.AccessToken).IsNotEmpty();
+        playerHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherSession.AccessToken);
+        await Assert.That((await playerClient.GetCurrentPlayerAsync(CancellationToken.None)).Id).IsEqualTo(me.Id);
     }
 
     [Test]
@@ -189,6 +195,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
             BirthGroup = BirthGroup.Teen,
             Address = Address.Nick,
         };
+        var miniPlayer = await new PlayerClient(miniClient).GetCurrentPlayerAsync(CancellationToken.None);
         var player = await new PlayerClient(miniClient).CompleteOnboardingAsync(onboarding, CancellationToken.None);
 
         // Act
@@ -215,7 +222,10 @@ public sealed class AuthControllerTests(ApiFactory factory)
         await Assert.That(rawTelegramGame.StatusCode).IsEqualTo(401);
         await Assert.That(wrongGrant.StatusCode).IsEqualTo(403);
         await Assert.That(widget.RefreshToken).IsNotEmpty();
+        await Assert.That(miniPlayer.OnboardingCompleted).IsFalse();
+        await Assert.That(player.Id).IsEqualTo(miniPlayer.Id);
         await Assert.That(current.Id).IsEqualTo(player.Id);
+        await Assert.That(current.OnboardingCompleted).IsTrue();
     }
 
     private static async Task<AuthTokenResponse> ExchangeAsync(

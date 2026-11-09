@@ -21,31 +21,12 @@ namespace Reki.Api.Controllers;
 public sealed class PlayerController(
     IRekiContext rekiContext,
     IInvitationRepository invitationRepository,
-    IPlayerRepository playerRepository,
     ISender sender) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
-    public async Task<Results<Ok<PlayerResponse>, NotFound<ProblemDetails>>> GetCurrentPlayerAsync(
-        CancellationToken cancellationToken)
-    {
-        var player = await playerRepository.GetPlayerAsync(rekiContext.TelegramUserId, cancellationToken);
-        if (player is null)
-        {
-            var problemDetails = new ProblemDetails
-            {
-                Status = StatusCodes.Status404NotFound,
-                Title = "Resource not found",
-                Type = "urn:reki:problem:resource-not-found",
-                Detail = "The requested resource was not found.",
-                Instance = Request.Path,
-            };
-            problemDetails.Extensions["failure"] = null;
-            return TypedResults.NotFound(problemDetails);
-        }
-
-        return TypedResults.Ok(player.ToResponse());
-    }
+    public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken) =>
+        TypedResults.Ok((await rekiContext.Player).ToResponse());
 
     [HttpPost("onboarding", Name = "CompleteOnboarding")]
     [ActionName("CompleteOnboarding")]
@@ -54,7 +35,7 @@ public sealed class PlayerController(
         CancellationToken cancellationToken)
     {
         var player = await sender.Send(
-            request.ToOnboardPlayer(rekiContext.TelegramUserId),
+            request.ToOnboardPlayer((await rekiContext.Player).Id),
             cancellationToken);
         return TypedResults.Ok(player.ToResponse());
     }

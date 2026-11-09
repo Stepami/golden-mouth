@@ -2,6 +2,7 @@
 import type { Challenge, Dm, Friend, GameEvent, Player, Post, PostResult } from './types'
 
 export const player: Player = {
+  onboardingCompleted: true,
   id: '00000000000000000000000000000001', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', address: 'she',
   world: 'edfccf53-65c6-4eaf-8321-2391bc1758bd', subs: 120, postsLeft: 10, postsCap: 10, firstPostInviteBonus: 0,
   streak: { days: 4, week: [true, true, true, true, false, false, false], nextReward: '7 дней: карточка «Неделя в эфире»' },

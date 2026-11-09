@@ -20,6 +20,11 @@ internal sealed class CreateWorldCommandHandler(
     public async ValueTask<World> Handle(CreateWorld request, CancellationToken cancellationToken)
     {
         var player = await rekiContextAccessor.Context.Player;
+        if (!player.OnboardingCompleted)
+        {
+            throw new RequestConflictException("Onboarding must be completed before creating a world.");
+        }
+
         var source = request.Definition;
         if (source.TemplateId is null && !player.HitOwnWorldMilestone)
         {

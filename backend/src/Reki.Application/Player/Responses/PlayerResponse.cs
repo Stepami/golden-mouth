@@ -11,4 +11,5 @@ public sealed record PlayerResponse(
     PlayerSettingsResponse Settings,
     IReadOnlyDictionary<string, string> Experiments,
     bool HitOwnWorldMilestone = false,
-    string AgeBand = "");
+    string AgeBand = "",
+    bool OnboardingCompleted = false);

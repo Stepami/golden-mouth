@@ -196,7 +196,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
     protected Task<BsonDocument> GetStoredPlayerAsync(long telegramUserId) =>
         Database
             .GetCollection<BsonDocument>("players")
-            .Find(new BsonDocument("TelegramUserId", telegramUserId))
+            .Find(new BsonDocument("ExternalUserIds", $"telegram:{telegramUserId}"))
             .SingleAsync();
 
     protected Task<BsonDocument> GetStoredPostAsync(string postId) =>

@@ -70,6 +70,12 @@ there are no additional checks for manually changed definitions.
 Index DDL runs outside transactions under the migrator's database lock. Successful versions are recorded and skipped
 on subsequent starts. The inherited `DownAsync` completes without changing documents or indexes.
 
+Version `2.6.3` backfills legacy Telegram identities as `telegram:<id>` in `ExternalUserIds`, marks those
+profiles as having completed onboarding, replaces the unique Telegram index with a unique multikey external-ID
+index, and removes the old field. Its data updates and index changes run outside the migration transaction under
+the migration lock and can be retried after interruption. Rolling back the application requires restoring a
+database backup: the inherited `DownAsync` does not reverse this migration.
+
 Version `2.1.0` moves referral attribution and bonus usage from player profiles to independent `invites`
 documents with a Vogen `InvitationId`, the two player IDs, creation time, and separate usage flags/times.
 It creates a unique `InviteeId` index and an `InviterId` lookup index. Registration creates the invitation without

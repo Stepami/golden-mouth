@@ -1,5 +1,6 @@
 using System.Net;
-using Reki.Infrastructure.Auth;
+using OpenIddict.Abstractions;
+using Reki.Domain.Player;
 
 namespace Reki.Tests;
 
@@ -7,12 +8,12 @@ public sealed class TestApiClient : IDisposable
 {
     private readonly HttpClient _httpClient;
 
-    internal TestApiClient(HttpClient httpClient, long? telegramUserId)
+    internal TestApiClient(HttpClient httpClient, PlayerId? playerId)
     {
         _httpClient = httpClient;
-        if (telegramUserId is { } userId)
+        if (playerId is { } id)
         {
-            SetAuthenticatedUser(userId);
+            SetAuthenticatedUser(id);
         }
 
         StoryCards = new StoryCardsClient(httpClient);
@@ -43,11 +44,11 @@ public sealed class TestApiClient : IDisposable
         _httpClient.Dispose();
     }
 
-    private void SetAuthenticatedUser(long userId)
+    private void SetAuthenticatedUser(PlayerId playerId)
     {
         _httpClient.SetFakeJwtBearerToken(new Dictionary<string, object>
         {
-            [AuthConstants.Claims.TelegramUserId] = userId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            [OpenIddictConstants.Claims.Subject] = playerId.ToString(),
         });
     }
 }

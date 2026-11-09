@@ -4,7 +4,7 @@ namespace Reki.Application.Player;
 
 public interface IPlayerRepository
 {
-    ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken);
+    ValueTask<PlayerProfile?> GetPlayerAsync(ExternalUserId externalUserId, CancellationToken cancellationToken);
 
     ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
 
