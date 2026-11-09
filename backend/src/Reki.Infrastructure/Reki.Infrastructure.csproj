@@ -9,6 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="AspNetCore.Authentication.Basic"/>
         <PackageReference Include="CommunityToolkit.VectorData.InMemory" />
         <PackageReference Include="DotNext.Threading"/>
         <PackageReference Include="Kot.MongoDB.Migrations.DI" />

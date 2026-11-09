@@ -1,7 +1,9 @@
-using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
+using AspNetCore.Authentication.Basic;
 using Microsoft.Extensions.DependencyInjection;
 using OpenIddict.Validation.AspNetCore;
 using Reki.Application.Auth;
+using Reki.Domain.Player;
 
 namespace Reki.Infrastructure.Auth;
 
@@ -12,7 +14,23 @@ internal static class DependencyInjection
         services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.SectionName);
         services.AddScoped<IAuthSessionService, AuthSessionService>();
         services.AddKeyedScoped<IExternalUserIdProvider, OnboardingExternalUserIdProvider>(AuthConstants.Schemes.Onboarding);
-        services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, OnboardingBasicHandler>(AuthConstants.Schemes.Onboarding, null);
+        services.AddAuthentication().AddBasic(AuthConstants.Schemes.Onboarding, options =>
+        {
+            options.SuppressWWWAuthenticateHeader = true;
+            options.Events.OnValidateCredentials = context =>
+            {
+                if (ExternalUserId.TryFrom($"{context.Username}:{context.Password}", out var externalId))
+                {
+                    context.ValidationSucceeded([new Claim(AuthConstants.Claims.ExternalUserId, externalId.Value)]);
+                }
+                else
+                {
+                    context.ValidationFailed("Invalid external identity.");
+                }
+
+                return Task.CompletedTask;
+            };
+        });
 
         services
             .AddAuthorizationBuilder()
