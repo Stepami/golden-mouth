@@ -28,3 +28,7 @@ No drift detected. Separate read-only Goldfish review checked preserved units, c
 ## PR-261-motion-polish.md
 
 No drift detected after correction of the resource press and empty-energy signal: only the inner icon moves. The separate Goldfish verified all 16 source regions and reduced-motion rules. Browser and build checks are recorded in the implementation documents.
+
+## PR-261-hero-entry-followup.md
+
+No drift detected. A separate fresh-context EGM Codebase Details Goldfish read the persona, integration guide, drift skill, applicable instructions, specification, Evening scenario, changed source and portrait persistence consumers. The read-only review covered the shortened intro, direct hero entry and back navigation, five motivations, fixed canonical portraits after custom states, three skills, and preservation of other worlds and story context. No open findings. Builds and browser results are recorded in the follow-up specification.

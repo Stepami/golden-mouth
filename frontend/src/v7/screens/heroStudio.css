@@ -85,3 +85,5 @@ html[data-large-text=true] .studio-panel-heading { flex-wrap:wrap; }
 .studio-goal strong { display:block; overflow:visible; }
 .studio-sheet .practice-grid { grid-template-columns:1fr; }
 html[data-large-text=true] .studio-roster { grid-template-columns:repeat(2,minmax(0,1fr)); }
+
+.studio-motivation { margin:0; font:400 .875rem/1.45 var(--font-body); }
