@@ -1,4 +1,4 @@
-export type Persona = { goal?: string; skills?: string[]; avatar?: string };
+export type Persona = { goal?: string; skills?: string[]; roleId?: string; templateId?: string; avatar?: string };
 const memory = new Map<string, Persona>();
 const key = (playerId: string, worldId: string) => `reki:v7:${playerId}:persona:${worldId}`;
 export function personaFor(playerId: string, worldId: string): Persona {

@@ -72,3 +72,16 @@ html[data-large-text=true] .studio-panel-heading { flex-wrap:wrap; }
 .hero-studio .studio-help { margin-top:var(--space-2); margin-bottom:var(--space-4); }
 .hero-studio .practice-example { margin-top:var(--space-4); padding:var(--space-4); }
 .hero-studio .studio-footer { padding-top:var(--space-4); }
+
+/* Every role remains visible and named, including worlds with larger casts. */
+.studio-roster { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; }
+.studio-roster button { width:100%; height:auto; min-height:88px; border-radius:14px; padding:8px 4px; gap:6px; }
+.studio-roster img { width:44px; height:44px; }
+.studio-roster button > .icon { width:32px; height:44px; }
+.studio-roster button > span { font-size:.75rem; line-height:1.2; overflow-wrap:anywhere; }
+.studio-role-skills,.studio-selected-skills { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.studio-role-skills > small { width:100%; color:var(--color-muted); }
+.studio-role-skills > span { display:flex; align-items:center; gap:4px; font-size:.8125rem; }
+.studio-goal strong { display:block; overflow:visible; }
+.studio-sheet .practice-grid { grid-template-columns:1fr; }
+html[data-large-text=true] .studio-roster { grid-template-columns:repeat(2,minmax(0,1fr)); }

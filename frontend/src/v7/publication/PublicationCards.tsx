@@ -1,8 +1,8 @@
 import {useEffect,useState} from 'react';
-import type { Player, PostResult } from '../../api/types';
+import type { Player, PostResult, RoleSkillState } from '../../api/types';
 import { Button, Icon, LoadingIndicator } from '../ui';
 import type {QuestOutcome} from './outcomes';
-export type PublicationReceipt={worldId:string;questId?:string;actionKind?:'post'|'comment';audienceKnown?:boolean;result:PostResult;before:Player['skills'];after?:Player['skills'];questReward?:{amount:number;title:string;questId:string};questOutcome?:QuestOutcome};
+export type PublicationReceipt={worldId:string;questId?:string;actionKind?:'post'|'comment';audienceKnown?:boolean;result:PostResult;before:Player['skills'];roleBefore?:RoleSkillState[];roleAfter?:RoleSkillState[];roleLabels?:string[];after?:Player['skills'];questReward?:{amount:number;title:string;questId:string};questOutcome?:QuestOutcome};
 export function PublicationWaiting({pending,unknown,text,status,onContinue,onStop}:{pending:boolean;unknown:boolean;text:string;status:string;onContinue:()=>void;onStop:()=>void}){
  const [takingLong,setTakingLong]=useState(false);
  useEffect(()=>{setTakingLong(false);if(!pending)return;const timer=setTimeout(()=>setTakingLong(true),15000);return()=>clearTimeout(timer);},[pending]);
@@ -25,12 +25,27 @@ export function PublicationResult({receipt,onRead,preview=false,animateReward:_a
   <summary><Icon name="check"/><span>{title}</span><b>{receipt.audienceKnown===false?'':`${result.delta>=0?'+':''}${result.delta}`}</b><Icon name="chevron"/></summary>
   <div className="stack">{outcome.status!=='unverified'&&<><strong>{outcome.title}</strong><p>{outcome.reason}</p></>}
    <p>{receipt.audienceKnown===false?'Рост аудитории уточняется':`${result.delta>=0?'+':''}${result.delta} подписчиков`}</p>
+   <SkillChanges receipt={receipt}/>
    {xp!==undefined&&<p>{xp} XP за квест · локальная проба</p>}
-   {outcome.status==='unverified'&&<p className="caption muted">Оценка задания пока недоступна. Публикация сохранена.</p>}
    {result.bestComment&&<blockquote>{result.bestComment.text}</blockquote>}
    <p className="caption muted">{result.views} просмотров{isComment?' у исходной записи':''}</p>
    {outcome.source==='local'&&<p className="caption muted">Это клиентская модель зачёта, не серверное решение NPC.</p>}
    <Button variant="ghost" onClick={onRead}>Читать отклики</Button>
   </div>
  </details>;
+}
+
+export function SkillChanges({receipt}:{receipt:PublicationReceipt}){
+ const legacy=['brave','humor','topic'] as const;
+ const names=receipt.roleLabels??['Смелость','Юмор','В тему'];
+ return <ul className="turn-skill-changes" aria-label="Навыки за ход">{names.map((name,index)=>{
+  const before=receipt.roleLabels?receipt.roleBefore?.find(s=>s.name===name):receipt.before[legacy[index]];
+  const after=receipt.roleLabels?receipt.roleAfter?.find(s=>s.name===name):receipt.after?.[legacy[index]];
+  let change='—';
+  if(before&&after){
+   const levels=after.level-before.level,points=Math.round((after.progress-before.progress)*100);
+   change=levels?`Ур. ${before.level} → ${after.level}`:points?`${points>0?'+':'−'}${Math.abs(points)} п.п.`:'Без изменений';
+  }
+  return <li key={name}><strong>{name}</strong><span>{change}</span></li>;
+ })}</ul>;
 }

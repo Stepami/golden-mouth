@@ -20,3 +20,7 @@
 @keyframes island-out { to { opacity:0; transform:translateY(-8px) scale(.94); } }
 @media(prefers-reduced-motion:reduce) { .result-island,.result-island.is-leaving { animation:none; } .result-island.is-leaving { opacity:0; } }
 html[data-large-text=true] .result-island { border-radius:22px; }
+
+.result-island { flex-wrap:wrap; border-radius:24px; padding:12px 44px 12px 16px; }
+.result-island .turn-skill-changes { flex:0 0 100%; font-size:.75rem; gap:6px; padding-top:8px; }
+.result-island-close { position:absolute; right:6px; top:8px; }

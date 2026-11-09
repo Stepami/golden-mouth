@@ -13,7 +13,7 @@ export function GoalCard({ goal, onClick }: { goal: string; onClick?: () => void
 /** The briefing and editor display one task using the same visual hierarchy. */
 export function TaskCard({ title, prompt, children, status, outcome }: { title: string; prompt: string; children?: ReactNode; status?:string; outcome?:string }) {
   return <section className="task-card">
-    <div className="task-heading"><p className="card-label">{status?'Текущее задание':'Твой следующий ход'}</p>{status&&<span className="task-status">{status}</span>}</div>
+    <div className="task-heading"><p className="card-label">Текущее задание</p>{status&&<span className="task-status">{status}</span>}</div>
     <h2 className="task-action">{prompt}</h2>
     {children}
     <details className="task-context"><summary>Контекст задания<Icon name="chevron"/></summary><p>{title}</p>{outcome&&<p className="caption muted">{outcome}</p>}</details>

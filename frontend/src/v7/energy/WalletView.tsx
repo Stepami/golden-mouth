@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import {Button} from '../ui';
+import {Button,Icon} from '../ui';
 import {RewardArt} from '../ui/RewardArt';
 import type {EnergyWallet} from './exchange';
 export function EnergyCountdown({wallet}:{wallet:EnergyWallet}){
@@ -32,4 +32,14 @@ export function WalletView({wallet,page='resources',busy,message,onExchange,onRe
   {message&&<p className="wallet-message" role="status">{message}</p>}
   <button className="wallet-refresh" disabled={busy} onClick={onRefresh}>Обновить баланс</button>
  </section>;
+}
+
+export function EnergyBadge({wallet,amount,onClick}:{wallet?:EnergyWallet;amount?:number;onClick:()=>void}){
+ const [now,setNow]=useState(Date.now());
+ useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[]);
+ const full=wallet&&wallet.amount>=wallet.cap;
+ const remaining=wallet?.nextEnergyAtUtc?Date.parse(wallet.nextEnergyAtUtc)-now:undefined;
+ const fill=full?1:remaining!==undefined&&Number.isFinite(remaining)&&wallet?Math.min(1,Math.max(0,1-remaining/(wallet.regenSeconds*1000))):0;
+ const value=wallet?`${wallet.amount}/${wallet.cap}`:String(amount??'—');
+ return <><button className="resource energy-ring-button" aria-label={`Энергия: ${value}. ${full?'Запас полный':'Восстанавливается'}`} onClick={onClick}><span className="energy-ring"><svg viewBox="0 0 36 36" aria-hidden="true"><circle className="energy-ring-track" cx="18" cy="18" r="15"/><circle className="energy-ring-fill" cx="18" cy="18" r="15" pathLength="100" strokeDasharray={`${fill*100} 100`}/></svg><Icon name="energy"/></span><b>{value}</b></button><span>{full?'Запас полный':'Восстанавливается'}</span></>;
 }

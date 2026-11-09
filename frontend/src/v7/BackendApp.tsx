@@ -1,6 +1,8 @@
 import {useScrollEdges} from './ui/useScrollEdges';
 import {useEnergyWallet} from './energy/useEnergyWallet';
-import {EnergyCountdown} from './energy/WalletView';
+import {EnergyBadge} from './energy/WalletView';
+import {accountIdentity} from './accountIdentity';
+import {roleForWorld,scenarioForTemplate,definitionForRole} from './story/roles';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { activitiesForWorld, markWorldActivitiesRead, type Activity } from './activity';
 import { submissionFor, publicationError } from './submission';
@@ -13,7 +15,7 @@ import { ageBand as ageBandOf } from '../app/ageBand';
 import { AgeEntry } from './screens/AgeEntry';
 import { rankCatalog } from './interests';
 import { worldArt } from '../app/worldArt';
-import { storyForTemplate, storyForCampaign, campaignFor, pilotDefinition, pilotBinding, boundCampaign, type PilotBinding, type PilotCampaign } from './story/pilot';
+import { storyForTemplate, storyForCampaign, boundCampaign, type PilotBinding, type PilotCampaign } from './story/pilot';
 import { StoryOpening, StoryMap, PlayMode, StoryWallet, XPFlight } from './storyplay/StorySurfaces';
 import { freshStory, isStoryPlay, repairClosedDays, finishQuest, freezeStoryDay, buyBooster, grantDemoCrystals, spendStoryXP, type StoryPlay } from './storyplay/model';
 import './storyplay/storyplay.css';
@@ -64,7 +66,7 @@ import { NominalSignOut, LoadingIndicator, Avatar, Badge, BottomNav, Button, Chi
 
 type Screen = 'welcome' | 'age' | 'catalog' | 'search' | 'intro' | 'onboarding' | 'hero' | 'story-skills' | 'feed' | 'goals' | 'compose' | 'thread' | 'topic' | 'profile' | 'character' | 'messages' | 'activity' | 'account' | ResourcePageName;
 type ReplyTarget = { postId: string; commentId: string | null; name: string; text: string; authorId:string };
-type ReplyDraft = { text: string; requestId?: string; submittedText?: string; beforeSubscribers?:number; additionalStarId?:string };
+type ReplyDraft = { text: string; requestId?: string; submittedText?: string; beforeSubscribers?:number; beforeSkills?:Player['skills']; roleBefore?:Player['roleSkills']; questId?:string; additionalStarId?:string };
 const statusLabels: Record<string, string> = { pending: 'Персонажи читают публикацию…', ready_for_moderation: 'Готовим результат…', completed: 'Публикация готова', failed: 'Публикация не отправлена' };
 const titleOf: Record<Screen, string> = { catalog: 'Миры', search: 'Поиск', intro: 'Вход в мир', onboarding: 'Знакомство', welcome: 'Знакомство', age: 'Возраст', hero: 'Ваш персонаж', 'story-skills': 'Навыки персонажа', feed: 'Лента', goals: 'Цели', compose: 'Новая публикация', thread: 'Обсуждение', topic: 'Тема', profile: 'Профиль персонажа', character: 'Собеседник', messages: 'Личка', activity: 'Уведомления', account: 'Профиль', resources:'Энергия',crystals:'Кристаллы',boosters:'Бустеры' };
 
@@ -191,6 +193,8 @@ export default function BackendApp() {
     const view = worldView(doc);
     const goal = doc.firstContext.split('\nЦель персонажа: ')[1];
     const persona = player ? personaFor(player.id, doc.id) : {};
+    const role = roleForWorld(doc,persona);
+    if(role)return {...view,goal:role.goal};
     if (goal || persona.goal) view.goal = persona.goal || goal;
     return campaign ? { ...view, title: storyForCampaign(campaign).worldKey === 'sorcerers' ? storyForCampaign(campaign).scenario : view.title, cover: worldArt[storyForCampaign(campaign!).templateId].cover, hero: worldArt[storyForCampaign(campaign!).templateId].cover, goal: persona.goal || goal || campaign.goal } : view;
   };
@@ -226,7 +230,10 @@ export default function BackendApp() {
 
   useEffect(()=>{if(!gainAnimation)return;const timer=setTimeout(()=>setGainAnimation(undefined),2100);return()=>clearTimeout(timer);},[gainAnimation?.nonce]);
   useEffect(() => { if (!rewardAnimation) return; const timer=setTimeout(()=>setRewardAnimation(undefined),1800); return()=>clearTimeout(timer); },[rewardAnimation?.nonce]);
-  const curriculum = activeCampaign || (world ? legacyCurriculum(world,player?optionalWorldTemplate({...worldDocumentOf(player.world),firstContext:worldDocumentOf(player.world).firstContext.split('\nЦель персонажа: ')[0]})?.id:undefined) : undefined);
+  const activeRole = player ? roleForWorld(worldDocumentOf(player.world),personaFor(player.id,player.world)) : undefined;
+  const roleTask = activeRole ? (player?.campaignProgress?.completed ? undefined : activeRole.tasks.find(t=>t.id===player?.campaignProgress?.taskId)??activeRole.tasks[0]) : undefined;
+  const campaignProgress = player?.campaignProgress?.percent;
+  const curriculum = activeCampaign || (!activeRole && (world ? legacyCurriculum(world,player?optionalWorldTemplate({...worldDocumentOf(player.world),firstContext:worldDocumentOf(player.world).firstContext.split('\nЦель персонажа: ')[0]})?.id:undefined) : undefined)) || undefined;
   const storyKey = player && curriculum ? `${key}:story-play:${player.world}:${curriculum.id}` : '';
   const inventoryKey = `${key}:story-inventory`;
   const playBase = curriculum && storyOwner === storyKey && storyState.campaignId === curriculum.id ? storyState : {...freshStory(curriculum?.id??''),enabled:import.meta.env.DEV};
@@ -234,9 +241,8 @@ export default function BackendApp() {
   const allQuests = curriculum?.days.flatMap(day => day.quests) ?? [];
   const currentQuest = allQuests.find(q => !play.completed.includes(q.id));
   const editorQuest = allQuests.find(q => q.id === prepared?.questId) ?? currentQuest;
-  const storyLabels = player && personaFor(player.id, player.world).skills?.length === 3 ? personaFor(player.id, player.world).skills! : ['Смелость','Юмор','В тему'];
+  const storyLabels = activeRole?.skills.map(s=>s.name) ?? (player && personaFor(player.id, player.world).skills?.length === 3 ? personaFor(player.id, player.world).skills! : ['Смелость','Юмор','В тему']);
   const stageDay = curriculum ? (curriculum?.days.find(day => day.quests.some(q => q.id === currentQuest?.id))?.day??curriculum.days.at(-1)?.day??1) : undefined;
-  const goalProgress = activeCampaign ? Math.floor(activeCampaign.days.reduce((sum,day) => sum + day.quests.filter(q => play.completed.includes(q.id)).length * day.weight / 3,0) / activeCampaign.goalWeights.reduce((a,b)=>a+b,0) * 100) : 0;
   useEffect(() => {
     if (!preview || !curriculum || !storyKey) { setStoryState(freshStory('')); setStoryOwner(''); return; }
     const saved = readLocal<unknown>(storyKey, undefined);
@@ -281,9 +287,9 @@ export default function BackendApp() {
   const chooseHero = (choice?: { id: string }) => {
     if (!definition || !heroBase) return;
     setHeroChoice(choice?.id ?? 'custom');
-    setHeroGoal((pilotSelected ? campaignFor(choice?.id ?? 'custom', heroBase.templateId)?.goal : undefined) || selected?.goal || '');
+    setHeroGoal((pilotSelected ? scenarioForTemplate(heroBase.templateId)?.roles.find(r=>r.id===(choice?.id??'custom'))?.goal : undefined) || selected?.goal || '');
     setHeroAvatar(undefined); setHeroSeed(choice?.id ?? crypto.randomUUID()); setAvatarRemoved(false);
-    if (pilotSelected) { setDefinition(pilotDefinition(heroBase, choice?.id ?? 'custom')); return; }
+    if (pilotSelected) { setDefinition(definitionForRole(heroBase, choice?.id ?? 'custom')); return; }
     if (!choice) { setDefinition(heroBase); return; }
     const star = heroBase.stars.find(star => star.id === choice.id); if (!star) return;
     setDefinition({ ...heroBase, name: star.name, avatar: star.avatarSeed, role: star.role,
@@ -309,7 +315,7 @@ export default function BackendApp() {
     interestOnly.current = false; setEntryAge(18); setAge(''); setScreen('welcome'); setStack([]);
   };
   const completeInterests = (values: string[]) => {
-    setQualities(values); localSave('qualities', values);
+    setQualities(values); localSave('qualities', values); setQuery(''); setGenre('Все');
     if (interestOnly.current) { back(); interestOnly.current = false; return; }
     localSave('entry-required', false); setWorld(undefined); setScreen('catalog'); setStack([]);
   };
@@ -327,14 +333,14 @@ export default function BackendApp() {
         clearReferral(); trackEvent('onboarding_step', { step: 'age', ok: true });
         saveLocal(`reki:v7:${api.playerId()}:qualities`, qualities); saveLocal(`reki:v7:${api.playerId()}:entry-required`, false);
       }
-      const created = await api.createWorld(heroChoice === 'custom' && heroGoal.trim() ? { ...definition, firstContext: `${definition.firstContext}\nЦель персонажа: ${heroGoal.trim()}` } : definition);
-      const campaign = pilotSelected && heroChoice && storyForTemplate(definition.templateId) ? campaignFor(heroChoice, definition.templateId) : undefined;
-      if (campaign && !saveLocal(`reki:v7:${created.id}:story:${created.worldInstanceId}`, pilotBinding(campaign))) setStorageError(true);
+      const created = await api.createWorld(definition);
+      const role = pilotSelected ? scenarioForTemplate(definition.templateId)?.roles.find(r=>r.id===heroChoice) : undefined;
       const portrait = avatarRemoved ? undefined : heroAvatar || await heroPortrait(heroChoice ?? 'custom', heroSeed || definition.avatar, definition.templateId || created.world, definition.avatarStyle).catch(() => undefined);
-      if (!savePersona(created.id, created.world, { goal: heroGoal.trim(), skills: heroSkills, avatar: avatarRemoved ? '' : portrait })) setStorageError(true);
+      if (!savePersona(created.id, created.world, { goal: role?.goal??heroGoal.trim(), skills: role?.skills.map(s=>s.name)??heroSkills, ...(role?{roleId:role.id,templateId:definition.templateId!}:{}), avatar: avatarRemoved ? '' : portrait })) setStorageError(true);
+      accountIdentity(created.id,owned[0]?.name??created.name);
       const p = installPlayer(created); trackEvent('onboarding_step', { step: 'done', ok: true, world: p.world }); localSave('qualities', qualities);
       const own = await api.ownedWorlds(); installWorldContent(own); setOwned(own);
-      setStoryOnboarding(!preview || !!campaign); setScreen('goals'); setStack([]); await loadFeed(p);
+      setStoryOnboarding(!preview || !!role); setScreen('goals'); setStack([]); await loadFeed(p);
     } catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
   };
   const replyKey = (target: ReplyTarget) => `${key}:reply:${player?.world}:${target.postId}:${target.commentId ?? 'root'}`;
@@ -347,6 +353,7 @@ export default function BackendApp() {
   };
   const openQuest = (questId?: string) => {
     if (!world || !player || sending.current) return;
+    if(!preview&&activeRole){openCompose();if(roleTask)setPrepared({title:roleTask.context,prompt:roleTask.prompt,questId:roleTask.id});return;}
     const quest = allQuests.find(q => q.id === questId) ?? currentQuest;
     const doc = worldDocumentOf(player.world);
     const template = optionalWorldTemplate({...doc,firstContext:doc.firstContext.split('\nЦель персонажа: ')[0]});
@@ -388,6 +395,10 @@ export default function BackendApp() {
     const k = draftKey(player), saved = readPostDraft(k);
     const command = submissionFor(saved, draft, () => crypto.randomUUID());
     const { id, text, recovery } = command;
+    const beforeKey=`${key}:turn-before:${player.world}:${id}`;
+    const fallback={skills:player.skills,roleSkills:player.roleSkills,questId:prepared?.questId??roleTask?.id??currentQuest?.id};
+    if(!recovery)saveLocal(beforeKey,fallback);
+    const turnBefore=readLocal(beforeKey,fallback);
     if (!recovery && curriculum) localSave(`story-action:${player.world}:${id}`,{questId:editorQuest?.id,mode:playMode,booster:selectedBooster});
     if (!recovery) trackEvent('post_publish', { len: text.length, own_words: command.ownWords });
     if (!savePostDraft(k, { ...saved, text: draft, publicationId: id, submittedText: text, ownWords: command.ownWords, submittedOwnWords: command.ownWords })) setStorageError(true);
@@ -398,7 +409,7 @@ export default function BackendApp() {
       completePostDraft(k, id, text); setDraft(readPostDraft(k).text);
       const serverOutcome=parseQuestOutcome((event.result as unknown as {questOutcome?:unknown}).questOutcome);
       const reward = serverOutcome?undefined:creditQuest(event.result.postId,readLocal(`${key}:story-action:${player.world}:${id}`,undefined));
-      const value: PublicationReceipt = { worldId: player.world, questId:prepared?.questId, result: event.result, before: player.skills, questReward: reward,questOutcome:serverOutcome??(reward?{status:'success',source:'local',title:reward.title,reason:'Действие сохранено. Шаг закрыт в сюжетной пробе.',xp:reward.amount}:{status:'unverified',source:'server',title:editorQuest?.title??'Твоя запись',reason:playMode==='sandbox'?'Свободная запись опубликована.':'Пост опубликован, но серверный исход квеста пока не возвращается.'}) };
+      const value: PublicationReceipt = { worldId: player.world, questId:turnBefore.questId, result: event.result, before: turnBefore.skills, roleBefore:turnBefore.roleSkills, roleLabels:activeRole?.skills.map(s=>s.name), questReward: reward,questOutcome:serverOutcome??(reward?{status:'success',source:'local',title:reward.title,reason:'Действие сохранено. Шаг закрыт в сюжетной пробе.',xp:reward.amount}:{status:'unverified',source:'server',title:editorQuest?.title??'Твоя запись',reason:playMode==='sandbox'?'Свободная запись опубликована.':'Пост опубликован, но серверный исход квеста пока не возвращается.'}) };
       setReceipt(value);setShowReceipt(true); saveLocal(`${key}:result:${player.world}`, value);
       if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,value);
       setToast(event.result); setGainAnimation({delta:event.result.delta,nonce:event.result.postId});
@@ -408,7 +419,7 @@ export default function BackendApp() {
       setPublicationFailed(false); setUnknown(false); setPending(false); sending.current = false; setStatus('completed');
       const item: Activity = { id: event.result.postId, worldId: player.world, title: actor ? `${actor.name} отвечает на твою запись` : event.result.headline, text: best?.text ?? `${event.result.delta > 0 ? '+' : ''}${event.result.delta} подписчиков`, read: false, ...(actor&&best?{kind:'reaction' as const,actorName:actor.name,relation:actor.relation}: {}) };
       setActivities(old => { const next = [item, ...old.filter(a => a.id !== item.id)].slice(0, 100); localSave('activity', next); return next; });
-      setScreen('feed'); setStack([]); void refresh().then(p => { const updated = { ...value, after: p.skills }; setReceipt(updated); saveLocal(`${key}:result:${player.world}`, updated); const freshActor=best?worldDocumentOf(p.world).stars.find(s=>s.avatarSeed===best.avatar):undefined; if(freshActor){setReactionNotice(n=>n?.id===event.result.postId?{...n,relation:freshActor.relation}:n);setActivities(old=>{const next=old.map(a=>a.id===event.result.postId&&a.worldId===player.world?{...a,relation:freshActor.relation}:a);localSave('activity',next);return next;});} }).catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
+      setScreen('feed'); setStack([]); void refresh().then(p => { const updated = { ...value, after: p.skills, roleAfter:p.roleSkills, questOutcome:p.lastTurn?.actionId===id?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome }; setReceipt(updated); saveLocal(`${key}:result:${player.world}`, updated); if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated); const freshActor=best?worldDocumentOf(p.world).stars.find(s=>s.avatarSeed===best.avatar):undefined; if(freshActor){setReactionNotice(n=>n?.id===event.result.postId?{...n,relation:freshActor.relation}:n);setActivities(old=>{const next=old.map(a=>a.id===event.result.postId&&a.worldId===player.world?{...a,relation:freshActor.relation}:a);localSave('activity',next);return next;});} }).catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
     }, (state, reason) => {
       sending.current = false; setPending(false); setUnknown(state === 'unknown'); setPublicationFailed(state === 'failed');
       if (state === 'failed') { const latest = readPostDraft(k); savePostDraft(k, { text: latest.text, ownWords: latest.ownWords }); }
@@ -420,7 +431,7 @@ export default function BackendApp() {
     const target=reply,k=replyKey(target),saved=readLocal<ReplyDraft>(k,{text:''});
     const requestId=saved.requestId??crypto.randomUUID(),text=saved.submittedText??draft;
     if(!saved.requestId&&curriculum)localSave(`story-action:${player.world}:${requestId}`,{questId:currentQuest?.id,mode:playMode,booster:selectedBooster});
-    saveLocal(k,{...saved,text:draft,requestId,submittedText:text,beforeSubscribers:saved.beforeSubscribers??player.subs});
+    saveLocal(k,{...saved,text:draft,requestId,submittedText:text,beforeSubscribers:saved.beforeSubscribers??player.subs,beforeSkills:saved.beforeSkills??player.skills,roleBefore:saved.roleBefore??player.roleSkills,questId:saved.questId??roleTask?.id??currentQuest?.id});
     sending.current=true;setPending(true);setError('');setReceipt(undefined);setStatus('Сохраняем комментарий…');
     let snapshot:Awaited<ReturnType<typeof api.reply>>|undefined,completed=false;
     try{
@@ -439,9 +450,9 @@ export default function BackendApp() {
       if(snapshot){
         const reward=completed?creditQuest(requestId,readLocal(`${key}:story-action:${player.world}:${requestId}`,undefined)):undefined;
         const delta=snapshot.subscribers-(saved.beforeSubscribers??player.subs);
-        const value:PublicationReceipt={worldId:player.world,actionKind:'comment',audienceKnown:true,before:player.skills,questReward:reward,questOutcome:reward?{status:'success',source:'local',title:reward.title,reason:'Комментарий и реакция сохранены. Шаг закрыт в сюжетной пробе.',xp:reward.amount}:{status:'unverified',source:'server',title:'Твой комментарий',reason:completed?'Комментарий и реакция сохранены. Серверная оценка квеста пока не возвращается.':'Комментарий сохранён. Получение реакции ещё не завершено.'},result:{postId:target.postId,delta,headline:'Комментарий сохранён',whys:[],ribbons:[],viral:false,flop:false,views:snapshot.post.views}};
+        const value:PublicationReceipt={worldId:player.world,questId:saved.questId??roleTask?.id??currentQuest?.id,actionKind:'comment',audienceKnown:true,before:saved.beforeSkills??player.skills,roleBefore:saved.roleBefore??player.roleSkills,roleLabels:activeRole?.skills.map(s=>s.name),questReward:reward,questOutcome:reward?{status:'success',source:'local',title:reward.title,reason:'Комментарий и реакция сохранены. Шаг закрыт в сюжетной пробе.',xp:reward.amount}:{status:'unverified',source:'server',title:'Твой комментарий',reason:completed?'Комментарий и реакция сохранены. Серверная оценка квеста пока не возвращается.':'Комментарий сохранён. Получение реакции ещё не завершено.'},result:{postId:target.postId,delta,headline:'Комментарий сохранён',whys:[],ribbons:[],viral:false,flop:false,views:snapshot.post.views}};
         setReceipt(value);setShowReceipt(true);saveLocal(`${key}:result:${player.world}`,value);if(delta)setGainAnimation({delta,nonce:requestId});
-        void refresh().catch(()=>setFeedError('Комментарий сохранён. Обнови ленту, чтобы получить актуальные данные.'));
+        void refresh().then(p=>{const updated={...value,after:p.skills,roleAfter:p.roleSkills,questOutcome:p.lastTurn?.actionId===requestId?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome};setReceipt(updated);saveLocal(`${key}:result:${player.world}`,updated);if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated);}).catch(()=>setFeedError('Комментарий сохранён. Обнови ленту, чтобы получить актуальные данные.'));
       }
       sending.current=false;setPending(false);
     }
@@ -462,9 +473,9 @@ export default function BackendApp() {
   useEffect(()=>{if(!energyNudge)return;const timer=setTimeout(()=>setEnergyNudge(0),6000);return()=>clearTimeout(timer);},[energyNudge]);
   const renderFeed = () => <>
     <div className="world-hud"><header className="world-header"><button className="world-switch" onClick={() => setOverlay('exit')}><strong><span className="world-switch-name">{world?.title}</span><Icon name="chevron"/></strong><span className="channel-sidebar-count"><Icon name="member"/><b className="channel-count-target">{formatAudience(player?.subs??0)}</b><span className="channel-count-label">подписчиков</span></span></button>
-      <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><ResourceBadge type="energy" value={accountEnergy.wallet?`${accountEnergy.wallet.amount}/${accountEnergy.wallet.cap}`:String(player?.postsLeft??'—')} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/>{accountEnergy.wallet?<EnergyCountdown wallet={accountEnergy.wallet}/>:<span>Общий запас</span>}</div>
+      <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><EnergyBadge wallet={accountEnergy.wallet} amount={player?.postsLeft} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/></div>
       <ResourceBadge type="crystal" value={accountEnergy.wallet?String(accountEnergy.wallet.crystals):preview && curriculum ? String(play.crystals) : '—'} hint={accountEnergy.wallet?"Кристаллы для обмена на энергию":preview?"Кристаллы локальной пробы и бустеры":"Баланс кристаллов пока недоступен"} onClick={() => openResource('crystals')} />
-      <button className="profile-access" data-unspent={curriculum && play.available>0 ? "true" : undefined} aria-label={curriculum && play.enabled ? `Профиль персонажа: ${formatXP(play.total)} XP, ${activeCampaign?`цель ${goalProgress}%`:`квесты ${play.completed.length}/${allQuests.length}`}. Потратить XP на навыки` : "Профиль персонажа"} onClick={() => go('profile')} style={curriculum && play.enabled ? { background: `conic-gradient(var(--color-progress) ${goalProgress}%,var(--color-divider) 0)` } : undefined}><Avatar name={player?.name ?? ''} src={player ? personaFor(player.id, player.world).avatar : undefined} size="lg" />{curriculum && play.enabled && <span className="story-avatar-label">{formatXP(play.total)} XP · {activeCampaign?`${goalProgress}%`:`${play.completed.length}/${allQuests.length}`}</span>}</button></header>
+      <button className="profile-access campaign-avatar" aria-label={`Профиль персонажа. История: ${campaignProgress===undefined?'прогресс уточняется':`${campaignProgress}%`}`} onClick={() => go('profile')} style={{background:`conic-gradient(var(--campaign-ring) ${campaignProgress??0}%,var(--color-divider) 0)`}}><Avatar name={player?.name ?? ''} src={player ? personaFor(player.id, player.world).avatar : undefined} size="lg" /></button></header>
     </div>
     {curriculum&&play.enabled&&play.available>0&&<section className="section"><div className="xp-day-ready"><strong>{formatXP(play.available)} XP можно направить на навыки</strong><Button onClick={()=>go('profile')}>Выбрать улучшения</Button></div></section>}
     {preview && curriculum && <section className="story-tools"><button className="map-access" onClick={() => setOverlay('map')}>Карта мира <span aria-hidden="true">↗</span></button><button className="local-play-badge" onClick={() => openResource('boosters')}>{preview?(play.enabled?'Локальная проба':'Включить сюжетную пробу'):'План истории'}</button></section>}
@@ -477,12 +488,13 @@ export default function BackendApp() {
   </>;
 
   const worldActivities = activitiesForWorld(activities, player?.world).filter(a=>a.kind==='reaction'||a.kind==='mention'||a.kind==='follow');
-  const selectedStory = storyForTemplate(definition?.templateId);
-  const heroOptions = definition ? [...(pilotSelected && selectedStory ? selectedStory.campaigns.filter(c => c.roleId !== 'own').map(c => ({ id: c.roleId, name: c.heroName, role: c.roleName, goal: c.goal })) : (heroBase ?? definition).stars.map(s => ({ id: s.id, name: s.name, role: s.role, goal: selected?.goal || '' }))), { id: 'custom', name: heroChoice === 'custom' ? definition.name || 'Свой персонаж' : 'Свой персонаж', role: 'Твоя история', goal: selected?.goal || '' }] : [];
+  const selectedStory = scenarioForTemplate(definition?.templateId);
+  const heroOptions = definition ? pilotSelected && selectedStory ? selectedStory.roles.map(role=>({id:role.id,name:role.id==='custom'?'Свой персонаж':role.name,role:role.name,goal:role.goal,skills:role.skills})) : [...(heroBase??definition).stars.map(s=>({id:s.id,name:s.name,role:s.role,goal:selected?.goal||''})),{id:'custom',name:'Свой персонаж',role:'Твоя история',goal:selected?.goal||''}] : [];
   let content: ReactNode;
   if (booting) content = <div className="loading-state" role="status"><LoadingIndicator/><p>Открываем твои миры</p></div>;
   else if (screen === 'catalog' || screen === 'search') {
-    const entries = rankCatalog(withHogwartsCard(catalogEntries(templates, plannedWorlds), storyForTemplate('aec9494b-4118-4525-8458-e85d759c8dd9')!), qualities);
+    const story=scenarioForTemplate('aec9494b-4118-4525-8458-e85d759c8dd9')!;
+    const entries = rankCatalog(withHogwartsCard(catalogEntries(templates, plannedWorlds), {templateId:story.templateId,scenario:story.title,premise:story.opening,subtitle:'Чьим будет будущее школы?'}).map(entry=>{const scenario=scenarioForTemplate(entry.world.id);return entry.available&&scenario&&(entry.storyVariant||scenario.templateId!==story.templateId)?{...entry,world:{...entry.world,title:scenario.title,description:scenario.opening,tagline:scenario.opening.split('. ')[0]}}:entry;}), qualities);
     const filtered = filterCatalog(entries, query, genre);
     content = <><ScreenHeading title={screen === 'search' ? 'Найти свой мир' : 'Миры'} action={screen==='catalog'&&<button className="catalog-settings" aria-label="Настроить интересы" title="Интересы" onClick={()=>{interestOnly.current=true;go('onboarding');}}><Icon name="preferences"/></button>} />
       {screen === 'search' && <div className="search-field"><TextField label="Название или тема" value={query} onChange={e => setQuery(e.target.value)} placeholder="Магия, приключения, общение…" /></div>}
@@ -497,7 +509,7 @@ export default function BackendApp() {
   else if (screen === 'onboarding') content = <Onboarding key="entry-interests" initialStep={1} standalone={interestOnly.current} initialQualities={qualities} onBack={back} onDone={completeInterests} />;
   else if (screen === 'hero' && definition && definition.templateId) content = <><HeroStudio onBack={back}
     options={heroOptions} selected={heroChoice} onChoose={id=>chooseHero(id==='custom'?undefined:{id})}
-    name={definition.name} channel={definition.avatar} goal={heroGoal} onName={name=>setDefinition({...definition,name})} onChannel={avatar=>setDefinition({...definition,avatar})} onGoal={setHeroGoal}
+    name={definition.name} channel={definition.avatar} goal={heroGoal} onName={name=>setDefinition({...definition,name})} onChannel={avatar=>setDefinition({...definition,avatar})}
     skills={heroSkills} onSkills={setHeroSkills} seed={heroSeed||definition.avatar} avatar={heroAvatar} removed={avatarRemoved}
     onLook={seed=>{setHeroSeed(seed);setHeroAvatar(undefined);setAvatarRemoved(false);}} onUpload={src=>{setHeroAvatar(src);setAvatarRemoved(false);}} onRemove={()=>{setHeroAvatar(undefined);setAvatarRemoved(true);}}
     address={address} onAddress={setAddress} worldId={definition.templateId} worldTitle={selected?.title||definition.title} style={definition.avatarStyle}
@@ -512,10 +524,10 @@ export default function BackendApp() {
   else if (screen === 'goals' && !preview && world && player) {
     const doc = worldDocumentOf(player.world);
     const template = optionalWorldTemplate({...doc, firstContext: doc.firstContext.split('\nЦель персонажа: ')[0]});
-    const task = currentQuest ?? starterFor(template?.id, world);
+    const task = roleTask ?? (activeRole ? undefined : currentQuest ?? starterFor(template?.id, world));
     const savedDraft=readPostDraft(draftKey(player));
-    const taskReceipt=receiptForRelease(readLocal<PublicationReceipt|undefined>(`${key}:task-result:${player.world}:${currentQuest?.id}`,undefined)??(receipt?.worldId===player.world&&receipt.actionKind!=='comment'&&((currentQuest&&receipt.questId===currentQuest.id)||receipt.questOutcome?.title===task.title)?receipt:undefined),false);
-    content = <WorldBrief practiceSkills={personaFor(player.id,player.world).skills??[]} world={world} player={player} avatar={personaFor(player.id, player.world).avatar} task={task} firstVisit={storyOnboarding} hasDraft={savedDraft.ownWords&&!!savedDraft.text.trim()} receipt={taskReceipt} onRead={taskReceipt?()=>void openThread(taskReceipt.result.postId):undefined} onWrite={openFirstPost} onFeed={() => { setStoryOnboarding(false); go('feed'); }} />;
+    const taskReceipt=receiptForRelease((receipt?.questId===(roleTask??currentQuest)?.id?receipt:undefined)??readLocal<PublicationReceipt|undefined>(`${key}:task-result:${player.world}:${(roleTask??currentQuest)?.id}`,undefined)??(receipt?.worldId===player.world&&((currentQuest&&receipt.questId===currentQuest.id)||receipt.questId===roleTask?.id||receipt.questOutcome?.title===task?.title)?receipt:undefined),false);
+    content = <WorldBrief roleSkills={activeRole?.skills} campaignProgress={campaignProgress} campaignComplete={player.campaignProgress?.completed} practiceSkills={personaFor(player.id,player.world).skills??[]} world={world} player={player} avatar={personaFor(player.id, player.world).avatar} task={task} firstVisit={storyOnboarding} hasDraft={savedDraft.ownWords&&!!savedDraft.text.trim()} receipt={taskReceipt} onRead={taskReceipt?()=>void openThread(taskReceipt.result.postId):undefined} onWrite={openFirstPost} onFeed={() => { setStoryOnboarding(false); go('feed'); }} />;
   } else if (screen === 'goals' && activeCampaign) content = <StoryOpening firstVisit={storyOnboarding} playerName={player?.name ?? activeCampaign.heroName} avatar={player ? personaFor(player.id,player.world).avatar : undefined} worldTitle={world?.title || storyForCampaign(activeCampaign).scenario} campaign={activeCampaign} goal={world?.goal || activeCampaign.goal} skills={storyLabels} step="mission" onNext={() => go('story-skills')} onBack={back} />;
   else if (screen === 'story-skills' && activeCampaign) content = <StoryOpening firstVisit={storyOnboarding} playerName={player?.name ?? activeCampaign.heroName} avatar={player ? personaFor(player.id,player.world).avatar : undefined} worldTitle={world?.title || storyForCampaign(activeCampaign).scenario} campaign={activeCampaign} goal={world?.goal || activeCampaign.goal} skills={storyLabels} step="skills" onNext={openFirstPost} onBack={back} />;
   else if (screen === 'goals' && world) content = <><ScreenHeading title="Цели" subtitle={world.title} /><StoryBrief goal={world.goal || 'Найти свой голос и начать разговор.'} /><section className="section"><Button onClick={openFirstPost}>Написать пост →</Button></section></>;
@@ -529,12 +541,12 @@ export default function BackendApp() {
       const author: Person = comment.me ? playerView(player) : world.cast.find(p => `Star_${p.id}` === comment.authorId) ?? { id: comment.authorId ?? comment.id, name: comment.author, handle: comment.avatar ?? '', role: comment.role ?? '', boundary: '' };
       return <div key={comment.id} className={comment.parentCommentId ? 'thread-nested' : ''}>{comment.parentCommentId && <span className="sr-only">Ответ на реплику</span>}{card({ id: comment.id, parentId: post.id, authorId: author.id, text: comment.hidden ? 'Комментарий скрыт' : comment.text, createdAt: '', likes: 0 }, author, 0, true)}{comment.star && !comment.hidden && world.cast.some(p => `Star_${p.id}` === comment.authorId) && <div className="reply-action"><Button variant="ghost" aria-label={`Ответить ${author.name}`} onClick={() => openCompose({ postId: post.id, commentId: comment.id, name: author.name, text: comment.text, authorId:`Star_${author.id}` })}>Ответить</Button></div>}</div>;
     })}{post && !post.comments.length && <EmptyState title="Здесь ещё нет ответов">Персонажи могут продолжить разговор после публикации.</EmptyState>}{postAuthor && post && <div className="section"><Button className="full" onClick={() => openCompose({ postId: post.id, commentId: null, name: postAuthor.name, text: post.text, authorId:`Star_${postAuthor.id}` })}>Начать разговор с автором</Button></div>}</>;
-  } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={personaFor(player.id, player.world).avatar} onBack={back} /><WorldProgress streak={player.streak} storyDay={preview?stageDay:undefined} boosterCount={preview?String(play.boosters+(play.energyBoosters?.length??0)):'—'} onStreak={()=>setOverlay('streak')} onGift={play.enabled?openSeriesGift:undefined} giftClaimed={storyInventory.loginGiftDays?.includes(giftDay)} onBoosters={preview?()=>openResource('boosters'):undefined}/><section className="section profile-overview"><div className="profile-audience"><ChannelAudience value={player.subs}/></div><GoalCard goal={world.goal} onClick={() => go('goals')} /><PracticeFocus skills={personaFor(player.id,player.world).skills??[]}/></section>{preview&&curriculum&&<section className="section"><h2 className="section-title">Твой путь</h2><StoryMap preview={preview} campaign={curriculum} actors={world.cast} state={play} currentId={currentQuest?.id} onSelect={id=>openQuest(id)}/></section>}{preview?<StoryWallet state={play} labels={storyLabels} onEnable={() => updateStory(v=>({...v,enabled:true}))} onSpend={points=>updateStory(v=>spendStoryXP(v,points))}/>:<CurrentSkills skills={player.skills} labels={['Смелость','Юмор','В тему']}/>}<section className="section"><Button variant="secondary" onClick={()=>go('account')}>Настройки профиля</Button></section></>;
+  } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={personaFor(player.id, player.world).avatar} onBack={back} /><WorldProgress streak={player.streak} storyDay={preview?stageDay:undefined} boosterCount={preview?String(play.boosters+(play.energyBoosters?.length??0)):'—'} onStreak={()=>setOverlay('streak')} onGift={play.enabled?openSeriesGift:undefined} giftClaimed={storyInventory.loginGiftDays?.includes(giftDay)} onBoosters={preview?()=>openResource('boosters'):undefined}/><section className="section profile-overview"><div className="profile-audience"><ChannelAudience value={player.subs}/>{receipt?.worldId===player.world&&receipt.audienceKnown!==false&&<p className="caption last-turn-audience">{receipt.result.delta>0?'+':receipt.result.delta<0?'−':''}{Math.abs(receipt.result.delta)} за последний ход</p>}</div><GoalCard goal={world.goal} onClick={() => go('goals')} /><PracticeFocus skills={personaFor(player.id,player.world).skills??[]}/></section>{preview&&curriculum&&<section className="section"><h2 className="section-title">Твой путь</h2><StoryMap preview={preview} campaign={curriculum} actors={world.cast} state={play} currentId={currentQuest?.id} onSelect={id=>openQuest(id)}/></section>}{preview?<StoryWallet state={play} labels={storyLabels} onEnable={() => updateStory(v=>({...v,enabled:true}))} onSpend={points=>updateStory(v=>spendStoryXP(v,points))}/>:<CurrentSkills skills={player.skills} labels={activeRole?storyLabels:['Смелость','Юмор','В тему']} roleSkills={activeRole?.skills} values={player.roleSkills}/>}<section className="section"><Button variant="secondary" onClick={()=>setOverlay('exit')}>Выйти из мира</Button></section></>;
   else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><ChannelAudience value={person.subscribers}/><span className="caption muted">@{person.handle} · AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
   else if (screen === 'topic' && world) content = <><div className="topic-header"><button className="back-button" onClick={back}>Назад</button><img className="topic-cover" src={world.hero} alt="" /><h1>{quote?.name ?? world.title}</h1><p>{quote?.text ?? world.topic}</p></div><section className="topic-people">{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}<Button className="full" onClick={() => openCompose(undefined, quote)}>Написать</Button></section></>;
   else if (screen === 'messages' && world) content = <><ScreenHeading title="Личка" /><EmptyState title="Сначала — общий разговор" action={<Button onClick={() => go('feed')}>Вернуться в ленту</Button>}>Личные сообщения скоро появятся.</EmptyState><section className="section"><h2 className="section-title">Собеседники</h2>{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}</section></>;
   else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={worldActivities.length > 0 && <button className="link-button caption" onClick={() => { const next = markWorldActivitiesRead(activities, player?.world); setActivities(next); localSave('activity', next); }}>Прочитать всё</button>} />{!worldActivities.length && <EmptyState title="Пока тихо">Здесь появятся реакции персонажей и доступные упоминания твоего канала.</EmptyState>}{worldActivities.map(a=><ReactionTicker key={a.id} inline read={a.read} notice={{id:a.id,postId:a.id,worldId:a.worldId,kind:a.kind??'reaction',actorName:a.actorName??a.title,text:a.text,relation:a.relation}} onOpen={()=>void openThread(a.id)} onClose={()=>{const next=activities.map(v=>v.id===a.id?{...v,read:true}:v);setActivities(next);localSave('activity',next);}}/>)}</>;
-  else if (screen === 'account') content = <><ProfileHeader name={player?.name ?? 'Твой профиль'} avatar={player?personaFor(player.id,player.world).avatar:undefined} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? owned.slice(0,accountVisible).map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}{owned.length>accountVisible&&<Button variant="secondary" onClick={()=>setAccountVisible(n=>n+5)}>Показать ещё {Math.min(5,owned.length-accountVisible)}</Button>}</section><section className="account-settings"><SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => openResource('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><SettingsRow label="Удалить аккаунт" onClick={()=>setDeleteOpen(true)} disabled={pending || busy} /><NominalSignOut onSignOut={beginEntry} disabled={pending || busy} /></section></>;
+  else if (screen === 'account') content = <><ProfileHeader name={player?accountIdentity(player.id,owned[0]?.name??player.name).name:'Твой профиль'} neutralAvatar handle={player?accountIdentity(player.id,owned[0]?.name??player.name).handle:undefined} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? owned.slice(0,accountVisible).map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}{owned.length>accountVisible&&<Button variant="secondary" onClick={()=>setAccountVisible(n=>n+5)}>Показать ещё {Math.min(5,owned.length-accountVisible)}</Button>}</section><section className="account-settings"><SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => openResource('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><SettingsRow label="Удалить аккаунт" onClick={()=>setDeleteOpen(true)} disabled={pending || busy} /><NominalSignOut onSignOut={beginEntry} disabled={pending || busy} /></section></>;
   else content = <EmptyState title="Выбери мир" action={<Button onClick={() => go('catalog')}>К мирам</Button>}>Продолжи сохранённую историю или начни новую.</EmptyState>;
 
   const inWorld = !!world && !['catalog', 'search', 'account', 'intro', 'onboarding', 'welcome', 'age', 'hero'].includes(screen);

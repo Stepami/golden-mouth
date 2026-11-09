@@ -555,11 +555,13 @@ export function ProfileHeader({
   avatar,
   onBack,
   label = "Персонаж",
+  neutralAvatar = false, handle,
 }: {
   name: string;
   avatar?: string;
   onBack?: () => void;
   label?: string;
+  neutralAvatar?:boolean; handle?:string;
 }) {
   return (
     <header className="character-heading">
@@ -571,9 +573,9 @@ export function ProfileHeader({
       <div className="character-identity">
         <div>
           <span className="character-kicker">{label}</span>
-          <h1>{name}</h1>
+          <h1>{name}</h1>{handle&&<p className="account-handle">@{handle}</p>}
         </div>
-        <Avatar name={name} src={avatar} size="xl" />
+        {neutralAvatar?<span className="account-neutral-avatar" aria-label="Общий профиль"><Icon name="profile"/></span>:<Avatar name={name} src={avatar} size="xl" />}
       </div>
     </header>
   );

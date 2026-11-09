@@ -22,7 +22,13 @@ export type PlayerDocument = Omit<Fields<Wire.PlayerResponse>, 'energy' | 'skill
   streak: Omit<Fields<Wire.StreakResponse>, 'days'> & { days: number }
   ageBand?: import('../app/ageBand').AgeBand
 }
+// Optional presentation contract for the new role campaigns. Legacy wire skills are separate.
+// The design adapter supplies examples; production awaits the campaign API mapping.
+export type RoleSkillState = {name:string; level:number; progress:number}
+export type CampaignProgress = {percent:number; taskId?:string; completed:boolean}
+export type TurnProgress = {actionId:string; skills:RoleSkillState[]; campaign:CampaignProgress; outcome:{status:'success'|'partial'|'failed';title:string;reason:string}}
 export interface Player extends Omit<PlayerDocument, 'energy' | 'experiments'> {
+  roleSkills?: RoleSkillState[]; campaignProgress?: CampaignProgress; lastTurn?: TurnProgress
   worldInstanceId?: string; difficulty?: WorldDifficulty; avatarStyle?: string
   name: string; handle: string; role: string; world: WorldId
   subs: number; postsLeft: number; postsCap: number; firstPostInviteBonus: number
