@@ -336,8 +336,9 @@ export default function BackendApp() {
       }
       const created = await api.createWorld(definition);
       const role = pilotSelected ? scenarioForTemplate(definition.templateId)?.roles.find(r=>r.id===heroChoice) : undefined;
-      const portrait = avatarRemoved ? undefined : heroAvatar || await heroPortrait(heroChoice ?? 'custom', heroSeed || definition.avatar, definition.templateId || created.world, definition.avatarStyle).catch(() => undefined);
-      if (!savePersona(created.id, created.world, { goal: role?.goal??heroGoal.trim(), skills: role?.skills.map(s=>s.name)??heroSkills, ...(role?{roleId:role.id,templateId:definition.templateId!}:{}), avatar: avatarRemoved ? '' : portrait })) setStorageError(true);
+      const custom = !heroChoice || heroChoice==='custom';
+      const portrait = custom&&avatarRemoved ? '' : (custom?heroAvatar:undefined) || await heroPortrait(heroChoice ?? 'custom', heroSeed || definition.avatar, definition.templateId || created.world, definition.avatarStyle).catch(() => undefined);
+      if (!savePersona(created.id, created.world, { goal: role?.goal??heroGoal.trim(), skills: role?.skills.map(s=>s.name)??heroSkills, ...(role?{roleId:role.id,templateId:definition.templateId!}:{}), avatar: portrait })) setStorageError(true);
       accountIdentity(created.id,owned[0]?.name??created.name);
       const p = installPlayer(created); trackEvent('onboarding_step', { step: 'done', ok: true, world: p.world }); localSave('qualities', qualities);
       const own = await api.ownedWorlds(); installWorldContent(own); setOwned(own);
@@ -490,12 +491,12 @@ export default function BackendApp() {
 
   const worldActivities = activitiesForWorld(activities, player?.world).filter(a=>a.kind==='reaction'||a.kind==='mention'||a.kind==='follow');
   const selectedStory = scenarioForTemplate(definition?.templateId);
-  const heroOptions = definition ? pilotSelected && selectedStory ? selectedStory.roles.map(role=>({id:role.id,name:role.id==='custom'?'Свой персонаж':role.name,role:role.name,goal:role.goal,skills:role.skills})) : [...(heroBase??definition).stars.map(s=>({id:s.id,name:s.name,role:s.role,goal:selected?.goal||''})),{id:'custom',name:'Свой персонаж',role:'Твоя история',goal:selected?.goal||''}] : [];
+  const heroOptions = definition ? pilotSelected && selectedStory ? selectedStory.roles.map(role=>({id:role.id,name:role.id==='custom'?'Свой персонаж':role.name,role:role.name,goal:role.goal,motivation:'motivation' in role?role.motivation:undefined,skills:role.skills})) : [...(heroBase??definition).stars.map(s=>({id:s.id,name:s.name,role:s.role,goal:selected?.goal||''})),{id:'custom',name:'Свой персонаж',role:'Твоя история',goal:selected?.goal||''}] : [];
   let content: ReactNode;
   if (booting) content = <div className="loading-state" role="status"><LoadingIndicator/><p>Открываем твои миры</p></div>;
   else if (screen === 'catalog' || screen === 'search') {
     const story=scenarioForTemplate('aec9494b-4118-4525-8458-e85d759c8dd9')!;
-    const entries = rankCatalog(withHogwartsCard(catalogEntries(templates, plannedWorlds), {templateId:story.templateId,scenario:story.title,premise:story.opening,subtitle:'Чьим будет будущее школы?'}).map(entry=>{const scenario=scenarioForTemplate(entry.world.id);return entry.available&&scenario&&(entry.storyVariant||scenario.templateId!==story.templateId)?{...entry,world:{...entry.world,title:scenario.title,description:scenario.opening,introTitles:scenario.openingTitles,tagline:scenario.opening.split('. ')[0]}}:entry;}), qualities);
+    const entries = rankCatalog(withHogwartsCard(catalogEntries(templates, plannedWorlds), {templateId:story.templateId,scenario:story.title,premise:story.opening,subtitle:'Чьим будет будущее школы?'}).map(entry=>{const scenario=scenarioForTemplate(entry.world.id);return entry.available&&scenario&&(entry.storyVariant||scenario.templateId!==story.templateId)?{...entry,world:{...entry.world,title:scenario.title,description:scenario.opening.split(/\n\s*\n/).slice(0,scenario.introParagraphCount).join('\n\n'),introTitles:scenario.openingTitles,tagline:scenario.opening.split('. ')[0]}}:entry;}), qualities);
     const filtered = filterCatalog(entries, query, genre);
     content = <><ScreenHeading title={screen === 'search' ? 'Найти свой мир' : 'Миры'} action={screen==='catalog'&&<button className="catalog-settings" aria-label="Настроить интересы" title="Интересы" onClick={()=>{interestOnly.current=true;go('onboarding');}}><Icon name="preferences"/></button>} />
       {screen === 'search' && <div className="search-field"><TextField label="Название или тема" value={query} onChange={e => setQuery(e.target.value)} placeholder="Магия, приключения, общение…" /></div>}
@@ -508,7 +509,7 @@ export default function BackendApp() {
   else if (screen === 'welcome') content = <Onboarding key="entry-welcome" initialStep={0} onTry={() => go('age')} onDone={() => go('age')} onBack={back} />;
   else if (screen === 'age') content = <AgeEntry initialAge={entryAge} minimumAge={14} requireConsent={true} onBack={value => { setEntryAge(value); back(); }} onContinue={continueAge} />;
   else if (screen === 'onboarding') content = <Onboarding key="entry-interests" initialStep={1} standalone={interestOnly.current} initialQualities={qualities} onBack={back} onDone={completeInterests} />;
-  else if (screen === 'hero' && definition && definition.templateId) content = <><HeroStudio onBack={back}
+  else if (screen === 'hero' && definition && definition.templateId) content = <><HeroStudio onBack={back} startWithHero={selectedStory?.startWithHero}
     options={heroOptions} selected={heroChoice} onChoose={id=>chooseHero(id==='custom'?undefined:{id})}
     name={definition.name} channel={definition.avatar} goal={heroGoal} onName={name=>setDefinition({...definition,name})} onChannel={avatar=>setDefinition({...definition,avatar})}
     skills={heroSkills} onSkills={setHeroSkills} seed={heroSeed||definition.avatar} avatar={heroAvatar} removed={avatarRemoved}

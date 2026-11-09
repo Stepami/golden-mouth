@@ -4,8 +4,8 @@ const photos: Record<string,string> = {
   'дейл купер':'dale', 'одри хорн':'audrey', 'шелли джонсон':'shelly',
   'вера воронина':'vera', 'костя воронин':'kostya', 'николай петрович':'nikolai', 'кирилл':'kirill',
 };
-export const roleLooks:Record<string,string>={isabella:'muse',eduard:'scout',yakov:'sage',diana:'spark',jon:'sage',james:'scout',greedy_wolf:'sage','2kotleti_news':'scout',alexey_nl:'muse'};
-const namedLooks:Record<string,string>={'изабелла лебедева':'muse','эдуард калинин':'scout','яков чернов':'sage','диана шторморождённая':'spark','джон винтер':'sage','джеймс левлистер':'scout','меркантил':'sage','бургер в декабре':'scout','куляш ai':'muse'};
+export const roleLooks:Record<string,string>={isabella:'muse',eduard:'scout',yakov:'sage',lida:'spark',diana:'spark',jon:'sage',james:'scout',greedy_wolf:'sage','2kotleti_news':'scout',alexey_nl:'muse'};
+const namedLooks:Record<string,string>={'изабелла лебедева':'muse','эдуард калинин':'scout','яков чернов':'sage','лида':'spark','диана шторморождённая':'spark','джон винтер':'sage','джеймс левлистер':'scout','меркантил':'sage','бургер в декабре':'scout','куляш ai':'muse'};
 export function defaultPortrait(name: string): string | undefined {
   const key = name.trim().toLocaleLowerCase('ru');
   if(namedLooks[key])return characterPortrait(namedLooks[key]);
