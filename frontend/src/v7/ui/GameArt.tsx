@@ -1,12 +1,14 @@
 import './gameArt.css';
 
-const cells={energy:[0,0],crystal:[1,0],flame:[2,0],followers:[3,0],gift:[0,1],booster:[1,1],courage:[2,1],humor:[3,1],context:[0,2],diplomacy:[1,2],empathy:[2,2],argument:[3,2],precision:[0,3],knowledge:[1,3],voice:[2,3],direction:[3,3]} as const;
-export type ArtKind=keyof typeof cells;
+// Square source regions surround each complete silhouette with 12px of space.
+// The illustrations are not centred on the atlas's nominal four-by-four grid.
+const regions={energy:[42,53,266],crystal:[338.5,51,272],flame:[638.5,51,275],followers:[944,76.5,273],gift:[39.5,356,259],booster:[343,359,245],courage:[638,353,270],humor:[955,368,249],context:[32.5,656,267],diplomacy:[338,657,263],empathy:[641,657,269],argument:[947,651,274],precision:[31,958,267],knowledge:[344,960,259],voice:[646,952,273],direction:[946,955,271]} as const;
+export type ArtKind=keyof typeof regions;
 
 /** A shared atlas keeps material, light and scale consistent across the app. */
 export function GameArt({kind,className=''}:{kind:ArtKind;className?:string}) {
- const [x,y]=cells[kind];
- return <svg className={`game-art ${className}`} width="96" height="96" viewBox="8 8 84 84" aria-hidden="true" focusable="false"><image href="/assets/game-art/icons-gloss.png" x={-x*100} y={-y*100} width="400" height="400"/></svg>;
+ const [x,y,size]=regions[kind];
+ return <svg className={`game-art game-art--${kind} ${className}`} width="96" height="96" viewBox={`${x} ${y} ${size} ${size}`} aria-hidden="true" focusable="false"><image href="/assets/game-art/icons-gloss.png" width="1254" height="1254"/></svg>;
 }
 
 const families:Record<ArtKind,string[]>={

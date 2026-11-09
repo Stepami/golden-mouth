@@ -20,9 +20,9 @@ export function Onboarding({onDone,onBack,initialQualities=[],initialStep=0,onTr
    <div className="entry-copy"><h1>Твоя история.<br/>Твой голос.</h1><p>Выбери мир и героя. Пиши посты, пробуй новые подходы и смотри, как отвечают персонажи.</p></div>
    <footer className="entry-actions"><Button className="full" onClick={()=>onTry?onTry():setStep(1)}>Начать историю</Button><p>Твои собеседники — AI-персонажи.</p></footer>
   </>:<>
-   <ScreenHeading title="Твои интересы" back={()=>initialStep===1?onBack():setStep(0)}/>
+   <ScreenHeading title="Что хочется попробовать?" back={()=>initialStep===1?onBack():setStep(0)}/>
    {!standalone&&<div className="entry-step-track" aria-label="Шаг 2 из 2"><i className="is-done"/><i className="is-done"/></div>}
-   <div className="entry-copy"><h1>Что хочется<br/>попробовать?</h1><p>Подберём миры под твои интересы. Можно выбрать несколько.</p></div>
+   <div className="entry-copy"><p>Выбери несколько интересов — подберём миры.</p></div>
    <div className="entry-interest-list">{communicationInterests.map(interest=><button key={interest} aria-pressed={selected.includes(interest)} onClick={()=>setSelected(values=>values.includes(interest)?values.filter(v=>v!==interest):[...values,interest])}><span>{interest}</span><span className="entry-choice-mark" aria-hidden="true">{selected.includes(interest)&&<Icon name="check"/>}</span></button>)}</div>
    <footer className="entry-actions"><Button className="full" onClick={()=>onDone(selected)}>Найти мой мир</Button><button className="entry-skip" onClick={()=>onDone([])}>Показать все миры</button></footer>
   </>}

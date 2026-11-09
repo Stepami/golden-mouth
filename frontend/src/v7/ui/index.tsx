@@ -572,7 +572,7 @@ export function ProfileHeader({
       )}
       <div className="character-identity">
         <div>
-          <span className="character-kicker">{label}</span>
+          <span className="sr-only">{label}</span>
           <h1>{name}</h1>{handle&&<p className="account-handle">@{handle}</p>}
         </div>
         {neutralAvatar?<span className="account-neutral-avatar" aria-label="Общий профиль"><Icon name="profile"/></span>:<Avatar name={name} src={avatar} size="xl" />}

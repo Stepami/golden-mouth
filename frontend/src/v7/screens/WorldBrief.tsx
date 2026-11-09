@@ -12,7 +12,7 @@ export function WorldBrief({ world, player, avatar, task, firstVisit, hasDraft, 
   firstVisit: boolean; hasDraft: boolean; onWrite: () => void; onFeed: () => void; practiceSkills?:string[]; receipt?:PublicationReceipt; onRead?:()=>void;
 }) {
   const outcome=receipt?.questOutcome;
-  const status=outcome?.status==='success'?'Задание выполнено':outcome?.status==='partial'?'Есть что дополнить':outcome?.status==='failed'?'Попробуй другой подход':receipt?'Пост опубликован':hasDraft?'Есть черновик':'Можно начинать';
+  const status=outcome?.status==='success'?'Задание выполнено':outcome?.status==='partial'?'Есть что дополнить':outcome?.status==='failed'?'Попробуй другой подход':undefined;
   return <div className="world-brief">
     <header className="brief-cover">
       <img className="brief-cover-image" src={world.hero} alt="" />

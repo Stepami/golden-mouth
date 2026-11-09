@@ -12,6 +12,7 @@ import './v7/app.css';
 import './v7/integration.css';
 import './v7/world-entry.css';
 import './v7/night.css';
+import './v7/ui/motion.css';
 
 // The scenario prototype is an explicit development preview, never an API fallback.
 const VisualReview = import.meta.env.DEV ? lazy(() => import('./v7/review/VisualReview')) : null;

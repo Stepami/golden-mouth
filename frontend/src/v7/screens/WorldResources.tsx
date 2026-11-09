@@ -25,9 +25,8 @@ export function WorldProgress({ streak, storyDay, boosterCount = '—', onStreak
 }
 export function StreakDetails({ streak,preview=true }: { streak: Player['streak']; preview?:boolean }) {
   return <div className="stack streak-detail">
-    <div className="streak-detail-hero"><RewardArt kind="flame"/><strong>{dayCount(streak.days)}</strong><p>Твой ритм общения</p></div>
+    <div className="streak-detail-hero"><RewardArt kind="flame"/><strong>{dayCount(streak.days)}</strong></div>
     <ol className="streak-days" aria-label="Семь отметок серии">{Array.from({ length: 7 }, (_, i) => <li key={i}><span className={`streak-day-mark${streak.week[i] ? ' is-done' : ''}`} aria-hidden="true">{streak.week[i] && <Icon name="check"/>}</span><span className="caption">{i + 1}</span><span className="sr-only">{streak.week[i] ? 'Есть отметка' : 'Нет отметки'}</span></li>)}</ol>
-    <p className="caption muted">Здесь отмечены дни, которые игра засчитала в серию.</p>
     {preview&&<><h3>Подарки сюжетной пробы</h3><p>В этой пробе каждый день серии даёт случайный подарок: энергию, кристаллы или бустер.</p></>}
   </div>;
 }

@@ -22,9 +22,9 @@ export function PublicationResult({receipt,onRead,preview=false,animateReward:_a
  const title={success:'Квест выполнен',partial:'Есть прогресс',failed:'Пока не получилось',unverified:isComment?'Комментарий сохранён':'Пост опубликован'}[outcome.status];
  const xp=preview?(receipt.questReward?.amount??outcome.xp):undefined;
  return <details className="receipt-history" aria-label="Результат публикации">
-  <summary><Icon name="check"/><span>{title}</span><b>{receipt.audienceKnown===false?'':`${result.delta>=0?'+':''}${result.delta}`}</b><Icon name="chevron"/></summary>
+  <summary><Icon name="check"/><span>{title}</span><b>{receipt.audienceKnown===false?'':`${result.delta>=0?'+':''}${result.delta} подписчиков`}</b><Icon name="chevron"/></summary>
   <div className="stack">{outcome.status!=='unverified'&&<><strong>{outcome.title}</strong><p>{outcome.reason}</p></>}
-   <p>{receipt.audienceKnown===false?'Рост аудитории уточняется':`${result.delta>=0?'+':''}${result.delta} подписчиков`}</p>
+   {receipt.audienceKnown===false&&<p>Рост аудитории уточняется</p>}
    <SkillChanges receipt={receipt}/>
    {xp!==undefined&&<p>{xp} XP за квест · локальная проба</p>}
    {result.bestComment&&<blockquote>{result.bestComment.text}</blockquote>}

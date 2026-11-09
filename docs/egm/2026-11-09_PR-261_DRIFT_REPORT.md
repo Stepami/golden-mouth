@@ -15,3 +15,16 @@ No open drift detected after re-reading corrections. Findings resolved during re
 The reviewer confirmed reading the persona, integration guide, drift skill, applicable instructions, full acceptance document, listed implementation sources and relevant sections of all four scenarios. The reviewer also checked that lastTurn only updates a receipt with the same action ID.
 
 Limit: this is a source review of the frontend handoff. It does not verify a production campaign API, balance, or a live deployment. Optional role progress remains a documented integration boundary.
+
+
+## PR-261-header-refinement.md
+
+No drift detected after the separate Goldfish reviewed the current source. Reduced-motion specificity, narrow control alignment and the seamless loop findings were resolved.
+
+## PR-261-caption-reduction.md
+
+No drift detected. Separate read-only Goldfish review checked preserved units, costs, meaningful states and accessibility.
+
+## PR-261-motion-polish.md
+
+No drift detected after correction of the resource press and empty-energy signal: only the inner icon moves. The separate Goldfish verified all 16 source regions and reduced-motion rules. Browser and build checks are recorded in the implementation documents.

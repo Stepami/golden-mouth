@@ -33,3 +33,10 @@ Local visual evidence is in `frontend/output/playwright/pr261/` (not included in
 ## Limits
 
 These checks validate the frontend and illustrative preview flows. They do not validate AI scoring, numeric balance, production campaign progression or cross-device account identity. The optional role skill/progress fields remain absent from the current real API; the interface displays unknown values there. No merge or deployment was performed.
+
+
+## Subsequent visual feedback · 2026-11-09
+
+The later approved header, caption cleanup and motion changes are documented in PR-261-header-refinement.md, PR-261-caption-reduction.md and PR-261-motion-polish.md. They supersede the earlier capsule/inner-ring presentation. Story pagination, unique chapter titles and skill mappings remain in place.
+
+Both builds (including TypeScript) and the same 14 existing UI/data/draft tests pass. Existing large-bundle and occupied test HMR-port warnings remain. At 320/390px the HUD controls align, counts stay still during pointer feedback and complete resource silhouettes fit during motion. Fitting world names remain still; overflowing names loop without fading/reloading the whole title. Reduced motion produces a single static title and disables artwork motion. The latest gallery covers all 16 complete atlas illustrations. Local evidence remains under frontend/output/playwright/pr261/ and is not committed.
