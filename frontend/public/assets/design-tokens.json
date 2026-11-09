@@ -1,5 +1,5 @@
 {
-  "$description": "REKI v7: Compact for body copy; Narrow (TT Norms Pro Condensed) for headings and labels. Rem sizes support 200% text scale.",
+  "$description": "REKI: Compact interface type; white enamel controls, 4px spacing grid and dimensional game art. Light v7 baseline retained; v8 night is current.",
   "tokens": {
     "font-family": {
       "$type": "string",
@@ -575,6 +575,204 @@
         "reki": {
           "css": "var(--font-label)"
         }
+      }
+    }
+  },
+  "$extensions": {
+    "reki": {
+      "defaultMode": "dark",
+      "modes": {
+        "dark": {
+          "color-paper": {
+            "$type": "color",
+            "$value": "#101010"
+          },
+          "color-bg": {
+            "$type": "color",
+            "$value": "#101010"
+          },
+          "color-surface": {
+            "$type": "color",
+            "$value": "#1c1c1c"
+          },
+          "color-world-surface": {
+            "$type": "color",
+            "$value": "#161616"
+          },
+          "color-ink": {
+            "$type": "color",
+            "$value": "#f3f5f7"
+          },
+          "color-muted": {
+            "$type": "color",
+            "$value": "#969ba1"
+          },
+          "color-control-border": {
+            "$type": "color",
+            "$value": "#5d6268"
+          },
+          "color-divider": {
+            "$type": "color",
+            "$value": "#2f3336"
+          },
+          "color-nav-muted": {
+            "$type": "color",
+            "$value": "#969ba1"
+          },
+          "color-success": {
+            "$type": "color",
+            "$value": "#e6e7e9"
+          },
+          "color-error": {
+            "$type": "color",
+            "$value": "#ff8c9e"
+          },
+          "color-on-accent": {
+            "$type": "color",
+            "$value": "#171918"
+          },
+          "font-heading": {
+            "$type": "string",
+            "$value": "var(--font-compact)"
+          },
+          "font-label": {
+            "$type": "string",
+            "$value": "var(--font-compact)"
+          },
+          "page-gutter": {
+            "$type": "string",
+            "$value": "16px"
+          },
+          "text-caption": {
+            "$type": "string",
+            "$value": ".75rem"
+          },
+          "leading-caption": {
+            "$type": "string",
+            "$value": "1rem"
+          },
+          "leading-body": {
+            "$type": "string",
+            "$value": "1.375rem"
+          },
+          "duration-fast": {
+            "$type": "string",
+            "$value": "120ms"
+          },
+          "duration-normal": {
+            "$type": "string",
+            "$value": "200ms"
+          },
+          "ease-out": {
+            "$type": "string",
+            "$value": "cubic-bezier(.23,1,.32,1)"
+          },
+          "color-accent": {
+            "$type": "color",
+            "$value": "#f4f4f5"
+          },
+          "color-accent-hover": {
+            "$type": "color",
+            "$value": "#ffffff"
+          },
+          "color-progress": {
+            "$type": "color",
+            "$value": "#f4f4f5"
+          },
+          "section-gap": {
+            "$type": "string",
+            "$value": "24px"
+          },
+          "related-gap": {
+            "$type": "string",
+            "$value": "12px"
+          },
+          "inline-gap": {
+            "$type": "string",
+            "$value": "8px"
+          },
+          "compact-gap": {
+            "$type": "string",
+            "$value": "4px"
+          },
+          "card-stack-gap": {
+            "$type": "string",
+            "$value": "8px"
+          },
+          "group-gap": {
+            "$type": "string",
+            "$value": "32px"
+          }
+        }
+      },
+      "components": {
+        "control-height": "48px",
+        "card-padding": "24px (20px below 390px; 16px below 351px)",
+        "card-radius": "18px",
+        "heading-screen": "1.375rem",
+        "heading-card": "1.125rem",
+        "loading-size": "18px",
+        "loading-stroke": "1.75",
+        "loading-duration": "800ms",
+        "loading-steps": "8",
+        "world-switch-title": "1rem",
+        "primary-button-fill": "linear-gradient(180deg,#fff 0%,#f3f3f4 72%,#ebebed 100%)",
+        "primary-button-shadow": "inset 0 1px 0 #fff,inset 0 -1px 1px #0000000d,0 1px 2px #0003",
+        "streak-location": "profile",
+        "result-duration": "6000ms",
+        "prologue-heading": "30px / 1.06",
+        "prologue-body": "16px / 24px"
+      },
+      "world-hud": {
+        "font-heading": "var(--font-body)",
+        "font-label": "var(--font-body)",
+        "page-gutter": "16px",
+        "control-size": "52px",
+        "compact-control-size": "48px",
+        "control-gap": "8px",
+        "compact-control-gap": "8px",
+        "text-caption": ".6875rem",
+        "leading-caption": "1rem"
+      },
+      "spacing": {
+        "base": "4px",
+        "scale": [
+          "0px",
+          "4px",
+          "8px",
+          "12px",
+          "16px",
+          "20px",
+          "24px",
+          "32px",
+          "40px",
+          "48px"
+        ],
+        "roles": {
+          "page-gutter": "space-4",
+          "card-padding": "space-6 / space-5 / space-4 by viewport",
+          "section-gap": "space-6",
+          "related-gap": "space-3",
+          "inline-gap": "space-2",
+          "compact-gap": "space-1",
+          "card-stack-gap": "space-2",
+          "group-gap": "space-8"
+        },
+        "section-stacking": "16px bottom + 8px next top = 24px; do not add a third margin",
+        "card-stacking": "8px between related surfaces; 16/20/24px inside by available width; 32px between semantic groups",
+        "responsive-card-padding": {
+          "default": "24px",
+          "max-389px": "20px",
+          "max-350px": "16px"
+        }
+      },
+      "game-art": {
+        "material": "satin-gloss ceramic / lacquered polymer",
+        "atlas": "assets/game-art/icons-gloss.png",
+        "grid": "4x4",
+        "resource-hud": "28px",
+        "skill": "28px",
+        "skill-inline": "20px"
       }
     }
   }

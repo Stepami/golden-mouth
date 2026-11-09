@@ -22,7 +22,7 @@ try {
   await test('editing interests starts on the choices and preserves saved selections', () => {
     const markup = renderToStaticMarkup(createElement(Onboarding, { initialStep: 1, initialQualities: ['Быть собой'], onDone() {}, onBack() {} }));
     assert.doesNotMatch(markup, /onboarding-steps/);
-    assert.match(markup, /<button[^>]*aria-pressed="true"[^>]*>Быть собой<\/button>/);
+    assert.match(markup, /<button[^>]*aria-pressed="true"[^>]*><span>Быть собой<\/span>/);
     assert.doesNotMatch(markup, /onboarding-art/);
   });
   await test('the UI adapter keeps the server NPC relation without calculating a new one', () => {

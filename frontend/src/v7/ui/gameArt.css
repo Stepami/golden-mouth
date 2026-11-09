@@ -1,0 +1,15 @@
+.game-art { display:block; flex-shrink:0; overflow:hidden; }
+.skill-art { width:28px; height:28px; }
+.skill-name { display:inline-flex; align-items:center; gap:var(--space-2); min-width:0; }
+.practice-grid .practice-choice { display:grid; grid-template-columns:minmax(0,1fr) 20px; gap:8px; padding:12px; }
+.practice-choice > .practice-choice-copy { min-width:0; grid-column:1 / -1; grid-row:2; }
+.practice-choice > .skill-art { width:28px; height:28px; }
+.practice-choice > .practice-check { grid-column:2; grid-row:1; width:20px; height:20px; }
+.practice-summary-skills { display:flex; flex-wrap:wrap; gap:var(--space-2); margin-top:var(--space-2); }
+.practice-summary-skills > span { display:inline-flex; align-items:center; gap:var(--space-1); color:var(--color-muted); font-size:.75rem; }
+.practice-summary-skills .skill-art { width:20px; height:20px; }
+.practice-example > strong { display:flex; align-items:center; gap:var(--space-2); }
+.practice-example .skill-art { width:24px; height:24px; }
+.entry-interest-list button > .skill-art { width:24px; height:24px; }
+.entry-interest-list button > span:first-of-type { flex:1; }
+@media(max-width:350px) { .practice-grid { grid-template-columns:1fr; } }

@@ -2,10 +2,28 @@
 const photos: Record<string,string> = {
   'гарри поттер':'harry', 'гермиона грейнджер':'hermione', 'рон уизли':'ron', 'драко малфой':'draco',
   'дейл купер':'dale', 'одри хорн':'audrey', 'шелли джонсон':'shelly',
+  'вера воронина':'vera', 'костя воронин':'kostya', 'николай петрович':'nikolai', 'кирилл':'kirill',
 };
-export async function defaultPortrait(name: string): Promise<string> {
-  const photo = photos[name.trim().toLocaleLowerCase('ru')];
+export const roleLooks:Record<string,string>={isabella:'muse',eduard:'scout',yakov:'sage',diana:'spark',jon:'sage',james:'scout',greedy_wolf:'sage','2kotleti_news':'scout',alexey_nl:'muse'};
+const namedLooks:Record<string,string>={'изабелла лебедева':'muse','эдуард калинин':'scout','яков чернов':'sage','диана шторморождённая':'spark','джон винтер':'sage','джеймс левлистер':'scout','меркантил':'sage','бургер в декабре':'scout','куляш ai':'muse'};
+export function defaultPortrait(name: string): string | undefined {
+  const key = name.trim().toLocaleLowerCase('ru');
+  if(namedLooks[key])return characterPortrait(namedLooks[key]);
+  const photo = photos[key];
   if(photo) return `/assets/avatars/${photo}.jpg`;
-  const { avatarUri } = await import('../ui/avatarRenderer');
-  return avatarUri(name.trim() || 'character', undefined, undefined, 'lorelei');
+  if(key === 'катя миронова') return '/assets/s1-imgPhoto.png';
+  if(key === 'макс лесной') return '/assets/s1-imgPhoto1.png';
+  // Fictional characters without supplied portraits share the generated avatar family.
+  return characterPortrait(name);
+}
+
+export const characterLooks = ['scout', 'muse', 'sage', 'spark'] as const;
+export function characterPortrait(seed: string) {
+  const look = characterLooks.find(value => value === seed) ?? characterLooks[Array.from(seed).reduce((sum, c) => sum + c.charCodeAt(0), 0) % characterLooks.length];
+  return `/assets/avatars/3d/${look}-v8.png`;
+}
+/** Retire the old generated SVGs without replacing a player's uploaded photo. */
+export function displayPortrait(src: string | undefined, name: string) {
+  if(src==='')return undefined;
+  return src?.startsWith('data:image/svg+xml') ? characterPortrait(name) : src || defaultPortrait(name);
 }

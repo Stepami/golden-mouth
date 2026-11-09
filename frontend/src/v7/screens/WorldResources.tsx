@@ -1,5 +1,7 @@
 import type { Player } from '../../api/types';
-import { Button } from '../ui';
+import {useEffect,useRef,useState} from 'react';
+import {RewardArt} from '../ui/RewardArt';
+import { Button, Icon } from '../ui';
 
 export function dayCount(value: number) {
   const n = Math.max(0, Math.floor(value));
@@ -7,23 +9,26 @@ export function dayCount(value: number) {
   return `${n} ${ending}`;
 }
 export function WorldProgress({ streak, storyDay, boosterCount = '—', onStreak, onBoosters, onGift, giftClaimed=false }: {
-  streak: Player['streak']; storyDay?: number; boosterCount?: string; onStreak: () => void; onBoosters: () => void; onGift?:()=>void; giftClaimed?:boolean;
+  streak: Player['streak']; storyDay?: number; boosterCount?: string; onStreak: () => void; onBoosters?: () => void; onGift?:()=>void; giftClaimed?:boolean;
 }) {
+  const previousDays=useRef(streak.days);
+  const [earned,setEarned]=useState(false);
+  useEffect(()=>{const grew=streak.days>previousDays.current;previousDays.current=streak.days;if(!grew)return;setEarned(true);const timer=setTimeout(()=>setEarned(false),600);return()=>clearTimeout(timer);},[streak.days]);
   return <div className="world-progress">
-    <button className="streak-access" onClick={onStreak} aria-label={`Серия: ${dayCount(streak.days)}. Посмотреть дни и награды`}>
-      <span aria-hidden="true">🔥</span><span><strong>Серия · {dayCount(streak.days)}</strong><span className="streak-mini" aria-hidden="true">{Array.from({ length: 7 }, (_, i) => <i key={i} className={streak.week[i] ? 'is-done' : ''} />)}</span></span>
+    <button className={`streak-access${earned?' is-earned':''}`} onClick={onStreak} aria-label={`Серия: ${dayCount(streak.days)}. Посмотреть дни`}>
+      <RewardArt kind="flame"/><span className="streak-copy"><span className="streak-heading"><strong>{dayCount(streak.days)}</strong><small>в серии</small></span><span className="streak-mini" aria-hidden="true">{Array.from({ length: 7 }, (_, i) => <i key={i} className={streak.week[i] ? 'is-done' : ''}>{streak.week[i]?<Icon name="check"/>:i+1}</i>)}</span></span>
     </button>
-    {onGift&&<button className={`gift-access${giftClaimed?' is-claimed':''}`} onClick={onGift} disabled={giftClaimed} aria-label={giftClaimed?'Подарок сегодня получен':'Забрать подарок серии — локальная проба'}><svg viewBox="0 0 32 32" aria-hidden="true"><g fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M6 14h20v14H6zM4 9h24v5H4zM16 9v19"/><path d="M16 9C8 10 6 5 9 3c3-2 7 6 7 6s4-8 7-6c3 2 1 7-7 6Z"/></g></svg><small>{giftClaimed?'Получен':'Забрать'}</small></button>}
+    {onGift&&<button className={`gift-access${giftClaimed?' is-claimed':''}`} onClick={onGift} disabled={giftClaimed} aria-label={giftClaimed?'Подарок сегодня получен':'Забрать подарок серии — локальная проба'}><RewardArt kind="gift"/><small>{giftClaimed?'Получен':'Забрать'}</small></button>}
     {storyDay !== undefined && <span className="story-day-label">День сюжета {storyDay}</span>}
-    <button className="boosters-access" onClick={onBoosters}><span aria-hidden="true">✦</span> Бустеры <span className="caption muted">{boosterCount}</span></button>
+    {onBoosters&&<button className="boosters-access" onClick={onBoosters}><RewardArt kind="booster"/> Бустеры <span className="caption muted">{boosterCount}</span></button>}
   </div>;
 }
 export function StreakDetails({ streak,preview=true }: { streak: Player['streak']; preview?:boolean }) {
-  return <div className="stack">
-    <p>В серии {dayCount(streak.days)}. Пропуск ставит её на паузу — серия не сгорает.</p>
-    <ol className="streak-days" aria-label="Семь отметок серии">{Array.from({ length: 7 }, (_, i) => <li key={i}><span aria-hidden="true">{streak.week[i] ? '🔥' : '○'}</span><span className="caption">{i + 1}</span><span className="sr-only">{streak.week[i] ? 'Есть отметка' : 'Нет отметки'}</span></li>)}</ol>
-    <p className="caption muted">Отметки серии, не календарь посещений.</p>
-    <h3>Подарки за возвращение</h3><p>{preview?'Каждый день серии — случайный подарок: энергия, кристаллы или бустер. Пропуск не отнимает уже полученные награды.':'Подарки за возвращение появятся позже.'}</p>
+  return <div className="stack streak-detail">
+    <div className="streak-detail-hero"><RewardArt kind="flame"/><strong>{dayCount(streak.days)}</strong><p>Твой ритм общения</p></div>
+    <ol className="streak-days" aria-label="Семь отметок серии">{Array.from({ length: 7 }, (_, i) => <li key={i}><span className={`streak-day-mark${streak.week[i] ? ' is-done' : ''}`} aria-hidden="true">{streak.week[i] && <Icon name="check"/>}</span><span className="caption">{i + 1}</span><span className="sr-only">{streak.week[i] ? 'Есть отметка' : 'Нет отметки'}</span></li>)}</ol>
+    <p className="caption muted">Здесь отмечены дни, которые игра засчитала в серию.</p>
+    {preview&&<><h3>Подарки сюжетной пробы</h3><p>В этой пробе каждый день серии даёт случайный подарок: энергию, кристаллы или бустер.</p></>}
   </div>;
 }
 export function CrystalExchange({ onBoosters }: { onBoosters: () => void }) {

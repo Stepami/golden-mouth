@@ -1,4 +1,6 @@
+import {useId} from 'react';
 import {WalletView} from '../energy/WalletView';
+import {RewardArt} from '../ui/RewardArt';
 import type {EnergyWallet} from '../energy/exchange';
 import { Button, Chip, ScreenHeading } from '../ui';
 import { DemoInventory } from '../storyplay/StorySurfaces';
@@ -11,9 +13,23 @@ export function ResourcePages({wallet,exchangeBusy=false,exchangeMessage='',onEx
  preview?:boolean;page:ResourcePageName;energy?:number;state:StoryPlay;activeStory:boolean;selectedBooster?:BoosterId;
  onPage:(page:ResourcePageName)=>void;onBack:()=>void;onEnable:()=>void;onDisable:()=>void;onGrant:()=>void;onBuy:(id?:BoosterId)=>void;onToggle:(id?:BoosterId)=>void;onChooseWorld:()=>void;
 }) {
+ const tabsId=useId();
  const title={resources:'Энергия',crystals:'Кристаллы',boosters:'Бустеры'}[page];
- if(!import.meta.env.DEV||!preview)return <><ScreenHeading title={title} back={onBack}/><section className="section resource-page">{!wallet&&exchangeMessage&&<p role="status">{exchangeMessage}</p>}<nav className="resource-tabs" aria-label="Ресурсы">{([['resources','Энергия'],['crystals','Кристаллы'],['boosters','Бустеры']] as const).map(([id,label])=><Chip key={id} selected={page===id} onClick={()=>onPage(id)}>{label}</Chip>)}</nav>{wallet&&page!=='boosters'?<WalletView wallet={wallet} busy={exchangeBusy} message={exchangeMessage} onExchange={onExchange} onRefresh={onWalletRefresh}/>:page==='resources'?<><div className="resource-balance"><span className="resource-symbol resource-symbol--energy" aria-hidden="true">ϟ</span><div><strong>{energy??'—'}</strong><span>энергии доступно</span></div></div><h2>{energy===0?'Энергия закончилась':'Для следующих ходов'}</h2><p>Публикация и ответ расходуют по 1 энергии. Запас общий для всех миров. Читать ленту можно бесплатно.</p><p className="caption muted">Запас обновляется по действующим правилам аккаунта.</p></>:<><h2>{page==='crystals'?'Кристаллы появятся позже':'Бустеры появятся позже'}</h2><p>Обмен и инвентарь пока недоступны.</p></>}<Button variant="ghost" disabled={exchangeBusy} onClick={onWalletRefresh}>Обновить баланс</Button><Button variant="secondary" onClick={onBack}>Вернуться</Button></section></>;
- const walletView=wallet?<WalletView wallet={wallet} busy={exchangeBusy} message={exchangeMessage} onExchange={onExchange} onRefresh={onWalletRefresh}/>:undefined;
+ if(!import.meta.env.DEV||!preview){
+  const releasePage=page==='boosters'?'resources':page;
+  return <><ScreenHeading title="Ресурсы" back={onBack}/><section className="section resource-page resource-page--release">
+   {!wallet&&exchangeMessage&&<p role="status">{exchangeMessage}</p>}
+   <div className="resource-switch" role="tablist" aria-label="Ресурсы">{([['resources','Энергия'],['crystals','Кристаллы']] as const).map(([id,label],index)=><button key={id} id={`${tabsId}-${id}`} role="tab" aria-selected={releasePage===id} aria-controls={`${tabsId}-panel`} tabIndex={releasePage===id?0:-1} onClick={()=>onPage(id)} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?1:1-index;onPage(next===0?'resources':'crystals');(event.currentTarget.parentElement?.children[next] as HTMLButtonElement)?.focus();}}>{label}</button>)}</div>
+   <div id={`${tabsId}-panel`} role="tabpanel" aria-labelledby={`${tabsId}-${releasePage}`} tabIndex={0}>
+   {wallet?<WalletView wallet={wallet} page={releasePage} busy={exchangeBusy} message={exchangeMessage} onExchange={onExchange} onRefresh={onWalletRefresh}/>:<>
+    {releasePage==='resources'&&<><div className="resource-balance"><RewardArt kind="energy"/><div><strong>{energy??'—'}</strong><span>энергии доступно</span></div></div><h2>{energy===0?'Энергия закончилась':'Для следующих ходов'}</h2><p>Публикация и ответ расходуют по 1 энергии. Запас общий для всех миров. Читать ленту можно бесплатно.</p></>}
+    <p>Баланс кошелька и обмен пока недоступны. Попробуй обновить баланс.</p><Button variant="ghost" disabled={exchangeBusy} onClick={onWalletRefresh}>Обновить баланс</Button>
+   </>}
+   </div>
+  </section></>;
+ }
+
+ const walletView=wallet?<WalletView wallet={wallet} page={page==='crystals'?'crystals':'resources'} busy={exchangeBusy} message={exchangeMessage} onExchange={onExchange} onRefresh={onWalletRefresh}/>:undefined;
  const demo=activeStory&&state.enabled;
  return <><ScreenHeading title={title} back={onBack}/><section className="section resource-page">
   <nav className="resource-tabs" aria-label="Ресурсы">{([['resources','Энергия'],['crystals','Кристаллы'],['boosters','Бустеры']] as const).map(([id,label])=><Chip key={id} selected={page===id} onClick={()=>onPage(id)}>{label}</Chip>)}</nav>

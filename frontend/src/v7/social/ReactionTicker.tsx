@@ -1,9 +1,14 @@
+import {Avatar,Icon} from '../ui';
 import {useEffect,useRef,useState} from 'react';
-import {Avatar} from '../ui';
 export type ReactionNotice={id:string;postId:string;worldId:string;kind:'reaction'|'mention'|'follow';actorName:string;text:string;relation?:number;local?:boolean};
-import {relationEmoji} from './emotions';
-export function ReactionTicker({notice,onOpen,onClose,inline=false}:{notice:ReactionNotice;onOpen:()=>void;onClose:()=>void;inline?:boolean}){
- const viewport=useRef<HTMLSpanElement>(null),text=useRef<HTMLSpanElement>(null);const[distance,setDistance]=useState(0);
- useEffect(()=>{const measure=()=>setDistance(Math.max(0,(text.current?.scrollWidth??0)-(viewport.current?.clientWidth??0)));measure();const observer=new ResizeObserver(measure);if(viewport.current)observer.observe(viewport.current);return()=>observer.disconnect();},[notice.id,notice.text]);
- return <aside className={`reaction-ticker${inline?' reaction-ticker--inline':''}`} role={inline?'article':'status'}><button className="reaction-ticker-open" onClick={onOpen}><span className="reaction-emotion" aria-hidden="true">{notice.relation&&notice.relation!==0?<span className="reaction-portrait"><Avatar name={notice.actorName} size="sm"/><small>{relationEmoji(notice.relation)}</small></span>:relationEmoji(notice.relation)}</span><span className="reaction-ticker-copy"><strong>{notice.actorName}{notice.kind==='mention'?' упоминает тебя':notice.kind==='follow'?' подписывается на канал':' отвечает на твою запись'}</strong><span className={`reaction-ticker-viewport${distance?' is-scrolling':''}`} ref={viewport} style={{'--ticker-distance':`${-distance}px`,'--ticker-time':`${Math.max(8,distance/28)}s`} as React.CSSProperties}><span ref={text}>{notice.text}</span></span></span></button><button className="reaction-ticker-close" aria-label="Закрыть реакцию" onClick={onClose}>×</button></aside>;
+export function ReactionTicker({notice,onOpen,onClose,inline=false,read=false}:{notice:ReactionNotice;onOpen:()=>void;onClose:()=>void;inline?:boolean;read?:boolean}){
+ const [paused,setPaused]=useState(false);const close=useRef(onClose);close.current=onClose;
+ useEffect(()=>{if(inline||paused)return;const timer=setTimeout(()=>close.current(),6000);return()=>clearTimeout(timer);},[notice.id,inline,paused]);
+ return <aside className={`reaction-ticker${inline?' reaction-ticker--inline':''}`} role={inline?'article':'status'} onPointerEnter={()=>setPaused(true)} onPointerLeave={()=>setPaused(false)} onFocus={()=>setPaused(true)} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget))setPaused(false);}}>
+  <button className="reaction-ticker-open" onClick={onOpen}>
+   <span className="reaction-emotion" aria-hidden="true"><span className="reaction-portrait"><Avatar name={notice.actorName} size="sm"/>{!!notice.relation&&<small>{notice.relation!>0?'+':''}{notice.relation}</small>}</span></span>
+   <span className="reaction-ticker-copy"><strong>{notice.actorName}{notice.kind==='mention'?' упоминает тебя':notice.kind==='follow'?' подписывается на канал':' отвечает на твою запись'}</strong><span className="reaction-ticker-preview">{notice.text}</span></span>
+  </button>
+  {(!inline||!read)&&<button className="reaction-ticker-close" aria-label={inline?'Отметить прочитанным':'Закрыть реакцию'} onClick={onClose}><Icon name={inline?'check':'close'}/></button>}
+ </aside>;
 }

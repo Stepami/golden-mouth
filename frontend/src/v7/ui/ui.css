@@ -60,6 +60,10 @@
   opacity: 0.4;
 }
 .icon {
+  width:24px;
+  height:24px;
+  min-width:0;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -156,7 +160,9 @@
   display: block;
   background: var(--color-progress);
   border-radius: inherit;
-  transition: width 360ms var(--ease-out);
+  width: 100%;
+  transform-origin: left;
+  transition: transform 240ms var(--ease-out);
 }
 .field {
   display: flex;
@@ -202,6 +208,9 @@
 .empty-state p {
   max-width: 280px;
 }
+.empty-copy { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.empty-copy :is(h2,p) { margin:0; }
+.empty-action { margin-top:8px; }
 .notice {
   display: flex;
   flex-direction: column;
@@ -448,17 +457,12 @@
   border-radius: 12px;
   transition: background var(--duration-fast);
 }
-.bottom-nav button:not(.is-active) .icon {
-  opacity: 0.6;
-}
+.bottom-nav .icon { opacity: 1; }
 .bottom-nav .is-active {
   color: var(--color-ink);
 }
 .bottom-nav .is-active .nav-symbol {
   background: transparent;
-}
-.bottom-nav .nav-compose .icon {
-  opacity: 1;
 }
 .nav-dot {
   height: 6px;
@@ -549,19 +553,18 @@
   padding: 8px 16px;
   margin-bottom: 20px;
 }
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.65s linear infinite;
+/* The same 18px indicator sits on the text baseline in every loading state. */
+.loading-indicator {
+  display: inline-block;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  vertical-align: -3px;
+  animation: loading-turn 800ms steps(8, end) infinite;
 }
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+@keyframes loading-turn { to { transform: rotate(360deg); } }
+.loading-state { min-height: 240px; padding: 32px 24px; display: flex; gap: 10px; align-items: center; justify-content: center; color: var(--color-muted); font: 400 .9375rem/1.4 var(--font-body); }
+@media(prefers-reduced-motion:reduce) { .loading-indicator { animation: none; } }
 @keyframes sheet-in {
   from {
     opacity: 0;
@@ -634,9 +637,6 @@
 }
 .bottom-nav .is-active {
   font-weight: 600;
-}
-.bottom-nav .nav-compose {
-  color: var(--color-ink);
 }
 
 .settings-row {

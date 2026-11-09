@@ -1,0 +1,10 @@
+.design-preview-layout { height:100dvh; display:flex; flex-direction:column; background:#101010; }
+.design-preview-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 24px; padding:12px 20px; flex-shrink:0; background:#1c1c1c; font-size:13px; line-height:1.4; }
+.design-preview-toolbar small { display:block; color:var(--color-muted); font-size:11px; }
+.design-preview-toolbar nav { display:flex; gap:4px; flex-wrap:wrap; }
+.design-preview-toolbar button { min-height:36px; padding:8px 12px; border-radius:20px; color:var(--color-muted); }
+.design-preview-toolbar button[aria-pressed=true] { background:#f3f5f7; color:#101010; }
+.design-preview-content { flex:1; min-height:0; overflow:auto; }
+.design-preview-content > .v7-stage { min-height:0; height:100%; }
+.design-preview-content > .v7-stage > .app { height:100%; }
+@media(max-width:480px){.design-preview-toolbar{padding:8px 12px}.design-preview-toolbar>span{font-size:12px}.design-preview-toolbar nav{gap:0}.design-preview-toolbar button{padding:6px 10px;font-size:12px}}

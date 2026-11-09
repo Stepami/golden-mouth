@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Button, Notice } from '../ui';
+import { Button, Notice, ScreenHeading } from '../ui';
+import './onboarding.css';
 
 const ages = Array.from({ length: 92 }, (_, index) => index + 8);
 export function AgeEntry({ initialAge = 18, minimumAge, requireConsent, onBack, onContinue }: {
@@ -21,9 +22,10 @@ export function AgeEntry({ initialAge = 18, minimumAge, requireConsent, onBack, 
     if (minimumAge !== undefined && age < minimumAge) { setError(`Сейчас начать игру можно с ${minimumAge} лет.`); return; }
     onContinue(age);
   };
-  return <section className="age-entry">
-    <span className="brand-small">реки®</span>
-    <div className="stack"><p className="caption muted">Знакомство</p><h1 className="display">Сколько<br />тебе лет?</h1><p className="muted">Дальше — настроим подборку миров.</p></div>
+  return <section className="age-entry entry-setup">
+    <ScreenHeading title="Знакомство" back={()=>onBack(age)}/>
+    <div className="entry-step-track" aria-label="Шаг 1 из 2"><i className="is-done"/><i/></div>
+    <div className="entry-copy"><h1>Сколько<br />тебе лет?</h1><p>Сначала познакомимся, затем выберем твой мир.</p></div>
     <div className="age-entry-wheel">
       <div className="age-entry-selection" aria-hidden="true" />
       <div ref={wheel} className="age-entry-options" role="listbox" tabIndex={0} aria-label="Возраст" aria-activedescendant={`${prefix}-${age}`}
@@ -37,6 +39,6 @@ export function AgeEntry({ initialAge = 18, minimumAge, requireConsent, onBack, 
     </div>
     {requireConsent && <label className="age-entry-consent"><input type="checkbox" checked={agreed} onChange={event => setAgreed(event.target.checked)} /><span>Даю согласие на обработку персональных данных.</span></label>}
     {error && <Notice title="Пока не получится продолжить" tone="error">{error}</Notice>}
-    <Button size="lg" className="full age-entry-continue" disabled={requireConsent && !agreed} onClick={next}>Продолжить ↗</Button>
+    <Button className="full age-entry-continue" disabled={requireConsent && !agreed} onClick={next}>Продолжить</Button>
   </section>;
 }

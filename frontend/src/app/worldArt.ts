@@ -1,11 +1,11 @@
-import eveningSmallCover from '../assets/evening-640-v4.webp'
-import sorcerersSmallCover from '../assets/sorcerers-640-v4.webp'
-import housesSmallCover from '../assets/houses-640-v4.webp'
-import itSmallCover from '../assets/it-640-v4.webp'
-import eveningCover from '../assets/evening-960-v4.webp'
-import sorcerersCover from '../assets/sorcerers-960-v4.webp'
-import housesCover from '../assets/houses-960-v4.webp'
-import itCover from '../assets/it-960-v4.webp'
+const itSmallCover = '/assets/worlds/it-portrait-480-v8.jpg'
+const itCover = '/assets/worlds/it-portrait-960-v8.jpg'
+const eveningSmallCover = '/assets/worlds/evening-portrait-480-v8.jpg'
+const eveningCover = '/assets/worlds/evening-portrait-960-v8.jpg'
+const housesSmallCover = '/assets/worlds/houses-portrait-480-v8.jpg'
+const housesCover = '/assets/worlds/houses-portrait-960-v8.jpg'
+const sorcerersSmallCover = '/assets/worlds/sorcerers-portrait-480-v8.jpg'
+const sorcerersCover = '/assets/worlds/sorcerers-portrait-960-v8.jpg'
 export const worldArt: Record<string, { cover: string; smallCover: string; pitch: string; genre: string }> = {
   'b3a1a522-0263-4796-a197-57a8731fc291': { cover: eveningCover, smallCover: eveningSmallCover, genre: 'Тайны · Романтика', pitch: 'Исчезнувшие улицы, чужие воспоминания и знакомства после заката.' },
   'aec9494b-4118-4525-8458-e85d759c8dd9': { cover: sorcerersCover, smallCover: sorcerersSmallCover, genre: 'Магия · Дружба', pitch: 'Школа меняется каждую ночь. Только ваша общая лента помнит всё.' },

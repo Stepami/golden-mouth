@@ -1,89 +1,30 @@
-import { useState } from "react";
-import { communicationInterests } from "../interests";
-import { Button, Chip, QuoteBlock } from "../ui";
-export function Onboarding({
-  onDone,
-  onBack,
-  initialQualities = [],
-  initialStep = 0,
-  onTry,
-}: {
-  onDone: (qualities: string[]) => void;
-  onBack: () => void;
-  initialQualities?: string[];
-  initialStep?: 0 | 1;
-  onTry?: () => void;
+import {useState} from 'react';
+import {communicationInterests} from '../interests';
+import {Button, Icon, ScreenHeading} from '../ui';
+import {characterPortrait} from '../portraits';
+import './onboarding.css';
+
+export function Onboarding({onDone,onBack,initialQualities=[],initialStep=0,onTry,standalone=false}:{
+ onDone:(qualities:string[])=>void;onBack:()=>void;initialQualities?:string[];initialStep?:0|1;onTry?:()=>void;standalone?:boolean;
 }) {
-  const [step, setStep] = useState<0 | 1>(initialStep);
-  const [selected, setSelected] = useState<string[]>(initialQualities);
-  return (
-    <section className="onboarding">
-      <div className="row between">
-        <span className="brand-small">реки®</span>
-        {step === 1 && <button className="link-button" onClick={() => onDone([])}>
-          Пропустить
-        </button>}
-      </div>
-      {step === 0 ? (
-        <>
-          <div className="onboarding-art">
-            <img
-              src="assets/catalog-imgImage2.jpg"
-              alt="Персонаж мира Gorpcore"
-            />
-            <div className="sample-bubble">Кто идёт знакомиться?</div>
-            <div className="sample-bubble sample-bubble--answer">
-              Сначала расскажи о себе ↗
-            </div>
-          </div>
-          <h1 className="display">
-            Твой пост.
-            <br />
-            Новая история.
-          </h1>
-          <p>
-            Публикуй, отвечай и знакомься. Твои слова влияют на разговор и
-            отношения с персонажами.
-          </p>
-          <p className="caption muted">Твои собеседники — AI-персонажи.</p>
-          <Button size="lg" className="full" onClick={() => onTry ? onTry() : setStep(1)}>
-            Попробовать ↗
-          </Button>
-        </>
-      ) : (
-        <>
-          <div className="onboarding-star" aria-hidden="true">
-            ✳
-          </div>
-          <h1 className="display">
-            Что хочется
-            <br />
-            попробовать?
-          </h1>
-          <p className="muted">Выбери то, что тебе близко.</p>
-          <div className="quality-grid">
-            {communicationInterests.map((q) => (
-              <Chip
-                key={q}
-                selected={selected.includes(q)}
-                onClick={() =>
-                  setSelected((x) =>
-                    x.includes(q) ? x.filter((y) => y !== q) : [...x, q],
-                  )
-                }
-              >
-                {q}
-              </Chip>
-            ))}
-          </div>
-          <Button size="lg" className="full" onClick={() => onDone(selected)}>
-            Продолжить ↗
-          </Button>
-          <button className="link-button" onClick={() => initialStep === 1 ? onBack() : setStep(0)}>
-            Назад
-          </button>
-        </>
-      )}
-    </section>
-  );
+ const [step,setStep]=useState<0|1>(initialStep);
+ const [selected,setSelected]=useState<string[]>(initialQualities);
+ return <section className={`entry-onboarding ${step===0?'entry-welcome':'entry-preferences'}`}>
+  {step===0?<>
+   <header className="entry-brand"><span className="brand-small">реки®</span><span>Игра в общение</span></header>
+   <div className="entry-scene" aria-hidden="true">
+    <img className="entry-scene-portrait" src={characterPortrait('muse')} alt=""/>
+    <div className="entry-message"><img src={characterPortrait('scout')} alt=""/><span>А ты как думаешь?</span></div>
+    <div className="entry-message entry-message--reply">У меня есть идея.</div>
+   </div>
+   <div className="entry-copy"><h1>Твоя история.<br/>Твой голос.</h1><p>Выбери мир и героя. Пиши посты, пробуй новые подходы и смотри, как отвечают персонажи.</p></div>
+   <footer className="entry-actions"><Button className="full" onClick={()=>onTry?onTry():setStep(1)}>Начать историю</Button><p>Твои собеседники — AI-персонажи.</p></footer>
+  </>:<>
+   <ScreenHeading title="Твои интересы" back={()=>initialStep===1?onBack():setStep(0)}/>
+   {!standalone&&<div className="entry-step-track" aria-label="Шаг 2 из 2"><i className="is-done"/><i className="is-done"/></div>}
+   <div className="entry-copy"><h1>Что хочется<br/>попробовать?</h1><p>Подберём миры под твои интересы. Можно выбрать несколько.</p></div>
+   <div className="entry-interest-list">{communicationInterests.map(interest=><button key={interest} aria-pressed={selected.includes(interest)} onClick={()=>setSelected(values=>values.includes(interest)?values.filter(v=>v!==interest):[...values,interest])}><span>{interest}</span><span className="entry-choice-mark" aria-hidden="true">{selected.includes(interest)&&<Icon name="check"/>}</span></button>)}</div>
+   <footer className="entry-actions"><Button className="full" onClick={()=>onDone(selected)}>Найти мой мир</Button><button className="entry-skip" onClick={()=>onDone([])}>Показать все миры</button></footer>
+  </>}
+ </section>;
 }

@@ -34,8 +34,7 @@ export function StoryOpening({ campaign, goal, skills, step, onNext, onBack, pla
       <p className="opening-explanation">Проходи квесты, чтобы приблизиться к своей цели.</p>
     </>:<>
       <h1 className="display">Твои навыки</h1><div className="opening-skills">{skills.map((name,i)=><article key={name}><span aria-hidden="true">{['↗','✳','◎'][i]}</span><div><h2>{name}</h2><p>{descriptions[name]||'Развивай навык, чтобы открывать новые подходы к цели.'}</p></div></article>)}</div>
-      <p className="opening-explanation">Развивай навыки — открывай более острые квесты.</p>
-      <details className="opening-xp-info"><summary>Как работает XP <span aria-hidden="true">+</span></summary><p>{import.meta.env.DEV?'XP за квесты можно распределять между навыками в локальной пробе; серверные навыки остаются прежними.':'Навыки развиваются после подтверждённых действий. Ручное распределение XP появится позже.'}</p></details>
+      <p className="opening-explanation">Навыки растут автоматически по мере продвижения в истории. Распределять очки не нужно.</p>
     </>}
     <footer className="opening-actions"><Button onClick={onNext}>{step==='mission'?'Дальше: твои навыки':firstVisit?'К первому квесту':'К текущему квесту'}</Button></footer>
   </section>;
@@ -77,10 +76,4 @@ export function XPFlight({ amount, nonce }: { amount:number; nonce:string }) {
   const [position,setPosition]=useState<{x:number;y:number;dx:number;dy:number}>();
   useEffect(()=>{if(amount<=0||matchMedia('(prefers-reduced-motion: reduce)').matches)return;const a=document.querySelector('.quest-reward')?.getBoundingClientRect(),b=document.querySelector('.profile-access')?.getBoundingClientRect();if(a&&b)setPosition({x:a.x+a.width/2,y:a.y+20,dx:b.x+b.width/2-a.x-a.width/2,dy:b.y+b.height/2-a.y-20});const timer=setTimeout(()=>setPosition(undefined),1700);return()=>clearTimeout(timer);},[nonce]);
   return position?<span className="xp-flight" style={{left:position.x,top:position.y,'--fly-x':`${position.dx}px`,'--fly-y':`${position.dy}px`} as React.CSSProperties}>+{formatXP(Math.round(amount*100))} XP</span>:null;
-}
-export function TypingDraft({ value, animate, disabled, onChange, onTyping }: { value:string; animate:boolean; disabled:boolean; onChange:(text:string)=>void; onTyping:(active:boolean)=>void }) {
-  const [limit,setLimit]=useState(()=>animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches?0:value.length);
-  useEffect(()=>{if(!animate||matchMedia('(prefers-reduced-motion: reduce)').matches){setLimit(value.length);onTyping(false);return;}onTyping(true);let timer=setInterval(()=>setLimit(n=>Math.min(value.length,n+Math.max(5,Math.ceil(value.length/35)))),35);const end=setTimeout(()=>{clearInterval(timer);setLimit(value.length);onTyping(false);},1300);return()=>{clearInterval(timer);clearTimeout(end);onTyping(false);};},[animate]);
-  const typing=animate&&limit<value.length;
-  return <><textarea id="post-text" className="composer-text" aria-label="Текст публикации" value={typing?value.slice(0,limit):value} onFocus={()=>{if(typing){setLimit(value.length);onTyping(false);}}} onChange={e=>{setLimit(e.target.value.length);onTyping(false);onChange(e.target.value);}} disabled={disabled} maxLength={2000}/>{typing&&<button className="link-button caption" onClick={()=>{setLimit(value.length);onTyping(false);}}>Показать весь текст</button>}</>;
 }

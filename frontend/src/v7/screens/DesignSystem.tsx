@@ -1,4 +1,5 @@
 import { useState } from "react";
+import designTokens from "../design-tokens.json";
 import {
   ResumeWorld,
   SettingsRow,
@@ -22,6 +23,8 @@ import {
 } from "../ui";
 import { worlds } from "../domain/worlds";
 export function DesignSystem() {
+  const night: Record<string, { $value: string }> = designTokens.$extensions.reki.modes.dark;
+  const colors = Object.entries(designTokens.tokens).filter(([, token]) => token.$type === "color").map(([name, token]) => [name.replace("color-", ""), night[name]?.$value ?? String(token.$value)]);
   const [selected, setSelected] = useState("Все");
   const [dialog, setDialog] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -31,7 +34,7 @@ export function DesignSystem() {
   return (
     <main className="system-page">
       <div className="system-hero">
-        <span className="eyebrow">REKI / DESIGN SYSTEM / 0.1</span>
+        <span className="eyebrow">REKI / DESIGN SYSTEM / NIGHT</span>
         <h1>
           Одни правила.
           <br />
@@ -42,7 +45,7 @@ export function DesignSystem() {
           приложение. React + чистый CSS.
         </p>
         <div className="row">
-          <Badge tone="accent">Social v7</Badge>
+          <Badge tone="accent">Night v8</Badge>
           <a href="#demo" className="link-button">
             Открыть прототип ↗
           </a>
@@ -81,19 +84,7 @@ export function DesignSystem() {
         <div className="system-content">
           <h3>Цвет</h3>
           <div className="swatches">
-            {[
-              ["paper", "#FFFFFF"],
-              ["ink", "#171918"],
-              ["accent", "#E8FB6D"],
-              ["surface", "#F5F5F5"],
-              ["muted", "#626863"],
-              ["divider", "#E5E7E3"],
-              ["progress", "#FFE310"],
-              ["energy", "#8325FF"],
-              ["crystal", "#43F9FF"],
-              ["goal", "#FF3366"],
-              ["control-border", "#7B807C"],
-            ].map(([n, v]) => (
+            {colors.map(([n, v]) => (
               <div key={n}>
                 <div className="swatch" style={{ background: v }} />
                 <b>{n}</b>

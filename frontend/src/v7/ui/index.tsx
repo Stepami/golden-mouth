@@ -1,4 +1,10 @@
-import { defaultPortrait } from '../portraits';
+import {LoadingIndicator} from './LoadingIndicator';
+export {LoadingIndicator} from './LoadingIndicator';
+import {LineIcon} from './LineIcon';
+import { displayPortrait } from '../portraits';
+import {RewardArt} from './RewardArt';
+import {SkillArt} from './GameArt';
+import { flushSync } from 'react-dom';
 import { SocialAction } from "./SocialAction";
 export { SocialAction } from "./SocialAction";
 import {
@@ -29,11 +35,11 @@ const iconFiles = {
   crystal: "s1-imgVector4.svg",
   member: "catalog-imgIconMemberFilled.svg",
 };
-export type IconName = keyof typeof iconFiles;
+export type IconName = keyof typeof iconFiles | "back" | "close" | "check" | "flame" | "chevron" | "retry" | "preferences";
 export function Icon({ name }: { name: IconName }) {
   return (
     <span className={`icon icon--${name}`} aria-hidden="true">
-      <img src={`assets/${iconFiles[name]}`} alt="" />
+      {name === "energy" || name === "crystal" || name === "member" || name === "flame" ? <RewardArt kind={name === 'member' ? 'followers' : name}/> : <LineIcon name={name}/>}
     </span>
   );
 }
@@ -56,7 +62,7 @@ export function Button({
       disabled={props.disabled || busy}
       aria-busy={busy || undefined}
     >
-      {busy ? <span className="spinner" /> : null}
+      {busy ? <LoadingIndicator/> : null}
       {children}
     </button>
   );
@@ -108,10 +114,8 @@ export function Avatar({
   src?: string;
   size?: "sm" | "md" | "lg" | "xl";
 }) {
-  const [generated,setGenerated] = useState<{name:string;uri:string}>();
   const [failed, setFailed] = useState(false);
-  useEffect(() => { let active=true; if(!src) void defaultPortrait(name).then(uri=>{if(active)setGenerated({name,uri});}).catch(()=>{}); return()=>{active=false;}; },[name,src]);
-  const image = src || (generated?.name===name ? generated.uri : undefined);
+  const image = displayPortrait(src, name);
   useEffect(() => setFailed(false), [image]);
   return (
     <span className={`avatar avatar--${size}`} aria-hidden="true">
@@ -146,7 +150,7 @@ export function Progress({
       aria-valuemax={max}
       aria-valuenow={Math.min(max, value)}
     >
-      <span style={{ width: `${percent}%` }} />
+      <span style={{ transform: `scaleX(${percent / 100})` }} />
     </div>
   );
 }
@@ -193,11 +197,10 @@ export function EmptyState({
   return (
     <div className="empty-state">
       <span className="empty-mark" aria-hidden="true">
-        *
+        <RewardArt kind="booster"/>
       </span>
-      <h2 className="section-title">{title}</h2>
-      <p className="muted">{children}</p>
-      {action}
+      <div className="empty-copy"><h2 className="section-title">{title}</h2><p className="muted">{children}</p></div>
+      {action && <div className="empty-action">{action}</div>}
     </div>
   );
 }
@@ -243,15 +246,19 @@ export function WorldCard({
       type="button"
       className={`world-card ${selected ? "world-card--selected" : ""}`}
       disabled={disabled}
-      onClick={disabled ? undefined : onClick}
+      onClick={disabled ? undefined : event => {
+        if (!onClick) return;
+        const cover = event.currentTarget.querySelector<HTMLImageElement>('.world-cover');
+        if (!cover || event.detail === 0 || !document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) { onClick(); return; }
+        cover.style.viewTransitionName = 'world-cover';
+        const transition = document.startViewTransition(() => flushSync(onClick));
+        void transition.finished.catch(() => {}).finally(() => { cover.style.viewTransitionName = ''; });
+      }}
       aria-label={disabled ? `${world.title} — скоро` : `Открыть мир ${world.title}`}
     >
-      <img className="world-cover" src={world.cover} alt="" />
-      <span className="world-title">{world.title}</span>
-      <span className="world-members">
-        {!disabled && <Icon name="member" />}
-        {disabled ? "Скоро" : world.members || "Открыть мир"}
-      </span>
+      <img className="world-cover" src={world.cover} alt="" loading="lazy" decoding="async" />
+      {disabled && <span className="world-soon">Скоро</span>}
+      <span className="world-card-copy"><span className="world-title">{world.title}</span><span className="world-genre">{world.genre}</span></span>
     </button>
   );
 }
@@ -329,7 +336,7 @@ export function PostCard({
         <Avatar name={author.name} src={author.avatar} />
       </button>
       <div className="post-content">
-        <div className="row between">
+        <div className="post-author-row">
           <button
             className="author-name"
             onClick={onAuthor}
@@ -337,10 +344,8 @@ export function PostCard({
           >
             {author.name}
           </button>
-          <span className="post-meta"><span className="caption muted nowrap">{post.createdAt}</span>{onReport&&<button className="post-report" aria-label={`Пожаловаться на реплику ${author.name}`} onClick={onReport}>⋯</button>}</span>
-        </div>
-        <div className="caption muted">
-          @{author.handle.replace(/^@/, "")} · {post.authorId === "player" ? "Вы" : "AI-персонаж"}
+          {post.authorId !== "player" && <span className="author-ai" aria-label="AI-персонаж">AI</span>}
+          <span className="post-meta"><span className="caption muted nowrap">{post.createdAt}</span>{onReport&&<button className="post-report" aria-label={`Пожаловаться на реплику ${author.name}`} onClick={onReport}><Icon name="more"/></button>}</span>
         </div>
         <p className="post-text">{post.text}</p>
         {quoted && <QuoteBlock {...quoted} />}
@@ -443,6 +448,9 @@ export function Dialog({
     const previous = document.activeElement as HTMLElement;
     const d = ref.current;
     d?.showModal();
+    if (d && document.documentElement.dataset.input !== 'keyboard' && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      d.animate([{opacity:0,transform:'translateY(12px) scale(.98)'},{opacity:1,transform:'translateY(0) scale(1)'}],{duration:220,easing:'cubic-bezier(.23,1,.32,1)'});
+    }
     return () => {
       d?.close();
       previous?.focus();
@@ -471,7 +479,7 @@ export function Dialog({
             onClick={onClose}
             aria-label="Закрыть"
           >
-            ×
+            <Icon name="close"/>
           </button>
         </div>
         {children}
@@ -527,8 +535,8 @@ export function ScreenHeading({
   return (
     <header className="screen-heading">
       {back && (
-        <button className="back-button" onClick={back}>
-          Назад
+        <button className="back-button" onClick={back} aria-label="Назад">
+          <Icon name="back"/>
         </button>
       )}
       <div className="row between">
@@ -556,8 +564,8 @@ export function ProfileHeader({
   return (
     <header className="character-heading">
       {onBack && (
-        <button className="back-button" onClick={onBack}>
-          Назад
+        <button className="back-button" onClick={onBack} aria-label="Назад">
+          <Icon name="back"/>
         </button>
       )}
       <div className="character-identity">
@@ -596,7 +604,7 @@ export function ProfileScore({
         {skillLabels.map((name, i) => (
           <div key={name}>
             <div className="row between">
-              <span>{name}</span>
+              <span className="skill-name"><SkillArt name={name}/>{name}</span>
               <span>{skills[i]}</span>
             </div>
             <Progress label={skillProgress ? `${name}: до следующего уровня` : name} value={skillProgress ? skillProgress[i] : skills[i]} max={skillProgress ? 1 : 10} />
@@ -610,15 +618,19 @@ export function ProfileScore({
 export function ResumeWorld({
   world,
   subtitle,
+  busy = false,
   onClick,
 }: {
   world: World;
   subtitle: string;
+  busy?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       className="resume-world"
+      disabled={busy}
+      aria-busy={busy || undefined}
       onClick={onClick}
       aria-label={`Продолжить ${world.title}`}
     >
