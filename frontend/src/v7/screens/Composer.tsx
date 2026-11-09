@@ -68,9 +68,8 @@ export function Composer({
           aria-describedby="draft-hint"
           autoFocus
         />
-        <div id="draft-hint" className="row between caption muted">
-          <span>Черновик</span>
-          <span>{draft.length} / 2 000</span>
+        <div id="draft-hint" className="composer-count caption muted" aria-label="Символов в публикации">
+          {draft.length} / 2 000
         </div>
         <div className="stack">
           <div className="approaches">

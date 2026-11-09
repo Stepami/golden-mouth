@@ -1,3 +1,4 @@
+import {LoadingIndicator} from './ui/LoadingIndicator';
 import {useEffect,useState,useSyncExternalStore} from 'react';
 import BackendApp from './BackendApp';
 import {api} from '../api/client';
@@ -64,7 +65,7 @@ export default function AuthenticatedApp() {
     }
   }
   const restartLogin = () => { clearPendingWidgetLogin(); setAuthError('') }
-  if (!explicitStart && !ready) return <div className="app"><div className="screen"><div className="pad" role="status">Входим в игру…</div></div></div>
+  if (!explicitStart && !ready) return <div className="app"><div className="loading-state" role="status"><LoadingIndicator/><p>Входим в игру</p></div></div>
   if (!explicitStart && !authenticated) return <TelegramLaunch onLogin={onLogin} onRestart={restartLogin} pending={pendingLogin} resumable={resumable} prepareFailed={prepareFailed} busy={busy} ready={resumable || prepareFailed || inTelegram && hasInitData() || telegramClientId !== null} error={authError} />
   return <BackendApp/>
 }

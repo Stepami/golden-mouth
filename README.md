@@ -80,3 +80,7 @@ docker compose down
 ```
 
 Репозиторий приватный, но токены, ключи, адреса серверов и реальные данные людей в Git не кладём.
+
+## Дизайн-превью v8
+
+[Запуск фронта без бэкенда и Telegram](frontend/DESIGN-PREVIEW.md): `cd frontend && npm ci && npm run design`.

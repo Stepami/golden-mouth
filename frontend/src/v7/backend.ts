@@ -1,15 +1,19 @@
 import type { FeedItem, WorldDocument, Player, Post as ServerPost } from '../api/types';
 import type { World, Person, Post } from './domain/types';
 import { worldArt } from '../app/worldArt';
+import { worlds as catalogWorlds } from '../api/worldContent';
 import { presetGoalFor } from '../app/presetGoals';
 import {channelSubscribers} from './social/audience';
 import { personaFor } from './persona';
 
 export function worldView(doc: WorldDocument): World {
-  const art = worldArt[doc.id];
-  const cover = doc.title.includes('чароде') ? '/assets/catalog-imgImage.jpg' : art?.cover ?? '/assets/catalog-imgImage2.jpg';
+  // Saved worlds have their own IDs and may retain an older version of the lore.
+  // Resolve artwork only; this must not change template identity or game rules.
+  const matches = catalogWorlds.filter(world => world.title === doc.title);
+  const art = worldArt[doc.id] ?? (matches.length === 1 ? worldArt[matches[0].id] : undefined);
+  const cover = art?.cover ?? '/assets/world-placeholder.svg';
   const goal = presetGoalFor(doc);
-  return { id: doc.id, title: doc.title, genre: art?.genre ?? 'Свои истории', cover, hero: cover,
+  return { id: doc.id, title: doc.title, genre: art?.genre ?? 'Свои истории', cover: art?.smallCover ?? cover, hero: cover,
     members: '', tagline: doc.summary, description: doc.description, goal: goal?.goal ?? doc.summary,
     role: doc.role, playerName: doc.name, topic: doc.firstContext, quests: doc.postIdeas.slice(0, 3).map((text, i) => ({ id: String(i), title: text, context: doc.firstContext, prompt: text, draft: '' })),
     seedPost: doc.firstPrompt, cast: doc.stars.map(star => ({ id: star.id, name: star.name, handle: star.avatarSeed, role: star.role, boundary: star.about, relation: star.relation, subscribers:channelSubscribers(star) })),

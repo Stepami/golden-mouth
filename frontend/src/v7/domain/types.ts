@@ -26,6 +26,7 @@ export type World = {
   members: string;
   tagline: string;
   description: string;
+  introTitles?: string[];
   goal: string;
   role: string;
   playerName: string;

@@ -1,0 +1,45 @@
+/* Resource art moves inside still controls: counts, rings and targets stay put. */
+@keyframes resource-energy-idle {
+  0%, 68%, 100% { transform:translateY(0) rotate(0); }
+  78% { transform:translateY(-3%) rotate(-4deg); }
+  88% { transform:translateY(-1%) rotate(2deg); }
+}
+@keyframes resource-crystal-idle {
+  0%, 100% { transform:translateY(0) rotate(-2deg); }
+  50% { transform:translateY(-4%) rotate(3deg); }
+}
+@keyframes detail-reveal {
+  from { opacity:0; }
+  to { opacity:1; }
+}
+@media (prefers-reduced-motion:no-preference) {
+  .game-art--energy { animation:resource-energy-idle 7.2s cubic-bezier(.45,0,.55,1) infinite; }
+  .game-art--crystal { animation:resource-crystal-idle 8.4s cubic-bezier(.45,0,.55,1) -2.1s infinite; }
+
+  html:not([data-input="keyboard"]) .v7-stage :is(.back-button,.close-button,.icon-button,.chip,.resume-world,.settings-row,.person-row,button.goal-card,.studio-goal,.studio-roster button,.studio-looks button,.resource-switch [role="tab"],.streak-access,.gift-access,.boosters-access) {
+    transition:transform 140ms cubic-bezier(.23,1,.32,1), background-color 140ms ease, border-color 140ms ease;
+  }
+  html:not([data-input="keyboard"]) .v7-stage :is(.back-button,.close-button,.icon-button,.chip,.resume-world,.settings-row,.person-row,button.goal-card,.studio-goal,.studio-roster button,.studio-looks button,.resource-switch [role="tab"],.streak-access,.gift-access,.boosters-access):not(:disabled):not([aria-disabled="true"]):active {
+    transform:scale(.97);
+    transition-duration:80ms;
+  }
+  html:not([data-input="keyboard"]) .v7-stage :is(.resource .icon,.profile-access .avatar) { transition:transform 140ms cubic-bezier(.23,1,.32,1); }
+  html:not([data-input="keyboard"]) .v7-stage :is(.resource:not(:disabled):active .icon,.profile-access:not(:disabled):active .avatar) { transform:scale(.92); transition-duration:80ms; }
+  html:not([data-input="keyboard"]) .v7-stage .bottom-nav .nav-symbol { transition:transform 160ms cubic-bezier(.23,1,.32,1); }
+  html:not([data-input="keyboard"]) .v7-stage .bottom-nav .is-active .nav-symbol { transform:translateY(-1px); }
+  html:not([data-input="keyboard"]) .v7-stage .bottom-nav button:not(:disabled):active .nav-symbol { transform:scale(.9); transition-duration:80ms; }
+
+  html:not([data-input="keyboard"]) .v7-stage details > summary .icon--chevron { transition:transform 180ms cubic-bezier(.23,1,.32,1); }
+  .v7-stage details[open] > summary .icon--chevron { transform:rotate(180deg); }
+  html:not([data-input="keyboard"]) .v7-stage :is(.task-context,.practice-focus,.practice-explainer,.publication-draft,.receipt-history)[open] > :not(summary) { animation:detail-reveal 160ms ease-out; }
+
+  html:not([data-input="keyboard"]) .v7-stage :is(.practice-check,.entry-choice-mark) { transition:background-color 140ms ease, border-color 140ms ease; }
+  html:not([data-input="keyboard"]) .v7-stage .studio-roster img { transition:transform 160ms cubic-bezier(.23,1,.32,1); }
+  html:not([data-input="keyboard"]) .v7-stage .studio-roster [aria-pressed="true"] img { transform:scale(1.05); }
+}
+/* Hover only emphasises controls with a real pointing device. */
+@media (hover:hover) and (pointer:fine) {
+  .v7-stage :is(.resource,.profile-access,.resume-world,.settings-row,.person-row,.studio-roster button,.studio-looks button):not(:disabled):hover { border-color:var(--color-muted); }
+}
+
+html[data-input="keyboard"] .v7-stage :is(.practice-choice,.entry-interest-list button,.world-card):active { transform:none; transition:none; }

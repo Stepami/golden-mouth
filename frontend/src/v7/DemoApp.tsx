@@ -1,3 +1,4 @@
+import {LoadingIndicator} from './ui/LoadingIndicator';
 import { useEffect, useRef, useState } from "react";
 import type {
   Approach,
@@ -435,7 +436,7 @@ export default function App() {
           </header>
           {pending && (
             <div className="pending-line" role="status">
-              <span className="spinner" />
+              <LoadingIndicator/>
               Публикуем…
             </div>
           )}
