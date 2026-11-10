@@ -1017,13 +1017,13 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That((await GetStoredPlayerAsync(28409))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(1);
     }
 
-    private Task<BsonDocument> GetStoredInviteAsync(string inviteeId) =>
-        Database.GetCollection<BsonDocument>("invites").Find(new BsonDocument("InviteeId", new BsonBinaryData(Guid.Parse(inviteeId), GuidRepresentation.Standard)))
-            .SingleAsync(CancellationToken.None);
-
     private static async Task<EnergyWalletResponse> ReadWalletAsync(TestApiClient api) =>
         (await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).EnergyWallet
         ?? throw new InvalidOperationException("The player response has no wallet.");
+
+    private Task<BsonDocument> GetStoredInviteAsync(string inviteeId) =>
+        Database.GetCollection<BsonDocument>("invites").Find(new BsonDocument("InviteeId", new BsonBinaryData(Guid.Parse(inviteeId), GuidRepresentation.Standard)))
+            .SingleAsync(CancellationToken.None);
 
     private Task SetWalletAsync(long userId, int energy, int crystals) =>
         Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
