@@ -47,10 +47,10 @@ public sealed class AuthControllerTests(ApiFactory factory)
             await Assert.That(body.RootElement.GetProperty("error").GetString()).IsEqualTo("registration_required");
             var externalId = body.RootElement.GetProperty("external_user_id").GetString()
                 ?? throw new InvalidOperationException("External ID is missing.");
-            await Assert.That(externalId).IsEqualTo("telegram:21001");
+            await Assert.That(Encoding.UTF8.GetString(Convert.FromBase64String(externalId))).IsEqualTo("telegram:21001");
             await Assert.That(await factory.Session.Database.GetCollection<BsonDocument>("players")
                 .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
-            firstClient.DefaultRequestHeaders.Authorization = Basic(externalId);
+            firstClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", externalId);
             await exchange.CompleteOnboardingAsync(new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None);
             first = await ExchangeAsync(firstClient, exchange, initData);
             second = await ExchangeAsync(firstClient, exchange, initData);
@@ -230,10 +230,10 @@ public sealed class AuthControllerTests(ApiFactory factory)
         await Assert.That(body.RootElement.GetProperty("error").GetString()).IsEqualTo("registration_required");
         var externalId = body.RootElement.GetProperty("external_user_id").GetString()
                 ?? throw new InvalidOperationException("External ID is missing.");
-        await Assert.That(externalId).IsEqualTo("telegram:21003");
+        await Assert.That(Encoding.UTF8.GetString(Convert.FromBase64String(externalId))).IsEqualTo("telegram:21003");
         await Assert.That(await factory.Session.Database.GetCollection<BsonDocument>("players")
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
-        client.DefaultRequestHeaders.Authorization = Basic(externalId);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", externalId);
         await exchange.CompleteOnboardingAsync(
             new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None);
         var initData = SignInitData(factory.Session.TelegramBotToken, 21003);

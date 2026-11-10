@@ -1,3 +1,4 @@
+using System.Text;
 using Mediator;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -89,7 +90,9 @@ public sealed class ExternalTelegramAuthController(IAuthSessionService sessions)
         });
         if (externalUserId is not null)
         {
-            properties.SetParameter(AuthConstants.Claims.ExternalUserId, externalUserId);
+            properties.SetParameter(
+                AuthConstants.Claims.ExternalUserId,
+                Convert.ToBase64String(Encoding.UTF8.GetBytes(externalUserId)));
         }
 
         return TypedResults.Forbid(properties, [Scheme]);
