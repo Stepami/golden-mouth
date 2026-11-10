@@ -1,5 +1,4 @@
 using System.Runtime.CompilerServices;
-using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Exceptions;
 using Reki.Application.Player;
@@ -20,30 +19,9 @@ internal sealed class MongoPlayerRepository(
         await _players.Find(item => item.ExternalUserIds.Contains(externalUserId)).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
-
-    public async ValueTask<PlayerWallet?> TryExchangeEnergyAsync(
-        PlayerId playerId, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var filter = Builders<PlayerProfile>.Filter.And(
-            Builders<PlayerProfile>.Filter.Eq(item => item.Id, playerId),
-            Builders<PlayerProfile>.Filter.Lt(item => item.Wallet.Energy, PlayerWallet.Cap),
-            Builders<PlayerProfile>.Filter.Gte(item => item.Wallet.Crystals, PlayerWallet.ExchangeCost));
-        var update = Builders<PlayerProfile>.Update
-            .Set(item => item.Wallet.Energy, PlayerWallet.Cap)
-            .Inc(item => item.Wallet.Crystals, -PlayerWallet.ExchangeCost)
-            .Set(item => item.Wallet.EnergyUpdatedAtUtc, now)
-            .Inc(item => item.Version, 1);
-        return await _players.FindOneAndUpdateAsync(
-            filter,
-            update,
-            new FindOneAndUpdateOptions<PlayerProfile, PlayerWallet>
-            {
-                ReturnDocument = ReturnDocument.Before,
-                Projection = Builders<PlayerProfile>.Projection.Expression(item => item.Wallet),
-            },
-            cancellationToken);
-    }
+        await (sessionProvider.Current is { } session
+            ? _players.Find(session, item => item.Id == playerId)
+            : _players.Find(item => item.Id == playerId)).FirstOrDefaultAsync(cancellationToken);
 
     public async IAsyncEnumerable<PlayerProfile> GetPlayersForEnergyRecoveryAsync(
         int cap, DateTimeOffset dueBefore, [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -56,20 +34,6 @@ internal sealed class MongoPlayerRepository(
             cancellationToken.ThrowIfCancellationRequested();
             yield return player;
         }
-    }
-
-    public async ValueTask<bool> TrySaveEnergyRecoveryAsync(
-        PlayerProfile player, PlayerWallet wallet, CancellationToken cancellationToken)
-    {
-        var update = Builders<PlayerProfile>.Update
-            .Set(item => item.Wallet.Energy, wallet.Energy)
-            .Set(item => item.Wallet.EnergyUpdatedAtUtc, wallet.EnergyUpdatedAtUtc)
-            .Inc(item => item.Version, 1);
-        var result = await _players.UpdateOneAsync(
-            item => item.Id == player.Id && item.Version == player.Version,
-            update,
-            cancellationToken: cancellationToken);
-        return result.MatchedCount == 1;
     }
 
     public async ValueTask CreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
@@ -86,53 +50,27 @@ internal sealed class MongoPlayerRepository(
         await _players.UpdateOneAsync(item => item.Id == player.Id, update, cancellationToken: cancellationToken);
     }
 
-    public async ValueTask<bool> TryClaimPlusInterestAsync(
+    public async ValueTask ClaimPlusInterestAsync(
         PlayerProfile player,
         PlayerProfile updated,
         CancellationToken cancellationToken)
     {
-        var filter = Builders<PlayerProfile>.Filter.And(
-            Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id),
-            Builders<PlayerProfile>.Filter.Eq(item => item.Version, player.Version),
-            Builders<PlayerProfile>.Filter.Ne(item => item.PlusInterestClaimed, updated.PlusInterestClaimed));
         var update = Builders<PlayerProfile>.Update
-            .Set(item => item.Wallet.Energy, updated.Wallet.Energy)
+            .Inc(item => item.Wallet.Energy, updated.Wallet.Energy - player.Wallet.Energy)
             .Set(item => item.PlusInterestClaimed, updated.PlusInterestClaimed)
             .Inc(item => item.Version, updated.Version - player.Version);
-        var result = await _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken);
-        return result.ModifiedCount == 1;
-    }
-
-    public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken)
-    {
-        var filter = Builders<PlayerProfile>.Filter.Where(stored => stored.Id == player.Id && stored.Version == player.Version - 1);
-        var result = sessionProvider.Current is { } session
-            ? await _players.ReplaceOneAsync(session, filter, player, cancellationToken: cancellationToken)
-            : await _players.ReplaceOneAsync(filter, player, cancellationToken: cancellationToken);
+        var result = await _players.UpdateOneAsync(
+            item => item.Id == player.Id && !item.PlusInterestClaimed && item.Version == player.Version,
+            update,
+            cancellationToken: cancellationToken);
         if (result.MatchedCount == 0)
         {
             throw new RequestConflictException("Player changed during the request.");
         }
     }
 
-    public async ValueTask AddInviteBonusAsync(PlayerId playerId, int bonusAmount, CancellationToken cancellationToken)
-    {
-        var fields = new BsonDocument
-        {
-            [nameof(PlayerProfile.HitOwnWorldMilestone)] = true,
-            ["Wallet.Energy"] = new BsonDocument("$min", new BsonArray
-            {
-                PlayerWallet.Cap, new BsonDocument("$add", new BsonArray { "$Wallet.Energy", bonusAmount }),
-            }),
-            [nameof(PlayerProfile.Version)] = new BsonDocument("$add", new BsonArray { "$Version", 1 }),
-        };
-        var update = Builders<PlayerProfile>.Update.Pipeline(new[] { new BsonDocument("$set", fields) });
-        await _players.UpdateOneAsync(
-            sessionProvider.Session,
-            item => item.Id == playerId,
-            update,
-            cancellationToken: cancellationToken);
-    }
+    public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
+        await _players.ReplaceOneAsync(sessionProvider, item => item.Id == player.Id, player, cancellationToken);
 
     public async ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
         await _players.DeleteOneAsync(sessionProvider.Session, item => item.Id == playerId, cancellationToken: cancellationToken);

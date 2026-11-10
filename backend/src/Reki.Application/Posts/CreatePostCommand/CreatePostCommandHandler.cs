@@ -120,7 +120,11 @@ internal sealed class CreatePostCommandHandler(
                         token);
                     if (inviterUses < currentBalance.InviteBonusMaxPerDay)
                     {
-                        await players.AddInviteBonusAsync(updatedInvite.InviterId, updatedInvite.BonusAmount, token);
+                        var inviter = await players.GetPlayerAsync(updatedInvite.InviterId, token);
+                        if (inviter is not null)
+                        {
+                            await players.ReplacePlayerAsync(inviter.AwardReferral(), token);
+                        }
                     }
 
                     await invitations.UseInviteBonusAsync(updatedInvite, token);

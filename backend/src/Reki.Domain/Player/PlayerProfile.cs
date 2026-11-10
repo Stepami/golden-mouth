@@ -69,6 +69,15 @@ public sealed record PlayerProfile
         };
     }
 
+    public PlayerProfile AwardReferral() => this with
+    {
+        Wallet = Wallet with { Crystals = Wallet.Crystals + 3 },
+        HitOwnWorldMilestone = true,
+        Version = Version + 1,
+    };
+
+    public PlayerProfile WithWallet(PlayerWallet wallet) => this with { Wallet = wallet, Version = Version + 1 };
+
     public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, int cost, DateTimeOffset now) =>
         SpendEnergy(cost, now) with { Skills = skills };
 

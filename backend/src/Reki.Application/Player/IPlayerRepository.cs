@@ -17,22 +17,16 @@ public interface IPlayerRepository
         PlayerProfile updated,
         CancellationToken cancellationToken);
 
-    ValueTask<bool> TryClaimPlusInterestAsync(
+    ValueTask ClaimPlusInterestAsync(
         PlayerProfile player,
         PlayerProfile updated,
         CancellationToken cancellationToken);
 
     ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
 
-    ValueTask AddInviteBonusAsync(PlayerId playerId, int bonusAmount, CancellationToken cancellationToken);
-
     ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
 
-    ValueTask<PlayerWallet?> TryExchangeEnergyAsync(PlayerId playerId, DateTimeOffset now, CancellationToken cancellationToken);
-
     IAsyncEnumerable<PlayerProfile> GetPlayersForEnergyRecoveryAsync(int cap, DateTimeOffset dueBefore, CancellationToken cancellationToken);
-
-    ValueTask<bool> TrySaveEnergyRecoveryAsync(PlayerProfile player, PlayerWallet wallet, CancellationToken cancellationToken);
 
     ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
 
