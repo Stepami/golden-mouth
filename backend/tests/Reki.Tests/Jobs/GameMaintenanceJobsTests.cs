@@ -153,7 +153,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var current = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         var owned = await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None);
 
-        await Assert.That(current.Wallet.Energy).IsEqualTo(8);
+        await Assert.That(current.Energy).IsEqualTo(8);
         await Assert.That(owned.Count).IsEqualTo(1);
         await Assert.That(await Database.GetCollection<BsonDocument>("players").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(beforePlayer);
         await Assert.That(await Database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(beforeWorld);

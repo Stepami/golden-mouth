@@ -1,5 +1,3 @@
-using Reki.Application.Player.Responses;
-using Reki.Infrastructure.Jobs;
 using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
@@ -13,12 +11,14 @@ using OpenIddict.MongoDb.Models;
 using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Application.Player;
+using Reki.Application.Player.Responses;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Jobs;
 
 namespace Reki.Tests.Api;
 
@@ -783,9 +783,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(response.Bonus).IsEqualTo(0);
     }
 
-    private Task<BsonDocument> GetStoredInviteAsync(string inviteeId) =>
-        Database.GetCollection<BsonDocument>("invites").Find(new BsonDocument("InviteeId", new BsonBinaryData(Guid.Parse(inviteeId), GuidRepresentation.Standard)))
-            .SingleAsync(CancellationToken.None);
     [Test]
     public async Task Onboarding_NewWorlds_KeepAccountWalletAsync()
     {
@@ -1019,6 +1016,10 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(afterTick.NextEnergyAtUtc).IsNull();
         await Assert.That((await GetStoredPlayerAsync(28409))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(1);
     }
+
+    private Task<BsonDocument> GetStoredInviteAsync(string inviteeId) =>
+        Database.GetCollection<BsonDocument>("invites").Find(new BsonDocument("InviteeId", new BsonBinaryData(Guid.Parse(inviteeId), GuidRepresentation.Standard)))
+            .SingleAsync(CancellationToken.None);
 
     private static async Task<EnergyWalletResponse> ReadWalletAsync(TestApiClient api) =>
         (await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).EnergyWallet

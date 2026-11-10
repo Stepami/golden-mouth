@@ -1,6 +1,7 @@
-using MongoDB.Bson;
 using System.Runtime.CompilerServices;
+using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Application.Exceptions;
 using Reki.Application.Player;
 using Reki.Domain.Player;
 
@@ -102,8 +103,17 @@ internal sealed class MongoPlayerRepository(
         return result.ModifiedCount == 1;
     }
 
-    public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
-        await _players.ReplaceOneAsync(sessionProvider, item => item.Id == player.Id, player, cancellationToken);
+    public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken)
+    {
+        var filter = Builders<PlayerProfile>.Filter.Where(stored => stored.Id == player.Id && stored.Version == player.Version - 1);
+        var result = sessionProvider.Current is { } session
+            ? await _players.ReplaceOneAsync(session, filter, player, cancellationToken: cancellationToken)
+            : await _players.ReplaceOneAsync(filter, player, cancellationToken: cancellationToken);
+        if (result.MatchedCount == 0)
+        {
+            throw new RequestConflictException("Player changed during the request.");
+        }
+    }
 
     public async ValueTask AddInviteBonusAsync(PlayerId playerId, int bonusAmount, CancellationToken cancellationToken)
     {

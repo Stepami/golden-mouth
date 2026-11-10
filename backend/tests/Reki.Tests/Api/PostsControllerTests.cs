@@ -928,7 +928,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         const long user = 8711;
         var (postId, targetId) = await PublishPostForThreadAsync(user);
         var playerId = (await GetStoredPlayerAsync(user))["_id"];
-        await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(new BsonDocument("_id", playerId), new BsonDocument("$set", new BsonDocument { { "Wallet.EnergyUsed", 10 }, { "Wallet.Energy", 0 } }));
+        await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(new BsonDocument("_id", playerId), new BsonDocument("$set", new BsonDocument { { "Wallet.EnergyUsed", 10 }, { "Wallet.Energy", 3 } }));
         Factory.Session.Clock.Advance(TimeSpan.FromDays(1));
         await ResetGameDayAsync();
 
@@ -936,7 +936,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var completed = await ReplyAsync(user, postId, targetId, "new-day", "ответ нового дня");
 
         // Assert
-        await Assert.That(completed.EnergyLeft).IsEqualTo(9);
+        await Assert.That(completed.EnergyLeft).IsEqualTo(2);
         await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(1);
         await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(3);
     }
