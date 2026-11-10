@@ -22,6 +22,7 @@ export function HeroStudio({options, selected, onChoose, name, channel, goal, on
  const [sheet,setSheet]=useState<'identity'|'goal'|'skills'|null>(null);
  const [query,setQuery]=useState(''),[directions,setDirections]=useState<string[]>([]),[uploadError,setUploadError]=useState('');
  const root=useRef<HTMLElement>(null);
+ const uploadInput=useRef<HTMLInputElement>(null);
  useEffect(()=>{root.current?.closest('.app-body')?.scrollTo({top:0});},[panel]);
  const swipe=useRef<{x:number;y:number}|null>(null);
  const index=Math.max(0,options.findIndex(hero=>hero.id===selected));
@@ -59,8 +60,8 @@ export function HeroStudio({options, selected, onChoose, name, channel, goal, on
     {(skills.length>0||directions.length>0)&&recommended&&<div className="practice-example" aria-live="polite"><strong>Тебе может подойти {recommended.name}</strong><p>{recommended.skills?.map(s=>s.name).join(' · ')}</p></div>}
     <details className="practice-explainer"><summary>Как это работает<Icon name="chevron"/></summary><p>У каждого персонажа уже есть три навыка, связанные с его историей. Выбор помогает найти героя, а его навыки развиваются через новые поступки в постах и ответах. Можно выбрать любого персонажа.</p></details>
    </div>:custom?<div className="studio-panel">
-    <AvatarBuilder worldId={worldId} seed={seed} onLook={onLook} onRender={(src,glasses)=>{onUpload(src);const look=eveningLooks.find(look=>look.id===customLook(seed,worldId).id);onAppearance(look?`${look.description}${glasses==='none'?'':glasses==='round'?' Круглые очки.':' Прямоугольные очки.'}`:undefined);}}/>
-    <div className="studio-upload"><label className="button button--secondary">Загрузить фото<input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>1024*1024){setUploadError('Выбери PNG, JPG или WebP до 1 МБ.');return;}const reader=new FileReader();reader.onload=()=>{onUpload(String(reader.result));onAppearance(undefined);setUploadError('');};reader.onerror=()=>setUploadError('Не удалось прочитать фото.');reader.readAsDataURL(file);e.target.value='';}}/></label><Button variant="ghost" onClick={onRemove}>Без фото</Button></div>{uploadError&&<p role="alert">{uploadError}</p>}
+    <AvatarBuilder worldId={worldId} seed={seed} onLook={onLook} onRender={src=>{onUpload(src);onAppearance(eveningLooks.find(look=>look.id===customLook(seed,worldId).id)?.description);}}/>
+    <div className="studio-upload"><Button type="button" variant="secondary" onClick={()=>uploadInput.current?.click()}>Загрузить фото</Button><input ref={uploadInput} className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>1024*1024){setUploadError('Выбери PNG, JPG или WebP до 1 МБ.');return;}const reader=new FileReader();reader.onload=()=>{onUpload(String(reader.result));onAppearance(undefined);setUploadError('');};reader.onerror=()=>setUploadError('Не удалось прочитать фото.');reader.readAsDataURL(file);e.target.value='';}}/><Button type="button" variant="ghost" onClick={onRemove}>Без фото</Button></div>{uploadError&&<p role="alert">{uploadError}</p>}
     {custom&&<div className="studio-address"><span>Обращение</span><div className="row">{([['she','Она'],['he','Он'],['nick','По нику']] as const).map(([id,label])=><Chip key={id} selected={address===id} onClick={()=>onAddress(id)}>{label}</Chip>)}</div></div>}
    </div>:null}
 
