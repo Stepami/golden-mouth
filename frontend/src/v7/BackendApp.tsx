@@ -496,10 +496,9 @@ export default function BackendApp() {
           <summary><Icon name="goals"/><span className="composer-assignment-copy"><small>По сюжету</small><span>{prepared?.prompt??roleTask?.prompt??(player.campaignProgress?.completed?'Задания истории завершены':'Сейчас можно написать свободный пост')}</span></span><Icon name="chevron"/></summary>
           <div className="composer-assignment-details"><p>{prepared?.prompt??roleTask?.prompt??world?.goal}</p><p>{prepared?.title??roleTask?.context??'История продолжается через твои публикации и разговоры с персонажами.'}</p></div>
         </details>
-        <section className="composer-assignment composer-assignment--daily" aria-label="Ежедневный квест"><Icon name="flame"/><span className="composer-assignment-copy"><small>На сегодня</small><span>Пока нет задания</span></span></section>
-        <PracticeFocus compact skills={personaFor(player.id, player.world).skills ?? []}/>
+        <section className="composer-assignment composer-assignment--empty" aria-label="Ежедневный квест"><Icon name="flame"/><span className="composer-assignment-copy"><small>На сегодня</small><span>Пока нет ежедневного задания</span></span></section>
       </div>}
-      {reply&&<PracticeFocus compact skills={personaFor(player.id, player.world).skills ?? []}/>}
+      <PracticeFocus skills={personaFor(player.id, player.world).skills ?? []}/>
       {(reply || quote) && !prepared && <QuoteBlock name={reply?.name ?? quote!.name} text={reply?.text ?? quote!.text}/>}
       <div className="row"><Avatar name={player.name} src={personaFor(player.id, player.world).avatar}/><strong>{player.name}</strong></div>
       <label className="sr-only" htmlFor="post-text">Текст публикации</label>
