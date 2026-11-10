@@ -6,8 +6,7 @@ on:
       - master
     paths:
       - "backend/**"
-      - "frontend/nswag.frontend.json"
-      - "frontend/src/api/generated/reki-api.ts"
+      - "frontend/**"
       - ".github/workflows/backend-ci.yml"
   workflow_call:
 
