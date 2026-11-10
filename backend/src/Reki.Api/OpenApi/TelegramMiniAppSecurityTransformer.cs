@@ -34,6 +34,12 @@ internal sealed class TelegramMiniAppSecurityTransformer : IOpenApiDocumentTrans
             Scheme = "bearer",
             BearerFormat = "JWT",
         };
+        document.Components.SecuritySchemes[AuthConstants.Schemes.Vk] = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            Description = "VK access_token; verified by the server with VK user_info.",
+        };
 
         var endpointSecurity = context.DescriptionGroups
             .SelectMany(group => group.Items)
@@ -48,6 +54,11 @@ internal sealed class TelegramMiniAppSecurityTransformer : IOpenApiDocumentTrans
                     }
 
                     var authorization = metadata.OfType<IAuthorizeData>().ToArray();
+                    if (authorization.Any(item => item.Policy == AuthConstants.Policies.RekiVkGrant))
+                    {
+                        return AuthConstants.Schemes.Vk;
+                    }
+
                     if (authorization.Any(item => item.Policy == AuthConstants.Policies.RekiAppJwt))
                     {
                         return AuthConstants.Schemes.AppBearer;

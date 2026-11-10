@@ -1,6 +1,8 @@
 export interface RuntimeConfig {
   apiBaseUrl: string
   appClientId: string
+  vkApplicationId: number
+  vkRedirectUrl: string
   features: { dm: boolean; friends: boolean; collection: boolean }
 }
 
@@ -13,6 +15,8 @@ declare global {
 const fallbackConfig: Readonly<RuntimeConfig> = Object.freeze({
   apiBaseUrl: '/api/v1',
   appClientId: 'reki-app',
+  vkApplicationId: 0,
+  vkRedirectUrl: '',
   features: { dm: false, friends: false, collection: false },
 })
 
@@ -35,7 +39,9 @@ function readRuntimeConfig(): Readonly<RuntimeConfig> {
       ? source.features[key as keyof RuntimeConfig['features']] : fallback,
   ])) as RuntimeConfig['features']
   const appClientId = typeof source?.appClientId === 'string' && source.appClientId ? source.appClientId : fallbackConfig.appClientId
-  return Object.freeze({ apiBaseUrl, appClientId, features: Object.freeze(features) })
+  const vkApplicationId = typeof source?.vkApplicationId === 'number' ? source.vkApplicationId : fallbackConfig.vkApplicationId
+  const vkRedirectUrl = typeof source?.vkRedirectUrl === 'string' ? source.vkRedirectUrl : fallbackConfig.vkRedirectUrl
+  return Object.freeze({ apiBaseUrl, appClientId, vkApplicationId, vkRedirectUrl, features: Object.freeze(features) })
 }
 
 export const runtimeConfig = readRuntimeConfig()

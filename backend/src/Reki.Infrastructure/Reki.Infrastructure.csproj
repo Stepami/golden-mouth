@@ -26,6 +26,8 @@
         <PackageReference Include="OpenIddict.MongoDb"/>
         <PackageReference Include="OpenIddict.AspNetCore"/>
         <PackageReference Include="TgMiniAppAuth"/>
+        <PackageReference Include="WebApiClientCore"/>
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience"/>
         <PackageReference Include="Telegram.Bot"/>
         <PackageReference Include="TickerQ" />
         <PackageReference Include="TickerQ.Instrumentation.OpenTelemetry" />
