@@ -14,6 +14,8 @@ let startupRequest: Promise<boolean> | undefined
 let telegramClientIdRequest: Promise<number> | undefined
 let widgetRequest: Promise<void> | undefined
 let pendingWidgetToken = sessionStorage.getItem(pendingLoginKey) ?? ''
+let pendingVkToken = ''
+let pendingVkExpiresAt = 0
 let pendingExpiryTimer: ReturnType<typeof setTimeout> | undefined
 let explicitlyLoggedOut = sessionStorage.getItem(loggedOutKey) === '1'
 const listeners = new Set<() => void>()
@@ -32,7 +34,15 @@ export function subscribeAuth(listener: () => void): () => void {
 const notify = () => { for (const listener of listeners) listener() }
 
 export const hasPendingWidgetLogin = () => !!pendingWidgetToken
-export const canResumeAuth = () => hasPendingWidgetLogin() || !!storedRefresh()
+export const hasPendingLogin = () => hasPendingWidgetLogin() || !!pendingVkToken
+export const pendingAuthProvider = (): 'telegram' | 'vk' | undefined => pendingVkToken ? 'vk' : pendingWidgetToken ? 'telegram' : undefined
+export const canResumeAuth = () => hasPendingLogin() || !!storedRefresh()
+
+export function clearPendingLogin() {
+  pendingVkToken = ''
+  pendingVkExpiresAt = 0
+  clearPendingWidgetLogin()
+}
 
 export function clearPendingWidgetLogin() {
   pendingWidgetToken = ''
@@ -78,7 +88,7 @@ function saveTokens(tokens: TokenResponse) {
   localStorage.setItem(refreshKey, tokens.refresh_token)
   accessToken = tokens.access_token
   registrationExternalId = ''
-  clearPendingWidgetLogin()
+  clearPendingLogin()
 }
 export function clearTokens() {
   accessToken = ''
@@ -95,6 +105,7 @@ async function tokenRequest(path: string, fields: Record<string, string>, author
   if (!response.ok) {
     const body = response.status === 400 ? await response.json().catch(() => null) as { error?: string; external_user_id?: string } | null : null
     if (body?.error === 'registration_required' && body.external_user_id) { registrationExternalId = body.external_user_id; notify(); return undefined }
+    if (path === '/auth/external/vk' && (response.status === 400 || response.status === 401)) clearPendingLogin()
     throw new Error(`Authorization failed (${response.status})`)
   }
   return response.json() as Promise<TokenResponse>
@@ -106,6 +117,7 @@ export async function loginMiniApp(): Promise<void> {
   sessionStorage.removeItem(loggedOutKey)
 }
 export async function loginWidget(idToken: string): Promise<void> {
+  pendingVkToken = ''
   registrationExternalId = ''
   sessionStorage.setItem(pendingLoginKey, idToken)
   pendingWidgetToken = idToken
@@ -126,6 +138,25 @@ export function resumeWidgetLogin(): Promise<void> {
     sessionStorage.removeItem(loggedOutKey)
   })().finally(() => { widgetRequest = undefined })
   return widgetRequest
+}
+export async function loginVk(token: string, expiresIn: number): Promise<void> {
+  clearPendingWidgetLogin()
+  pendingVkToken = token
+  pendingVkExpiresAt = Date.now() + expiresIn * 1000
+  notify()
+  await resumeVkLogin()
+}
+async function resumeVkLogin(): Promise<void> {
+  if (!pendingVkToken || pendingVkExpiresAt <= Date.now()) {
+    clearPendingLogin()
+    throw new Error('VK login expired')
+  }
+  const proof = pendingVkToken
+  const tokens = await tokenRequest('/auth/external/vk', { grant_type: 'urn:reki:grant:vk' }, `Bearer ${proof}`)
+  if (proof !== pendingVkToken) return
+  if (tokens) saveTokens(tokens)
+  explicitlyLoggedOut = false
+  sessionStorage.removeItem(loggedOutKey)
 }
 export function refreshAccess(): Promise<boolean> {
   if (refreshRequest) return refreshRequest
@@ -159,6 +190,10 @@ export function startAuth(): Promise<boolean> {
       const restored = await refreshAccess()
       if (restored) return true
     }
+    if (pendingVkToken) {
+      await resumeVkLogin()
+      return hasAccess()
+    }
     if (hasPendingWidgetLogin()) {
       await resumeWidgetLogin()
       return hasAccess()
@@ -179,7 +214,8 @@ export async function registerPlayer(body: OnboardingRequest): Promise<PlayerRes
       body: JSON.stringify(body), signal: AbortSignal.timeout(authTimeoutMs),
     })
     if (!response.ok && response.status !== 409) throw new Error(`Registration failed (${response.status})`)
-    if (pendingWidgetToken) await resumeWidgetLogin()
+    if (pendingVkToken) await resumeVkLogin()
+    else if (pendingWidgetToken) await resumeWidgetLogin()
     else await loginMiniApp()
     if (!hasAccess()) throw new Error('Registration could not be confirmed')
   }
@@ -198,6 +234,6 @@ export async function logout(): Promise<void> {
   }
   explicitlyLoggedOut = true
   sessionStorage.setItem(loggedOutKey, '1')
-  clearPendingWidgetLogin()
+  clearPendingLogin()
   clearTokens()
 }

@@ -16,6 +16,7 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageVersion Include="AspNetCore.Authentication.Basic" Version="9.0.0"/>
+        <PackageVersion Include="AspNetCore.Authentication.ApiKey" Version="9.0.0"/>
         <PackageVersion Include="alexjamesbrown.TickerQ.MongoDB" Version="0.1.0"/>
         <PackageVersion Include="TickerQ" Version="$(TickerQVersion)"/>
         <PackageVersion Include="TickerQ.Instrumentation.OpenTelemetry" Version="$(TickerQVersion)"/>
@@ -51,6 +52,8 @@
         <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="$(SkiaVersion)"/>
         <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.3.1"/>
         <PackageVersion Include="TgMiniAppAuth" Version="0.0.8"/>
+        <PackageVersion Include="WebApiClientCore" Version="2.1.6"/>
+        <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="$(MicrosoftTelemetryVersion)"/>
         <PackageVersion Include="Telegram.Bot" Version="22.10.3.3"/>
         <PackageVersion Include="Vogen" Version="8.0.7"/>
         <!--OpenTelemetry-->

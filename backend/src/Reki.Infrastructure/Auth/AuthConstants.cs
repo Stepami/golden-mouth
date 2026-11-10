@@ -6,6 +6,7 @@ public static class AuthConstants
     {
         public const string MiniApp = "urn:reki:grant:telegram-mini-app";
         public const string TelegramLogin = "urn:reki:grant:telegram-login";
+        public const string Vk = "urn:reki:grant:vk";
         public const string Refresh = OpenIddict.Abstractions.OpenIddictConstants.GrantTypes.RefreshToken;
     }
 
@@ -16,6 +17,7 @@ public static class AuthConstants
         public const string MiniApp = Schemes.MiniApp;
         public const string RekiTelegramLoginGrant = nameof(RekiTelegramLoginGrant);
         public const string RekiRefreshGrant = nameof(RekiRefreshGrant);
+        public const string RekiVkGrant = nameof(RekiVkGrant);
     }
 
     public static class Schemes
@@ -24,6 +26,7 @@ public static class AuthConstants
         public const string TelegramLogin = nameof(TelegramLogin);
         public const string Onboarding = nameof(Onboarding);
         public const string AppBearer = nameof(AppBearer);
+        public const string Vk = nameof(Vk);
     }
 
     public static class Claims
