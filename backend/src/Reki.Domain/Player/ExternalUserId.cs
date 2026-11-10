@@ -9,6 +9,8 @@ public readonly partial struct ExternalUserId
 
     public static ExternalUserId Vk(string id) => From($"vk:{id}");
 
+    public static ExternalUserId Yandex(string id) => From($"yandex:{id}");
+
     private static Validation Validate(string value) =>
         !string.IsNullOrWhiteSpace(value) && value.IndexOf(':') > 0 && !value.EndsWith(':')
             ? Validation.Ok

@@ -29,6 +29,14 @@ Development uses MongoDB for game data. Before starting the API outside Compose,
 
 OpenAPI JSON and Swagger UI are available only in Development. Production does not serve these routes. Build-time OpenAPI generation for NSwag clients remains available. The exact local address is printed by ASP.NET Core when the service starts.
 
+Yandex ID uses the public `Yandex:ClientId` (default `799a21610c6b495c8d8c01fd9b8c4012`), configurable with
+`Yandex__ClientId` (Compose: `YANDEX_CLIENT_ID`). It must match the frontend app ID.
+`Yandex:BaseUrl` defaults to `https://login.yandex.ru/`, and `Yandex:TimeoutSeconds` defaults to 10.
+`POST /auth/external/yandex` accepts the Yandex OAuth token as Bearer and form fields `client_id` and
+`grant_type=urn:reki:grant:yandex`. The server checks the token and application ID with Yandex ID's `info` API.
+Unknown users receive `registration_required` with a `yandex:` external ID for the existing onboarding flow;
+registered users receive the standard game tokens and use the same refresh and logout endpoints.
+
 VK ID uses `Vk:ApplicationId` (the public VK app ID, matching the frontend runtime configuration), `Vk:BaseUrl`
 (default `https://id.vk.ru/`) and `Vk:TimeoutSeconds` (default 10). Set the required public app ID with `Vk__ApplicationId`
 outside Compose; Compose supplies it from `VK_APPLICATION_ID`. `POST /auth/external/vk` takes a VK access token as Bearer and form fields
@@ -146,6 +154,16 @@ TickerQ request serialization uses `ApiJsonSerializerContext` through `WithJsonC
 Successful publications and thread replies schedule a one-off `GenerateStarFeedPostJob`. Feed reads do so with `feed.open_probability` from the balance file. The existing feed returns saved posts immediately; refresh to see new star posts. The backend uses a non-streaming chat response and the existing 14+ output checks. Player energy, audience and progression are unchanged.
 
 Type-safe `AddAsync<GenerateStarFeedPostJob, StarFeedRequest>` uses `RekiTimeTicker` defaults: three retries at 30, 120 and 600 seconds. These defaults apply to all application TimeTickers; cron maintenance retains its existing configuration. Technical failures propagate to TickerQ; invalid content and missing worlds terminate without retry. A BSON ObjectId string is created at scheduling and stored as a typed PostId in the request alongside typed PlayerId and WorldId. Repeated executions reuse it; the post collection's unique `_id` prevents duplicate posts. Concurrent executions of the same request can still spend AI tokens before one insert wins. Failed TickerQ scheduling results are logged; unexpected scheduler exceptions are not swallowed. ScheduleAsync always schedules; ScheduleFromFeedAsync uses random < feed.open_probability. Neither scheduler method accepts a cancellation token. MongoPostRepository uses a plain InsertPostAsync and insertion exceptions propagate to TickerQ. The AI history identifies authors and marks the selected star's own posts with isOwn. There is no transactional outbox between the business commit and scheduling.
+
+## Profile linking (#268)
+
+`POST /merge` uses the current game JWT and accepts `{ "fromPlayerId": "<player ID>" }`. The ID comes from
+`GET /me` under the other login's JWT. The current profile remains; the source profile and its game data and
+sessions are deleted, then its external login IDs are added to the current profile. A source ID equal to the current
+player returns 409; a missing profile returns 404. No tokens are issued by this endpoint.
+
+The agreed prototype contract trusts `fromPlayerId` without server-side proof of control of the source profile.
+Deletion and transfer are sequential, so a failure after deletion can leave the source login IDs untransferred.
 
 ## API clients (#122)
 

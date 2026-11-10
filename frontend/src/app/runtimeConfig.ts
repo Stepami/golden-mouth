@@ -3,6 +3,8 @@ export interface RuntimeConfig {
   appClientId: string
   vkApplicationId: number
   vkRedirectUrl: string
+  yandexClientId: string
+  yandexRedirectUrl: string
   features: { dm: boolean; friends: boolean; collection: boolean }
 }
 
@@ -17,6 +19,8 @@ const fallbackConfig: Readonly<RuntimeConfig> = Object.freeze({
   appClientId: 'reki-app',
   vkApplicationId: 0,
   vkRedirectUrl: '',
+  yandexClientId: '',
+  yandexRedirectUrl: '',
   features: { dm: false, friends: false, collection: false },
 })
 
@@ -41,7 +45,9 @@ function readRuntimeConfig(): Readonly<RuntimeConfig> {
   const appClientId = typeof source?.appClientId === 'string' && source.appClientId ? source.appClientId : fallbackConfig.appClientId
   const vkApplicationId = typeof source?.vkApplicationId === 'number' ? source.vkApplicationId : fallbackConfig.vkApplicationId
   const vkRedirectUrl = typeof source?.vkRedirectUrl === 'string' ? source.vkRedirectUrl : fallbackConfig.vkRedirectUrl
-  return Object.freeze({ apiBaseUrl, appClientId, vkApplicationId, vkRedirectUrl, features: Object.freeze(features) })
+  const yandexClientId = typeof source?.yandexClientId === 'string' ? source.yandexClientId : fallbackConfig.yandexClientId
+  const yandexRedirectUrl = typeof source?.yandexRedirectUrl === 'string' ? source.yandexRedirectUrl : fallbackConfig.yandexRedirectUrl
+  return Object.freeze({ apiBaseUrl, appClientId, vkApplicationId, vkRedirectUrl, yandexClientId, yandexRedirectUrl, features: Object.freeze(features) })
 }
 
 export const runtimeConfig = readRuntimeConfig()

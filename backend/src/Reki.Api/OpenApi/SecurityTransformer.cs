@@ -41,6 +41,13 @@ internal sealed class SecurityTransformer : IOpenApiDocumentTransformer
             Description = "VK access_token; verified by the server with VK user_info.",
         };
 
+        document.Components.SecuritySchemes[AuthConstants.Schemes.Yandex] = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            Description = "Yandex OAuth token; verified by the server with Yandex ID.",
+        };
+
         var endpointSecurity = context.DescriptionGroups
             .SelectMany(group => group.Items)
             .ToDictionary(
@@ -57,6 +64,11 @@ internal sealed class SecurityTransformer : IOpenApiDocumentTransformer
                     if (authorization.Any(item => item.Policy == AuthConstants.Policies.RekiVkGrant))
                     {
                         return AuthConstants.Schemes.Vk;
+                    }
+
+                    if (authorization.Any(item => item.Policy == AuthConstants.Policies.RekiYandexGrant))
+                    {
+                        return AuthConstants.Schemes.Yandex;
                     }
 
                     if (authorization.Any(item => item.Policy == AuthConstants.Policies.RekiAppJwt))
