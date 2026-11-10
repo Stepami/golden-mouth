@@ -228,9 +228,9 @@ html[data-large-text="true"] .world-intro .intro-cta { position: static; }
 .activity-open strong { -webkit-line-clamp:2; line-clamp:2; }
 .activity-text { -webkit-line-clamp:3; line-clamp:3; }
 .post-ideas>p { margin:0 0 8px; }
-.post-ideas-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
-.post-ideas-grid .post-idea { padding:10px; font-size:12px; line-height:1.45; border-radius:12px; }
-.post-ideas-grid .post-idea span { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden; }
+.post-ideas-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-2); }
+.post-ideas-grid .post-idea { overflow-wrap:anywhere; }
+.post-ideas-grid .post-idea span { display:block; }
 
 .account-handle { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; overflow-wrap:normal; max-width:100%; }
 .owned-world { display:grid; grid-template-columns:minmax(0,1fr) 44px; align-items:center; min-width:0; }
