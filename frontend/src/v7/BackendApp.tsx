@@ -145,13 +145,13 @@ export default function BackendApp() {
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments); }, [player?.experiments]);
   const key = `reki:v7:${player?.id ?? api.playerId() ?? 'guest'}`;
   const localSave = (name: string, value: unknown) => { if (!saveLocal(`${key}:${name}`, value)) setStorageError(true); };
-  const go = (next: Screen) => { setError(''); setStack(s => [...s, screen]); setScreen(next); setToast(undefined); setReactionNotice(undefined); };
+  const go = (next: Screen, replace = false) => { setError(''); setStack(s => replace ? [] : [...s, screen]); setScreen(next); setToast(undefined); setReactionNotice(undefined); };
   const openResource = (next: ResourcePageName) => {
     void accountEnergy.refresh();
     if(['resources','crystals'].includes(screen)){setScreen(next);setError('');}else go(next);
   };
   const back = useCallback(() => { if (pending || busy) return; if (screen === 'intro' && introStep > 0) { setIntroStep(introStep - 1); return; } setError(''); setScreen(stack.at(-1) ?? (world ? 'feed' : 'catalog')); setStack(s => s.slice(0, -1)); }, [stack, world, pending, busy, screen, introStep]);
-  useEffect(() => screen==='hero'&&definition?.templateId ? undefined : syncBackButton(stack.length > 0 && screen !== 'age' && !pending, back), [back, stack.length, pending, screen, definition?.templateId]);
+  useEffect(() => screen==='hero'&&definition?.templateId ? undefined : syncBackButton(stack.length > 0 && !['catalog','search','account','age'].includes(screen) && !pending, back), [back, stack.length, pending, screen, definition?.templateId]);
   useEffect(() => {
     if (booting || hash.startsWith('#system') || hash.startsWith('#result-review')) return;
     const id = `v7.${screen}`; setLogScreen(id); screenView(id);
@@ -451,8 +451,8 @@ export default function BackendApp() {
     const entries = rankCatalog(withHogwartsCard(catalogEntries(templates, plannedWorlds), {templateId:story.templateId,scenario:story.title,premise:story.opening,subtitle:'Чьим будет будущее школы?'}).map(entry=>{const scenario=scenarioForTemplate(entry.world.id);return entry.available&&scenario&&(entry.storyVariant||scenario.templateId!==story.templateId)?{...entry,world:{...entry.world,title:scenario.title,description:scenario.opening.split(/\n\s*\n/).slice(0,scenario.introParagraphCount).join('\n\n'),introTitles:scenario.openingTitles,tagline:scenario.opening.split('. ')[0]}}:entry;}), qualities);
     const filtered = filterCatalog(entries, query, genre);
     content = <><ScreenHeading title={screen === 'search' ? 'Найти свой мир' : 'Миры'} action={screen==='catalog'&&<button className="catalog-settings" aria-label="Настроить интересы" title="Интересы" onClick={()=>{interestOnly.current=true;go('onboarding');}}><Icon name="preferences"/></button>} />
-      {screen === 'search' && <div className="search-field catalog-overview"><TextField label="Название или тема" value={query} onChange={e => setQuery(e.target.value)} placeholder="Магия, приключения, общение…" /></div>}
-      {screen === 'catalog' && owned.length > 0 && <section className="saved-worlds catalog-overview"><h2 className="section-title">Мои миры</h2><WorldCarousel>{owned.map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} onDelete={()=>setWorldToDelete(d)} />)}</WorldCarousel></section>}
+      {screen === 'search' && <div className="search-field"><TextField label="Название или тема" value={query} onChange={e => setQuery(e.target.value)} placeholder="Магия, приключения, общение…" /></div>}
+      {screen === 'catalog' && owned.length > 0 && <section className="saved-worlds"><h2 className="section-title">Мои миры</h2><WorldCarousel>{owned.map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} onDelete={()=>setWorldToDelete(d)} />)}</WorldCarousel></section>}
       <div className="filter-strip">{['Все', ...new Set(entries.map(({ world }) => world.genre))].map(g => <Chip key={g} selected={genre === g} onClick={() => setGenre(g)}>{g}</Chip>)}</div>
       {filtered.length ? <div className="world-grid">{filtered.map(({ key, world: w, available, storyVariant }) => <WorldCard key={key} world={w} disabled={!available || busy} selected={available && selected?.id === w.id && selectedVariant === !!storyVariant} onClick={available ? () => void openWorld(w, !!storyVariant) : undefined} />)}</div> : <EmptyState title="Такого мира пока нет" action={<Button onClick={() => { setQuery(''); setGenre('Все'); if (!templates.length) void boot(); }}>Сбросить поиск</Button>}>Попробуй другое название или убери фильтр.</EmptyState>}
       {player?.hitOwnWorldMilestone && <div className="section"><Button onClick={() => { setDefinition({ ...blankWorld(), name: player.name, avatar: player.handle, stars: [{ id: crypto.randomUUID(), name: '', role: '', about: '', voice: 'Живо и по делу', avatarSeed: 'guide', trait: 1, relation: 0 }] }); go('hero'); }}>Создать свой мир</Button></div>}
@@ -523,7 +523,7 @@ export default function BackendApp() {
   if(import.meta.env.DEV&&hash.startsWith('#result-review'))return <ResultReview/>;
   if (hash.startsWith('#system')) return <DesignSystem />;
   return <div className="v7-stage"><div ref={appRoot} className={`app ${showNav ? 'app--nav' : ''} ${screen === 'intro' ? 'app--prologue' : ''} ${screen === 'hero' ? 'app--hero' : ''}`}><div className="app-body" ref={main}><div className="sr-only" tabIndex={-1} ref={focusHeading}>{titleOf[screen]}</div>{storageError && <Notice title="Не удалось сохранить на устройстве" tone="error">Не закрывай вкладку: черновик остаётся в памяти до перезагрузки.</Notice>}{error && <div className="section"><Notice title={screen==='thread'&&reply&&unknown?'Комментарий сохранён, ответ пока не готов':'Не получилось завершить действие'} tone="error">{error}</Notice>{!booting && !templates.length && <Button onClick={() => void boot()}>Повторить</Button>}</div>}{content}</div>
-    {showNav && <BottomNav items={nav.map(n => ({ ...n, disabled: pending }))} active={screen} onChange={id => { tap('tab', { to: `v7.${id}` }); id === 'compose' ? openFirstPost() : go(id as Screen); }} />}
+    {showNav && <BottomNav items={nav.map(n => ({ ...n, disabled: pending }))} active={screen} onChange={id => { tap('tab', { to: `v7.${id}` }); id === 'compose' ? openFirstPost() : go(id as Screen, true); }} />}
     {worldToDelete&&<Dialog title="Удалить мир?" onClose={()=>setWorldToDelete(undefined)}><div className="stack"><p><strong>{worldToDelete.title}</strong><br/>{worldToDelete.name}</p><p>Удаление этого прохождения вместе с историей персонажа пока недоступно.</p><Button variant="danger" disabled>Удалить мир</Button><Button variant="secondary" onClick={()=>setWorldToDelete(undefined)}>Отмена</Button></div></Dialog>}
     {inviteOpen&&<InviteFriend onClose={()=>setInviteOpen(false)}/>}
     {linkProfileOpen && player && <LinkProfile player={player} refresh={refresh} onClose={()=>setLinkProfileOpen(false)}/>}

@@ -33,7 +33,7 @@ export function Catalog({
     <>
       <ScreenHeading title={search ? "Найти свой мир" : "Миры"} />
       {search && (
-        <div className="search-field catalog-overview">
+        <div className="search-field">
           <TextField
             label="Название или тема"
             placeholder="Магия, прогулки, семейный чат…"
@@ -44,7 +44,7 @@ export function Catalog({
         </div>
       )}
       {!search && saved.length > 0 && (
-        <section className="saved-worlds catalog-overview">
+        <section className="saved-worlds">
           <div className="row between">
             <h2 className="section-title">Мои миры</h2>
             <Badge>{saved.length}</Badge>
