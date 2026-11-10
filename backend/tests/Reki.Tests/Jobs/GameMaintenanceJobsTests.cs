@@ -269,14 +269,16 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
     }
 
     [Test]
-    public async Task Startup_PersistsThreeRecurringSchedulesInMongoAsync()
+    public async Task Startup_PersistsRecurringSchedulesInMongoAsync()
     {
         using var http = Factory.CreateClient();
 
         var schedules = await Database.GetCollection<BsonDocument>("ticker_CronTickers")
             .Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
 
-        await Assert.That(schedules.Count).IsEqualTo(3);
+        await Assert.That(schedules.Count).IsEqualTo(4);
+        var recovery = schedules.Single(item => item["Function"].AsString == nameof(RestoreEnergyJob));
+        await Assert.That(recovery["Expression"].AsString).IsEqualTo("0 * * * * *");
         var reset = schedules.Single(item => item["Function"].AsString == nameof(ResetGameDayJob));
         var count = schedules.Single(item => item["Function"].AsString == nameof(RefreshRegisteredPlayersJob));
         var prune = schedules.Single(item => item["Function"].AsString == nameof(PruneAuthJob));

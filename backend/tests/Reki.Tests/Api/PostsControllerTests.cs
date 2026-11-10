@@ -454,7 +454,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             var player = await GetStoredPlayerAsync(user);
             await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(
                 new BsonDocument("_id", player["_id"]),
-                new BsonDocument("$set", new BsonDocument("Energy", 0)));
+                new BsonDocument("$set", new BsonDocument("Wallet.Energy", 0)));
         }
 
         Factory.Llm.Respond(_ => CreateReplyTextResponse(scenario == "unsafe" ? "наркотики" : "Спасибо за ответ."));
