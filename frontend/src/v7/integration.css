@@ -242,3 +242,15 @@ html[data-large-text="true"] .world-intro .intro-cta { position: static; }
 .saved-worlds-scroll .owned-world .resume-world { background:transparent; }
 
 html[data-theme] .owned-world .resume-world,html[data-theme] .saved-worlds-scroll .owned-world .resume-world { padding-inline-end:0; }
+
+/* Shared overview track for the catalogue and search; card dimensions stay intact. */
+.catalog-overview { --catalog-control-height:72px; }
+html[data-theme] .saved-worlds.catalog-overview { display:grid; grid-template-rows:minmax(24px,auto) minmax(var(--catalog-control-height),auto); gap:var(--space-2); padding-bottom:var(--space-4); }
+html[data-theme] .saved-worlds.catalog-overview>.section-title { margin:0; line-height:24px; }
+html[data-theme] .search-field.catalog-overview { padding-bottom:var(--space-4); }
+.catalog-overview .field { display:grid; grid-template-rows:minmax(24px,auto) minmax(var(--catalog-control-height),auto); gap:var(--space-2); }
+.catalog-overview .field>label { line-height:24px; }
+.catalog-overview .field>input { align-self:center; }
+@container (max-width:350px) {
+  .catalog-overview { --catalog-control-height:88px; }
+}
