@@ -152,7 +152,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await Assert.That(scheduled.Retries).IsEqualTo(3);
         await Assert.That(scheduled.RetryIntervals).IsEquivalentTo(new[] { 30, 120, 600 });
         await Assert.That(scheduled.ExecutionTime).IsEqualTo(Factory.Session.Clock.GetUtcNow().UtcDateTime);
-        await Assert.That((await GetStoredPlayerAsync(user))["Energy"].AsInt32).IsEqualTo(9);
+        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"].AsInt32).IsEqualTo(9);
     }
 
     [Test]

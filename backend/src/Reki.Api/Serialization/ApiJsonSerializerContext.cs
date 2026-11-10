@@ -41,6 +41,8 @@ using Reki.Infrastructure.Yandex;
 
 namespace Reki.Api.Serialization;
 
+[JsonSerializable(typeof(EnergyExchangeResponse))]
+[JsonSerializable(typeof(EnergyWalletResponse))]
 [JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(HttpValidationProblemDetails))]
 [JsonSerializable(typeof(ValidationProblemDetails))]

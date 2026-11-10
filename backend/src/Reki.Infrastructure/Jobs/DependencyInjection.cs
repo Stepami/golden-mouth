@@ -37,6 +37,9 @@ internal static class DependencyInjection
         services.MapTicker<ResetGameDayJob>(ServiceLifetime.Singleton)
             .WithCron("0 0 9 * * *")
             .WithMaxConcurrency(1);
+        services.MapTicker<RestoreEnergyJob>(ServiceLifetime.Singleton)
+            .WithCron("0 * * * * *")
+            .WithMaxConcurrency(1);
         services.MapTicker<RefreshRegisteredPlayersJob>(ServiceLifetime.Singleton)
             .WithCron("0 * * * * *")
             .WithMaxConcurrency(1);

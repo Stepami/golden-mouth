@@ -26,7 +26,7 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
         var currentBalance = balance.CurrentValue;
         var world = currentBalance.Difficulties[gameWorld.Difficulty];
         var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
-        var postIndex = player.EnergyUsed + 1;
+        var postIndex = player.Wallet.EnergyUsed + 1;
         var multiplier = GetGrowthMultiplier(gameWorld, postIndex, ownWords);
         var viral = !flop && IsViral(publicationId, quality, world);
 
