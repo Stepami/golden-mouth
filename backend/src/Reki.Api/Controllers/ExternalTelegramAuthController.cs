@@ -1,16 +1,12 @@
-using System.Text;
 using Mediator;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using OpenIddict.Server.AspNetCore;
 using Reki.Api.Requests.Auth;
 using Reki.Api.Requests.Player;
 using Reki.Application.Auth;
 using Reki.Infrastructure.Auth;
 using Telegram.Bot;
-using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Reki.Api.Controllers;
 
@@ -19,8 +15,6 @@ namespace Reki.Api.Controllers;
 [Route("auth/external/tg")]
 public sealed class ExternalTelegramAuthController(IAuthSessionService sessions) : ControllerBase
 {
-    private const string Scheme = OpenIddictServerAspNetCoreDefaults.AuthenticationScheme;
-
     [AllowAnonymous]
     [HttpGet("client-id", Name = "GetTelegramClientId")]
     public Ok<long> GetTelegramClientId(
@@ -35,15 +29,8 @@ public sealed class ExternalTelegramAuthController(IAuthSessionService sessions)
         [FromKeyedServices(AuthConstants.Grants.MiniApp)] IExternalUserIdProvider externalUserIdProvider,
         CancellationToken cancellationToken)
     {
-        if (!externalUserIdProvider.TryGetExternalUserId(out var externalId))
-        {
-            return InvalidGrant(Errors.InvalidGrant, null);
-        }
-
-        var principal = await sessions.IssueAsync(externalId.Value, request.ClientId, cancellationToken);
-        return principal is null
-            ? InvalidGrant("registration_required", externalId.Value.Value)
-            : TypedResults.SignIn(principal, authenticationScheme: Scheme);
+        var result = await sessions.IssueAsync(externalUserIdProvider, request.ClientId, cancellationToken);
+        return result.ToHttpResult();
     }
 
     [HttpPost("widget", Name = "ExchangeTelegramLogin")]
@@ -54,15 +41,8 @@ public sealed class ExternalTelegramAuthController(IAuthSessionService sessions)
         [FromKeyedServices(AuthConstants.Grants.TelegramLogin)] IExternalUserIdProvider externalUserIdProvider,
         CancellationToken cancellationToken)
     {
-        if (!externalUserIdProvider.TryGetExternalUserId(out var externalId))
-        {
-            return InvalidGrant(Errors.InvalidGrant, null);
-        }
-
-        var principal = await sessions.IssueAsync(externalId.Value, request.ClientId, cancellationToken);
-        return principal is null
-            ? InvalidGrant("registration_required", externalId.Value.Value)
-            : TypedResults.SignIn(principal, authenticationScheme: Scheme);
+        var result = await sessions.IssueAsync(externalUserIdProvider, request.ClientId, cancellationToken);
+        return result.ToHttpResult();
     }
 
     [HttpPost("/onboarding", Name = "CompleteOnboarding")]
@@ -73,28 +53,13 @@ public sealed class ExternalTelegramAuthController(IAuthSessionService sessions)
         [FromKeyedServices(AuthConstants.Schemes.Onboarding)] IExternalUserIdProvider provider,
         CancellationToken cancellationToken)
     {
-        if (!provider.TryGetExternalUserId(out var externalId))
+        var externalId = await provider.GetExternalUserIdOrNullAsync(cancellationToken);
+        if (externalId is null)
         {
             throw new InvalidOperationException("Onboarding identity is missing.");
         }
 
         await sender.Send(request.ToOnboardPlayer(externalId.Value), cancellationToken);
         return TypedResults.Ok();
-    }
-
-    private static ForbidHttpResult InvalidGrant(string error, string? externalUserId)
-    {
-        var properties = new AuthenticationProperties(new Dictionary<string, string?>
-        {
-            [OpenIddictServerAspNetCoreConstants.Properties.Error] = error,
-        });
-        if (externalUserId is not null)
-        {
-            properties.SetParameter(
-                AuthConstants.Claims.ExternalUserId,
-                Convert.ToBase64String(Encoding.UTF8.GetBytes(externalUserId)));
-        }
-
-        return TypedResults.Forbid(properties, [Scheme]);
     }
 }

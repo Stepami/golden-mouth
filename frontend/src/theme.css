@@ -24,6 +24,18 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
 .telegram-launch__button:disabled { opacity: .6; }
 .telegram-launch__button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 .telegram-launch__hint { align-self: end; max-width: 290px; margin: 0 auto; color: var(--muted); font-size: 13px; line-height: 1.45; text-align: center; }
+.reki-login-logo { display: block; margin: 0 auto 24px; border-radius: 28px; }
+.auth-providers { display: flex; flex-direction: column; gap: 12px; }
+.provider-button { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 15px 16px; border: 0; border-radius: 14px; color: #fff; font-size: 16px; font-weight: 700; text-decoration: none; }
+.provider-button svg { width: 24px; height: 24px; fill: currentColor; flex-shrink: 0; }
+.provider-button--telegram { background: #2AABEE; }
+.provider-button--vk { background: #0077FF; }
+.provider-button--secondary { background: var(--card2); border: 1px solid var(--line2); }
+.provider-button:disabled { opacity: .55; }
+.provider-button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.telegram-launch__content .auth-error { margin: 18px 0 0; font-size: 14px; color: var(--warn); }
+.telegram-launch__content .auth-providers p { margin: 0; }
+.vk-login { min-height: 50px; }
 
 @media (max-height: 620px) {
   .telegram-launch__content { margin-top: 12px; }
