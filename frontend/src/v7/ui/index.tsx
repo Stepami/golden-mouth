@@ -555,13 +555,15 @@ export function ProfileHeader({
   avatar,
   onBack,
   label = "Персонаж",
-  neutralAvatar = false, handle,
+  neutralAvatar = false, handle, showStoryProgress = false, storyProgress,
 }: {
   name: string;
   avatar?: string;
   onBack?: () => void;
   label?: string;
   neutralAvatar?:boolean; handle?:string;
+  showStoryProgress?: boolean;
+  storyProgress?: number;
 }) {
   return (
     <header className="character-heading">
@@ -574,8 +576,9 @@ export function ProfileHeader({
         <div>
           <span className="sr-only">{label}</span>
           <h1>{name}</h1>{handle&&<p className="account-handle">@{handle}</p>}
+          {showStoryProgress && <p className="caption muted">{storyProgress === undefined ? "Прогресс истории уточняется" : `Пройдено истории · ${storyProgress}%`}</p>}
         </div>
-        {neutralAvatar?<span className="account-neutral-avatar" aria-label="Общий профиль"><Icon name="profile"/></span>:<Avatar name={name} src={avatar} size="xl" />}
+        {neutralAvatar?<span className="account-neutral-avatar" aria-label="Общий профиль"><Icon name="profile"/></span>:<span className={showStoryProgress ? "profile-story-ring" : undefined} style={showStoryProgress ? {background: storyProgress === undefined ? undefined : `conic-gradient(var(--campaign-ring) ${storyProgress}%, var(--color-divider) 0)`} : undefined}><Avatar name={name} src={avatar} size="xl" /></span>}
       </div>
     </header>
   );

@@ -444,3 +444,15 @@ html[data-large-text="true"][data-theme="dark"] .v7-stage .world-header .energy-
 html[data-theme="dark"] .v7-stage .world-header:has(.energy-hud > span:not(.sr-only)) { padding-bottom:26px; }
 html[data-large-text="true"][data-theme="dark"] .v7-stage .world-header:has(.energy-hud > span:not(.sr-only)) { padding-bottom:40px; }
 .composer-count { text-align:right; }
+
+.profile-story-ring {
+  display: inline-flex;
+  flex: none;
+  padding: 3px;
+  border-radius: 50%;
+  background: var(--color-divider);
+}
+.profile-story-ring .avatar {
+  border: 3px solid var(--color-paper);
+  border-radius: 50%;
+}
