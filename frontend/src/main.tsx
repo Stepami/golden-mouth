@@ -8,9 +8,18 @@ import { installGlobalHandlers } from './app/log'
 import { initTelegram } from './telegram'
 import './theme.css'
 
-if (new URLSearchParams(location.search).has('shot')) document.documentElement.classList.add('shot')
-if (initTelegram()) {
-  installGlobalHandlers()
-  installAnalytics()
+const callbackParams = new URLSearchParams(location.hash.slice(1))
+const yandexCallback = (callbackParams.has('access_token') || callbackParams.has('error')) && (window.opener || window.parent !== window)
+if (yandexCallback) {
+  const script = document.createElement('script')
+  script.src = 'https://yastatic.net/s3/passport-sdk/autofill/v1/sdk-suggest-token-with-polyfills-latest.js'
+  script.onload = () => window.YaSendSuggestToken?.(window.location.origin)
+  document.head.append(script)
+} else {
+  if (new URLSearchParams(location.search).has('shot')) document.documentElement.classList.add('shot')
+  if (initTelegram()) {
+    installGlobalHandlers()
+    installAnalytics()
+  }
+  createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary><App /></ErrorBoundary></StrictMode>)
 }
-createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary><App /></ErrorBoundary></StrictMode>)

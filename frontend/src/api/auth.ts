@@ -14,6 +14,8 @@ let startupRequest: Promise<boolean> | undefined
 let telegramClientIdRequest: Promise<number> | undefined
 let widgetRequest: Promise<void> | undefined
 let pendingWidgetToken = sessionStorage.getItem(pendingLoginKey) ?? ''
+let pendingYandexToken = ''
+let pendingYandexExpiresAt = 0
 let pendingVkToken = ''
 let pendingVkExpiresAt = 0
 let pendingExpiryTimer: ReturnType<typeof setTimeout> | undefined
@@ -34,11 +36,13 @@ export function subscribeAuth(listener: () => void): () => void {
 const notify = () => { for (const listener of listeners) listener() }
 
 export const hasPendingWidgetLogin = () => !!pendingWidgetToken
-export const hasPendingLogin = () => hasPendingWidgetLogin() || !!pendingVkToken
-export const pendingAuthProvider = (): 'telegram' | 'vk' | undefined => pendingVkToken ? 'vk' : pendingWidgetToken ? 'telegram' : undefined
+export const hasPendingLogin = () => hasPendingWidgetLogin() || !!pendingVkToken || !!pendingYandexToken
+export const pendingAuthProvider = (): 'telegram' | 'vk' | 'yandex' | undefined => pendingYandexToken ? 'yandex' : pendingVkToken ? 'vk' : pendingWidgetToken ? 'telegram' : undefined
 export const canResumeAuth = () => hasPendingLogin() || !!storedRefresh()
 
 export function clearPendingLogin() {
+  pendingYandexToken = ''
+  pendingYandexExpiresAt = 0
   pendingVkToken = ''
   pendingVkExpiresAt = 0
   clearPendingWidgetLogin()
@@ -105,7 +109,7 @@ async function tokenRequest(path: string, fields: Record<string, string>, author
   if (!response.ok) {
     const body = response.status === 400 ? await response.json().catch(() => null) as { error?: string; external_user_id?: string } | null : null
     if (body?.error === 'registration_required' && body.external_user_id) { registrationExternalId = body.external_user_id; notify(); return undefined }
-    if (path === '/auth/external/vk' && (response.status === 400 || response.status === 401)) clearPendingLogin()
+    if ((path === '/auth/external/vk' || path === '/auth/external/yandex') && (response.status === 400 || response.status === 401)) clearPendingLogin()
     throw new Error(`Authorization failed (${response.status})`)
   }
   return response.json() as Promise<TokenResponse>
@@ -118,6 +122,7 @@ export async function loginMiniApp(): Promise<void> {
 }
 export async function loginWidget(idToken: string): Promise<void> {
   pendingVkToken = ''
+  pendingYandexToken = ''
   registrationExternalId = ''
   sessionStorage.setItem(pendingLoginKey, idToken)
   pendingWidgetToken = idToken
@@ -140,7 +145,7 @@ export function resumeWidgetLogin(): Promise<void> {
   return widgetRequest
 }
 export async function loginVk(token: string, expiresIn: number): Promise<void> {
-  clearPendingWidgetLogin()
+  clearPendingLogin()
   pendingVkToken = token
   pendingVkExpiresAt = Date.now() + expiresIn * 1000
   notify()
@@ -154,6 +159,25 @@ async function resumeVkLogin(): Promise<void> {
   const proof = pendingVkToken
   const tokens = await tokenRequest('/auth/external/vk', { grant_type: 'urn:reki:grant:vk' }, `Bearer ${proof}`)
   if (proof !== pendingVkToken) return
+  if (tokens) saveTokens(tokens)
+  explicitlyLoggedOut = false
+  sessionStorage.removeItem(loggedOutKey)
+}
+export async function loginYandex(token: string, expiresIn: number): Promise<void> {
+  clearPendingLogin()
+  pendingYandexToken = token
+  pendingYandexExpiresAt = Date.now() + expiresIn * 1000
+  notify()
+  await resumeYandexLogin()
+}
+async function resumeYandexLogin(): Promise<void> {
+  if (!pendingYandexToken || pendingYandexExpiresAt <= Date.now()) {
+    clearPendingLogin()
+    throw new Error('Yandex login expired')
+  }
+  const proof = pendingYandexToken
+  const tokens = await tokenRequest('/auth/external/yandex', { grant_type: 'urn:reki:grant:yandex' }, `Bearer ${proof}`)
+  if (proof !== pendingYandexToken) return
   if (tokens) saveTokens(tokens)
   explicitlyLoggedOut = false
   sessionStorage.removeItem(loggedOutKey)
@@ -190,6 +214,10 @@ export function startAuth(): Promise<boolean> {
       const restored = await refreshAccess()
       if (restored) return true
     }
+    if (pendingYandexToken) {
+      await resumeYandexLogin()
+      return hasAccess()
+    }
     if (pendingVkToken) {
       await resumeVkLogin()
       return hasAccess()
@@ -214,7 +242,8 @@ export async function registerPlayer(body: OnboardingRequest): Promise<PlayerRes
       body: JSON.stringify(body), signal: AbortSignal.timeout(authTimeoutMs),
     })
     if (!response.ok && response.status !== 409) throw new Error(`Registration failed (${response.status})`)
-    if (pendingVkToken) await resumeVkLogin()
+    if (pendingYandexToken) await resumeYandexLogin()
+    else if (pendingVkToken) await resumeVkLogin()
     else if (pendingWidgetToken) await resumeWidgetLogin()
     else await loginMiniApp()
     if (!hasAccess()) throw new Error('Registration could not be confirmed')
