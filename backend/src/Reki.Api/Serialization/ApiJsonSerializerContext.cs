@@ -36,6 +36,7 @@ using Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;
 using Reki.Infrastructure.ML.Classifier;
+using Reki.Infrastructure.Vk;
 
 namespace Reki.Api.Serialization;
 
@@ -60,6 +61,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(AuthTokenResponse))]
 [JsonSerializable(typeof(Guid))]
 [JsonSerializable(typeof(long))]
+[JsonSerializable(typeof(VkUserInfoResponse))]
 [JsonSerializable(typeof(PlayerId))]
 [JsonSerializable(typeof(PostId))]
 [JsonSerializable(typeof(CommentId))]

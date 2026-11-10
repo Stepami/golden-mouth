@@ -74,7 +74,7 @@ function Age() {
         </div>
         <Card style={{ marginTop: 18 }}>
           <b>Сохраним твою игру?</b>
-          <div className="small muted" style={{ margin: '6px 0 10px' }}>Храним только Telegram ID и игру, сервер в России. Удалить всё можно в профиле в один тап. <span style={{ color: '#8CC8FF' }}>Подробнее</span></div>
+          <div className="small muted" style={{ margin: '6px 0 10px' }}>Храним идентификатор способа входа и игру, сервер в России. Удалить всё можно в профиле в один тап. <span style={{ color: '#8CC8FF' }}>Подробнее</span></div>
           <label className="row" style={{ gap: 8 }}>
             <button onClick={() => setAgree(!agree)} aria-pressed={agree} style={{ width: 22, height: 22, borderRadius: 6, border: agree ? 'none' : '2px solid #55536A', background: agree ? 'var(--grad)' : 'none', color: '#fff', fontSize: 14 }}>{agree ? '✓' : ''}</button>
             <span className="small">Согласие на обработку данных</span>

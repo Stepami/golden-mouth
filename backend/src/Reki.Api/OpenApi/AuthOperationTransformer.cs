@@ -16,6 +16,7 @@ internal sealed class AuthOperationTransformer : IOpenApiOperationTransformer
             "Auth_Refresh" => typeof(RefreshTokenRequest),
             "Auth_Logout" => typeof(LogoutRequest),
             "ExternalTelegramAuth_ExchangeMiniApp" or "ExternalTelegramAuth_ExchangeTelegramLogin" => typeof(TokenExchangeRequest),
+            "ExternalVkAuth_ExchangeVk" => typeof(TokenExchangeRequest),
             _ => null,
         };
         if (requestType is not null &&
@@ -24,7 +25,7 @@ internal sealed class AuthOperationTransformer : IOpenApiOperationTransformer
             form.Schema = await GetNamedSchemaAsync(context, requestType, cancellationToken);
         }
 
-        if (operation.OperationId is "Auth_Refresh" or "ExternalTelegramAuth_ExchangeMiniApp" or "ExternalTelegramAuth_ExchangeTelegramLogin")
+        if (operation.OperationId is "Auth_Refresh" or "ExternalTelegramAuth_ExchangeMiniApp" or "ExternalTelegramAuth_ExchangeTelegramLogin" or "ExternalVkAuth_ExchangeVk")
         {
             operation.Responses ??= new OpenApiResponses();
             operation.Responses["200"] = new OpenApiResponse

@@ -5,10 +5,10 @@ import { SCREENS, TAB_OF } from './screens'
 import { screenView, setExperiments, tap } from './app/analytics'
 import { setScreen } from './app/log'
 import { TelegramLaunch } from './app/TelegramLaunch'
-import { inTelegram, syncBackButton } from './telegram'
+import { syncBackButton } from './telegram'
 import { api } from './api/client'
-import { canResumeAuth, clearPendingWidgetLogin, hasAccess, hasInitData, hasPendingWidgetLogin, loadTelegramClientId, loginMiniApp, loginWidget, needsRegistration, startAuth, subscribeAuth } from './api/auth'
-import { openTelegramLogin, preloadTelegramLogin } from './api/telegramLogin'
+import { canResumeAuth, clearPendingLogin, hasAccess, hasInitData, hasPendingLogin, loginMiniApp, loginVk, loginWidget, needsRegistration, pendingAuthProvider, startAuth, subscribeAuth } from './api/auth'
+import { AuthProviders } from './app/AuthProviders'
 import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
 import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
@@ -85,12 +85,9 @@ function Shell() {
 export function App() {
   const authenticated = useSyncExternalStore(subscribeAuth, hasAccess)
   const registration = useSyncExternalStore(subscribeAuth, needsRegistration)
-  const pendingLogin = useSyncExternalStore(subscribeAuth, hasPendingWidgetLogin)
+  const pendingLogin = useSyncExternalStore(subscribeAuth, hasPendingLogin)
   const resumable = useSyncExternalStore(subscribeAuth, canResumeAuth)
   const [ready, setReady] = useState(false)
-  const [telegramClientId, setTelegramClientId] = useState<number | null>(null)
-  const [prepareAttempt, setPrepareAttempt] = useState(0)
-  const [prepareFailed, setPrepareFailed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [authError, setAuthError] = useState('')
   const explicitStart = hasExplicitStart()
@@ -98,49 +95,21 @@ export function App() {
     if (explicitStart) return
     void startAuth().catch(() => { setAuthError('Нет соединения с игрой. Проверь подключение и продолжи вход.') }).finally(() => setReady(true))
   }, [explicitStart])
-  useEffect(() => {
-    if (!ready || authenticated || resumable || inTelegram && hasInitData() || explicitStart) return
-    let active = true
-    setPrepareFailed(false)
-    void Promise.all([preloadTelegramLogin(), loadTelegramClientId()]).then(([, clientId]) => {
-      if (active) setTelegramClientId(clientId)
-    }).catch(() => {
-      if (active) { setPrepareFailed(true); setAuthError('Не удалось подготовить вход Telegram. Проверь подключение и попробуй снова.') }
-    })
-    return () => { active = false }
-  }, [ready, authenticated, resumable, explicitStart, prepareAttempt])
   useEffect(() => { if (ready && !authenticated && api.hasPlayer()) api.clearSession() }, [ready, authenticated])
   const finishLogin = (request: Promise<unknown>) => {
+    setAuthError(''); setBusy(true)
     void request.catch(() => {
-      setAuthError(hasPendingWidgetLogin()
-        ? 'Подтверждение Telegram сохранено. Проверь соединение с игрой и продолжи вход.'
+      setAuthError(hasPendingLogin()
+        ? 'Подтверждение входа сохранено. Проверь соединение с игрой и продолжи вход.'
         : 'Не получилось войти. Проверь подключение и попробуй снова.')
     }).finally(() => setBusy(false))
   }
-  const onLogin = () => {
-    if (resumable) {
-      setAuthError(''); setBusy(true)
-      finishLogin(startAuth())
-      return
-    }
-    if (prepareFailed) {
-      setAuthError(''); setTelegramClientId(null); setPrepareAttempt(value => value + 1)
-      return
-    }
-    if (!(inTelegram && hasInitData()) && telegramClientId === null) return
-    setAuthError('')
-    setBusy(true)
-    if (inTelegram && hasInitData()) {
-      finishLogin(loginMiniApp())
-    } else {
-      openTelegramLogin(telegramClientId!,
-        idToken => finishLogin(loginWidget(idToken)),
-        () => { setBusy(false); setAuthError('Вход через Telegram не завершён.') },
-      )
-    }
-  }
-  const restartLogin = () => { clearPendingWidgetLogin(); setAuthError('') }
   if (!explicitStart && !ready) return <div className="app"><div className="screen"><div className="pad" role="status">Входим в игру…</div></div></div>
-  if (!explicitStart && !authenticated && !registration) return <TelegramLaunch onLogin={onLogin} onRestart={restartLogin} pending={pendingLogin} resumable={resumable} prepareFailed={prepareFailed} busy={busy} ready={resumable || prepareFailed || inTelegram && hasInitData() || telegramClientId !== null} error={authError} />
+  if (!explicitStart && !authenticated && !registration) return <TelegramLaunch error={authError} pendingProvider={pendingLogin ? pendingAuthProvider() === 'vk' ? 'VK' : 'Telegram' : undefined}>
+    {resumable ? <div className="auth-providers">
+      <button className="btn" disabled={busy} onClick={() => finishLogin(startAuth())}>{busy ? 'Входим…' : 'Продолжить вход'}</button>
+      {pendingLogin && <button className="btn secondary" disabled={busy} onClick={() => { clearPendingLogin(); setAuthError('') }}>Войти заново</button>}
+    </div> : <AuthProviders busy={busy} onMiniApp={hasInitData() ? () => finishLogin(loginMiniApp()) : undefined} onTelegram={token => finishLogin(loginWidget(token))} onVk={(token, expiry) => finishLogin(loginVk(token, expiry))} onError={() => { setBusy(false); setAuthError('Вход не завершён. Попробуй ещё раз.') }} />}
+  </TelegramLaunch>
   return <StoreProvider><Shell /></StoreProvider>
 }
