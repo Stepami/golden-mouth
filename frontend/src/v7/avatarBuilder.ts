@@ -19,7 +19,9 @@ export async function composeAvatar(seed:string,background:AvatarBackground,glas
   const world=worldArt[worldId];
   if(background==='world'&&world){
     const image=await loadImage(world.smallCover),side=Math.min(image.width,image.height);
-    ctx.drawImage(image,(image.width-side)/2,(image.height-side)/2,side,side,0,0,640,640);
+    ctx.filter='blur(28px)';
+    ctx.drawImage(image,(image.width-side)/2,(image.height-side)/2,side,side,-40,-40,720,720);
+    ctx.filter='none';
     ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(0,0,640,640);
   }else if(background!=='none'){
     const gradient=ctx.createLinearGradient(0,0,640,640);
