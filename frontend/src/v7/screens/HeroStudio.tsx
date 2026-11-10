@@ -19,7 +19,7 @@ export function HeroStudio({options, selected, onChoose, name, channel, goal, on
 }) {
  const [panel,setPanel]=useState<'skills'|'look'>(startWithHero?'look':'skills');
  useEffect(()=>syncBackButton(!busy,()=>panel==='look'&&!startWithHero?setPanel('skills'):onBack()),[panel,busy,onBack,startWithHero]);
- const [sheet,setSheet]=useState<'identity'|'goal'|'skills'|null>(null);
+ const [sheet,setSheet]=useState<'identity'|'skills'|null>(null);
  const [query,setQuery]=useState(''),[directions,setDirections]=useState<string[]>([]),[uploadError,setUploadError]=useState('');
  const root=useRef<HTMLElement>(null);
  const uploadInput=useRef<HTMLInputElement>(null);
@@ -50,7 +50,7 @@ export function HeroStudio({options, selected, onChoose, name, channel, goal, on
    <div className="studio-identity"><button disabled={!custom} onClick={()=>setSheet('identity')}><h2>{name}</h2>{custom&&<Icon name="compose"/>}</button>{!custom&&options[index].role!==name&&<p>{options[index].role}</p>}</div>
    <div className="studio-roster" aria-label="Персонажи">{options.map((hero,i)=><button key={hero.id} aria-label={hero.id==='custom'?'Создать своего персонажа':hero.name} aria-pressed={i===index} onClick={()=>onChoose(hero.id)}>{hero.id==='custom'?<Icon name="compose"/>:<img src={heroPortraitSource(hero.id,hero.id,worldId,style)} alt=""/>}<span>{hero.id==='custom'?'Свой персонаж':hero.name}</span></button>)}</div>
    {options[index].motivation&&<p className="studio-motivation" aria-live="polite">{options[index].motivation}</p>}
-   <button className="studio-goal" onClick={()=>setSheet('goal')}><span><small>Твоя цель</small><strong>{goal||options[index].goal}</strong></span></button><div className="studio-role-skills" aria-label="Навыки персонажа">{options[index].skills?.map(skill=><span key={skill.name}><SkillArt name={skill.name}/>{skill.name}</span>)}</div>
+   <div className="studio-goal"><span><small>Твоя цель</small><strong>{goal||options[index].goal}</strong></span></div><div className="studio-role-skills" aria-label="Навыки персонажа">{options[index].skills?.map(skill=><span key={skill.name}><SkillArt name={skill.name}/>{skill.name}</span>)}</div>
    </>}
    {panel==='skills'?<div className="studio-panel">
     <div className="studio-panel-heading"><h3>Что хочешь прокачать?</h3><button className="link-button" onClick={()=>setSheet('skills')}>Все навыки</button></div>
@@ -67,8 +67,8 @@ export function HeroStudio({options, selected, onChoose, name, channel, goal, on
 
   </fieldset>
   <div className="studio-footer"><Button busy={busy} disabled={busy||(panel==='look'&&!canEnter)} onClick={()=>{if(panel==='skills'){if(recommended)onChoose(recommended.id);setPanel('look');}else onEnter();}}>{panel==='skills'?'Выбрать персонажа':'Начать историю'}</Button></div>
-  {sheet&&<Dialog title={sheet==='identity'?'Имя и канал':sheet==='goal'?'Твоя цель':'Все навыки'} onClose={()=>setSheet(null)}><fieldset className="studio-sheet" disabled={busy}>
-   {sheet==='identity'?<><TextField label="Имя персонажа" value={name} maxLength={80} onChange={e=>onName(e.target.value)}/><TextField label="Имя канала" value={channel} maxLength={80} onChange={e=>onChannel(e.target.value)}/></>:sheet==='goal'?<p>{goal||options[index].goal}</p>:<><TextField label="Поиск навыка" value={query} onChange={e=>setQuery(e.target.value)}/><p className="caption muted">Выбрано {skills.length} из 3</p><div className="practice-grid">{choices(availableSkills.filter(s=>s.name.toLocaleLowerCase('ru').includes(query.toLocaleLowerCase('ru'))))}</div></>}
+  {sheet&&<Dialog title={sheet==='identity'?'Имя и канал':'Все навыки'} onClose={()=>setSheet(null)}><fieldset className="studio-sheet" disabled={busy}>
+   {sheet==='identity'?<><TextField label="Имя персонажа" value={name} maxLength={80} onChange={e=>onName(e.target.value)}/><TextField label="Имя канала" value={channel} maxLength={80} onChange={e=>onChannel(e.target.value)}/></>:<><TextField label="Поиск навыка" value={query} onChange={e=>setQuery(e.target.value)}/><p className="caption muted">Выбрано {skills.length} из 3</p><div className="practice-grid">{choices(availableSkills.filter(s=>s.name.toLocaleLowerCase('ru').includes(query.toLocaleLowerCase('ru'))))}</div></>}
    <Button onClick={()=>setSheet(null)}>Готово</Button>
   </fieldset></Dialog>}
  </section>;
