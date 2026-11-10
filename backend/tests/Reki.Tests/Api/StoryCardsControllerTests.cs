@@ -23,10 +23,10 @@ public sealed class StoryCardsControllerTests(ApiFactory factory) : GameApiTestB
         await PublishAsync(ownerTelegramId, "публичная карточка");
 
         var owner = await Database.GetCollection<BsonDocument>("players")
-            .Find(new BsonDocument("TelegramUserId", ownerTelegramId))
+            .Find(new BsonDocument("ExternalUserIds", $"telegram:{ownerTelegramId}"))
             .SingleAsync();
         var other = await Database.GetCollection<BsonDocument>("players")
-            .Find(new BsonDocument("TelegramUserId", otherTelegramId))
+            .Find(new BsonDocument("ExternalUserIds", $"telegram:{otherTelegramId}"))
             .SingleAsync();
         var ownerId = owner["_id"].AsBsonBinaryData.ToGuid().ToString("N");
         var otherId = other["_id"].AsBsonBinaryData.ToGuid().ToString("N");

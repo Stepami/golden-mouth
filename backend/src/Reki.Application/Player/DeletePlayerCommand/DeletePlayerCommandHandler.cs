@@ -1,4 +1,6 @@
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using Reki.Application.Auth;
 using Reki.Application.Events;
 using Reki.Application.Invites;
 using Reki.Application.Posts;
@@ -11,6 +13,7 @@ namespace Reki.Application.Player.DeletePlayerCommand;
 internal sealed class DeletePlayerCommandHandler(
     IUnitOfWork unitOfWork,
     IPlayerRepository players,
+    IServiceScopeFactory scopeFactory,
     IWorldRepository worlds,
     IPostRepository posts,
     IDailyGameEventRepository events,
@@ -23,20 +26,22 @@ internal sealed class DeletePlayerCommandHandler(
         DeletePlayer request,
         CancellationToken cancellationToken)
     {
-        var player = await rekiContextAccessor.Context.Player;
+        var playerId = rekiContextAccessor.Context.PlayerId;
         await unitOfWork.ExecuteAsync(
             async token =>
             {
-                var worldIds = await worlds.GetWorldIdsAsync(player.Id, token);
+                var worldIds = await worlds.GetWorldIdsAsync(playerId, token);
                 await posts.DeletePostsAsync(worldIds, token);
-                await events.DeleteEventsAsync(player.Id, token);
-                await worlds.DeleteWorldsAsync(player.Id, token);
-                await invitations.DeleteInvitesAsync(player.Id, token);
-                await players.DeletePlayerAsync(player.Id, token);
+                await events.DeleteEventsAsync(playerId, token);
+                await worlds.DeleteWorldsAsync(playerId, token);
+                await invitations.DeleteInvitesAsync(playerId, token);
+                await players.DeletePlayerAsync(playerId, token);
                 return Unit.Value;
             },
             cancellationToken);
-        telemetry.Track(player.Id, "player_deleted", new Dictionary<string, string>());
+        await using var scope = scopeFactory.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<IAuthSessionService>().DeletePlayerSessionsAsync(playerId, cancellationToken);
+        telemetry.Track(playerId, "player_deleted", new Dictionary<string, string>());
         return Unit.Value;
     }
 }

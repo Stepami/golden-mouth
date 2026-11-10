@@ -10,6 +10,7 @@ using Reki.Domain.Player;
 namespace Reki.Application.Player.OnboardPlayerCommand;
 
 internal sealed class OnboardPlayerCommandHandler(
+    IUnitOfWork unitOfWork,
     IInvitationRepository invitationRepository,
     IPlayerRepository playerRepository,
     GameDayPeriod gameDayPeriod,
@@ -21,42 +22,23 @@ internal sealed class OnboardPlayerCommandHandler(
         OnboardPlayer request,
         CancellationToken cancellationToken)
     {
-        var telegramUserId = request.TelegramUserId;
-        if (await playerRepository.GetPlayerAsync(telegramUserId, cancellationToken) is not null)
+        if (await playerRepository.GetPlayerAsync(request.ExternalUserId, cancellationToken) is not null)
         {
             throw new RequestConflictException("Onboarding has already been completed.");
         }
 
         var currentBalance = balance.CurrentValue;
-        var inviter = await ResolveInviterAsync(request, telegramUserId, cancellationToken);
-        var created = CreatePlayer(request, telegramUserId, gameDayPeriod.PeriodStart) with
-        {
-            AgeBand = request.AgeBand,
-            Energy = currentBalance.FreePostsPerDay,
-        };
-        await playerRepository.CreatePlayerAsync(created, cancellationToken);
-        if (inviter is not null)
-        {
-            var invite = Invitation.Create(inviter.Id, created.Id, timeProvider.GetUtcNow(), currentBalance.InviteBonusBoth);
-            await invitationRepository.CreateInviteAsync(invite, cancellationToken);
-        }
-
-        analytics.TrackPlayer(created, "player_created", new Dictionary<string, string>(), referred: inviter is not null);
-        return created;
-    }
-
-    private static PlayerProfile CreatePlayer(
-        OnboardPlayer request,
-        TelegramUserId telegramUserId,
-        DateTimeOffset periodStart)
-    {
-        var player = new PlayerProfile
+        var inviter = await ResolveInviterAsync(request, cancellationToken);
+        var completed = new PlayerProfile
         {
             Id = PlayerId.New(),
-            TelegramUserId = telegramUserId,
+            ExternalUserIds = [request.ExternalUserId],
+            Settings = new PlayerSettings("all", "22:00-09:00", false),
             BirthGroup = request.BirthGroup,
             Address = request.Address,
-            PostsPeriodStartedAtUtc = periodStart,
+            AgeBand = request.AgeBand,
+            Energy = currentBalance.FreePostsPerDay,
+            PostsPeriodStartedAtUtc = gameDayPeriod.PeriodStart,
             StreakDays = 1,
             Skills = new Dictionary<SkillId, SkillProgress>
             {
@@ -64,14 +46,28 @@ internal sealed class OnboardPlayerCommandHandler(
                 [SkillId.From("humor")] = new(1, 0, 0),
                 [SkillId.From("topic")] = new(1, 0, 0),
             },
-            Settings = new PlayerSettings("all", "22:00-09:00", false),
         };
-        return player;
+        await unitOfWork.ExecuteAsync(
+            async token =>
+            {
+                await playerRepository.CreatePlayerAsync(completed, token);
+
+                if (inviter is not null)
+                {
+                    var invite = Invitation.Create(inviter.Id, completed.Id, timeProvider.GetUtcNow(), currentBalance.InviteBonusBoth);
+                    await invitationRepository.CreateInviteAsync(invite, token);
+                }
+
+                return true;
+            },
+            cancellationToken);
+
+        analytics.TrackPlayer(completed, "player_created", new Dictionary<string, string>(), referred: inviter is not null);
+        return completed;
     }
 
     private async ValueTask<PlayerProfile?> ResolveInviterAsync(
         OnboardPlayer request,
-        TelegramUserId telegramUserId,
         CancellationToken cancellationToken)
     {
         var code = request.ReferralCode;
@@ -82,8 +78,6 @@ internal sealed class OnboardPlayerCommandHandler(
         }
 
         var inviter = await playerRepository.GetPlayerAsync(PlayerId.From(code[4..]), cancellationToken);
-        return inviter is not null && inviter.TelegramUserId != telegramUserId
-            ? inviter
-            : null;
+        return inviter;
     }
 }

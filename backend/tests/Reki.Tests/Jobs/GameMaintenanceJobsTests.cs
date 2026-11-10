@@ -45,7 +45,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         };
         await players.ReplaceOneAsync(item => item.Id == player.Id, seededPlayer);
         await worlds.ReplaceOneAsync(item => item.Id == world.Id, seededWorld);
-        var otherPlayer = seededPlayer with { Id = PlayerId.New(), TelegramUserId = TelegramUserId.From(9391) };
+        var otherPlayer = seededPlayer with { Id = PlayerId.New(), ExternalUserIds = [ExternalUserId.From("telegram:9391")] };
         var otherWorld = seededWorld with { Id = WorldId.New(), Player = seededWorld.Player with { PlayerId = otherPlayer.Id } };
         await players.InsertOneAsync(otherPlayer);
         await worlds.InsertOneAsync(otherWorld);

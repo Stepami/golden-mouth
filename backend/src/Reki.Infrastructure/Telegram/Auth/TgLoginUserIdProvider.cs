@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Reki.Application.Auth;
+using Reki.Domain.Player;
 
 namespace Reki.Infrastructure.Telegram.Auth;
 
@@ -10,7 +11,7 @@ internal sealed class TgLoginUserIdProvider(
     IHttpContextAccessor httpContextAccessor) :
     IExternalUserIdProvider
 {
-    public bool TryGetExternalUserId([NotNullWhen(true)] out long? externalUserId)
+    public bool TryGetExternalUserId([NotNullWhen(true)] out ExternalUserId? externalUserId)
     {
         var id = httpContextAccessor.HttpContext?.User.FindFirstValue("id");
         var parsed = long.TryParse(
@@ -25,7 +26,7 @@ internal sealed class TgLoginUserIdProvider(
             return false;
         }
 
-        externalUserId = telegramId;
+        externalUserId = ExternalUserId.Telegram(telegramId);
         return true;
     }
 }

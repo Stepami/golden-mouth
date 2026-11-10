@@ -5,7 +5,7 @@ namespace Reki.Application.RekiContext;
 
 public interface IRekiContext
 {
-    TelegramUserId TelegramUserId { get; }
+    PlayerId PlayerId { get; }
 
     Task<PlayerProfile> Player { get; }
 

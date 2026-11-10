@@ -21,50 +21,18 @@ namespace Reki.Api.Controllers;
 public sealed class PlayerController(
     IRekiContext rekiContext,
     IInvitationRepository invitationRepository,
-    IPlayerRepository playerRepository,
     ISender sender) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
-    public async Task<Results<Ok<PlayerResponse>, NotFound<ProblemDetails>>> GetCurrentPlayerAsync(
-        CancellationToken cancellationToken)
-    {
-        var player = await playerRepository.GetPlayerAsync(rekiContext.TelegramUserId, cancellationToken);
-        if (player is null)
-        {
-            var problemDetails = new ProblemDetails
-            {
-                Status = StatusCodes.Status404NotFound,
-                Title = "Resource not found",
-                Type = "urn:reki:problem:resource-not-found",
-                Detail = "The requested resource was not found.",
-                Instance = Request.Path,
-            };
-            problemDetails.Extensions["failure"] = null;
-            return TypedResults.NotFound(problemDetails);
-        }
-
-        return TypedResults.Ok(player.ToResponse());
-    }
-
-    [HttpPost("onboarding", Name = "CompleteOnboarding")]
-    [ActionName("CompleteOnboarding")]
-    public async Task<Ok<PlayerResponse>> CompleteOnboardingAsync(
-        OnboardingRequest request,
-        CancellationToken cancellationToken)
-    {
-        var player = await sender.Send(
-            request.ToOnboardPlayer(rekiContext.TelegramUserId),
-            cancellationToken);
-        return TypedResults.Ok(player.ToResponse());
-    }
+    public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken) =>
+        TypedResults.Ok((await rekiContext.Player).ToResponse());
 
     [HttpGet("invitation", Name = "GetInvitation")]
     [ActionName("GetInvitation")]
     public async Task<Ok<InvitationResponse>> GetInvitationAsync(CancellationToken cancellationToken)
     {
-        var player = await rekiContext.Player;
-        var invitation = await invitationRepository.GetPendingInviteAsync(player.Id, cancellationToken);
+        var invitation = await invitationRepository.GetPendingInviteAsync(rekiContext.PlayerId, cancellationToken);
         return TypedResults.Ok(new InvitationResponse(invitation?.BonusAmount ?? 0));
     }
 

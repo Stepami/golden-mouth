@@ -4,7 +4,7 @@ import { clearPlayerDrafts } from '../app/postDraft';
 import { clearWorldDrafts } from '../app/worldDraft';
 import { clearAvatarPersonalization } from '../app/avatarPersonalization';
 import { clearReferral } from '../app/referral';
-import { clearTokens, logout as revokeSession } from './auth';
+import { clearTokens, logout as revokeSession, registerPlayer } from './auth';
 import { clearApiCache } from '../app/useApi';
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics';
 import { clearWorldContent, installWorldContent, installWorldTemplates } from './worldContent';
@@ -108,13 +108,14 @@ async function generateStar(postId: string, replyWorldId: string, authorId: stri
     throw new Error('Generation failed');
 }
 const playerRequests = new Map<string, Promise<Player>>();
-async function loadPlayer(worldId?: string): Promise<Player> {
+async function loadPlayer(worldId?: string): Promise<Player | undefined> {
     const generation = sessionGeneration();
     const player = map.player(await data(sdk.player.getCurrentPlayer()));
     if (sessionIdentity?.id !== player.id)
         ownedWorldSnapshot = undefined;
     sessionIdentity = player;
     setTelemetryPlayerAvailable(true);
+    clearReferral();
     const [ownedWorlds, invitation] = await Promise.all([
         data(sdk.worlds.getOwnedWorlds()).then(worlds => worlds.map(map.world)),
         data(sdk.player.getInvitation()).then(value => ({ bonus: Number(value.bonus) })),
@@ -128,7 +129,7 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     catch { /* memory fallback */ }
     const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)) ?? ownedWorlds[0];
     if (!world)
-        throw new ApiError(404, 'GET', '/worlds');
+        return undefined;
     installWorldContent([world]);
     return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, difficulty: world.difficulty, avatarStyle: world.avatarStyle,
         world: world.id, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
@@ -164,12 +165,16 @@ export const api = {
         api.clearSession();
     },
     loadWorldTemplates: loadTemplates,
+    restore: (): Promise<Player | undefined> => loadPlayer(),
     me: (worldId?: string): Promise<Player> => {
         const key = worldId ?? sessionPlayer?.worldInstanceId ?? '';
         const pending = playerRequests.get(key);
         if (pending)
             return pending;
-        const request = loadPlayer(worldId).finally(() => {
+        const request = loadPlayer(worldId).then(player => {
+            if (!player) throw new Error('World must be created before this request');
+            return player;
+        }).finally(() => {
             if (playerRequests.get(key) === request)
                 playerRequests.delete(key);
         });
@@ -178,11 +183,12 @@ export const api = {
     },
     playerId: (): string | undefined => sessionIdentity?.id,
     hasPlayer: (): boolean => sessionIdentity !== undefined,
+    onboardingProfile: () => sessionIdentity,
     onboarding: async (body: Wire.OnboardingRequest): Promise<PlayerDocument> => {
         if (sessionIdentity)
             throw new Error('Onboarding has already been completed');
         sessionIdentity =
-            map.player(await data(sdk.player.completeOnboarding(body)));
+            map.player(await registerPlayer(body));
         setTelemetryPlayerAvailable(true);
         return sessionIdentity;
     },

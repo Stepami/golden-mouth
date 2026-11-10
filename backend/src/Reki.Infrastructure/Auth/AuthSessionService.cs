@@ -1,9 +1,10 @@
-using System.Globalization;
 using System.Security.Claims;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using Reki.Application.Auth;
+using Reki.Application.Player;
+using Reki.Domain.Player;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Reki.Infrastructure.Auth;
@@ -12,8 +13,23 @@ internal sealed class AuthSessionService(
     IOpenIddictApplicationManager applications,
     IOpenIddictAuthorizationManager authorizations,
     IOpenIddictTokenManager tokens,
-    IOptions<AuthOptions> options) : IAuthSessionService
+    IOptions<AuthOptions> options,
+    IPlayerRepository players) : IAuthSessionService
 {
+    public async Task DeletePlayerSessionsAsync(PlayerId playerId, CancellationToken cancellationToken)
+    {
+        var subject = playerId.ToString();
+        await foreach (var token in tokens.FindBySubjectAsync(subject, cancellationToken))
+        {
+            await tokens.DeleteAsync(token, cancellationToken);
+        }
+
+        await foreach (var authorization in authorizations.FindBySubjectAsync(subject, cancellationToken))
+        {
+            await authorizations.DeleteAsync(authorization, cancellationToken);
+        }
+    }
+
     public async Task<bool> LogoutAsync(
         string refreshToken,
         CancellationToken cancellationToken)
@@ -36,27 +52,22 @@ internal sealed class AuthSessionService(
     }
 
     public async Task<ClaimsPrincipal?> IssueAsync(
-        IExternalUserIdProvider externalUserIdProvider,
+        ExternalUserId externalUserId,
         string clientId,
         CancellationToken cancellationToken)
     {
-        var application = await applications.FindByClientIdAsync(clientId, cancellationToken);
-        if (application is null)
+        var application = await applications.FindByClientIdAsync(clientId, cancellationToken)
+            ?? throw new InvalidOperationException("OpenIddict application is missing.");
+        var player = await players.GetPlayerAsync(externalUserId, cancellationToken);
+        if (player is null)
         {
             return null;
         }
 
-        if (!externalUserIdProvider.TryGetExternalUserId(out var telegramId))
-        {
-            return null;
-        }
-
-        var subject = telegramId.Value.ToString(CultureInfo.InvariantCulture);
+        var subject = player.Id.ToString();
         var identity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType);
         identity.SetClaim(Claims.Subject, subject);
-        identity.SetClaim(AuthConstants.Claims.TelegramUserId, subject);
-        identity.SetDestinations(claim => claim.Type == AuthConstants.Claims.TelegramUserId
-            ? [Destinations.AccessToken] : []);
+        identity.SetDestinations(_ => []);
 
         var principal = new ClaimsPrincipal(identity);
         principal.SetScopes(Scopes.OfflineAccess);

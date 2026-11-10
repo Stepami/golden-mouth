@@ -12,15 +12,15 @@ internal sealed class MongoPlayerRepository(
         database.GetCollection<PlayerProfile>(MongoCollections.Players);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
-        TelegramUserId telegramUserId,
+        ExternalUserId externalUserId,
         CancellationToken cancellationToken) =>
-        await _players.Find(item => item.TelegramUserId == telegramUserId).FirstOrDefaultAsync(cancellationToken);
+        await _players.Find(item => item.ExternalUserIds.Contains(externalUserId)).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
         await _players.Find(item => item.Id == playerId).FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask CreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
-        await _players.InsertOneAsync(player, cancellationToken: cancellationToken);
+        await _players.InsertOneAsync(sessionProvider.Session, player, cancellationToken: cancellationToken);
 
     public async ValueTask SavePlusNotificationAsync(
         PlayerProfile player,

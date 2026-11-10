@@ -4,7 +4,7 @@ public sealed record PlayerProfile
 {
     public required PlayerId Id { get; init; }
 
-    public required TelegramUserId TelegramUserId { get; init; }
+    public required IReadOnlyList<ExternalUserId> ExternalUserIds { get; init; }
 
     public required string BirthGroup { get; init; }
 

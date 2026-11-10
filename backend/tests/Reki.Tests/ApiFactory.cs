@@ -8,9 +8,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 using NSubstitute;
 using Reki.Api;
 using Reki.Application.Posts.ML;
+using Reki.Domain.Player;
 using Reki.Infrastructure.Auth;
 using Reki.Infrastructure.ML.Nli;
 using Reki.Tests.Persistence;
@@ -40,7 +42,16 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
 
     public TestApiClient CreateApiClient(long? telegramUserId = null)
     {
-        return new TestApiClient(CreateClient(), telegramUserId);
+        var client = CreateClient();
+        PlayerId? playerId = null;
+        if (telegramUserId is { } id)
+        {
+            var externalId = ExternalUserId.Telegram(id);
+            var players = Session.Database.GetCollection<PlayerProfile>("players");
+            playerId = players.Find(item => item.ExternalUserIds.Contains(externalId)).FirstOrDefault()?.Id ?? PlayerId.New();
+        }
+
+        return new TestApiClient(client, playerId, telegramUserId, this);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -108,7 +119,11 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
                         options.DefaultAuthenticateScheme = FakeJwtBearerDefaults.AuthenticationScheme;
                         options.DefaultChallengeScheme = FakeJwtBearerDefaults.AuthenticationScheme;
                     })
-                    .AddFakeJwtBearer(options => options.BearerValueType = FakeJwtBearerBearerValueType.Jwt);
+                    .AddFakeJwtBearer(options =>
+                    {
+                        options.BearerValueType = FakeJwtBearerBearerValueType.Jwt;
+                        ((FakeJwtBearerClaimsHandler)options.SecurityTokenClaimHandler).Options.MapInboundClaims = false;
+                    });
                 services.PostConfigure<AuthorizationOptions>(options =>
                     options.AddPolicy(AuthConstants.Policies.RekiAppJwt, new AuthorizationPolicyBuilder(FakeJwtBearerDefaults.AuthenticationScheme)
                         .RequireAuthenticatedUser()

@@ -22,12 +22,13 @@ public static class AuthConstants
     {
         public const string MiniApp = TgMiniAppAuth.TgMiniAppAuthConstants.AuthenticationScheme;
         public const string TelegramLogin = nameof(TelegramLogin);
+        public const string Onboarding = nameof(Onboarding);
         public const string AppBearer = nameof(AppBearer);
     }
 
     public static class Claims
     {
-        public const string TelegramUserId = "telegram_user_id";
+        public const string ExternalUserId = "external_user_id";
     }
 
     public static class Issuers

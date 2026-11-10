@@ -64,7 +64,6 @@ export async function flushEvents() {
 export function installAnalytics() {
   if (installed) return
   installed = true
-  if (BASE) void getSessionId().catch(() => {})
   event('session_start', { platform })
   const interact = () => activeTime.interact(performance.now())
   for (const name of ['pointerdown', 'keydown', 'scroll']) document.addEventListener(name, interact, { passive: true, capture: true })

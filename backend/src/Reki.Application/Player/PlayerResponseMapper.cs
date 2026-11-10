@@ -18,7 +18,7 @@ public static partial class PlayerResponseMapper
             MapSettings(player.Settings),
             new Dictionary<string, string>(),
             player.HitOwnWorldMilestone,
-            player.AgeBand ?? (player.BirthGroup == "14-17" ? "14-17" : "18+"));
+            player.AgeBand ?? player.BirthGroup);
     }
 
     private static partial IReadOnlyDictionary<SkillId, SkillResponse> MapSkills(IReadOnlyDictionary<SkillId, SkillProgress> source);

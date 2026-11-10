@@ -39,11 +39,11 @@ public sealed partial class TelemetryController(
 
     [HttpPost("logs", Name = "SubmitClientLogs")]
     [ActionName("SubmitClientLogs")]
-    public async Task<NoContent> SubmitClientLogsAsync(
+    public Task<NoContent> SubmitClientLogsAsync(
         ClientLogBatchRequest request,
         CancellationToken cancellationToken)
     {
-        var player = await rekiContext.Player;
+        var playerId = rekiContext.PlayerId;
         foreach (var entry in request.Entries)
         {
             var properties = entry.Props.SanitizeProperties();
@@ -52,13 +52,13 @@ public sealed partial class TelemetryController(
             WriteClientLog(
                 entry.Level,
                 entry.Event,
-                player.Id.Value.ToString("N"),
+                playerId.Value.ToString("N"),
                 entry.Screen ?? string.Empty,
                 status ?? string.Empty,
                 path ?? string.Empty);
         }
 
-        return TypedResults.NoContent();
+        return Task.FromResult(TypedResults.NoContent());
     }
 
     [HttpPost("reports", Name = "ReportComment")]

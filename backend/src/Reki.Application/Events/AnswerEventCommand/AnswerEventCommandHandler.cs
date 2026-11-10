@@ -13,11 +13,11 @@ internal sealed class AnswerEventCommandHandler(
         AnswerEvent request,
         CancellationToken cancellationToken)
     {
-        var player = await rekiContextAccessor.Context.Player;
+        var playerId = rekiContextAccessor.Context.PlayerId;
         var world = (await rekiContextAccessor.Context.Worlds).GetValueOrDefault(request.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var gameEvent = await dailyGameEventRepository.GetTodayEventAsync(
-            player.Id,
+            playerId,
             DateTimeOffset.MinValue,
             cancellationToken,
             world.Id);
