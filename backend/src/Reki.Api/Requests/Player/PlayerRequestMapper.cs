@@ -9,8 +9,8 @@ namespace Reki.Api.Requests.Player;
 [Mapper]
 internal static partial class PlayerRequestMapper
 {
-    public static OnboardPlayer ToOnboardPlayer(this OnboardingRequest source, TelegramUserId telegramUserId) =>
-        new(telegramUserId, source.BirthGroup.ToStorageValue(), source.Address, source.ReferralCode, source.AgeBand);
+    public static OnboardPlayer ToOnboardPlayer(this OnboardingRequest source, ExternalUserId externalUserId) =>
+        new(externalUserId, source.BirthGroup.ToStorageValue(), source.Address, source.ReferralCode, source.AgeBand);
 
     public static partial UpdateSettings ToUpdateSettings(this UpdateSettingsRequest source);
 

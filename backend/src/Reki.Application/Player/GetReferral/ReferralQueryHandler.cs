@@ -7,11 +7,11 @@ namespace Reki.Application.Player.GetReferral;
 internal sealed class ReferralQueryHandler(IRekiContextAccessor rekiContextAccessor) :
     IQueryHandler<ReferralQuery, ReferralResponse>
 {
-    public async ValueTask<ReferralResponse> Handle(
+    public ValueTask<ReferralResponse> Handle(
         ReferralQuery request,
         CancellationToken cancellationToken)
     {
-        var player = await rekiContextAccessor.Context.Player;
-        return new ReferralResponse($"ref_{player.Id.Value:N}");
+        var playerId = rekiContextAccessor.Context.PlayerId;
+        return ValueTask.FromResult(new ReferralResponse($"ref_{playerId.Value:N}"));
     }
 }

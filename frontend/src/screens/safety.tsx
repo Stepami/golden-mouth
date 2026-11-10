@@ -29,7 +29,7 @@ function Crisis({ adult }: { adult: boolean }) {
             ? 'Похоже, тебе сейчас тяжело. С этим не нужно справляться в одиночку. Поговори с тем, кому доверяешь, и, пожалуйста, обратись к психологу: это нормально и правда помогает'
             : 'Похоже, тебе сейчас тяжело. Если хочешь поговорить с живым человеком, тебе помогут:'}</div>
           {!adult && <>
-            <a href="tel:88002000122" className="btn" style={{ display: 'block', textAlign: 'center', background: 'var(--up)', marginTop: 14, textDecoration: 'none' }}>📞 Позвонить 8-800-2000-122</a>
+            <a href="tel:88002000122" className="btn" style={{ display: 'block', textAlign: 'center', background: '#2E9E6F', marginTop: 14, textDecoration: 'none' }}>📞 Позвонить 8-800-2000-122</a>
             <div className="small muted" style={{ textAlign: 'center', marginTop: 6 }}>детский телефон доверия · бесплатно и анонимно</div>
           </>}
           <div className="small muted" style={{ marginTop: 12 }}>Это видишь только ты. Хейт в игре выключен на неделю</div>

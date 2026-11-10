@@ -15,7 +15,10 @@ public sealed record GamePost(
     double ReachRatio,
     bool Viral,
     bool Flop,
-    int Version = 0)
+    int Version = 0,
+    string ReactionEmoji = "🔥",
+    AuthorId? PredictedAuthorId = null,
+    string? FlopReason = null)
 {
     public GameComment? FindRequest(string requestId) =>
         Comments.FirstOrDefault(item => string.Equals(item.RequestId, requestId, StringComparison.Ordinal));

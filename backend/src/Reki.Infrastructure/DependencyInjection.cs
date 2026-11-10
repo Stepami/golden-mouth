@@ -12,10 +12,13 @@ using Reki.Application.Posts.GetPublicStoryCard;
 using Reki.Infrastructure.AI;
 using Reki.Infrastructure.Auth;
 using Reki.Infrastructure.Jobs;
+using Reki.Infrastructure.ML;
 using Reki.Infrastructure.Mongo;
 using Reki.Infrastructure.RekiContext;
 using Reki.Infrastructure.Rendering;
 using Reki.Infrastructure.Telegram;
+using Reki.Infrastructure.Vk;
+using Reki.Infrastructure.Yandex;
 
 namespace Reki.Infrastructure;
 
@@ -33,25 +36,23 @@ public static class DependencyInjection
         services
             .AddRekiContext()
             .AddChatClients()
+            .AddEmbeddingClients()
+            .AddMlScorers()
             .AddJobs(configuration, jsonContext)
             .AddMongo()
             .AddAuth()
+            .AddVk()
+            .AddYandex()
             .AddTelegram(configuration);
 
         services.AddObservability();
-        services.AddBaseHealthChecks();
-
-        return services;
-    }
-
-    private static void AddBaseHealthChecks(this IServiceCollection services)
-    {
-        services
-            .AddHealthChecks()
+        services.AddHealthChecks()
             .AddCheck(
                 "self",
                 () => HealthCheckResult.Healthy(),
                 ["live"]);
+
+        return services;
     }
 
     private static void AddObservability(this IServiceCollection services)
@@ -59,12 +60,19 @@ public static class DependencyInjection
         services.AddMetrics();
         services.AddOpenTelemetry()
             .WithTracing(tracing => tracing
-                .AddSource(MongoTelemetry.ActivitySourceName, "Reki.GenAI", "TickerQ")
+                .AddSource(
+                    MongoTelemetry.ActivitySourceName,
+                    "Reki.GenAI",
+                    "Reki.Embed",
+                    "TickerQ")
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddProcessor<TelegramBotTelemetry>())
             .WithMetrics(metrics => metrics
-                .AddMeter("Reki.GenAI", "Reki.Product")
+                .AddMeter(
+                    "Reki.GenAI",
+                    "Reki.Embed",
+                    "Reki.Product")
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation())

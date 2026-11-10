@@ -1,15 +1,5 @@
 {
-  "_doc": "Все числа баланса одним местом. Источник: docs/game-flow.md и симуляции docs/balance-sim. Бэкенд читает этот конфиг из /app/config/balance.json внутри Docker image. После внедрения #184 валидная ручная замена runtime-файла применяется без рестарта; правка временная, те же значения сохраняются здесь для следующего image. Изменение времени сброса требует рестарта; инструкция в backend/README.md.",
-  "story_economy_proposal": {
-    "status": "frontend-preview; backend implementation required",
-    "partial_closes_quest": true, "partial_can_improve": true,
-    "difficulty_change": "next_story_day", "story_day_quests": 3, "npc_unlock_interval_story_days": 7,
-    "xp_booster_consumed_on_quest_failure": true,
-    "gift_timezone": "Europe/Moscow", "gift_reset_local_time": "00:00", "full_energy_gift": "inventory_item",
-    "energy_cap": 10, "energy_regen_seconds": 600, "initial_crystals": 10,
-    "booster_xp_percent": [25, 50, 75, 100, 200], "booster_crystal_price_per_100_percent": 8,
-    "energy_exchange_offer": { "crystals": 3, "energy": 10, "direction_pending_confirmation": false, "mode": "refill_to_cap" }
-  },
+  "_doc": "Действующий баланс ML-публикации #245. Источник правил: docs/game-flow.md и docs/ml-scoring.md. Backend читает /app/config/balance.json; валидные изменения применяются через IOptionsMonitor к следующим расчётам, время дневного сброса требует рестарта. Те же изменения сохраняются в репозитории для следующего image.",
   "feed": { "open_probability": 0.05 },
   "energy": { "post_cost": 1, "comment_cost": 1, "initial": 10, "cap": 10, "regen_seconds": 600, "initial_crystals": 10, "exchange_crystals": 3, "exchange_target_energy": 10 },
   "posts": {
@@ -34,17 +24,6 @@
     "start_subs": 120, "subs_never_decrease_on_new_world": true
   },
   "viral": { "base": 0.03, "per_quality": 0.06, "x": 3, "near_miss_band": 0.15 },
-  "flop": { "loss_x": -0.3 },
-  "short_cycle_skills": {
-    "status": "agreed-first-test-2026-11-09; backend implementation and DEV verification required",
-    "initial_level": 1,
-    "max_level": 10,
-    "progress_per_confirmed_manifestation": 10,
-    "level_thresholds_total": [0, 10, 30, 60, 100, 150, 210, 280, 360, 450],
-    "free_feed_uses_same_progression": true,
-    "unmanifested_skill_gain": 0,
-    "quest_completion_extra_gain": 0
-  },
   "skills": {
     "ids": ["brave", "humor", "topic"],
     "levels_xp": [0, 8, 20, 36, 56, 80, 110, 150, 200, 270],
@@ -59,38 +38,64 @@
   "stages": [{ "id": "mask", "from": 120 }, { "id": "views", "from": 1000 }, { "id": "strike", "from": 5000 }, { "id": "new_line", "from": 10000 }],
   "difficulties": {
     "easy": {
+      "topic_min_cosine": 0.55,
       "k": 1.0,
-      "flop": 0.1,
       "viral_x": 1.0,
       "hate_from": 5000,
-      "hate_every_days": [
-        4,
-        5
-      ]
+      "hate_every_days": [4, 5],
+      "loss_x": 0.08,
+      "max_subscriber_fraction": 0.005,
+      "reason_priority": ["angry_abuse", "near_copy"],
+      "emotion_tie_break": "sad_tone",
+      "thresholds": {"angry_abuse": 0.9, "near_copy_cosine": 0.98, "sad_tone": 0.98, "anxious_tone": 0.96},
+      "threshold_reduction_per_step": {"angry_abuse": 0.05, "near_copy_cosine": 0.01, "sad_tone": 0.01, "anxious_tone": 0.01},
+      "drama": {
+        "off": {"hate_x": 0, "threshold_steps": 0, "loss_multiplier": 0.5},
+        "soft": {"hate_x": 0.5, "threshold_steps": 1, "loss_multiplier": 0.75},
+        "mid": {"hate_x": 1.0, "threshold_steps": 2, "loss_multiplier": 1.0},
+        "hot": {"hate_x": 1.3, "threshold_steps": 3, "loss_multiplier": 1.25}
+      }
     },
     "normal": {
+      "topic_min_cosine": 0.65,
       "k": 1.1,
-      "flop": 0.15,
       "viral_x": 1.2,
       "hate_from": 3000,
-      "hate_every_days": [
-        3,
-        4
-      ]
+      "hate_every_days": [3, 4],
+      "loss_x": 0.12,
+      "max_subscriber_fraction": 0.01,
+      "reason_priority": ["angry_abuse", "near_copy"],
+      "emotion_tie_break": "sad_tone",
+      "thresholds": {"angry_abuse": 0.8, "near_copy_cosine": 0.96, "sad_tone": 0.96, "anxious_tone": 0.94},
+      "threshold_reduction_per_step": {"angry_abuse": 0.05, "near_copy_cosine": 0.01, "sad_tone": 0.01, "anxious_tone": 0.01},
+      "drama": {
+        "off": {"hate_x": 0, "threshold_steps": 0, "loss_multiplier": 0.5},
+        "soft": {"hate_x": 0.5, "threshold_steps": 1, "loss_multiplier": 0.75},
+        "mid": {"hate_x": 1.0, "threshold_steps": 2, "loss_multiplier": 1.0},
+        "hot": {"hate_x": 1.3, "threshold_steps": 3, "loss_multiplier": 1.25}
+      }
     },
     "hard": {
+      "topic_min_cosine": 0.75,
       "k": 1.25,
-      "flop": 0.2,
       "viral_x": 1.4,
       "hate_from": 1000,
-      "hate_every_days": [
-        2,
-        3
-      ]
+      "hate_every_days": [2, 3],
+      "loss_x": 0.16,
+      "max_subscriber_fraction": 0.015,
+      "reason_priority": ["angry_abuse", "near_copy"],
+      "emotion_tie_break": "sad_tone",
+      "thresholds": {"angry_abuse": 0.7, "near_copy_cosine": 0.94, "sad_tone": 0.94, "anxious_tone": 0.92},
+      "threshold_reduction_per_step": {"angry_abuse": 0.05, "near_copy_cosine": 0.01, "sad_tone": 0.01, "anxious_tone": 0.01},
+      "drama": {
+        "off": {"hate_x": 0, "threshold_steps": 0, "loss_multiplier": 0.5},
+        "soft": {"hate_x": 0.5, "threshold_steps": 1, "loss_multiplier": 0.75},
+        "mid": {"hate_x": 1.0, "threshold_steps": 2, "loss_multiplier": 1.0},
+        "hot": {"hate_x": 1.3, "threshold_steps": 3, "loss_multiplier": 1.25}
+      }
     }
   },
   "access": { "create_world_from_scratch": { "subs": 500, "or_first_friend": true } },
-  "drama": { "soft": { "hate_x": 0.5 }, "mid": { "hate_x": 1.0 }, "hot": { "hate_x": 1.3 }, "off": { "hate_x": 0 } },
   "challenge": { "days": 3, "active_max": 1, "min_posts": 5, "score": "0.7 * avg(post_quality) + 0.3 * avg(reach / own_median_reach)" },
   "streak": { "rewards": { "3": "posts+2", "7": "card:week_on_air", "14": "frame", "30": "guest_star" }, "burns": false },
   "notifications": { "max_per_day": 3, "quiet": ["22:00", "09:00"], "evening_teaser": ["17:00", "20:00"], "morning": "09:00" },

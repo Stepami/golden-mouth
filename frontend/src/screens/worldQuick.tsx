@@ -4,6 +4,7 @@ import { avatarPersonalization } from '../app/avatarPersonalization'
 import { displayHandle } from '../app/handle'
 import type { AgeBand } from '../app/ageBand'
 import { worldDefinitionOf } from '../api/worldContent'
+import { api } from '../api/client'
 import { WorldSwitchDialog } from '../ui/WorldSwitchDialog'
 import { presetGoalFor } from '../app/presetGoals'
 import { WorldCover } from '../ui/WorldCover'
@@ -22,14 +23,15 @@ export function WorldOverview() {
   if (!world) return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={nav.back} /><div className="pad"><Button onClick={() => nav.replace('01-3_world')}>Выбрать мир</Button></div></div>
   const d = worldDefinitionOf(world); const art = worldArt[d.templateId ?? '']; const goal = presetGoalFor(d)
   const begin = (confirmed = false) => {
-    selectDraftOwner(player?.id ?? 'onboarding')
+    selectDraftOwner(player?.id ?? api.playerId() ?? 'onboarding')
     const previous = getWorldDraft()
     if (!confirmed && previous && (previous.definition.templateId !== world || previous.editingId)) { setConfirmSwitch(true); return }
     const restored = savedWorldDraft(world)
+    const profile = player ?? api.onboardingProfile()
     setWorldDraft(restored && !restored.previewOnly ? restored : {
-      definition: d, heroOrder: d.stars.map(star => star.id), address: player?.address ?? 'nick',
-      group: player?.ageBand ? (player.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17',
-      ageBand: player?.ageBand ?? nav.params.ageBand as AgeBand | undefined,
+      definition: d, heroOrder: d.stars.map(star => star.id), address: profile?.address ?? 'nick',
+      group: profile ? (profile.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17',
+      ageBand: profile?.ageBand ?? nav.params.ageBand as AgeBand | undefined,
       personalizeAvatar: player ? avatarPersonalization(player.id) : true,
     })
     setConfirmSwitch(false)

@@ -9,10 +9,15 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="AspNetCore.Authentication.Basic"/>
+        <PackageReference Include="AspNetCore.Authentication.ApiKey"/>
+        <PackageReference Include="CommunityToolkit.VectorData.InMemory" />
         <PackageReference Include="DotNext.Threading"/>
         <PackageReference Include="Kot.MongoDB.Migrations.DI" />
         <PackageReference Include="Microsoft.Extensions.AI"/>
         <PackageReference Include="Microsoft.Extensions.AI.OpenAI"/>
+        <PackageReference Include="Microsoft.ML.Tokenizers"/>
+        <PackageReference Include="Microsoft.ML.OnnxRuntime"/>
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer"/>
         <PackageReference Include="Microsoft.Extensions.Compliance.Redaction"/>
         <PackageReference Include="Microsoft.Extensions.Http.Diagnostics"/>
@@ -22,6 +27,8 @@
         <PackageReference Include="OpenIddict.MongoDb"/>
         <PackageReference Include="OpenIddict.AspNetCore"/>
         <PackageReference Include="TgMiniAppAuth"/>
+        <PackageReference Include="WebApiClientCore"/>
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience"/>
         <PackageReference Include="Telegram.Bot"/>
         <PackageReference Include="TickerQ" />
         <PackageReference Include="TickerQ.Instrumentation.OpenTelemetry" />

@@ -5,10 +5,7 @@ using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.ChannelPost;
 using Reki.Application.Posts.Responses.Comment;
 using Reki.Application.Posts.Responses.FeedItem;
-using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Application.Posts.Responses.PostDetail;
-using Reki.Application.Posts.Responses.PostResult;
-using Reki.Application.Posts.Responses.PublicationStatus;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -46,13 +43,6 @@ public static partial class PostResponseMapper
             post.Text);
     }
 
-    public static PublicationStatusResponse MapPublication(this Publication publication, World world) =>
-        new(
-            publication.Id,
-            publication.Status,
-            publication.Result is null ? null : MapResult(publication.Result, world),
-            publication.Failure);
-
     public static FeedItemResponse MapFeedItem(
         this GamePost post,
         World author)
@@ -83,24 +73,13 @@ public static partial class PostResponseMapper
     [MapperIgnoreSource(nameof(GamePost.Viral))]
     [MapperIgnoreSource(nameof(GamePost.Flop))]
     [MapperIgnoreSource(nameof(GamePost.Version))]
+    [MapperIgnoreSource(nameof(GamePost.ReactionEmoji))]
+    [MapperIgnoreSource(nameof(GamePost.PredictedAuthorId))]
+    [MapperIgnoreSource(nameof(GamePost.FlopReason))]
     public static partial ChannelPostResponse MapChannelPost(this GamePost post);
 
     public static IReadOnlyList<ReactionResponse> CreateReactions(this GamePost post) =>
-        [new ReactionResponse("🔥", post.Viral ? 3 : 1)];
-
-    public static IReadOnlyList<LiveEvent> MapLiveEvents(this PublishedPost published, World world, PlayerId playerId)
-    {
-        var comment = published.Post.Comments[0];
-        return
-        [
-            new ViewsLiveEvent(Math.Min(48, published.Post.Views)),
-            new ReactionLiveEvent(published.Reaction),
-            new CommentLiveEvent(
-                MapComment(published.Post, comment, world, playerId)),
-            new TypingLiveEvent(ResolveAuthor(comment.AuthorId, world).Name),
-            new ResultLiveEvent(MapResult(published, world)),
-        ];
-    }
+        [new ReactionResponse(post.ReactionEmoji, post.Viral ? 3 : 1)];
 
     public static PostDetailResponse MapPost(this GamePost post, World world, PlayerId playerId) =>
         new(
@@ -159,24 +138,5 @@ public static partial class PostResponseMapper
 
         var deleted = WorldStar.DeletedAccount;
         return (deleted.Name, deleted.AvatarSeed, deleted.Role, string.Empty, false);
-    }
-
-    private static PostResultResponse MapResult(PublishedPost source, World world)
-    {
-        var post = source.Post;
-        var bestComment = post.Comments.FirstOrDefault();
-        var whys = source.Reasons.Select(reason => new WhyResponse(reason.Icon, reason.Label, $"+{post.SubscriberDelta}")).ToArray();
-        var best = bestComment is null ? null : new BestCommentResponse(ResolveAuthor(bestComment.AuthorId, world).Avatar, bestComment.Text);
-        return new PostResultResponse(
-            post.Id,
-            post.SubscriberDelta,
-            post.Viral ? "Пост залетел" : "Канал растёт",
-            whys,
-            post.Viral ? [new RibbonResponse("🚀", "залёт", null)] : [],
-            best,
-            post.Viral,
-            post.Flop,
-            post.Views,
-            source.Hook);
     }
 }

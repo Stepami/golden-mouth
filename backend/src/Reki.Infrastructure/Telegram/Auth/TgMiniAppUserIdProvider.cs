@@ -1,5 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
 using Reki.Application.Auth;
+using Reki.Domain.Player;
 using TgMiniAppAuth.AuthContext.User;
 
 namespace Reki.Infrastructure.Telegram.Auth;
@@ -8,9 +8,6 @@ internal sealed class TgMiniAppUserIdProvider(
     ITelegramUserAccessor telegramUserProvider) :
     IExternalUserIdProvider
 {
-    public bool TryGetExternalUserId([NotNullWhen(true)] out long? externalUserId)
-    {
-        externalUserId = telegramUserProvider.User.Id;
-        return true;
-    }
+    public Task<ExternalUserId?> GetExternalUserIdOrNullAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<ExternalUserId?>(ExternalUserId.Telegram(telegramUserProvider.User.Id));
 }

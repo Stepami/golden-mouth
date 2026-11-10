@@ -34,6 +34,10 @@ Docker images собираются только во время deployment на 
 
 Перед первым запуском задай логин и пароль администратора OpenObserve. Эти же данные Collector использует только внутри Compose-сети для отправки OTLP. Настройки OpenAI-compatible LLM передаются в Compose из переменных окружения, а не задаются моделью в файлах Compose. Затем из корня репозитория запусти:
 
+Штатный Infinity скачает и загрузит все четыре публичные модели, включая готовый ONNX, в общий Docker volume. Токен Hugging Face и скрипты подготовки не нужны. Первый запуск требует интернета. [Контракты моделей и устройство volume](docs/ml-scoring.md).
+
+Для MongoDB/Search нужен Compose 2.30+: настройки `mongot` заданы через `configs.content`, инициализация служебного пользователя — внутри `mongo.post_start`. Всё находится в `compose.yml`, дополнительных файлов конфигурации Mongo нет.
+
 ```powershell
 $env:OPENOBSERVE_EMAIL = '<выбранный email администратора>'
 $env:OPENOBSERVE_PASSWORD = '<случайный длинный пароль>'
@@ -48,7 +52,7 @@ docker compose up --build
 
 Локальный Vite dev server эмулирует Telegram Mini App, каждый раз создаёт свежий HMAC-подписанный `initData` для вымышленного игрока и отправляет запросы в backend. Backend проверяет подпись штатным `TgMiniAppAuth`; auth bypass нет. `TG_PAT` — единый вход Compose: Vite читает его при подписи, а Compose передаёт то же значение в настройку `TgMiniAppAuth` backend. Показанное значение фиктивное, не связано с Telegram и не даёт доступа ни к одному боту.
 
-Compose запустит пять постоянно работающих сервисов и одноразовую инициализацию MongoDB:
+Помимо внутренних Infinity и MongoDB Search, Compose запускает:
 
 - фронтенд: `http://localhost:8080`;
 - бэкенд: `http://localhost:8081` (`/health/live`, `/health/ready`, `/swagger/`);

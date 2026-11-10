@@ -43,7 +43,9 @@ public sealed class SocialControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(sent.Reply).IsNull();
         await Assert.That(sent.RepliesLeft).IsEqualTo(0);
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(0);
-        foreach (var collection in new[] { "players", "stars_memory", "challenges" })
+        await Assert.That(await Database.GetCollection<BsonDocument>("players")
+            .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None)).IsEqualTo(0);
+        foreach (var collection in new[] { "stars_memory", "challenges" })
         {
             await Assert.That(await Database.GetCollection<BsonDocument>(collection)
                 .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None)).IsEqualTo(0);

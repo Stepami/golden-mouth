@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
+using Reki.Application.Posts.ML;
 using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
 using Reki.Domain.Worlds;
@@ -13,8 +14,8 @@ internal sealed class CreateWorldCommandHandler(
     IRekiContextAccessor rekiContextAccessor,
     GameDayPeriod gameDayPeriod,
     IOptionsMonitor<GameBalance> balance,
-    ProductTelemetry telemetry)
-    : ICommandHandler<CreateWorld, World>
+    ProductTelemetry telemetry,
+    IStarVectorStore starVectorStore) : ICommandHandler<CreateWorld, World>
 {
     public async ValueTask<World> Handle(CreateWorld request, CancellationToken cancellationToken)
     {
@@ -40,6 +41,7 @@ internal sealed class CreateWorldCommandHandler(
         await worldRepository.InsertWorldAsync(world, cancellationToken);
         telemetry.TrackPlayer(player, "world_created", new Dictionary<string, string> { ["template_id"] = world.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = world.Difficulty.ToString().ToLowerInvariant() }, world.Id);
         telemetry.TrackWorldAudience(world);
+        await starVectorStore.WarmUpAsync(world);
         return world;
     }
 }

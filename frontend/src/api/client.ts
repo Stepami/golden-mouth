@@ -4,19 +4,19 @@ import { clearPlayerDrafts } from '../app/postDraft';
 import { clearWorldDrafts } from '../app/worldDraft';
 import { clearAvatarPersonalization } from '../app/avatarPersonalization';
 import { clearReferral } from '../app/referral';
-import { clearTokens, logout as revokeSession } from './auth';
+import { registerPlayer, clearTokens, logout as revokeSession } from './auth';
 import { clearApiCache } from '../app/useApi';
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics';
 import { clearWorldContent, installWorldContent, installWorldTemplates } from './worldContent';
 import { error } from '../app/log';
-import { sdk, walletExchangeClient } from './transport';
+import { sdk } from './transport';
 import type * as Wire from './generated/reki-api';
 import * as map from './mappers';
 import { ApiError, data, stream } from './transport';
 export { ApiError } from './transport';
 import { sessionGeneration, assertSession, endSession } from './session';
 import { parse } from 'valibot';
-import { publicationEvent, starGenerationEvent } from './streamEvents';
+import { starGenerationEvent } from './streamEvents';
 import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PublicationState, PublicationStatus, PublicationFailure, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
 let sessionPlayer: Player | undefined;
 let sessionIdentity: PlayerDocument | undefined;
@@ -84,8 +84,29 @@ async function readSse<T>(response: Response, decode: (value: unknown) => T, onE
             break;
     }
 }
-async function publicationState(id: string, signal?: AbortSignal): Promise<PublicationState> {
-    return map.publication(await data(sdk.posts.getPublicationStatus(id, signal)));
+
+async function generateStar(postId: string, replyWorldId: string, authorId: string, sourceCommentId: string | null, additional: boolean, signal?: AbortSignal, onTyping?: (authorId: string | null) => void) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+            onTyping?.(authorId);
+            let completed: { text: string; additionalStarId?: string | null } | undefined;
+            const response = await stream({ url: '/posts/{postId}/replies/generation', path: { postId }, query: { worldId: replyWorldId }, body: { authorId, sourceCommentId, additional } }, signal);
+            await readSse(response, value => parse(starGenerationEvent, value), event => {
+                if (event.status === 'failed') {
+                    const failure = new Error(event.code ?? 'ai_unavailable');
+                    failure.name = event.code ?? 'ai_unavailable';
+                    throw failure;
+                }
+                if (event.status === 'completed' && event.text) completed = { text: event.text, additionalStarId: event.additionalStarId };
+            });
+            if (!completed) throw new Error('Generation stream ended before completion');
+            return completed;
+        } catch (cause) {
+            const code = cause instanceof Error ? cause.name : '';
+            if (attempt === 1 || signal?.aborted || code === 'AbortError' || code === 'unsafe_generated_content' || code === 'unsafe_input' || code === 'crisis' || (cause instanceof ApiError && cause.status >= 400 && cause.status < 500)) throw cause;
+        }
+    }
+    throw new Error('Generation failed');
 }
 const playerRequests = new Map<string, Promise<Player>>();
 async function loadPlayer(worldId?: string): Promise<Player> {
@@ -148,7 +169,7 @@ export const api = {
         api.clearSession();
     },
     energyWallet: () => data(sdk.player.getCurrentPlayer()).then(player=>{if(!player.energyWallet)throw Object.assign(new Error('Wallet is not supported by this API'),{code:'wallet_unavailable'});return map.energyWallet(player.energyWallet);}),
-    exchangeEnergy: () => data(walletExchangeClient.exchangeEnergy()).then(value=>({...value,wallet:value.wallet?map.energyWallet(value.wallet):null})),
+    exchangeEnergy: () => data(sdk.player.exchangeEnergy()).then(value=>({...value,wallet:value.wallet?map.energyWallet(value.wallet):null})),
     loadWorldTemplates: loadTemplates,
     me: (worldId?: string): Promise<Player> => {
         const key = worldId ?? sessionPlayer?.worldInstanceId ?? '';
@@ -162,13 +183,14 @@ export const api = {
         playerRequests.set(key, request);
         return request;
     },
+    onboardingProfile: () => sessionIdentity,
     playerId: (): string | undefined => sessionIdentity?.id,
     hasPlayer: (): boolean => sessionIdentity !== undefined,
     onboarding: async (body: Wire.OnboardingRequest): Promise<PlayerDocument> => {
         if (sessionIdentity)
             throw new Error('Onboarding has already been completed');
         sessionIdentity =
-            map.player(await data(sdk.player.completeOnboarding(body)));
+            map.player(await registerPlayer(body));
         setTelemetryPlayerAvailable(true);
         return sessionIdentity;
     },
@@ -177,136 +199,31 @@ export const api = {
         return api.me(world.id);
     },
     /** Р“РµРЅРµСЂР°С†РёСЏ, Р·Р°С‚РµРј РјРѕРґРµСЂР°С†РёСЏ Рё Р°РЅРёРјР°С†РёСЏ РјР°СЃСЃРёРІР° СЂРµР°РєС†РёР№; РїСЂРё РѕР±СЂС‹РІРµ СЃРІРµСЂСЏРµРј СЃРѕС…СЂР°РЅС‘РЅРЅС‹Р№ СЃС‚Р°С‚СѓСЃ. */
-    publish(text: string, publicationId: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true, wantId?: string, recoveryOnly = false): () => void {
-        const generation = sessionGeneration();
-        const ctrl = new AbortController();
-        let deliveredResult = false;
-        const pause = (ms: number): Promise<void> => {
-            if (ctrl.signal.aborted)
-                return Promise.reject(new DOMException('Aborted', 'AbortError'));
-            if (document.hidden)
-                return Promise.resolve();
-            return new Promise((resolve, reject) => {
-                const finish = () => { clearTimeout(timer); ctrl.signal.removeEventListener('abort', onAbort); document.removeEventListener('visibilitychange', onVisibilityChange); };
-                const onAbort = () => { finish(); reject(new DOMException('Aborted', 'AbortError')); };
-                const onVisibilityChange = () => {
-                    if (document.hidden) {
-                        finish();
-                        resolve();
-                    }
-                };
-                const timer = setTimeout(() => { finish(); resolve(); }, ms);
-                ctrl.signal.addEventListener('abort', onAbort, { once: true });
-                document.addEventListener('visibilitychange', onVisibilityChange);
-                if (ctrl.signal.aborted)
-                    onAbort();
-                else if (document.hidden)
-                    onVisibilityChange();
-            });
-        };
-        const moderation = async () => {
-            const events = (await data(sdk.posts.moderatePublication(publicationId, worldId(), ctrl.signal))).map(map.live);
-            let lastShownAt = 0;
-            const minimumGap: Record<LiveEvent['type'], number> = {
-                views: 750, react: 800, comment: 950, typing: 950, result: 1300,
-            };
-            for (const event of events) {
-                assertSession(generation);
-                if (ctrl.signal.aborted)
-                    throw new DOMException('Aborted', 'AbortError');
-                const remaining = minimumGap[event.type] - (performance.now() - lastShownAt);
-                if (lastShownAt && remaining > 0)
-                    await pause(remaining);
-                assertSession(generation);
-                lastShownAt = performance.now();
-                if (event.type === 'result')
-                    deliveredResult = true;
-                onEvent(event);
-            }
-            if (!deliveredResult)
-                throw new Error('Post response has no result');
-        };
-        const recover = async (): Promise<void> => {
-            if (generation !== sessionGeneration())
-                return;
-            let state: PublicationState;
-            try {
-                state = await publicationState(publicationId, ctrl.signal);
-            }
-            catch {
-                if (generation === sessionGeneration())
-                    onError('unknown');
-                return;
-            }
-            if (generation !== sessionGeneration())
-                return;
-            if (state.status === 'completed' && state.result) {
-                if (!deliveredResult) {
-                    deliveredResult = true;
-                    onEvent({ type: 'result', result: state.result });
-                }
-            }
-            else if (state.status === 'ready_for_moderation') {
-                onError('unknown');
-            }
-            else if (state.status === 'failed') {
-                onError('failed', state.failure);
-            }
-            else {
-                onError('unknown');
-            }
-        };
-        // StrictMode immediately unmounts the first effect in development.
-        // Defer the request so that probe does not create an abandoned publication.
-        const start = setTimeout(() => {
-            void (async () => {
-                try {
-                    assertSession(generation);
-                    if (recoveryOnly) {
-                        const state = await publicationState(publicationId, ctrl.signal);
-                        if (ctrl.signal.aborted) return;
-                        assertSession(generation);
-                        onStatus?.(state.status);
-                        if (state.status === 'completed' && state.result) {
-                            deliveredResult = true;
-                            onEvent({ type: 'result', result: state.result });
-                        } else if (state.status === 'ready_for_moderation') await moderation();
-                        else if (state.status === 'failed') onError('failed', state.failure);
-                        else onError('unknown');
-                        return;
-                    }
-                    const r = await stream({ url: '/posts/publications', query: { worldId: worldId() }, body: { publicationId, text, ownWords, wantId } }, ctrl.signal);
-                    let lastStatus: PublicationStatus | null = null;
-                    let failure: PublicationFailure | undefined;
-                    await readSse(r, value => parse(publicationEvent, value), event => { lastStatus = event.type; failure = event.failure ?? undefined; onStatus?.(event.type); });
-                    if (lastStatus === 'failed') {
-                        onError('failed', failure);
-                        return;
-                    }
-                    if (lastStatus === 'completed') {
-                        await recover();
-                        return;
-                    }
-                    if (lastStatus !== 'ready_for_moderation') {
-                        await recover();
-                        return;
-                    }
-                    await moderation();
-                }
-                catch (e) {
-                    if (generation !== sessionGeneration() || (e instanceof Error && e.name === 'AbortError'))
-                        return;
-                    error('sse_error', e);
-                    if (e instanceof ApiError && e.failure)
-                        onError('failed', e.failure);
-                    else if (e instanceof ApiError && e.status >= 400 && e.status < 500 && e.status !== 409)
-                        onError('failed');
-                    else
-                        await recover();
-                }
-            })();
+    publish(text: string, _id: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true, wantId?: string, recoveryOnly = false): () => void {
+        let cancelled = false;
+        const timer = setTimeout(() => {
+            if (recoveryOnly) { onError('unknown'); return; }
+            onStatus?.('generating');
+            void api.createPost(text, ownWords, wantId).then(async response => {
+                if (cancelled) return;
+                onStatus?.('completed');
+                onEvent({type:'result',result:response.result});
+                await api.initialComment(response.post.id, response.predictedAuthorId).catch(() => undefined);
+            }).catch(() => { if (!cancelled) onError('unknown'); });
         }, 0);
-        return () => { clearTimeout(start); ctrl.abort(); };
+        return () => { cancelled = true; clearTimeout(timer); };
+    },
+    createPost: async (text: string, ownWords: boolean, wantId?: string) => {
+        const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, wantId: wantId ?? null }));
+        const { postId: id, ...post } = map.post(response.post);
+        return { post: { ...post, id }, result: map.result(response.result), predictedAuthorId: response.predictedAuthorId };
+    },
+    initialComment: async (postId: string, authorId: string, signal?: AbortSignal): Promise<Post> => {
+        const currentWorld = worldId();
+        const generated = await generateStar(postId, currentWorld, authorId, null, false, signal);
+        const saved = await data(sdk.posts.replyToPost(postId, currentWorld, { authorId, commentId: null, requestId: crypto.randomUUID(), text: generated.text }, signal));
+        const { postId: id, ...post } = map.post(saved.post);
+        return { ...post, id };
     },
     reply: async (postId: string, commentId: string | null, requestId: string, text: string, starAuthorId: string, options: {
         signal?: AbortSignal;

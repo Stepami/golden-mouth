@@ -1,3 +1,5 @@
+using Reki.Domain.Worlds;
+
 namespace Reki.Domain.Posts;
 
 public sealed record GameComment(
@@ -7,4 +9,5 @@ public sealed record GameComment(
     AuthorId AuthorId,
     string Text,
     bool Hidden,
-    IReadOnlyList<CommentReaction> Reactions);
+    IReadOnlyList<CommentReaction> Reactions,
+    StarId? AdditionalReplierId);

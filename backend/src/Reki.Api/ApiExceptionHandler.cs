@@ -2,8 +2,6 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using Reki.Application.Exceptions;
-using Reki.Application.Posts;
-using Reki.Application.Posts.AI.Safety;
 
 namespace Reki.Api;
 
@@ -99,15 +97,6 @@ internal sealed partial class ApiExceptionHandler(
             },
         };
 
-        problemDetails.Extensions["failure"] = exception switch
-        {
-            ContentRejectedException rejected => new PublicationFailure("content_rejected", rejected.Category, PublicationSafetyPolicy.Version),
-            UnsafeGeneratedContentException rejected => new PublicationFailure("unsafe_generated_content", rejected.Category, PublicationSafetyPolicy.Version),
-            CrisisDetectedException => new PublicationFailure("crisis", "crisis", PublicationSafetyPolicy.Version),
-            AiServiceUnavailableException => new PublicationFailure("technical_failure", "uncertain", PublicationSafetyPolicy.Version),
-            RequestConflictException conflict when conflict.Message.Contains("limit", StringComparison.OrdinalIgnoreCase) => new PublicationFailure("limit_reached", "limit", PublicationSafetyPolicy.Version),
-            _ => null,
-        };
         problemDetails.Instance = instance;
         return problemDetails;
     }

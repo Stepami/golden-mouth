@@ -9,7 +9,6 @@ using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.GetPost;
 using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.RekiContext;
-using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.GenerateReplyCommand;
 
@@ -20,8 +19,6 @@ internal sealed partial class GenerateReplyCommandHandler(
     IStarTurnGenerator generator,
     ILogger<GenerateReplyCommandHandler> logger) : IStreamCommandHandler<GenerateReply, ReplyGenerationLiveEvent>
 {
-    private const double AdditionalStarProbability = 0.5;
-
     public async IAsyncEnumerable<ReplyGenerationLiveEvent> Handle(
         GenerateReply request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -33,35 +30,29 @@ internal sealed partial class GenerateReplyCommandHandler(
         var post = await sender.Send(new PostQuery(request.PostId, world.Id), cancellationToken);
         var star = world.FindStar(request.AuthorId)
             ?? throw new RequestConflictException("The author is not a star of this world.");
-        var source = post.Comments.FirstOrDefault(item =>
-                item.Id == request.SourceCommentId && !item.Hidden && item.AuthorId == player.Id.ToAuthorId())
-            ?? throw new ResourceNotFoundException("Player comment not found.");
-        var primary = source.ParentCommentId is { } parentId
-            ? world.FindStar(post.Comments.First(item => item.Id == parentId).AuthorId)
-            : world.FindStar(post.AuthorId);
-        if (primary is null)
-        {
-            throw new RequestConflictException("The thread star is no longer in this world.");
-        }
-
-        var others = world.Stars.Where(item => item.Id != primary.Id).ToArray();
-        var bytes = source.Id.Value.ToByteArray();
-        StarId? additionalStarId = others.Length > 0 &&
-                                   BitConverter.ToUInt32(bytes, 0) / 4294967296d < AdditionalStarProbability
-            ? others[(int)(BitConverter.ToUInt32(bytes, 4) % (uint)others.Length)].Id
+        var source = request.SourceCommentId is { } sourceId
+            ? post.Comments.FirstOrDefault(item => item.Id == sourceId && !item.Hidden && item.AuthorId == player.Id.ToAuthorId())
+                ?? throw new ResourceNotFoundException("Player comment not found.")
             : null;
-        if (request.Additional ? additionalStarId != star.Id : primary.Id != star.Id)
+        if (source is not null)
         {
-            throw new RequestConflictException("The star does not belong to the selected thread.");
+            var primary = source.ParentCommentId is { } parentId
+                ? world.FindStar(post.Comments.First(item => item.Id == parentId).AuthorId)
+                : world.FindStar(post.AuthorId);
+            if (primary is null || (request.Additional ? source.AdditionalReplierId != star.Id : primary.Id != star.Id))
+            {
+                throw new RequestConflictException("The star does not belong to the selected thread.");
+            }
         }
 
-        var branch = source.ParentCommentId is { } parent ? post.GetBranch(parent) : [];
+        var additionalStarId = source?.AdditionalReplierId;
+        var branch = source?.ParentCommentId is { } parent ? post.GetBranch(parent) : [];
         var turnContext = new StarReplyContext(
             new StarAgentProfile(world, star.Id, player.Address),
             star.Id,
             post.Text,
             branch,
-            source.Text,
+            source?.Text,
             turnPolicy.IsHateEnabled(player, world),
             request.Additional);
         yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Generating, request.AuthorId, null, null, null);

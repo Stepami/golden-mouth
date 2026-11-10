@@ -2,35 +2,46 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#101010" />
-    <script>document.documentElement.dataset.theme = "dark";</script>
-    <link rel="icon" href="/favicon.ico?v=reki-v7-3" sizes="any" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=reki-v7-3" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=reki-v7-3" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=reki-v7-3" sizes="any" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=reki-v7-3" />
-    <link rel="manifest" href="/site.webmanifest?v=reki-v7-3" />
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript">
+      if (!new URLSearchParams(location.hash.slice(1)).has('access_token') && !((window.opener || window.parent !== window) && new URLSearchParams(location.hash.slice(1)).has('error'))) {
+      (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+      })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=114170439', 'ym');
+
+      ym(114170439, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+      }
+    </script>
+    <!-- /Yandex.Metrika counter -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0E0E13" />
+    <link rel="icon" href="/favicon.ico?v=wave-2" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=wave-2" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=wave-2" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=wave-2" />
+    <link rel="manifest" href="/site.webmanifest?v=wave-2" />
     <title>Реки</title>
   </head>
   <body>
+    <!-- Yandex.Metrika counter -->
+    <noscript><div><img src="https://mc.yandex.ru/watch/114170439" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+    <!-- /Yandex.Metrika counter -->
     <div id="root">
       <style>
-        :root { color-scheme:dark; --boot-bg:#101010; --boot-card:#1c1c1c; --boot-line:#2f3336; --boot-text:#f3f5f7; --boot-muted:#969ba1; --boot-accent:#f3f5f7; }
-        :root[data-theme=light] { --boot-bg:#fff; --boot-card:#f7f9f9; --boot-line:#cfd9de; --boot-text:#0f1419; --boot-muted:#536471; }
-        body { margin:0; background:var(--boot-bg); }
-        .boot-loader { box-sizing:border-box;min-height:100vh;min-height:100dvh;background:var(--boot-bg);color:var(--boot-text);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:32px;text-align:center;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;gap:16px; }
-        .boot-loader .boot-emblem { display:grid;place-items:center;width:80px;height:80px;border:1px solid var(--boot-line);border-radius:24px;background:var(--boot-card);color:var(--boot-accent);font-size:40px; }
-        .boot-loader b { font-size:32px;letter-spacing:-.025em; }
-        .boot-loader p { margin:0;color:var(--boot-muted); }
-        .boot-loader .boot-slow { color:var(--boot-muted);max-width:300px;visibility:hidden;animation:boot-reveal 0s 3s forwards; }
-        .boot-loader a { color:var(--boot-accent);visibility:hidden;animation:boot-reveal 0s 15s forwards; }
-        .boot-loader .boot-track { width:140px;height:4px;border-radius:99px;background:var(--boot-line);overflow:hidden; }.boot-loader .boot-track i { display:block;width:40%;height:100%;background:var(--boot-accent);animation:boot-progress 1.4s ease-in-out infinite alternate; }@keyframes boot-progress { to { transform:translateX(150%); } }@media(prefers-reduced-motion:reduce) { .boot-loader .boot-track i { animation:none; } }
+        body { margin: 0; background: #0E0E13; }
+        .boot-loader { box-sizing: border-box; min-height: 100vh; min-height: 100dvh; background: #0E0E13; color: #F2F1F6; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 32px; text-align: center; font: 16px/1.5 system-ui, sans-serif; }
+        .boot-loader b { font-size: 28px; color: #FF6091; }
+        .boot-loader p { margin: 16px 0 0; }
+        .boot-loader .boot-slow { color: #A5A1B7; max-width: 300px; visibility: hidden; animation: boot-reveal 0s 3s forwards; }
+        .boot-loader a { color: #C8A6FF; visibility: hidden; animation: boot-reveal 0s 15s forwards; margin-top: 20px; }
         @keyframes boot-reveal { to { visibility: visible; } }
       </style>
       <div class="boot-loader" role="status" aria-live="polite">
-        <div class="boot-emblem" aria-hidden="true">✦</div><b>Реки</b>
-        <p>Открываем твои миры</p><div class="boot-track" aria-hidden="true"><i></i></div>
+        <b>реки</b>
+        <p>Загружаем игру…</p>
         <p class="boot-slow">Загрузка занимает больше времени. Оставь экран открытым.</p>
         <a href="">Обновить страницу</a>
         <noscript>Для игры нужно включить JavaScript.</noscript>

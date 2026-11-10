@@ -14,6 +14,7 @@ $env:ASPNETCORE_ENVIRONMENT = 'Development'
 $env:ASPNETCORE_URLS = 'http://127.0.0.1:8081'
 $env:Auth__Issuer = 'https://localhost:5173/'
 $env:Telegram__BotToken = '<telegram bot token>'
+$env:Vk__ApplicationId = '<VK application ID>'
 dotnet tool restore
 dotnet restore Reki.slnx
 dotnet run --project src/Reki.Api/Reki.Api.csproj
@@ -27,6 +28,20 @@ Development uses MongoDB for game data. Before starting the API outside Compose,
 - `GET /swagger/`
 
 OpenAPI JSON and Swagger UI are available only in Development. Production does not serve these routes. Build-time OpenAPI generation for NSwag clients remains available. The exact local address is printed by ASP.NET Core when the service starts.
+
+Yandex ID uses the public `Yandex:ClientId` (default `799a21610c6b495c8d8c01fd9b8c4012`), configurable with
+`Yandex__ClientId` (Compose: `YANDEX_CLIENT_ID`). It must match the frontend app ID.
+`Yandex:BaseUrl` defaults to `https://login.yandex.ru/`, and `Yandex:TimeoutSeconds` defaults to 10.
+`POST /auth/external/yandex` accepts the Yandex OAuth token as Bearer and form fields `client_id` and
+`grant_type=urn:reki:grant:yandex`. The server checks the token and application ID with Yandex ID's `info` API.
+Unknown users receive `registration_required` with a `yandex:` external ID for the existing onboarding flow;
+registered users receive the standard game tokens and use the same refresh and logout endpoints.
+
+VK ID uses `Vk:ApplicationId` (the public VK app ID, matching the frontend runtime configuration), `Vk:BaseUrl`
+(default `https://id.vk.ru/`) and `Vk:TimeoutSeconds` (default 10). Set the required public app ID with `Vk__ApplicationId`
+outside Compose; Compose supplies it from `VK_APPLICATION_ID`. `POST /auth/external/vk` takes a VK access token as Bearer and form fields
+`client_id` and `grant_type=urn:reki:grant:vk`. The server verifies it through VK `user_info`. Unknown users follow
+the existing `registration_required` → Basic `/onboarding` → repeat VK login flow. VK tokens are not stored or logged.
 
 ## Run in Docker
 
@@ -70,11 +85,19 @@ there are no additional checks for manually changed definitions.
 Index DDL runs outside transactions under the migrator's database lock. Successful versions are recorded and skipped
 on subsequent starts. The inherited `DownAsync` completes without changing documents or indexes.
 
+Version `2.6.3` backfills legacy Telegram identities as `telegram:<id>` in `ExternalUserIds`, replaces the unique
+Telegram index with a unique multikey external-ID index, and removes the old field. It also clears all existing
+OpenIddict tokens and authorizations while preserving registered applications and indexes. Its data updates and
+index changes run outside the migration transaction under the migration lock and can be retried after interruption.
+Rolling back the application requires restoring a database backup: the inherited `DownAsync` does not reverse this migration.
+
+Version `2.6.4` adds the VK grant to the existing OpenIddict client without changing player documents or sessions.
+
 Version `2.1.0` moves referral attribution and bonus usage from player profiles to independent `invites`
 documents with a Vogen `InvitationId`, the two player IDs, creation time, and separate usage flags/times.
 It creates a unique `InviteeId` index and an `InviterId` lookup index. Registration creates the invitation without
 changing the inviter's profile. The invitee's first successful publication marks both bonuses inside the existing
-publication transaction; failures and repeated moderation do not consume or duplicate them. Daily post limits read
+post transaction; unsuccessful requests do not consume them. Daily post limits read
 invitation usage in the current game day and cap inviter credits at the configured maximum.
 
 The migration preserves previously issued inviter credits and used invitee bonuses, removes their old contribution
@@ -90,7 +113,9 @@ Migration `2.4.7` drops the retired `stars_memory` and `challenges` collections,
 
 ## Test infrastructure
 
-API component tests share one `ApiFactory`, WireMock server and MongoDB database per test session. `TestSessionFixture` owns the MongoDB container/client, WireMock and resettable clock; TUnit disposes the dependent API factory before these resources at session end. The host starts lazily for the first API test and applies startup migrations once.
+API component tests share one `ApiFactory`, WireMock server and MongoDB database per test session. The test fixture runs MongoDB Atlas Local 8.3.11 in one Testcontainers container with MongoDB and Search; production Compose uses MongoDB 9.0.4. The container health check does not guarantee that a newly created search index is ready. `TestSessionFixture` owns the MongoDB container/client, WireMock and resettable clock; TUnit disposes the dependent API factory before these resources at session end. The host starts lazily for the first API test and applies startup migrations once.
+
+Atlas Local in this pinned image cannot update the vector index with the production command. `ApiFactory` replaces `IMigrationInstantiator` only for the API test host: the 2.6.0 adapter creates the final `vectorSearch` index with both filter fields, preserves the original embedding backfill, and waits for readiness with TUnit `WaitsFor` (60 seconds, one-second polling). The 2.6.2 adapter is a no-op because those fields already exist. All other migrations, MongoDB queries and repositories remain real; direct production migration updates are not covered by this test-host workaround.
 
 Migration tests belong to `ParallelGroup("Migrations", Order = 0)` and use isolated temporary databases on the same MongoDB container. API tests belong to `ParallelGroup("Api", Order = 1)` and share `NotInParallel("ApiState")`, so their setup, execution and teardown do not overlap. Unit tests keep the default parallel execution. A filtered API test also works independently of the migration-test group.
 
@@ -130,6 +155,16 @@ Successful publications and thread replies schedule a one-off `GenerateStarFeedP
 
 Type-safe `AddAsync<GenerateStarFeedPostJob, StarFeedRequest>` uses `RekiTimeTicker` defaults: three retries at 30, 120 and 600 seconds. These defaults apply to all application TimeTickers; cron maintenance retains its existing configuration. Technical failures propagate to TickerQ; invalid content and missing worlds terminate without retry. A BSON ObjectId string is created at scheduling and stored as a typed PostId in the request alongside typed PlayerId and WorldId. Repeated executions reuse it; the post collection's unique `_id` prevents duplicate posts. Concurrent executions of the same request can still spend AI tokens before one insert wins. Failed TickerQ scheduling results are logged; unexpected scheduler exceptions are not swallowed. ScheduleAsync always schedules; ScheduleFromFeedAsync uses random < feed.open_probability. Neither scheduler method accepts a cancellation token. MongoPostRepository uses a plain InsertPostAsync and insertion exceptions propagate to TickerQ. The AI history identifies authors and marks the selected star's own posts with isOwn. There is no transactional outbox between the business commit and scheduling.
 
+## Profile linking (#268)
+
+`POST /merge` uses the current game JWT and accepts `{ "fromPlayerId": "<player ID>" }`. The ID comes from
+`GET /me` under the other login's JWT. The current profile remains; the source profile and its game data and
+sessions are deleted, then its external login IDs are added to the current profile. A source ID equal to the current
+player returns 409; a missing profile returns 404. No tokens are issued by this endpoint.
+
+The agreed prototype contract trusts `fromPlayerId` without server-side proof of control of the source profile.
+Deletion and transfer are sequential, so a failure after deletion can leave the source login IDs untransferred.
+
 ## API clients (#122)
 
 Use the existing local NSwag 14.7.1 tool for two independent clients:
@@ -156,11 +191,11 @@ The active-challenge endpoint returns an empty HTTP 200 body when there is no ch
 
 ## Persistence
 
-Application messages and handlers are grouped by use case inside their subdomain: `Posts/AddReplyCommand/` contains `AddReply` and `AddReplyCommandHandler`; `Events/GetTodayEvent/` contains `TodayEventQuery` and `TodayEventQueryHandler`. Helpers used by one use case live beside it, including its result models and adapter ports. Helpers shared by several use cases in one subdomain stay at the subdomain root. Shared post AI components live in `Posts/AI`, with safety checks and policies in `Posts/AI/Safety`; the publication tool parser lives in `Posts/GeneratePublicationCommand`. Request context, transactions, and the shared balance configuration live in `Common`. All custom exception types live in the root `Exceptions` folder of their declaring assembly, for example `Reki.Application/Exceptions` with namespace `Reki.Application.Exceptions`.
+Application messages and handlers are grouped by use case inside their subdomain: `Posts/AddReplyCommand/` contains `AddReply` and `AddReplyCommandHandler`; `Events/GetTodayEvent/` contains `TodayEventQuery` and `TodayEventQueryHandler`. Helpers used by one use case live beside it, including its result models and adapter ports. Helpers shared by several use cases in one subdomain stay at the subdomain root. Shared post AI components live in `Posts/AI`, with safety checks and policies in `Posts/AI/Safety`; ML scoring lives in `Posts/CreatePostCommand`. Request context, transactions, and the shared balance configuration live in `Common`. All custom exception types live in the root `Exceptions` folder of their declaring assembly, for example `Reki.Application/Exceptions` with namespace `Reki.Application.Exceptions`.
 
-Placement follows consumers inside Application only; API error handling, infrastructure jobs, tests, and generated code do not make a type shared. Follow service methods to their use cases when a helper is referenced indirectly. For example, `PublicationSafetyPolicy` belongs to `Posts` because generation and publication use it, and `WorldPostsPage` belongs to `Posts/GetWorldPosts` because that is the only Application consumer of the repository's post-page query. All balance configuration models, including `GameBalance` and its nested configuration types, live in `Common/Balance` with namespace `Reki.Application.Common.Balance`.
+Placement follows consumers inside Application only; API error handling, infrastructure jobs, tests, and generated code do not make a type shared. Follow service methods to their use cases when a helper is referenced indirectly. For example, `WorldPostsPage` belongs to `Posts/GetWorldPosts` because that is the only Application consumer of the repository's post-page query. All balance configuration models, including `GameBalance` and its nested configuration types, live in `Common/Balance` with namespace `Reki.Application.Common.Balance`.
 
-Persistence ports live beside their application features. Each Mongo repository handles one entity: player, world (including templates), post, publication, invitation, or daily event. Handlers, request context, and jobs depend directly on the ports they use. `IGameStore` / `MongoGameStore` retains multi-entity transactions for post/reply commits and deletion of all player data. Player deletion reads owned world IDs and deletes related documents and the player in one transaction; operations run sequentially on the same session. Public story world ownership is verified in the application handler before rendering.
+Persistence ports live beside their application features. Each Mongo repository handles one entity: player, world (including templates), post, invitation, or daily event. Handlers, request context, and jobs depend directly on the ports they use. Application handlers coordinate post/reply commits and deletion of all player data through `Reki.Application.IUnitOfWork` and these repositories. Infrastructure owns MongoDB sessions and transactions; the singleton `MongoSessionProvider` stores the current session in `AsyncLocal`. Methods used only outside a unit of work call ordinary driver overloads. Transaction-only methods pass the required session directly. Shared `ReplacePlayerAsync`, `ReplaceWorldAsync` and `SaveReplyAsync` reuse one `ReplaceOneAsync` extension; `InsertPostAsync` selects the session overload directly in its single repository implementation. DAL writes are direct calls without Try results, manual exceptions or matched/modified-count checks. Write filters retain identity and ownership, without Version, publication-status or RequestId concurrency conditions; existing Version fields remain stored. Driver failures abort the unit of work. Business validation and sequential replay checks remain in Application, and component tests exercise sequential scenarios. Operations without a result return `Mediator.Unit.Value`. Player deletion reads owned world IDs and deletes related documents and the player in one transaction, sequentially on the same session. Public story world ownership is verified in the application handler before rendering.
 
 
 ## Disabled social features
@@ -171,7 +206,7 @@ Migration `2.4.5` removes the retired challenge bonus expiry field from player d
 
 ## Manual runtime balance update (#184)
 
-After deploying #184 once, a valid replacement of `/app/config/balance.json` is reloaded by the standard .NET JSON configuration provider. `IOptionsMonitor<GameBalance>` supplies a new immutable balance for subsequent operations. Consumers obtain balance through DI and read `CurrentValue` into a method-local variable. Following review, balance is not threaded through helper parameters: a reload between the handler and a helper can therefore make them observe different values. There is no atomic snapshot across the entire confirmation and no cached balance in singleton fields. Unfinished publications use the balance and world difficulty at confirmation; completed results replay unchanged. Existing energy is retained until the next daily reset, which uses the new balance.
+After deploying #184 once, a valid replacement of `/app/config/balance.json` is reloaded by the standard .NET JSON configuration provider. `IOptionsMonitor<GameBalance>` supplies a new immutable balance for subsequent operations. Consumers obtain balance through DI and read `CurrentValue` into a method-local variable. Following review, balance is not threaded through helper parameters: a reload between the handler and a helper can therefore make them observe different values. There is no atomic snapshot across the entire confirmation and no cached balance in singleton fields. Each post uses the balance and world difficulty at creation. Existing energy is retained until the next daily reset, which uses the new balance.
 
 Choose the backend container explicitly. Copy its current file for rollback, prepare a complete replacement, validate JSON syntax and review all changed values against the existing balance constraints before applying:
 
@@ -187,8 +222,3 @@ docker exec --user root "$container" sh -c 'chmod 0444 /app/config/balance.next.
 The image runs as `app`; replacing the file can require the explicit root connection above. Wait a few seconds for the standard file-change notification, then verify the changed parameter with the next relevant game operation and check container logs for validation errors. The process and container must remain running. JSON syntax validation alone does not validate game values: an invalid JSON file or balance can cause errors; there is no automatic rollback or last-known-good cache. To roll back, repeat the replacement using `balance.previous.json`.
 
 The edit is lost when the container is recreated. Save the same intended values in `docs/config/balance.json` so the next image preserves them. No volume, management API, custom watcher or delivery automation is introduced. Changing `posts.reset_time_msk` requires a process restart and coordination with the existing TickerQ schedule; hot reload does not rebuild cron schedules.
-
-### Узкая проверка кошелька энергии (#205)
-
-Из `backend/`: `dotnet test --project tests/Reki.Tests/Reki.Tests.csproj -c Release --treenode-filter '/*/*/EnergyWalletControllerTests/*'`.
-Проверки используют штатный Testcontainers MongoDB и требуют Docker daemon. Отдельного подключения к внешнему MongoDB в fixture нет; без локального Docker выполняются build/style, а component tests проверяются CI. Тесты не обращаются к реальному LLM.

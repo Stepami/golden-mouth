@@ -16,9 +16,9 @@ export function savePostDraft(key: string, draft: PostDraft) {
   memory.set(key, next)
   try { localStorage.setItem(key, JSON.stringify(next)); return true } catch { return false }
 }
-export function completePostDraft(key: string, publicationId: string, text: string) {
+export function completePostDraft(key: string, publicationId: string, text: string = publicationId) {
   const current = readPostDraft(key)
-  if (current.publicationId !== publicationId) return
+  if (current.publicationId && current.publicationId !== publicationId) return
   savePostDraft(key, current.text === text ? { text: '', ownWords: true } : { text: current.text, ownWords: current.ownWords, wantId: current.wantId })
 }
 export function clearPlayerDrafts(id: string) {

@@ -1,12 +1,15 @@
 using System.Globalization;
 using System.Text.Json;
 using Kot.MongoDB.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using NSubstitute;
+using OpenIddict.MongoDb;
+using OpenIddict.MongoDb.Models;
 using Reki.Application.Balance;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
@@ -25,6 +28,60 @@ namespace Reki.Tests.Persistence;
 public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 {
     private static readonly DateTimeOffset CreatedAt = new(2026, 10, 5, 15, 0, 0, 123, TimeSpan.FromHours(3));
+
+    [Test]
+    [Arguments(0, 0)]
+    [Arguments(6, 6)]
+    [Arguments(21, 10)]
+    public async Task EmbedWallet_LegacyProfile_PreservesProgressOnceAsync(int energy, int expectedEnergy)
+    {
+        // Arrange
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        var clock = new FakeTimeProvider(CreatedAt);
+        var players = database.GetCollection<BsonDocument>("players");
+        var old = new BsonDocument
+        {
+            ["_id"] = "wallet-owner", ["Energy"] = energy, ["EnergyUsed"] = 7,
+            ["Version"] = 12, ["Skills"] = new BsonDocument("brave", new BsonDocument("Experience", 42)),
+            ["Settings"] = new BsonDocument("Plus", true), ["PostsPeriodStartedAtUtc"] = ReferralTimestamp(CreatedAt.AddDays(-1)),
+        };
+        await players.InsertOneAsync(old);
+        var worlds = database.GetCollection<BsonDocument>("worlds");
+        await worlds.InsertManyAsync(new[]
+        {
+            new BsonDocument { ["_id"] = "first-world", ["PlayerId"] = "wallet-owner", ["Subscribers"] = 77 },
+            new BsonDocument { ["_id"] = "second-world", ["PlayerId"] = "wallet-owner", ["Subscribers"] = 99 },
+        });
+        var beforeWorlds = await worlds.Find(FilterDefinition<BsonDocument>.Empty).Sort("{_id:1}").ToListAsync();
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        var migration = new EmbedPlayerWallet(clock);
+
+        // Act
+        await migration.UpAsync(database, session, CancellationToken.None);
+        var saved = await ReadAsync(database, "players", "wallet-owner");
+        await players.UpdateOneAsync(new BsonDocument("_id", "wallet-owner"), Builders<BsonDocument>.Update.Set("Wallet.Crystals", 7));
+        var afterSpend = await ReadAsync(database, "players", "wallet-owner");
+        clock.Advance(TimeSpan.FromDays(1));
+        await migration.UpAsync(database, session, CancellationToken.None);
+        var repeated = await ReadAsync(database, "players", "wallet-owner");
+
+        // Assert
+        await Assert.That(saved["Wallet"]["Energy"].AsInt32).IsEqualTo(expectedEnergy);
+        await Assert.That(saved["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(7);
+        await Assert.That(saved["Wallet"]["Crystals"].AsInt32).IsEqualTo(10);
+        await Assert.That(saved["Wallet"]["EnergyUpdatedAtUtc"]).IsEqualTo(ReferralTimestamp(CreatedAt.ToUniversalTime()));
+        await Assert.That(saved["Version"].AsInt32).IsEqualTo(13);
+        await Assert.That(saved["Skills"]).IsEqualTo(old["Skills"]);
+        await Assert.That(saved["Settings"]).IsEqualTo(old["Settings"]);
+        await Assert.That(saved["PostsPeriodStartedAtUtc"]).IsEqualTo(old["PostsPeriodStartedAtUtc"]);
+        await Assert.That(saved.Contains("Energy")).IsFalse();
+        await Assert.That(saved.Contains("EnergyUsed")).IsFalse();
+        await Assert.That(saved.Contains("Crystals")).IsFalse();
+        await Assert.That(repeated).IsEqualTo(afterSpend);
+        var afterWorlds = await worlds.Find(FilterDefinition<BsonDocument>.Empty).Sort("{_id:1}").ToListAsync();
+        await Assert.That(afterWorlds.SequenceEqual(beforeWorlds)).IsTrue();
+    }
 
     [Test]
     [Arguments("own", "Normal")]
@@ -415,8 +472,34 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         // Arrange
         await using var scope = CreateDatabase();
         var database = scope.Database;
+        var openIddict = new OpenIddictMongoDbOptions
+        {
+            ApplicationsCollectionName = "test_applications",
+            AuthorizationsCollectionName = "test_authorizations",
+            TokensCollectionName = "test_tokens",
+        };
+        var application = new OpenIddictMongoDbApplication { ClientId = "test-client" }.ToBsonDocument();
+        var authorization = new OpenIddictMongoDbAuthorization
+        {
+            Status = "valid",
+            Subject = "12345",
+        }.ToBsonDocument();
+        var token = new OpenIddictMongoDbToken
+        {
+            Status = "valid",
+            Subject = "12345",
+            ExpirationDate = new DateTime(2099, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+        }.ToBsonDocument();
+        await database.GetCollection<BsonDocument>(openIddict.ApplicationsCollectionName).InsertOneAsync(application);
+        await database.GetCollection<BsonDocument>(openIddict.AuthorizationsCollectionName).InsertOneAsync(authorization);
+        await database.GetCollection<BsonDocument>(openIddict.TokensCollectionName).InsertOneAsync(token);
+        foreach (var name in new[] { openIddict.ApplicationsCollectionName, openIddict.AuthorizationsCollectionName, openIddict.TokensCollectionName })
+        {
+            await CreateIndexAsync(database, name, "ix_smoke_status", new BsonDocument("Status", 1), false);
+        }
+
         var player = new BsonDocument
-            { { "_id", "test-player" }, { "TelegramUserId", 12345L }, { "World", "stream" }, { "ChallengeBonusUntilUtc", ReferralTimestamp(CreatedAt) } };
+            { { "_id", "test-player" }, { "TelegramUserId", 12345L }, { "World", "stream" }, { "Energy", 3 }, { "ChallengeBonusUntilUtc", ReferralTimestamp(CreatedAt) } };
         await database.GetCollection<BsonDocument>("players")
             .InsertOneAsync(player, cancellationToken: CancellationToken.None);
         var challenge = new BsonDocument
@@ -437,7 +520,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             await SeedCurrentIndexesAsync(database);
         }
 
-        var migrator = CreateMigrator(mongo.MongoClient, database.DatabaseNamespace.DatabaseName);
+        var migrator = CreateMigrator(mongo.MongoClient, database.DatabaseNamespace.DatabaseName, openIddict: openIddict);
 
         // Act
         await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
@@ -448,8 +531,26 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var savedPlayer = await database.GetCollection<BsonDocument>("players")
             .Find(new BsonDocument("_id", "test-player")).SingleAsync(CancellationToken.None);
         await Assert.That(savedPlayer["_id"]).IsEqualTo(player["_id"]);
+        await Assert.That(savedPlayer["ExternalUserIds"]).IsEqualTo(new BsonArray { "telegram:12345" });
+        await Assert.That(savedPlayer["Energy"]).IsEqualTo(player["Energy"]);
+        await Assert.That(savedPlayer.Contains("TelegramUserId")).IsFalse();
         await Assert.That(savedPlayer.Contains("World")).IsFalse();
         await Assert.That(savedPlayer.Contains("ChallengeBonusUntilUtc")).IsFalse();
+        var savedApplications = await database.GetCollection<BsonDocument>(openIddict.ApplicationsCollectionName)
+            .Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
+        await Assert.That(savedApplications.Count).IsEqualTo(1);
+        await Assert.That(new BsonDocument(savedApplications[0].Elements.OrderBy(item => item.Name, StringComparer.Ordinal)))
+            .IsEqualTo(new BsonDocument(application.Elements.OrderBy(item => item.Name, StringComparer.Ordinal)));
+        await Assert.That(await database.GetCollection<BsonDocument>(openIddict.TokensCollectionName)
+            .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
+        await Assert.That(await database.GetCollection<BsonDocument>(openIddict.AuthorizationsCollectionName)
+            .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
+        foreach (var name in new[] { openIddict.ApplicationsCollectionName, openIddict.AuthorizationsCollectionName, openIddict.TokensCollectionName })
+        {
+            using var indexCursor = await database.GetCollection<BsonDocument>(name).Indexes.ListAsync();
+            await Assert.That((await indexCursor.ToListAsync()).Any(item => item["name"] == "ix_smoke_status")).IsTrue();
+        }
+
         var worlds = await database.GetCollection<BsonDocument>("worlds").Find(new BsonDocument("Player.PlayerId", "test-player")).ToListAsync(CancellationToken.None);
         await Assert.That(worlds.Count).IsEqualTo(1);
         await Assert.That(worlds[0]["BalanceKey"].AsString).IsEqualTo("stream");
@@ -460,7 +561,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var options = new MigrationOptions(database.DatabaseNamespace.DatabaseName);
         var historyCount = await database.GetCollection<BsonDocument>(options.MigrationsCollectionName)
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
-        await Assert.That(historyCount).IsEqualTo(17L);
+        await Assert.That(historyCount).IsEqualTo(18L);
     }
 
     [Test]
@@ -1174,60 +1275,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         }
     }
 
-    [Test]
-    [Arguments(0, 0)]
-    [Arguments(6, 6)]
-    [Arguments(21, 10)]
-    public async Task EmbedWallet_LegacyProfile_PreservesProgressOnceAsync(int energy, int expectedEnergy)
-    {
-        // Arrange
-        await using var scope = CreateDatabase();
-        var database = scope.Database;
-        var clock = new FakeTimeProvider(CreatedAt);
-        var players = database.GetCollection<BsonDocument>("players");
-        var old = new BsonDocument
-        {
-            ["_id"] = "wallet-owner", ["Energy"] = energy, ["EnergyUsed"] = 7,
-            ["Version"] = 12, ["Skills"] = new BsonDocument("brave", new BsonDocument("Experience", 42)),
-            ["Settings"] = new BsonDocument("Plus", true), ["PostsPeriodStartedAtUtc"] = ReferralTimestamp(CreatedAt.AddDays(-1)),
-        };
-        await players.InsertOneAsync(old);
-        var worlds = database.GetCollection<BsonDocument>("worlds");
-        await worlds.InsertManyAsync(new[]
-        {
-            new BsonDocument { ["_id"] = "first-world", ["PlayerId"] = "wallet-owner", ["Subscribers"] = 77 },
-            new BsonDocument { ["_id"] = "second-world", ["PlayerId"] = "wallet-owner", ["Subscribers"] = 99 },
-        });
-        var beforeWorlds = await worlds.Find(FilterDefinition<BsonDocument>.Empty).Sort("{_id:1}").ToListAsync();
-        using var session = await mongo.MongoClient.StartSessionAsync();
-        var migration = new EmbedPlayerWallet(clock);
-
-        // Act
-        await migration.UpAsync(database, session, CancellationToken.None);
-        var saved = await ReadAsync(database, "players", "wallet-owner");
-        await players.UpdateOneAsync(new BsonDocument("_id", "wallet-owner"), Builders<BsonDocument>.Update.Set("Wallet.Crystals", 7));
-        var afterSpend = await ReadAsync(database, "players", "wallet-owner");
-        clock.Advance(TimeSpan.FromDays(1));
-        await migration.UpAsync(database, session, CancellationToken.None);
-        var repeated = await ReadAsync(database, "players", "wallet-owner");
-
-        // Assert
-        await Assert.That(saved["Wallet"]["Energy"].AsInt32).IsEqualTo(expectedEnergy);
-        await Assert.That(saved["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(7);
-        await Assert.That(saved["Wallet"]["Crystals"].AsInt32).IsEqualTo(10);
-        await Assert.That(saved["Wallet"]["EnergyUpdatedAtUtc"]).IsEqualTo(ReferralTimestamp(CreatedAt.ToUniversalTime()));
-        await Assert.That(saved["Version"].AsInt32).IsEqualTo(13);
-        await Assert.That(saved["Skills"]).IsEqualTo(old["Skills"]);
-        await Assert.That(saved["Settings"]).IsEqualTo(old["Settings"]);
-        await Assert.That(saved["PostsPeriodStartedAtUtc"]).IsEqualTo(old["PostsPeriodStartedAtUtc"]);
-        await Assert.That(saved.Contains("Energy")).IsFalse();
-        await Assert.That(saved.Contains("EnergyUsed")).IsFalse();
-        await Assert.That(saved.Contains("Crystals")).IsFalse();
-        await Assert.That(repeated).IsEqualTo(afterSpend);
-        var afterWorlds = await worlds.Find(FilterDefinition<BsonDocument>.Empty).Sort("{_id:1}").ToListAsync();
-        await Assert.That(afterWorlds.SequenceEqual(beforeWorlds)).IsTrue();
-    }
-
     private static async Task AssertRetiredSocialCollectionsAbsentAsync(IMongoDatabase database)
     {
         using var cursor = await database.ListCollectionNamesAsync();
@@ -1310,7 +1357,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         }
     }
 
-    private static IMigrator CreateMigrator(IMongoClient client, string databaseName, bool includeRelease = true, bool includeThreadCleanup = true)
+    private static IMigrator CreateMigrator(IMongoClient client, string databaseName, bool includeRelease = true, bool includeThreadCleanup = true, OpenIddictMongoDbOptions? openIddict = null)
     {
         var options = new RekiMigrationOptions(Options.Create(new MongoOptions { DatabaseName = databaseName }));
         var migrations = new List<RekiMigrationBase>
@@ -1332,6 +1379,21 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             migrations.Add(new RemoveChallengeBonus());
             migrations.Add(new RemoveUnusedSocialCollections());
             migrations.Add(new CreatePostCursorIndexes());
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddSingleton(client.GetDatabase(databaseName));
+            services.AddOpenIddict().AddCore(core => core.UseMongoDb());
+            if (openIddict is not null)
+            {
+                services.Configure<OpenIddictMongoDbOptions>(options =>
+                {
+                    options.ApplicationsCollectionName = openIddict.ApplicationsCollectionName;
+                    options.AuthorizationsCollectionName = openIddict.AuthorizationsCollectionName;
+                    options.TokensCollectionName = openIddict.TokensCollectionName;
+                });
+            }
+
+            migrations.Add(new UseExternalPlayerIds(services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>()));
         }
 
         return MigratorBuilder.FromMongoClient(client, options).LoadMigrations(migrations).Build();
@@ -1339,7 +1401,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
     private static IEnumerable<(string Collection, string Name, BsonDocument Keys, bool Unique)> ExpectedIndexes()
     {
-        yield return ("players", "ux_players_telegram_user", new BsonDocument("TelegramUserId", 1), true);
+        yield return ("players", "ux_players_external_user", new BsonDocument("ExternalUserIds", 1), true);
         yield return ("publications", "ix_publications_expiry", new BsonDocument("ExpiresAtUtc", 1), false);
         yield return ("events", "ix_events_player_day",
             new BsonDocument { { "PlayerId", 1 }, { "DayStartedAtUtc", -1 } }, false);
@@ -1360,6 +1422,12 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await CreateIndexAsync(database, "invites", "ix_invites_player", new BsonDocument("PlayerId", 1), false);
         foreach (var (collection, name, keys, unique) in ExpectedIndexes())
         {
+            if (name == "ux_players_external_user")
+            {
+                await CreateIndexAsync(database, "players", "ux_players_telegram_user", new BsonDocument("TelegramUserId", 1), true);
+                continue;
+            }
+
             await CreateIndexAsync(database, collection, name, name == "ix_worlds_player" ? new BsonDocument("PlayerId", 1) : keys, unique);
         }
     }
@@ -1395,6 +1463,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             var indexes = await cursor.ToListAsync(CancellationToken.None);
             var index = indexes.Single(item => item["name"] == name);
             await Assert.That(index["key"]).IsEqualTo(keys);
+            await Assert.That(indexes.Any(item => item["name"] == "ux_players_telegram_user")).IsFalse();
             await Assert.That(indexes.Any(item => item["name"] == "ix_posts_player_created")).IsFalse();
             await Assert.That(indexes.Any(item => item["name"] == "ix_posts_world_created")).IsFalse();
             await Assert.That(indexes.Any(item => item["name"] == "ix_invites_player")).IsFalse();

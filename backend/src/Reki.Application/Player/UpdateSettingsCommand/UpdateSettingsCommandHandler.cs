@@ -16,8 +16,6 @@ internal sealed class UpdateSettingsCommandHandler(
     {
         var player = await rekiContextAccessor.Context.Player;
         var currentBalance = balance.CurrentValue;
-        var bonus = request.Plus is true && !player.Settings.Plus
-            ? Math.Max(0, currentBalance.PlusPostsPerDay - currentBalance.FreePostsPerDay) : 0;
         var updated = player with
         {
             Settings = new PlayerSettings(
@@ -25,10 +23,12 @@ internal sealed class UpdateSettingsCommandHandler(
                 Quiet: request.Quiet ?? player.Settings.Quiet,
                 Plus: request.Plus ?? player.Settings.Plus),
             Address = request.Address ?? player.Address,
-            Wallet = player.Wallet.Replenish(bonus),
+            Wallet = player.Wallet.Replenish(request.Plus is true && !player.Settings.Plus
+                ? Math.Max(0, currentBalance.PlusPostsPerDay - currentBalance.FreePostsPerDay)
+                : 0),
             Version = player.Version + 1,
         };
-        await playerRepository.TryReplacePlayerAsync(updated, player.Version, cancellationToken);
+        await playerRepository.ReplacePlayerAsync(updated, cancellationToken);
         return Unit.Value;
     }
 }

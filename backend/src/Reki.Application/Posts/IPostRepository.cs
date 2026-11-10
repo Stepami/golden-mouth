@@ -8,6 +8,9 @@ public interface IPostRepository
 {
     ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken);
 
+    ValueTask<IReadOnlyList<PostSimilarity>> FindSimilarPostsAsync(
+        GamePost post, double threshold, CancellationToken cancellationToken);
+
     /// <summary>
     /// Reads posts in a world whose ownership the application has already verified.
     /// Returns posts ordered by descending UUID and the cursor for the next page, if any.
@@ -31,4 +34,6 @@ public interface IPostRepository
     ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken);
 
     ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken);
+
+    ValueTask DeletePostsAsync(IReadOnlyCollection<WorldId> worldIds, CancellationToken cancellationToken);
 }

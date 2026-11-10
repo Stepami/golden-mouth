@@ -1,6 +1,9 @@
+using System.Security.Claims;
+using AspNetCore.Authentication.Basic;
 using Microsoft.Extensions.DependencyInjection;
 using OpenIddict.Validation.AspNetCore;
 using Reki.Application.Auth;
+using Reki.Domain.Player;
 
 namespace Reki.Infrastructure.Auth;
 
@@ -10,6 +13,24 @@ internal static class DependencyInjection
     {
         services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.SectionName);
         services.AddScoped<IAuthSessionService, AuthSessionService>();
+        services.AddKeyedScoped<IExternalUserIdProvider, OnboardingExternalUserIdProvider>(AuthConstants.Schemes.Onboarding);
+        services.AddAuthentication().AddBasic(AuthConstants.Schemes.Onboarding, options =>
+        {
+            options.SuppressWWWAuthenticateHeader = true;
+            options.Events.OnValidateCredentials = context =>
+            {
+                if (ExternalUserId.TryFrom($"{context.Username}:{context.Password}", out var externalId))
+                {
+                    context.ValidationSucceeded([new Claim(AuthConstants.Claims.ExternalUserId, externalId.Value)]);
+                }
+                else
+                {
+                    context.ValidationFailed("Invalid external identity.");
+                }
+
+                return Task.CompletedTask;
+            };
+        });
 
         services
             .AddAuthorizationBuilder()
@@ -26,6 +47,12 @@ internal static class DependencyInjection
                 AuthConstants.Policies.RekiTelegramLoginGrant,
                 policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.TelegramLogin)))
             .AddPolicy(
+                AuthConstants.Policies.RekiVkGrant,
+                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.Vk)))
+            .AddPolicy(
+                AuthConstants.Policies.RekiYandexGrant,
+                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.Yandex)))
+            .AddPolicy(
                 AuthConstants.Policies.RekiRefreshGrant,
                 policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.Refresh)));
 
@@ -36,9 +63,11 @@ internal static class DependencyInjection
             .AddCore(options => options.UseMongoDb())
             .AddServer(options =>
             {
-                options.SetTokenEndpointUris("auth/external/tg/miniapp", "auth/external/tg/widget", "auth/refresh")
+                options.SetTokenEndpointUris("auth/external/tg/miniapp", "auth/external/tg/widget", "auth/external/vk", "auth/external/yandex", "auth/refresh")
                     .AllowCustomFlow(AuthConstants.Grants.MiniApp)
                     .AllowCustomFlow(AuthConstants.Grants.TelegramLogin)
+                    .AllowCustomFlow(AuthConstants.Grants.Vk)
+                    .AllowCustomFlow(AuthConstants.Grants.Yandex)
                     .AllowRefreshTokenFlow()
                     .UseReferenceRefreshTokens();
                 options.UseAspNetCore();

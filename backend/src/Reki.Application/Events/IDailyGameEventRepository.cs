@@ -13,4 +13,6 @@ public interface IDailyGameEventRepository
         WorldId worldId);
 
     ValueTask SaveEventAsync(DailyGameEvent gameEvent, CancellationToken cancellationToken);
+
+    ValueTask DeleteEventsAsync(PlayerId playerId, CancellationToken cancellationToken);
 }

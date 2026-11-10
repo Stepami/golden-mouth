@@ -7,7 +7,3 @@ import './events'
 import './safety'
 import './world'
 import './mechanics'
-
-import './progress'
-
-import './people'

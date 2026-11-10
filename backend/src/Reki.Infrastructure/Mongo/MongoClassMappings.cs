@@ -2,7 +2,6 @@ using System.Linq.Expressions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
-using Reki.Application.Posts;
 using Reki.Domain.Events;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
@@ -38,19 +37,19 @@ internal static class MongoClassMappings
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.StarIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.TelegramUserIdBsonSerializer());
+            new BsonValueObjectConversions.ExternalUserIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.WorldIdBsonSerializer());
         RegisterWithMongoId<PlayerProfile, PlayerId>(item => item.Id);
-        RegisterWithMongoId<GamePost, PostId>(item => item.Id);
-        RegisterWithMongoId<Publication, string>(item => item.Id);
+        RegisterWithMongoId<GamePost, PostId>(item => item.Id, ignoreExtraElements: true);
         RegisterWithMongoId<DailyGameEvent, RekiEventId>(item => item.Id);
         RegisterWithMongoId<World, WorldId>(item => item.Id);
         RegisterWithMongoId<Invitation, InvitationId>(item => item.Id);
     }
 
     private static void RegisterWithMongoId<TDocument, TId>(
-        Expression<Func<TDocument, TId>> idExpression)
+        Expression<Func<TDocument, TId>> idExpression,
+        bool ignoreExtraElements = false)
     {
         if (BsonClassMap.IsClassMapRegistered(typeof(TDocument)))
         {
@@ -61,6 +60,7 @@ internal static class MongoClassMappings
         {
             classMap.AutoMap();
             classMap.MapIdMember(idExpression);
+            classMap.SetIgnoreExtraElements(ignoreExtraElements);
         });
     }
 }

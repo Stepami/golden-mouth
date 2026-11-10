@@ -4,7 +4,7 @@ namespace Reki.Application.Player;
 
 public interface IPlayerRepository
 {
-    ValueTask<PlayerProfile?> GetPlayerAsync(TelegramUserId telegramUserId, CancellationToken cancellationToken);
+    ValueTask<PlayerProfile?> GetPlayerAsync(ExternalUserId externalUserId, CancellationToken cancellationToken);
 
     ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
 
@@ -17,21 +17,16 @@ public interface IPlayerRepository
         PlayerProfile updated,
         CancellationToken cancellationToken);
 
-    ValueTask<bool> TryClaimPlusInterestAsync(
+    ValueTask<int> ClaimPlusInterestAsync(
         PlayerProfile player,
         PlayerProfile updated,
         CancellationToken cancellationToken);
 
-    ValueTask<bool> TryReplacePlayerAsync(
-        PlayerProfile player,
-        int expectedVersion,
-        CancellationToken cancellationToken);
+    ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
 
-    ValueTask<PlayerWallet?> TryExchangeEnergyAsync(PlayerId playerId, DateTimeOffset now, CancellationToken cancellationToken);
+    ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
 
-    IAsyncEnumerable<PlayerProfile> GetPlayersForEnergyRecoveryAsync(DateTimeOffset dueBefore, CancellationToken cancellationToken);
-
-    ValueTask<bool> TrySaveEnergyRecoveryAsync(PlayerProfile player, PlayerWallet wallet, CancellationToken cancellationToken);
+    IAsyncEnumerable<PlayerProfile> GetPlayersForEnergyRecoveryAsync(int cap, DateTimeOffset dueBefore, CancellationToken cancellationToken);
 
     ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
 

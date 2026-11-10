@@ -1,12 +1,14 @@
 using Mediator;
 using Reki.Application.Exceptions;
+using Reki.Application.Posts.ML;
 using Reki.Application.RekiContext;
 
 namespace Reki.Application.Worlds.UpdateWorldCommand;
 
 internal sealed class UpdateWorldCommandHandler(
     IWorldRepository worldRepository,
-    IRekiContextAccessor contextAccessor)
+    IRekiContextAccessor contextAccessor,
+    IStarVectorStore starVectorStore)
     : ICommandHandler<UpdateWorld>
 {
     public async ValueTask<Unit> Handle(UpdateWorld request, CancellationToken cancellationToken)
@@ -53,10 +55,8 @@ internal sealed class UpdateWorldCommandHandler(
                 }).ToArray(),
             },
         };
-        if (!await worldRepository.TryReplaceWorldAsync(updated, world.Version, cancellationToken))
-        {
-            throw new RequestConflictException("World changed concurrently.");
-        }
+        await worldRepository.ReplaceWorldAsync(updated, cancellationToken);
+        await starVectorStore.WarmUpAsync(updated);
 
         return Unit.Value;
     }

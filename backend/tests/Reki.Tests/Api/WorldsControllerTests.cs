@@ -6,7 +6,6 @@ using Reki.Api.Requests.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Auth;
 
 namespace Reki.Tests.Api;
 
@@ -92,10 +91,10 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         using var api = Factory.CreateApiClient(1021);
         var firstPlayer = await CreatePlayerWithWorldAsync(api);
         var firstId = await GetWorldIdAsync(api);
-        PlayerApiException? exception = null;
+        ExternalTelegramAuthApiException? exception = null;
         try
         {
-            await api.Player.CompleteOnboardingAsync(
+            await api.RegisterAsync(
                 new OnboardingRequest
                 {
                     BirthGroup = BirthGroup.Teen,
@@ -103,7 +102,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
                 },
                 CancellationToken.None);
         }
-        catch (PlayerApiException caught)
+        catch (ExternalTelegramAuthApiException caught)
         {
             exception = caught;
         }
@@ -211,8 +210,8 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Act
         using var http = Factory.CreateClient();
-        http.SetFakeJwtBearerToken(new Dictionary<string, object> { [AuthConstants.Claims.TelegramUserId] = "1018" });
-        using var response = await http.GetAsync("/feed");
+        http.SetFakeJwtBearerToken(new Dictionary<string, object> { ["sub"] = (await GetStoredPlayerAsync(1018))["_id"].AsBsonBinaryData.ToGuid().ToString("N") });
+        using var response = await http.GetAsync("/posts/feed");
 
         // Assert
         await Assert.That((int)response.StatusCode).IsEqualTo(400);
@@ -222,7 +221,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task CurrentPresets_FullUpdate_PreservesProgressAsync()
     {
         using var api = Factory.CreateApiClient(1091);
-        await api.Player.CompleteOnboardingAsync(
+        await api.RegisterAsync(
             new OnboardingRequest
         {
             BirthGroup = BirthGroup.Teen,
@@ -311,12 +310,9 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             Builders<World>.Update.Set(world => world.Player.Subscribers, 499));
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).HitOwnWorldMilestone).IsFalse();
 
-        // Fixed publication seed produces a positive turn; flops must not unlock the milestone.
-        var generation = await GenerateWithIdAsync(1093, "Расскажу о сегодняшней репетиции", "00000000-0000-0000-0000-000000000001");
-        await Assert.That(generation.StatusCode).IsEqualTo(HttpStatusCode.OK);
         var definition = (await CreateWorldDefinitionAsync(api)) with { Difficulty = WorldDifficulty.Hard };
         await api.Worlds.UpdateWorldAsync(id.ToString(), definition, CancellationToken.None);
-        await api.Posts.ModeratePublicationAsync(generation.PublicationId, id.ToString(), CancellationToken.None);
+        await PublishAsync(1093, "Расскажу о сегодняшней репетиции");
         var scored = Factory.Services.GetFakeLogCollector().GetSnapshot().Single(record =>
             record.GetStructuredStateValue("event_name") == "post_scored" && record.GetStructuredStateValue("player_id") == player.Id.ToString());
         await Assert.That(scored.GetStructuredStateValue("difficulty")).IsEqualTo("hard");

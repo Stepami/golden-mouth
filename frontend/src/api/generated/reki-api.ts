@@ -336,6 +336,153 @@ export class ExternalTelegramAuthClient {
         }
         return Promise.resolve<SwaggerResponse<AuthTokenResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
+
+    /**
+     * @return OK
+     */
+    completeOnboarding(body: OnboardingRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+        let url_ = this.baseUrl + "/onboarding";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCompleteOnboarding(_response);
+        });
+    }
+
+    protected processCompleteOnboarding(response: Response): Promise<SwaggerResponse<void>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return new SwaggerResponse(status, _headers, null as any);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
+    }
+}
+
+export class ExternalVkAuthClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    /**
+     * @return OK
+     */
+    exchangeVk(body: TokenExchangeRequest, signal?: AbortSignal): Promise<SwaggerResponse<AuthTokenResponse>> {
+        let url_ = this.baseUrl + "/auth/external/vk";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = Object.keys(body as any).map((key) => {
+            return encodeURIComponent(key) + '=' + encodeURIComponent((body as any)[key]);
+        }).join('&')
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processExchangeVk(_response);
+        });
+    }
+
+    protected processExchangeVk(response: Response): Promise<SwaggerResponse<AuthTokenResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as AuthTokenResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<AuthTokenResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+}
+
+export class ExternalYandexAuthClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    /**
+     * @return OK
+     */
+    exchangeYandex(body: TokenExchangeRequest, signal?: AbortSignal): Promise<SwaggerResponse<AuthTokenResponse>> {
+        let url_ = this.baseUrl + "/auth/external/yandex";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = Object.keys(body as any).map((key) => {
+            return encodeURIComponent(key) + '=' + encodeURIComponent((body as any)[key]);
+        }).join('&')
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processExchangeYandex(_response);
+        });
+    }
+
+    protected processExchangeYandex(response: Response): Promise<SwaggerResponse<AuthTokenResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as AuthTokenResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<AuthTokenResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
 }
 
 export class PlayerClient {
@@ -376,12 +523,6 @@ export class PlayerClient {
             let result200: any = null;
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlayerResponse;
             return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status === 404) {
-            return response.text().then((_responseText) => {
-            let result404: any = null;
-            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
-            return throwException("Not Found", status, _responseText, _headers, result404);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
@@ -424,47 +565,6 @@ export class PlayerClient {
             });
         }
         return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
-     * @return OK
-     */
-    completeOnboarding(body: OnboardingRequest, signal?: AbortSignal): Promise<SwaggerResponse<PlayerResponse>> {
-        let url_ = this.baseUrl + "/onboarding";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_: RequestInit = {
-            body: content_,
-            method: "POST",
-            signal,
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCompleteOnboarding(_response);
-        });
-    }
-
-    protected processCompleteOnboarding(response: Response): Promise<SwaggerResponse<PlayerResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlayerResponse;
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<PlayerResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
@@ -658,6 +758,57 @@ export class PlayerClient {
         }
         return Promise.resolve<SwaggerResponse<PlusInterestResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
+
+    /**
+     * @return OK
+     */
+    mergePlayers(body: MergePlayersRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+        let url_ = this.baseUrl + "/merge";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processMergePlayers(_response);
+        });
+    }
+
+    protected processMergePlayers(response: Response): Promise<SwaggerResponse<void>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return new SwaggerResponse(status, _headers, null as any);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            result409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
+    }
 }
 
 export class PostsClient {
@@ -673,8 +824,8 @@ export class PostsClient {
     /**
      * @return OK
      */
-    generatePublication(worldId: string, body: StartPublicationRequest, signal?: AbortSignal): Promise<SwaggerResponse<FileResponse>> {
-        let url_ = this.baseUrl + "/posts/publications?";
+    createPost(worldId: string, body: CreatePostRequest, signal?: AbortSignal): Promise<SwaggerResponse<CreatePostResponse>> {
+        let url_ = this.baseUrl + "/posts?";
         if (worldId === undefined || worldId === null)
             throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
         else
@@ -689,67 +840,22 @@ export class PostsClient {
             signal,
             headers: {
                 "Content-Type": "application/json",
-                "Accept": "text/event-stream"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGeneratePublication(_response);
-        });
-    }
-
-    protected processGeneratePublication(response: Response): Promise<SwaggerResponse<FileResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return new SwaggerResponse(status, _headers, { fileName: fileName, data: blob, status: status, headers: _headers }); });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<FileResponse>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
-     * @return OK
-     */
-    getPublicationStatus(publicationId: string, signal?: AbortSignal): Promise<SwaggerResponse<PublicationStatusResponse>> {
-        let url_ = this.baseUrl + "/posts/publications/{publicationId}";
-        if (publicationId === undefined || publicationId === null)
-            throw new globalThis.Error("The parameter 'publicationId' must be defined.");
-        url_ = url_.replace("{publicationId}", encodeURIComponent("" + publicationId));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            signal,
-            headers: {
                 "Accept": "application/json"
             }
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetPublicationStatus(_response);
+            return this.processCreatePost(_response);
         });
     }
 
-    protected processGetPublicationStatus(response: Response): Promise<SwaggerResponse<PublicationStatusResponse>> {
+    protected processCreatePost(response: Response): Promise<SwaggerResponse<CreatePostResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PublicationStatusResponse;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as CreatePostResponse;
             return new SwaggerResponse(status, _headers, result200);
             });
         } else if (status !== 200 && status !== 204) {
@@ -757,51 +863,7 @@ export class PostsClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<SwaggerResponse<PublicationStatusResponse>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
-     * @return OK
-     */
-    moderatePublication(publicationId: string, worldId: string, signal?: AbortSignal): Promise<SwaggerResponse<(LiveEventViewsLiveEvent | LiveEventReactionLiveEvent | LiveEventCommentLiveEvent | LiveEventTypingLiveEvent | LiveEventResultLiveEvent)[]>> {
-        let url_ = this.baseUrl + "/posts/publications/{publicationId}/moderation?";
-        if (publicationId === undefined || publicationId === null)
-            throw new globalThis.Error("The parameter 'publicationId' must be defined.");
-        url_ = url_.replace("{publicationId}", encodeURIComponent("" + publicationId));
-        if (worldId === undefined || worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
-        else
-            url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "POST",
-            signal,
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processModeratePublication(_response);
-        });
-    }
-
-    protected processModeratePublication(response: Response): Promise<SwaggerResponse<(LiveEventViewsLiveEvent | LiveEventReactionLiveEvent | LiveEventCommentLiveEvent | LiveEventTypingLiveEvent | LiveEventResultLiveEvent)[]>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as (LiveEventViewsLiveEvent | LiveEventReactionLiveEvent | LiveEventCommentLiveEvent | LiveEventTypingLiveEvent | LiveEventResultLiveEvent)[];
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<(LiveEventViewsLiveEvent | LiveEventReactionLiveEvent | LiveEventCommentLiveEvent | LiveEventTypingLiveEvent | LiveEventResultLiveEvent)[]>>(new SwaggerResponse(status, _headers, null as any));
+        return Promise.resolve<SwaggerResponse<CreatePostResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
@@ -911,7 +973,7 @@ export class PostsClient {
      * @return OK
      */
     getFeed(worldId: string, cursor?: string | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
-        let url_ = this.baseUrl + "/feed?";
+        let url_ = this.baseUrl + "/posts/feed?";
         if (worldId === undefined || worldId === null)
             throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
         else
@@ -1848,6 +1910,22 @@ export interface CommentResponse {
     [key: string]: any;
 }
 
+export interface CreatePostRequest {
+    text: string;
+    ownWords?: boolean;
+    wantId?: string | null;
+
+    [key: string]: any;
+}
+
+export interface CreatePostResponse {
+    post: PostDetailResponse;
+    result: PostResultResponse;
+    predictedAuthorId: string;
+
+    [key: string]: any;
+}
+
 export interface CreateWorldRequest {
     templateId?: string | null;
     name: string;
@@ -1984,7 +2062,7 @@ export interface GameEventResponse {
 
 export interface GenerateReplyRequest {
     authorId: string;
-    sourceCommentId: string;
+    sourceCommentId?: string | null;
     additional: boolean;
 
     [key: string]: any;
@@ -1998,48 +2076,14 @@ export interface InvitationResponse {
 
 export type LaunchSurface = "unknown" | "telegram-mini-app" | "browser" | "standalone";
 
-export interface LiveEvent {
-
-    [key: string]: any;
-}
-
-export interface LiveEventCommentLiveEvent {
-    type?: LiveEventCommentLiveEventType;
-    comment: CommentResponse;
-
-    [key: string]: any;
-}
-
-export interface LiveEventReactionLiveEvent {
-    type?: LiveEventReactionLiveEventType;
-    emoji: string;
-
-    [key: string]: any;
-}
-
-export interface LiveEventResultLiveEvent {
-    type?: LiveEventResultLiveEventType;
-    result: PostResultResponse;
-
-    [key: string]: any;
-}
-
-export interface LiveEventTypingLiveEvent {
-    type?: LiveEventTypingLiveEventType;
-    who: string;
-
-    [key: string]: any;
-}
-
-export interface LiveEventViewsLiveEvent {
-    type?: LiveEventViewsLiveEventType;
-    views: number;
-
-    [key: string]: any;
-}
-
 export interface LogoutRequest {
     refresh_token: string;
+
+    [key: string]: any;
+}
+
+export interface MergePlayersRequest {
+    fromPlayerId: string;
 
     [key: string]: any;
 }
@@ -2123,7 +2167,6 @@ export interface PostResultResponse {
     viral: boolean;
     flop: boolean;
     views: number;
-    hook: string | null;
 
     [key: string]: any;
 }
@@ -2137,33 +2180,6 @@ export interface ProblemDetails {
 
     [key: string]: any;
 }
-
-export interface PublicationFailure {
-    code: string;
-    category: string;
-    policyVersion: string;
-
-    [key: string]: any;
-}
-
-export interface PublicationStatusLiveEvent {
-    type: PublicationStatusType;
-    publicationId: string;
-    failure?: PublicationFailure | null;
-
-    [key: string]: any;
-}
-
-export interface PublicationStatusResponse {
-    publicationId: string;
-    status: PublicationStatusType;
-    result: PostResultResponse | null;
-    failure?: PublicationFailure | null;
-
-    [key: string]: any;
-}
-
-export type PublicationStatusType = "pending" | "ready_for_moderation" | "completed" | "failed";
 
 export interface ReactionResponse {
     emoji: string;
@@ -2246,15 +2262,6 @@ export interface SkillResponse {
     [key: string]: any;
 }
 
-export interface SseItemOfPublicationStatusLiveEvent {
-    data?: PublicationStatusLiveEvent;
-    eventId?: string | null;
-    eventType?: string | null;
-    reconnectionInterval?: string | null;
-
-    [key: string]: any;
-}
-
 export interface SseItemOfReplyGenerationLiveEvent {
     data?: ReplyGenerationLiveEvent;
     eventId?: string | null;
@@ -2278,15 +2285,6 @@ export interface StarResponse {
 
 export interface StartChallengeRequest {
     friendId: string;
-
-    [key: string]: any;
-}
-
-export interface StartPublicationRequest {
-    publicationId: string;
-    text: string;
-    ownWords?: boolean;
-    wantId?: string | null;
 
     [key: string]: any;
 }
@@ -2416,16 +2414,6 @@ export interface WorldStarResponse {
 
     [key: string]: any;
 }
-
-export type LiveEventCommentLiveEventType = "comment";
-
-export type LiveEventReactionLiveEventType = "react";
-
-export type LiveEventResultLiveEventType = "result";
-
-export type LiveEventTypingLiveEventType = "typing";
-
-export type LiveEventViewsLiveEventType = "views";
 
 export type OnboardingRequestAddress = "she" | "he" | "nick";
 

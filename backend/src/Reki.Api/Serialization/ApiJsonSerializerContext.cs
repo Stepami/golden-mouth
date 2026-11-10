@@ -12,15 +12,12 @@ using Reki.Api.Requests.Telemetry.ClientLogBatch;
 using Reki.Api.Requests.Worlds;
 using Reki.Application.Events.Responses;
 using Reki.Application.Player.Responses;
-using Reki.Application.Posts;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Feed;
+using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.ChannelPost;
 using Reki.Application.Posts.Responses.FeedItem;
-using Reki.Application.Posts.Responses.LiveEvent;
 using Reki.Application.Posts.Responses.PostDetail;
-using Reki.Application.Posts.Responses.PublicationStatus;
-using Reki.Application.Posts.Responses.PublicationStatusLiveEvent;
 using Reki.Application.Posts.Responses.Reply;
 using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.Responses;
@@ -38,6 +35,9 @@ using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;
+using Reki.Infrastructure.ML.Classifier;
+using Reki.Infrastructure.Vk;
+using Reki.Infrastructure.Yandex;
 
 namespace Reki.Api.Serialization;
 
@@ -62,25 +62,22 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(AuthTokenResponse))]
 [JsonSerializable(typeof(Guid))]
 [JsonSerializable(typeof(long))]
+[JsonSerializable(typeof(VkUserInfoResponse))]
+[JsonSerializable(typeof(YandexUserInfoResponse))]
 [JsonSerializable(typeof(PlayerId))]
 [JsonSerializable(typeof(PostId))]
 [JsonSerializable(typeof(CommentId))]
 [JsonSerializable(typeof(InvitationId))]
 [JsonSerializable(typeof(RekiEventId))]
-[JsonSerializable(typeof(PublicationFailure))]
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]
-[JsonSerializable(typeof(IReadOnlyList<LiveEvent>))]
-[JsonSerializable(typeof(SseItem<PublicationStatusLiveEvent>))]
 [JsonSerializable(typeof(PlayerResponse))]
 [JsonSerializable(typeof(ReferralResponse))]
 [JsonSerializable(typeof(InvitationResponse))]
 [JsonSerializable(typeof(OnboardingRequest))]
-[JsonSerializable(typeof(StartPublicationRequest))]
-[JsonSerializable(typeof(PublicationStatusLiveEvent))]
-[JsonSerializable(typeof(PublicationStatusResponse))]
-[JsonSerializable(typeof(PublicationStatusType))]
-[JsonSerializable(typeof(LiveEventType))]
+[JsonSerializable(typeof(MergePlayersRequest))]
+[JsonSerializable(typeof(CreatePostRequest))]
+[JsonSerializable(typeof(CreatePostResponse))]
 [JsonSerializable(typeof(ReplyRequest))]
 [JsonSerializable(typeof(GenerateReplyRequest))]
 [JsonSerializable(typeof(ReplyResponse))]
@@ -112,14 +109,10 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(CreateWorldRequest))]
 [JsonSerializable(typeof(PlusInterestRequest))]
 [JsonSerializable(typeof(PlusInterestResponse))]
-[JsonSerializable(typeof(ViewsLiveEvent))]
-[JsonSerializable(typeof(LiveEvent))]
-[JsonSerializable(typeof(ReactionLiveEvent))]
-[JsonSerializable(typeof(CommentLiveEvent))]
-[JsonSerializable(typeof(TypingLiveEvent))]
-[JsonSerializable(typeof(ResultLiveEvent))]
 [JsonSerializable(typeof(AnalyticsBatchRequest))]
 [JsonSerializable(typeof(ClientLogBatchRequest))]
+[JsonSerializable(typeof(ClassifyRequest))]
+[JsonSerializable(typeof(ClassifyResponse))]
 [JsonSourceGenerationOptions(
     Converters =
     [
@@ -130,11 +123,9 @@ namespace Reki.Api.Serialization;
         typeof(CamelCaseEnumConverter<FeedItemKind>),
         typeof(CamelCaseEnumConverter<DirectMessageAuthor>),
         typeof(CamelCaseEnumConverter<GameEventKind>),
-        typeof(CamelCaseEnumConverter<LiveEventType>),
         typeof(CamelCaseEnumConverter<ReplyGenerationStatus>),
         typeof(CamelCaseEnumConverter<ClientLogLevel>),
-        typeof(KebabCaseEnumConverter<LaunchSurface>),
-        typeof(SnakeCaseEnumConverter<PublicationStatusType>)
+        typeof(KebabCaseEnumConverter<LaunchSurface>)
     ],
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal sealed partial class ApiJsonSerializerContext : JsonSerializerContext;

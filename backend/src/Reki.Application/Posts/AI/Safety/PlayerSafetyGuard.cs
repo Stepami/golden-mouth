@@ -70,7 +70,7 @@ internal sealed class PlayerSafetyGuard(
 
         var now = timeProvider.GetUtcNow();
         var paused = player.StartCrisisPause(now, HateCooldown);
-        await playerRepository.TryReplacePlayerAsync(paused, player.Version, cancellationToken);
+        await playerRepository.ReplacePlayerAsync(paused, cancellationToken);
 
         throw new CrisisDetectedException(player.BirthGroup == "14-17");
     }

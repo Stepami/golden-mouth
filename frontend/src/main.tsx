@@ -27,6 +27,16 @@ import.meta.hot?.dispose(() => {
   document.removeEventListener('keydown', keyboardInput, {capture:true});
   document.removeEventListener('pointerdown', pointerInput, {capture:true});
 });
+const callbackParams = new URLSearchParams(location.hash.slice(1));
+const yandexCallback = (callbackParams.has('access_token') || callbackParams.has('error')) && (window.opener || window.parent !== window);
+if (yandexCallback) {
+  const script = document.createElement('script');
+  script.src = 'https://yastatic.net/s3/passport-sdk/autofill/v1/sdk-suggest-token-with-polyfills-latest.js';
+  script.onload = () => window.YaSendSuggestToken?.(window.location.origin);
+  document.head.append(script);
+} else {
 if (initTelegram()) { installGlobalHandlers(); installAnalytics(); }
 const demo = import.meta.env.DEV && new URLSearchParams(location.search).has('v7demo');
 createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary><Suspense fallback={<div className="app"><div className="loading-state" role="status"><LoadingIndicator/><p>Открываем Реки</p></div></div>}>{visualReview && VisualReview ? <VisualReview /> : demo && DemoApp ? <DemoApp /> : <AuthenticatedApp />}</Suspense></ErrorBoundary></StrictMode>);
+
+}

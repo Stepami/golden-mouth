@@ -9,5 +9,5 @@ public sealed record GenerateReply(
     PostId PostId,
     WorldId WorldId,
     AuthorId AuthorId,
-    CommentId SourceCommentId,
+    CommentId? SourceCommentId,
     bool Additional) : IStreamCommand<ReplyGenerationLiveEvent>;

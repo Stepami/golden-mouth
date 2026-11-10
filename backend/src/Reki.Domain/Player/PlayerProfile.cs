@@ -4,7 +4,7 @@ public sealed record PlayerProfile
 {
     public required PlayerId Id { get; init; }
 
-    public required TelegramUserId TelegramUserId { get; init; }
+    public required IReadOnlyList<ExternalUserId> ExternalUserIds { get; init; }
 
     public required string BirthGroup { get; init; }
 
@@ -33,6 +33,9 @@ public sealed record PlayerProfile
     public string? AgeBand { get; init; }
 
     public required PlayerSettings Settings { get; init; }
+
+    public PlayerProfile AddExternalUserIds(IEnumerable<ExternalUserId> ids) =>
+        this with { ExternalUserIds = ExternalUserIds.Concat(ids).Distinct().ToArray() };
 
     public PlayerProfile ClaimPlusInterestBonus(int bonus)
     {
@@ -65,6 +68,15 @@ public sealed record PlayerProfile
             Version = Version + 1,
         };
     }
+
+    public PlayerProfile AwardReferral() => this with
+    {
+        Wallet = Wallet with { Crystals = Wallet.Crystals + 3 },
+        HitOwnWorldMilestone = true,
+        Version = Version + 1,
+    };
+
+    public PlayerProfile WithWallet(PlayerWallet wallet) => this with { Wallet = wallet, Version = Version + 1 };
 
     public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, int cost, DateTimeOffset now) =>
         SpendEnergy(cost, now) with { Skills = skills };

@@ -48,7 +48,7 @@ function EventCard({ e, border }: { e: GameEvent; border: string }) {
   )
 }
 const Collab = () => { const e = useApi(api.eventToday, events.collab); return <EventCard e={e} border="#6BFFB866" /> }
-const Hate = () => <EventCard e={events.hate} border="var(--line)" />
+const Hate = () => <EventCard e={events.hate} border="#FF6B8B66" />
 
 const EveningPush = () => <TgBot time="18:40">
   <div className="tgb">🌩 <b>Про тебя пишут.</b> Фансайт BLESK считает, что ты «пиаришься на Мире». Уже 200 комментариев</div><button className="tgbtn">Ответить фансайту</button>
@@ -75,7 +75,7 @@ function HateResult() {
           <Card style={{ flex: 1 }}><div style={{ fontSize: 24, fontWeight: 800 }} className="up">+12</div><div className="small muted">опыта смелости</div></Card>
         </div>
         <Card style={{ textAlign: 'left', border: '1px solid #FFB86B66', marginBottom: 12 }}><span className="badge">НОВАЯ КАРТОЧКА</span><div style={{ marginTop: 6 }}><b>Хейт пережит</b><div className="small muted">4/12 в коллекции</div></div></Card>
-        <Gift>Покажи друзьям, как держать удар: друг зайдёт = +5 энергии вам обоим</Gift>
+        <Gift>Покажи друзьям, как держать удар: за первый пост друга ты получишь 3 кристалла</Gift>
       </div>
       <BottomCTA second="Дальше" onSecond={() => nav.replace('03-5_stage')} main="Поделиться" onMain={() => nav.push('02-7_share')} />
     </div>
@@ -127,7 +127,7 @@ function StatsCard() {
     <div className="screen no-tab" style={{ background: 'linear-gradient(160deg,#2A1236,#0E0E13 55%,#12203A)', padding: '50px 26px', textAlign: 'center' }}>
       <div className="brand" style={{ fontSize: 22 }}>Реки</div><div className="small" style={{ color: 'var(--soft)', letterSpacing: '.08em', marginTop: 4 }}>МОИ СТАТЫ · {worldOf(p.world).emoji} {worldOf(p.world).title.toUpperCase()}</div>
       <Avatar seed={p.handle} size={96} style={{ margin: '22px auto 8px' }} /><div style={{ fontSize: 22, fontWeight: 800 }}>{p.name}</div>
-      <div style={{ fontSize: 40, fontWeight: 900, background: 'linear-gradient(90deg,var(--accent),#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent', marginTop: 8 }}>{fmt(p.subs)}</div><div className="muted">подписчиков за 4 дня</div>
+      <div style={{ fontSize: 40, fontWeight: 900, background: 'linear-gradient(90deg,#FF6B8B,#FFB86B)', WebkitBackgroundClip: 'text', color: 'transparent', marginTop: 8 }}>{fmt(p.subs)}</div><div className="muted">подписчиков за 4 дня</div>
       <Card style={{ marginTop: 18, textAlign: 'left' }}>
         <SkillBar name="смелость" progress={.72} /><SkillBar name="юмор" progress={.64} /><SkillBar name="в тему" progress={.58} />
         <div className="small muted" style={{ marginTop: 6 }}>типаж: {p.type}</div>
