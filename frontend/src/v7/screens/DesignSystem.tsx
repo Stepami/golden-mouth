@@ -187,6 +187,7 @@ export function DesignSystem() {
                 "heart",
                 "comment",
                 "quote",
+                "trash",
               ] as IconName[]
             ).map((n) => (
               <div key={n}>
@@ -314,6 +315,7 @@ export function DesignSystem() {
             <ResumeWorld
               world={worlds[0]}
               subtitle="Гарри Поттер"
+              onDelete={()=>setDialog(true)}
               onClick={() => setDialog(true)}
             />
             <SettingsRow

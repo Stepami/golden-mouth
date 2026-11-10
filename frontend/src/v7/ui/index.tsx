@@ -35,7 +35,7 @@ const iconFiles = {
   crystal: "s1-imgVector4.svg",
   member: "catalog-imgIconMemberFilled.svg",
 };
-export type IconName = keyof typeof iconFiles | "back" | "close" | "check" | "flame" | "chevron" | "retry" | "preferences";
+export type IconName = keyof typeof iconFiles | "back" | "close" | "check" | "flame" | "chevron" | "retry" | "preferences" | "trash";
 export function Icon({ name }: { name: IconName }) {
   return (
     <span className={`icon icon--${name}`} aria-hidden="true">
@@ -625,13 +625,15 @@ export function ResumeWorld({
   subtitle,
   busy = false,
   onClick,
+  onDelete,
 }: {
   world: World;
   subtitle: string;
   busy?: boolean;
   onClick: () => void;
+  onDelete?: () => void;
 }) {
-  return (
+  const card = (
     <button
       className="resume-world"
       disabled={busy}
@@ -644,9 +646,10 @@ export function ResumeWorld({
         <strong>{world.title}</strong>
         <span className="caption muted block">{subtitle}</span>
       </span>
-      <Icon name="arrow" />
+      {!onDelete&&<Icon name="arrow" />}
     </button>
   );
+  return onDelete?<div className="owned-world">{card}<button className="owned-world-delete" disabled={busy} aria-label={`Удалить мир ${world.title}. Персонаж: ${subtitle}`} title="Удалить мир" onClick={onDelete}><Icon name="trash"/></button></div>:card;
 }
 export function SettingsRow({
   label,
