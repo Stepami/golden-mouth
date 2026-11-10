@@ -17,7 +17,7 @@ public interface IPlayerRepository
         PlayerProfile updated,
         CancellationToken cancellationToken);
 
-    ValueTask ClaimPlusInterestAsync(
+    ValueTask<bool> TryClaimPlusInterestAsync(
         PlayerProfile player,
         PlayerProfile updated,
         CancellationToken cancellationToken);
@@ -28,11 +28,15 @@ public interface IPlayerRepository
 
     ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
 
+    ValueTask<PlayerWallet?> TryExchangeEnergyAsync(PlayerId playerId, DateTimeOffset now, CancellationToken cancellationToken);
+
+    IAsyncEnumerable<PlayerProfile> GetPlayersForEnergyRecoveryAsync(int cap, DateTimeOffset dueBefore, CancellationToken cancellationToken);
+
+    ValueTask<bool> TrySaveEnergyRecoveryAsync(PlayerProfile player, PlayerWallet wallet, CancellationToken cancellationToken);
+
     ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
 
     ValueTask<long> ResetGameDayAsync(
         DateTimeOffset periodStart,
-        int freeEnergy,
-        int plusEnergy,
         CancellationToken cancellationToken);
 }

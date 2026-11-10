@@ -37,7 +37,7 @@ internal sealed class OnboardPlayerCommandHandler(
             BirthGroup = request.BirthGroup,
             Address = request.Address,
             AgeBand = request.AgeBand,
-            Energy = currentBalance.FreePostsPerDay,
+            Wallet = PlayerWallet.Create(timeProvider.GetUtcNow()),
             PostsPeriodStartedAtUtc = gameDayPeriod.PeriodStart,
             StreakDays = 1,
             Skills = new Dictionary<SkillId, SkillProgress>

@@ -263,7 +263,7 @@ function Me() {
       <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b>{p.handle && <div className="small muted" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="small muted profile-world-name">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
       <div className="pad">
         <div className="profile-stats">
-          {[[`⚡ ${p.postsLeft}`, 'энергии'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
+          {[[`⚡ ${p.postsLeft}`, 'энергии'], ...(p.energyWallet ? [[`💎 ${p.energyWallet.crystals}`, 'кристаллы']] : []), [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
         </div>
         <div className="profile-task-row"><div><b>💡 О чём написать</b><p className="small muted">{p.wants[0]?.text ?? "Поделись событием из своего мира"}</p></div><button className="text-link small" onClick={() => nav.push('02-1_compose')}>Написать →</button></div><p className="small muted energy-help">Пост и ответ расходуют энергию. Новый запас — в 09:00 МСК.</p>
         <div className="card own-world-unlock" style={{ marginTop: 0, marginBottom: 12 }}><b>{p.hitOwnWorldMilestone ? '✨ Свой мир открыт' : '✨ Создай свой мир'}</b>{p.hitOwnWorldMilestone ? <>

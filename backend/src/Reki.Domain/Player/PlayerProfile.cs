@@ -12,9 +12,7 @@ public sealed record PlayerProfile
 
     public bool HitOwnWorldMilestone { get; init; }
 
-    public int EnergyUsed { get; init; }
-
-    public int Energy { get; init; }
+    public required PlayerWallet Wallet { get; init; }
 
     public DateTimeOffset PostsPeriodStartedAtUtc { get; init; }
 
@@ -45,7 +43,7 @@ public sealed record PlayerProfile
 
         return this with
         {
-            Energy = Energy + bonus,
+            Wallet = Wallet.Replenish(bonus),
             PlusInterestClaimed = true,
             Version = Version + 1,
         };
@@ -68,17 +66,11 @@ public sealed record PlayerProfile
         };
     }
 
-    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, int cost) =>
-        SpendEnergy(cost) with { Skills = skills };
+    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, int cost, DateTimeOffset now) =>
+        SpendEnergy(cost, now) with { Skills = skills };
 
-    public PlayerProfile SpendEnergy(int cost)
+    public PlayerProfile SpendEnergy(int cost, DateTimeOffset now)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(cost);
-        if (Energy < cost)
-        {
-            throw new InvalidOperationException("Insufficient energy.");
-        }
-
-        return this with { Energy = Energy - cost, EnergyUsed = EnergyUsed + cost, Version = Version + 1 };
+        return this with { Wallet = Wallet.Spend(cost, now), Version = Version + 1 };
     }
 }

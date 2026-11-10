@@ -427,6 +427,43 @@ export class PlayerClient {
     /**
      * @return OK
      */
+    exchangeEnergy(signal?: AbortSignal): Promise<SwaggerResponse<EnergyExchangeResponse>> {
+        let url_ = this.baseUrl + "/me/energy/exchange";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "POST",
+            signal,
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processExchangeEnergy(_response);
+        });
+    }
+
+    protected processExchangeEnergy(response: Response): Promise<SwaggerResponse<EnergyExchangeResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as EnergyExchangeResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<EnergyExchangeResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return OK
+     */
     deleteCurrentPlayer(signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/me";
         url_ = url_.replace(/[?&]$/, "");
@@ -1786,6 +1823,33 @@ export interface DmResponse {
     [key: string]: any;
 }
 
+export interface EnergyExchangeQuoteResponse {
+    crystalCost: number;
+    targetEnergy: number;
+    available: boolean;
+    unavailableReason: string | null;
+
+    [key: string]: any;
+}
+
+export interface EnergyExchangeResponse {
+    exchanged: boolean;
+    wallet: EnergyWalletResponse | null;
+
+    [key: string]: any;
+}
+
+export interface EnergyWalletResponse {
+    amount: number;
+    cap: number;
+    nextEnergyAtUtc: string | null;
+    regenSeconds: number;
+    crystals: number;
+    exchangeQuote: EnergyExchangeQuoteResponse;
+
+    [key: string]: any;
+}
+
 export type FeedItemKind = "news" | "post";
 
 export interface FeedItemResponse {
@@ -1892,6 +1956,7 @@ export interface PlayerResponse {
     experiments: { [key: string]: string; };
     hitOwnWorldMilestone?: boolean;
     ageBand?: string;
+    energyWallet?: EnergyWalletResponse | null;
 
     [key: string]: any;
 }
@@ -2048,6 +2113,7 @@ export interface StarResponse {
     trait: string;
     about: string;
     relation: number;
+    channelSubscribers?: number | null;
 
     [key: string]: any;
 }
@@ -2179,6 +2245,7 @@ export interface WorldStarResponse {
     voice: string;
     avatarSeed: string;
     relation: number;
+    channelSubscribers?: number | null;
 
     [key: string]: any;
 }
