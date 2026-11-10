@@ -18,18 +18,15 @@ export function PublicationWaiting({pending,unknown,text,status,onContinue,onSto
 export function PublicationResult({receipt,onRead,preview=false,animateReward:_animateReward=false,animateFollowers:_animateFollowers=false}:{receipt:PublicationReceipt;onRead:()=>void;preview?:boolean;animateReward?:boolean;animateFollowers?:boolean}){
  const {result}=receipt;
  const isComment=receipt.actionKind==='comment';
- const outcome=receipt.questOutcome??(receipt.questReward?{status:'success',title:receipt.questReward.title,reason:'Действие сохранено. Квест закрыт в локальной пробе.',source:'local',xp:receipt.questReward.amount}:{status:'unverified',title:'Твоя публикация',reason:'Пост сохранён. Серверный зачёт квеста пока не подключён.',source:'server'});
+ const outcome=receipt.questOutcome??({status:'unverified',title:'Твоя публикация',reason:'Пост сохранён. Серверный зачёт квеста пока не подключён.',source:'server'});
  const title={success:'Квест выполнен',partial:'Есть прогресс',failed:'Пока не получилось',unverified:isComment?'Комментарий сохранён':'Пост опубликован'}[outcome.status];
- const xp=preview?(receipt.questReward?.amount??outcome.xp):undefined;
  return <details className="receipt-history" aria-label="Результат публикации">
   <summary><Icon name="check"/><span>{title}</span><b>{receipt.audienceKnown===false?'':`${result.delta>=0?'+':''}${result.delta} подписчиков`}</b><Icon name="chevron"/></summary>
   <div className="stack">{outcome.status!=='unverified'&&<><strong>{outcome.title}</strong><p>{outcome.reason}</p></>}
    {receipt.audienceKnown===false&&<p>Рост аудитории уточняется</p>}
    <SkillChanges receipt={receipt}/>
-   {xp!==undefined&&<p>{xp} XP за квест · локальная проба</p>}
    {result.bestComment&&<blockquote>{result.bestComment.text}</blockquote>}
    <p className="caption muted">{result.views} просмотров{isComment?' у исходной записи':''}</p>
-   {outcome.source==='local'&&<p className="caption muted">Это клиентская модель зачёта, не серверное решение NPC.</p>}
    <Button variant="ghost" onClick={onRead}>Читать отклики</Button>
   </div>
  </details>;

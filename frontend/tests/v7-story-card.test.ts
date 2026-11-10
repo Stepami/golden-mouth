@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { catalogEntries, filterCatalog, withHogwartsCard } from '../src/v7/catalog.ts';
-import { storyForTemplate } from '../src/v7/story/pilot.ts';
+import { scenarioForTemplate } from '../src/v7/story/roles.ts';
 import type { World } from '../src/v7/domain/types.ts';
-const story = storyForTemplate('aec9494b-4118-4525-8458-e85d759c8dd9')!;
+const scenario = scenarioForTemplate('aec9494b-4118-4525-8458-e85d759c8dd9')!;
+const story = {templateId:scenario.templateId,scenario:scenario.title,premise:scenario.opening,subtitle:''};
 const school = { id: story.templateId, title: 'Школа чародеев', description: 'Original', genre: 'Магия' } as World;
 test('separate Hogwarts card keeps real template ID and original school content', () => {
   const entries = withHogwartsCard(catalogEntries([school], []), story);

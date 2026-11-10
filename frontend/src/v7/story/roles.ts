@@ -1,4 +1,4 @@
-import scenarios from './roleScenarios.json';
+import scenarios from './roleScenarios.json' with {type:'json'};
 import type {WorldDefinition, WorldDocument} from '../../api/types';
 import type {Persona} from '../persona';
 
