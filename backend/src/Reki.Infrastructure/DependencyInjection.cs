@@ -18,6 +18,7 @@ using Reki.Infrastructure.RekiContext;
 using Reki.Infrastructure.Rendering;
 using Reki.Infrastructure.Telegram;
 using Reki.Infrastructure.Vk;
+using Reki.Infrastructure.Yandex;
 
 namespace Reki.Infrastructure;
 
@@ -41,6 +42,7 @@ public static class DependencyInjection
             .AddMongo()
             .AddAuth()
             .AddVk()
+            .AddYandex()
             .AddTelegram(configuration);
 
         services.AddObservability();

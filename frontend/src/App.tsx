@@ -7,7 +7,7 @@ import { setScreen } from './app/log'
 import { TelegramLaunch } from './app/TelegramLaunch'
 import { syncBackButton } from './telegram'
 import { api } from './api/client'
-import { canResumeAuth, clearPendingLogin, hasAccess, hasInitData, hasPendingLogin, loginMiniApp, loginVk, loginWidget, needsRegistration, pendingAuthProvider, startAuth, subscribeAuth } from './api/auth'
+import { canResumeAuth, clearPendingLogin, hasAccess, hasInitData, hasPendingLogin, loginMiniApp, loginVk, loginWidget, loginYandex, needsRegistration, pendingAuthProvider, startAuth, subscribeAuth } from './api/auth'
 import { AuthProviders } from './app/AuthProviders'
 import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
 import { runtimeConfig } from './app/runtimeConfig'
@@ -105,11 +105,11 @@ export function App() {
     }).finally(() => setBusy(false))
   }
   if (!explicitStart && !ready) return <div className="app"><div className="screen"><div className="pad" role="status">Входим в игру…</div></div></div>
-  if (!explicitStart && !authenticated && !registration) return <TelegramLaunch error={authError} pendingProvider={pendingLogin ? pendingAuthProvider() === 'vk' ? 'VK' : 'Telegram' : undefined}>
+  if (!explicitStart && !authenticated && !registration) return <TelegramLaunch error={authError} pendingProvider={pendingLogin ? pendingAuthProvider() === 'yandex' ? 'Яндекс ID' : pendingAuthProvider() === 'vk' ? 'VK' : 'Telegram' : undefined}>
     {resumable ? <div className="auth-providers">
       <button className="btn" disabled={busy} onClick={() => finishLogin(startAuth())}>{busy ? 'Входим…' : 'Продолжить вход'}</button>
       {pendingLogin && <button className="btn secondary" disabled={busy} onClick={() => { clearPendingLogin(); setAuthError('') }}>Войти заново</button>}
-    </div> : <AuthProviders busy={busy} onMiniApp={hasInitData() ? () => finishLogin(loginMiniApp()) : undefined} onTelegram={token => finishLogin(loginWidget(token))} onVk={(token, expiry) => finishLogin(loginVk(token, expiry))} onError={() => { setBusy(false); setAuthError('Вход не завершён. Попробуй ещё раз.') }} />}
+    </div> : <AuthProviders busy={busy} onMiniApp={hasInitData() ? () => finishLogin(loginMiniApp()) : undefined} onTelegram={token => finishLogin(loginWidget(token))} onVk={(token, expiry) => finishLogin(loginVk(token, expiry))} onYandex={(token, expiry) => finishLogin(loginYandex(token, expiry))} onError={() => { setBusy(false); setAuthError('Вход не завершён. Попробуй ещё раз.') }} />}
   </TelegramLaunch>
   return <StoreProvider><Shell /></StoreProvider>
 }

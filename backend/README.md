@@ -29,6 +29,14 @@ Development uses MongoDB for game data. Before starting the API outside Compose,
 
 OpenAPI JSON and Swagger UI are available only in Development. Production does not serve these routes. Build-time OpenAPI generation for NSwag clients remains available. The exact local address is printed by ASP.NET Core when the service starts.
 
+Yandex ID uses the public `Yandex:ClientId` (default `799a21610c6b495c8d8c01fd9b8c4012`), configurable with
+`Yandex__ClientId` (Compose: `YANDEX_CLIENT_ID`). It must match the frontend app ID.
+`Yandex:BaseUrl` defaults to `https://login.yandex.ru/`, and `Yandex:TimeoutSeconds` defaults to 10.
+`POST /auth/external/yandex` accepts the Yandex OAuth token as Bearer and form fields `client_id` and
+`grant_type=urn:reki:grant:yandex`. The server checks the token and application ID with Yandex ID's `info` API.
+Unknown users receive `registration_required` with a `yandex:` external ID for the existing onboarding flow;
+registered users receive the standard game tokens and use the same refresh and logout endpoints.
+
 VK ID uses `Vk:ApplicationId` (the public VK app ID, matching the frontend runtime configuration), `Vk:BaseUrl`
 (default `https://id.vk.ru/`) and `Vk:TimeoutSeconds` (default 10). Set the required public app ID with `Vk__ApplicationId`
 outside Compose; Compose supplies it from `VK_APPLICATION_ID`. `POST /auth/external/vk` takes a VK access token as Bearer and form fields

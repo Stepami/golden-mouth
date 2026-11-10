@@ -50,6 +50,9 @@ internal static class DependencyInjection
                 AuthConstants.Policies.RekiVkGrant,
                 policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.Vk)))
             .AddPolicy(
+                AuthConstants.Policies.RekiYandexGrant,
+                policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.Yandex)))
+            .AddPolicy(
                 AuthConstants.Policies.RekiRefreshGrant,
                 policy => policy.RequireAssertion(context => context.HasGrant(AuthConstants.Grants.Refresh)));
 
@@ -60,10 +63,11 @@ internal static class DependencyInjection
             .AddCore(options => options.UseMongoDb())
             .AddServer(options =>
             {
-                options.SetTokenEndpointUris("auth/external/tg/miniapp", "auth/external/tg/widget", "auth/external/vk", "auth/refresh")
+                options.SetTokenEndpointUris("auth/external/tg/miniapp", "auth/external/tg/widget", "auth/external/vk", "auth/external/yandex", "auth/refresh")
                     .AllowCustomFlow(AuthConstants.Grants.MiniApp)
                     .AllowCustomFlow(AuthConstants.Grants.TelegramLogin)
                     .AllowCustomFlow(AuthConstants.Grants.Vk)
+                    .AllowCustomFlow(AuthConstants.Grants.Yandex)
                     .AllowRefreshTokenFlow()
                     .UseReferenceRefreshTokens();
                 options.UseAspNetCore();

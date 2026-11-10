@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { loadTelegramClientId } from '../api/auth'
 import { openTelegramLogin, preloadTelegramLogin } from '../api/telegramLogin'
 import { renderVkLogin } from '../api/vkLogin'
+import { renderYandexLogin } from '../api/yandexLogin'
 import { TELEGRAM_APP_URL } from './telegramLinks'
 import { runtimeConfig } from './runtimeConfig'
 
@@ -28,8 +29,30 @@ function VkLogin({ onToken, onError }: { onToken: (token: string, expiresIn: num
   return <div className="vk-login" aria-label="Войти с VK">{(loading || failed) && <button className="provider-button provider-button--vk" disabled={loading} onClick={() => { setLoading(true); setFailed(false); setAttempt(value => value + 1) }}><ProviderMark provider="vk" />Войти с VK</button>}<div ref={container} /></div>
 }
 
-export function AuthProviders({ onTelegram, onVk, onMiniApp, onError, busy = false }: {
-  onTelegram: (token: string) => void; onVk: (token: string, expiresIn: number) => void; onError: () => void
+let yandexContainerId = 0
+function YandexLogin({ onToken, onError }: { onToken: (token: string, expiresIn: number) => void; onError: () => void }) {
+  const container = useRef<HTMLDivElement>(null)
+  const callbacks = useRef({ onToken, onError })
+  callbacks.current = { onToken, onError }
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    let active = true
+    let close: (() => void) | undefined
+    const target = document.createElement('div')
+    target.id = `yandex-login-${++yandexContainerId}`
+    container.current!.append(target)
+    void renderYandexLogin(target, (token, expiry) => { if (active) callbacks.current.onToken(token, expiry) }, () => { if (active) callbacks.current.onError() }).then(cleanup => {
+      if (active) { close = cleanup; setLoading(false) } else cleanup()
+    }).catch(() => { if (active) { setLoading(false); setFailed(true); callbacks.current.onError() } })
+    return () => { active = false; target.remove(); close?.() }
+  }, [attempt])
+  return <div className="yandex-login">{(loading || failed) && <button className="provider-button provider-button--secondary" disabled={loading} onClick={() => { setLoading(true); setFailed(false); setAttempt(value => value + 1) }}>Войти с Яндекс ID</button>}<div ref={container} /></div>
+}
+
+export function AuthProviders({ onTelegram, onVk, onYandex, onMiniApp, onError, busy = false }: {
+  onTelegram: (token: string) => void; onVk: (token: string, expiresIn: number) => void; onYandex: (token: string, expiresIn: number) => void; onError: () => void
   busy?: boolean
   onMiniApp?: () => void
 }) {
@@ -53,8 +76,9 @@ export function AuthProviders({ onTelegram, onVk, onMiniApp, onError, busy = fal
     <button className="text-button" disabled={busy} onClick={() => setStep('providers')}>Назад</button>
   </div>
   return <div className="auth-providers">
-    <button className="provider-button provider-button--telegram" disabled={busy} onClick={() => setStep('telegram')}><ProviderMark provider="telegram" />Войти с Telegram</button>
+    {runtimeConfig.yandexClientId && runtimeConfig.yandexRedirectUrl && <div inert={busy}><YandexLogin onToken={onYandex} onError={onError} /></div>}
     {runtimeConfig.vkApplicationId !== 0 && runtimeConfig.vkRedirectUrl && <div inert={busy}><VkLogin onToken={onVk} onError={onError} /></div>}
+    <button className="provider-button provider-button--telegram" disabled={busy} onClick={() => setStep('telegram')}><ProviderMark provider="telegram" />Войти с Telegram</button>
     {busy && <p role="status">Подтверждаем вход…</p>}
   </div>
 }

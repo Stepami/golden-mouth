@@ -2,7 +2,7 @@
 
 Telegram Mini App игры «Реки». Правила для агента и людей: [AGENTS.md](AGENTS.md). Навыки агента: [apm.yml](apm.yml).
 
-В `public/runtime-config/config.js` задаются same-origin `apiBaseUrl`, собственный `appClientId`, публичные `vkApplicationId` / `vkRedirectUrl` и feature flags. VK application ID должен совпадать с серверной настройкой `Vk:ApplicationId`; redirect URL должен быть зарегистрирован в VK ID. По умолчанию redirect использует текущий origin без завершающего слеша. Приложение использует настоящий API; ошибки не подменяются локальным успехом. Local Compose запускает Vite dev server и проксирует `/api` в backend.
+В `public/runtime-config/config.js` задаются same-origin `apiBaseUrl`, собственный `appClientId`, публичные `vkApplicationId` / `vkRedirectUrl` `yandexClientId` / `yandexRedirectUrl` и feature flags. Яндекс redirect URL должен использовать тот же origin, что и страница входа, и совпадать с зарегистрированным в OAuth-приложении; callback на этом URL передаёт токен через SDK. VK application ID должен совпадать с серверной настройкой `Vk:ApplicationId`; redirect URL должен быть зарегистрирован в VK ID. По умолчанию redirect использует текущий origin без завершающего слеша. Приложение использует настоящий API; ошибки не подменяются локальным успехом. Local Compose запускает Vite dev server и проксирует `/api` в backend.
 
 В local Compose Vite-плагин читает общий `TG_PAT`, даёт `@tma.js/sdk` вымышленного игрока и свежий HMAC-подписанный `initData`. Compose передаёт тот же `TG_PAT` в настройку `TgMiniAppAuth` backend; отключения auth для development нет. Production build и nginx не включают эмулятор.
 
@@ -23,9 +23,9 @@ npm run dev
 
 После подтверждения в Telegram браузер временно сохраняет `id_token` в `sessionStorage` текущей вкладки до завершения обмена с backend. Если смена сети или отключение VPN оборвали обмен, «Продолжить вход» и перезагрузка страницы повторяют обмен без нового popup. Подтверждение удаляется после успешного входа, истечения `exp`, выбора «Войти заново» или выхода; до получения callback popup сохранять ещё нечего. Повтор обмена не требует загрузки Telegram Login JS.
 
-На первом экране доступны Telegram и нативная кнопка VK ID OneTap. Для Telegram сначала выбирается браузер или MiniApp. VK Web SDK закреплён по точному URL на `@vkid/sdk@2.6.1`; callback `LOGIN_SUCCESS` обменивает `code` и `device_id` через SDK, затем передаёт внешний `access_token` в `POST /auth/external/vk`. Параметры SDK: `Callback`, `LOWCODE`, пустой `scope`.
+На первом экране доступны кнопки Яндекс ID, VK ID OneTap и Telegram. Яндекс SDK передаёт OAuth-токен в `POST /auth/external/yandex`. Для Telegram сначала выбирается браузер или MiniApp. VK Web SDK закреплён по точному URL на `@vkid/sdk@2.6.1`; callback `LOGIN_SUCCESS` обменивает `code` и `device_id` через SDK, затем передаёт внешний `access_token` в `POST /auth/external/vk`. Параметры SDK: `Callback`, `LOWCODE`, пустой `scope`.
 
-Для нового игрока сохраняется поток `registration_required` → Basic-онбординг → повтор внешнего входа. VK-подтверждение и срок `expires_in` остаются только в памяти вкладки на время онбординга и сетевого повтора; VK access token не разбирается как JWT и не сохраняется как игровая сессия. После перезагрузки или истечения подтверждения нужно снова войти через VK. После входа используется существующая собственная refresh-сессия.
+Для нового игрока сохраняется поток `registration_required` → Basic-онбординг → повтор внешнего входа. Подтверждения VK и Яндекс ID и их срок `expires_in` остаются только в памяти вкладки на время онбординга и сетевого повтора; их access token не разбирается как JWT и не сохраняется как игровая сессия. После перезагрузки или истечения подтверждения нужно снова войти через выбранный способ. После входа используется существующая собственная refresh-сессия.
 
 ## Демо-функции (#92)
 
