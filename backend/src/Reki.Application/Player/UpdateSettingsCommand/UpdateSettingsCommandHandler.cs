@@ -23,7 +23,7 @@ internal sealed class UpdateSettingsCommandHandler(
                 Quiet: request.Quiet ?? player.Settings.Quiet,
                 Plus: request.Plus ?? player.Settings.Plus),
             Address = request.Address ?? player.Address,
-            Energy = player.Energy + (request.Plus is true && !player.Settings.Plus
+            Wallet = player.Wallet.Replenish(request.Plus is true && !player.Settings.Plus
                 ? Math.Max(0, currentBalance.PlusPostsPerDay - currentBalance.FreePostsPerDay)
                 : 0),
             Version = player.Version + 1,

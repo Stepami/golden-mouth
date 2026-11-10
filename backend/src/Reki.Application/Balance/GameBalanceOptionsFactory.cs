@@ -134,6 +134,7 @@ internal sealed class GameBalanceOptionsFactory(
             difficulties,
             postCost,
             configuration.GetValue<int>("access:create_world_from_scratch:subs"),
-            configuration.GetValue<double>("feed:open_probability"));
+            configuration.GetValue<double>("feed:open_probability"),
+            energy.GetValue<int>("cap"));
     }
 }

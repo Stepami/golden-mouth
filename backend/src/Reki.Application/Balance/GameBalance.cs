@@ -21,4 +21,5 @@ public sealed record GameBalance(
     IReadOnlyDictionary<WorldDifficulty, DifficultyBalance> Difficulties,
     int PostEnergyCost = 1,
     int OwnWorldSubscribers = 500,
-    double StarFeedOpenProbability = 0);
+    double StarFeedOpenProbability = 0,
+    int EnergyCap = 10);

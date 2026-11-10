@@ -8,5 +8,6 @@ public sealed record StarResponse(
     string Role,
     string Trait,
     string About,
-    int Relation);
+    int Relation,
+    long? ChannelSubscribers = null);
 

@@ -28,7 +28,7 @@ function Limit() {
         <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Мира ответит утром</div>
         <div className="muted" style={{ marginBottom: 14 }}>Она сказала «надо подумать 👀». Энергия на сегодня закончилась. В 9:00 запас обновится</div>
         <Card style={{ textAlign: 'left', marginBottom: 12 }}><div className="small" style={{ color: 'var(--soft)', marginBottom: 4 }}>А пока бесплатно</div>читать треды · комментировать друзей · листать ленту</Card>
-        <Gift style={{ textAlign: 'left', fontSize: 15, padding: '12px 14px' }}>Позови друга: +5 энергии вам обоим прямо сегодня<div style={{ fontWeight: 600, fontSize: 12, marginTop: 2 }}>как только он сделает первый пост · до 3 друзей в день</div></Gift>
+        <Gift style={{ textAlign: 'left', fontSize: 15, padding: '12px 14px' }}>Позови друга: тебе 3 кристалла за его первый пост<div style={{ fontWeight: 600, fontSize: 12, marginTop: 2 }}>как только он сделает первый пост · до 3 друзей в день</div></Gift>
         <button onClick={() => nav.push('04-2_fake_door')} style={{ marginTop: 14, fontSize: 14, color: 'var(--muted2)', background: 'none', border: 'none' }}>Реки+: +10 энергии и все миры ›</button>
       </div>
       <BottomCTA main="Позвать друга" onMain={() => nav.push('04-3_invite')} />
@@ -68,8 +68,8 @@ function FakeDoor() {
       <div className="sheet-bg"><div className="sheet" style={{ textAlign: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 4 }}>✨ Реки+</div><div className="muted small" style={{ marginBottom: 14 }}>Для тех, кому 10 энергии в день мало</div>
         <div style={{ display: 'flex', gap: 8, textAlign: 'left', marginBottom: 12 }}>
-          {plan('Бесплатно', '0 ₽', [['10 энергии в день', true], ['+5 за друга', true], ['свой стиль канала', false], ['все миры сразу', false]])}
-          {plan('Реки+', '349 ₽/мес', [['20 энергии в день', true], ['+5 за друга', true], ['свой стиль канала', true], ['все миры сразу', true]], true)}
+          {plan('Бесплатно', '0 ₽', [['10 энергии в день', true], ['3 кристалла за друга', true], ['свой стиль канала', false], ['все миры сразу', false]])}
+          {plan('Реки+', '349 ₽/мес', [['20 энергии в день', true], ['3 кристалла за друга', true], ['свой стиль канала', true], ['все миры сразу', true]], true)}
         </div>
         <div className="muted small" style={{ marginBottom: 12 }}>Реки+ ещё в работе, деньги не списываются. Можно оставить интерес к запуску. Рассылка в боте появится позже</div>
         <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#1F2A26,#1A1A24)', border: '1px solid #6BFFB855' }}><b className="up">{sent ? message : 'Можно получить +5 энергии один раз'}</b></Card>
@@ -108,7 +108,7 @@ function Invite() {
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Позвать друзей" />
       <div className="pad">
-        <Card style={{ marginBottom: 20 }}><b>Открой создание своего мира</b><p style={{ marginTop: 12, lineHeight: 1.5 }}>Отправь ссылку другу. Когда он опубликует первый пост, создание мира откроется, а вы оба получите +5 энергии.</p></Card>
+        <Card style={{ marginBottom: 20 }}><b>Открой создание своего мира</b><p style={{ marginTop: 12, lineHeight: 1.5 }}>Отправь ссылку другу. Когда он опубликует первый пост, создание мира откроется, а ты получишь 3 кристалла, а друг — до 5 энергии.</p></Card>
         <div className="label">Друг увидит твою карточку</div>
         <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420 60%,#12203A)', borderRadius: 16, padding: 14, textAlign: 'center', marginBottom: 12 }}>
           <Avatar seed={p.handle} size={44} style={{ margin: '0 auto 6px' }} /><b>{p.name}</b>
@@ -134,7 +134,7 @@ function FriendJoined() {
         <div className="row" style={{ justifyContent: 'center', gap: 0, marginBottom: 12 }}><Avatar seed={p.handle} size={64} style={{ border: '3px solid #1A1A24' }} /><Avatar seed="katya" size={64} style={{ marginLeft: -14, border: '3px solid #1A1A24' }} /></div>
         <div style={{ fontSize: 22, fontWeight: 900 }}>Катя пришла по твоей карточке!</div>
         <div className="muted" style={{ margin: '6px 0 16px' }}>Она завела канал в Академии и сделала первый пост</div>
-        <Gift style={{ fontSize: 20, padding: 14 }}>+5 энергии тебе и ей</Gift>
+        <Gift style={{ fontSize: 20, padding: 14 }}>Тебе 3 кристалла, другу до 5 энергии</Gift>
         <div className="small muted" style={{ marginTop: 12 }}>Вернётся завтра: откроется карточка «Дуэт»</div>
         <Button style={{ marginTop: 16 }} onClick={() => nav.replace('03-4b_friend_channel')}>К каналу Кати</Button>
       </div></div>

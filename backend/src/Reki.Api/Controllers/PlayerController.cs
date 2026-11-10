@@ -7,6 +7,7 @@ using Reki.Api.Requests.Player;
 using Reki.Application.Invites;
 using Reki.Application.Player;
 using Reki.Application.Player.DeletePlayerCommand;
+using Reki.Application.Player.ExchangeEnergyCommand;
 using Reki.Application.Player.GetReferral;
 using Reki.Application.Player.MergePlayersCommand;
 using Reki.Application.Player.Responses;
@@ -28,6 +29,13 @@ public sealed class PlayerController(
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken) =>
         TypedResults.Ok((await rekiContext.Player).ToResponse());
+
+    [HttpPost("me/energy/exchange", Name = "ExchangeEnergy")]
+    public async Task<Ok<EnergyExchangeResponse>> ExchangeEnergyAsync(CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new ExchangeEnergy(), cancellationToken);
+        return TypedResults.Ok(result);
+    }
 
     [HttpGet("invitation", Name = "GetInvitation")]
     [ActionName("GetInvitation")]

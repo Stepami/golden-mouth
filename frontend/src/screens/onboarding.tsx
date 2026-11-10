@@ -109,6 +109,7 @@ export function ChannelHead() {
       <Avatar seed={p.handle} size={36} />
       <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div>
       <div className="energy-badge" aria-label={`Осталось ${p.postsLeft} энергии`}>⚡ {p.postsLeft}</div>
+      {p.energyWallet && <div className="energy-badge" aria-label={`Кристаллы: ${p.energyWallet.crystals}`}>💎 {p.energyWallet.crystals}</div>}
     </div>
   )
 }

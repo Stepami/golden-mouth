@@ -15,6 +15,7 @@ using Reki.Domain.Posts;
 namespace Reki.Application.Posts.AddReplyCommand;
 
 internal sealed class AddReplyCommandHandler(
+    TimeProvider timeProvider,
     IUnitOfWork unitOfWork,
     IPostRepository posts,
     IPlayerRepository players,
@@ -37,7 +38,7 @@ internal sealed class AddReplyCommandHandler(
         var isPlayer = request.AuthorId == player.Id.ToAuthorId();
         if (post.FindRequest(request.RequestId) is { } existing)
         {
-            return new ReplyResponse(existing.Id, existing.AuthorId, post.MapPost(world, player.Id), player.Energy, world.Player.Subscribers);
+            return new ReplyResponse(existing.Id, existing.AuthorId, post.MapPost(world, player.Id), player.Wallet.Energy, world.Player.Subscribers);
         }
 
         var comment = new GameComment(
@@ -53,7 +54,7 @@ internal sealed class AddReplyCommandHandler(
         {
             await safety.EnsureInputAllowedAsync(player, [comment.Text], cancellationToken);
             var thread = balance.CurrentValue.Thread;
-            if (player.Energy < thread.EnergyCost)
+            if (player.Wallet.Energy < thread.EnergyCost)
             {
                 throw new RequestConflictException("Insufficient energy.");
             }
@@ -68,7 +69,7 @@ internal sealed class AddReplyCommandHandler(
             };
             var bonus = post.Comments.Count(item => item.AuthorId == comment.AuthorId) < thread.BonusReplies
                 ? thread.SubscriberBonus : 0;
-            player = player.SpendEnergy(thread.EnergyCost);
+            player = player.SpendEnergy(thread.EnergyCost, timeProvider.GetUtcNow());
             world = world.AwardThreadBonus(bonus);
         }
 
@@ -93,6 +94,6 @@ internal sealed class AddReplyCommandHandler(
             await posts.SaveReplyAsync(post, cancellationToken);
         }
 
-        return new ReplyResponse(comment.Id, comment.AuthorId, post.MapPost(world, player.Id), player.Energy, world.Player.Subscribers);
+        return new ReplyResponse(comment.Id, comment.AuthorId, post.MapPost(world, player.Id), player.Wallet.Energy, world.Player.Subscribers);
     }
 }
