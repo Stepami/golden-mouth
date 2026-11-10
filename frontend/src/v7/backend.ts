@@ -5,12 +5,14 @@ import { worlds as catalogWorlds } from '../api/worldContent';
 import { presetGoalFor } from '../app/presetGoals';
 import {channelSubscribers} from './social/audience';
 import { personaFor } from './persona';
+import { roleScenarios } from './story/roles';
 
 export function worldView(doc: WorldDocument): World {
   // Saved worlds have their own IDs and may retain an older version of the lore.
   // Resolve artwork only; this must not change template identity or game rules.
   const matches = catalogWorlds.filter(world => world.title === doc.title);
-  const art = worldArt[doc.id] ?? (matches.length === 1 ? worldArt[matches[0].id] : undefined);
+  const scenario = roleScenarios.find(s => s.title === doc.title || doc.firstContext.startsWith(s.opening));
+  const art = worldArt[doc.id] ?? worldArt[scenario?.templateId ?? ''] ?? (matches.length === 1 ? worldArt[matches[0].id] : undefined);
   const cover = art?.cover ?? '/assets/world-placeholder.svg';
   const goal = presetGoalFor(doc);
   return { id: doc.id, title: doc.title, genre: art?.genre ?? 'Свои истории', cover: art?.smallCover ?? cover, hero: cover,

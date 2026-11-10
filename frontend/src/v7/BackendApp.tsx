@@ -1,3 +1,5 @@
+import {InviteFriend} from './screens/InviteFriend';
+import {PostIdeas,ideasForWorld} from './screens/PostIdeas';
 import {LinkProfile} from '../app/LinkProfile';
 import {useScrollEdges} from './ui/useScrollEdges';
 import {useEnergyWallet} from './energy/useEnergyWallet';
@@ -65,6 +67,7 @@ const walletClient={read:()=>api.energyWallet(),exchange:()=>api.exchangeEnergy(
 
 export default function BackendApp() {
   const [linkProfileOpen, setLinkProfileOpen] = useState(false);
+  const [inviteOpen,setInviteOpen]=useState(false);
   const [deleteOpen,setDeleteOpen]=useState(false);
   const [reportId,setReportId]=useState<string>();
   const [hash, setHash] = useState(location.hash);
@@ -159,6 +162,40 @@ export default function BackendApp() {
     setAccountVisible(5); setActivities(readLocal(`${key}:activity`, [])); setLikes(readLocal(`${key}:likes`, [])); setQualities(readLocal(`${key}:qualities`, []));
   }, [key, !!player]);
 
+  const recordComments = (postId:string, worldId:string, comments:ServerPost['comments']) => {
+    const confirmed=comments.filter(c=>!c.me&&!c.hidden&&(c.star||c.authorId?.startsWith('Star_')));
+    if(!confirmed.length)return;
+    setActivities(old=>{
+      const fresh=confirmed.filter(c=>!old.some(a=>a.id===`comment:${c.id}`)).map(c=>({id:`comment:${c.id}`,postId,worldId,title:`${c.author} отвечает`,actorName:c.author,text:c.text,read:false,kind:'reaction' as const}));
+      if(!fresh.length)return old;
+      const next=[...fresh.reverse(),...old].slice(0,100);localSave('activity',next);return next;
+    });
+  };
+  useEffect(()=>{
+    if(!player||player.streak.days<1)return;
+    const id=`streak:${player.world}:${player.streak.days}`;
+    setActivities(old=>{
+      if(old.some(a=>a.id===id))return old;
+      const days=player.streak.days;
+      const next=[{id,worldId:player.world,title:days===1?'Первый день серии':`Серия: ${days} дней`,text:days===1?'Начало серии отмечено. Продолжи завтра постом или комментарием.':'Твоя серия продолжается.',kind:'streak' as const,read:false},...old].slice(0,100);
+      localSave('activity',next);return next;
+    });
+  },[player?.id,player?.world,player?.streak.days]);
+  useEffect(()=>{
+    if(screen!=='activity'||!player)return;
+    let active=true;
+    const ownPosts=feed.filter(p=>p.postId&&p.author===player.name);
+    const likes=ownPosts.map(p=>({postId:p.postId!,count:p.reactions?.reduce((sum,r)=>sum+r.count,0)??0})).filter(p=>p.count>0);
+    setActivities(old=>{
+      const updates=likes.filter(p=>!old.some(a=>a.id===`likes:${p.postId}`&&a.count===p.count)).map(p=>({id:`likes:${p.postId}`,postId:p.postId,worldId:player.world,title:'Реакции на твою публикацию',text:`Сейчас реакций: ${p.count}.`,count:p.count,kind:'likes' as const,read:false}));
+      if(!updates.length)return old;
+      const next=[...updates,...old.filter(a=>!updates.some(u=>u.id===a.id))].slice(0,100);localSave('activity',next);return next;
+    });
+    void Promise.all(ownPosts.filter(p=>(p.commentCount??0)>0).slice(0,20).map(async item=>{
+      try{const post=await api.post(item.postId!);if(active)recordComments(post.id,player.world,post.comments);}catch{/* The list remains usable when a post cannot be loaded. */}
+    }));
+    return()=>{active=false;};
+  },[screen,player?.world]);
   const loadFeed = useCallback(async (p: Player, more?: string) => {
     const request = ++feedRequest.current;
     setFeedLoading(true); setFeedError('');
@@ -240,14 +277,10 @@ export default function BackendApp() {
       catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
     } else startHero(target);
   };
-  const beginEntry = () => {
-    if (sending.current || busy) return;
-    feedRequest.current++; threadRequest.current++;
-    localSave('entry-required', true);
-    setWorld(undefined); setReceipt(undefined); setPublicationFailed(false);  setSelected(undefined); setPerson(undefined); setPost(undefined);
-    setFeed([]); setCursor(null); setReply(undefined); setQuote(undefined); setToast(undefined);
-    setOverlay(null); setUnknown(false); setError(''); setQuery(''); setGenre('Все');
-    interestOnly.current = false; setEntryAge(18); setAge(''); setScreen('welcome'); setStack([]);
+  const beginEntry = async () => {
+    if(sending.current||busy)return;
+    setBusy(true);setError('');
+    try{await api.logout();}catch{setError('Не удалось выйти. Попробуй ещё раз.');}finally{setBusy(false);}
   };
   const completeInterests = (values: string[]) => {
     setQualities(values); localSave('qualities', values); setQuery(''); setGenre('Все');
@@ -301,7 +334,7 @@ export default function BackendApp() {
   const openThread = async (id: string) => {
     if (!id || pending) return;
     const request = ++threadRequest.current; setPost(undefined); setThreadLoading(true); go('thread');
-    try { const p = await api.post(id); if (threadRequest.current === request) { setPost(p); const next = activities.map(a => a.id === id ? { ...a, read: true } : a); setActivities(next); localSave('activity', next); } }
+    try { const p = await api.post(id); if (threadRequest.current === request) { setPost(p); const next = activities.map(a => a.id === id || a.postId === id ? { ...a, read: true } : a); setActivities(next); localSave('activity', next); } }
     catch (cause) { if (threadRequest.current === request) setError(errorText(cause)); }
     finally { if (threadRequest.current === request) setThreadLoading(false); }
   };
@@ -319,12 +352,15 @@ export default function BackendApp() {
     if (!recovery) trackEvent('post_publish', { len: text.length, own_words: command.ownWords });
     if (!savePostDraft(k, { ...saved, text: draft, publicationId: id, submittedText: text, ownWords: command.ownWords, submittedOwnWords: command.ownWords })) setStorageError(true);
     sending.current = true; setPending(true); setUnknown(false); setPublicationFailed(false); setError(''); setStatus('pending'); setScreen('feed'); setStack([]);
+    let publishedPostId='';
     cancel.current = api.publish(text, id, event => {
       if (event.type === 'comment') {
+        recordComments(publishedPostId,player.world,[event.comment]);
         if (displayedWorld.current === player.world) void loadFeed(player);
         return;
       }
       if (event.type !== 'result') return;
+      publishedPostId=event.result.postId;
       trackEvent('post_result', { delta: event.result.delta, viral: event.result.viral, flop: event.result.flop });
       completePostDraft(k, id, text); setDraft(readPostDraft(k).text);
       const serverOutcome=parseQuestOutcome((event.result as unknown as {questOutcome?:unknown}).questOutcome);
@@ -337,8 +373,6 @@ export default function BackendApp() {
       const actor=best?world?.cast.find(p=>p.handle===best.avatar||p.id===best.avatar):undefined;
       if(best&&actor){const notice:ReactionNotice={id:event.result.postId,postId:event.result.postId,worldId:player.world,kind:'reaction',actorName:actor.name,text:best.text,relation:actor.relation};setReactionNotice(notice);}
       setPublicationFailed(false); setUnknown(false); setPending(false); sending.current = false; setStatus('completed');
-      const item: Activity = { id: event.result.postId, worldId: player.world, title: actor ? `${actor.name} отвечает на твою запись` : event.result.headline, text: best?.text ?? `${event.result.delta > 0 ? '+' : ''}${event.result.delta} подписчиков`, read: false, ...(actor&&best?{kind:'reaction' as const,actorName:actor.name,relation:actor.relation}: {}) };
-      setActivities(old => { const next = [item, ...old.filter(a => a.id !== item.id)].slice(0, 100); localSave('activity', next); return next; });
       setScreen('feed'); setStack([]); void refresh().then(p => { const updated = { ...value, after: p.skills, roleAfter:p.roleSkills, questOutcome:p.lastTurn?.actionId===id?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome }; setReceipt(updated); saveLocal(`${key}:result:${player.world}`, updated); if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated); const freshActor=best?worldDocumentOf(p.world).stars.find(s=>s.avatarSeed===best.avatar):undefined; if(freshActor){setReactionNotice(n=>n?.id===event.result.postId?{...n,relation:freshActor.relation}:n);setActivities(old=>{const next=old.map(a=>a.id===event.result.postId&&a.worldId===player.world?{...a,relation:freshActor.relation}:a);localSave('activity',next);return next;});} }).catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
     }, (state, reason) => {
       sending.current = false; setPending(false); setUnknown(state === 'unknown'); setPublicationFailed(state === 'failed');
@@ -357,7 +391,7 @@ export default function BackendApp() {
       const controller=new AbortController();cancel.current=()=>controller.abort();
       snapshot=await api.reply(target.postId,target.commentId,requestId,text,target.authorId,{
         signal:controller.signal,additionalStarId:saved.additionalStarId,
-        onSaved:value=>{const first=!snapshot;snapshot=value;if(first)void accountEnergy.refresh();setPost({...value.post,id:value.post.postId});setPlayer(p=>p?{...p,postsLeft:value.energyLeft,subs:value.subscribers}:p);setScreen('thread');setStack(v=>v.filter(x=>x!=='compose'));},
+        onSaved:value=>{recordComments(target.postId,player.world,value.post.comments);const first=!snapshot;snapshot=value;if(first)void accountEnergy.refresh();setPost({...value.post,id:value.post.postId});setPlayer(p=>p?{...p,postsLeft:value.energyLeft,subs:value.subscribers}:p);setScreen('thread');setStack(v=>v.filter(x=>x!=='compose'));},
         onTyping:authorId=>setStatus(authorId?`${world?.cast.find(p=>`Star_${p.id}`===authorId)?.name??'Персонаж'} печатает…`:''),
         onAdditionalStar:id=>saveLocal(k,{...readLocal<ReplyDraft>(k,{text}),additionalStarId:id??undefined}),
       });
@@ -395,6 +429,7 @@ export default function BackendApp() {
       <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><EnergyBadge wallet={accountEnergy.wallet} amount={player?.postsLeft} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/></div>
       <ResourceBadge type="crystal" value={accountEnergy.wallet?String(accountEnergy.wallet.crystals):'—'} hint={accountEnergy.wallet?"Кристаллы для обмена на энергию":"Баланс кристаллов пока недоступен"} onClick={() => openResource('crystals')} />
       <button className="profile-access campaign-avatar" aria-label={`Профиль персонажа. История: ${campaignProgress===undefined?'прогресс уточняется':`${campaignProgress}%`}`} onClick={() => go('profile')} style={{background:`conic-gradient(var(--campaign-ring) ${campaignProgress??0}%,var(--color-divider) 0)`}}><Avatar name={player?.name ?? ''} src={player ? personaFor(player.id, player.world).avatar : undefined} size="lg" /></button></header>
+    {player&&<button className="hud-streak" onClick={()=>setOverlay('streak')} aria-label={`Серия: ${player.streak.days}. Посмотреть дни`}>🔥 <strong>{player.streak.days}</strong><span>в серии</span><Icon name="chevron"/></button>}
     </div>
     {player?.postsLeft===0&&draft.trim()&&!pending&&<section className="section"><div className="energy-draft-notice"><strong>Черновик ждёт энергии</strong><blockquote className="energy-draft-text">{draft}</blockquote><p>Текст сохранён. Нажми на энергию вверху, чтобы посмотреть восстановление и обмен.</p><Button variant="secondary" onClick={()=>reply?openCompose(reply):openFirstPost()}>Вернуться к черновику</Button></div></section>}
     {!reply && (pending || unknown || publicationFailed) && <PublicationWaiting pending={pending} unknown={unknown} text={draft} status={status} onStop={stopWaiting} onContinue={() => { if (unknown) publish(); else openCompose(); }} />}
@@ -404,7 +439,7 @@ export default function BackendApp() {
     {(feed.length > 0 || feedError || feedLoading) && (!pending || feed.length > 0) && <div className="section feed-footer"><Button variant="ghost" busy={feedLoading} onClick={() => void loadFeed(player!, cursor ?? undefined)}>{feedLoading ? 'Загружаем ленту' : cursor ? 'Показать ещё' : 'Обновить ленту'}</Button></div>}
   </>;
 
-  const worldActivities = activitiesForWorld(activities, player?.world).filter(a=>a.kind==='reaction'||a.kind==='mention'||a.kind==='follow');
+  const worldActivities = activitiesForWorld(activities, player?.world).filter(a=>!!a.kind);
   const selectedStory = scenarioForTemplate(definition?.templateId);
   const heroOptions = definition ? roleScenarioSelected && selectedStory ? selectedStory.roles.map(role=>({id:role.id,name:role.id==='custom'?'Свой персонаж':role.name,role:role.name,goal:role.goal,motivation:'motivation' in role?role.motivation:undefined,skills:role.skills})) : [...(heroBase??definition).stars.map(s=>({id:s.id,name:s.name,role:s.role,goal:selected?.goal||''})),{id:'custom',name:'Свой персонаж',role:'Твоя история',goal:selected?.goal||''}] : [];
   let content: ReactNode;
@@ -457,7 +492,8 @@ export default function BackendApp() {
       <div className="row"><Avatar name={player.name} src={personaFor(player.id, player.world).avatar}/><strong>{player.name}</strong></div>
       <label className="sr-only" htmlFor="post-text">Текст публикации</label>
       <textarea id="post-text" className="composer-text" value={draft} onChange={e=>updateDraft(e.target.value)} disabled={pending || unknown} maxLength={reply ? 1000 : 2000} autoFocus={!!reply}/>
-      <div className="composer-count caption muted">{draft.length} / {reply ? 1000 : 2000}</div>
+      <div className="composer-tools"><span className="caption muted">{draft.length} / {reply ? 1000 : 2000}</span><button className="link-button caption" disabled={!draft||pending||unknown} onClick={()=>updateDraft('')}>Очистить {reply?'ответ':'пост'}</button></div>
+      {!reply&&<PostIdeas ideas={ideasForWorld(worldDocumentOf(player.world))} draft={draft} onDraft={updateDraft} disabled={pending||unknown}/>}
       {quote && !reply && !prepared && <p className="caption muted">Контекст помогает написать пост. Связь цитирования на сервере пока недоступна.</p>}
       {pending && <div className="pending-line" role="status"><LoadingIndicator/>{statusLabels[status] ?? 'Отправляем ответ…'}</div>}
       {pending && <Button variant="secondary" onClick={stopWaiting}>Остановить ожидание</Button>}
@@ -475,8 +511,8 @@ export default function BackendApp() {
   else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><ChannelAudience value={person.subscribers}/><span className="caption muted">@{person.handle} · AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
   else if (screen === 'topic' && world) content = <><div className="topic-header"><button className="back-button" onClick={back}>Назад</button><img className="topic-cover" src={world.hero} alt="" /><h1>{quote?.name ?? world.title}</h1><p>{quote?.text ?? world.topic}</p></div><section className="topic-people">{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}<Button className="full" onClick={() => openCompose(undefined, quote)}>Написать</Button></section></>;
   else if (screen === 'messages' && world) content = <><ScreenHeading title="Личка" /><EmptyState title="Сначала — общий разговор" action={<Button onClick={() => go('feed')}>Вернуться в ленту</Button>}>Личные сообщения скоро появятся.</EmptyState><section className="section"><h2 className="section-title">Собеседники</h2>{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}</section></>;
-  else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={worldActivities.length > 0 && <button className="link-button caption" onClick={() => { const next = markWorldActivitiesRead(activities, player?.world); setActivities(next); localSave('activity', next); }}>Прочитать всё</button>} />{!worldActivities.length && <EmptyState title="Пока тихо">Здесь появятся реакции персонажей и доступные упоминания твоего канала.</EmptyState>}{worldActivities.map(a=><ReactionTicker key={a.id} inline read={a.read} notice={{id:a.id,postId:a.id,worldId:a.worldId,kind:a.kind??'reaction',actorName:a.actorName??a.title,text:a.text,relation:a.relation}} onOpen={()=>void openThread(a.id)} onClose={()=>{const next=activities.map(v=>v.id===a.id?{...v,read:true}:v);setActivities(next);localSave('activity',next);}}/>)}</>;
-  else if (screen === 'account') content = <><ProfileHeader name={player?accountIdentity(player.id,owned[0]?.name??player.name).name:'Твой профиль'} neutralAvatar handle={player?accountIdentity(player.id,owned[0]?.name??player.name).handle:undefined} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? owned.slice(0,accountVisible).map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}{owned.length>accountVisible&&<Button variant="secondary" onClick={()=>setAccountVisible(n=>n+5)}>Показать ещё {Math.min(5,owned.length-accountVisible)}</Button>}</section><section className="account-settings">{player && <SettingsRow label="Привязать профиль" onClick={()=>setLinkProfileOpen(true)}/>}<SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => openResource('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><SettingsRow label="Удалить аккаунт" onClick={()=>setDeleteOpen(true)} disabled={pending || busy} /><NominalSignOut onSignOut={beginEntry} disabled={pending || busy} /></section></>;
+  else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={worldActivities.length > 0 && <button className="link-button caption" onClick={() => { const next = markWorldActivitiesRead(activities, player?.world); setActivities(next); localSave('activity', next); }}>Прочитать всё</button>} />{!worldActivities.length && <EmptyState title="Пока тихо">Здесь появятся ответы персонажей, реакции на публикации и отметки серии.</EmptyState>}{worldActivities.map(a=><article className={`activity-row${a.read?' is-read':''}`} key={a.id}><button className="activity-open" onClick={()=>{const next=activities.map(v=>v.id===a.id?{...v,read:true}:v);setActivities(next);localSave('activity',next);if(a.kind==='streak')setOverlay('streak');else if(a.postId)void openThread(a.postId);else void openThread(a.id);}}>{a.actorName?<Avatar name={a.actorName}/>:<span className="activity-symbol" aria-hidden="true">{a.kind==='streak'?'🔥':a.kind==='likes'?'♡':'✦'}</span>}<span><strong>{a.title}</strong><span className="activity-text">{a.text}</span></span>{!a.read&&<i className="activity-unread" aria-label="Не прочитано"/>}</button></article>)}</>;
+  else if (screen === 'account') content = <><ProfileHeader name={player?accountIdentity(player.id,owned[0]?.name??player.name).name:'Твой профиль'} neutralAvatar handle={player?accountIdentity(player.id,owned[0]?.name??player.name).handle:undefined} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? owned.slice(0,accountVisible).map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}{owned.length>accountVisible&&<Button variant="secondary" onClick={()=>setAccountVisible(n=>n+5)}>Показать ещё {Math.min(5,owned.length-accountVisible)}</Button>}</section><section className="account-settings">{player&&<SettingsRow label="Пригласить друга" onClick={()=>setInviteOpen(true)}/>} {player && <SettingsRow label="Привязать профиль" onClick={()=>setLinkProfileOpen(true)}/>}<SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => openResource('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><SettingsRow label="Удалить аккаунт" onClick={()=>setDeleteOpen(true)} disabled={pending || busy} /><NominalSignOut onSignOut={()=>void beginEntry()} disabled={pending || busy} /></section></>;
   else content = <EmptyState title="Выбери мир" action={<Button onClick={() => go('catalog')}>К мирам</Button>}>Продолжи сохранённую историю или начни новую.</EmptyState>;
 
   const inWorld = !!world && !['catalog', 'search', 'account', 'intro', 'onboarding', 'welcome', 'age', 'hero'].includes(screen);
@@ -486,6 +522,7 @@ export default function BackendApp() {
   if (hash.startsWith('#system')) return <DesignSystem />;
   return <div className="v7-stage"><div ref={appRoot} className={`app ${showNav ? 'app--nav' : ''} ${screen === 'intro' ? 'app--prologue' : ''} ${screen === 'hero' ? 'app--hero' : ''}`}><div className="app-body" ref={main}><div className="sr-only" tabIndex={-1} ref={focusHeading}>{titleOf[screen]}</div>{storageError && <Notice title="Не удалось сохранить на устройстве" tone="error">Не закрывай вкладку: черновик остаётся в памяти до перезагрузки.</Notice>}{error && <div className="section"><Notice title={screen==='thread'&&reply&&unknown?'Комментарий сохранён, ответ пока не готов':'Не получилось завершить действие'} tone="error">{error}</Notice>{!booting && !templates.length && <Button onClick={() => void boot()}>Повторить</Button>}</div>}{content}</div>
     {showNav && <BottomNav items={nav.map(n => ({ ...n, disabled: pending }))} active={screen} onChange={id => { tap('tab', { to: `v7.${id}` }); id === 'compose' ? openFirstPost() : go(id as Screen); }} />}
+    {inviteOpen&&<InviteFriend onClose={()=>setInviteOpen(false)}/>}
     {linkProfileOpen && player && <LinkProfile player={player} refresh={refresh} onClose={()=>setLinkProfileOpen(false)}/>}
     {deleteOpen&&<AccountDeletion onDelete={deleteAccount} onClose={()=>setDeleteOpen(false)}/>}
     {reportId&&<ReportComment onSend={reason=>api.report(reportId,reason)} onClose={()=>setReportId(undefined)}/>}

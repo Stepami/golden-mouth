@@ -102,3 +102,5 @@
     border-radius: 18px;
   }
 }
+
+.yandex-login:has(iframe) > .provider-button { display: none; }

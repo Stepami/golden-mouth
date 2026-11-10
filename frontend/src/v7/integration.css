@@ -198,3 +198,27 @@ html[data-large-text="true"] .world-intro .intro-cta { position: static; }
 
 .v7-stage .screen-heading > .row { flex-wrap: wrap; gap: 12px; }
 .v7-stage .screen-heading > .row > div { min-width: 0; flex: 1 1 160px; }
+
+/* DEV review: compose, invitations and confirmed activity. */
+.composer-tools { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.post-ideas { border-top:1px solid var(--color-divider); padding-top:12px; }
+.post-ideas summary { cursor:pointer; font-weight:600; padding:8px 0 16px; }
+.post-idea { width:100%; padding:16px; border:1px solid var(--color-divider); border-radius:16px; background:var(--color-surface); color:var(--color-ink); font:inherit; text-align:left; line-height:1.5; }
+.post-idea:disabled { opacity:.5; }
+.invite-friend p { line-height:1.5; }
+.invite-friend input { min-width:0; width:100%; }
+.hud-streak { display:flex; gap:6px; align-items:center; margin:0 24px 10px auto; padding:6px 10px; border:1px solid var(--color-divider); border-radius:24px; background:var(--color-surface); color:var(--color-ink); font:inherit; font-size:12px; }
+.hud-streak svg { width:14px; height:14px; }
+.hud-streak span { color:var(--color-muted); }
+.activity-row { border-bottom:1px solid var(--color-divider); }
+.activity-open { width:100%; display:flex; align-items:flex-start; gap:12px; padding:20px 24px; background:transparent; border:0; color:var(--color-ink); font:inherit; text-align:left; }
+.activity-open>span:nth-child(2) { flex:1; min-width:0; }
+.activity-open strong { display:block; line-height:1.4; }
+.activity-text { display:block; margin-top:6px; font-size:14px; line-height:1.5; color:var(--color-muted); overflow-wrap:anywhere; }
+.activity-symbol { display:grid; place-items:center; width:40px; height:40px; flex:none; border-radius:50%; background:var(--color-surface); font-size:26px; }
+.activity-unread { width:7px; height:7px; border-radius:50%; background:var(--color-ink); margin-top:8px; flex:none; }
+.activity-row.is-read strong { font-weight:500; }
+.avatar-builder { display:grid; gap:12px; }
+.avatar-builder h4 { margin:8px 0 0; font-size:14px; color:var(--color-muted); font-weight:500; }
+.avatar-builder-options { display:flex; flex-wrap:wrap; gap:8px; }
+.avatar-builder .studio-looks { margin:0; }

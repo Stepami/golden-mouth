@@ -1,7 +1,7 @@
 import {syncBackButton} from '../../telegram';
 import {useEffect, useRef, useState} from 'react';
 import {Button, Chip, Dialog, Icon, TextField, ScreenHeading} from '../ui';
-import {characterLooks, characterPortrait} from '../portraits';
+import {AvatarBuilder} from './AvatarBuilder';
 import {heroPortraitSource, type HeroOption} from './HeroPicker';
 import {recommendRoles, skillDirections} from '../story/roles';
 import {SkillArt} from '../ui/GameArt';
@@ -57,7 +57,7 @@ export function HeroStudio({options, selected, onChoose, name, channel, goal, on
     {(skills.length>0||directions.length>0)&&recommended&&<div className="practice-example" aria-live="polite"><strong>Тебе может подойти {recommended.name}</strong><p>{recommended.skills?.map(s=>s.name).join(' · ')}</p></div>}
     <details className="practice-explainer"><summary>Как это работает<Icon name="chevron"/></summary><p>У каждого персонажа уже есть три навыка, связанные с его историей. Выбор помогает найти героя, а его навыки развиваются через новые поступки в постах и ответах. Можно выбрать любого персонажа.</p></details>
    </div>:custom?<div className="studio-panel">
-    <h3>Выбери свой образ</h3><div className="studio-looks">{characterLooks.map((look,i)=><button key={look} aria-label={`Образ ${i+1}`} aria-pressed={!removed&&!avatar&&seed===look} onClick={()=>onLook(look)}><img src={characterPortrait(look)} alt=""/></button>)}</div>
+    <AvatarBuilder seed={seed} worldId={worldId} onLook={onLook} onRender={onUpload}/>
     <div className="studio-upload"><label className="button button--secondary">Загрузить фото<input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>1024*1024){setUploadError('Выбери PNG, JPG или WebP до 1 МБ.');return;}const reader=new FileReader();reader.onload=()=>{onUpload(String(reader.result));setUploadError('');};reader.onerror=()=>setUploadError('Не удалось прочитать фото.');reader.readAsDataURL(file);e.target.value='';}}/></label><Button variant="ghost" onClick={onRemove}>Без фото</Button></div>{uploadError&&<p role="alert">{uploadError}</p>}
     {custom&&<div className="studio-address"><span>Обращение</span><div className="row">{([['she','Она'],['he','Он'],['nick','По нику']] as const).map(([id,label])=><Chip key={id} selected={address===id} onClick={()=>onAddress(id)}>{label}</Chip>)}</div></div>}
    </div>:null}

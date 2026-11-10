@@ -142,13 +142,13 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     });
 }
 export const api = {
-    clearSession: () => {
+    clearSession: (preserveDrafts = false) => {
         const playerId = sessionIdentity?.id ?? sessionPlayer?.id;
         endSession();
         playerRequests.clear();
         clearApiCache();
         if (playerId) {
-            clearPlayerDrafts(playerId);
+            if (!preserveDrafts) clearPlayerDrafts(playerId);
             clearAvatarPersonalization(playerId);
             try {
                 localStorage.removeItem(`reki:selected-world:v2:${playerId}`);
@@ -166,7 +166,7 @@ export const api = {
     },
     logout: async () => {
         await revokeSession();
-        api.clearSession();
+        api.clearSession(true);
     },
     energyWallet: () => data(sdk.player.getCurrentPlayer()).then(player=>{if(!player.energyWallet)throw Object.assign(new Error('Wallet is not supported by this API'),{code:'wallet_unavailable'});return map.energyWallet(player.energyWallet);}),
     exchangeEnergy: () => data(sdk.player.exchangeEnergy()).then(value=>({...value,wallet:value.wallet?map.energyWallet(value.wallet):null})),
