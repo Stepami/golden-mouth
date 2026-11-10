@@ -1,0 +1,7 @@
+import {useRef,useState} from 'react';
+import {Button,Chip,Dialog,Notice,TextField} from '../ui';
+export function ReportComment({onSend,onClose}:{onSend:(reason:string)=>Promise<void>;onClose:()=>void}){
+ const [reason,setReason]=useState('Неприемлемый контент'),[busy,setBusy]=useState(false),[error,setError]=useState(''),[sent,setSent]=useState(false);const locked=useRef(false);
+ const send=async()=>{if(locked.current||!reason.trim()||reason.length>128)return;locked.current=true;setBusy(true);setError('');try{await onSend(reason.trim());setSent(true);}catch{setError('Не удалось отправить жалобу. Попробуй ещё раз.');}finally{locked.current=false;setBusy(false);}};
+ return <Dialog title={sent?'Жалоба отправлена':'Пожаловаться на реплику'} onClose={()=>{if(!locked.current)onClose();}}>{sent?<><p>Сигнал отправлен. Спасибо, что сообщил.</p><Button onClick={onClose}>Готово</Button></>:<><p>Что не так с этой репликой?</p><div className="row" style={{flexWrap:'wrap'}}>{['Неприемлемый контент','Оскорбление','Спам'].map(v=><Chip key={v} selected={reason===v} onClick={()=>setReason(v)}>{v}</Chip>)}</div><TextField label="Причина" value={reason} onChange={e=>setReason(e.target.value)} maxLength={128}/>{error&&<Notice title="Жалоба не отправлена" tone="error">{error}</Notice>}<Button disabled={!reason.trim()||reason.length>128} busy={busy} onClick={()=>void send()}>Отправить жалобу</Button><Button variant="secondary" disabled={busy} onClick={onClose}>Отмена</Button></>}</Dialog>;
+}
