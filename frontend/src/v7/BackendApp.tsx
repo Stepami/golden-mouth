@@ -55,7 +55,7 @@ import type { World, Person, Post, Approach } from './domain/types';
 import { Onboarding } from './screens/Onboarding';
 import { WorldIntro } from './screens/WorldIntro';
 import { WorldBrief } from './screens/WorldBrief';
-import { GoalCard, TaskCard } from './ui/GameBrief';
+import { GoalCard } from './ui/GameBrief';
 import { DesignSystem } from './screens/DesignSystem';
 import { NominalSignOut, LoadingIndicator, Avatar, Badge, BottomNav, Button, Chip, Dialog, EmptyState, Icon, Notice, PersonRow, PostCard, ProfileHeader, Progress, QuoteBlock, ResourceBadge, ResumeWorld, ScreenHeading, SettingsRow, TextField, WorldCard } from './ui';
 
@@ -491,7 +491,13 @@ export default function BackendApp() {
   else if (screen === 'compose' && player) content = <>
     <ScreenHeading title={reply ? 'Продолжить разговор' : 'Новая публикация'} back={back} />
     <section className="section stack composer-body">
-      {prepared && <TaskCard title={prepared.title} prompt={prepared.prompt}/>}
+      {!reply&&<div className="composer-assignments">
+        <details className="composer-assignment">
+          <summary><Icon name="goals"/><span className="composer-assignment-copy"><small>По сюжету</small><span>{prepared?.prompt??roleTask?.prompt??(player.campaignProgress?.completed?'Задания истории завершены':'Сейчас можно написать свободный пост')}</span></span><Icon name="chevron"/></summary>
+          <div className="composer-assignment-details"><p>{prepared?.prompt??roleTask?.prompt??world?.goal}</p><p>{prepared?.title??roleTask?.context??'История продолжается через твои публикации и разговоры с персонажами.'}</p></div>
+        </details>
+        <section className="composer-assignment composer-assignment--empty" aria-label="Ежедневный квест"><Icon name="flame"/><span className="composer-assignment-copy"><small>На сегодня</small><span>Пока нет ежедневного задания</span></span></section>
+      </div>}
       <PracticeFocus skills={personaFor(player.id, player.world).skills ?? []}/>
       {(reply || quote) && !prepared && <QuoteBlock name={reply?.name ?? quote!.name} text={reply?.text ?? quote!.text}/>}
       <div className="row"><Avatar name={player.name} src={personaFor(player.id, player.world).avatar}/><strong>{player.name}</strong></div>
