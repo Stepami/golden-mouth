@@ -6,7 +6,7 @@ const photos: Record<string,string> = {
 };
 export const roleLooks:Record<string,string>={isabella:'muse',eduard:'scout',yakov:'sage',lida:'spark',diana:'spark',jon:'sage',james:'scout',greedy_wolf:'sage','2kotleti_news':'scout',alexey_nl:'muse'};
 const namedLooks:Record<string,string>={'изабелла лебедева':'muse','эдуард калинин':'scout','яков чернов':'sage','лида':'spark','диана шторморождённая':'spark','джон винтер':'sage','джеймс левлистер':'scout','меркантил':'sage','бургер в декабре':'scout','куляш ai':'muse'};
-const itPortraits:Record<string,string>={'бургер в декабре':'burger','куляш ai':'kulyash','куляш ии':'kulyash'};
+const itPortraits:Record<string,string>={'меркантил':'merkantil','бургер в декабре':'burger','куляш ai':'kulyash','куляш ии':'kulyash'};
 export function defaultPortrait(name: string): string | undefined {
   const key = name.trim().toLocaleLowerCase('ru');
   if(itPortraits[key])return `/assets/avatars/3d/${itPortraits[key]}-v9.png`;

@@ -32,7 +32,7 @@ export function ideasForWorld(world:WorldDocument){
 }
 export function PostIdeas({ideas,draft,onDraft,disabled}:{ideas:string[];draft:string;onDraft:(text:string)=>void;disabled:boolean}){
   const [replacement,setReplacement]=useState<string>();
-  return <>{ideas.length>0&&<details className="post-ideas"><summary>О чём написать</summary><div className="stack">{ideas.slice(0,3).map(text=><button className="post-idea" key={text} disabled={disabled} onClick={()=>draft.trim()?setReplacement(text):onDraft(text)}>{text}</button>)}</div></details>}
+  return <>{ideas.length>0&&<section className="post-ideas" aria-label="Подсказки для поста"><p className="caption muted">О чём написать</p><div className="post-ideas-grid">{ideas.slice(0,3).map(text=><button className="post-idea" key={text} title={text} disabled={disabled} onClick={()=>draft.trim()?setReplacement(text):onDraft(text)}><span>{text}</span></button>)}</div></section>}
     {replacement!==undefined&&<Dialog title="Заменить черновик?" onClose={()=>setReplacement(undefined)}><div className="stack"><p>Текущий текст заменится выбранной подсказкой.</p><Button onClick={()=>{onDraft(replacement);setReplacement(undefined);}}>Заменить</Button><Button variant="secondary" onClick={()=>setReplacement(undefined)}>Оставить мой текст</Button></div></Dialog>}
   </>;
 }

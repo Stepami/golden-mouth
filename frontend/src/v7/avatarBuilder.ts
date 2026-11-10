@@ -1,5 +1,3 @@
-import {worldArt} from '../app/worldArt';
-
 export const customLooks=[
   {id:'custom-man-1',label:'Мужской образ 1',eyes:[.431,.567,.289]},
   {id:'custom-man-2',label:'Мужской образ 2',eyes:[.431,.566,.285]},
@@ -8,26 +6,13 @@ export const customLooks=[
 ];
 export const customLook=(seed:string)=>customLooks.find(look=>look.id===seed)??customLooks[0];
 export const customPortrait=(seed:string)=>`/assets/avatars/3d/${customLook(seed).id}-v9.png`;
-export type AvatarBackground='none'|'world'|'blue'|'plum';
 export type AvatarGlasses='none'|'round'|'square';
 const loadImage=async(src:string)=>{const image=new Image();image.src=src;await image.decode();return image;};
 
 /** Compose reusable cutouts and accessory geometry; this does not generate a new face. */
-export async function composeAvatar(seed:string,background:AvatarBackground,glasses:AvatarGlasses,worldId:string){
+export async function composeAvatar(seed:string,glasses:AvatarGlasses){
   const canvas=document.createElement('canvas');canvas.width=640;canvas.height=640;
   const ctx=canvas.getContext('2d')!;
-  const world=worldArt[worldId];
-  if(background==='world'&&world){
-    const image=await loadImage(world.smallCover),side=Math.min(image.width,image.height);
-    ctx.filter='blur(28px)';
-    ctx.drawImage(image,(image.width-side)/2,(image.height-side)/2,side,side,-40,-40,720,720);
-    ctx.filter='none';
-    ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(0,0,640,640);
-  }else if(background!=='none'){
-    const gradient=ctx.createLinearGradient(0,0,640,640);
-    gradient.addColorStop(0,background==='plum'?'#66425f':'#365366');gradient.addColorStop(1,'#15191f');
-    ctx.fillStyle=gradient;ctx.fillRect(0,0,640,640);
-  }
   ctx.drawImage(await loadImage(customPortrait(seed)),0,0,640,640);
   if(glasses!=='none'){
     const [left,right,y]=customLook(seed).eyes.map(n=>n*640),width=(right-left)*.83,height=width*.65;

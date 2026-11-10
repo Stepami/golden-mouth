@@ -1,3 +1,4 @@
+import {ActivityItem} from '../ui/ActivityItem';
 import { useState } from "react";
 import designTokens from "../design-tokens.json";
 import {
@@ -292,6 +293,12 @@ export function DesignSystem() {
               onQuote={() => setDialog(true)}
               replyCount={2}
             />
+          </div>
+          <h3>Уведомление / ActivityItem</h3>
+          <p className="caption muted">Заголовок — до двух строк. Текст — до трёх строк с многоточием. Нажатие открывает полный ответ. Прочитанная запись остаётся в списке.</p>
+          <div className="system-phone">
+            <ActivityItem title="Георгина Гречихина отвечает" actorName="Георгина Гречихина" text="Идея правильная, но давай сразу договоримся о правилах. Предлагаю разбирать по одной идее и сохранять ответы участников. Полный ответ откроется в обсуждении публикации, а здесь останется короткое превью." symbol="" read={false} onOpen={()=>setDialog(true)}/>
+            <ActivityItem title="Первый день серии" text="Начало серии отмечено. Продолжи завтра постом или комментарием." symbol="🔥" read onOpen={()=>setDialog(true)}/>
           </div>
           <h3>ProfileHeader + ProfileScore</h3>
           <div className="system-phone">
