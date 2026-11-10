@@ -16,6 +16,7 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageVersion Include="AspNetCore.Authentication.Basic" Version="9.0.0"/>
+        <PackageVersion Include="AspNetCore.Authentication.ApiKey" Version="9.0.0"/>
         <PackageVersion Include="alexjamesbrown.TickerQ.MongoDB" Version="0.1.0"/>
         <PackageVersion Include="TickerQ" Version="$(TickerQVersion)"/>
         <PackageVersion Include="TickerQ.Instrumentation.OpenTelemetry" Version="$(TickerQVersion)"/>

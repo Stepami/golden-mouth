@@ -80,6 +80,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Telegram:OAuthUrl", TelegramOAuthUrl ?? "https://example.invalid/");
         builder.UseSetting("Telegram:ApiUrl", "https://example.invalid/");
         builder.UseSetting("Telegram:BotToken", Session.TelegramBotToken);
+        builder.UseSetting("Vk:ApplicationId", "123456");
         builder.UseSetting("Auth:AccessTokenLifetime", "00:15:00");
         builder.UseSetting("Auth:RefreshTokenLifetime", "30.00:00:00");
         builder.ConfigureAppConfiguration((_, configuration) =>

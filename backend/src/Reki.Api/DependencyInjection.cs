@@ -37,7 +37,7 @@ internal static class DependencyInjection
             options.AddSchemaTransformer<NullableChallengeSchemaTransformer>();
             options.AddOperationTransformer<OperationMetadataTransformer>();
             options.AddOperationTransformer<AuthOperationTransformer>();
-            options.AddDocumentTransformer<TelegramMiniAppSecurityTransformer>();
+            options.AddDocumentTransformer<SecurityTransformer>();
         });
         services.AddControllers();
         services.AddSerialization();

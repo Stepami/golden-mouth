@@ -5,7 +5,7 @@ using Reki.Infrastructure.Auth;
 
 namespace Reki.Api.OpenApi;
 
-internal sealed class TelegramMiniAppSecurityTransformer : IOpenApiDocumentTransformer
+internal sealed class SecurityTransformer : IOpenApiDocumentTransformer
 {
     public Task TransformAsync(
         OpenApiDocument document,

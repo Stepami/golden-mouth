@@ -10,6 +10,7 @@
 
     <ItemGroup>
         <PackageReference Include="AspNetCore.Authentication.Basic"/>
+        <PackageReference Include="AspNetCore.Authentication.ApiKey"/>
         <PackageReference Include="CommunityToolkit.VectorData.InMemory" />
         <PackageReference Include="DotNext.Threading"/>
         <PackageReference Include="Kot.MongoDB.Migrations.DI" />

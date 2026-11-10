@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +7,6 @@ using OpenIddict.Server.AspNetCore;
 using Reki.Api.Requests.Auth;
 using Reki.Application.Auth;
 using Reki.Infrastructure.Auth;
-using Reki.Infrastructure.Vk;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace Reki.Api.Controllers;
@@ -16,25 +14,17 @@ namespace Reki.Api.Controllers;
 [ApiController]
 [Produces("application/json")]
 [Route("auth/external/vk")]
-public sealed class ExternalVkAuthController(
-    IAuthSessionService sessions,
-    VkIdentityVerifier verifier) : ControllerBase
+public sealed class ExternalVkAuthController(IAuthSessionService sessions) : ControllerBase
 {
     [HttpPost(Name = "ExchangeVk")]
+    [Authorize(AuthenticationSchemes = AuthConstants.Schemes.Vk)]
     [Authorize(Policy = AuthConstants.Policies.RekiVkGrant)]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> ExchangeVkAsync(
         [FromForm] TokenExchangeRequest request,
+        [FromKeyedServices(AuthConstants.Grants.Vk)] IExternalUserIdProvider externalUserIdProvider,
         CancellationToken cancellationToken)
     {
-        if (!AuthenticationHeaderValue.TryParse(Request.Headers.Authorization, out var authorization) ||
-            !authorization.Scheme.Equals("Bearer", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(authorization.Parameter))
-        {
-            return InvalidGrant(Errors.InvalidGrant, null);
-        }
-
-        var externalId = await verifier.VerifyAsync(authorization.Parameter, cancellationToken);
-        if (externalId is null)
+        if (!externalUserIdProvider.TryGetExternalUserId(out var externalId))
         {
             return InvalidGrant(Errors.InvalidGrant, null);
         }

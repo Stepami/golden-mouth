@@ -14,6 +14,7 @@ $env:ASPNETCORE_ENVIRONMENT = 'Development'
 $env:ASPNETCORE_URLS = 'http://127.0.0.1:8081'
 $env:Auth__Issuer = 'https://localhost:5173/'
 $env:Telegram__BotToken = '<telegram bot token>'
+$env:Vk__ApplicationId = '<VK application ID>'
 dotnet tool restore
 dotnet restore Reki.slnx
 dotnet run --project src/Reki.Api/Reki.Api.csproj
@@ -29,8 +30,8 @@ Development uses MongoDB for game data. Before starting the API outside Compose,
 OpenAPI JSON and Swagger UI are available only in Development. Production does not serve these routes. Build-time OpenAPI generation for NSwag clients remains available. The exact local address is printed by ASP.NET Core when the service starts.
 
 VK ID uses `Vk:ApplicationId` (the public VK app ID, matching the frontend runtime configuration), `Vk:BaseUrl`
-(default `https://id.vk.ru/`) and `Vk:TimeoutSeconds` (default 10). Override the public app ID with `Vk__ApplicationId`;
-Compose accepts `VK_APPLICATION_ID`. `POST /auth/external/vk` takes a VK access token as Bearer and form fields
+(default `https://id.vk.ru/`) and `Vk:TimeoutSeconds` (default 10). Set the required public app ID with `Vk__ApplicationId`
+outside Compose; Compose supplies it from `VK_APPLICATION_ID`. `POST /auth/external/vk` takes a VK access token as Bearer and form fields
 `client_id` and `grant_type=urn:reki:grant:vk`. The server verifies it through VK `user_info`. Unknown users follow
 the existing `registration_required` → Basic `/onboarding` → repeat VK login flow. VK tokens are not stored or logged.
 
