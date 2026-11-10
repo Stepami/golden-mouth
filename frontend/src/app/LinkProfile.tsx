@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AuthProviders } from './AuthProviders'
 import { currentAuthProvider, getInitData, hasInitData, type AuthProvider } from '../api/auth'
 import { identifyOtherProfile, mergeProfile } from '../api/linkProfile'
-import { Button, Sheet } from '../ui'
+import {Button, Dialog} from '../v7/ui'
 import type { Player } from '../api/types'
 import type { PlayerResponse } from '../api/generated/reki-api'
 
@@ -43,8 +43,7 @@ export function LinkProfile({ player, refresh, onClose }: { player: Player; refr
     } catch { /* The profiles are already merged; leave the refresh action available. */ }
     finally { pending.current = false; if (mounted.current) setBusy(false) }
   }
-  return <Sheet onClose={() => { if (!pending.current) onClose() }}>
-    <h2>🔑 Привязать профиль</h2>
+  return <Dialog title="Привязать профиль" onClose={() => { if (!pending.current) onClose() }}>
     {merged ? <>
       <p>Профиль привязан. Не получилось обновить данные игры — попробуй обновить ещё раз.</p>
       <Button disabled={busy} onClick={() => { setBusy(true); void refresh().then(updated => { if (updated) onClose() }).finally(() => setBusy(false)) }}>Обновить игру</Button>
@@ -62,5 +61,5 @@ export function LinkProfile({ player, refresh, onClose }: { player: Player; refr
     </>}
     {error && <p role="alert" style={{ color: 'var(--warn)' }}>{error}</p>}
     <button className="text-button" disabled={busy} onClick={onClose}>{merged ? 'Закрыть' : 'Отмена'}</button>
-  </Sheet>
+  </Dialog>
 }
