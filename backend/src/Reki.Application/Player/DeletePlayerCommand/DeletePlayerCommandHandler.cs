@@ -4,7 +4,6 @@ using Reki.Application.Auth;
 using Reki.Application.Events;
 using Reki.Application.Invites;
 using Reki.Application.Posts;
-using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
 
@@ -18,7 +17,6 @@ internal sealed class DeletePlayerCommandHandler(
     IPostRepository posts,
     IDailyGameEventRepository events,
     IInvitationRepository invitations,
-    IRekiContextAccessor rekiContextAccessor,
     ProductTelemetry telemetry)
     : ICommandHandler<DeletePlayer>
 {
@@ -26,7 +24,7 @@ internal sealed class DeletePlayerCommandHandler(
         DeletePlayer request,
         CancellationToken cancellationToken)
     {
-        var playerId = rekiContextAccessor.Context.PlayerId;
+        var playerId = request.PlayerId;
         await unitOfWork.ExecuteAsync(
             async token =>
             {

@@ -36,6 +36,9 @@ public sealed record PlayerProfile
 
     public required PlayerSettings Settings { get; init; }
 
+    public PlayerProfile AddExternalUserIds(IEnumerable<ExternalUserId> ids) =>
+        this with { ExternalUserIds = ExternalUserIds.Concat(ids).Distinct().ToArray() };
+
     public PlayerProfile ClaimPlusInterestBonus(int bonus)
     {
         if (PlusInterestClaimed)

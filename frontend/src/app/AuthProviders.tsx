@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadTelegramClientId } from '../api/auth'
+import { loadTelegramClientId, type AuthProvider } from '../api/auth'
 import { openTelegramLogin, preloadTelegramLogin } from '../api/telegramLogin'
 import { renderVkLogin } from '../api/vkLogin'
 import { renderYandexLogin } from '../api/yandexLogin'
@@ -51,9 +51,11 @@ function YandexLogin({ onToken, onError }: { onToken: (token: string, expiresIn:
   return <div className="yandex-login">{(loading || failed) && <button className="provider-button provider-button--secondary" disabled={loading} onClick={() => { setLoading(true); setFailed(false); setAttempt(value => value + 1) }}>Войти с Яндекс ID</button>}<div ref={container} /></div>
 }
 
-export function AuthProviders({ onTelegram, onVk, onYandex, onMiniApp, onError, busy = false }: {
+export function AuthProviders({ onTelegram, onVk, onYandex, onMiniApp, onError, hiddenProvider, allowMiniAppLink = true, busy = false }: {
   onTelegram: (token: string) => void; onVk: (token: string, expiresIn: number) => void; onYandex: (token: string, expiresIn: number) => void; onError: () => void
   busy?: boolean
+  hiddenProvider?: AuthProvider
+  allowMiniAppLink?: boolean
   onMiniApp?: () => void
 }) {
   const [step, setStep] = useState<'providers' | 'telegram'>('providers')
@@ -72,13 +74,13 @@ export function AuthProviders({ onTelegram, onVk, onYandex, onMiniApp, onError, 
   }
   if (step === 'telegram') return <div className="auth-providers">
     <button className="provider-button provider-button--telegram" disabled={busy || clientId === null && !prepareFailed} onClick={telegram}><ProviderMark provider="telegram" />{prepareFailed ? 'Подготовить вход снова' : clientId === null ? 'Готовим вход…' : 'Войти в браузере'}</button>
-    {onMiniApp ? <button className="provider-button provider-button--secondary" disabled={busy} onClick={onMiniApp}><ProviderMark provider="telegram" />Запустить MiniApp</button> : <a className="provider-button provider-button--secondary" href={TELEGRAM_APP_URL}><ProviderMark provider="telegram" />Запустить MiniApp</a>}
+    {onMiniApp ? <button className="provider-button provider-button--secondary" disabled={busy} onClick={onMiniApp}><ProviderMark provider="telegram" />Запустить MiniApp</button> : allowMiniAppLink && <a className="provider-button provider-button--secondary" href={TELEGRAM_APP_URL}><ProviderMark provider="telegram" />Запустить MiniApp</a>}
     <button className="text-button" disabled={busy} onClick={() => setStep('providers')}>Назад</button>
   </div>
   return <div className="auth-providers">
-    {runtimeConfig.yandexClientId && runtimeConfig.yandexRedirectUrl && <div inert={busy}><YandexLogin onToken={onYandex} onError={onError} /></div>}
-    {runtimeConfig.vkApplicationId !== 0 && runtimeConfig.vkRedirectUrl && <div inert={busy}><VkLogin onToken={onVk} onError={onError} /></div>}
-    <button className="provider-button provider-button--telegram" disabled={busy} onClick={() => setStep('telegram')}><ProviderMark provider="telegram" />Войти с Telegram</button>
+    {hiddenProvider !== 'yandex' && runtimeConfig.yandexClientId && runtimeConfig.yandexRedirectUrl && <div inert={busy}><YandexLogin onToken={onYandex} onError={onError} /></div>}
+    {hiddenProvider !== 'vk' && runtimeConfig.vkApplicationId !== 0 && runtimeConfig.vkRedirectUrl && <div inert={busy}><VkLogin onToken={onVk} onError={onError} /></div>}
+    {hiddenProvider !== 'telegram' && <button className="provider-button provider-button--telegram" disabled={busy} onClick={() => setStep('telegram')}><ProviderMark provider="telegram" />Войти с Telegram</button>}
     {busy && <p role="status">Подтверждаем вход…</p>}
   </div>
 }

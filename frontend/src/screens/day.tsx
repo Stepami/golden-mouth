@@ -1,3 +1,4 @@
+import { LinkProfile } from '../app/LinkProfile'
 import { displayHandle } from '../app/handle'
 import { StoryGoal } from '../ui/StoryGoal'
 import { ExpandableText } from '../ui'
@@ -253,6 +254,7 @@ function Stage() {
 function Me() {
   const nav = useNav(); const p = usePlayer()
   const [skillHelp, setSkillHelp] = useState(false)
+  const [linkProfile, setLinkProfile] = useState(false)
   const { refresh } = useStore()
   useEffect(() => { void refresh() }, [refresh])
   const DAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
@@ -265,7 +267,7 @@ function Me() {
         <div className="profile-stats">
           {[[`⚡ ${p.postsLeft}`, 'энергии'], [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
         </div>
-        <div className="profile-task-row"><div><b>💡 О чём написать</b><p className="small muted">{p.wants[0]?.text ?? "Поделись событием из своего мира"}</p></div><button className="text-link small" onClick={() => nav.push('02-1_compose')}>Написать →</button></div><p className="small muted energy-help">Пост и ответ расходуют энергию. Новый запас — в 09:00 МСК.</p>
+        <Button secondary onClick={() => setLinkProfile(true)}>🔑 Привязать профиль</Button><p className="small muted energy-help">Пост и ответ расходуют энергию. Новый запас — в 09:00 МСК.</p>
         <div className="card own-world-unlock" style={{ marginTop: 0, marginBottom: 12 }}><b>{p.hitOwnWorldMilestone ? '✨ Свой мир открыт' : '✨ Создай свой мир'}</b>{p.hitOwnWorldMilestone ? <>
           <p className="small muted">Доступ подтверждён. Можно придумать свою историю.</p>
           <button className="text-link" onClick={() => { beginOwnWorld(p); nav.push('05-7b_own_world', {}) }}>Создать свой мир →</button>
@@ -291,6 +293,7 @@ function Me() {
         </Card>}
       </div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
+      {linkProfile && <LinkProfile player={p} refresh={refresh} onClose={() => setLinkProfile(false)} />}
     </div>
   )
 }

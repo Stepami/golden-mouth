@@ -155,6 +155,16 @@ Successful publications and thread replies schedule a one-off `GenerateStarFeedP
 
 Type-safe `AddAsync<GenerateStarFeedPostJob, StarFeedRequest>` uses `RekiTimeTicker` defaults: three retries at 30, 120 and 600 seconds. These defaults apply to all application TimeTickers; cron maintenance retains its existing configuration. Technical failures propagate to TickerQ; invalid content and missing worlds terminate without retry. A BSON ObjectId string is created at scheduling and stored as a typed PostId in the request alongside typed PlayerId and WorldId. Repeated executions reuse it; the post collection's unique `_id` prevents duplicate posts. Concurrent executions of the same request can still spend AI tokens before one insert wins. Failed TickerQ scheduling results are logged; unexpected scheduler exceptions are not swallowed. ScheduleAsync always schedules; ScheduleFromFeedAsync uses random < feed.open_probability. Neither scheduler method accepts a cancellation token. MongoPostRepository uses a plain InsertPostAsync and insertion exceptions propagate to TickerQ. The AI history identifies authors and marks the selected star's own posts with isOwn. There is no transactional outbox between the business commit and scheduling.
 
+## Profile linking (#268)
+
+`POST /merge` uses the current game JWT and accepts `{ "fromPlayerId": "<player ID>" }`. The ID comes from
+`GET /me` under the other login's JWT. The current profile remains; the source profile and its game data and
+sessions are deleted, then its external login IDs are added to the current profile. A source ID equal to the current
+player returns 409; a missing profile returns 404. No tokens are issued by this endpoint.
+
+The agreed prototype contract trusts `fromPlayerId` without server-side proof of control of the source profile.
+Deletion and transfer are sequential, so a failure after deletion can leave the source login IDs untransferred.
+
 ## API clients (#122)
 
 Use the existing local NSwag 14.7.1 tool for two independent clients:
