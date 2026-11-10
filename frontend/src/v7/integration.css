@@ -228,8 +228,9 @@ html[data-large-text="true"] .world-intro .intro-cta { position: static; }
 .activity-open strong { -webkit-line-clamp:2; line-clamp:2; }
 .activity-text { -webkit-line-clamp:3; line-clamp:3; }
 .post-ideas>p { margin:0 0 8px; }
-.post-ideas-grid { display:flex; flex-wrap:wrap; gap:var(--space-2); }
-.post-ideas-grid .chip { max-width:100%; overflow-wrap:anywhere; text-align:left; }
+.post-ideas-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-2); }
+.post-ideas-grid .post-idea { padding:10px 12px; font-size:.875rem; line-height:1.4; overflow-wrap:anywhere; }
+.post-ideas-grid .post-idea span { display:block; }
 
 .account-handle { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; overflow-wrap:normal; max-width:100%; }
 .owned-world { display:grid; grid-template-columns:minmax(0,1fr) 44px; align-items:center; min-width:0; }
