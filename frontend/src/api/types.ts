@@ -22,7 +22,13 @@ export type PlayerDocument = Omit<Fields<Wire.PlayerResponse>, 'energy' | 'skill
   streak: Omit<Fields<Wire.StreakResponse>, 'days'> & { days: number }
   ageBand?: import('../app/ageBand').AgeBand
 }
+// Optional presentation contract for the new role campaigns. Legacy wire skills are separate.
+// The design adapter supplies examples; production awaits the campaign API mapping.
+export type RoleSkillState = {name:string; level:number; progress:number}
+export type CampaignProgress = {percent:number; taskId?:string; completed:boolean}
+export type TurnProgress = {actionId:string; skills:RoleSkillState[]; campaign:CampaignProgress; outcome:{status:'success'|'partial'|'failed';title:string;reason:string}}
 export interface Player extends Omit<PlayerDocument, 'energy' | 'experiments'> {
+  roleSkills?: RoleSkillState[]; campaignProgress?: CampaignProgress; lastTurn?: TurnProgress
   worldInstanceId?: string; difficulty?: WorldDifficulty; avatarStyle?: string
   name: string; handle: string; role: string; world: WorldId
   subs: number; postsLeft: number; postsCap: number; firstPostInviteBonus: number
@@ -41,12 +47,16 @@ export type PostDetailResponse = Omit<Fields<Wire.PostDetailResponse>, 'views' |
 export type Post = Omit<PostDetailResponse, 'postId'> & { id: string; inRivers?: boolean; at?: string }
 export type ChannelPost = Omit<Fields<Wire.ChannelPostResponse>, 'views' | 'commentCount' | 'reactions'> & { views: number; commentCount: number; reactions: Reaction[] }
 export type Why = Wire.WhyResponse
-export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views' | 'ribbons' | 'bestComment'> & {
+export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views' | 'ribbons' | 'bestComment' | 'hook'> & {
   delta: number; views: number
   ribbons: (Omit<Fields<Wire.RibbonResponse>, 'sub'> & { sub?: string })[]
-  bestComment?: Wire.BestCommentResponse
+  bestComment?: Wire.BestCommentResponse; hook?: string
   completedWants?: Pick<Want, 'id' | 'text' | 'reward'>[]
 }
+export type LiveEvent = {type:'views';views:number}|{type:'typing';name:string}|{type:'react';emoji:string;count:number}|{type:'comment';comment:CommentT}|{type:'result';result:PostResult}
+export type PublicationStatus = 'pending'|'generating'|'ready_for_moderation'|'completed'|'failed'
+export type PublicationFailure = {code:string}
+export type PublicationState = {status:PublicationStatus;result:PostResult|null;failure?:PublicationFailure}
 export type Friend = Omit<Fields<Wire.FriendResponse>, 'subs' | 'pronoun'> & { subs: number; pronoun: 'её' | 'его' }
 export type Challenge = Omit<Fields<NonNullable<Wire.ChallengeResponse>>, 'rival' | 'day' | 'days' | 'myScore' | 'rivalScore'> & { rival: Friend; day: number; days: number; myScore: number; rivalScore: number }
 export type GameEvent = Wire.GameEventResponse

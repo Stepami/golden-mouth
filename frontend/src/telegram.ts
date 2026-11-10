@@ -15,10 +15,10 @@ export function initTelegram(): boolean {
     rememberReferral(new URLSearchParams(raw).get('start_param') ?? retrieveLaunchParams().tgWebAppStartParam)
     backButton.mount.ifAvailable()
     miniApp.mount.ifAvailable()
-    miniApp.setHeaderColor.ifAvailable('#0E0E13')
-    miniApp.setBgColor.ifAvailable('#0E0E13')
+    miniApp.setHeaderColor.ifAvailable(document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#000000')
+    miniApp.setBgColor.ifAvailable(document.documentElement.dataset.theme === 'light' ? '#ffffff' : '#000000')
     swipeBehavior.mount.ifAvailable(); swipeBehavior.disableVertical.ifAvailable()
-    if (viewport.mount.isAvailable()) viewport.mount().then(() => viewport.expand.ifAvailable()).catch(() => {})
+    if (viewport.mount.isAvailable()) viewport.mount().then(() => { viewport.bindCssVars(); viewport.expand.ifAvailable() }).catch(() => {})
     miniApp.ready.ifAvailable()
   } catch { inTelegram = false }
   return inTelegram

@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { clearWorldDrafts, getWorldDraft, selectDraftOwner, setWorldDraft } from './worldDraft'
+import { selectDraftOwner } from './worldDraft'
+import { clearResultHistory } from './resultHistory'
 import { api } from '../api/client'
-import { hasAccess } from '../api/auth'
 import type { Player } from '../api/types'
 
-export type PlayerState = 'loading' | 'ready' | 'missing' | 'failed'
+export type PlayerState = 'loading' | 'ready' | 'missing' | 'unauthorized' | 'failed'
 interface Store { player: Player | null; playerState: PlayerState; setPlayer: (p: Player) => void; resetPlayer: () => void; patch: (p: Partial<Player>) => void; refresh: () => Promise<Player | undefined>; unlockCelebration: boolean; dismissUnlockCelebration: () => void }
 const unlockSeen = new Set<string>()
 const Ctx = createContext<Store>(null!)
@@ -18,6 +18,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [unlockPlayerId, setUnlockPlayerId] = useState<string | null>(null)
   const resetPlayer = useCallback(() => {
     generation.current++
+    clearResultHistory()
     if (player) unlockSeen.delete(player.id)
     selectDraftOwner('onboarding')
     setPlayerValue(null); setPlayerState('missing'); setUnlockPlayerId(null)
@@ -38,24 +39,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   /** Reconciles player state with /me. On failure keeps an already ready player untouched. */
   const refresh = useCallback(async () => {
     const started = generation.current
-    if (!hasAccess()) { selectDraftOwner('onboarding'); setPlayerState('missing'); return }
     try {
-      const next = await api.restore()
+      const next = await api.me()
       if (started !== generation.current) return
-      if (next) setPlayer(next)
-      else {
-        if (api.hasPlayer()) {
-          selectDraftOwner('onboarding')
-          const draft = getWorldDraft()
-          selectDraftOwner(api.playerId()!)
-          if (!getWorldDraft() && draft) { setWorldDraft(draft); clearWorldDrafts('onboarding') }
-        } else selectDraftOwner('onboarding')
-        setPlayerState('missing')
-      }
+      setPlayer(next)
       return next
-    } catch {
+    } catch (e) {
       if (started !== generation.current) return
-      setPlayerState(prev => prev === 'ready' ? 'ready' : 'failed')
+      selectDraftOwner(api.playerId() ?? 'onboarding')
+      setPlayerState(prev => prev === 'ready' ? 'ready' : (e as { status?: number })?.status === 404 ? 'missing' : (e as { status?: number })?.status === 401 ? 'unauthorized' : 'failed')
     }
   }, [setPlayer])
   useEffect(() => { void refresh() }, [refresh])

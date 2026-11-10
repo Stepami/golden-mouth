@@ -7,6 +7,7 @@ const certPath = process.env.REKI_HTTPS_CERT_PATH
 const keyPath = process.env.REKI_HTTPS_KEY_PATH
 
 export default defineConfig({
+  cacheDir: process.env.REKI_VITE_CACHE_DIR ?? "node_modules/.vite",
   plugins: [
     react(),
     ...(process.env.REKI_BROWSER_LOGIN === '1' ? [] : [tma({
