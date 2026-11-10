@@ -24,7 +24,8 @@ public sealed class ExternalVkAuthController(IAuthSessionService sessions) : Con
         [FromKeyedServices(AuthConstants.Grants.Vk)] IExternalUserIdProvider externalUserIdProvider,
         CancellationToken cancellationToken)
     {
-        if (!externalUserIdProvider.TryGetExternalUserId(out var externalId))
+        var externalId = await externalUserIdProvider.GetExternalUserIdOrNullAsync(cancellationToken);
+        if (externalId is null)
         {
             return InvalidGrant(Errors.InvalidGrant, null);
         }

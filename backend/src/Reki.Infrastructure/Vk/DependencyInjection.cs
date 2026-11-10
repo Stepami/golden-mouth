@@ -1,11 +1,10 @@
-using System.Security.Claims;
 using System.Text.Json;
 using AspNetCore.Authentication.ApiKey;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Reki.Application.Auth;
-using Reki.Domain.Player;
 using Reki.Infrastructure.Auth;
 
 namespace Reki.Infrastructure.Vk;
@@ -24,7 +23,6 @@ internal static class DependencyInjection
         services.AddHttpApi<IVkApi>((options, provider) =>
             {
                 var jsonOptions = provider.GetRequiredService<IOptions<JsonSerializerOptions>>().Value;
-                options.UseLogging = false;
                 options.JsonSerializeOptions.TypeInfoResolver = jsonOptions.TypeInfoResolver;
                 options.JsonDeserializeOptions.TypeInfoResolver = jsonOptions.TypeInfoResolver;
                 options.KeyValueSerializeOptions.GetJsonSerializerOptions().TypeInfoResolver = jsonOptions.TypeInfoResolver;
@@ -35,34 +33,18 @@ internal static class DependencyInjection
                 client.BaseAddress = new Uri(options.BaseUrl);
                 client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
             })
-            .RemoveAllLoggers()
             .AddStandardResilienceHandler(options => options.Retry.DisableForUnsafeHttpMethods());
         services.AddAuthentication().AddApiKeyInAuthorizationHeader(AuthConstants.Schemes.Vk, options =>
         {
             options.KeyName = "Bearer";
             options.SuppressWWWAuthenticateHeader = true;
-            options.Events.OnValidateKey = async context =>
+
+            // This scheme only extracts the credential; the provider verifies it before issuing a session.
+            options.Events.OnValidateKey = context =>
             {
-                var httpContext = context.HttpContext;
-                try
-                {
-                    var provider = httpContext.RequestServices;
-                    var vkOptions = provider.GetRequiredService<IOptions<VkOptions>>().Value;
-                    var info = await provider.GetRequiredService<IVkApi>()
-                        .GetUserInfoAsync(vkOptions.ApplicationId, context.ApiKey, httpContext.RequestAborted);
-                    if (info.User?.UserId is { Length: > 0 } id && id.All(char.IsAsciiDigit) && id.Any(character => character != '0'))
-                    {
-                        context.ValidationSucceeded([new Claim(AuthConstants.Claims.ExternalUserId, ExternalUserId.Vk(id).Value)]);
-                    }
-                    else
-                    {
-                        context.ValidationFailed();
-                    }
-                }
-                catch (Exception) when (!httpContext.RequestAborted.IsCancellationRequested)
-                {
-                    context.ValidationFailed();
-                }
+                context.Properties.StoreTokens([new AuthenticationToken { Name = "access_token", Value = context.ApiKey }]);
+                context.ValidationSucceeded();
+                return Task.CompletedTask;
             };
         });
         services.AddKeyedScoped<IExternalUserIdProvider, VkUserIdProvider>(AuthConstants.Grants.Vk);

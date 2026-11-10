@@ -35,7 +35,8 @@ public sealed class ExternalTelegramAuthController(IAuthSessionService sessions)
         [FromKeyedServices(AuthConstants.Grants.MiniApp)] IExternalUserIdProvider externalUserIdProvider,
         CancellationToken cancellationToken)
     {
-        if (!externalUserIdProvider.TryGetExternalUserId(out var externalId))
+        var externalId = await externalUserIdProvider.GetExternalUserIdOrNullAsync(cancellationToken);
+        if (externalId is null)
         {
             return InvalidGrant(Errors.InvalidGrant, null);
         }
@@ -54,7 +55,8 @@ public sealed class ExternalTelegramAuthController(IAuthSessionService sessions)
         [FromKeyedServices(AuthConstants.Grants.TelegramLogin)] IExternalUserIdProvider externalUserIdProvider,
         CancellationToken cancellationToken)
     {
-        if (!externalUserIdProvider.TryGetExternalUserId(out var externalId))
+        var externalId = await externalUserIdProvider.GetExternalUserIdOrNullAsync(cancellationToken);
+        if (externalId is null)
         {
             return InvalidGrant(Errors.InvalidGrant, null);
         }
@@ -73,7 +75,8 @@ public sealed class ExternalTelegramAuthController(IAuthSessionService sessions)
         [FromKeyedServices(AuthConstants.Schemes.Onboarding)] IExternalUserIdProvider provider,
         CancellationToken cancellationToken)
     {
-        if (!provider.TryGetExternalUserId(out var externalId))
+        var externalId = await provider.GetExternalUserIdOrNullAsync(cancellationToken);
+        if (externalId is null)
         {
             throw new InvalidOperationException("Onboarding identity is missing.");
         }
