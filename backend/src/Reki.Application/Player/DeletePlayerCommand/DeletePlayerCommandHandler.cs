@@ -1,4 +1,6 @@
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using Reki.Application.Auth;
 using Reki.Application.Events;
 using Reki.Application.Invites;
 using Reki.Application.Posts;
@@ -11,6 +13,7 @@ namespace Reki.Application.Player.DeletePlayerCommand;
 internal sealed class DeletePlayerCommandHandler(
     IUnitOfWork unitOfWork,
     IPlayerRepository players,
+    IServiceScopeFactory scopeFactory,
     IWorldRepository worlds,
     IPostRepository posts,
     IDailyGameEventRepository events,
@@ -36,6 +39,8 @@ internal sealed class DeletePlayerCommandHandler(
                 return Unit.Value;
             },
             cancellationToken);
+        await using var scope = scopeFactory.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<IAuthSessionService>().DeletePlayerSessionsAsync(playerId, cancellationToken);
         telemetry.Track(playerId, "player_deleted", new Dictionary<string, string>());
         return Unit.Value;
     }

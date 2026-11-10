@@ -1,11 +1,13 @@
 using Kot.MongoDB.Migrations;
+using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using OpenIddict.Abstractions;
 using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
 
-internal sealed class UseExternalPlayerIds : RekiMigrationBase
+internal sealed class UseExternalPlayerIds(IServiceScopeFactory scopeFactory) : RekiMigrationBase
 {
     private const string LegacyIndexName = "ux_players_telegram_user";
 
@@ -48,5 +50,18 @@ internal sealed class UseExternalPlayerIds : RekiMigrationBase
             legacyPlayers,
             Builders<BsonDocument>.Update.Unset("TelegramUserId"),
             cancellationToken: cancellationToken);
+
+        using var scope = scopeFactory.CreateScope();
+        var tokens = scope.ServiceProvider.GetRequiredService<IOpenIddictTokenManager>();
+        var authorizations = scope.ServiceProvider.GetRequiredService<IOpenIddictAuthorizationManager>();
+        await foreach (var token in tokens.ListAsync(null, null, cancellationToken))
+        {
+            await tokens.DeleteAsync(token, cancellationToken);
+        }
+
+        await foreach (var authorization in authorizations.ListAsync(null, null, cancellationToken))
+        {
+            await authorizations.DeleteAsync(authorization, cancellationToken);
+        }
     }
 }

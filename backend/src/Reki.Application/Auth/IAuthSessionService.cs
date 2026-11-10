@@ -5,6 +5,8 @@ namespace Reki.Application.Auth;
 
 public interface IAuthSessionService
 {
+    Task DeletePlayerSessionsAsync(PlayerId playerId, CancellationToken cancellationToken);
+
     Task<bool> LogoutAsync(string refreshToken, CancellationToken cancellationToken);
 
     Task<ClaimsPrincipal?> IssueAsync(

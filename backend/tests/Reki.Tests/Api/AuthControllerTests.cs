@@ -107,6 +107,11 @@ public sealed class AuthControllerTests(ApiFactory factory)
         await Assert.That(otherSession.AccessToken).IsNotEmpty();
         playerHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", otherSession.AccessToken);
         await Assert.That((await playerClient.GetCurrentPlayerAsync(CancellationToken.None)).Id).IsEqualTo(me.Id);
+        await playerClient.DeleteCurrentPlayerAsync(CancellationToken.None);
+        var deletedSession = await Assert.ThrowsAsync<AuthApiException>(() => auth.RefreshAsync(
+            RefreshRequest(otherSession.RefreshToken), CancellationToken.None))
+            ?? throw new InvalidOperationException("Expected a rejected refresh after account deletion.");
+        await Assert.That(deletedSession.StatusCode).IsEqualTo(400);
     }
 
     [Test]

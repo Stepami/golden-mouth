@@ -2,8 +2,12 @@ using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using OpenIddict.Abstractions;
+using OpenIddict.MongoDb;
+using OpenIddict.MongoDb.Models;
 using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Application.Player;
@@ -364,6 +368,25 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var invitations = Database.GetCollection<Invitation>("invites");
         var deletedPlayerId = PlayerId.From(Guid.Parse(playerId));
         var otherPlayerId = PlayerId.New();
+        var authOptions = Factory.Services.GetRequiredService<IOptions<OpenIddictMongoDbOptions>>().Value;
+        var tokens = Database.GetCollection<OpenIddictMongoDbToken>(authOptions.TokensCollectionName);
+        var authorizations = Database.GetCollection<OpenIddictMongoDbAuthorization>(authOptions.AuthorizationsCollectionName);
+        var applications = Database.GetCollection<OpenIddictMongoDbApplication>(authOptions.ApplicationsCollectionName);
+        var otherSubject = otherPlayerId.ToString();
+        await authorizations.InsertManyAsync(new[]
+        {
+            new OpenIddictMongoDbAuthorization { Subject = playerId, Status = OpenIddictConstants.Statuses.Valid },
+            new OpenIddictMongoDbAuthorization { Subject = playerId, Status = OpenIddictConstants.Statuses.Revoked },
+            new OpenIddictMongoDbAuthorization { Subject = otherSubject, Status = OpenIddictConstants.Statuses.Valid },
+        });
+        await tokens.InsertManyAsync(new[]
+        {
+            new OpenIddictMongoDbToken { Subject = playerId, Status = OpenIddictConstants.Statuses.Valid, Type = OpenIddictConstants.TokenTypeIdentifiers.RefreshToken, ReferenceId = Guid.NewGuid().ToString("N") },
+            new OpenIddictMongoDbToken { Subject = playerId, Status = OpenIddictConstants.Statuses.Valid, Type = OpenIddictConstants.TokenTypeIdentifiers.AccessToken, ReferenceId = Guid.NewGuid().ToString("N") },
+            new OpenIddictMongoDbToken { Subject = otherSubject, Status = OpenIddictConstants.Statuses.Valid, Type = OpenIddictConstants.TokenTypeIdentifiers.RefreshToken, ReferenceId = Guid.NewGuid().ToString("N") },
+        });
+        var applicationCount = await applications.CountDocumentsAsync(item => item.ClientId == "reki-test-client");
+        await Assert.That(applicationCount).IsEqualTo(1L);
         var unrelatedInvitation = Invitation.Create(otherPlayerId, PlayerId.New(), Factory.Session.Clock.GetUtcNow(), 5);
         await invitations.InsertManyAsync(new[]
         {
@@ -378,6 +401,11 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await api.Player.DeleteCurrentPlayerAsync(CancellationToken.None);
 
         // Assert
+        await Assert.That(await tokens.CountDocumentsAsync(item => item.Subject == playerId)).IsEqualTo(0L);
+        await Assert.That(await authorizations.CountDocumentsAsync(item => item.Subject == playerId)).IsEqualTo(0L);
+        await Assert.That(await tokens.CountDocumentsAsync(item => item.Subject == otherSubject)).IsEqualTo(1L);
+        await Assert.That(await authorizations.CountDocumentsAsync(item => item.Subject == otherSubject)).IsEqualTo(1L);
+        await Assert.That(await applications.CountDocumentsAsync(item => item.ClientId == "reki-test-client")).IsEqualTo(applicationCount);
         var savedInvitations = await invitations.Find(FilterDefinition<Invitation>.Empty).ToListAsync();
         await Assert.That(savedInvitations).IsEquivalentTo(new[] { unrelatedInvitation });
         await Assert.That(await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None)).IsEqualTo(before - 1);

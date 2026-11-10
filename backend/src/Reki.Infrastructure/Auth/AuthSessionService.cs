@@ -16,6 +16,20 @@ internal sealed class AuthSessionService(
     IOptions<AuthOptions> options,
     IPlayerRepository players) : IAuthSessionService
 {
+    public async Task DeletePlayerSessionsAsync(PlayerId playerId, CancellationToken cancellationToken)
+    {
+        var subject = playerId.ToString();
+        await foreach (var token in tokens.FindBySubjectAsync(subject, cancellationToken))
+        {
+            await tokens.DeleteAsync(token, cancellationToken);
+        }
+
+        await foreach (var authorization in authorizations.FindBySubjectAsync(subject, cancellationToken))
+        {
+            await authorizations.DeleteAsync(authorization, cancellationToken);
+        }
+    }
+
     public async Task<bool> LogoutAsync(
         string refreshToken,
         CancellationToken cancellationToken)
