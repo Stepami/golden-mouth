@@ -4,8 +4,8 @@ const photos: Record<string,string> = {
   'дейл купер':'dale', 'одри хорн':'audrey', 'шелли джонсон':'shelly',
   'вера воронина':'vera', 'костя воронин':'kostya', 'николай петрович':'nikolai', 'кирилл':'kirill',
 };
-export const roleLooks:Record<string,string>={isabella:'muse',eduard:'scout',yakov:'sage',lida:'spark',diana:'spark',jon:'sage',james:'scout',greedy_wolf:'sage','2kotleti_news':'scout',alexey_nl:'muse'};
-const namedLooks:Record<string,string>={'изабелла лебедева':'muse','эдуард калинин':'scout','яков чернов':'sage','лида':'spark','диана шторморождённая':'spark','джон винтер':'sage','джеймс левлистер':'scout','меркантил':'sage','бургер в декабре':'scout','куляш ai':'muse'};
+export const roleLooks:Record<string,string>={isabella:'muse',eduard:'evening-eduard',yakov:'evening-yakov',lida:'spark',diana:'spark',jon:'sage',james:'scout',greedy_wolf:'sage','2kotleti_news':'scout',alexey_nl:'muse'};
+const namedLooks:Record<string,string>={'изабелла лебедева':'muse','эдуард калинин':'evening-eduard','яков чернов':'evening-yakov','лида':'spark','диана шторморождённая':'spark','джон винтер':'sage','джеймс левлистер':'scout','меркантил':'sage','бургер в декабре':'scout','куляш ai':'muse'};
 const itPortraits:Record<string,string>={'меркантил':'merkantil','бургер в декабре':'burger','куляш ai':'kulyash','куляш ии':'kulyash'};
 export function defaultPortrait(name: string): string | undefined {
   const key = name.trim().toLocaleLowerCase('ru');
@@ -21,12 +21,15 @@ export function defaultPortrait(name: string): string | undefined {
 
 export const characterLooks = ['scout', 'muse', 'sage', 'spark'] as const;
 export function characterPortrait(seed: string) {
+  if(seed==='evening-eduard'||seed==='evening-yakov')return `/assets/avatars/3d/${seed}-v10.png`;
   const look = characterLooks.find(value => value === seed) ?? characterLooks[Array.from(seed).reduce((sum, c) => sum + c.charCodeAt(0), 0) % characterLooks.length];
   return `/assets/avatars/3d/${look}-v8.png`;
 }
 /** Retire the old generated SVGs without replacing a player's uploaded photo. */
 export function displayPortrait(src: string | undefined, name: string) {
   if(src==='')return undefined;
+  const evening=namedLooks[name.trim().toLocaleLowerCase('ru')];
+  if(evening?.startsWith('evening-')&&(!src||src.startsWith('/assets/avatars/3d/')||src.startsWith('data:image/svg+xml')))return characterPortrait(evening);
   const fixed=itPortraits[name.trim().toLocaleLowerCase('ru')];
   if(fixed&&(!src||src.startsWith('/assets/avatars/3d/')))return `/assets/avatars/3d/${fixed}-v9.png`;
   return src?.startsWith('data:image/svg+xml') ? defaultPortrait(name) : src || defaultPortrait(name);

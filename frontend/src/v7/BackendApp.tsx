@@ -1,3 +1,4 @@
+import {withEveningAppearance} from './eveningAppearance';
 import {ActivityItem} from './ui/ActivityItem';
 import {InviteFriend} from './screens/InviteFriend';
 import {PostIdeas,ideasForWorld} from './screens/PostIdeas';
@@ -109,6 +110,7 @@ export default function BackendApp() {
   const [heroSkills, setHeroSkills] = useState<string[]>([]);
   const [heroSeed, setHeroSeed] = useState('');
   const [heroAvatar, setHeroAvatar] = useState<string>();
+  const [heroAppearance,setHeroAppearance]=useState<string>();
   const [avatarRemoved, setAvatarRemoved] = useState(false);
   const [roleScenarioSelected, setRoleScenarioSelected] = useState(false);
   const [draft, setDraft] = useState('');
@@ -256,13 +258,13 @@ export default function BackendApp() {
     setIntroStep(0); setSelected(w); setSelectedVariant(storyVariant); go('intro');
   };
   const startHero = (w: World) => {
-    const def = worldDefinitionOf(w.id); setHeroBase(def); setDefinition(def); setHeroChoice(null); setRoleScenarioSelected(!!scenarioForTemplate(def.templateId) && (def.templateId !== 'aec9494b-4118-4525-8458-e85d759c8dd9' || selectedVariant)); setHeroGoal(''); setHeroSkills([]); setHeroAvatar(undefined); setHeroSeed(def.avatar); setAvatarRemoved(false); go('hero');
+    const def = worldDefinitionOf(w.id); setHeroBase(def); setDefinition(def); setHeroChoice(null); setRoleScenarioSelected(!!scenarioForTemplate(def.templateId) && (def.templateId !== 'aec9494b-4118-4525-8458-e85d759c8dd9' || selectedVariant)); setHeroGoal(''); setHeroSkills([]); setHeroAvatar(undefined); setHeroAppearance(undefined); setHeroSeed(def.avatar); setAvatarRemoved(false); go('hero');
   };
   const chooseHero = (choice?: { id: string }) => {
     if (!definition || !heroBase) return;
     setHeroChoice(choice?.id ?? 'custom');
     setHeroGoal((roleScenarioSelected ? scenarioForTemplate(heroBase.templateId)?.roles.find(r=>r.id===(choice?.id??'custom'))?.goal : undefined) || selected?.goal || '');
-    setHeroAvatar(undefined); setHeroSeed(choice?.id ?? crypto.randomUUID()); setAvatarRemoved(false);
+    setHeroAvatar(undefined); setHeroAppearance(undefined); setHeroSeed(choice?.id ?? crypto.randomUUID()); setAvatarRemoved(false);
     if (roleScenarioSelected) { setDefinition(definitionForRole(heroBase, choice?.id ?? 'custom')); return; }
     if (!choice) { setDefinition(heroBase); return; }
     const star = heroBase.stars.find(star => star.id === choice.id); if (!star) return;
@@ -303,7 +305,8 @@ export default function BackendApp() {
         clearReferral(); trackEvent('onboarding_step', { step: 'age', ok: true });
         saveLocal(`reki:v7:${api.playerId()}:qualities`, qualities); saveLocal(`reki:v7:${api.playerId()}:entry-required`, false);
       }
-      const created = await api.createWorld(definition);
+      const worldDefinition=withEveningAppearance(definition,heroChoice??'custom',avatarRemoved?undefined:heroAppearance);
+      const created = await api.createWorld(worldDefinition);
       const role = roleScenarioSelected ? scenarioForTemplate(definition.templateId)?.roles.find(r=>r.id===heroChoice) : undefined;
       const custom = !heroChoice || heroChoice==='custom';
       const portrait = custom&&avatarRemoved ? '' : (custom?heroAvatar:undefined) || await heroPortrait(heroChoice ?? 'custom', heroSeed || definition.avatar, definition.templateId || created.world, definition.avatarStyle).catch(() => undefined);
@@ -461,11 +464,11 @@ export default function BackendApp() {
   else if (screen === 'welcome') content = <Onboarding key="entry-welcome" initialStep={0} onTry={() => go('age')} onDone={() => go('age')} onBack={back} />;
   else if (screen === 'age') content = <AgeEntry initialAge={entryAge} minimumAge={14} requireConsent={true} onBack={value => { setEntryAge(value); back(); }} onContinue={continueAge} />;
   else if (screen === 'onboarding') content = <Onboarding key="entry-interests" initialStep={1} standalone={interestOnly.current} initialQualities={qualities} onBack={back} onDone={completeInterests} />;
-  else if (screen === 'hero' && definition && definition.templateId) content = <><HeroStudio onBack={back} startWithHero={selectedStory?.startWithHero}
+  else if (screen === 'hero' && definition && definition.templateId) content = <><HeroStudio onAppearance={setHeroAppearance} onBack={back} startWithHero={selectedStory?.startWithHero}
     options={heroOptions} selected={heroChoice} onChoose={id=>chooseHero(id==='custom'?undefined:{id})}
     name={definition.name} channel={definition.avatar} goal={heroGoal} onName={name=>setDefinition({...definition,name})} onChannel={avatar=>setDefinition({...definition,avatar})}
     skills={heroSkills} onSkills={setHeroSkills} seed={heroSeed||definition.avatar} avatar={heroAvatar} removed={avatarRemoved}
-    onLook={seed=>{setHeroSeed(seed);setHeroAvatar(undefined);setAvatarRemoved(false);}} onUpload={src=>{setHeroAvatar(src);setAvatarRemoved(false);}} onRemove={()=>{setHeroAvatar(undefined);setAvatarRemoved(true);}}
+    onLook={seed=>{setHeroSeed(seed);setHeroAvatar(undefined); setHeroAppearance(undefined);setAvatarRemoved(false);}} onUpload={src=>{setHeroAvatar(src);setAvatarRemoved(false);}} onRemove={()=>{setHeroAvatar(undefined); setHeroAppearance(undefined);setAvatarRemoved(true);}}
     address={address} onAddress={setAddress} worldId={definition.templateId} worldTitle={selected?.title||definition.title} style={definition.avatarStyle}
     busy={busy} canEnter={!!heroChoice&&!!definition.stars.length&&(heroChoice!=='custom'||!!(definition.name.trim()&&definition.avatar.trim()&&heroGoal.trim()))} onEnter={()=>void createWorld()}/></>;
   else if (screen === 'hero' && definition) content = <><ScreenHeading title="Свой мир" back={back} /><section className="section stack"><TextField label="Имя персонажа" maxLength={80} value={definition.name} onChange={e => setDefinition({ ...definition, name: e.target.value })} /><TextField label="Имя канала" maxLength={80} value={definition.avatar} onChange={e => setDefinition({ ...definition, avatar: e.target.value })} />

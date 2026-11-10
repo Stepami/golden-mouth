@@ -1,3 +1,4 @@
+import {eveningLooks,customLook} from '../avatarBuilder';
 import {syncBackButton} from '../../telegram';
 import {useEffect, useRef, useState} from 'react';
 import {Button, Chip, Dialog, Icon, TextField, ScreenHeading} from '../ui';
@@ -7,12 +8,13 @@ import {recommendRoles, skillDirections} from '../story/roles';
 import {SkillArt} from '../ui/GameArt';
 import './heroStudio.css';
 
-export function HeroStudio({options, selected, onChoose, name, channel, goal, onName, onChannel, skills, onSkills, seed, avatar, removed, onLook, onUpload, onRemove, address, onAddress, worldId, worldTitle, style, busy, canEnter, onEnter, onBack, startWithHero=false}: {
+export function HeroStudio({options, selected, onChoose, name, channel, goal, onName, onChannel, skills, onSkills, seed, avatar, removed, onLook, onUpload, onRemove, address, onAddress, worldId, worldTitle, style, busy, canEnter, onEnter, onBack, onAppearance, startWithHero=false}: {
  options:HeroOption[]; selected:string|null; onChoose:(id:string)=>void;
  name:string; channel:string; goal:string; onName:(value:string)=>void; onChannel:(value:string)=>void;
  skills:string[]; onSkills:(value:string[])=>void; seed:string; avatar?:string; removed:boolean;
  onLook:(seed:string)=>void; onUpload:(src:string)=>void; onRemove:()=>void;
  address:string; onAddress:(value:'she'|'he'|'nick')=>void; worldId:string; worldTitle:string; style:string;
+ onAppearance:(description:string|undefined)=>void;
  busy:boolean; canEnter:boolean; onEnter:()=>void; onBack:()=>void; startWithHero?:boolean;
 }) {
  const [panel,setPanel]=useState<'skills'|'look'>(startWithHero?'look':'skills');
@@ -57,8 +59,8 @@ export function HeroStudio({options, selected, onChoose, name, channel, goal, on
     {(skills.length>0||directions.length>0)&&recommended&&<div className="practice-example" aria-live="polite"><strong>Тебе может подойти {recommended.name}</strong><p>{recommended.skills?.map(s=>s.name).join(' · ')}</p></div>}
     <details className="practice-explainer"><summary>Как это работает<Icon name="chevron"/></summary><p>У каждого персонажа уже есть три навыка, связанные с его историей. Выбор помогает найти героя, а его навыки развиваются через новые поступки в постах и ответах. Можно выбрать любого персонажа.</p></details>
    </div>:custom?<div className="studio-panel">
-    <AvatarBuilder seed={seed} onLook={onLook} onRender={onUpload}/>
-    <div className="studio-upload"><label className="button button--secondary">Загрузить фото<input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>1024*1024){setUploadError('Выбери PNG, JPG или WebP до 1 МБ.');return;}const reader=new FileReader();reader.onload=()=>{onUpload(String(reader.result));setUploadError('');};reader.onerror=()=>setUploadError('Не удалось прочитать фото.');reader.readAsDataURL(file);e.target.value='';}}/></label><Button variant="ghost" onClick={onRemove}>Без фото</Button></div>{uploadError&&<p role="alert">{uploadError}</p>}
+    <AvatarBuilder worldId={worldId} seed={seed} onLook={onLook} onRender={(src,glasses)=>{onUpload(src);const look=eveningLooks.find(look=>look.id===customLook(seed,worldId).id);onAppearance(look?`${look.description}${glasses==='none'?'':glasses==='round'?' Круглые очки.':' Прямоугольные очки.'}`:undefined);}}/>
+    <div className="studio-upload"><label className="button button--secondary">Загрузить фото<input className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{const file=e.target.files?.[0];if(!file)return;if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>1024*1024){setUploadError('Выбери PNG, JPG или WebP до 1 МБ.');return;}const reader=new FileReader();reader.onload=()=>{onUpload(String(reader.result));onAppearance(undefined);setUploadError('');};reader.onerror=()=>setUploadError('Не удалось прочитать фото.');reader.readAsDataURL(file);e.target.value='';}}/></label><Button variant="ghost" onClick={onRemove}>Без фото</Button></div>{uploadError&&<p role="alert">{uploadError}</p>}
     {custom&&<div className="studio-address"><span>Обращение</span><div className="row">{([['she','Она'],['he','Он'],['nick','По нику']] as const).map(([id,label])=><Chip key={id} selected={address===id} onClick={()=>onAddress(id)}>{label}</Chip>)}</div></div>}
    </div>:null}
 
