@@ -318,6 +318,10 @@ export default function BackendApp() {
     if (!savePostDraft(k, { ...saved, text: draft, publicationId: id, submittedText: text, ownWords: command.ownWords, submittedOwnWords: command.ownWords })) setStorageError(true);
     sending.current = true; setPending(true); setUnknown(false); setPublicationFailed(false); setError(''); setStatus('pending'); setScreen('feed'); setStack([]);
     cancel.current = api.publish(text, id, event => {
+      if (event.type === 'comment') {
+        void loadFeed(player);
+        return;
+      }
       if (event.type !== 'result') return;
       trackEvent('post_result', { delta: event.result.delta, viral: event.result.viral, flop: event.result.flop });
       completePostDraft(k, id, text); setDraft(readPostDraft(k).text);
