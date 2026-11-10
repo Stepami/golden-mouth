@@ -133,6 +133,8 @@ export default function BackendApp() {
   useScrollEdges(appRoot);
   const focusHeading = useRef<HTMLDivElement>(null);
   const feedRequest = useRef(0);
+  const displayedWorld = useRef(world?.id);
+  displayedWorld.current = world?.id;
   const threadRequest = useRef(0);
   const interestOnly = useRef(false);
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments); }, [player?.experiments]);
@@ -319,7 +321,7 @@ export default function BackendApp() {
     sending.current = true; setPending(true); setUnknown(false); setPublicationFailed(false); setError(''); setStatus('pending'); setScreen('feed'); setStack([]);
     cancel.current = api.publish(text, id, event => {
       if (event.type === 'comment') {
-        void loadFeed(player);
+        if (displayedWorld.current === player.world) void loadFeed(player);
         return;
       }
       if (event.type !== 'result') return;
