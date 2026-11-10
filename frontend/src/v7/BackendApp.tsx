@@ -133,6 +133,8 @@ export default function BackendApp() {
   useScrollEdges(appRoot);
   const focusHeading = useRef<HTMLDivElement>(null);
   const feedRequest = useRef(0);
+  const displayedWorld = useRef(world?.id);
+  displayedWorld.current = world?.id;
   const threadRequest = useRef(0);
   const interestOnly = useRef(false);
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments); }, [player?.experiments]);
@@ -318,6 +320,10 @@ export default function BackendApp() {
     if (!savePostDraft(k, { ...saved, text: draft, publicationId: id, submittedText: text, ownWords: command.ownWords, submittedOwnWords: command.ownWords })) setStorageError(true);
     sending.current = true; setPending(true); setUnknown(false); setPublicationFailed(false); setError(''); setStatus('pending'); setScreen('feed'); setStack([]);
     cancel.current = api.publish(text, id, event => {
+      if (event.type === 'comment') {
+        if (displayedWorld.current === player.world) void loadFeed(player);
+        return;
+      }
       if (event.type !== 'result') return;
       trackEvent('post_result', { delta: event.result.delta, viral: event.result.viral, flop: event.result.flop });
       completePostDraft(k, id, text); setDraft(readPostDraft(k).text);

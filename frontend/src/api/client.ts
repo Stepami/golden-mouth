@@ -208,7 +208,10 @@ export const api = {
                 if (cancelled) return;
                 onStatus?.('completed');
                 onEvent({type:'result',result:response.result});
-                await api.initialComment(response.post.id, response.predictedAuthorId).catch(() => undefined);
+                const updatedPost = await api.initialComment(response.post.id, response.predictedAuthorId).catch(() => undefined);
+                if (cancelled) return;
+                const comment = updatedPost?.comments.at(-1);
+                if (comment) onEvent({type: 'comment', comment});
             }).catch(() => { if (!cancelled) onError('unknown'); });
         }, 0);
         return () => { cancelled = true; clearTimeout(timer); };
