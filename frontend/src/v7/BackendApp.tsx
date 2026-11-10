@@ -42,7 +42,7 @@ import {ReportComment} from './screens/ReportComment';
 import {receiptForRelease} from './releasePolicy';
 import {deleteConfirmedAccount} from './accountDeletion';
 import { personaFor, savePersona, clearPersonas } from './persona';
-import { WorldProgress, StreakDetails } from './screens/WorldResources';
+import { WorldProgress, StreakDetails, dayCount } from './screens/WorldResources';
 import { blankWorld } from '../app/worldDraft';
 import { pendingReferral, clearReferral } from '../app/referral';
 import { draftKey, readPostDraft, savePostDraft, completePostDraft } from '../app/postDraft';
@@ -430,7 +430,7 @@ export default function BackendApp() {
       <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><EnergyBadge wallet={accountEnergy.wallet} amount={player?.postsLeft} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/></div>
       <ResourceBadge type="crystal" value={accountEnergy.wallet?String(accountEnergy.wallet.crystals):'—'} hint={accountEnergy.wallet?"Кристаллы для обмена на энергию":"Баланс кристаллов пока недоступен"} onClick={() => openResource('crystals')} />
       <button className="profile-access campaign-avatar" aria-label={`Профиль персонажа. История: ${campaignProgress===undefined?'прогресс уточняется':`${campaignProgress}%`}`} onClick={() => go('profile')} style={{background:`conic-gradient(var(--campaign-ring) ${campaignProgress??0}%,var(--color-divider) 0)`}}><Avatar name={player?.name ?? ''} src={player ? personaFor(player.id, player.world).avatar : undefined} size="lg" /></button></header>
-    {player&&<button className="hud-streak" onClick={()=>setOverlay('streak')} aria-label={`Серия: ${player.streak.days}. Посмотреть дни`}>🔥 <strong>{player.streak.days}</strong><span>в серии</span></button>}
+    {player&&<button className="hud-streak" onClick={()=>setOverlay('streak')} aria-label={`Серия: ${player.streak.days}. Посмотреть дни`}>🔥 <strong>{dayCount(player.streak.days)}</strong><span>в серии</span></button>}
     </div>
     {player?.postsLeft===0&&draft.trim()&&!pending&&<section className="section"><div className="energy-draft-notice"><strong>Черновик ждёт энергии</strong><blockquote className="energy-draft-text">{draft}</blockquote><p>Текст сохранён. Нажми на энергию вверху, чтобы посмотреть восстановление и обмен.</p><Button variant="secondary" onClick={()=>reply?openCompose(reply):openFirstPost()}>Вернуться к черновику</Button></div></section>}
     {!reply && (pending || unknown || publicationFailed) && <PublicationWaiting pending={pending} unknown={unknown} text={draft} status={status} onStop={stopWaiting} onContinue={() => { if (unknown) publish(); else openCompose(); }} />}
