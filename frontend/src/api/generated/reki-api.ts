@@ -721,6 +721,57 @@ export class PlayerClient {
         }
         return Promise.resolve<SwaggerResponse<PlusInterestResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
+
+    /**
+     * @return OK
+     */
+    mergePlayers(body: MergePlayersRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+        let url_ = this.baseUrl + "/merge";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processMergePlayers(_response);
+        });
+    }
+
+    protected processMergePlayers(response: Response): Promise<SwaggerResponse<void>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            return new SwaggerResponse(status, _headers, null as any);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("Not Found", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            result409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("Conflict", status, _responseText, _headers, result409);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
+    }
 }
 
 export class PostsClient {
@@ -1963,6 +2014,12 @@ export type LaunchSurface = "unknown" | "telegram-mini-app" | "browser" | "stand
 
 export interface LogoutRequest {
     refresh_token: string;
+
+    [key: string]: any;
+}
+
+export interface MergePlayersRequest {
+    fromPlayerId: string;
 
     [key: string]: any;
 }

@@ -2,6 +2,12 @@ import { runtimeConfig } from '../app/runtimeConfig'
 import type { OnboardingRequest, PlayerResponse } from './generated/reki-api'
 
 const refreshKey = 'reki:refresh-token'
+const providerKey = 'reki:auth-provider'
+export type AuthProvider = 'telegram' | 'vk' | 'yandex'
+export const currentAuthProvider = (): AuthProvider | undefined => {
+  const value = localStorage.getItem(providerKey)
+  return value === 'telegram' || value === 'vk' || value === 'yandex' ? value : undefined
+}
 const loggedOutKey = 'reki:logged-out'
 const pendingLoginKey = 'reki:pending-telegram-login'
 const authTimeoutMs = 15_000
@@ -26,6 +32,7 @@ interface TokenResponse { access_token: string; refresh_token: string }
 
 export const setInitData = (raw: string) => { if (raw !== initDataRaw) registrationExternalId = ''; initDataRaw = raw }
 export const hasInitData = () => !!initDataRaw
+export const getInitData = () => initDataRaw
 export const getAccessToken = () => accessToken
 export const hasAccess = () => !!accessToken
 export const needsRegistration = () => !!registrationExternalId
@@ -88,7 +95,8 @@ export function loadTelegramClientId(): Promise<number> {
 function storedRefresh(): string | null {
   try { return localStorage.getItem(refreshKey) } catch { return null }
 }
-function saveTokens(tokens: TokenResponse) {
+function saveTokens(tokens: TokenResponse, provider?: AuthProvider) {
+  if (provider) localStorage.setItem(providerKey, provider)
   localStorage.setItem(refreshKey, tokens.refresh_token)
   accessToken = tokens.access_token
   registrationExternalId = ''
@@ -97,7 +105,7 @@ function saveTokens(tokens: TokenResponse) {
 export function clearTokens() {
   accessToken = ''
   registrationExternalId = ''
-  try { localStorage.removeItem(refreshKey) } catch { /* storage unavailable */ }
+  try { localStorage.removeItem(refreshKey); localStorage.removeItem(providerKey) } catch { /* storage unavailable */ }
   notify()
 }
 async function tokenRequest(path: string, fields: Record<string, string>, authorization: string): Promise<TokenResponse | undefined> {
@@ -116,7 +124,7 @@ async function tokenRequest(path: string, fields: Record<string, string>, author
 }
 export async function loginMiniApp(): Promise<void> {
   const tokens = await tokenRequest('/auth/external/tg/miniapp', { grant_type: 'urn:reki:grant:telegram-mini-app' }, `TMiniApp ${initDataRaw}`)
-  if (tokens) saveTokens(tokens)
+  if (tokens) saveTokens(tokens, 'telegram')
   explicitlyLoggedOut = false
   sessionStorage.removeItem(loggedOutKey)
 }
@@ -138,7 +146,7 @@ export function resumeWidgetLogin(): Promise<void> {
   widgetRequest = (async () => {
     const tokens = await tokenRequest('/auth/external/tg/widget', { grant_type: 'urn:reki:grant:telegram-login' }, `Bearer ${idToken}`)
     if (pendingWidgetToken !== idToken) return
-    if (tokens) saveTokens(tokens)
+    if (tokens) saveTokens(tokens, 'telegram')
     explicitlyLoggedOut = false
     sessionStorage.removeItem(loggedOutKey)
   })().finally(() => { widgetRequest = undefined })
@@ -159,7 +167,7 @@ async function resumeVkLogin(): Promise<void> {
   const proof = pendingVkToken
   const tokens = await tokenRequest('/auth/external/vk', { grant_type: 'urn:reki:grant:vk' }, `Bearer ${proof}`)
   if (proof !== pendingVkToken) return
-  if (tokens) saveTokens(tokens)
+  if (tokens) saveTokens(tokens, 'vk')
   explicitlyLoggedOut = false
   sessionStorage.removeItem(loggedOutKey)
 }
@@ -178,7 +186,7 @@ async function resumeYandexLogin(): Promise<void> {
   const proof = pendingYandexToken
   const tokens = await tokenRequest('/auth/external/yandex', { grant_type: 'urn:reki:grant:yandex' }, `Bearer ${proof}`)
   if (proof !== pendingYandexToken) return
-  if (tokens) saveTokens(tokens)
+  if (tokens) saveTokens(tokens, 'yandex')
   explicitlyLoggedOut = false
   sessionStorage.removeItem(loggedOutKey)
 }

@@ -8,6 +8,7 @@ using Reki.Application.Invites;
 using Reki.Application.Player;
 using Reki.Application.Player.DeletePlayerCommand;
 using Reki.Application.Player.GetReferral;
+using Reki.Application.Player.MergePlayersCommand;
 using Reki.Application.Player.Responses;
 using Reki.Application.RekiContext;
 using Reki.Infrastructure.Auth;
@@ -70,13 +71,23 @@ public sealed class PlayerController(
         return TypedResults.Ok(new PlusInterestResponse(bonus));
     }
 
+    [HttpPost("merge", Name = "MergePlayers")]
+    [ActionName("MergePlayers")]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<Ok> MergePlayersAsync(MergePlayersRequest request, CancellationToken cancellationToken)
+    {
+        await sender.Send(new MergePlayers(request.FromPlayerId, rekiContext.PlayerId), cancellationToken);
+        return TypedResults.Ok();
+    }
+
     [HttpDelete("me", Name = "DeleteCurrentPlayer")]
     [ActionName("DeleteCurrentPlayer")]
     public async Task<Ok> DeleteCurrentPlayerAsync(
         CancellationToken cancellationToken)
     {
         await sender.Send(
-            new DeletePlayer(),
+            new DeletePlayer(rekiContext.PlayerId),
             cancellationToken);
         return TypedResults.Ok();
     }
