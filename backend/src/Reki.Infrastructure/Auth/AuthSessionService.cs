@@ -51,19 +51,26 @@ internal sealed class AuthSessionService(
         return true;
     }
 
-    public async Task<ClaimsPrincipal?> IssueAsync(
-        ExternalUserId externalUserId,
+    public async Task<IssueResult> IssueAsync(
+        IExternalUserIdProvider provider,
         string clientId,
         CancellationToken cancellationToken)
     {
-        var application = await applications.FindByClientIdAsync(clientId, cancellationToken)
-            ?? throw new InvalidOperationException("OpenIddict application is missing.");
-        var player = await players.GetPlayerAsync(externalUserId, cancellationToken);
-        if (player is null)
+        var externalUserId = await provider.GetExternalUserIdOrNullAsync(cancellationToken);
+        if (externalUserId is null)
         {
-            return null;
+            return new IssueResult(false, Errors.InvalidGrant, null);
         }
 
+        var player = await players.GetPlayerAsync(externalUserId.Value, cancellationToken);
+        if (player is null)
+        {
+            var unregisteredIdentity = new ClaimsIdentity([new Claim(AuthConstants.Claims.ExternalUserId, externalUserId.Value.Value)]);
+            return new IssueResult(false, "registration_required", new ClaimsPrincipal(unregisteredIdentity));
+        }
+
+        var application = await applications.FindByClientIdAsync(clientId, cancellationToken)
+            ?? throw new InvalidOperationException("OpenIddict application is missing.");
         var subject = player.Id.ToString();
         var identity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType);
         identity.SetClaim(Claims.Subject, subject);
@@ -83,6 +90,6 @@ internal sealed class AuthSessionService(
             principal.GetScopes(),
             cancellationToken);
         principal.SetAuthorizationId(await authorizations.GetIdAsync(authorization, cancellationToken));
-        return principal;
+        return new IssueResult(true, null, principal);
     }
 }
