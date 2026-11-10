@@ -34,7 +34,6 @@ internal sealed class ClaimPlusInterestCommandHandler(
             return 0;
         }
 
-        await playerRepository.ClaimPlusInterestAsync(player, updated, cancellationToken);
-        return updated.Wallet.Energy - player.Wallet.Energy;
+        return await playerRepository.ClaimPlusInterestAsync(player, updated, cancellationToken);
     }
 }

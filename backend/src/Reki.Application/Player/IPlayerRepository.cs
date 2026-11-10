@@ -17,7 +17,7 @@ public interface IPlayerRepository
         PlayerProfile updated,
         CancellationToken cancellationToken);
 
-    ValueTask ClaimPlusInterestAsync(
+    ValueTask<int> ClaimPlusInterestAsync(
         PlayerProfile player,
         PlayerProfile updated,
         CancellationToken cancellationToken);

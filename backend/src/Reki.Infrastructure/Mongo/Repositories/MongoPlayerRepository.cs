@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using MongoDB.Driver;
-using Reki.Application.Exceptions;
 using Reki.Application.Player;
 using Reki.Domain.Player;
 
@@ -50,7 +49,7 @@ internal sealed class MongoPlayerRepository(
         await _players.UpdateOneAsync(item => item.Id == player.Id, update, cancellationToken: cancellationToken);
     }
 
-    public async ValueTask ClaimPlusInterestAsync(
+    public async ValueTask<int> ClaimPlusInterestAsync(
         PlayerProfile player,
         PlayerProfile updated,
         CancellationToken cancellationToken)
@@ -63,10 +62,7 @@ internal sealed class MongoPlayerRepository(
             item => item.Id == player.Id && !item.PlusInterestClaimed && item.Version == player.Version,
             update,
             cancellationToken: cancellationToken);
-        if (result.MatchedCount == 0)
-        {
-            throw new RequestConflictException("Player changed during the request.");
-        }
+        return result.ModifiedCount == 1 ? updated.Wallet.Energy - player.Wallet.Energy : 0;
     }
 
     public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
