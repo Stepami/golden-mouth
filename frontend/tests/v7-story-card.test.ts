@@ -6,12 +6,11 @@ import type { World } from '../src/v7/domain/types.ts';
 const scenario = scenarioForTemplate('aec9494b-4118-4525-8458-e85d759c8dd9')!;
 const story = {templateId:scenario.templateId,scenario:scenario.title,premise:scenario.opening,subtitle:''};
 const school = { id: story.templateId, title: 'Школа чародеев', description: 'Original', genre: 'Магия' } as World;
-test('separate Hogwarts card keeps real template ID and original school content', () => {
+test('Hogwarts replaces the active school card and keeps its template ID', () => {
   const entries = withHogwartsCard(catalogEntries([school], []), story);
-  assert.equal(entries.length, 2); assert.equal(entries[0].world, school);
-  assert.equal(entries[1].world.title, 'Спасти Хогвартс'); assert.equal(entries[1].world.id, school.id);
-  assert.notEqual(entries[0].key, entries[1].key);
-  assert.equal(entries[1].storyVariant, 'hogwarts'); assert.ok(entries[1].available);
+  assert.equal(entries.length, 1); assert.equal(school.title, 'Школа чародеев');
+  assert.equal(entries[0].world.title, 'Спасти Хогвартс'); assert.equal(entries[0].world.id, school.id);
+  assert.equal(entries[0].storyVariant, 'hogwarts'); assert.ok(entries[0].available);
   assert.equal(filterCatalog(entries, 'Хогвартс', 'Все')[0].storyVariant, 'hogwarts');
 });
 test('missing/disabled server template never creates an active Hogwarts card', () => {
