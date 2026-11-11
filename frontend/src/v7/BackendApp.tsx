@@ -18,6 +18,7 @@ import {accountIdentity} from './accountIdentity';
 import {roleForWorld,scenarioForTemplate,definitionForRole} from './story/roles';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { activitiesForWorld, markWorldActivitiesRead, type Activity } from './activity';
+import {useNpcPostActivity} from './useNpcPostActivity';
 import { submissionFor, publicationError } from './submission';
 import { screenView, setExperiments, tap, event as trackEvent } from '../app/analytics';
 import { setScreen as setLogScreen } from '../app/log';
@@ -175,6 +176,14 @@ export default function BackendApp() {
     if (!player) return;
     setAccountVisible(5); setActivities(readLocal(`${key}:activity`, [])); setLikes(readLocal(`${key}:likes`, [])); setQualities(readLocal(`${key}:qualities`, []));
   }, [key, !!player]);
+
+  useNpcPostActivity(player?.id, world?.id, !booting && !['catalog', 'search', 'account', 'intro', 'onboarding', 'welcome', 'age', 'hero'].includes(screen), fresh => {
+    setActivities(old => {
+      const added = fresh.filter(item => !old.some(a => a.id === item.id && a.worldId === item.worldId));
+      if (!added.length) return old;
+      const next = [...added, ...old].slice(0, 100); localSave('activity', next); return next;
+    });
+  }, () => setStorageError(true));
 
   const recordComments = (postId:string, worldId:string, comments:ServerPost['comments']) => {
     const confirmed=comments.filter(c=>!c.me&&!c.hidden&&(c.star||c.authorId?.startsWith('Star_')));
@@ -364,7 +373,7 @@ export default function BackendApp() {
   const openThread = async (id: string) => {
     if (!id || pending) return;
     const request = ++threadRequest.current; setPost(undefined); setThreadLoading(true); go('thread');
-    try { const p = await api.post(id); if (threadRequest.current === request) { setPost(p); const next = activities.map(a => a.id === id || a.postId === id ? { ...a, read: true } : a); setActivities(next); localSave('activity', next); } }
+    try { const p = await api.post(id); if (threadRequest.current === request) { setPost(p); setActivities(old => { const next = old.map(a => a.worldId === player?.world && (a.id === id || a.postId === id) ? { ...a, read: true } : a); localSave('activity', next); return next; }); } }
     catch (cause) { if (threadRequest.current === request) setError(errorText(cause)); }
     finally { if (threadRequest.current === request) setThreadLoading(false); }
   };
@@ -544,7 +553,7 @@ export default function BackendApp() {
   else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><ChannelAudience value={person.subscribers}/><span className="caption muted">@{person.handle} · AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
   else if (screen === 'topic' && world) content = <><div className="topic-header"><button className="back-button" onClick={back}>Назад</button><img className="topic-cover" src={world.hero} alt="" /><h1>{quote?.name ?? world.title}</h1><p>{quote?.text ?? world.topic}</p></div><section className="topic-people">{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}<Button className="full" onClick={() => openCompose(undefined, quote)}>Написать</Button></section></>;
   else if (screen === 'messages' && world) content = <><ScreenHeading title="Личка" /><EmptyState title="Сначала — общий разговор" action={<Button onClick={() => go('feed')}>Вернуться в ленту</Button>}>Личные сообщения скоро появятся.</EmptyState><section className="section"><h2 className="section-title">Собеседники</h2>{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}</section></>;
-  else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={worldActivities.length > 0 && <button className="link-button caption" onClick={() => { const next = markWorldActivitiesRead(activities, player?.world); setActivities(next); localSave('activity', next); }}>Прочитать всё</button>} />{!worldActivities.length && <EmptyState title="Пока тихо">Здесь появятся ответы персонажей, реакции на публикации и отметки серии.</EmptyState>}{worldActivities.map(a=><ActivityItem key={a.id} title={a.title} text={a.text} actorName={a.actorName} symbol={a.kind==='streak'?'🔥':a.kind==='likes'?'♡':'✦'} read={a.read} onOpen={()=>{const next=activities.map(v=>v.id===a.id?{...v,read:true}:v);setActivities(next);localSave('activity',next);if(a.kind==='streak')setOverlay('streak');else void openThread(a.postId??a.id);}}/>)}</>;
+  else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={worldActivities.length > 0 && <button className="link-button caption" onClick={() => { const next = markWorldActivitiesRead(activities, player?.world); setActivities(next); localSave('activity', next); }}>Прочитать всё</button>} />{!worldActivities.length && <EmptyState title="Пока тихо">Здесь появятся новые посты и ответы персонажей, реакции на публикации и отметки серии.</EmptyState>}{worldActivities.map(a=><ActivityItem key={a.id} title={a.title} text={a.text} actorName={a.actorName} symbol={a.kind==='streak'?'🔥':a.kind==='likes'?'♡':'✦'} read={a.read} onOpen={()=>{if(a.kind==='streak'){setActivities(old=>{const next=old.map(v=>v.id===a.id&&v.worldId===a.worldId?{...v,read:true}:v);localSave('activity',next);return next;});setOverlay('streak');}else void openThread(a.postId??a.id);}}/>)}</>;
   else if (screen === 'account') content = <><ProfileHeader name={player?accountIdentity(player.id,owned[0]?.name??player.name).name:'Твой профиль'} neutralAvatar handle={player?accountIdentity(player.id,owned[0]?.name??player.name).handle:undefined} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? owned.slice(0,accountVisible).map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} onDelete={()=>setWorldToDelete(d)} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}{owned.length>accountVisible&&<Button variant="secondary" onClick={()=>setAccountVisible(n=>n+5)}>Показать ещё {Math.min(5,owned.length-accountVisible)}</Button>}</section><section className="account-settings">{player&&<SettingsRow label="Пригласить друга" onClick={()=>setInviteOpen(true)}/>} {player && <SettingsRow label="Привязать профиль" onClick={()=>setLinkProfileOpen(true)}/>}<SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => openResource('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><SettingsRow label="Удалить аккаунт" onClick={()=>setDeleteOpen(true)} disabled={pending || busy} /><NominalSignOut onSignOut={()=>void beginEntry()} disabled={pending || busy} /></section></>;
   else content = <EmptyState title="Выбери мир" action={<Button onClick={() => go('catalog')}>К мирам</Button>}>Продолжи сохранённую историю или начни новую.</EmptyState>;
 
