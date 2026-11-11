@@ -2,8 +2,13 @@ import {Icon} from '../ui';
 
 /** Presentation data only; bind after the daily quest API is agreed. */
 export function DailyQuestCard({task}:{task?:{text:string;rewardCrystals:number}}){
+ const form=task?new Intl.PluralRules('ru').select(task.rewardCrystals):'many';
+ const unit=form==='one'?'кристалл':form==='few'?'кристалла':'кристаллов';
  return <section className="daily-quest" aria-label="Задание на сегодня">
-  <div className="daily-quest-heading"><p className="caption muted">Задание на сегодня</p><span className="daily-quest-reward" aria-label={task?`Награда в кристаллах: ${task.rewardCrystals}`:'Награда в кристаллах пока не определена'}><Icon name="crystal"/>{task?`+${task.rewardCrystals}`:'—'}</span></div>
-  <div className="daily-quest-card"><p>{task?.text??'Новое задание скоро появится'}</p></div>
+  <p className="caption muted daily-quest-heading">Задание на сегодня</p>
+  <div className="daily-quest-card">
+   <p>{task?.text??'Новое задание скоро появится'}</p>
+   <div className="daily-quest-reward">{task?<><span>Выполни задание — получи</span><span className="daily-quest-amount"><Icon name="crystal"/>{task.rewardCrystals} {unit}</span></>:<span>За выполнение — награда в кристаллах</span>}</div>
+  </div>
  </section>;
 }

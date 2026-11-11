@@ -1,3 +1,4 @@
+import {ComposerText} from './screens/ComposerText';
 import {firstPostFor} from './firstPost';
 import {DailyQuestCard} from './screens/DailyQuestCard';
 import {withEveningAppearance} from './eveningAppearance';
@@ -508,7 +509,7 @@ export default function BackendApp() {
       {(reply || quote) && !prepared && <QuoteBlock name={reply?.name ?? quote!.name} text={reply?.text ?? quote!.text}/>}
       <div className="row"><Avatar name={player.name} src={personaFor(player.id, player.world).avatar}/><strong>{player.name}</strong></div>
       <label className="sr-only" htmlFor="post-text">Текст публикации</label>
-      <textarea id="post-text" className="composer-text" value={draft} onChange={e=>updateDraft(e.target.value)} disabled={pending || unknown} maxLength={reply ? 1000 : 2000} autoFocus={!!reply}/>
+      <ComposerText key={`${player.world}:${reply?.postId??'post'}`} value={draft} onChange={e=>updateDraft(e.target.value)} animate={!reply&&!quote&&!readPostDraft(draftKey(player)).ownWords&&draft===firstPostFor(worldDocumentOf(player.world),activeRole?.id)} disabled={pending || unknown} maxLength={reply ? 1000 : 2000} autoFocus={!!reply}/>
       <div className="composer-tools"><span className="caption muted">{draft.length} / {reply ? 1000 : 2000}</span><button className="link-button caption" disabled={!draft||pending||unknown} onClick={()=>updateDraft('')}>Очистить {reply?'ответ':'пост'}</button></div>
       {!reply&&<PostIdeas ideas={ideasForWorld(worldDocumentOf(player.world))} draft={draft} onDraft={updateDraft} disabled={pending||unknown}/>}
       {quote && !reply && !prepared && <p className="caption muted">Контекст помогает написать пост. Связь цитирования на сервере пока недоступна.</p>}

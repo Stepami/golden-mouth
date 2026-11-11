@@ -246,9 +246,17 @@ html[data-theme] .owned-world .resume-world,html[data-theme] .saved-worlds-scrol
 
 /* One shared daily quest slot; condition and crystal reward await server data. */
 .daily-quest { min-width:0; }
-.daily-quest-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); margin:0 0 var(--space-2); }
-.daily-quest-heading p { margin:0; }
+.daily-quest-heading { margin:0 0 var(--space-2); }
 .daily-quest-card { padding:var(--space-3); border:1px solid var(--color-divider); border-radius:var(--radius-md); background:var(--color-surface); font:400 .875rem/1.45 var(--font-body); }
 .daily-quest-card p { margin:0; }
-.daily-quest-reward { display:inline-flex; align-items:center; gap:var(--space-1); color:var(--color-crystal); font:500 .875rem/1.4 var(--font-body); }
+.daily-quest-reward { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-1); margin-top:var(--space-2); color:var(--color-muted); font:400 .8125rem/1.4 var(--font-body); }
+.daily-quest-amount { display:inline-flex; align-items:center; gap:var(--space-1); color:var(--color-crystal); font-weight:500; }
 .daily-quest-reward .icon { width:18px; height:18px; }
+
+.composer-editor { position:relative; min-width:0; }
+.composer-editor .composer-text { display:block; width:100%; padding:12px; line-height:1.45; }
+.composer-editor .composer-text.is-autotyping { color:transparent; caret-color:transparent; }
+.composer-typing { position:absolute; inset:1px; overflow:hidden; padding:12px; border-radius:inherit; pointer-events:none; white-space:pre-wrap; overflow-wrap:break-word; font:inherit; line-height:1.45; color:var(--color-ink); }
+.composer-typing-caret { display:inline-block; height:1em; margin-left:1px; border-left:2px solid currentColor; vertical-align:-.12em; animation:composer-caret-blink 650ms step-end infinite; }
+@keyframes composer-caret-blink { 50% { opacity:0; } }
+@media(prefers-reduced-motion:reduce) { .composer-typing-caret { animation:none; } }
