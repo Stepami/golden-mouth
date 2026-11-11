@@ -1,7 +1,7 @@
 import {useEffect,useId,useState} from 'react';
 import {syncBackButton} from '../../telegram';
 import type {WorldDefinition} from '../../api/types';
-import {Button,Icon,Notice,ScreenHeading,TextField} from '../ui';
+import {Button,Dialog,Icon,Notice,ScreenHeading,TextField} from '../ui';
 import {AvatarBuilder} from './AvatarBuilder';
 import {customPortrait} from '../avatarBuilder';
 import './worldEditor.css';
@@ -16,7 +16,7 @@ export function WorldEditor({initial,creating=false,busy,error,onSave,onBack}:{i
  const [value,setValue]=useState(()=>structuredClone(initial));
  const [look,setLook]=useState('custom-man-1');
  const [confirmExit,setConfirmExit]=useState(false);
- const dirty=JSON.stringify(value)!==JSON.stringify(initial);
+ const dirty=JSON.stringify(value)!==JSON.stringify(initial)||(creating&&look!=='custom-man-1');
  const update=(patch:Partial<WorldDefinition>)=>setValue(old=>({...old,...patch}));
  const star=(id:string,patch:Partial<WorldDefinition['stars'][number]>)=>update({stars:value.stars.map(s=>s.id===id?{...s,...patch}:s)});
  const ready=!!(value.name.trim()&&value.avatar.trim()&&value.role.trim()&&value.title.trim()&&value.description.trim()&&value.voice.trim()&&value.stars.length&&value.stars.every(s=>s.name.trim()&&s.role.trim()&&s.about.trim()&&s.voice.trim()));
@@ -73,6 +73,7 @@ export function WorldEditor({initial,creating=false,busy,error,onSave,onBack}:{i
  {error&&<Notice title="Не удалось сохранить мир" tone="error">{error}</Notice>}
  {!ready&&<p className="caption muted">Заполни название и описание мира, имя и роль своего персонажа, стиль ответов, имена, роли и описания собеседников.</p>}
  <Button type="submit" busy={busy} disabled={!ready||busy}>{creating?'Начать историю':'Сохранить изменения'}</Button>
- {confirmExit&&<Notice title="Есть несохранённые изменения"><div className="stack"><Button type="button" variant="secondary" onClick={()=>setConfirmExit(false)}>Продолжить редактирование</Button><Button type="button" variant="ghost" onClick={onBack}>Выйти без сохранения</Button></div></Notice>}
- </form></>;
+ </form>
+ {confirmExit&&<Dialog title="Выйти без сохранения?" onClose={()=>setConfirmExit(false)}><div className="stack"><p>Изменения в настройках мира не сохранятся.</p><Button type="button" variant="secondary" onClick={()=>setConfirmExit(false)}>Продолжить редактирование</Button><Button type="button" variant="ghost" onClick={onBack}>Выйти без сохранения</Button></div></Dialog>}
+ </>;
 }
