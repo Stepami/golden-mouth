@@ -1,3 +1,5 @@
+import {RewardArt} from '../ui/RewardArt';
+import {audiencePercent} from './resultCopy';
 import {SkillArt} from '../ui/GameArt';
 import {useEffect,useState} from 'react';
 import type { Player, PostResult, RoleSkillState } from '../../api/types';
@@ -25,7 +27,10 @@ export function PublicationResult({receipt,onRead,preview=false,animateReward:_a
   <summary><Icon name="check"/><span>{title}</span><b>{receipt.audienceKnown===false?'':`${result.delta>=0?'+':''}${result.delta} подписчиков`}</b><Icon name="chevron"/></summary>
   <div className="stack">{outcome.status!=='unverified'&&<><strong>{outcome.title}</strong><p>{outcome.reason}</p></>}
    {receipt.audienceKnown===false&&<p>Рост аудитории уточняется</p>}
-   <SkillChanges receipt={receipt}/>
+   {receipt.audienceKnown!==false&&<p>Аудитория: {receipt.beforeSubscribers===undefined?'':`${receipt.beforeSubscribers.toLocaleString('ru')} → ${(receipt.beforeSubscribers+result.delta).toLocaleString('ru')}. `}{result.delta>=0?'+':''}{result.delta} подписчиков{audiencePercent(result.delta,receipt.beforeSubscribers)?` (${audiencePercent(result.delta,receipt.beforeSubscribers)})`:''}</p>}
+   {receipt.reactionText&&<p>{receipt.reactionText}</p>}
+   <SkillChanges receipt={receipt} detailed/>
+   {(receipt.questReward?.source==='server'||(import.meta.env.DEV&&receipt.questReward?.source==='preview'))&&receipt.questReward.amount>0&&<p className="receipt-reward"><RewardArt kind="crystal"/>{receipt.questReward.source==='preview'?'Превью: за ход':'Награда'}: +{receipt.questReward.amount} кристаллов{receipt.questReward.balanceBefore!==undefined&&receipt.questReward.balanceAfter!==undefined&&<span> · {receipt.questReward.balanceBefore} → {receipt.questReward.balanceAfter}</span>}</p>}
    {result.bestComment&&<blockquote>{result.bestComment.text}</blockquote>}
    <p className="caption muted">{result.views} просмотров{isComment?' у исходной записи':''}</p>
    <Button variant="ghost" onClick={onRead}>Читать отклики</Button>

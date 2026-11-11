@@ -1,7 +1,7 @@
 import {creditDevTurn,readDevCrystals} from './energy/devCrystalPreview';
 import {CrystalRewardBadge} from './energy/CrystalRewardBadge';
 import {pickResultPhrase} from './publication/resultCopy';
-import {FeedFilter} from './ui/FeedFilter';
+import {ViewFilter,FeedFilter} from './ui/FeedFilter';
 import {MyPosts} from './screens/MyPosts';
 import {ComposerText} from './screens/ComposerText';
 import {firstPostFor} from './firstPost';
@@ -19,7 +19,8 @@ import {accountIdentity} from './accountIdentity';
 import {roleForWorld,scenarioForTemplate,definitionForRole} from './story/roles';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { activitiesForWorld, markWorldActivitiesRead, type Activity } from './activity';
-import {useNpcPostActivity} from './useNpcPostActivity';
+import {useResultHistory} from './publication/useResultHistory';
+import {ResultHistory} from './publication/ResultHistory';
 import { submissionFor, publicationError } from './submission';
 import { screenView, setExperiments, tap, event as trackEvent } from '../app/analytics';
 import { setScreen as setLogScreen } from '../app/log';
@@ -93,7 +94,7 @@ export default function BackendApp() {
   const [introStep, setIntroStep] = useState(0);
   const [player, setPlayer] = useState<Player>();
   const [world, setWorld] = useState<World>();
-  const [devCrystalState,setDevCrystalState]=useState<{owner:string;total:number;award?:{actionId:string;beforeOffset:number;afterOffset:number}}>();
+  const [devCrystalState,setDevCrystalState]=useState<{owner:string;total:number}>();
   const accountEnergy=useEnergyWallet(player?.id,walletClient,w=>setPlayer(p=>p?{...p,postsLeft:w.amount,postsCap:w.cap}:p));
   const [booting, setBooting] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -133,6 +134,8 @@ export default function BackendApp() {
   const [typingActor,setTypingActor]=useState<string|null>(null);
   const [unknown, setUnknown] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [activityTab,setActivityTab]=useState<'events'|'results'>('events');
+  const resultHistory=useResultHistory(player?.id,player?.world);
   const [likes, setLikes] = useState<string[]>([]);
   const [storageError, setStorageError] = useState(false);
   const [toast, setToast] = useState<PostResult>();
@@ -153,6 +156,7 @@ export default function BackendApp() {
   useScrollEdges(appRoot);
   const focusHeading = useRef<HTMLDivElement>(null);
   const feedRequest = useRef(0);
+  const livePlayer=useRef(player);livePlayer.current=player;
   const displayedWorld = useRef(world?.id);
   displayedWorld.current = world?.id;
   const threadRequest = useRef(0);
@@ -160,7 +164,7 @@ export default function BackendApp() {
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments); }, [player?.experiments]);
   const key = `reki:v7:${player?.id ?? api.playerId() ?? 'guest'}`;
   const localSave = (name: string, value: unknown) => { if (!saveLocal(`${key}:${name}`, value)) setStorageError(true); };
-  const go = (next: Screen, replace = false) => { setShowReceipt(false); setError(''); setStack(s => replace ? [] : [...s, screen]); setScreen(next); setToast(undefined); setReactionNotice(undefined); };
+  const go = (next: Screen, replace = false) => { setShowReceipt(false); setGainAnimation(undefined); setError(''); setStack(s => replace ? [] : [...s, screen]); setScreen(next); setToast(undefined); setReactionNotice(undefined); };
   const openResource = (next: ResourcePageName) => {
     void accountEnergy.refresh();
     if(['resources','crystals'].includes(screen)){setScreen(next);setError('');}else go(next);
@@ -179,21 +183,13 @@ export default function BackendApp() {
     setAccountVisible(5); setActivities(readLocal(`${key}:activity`, [])); setLikes(readLocal(`${key}:likes`, [])); setQualities(readLocal(`${key}:qualities`, []));
   }, [key, !!player]);
 
-  useNpcPostActivity(player?.id, world?.id, !booting && !['catalog', 'search', 'account', 'intro', 'onboarding', 'welcome', 'age', 'hero'].includes(screen), fresh => {
-    setActivities(old => {
-      const added = fresh.filter(item => !old.some(a => a.id === item.id && a.worldId === item.worldId));
-      if (!added.length) return old;
-      const next = [...added, ...old].slice(0, 100); localSave('activity', next); return next;
-    });
-  }, () => setStorageError(true));
-
   const recordComments = (postId:string, worldId:string, comments:ServerPost['comments']) => {
     const confirmed=comments.filter(c=>!c.me&&!c.hidden&&(c.star||c.authorId?.startsWith('Star_')));
     if(!confirmed.length)return;
     setActivities(old=>{
       const fresh=confirmed.filter(c=>!old.some(a=>a.id===`comment:${c.id}`)).map(c=>({id:`comment:${c.id}`,postId,worldId,title:`${c.author} отвечает`,actorName:c.author,text:c.text,read:false,kind:'reaction' as const}));
       if(!fresh.length)return old;
-      const next=[...fresh.reverse(),...old].slice(0,100);localSave('activity',next);return next;
+      const next=[...fresh.reverse(),...old];localSave('activity',next);return next;
     });
   };
   useEffect(()=>{
@@ -202,25 +198,25 @@ export default function BackendApp() {
     setActivities(old=>{
       if(old.some(a=>a.id===id))return old;
       const days=player.streak.days;
-      const next=[{id,worldId:player.world,title:days===1?'Первый день серии':`Серия: ${days} дней`,text:days===1?'Начало серии отмечено. Продолжи завтра постом или комментарием.':'Твоя серия продолжается.',kind:'streak' as const,read:false},...old].slice(0,100);
+      const next=[{id,worldId:player.world,title:days===1?'Первый день серии':`Серия: ${days} дней`,text:days===1?'Начало серии отмечено. Продолжи завтра постом или комментарием.':'Твоя серия продолжается.',kind:'streak' as const,read:false},...old];
       localSave('activity',next);return next;
     });
   },[player?.id,player?.world,player?.streak.days]);
   useEffect(()=>{
     if(screen!=='activity'||!player)return;
     let active=true;
-    const ownPosts=feed.filter(p=>p.postId&&p.author===player.name);
-    const likes=ownPosts.map(p=>({postId:p.postId!,count:p.reactions?.reduce((sum,r)=>sum+r.count,0)??0})).filter(p=>p.count>0);
-    setActivities(old=>{
-      const updates=likes.filter(p=>!old.some(a=>a.id===`likes:${p.postId}`&&a.count===p.count)).map(p=>({id:`likes:${p.postId}`,postId:p.postId,worldId:player.world,title:'Реакции на твою публикацию',text:`Сейчас реакций: ${p.count}.`,count:p.count,kind:'likes' as const,read:false}));
-      if(!updates.length)return old;
-      const next=[...updates,...old.filter(a=>!updates.some(u=>u.id===a.id))].slice(0,100);localSave('activity',next);return next;
-    });
-    void Promise.all(ownPosts.filter(p=>(p.commentCount??0)>0).slice(0,20).map(async item=>{
-      try{const post=await api.post(item.postId!);if(active)recordComments(post.id,player.world,post.comments);}catch{/* The list remains usable when a post cannot be loaded. */}
-    }));
+    void api.channelPosts(player.worldInstanceId??player.world).then(async page=>{
+      if(!active)return;
+      setActivities(old=>{
+        const updates=page.items.filter(p=>p.reactions.reduce((sum,r)=>sum+r.count,0)>0).map(p=>({id:`likes:${p.postId}`,postId:p.postId,worldId:player.world,title:'Реакции на твой пост',text:`Реакций: ${p.reactions.reduce((sum,r)=>sum+r.count,0)}`,postText:p.text,count:p.reactions.reduce((sum,r)=>sum+r.count,0),kind:'likes' as const,read:old.find(a=>a.worldId===player.world&&a.id===`likes:${p.postId}`&&a.count===p.reactions.reduce((sum,r)=>sum+r.count,0))?.read??false}));
+        const next=[...updates,...old.filter(a=>!updates.some(u=>u.worldId===a.worldId&&u.id===a.id))];localSave('activity',next);return next;
+      });
+      await Promise.all(page.items.filter(p=>p.commentCount>0).map(async item=>{
+        try{const post=await api.post(item.postId);if(active)recordComments(post.id,player.world,post.comments);}catch{/* Keep already confirmed events when details are unavailable. */}
+      }));
+    }).catch(()=>{/* Existing events stay visible when the server is unavailable. */});
     return()=>{active=false;};
-  },[screen,player?.world]);
+  },[screen,player?.id,player?.world]);
   const loadFeed = useCallback(async (p: Player, more?: string) => {
     const request = ++feedRequest.current;
     setFeedLoading(true); setFeedError('');
@@ -244,11 +240,11 @@ export default function BackendApp() {
   const installPlayer = (p: Player) => { setPlayer(p); const doc = worldDocumentOf(p.world); setWorld(storyView(doc));
     const draft = readPostDraft(draftKey(p));
     const savedReceipt = readLocal<PublicationReceipt | undefined>(`reki:v7:${p.id}:result:${p.world}`, undefined);
-    setReceipt(receiptForRelease(savedReceipt ? { ...savedReceipt, worldId: p.world } : undefined,false));
+    setReceipt(receiptForRelease(savedReceipt ? { ...savedReceipt, worldId: p.world } : undefined,import.meta.env.DEV));
     if(player?.world!==p.world)setShowReceipt(false);
     if (!sending.current) { setDraft(draft.text); setUnknown(!!draft.publicationId); setPublicationFailed(false); }
     return p; };
-  const refresh = async () => { const p = installPlayer(await api.me()); await loadFeed(p); await accountEnergy.refresh(); return p; };
+  const refresh = async () => { const expected=player;const p=await api.me();if(livePlayer.current?.id===expected?.id&&livePlayer.current?.world===expected?.world&&p.world===expected?.world){installPlayer(p);await loadFeed(p);await accountEnergy.refresh();}return p; };
   const boot = useCallback(async () => {
     setBooting(true); setError('');
     try {
@@ -340,10 +336,12 @@ export default function BackendApp() {
       setStoryOnboarding(true); setScreen('goals'); setStack([]); await loadFeed(p);
     } catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
   };
-  const previewTurnReward=(value:PublicationReceipt)=>{
-    if(!import.meta.env.DEV||!player||value.questReward?.source==='server')return;
+  const previewTurnReward=(value:PublicationReceipt):PublicationReceipt=>{
+    if(!import.meta.env.DEV||!player||value.questReward?.source==='server')return value;
     const award=creditDevTurn(player.id,value.actionId??value.result.postId);
-    if(award)setDevCrystalState({owner:player.id,total:award.afterOffset,award});
+    if(!award)return value;
+    setDevCrystalState({owner:player.id,total:award.afterOffset});
+    return {...value,questReward:{questId:'dev-turn-preview',title:'Превью: за ход',amount:2,source:'preview',balanceBefore:accountEnergy.wallet?accountEnergy.wallet.crystals+award.beforeOffset:undefined,balanceAfter:accountEnergy.wallet?accountEnergy.wallet.crystals+award.afterOffset:undefined}};
   };
   const replyKey = (target: ReplyTarget) => `${key}:reply:${player?.world}:${target.postId}:${target.commentId ?? 'root'}`;
   const openCompose = async (target?: ReplyTarget, context?: { name: string; text: string }) => {
@@ -413,15 +411,15 @@ export default function BackendApp() {
       completePostDraft(k, id, text); setDraft(readPostDraft(k).text);
       const serverOutcome=parseQuestOutcome((event.result as unknown as {questOutcome?:unknown}).questOutcome);
 
-      const value: PublicationReceipt = { worldId: player.world, actionId:id,beforeSubscribers:turnBefore.beforeSubscribers,reactionText:pickResultPhrase(event.result.delta),questId:turnBefore.questId, result: event.result, before: turnBefore.skills, roleBefore:turnBefore.roleSkills, roleLabels:activeRole?.skills.map(s=>s.name), questOutcome:serverOutcome??({status:'unverified',source:'server',title:roleTask?.context??'Твоя запись',reason:'Пост опубликован, но серверный исход квеста пока не возвращается.'}) };
-      previewTurnReward(value);setReceipt(value);setShowReceipt(true); saveLocal(`${key}:result:${player.world}`, value);
+      const value = resultHistory.save(previewTurnReward({ worldId: player.world, actionId:id,beforeSubscribers:turnBefore.beforeSubscribers,reactionText:pickResultPhrase(event.result.delta),questId:turnBefore.questId, result: event.result, before: turnBefore.skills, roleBefore:turnBefore.roleSkills, roleLabels:activeRole?.skills.map(s=>s.name), questOutcome:serverOutcome??({status:'unverified',source:'server',title:roleTask?.context??'Твоя запись',reason:'Пост опубликован, но серверный исход квеста пока не возвращается.'}) }),text);
+      setReceipt(value);setShowReceipt(true);
       if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,value);
       setToast(event.result); setGainAnimation({delta:event.result.delta,nonce:event.result.postId});
       const best=event.result.bestComment;
       const actor=best?world?.cast.find(p=>p.handle===best.avatar||p.id===best.avatar):undefined;
       if(best&&actor){const notice:ReactionNotice={id:event.result.postId,postId:event.result.postId,worldId:player.world,kind:'reaction',actorName:actor.name,text:best.text,relation:actor.relation};setReactionNotice(notice);}
       setPublicationFailed(false); setUnknown(false); setPending(false); sending.current = false; setStatus('completed');
-      setScreen('feed'); setStack([]); void refresh().then(p => { const updated = { ...value, after: p.skills, roleAfter:p.roleSkills, questOutcome:p.lastTurn?.actionId===id?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome }; setReceipt(updated); saveLocal(`${key}:result:${player.world}`, updated); if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated); const freshActor=best?worldDocumentOf(p.world).stars.find(s=>s.avatarSeed===best.avatar):undefined; if(freshActor){setReactionNotice(n=>n?.id===event.result.postId?{...n,relation:freshActor.relation}:n);setActivities(old=>{const next=old.map(a=>a.id===event.result.postId&&a.worldId===player.world?{...a,relation:freshActor.relation}:a);localSave('activity',next);return next;});} }).catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
+      setScreen('feed'); setStack([]); void refresh().then(p => { if(p.world!==value.worldId)return;const updated = { ...value, after: p.skills, roleAfter:p.roleSkills, questOutcome:p.lastTurn?.actionId===id?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome }; const savedResult=resultHistory.save(updated);setReceipt(current=>current?.actionId===updated.actionId?savedResult:current); if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated); const freshActor=best?worldDocumentOf(p.world).stars.find(s=>s.avatarSeed===best.avatar):undefined; if(freshActor){setReactionNotice(n=>n?.id===event.result.postId?{...n,relation:freshActor.relation}:n);setActivities(old=>{const next=old.map(a=>a.id===event.result.postId&&a.worldId===player.world?{...a,relation:freshActor.relation}:a);localSave('activity',next);return next;});} }).catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
     }, (state, reason) => {
       sending.current = false; setPending(false); setUnknown(state === 'unknown'); setPublicationFailed(state === 'failed');
       if (state === 'failed') { const latest = readPostDraft(k); savePostDraft(k, { text: latest.text, ownWords: latest.ownWords }); }
@@ -451,9 +449,9 @@ export default function BackendApp() {
       if(snapshot){
 
         const delta=snapshot.subscribers-(saved.beforeSubscribers??player.subs);
-        const value:PublicationReceipt={worldId:player.world,actionId:requestId,beforeSubscribers:saved.beforeSubscribers??player.subs,reactionText:pickResultPhrase(delta),questId:saved.questId??roleTask?.id,actionKind:'comment',audienceKnown:true,before:saved.beforeSkills??player.skills,roleBefore:saved.roleBefore??player.roleSkills,roleLabels:activeRole?.skills.map(s=>s.name),questOutcome:{status:'unverified',source:'server',title:'Твой комментарий',reason:completed?'Комментарий и реакция сохранены. Серверная оценка квеста пока не возвращается.':'Комментарий сохранён. Получение реакции ещё не завершено.'},result:{postId:target.postId,delta,headline:'Комментарий сохранён',whys:[],ribbons:[],viral:false,flop:false,views:snapshot.post.views}};
-        previewTurnReward(value);setReceipt(value);setShowReceipt(true);saveLocal(`${key}:result:${player.world}`,value);if(delta)setGainAnimation({delta,nonce:requestId});
-        void refresh().then(p=>{const updated={...value,after:p.skills,roleAfter:p.roleSkills,questOutcome:p.lastTurn?.actionId===requestId?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome};setReceipt(updated);saveLocal(`${key}:result:${player.world}`,updated);if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated);}).catch(()=>setFeedError('Комментарий сохранён. Обнови ленту, чтобы получить актуальные данные.'));
+        const value=resultHistory.save(previewTurnReward({worldId:player.world,actionId:requestId,beforeSubscribers:saved.beforeSubscribers??player.subs,reactionText:pickResultPhrase(delta),questId:saved.questId??roleTask?.id,actionKind:'comment',audienceKnown:true,before:saved.beforeSkills??player.skills,roleBefore:saved.roleBefore??player.roleSkills,roleLabels:activeRole?.skills.map(s=>s.name),questOutcome:{status:'unverified',source:'server',title:'Твой комментарий',reason:completed?'Комментарий и реакция сохранены. Серверная оценка квеста пока не возвращается.':'Комментарий сохранён. Получение реакции ещё не завершено.'},result:{postId:target.postId,delta,headline:'Комментарий сохранён',whys:[],ribbons:[],viral:false,flop:false,views:snapshot.post.views}}),text);
+        setReceipt(value);setShowReceipt(true);if(delta)setGainAnimation({delta,nonce:requestId});
+        void refresh().then(p=>{if(p.world!==value.worldId)return;const updated={...value,after:p.skills,roleAfter:p.roleSkills,questOutcome:p.lastTurn?.actionId===requestId?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome};const savedResult=resultHistory.save(updated);setReceipt(current=>current?.actionId===updated.actionId?savedResult:current);if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated);}).catch(()=>setFeedError('Комментарий сохранён. Обнови ленту, чтобы получить актуальные данные.'));
       }
       sending.current=false;setPending(false);
     }
@@ -475,11 +473,8 @@ export default function BackendApp() {
   const crystalRewardsSeen=crystalAwardsSeen.current;
   const devCrystals=import.meta.env.DEV&&player?(devCrystalState?.owner===player.id?devCrystalState:{owner:player.id,total:readDevCrystals(player.id).total,award:undefined}):undefined;
   const displayCrystals=accountEnergy.wallet?accountEnergy.wallet.crystals+(devCrystals?.total??0):undefined;
-  const previewAward=devCrystals?.award;
-  const previewForReceipt=receipt&&previewAward?.actionId===(receipt.actionId??receipt.result.postId);
-  const displayReceipt:PublicationReceipt|undefined=previewForReceipt?{...receipt!,questReward:{questId:'dev-turn-preview',title:'Превью: за ход',amount:2,source:'preview',balanceBefore:accountEnergy.wallet?accountEnergy.wallet.crystals+previewAward!.beforeOffset:undefined,balanceAfter:accountEnergy.wallet?accountEnergy.wallet.crystals+previewAward!.afterOffset:undefined}}:receipt;
-  const awarded=displayReceipt?.questReward;
-  const crystalAward=(awarded?.source==='server'||(import.meta.env.DEV&&awarded?.source==='preview'))&&awarded.balanceBefore!==undefined&&awarded.balanceAfter!==undefined?{id:`${displayReceipt!.actionId??displayReceipt!.result.postId}:${awarded.questId}`,amount:awarded.amount,before:awarded.balanceBefore,after:awarded.balanceAfter}:undefined;
+  const awarded=showReceipt?receipt?.questReward:undefined;
+  const crystalAward=(awarded?.source==='server'||(import.meta.env.DEV&&awarded?.source==='preview'))&&awarded.balanceBefore!==undefined&&awarded.balanceAfter!==undefined?{id:`${receipt!.actionId??receipt!.result.postId}:${awarded.questId}`,amount:awarded.amount,before:awarded.balanceBefore,after:awarded.balanceAfter}:undefined;
   const renderWorldHud = () => <div className="world-hud"><header className="world-header"><button className="world-switch" aria-label={`${world?.title??''}. ${formatAudience(player?.subs??0)} подписчиков. Выбрать мир`} onClick={() => setOverlay('exit')}><strong><WorldName name={world?.title??''}/><Icon name="chevron"/></strong><span className="channel-sidebar-count"><Icon name="member"/><b className="channel-count-target">{formatAudience(player?.subs??0)}</b><span className="channel-count-label">подписчиков</span></span></button>
       <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><EnergyBadge wallet={accountEnergy.wallet} amount={player?.postsLeft} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/></div>
       <CrystalRewardBadge balance={displayCrystals} preview={!!devCrystals} award={crystalAward} seen={crystalRewardsSeen} onClick={() => openResource('crystals')}/>
@@ -567,7 +562,13 @@ export default function BackendApp() {
   else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><ChannelAudience value={person.subscribers}/><span className="caption muted">@{person.handle} · AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
   else if (screen === 'topic' && world) content = <><div className="topic-header"><button className="back-button" onClick={back}>Назад</button><img className="topic-cover" src={world.hero} alt="" /><h1>{quote?.name ?? world.title}</h1><p>{quote?.text ?? world.topic}</p></div><section className="topic-people">{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}<Button className="full" onClick={() => openCompose(undefined, quote)}>Написать</Button></section></>;
   else if (screen === 'messages' && world) content = <><ScreenHeading title="Личка" /><EmptyState title="Сначала — общий разговор" action={<Button onClick={() => go('feed')}>Вернуться в ленту</Button>}>Личные сообщения скоро появятся.</EmptyState><section className="section"><h2 className="section-title">Собеседники</h2>{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}</section></>;
-  else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={worldActivities.length > 0 && <button className="link-button caption" onClick={() => { const next = markWorldActivitiesRead(activities, player?.world); setActivities(next); localSave('activity', next); }}>Прочитать всё</button>} />{!worldActivities.length && <EmptyState title="Пока тихо">Здесь появятся новые посты и ответы персонажей, реакции на публикации и отметки серии.</EmptyState>}{worldActivities.map(a=><ActivityItem key={a.id} title={a.title} text={a.text} actorName={a.actorName} symbol={a.kind==='streak'?'🔥':a.kind==='likes'?'♡':'✦'} read={a.read} onOpen={()=>{if(a.kind==='streak'){setActivities(old=>{const next=old.map(v=>v.id===a.id&&v.worldId===a.worldId?{...v,read:true}:v);localSave('activity',next);return next;});setOverlay('streak');}else void openThread(a.postId??a.id);}}/>)}</>;
+  else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={activityTab==='events'&&worldActivities.length>0&&<button className="link-button caption" onClick={()=>{const next=markWorldActivitiesRead(activities,player?.world);setActivities(next);localSave('activity',next);}}>Прочитать всё</button>}/>
+    <ViewFilter value={activityTab} onChange={setActivityTab} options={[{value:'events',label:'События'},{value:'results',label:'Результаты'}]} label="Раздел уведомлений"/>
+    {activityTab==='results'?<ResultHistory items={resultHistory.items} onOpen={id=>void openThread(id)}/>:<>
+      {!worldActivities.length&&<EmptyState title="Пока тихо">Здесь появятся ответы персонажей, реакции на твои посты и отметки серии.</EmptyState>}
+      {worldActivities.map(a=><ActivityItem key={a.id} title={a.title} text={a.kind==='likes'?a.postText??'Фрагмент публикации не сохранён':a.text} detail={a.kind==='likes'&&a.count!==undefined?`Реакций: ${a.count}`:undefined} actorName={a.kind==='likes'?undefined:a.actorName} symbol={a.kind==='streak'?'🔥':a.kind==='likes'?'♡':'✦'} read={a.read} onOpen={()=>{if(a.kind==='streak'){setActivities(old=>{const next=old.map(v=>v.id===a.id&&v.worldId===a.worldId?{...v,read:true}:v);localSave('activity',next);return next;});setOverlay('streak');}else void openThread(a.postId??a.id);}}/>)}
+    </>}
+  </>;
   else if (screen === 'account') content = <><ProfileHeader name={player?accountIdentity(player.id,owned[0]?.name??player.name).name:'Твой профиль'} neutralAvatar handle={player?accountIdentity(player.id,owned[0]?.name??player.name).handle:undefined} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? orderedOwned.slice(0,accountVisible).map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} onDelete={()=>setWorldToDelete(d)} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}{owned.length>accountVisible&&<Button variant="secondary" onClick={()=>setAccountVisible(n=>n+5)}>Показать ещё {Math.min(5,owned.length-accountVisible)}</Button>}</section><section className="account-settings">{player&&<SettingsRow label="Пригласить друга" onClick={()=>setInviteOpen(true)}/>} {player && <SettingsRow label="Привязать профиль" onClick={()=>setLinkProfileOpen(true)}/>}<SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => openResource('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><SettingsRow label="Удалить аккаунт" onClick={()=>setDeleteOpen(true)} disabled={pending || busy} /><NominalSignOut onSignOut={()=>void beginEntry()} disabled={pending || busy} /></section></>;
   else content = <EmptyState title="Выбери мир" action={<Button onClick={() => go('catalog')}>К мирам</Button>}>Продолжи сохранённую историю или начни новую.</EmptyState>;
 
@@ -576,7 +577,7 @@ export default function BackendApp() {
   const nav = inWorld ? [ { id: 'feed', label: 'Лента', icon: 'feed' as const }, { id: 'goals', label: 'Цели', icon: 'goals' as const }, { id: 'compose', label: 'Написать', icon: 'compose' as const }, { id: 'activity', label: 'Уведомления', icon: 'activity' as const, badge: worldActivities.filter(a=>!a.read).length } ] : [ { id: 'catalog', label: 'Главная', icon: 'home' as const }, { id: 'search', label: 'Поиск', icon: 'search' as const }, { id: 'account', label: 'Профиль', icon: 'profile' as const } ];
   if(import.meta.env.DEV&&hash.startsWith('#result-review'))return <ResultReview/>;
   if (hash.startsWith('#system')) return <DesignSystem />;
-  return <div className="v7-stage"><div ref={appRoot} className={`app ${showNav ? 'app--nav' : ''} ${screen === 'intro' ? 'app--prologue' : ''} ${screen === 'hero' ? 'app--hero' : ''}`}><div className="app-body" ref={main}><div className="sr-only" tabIndex={-1} ref={focusHeading}>{titleOf[screen]}</div>{storageError && <Notice title="Не удалось сохранить на устройстве" tone="error">Не закрывай вкладку: черновик остаётся в памяти до перезагрузки.</Notice>}{error && <div className="section"><Notice title={screen==='thread'&&reply&&unknown?'Комментарий сохранён, ответ пока не готов':'Не получилось завершить действие'} tone="error">{error}</Notice>{!booting && !templates.length && <Button onClick={() => void boot()}>Повторить</Button>}</div>}{content}</div>
+  return <div className="v7-stage"><div ref={appRoot} className={`app ${showNav ? 'app--nav' : ''} ${screen === 'intro' ? 'app--prologue' : ''} ${screen === 'hero' ? 'app--hero' : ''}`}><div className="app-body" ref={main}><div className="sr-only" tabIndex={-1} ref={focusHeading}>{titleOf[screen]}</div>{storageError && <Notice title="Не удалось сохранить на устройстве" tone="error">Не закрывай вкладку: черновик остаётся в памяти до перезагрузки.</Notice>}{error && <div className="section"><Notice title={screen==='thread'&&reply&&unknown?'Комментарий сохранён, ответ пока не готов':'Не получилось завершить действие'} tone="error">{error}</Notice>{!booting && !templates.length && <Button onClick={() => void boot()}>Повторить</Button>}</div>}{resultHistory.error&&<div className="section"><Notice title="История результатов не сохранена" tone="error">{resultHistory.error}</Notice></div>}{content}</div>
     {showNav && <BottomNav items={nav.map(n => ({ ...n, disabled: pending }))} active={screen} onChange={id => { tap('tab', { to: `v7.${id}` }); id === 'compose' ? openFirstPost() : go(id as Screen, true); }} />}
     {worldToDelete&&<Dialog title="Удалить мир?" onClose={()=>setWorldToDelete(undefined)}><div className="stack"><p><strong>{worldToDelete.title}</strong><br/>{worldToDelete.name}</p><p>Удаление этого прохождения вместе с историей персонажа пока недоступно.</p><Button variant="danger" disabled>Удалить мир</Button><Button variant="secondary" onClick={()=>setWorldToDelete(undefined)}>Отмена</Button></div></Dialog>}
     {inviteOpen&&<InviteFriend onClose={()=>setInviteOpen(false)}/>}
@@ -584,7 +585,7 @@ export default function BackendApp() {
     {deleteOpen&&<AccountDeletion onDelete={deleteAccount} onClose={()=>setDeleteOpen(false)}/>}
     {reportId&&<ReportComment onSend={reason=>api.report(reportId,reason)} onClose={()=>setReportId(undefined)}/>}
     {showReceipt&&screen==='thread'&&player&&world&&<div className="result-status-bar">{renderWorldHud()}</div>}
-    {showReceipt&&receipt&&receipt.worldId===player?.world&&<ResultIsland key={receipt.actionId??receipt.result.postId} receipt={displayReceipt??receipt} onRead={()=>void openThread(receipt.result.postId)} onClose={()=>setShowReceipt(false)}/>}
+    {showReceipt&&receipt&&receipt.worldId===player?.world&&<ResultIsland key={receipt.actionId??receipt.result.postId} receipt={receipt} onRead={()=>void openThread(receipt.result.postId)} onClose={()=>setShowReceipt(false)}/>}
     {reactionNotice&&!showReceipt&&<ReactionTicker notice={reactionNotice} onOpen={()=>{void openThread(reactionNotice.postId);setReactionNotice(undefined);}} onClose={()=>setReactionNotice(undefined)}/>}
     {gainAnimation&&<FollowersFlight delta={gainAnimation.delta} nonce={gainAnimation.nonce}/>}
     {overlay && <Dialog title={{ exit: 'Выйти из мира?', streak: 'Серия дней', skills: 'Навыки и отношения', 'text-size': 'Размер текста', 'local-like': 'Реакция', quote: 'Цитата', about: 'Новая версия' }[overlay]} onClose={() => setOverlay(null)}>
