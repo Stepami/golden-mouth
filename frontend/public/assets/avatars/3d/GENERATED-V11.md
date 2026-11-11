@@ -2,7 +2,7 @@
 
 Refs #205. По замечаниям к DEV: готовые герои должны сохранять узнаваемые черты, а свои образы — принадлежать этому миру, без современных курток.
 
-Встроенный imagegen, семь отдельных PNG с прозрачностью, уменьшены до 640 px по длинной стороне. Обложка мира сохранена; её персонаж используется для Гарри. Генерация отдельного портрета Гарри была отклонена инструментом, новый портрет не заявляется готовым.
+Встроенный imagegen, семь отдельных PNG с прозрачностью, уменьшены до 640 px по длинной стороне. Обложка мира сохранена. После проверки прозрачности Гарри получил отдельный PNG из обложки, см. уточнение ниже.
 
 ## Общий промпт
 
@@ -23,3 +23,13 @@ Use case: stylized-concept. One illustrated fantasy game character portrait, squ
 ## Проверка
 
 TypeScript и production build, secret scan и diff --check прошли. В изолированном headless Chrome на DEV отрисованы настоящие HeroStudio и AvatarBuilder: восемь источников загружаются, набор своего героя содержит четыре отдельных образа, на 390 и 1280 px нет горизонтального переполнения. Проверена подмена старого штатного портрета Драко и сохранение пользовательского data:image/png. Изображения просмотрены на скриншотах. Игровые данные для проверки не создавались.
+
+## Прозрачность: исправление Гарри, v12
+
+По дополнительному запросу проверены все 25 PNG из рабочего набора аватаров: альфа-канал и визуальное отображение на контрастной клетчатой подложке. Вне силуэтов нет сплошного фона. Непрозрачность одежды в нижних углах не считается фоном.
+
+Гарри больше не использует JPEG обложки как аватар. Встроенным imagegen из обложки подготовлен `hogwarts-harry-v12.png` с настоящей прозрачностью, 427 × 640 px. Обложка не изменялась. При показе заменяется также её путь, сохранённый предыдущей итерацией в персоне; пользовательские загруженные фотографии сохраняются.
+
+Промпт: Use case: background-extraction. Edit target: supplied existing fantasy cover portrait. Remove only the dark green background around the person. Deliver an isolated head-and-shoulders portrait cutout on a genuinely transparent background, including the full hair, parchment collar, burgundy cloak, glasses and hanging jewellery. Preserve the existing illustrated person, facial features, expression, hairstyle, clothing, colours and lighting. Do not redesign the face or add anything. No green rectangular backdrop, no shadow panel, no checkerboard pixels. Frame the bust with a little transparent space around hair and shoulders; no text or border.
+
+Старые JPEG для прежних/отложенных миров остаются историческими файлами, в этот PNG-набор не входят. Загруженные фотографии пользователя не обрабатывались.

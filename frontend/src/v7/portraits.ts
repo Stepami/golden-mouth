@@ -1,6 +1,6 @@
 /** Presentation-only fallbacks; never character IDs or backend catalogue entries. */
 export const hogwartsPortraits:Record<string,string>={
-  harry:'/assets/worlds/sorcerers-portrait-960-v8.jpg',
+  harry:'/assets/avatars/3d/hogwarts-harry-v12.png',
   hermione:'/assets/avatars/3d/hogwarts-hermione-v11.png',
   ron:'/assets/avatars/3d/hogwarts-ron-v11.png',
   draco:'/assets/avatars/3d/hogwarts-draco-v11.png',
@@ -37,7 +37,7 @@ export function characterPortrait(seed: string) {
 export function displayPortrait(src: string | undefined, name: string) {
   if(src==='')return undefined;
   const hogwarts=hogwartsNames[name.trim().toLocaleLowerCase('ru')];
-  if(hogwarts&&(!src||src.startsWith('/assets/avatars/')||src.startsWith('data:image/svg+xml')))return hogwartsPortraits[hogwarts];
+  if(hogwarts&&(!src||src.startsWith('/assets/avatars/')||src==='/assets/worlds/sorcerers-portrait-960-v8.jpg'||src.startsWith('data:image/svg+xml')))return hogwartsPortraits[hogwarts];
   const evening=namedLooks[name.trim().toLocaleLowerCase('ru')];
   if(evening?.startsWith('evening-')&&(!src||src.startsWith('/assets/avatars/3d/')||src.startsWith('data:image/svg+xml')))return characterPortrait(evening);
   const fixed=itPortraits[name.trim().toLocaleLowerCase('ru')];
