@@ -10,18 +10,18 @@ internal sealed class SubmitAnalyticsCommandHandler(
     : ICommandHandler<SubmitAnalytics>
 {
     public async ValueTask<Unit> Handle(
-        SubmitAnalytics request,
+        SubmitAnalytics command,
         CancellationToken cancellationToken)
     {
         var rekiContext = rekiContextAccessor.Context;
         var player = await rekiContext.Player;
-        foreach (var worldId in request.Submission.Events.Select(entry => entry.WorldId).OfType<Domain.Worlds.WorldId>().Distinct())
+        foreach (var worldId in command.Submission.Events.Select(entry => entry.WorldId).OfType<Domain.Worlds.WorldId>().Distinct())
         {
             _ = (await rekiContext.Worlds).GetValueOrDefault(worldId)
             ?? throw new ResourceNotFoundException("World not found.");
         }
 
-        telemetry.TrackSubmission(player, request.Submission);
+        telemetry.TrackSubmission(player, command.Submission);
         return Unit.Value;
     }
 }

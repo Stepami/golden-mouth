@@ -4,6 +4,6 @@ namespace Reki.Application.Posts.AI.Serializers;
 
 internal sealed class WorldEncodeSerializer : IEncodeSerializer<World>
 {
-    public string Serialize(World world) =>
-        $"{world.Interface.Title}. {world.Interface.Description}. {world.Player.Role}";
+    public string Serialize(World item) =>
+        $"{item.Interface.Title}. {item.Interface.Description}. {item.Player.Role}";
 }

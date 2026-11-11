@@ -27,26 +27,26 @@ internal sealed class AddReplyCommandHandler(
     IStarFeedScheduler<ScheduleFromCommentRequest> feedScheduler,
     IStarVectorStore starVectorStore) : ICommandHandler<AddReply, ReplyResponse>
 {
-    public async ValueTask<ReplyResponse> Handle(AddReply request, CancellationToken cancellationToken)
+    public async ValueTask<ReplyResponse> Handle(AddReply command, CancellationToken cancellationToken)
     {
         var context = rekiContextAccessor.Context;
         var player = await context.Player;
-        var world = (await context.Worlds).GetValueOrDefault(request.WorldId)
+        var world = (await context.Worlds).GetValueOrDefault(command.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
-        var post = await posts.GetPostAsync(request.PostId, world.Id, cancellationToken)
+        var post = await posts.GetPostAsync(command.PostId, world.Id, cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");
-        var isPlayer = request.AuthorId == player.Id.ToAuthorId();
-        if (post.FindRequest(request.RequestId) is { } existing)
+        var isPlayer = command.AuthorId == player.Id.ToAuthorId();
+        if (post.FindRequest(command.RequestId) is { } existing)
         {
             return new ReplyResponse(existing.Id, existing.AuthorId, post.MapPost(world, player.Id), player.Wallet.Energy, world.Player.Subscribers);
         }
 
         var comment = new GameComment(
             CommentId.New(),
-            request.TargetCommentId,
-            request.RequestId,
-            request.AuthorId,
-            request.Text,
+            command.TargetCommentId,
+            command.RequestId,
+            command.AuthorId,
+            command.Text,
             false,
             [],
             null);
@@ -67,8 +67,7 @@ internal sealed class AddReplyCommandHandler(
             {
                 AdditionalReplierId = await starVectorStore.GetRelevantAdditionalReplierAsync(world, targetStar.Id, comment),
             };
-            var bonus = post.Comments.Count(item => item.AuthorId == comment.AuthorId) < thread.BonusReplies
-                ? thread.SubscriberBonus : 0;
+            var bonus = post.Comments.Count(item => item.AuthorId == comment.AuthorId) < thread.BonusReplies ? thread.SubscriberBonus : 0;
             player = player.SpendEnergy(thread.EnergyCost, timeProvider.GetUtcNow());
             world = world.AwardThreadBonus(bonus);
         }

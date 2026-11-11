@@ -9,7 +9,7 @@ internal sealed class ReportCommentCommandHandler(
     : ICommandHandler<ReportComment>
 {
     public ValueTask<Unit> Handle(
-        ReportComment request,
+        ReportComment command,
         CancellationToken cancellationToken)
     {
         var playerId = rekiContextAccessor.Context.PlayerId;

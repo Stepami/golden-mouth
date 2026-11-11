@@ -11,13 +11,13 @@ internal sealed class PostQueryHandler(
     : IQueryHandler<PostQuery, GamePost>
 {
     public async ValueTask<GamePost> Handle(
-        PostQuery request,
+        PostQuery query,
         CancellationToken cancellationToken)
     {
         var worlds = await rekiContextAccessor.Context.Worlds;
-        var world = worlds.GetValueOrDefault(request.WorldId)
+        var world = worlds.GetValueOrDefault(query.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
-        return await postRepository.GetPostAsync(request.PostId, world.Id, cancellationToken)
+        return await postRepository.GetPostAsync(query.PostId, world.Id, cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");
     }
 }

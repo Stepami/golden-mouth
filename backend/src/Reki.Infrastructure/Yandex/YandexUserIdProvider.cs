@@ -25,10 +25,7 @@ internal sealed class YandexUserIdProvider(
         try
         {
             var info = await api.GetUserInfoAsync($"OAuth {token}", cancellationToken);
-            return info.ClientId == options.Value.ClientId &&
-                info.Id is { Length: > 0 } id && id.All(char.IsAsciiDigit) && id.Any(character => character != '0')
-                ? ExternalUserId.Yandex(id)
-                : null;
+            return info.ClientId == options.Value.ClientId && info.Id is { Length: > 0 } id && id.All(char.IsAsciiDigit) && id.Any(character => character != '0') ? ExternalUserId.Yandex(id) : null;
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {

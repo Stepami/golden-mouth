@@ -8,18 +8,18 @@ internal sealed class MergePlayersCommandHandler(
     IPlayerRepository players,
     ISender sender) : ICommandHandler<MergePlayers>
 {
-    public async ValueTask<Unit> Handle(MergePlayers request, CancellationToken cancellationToken)
+    public async ValueTask<Unit> Handle(MergePlayers command, CancellationToken cancellationToken)
     {
-        if (request.FromPlayerId == request.ToPlayerId)
+        if (command.FromPlayerId == command.ToPlayerId)
         {
             throw new RequestConflictException("A player cannot be merged with itself.");
         }
 
-        var source = await players.GetPlayerAsync(request.FromPlayerId, cancellationToken)
+        var source = await players.GetPlayerAsync(command.FromPlayerId, cancellationToken)
             ?? throw new ResourceNotFoundException("Player not found.");
-        var target = await players.GetPlayerAsync(request.ToPlayerId, cancellationToken)
+        var target = await players.GetPlayerAsync(command.ToPlayerId, cancellationToken)
             ?? throw new ResourceNotFoundException("Player not found.");
-        await sender.Send(new DeletePlayer(request.FromPlayerId), cancellationToken);
+        await sender.Send(new DeletePlayer(command.FromPlayerId), cancellationToken);
         await players.ReplacePlayerAsync(target.AddExternalUserIds(source.ExternalUserIds), cancellationToken);
         return Unit.Value;
     }

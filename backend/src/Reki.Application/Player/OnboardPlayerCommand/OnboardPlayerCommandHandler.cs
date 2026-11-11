@@ -19,24 +19,24 @@ internal sealed class OnboardPlayerCommandHandler(
     ProductTelemetry analytics) : ICommandHandler<OnboardPlayer, PlayerProfile>
 {
     public async ValueTask<PlayerProfile> Handle(
-        OnboardPlayer request,
+        OnboardPlayer command,
         CancellationToken cancellationToken)
     {
-        if (await playerRepository.GetPlayerAsync(request.ExternalUserId, cancellationToken) is not null)
+        if (await playerRepository.GetPlayerAsync(command.ExternalUserId, cancellationToken) is not null)
         {
             throw new RequestConflictException("Onboarding has already been completed.");
         }
 
         var currentBalance = balance.CurrentValue;
-        var inviter = await ResolveInviterAsync(request, cancellationToken);
+        var inviter = await ResolveInviterAsync(command, cancellationToken);
         var completed = new PlayerProfile
         {
             Id = PlayerId.New(),
-            ExternalUserIds = [request.ExternalUserId],
+            ExternalUserIds = [command.ExternalUserId],
             Settings = new PlayerSettings("all", "22:00-09:00", false),
-            BirthGroup = request.BirthGroup,
-            Address = request.Address,
-            AgeBand = request.AgeBand,
+            BirthGroup = command.BirthGroup,
+            Address = command.Address,
+            AgeBand = command.AgeBand,
             Wallet = PlayerWallet.Create(timeProvider.GetUtcNow()),
             LastSeenAt = timeProvider.GetUtcNow(),
             PostsPeriodStartedAtUtc = gameDayPeriod.PeriodStart,

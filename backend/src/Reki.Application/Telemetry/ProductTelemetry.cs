@@ -185,12 +185,10 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
     }
 
     private static string ReadDifficulty(IReadOnlyDictionary<string, string> properties) =>
-        properties.TryGetValue("difficulty", out var difficulty) && difficulty is "easy" or "normal" or "hard"
-            ? difficulty : "unknown";
+        properties.TryGetValue("difficulty", out var difficulty) && difficulty is "easy" or "normal" or "hard" ? difficulty : "unknown";
 
     private static string? ReadTemplateId(IReadOnlyDictionary<string, string> properties) =>
-        properties.TryGetValue("template_id", out var template) && Guid.TryParse(template, out var id)
-            ? id.ToString("D") : null;
+        properties.TryGetValue("template_id", out var template) && Guid.TryParse(template, out var id) ? id.ToString("D") : null;
 
     private Dictionary<string, object?> CreateAttributes(
         PlayerId playerId,

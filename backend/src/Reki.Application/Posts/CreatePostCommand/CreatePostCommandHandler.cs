@@ -37,11 +37,11 @@ internal sealed class CreatePostCommandHandler(
     ProductTelemetry telemetry,
     IStarFeedScheduler<ScheduleFromPostRequest> feedScheduler) : ICommandHandler<CreatePost, CreatePostResponse>
 {
-    public async ValueTask<CreatePostResponse> Handle(CreatePost request, CancellationToken cancellationToken)
+    public async ValueTask<CreatePostResponse> Handle(CreatePost command, CancellationToken cancellationToken)
     {
         var context = contextAccessor.Context;
         var player = await context.Player;
-        var world = (await context.Worlds).GetValueOrDefault(request.WorldId)
+        var world = (await context.Worlds).GetValueOrDefault(command.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var currentBalance = balance.CurrentValue;
         if (player.Wallet.Energy < currentBalance.PostEnergyCost)
@@ -49,19 +49,19 @@ internal sealed class CreatePostCommandHandler(
             throw new RequestConflictException("The daily post limit has been reached.");
         }
 
-        var wantCompleted = request.WantId is not null && world.Player.Wants.Any(want => want.Id == request.WantId && !want.Done);
-        if (request.WantId is not null && !wantCompleted)
+        var wantCompleted = command.WantId is not null && world.Player.Wants.Any(want => want.Id == command.WantId && !want.Done);
+        if (command.WantId is not null && !wantCompleted)
         {
             throw new RequestConflictException("The selected daily want is unavailable.");
         }
 
-        await safety.EnsureInputAllowedAsync(player, [request.Text], cancellationToken);
+        await safety.EnsureInputAllowedAsync(player, [command.Text], cancellationToken);
         var now = timeProvider.GetUtcNow();
         var post = new GamePost(
             PostId.New(now),
             player.Id.ToAuthorId(),
             world.Id,
-            request.Text,
+            command.Text,
             Random.Shared.NextInt64(world.Player.Subscribers + 1),
             [],
             now,
@@ -78,7 +78,7 @@ internal sealed class CreatePostCommandHandler(
             player,
             world,
             score,
-            request.OwnWords,
+            command.OwnWords,
             wantCompleted,
             post.Id.ToString(),
             flop);
@@ -86,7 +86,7 @@ internal sealed class CreatePostCommandHandler(
             progression.SubscriberDelta,
             progression.Viral,
             progression.Skills,
-            request.WantId,
+            command.WantId,
             starId,
             now,
             currentBalance.Relations.Minimum,

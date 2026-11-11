@@ -20,17 +20,17 @@ internal sealed partial class GenerateReplyCommandHandler(
     ILogger<GenerateReplyCommandHandler> logger) : IStreamCommandHandler<GenerateReply, ReplyGenerationLiveEvent>
 {
     public async IAsyncEnumerable<ReplyGenerationLiveEvent> Handle(
-        GenerateReply request,
+        GenerateReply command,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var rekiContext = rekiContextAccessor.Context;
         var player = await rekiContext.Player;
-        var world = (await rekiContext.Worlds).GetValueOrDefault(request.WorldId)
+        var world = (await rekiContext.Worlds).GetValueOrDefault(command.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
-        var post = await sender.Send(new PostQuery(request.PostId, world.Id), cancellationToken);
-        var star = world.FindStar(request.AuthorId)
+        var post = await sender.Send(new PostQuery(command.PostId, world.Id), cancellationToken);
+        var star = world.FindStar(command.AuthorId)
             ?? throw new RequestConflictException("The author is not a star of this world.");
-        var source = request.SourceCommentId is { } sourceId
+        var source = command.SourceCommentId is { } sourceId
             ? post.Comments.FirstOrDefault(item => item.Id == sourceId && !item.Hidden && item.AuthorId == player.Id.ToAuthorId())
                 ?? throw new ResourceNotFoundException("Player comment not found.")
             : null;
@@ -39,7 +39,7 @@ internal sealed partial class GenerateReplyCommandHandler(
             var primary = source.ParentCommentId is { } parentId
                 ? world.FindStar(post.Comments.First(item => item.Id == parentId).AuthorId)
                 : world.FindStar(post.AuthorId);
-            if (primary is null || (request.Additional ? source.AdditionalReplierId != star.Id : primary.Id != star.Id))
+            if (primary is null || (command.Additional ? source.AdditionalReplierId != star.Id : primary.Id != star.Id))
             {
                 throw new RequestConflictException("The star does not belong to the selected thread.");
             }
@@ -54,8 +54,8 @@ internal sealed partial class GenerateReplyCommandHandler(
             branch,
             source?.Text,
             turnPolicy.IsHateEnabled(player, world),
-            request.Additional);
-        yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Generating, request.AuthorId, null, null, null);
+            command.Additional);
+        yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Generating, command.AuthorId, null, null, null);
         var text = new StringBuilder();
         var hasToolCall = false;
         await using var updates = generator.StreamReplyTurnAsync(turnContext, cancellationToken)
@@ -78,7 +78,7 @@ internal sealed partial class GenerateReplyCommandHandler(
 
             if (failed)
             {
-                yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Failed, request.AuthorId, null, null, "ai_unavailable");
+                yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Failed, command.AuthorId, null, null, "ai_unavailable");
                 yield break;
             }
 
@@ -90,7 +90,7 @@ internal sealed partial class GenerateReplyCommandHandler(
             text.Append(string.Concat(updates.Current.Contents.OfType<TextContent>().Select(chunk => chunk.Text)));
             hasToolCall |= updates.Current.Contents.Any(content => content is FunctionCallContent);
 
-            yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Generating, request.AuthorId, null, null, null);
+            yield return new ReplyGenerationLiveEvent(ReplyGenerationStatus.Generating, command.AuthorId, null, null, null);
         }
 
         ReplyGenerationLiveEvent outcome;
@@ -105,19 +105,19 @@ internal sealed partial class GenerateReplyCommandHandler(
             PlayerSafetyGuard.EnsureOutputAllowed([reply]);
             outcome = new ReplyGenerationLiveEvent(
                 ReplyGenerationStatus.Completed,
-                request.AuthorId,
+                command.AuthorId,
                 reply,
-                request.Additional ? null : additionalStarId,
+                command.Additional ? null : additionalStarId,
                 null);
         }
         catch (UnsafeGeneratedContentException)
         {
-            outcome = new ReplyGenerationLiveEvent(ReplyGenerationStatus.Failed, request.AuthorId, null, null, "unsafe_generated_content");
+            outcome = new ReplyGenerationLiveEvent(ReplyGenerationStatus.Failed, command.AuthorId, null, null, "unsafe_generated_content");
         }
         catch (AiServiceUnavailableException)
         {
             GenerationFailed();
-            outcome = new ReplyGenerationLiveEvent(ReplyGenerationStatus.Failed, request.AuthorId, null, null, "ai_unavailable");
+            outcome = new ReplyGenerationLiveEvent(ReplyGenerationStatus.Failed, command.AuthorId, null, null, "ai_unavailable");
         }
 
         yield return outcome;

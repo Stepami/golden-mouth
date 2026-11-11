@@ -125,7 +125,7 @@ namespace Reki.Api.Serialization;
         typeof(CamelCaseEnumConverter<GameEventKind>),
         typeof(CamelCaseEnumConverter<ReplyGenerationStatus>),
         typeof(CamelCaseEnumConverter<ClientLogLevel>),
-        typeof(KebabCaseEnumConverter<LaunchSurface>)
+        typeof(KebabCaseEnumConverter<LaunchSurface>),
     ],
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 internal sealed partial class ApiJsonSerializerContext : JsonSerializerContext;

@@ -10,7 +10,7 @@ internal sealed class ExchangeEnergyCommandHandler(
     IRekiContextAccessor contextAccessor,
     TimeProvider timeProvider) : ICommandHandler<ExchangeEnergy, EnergyExchangeResponse>
 {
-    public async ValueTask<EnergyExchangeResponse> Handle(ExchangeEnergy request, CancellationToken cancellationToken)
+    public async ValueTask<EnergyExchangeResponse> Handle(ExchangeEnergy command, CancellationToken cancellationToken)
     {
         return await unitOfWork.ExecuteAsync(
             async token =>

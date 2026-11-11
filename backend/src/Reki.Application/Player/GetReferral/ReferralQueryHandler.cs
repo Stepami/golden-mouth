@@ -8,7 +8,7 @@ internal sealed class ReferralQueryHandler(IRekiContextAccessor rekiContextAcces
     IQueryHandler<ReferralQuery, ReferralResponse>
 {
     public ValueTask<ReferralResponse> Handle(
-        ReferralQuery request,
+        ReferralQuery query,
         CancellationToken cancellationToken)
     {
         var playerId = rekiContextAccessor.Context.PlayerId;

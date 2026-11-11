@@ -17,10 +17,10 @@ internal sealed class CreateWorldCommandHandler(
     ProductTelemetry telemetry,
     IStarVectorStore starVectorStore) : ICommandHandler<CreateWorld, World>
 {
-    public async ValueTask<World> Handle(CreateWorld request, CancellationToken cancellationToken)
+    public async ValueTask<World> Handle(CreateWorld command, CancellationToken cancellationToken)
     {
         var player = await rekiContextAccessor.Context.Player;
-        var source = request.Definition;
+        var source = command.Definition;
         if (source.TemplateId is null && !player.HitOwnWorldMilestone)
         {
             throw new RequestConflictException("Creating a world from scratch is not unlocked.");

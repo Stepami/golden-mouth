@@ -30,8 +30,7 @@ internal static class DependencyInjection
         services.AddProblemDetails();
         services.AddOpenApi(options =>
         {
-            options.CreateSchemaReferenceId = info => info.Kind == JsonTypeInfoKind.None && !info.Type.IsEnum
-                ? null : OpenApiOptions.CreateDefaultSchemaReferenceId(info);
+            options.CreateSchemaReferenceId = info => info.Kind == JsonTypeInfoKind.None && !info.Type.IsEnum ? null : OpenApiOptions.CreateDefaultSchemaReferenceId(info);
             options.MapVogenTypesInDependencyInjection();
             options.AddSchemaTransformer<AddressSchemaTransformer>();
             options.AddSchemaTransformer<NullableChallengeSchemaTransformer>();
