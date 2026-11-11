@@ -11,14 +11,14 @@ internal sealed class ClaimPlusInterestCommandHandler(
     IRekiContextAccessor rekiContextAccessor) : ICommandHandler<ClaimPlusInterest, int>
 {
     public async ValueTask<int> Handle(
-        ClaimPlusInterest request,
+        ClaimPlusInterest command,
         CancellationToken cancellationToken)
     {
         var currentBalance = balance.CurrentValue;
         var storedPlayer = await rekiContextAccessor.Context.Player;
         var player = storedPlayer;
 
-        if (request.Interest)
+        if (command.Interest)
         {
             var subscribed = player.RequestPlusNotification();
             if (!ReferenceEquals(subscribed, player))

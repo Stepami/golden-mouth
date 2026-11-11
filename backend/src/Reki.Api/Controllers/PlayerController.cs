@@ -11,6 +11,7 @@ using Reki.Application.Player.ExchangeEnergyCommand;
 using Reki.Application.Player.GetReferral;
 using Reki.Application.Player.MergePlayersCommand;
 using Reki.Application.Player.Responses;
+using Reki.Application.Player.UpdateLastSeenAtCommand;
 using Reki.Application.RekiContext;
 using Reki.Infrastructure.Auth;
 
@@ -27,8 +28,12 @@ public sealed class PlayerController(
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
-    public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken) =>
-        TypedResults.Ok((await rekiContext.Player).ToResponse());
+    public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
+    {
+        var player = await rekiContext.Player;
+        await sender.Send(new UpdateLastSeenAt(player), cancellationToken);
+        return TypedResults.Ok(player.ToResponse());
+    }
 
     [HttpPost("me/energy/exchange", Name = "ExchangeEnergy")]
     public async Task<Ok<EnergyExchangeResponse>> ExchangeEnergyAsync(CancellationToken cancellationToken)

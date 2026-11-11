@@ -12,18 +12,18 @@ internal sealed class UpdateSettingsCommandHandler(
     IOptionsMonitor<GameBalance> balance)
     : ICommandHandler<UpdateSettings>
 {
-    public async ValueTask<Unit> Handle(UpdateSettings request, CancellationToken cancellationToken)
+    public async ValueTask<Unit> Handle(UpdateSettings command, CancellationToken cancellationToken)
     {
         var player = await rekiContextAccessor.Context.Player;
         var currentBalance = balance.CurrentValue;
         var updated = player with
         {
             Settings = new PlayerSettings(
-                Notifications: request.Notifications ?? player.Settings.Notifications,
-                Quiet: request.Quiet ?? player.Settings.Quiet,
-                Plus: request.Plus ?? player.Settings.Plus),
-            Address = request.Address ?? player.Address,
-            Wallet = player.Wallet.Replenish(request.Plus is true && !player.Settings.Plus
+                Notifications: command.Notifications ?? player.Settings.Notifications,
+                Quiet: command.Quiet ?? player.Settings.Quiet,
+                Plus: command.Plus ?? player.Settings.Plus),
+            Address = command.Address ?? player.Address,
+            Wallet = player.Wallet.Replenish(command.Plus is true && !player.Settings.Plus
                 ? Math.Max(0, currentBalance.PlusPostsPerDay - currentBalance.FreePostsPerDay)
                 : 0),
             Version = player.Version + 1,

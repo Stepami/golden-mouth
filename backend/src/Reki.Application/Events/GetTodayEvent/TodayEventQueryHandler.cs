@@ -12,11 +12,11 @@ internal sealed class TodayEventQueryHandler(
     IRekiContextAccessor rekiContextAccessor) : IQueryHandler<TodayEventQuery, DailyGameEvent>
 {
     public async ValueTask<DailyGameEvent> Handle(
-        TodayEventQuery request,
+        TodayEventQuery query,
         CancellationToken cancellationToken)
     {
         var playerId = rekiContextAccessor.Context.PlayerId;
-        var world = (await rekiContextAccessor.Context.Worlds).GetValueOrDefault(request.WorldId)
+        var world = (await rekiContextAccessor.Context.Worlds).GetValueOrDefault(query.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var periodStart = gameDayPeriod.PeriodStart;
         var existing = await dailyGameEventRepository.GetTodayEventAsync(

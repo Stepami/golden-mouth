@@ -70,14 +70,7 @@ internal sealed class NestWorldDocuments : RekiMigrationBase
             drama = "mid";
         }
 
-        player["Drama"] = drama.IsString ? drama.AsString switch
-        {
-            "soft" => 0,
-            "mid" => 1,
-            "hot" => 2,
-            "off" => 3,
-            _ => 1,
-        } : drama;
+        player["Drama"] = drama.IsString ? drama.AsString switch { "soft" => 0, "mid" => 1, "hot" => 2, "off" => 3, _ => 1, } : drama;
         if (!worldInterface.TryGetValue("Difficulty", out var difficulty) || difficulty.IsBsonNull || difficulty == 0)
         {
             worldInterface["Difficulty"] = 1;

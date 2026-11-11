@@ -26,23 +26,23 @@ public sealed class TelegramBotTelemetry : BaseProcessor<Activity>, IDownstreamD
 
     public ISet<RequestMetadata> RequestMetadata { get; }
 
-    public override void OnEnd(Activity activity)
+    public override void OnEnd(Activity data)
     {
-        if (activity.Source.Name != "System.Net.Http" ||
-            activity.GetTagItem("server.address") is not string host ||
+        if (data.Source.Name != "System.Net.Http" ||
+            data.GetTagItem("server.address") is not string host ||
             !string.Equals(host, _host, StringComparison.OrdinalIgnoreCase) ||
-            activity.GetTagItem("url.full") is not string rawUrl)
+            data.GetTagItem("url.full") is not string rawUrl)
         {
             return;
         }
 
         if (!Uri.TryCreate(rawUrl, UriKind.Absolute, out var uri))
         {
-            activity.SetTag("url.full", null);
+            data.SetTag("url.full", null);
             return;
         }
 
-        activity.SetTag("url.full", $"{uri.Scheme}://{uri.Authority}{RedactPath(uri.AbsolutePath)}");
+        data.SetTag("url.full", $"{uri.Scheme}://{uri.Authority}{RedactPath(uri.AbsolutePath)}");
     }
 
     private static string RedactPath(string path)

@@ -12,12 +12,12 @@ internal sealed class PublicStoryCardQueryHandler(
     : IQueryHandler<PublicStoryCardQuery, StoryCardData>
 {
     public async ValueTask<StoryCardData> Handle(
-        PublicStoryCardQuery request,
+        PublicStoryCardQuery query,
         CancellationToken cancellationToken)
     {
-        var player = await playerRepository.GetPlayerAsync(request.PlayerId, cancellationToken)
+        var player = await playerRepository.GetPlayerAsync(query.PlayerId, cancellationToken)
             ?? throw new ResourceNotFoundException("Player not found.");
-        var post = await postRepository.GetPublicStoryPostAsync(request.PostId, cancellationToken)
+        var post = await postRepository.GetPublicStoryPostAsync(query.PostId, cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");
         var world = await worldRepository.GetWorldAsync(player.Id, post.WorldId, cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");

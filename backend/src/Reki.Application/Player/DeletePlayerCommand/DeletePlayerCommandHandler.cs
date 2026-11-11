@@ -21,10 +21,10 @@ internal sealed class DeletePlayerCommandHandler(
     : ICommandHandler<DeletePlayer>
 {
     public async ValueTask<Unit> Handle(
-        DeletePlayer request,
+        DeletePlayer command,
         CancellationToken cancellationToken)
     {
-        var playerId = request.PlayerId;
+        var playerId = command.PlayerId;
         await unitOfWork.ExecuteAsync(
             async token =>
             {

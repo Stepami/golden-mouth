@@ -736,7 +736,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await players.InsertManyAsync([inviter, first, second, third, child]);
         await database.GetCollection<BsonDocument>("posts").InsertManyAsync([
             new BsonDocument { ["_id"] = "later", ["PlayerId"] = "first", ["CreatedAtUtc"] = ReferralTimestamp(period.AddHours(5)) },
-            new BsonDocument { ["_id"] = "earlier", ["PlayerId"] = "first", ["CreatedAtUtc"] = ReferralTimestamp(period.AddHours(4)) }]);
+            new BsonDocument { ["_id"] = "earlier", ["PlayerId"] = "first", ["CreatedAtUtc"] = ReferralTimestamp(period.AddHours(4)) },
+        ]);
         using var session = await mongo.MongoClient.StartSessionAsync();
         var migration = new MoveReferralStateToInvites();
 
@@ -1349,8 +1350,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(documents.Count).IsEqualTo(3);
         foreach (var document in documents)
         {
-            var array = document["_id"] == "existing"
-                ? new BsonArray { "keep", BsonNull.Value } : new BsonArray();
+            var array = document["_id"] == "existing" ? new BsonArray { "keep", BsonNull.Value } : new BsonArray();
             var expected = new BsonDocument { { "_id", document["_id"] }, { "untouched", "original" } };
             expected.AddRange(fields.Select(fieldName => new BsonElement(fieldName, array.DeepClone())));
             await Assert.That(document).IsEqualTo(expected);

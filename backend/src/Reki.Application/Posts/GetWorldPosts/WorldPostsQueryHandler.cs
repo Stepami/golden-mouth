@@ -12,15 +12,15 @@ internal sealed class WorldPostsQueryHandler(
     : IQueryHandler<WorldPostsQuery, WorldPostsPage>
 {
     public async ValueTask<WorldPostsPage> Handle(
-        WorldPostsQuery request,
+        WorldPostsQuery query,
         CancellationToken cancellationToken)
     {
         var context = rekiContextAccessor.Context;
         var worlds = await context.Worlds;
-        var world = worlds.GetValueOrDefault(request.WorldId)
+        var world = worlds.GetValueOrDefault(query.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
 
-        if (request.Feed)
+        if (query.Feed)
         {
             await feedScheduler.ScheduleFeedAsync(new ScheduleFromFeedRequest(
                 world.Player.PlayerId,
@@ -29,9 +29,9 @@ internal sealed class WorldPostsQueryHandler(
 
         return await postRepository.GetPostsAsync(
             world.Id,
-            request.Feed ? null : world.Player.PlayerId.ToAuthorId(),
-            request.Cursor,
-            request.PageSize,
+            query.Feed ? null : world.Player.PlayerId.ToAuthorId(),
+            query.Cursor,
+            query.PageSize,
             cancellationToken);
     }
 }

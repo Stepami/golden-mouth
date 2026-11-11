@@ -155,7 +155,11 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
 
         await Assert.That(current.Energy).IsEqualTo(8);
         await Assert.That(owned.Count).IsEqualTo(1);
-        await Assert.That(await Database.GetCollection<BsonDocument>("players").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(beforePlayer);
+        var savedPlayer = await Database.GetCollection<BsonDocument>("players").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
+        await Assert.That((await players.Find(item => item.Id == player.Id).SingleAsync()).LastSeenAt)
+            .IsEqualTo(player.PostsPeriodStartedAtUtc.AddDays(1));
+        beforePlayer["LastSeenAt"] = savedPlayer["LastSeenAt"];
+        await Assert.That(savedPlayer).IsEqualTo(beforePlayer);
         await Assert.That(await Database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync()).IsEqualTo(beforeWorld);
     }
 

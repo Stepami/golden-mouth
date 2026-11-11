@@ -23,11 +23,7 @@ internal sealed class LlmSpendPolicy : PipelinePolicy
 
     private static double? ReadCost(PipelineResponseHeaders headers, string name)
     {
-        return headers.TryGetValue(name, out var value) &&
-               double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var cost) &&
-               double.IsFinite(cost) && cost >= 0
-            ? cost
-            : null;
+        return headers.TryGetValue(name, out var value) && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var cost) && double.IsFinite(cost) && cost >= 0 ? cost : null;
     }
 
     private static void RecordCost(PipelineResponse? response, Activity? activity)

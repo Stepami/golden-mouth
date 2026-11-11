@@ -96,7 +96,7 @@ internal static partial class WorldRequestMapper
         .. source
             .Where(rule => rule.Text != "Без тем 18+ и травли по внешности")
             .Select(rule => new WorldRule(rule.Text, false)),
-        new("Без тем 18+ и травли по внешности", true)
+        new("Без тем 18+ и травли по внешности", true),
     ];
 
     [MapperIgnoreSource(nameof(WorldStarRequest.Relation))]

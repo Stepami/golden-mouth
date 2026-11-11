@@ -16,6 +16,8 @@ public sealed record PlayerProfile
 
     public DateTimeOffset PostsPeriodStartedAtUtc { get; init; }
 
+    public DateTimeOffset LastSeenAt { get; init; }
+
     public bool PlusInterestClaimed { get; init; }
 
     public int StreakDays { get; init; }

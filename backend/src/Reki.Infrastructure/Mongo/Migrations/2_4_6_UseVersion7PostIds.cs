@@ -196,13 +196,11 @@ internal sealed class UseVersion7PostIds : RekiMigrationBase
         }
 
         var previousText = request["postId"]?.GetValue<string>();
-        BsonValue previousId = Guid.TryParseExact(previousText, "D", out _)
-            ? new BsonBinaryData(Guid.Parse(previousText), GuidRepresentation.Standard) : new BsonString(previousText);
+        BsonValue previousId = Guid.TryParseExact(previousText, "D", out _) ? new BsonBinaryData(Guid.Parse(previousText), GuidRepresentation.Standard) : new BsonString(previousText);
         var nextId = ResolveId(context, previousId, "Post", ticker, "CreatedAt");
         request["postId"] = nextId.IsBsonBinaryData ? nextId.AsBsonBinaryData.ToGuid(GuidRepresentation.Standard).ToString("D") : nextId.AsString;
         var playerText = request["playerId"]?.GetValue<string>();
-        BsonValue playerId = Guid.TryParseExact(playerText, "D", out _)
-            ? new BsonBinaryData(Guid.Parse(playerText), GuidRepresentation.Standard) : new BsonString(playerText);
+        BsonValue playerId = Guid.TryParseExact(playerText, "D", out _) ? new BsonBinaryData(Guid.Parse(playerText), GuidRepresentation.Standard) : new BsonString(playerText);
         var nextPlayerId = ResolveId(context, playerId, "Player", ticker, "CreatedAt");
         request["playerId"] = nextPlayerId.IsBsonBinaryData ? nextPlayerId.AsBsonBinaryData.ToGuid(GuidRepresentation.Standard).ToString("D") : nextPlayerId.AsString;
         var payload = TickerHelper.CreateTickerRequest(Encoding.UTF8.GetBytes(request.ToJsonString()));
