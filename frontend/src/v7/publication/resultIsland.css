@@ -29,7 +29,9 @@ html[data-theme=dark] .result-island--loss { --result-accent:#ffb86b; }
 .result-island .turn-skill-changes--detailed { gap:var(--space-4); font-size:.8125rem; }
 .result-island .turn-skill-changes--detailed li { min-width:0; align-items:start; }
 .result-island .turn-skill-changes--detailed li>div { flex:1; min-width:0; }
-.result-island .turn-skill-changes--detailed strong { display:block; font-weight:500; }
+.result-island .turn-skill-changes--detailed strong { display:flex; align-items:center; gap:var(--space-2); font-weight:500; }
+.result-island .turn-skill-changes--detailed strong>span { color:var(--color-ink); text-align:left; }
+.result-island .turn-skill-changes--detailed .skill-art { width:24px; height:24px; }
 .result-island .turn-skill-changes--detailed small { display:block; margin-top:var(--space-1); color:var(--color-muted); font-size:.6875rem; line-height:1.4; }
 .result-island .turn-skill-changes--detailed .progress { width:100%; height:4px; margin:var(--space-2) 0 0; }
 .result-island .turn-skill-changes--detailed .progress>span { background:var(--result-skill-gain); }
@@ -44,3 +46,9 @@ html[data-theme=dark] .result-island--loss { --result-accent:#ffb86b; }
 @keyframes island-out { to { opacity:0; transform:translateY(-8px) scale(.96); } }
 @keyframes result-count-in { from { opacity:0; transform:translateY(4px) scale(.96); } to { opacity:1; transform:none; } }
 @media(prefers-reduced-motion:reduce) { .result-island,.result-island.is-leaving,.result-island-delta { animation:none; } .result-island.is-leaving { opacity:0; } }
+
+.result-island-skill-gains { display:flex; flex-wrap:wrap; gap:var(--space-2); margin-top:var(--space-1); }
+.result-island-skill-gains>span { display:flex; align-items:center; gap:var(--space-1); max-width:100%; min-width:0; padding:4px 8px; border-radius:10px; background:color-mix(in srgb,var(--result-skill-gain) 8%,transparent); font:400 .75rem/1.4 var(--font-body); }
+.result-island-skill-gains .skill-art { width:20px; height:20px; }
+.result-island-skill-gains .result-skill-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--color-ink); }
+.result-island-skill-gains b { flex:none; color:var(--result-skill-gain); font-weight:500; }

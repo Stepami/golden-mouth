@@ -1,3 +1,4 @@
+import {SkillArt} from '../ui/GameArt';
 import {useEffect,useState} from 'react';
 import type { Player, PostResult, RoleSkillState } from '../../api/types';
 import { Button, Icon, LoadingIndicator, Progress } from '../ui';
@@ -32,17 +33,33 @@ export function PublicationResult({receipt,onRead,preview=false,animateReward:_a
  </details>;
 }
 
-export function SkillChanges({receipt,detailed=false}:{receipt:PublicationReceipt;detailed?:boolean}){
+function skillsFor(receipt:PublicationReceipt){
  const legacy=['brave','humor','topic'] as const;
- const names=receipt.roleLabels??['Смелость','Юмор','В тему'];
- return <ul className={`turn-skill-changes${detailed?' turn-skill-changes--detailed':''}`} aria-label="Навыки за ход">{names.map((name,index)=>{
-  const before=receipt.roleLabels?receipt.roleBefore?.find(s=>s.name===name):receipt.before[legacy[index]];
-  const after=receipt.roleLabels?receipt.roleAfter?.find(s=>s.name===name):receipt.after?.[legacy[index]];
+ return (receipt.roleLabels??['Смелость','Юмор','В тему']).map((name,index)=>({
+  name,
+  before:receipt.roleLabels?receipt.roleBefore?.find(s=>s.name===name):receipt.before[legacy[index]],
+  after:receipt.roleLabels?receipt.roleAfter?.find(s=>s.name===name):receipt.after?.[legacy[index]],
+ }));
+}
+
+export function SkillGains({receipt}:{receipt:PublicationReceipt}){
+ const gains=skillsFor(receipt).flatMap(({name,before,after})=>{
+  if(!before||!after)return [];
+  const levels=after.level-before.level,points=Math.round((after.progress-before.progress)*1000)/10;
+  if(levels<0||(levels===0&&points<=0))return [];
+  const label=levels>0?`Ур. ${after.level} · ${Math.round(after.progress*100)}%`:`+${points} п.п.`;
+  return [<span key={name}><SkillArt name={name}/><span className="result-skill-name">{name}</span><b>{label}</b></span>];
+ });
+ return gains.length?<span className="result-island-skill-gains" aria-label="Выросшие навыки">{gains}</span>:null;
+}
+
+export function SkillChanges({receipt,detailed=false}:{receipt:PublicationReceipt;detailed?:boolean}){
+ return <ul className={`turn-skill-changes${detailed?' turn-skill-changes--detailed':''}`} aria-label="Навыки за ход">{skillsFor(receipt).map(({name,before,after})=>{
   let change='—';
   if(before&&after){
    const levels=after.level-before.level,points=Math.round((after.progress-before.progress)*1000)/10;
    change=levels?`Ур. ${before.level} → ${after.level}`:points?`${points>0?'+':'−'}${Math.abs(points)} п.п.`:'Без изменений';
   }
-  return <li key={name}><div><strong>{name}</strong>{detailed&&<small>{before&&after?`Ур. ${before.level} · ${Math.round(before.progress*100)}% → Ур. ${after.level} · ${Math.round(after.progress*100)}%`:'Изменение навыка пока не получено'}</small>}{detailed&&after&&<Progress value={after.progress} max={1} label={`${name}: прогресс текущего уровня`}/>}</div><span data-direction={before&&after?Math.sign(after.level-before.level||after.progress-before.progress):0}>{change}</span></li>;
+  return <li key={name}><div><strong className="skill-name">{detailed?<><SkillArt name={name}/><span>{name}</span></>:name}</strong>{detailed&&<small>{before&&after?`Ур. ${before.level} · ${Math.round(before.progress*100)}% → Ур. ${after.level} · ${Math.round(after.progress*100)}%`:'Изменение навыка пока не получено'}</small>}{detailed&&after&&<Progress value={after.progress} max={1} label={`${name}: прогресс текущего уровня`}/>}</div><span data-direction={before&&after?Math.sign(after.level-before.level||after.progress-before.progress):0}>{change}</span></li>;
  })}</ul>;
 }
