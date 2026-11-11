@@ -1,8 +1,8 @@
 import {useEffect,useState} from 'react';
 import type { Player, PostResult, RoleSkillState } from '../../api/types';
-import { Button, Icon, LoadingIndicator } from '../ui';
+import { Button, Icon, LoadingIndicator, Progress } from '../ui';
 import type {QuestOutcome} from './outcomes';
-export type PublicationReceipt={worldId:string;questId?:string;actionKind?:'post'|'comment';audienceKnown?:boolean;result:PostResult;before:Player['skills'];roleBefore?:RoleSkillState[];roleAfter?:RoleSkillState[];roleLabels?:string[];after?:Player['skills'];questReward?:{amount:number;title:string;questId:string};questOutcome?:QuestOutcome};
+export type PublicationReceipt={worldId:string;actionId?:string;beforeSubscribers?:number;reactionText?:string;questId?:string;actionKind?:'post'|'comment';audienceKnown?:boolean;result:PostResult;before:Player['skills'];roleBefore?:RoleSkillState[];roleAfter?:RoleSkillState[];roleLabels?:string[];after?:Player['skills'];questReward?:{amount:number;title:string;questId:string};questOutcome?:QuestOutcome};
 export function PublicationWaiting({pending,unknown,text,status,onContinue,onStop}:{pending:boolean;unknown:boolean;text:string;status:string;onContinue:()=>void;onStop:()=>void}){
  const [takingLong,setTakingLong]=useState(false);
  useEffect(()=>{setTakingLong(false);if(!pending)return;const timer=setTimeout(()=>setTakingLong(true),15000);return()=>clearTimeout(timer);},[pending]);
@@ -32,17 +32,17 @@ export function PublicationResult({receipt,onRead,preview=false,animateReward:_a
  </details>;
 }
 
-export function SkillChanges({receipt}:{receipt:PublicationReceipt}){
+export function SkillChanges({receipt,detailed=false}:{receipt:PublicationReceipt;detailed?:boolean}){
  const legacy=['brave','humor','topic'] as const;
  const names=receipt.roleLabels??['Смелость','Юмор','В тему'];
- return <ul className="turn-skill-changes" aria-label="Навыки за ход">{names.map((name,index)=>{
+ return <ul className={`turn-skill-changes${detailed?' turn-skill-changes--detailed':''}`} aria-label="Навыки за ход">{names.map((name,index)=>{
   const before=receipt.roleLabels?receipt.roleBefore?.find(s=>s.name===name):receipt.before[legacy[index]];
   const after=receipt.roleLabels?receipt.roleAfter?.find(s=>s.name===name):receipt.after?.[legacy[index]];
   let change='—';
   if(before&&after){
-   const levels=after.level-before.level,points=Math.round((after.progress-before.progress)*100);
+   const levels=after.level-before.level,points=Math.round((after.progress-before.progress)*1000)/10;
    change=levels?`Ур. ${before.level} → ${after.level}`:points?`${points>0?'+':'−'}${Math.abs(points)} п.п.`:'Без изменений';
   }
-  return <li key={name}><strong>{name}</strong><span>{change}</span></li>;
+  return <li key={name}><div><strong>{name}</strong>{detailed&&<small>{before&&after?`Ур. ${before.level} · ${Math.round(before.progress*100)}% → Ур. ${after.level} · ${Math.round(after.progress*100)}%`:'Изменение навыка пока не получено'}</small>}{detailed&&after&&<Progress value={after.progress} max={1} label={`${name}: прогресс текущего уровня`}/>}</div><span data-direction={before&&after?Math.sign(after.level-before.level||after.progress-before.progress):0}>{change}</span></li>;
  })}</ul>;
 }

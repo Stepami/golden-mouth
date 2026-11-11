@@ -1,3 +1,4 @@
+import {pickResultPhrase} from './publication/resultCopy';
 import {ComposerText} from './screens/ComposerText';
 import {firstPostFor} from './firstPost';
 import {DailyQuestCard} from './screens/DailyQuestCard';
@@ -369,7 +370,7 @@ export default function BackendApp() {
     const command = submissionFor(saved, draft, () => crypto.randomUUID());
     const { id, text, recovery } = command;
     const beforeKey=`${key}:turn-before:${player.world}:${id}`;
-    const fallback={skills:player.skills,roleSkills:player.roleSkills,questId:prepared?.questId??roleTask?.id};
+    const fallback={skills:player.skills,roleSkills:player.roleSkills,beforeSubscribers:player.subs,questId:prepared?.questId??roleTask?.id};
     if(!recovery)saveLocal(beforeKey,fallback);
     const turnBefore=readLocal(beforeKey,fallback);
     if (!recovery) trackEvent('post_publish', { len: text.length, own_words: command.ownWords });
@@ -388,7 +389,7 @@ export default function BackendApp() {
       completePostDraft(k, id, text); setDraft(readPostDraft(k).text);
       const serverOutcome=parseQuestOutcome((event.result as unknown as {questOutcome?:unknown}).questOutcome);
 
-      const value: PublicationReceipt = { worldId: player.world, questId:turnBefore.questId, result: event.result, before: turnBefore.skills, roleBefore:turnBefore.roleSkills, roleLabels:activeRole?.skills.map(s=>s.name), questOutcome:serverOutcome??({status:'unverified',source:'server',title:roleTask?.context??'Твоя запись',reason:'Пост опубликован, но серверный исход квеста пока не возвращается.'}) };
+      const value: PublicationReceipt = { worldId: player.world, actionId:id,beforeSubscribers:turnBefore.beforeSubscribers,reactionText:pickResultPhrase(event.result.delta),questId:turnBefore.questId, result: event.result, before: turnBefore.skills, roleBefore:turnBefore.roleSkills, roleLabels:activeRole?.skills.map(s=>s.name), questOutcome:serverOutcome??({status:'unverified',source:'server',title:roleTask?.context??'Твоя запись',reason:'Пост опубликован, но серверный исход квеста пока не возвращается.'}) };
       setReceipt(value);setShowReceipt(true); saveLocal(`${key}:result:${player.world}`, value);
       if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,value);
       setToast(event.result); setGainAnimation({delta:event.result.delta,nonce:event.result.postId});
@@ -426,7 +427,7 @@ export default function BackendApp() {
       if(snapshot){
 
         const delta=snapshot.subscribers-(saved.beforeSubscribers??player.subs);
-        const value:PublicationReceipt={worldId:player.world,questId:saved.questId??roleTask?.id,actionKind:'comment',audienceKnown:true,before:saved.beforeSkills??player.skills,roleBefore:saved.roleBefore??player.roleSkills,roleLabels:activeRole?.skills.map(s=>s.name),questOutcome:{status:'unverified',source:'server',title:'Твой комментарий',reason:completed?'Комментарий и реакция сохранены. Серверная оценка квеста пока не возвращается.':'Комментарий сохранён. Получение реакции ещё не завершено.'},result:{postId:target.postId,delta,headline:'Комментарий сохранён',whys:[],ribbons:[],viral:false,flop:false,views:snapshot.post.views}};
+        const value:PublicationReceipt={worldId:player.world,actionId:requestId,beforeSubscribers:saved.beforeSubscribers??player.subs,reactionText:pickResultPhrase(delta),questId:saved.questId??roleTask?.id,actionKind:'comment',audienceKnown:true,before:saved.beforeSkills??player.skills,roleBefore:saved.roleBefore??player.roleSkills,roleLabels:activeRole?.skills.map(s=>s.name),questOutcome:{status:'unverified',source:'server',title:'Твой комментарий',reason:completed?'Комментарий и реакция сохранены. Серверная оценка квеста пока не возвращается.':'Комментарий сохранён. Получение реакции ещё не завершено.'},result:{postId:target.postId,delta,headline:'Комментарий сохранён',whys:[],ribbons:[],viral:false,flop:false,views:snapshot.post.views}};
         setReceipt(value);setShowReceipt(true);saveLocal(`${key}:result:${player.world}`,value);if(delta)setGainAnimation({delta,nonce:requestId});
         void refresh().then(p=>{const updated={...value,after:p.skills,roleAfter:p.roleSkills,questOutcome:p.lastTurn?.actionId===requestId?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome};setReceipt(updated);saveLocal(`${key}:result:${player.world}`,updated);if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated);}).catch(()=>setFeedError('Комментарий сохранён. Обнови ленту, чтобы получить актуальные данные.'));
       }
@@ -545,7 +546,7 @@ export default function BackendApp() {
     {linkProfileOpen && player && <LinkProfile player={player} refresh={refresh} onClose={()=>setLinkProfileOpen(false)}/>}
     {deleteOpen&&<AccountDeletion onDelete={deleteAccount} onClose={()=>setDeleteOpen(false)}/>}
     {reportId&&<ReportComment onSend={reason=>api.report(reportId,reason)} onClose={()=>setReportId(undefined)}/>}
-    {showReceipt&&receipt&&receipt.worldId===player?.world&&<ResultIsland receipt={receipt} onRead={()=>void openThread(receipt.result.postId)} onClose={()=>setShowReceipt(false)}/>}
+    {showReceipt&&receipt&&receipt.worldId===player?.world&&<ResultIsland key={receipt.actionId??receipt.result.postId} receipt={receipt} onRead={()=>void openThread(receipt.result.postId)} onClose={()=>setShowReceipt(false)}/>}
     {reactionNotice&&!showReceipt&&<ReactionTicker notice={reactionNotice} onOpen={()=>{void openThread(reactionNotice.postId);setReactionNotice(undefined);}} onClose={()=>setReactionNotice(undefined)}/>}
     {gainAnimation&&<FollowersFlight delta={gainAnimation.delta} nonce={gainAnimation.nonce}/>}
     {overlay && <Dialog title={{ exit: 'Выйти из мира?', streak: 'Серия дней', skills: 'Навыки и отношения', 'text-size': 'Размер текста', 'local-like': 'Реакция', quote: 'Цитата', about: 'Новая версия' }[overlay]} onClose={() => setOverlay(null)}>
