@@ -1,3 +1,4 @@
+import {FeedFilter} from '../ui/FeedFilter';
 import {ActivityItem} from '../ui/ActivityItem';
 import { useState } from "react";
 import designTokens from "../design-tokens.json";
@@ -26,6 +27,7 @@ import { worlds } from "../domain/worlds";
 export function DesignSystem() {
   const night: Record<string, { $value: string }> = designTokens.$extensions.reki.modes.dark;
   const colors = Object.entries(designTokens.tokens).filter(([, token]) => token.$type === "color").map(([name, token]) => [name.replace("color-", ""), night[name]?.$value ?? String(token.$value)]);
+  const [feedFilter, setFeedFilter] = useState<'all' | 'mine'>('all');
   const [selected, setSelected] = useState("Все");
   const [dialog, setDialog] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -173,6 +175,8 @@ export function DesignSystem() {
               </Chip>
             ))}
           </div>
+          <h3>Переключение ленты / FeedFilter</h3>
+          <FeedFilter value={feedFilter} onChange={setFeedFilter}/>
           <h3>Иконки / Icon</h3>
           <div className="icon-gallery">
             {(
