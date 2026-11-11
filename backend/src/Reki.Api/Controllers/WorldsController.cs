@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Requests.Worlds;
 using Reki.Application.RekiContext;
 using Reki.Application.Worlds;
+using Reki.Application.Worlds.DeleteWorldCommand;
 using Reki.Application.Worlds.GetWorldTemplates;
 using Reki.Application.Worlds.Responses;
 using Reki.Domain.Worlds;
@@ -57,5 +58,12 @@ public sealed class WorldsController(
         var command = request.ToUpdateWorld(worldId);
         await sender.Send(command, cancellationToken);
         return TypedResults.Ok();
+    }
+
+    [HttpDelete("{worldId}", Name = "DeleteWorld")]
+    public async Task<NoContent> DeleteWorldAsync(WorldId worldId, CancellationToken cancellationToken)
+    {
+        await sender.Send(new DeleteWorld(rekiContext.PlayerId, worldId), cancellationToken);
+        return TypedResults.NoContent();
     }
 }

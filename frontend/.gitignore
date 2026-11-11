@@ -8,3 +8,4 @@ shots/
 .codex/
 .claude/
 apm.lock.yaml
+tsconfig.tsbuildinfo

@@ -135,4 +135,14 @@ internal sealed class MongoPostRepository(
             sessionProvider.Session,
             Builders<GamePost>.Filter.In(item => item.WorldId, worldIds),
             cancellationToken: cancellationToken);
+
+    public async ValueTask DeletePostAsync(PostId postId, CancellationToken cancellationToken) =>
+        await (sessionProvider.Current is { } session
+            ? _posts.DeleteOneAsync(
+                session,
+                post => post.Id == postId,
+                cancellationToken: cancellationToken)
+            : _posts.DeleteOneAsync(
+                post => post.Id == postId,
+                cancellationToken));
 }

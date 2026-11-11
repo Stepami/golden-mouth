@@ -100,4 +100,14 @@ public sealed class PostsController(ISender sender) : ControllerBase
             cancellationToken);
         return TypedResults.Ok(result);
     }
+
+    [HttpDelete("{postId}", Name = "DeletePost")]
+    public async Task<NoContent> DeletePostAsync(
+        PostId postId,
+        [FromServices] IPostRepository posts,
+        CancellationToken cancellationToken)
+    {
+        await posts.DeletePostAsync(postId, cancellationToken);
+        return TypedResults.NoContent();
+    }
 }

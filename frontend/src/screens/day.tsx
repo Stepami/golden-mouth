@@ -1,6 +1,6 @@
 import { LinkProfile } from '../app/LinkProfile'
 import { displayHandle } from '../app/handle'
-import { StoryGoal } from '../ui/StoryGoal'
+import { Streak } from '../ui/Streak'
 import { ExpandableText } from '../ui'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import { setAvatarPersonalization, useAvatarPersonalization } from '../app/avatarPersonalization'
@@ -57,7 +57,7 @@ function Dm() {
           <button onClick={() => setShowMem(true)} className="small" style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--lilac)' }}>Мира помнит: {memory.join(', ')} ›</button>
         </Card>
         {msgs.map((m, i) => <div key={i} style={{ position: 'relative' }}><Bubble me={m.from === 'me'}>{m.text}</Bubble></div>)}
-        {closed ? <Card style={{ marginTop: 10, textAlign: 'center' }}><span className="muted small">Мира ушла на репетицию. Ответит утром, в 9:00</span></Card> : <>
+        {closed ? <Card style={{ marginTop: 10, textAlign: 'center' }}><span className="muted small">Мира ответит, когда появится энергия. Она восстанавливается каждые 10 минут.</span></Card> : <>
           <div className="small muted" style={{ margin: '10px 0 8px' }}>💡 ИДЕИ ИЛИ СВОИМИ СЛОВАМИ · бесплатно · Мира ответит ещё {left} {left === 1 ? 'раз' : 'раза'} сегодня</div>
           <TextField label="Сообщение" value={text} onChange={setText} ideas={d.ideas} maxLength={300} />
         </>}
@@ -226,7 +226,7 @@ function Stage() {
       {pullIndicator}
       <ChannelHead />
       <div className="pad">
-        <StoryGoal world={p.world} />
+        <Streak streak={p.streak} />
         {banner && p.subs >= 1000 && <Card style={{ marginBottom: 10, background: 'linear-gradient(135deg,#2A1A2E,#1E1A33)', border: '1px solid #FF6B8B55', position: 'relative' }}>
           <button onClick={() => setBanner(false)} className="muted" style={{ position: 'absolute', right: 14, top: 10, background: 'none', border: 'none' }}>✕</button>
           <span className="badge">НОВЫЙ ЭТАП · 1 000 ПОДПИСЧИКОВ</span>
@@ -257,8 +257,6 @@ function Me() {
   const [linkProfile, setLinkProfile] = useState(false)
   const { refresh } = useStore()
   useEffect(() => { void refresh() }, [refresh])
-  const DAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
-  const today = p.streak.week.indexOf(false)
   return (
     <div className="screen">
       <TopBar title="Я" rightPlain right={<button className="header-action" onClick={() => nav.push('05-8_settings')}>⚙ Настройки</button>} />
@@ -267,7 +265,7 @@ function Me() {
         <div className="profile-stats">
           {[[`⚡ ${p.postsLeft}`, 'энергии'], ...(p.energyWallet ? [[`💎 ${p.energyWallet.crystals}`, 'кристаллы']] : []), [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
         </div>
-        <Button secondary onClick={() => setLinkProfile(true)}>🔑 Привязать профиль</Button><p className="small muted energy-help">Пост и ответ расходуют энергию. Новый запас — в 09:00 МСК.</p>
+        <Button secondary onClick={() => setLinkProfile(true)}>🔑 Привязать профиль</Button><p className="small muted energy-help">Пост и ответ расходуют энергию. Энергия восстанавливается по одной каждые 10 минут.</p>
         <div className="card own-world-unlock" style={{ marginTop: 0, marginBottom: 12 }}><b>{p.hitOwnWorldMilestone ? '✨ Свой мир открыт' : '✨ Создай свой мир'}</b>{p.hitOwnWorldMilestone ? <>
           <p className="small muted">Доступ подтверждён. Можно придумать свою историю.</p>
           <button className="text-link" onClick={() => { beginOwnWorld(p); nav.push('05-7b_own_world', {}) }}>Создать свой мир →</button>
@@ -279,10 +277,6 @@ function Me() {
           <p className="small muted own-unlock-alternative">Или набери 500 подписчиков в одном мире.</p>
         </>}</div>
         <div className="profile-world-settings"><Button secondary onClick={() => nav.push('05-11_world_rules')}>Настройки мира</Button></div>
-        <Card style={{ marginBottom: 10 }}>
-          <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Серия {p.streak.days} дня</b><span className="small" style={{ color: 'var(--gift)' }}>{p.streak.nextReward}</span></div>
-          <div style={{ display: 'flex', gap: 6 }}>{DAYS.map((d, i) => <div key={d} style={{ flex: 1, textAlign: 'center' }}><div style={{ height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, ...(p.streak.week[i] ? { background: 'var(--grad)' } : i === today ? { border: '2px dashed var(--accent)' } : { background: '#20202B' }) }}>{p.streak.week[i] ? '🔥' : i === today ? '?' : ''}</div><div className="small muted" style={{ marginTop: 3 }}>{d}</div></div>)}</div>
-        </Card>
         <Card style={{ marginBottom: 10 }}>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Навыки · из 10</b><button className="text-button small" onClick={() => setSkillHelp(true)}>как поднять ›</button></div>
           {(Object.keys(SKILL_NAMES) as (keyof typeof SKILL_NAMES)[]).map(k => <SkillBar key={k} name={SKILL_NAMES[k]} level={p.skills[k].level} progress={p.skills[k].progress} />)}

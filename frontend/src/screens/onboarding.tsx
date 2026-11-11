@@ -1,3 +1,5 @@
+import { Resources } from '../ui/Resources'
+import { Streak } from '../ui/Streak'
 import { displayHandle } from '../app/handle'
 import { usePresetGoal } from '../ui/StoryGoal'
 import { WorldCover } from '../ui/WorldCover'
@@ -106,16 +108,16 @@ export function ChannelHead() {
   const w = worldOf(p.world)
   return (
     <div className="top channel-header">
-      <Avatar seed={p.handle} size={36} />
-      <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div>
-      <div className="energy-badge" aria-label={`Осталось ${p.postsLeft} энергии`}>⚡ {p.postsLeft}</div>
-      {p.energyWallet && <div className="energy-badge" aria-label={`Кристаллы: ${p.energyWallet.crystals}`}>💎 {p.energyWallet.crystals}</div>}
+      <button className="channel-author" onClick={() => nav.tab(4)}><Avatar seed={p.handle} size={36} />
+      <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div></button>
+      <Resources player={p} />
     </div>
   )
 }
 export function Home() {
   const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
   return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
+    <Streak streak={p.streak} />
     <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{profile.firstContext}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
       {p.firstPostInviteBonus > 0 && <p>🎁 Первый пост даст ещё {p.firstPostInviteBonus} энергии</p>}
     </div><p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>
