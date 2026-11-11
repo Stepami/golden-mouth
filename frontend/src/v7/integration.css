@@ -228,8 +228,8 @@ html[data-large-text="true"] .world-intro .intro-cta { position: static; }
 .activity-open strong { -webkit-line-clamp:2; line-clamp:2; }
 .activity-text { -webkit-line-clamp:3; line-clamp:3; }
 .post-ideas>p { margin:0 0 8px; }
-.post-ideas-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--space-2); }
-.post-ideas-grid .post-idea { padding:10px 12px; font-size:.875rem; line-height:1.4; overflow-wrap:anywhere; }
+.post-ideas-grid { display:flex; gap:var(--space-2); overflow-x:auto; scroll-snap-type:x proximity; padding-bottom:var(--space-2); }
+.post-ideas-grid .post-idea { flex:0 0 85%; min-width:0; padding:10px 12px; font-size:.875rem; line-height:1.4; overflow-wrap:anywhere; scroll-snap-align:start; }
 .post-ideas-grid .post-idea span { display:block; }
 
 .account-handle { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; overflow-wrap:normal; max-width:100%; }
@@ -244,18 +244,10 @@ html[data-large-text="true"] .world-intro .intro-cta { position: static; }
 html[data-theme] .owned-world .resume-world,html[data-theme] .saved-worlds-scroll .owned-world .resume-world { padding-inline-end:0; }
 
 
-/* Compact assignments stay above the editor; ideas remain secondary below it. */
-.composer-assignments { display:grid; gap:var(--space-2); }
-.composer-assignment { border:1px solid var(--color-divider); border-radius:var(--radius-md); background:var(--color-surface); }
-.composer-assignment summary,.composer-assignment--empty { display:flex; align-items:center; gap:var(--space-3); padding:var(--space-3); }
-.composer-assignment summary { list-style:none; cursor:pointer; }
-.composer-assignment summary::-webkit-details-marker { display:none; }
-.composer-assignment .icon { width:20px; height:20px; }
-.composer-assignment summary>.icon:last-child { width:16px; height:16px; color:var(--color-muted); }
-.composer-assignment[open] summary>.icon:last-child { transform:rotate(180deg); }
-.composer-assignment-copy { display:grid; gap:var(--space-1); flex:1; min-width:0; }
-.composer-assignment-copy small { color:var(--color-muted); font:400 .75rem/1.3 var(--font-body); }
-.composer-assignment-copy>span { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden; font:400 .875rem/1.4 var(--font-body); overflow-wrap:anywhere; }
-.composer-assignment-details { padding:0 var(--space-3) var(--space-3); font:400 .875rem/1.4 var(--font-body); }
-.composer-assignment-details p { margin:0; }
-.composer-assignment-details p+p { margin-top:var(--space-2); color:var(--color-muted); }
+/* One shared daily quest slot; condition and crystal reward await server data. */
+.daily-quest { min-width:0; }
+.daily-quest>p { margin:0 0 var(--space-2); }
+.daily-quest-card { padding:var(--space-3); border:1px solid var(--color-divider); border-radius:var(--radius-md); background:var(--color-surface); font:400 .875rem/1.45 var(--font-body); }
+.daily-quest-card p { margin:0; }
+.daily-quest-reward { display:inline-flex; align-items:center; gap:var(--space-1); margin-top:var(--space-2); color:var(--color-crystal); font-weight:500; }
+.daily-quest-reward .icon { width:18px; height:18px; }

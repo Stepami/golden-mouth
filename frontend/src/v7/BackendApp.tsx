@@ -1,3 +1,4 @@
+import {DailyQuestCard} from './screens/DailyQuestCard';
 import {withEveningAppearance} from './eveningAppearance';
 import {ActivityItem} from './ui/ActivityItem';
 import {InviteFriend} from './screens/InviteFriend';
@@ -479,26 +480,15 @@ export default function BackendApp() {
     <Button busy={busy} disabled={!definition.name.trim() || !definition.avatar.trim() || !definition.role.trim() || !definition.title.trim() || !definition.stars.length || definition.stars.some(star => !star.name.trim() || !star.role.trim())} onClick={() => void createWorld()}>Начать историю</Button></section></>;
   else if (screen === 'feed' && player && world) content = renderFeed();
   else if (screen === 'goals' && world && player) {
-    const doc = worldDocumentOf(player.world);
-
-    const task = roleTask ?? (activeRole ? undefined : {title:world.goal,prompt:doc.postIdeas[0] || doc.firstPrompt || doc.firstContext,context:doc.firstContext});
     const savedDraft=readPostDraft(draftKey(player));
-    const taskReceipt=receiptForRelease((receipt?.questId===(roleTask??roleTask)?.id?receipt:undefined)??readLocal<PublicationReceipt|undefined>(`${key}:task-result:${player.world}:${(roleTask??roleTask)?.id}`,undefined)??(receipt?.worldId===player.world&&((roleTask&&receipt.questId===roleTask.id)||receipt.questId===roleTask?.id||receipt.questOutcome?.title===task?.title)?receipt:undefined),false);
-    content = <WorldBrief roleSkills={activeRole?.skills} campaignProgress={campaignProgress} campaignComplete={player.campaignProgress?.completed} practiceSkills={personaFor(player.id,player.world).skills??[]} world={world} player={player} avatar={personaFor(player.id, player.world).avatar} task={task} firstVisit={storyOnboarding} hasDraft={savedDraft.ownWords&&!!savedDraft.text.trim()} receipt={taskReceipt} onRead={taskReceipt?()=>void openThread(taskReceipt.result.postId):undefined} onWrite={openFirstPost} onFeed={() => { setStoryOnboarding(false); go('feed'); }} />;
+    content = <WorldBrief roleSkills={activeRole?.skills} world={world} player={player} avatar={personaFor(player.id, player.world).avatar} firstVisit={storyOnboarding} hasDraft={savedDraft.ownWords&&!!savedDraft.text.trim()} onWrite={openFirstPost} onFeed={() => { setStoryOnboarding(false); go('feed'); }} />;
   }
   else if (screen === 'goals' && world) content = <><ScreenHeading title="Цели" subtitle={world.title} /><StoryBrief goal={world.goal || 'Найти свой голос и начать разговор.'} /><section className="section"><Button onClick={openFirstPost}>Написать пост →</Button></section></>;
   else if (screen === 'resources' || screen === 'crystals') content = <ResourcePages wallet={accountEnergy.wallet} exchangeBusy={accountEnergy.busy} exchangeMessage={accountEnergy.message} onExchange={()=>void accountEnergy.exchange()} onWalletRefresh={()=>void accountEnergy.refresh()} page={screen} energy={player?.postsLeft} onPage={openResource} onBack={back}/>;
   else if (screen === 'compose' && player) content = <>
     <ScreenHeading title={reply ? 'Продолжить разговор' : 'Новая публикация'} back={back} />
     <section className="section stack composer-body">
-      {!reply&&<div className="composer-assignments">
-        <details className="composer-assignment">
-          <summary><Icon name="goals"/><span className="composer-assignment-copy"><small>По сюжету</small><span>{prepared?.prompt??roleTask?.prompt??(player.campaignProgress?.completed?'Задания истории завершены':'Сейчас можно написать свободный пост')}</span></span><Icon name="chevron"/></summary>
-          <div className="composer-assignment-details"><p>{prepared?.prompt??roleTask?.prompt??world?.goal}</p><p>{prepared?.title??roleTask?.context??'История продолжается через твои публикации и разговоры с персонажами.'}</p></div>
-        </details>
-        <section className="composer-assignment composer-assignment--empty" aria-label="Ежедневный квест"><Icon name="flame"/><span className="composer-assignment-copy"><small>На сегодня</small><span>Пока нет ежедневного задания</span></span></section>
-      </div>}
-      <PracticeFocus skills={personaFor(player.id, player.world).skills ?? []}/>
+      {!reply&&<DailyQuestCard/>}
       {(reply || quote) && !prepared && <QuoteBlock name={reply?.name ?? quote!.name} text={reply?.text ?? quote!.text}/>}
       <div className="row"><Avatar name={player.name} src={personaFor(player.id, player.world).avatar}/><strong>{player.name}</strong></div>
       <label className="sr-only" htmlFor="post-text">Текст публикации</label>
