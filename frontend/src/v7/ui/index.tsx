@@ -1,3 +1,4 @@
+import {isGeneratedAvatar,resolveGeneratedAvatar} from '../generatedAvatar';
 import {LoadingIndicator} from './LoadingIndicator';
 export {LoadingIndicator} from './LoadingIndicator';
 import {LineIcon} from './LineIcon';
@@ -115,7 +116,9 @@ export function Avatar({
   size?: "sm" | "md" | "lg" | "xl";
 }) {
   const [failed, setFailed] = useState(false);
-  const image = displayPortrait(src, name);
+  const [generated,setGenerated]=useState<{source:string;uri:string}>();
+  useEffect(()=>{let active=true;if(src&&isGeneratedAvatar(src))void resolveGeneratedAvatar(src).then(uri=>{if(active)setGenerated({source:src,uri});}).catch(()=>{if(active)setFailed(true);});return()=>{active=false;};},[src]);
+  const image = isGeneratedAvatar(src) ? (generated&&generated.source===src?generated.uri:undefined) : displayPortrait(src, name);
   useEffect(() => setFailed(false), [image]);
   return (
     <span className={`avatar avatar--${size}`} aria-hidden="true">

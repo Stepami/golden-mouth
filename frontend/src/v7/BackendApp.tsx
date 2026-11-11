@@ -1,5 +1,7 @@
 import {OwnWorldInvite} from './screens/OwnWorldInvite';
-import {WorldEditor} from './screens/WorldEditor';
+import {WorldEditor,type WorldEditorPreferences} from './screens/WorldEditor';
+import {setAvatarPersonalization} from '../app/avatarPersonalization';
+import {setWorldDraft} from '../app/worldDraft';
 import {creditDevTurn,readDevCrystals} from './energy/devCrystalPreview';
 import {CrystalRewardBadge} from './energy/CrystalRewardBadge';
 import {pickResultPhrase} from './publication/resultCopy';
@@ -242,7 +244,7 @@ export default function BackendApp() {
   const ownedView = (doc: WorldDocument) => storyView(doc);
   const lastWorld = owned.find(d => d.id === player?.world);
   const orderedOwned = lastWorld ? [lastWorld, ...owned.filter(d => d.id !== lastWorld.id)] : owned;
-  const installPlayer = (p: Player) => { setPlayer(p); const doc = worldDocumentOf(p.world); setWorld(storyView(doc));
+  const installPlayer = (p: Player) => { setPlayer(p);setAddress(p.address); const doc = worldDocumentOf(p.world); setWorld(storyView(doc));
     const draft = readPostDraft(draftKey(p));
     const savedReceipt = readLocal<PublicationReceipt | undefined>(`reki:v7:${p.id}:result:${p.world}`, undefined);
     setReceipt(receiptForRelease(savedReceipt ? { ...savedReceipt, worldId: p.world } : undefined,import.meta.env.DEV));
@@ -258,7 +260,7 @@ export default function BackendApp() {
   const startOwnWorld = () => {
     if(!player||busy||pending)return;
     if(!player.hitOwnWorldMilestone){setInviteOpen(true);return;}
-    setDefinition({...blankWorld(),name:player.name,avatar:player.handle,role:player.role,voice:'Живо и по делу',stars:[{id:crypto.randomUUID().replaceAll('-',''),name:'',role:'',about:'',voice:'Живо и по делу',avatarSeed:crypto.randomUUID(),trait:1,relation:0}]});
+    setDefinition({...blankWorld(),name:player.name,avatar:`generated-${crypto.randomUUID()}`,role:player.role,voice:'Живо и по делу',stars:[{id:crypto.randomUUID().replaceAll('-',''),name:'',role:'',about:'',voice:'Живо и по делу',avatarSeed:`generated-${crypto.randomUUID()}`,trait:1,relation:0}]});
     setHeroChoice('custom');setRoleScenarioSelected(false);setHeroAvatar(undefined);setHeroAppearance(undefined);setAvatarRemoved(false);setHeroGoal('');setHeroSkills([]);setError('');go('own-world');
   };
   const openWorldSettings = () => {
@@ -270,7 +272,7 @@ export default function BackendApp() {
     if(!worldEdit||busy||pending)return;
     setBusy(true);setError('');
     try{
-      const p=await api.saveWorld(worldEdit.id,definition);
+      const p=await api.saveWorld(worldEdit.id,definition);setWorldDraft(null);
       const own=await api.ownedWorlds();installWorldContent(own);setOwned(own);installPlayer(p);
       setWorldEdit(undefined);setScreen('profile');setStack([]);
     }catch(cause){setError(errorText(cause));}finally{setBusy(false);}
@@ -345,7 +347,7 @@ export default function BackendApp() {
     setEntryAge(value); setAge(ageBandOf(value) ?? '');
     interestOnly.current = false; setStack(['welcome', 'age']); setScreen('onboarding'); setError('');
   };
-  const createWorld = async (submitted=definition,selectedAvatar=heroAvatar) => {
+  const createWorld = async (submitted=definition,selectedAvatar=heroAvatar,preferences?:WorldEditorPreferences) => {
     const definition=submitted;
     if (!definition || busy) return;
     setBusy(true); setError('');
@@ -356,8 +358,10 @@ export default function BackendApp() {
         clearReferral(); trackEvent('onboarding_step', { step: 'age', ok: true });
         saveLocal(`reki:v7:${api.playerId()}:qualities`, qualities); saveLocal(`reki:v7:${api.playerId()}:entry-required`, false);
       }
+      if(player&&(preferences||heroChoice==='custom')&&(preferences?.address??address)!==player.address)await api.settings({address:preferences?.address??address});
       const worldDefinition=withEveningAppearance(definition,heroChoice??'custom',avatarRemoved?undefined:heroAppearance);
       const created = await api.createWorld(worldDefinition);
+      if(preferences){setWorldDraft(null);setAvatarPersonalization(created.id,preferences.personalizeAvatar);}
       const role = roleScenarioSelected ? scenarioForTemplate(definition.templateId)?.roles.find(r=>r.id===heroChoice) : undefined;
       const custom = !heroChoice || heroChoice==='custom';
       const portrait = custom&&avatarRemoved ? '' : (custom?selectedAvatar:undefined) || await heroPortrait(heroChoice ?? 'custom', heroSeed || definition.avatar, definition.templateId || created.world, definition.avatarStyle).catch(() => undefined);
@@ -495,7 +499,7 @@ export default function BackendApp() {
     cancel.current?.(); feedRequest.current++;threadRequest.current++;setDeleteOpen(false);setPlayer(undefined);setWorld(undefined);setOwned([]);setFeed([]);setPost(undefined);setReceipt(undefined);setDraft('');setStack([]);setScreen('welcome');
   };
   const showPerson = (value: Person) => { if (value.id === 'player') go('profile'); else { const cast = world?.cast.find(p => p.id === value.id || p.name === value.name); setPerson(cast ?? value); go('character'); } };
-  const card = (p: Post, author: Person, count = 0, compact = false) => <PostCard key={p.id} post={{ ...p, liked: likes.includes(`${player?.world}:${p.id}`) }} author={author} replyCount={count} compact={compact}
+  const card = (p: Post, author: Person, count = 0, compact = false) => <PostCard key={p.id} post={{ ...p, liked: likes.includes(`${player?.world}:${p.id}`) }} author={{...author,avatar:author.avatar??world?.cast.find(c=>c.id===author.id||c.handle===author.handle)?.avatar}} replyCount={count} compact={compact}
     onReport={p.parentId && author.id!=='player' && p.text!=='Комментарий скрыт' ? ()=>setReportId(p.id) : undefined}
     onReply={p.parentId || p.id ? () => void openThread(p.parentId ?? p.id) : undefined} onAuthor={() => showPerson(author)}
     onLike={() => { const id = `${player?.world}:${p.id}`; const next = likes.includes(id) ? likes.filter(x => x !== id) : [...likes, id]; setLikes(next); localSave('likes', next); }}
@@ -510,7 +514,7 @@ export default function BackendApp() {
   const renderWorldHud = () => <div className="world-hud"><header className="world-header"><button className="world-switch" aria-label={`${world?.title??''}. ${formatAudience(player?.subs??0)} подписчиков. Выбрать мир`} onClick={() => setOverlay('exit')}><strong><WorldName name={world?.title??''}/><Icon name="chevron"/></strong><span className="channel-sidebar-count"><Icon name="member"/><b className="channel-count-target">{formatAudience(player?.subs??0)}</b><span className="channel-count-label">подписчиков</span></span></button>
       <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><EnergyBadge wallet={accountEnergy.wallet} amount={player?.postsLeft} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/></div>
       <CrystalRewardBadge balance={displayCrystals} preview={!!devCrystals} award={crystalAward} seen={crystalRewardsSeen} onClick={() => openResource('crystals')}/>
-      <button className="profile-access campaign-avatar" aria-label={`Профиль персонажа. История: ${campaignProgress===undefined?'прогресс уточняется':`${campaignProgress}%`}`} onClick={() => go('profile')} style={{background:`conic-gradient(var(--campaign-ring) ${campaignProgress??0}%,var(--color-divider) 0)`}}><Avatar name={player?.name ?? ''} src={player ? personaFor(player.id, player.world).avatar : undefined} size="lg" /></button></header>
+      <button className="profile-access campaign-avatar" aria-label={`Профиль персонажа. История: ${campaignProgress===undefined?'прогресс уточняется':`${campaignProgress}%`}`} onClick={() => go('profile')} style={{background:`conic-gradient(var(--campaign-ring) ${campaignProgress??0}%,var(--color-divider) 0)`}}><Avatar name={player?.name ?? ''} src={player ? playerView(player).avatar : undefined} size="lg" /></button></header>
     {player&&<button className="hud-streak" onClick={()=>setOverlay('streak')} aria-label={`Серия: ${player.streak.days}. Посмотреть дни`}>🔥 <strong>{dayCount(player.streak.days)}</strong><span>в серии</span></button>}
     </div>;
   const renderFeed = () => <>
@@ -554,8 +558,8 @@ export default function BackendApp() {
     onLook={seed=>{setHeroSeed(seed);setHeroAvatar(undefined); setHeroAppearance(undefined);setAvatarRemoved(false);}} onUpload={src=>{setHeroAvatar(src);setAvatarRemoved(false);}} onRemove={()=>{setHeroAvatar(undefined); setHeroAppearance(undefined);setAvatarRemoved(true);}}
     address={address} onAddress={setAddress} worldId={definition.templateId} worldTitle={selected?.title||definition.title} style={definition.avatarStyle}
     busy={busy} canEnter={!!heroChoice&&!!definition.stars.length&&(heroChoice!=='custom'||!!(definition.name.trim()&&definition.avatar.trim()&&heroGoal.trim()))} onEnter={()=>void createWorld()}/></>;
-  else if (screen === 'own-world' && definition) content = <WorldEditor key="own-world" creating initial={definition} busy={busy} error={error} onBack={back} onSave={(value,portrait)=>void createWorld(value,portrait)}/>;
-  else if (screen === 'world-settings' && worldEdit) content = <WorldEditor key={worldEdit.id} initial={worldEdit.definition} busy={busy} error={error} onBack={back} onSave={value=>void saveWorldSettings(value)}/>;
+  else if (screen === 'own-world' && definition) content = <WorldEditor key="own-world" creating initial={definition} profile={player!} busy={busy} error={error} onBack={back} onSave={(value,portrait,preferences)=>void createWorld(value,portrait,preferences)}/>;
+  else if (screen === 'world-settings' && worldEdit) content = <WorldEditor key={worldEdit.id} initial={worldEdit.definition} editingId={worldEdit.id} profile={player!} busy={busy} error={error} onBack={back} onSave={value=>void saveWorldSettings(value)}/>;
   else if (screen === 'hero' && definition) content = <><ScreenHeading title="Свой мир" back={back} /><section className="section stack"><TextField label="Имя персонажа" maxLength={80} value={definition.name} onChange={e => setDefinition({ ...definition, name: e.target.value })} /><TextField label="Имя канала" maxLength={80} value={definition.avatar} onChange={e => setDefinition({ ...definition, avatar: e.target.value })} />
     <label>Как обращаться<select value={address} onChange={e => setAddress(e.target.value as Address)}><option value="nick">По имени</option><option value="she">Она</option><option value="he">Он</option></select></label>
     <TextField label="Кто ты в этом мире" value={definition.role} maxLength={80} onChange={e => setDefinition({ ...definition, role: e.target.value })} />
@@ -565,7 +569,7 @@ export default function BackendApp() {
   else if (screen === 'feed' && player && world) content = renderFeed();
   else if (screen === 'goals' && world && player) {
     const savedDraft=readPostDraft(draftKey(player));
-    content = <WorldBrief roleSkills={activeRole?.skills} world={world} player={player} avatar={personaFor(player.id, player.world).avatar} firstVisit={storyOnboarding} hasDraft={savedDraft.ownWords&&!!savedDraft.text.trim()} onWrite={openFirstPost} onFeed={() => { setStoryOnboarding(false); go('feed'); }} />;
+    content = <WorldBrief roleSkills={activeRole?.skills} world={world} player={player} avatar={playerView(player).avatar} firstVisit={storyOnboarding} hasDraft={savedDraft.ownWords&&!!savedDraft.text.trim()} onWrite={openFirstPost} onFeed={() => { setStoryOnboarding(false); go('feed'); }} />;
   }
   else if (screen === 'goals' && world) content = <><ScreenHeading title="Цели" subtitle={world.title} /><StoryBrief goal={world.goal || 'Найти свой голос и начать разговор.'} /><section className="section"><Button onClick={openFirstPost}>Написать пост →</Button></section></>;
   else if (screen === 'resources' || screen === 'crystals') content = <ResourcePages wallet={accountEnergy.wallet} exchangeBusy={accountEnergy.busy} exchangeMessage={accountEnergy.message} onExchange={()=>void accountEnergy.exchange()} onWalletRefresh={()=>void accountEnergy.refresh()} page={screen} energy={player?.postsLeft} onPage={openResource} onBack={back}/>;
@@ -593,15 +597,15 @@ export default function BackendApp() {
       const author: Person = comment.me ? playerView(player) : world.cast.find(p => `Star_${p.id}` === comment.authorId) ?? { id: comment.authorId ?? comment.id, name: comment.author, handle: comment.avatar ?? '', role: comment.role ?? '', boundary: '' };
       return <div key={comment.id} className={comment.parentCommentId ? 'thread-nested' : ''}>{comment.parentCommentId && <span className="sr-only">Ответ на реплику</span>}{card({ id: comment.id, parentId: post.id, authorId: author.id, text: comment.hidden ? 'Комментарий скрыт' : comment.text, createdAt: '', likes: 0 }, author, 0, true)}{comment.star && !comment.hidden && world.cast.some(p => `Star_${p.id}` === comment.authorId) && <div className="reply-action"><Button variant="ghost" aria-label={`Ответить ${author.name}`} onClick={() => openCompose({ postId: post.id, commentId: comment.id, name: author.name, text: comment.text, authorId:`Star_${author.id}` })}>Ответить</Button></div>}</div>;
     })}{post && !post.comments.length && <EmptyState title="Здесь ещё нет ответов">Персонажи могут продолжить разговор после публикации.</EmptyState>}{postAuthor && post && <div className="section"><Button className="full" onClick={() => openCompose({ postId: post.id, commentId: null, name: postAuthor.name, text: post.text, authorId:`Star_${postAuthor.id}` })}>Начать разговор с автором</Button></div>}</>;
-  } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={personaFor(player.id, player.world).avatar} onBack={back} showStoryProgress storyProgress={campaignProgress} /><WorldProgress streak={player.streak} onStreak={()=>setOverlay('streak')}/><section className="section profile-overview"><div className="profile-audience"><ChannelAudience value={player.subs}/>{receipt?.worldId===player.world&&receipt.audienceKnown!==false&&<p className="caption last-turn-audience">{receipt.result.delta>0?'+':receipt.result.delta<0?'−':''}{Math.abs(receipt.result.delta)} за последний ход</p>}</div><GoalCard goal={world.goal} onClick={() => go('goals')} /><PracticeFocus skills={personaFor(player.id,player.world).skills??[]}/></section><CurrentSkills skills={player.skills} labels={activeRole?storyLabels:['Смелость','Юмор','В тему']} roleSkills={activeRole?.skills} values={player.roleSkills}/><section className="section stack"><Button variant="secondary" disabled={busy||pending} onClick={openWorldSettings}>Настройки мира</Button><Button variant="ghost" onClick={()=>setOverlay('exit')}>Выйти из мира</Button></section></>;
-  else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><ChannelAudience value={person.subscribers}/><span className="caption muted">@{person.handle} · AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
+  } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={playerView(player).avatar} onBack={back} showStoryProgress storyProgress={campaignProgress} /><WorldProgress streak={player.streak} onStreak={()=>setOverlay('streak')}/><section className="section profile-overview"><div className="profile-audience"><ChannelAudience value={player.subs}/>{receipt?.worldId===player.world&&receipt.audienceKnown!==false&&<p className="caption last-turn-audience">{receipt.result.delta>0?'+':receipt.result.delta<0?'−':''}{Math.abs(receipt.result.delta)} за последний ход</p>}</div><GoalCard goal={world.goal} onClick={() => go('goals')} /><PracticeFocus skills={personaFor(player.id,player.world).skills??[]}/></section><CurrentSkills skills={player.skills} labels={activeRole?storyLabels:['Смелость','Юмор','В тему']} roleSkills={activeRole?.skills} values={player.roleSkills}/><section className="section stack"><Button variant="secondary" disabled={busy||pending} onClick={openWorldSettings}>Настройки мира</Button><Button variant="ghost" onClick={()=>setOverlay('exit')}>Выйти из мира</Button></section></>;
+  else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><ChannelAudience value={person.subscribers}/><span className="caption muted">{!person.handle.startsWith('generated-')&&`@${person.handle} · `}AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
   else if (screen === 'topic' && world) content = <><div className="topic-header"><button className="back-button" onClick={back}>Назад</button><img className="topic-cover" src={world.hero} alt="" /><h1>{quote?.name ?? world.title}</h1><p>{quote?.text ?? world.topic}</p></div><section className="topic-people">{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}<Button className="full" onClick={() => openCompose(undefined, quote)}>Написать</Button></section></>;
   else if (screen === 'messages' && world) content = <><ScreenHeading title="Личка" /><EmptyState title="Сначала — общий разговор" action={<Button onClick={() => go('feed')}>Вернуться в ленту</Button>}>Личные сообщения скоро появятся.</EmptyState><section className="section"><h2 className="section-title">Собеседники</h2>{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}</section></>;
   else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={activityTab==='events'&&worldActivities.length>0&&<button className="link-button caption" onClick={()=>{const next=markWorldActivitiesRead(activities,player?.world);setActivities(next);localSave('activity',next);}}>Прочитать всё</button>}/>
     <ViewFilter value={activityTab} onChange={setActivityTab} options={[{value:'events',label:'События'},{value:'results',label:'Результаты'}]} label="Раздел уведомлений"/>
     {activityTab==='results'?<ResultHistory items={resultHistory.items} onOpen={id=>void openThread(id)}/>:<>
       {!worldActivities.length&&<EmptyState title="Пока тихо">Здесь появятся ответы персонажей, реакции на твои посты и отметки серии.</EmptyState>}
-      {worldActivities.map(a=><ActivityItem key={a.id} title={a.title} text={a.kind==='likes'?a.postText??'Фрагмент публикации не сохранён':a.text} detail={a.kind==='likes'&&a.count!==undefined?`Реакций: ${a.count}`:undefined} actorName={a.kind==='likes'?undefined:a.actorName} symbol={a.kind==='streak'?'🔥':a.kind==='likes'?'♡':'✦'} read={a.read} onOpen={()=>{if(a.kind==='streak'){setActivities(old=>{const next=old.map(v=>v.id===a.id&&v.worldId===a.worldId?{...v,read:true}:v);localSave('activity',next);return next;});setOverlay('streak');}else void openThread(a.postId??a.id);}}/>)}
+      {worldActivities.map(a=><ActivityItem key={a.id} title={a.title} text={a.kind==='likes'?a.postText??'Фрагмент публикации не сохранён':a.text} detail={a.kind==='likes'&&a.count!==undefined?`Реакций: ${a.count}`:undefined} actorName={a.kind==='likes'?undefined:a.actorName} actorAvatar={world?.cast.find(p=>p.name===a.actorName)?.avatar} symbol={a.kind==='streak'?'🔥':a.kind==='likes'?'♡':'✦'} read={a.read} onOpen={()=>{if(a.kind==='streak'){setActivities(old=>{const next=old.map(v=>v.id===a.id&&v.worldId===a.worldId?{...v,read:true}:v);localSave('activity',next);return next;});setOverlay('streak');}else void openThread(a.postId??a.id);}}/>)}
     </>}
   </>;
   else if (screen === 'account') content = <><ProfileHeader name={player?accountIdentity(player.id,owned[0]?.name??player.name).name:'Твой профиль'} neutralAvatar handle={player?accountIdentity(player.id,owned[0]?.name??player.name).handle:undefined} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? orderedOwned.slice(0,accountVisible).map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} onDelete={()=>setWorldToDelete(d)} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}{owned.length>accountVisible&&<Button variant="secondary" onClick={()=>setAccountVisible(n=>n+5)}>Показать ещё {Math.min(5,owned.length-accountVisible)}</Button>}</section>{ownWorldInvite}<section className="account-settings">{player&&<SettingsRow label="Пригласить друга" onClick={()=>setInviteOpen(true)}/>} {player && <SettingsRow label="Привязать профиль" onClick={()=>setLinkProfileOpen(true)}/>}<SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => openResource('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><SettingsRow label="Удалить аккаунт" onClick={()=>setDeleteOpen(true)} disabled={pending || busy} /><NominalSignOut onSignOut={()=>void beginEntry()} disabled={pending || busy} /></section></>;
