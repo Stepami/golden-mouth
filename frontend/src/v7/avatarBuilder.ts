@@ -18,9 +18,16 @@ export const hogwartsLooks=[
   {id:'hogwarts-woman-1',label:'Волшебница в бирюзовой мантии'},
   {id:'hogwarts-woman-2',label:'Волшебница в сливовой мантии'},
 ];
-export const customLooksFor=(worldId?:string)=>worldId===hogwartsTemplateId?hogwartsLooks:worldId===eveningTemplateId?eveningLooks:customLooks;
+const housesTemplateId='8c02a7fb-3b55-4eb0-b957-1b4869ed9834';
+export const housesLooks=[
+  {id:'houses-man-1',label:'Посланник в синем'},
+  {id:'houses-man-2',label:'Торговец в кожаном плаще'},
+  {id:'houses-woman-1',label:'Рыжеволосая посланница'},
+  {id:'houses-woman-2',label:'Путешественница в сером'},
+];
+export const customLooksFor=(worldId?:string)=>worldId===housesTemplateId?housesLooks:worldId===hogwartsTemplateId?hogwartsLooks:worldId===eveningTemplateId?eveningLooks:customLooks;
 export const customLook=(seed:string,worldId?:string)=>customLooksFor(worldId).find(look=>look.id===seed)??customLooksFor(worldId)[0];
 export const customPortrait=(seed:string,worldId?:string)=>{
   const id=customLook(seed,worldId).id;
-  return `/assets/avatars/3d/${id}-${id.startsWith('hogwarts-')?'v11':id.startsWith('evening-')?'v10':'v9'}.png`;
+  return `/assets/avatars/3d/${id}-${id.startsWith('houses-')?'v13':id.startsWith('hogwarts-')?'v11':id.startsWith('evening-')?'v10':'v9'}.png`;
 };

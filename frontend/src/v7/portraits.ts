@@ -6,6 +6,13 @@ export const hogwartsPortraits:Record<string,string>={
   draco:'/assets/avatars/3d/hogwarts-draco-v11.png',
 };
 const hogwartsNames:Record<string,string>={'гарри поттер':'harry','гермиона грейнджер':'hermione','рон уизли':'ron','драко малфой':'draco'};
+export const housesPortraits:Record<string,string>={
+  jon:'/assets/avatars/3d/houses-jon-v13.png',
+  james:'/assets/avatars/3d/houses-james-v13.png',
+  diana:'/assets/avatars/3d/houses-diana-v13.png',
+  maren:'/assets/avatars/3d/houses-maren-v13.png',
+};
+const housesNames:Record<string,string>={'джон винтер':'jon','джеймс левлистер':'james','диана шторморождённая':'diana','марен':'maren'};
 const photos: Record<string,string> = {
   'гарри поттер':'harry', 'гермиона грейнджер':'hermione', 'рон уизли':'ron', 'драко малфой':'draco',
   'дейл купер':'dale', 'одри хорн':'audrey', 'шелли джонсон':'shelly',
@@ -16,6 +23,7 @@ const namedLooks:Record<string,string>={'изабелла лебедева':'mus
 const itPortraits:Record<string,string>={'меркантил':'merkantil','бургер в декабре':'burger','куляш ai':'kulyash','куляш ии':'kulyash'};
 export function defaultPortrait(name: string): string | undefined {
   const key = name.trim().toLocaleLowerCase('ru');
+  if(housesNames[key])return housesPortraits[housesNames[key]];
   if(hogwartsNames[key])return hogwartsPortraits[hogwartsNames[key]];
   if(itPortraits[key])return `/assets/avatars/3d/${itPortraits[key]}-v9.png`;
   if(namedLooks[key])return characterPortrait(namedLooks[key]);
@@ -36,6 +44,8 @@ export function characterPortrait(seed: string) {
 /** Retire the old generated SVGs without replacing a player's uploaded photo. */
 export function displayPortrait(src: string | undefined, name: string) {
   if(src==='')return undefined;
+  const houses=housesNames[name.trim().toLocaleLowerCase('ru')];
+  if(houses&&(!src||src.startsWith('/assets/avatars/')||src.startsWith('data:image/svg+xml')))return housesPortraits[houses];
   const hogwarts=hogwartsNames[name.trim().toLocaleLowerCase('ru')];
   if(hogwarts&&(!src||src.startsWith('/assets/avatars/')||src==='/assets/worlds/sorcerers-portrait-960-v8.jpg'||src.startsWith('data:image/svg+xml')))return hogwartsPortraits[hogwarts];
   const evening=namedLooks[name.trim().toLocaleLowerCase('ru')];
