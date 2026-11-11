@@ -5,7 +5,7 @@ import {RewardArt} from '../ui/RewardArt';
 
 export type CrystalAward={id:string;amount:number;before:number;after:number};
 /** Visual feedback only. The wallet and reward snapshots are supplied by the caller. */
-export function CrystalRewardBadge({balance,award,seen,onClick}:{balance?:number;award?:CrystalAward;seen:Set<string>;onClick:()=>void}){
+export function CrystalRewardBadge({balance,award,seen,onClick,preview=false}:{balance?:number;preview?:boolean;award?:CrystalAward;seen:Set<string>;onClick:()=>void}){
  const root=useRef<HTMLSpanElement>(null);
  const [shown,setShown]=useState(balance);
  const [flight,setFlight]=useState<{award:CrystalAward;x:number;y:number;dx:number;dy:number}>();
@@ -35,7 +35,7 @@ export function CrystalRewardBadge({balance,award,seen,onClick}:{balance?:number
  const app=root.current?.closest('.app');
  const particles=flight&&Array.from({length:flight.award.amount},(_,index)=><span key={`${flight.award.id}:${index}`} className="crystal-award-flight" aria-hidden="true" onAnimationEnd={()=>arrive(index)} style={{left:flight.x,top:flight.y,animationDelay:`${index*380}ms`,'--crystal-x':`${flight.dx}px`,'--crystal-y':`${flight.dy}px`} as CSSProperties}><RewardArt kind="crystal"/></span>);
  return <span className="crystal-hud" ref={root}>
-  <ResourceBadge type="crystal" value={shown===undefined?'—':String(shown)} hint={balance===undefined?'Баланс кристаллов пока недоступен':'Кристаллы для обмена на энергию'} onClick={onClick}/>
+  <span className="crystal-badge-wrap"><ResourceBadge type="crystal" value={shown===undefined?'—':String(shown)} hint={preview?'Превью: +2 за ход. Серверный кошелёк и обмен не изменяются.':balance===undefined?'Баланс кристаллов пока недоступен':'Кристаллы для обмена на энергию'} onClick={onClick}/>{preview&&<small className="crystal-preview-label">Превью</small>}</span>
   {app&&particles?createPortal(particles,app):null}
  </span>;
 }

@@ -1,3 +1,4 @@
+import {creditDevTurn,readDevCrystals} from './energy/devCrystalPreview';
 import {CrystalRewardBadge} from './energy/CrystalRewardBadge';
 import {pickResultPhrase} from './publication/resultCopy';
 import {ComposerText} from './screens/ComposerText';
@@ -89,6 +90,7 @@ export default function BackendApp() {
   const [introStep, setIntroStep] = useState(0);
   const [player, setPlayer] = useState<Player>();
   const [world, setWorld] = useState<World>();
+  const [devCrystalState,setDevCrystalState]=useState<{owner:string;total:number;award?:{actionId:string;beforeOffset:number;afterOffset:number}}>();
   const accountEnergy=useEnergyWallet(player?.id,walletClient,w=>setPlayer(p=>p?{...p,postsLeft:w.amount,postsCap:w.cap}:p));
   const [booting, setBooting] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -324,6 +326,11 @@ export default function BackendApp() {
       setStoryOnboarding(true); setScreen('goals'); setStack([]); await loadFeed(p);
     } catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
   };
+  const previewTurnReward=(value:PublicationReceipt)=>{
+    if(!import.meta.env.DEV||!player||value.questReward?.source==='server')return;
+    const award=creditDevTurn(player.id,value.actionId??value.result.postId);
+    if(award)setDevCrystalState({owner:player.id,total:award.afterOffset,award});
+  };
   const replyKey = (target: ReplyTarget) => `${key}:reply:${player?.world}:${target.postId}:${target.commentId ?? 'root'}`;
   const openCompose = async (target?: ReplyTarget, context?: { name: string; text: string }) => {
     if (!player || sending.current || busy) return;
@@ -393,7 +400,7 @@ export default function BackendApp() {
       const serverOutcome=parseQuestOutcome((event.result as unknown as {questOutcome?:unknown}).questOutcome);
 
       const value: PublicationReceipt = { worldId: player.world, actionId:id,beforeSubscribers:turnBefore.beforeSubscribers,reactionText:pickResultPhrase(event.result.delta),questId:turnBefore.questId, result: event.result, before: turnBefore.skills, roleBefore:turnBefore.roleSkills, roleLabels:activeRole?.skills.map(s=>s.name), questOutcome:serverOutcome??({status:'unverified',source:'server',title:roleTask?.context??'Твоя запись',reason:'Пост опубликован, но серверный исход квеста пока не возвращается.'}) };
-      setReceipt(value);setShowReceipt(true); saveLocal(`${key}:result:${player.world}`, value);
+      previewTurnReward(value);setReceipt(value);setShowReceipt(true); saveLocal(`${key}:result:${player.world}`, value);
       if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,value);
       setToast(event.result); setGainAnimation({delta:event.result.delta,nonce:event.result.postId});
       const best=event.result.bestComment;
@@ -431,7 +438,7 @@ export default function BackendApp() {
 
         const delta=snapshot.subscribers-(saved.beforeSubscribers??player.subs);
         const value:PublicationReceipt={worldId:player.world,actionId:requestId,beforeSubscribers:saved.beforeSubscribers??player.subs,reactionText:pickResultPhrase(delta),questId:saved.questId??roleTask?.id,actionKind:'comment',audienceKnown:true,before:saved.beforeSkills??player.skills,roleBefore:saved.roleBefore??player.roleSkills,roleLabels:activeRole?.skills.map(s=>s.name),questOutcome:{status:'unverified',source:'server',title:'Твой комментарий',reason:completed?'Комментарий и реакция сохранены. Серверная оценка квеста пока не возвращается.':'Комментарий сохранён. Получение реакции ещё не завершено.'},result:{postId:target.postId,delta,headline:'Комментарий сохранён',whys:[],ribbons:[],viral:false,flop:false,views:snapshot.post.views}};
-        setReceipt(value);setShowReceipt(true);saveLocal(`${key}:result:${player.world}`,value);if(delta)setGainAnimation({delta,nonce:requestId});
+        previewTurnReward(value);setReceipt(value);setShowReceipt(true);saveLocal(`${key}:result:${player.world}`,value);if(delta)setGainAnimation({delta,nonce:requestId});
         void refresh().then(p=>{const updated={...value,after:p.skills,roleAfter:p.roleSkills,questOutcome:p.lastTurn?.actionId===requestId?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome};setReceipt(updated);saveLocal(`${key}:result:${player.world}`,updated);if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated);}).catch(()=>setFeedError('Комментарий сохранён. Обнови ленту, чтобы получить актуальные данные.'));
       }
       sending.current=false;setPending(false);
@@ -452,11 +459,16 @@ export default function BackendApp() {
 
   useEffect(()=>{if(!energyNudge)return;const timer=setTimeout(()=>setEnergyNudge(0),6000);return()=>clearTimeout(timer);},[energyNudge]);
   const crystalRewardsSeen=crystalAwardsSeen.current;
-  const awarded=receipt?.questReward;
-  const crystalAward=awarded?.source==='server'&&awarded.balanceBefore!==undefined&&awarded.balanceAfter!==undefined?{id:`${receipt!.actionId??receipt!.result.postId}:${awarded.questId}`,amount:awarded.amount,before:awarded.balanceBefore,after:awarded.balanceAfter}:undefined;
+  const devCrystals=import.meta.env.DEV&&player?(devCrystalState?.owner===player.id?devCrystalState:{owner:player.id,total:readDevCrystals(player.id).total,award:undefined}):undefined;
+  const displayCrystals=accountEnergy.wallet?accountEnergy.wallet.crystals+(devCrystals?.total??0):undefined;
+  const previewAward=devCrystals?.award;
+  const previewForReceipt=receipt&&previewAward?.actionId===(receipt.actionId??receipt.result.postId);
+  const displayReceipt:PublicationReceipt|undefined=previewForReceipt?{...receipt!,questReward:{questId:'dev-turn-preview',title:'Превью: за ход',amount:2,source:'preview',balanceBefore:accountEnergy.wallet?accountEnergy.wallet.crystals+previewAward!.beforeOffset:undefined,balanceAfter:accountEnergy.wallet?accountEnergy.wallet.crystals+previewAward!.afterOffset:undefined}}:receipt;
+  const awarded=displayReceipt?.questReward;
+  const crystalAward=(awarded?.source==='server'||(import.meta.env.DEV&&awarded?.source==='preview'))&&awarded.balanceBefore!==undefined&&awarded.balanceAfter!==undefined?{id:`${displayReceipt!.actionId??displayReceipt!.result.postId}:${awarded.questId}`,amount:awarded.amount,before:awarded.balanceBefore,after:awarded.balanceAfter}:undefined;
   const renderWorldHud = () => <div className="world-hud"><header className="world-header"><button className="world-switch" aria-label={`${world?.title??''}. ${formatAudience(player?.subs??0)} подписчиков. Выбрать мир`} onClick={() => setOverlay('exit')}><strong><WorldName name={world?.title??''}/><Icon name="chevron"/></strong><span className="channel-sidebar-count"><Icon name="member"/><b className="channel-count-target">{formatAudience(player?.subs??0)}</b><span className="channel-count-label">подписчиков</span></span></button>
       <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><EnergyBadge wallet={accountEnergy.wallet} amount={player?.postsLeft} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/></div>
-      <CrystalRewardBadge balance={accountEnergy.wallet?.crystals} award={crystalAward} seen={crystalRewardsSeen} onClick={() => openResource('crystals')}/>
+      <CrystalRewardBadge balance={displayCrystals} preview={!!devCrystals} award={crystalAward} seen={crystalRewardsSeen} onClick={() => openResource('crystals')}/>
       <button className="profile-access campaign-avatar" aria-label={`Профиль персонажа. История: ${campaignProgress===undefined?'прогресс уточняется':`${campaignProgress}%`}`} onClick={() => go('profile')} style={{background:`conic-gradient(var(--campaign-ring) ${campaignProgress??0}%,var(--color-divider) 0)`}}><Avatar name={player?.name ?? ''} src={player ? personaFor(player.id, player.world).avatar : undefined} size="lg" /></button></header>
     {player&&<button className="hud-streak" onClick={()=>setOverlay('streak')} aria-label={`Серия: ${player.streak.days}. Посмотреть дни`}>🔥 <strong>{dayCount(player.streak.days)}</strong><span>в серии</span></button>}
     </div>;
@@ -513,7 +525,7 @@ export default function BackendApp() {
   else if (screen === 'compose' && player) content = <>
     <ScreenHeading title={reply ? 'Продолжить разговор' : 'Новая публикация'} back={back} />
     <section className="section stack composer-body">
-      {!reply&&<DailyQuestCard task={import.meta.env.DEV?{text:'Опубликуй первый пост и задай персонажам вопрос.',rewardCrystals:1}:undefined} preview={import.meta.env.DEV}/>}
+      {!reply&&<DailyQuestCard task={import.meta.env.DEV?{text:'Опубликуй пост или оставь комментарий.',rewardCrystals:2}:undefined} preview={import.meta.env.DEV}/>}
       {(reply || quote) && !prepared && <QuoteBlock name={reply?.name ?? quote!.name} text={reply?.text ?? quote!.text}/>}
       <div className="row"><Avatar name={player.name} src={personaFor(player.id, player.world).avatar}/><strong>{player.name}</strong></div>
       <label className="sr-only" htmlFor="post-text">Текст публикации</label>
@@ -555,7 +567,7 @@ export default function BackendApp() {
     {deleteOpen&&<AccountDeletion onDelete={deleteAccount} onClose={()=>setDeleteOpen(false)}/>}
     {reportId&&<ReportComment onSend={reason=>api.report(reportId,reason)} onClose={()=>setReportId(undefined)}/>}
     {showReceipt&&screen==='thread'&&player&&world&&<div className="result-status-bar">{renderWorldHud()}</div>}
-    {showReceipt&&receipt&&receipt.worldId===player?.world&&<ResultIsland key={receipt.actionId??receipt.result.postId} receipt={receipt} onRead={()=>void openThread(receipt.result.postId)} onClose={()=>setShowReceipt(false)}/>}
+    {showReceipt&&receipt&&receipt.worldId===player?.world&&<ResultIsland key={receipt.actionId??receipt.result.postId} receipt={displayReceipt??receipt} onRead={()=>void openThread(receipt.result.postId)} onClose={()=>setShowReceipt(false)}/>}
     {reactionNotice&&!showReceipt&&<ReactionTicker notice={reactionNotice} onOpen={()=>{void openThread(reactionNotice.postId);setReactionNotice(undefined);}} onClose={()=>setReactionNotice(undefined)}/>}
     {gainAnimation&&<FollowersFlight delta={gainAnimation.delta} nonce={gainAnimation.nonce}/>}
     {overlay && <Dialog title={{ exit: 'Выйти из мира?', streak: 'Серия дней', skills: 'Навыки и отношения', 'text-size': 'Размер текста', 'local-like': 'Реакция', quote: 'Цитата', about: 'Новая версия' }[overlay]} onClose={() => setOverlay(null)}>

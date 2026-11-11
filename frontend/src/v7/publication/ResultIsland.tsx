@@ -9,6 +9,8 @@ import './resultIsland.css';
 
 export function ResultIsland({receipt,onRead,onClose}:{receipt:PublicationReceipt;onRead:()=>void;onClose:()=>void}) {
  const [paused,setPaused]=useState(false),[leaving,setLeaving]=useState(false),[expanded,setExpanded]=useState(false);
+ const remaining=useRef(5000);
+ const [seconds,setSeconds]=useState(5);
  const [fallbackPhrase]=useState(()=>pickResultPhrase(receipt.result.delta));
  const detailsId=useId();
  const panel=useRef<HTMLElement>(null);
@@ -26,7 +28,13 @@ export function ResultIsland({receipt,onRead,onClose}:{receipt:PublicationReceip
   return()=>{observer.disconnect();body?.removeEventListener('scroll',measure);window.removeEventListener('resize',measure);};
  },[]);
  const onCloseRef=useRef(onClose);onCloseRef.current=onClose;
- useEffect(()=>{if(paused||expanded||leaving)return;const timer=setTimeout(()=>setLeaving(true),12000);return()=>clearTimeout(timer);},[paused,expanded,leaving]);
+ useEffect(()=>{
+  if(paused||expanded||leaving)return;
+  const started=performance.now(),initial=remaining.current;
+  const tick=()=>{remaining.current=Math.max(0,initial-(performance.now()-started));setSeconds(Math.ceil(remaining.current/1000));if(remaining.current===0)setLeaving(true);};
+  const timer=setInterval(tick,100);
+  return()=>{remaining.current=Math.max(0,initial-(performance.now()-started));clearInterval(timer);};
+ },[paused,expanded,leaving]);
  useEffect(()=>{if(!leaving)return;const timer=setTimeout(()=>onCloseRef.current(),180);return()=>clearTimeout(timer);},[leaving]);
  const known=receipt.audienceKnown!==false,delta=receipt.result.delta;
  const mood=known?(delta>0?'gain':delta<0?'loss':'neutral'):'neutral';
@@ -55,11 +63,11 @@ export function ResultIsland({receipt,onRead,onClose}:{receipt:PublicationReceip
    <span className="result-island-audience"><RewardArt kind="followers"/><span>Подписчики</span></span>
    <span className="result-island-numbers"><strong className="result-island-delta">{known?shownChange:'Уточняем'}</strong>{percent&&<span className="result-island-percent">{shownPercent}</span>}</span>
    <span className="result-island-phrase">{known?phrase:'Публикация сохранена. Данные аудитории уточняются.'}</span>
-   {receipt.questReward?.source==='server'&&receipt.questReward.amount>0&&<span className="result-crystal-reward"><span>Задание выполнено</span><span><RewardArt kind="crystal"/>+{receipt.questReward.amount}</span></span>}
+   {(receipt.questReward?.source==='server'||(import.meta.env.DEV&&receipt.questReward?.source==='preview'))&&receipt.questReward.amount>0&&<span className="result-crystal-reward"><span>{receipt.questReward.source==='preview'?'Превью: за ход':'Задание выполнено'}</span><span><RewardArt kind="crystal"/>+{receipt.questReward.amount}</span></span>}
    {!expanded&&<SkillGains receipt={receipt}/>}
    <span className="result-island-more">{expanded?'Скрыть изменения навыков':'Показать изменения навыков'}<Icon name="chevron"/></span>
   </button>
   {expanded&&<div id={detailsId} className="result-island-details"><h2>Навыки за ход</h2><SkillChanges receipt={receipt} detailed/><button className="result-island-read" onClick={()=>{onRead();onClose();}}>Читать отклики<Icon name="arrow"/></button></div>}
-  <button className="result-island-close" aria-label="Скрыть результат" onClick={()=>setLeaving(true)}><Icon name="close"/></button>
+  <span className="result-island-dismiss"><span className="result-island-countdown" aria-live="off" title={paused||expanded?'Таймер на паузе':`Автоскрытие через ${seconds} с`}>{paused||expanded?'Пауза':`${seconds} с`}</span><button className="result-island-close" aria-label="Скрыть результат" onClick={()=>setLeaving(true)}><Icon name="close"/></button></span>
  </aside>;
 }
