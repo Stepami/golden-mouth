@@ -1,3 +1,4 @@
+import {WorldEditor} from './screens/WorldEditor';
 import {creditDevTurn,readDevCrystals} from './energy/devCrystalPreview';
 import {CrystalRewardBadge} from './energy/CrystalRewardBadge';
 import {pickResultPhrase} from './publication/resultCopy';
@@ -69,17 +70,18 @@ import { GoalCard } from './ui/GameBrief';
 import { DesignSystem } from './screens/DesignSystem';
 import { NominalSignOut, LoadingIndicator, Avatar, Badge, BottomNav, Button, Chip, Dialog, EmptyState, Icon, Notice, PersonRow, PostCard, ProfileHeader, Progress, QuoteBlock, ResumeWorld, ScreenHeading, SettingsRow, TextField, WorldCard } from './ui';
 
-type Screen = 'welcome' | 'age' | 'catalog' | 'search' | 'intro' | 'onboarding' | 'hero' | 'feed' | 'goals' | 'compose' | 'thread' | 'topic' | 'profile' | 'character' | 'messages' | 'activity' | 'account' | ResourcePageName;
+type Screen = 'world-settings' | 'welcome' | 'age' | 'catalog' | 'search' | 'intro' | 'onboarding' | 'hero' | 'feed' | 'goals' | 'compose' | 'thread' | 'topic' | 'profile' | 'character' | 'messages' | 'activity' | 'account' | ResourcePageName;
 type ReplyTarget = { postId: string; commentId: string | null; name: string; text: string; authorId:string };
 type ReplyDraft = { text: string; requestId?: string; submittedText?: string; beforeSubscribers?:number; beforeSkills?:Player['skills']; roleBefore?:Player['roleSkills']; questId?:string; additionalStarId?:string };
 const statusLabels: Record<string, string> = { pending: 'Персонажи читают публикацию…', ready_for_moderation: 'Готовим результат…', completed: 'Публикация готова', failed: 'Публикация не отправлена' };
-const titleOf: Record<Screen, string> = { catalog: 'Миры', search: 'Поиск', intro: 'Вход в мир', onboarding: 'Знакомство', welcome: 'Знакомство', age: 'Возраст', hero: 'Ваш персонаж', feed: 'Лента', goals: 'Цели', compose: 'Новая публикация', thread: 'Обсуждение', topic: 'Тема', profile: 'Профиль персонажа', character: 'Собеседник', messages: 'Личка', activity: 'Уведомления', account: 'Профиль', resources:'Энергия',crystals:'Кристаллы' };
+const titleOf: Record<Screen, string> = { 'world-settings':'Настройки мира', catalog: 'Миры', search: 'Поиск', intro: 'Вход в мир', onboarding: 'Знакомство', welcome: 'Знакомство', age: 'Возраст', hero: 'Ваш персонаж', feed: 'Лента', goals: 'Цели', compose: 'Новая публикация', thread: 'Обсуждение', topic: 'Тема', profile: 'Профиль персонажа', character: 'Собеседник', messages: 'Личка', activity: 'Уведомления', account: 'Профиль', resources:'Энергия',crystals:'Кристаллы' };
 
 const walletClient={read:()=>api.energyWallet(),exchange:()=>api.exchangeEnergy()};
 
 export default function BackendApp() {
   const [linkProfileOpen, setLinkProfileOpen] = useState(false);
   const [inviteOpen,setInviteOpen]=useState(false);
+  const [worldEdit,setWorldEdit]=useState<{id:string;definition:WorldDefinition}>();
   const [worldToDelete,setWorldToDelete]=useState<WorldDocument>();
   const [deleteOpen,setDeleteOpen]=useState(false);
   const [reportId,setReportId]=useState<string>();
@@ -244,6 +246,20 @@ export default function BackendApp() {
     if(player?.world!==p.world)setShowReceipt(false);
     if (!sending.current) { setDraft(draft.text); setUnknown(!!draft.publicationId); setPublicationFailed(false); }
     return p; };
+  const openWorldSettings = () => {
+    if(!player||busy||pending)return;
+    const {id,subscribers:_subs,lock:_lock,...definition}=worldDocumentOf(player.world);
+    setWorldEdit({id,definition:{...definition,templateId:null}});setError('');go('world-settings');
+  };
+  const saveWorldSettings = async (definition:WorldDefinition) => {
+    if(!worldEdit||busy||pending)return;
+    setBusy(true);setError('');
+    try{
+      const p=await api.saveWorld(worldEdit.id,definition);
+      const own=await api.ownedWorlds();installWorldContent(own);setOwned(own);installPlayer(p);
+      setWorldEdit(undefined);setScreen('profile');setStack([]);
+    }catch(cause){setError(errorText(cause));}finally{setBusy(false);}
+  };
   const refresh = async () => { const expected=player;const p=await api.me();if(livePlayer.current?.id===expected?.id&&livePlayer.current?.world===expected?.world&&p.world===expected?.world){installPlayer(p);await loadFeed(p);await accountEnergy.refresh();}return p; };
   const boot = useCallback(async () => {
     setBooting(true); setError('');
@@ -521,6 +537,7 @@ export default function BackendApp() {
     onLook={seed=>{setHeroSeed(seed);setHeroAvatar(undefined); setHeroAppearance(undefined);setAvatarRemoved(false);}} onUpload={src=>{setHeroAvatar(src);setAvatarRemoved(false);}} onRemove={()=>{setHeroAvatar(undefined); setHeroAppearance(undefined);setAvatarRemoved(true);}}
     address={address} onAddress={setAddress} worldId={definition.templateId} worldTitle={selected?.title||definition.title} style={definition.avatarStyle}
     busy={busy} canEnter={!!heroChoice&&!!definition.stars.length&&(heroChoice!=='custom'||!!(definition.name.trim()&&definition.avatar.trim()&&heroGoal.trim()))} onEnter={()=>void createWorld()}/></>;
+  else if (screen === 'world-settings' && worldEdit) content = <WorldEditor key={worldEdit.id} initial={worldEdit.definition} busy={busy} error={error} onBack={back} onSave={value=>void saveWorldSettings(value)}/>;
   else if (screen === 'hero' && definition) content = <><ScreenHeading title="Свой мир" back={back} /><section className="section stack"><TextField label="Имя персонажа" maxLength={80} value={definition.name} onChange={e => setDefinition({ ...definition, name: e.target.value })} /><TextField label="Имя канала" maxLength={80} value={definition.avatar} onChange={e => setDefinition({ ...definition, avatar: e.target.value })} />
     <label>Как обращаться<select value={address} onChange={e => setAddress(e.target.value as Address)}><option value="nick">По имени</option><option value="she">Она</option><option value="he">Он</option></select></label>
     <TextField label="Кто ты в этом мире" value={definition.role} maxLength={80} onChange={e => setDefinition({ ...definition, role: e.target.value })} />
@@ -558,7 +575,7 @@ export default function BackendApp() {
       const author: Person = comment.me ? playerView(player) : world.cast.find(p => `Star_${p.id}` === comment.authorId) ?? { id: comment.authorId ?? comment.id, name: comment.author, handle: comment.avatar ?? '', role: comment.role ?? '', boundary: '' };
       return <div key={comment.id} className={comment.parentCommentId ? 'thread-nested' : ''}>{comment.parentCommentId && <span className="sr-only">Ответ на реплику</span>}{card({ id: comment.id, parentId: post.id, authorId: author.id, text: comment.hidden ? 'Комментарий скрыт' : comment.text, createdAt: '', likes: 0 }, author, 0, true)}{comment.star && !comment.hidden && world.cast.some(p => `Star_${p.id}` === comment.authorId) && <div className="reply-action"><Button variant="ghost" aria-label={`Ответить ${author.name}`} onClick={() => openCompose({ postId: post.id, commentId: comment.id, name: author.name, text: comment.text, authorId:`Star_${author.id}` })}>Ответить</Button></div>}</div>;
     })}{post && !post.comments.length && <EmptyState title="Здесь ещё нет ответов">Персонажи могут продолжить разговор после публикации.</EmptyState>}{postAuthor && post && <div className="section"><Button className="full" onClick={() => openCompose({ postId: post.id, commentId: null, name: postAuthor.name, text: post.text, authorId:`Star_${postAuthor.id}` })}>Начать разговор с автором</Button></div>}</>;
-  } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={personaFor(player.id, player.world).avatar} onBack={back} showStoryProgress storyProgress={campaignProgress} /><WorldProgress streak={player.streak} onStreak={()=>setOverlay('streak')}/><section className="section profile-overview"><div className="profile-audience"><ChannelAudience value={player.subs}/>{receipt?.worldId===player.world&&receipt.audienceKnown!==false&&<p className="caption last-turn-audience">{receipt.result.delta>0?'+':receipt.result.delta<0?'−':''}{Math.abs(receipt.result.delta)} за последний ход</p>}</div><GoalCard goal={world.goal} onClick={() => go('goals')} /><PracticeFocus skills={personaFor(player.id,player.world).skills??[]}/></section><CurrentSkills skills={player.skills} labels={activeRole?storyLabels:['Смелость','Юмор','В тему']} roleSkills={activeRole?.skills} values={player.roleSkills}/><section className="section"><Button variant="secondary" onClick={()=>setOverlay('exit')}>Выйти из мира</Button></section></>;
+  } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={personaFor(player.id, player.world).avatar} onBack={back} showStoryProgress storyProgress={campaignProgress} /><WorldProgress streak={player.streak} onStreak={()=>setOverlay('streak')}/><section className="section profile-overview"><div className="profile-audience"><ChannelAudience value={player.subs}/>{receipt?.worldId===player.world&&receipt.audienceKnown!==false&&<p className="caption last-turn-audience">{receipt.result.delta>0?'+':receipt.result.delta<0?'−':''}{Math.abs(receipt.result.delta)} за последний ход</p>}</div><GoalCard goal={world.goal} onClick={() => go('goals')} /><PracticeFocus skills={personaFor(player.id,player.world).skills??[]}/></section><CurrentSkills skills={player.skills} labels={activeRole?storyLabels:['Смелость','Юмор','В тему']} roleSkills={activeRole?.skills} values={player.roleSkills}/><section className="section stack"><Button variant="secondary" disabled={busy||pending} onClick={openWorldSettings}>Настройки мира</Button><Button variant="ghost" onClick={()=>setOverlay('exit')}>Выйти из мира</Button></section></>;
   else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><ChannelAudience value={person.subscribers}/><span className="caption muted">@{person.handle} · AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
   else if (screen === 'topic' && world) content = <><div className="topic-header"><button className="back-button" onClick={back}>Назад</button><img className="topic-cover" src={world.hero} alt="" /><h1>{quote?.name ?? world.title}</h1><p>{quote?.text ?? world.topic}</p></div><section className="topic-people">{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}<Button className="full" onClick={() => openCompose(undefined, quote)}>Написать</Button></section></>;
   else if (screen === 'messages' && world) content = <><ScreenHeading title="Личка" /><EmptyState title="Сначала — общий разговор" action={<Button onClick={() => go('feed')}>Вернуться в ленту</Button>}>Личные сообщения скоро появятся.</EmptyState><section className="section"><h2 className="section-title">Собеседники</h2>{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}</section></>;
