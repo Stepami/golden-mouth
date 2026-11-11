@@ -1,0 +1,10 @@
+import {useState} from 'react';
+import {Avatar,Button,Chip} from '../ui';
+import {PublicationResult,type PublicationReceipt} from './PublicationCards';
+import {FollowersFlight} from './RewardMotion';
+export function ResultReview(){
+ const[kind,setKind]=useState<'success'|'partial'|'failed'>('success'),[round,setRound]=useState(0),[message,setMessage]=useState('');
+ const delta=kind==='success'?33:kind==='partial'?12:0;
+ const receipt:PublicationReceipt={worldId:'design-example',before:{} as PublicationReceipt['before'],questOutcome:{status:kind,source:'server',title:'Назвать цель сбора',reason:kind==='success'?'Цель названа, условия открыты. Можно перейти к обсуждению первого взноса.':kind==='partial'?'Цель понятна, но нет расчёта расходов. Уточни смету, чтобы завершить квест.':'Заявление не подтверждено. Приведи проверяемый источник и попробуй снова.'},result:{postId:`example-${round}`,delta,headline:'Пример',whys:[],ribbons:[],viral:false,flop:false,views:120}};
+ return <div className="v7-stage"><div className="app"><div className="app-body"><section className="section stack"><p className="local-story-notice">Дизайн-примеры трёх исходов. Это не результаты API, награды аккаунту не начисляются.</p><div className="row between"><strong className="channel-count-target">Канал · 120 подписчиков</strong><button className="profile-access" aria-label="Пример аватара"><Avatar name="Игрок"/></button></div><div className="row" style={{flexWrap:'wrap'}}>{([['success','Успех'],['partial','Частично'],['failed','Неуспех']] as const).map(([id,label])=><Chip key={id} selected={kind===id} onClick={()=>{setKind(id);setRound(v=>v+1);}}>{label}</Chip>)}</div><Button variant="secondary" onClick={()=>setRound(v=>v+1)}>Повторить анимацию</Button></section><PublicationResult key={`${kind}:${round}`} receipt={receipt} animateFollowers onRead={()=>setMessage('В приложении здесь открывается обсуждение сохранённого поста.')}/><p className="section caption" role="status">{message}</p>{round>0&&<><FollowersFlight key={`followers-${kind}-${round}`} delta={delta} nonce={`${kind}-${round}`}/></>}</div></div></div>;
+}

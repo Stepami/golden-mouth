@@ -4,7 +4,7 @@ import { clearPlayerDrafts } from '../app/postDraft';
 import { clearWorldDrafts } from '../app/worldDraft';
 import { clearAvatarPersonalization } from '../app/avatarPersonalization';
 import { clearReferral } from '../app/referral';
-import { clearTokens, logout as revokeSession, registerPlayer } from './auth';
+import { registerPlayer, clearTokens, logout as revokeSession } from './auth';
 import { clearApiCache } from '../app/useApi';
 import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics';
 import { clearWorldContent, installWorldContent, installWorldTemplates } from './worldContent';
@@ -17,7 +17,7 @@ export { ApiError } from './transport';
 import { sessionGeneration, assertSession, endSession } from './session';
 import { parse } from 'valibot';
 import { starGenerationEvent } from './streamEvents';
-import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, Player, Post, PostDetailResponse, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
+import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, LiveEvent, Player, Post, PostDetailResponse, PublicationState, PublicationStatus, PublicationFailure, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
 let sessionPlayer: Player | undefined;
 let sessionIdentity: PlayerDocument | undefined;
 let ownedWorldSnapshot: WorldDocument[] | undefined;
@@ -84,6 +84,7 @@ async function readSse<T>(response: Response, decode: (value: unknown) => T, onE
             break;
     }
 }
+
 async function generateStar(postId: string, replyWorldId: string, authorId: string, sourceCommentId: string | null, additional: boolean, signal?: AbortSignal, onTyping?: (authorId: string | null) => void) {
     for (let attempt = 0; attempt < 2; attempt++) {
         try {
@@ -108,14 +109,13 @@ async function generateStar(postId: string, replyWorldId: string, authorId: stri
     throw new Error('Generation failed');
 }
 const playerRequests = new Map<string, Promise<Player>>();
-async function loadPlayer(worldId?: string): Promise<Player | undefined> {
+async function loadPlayer(worldId?: string): Promise<Player> {
     const generation = sessionGeneration();
     const player = map.player(await data(sdk.player.getCurrentPlayer()));
     if (sessionIdentity?.id !== player.id)
         ownedWorldSnapshot = undefined;
     sessionIdentity = player;
     setTelemetryPlayerAvailable(true);
-    clearReferral();
     const [ownedWorlds, invitation] = await Promise.all([
         data(sdk.worlds.getOwnedWorlds()).then(worlds => worlds.map(map.world)),
         data(sdk.player.getInvitation()).then(value => ({ bonus: Number(value.bonus) })),
@@ -129,9 +129,13 @@ async function loadPlayer(worldId?: string): Promise<Player | undefined> {
     catch { /* memory fallback */ }
     const world = ownedWorlds.find(item => item.id === (worldId ?? sessionPlayer?.worldInstanceId ?? selected)) ?? ownedWorlds[0];
     if (!world)
-        return undefined;
+        throw new ApiError(404, 'GET', '/worlds');
+    // Saved-world routes also need the authoritative template match for covers/guidance.
+    // A catalogue outage must not prevent opening the actual saved world.
+    await loadTemplates().catch(() => undefined);
+    assertSession(generation);
     installWorldContent([world]);
-    return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, difficulty: world.difficulty, avatarStyle: world.avatarStyle,
+    return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: player.energyWallet?.cap ?? Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, difficulty: world.difficulty, avatarStyle: world.avatarStyle,
         world: world.id, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
         wants: world.wants, collection: world.achievements, bio: '', type: 'СЃРІРѕР№ РіРѕР»РѕСЃ',
         voice: world.voice, drama: world.drama,
@@ -164,26 +168,24 @@ export const api = {
         await revokeSession();
         api.clearSession();
     },
+    energyWallet: () => data(sdk.player.getCurrentPlayer()).then(player=>{if(!player.energyWallet)throw Object.assign(new Error('Wallet is not supported by this API'),{code:'wallet_unavailable'});return map.energyWallet(player.energyWallet);}),
+    exchangeEnergy: () => data(sdk.player.exchangeEnergy()).then(value=>({...value,wallet:value.wallet?map.energyWallet(value.wallet):null})),
     loadWorldTemplates: loadTemplates,
-    restore: (): Promise<Player | undefined> => loadPlayer(),
     me: (worldId?: string): Promise<Player> => {
         const key = worldId ?? sessionPlayer?.worldInstanceId ?? '';
         const pending = playerRequests.get(key);
         if (pending)
             return pending;
-        const request = loadPlayer(worldId).then(player => {
-            if (!player) throw new Error('World must be created before this request');
-            return player;
-        }).finally(() => {
+        const request = loadPlayer(worldId).finally(() => {
             if (playerRequests.get(key) === request)
                 playerRequests.delete(key);
         });
         playerRequests.set(key, request);
         return request;
     },
+    onboardingProfile: () => sessionIdentity,
     playerId: (): string | undefined => sessionIdentity?.id,
     hasPlayer: (): boolean => sessionIdentity !== undefined,
-    onboardingProfile: () => sessionIdentity,
     onboarding: async (body: Wire.OnboardingRequest): Promise<PlayerDocument> => {
         if (sessionIdentity)
             throw new Error('Onboarding has already been completed');
@@ -195,6 +197,21 @@ export const api = {
     createWorld: async (definition: WorldDefinition): Promise<Player> => {
         const world = map.world(await data(sdk.worlds.createWorld(definition)));
         return api.me(world.id);
+    },
+    /** Р“РµРЅРµСЂР°С†РёСЏ, Р·Р°С‚РµРј РјРѕРґРµСЂР°С†РёСЏ Рё Р°РЅРёРјР°С†РёСЏ РјР°СЃСЃРёРІР° СЂРµР°РєС†РёР№; РїСЂРё РѕР±СЂС‹РІРµ СЃРІРµСЂСЏРµРј СЃРѕС…СЂР°РЅС‘РЅРЅС‹Р№ СЃС‚Р°С‚СѓСЃ. */
+    publish(text: string, _id: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true, wantId?: string, recoveryOnly = false): () => void {
+        let cancelled = false;
+        const timer = setTimeout(() => {
+            if (recoveryOnly) { onError('unknown'); return; }
+            onStatus?.('generating');
+            void api.createPost(text, ownWords, wantId).then(async response => {
+                if (cancelled) return;
+                onStatus?.('completed');
+                onEvent({type:'result',result:response.result});
+                await api.initialComment(response.post.id, response.predictedAuthorId).catch(() => undefined);
+            }).catch(() => { if (!cancelled) onError('unknown'); });
+        }, 0);
+        return () => { cancelled = true; clearTimeout(timer); };
     },
     createPost: async (text: string, ownWords: boolean, wantId?: string) => {
         const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, wantId: wantId ?? null }));
@@ -226,12 +243,35 @@ export const api = {
             options.onSaved?.(saved);
             return { ...saved, commentId: result.commentId };
         };
+        const generate = async (authorId: string, sourceCommentId: string, additional: boolean) => {
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    options.onTyping?.(authorId);
+                    let completed: { text: string; additionalStarId?: string | null } | undefined;
+                    const response = await stream({ url: '/posts/{postId}/replies/generation', path: { postId }, query: { worldId: replyWorldId }, body: { authorId, sourceCommentId, additional } }, options.signal);
+                    await readSse(response, value => parse(starGenerationEvent, value), event => {
+                        if (event.status === 'failed') {
+                            const failure = new Error(event.code ?? 'ai_unavailable');
+                            failure.name = event.code ?? 'ai_unavailable';
+                            throw failure;
+                        }
+                        if (event.status === 'completed' && event.text) completed = { text: event.text, additionalStarId: event.additionalStarId };
+                    });
+                    if (!completed) throw new Error('Generation stream ended before completion');
+                    return completed;
+                } catch (cause) {
+                    const code = cause instanceof Error ? cause.name : '';
+                    if (attempt === 1 || options.signal?.aborted || code === 'AbortError' || code === 'unsafe_generated_content' || code === 'unsafe_input' || code === 'crisis' || (cause instanceof ApiError && cause.status >= 400 && cause.status < 500)) throw cause;
+                }
+            }
+            throw new Error('Generation failed');
+        };
         const playerReply = await save(`Player_${player.id.replaceAll('-', '')}`, commentId, requestId, text);
         try {
             const mainId = `${requestId}-star`;
             const main = playerReply.post.comments.some(comment => comment.requestId === mainId) && options.additionalStarId
                 ? { text: '', additionalStarId: options.additionalStarId }
-                : await generateStar(postId, replyWorldId, starAuthorId, playerReply.commentId, false, options.signal, options.onTyping);
+                : await generate(starAuthorId, playerReply.commentId, false);
             options.onAdditionalStar?.(main.additionalStarId ?? null);
             let latest = playerReply.post.comments.some(comment => comment.requestId === mainId)
                 ? playerReply : await save(starAuthorId, playerReply.commentId, mainId, main.text);
@@ -239,7 +279,7 @@ export const api = {
                 const extraId = `${requestId}-extra`;
                 if (!latest.post.comments.some(comment => comment.requestId === extraId)) {
                     const additionalAuthorId = `Star_${main.additionalStarId}`;
-                    const additional = await generateStar(postId, replyWorldId, additionalAuthorId, playerReply.commentId, true, options.signal, options.onTyping);
+                    const additional = await generate(additionalAuthorId, playerReply.commentId, true);
                     latest = await save(additionalAuthorId, null, extraId, additional.text);
                 }
             }
