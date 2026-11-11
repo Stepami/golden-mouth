@@ -1,3 +1,4 @@
+import {waitForTyping} from '../app/typingDelay';
 // Р¤Р°СЃР°Рґ API РїРѕРІРµСЂС… NSwag Fetch-РєР»РёРµРЅС‚Р°.
 // Р’Рѕ С„СЂРѕРЅС‚Рµ РќР•Рў СЃРµРєСЂРµС‚РѕРІ: runtime config РІРёРґРµРЅ РІ Р±СЂР°СѓР·РµСЂРµ. РљР»СЋС‡Рё LLM Рё С‚РѕРєРµРЅ Р±РѕС‚Р° Р¶РёРІСѓС‚ С‚РѕР»СЊРєРѕ РЅР° Р±СЌРєРµРЅРґРµ.
 import { clearPlayerDrafts } from '../app/postDraft';
@@ -238,17 +239,20 @@ export const api = {
         const player = sessionPlayer;
         const replyWorldId = player?.worldInstanceId;
         if (!player || !replyWorldId) throw new Error('World must be loaded before this request');
+        let typing:{authorId:string;started:number}|undefined;
         const save = async (authorId: string, parentCommentId: string | null, id: string, content: string) => {
             const result = await data(sdk.posts.replyToPost(postId, replyWorldId, { authorId, commentId: parentCommentId, requestId: id, text: content }, options.signal));
             const saved = { post: map.post(result.post), energyLeft: Number(result.energyLeft), subscribers: Number(result.subscribers) };
             if (sessionPlayer?.id === player.id && sessionPlayer.worldInstanceId === replyWorldId)
                 sessionPlayer = { ...sessionPlayer, postsLeft: saved.energyLeft, subs: saved.subscribers };
+            if(options.onTyping&&typing?.authorId===authorId)await waitForTyping(typing.started,options.signal);
             options.onSaved?.(saved);
             return { ...saved, commentId: result.commentId };
         };
         const generate = async (authorId: string, sourceCommentId: string, additional: boolean) => {
             for (let attempt = 0; attempt < 2; attempt++) {
                 try {
+                    if(typing?.authorId!==authorId)typing={authorId,started:performance.now()};
                     options.onTyping?.(authorId);
                     let completed: { text: string; additionalStarId?: string | null } | undefined;
                     const response = await stream({ url: '/posts/{postId}/replies/generation', path: { postId }, query: { worldId: replyWorldId }, body: { authorId, sourceCommentId, additional } }, options.signal);

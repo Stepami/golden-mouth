@@ -1,6 +1,6 @@
 import {hapticFeedback} from '@tma.js/sdk';
 import {inTelegram} from '../../telegram';
-import {useEffect,useId,useRef,useState} from 'react';
+import {useEffect,useId,useLayoutEffect,useRef,useState} from 'react';
 import {Icon} from '../ui';
 import {RewardArt} from '../ui/RewardArt';
 import {SkillChanges,SkillGains,type PublicationReceipt} from './PublicationCards';
@@ -11,6 +11,20 @@ export function ResultIsland({receipt,onRead,onClose}:{receipt:PublicationReceip
  const [paused,setPaused]=useState(false),[leaving,setLeaving]=useState(false),[expanded,setExpanded]=useState(false);
  const [fallbackPhrase]=useState(()=>pickResultPhrase(receipt.result.delta));
  const detailsId=useId();
+ const panel=useRef<HTMLElement>(null);
+ const [position,setPosition]=useState({top:8,maxHeight:'calc(100dvh - 32px)'});
+ useLayoutEffect(()=>{
+  const app=panel.current?.closest('.app'),hud=app?.querySelector('.world-hud'),body=app?.querySelector('.app-body');
+  const measure=()=>{
+   const a=app?.getBoundingClientRect(),h=hud?.getBoundingClientRect();
+   const top=Math.max(8,h&&a?h.bottom-a.top+16:8);
+   setPosition({top,maxHeight:`calc(100dvh - ${top+16}px)`});
+  };
+  measure();
+  const observer=new ResizeObserver(measure);if(app)observer.observe(app,{box:'border-box'});if(hud)observer.observe(hud,{box:'border-box'});
+  body?.addEventListener('scroll',measure,{passive:true});window.addEventListener('resize',measure);
+  return()=>{observer.disconnect();body?.removeEventListener('scroll',measure);window.removeEventListener('resize',measure);};
+ },[]);
  const onCloseRef=useRef(onClose);onCloseRef.current=onClose;
  useEffect(()=>{if(paused||expanded||leaving)return;const timer=setTimeout(()=>setLeaving(true),12000);return()=>clearTimeout(timer);},[paused,expanded,leaving]);
  useEffect(()=>{if(!leaving)return;const timer=setTimeout(()=>onCloseRef.current(),180);return()=>clearTimeout(timer);},[leaving]);
@@ -34,13 +48,14 @@ export function ResultIsland({receipt,onRead,onClose}:{receipt:PublicationReceip
  const title=receipt.actionKind==='comment'?'Комментарий сохранён':'Пост опубликован';
  const change=`${delta>0?'+':delta<0?'−':''}${new Intl.NumberFormat('ru').format(Math.abs(delta))}`;
  const shownChange=`${shown===0?'':delta>0?'+':'−'}${new Intl.NumberFormat('ru').format(shown)}`;
- return <aside className={`result-island result-island--${mood}${leaving?' is-leaving':''}`} aria-label="Результат отправки" onPointerEnter={()=>setPaused(true)} onPointerLeave={()=>setPaused(false)} onFocus={()=>setPaused(true)} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget))setPaused(false);}}>
+ return <aside ref={panel} style={position} className={`result-island result-island--${mood}${leaving?' is-leaving':''}`} aria-label="Результат отправки" onPointerEnter={()=>setPaused(true)} onPointerLeave={()=>setPaused(false)} onFocus={()=>setPaused(true)} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget))setPaused(false);}}>
   <span className="sr-only" role="status">{title}{known?`. ${change} подписчиков${percent?`, ${percent}`:''}`:'. Данные аудитории уточняются'}</span>
   <button className="result-island-open" aria-expanded={expanded} aria-controls={detailsId} onClick={()=>setExpanded(value=>!value)}>
    <span className="result-island-title">{title}</span>
    <span className="result-island-audience"><RewardArt kind="followers"/><span>Подписчики</span></span>
    <span className="result-island-numbers"><strong className="result-island-delta">{known?shownChange:'Уточняем'}</strong>{percent&&<span className="result-island-percent">{shownPercent}</span>}</span>
    <span className="result-island-phrase">{known?phrase:'Публикация сохранена. Данные аудитории уточняются.'}</span>
+   {receipt.questReward?.source==='server'&&receipt.questReward.amount>0&&<span className="result-crystal-reward"><span>Задание выполнено</span><span><RewardArt kind="crystal"/>+{receipt.questReward.amount}</span></span>}
    {!expanded&&<SkillGains receipt={receipt}/>}
    <span className="result-island-more">{expanded?'Скрыть изменения навыков':'Показать изменения навыков'}<Icon name="chevron"/></span>
   </button>

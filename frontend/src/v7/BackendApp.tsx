@@ -1,3 +1,4 @@
+import {CrystalRewardBadge} from './energy/CrystalRewardBadge';
 import {pickResultPhrase} from './publication/resultCopy';
 import {ComposerText} from './screens/ComposerText';
 import {firstPostFor} from './firstPost';
@@ -61,7 +62,7 @@ import { WorldIntro } from './screens/WorldIntro';
 import { WorldBrief } from './screens/WorldBrief';
 import { GoalCard } from './ui/GameBrief';
 import { DesignSystem } from './screens/DesignSystem';
-import { NominalSignOut, LoadingIndicator, Avatar, Badge, BottomNav, Button, Chip, Dialog, EmptyState, Icon, Notice, PersonRow, PostCard, ProfileHeader, Progress, QuoteBlock, ResourceBadge, ResumeWorld, ScreenHeading, SettingsRow, TextField, WorldCard } from './ui';
+import { NominalSignOut, LoadingIndicator, Avatar, Badge, BottomNav, Button, Chip, Dialog, EmptyState, Icon, Notice, PersonRow, PostCard, ProfileHeader, Progress, QuoteBlock, ResumeWorld, ScreenHeading, SettingsRow, TextField, WorldCard } from './ui';
 
 type Screen = 'welcome' | 'age' | 'catalog' | 'search' | 'intro' | 'onboarding' | 'hero' | 'feed' | 'goals' | 'compose' | 'thread' | 'topic' | 'profile' | 'character' | 'messages' | 'activity' | 'account' | ResourcePageName;
 type ReplyTarget = { postId: string; commentId: string | null; name: string; text: string; authorId:string };
@@ -123,6 +124,7 @@ export default function BackendApp() {
   const [approach, setApproach] = useState<Approach>('ask');
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState('');
+  const [typingActor,setTypingActor]=useState<string|null>(null);
   const [unknown, setUnknown] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [likes, setLikes] = useState<string[]>([]);
@@ -139,6 +141,7 @@ export default function BackendApp() {
   const [energyNudge,setEnergyNudge] = useState(0);
   const cancel = useRef<(() => void) | undefined>(undefined);
   const sending = useRef(false);
+  const crystalAwardsSeen=useRef(new Set<string>());
   const main = useRef<HTMLDivElement>(null);
   const appRoot = useRef<HTMLDivElement>(null);
   useScrollEdges(appRoot);
@@ -151,7 +154,7 @@ export default function BackendApp() {
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments); }, [player?.experiments]);
   const key = `reki:v7:${player?.id ?? api.playerId() ?? 'guest'}`;
   const localSave = (name: string, value: unknown) => { if (!saveLocal(`${key}:${name}`, value)) setStorageError(true); };
-  const go = (next: Screen, replace = false) => { setError(''); setStack(s => replace ? [] : [...s, screen]); setScreen(next); setToast(undefined); setReactionNotice(undefined); };
+  const go = (next: Screen, replace = false) => { setShowReceipt(false); setError(''); setStack(s => replace ? [] : [...s, screen]); setScreen(next); setToast(undefined); setReactionNotice(undefined); };
   const openResource = (next: ResourcePageName) => {
     void accountEnergy.refresh();
     if(['resources','crystals'].includes(screen)){setScreen(next);setError('');}else go(next);
@@ -416,7 +419,7 @@ export default function BackendApp() {
       snapshot=await api.reply(target.postId,target.commentId,requestId,text,target.authorId,{
         signal:controller.signal,additionalStarId:saved.additionalStarId,
         onSaved:value=>{recordComments(target.postId,player.world,value.post.comments);const first=!snapshot;snapshot=value;if(first)void accountEnergy.refresh();setPost({...value.post,id:value.post.postId});setPlayer(p=>p?{...p,postsLeft:value.energyLeft,subs:value.subscribers}:p);setScreen('thread');setStack(v=>v.filter(x=>x!=='compose'));},
-        onTyping:authorId=>setStatus(authorId?`${world?.cast.find(p=>`Star_${p.id}`===authorId)?.name??'Персонаж'} печатает…`:''),
+        onTyping:authorId=>{setTypingActor(authorId);setStatus(authorId?`${world?.cast.find(p=>`Star_${p.id}`===authorId)?.name??'Персонаж'} печатает…`:'');},
         onAdditionalStar:id=>saveLocal(k,{...readLocal<ReplyDraft>(k,{text}),additionalStarId:id??undefined}),
       });
       completed=true;saveLocal(k,{text:''});setDraft('');setReply(undefined);setUnknown(false);setScreen('thread');setStack(v=>v.filter(x=>x!=='compose'));
@@ -448,13 +451,17 @@ export default function BackendApp() {
     onQuote={() => { setQuote({ name: author.name, text: p.text }); setOverlay('quote'); }} />;
 
   useEffect(()=>{if(!energyNudge)return;const timer=setTimeout(()=>setEnergyNudge(0),6000);return()=>clearTimeout(timer);},[energyNudge]);
-  const renderFeed = () => <>
-    <div className="world-hud"><header className="world-header"><button className="world-switch" aria-label={`${world?.title??''}. ${formatAudience(player?.subs??0)} подписчиков. Выбрать мир`} onClick={() => setOverlay('exit')}><strong><WorldName name={world?.title??''}/><Icon name="chevron"/></strong><span className="channel-sidebar-count"><Icon name="member"/><b className="channel-count-target">{formatAudience(player?.subs??0)}</b><span className="channel-count-label">подписчиков</span></span></button>
+  const crystalRewardsSeen=crystalAwardsSeen.current;
+  const awarded=receipt?.questReward;
+  const crystalAward=awarded?.source==='server'&&awarded.balanceBefore!==undefined&&awarded.balanceAfter!==undefined?{id:`${receipt!.actionId??receipt!.result.postId}:${awarded.questId}`,amount:awarded.amount,before:awarded.balanceBefore,after:awarded.balanceAfter}:undefined;
+  const renderWorldHud = () => <div className="world-hud"><header className="world-header"><button className="world-switch" aria-label={`${world?.title??''}. ${formatAudience(player?.subs??0)} подписчиков. Выбрать мир`} onClick={() => setOverlay('exit')}><strong><WorldName name={world?.title??''}/><Icon name="chevron"/></strong><span className="channel-sidebar-count"><Icon name="member"/><b className="channel-count-target">{formatAudience(player?.subs??0)}</b><span className="channel-count-label">подписчиков</span></span></button>
       <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><EnergyBadge wallet={accountEnergy.wallet} amount={player?.postsLeft} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/></div>
-      <ResourceBadge type="crystal" value={accountEnergy.wallet?String(accountEnergy.wallet.crystals):'—'} hint={accountEnergy.wallet?"Кристаллы для обмена на энергию":"Баланс кристаллов пока недоступен"} onClick={() => openResource('crystals')} />
+      <CrystalRewardBadge balance={accountEnergy.wallet?.crystals} award={crystalAward} seen={crystalRewardsSeen} onClick={() => openResource('crystals')}/>
       <button className="profile-access campaign-avatar" aria-label={`Профиль персонажа. История: ${campaignProgress===undefined?'прогресс уточняется':`${campaignProgress}%`}`} onClick={() => go('profile')} style={{background:`conic-gradient(var(--campaign-ring) ${campaignProgress??0}%,var(--color-divider) 0)`}}><Avatar name={player?.name ?? ''} src={player ? personaFor(player.id, player.world).avatar : undefined} size="lg" /></button></header>
     {player&&<button className="hud-streak" onClick={()=>setOverlay('streak')} aria-label={`Серия: ${player.streak.days}. Посмотреть дни`}>🔥 <strong>{dayCount(player.streak.days)}</strong><span>в серии</span></button>}
-    </div>
+    </div>;
+  const renderFeed = () => <>
+    {renderWorldHud()}
     {player?.postsLeft===0&&draft.trim()&&!pending&&<section className="section"><div className="energy-draft-notice"><strong>Черновик ждёт энергии</strong><blockquote className="energy-draft-text">{draft}</blockquote><p>Текст сохранён. Нажми на энергию вверху, чтобы посмотреть восстановление и обмен.</p><Button variant="secondary" onClick={()=>reply?openCompose(reply):openFirstPost()}>Вернуться к черновику</Button></div></section>}
     {!reply && (pending || unknown || publicationFailed) && <PublicationWaiting pending={pending} unknown={unknown} text={draft} status={status} onStop={stopWaiting} onContinue={() => { if (unknown) publish(); else openCompose(); }} />}
     {feedError && <div className="section"><Notice title="Не удалось обновить ленту" tone="error">{feedError}</Notice></div>}
@@ -520,9 +527,10 @@ export default function BackendApp() {
     </section>
   </>;
   else if (screen === 'thread' && player && world) {
+    const typingPerson=world.cast.find(p=>`Star_${p.id}`===typingActor);
     const view = post ? detailView(post, world, playerView(player)) : undefined;
     const postAuthor = post && world.cast.find(p => `Star_${p.id}` === post.authorId);
-    content = <><ScreenHeading title="Обсуждение" back={back} />{pending&&<div className="section stack" role="status"><div className="pending-line"><LoadingIndicator/>{status||'Получаем ответ персонажа…'}</div><Button variant="ghost" onClick={stopWaiting}>Остановить ожидание</Button></div>}{reply&&unknown&&!pending&&<section className="section"><Button onClick={()=>openCompose(reply)}>Продолжить получение ответа</Button><p className="caption muted">Сохранённый комментарий повторно не публикуется.</p></section>}{receipt&&receipt.worldId===player.world&&receipt.result.postId===post?.id&&<PublicationResult receipt={receipt} animateFollowers={!!gainAnimation} onRead={()=>document.querySelector('.thread-nested')?.scrollIntoView({block:'center'})}/>}{threadLoading && <div className="pending-line" role="status"><LoadingIndicator/>Загружаем обсуждение…</div>}{view && card(view.post, view.author, post!.comments.length)}{post?.comments.map(comment => {
+    content = <><ScreenHeading title="Обсуждение" back={back} />{pending&&<div className="section stack" role="status"><div className={`pending-line${typingActor?' npc-typing':''}`}>{typingActor?<><Avatar name={typingPerson?.name??'Персонаж'} src={typingPerson?.avatar}/><span>{typingPerson?.name??'Персонаж'} печатает<span className="npc-typing-dots" aria-hidden="true"><i/><i/><i/></span></span></>:<><LoadingIndicator/>{status||'Получаем ответ персонажа…'}</>}</div><Button variant="ghost" onClick={stopWaiting}>Остановить ожидание</Button></div>}{reply&&unknown&&!pending&&<section className="section"><Button onClick={()=>openCompose(reply)}>Продолжить получение ответа</Button><p className="caption muted">Сохранённый комментарий повторно не публикуется.</p></section>}{receipt&&receipt.worldId===player.world&&receipt.result.postId===post?.id&&<PublicationResult receipt={receipt} animateFollowers={!!gainAnimation} onRead={()=>document.querySelector('.thread-nested')?.scrollIntoView({block:'center'})}/>}{threadLoading && <div className="pending-line" role="status"><LoadingIndicator/>Загружаем обсуждение…</div>}{view && card(view.post, view.author, post!.comments.length)}{post?.comments.map(comment => {
       const author: Person = comment.me ? playerView(player) : world.cast.find(p => `Star_${p.id}` === comment.authorId) ?? { id: comment.authorId ?? comment.id, name: comment.author, handle: comment.avatar ?? '', role: comment.role ?? '', boundary: '' };
       return <div key={comment.id} className={comment.parentCommentId ? 'thread-nested' : ''}>{comment.parentCommentId && <span className="sr-only">Ответ на реплику</span>}{card({ id: comment.id, parentId: post.id, authorId: author.id, text: comment.hidden ? 'Комментарий скрыт' : comment.text, createdAt: '', likes: 0 }, author, 0, true)}{comment.star && !comment.hidden && world.cast.some(p => `Star_${p.id}` === comment.authorId) && <div className="reply-action"><Button variant="ghost" aria-label={`Ответить ${author.name}`} onClick={() => openCompose({ postId: post.id, commentId: comment.id, name: author.name, text: comment.text, authorId:`Star_${author.id}` })}>Ответить</Button></div>}</div>;
     })}{post && !post.comments.length && <EmptyState title="Здесь ещё нет ответов">Персонажи могут продолжить разговор после публикации.</EmptyState>}{postAuthor && post && <div className="section"><Button className="full" onClick={() => openCompose({ postId: post.id, commentId: null, name: postAuthor.name, text: post.text, authorId:`Star_${postAuthor.id}` })}>Начать разговор с автором</Button></div>}</>;
@@ -546,6 +554,7 @@ export default function BackendApp() {
     {linkProfileOpen && player && <LinkProfile player={player} refresh={refresh} onClose={()=>setLinkProfileOpen(false)}/>}
     {deleteOpen&&<AccountDeletion onDelete={deleteAccount} onClose={()=>setDeleteOpen(false)}/>}
     {reportId&&<ReportComment onSend={reason=>api.report(reportId,reason)} onClose={()=>setReportId(undefined)}/>}
+    {showReceipt&&screen==='thread'&&player&&world&&<div className="result-status-bar">{renderWorldHud()}</div>}
     {showReceipt&&receipt&&receipt.worldId===player?.world&&<ResultIsland key={receipt.actionId??receipt.result.postId} receipt={receipt} onRead={()=>void openThread(receipt.result.postId)} onClose={()=>setShowReceipt(false)}/>}
     {reactionNotice&&!showReceipt&&<ReactionTicker notice={reactionNotice} onOpen={()=>{void openThread(reactionNotice.postId);setReactionNotice(undefined);}} onClose={()=>setReactionNotice(undefined)}/>}
     {gainAnimation&&<FollowersFlight delta={gainAnimation.delta} nonce={gainAnimation.nonce}/>}

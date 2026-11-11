@@ -52,3 +52,13 @@ html[data-theme=dark] .result-island--loss { --result-accent:#ffb86b; }
 .result-island-skill-gains .skill-art { width:20px; height:20px; }
 .result-island-skill-gains .result-skill-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--color-ink); }
 .result-island-skill-gains b { flex:none; color:var(--result-skill-gain); font-weight:500; }
+
+.result-status-bar { position:absolute; top:0; left:0; right:0; z-index:44; background:var(--color-paper); padding-top:var(--safe-top,0px); }
+.result-crystal-reward { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); margin-top:var(--space-2); font-size:.8125rem; }
+.result-crystal-reward>span:last-child { display:inline-flex; align-items:center; gap:var(--space-1); color:var(--color-crystal); font-weight:500; }
+.result-crystal-reward .reward-art { width:22px; height:22px; }
+.crystal-hud { display:contents; }
+.crystal-award-flight { position:fixed; z-index:80; width:24px; height:24px; pointer-events:none; animation:crystal-collect 700ms cubic-bezier(.35,0,.7,.5) both; }
+.crystal-award-flight .reward-art { width:100%; height:100%; }
+@keyframes crystal-collect { from { transform:translate(-50%,-50%) scale(1); opacity:0; } 12% { opacity:1; } 85% { opacity:1; } to { transform:translate(calc(var(--crystal-x) - 50%),calc(var(--crystal-y) - 50%)) scale(.45); opacity:0; } }
+@media(prefers-reduced-motion:reduce) { .crystal-award-flight { display:none; animation:none; } }
