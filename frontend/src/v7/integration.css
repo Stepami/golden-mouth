@@ -246,8 +246,9 @@ html[data-theme] .owned-world .resume-world,html[data-theme] .saved-worlds-scrol
 
 /* One shared daily quest slot; condition and crystal reward await server data. */
 .daily-quest { min-width:0; }
-.daily-quest>p { margin:0 0 var(--space-2); }
+.daily-quest-heading { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); margin:0 0 var(--space-2); }
+.daily-quest-heading p { margin:0; }
 .daily-quest-card { padding:var(--space-3); border:1px solid var(--color-divider); border-radius:var(--radius-md); background:var(--color-surface); font:400 .875rem/1.45 var(--font-body); }
 .daily-quest-card p { margin:0; }
-.daily-quest-reward { display:inline-flex; align-items:center; gap:var(--space-1); margin-top:var(--space-2); color:var(--color-crystal); font-weight:500; }
+.daily-quest-reward { display:inline-flex; align-items:center; gap:var(--space-1); color:var(--color-crystal); font:500 .875rem/1.4 var(--font-body); }
 .daily-quest-reward .icon { width:18px; height:18px; }

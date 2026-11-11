@@ -1,3 +1,4 @@
+import {firstPostFor} from './firstPost';
 import {DailyQuestCard} from './screens/DailyQuestCard';
 import {withEveningAppearance} from './eveningAppearance';
 import {ActivityItem} from './ui/ActivityItem';
@@ -319,11 +320,26 @@ export default function BackendApp() {
     } catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
   };
   const replyKey = (target: ReplyTarget) => `${key}:reply:${player?.world}:${target.postId}:${target.commentId ?? 'root'}`;
-  const openCompose = (target?: ReplyTarget, context?: { name: string; text: string }) => {
-    if (!player || sending.current) return;
+  const openCompose = async (target?: ReplyTarget, context?: { name: string; text: string }) => {
+    if (!player || sending.current || busy) return;
     setPrepared(undefined); setReply(target); setQuote(context); setUnknown(false); setStatus('');
     if (target) { const saved = readLocal<ReplyDraft>(replyKey(target), { text: '' }); setDraft(saved.text); setUnknown(!!saved.requestId); }
-    else { const saved = readPostDraft(draftKey(player)); setDraft(saved.text); setUnknown(!!saved.publicationId); }
+    else {
+      const draftId=draftKey(player);
+      let saved=readPostDraft(draftId);
+      if(!context&&!saved.at&&!saved.text.trim()&&!saved.publicationId){
+        setBusy(true);
+        try{
+          const posts=await api.channelPosts(player.world);
+          if(!posts.items.length&&!posts.nextCursor){
+            const text=firstPostFor(worldDocumentOf(player.world),activeRole?.id);
+            if(text){saved={text,ownWords:false};if(!savePostDraft(draftId,saved))setStorageError(true);}
+          }
+        }catch { /* Keep the editor available when the first-post check is unavailable. */ }
+        finally{setBusy(false);}
+      }
+      setDraft(saved.text);setUnknown(!!saved.publicationId);
+    }
     go('compose');
   };
   const openFirstPost = () => {
