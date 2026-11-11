@@ -1,4 +1,5 @@
-import {useId,useState} from 'react';
+import {useEffect,useId,useState} from 'react';
+import {syncBackButton} from '../../telegram';
 import type {WorldDefinition} from '../../api/types';
 import {Button,Icon,Notice,ScreenHeading,TextField} from '../ui';
 import {AvatarBuilder} from './AvatarBuilder';
@@ -20,6 +21,7 @@ export function WorldEditor({initial,creating=false,busy,error,onSave,onBack}:{i
  const star=(id:string,patch:Partial<WorldDefinition['stars'][number]>)=>update({stars:value.stars.map(s=>s.id===id?{...s,...patch}:s)});
  const ready=!!(value.name.trim()&&value.avatar.trim()&&value.role.trim()&&value.title.trim()&&value.description.trim()&&value.voice.trim()&&value.stars.length&&value.stars.every(s=>s.name.trim()&&s.role.trim()&&s.about.trim()&&s.voice.trim()));
  const leave=()=>{if(busy)return;if(dirty)setConfirmExit(true);else onBack();};
+ useEffect(()=>syncBackButton(!busy,leave),[busy,dirty,onBack]);
  return <><ScreenHeading title={creating?'Создать свой мир':'Настройки мира'} back={leave}/>
  <form className="section stack world-editor" onSubmit={e=>{e.preventDefault();if(!ready||busy)return;onSave({...value,roles:value.roles.map(s=>s.trim()).filter(Boolean),voices:value.voices.map(s=>s.trim()).filter(Boolean),postIdeas:value.postIdeas.map(s=>s.trim()).filter(Boolean),demoPosts:value.demoPosts.map(s=>s.trim()).filter(Boolean),rules:value.rules.filter(r=>r.locked||r.text.trim())},creating?customPortrait(look):undefined);}}>
  <p className="caption muted">{creating?'Задай мир, своего персонажа и собеседников.':'Изменения будут действовать на следующие посты и ответы. Публикации, подписчики и отношения сохранятся.'}</p>
