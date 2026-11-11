@@ -1,4 +1,3 @@
-import './auth.css';
 import {useEffect, useState, useSyncExternalStore} from 'react';
 import BackendApp from './BackendApp';
 import {

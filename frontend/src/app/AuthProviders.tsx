@@ -1,3 +1,4 @@
+import '../v7/auth.css'
 import { useEffect, useRef, useState } from 'react'
 import { loadTelegramClientId, type AuthProvider } from '../api/auth'
 import { openTelegramLogin, preloadTelegramLogin } from '../api/telegramLogin'
