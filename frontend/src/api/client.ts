@@ -181,6 +181,7 @@ export const api = {
         playerRequests.set(key, request);
         return request;
     },
+    exchangeEnergy: async () => data(sdk.player.exchangeEnergy()),
     playerId: (): string | undefined => sessionIdentity?.id,
     hasPlayer: (): boolean => sessionIdentity !== undefined,
     onboardingProfile: () => sessionIdentity,
