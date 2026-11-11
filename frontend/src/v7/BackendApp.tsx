@@ -1,5 +1,6 @@
 import {CrystalRewardBadge} from './energy/CrystalRewardBadge';
 import {pickResultPhrase} from './publication/resultCopy';
+import {FeedFilter} from './ui/FeedFilter';
 import {MyPosts} from './screens/MyPosts';
 import {ComposerText} from './screens/ComposerText';
 import {firstPostFor} from './firstPost';
@@ -464,7 +465,7 @@ export default function BackendApp() {
     </div>;
   const renderFeed = () => <>
     {renderWorldHud()}
-    <nav className="filter-strip" aria-label="Публикации в ленте"><Chip selected={feedFilter==='all'} onClick={()=>setFeedFilter('all')}>Все</Chip><Chip selected={feedFilter==='mine'} onClick={()=>setFeedFilter('mine')}>Мои посты</Chip></nav>
+    <FeedFilter value={feedFilter} onChange={setFeedFilter}/>
     {player?.postsLeft===0&&draft.trim()&&!pending&&<section className="section"><div className="energy-draft-notice"><strong>Черновик ждёт энергии</strong><blockquote className="energy-draft-text">{draft}</blockquote><p>Текст сохранён. Нажми на энергию вверху, чтобы посмотреть восстановление и обмен.</p><Button variant="secondary" onClick={()=>reply?openCompose(reply):openFirstPost()}>Вернуться к черновику</Button></div></section>}
     {!reply && (pending || unknown || publicationFailed) && <PublicationWaiting pending={pending} unknown={unknown} text={draft} status={status} onStop={stopWaiting} onContinue={() => { if (unknown) publish(); else openCompose(); }} />}
     {feedFilter==='mine' && player ? <MyPosts key={`${player.id}:${player.world}`} worldId={player.worldInstanceId ?? player.world} author={playerView(player)} renderPost={card} onCompose={()=>openCompose()}/> : <>
