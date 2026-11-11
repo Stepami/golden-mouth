@@ -197,6 +197,16 @@ export const api = {
         const world = map.world(await data(sdk.worlds.createWorld(definition)));
         return api.me(world.id);
     },
+    deleteWorld: async (id: string) => {
+        await data(sdk.worlds.deleteWorld(id));
+        ownedWorldSnapshot = undefined;
+        sessionPlayer = undefined;
+        clearApiCache();
+    },
+    deletePost: async (id: string) => {
+        await data(sdk.posts.deletePost(id));
+        clearApiCache();
+    },
     createPost: async (text: string, ownWords: boolean, wantId?: string) => {
         const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, wantId: wantId ?? null }));
         const { postId: id, ...post } = map.post(response.post);

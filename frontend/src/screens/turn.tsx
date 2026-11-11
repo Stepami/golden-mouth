@@ -229,6 +229,8 @@ function Thread() {
   const [sending, setSending] = useState(false)
   const [typingName, setTypingName] = useState<string | null>(null)
   const [replyError, setReplyError] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const controller = useRef<AbortController | null>(null)
   const activeKey = useRef(threadKey)
   activeKey.current = threadKey
@@ -333,6 +335,12 @@ function Thread() {
   const focusReply = (id: string) => { edit({ commentId: id }); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.thread-reply-input')?.focus()) }
   const fromFeed = nav.params.returnTo === 'feed' || (!nav.params.returnTo && !!postAuthor)
   const goBack = () => { if (nav.params.returnTo && nav.canBack) nav.back(); else nav.replace(fromFeed ? '03-3_feed' : '03-5_stage') }
+  const removePost = async () => {
+    if (!post || !window.confirm('Удалить пост и все комментарии? Это действие нельзя отменить.')) return
+    setDeleting(true); setDeleteError('')
+    try { await api.deletePost(post.id); nav.reset(fromFeed ? '03-3_feed' : '03-5_stage') }
+    catch { setDeleteError('Не получилось удалить пост. Попробуй ещё раз.'); setDeleting(false) }
+  }
   if (load !== 'ready' || loadedKey !== threadKey) return (
     <div className="screen no-tab"><TopBar onBack={goBack} title="Реакции" /><div className="pad"><div className="card" role="status">
       {load === 'loading' && <span className="small muted">Загружаем пост…</span>}
@@ -354,7 +362,7 @@ function Thread() {
     <div className="screen no-tab">
       <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions"><EnergyBadge value={player.postsLeft} /><button className="thread-exit" onClick={goBack}>{fromFeed ? 'В ленту →' : 'В канал →'}</button></div>} />
       <div className="pad">
-        <div className="card" style={{ marginBottom: 12 }}>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div></div>
+        <div className="card" style={{ marginBottom: 12 }}>{post.text}<div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div>{post.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" aria-label="Удалить пост" disabled={deleting} onClick={removePost} style={{ background: 'none', border: 0, fontSize: 20 }}>🧺</button>}</div>{deleteError && <p role="alert" className="small">{deleteError}</p>}</div>
         {showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
         {!showHelp && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
         {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>
