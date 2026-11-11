@@ -537,7 +537,7 @@ export default function BackendApp() {
   else if (screen === 'compose' && player) content = <>
     <ScreenHeading title={reply ? 'Продолжить разговор' : 'Новая публикация'} back={back} />
     <section className="section stack composer-body">
-      {!reply&&<DailyQuestCard task={import.meta.env.DEV?{text:'Опубликуй пост или оставь комментарий.',rewardCrystals:2}:undefined} preview={import.meta.env.DEV}/>}
+      {!reply&&<DailyQuestCard task={import.meta.env.DEV?{text:'Напиши 1 пост и оставь 1 комментарий',rewardCrystals:2}:undefined} preview={import.meta.env.DEV}/>}
       {(reply || quote) && !prepared && <QuoteBlock name={reply?.name ?? quote!.name} text={reply?.text ?? quote!.text}/>}
       <div className="row"><Avatar name={player.name} src={personaFor(player.id, player.world).avatar}/><strong>{player.name}</strong></div>
       <label className="sr-only" htmlFor="post-text">Текст публикации</label>
