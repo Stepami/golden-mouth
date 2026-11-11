@@ -2,6 +2,12 @@
 
 Refs #205. Восемь отдельных изображений подготовлены встроенным imagegen 11.11.2026: четыре готовых героя и четыре собственных образа (два мужских, два женских). Все PNG уменьшены до 640 × 640 px с сохранением прозрачности. Исходные обложки и другие миры не менялись.
 
+## Замена четвёртого собственного образа
+
+После замечания о сходстве с Марен файл `houses-woman-2-v13.png` заменён: молодая светловолосая путешественница с короткой стрижкой, голубыми глазами и округлым лицом. Марен и остальные семь образов сохранены. Имя файла оставлено прежним по прямому запросу замены, чтобы обновился также уже выбранный штатный образ. Генерация — встроенный imagegen, настоящая прозрачность сохранена.
+
+Актуальный промпт для этого файла: Use case: stylized-concept. One new adult female customizable character avatar for a dark medieval fantasy game. Genuinely transparent background, isolated square head-and-shoulders portrait with full hair and both shoulders inside frame. Premium painterly realistic character illustration, cold silver-blue cinematic lighting, tactile wool and leather, matching a frosty northern medieval world. A distinctly youthful adult woman, 24 years old, round soft face, small straight nose, light eyebrows, bright pale blue eyes, short straight honey-blonde pixie haircut with side-swept fringe, no braids or bun. Friendly alert expression, clean unscarred face. This must look entirely different from a mature angular brunette with brown side braid: different skull/face silhouette, nose, eyes, hairstyle and age. Muted plum quilted tunic, dark grey wool travel cloak, plain bronze clasp. No crown, royal heraldry, modern clothing, jewellery, weapons, floor, backdrop, checkerboard pixels, border or text. Original fictional face, not a real actor.
+
 Готовые герои больше не используют общие muse/sage/scout/spark. Джон — тёмноволосый северянин в чёрном меху; Джеймс — светловолосый рыцарь Дома Львов; Диана — серебристые косы и драконий плащ; Марен — каштановая коса и практичная одежда хозяйки переправы. Пользовательские фотографии и ранее выбранные собственные образы не переписываются. Сюжет, биографии, цели и навыки не менялись.
 
 ## Промпты
