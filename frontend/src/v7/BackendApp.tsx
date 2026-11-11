@@ -70,11 +70,11 @@ import { GoalCard } from './ui/GameBrief';
 import { DesignSystem } from './screens/DesignSystem';
 import { NominalSignOut, LoadingIndicator, Avatar, Badge, BottomNav, Button, Chip, Dialog, EmptyState, Icon, Notice, PersonRow, PostCard, ProfileHeader, Progress, QuoteBlock, ResumeWorld, ScreenHeading, SettingsRow, TextField, WorldCard } from './ui';
 
-type Screen = 'world-settings' | 'welcome' | 'age' | 'catalog' | 'search' | 'intro' | 'onboarding' | 'hero' | 'feed' | 'goals' | 'compose' | 'thread' | 'topic' | 'profile' | 'character' | 'messages' | 'activity' | 'account' | ResourcePageName;
+type Screen = 'own-world' | 'world-settings' | 'welcome' | 'age' | 'catalog' | 'search' | 'intro' | 'onboarding' | 'hero' | 'feed' | 'goals' | 'compose' | 'thread' | 'topic' | 'profile' | 'character' | 'messages' | 'activity' | 'account' | ResourcePageName;
 type ReplyTarget = { postId: string; commentId: string | null; name: string; text: string; authorId:string };
 type ReplyDraft = { text: string; requestId?: string; submittedText?: string; beforeSubscribers?:number; beforeSkills?:Player['skills']; roleBefore?:Player['roleSkills']; questId?:string; additionalStarId?:string };
 const statusLabels: Record<string, string> = { pending: 'Персонажи читают публикацию…', ready_for_moderation: 'Готовим результат…', completed: 'Публикация готова', failed: 'Публикация не отправлена' };
-const titleOf: Record<Screen, string> = { 'world-settings':'Настройки мира', catalog: 'Миры', search: 'Поиск', intro: 'Вход в мир', onboarding: 'Знакомство', welcome: 'Знакомство', age: 'Возраст', hero: 'Ваш персонаж', feed: 'Лента', goals: 'Цели', compose: 'Новая публикация', thread: 'Обсуждение', topic: 'Тема', profile: 'Профиль персонажа', character: 'Собеседник', messages: 'Личка', activity: 'Уведомления', account: 'Профиль', resources:'Энергия',crystals:'Кристаллы' };
+const titleOf: Record<Screen, string> = { 'own-world':'Создать свой мир', 'world-settings':'Настройки мира', catalog: 'Миры', search: 'Поиск', intro: 'Вход в мир', onboarding: 'Знакомство', welcome: 'Знакомство', age: 'Возраст', hero: 'Ваш персонаж', feed: 'Лента', goals: 'Цели', compose: 'Новая публикация', thread: 'Обсуждение', topic: 'Тема', profile: 'Профиль персонажа', character: 'Собеседник', messages: 'Личка', activity: 'Уведомления', account: 'Профиль', resources:'Энергия',crystals:'Кристаллы' };
 
 const walletClient={read:()=>api.energyWallet(),exchange:()=>api.exchangeEnergy()};
 
@@ -246,6 +246,12 @@ export default function BackendApp() {
     if(player?.world!==p.world)setShowReceipt(false);
     if (!sending.current) { setDraft(draft.text); setUnknown(!!draft.publicationId); setPublicationFailed(false); }
     return p; };
+  const startOwnWorld = () => {
+    if(!player||busy||pending)return;
+    if(!player.hitOwnWorldMilestone){setInviteOpen(true);return;}
+    setDefinition({...blankWorld(),name:player.name,avatar:player.handle,role:player.role,voice:'Живо и по делу',stars:[{id:crypto.randomUUID().replaceAll('-',''),name:'',role:'',about:'',voice:'Живо и по делу',avatarSeed:crypto.randomUUID(),trait:1,relation:0}]});
+    setHeroChoice('custom');setRoleScenarioSelected(false);setHeroAvatar(undefined);setHeroAppearance(undefined);setAvatarRemoved(false);setHeroGoal('');setHeroSkills([]);setError('');go('own-world');
+  };
   const openWorldSettings = () => {
     if(!player||busy||pending)return;
     const {id,subscribers:_subs,lock:_lock,...definition}=worldDocumentOf(player.world);
@@ -330,7 +336,8 @@ export default function BackendApp() {
     setEntryAge(value); setAge(ageBandOf(value) ?? '');
     interestOnly.current = false; setStack(['welcome', 'age']); setScreen('onboarding'); setError('');
   };
-  const createWorld = async () => {
+  const createWorld = async (submitted=definition,selectedAvatar=heroAvatar) => {
+    const definition=submitted;
     if (!definition || busy) return;
     setBusy(true); setError('');
     try {
@@ -344,7 +351,7 @@ export default function BackendApp() {
       const created = await api.createWorld(worldDefinition);
       const role = roleScenarioSelected ? scenarioForTemplate(definition.templateId)?.roles.find(r=>r.id===heroChoice) : undefined;
       const custom = !heroChoice || heroChoice==='custom';
-      const portrait = custom&&avatarRemoved ? '' : (custom?heroAvatar:undefined) || await heroPortrait(heroChoice ?? 'custom', heroSeed || definition.avatar, definition.templateId || created.world, definition.avatarStyle).catch(() => undefined);
+      const portrait = custom&&avatarRemoved ? '' : (custom?selectedAvatar:undefined) || await heroPortrait(heroChoice ?? 'custom', heroSeed || definition.avatar, definition.templateId || created.world, definition.avatarStyle).catch(() => undefined);
       if (!savePersona(created.id, created.world, { goal: role?.goal??heroGoal.trim(), skills: role?.skills.map(s=>s.name)??heroSkills, ...(role?{roleId:role.id,templateId:definition.templateId!}:{}), avatar: portrait })) setStorageError(true);
       accountIdentity(created.id,owned[0]?.name??created.name);
       const p = installPlayer(created); trackEvent('onboarding_step', { step: 'done', ok: true, world: p.world }); localSave('qualities', qualities);
@@ -524,7 +531,7 @@ export default function BackendApp() {
       {screen === 'catalog' && owned.length > 0 && <section className="saved-worlds"><h2 className="section-title">Мои миры</h2><WorldCarousel>{orderedOwned.map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} onDelete={()=>setWorldToDelete(d)} />)}</WorldCarousel></section>}
       <div className="filter-strip">{['Все', ...new Set(entries.map(({ world }) => world.genre))].map(g => <Chip key={g} selected={genre === g} onClick={() => setGenre(g)}>{g}</Chip>)}</div>
       {filtered.length ? <div className="world-grid">{filtered.map(({ key, world: w, available, storyVariant }) => <WorldCard key={key} world={w} disabled={!available || busy} selected={available && selected?.id === w.id && selectedVariant === !!storyVariant} onClick={available ? () => void openWorld(w, !!storyVariant) : undefined} />)}</div> : <EmptyState title="Такого мира пока нет" action={<Button onClick={() => { setQuery(''); setGenre('Все'); if (!templates.length) void boot(); }}>Сбросить поиск</Button>}>Попробуй другое название или убери фильтр.</EmptyState>}
-      {player?.hitOwnWorldMilestone && <div className="section"><Button onClick={() => { setDefinition({ ...blankWorld(), name: player.name, avatar: player.handle, stars: [{ id: crypto.randomUUID(), name: '', role: '', about: '', voice: 'Живо и по делу', avatarSeed: 'guide', trait: 1, relation: 0 }] }); go('hero'); }}>Создать свой мир</Button></div>}
+      {player?.hitOwnWorldMilestone && <div className="section"><Button onClick={startOwnWorld}>Создать свой мир</Button></div>}
     </>;
   } else if (screen === 'intro' && selected) content = <WorldIntro key={selected.id} step={introStep} onStepChange={setIntroStep} world={selected} busy={busy} resume={owned.some(d => d.id === selected.id)} onBack={back} onEnter={() => void enter()} />;
   else if (screen === 'welcome') content = <Onboarding key="entry-welcome" initialStep={0} onTry={() => go('age')} onDone={() => go('age')} onBack={back} />;
@@ -537,6 +544,7 @@ export default function BackendApp() {
     onLook={seed=>{setHeroSeed(seed);setHeroAvatar(undefined); setHeroAppearance(undefined);setAvatarRemoved(false);}} onUpload={src=>{setHeroAvatar(src);setAvatarRemoved(false);}} onRemove={()=>{setHeroAvatar(undefined); setHeroAppearance(undefined);setAvatarRemoved(true);}}
     address={address} onAddress={setAddress} worldId={definition.templateId} worldTitle={selected?.title||definition.title} style={definition.avatarStyle}
     busy={busy} canEnter={!!heroChoice&&!!definition.stars.length&&(heroChoice!=='custom'||!!(definition.name.trim()&&definition.avatar.trim()&&heroGoal.trim()))} onEnter={()=>void createWorld()}/></>;
+  else if (screen === 'own-world' && definition) content = <WorldEditor key="own-world" creating initial={definition} busy={busy} error={error} onBack={back} onSave={(value,portrait)=>void createWorld(value,portrait)}/>;
   else if (screen === 'world-settings' && worldEdit) content = <WorldEditor key={worldEdit.id} initial={worldEdit.definition} busy={busy} error={error} onBack={back} onSave={value=>void saveWorldSettings(value)}/>;
   else if (screen === 'hero' && definition) content = <><ScreenHeading title="Свой мир" back={back} /><section className="section stack"><TextField label="Имя персонажа" maxLength={80} value={definition.name} onChange={e => setDefinition({ ...definition, name: e.target.value })} /><TextField label="Имя канала" maxLength={80} value={definition.avatar} onChange={e => setDefinition({ ...definition, avatar: e.target.value })} />
     <label>Как обращаться<select value={address} onChange={e => setAddress(e.target.value as Address)}><option value="nick">По имени</option><option value="she">Она</option><option value="he">Он</option></select></label>

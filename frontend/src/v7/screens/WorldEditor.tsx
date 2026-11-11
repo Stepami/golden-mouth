@@ -1,6 +1,8 @@
 import {useId,useState} from 'react';
 import type {WorldDefinition} from '../../api/types';
 import {Button,Icon,Notice,ScreenHeading,TextField} from '../ui';
+import {AvatarBuilder} from './AvatarBuilder';
+import {customPortrait} from '../avatarBuilder';
 import './worldEditor.css';
 
 function Area({label,value,onChange,maxLength=2000}:{label:string;value:string;onChange:(value:string)=>void;maxLength?:number}){
@@ -9,8 +11,9 @@ function Area({label,value,onChange,maxLength=2000}:{label:string;value:string;o
 }
 const traits=['Смелость','Поддержка','Загадка','Воображение','Любопытство','Энергия','Ирония и расчёт','Сухой юмор','Самоирония','Азарт','Внимание'];
 
-export function WorldEditor({initial,creating=false,busy,error,onSave,onBack}:{initial:WorldDefinition;creating?:boolean;busy:boolean;error:string;onSave:(value:WorldDefinition)=>void;onBack:()=>void}){
+export function WorldEditor({initial,creating=false,busy,error,onSave,onBack}:{initial:WorldDefinition;creating?:boolean;busy:boolean;error:string;onSave:(value:WorldDefinition,portrait?:string)=>void;onBack:()=>void}){
  const [value,setValue]=useState(()=>structuredClone(initial));
+ const [look,setLook]=useState('custom-man-1');
  const [confirmExit,setConfirmExit]=useState(false);
  const dirty=JSON.stringify(value)!==JSON.stringify(initial);
  const update=(patch:Partial<WorldDefinition>)=>setValue(old=>({...old,...patch}));
@@ -18,7 +21,7 @@ export function WorldEditor({initial,creating=false,busy,error,onSave,onBack}:{i
  const ready=!!(value.name.trim()&&value.avatar.trim()&&value.role.trim()&&value.title.trim()&&value.description.trim()&&value.voice.trim()&&value.stars.length&&value.stars.every(s=>s.name.trim()&&s.role.trim()&&s.about.trim()&&s.voice.trim()));
  const leave=()=>{if(busy)return;if(dirty)setConfirmExit(true);else onBack();};
  return <><ScreenHeading title={creating?'Создать свой мир':'Настройки мира'} back={leave}/>
- <form className="section stack world-editor" onSubmit={e=>{e.preventDefault();if(!ready||busy)return;onSave({...value,roles:value.roles.map(s=>s.trim()).filter(Boolean),voices:value.voices.map(s=>s.trim()).filter(Boolean),postIdeas:value.postIdeas.map(s=>s.trim()).filter(Boolean),demoPosts:value.demoPosts.map(s=>s.trim()).filter(Boolean),rules:value.rules.filter(r=>r.locked||r.text.trim())});}}>
+ <form className="section stack world-editor" onSubmit={e=>{e.preventDefault();if(!ready||busy)return;onSave({...value,roles:value.roles.map(s=>s.trim()).filter(Boolean),voices:value.voices.map(s=>s.trim()).filter(Boolean),postIdeas:value.postIdeas.map(s=>s.trim()).filter(Boolean),demoPosts:value.demoPosts.map(s=>s.trim()).filter(Boolean),rules:value.rules.filter(r=>r.locked||r.text.trim())},creating?customPortrait(look):undefined);}}>
  <p className="caption muted">{creating?'Задай мир, своего персонажа и собеседников.':'Изменения будут действовать на следующие посты и ответы. Публикации, подписчики и отношения сохранятся.'}</p>
  <fieldset disabled={busy} className="stack">
  <details open className="world-editor-section"><summary>Мир и начало истории<Icon name="chevron"/></summary><div className="stack">
@@ -39,6 +42,7 @@ export function WorldEditor({initial,creating=false,busy,error,onSave,onBack}:{i
   <TextField label="Имя персонажа" required maxLength={80} value={value.name} onChange={e=>update({name:e.target.value})}/>
   <TextField label="Имя канала" required maxLength={80} value={value.avatar} onChange={e=>update({avatar:e.target.value})}/>
   <TextField label="Кто ты в этом мире" required maxLength={80} value={value.role} onChange={e=>update({role:e.target.value})}/>
+  {creating&&<AvatarBuilder seed={look} onLook={setLook} onRender={()=>{}}/>}
  </div></details>
  <details open className="world-editor-section"><summary>Собеседники · {value.stars.length}<Icon name="chevron"/></summary><div className="stack">
   <p className="caption muted">Персонаж, за которого ты играешь, сюда не входит.</p>
