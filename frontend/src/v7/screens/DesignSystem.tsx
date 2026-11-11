@@ -305,7 +305,7 @@ export function DesignSystem() {
           <h3>Уведомления: события и результаты</h3>
           <ViewFilter value={activityFilter} onChange={setActivityFilter} options={[{value:'events',label:'События'},{value:'results',label:'Результаты'}]} label="Раздел уведомлений"/>
           <p className="system-note">События: ответы, реакции и серия. Результаты: сохранённые итоги постов и комментариев. В истории нет автоскрытия, повторных начислений и наградных эффектов.</p>
-          <h3>История результата / PublicationResult</h3>
+          <h3>История результата / ResultIsland · архив</h3>
           <p className="system-note">Демонстрационный снимок: раскрытие не запускает наградные эффекты и начисления.</p>
           <ResultHistory items={[{id:'example',createdAt:'2026-11-11T09:00:00+03:00',text:'Проверим обещание на конкретном примере.',receipt:{worldId:'example',actionId:'example',actionKind:'post',before:examplePlayer.skills,after:examplePlayer.skills,beforeSubscribers:examplePlayer.subs,result:exampleResults.normal}}]} onOpen={()=>setDialog(true)}/>
           <h3>Уведомление / ActivityItem</h3>

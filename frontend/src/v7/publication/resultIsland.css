@@ -69,3 +69,8 @@ html[data-theme=dark] .result-island--loss { --result-accent:#ffb86b; }
 .result-island-dismiss { position:absolute; right:8px; top:8px; display:flex; align-items:center; gap:4px; }
 .result-island-countdown { min-width:28px; color:var(--color-muted); text-align:right; font:500 .75rem/1.3 var(--font-body); font-variant-numeric:tabular-nums; }
 html[data-large-text=true] .result-island-title { padding-right:120px; }
+
+/* The saved result keeps the live card's design, without overlay behavior or effects. */
+.result-island--archive { position:static; inset:auto; z-index:auto; max-height:none; overflow:visible; animation:none; transform:none; }
+.result-island--archive .result-island-delta { animation:none; }
+.result-island--archive .result-island-title { padding-right:0; }
