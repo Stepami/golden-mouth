@@ -1,5 +1,6 @@
 import {CrystalRewardBadge} from './energy/CrystalRewardBadge';
 import {pickResultPhrase} from './publication/resultCopy';
+import {MyPosts} from './screens/MyPosts';
 import {ComposerText} from './screens/ComposerText';
 import {firstPostFor} from './firstPost';
 import {DailyQuestCard} from './screens/DailyQuestCard';
@@ -93,6 +94,7 @@ export default function BackendApp() {
   const [booting, setBooting] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [feedFilter, setFeedFilter] = useState<'all' | 'mine'>('all');
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [feedLoading, setFeedLoading] = useState(false);
@@ -462,12 +464,15 @@ export default function BackendApp() {
     </div>;
   const renderFeed = () => <>
     {renderWorldHud()}
+    <nav className="filter-strip" aria-label="Публикации в ленте"><Chip selected={feedFilter==='all'} onClick={()=>setFeedFilter('all')}>Все</Chip><Chip selected={feedFilter==='mine'} onClick={()=>setFeedFilter('mine')}>Мои посты</Chip></nav>
     {player?.postsLeft===0&&draft.trim()&&!pending&&<section className="section"><div className="energy-draft-notice"><strong>Черновик ждёт энергии</strong><blockquote className="energy-draft-text">{draft}</blockquote><p>Текст сохранён. Нажми на энергию вверху, чтобы посмотреть восстановление и обмен.</p><Button variant="secondary" onClick={()=>reply?openCompose(reply):openFirstPost()}>Вернуться к черновику</Button></div></section>}
     {!reply && (pending || unknown || publicationFailed) && <PublicationWaiting pending={pending} unknown={unknown} text={draft} status={status} onStop={stopWaiting} onContinue={() => { if (unknown) publish(); else openCompose(); }} />}
+    {feedFilter==='mine' && player ? <MyPosts key={`${player.id}:${player.world}`} worldId={player.worldInstanceId ?? player.world} author={playerView(player)} renderPost={card} onCompose={()=>openCompose()}/> : <>
     {feedError && <div className="section"><Notice title="Не удалось обновить ленту" tone="error">{feedError}</Notice></div>}
     {!feed.length && !feedLoading && !feedError && !pending && !unknown && !publicationFailed && <EmptyState title="Первое слово за тобой" action={<Button onClick={() => openCompose()}>Написать пост</Button>}>{world?.seedPost || 'Расскажи свою версию истории. Здесь появятся публикации и ответы.'}</EmptyState>}
     {feed.map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}
     {(feed.length > 0 || feedError || feedLoading) && (!pending || feed.length > 0) && <div className="section feed-footer"><Button variant="ghost" busy={feedLoading} onClick={() => void loadFeed(player!, cursor ?? undefined)}>{feedLoading ? 'Загружаем ленту' : cursor ? 'Показать ещё' : 'Обновить ленту'}</Button></div>}
+    </>}
   </>;
 
   const worldActivities = activitiesForWorld(activities, player?.world).filter(a=>!!a.kind);
