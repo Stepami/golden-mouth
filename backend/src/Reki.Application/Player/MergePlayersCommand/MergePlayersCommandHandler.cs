@@ -1,14 +1,13 @@
 using Mediator;
-using Microsoft.Extensions.Caching.Memory;
 using Reki.Application.Exceptions;
 using Reki.Application.Player.DeletePlayerCommand;
+using Reki.Application.Player.UpdateLastSeenAtCommand;
 
 namespace Reki.Application.Player.MergePlayersCommand;
 
 internal sealed class MergePlayersCommandHandler(
     IPlayerRepository players,
-    ISender sender,
-    IMemoryCache cache) : ICommandHandler<MergePlayers>
+    ISender sender) : ICommandHandler<MergePlayers>
 {
     public async ValueTask<Unit> Handle(MergePlayers command, CancellationToken cancellationToken)
     {
@@ -24,7 +23,7 @@ internal sealed class MergePlayersCommandHandler(
         await sender.Send(new DeletePlayer(command.FromPlayerId), cancellationToken);
         var updated = target.AddExternalUserIds(source.ExternalUserIds);
         await players.ReplacePlayerAsync(updated, cancellationToken);
-        cache.Remove(target.Id);
+        await sender.Send(new UpdateLastSeenAt(updated, Force: true), cancellationToken);
         return Unit.Value;
     }
 }

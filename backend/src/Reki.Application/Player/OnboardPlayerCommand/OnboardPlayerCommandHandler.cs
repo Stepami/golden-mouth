@@ -3,10 +3,9 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Application.Invites;
-using Reki.Application.Notifications;
+using Reki.Application.Player.UpdateLastSeenAtCommand;
 using Reki.Application.Telemetry;
 using Reki.Domain.Invites;
-using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Player.OnboardPlayerCommand;
@@ -15,7 +14,7 @@ internal sealed class OnboardPlayerCommandHandler(
     IUnitOfWork unitOfWork,
     IInvitationRepository invitationRepository,
     IPlayerRepository playerRepository,
-    INotificationRepository notifications,
+    ISender sender,
     GameDayPeriod gameDayPeriod,
     IOptionsMonitor<GameBalance> balance,
     TimeProvider timeProvider,
@@ -58,13 +57,6 @@ internal sealed class OnboardPlayerCommandHandler(
             async token =>
             {
                 await playerRepository.CreatePlayerAsync(completed, token);
-                if (completed.NotificationChannels.Count > 0)
-                {
-                    await notifications.InsertAsync(
-                        Notification.New(playerId, timeProvider.GetUtcNow().AddDays(1)),
-                        token);
-                }
-
                 if (inviter is not null)
                 {
                     var invite = Invitation.Create(
@@ -78,6 +70,8 @@ internal sealed class OnboardPlayerCommandHandler(
                 return true;
             },
             cancellationToken);
+
+        await sender.Send(new UpdateLastSeenAt(completed, Force: true), cancellationToken);
 
         analytics.TrackPlayer(
             completed,

@@ -1,5 +1,5 @@
 using Mediator;
-using Microsoft.Extensions.Caching.Memory;
+using Reki.Application.Player.UpdateLastSeenAtCommand;
 using Reki.Application.RekiContext;
 using Reki.Domain.Player;
 
@@ -8,7 +8,7 @@ namespace Reki.Application.Player.RegisterWebPushCommand;
 internal sealed class RegisterWebPushCommandHandler(
     IRekiContextAccessor context,
     IPlayerRepository players,
-    IMemoryCache cache) : ICommandHandler<RegisterWebPush>
+    ISender sender) : ICommandHandler<RegisterWebPush>
 {
     public async ValueTask<Unit> Handle(RegisterWebPush command, CancellationToken cancellationToken)
     {
@@ -16,7 +16,7 @@ internal sealed class RegisterWebPushCommandHandler(
         var channel = PlayerNotificationChannel.WebPush(command.Endpoint, command.P256dh, command.Auth);
         var updated = player.AddNotificationChannel(channel);
         await players.ReplacePlayerAsync(updated, cancellationToken);
-        cache.Remove(player.Id);
+        await sender.Send(new UpdateLastSeenAt(updated, Force: true), cancellationToken);
         return Unit.Value;
     }
 }
