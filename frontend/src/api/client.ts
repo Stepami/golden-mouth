@@ -181,6 +181,10 @@ export const api = {
         playerRequests.set(key, request);
         return request;
     },
+    registerWebPush: async (subscription: Wire.WebPushSubscriptionRequest) => data(sdk.player.registerWebPush(subscription, AbortSignal.timeout(15000)).then(response => {
+        if (response.status !== 200) throw new Error('Web Push registration was not confirmed');
+        return response;
+    })),
     exchangeEnergy: async () => data(sdk.player.exchangeEnergy()),
     playerId: (): string | undefined => sessionIdentity?.id,
     hasPlayer: (): boolean => sessionIdentity !== undefined,

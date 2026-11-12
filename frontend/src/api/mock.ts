@@ -18,7 +18,7 @@ export const player: Player = {
   ],
   bio: 'первый год в агентстве. путаю право и лево, но очень стараюсь ✨', type: 'дерзкая с самоиронией',
   drama: 'mid', voice: '«коротко, с самоиронией»',
-  settings: { notifications: 'до 3 в день', quiet: '22:00–9:00', plus: false },
+  settings: { notifications: 'all', quiet: 'off', plus: false },
 }
 
 export const firstPost: Post = {
