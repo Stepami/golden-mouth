@@ -1,5 +1,6 @@
 .install-settings { display:flex; align-items:center; justify-content:space-between; width:100%; gap:12px; padding:12px 0; border:0; border-bottom:1px solid var(--line2); background:none; color:inherit; text-align:left; font:inherit; }
 .install-banner-heading { display:flex; align-items:center; gap:10px; }
+.install-banner-heading + p { margin:8px 0 16px; line-height:1.5; }
 .install-banner-heading strong { flex:1; }
 .install-banner-heading img { flex:none; border-radius:10px; }
 .install-banner-heading button { flex:none; width:44px; height:44px; border:0; background:none; color:var(--muted2); font-size:24px; }
