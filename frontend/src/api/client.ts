@@ -181,10 +181,16 @@ export const api = {
         playerRequests.set(key, request);
         return request;
     },
-    registerWebPush: async (subscription: Wire.WebPushSubscriptionRequest) => data(sdk.player.registerWebPush(subscription, AbortSignal.timeout(15000)).then(response => {
-        if (response.status !== 200) throw new Error('Web Push registration was not confirmed');
-        return response;
-    })),
+    webPushAvailable: () => 'registerWebPush' in sdk.player && typeof sdk.player.registerWebPush === 'function',
+    registerWebPush: async (subscription: { endpoint: string; p256dh: string; auth: string }) => {
+        // shortcut: optional generated method until backend #293 is merged; then use its generated types directly.
+        const client = sdk.player as typeof sdk.player & { registerWebPush?: (body: typeof subscription, signal?: AbortSignal) => Promise<Wire.SwaggerResponse<void>> };
+        if (!client.registerWebPush) throw new Error('Web Push API client is not available');
+        return data(client.registerWebPush(subscription, AbortSignal.timeout(15000)).then(response => {
+            if (response.status !== 200) throw new Error('Web Push registration was not confirmed');
+            return response;
+        }));
+    },
     exchangeEnergy: async () => data(sdk.player.exchangeEnergy()),
     playerId: (): string | undefined => sessionIdentity?.id,
     hasPlayer: (): boolean => sessionIdentity !== undefined,

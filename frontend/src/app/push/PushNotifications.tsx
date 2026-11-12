@@ -19,7 +19,7 @@ export function PushNotifications({playerId}: {playerId: string}) {
   const dialog = useRef<HTMLDivElement>(null), heading = useRef<HTMLHeadingElement>(null)
   const titleId = useId()
   const support = pushSupport(inTelegram)
-  const key = runtimeConfig.webPushPublicKey
+  const key = api.webPushAvailable() ? runtimeConfig.webPushPublicKey : ''
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
 
   const connect = async (ask: boolean) => {
