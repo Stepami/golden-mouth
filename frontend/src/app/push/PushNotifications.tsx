@@ -93,20 +93,20 @@ export function PushNotifications({playerId, entry = 'settings'}: {playerId: str
 
   if (entry === 'banner') {
     if (support !== 'supported' || !key || dismissed || permission === 'denied' || saved) return null
-    return <Card style={{marginBottom: 12}}>
+    return <Card style={{marginBottom: 12}}><div className="browser-offer">
       <strong>Включить уведомления</strong>
       <p className="small muted">Напомним о твоём мире, даже когда игра закрыта.</p>
       {error && <p role="alert" className="small">{error}</p>}
-      <Button disabled={busy} onClick={() => void connect(true)}>{busy ? 'Подключаем…' : permission === 'granted' ? 'Подключить уведомления' : 'Разрешить'}</Button>
-      <Button secondary disabled={busy} onClick={dismiss} style={{marginTop: 8}}>Позже</Button>
-    </Card>
+      <div className="browser-offer-actions"><Button disabled={busy} onClick={() => void connect(true)}>{busy ? 'Подключаем…' : permission === 'granted' ? 'Подключить уведомления' : 'Разрешить'}</Button>
+      <button type="button" className="browser-offer-later" disabled={busy} onClick={dismiss}>Позже</button></div>
+    </div></Card>
   }
 
   return <>
     <button type="button" className="install-settings" onClick={() => setOpen(true)}><span>🔔 Уведомления</span><span aria-hidden="true">›</span></button>
     {open && createPortal(<Sheet onClose={() => setOpen(false)}><div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId} className="install-dialog" style={{overflowWrap: 'anywhere'}}>
       <h2 ref={heading} id={titleId} tabIndex={-1}>Уведомления</h2>
-      {support === 'telegram' ? <p>Напоминания будут приходить сообщением от бота в Telegram. Разрешение браузера здесь не нужно. Если бот заблокирован, сообщения не придут.</p>
+      {support === 'telegram' ? <p>Напоминания приходят в чат с ботом «Реки».</p>
         : support === 'embedded' ? <p>Для браузерных уведомлений открой «Реки» в обычном браузере.</p>
         : support === 'install' ? <><p>На iPhone и iPad уведомления доступны в установленном приложении на iOS 16.4 и новее. Добавь «Реки» на экран «Домой», открой с иконки и войди в аккаунт.</p><InstallApp entry="settings" /></>
         : support === 'unsupported' ? <p>Этот браузер не поддерживает уведомления для «Рек». Попробуй актуальную версию другого браузера. Подключение должно быть защищённым.</p>
