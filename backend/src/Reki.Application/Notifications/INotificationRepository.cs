@@ -5,13 +5,11 @@ namespace Reki.Application.Notifications;
 
 public interface INotificationRepository
 {
-    ValueTask<Notification?> GetPendingAsync(PlayerId playerId, CancellationToken cancellationToken);
+    ValueTask UpsertPendingAsync(Notification notification, bool reschedule, CancellationToken cancellationToken);
 
-    IAsyncEnumerable<Notification> GetDueAsync(DateTimeOffset now, CancellationToken cancellationToken);
+    IAsyncEnumerable<Notification> GetDueAsync(CancellationToken cancellationToken);
 
-    ValueTask InsertAsync(Notification notification, CancellationToken cancellationToken);
-
-    ValueTask ReplaceAsync(Notification notification, CancellationToken cancellationToken);
+    ValueTask SaveAsync(Notification notification, CancellationToken cancellationToken);
 
     ValueTask DeleteForPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
 }

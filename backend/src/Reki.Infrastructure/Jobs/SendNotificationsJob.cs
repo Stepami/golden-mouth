@@ -26,12 +26,12 @@ internal sealed partial class SendNotificationsJob(
 {
     public async Task ExecuteAsync(TickerFunctionContext context, CancellationToken cancellationToken = default)
     {
-        await foreach (var notification in notifications.GetDueAsync(timeProvider.GetUtcNow(), cancellationToken))
+        await foreach (var notification in notifications.GetDueAsync(cancellationToken))
         {
             var player = await players.GetPlayerAsync(notification.PlayerId, cancellationToken);
             if (player is null || player.NotificationChannels.Count == 0)
             {
-                await notifications.ReplaceAsync(
+                await notifications.SaveAsync(
                     notification with { Status = NotificationStatus.Sent },
                     cancellationToken);
                 continue;
@@ -43,10 +43,10 @@ internal sealed partial class SendNotificationsJob(
             await unitOfWork.ExecuteAsync(
                 async token =>
                 {
-                    await notifications.ReplaceAsync(
+                    await notifications.SaveAsync(
                         notification with { Status = NotificationStatus.Sent },
                         token);
-                    await notifications.InsertAsync(
+                    await notifications.SaveAsync(
                         Notification.New(notification.PlayerId, now.AddDays(1), notification.Content),
                         token);
                     return true;

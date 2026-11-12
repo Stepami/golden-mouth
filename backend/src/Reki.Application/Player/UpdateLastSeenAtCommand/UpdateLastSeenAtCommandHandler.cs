@@ -21,25 +21,24 @@ internal sealed class UpdateLastSeenAtCommandHandler(
         }
 
         var now = timeProvider.GetUtcNow();
-        var player = command.Player;
+        var oldLastSeenAt = command.Player.LastSeenAt;
+        var player = command.Player with { LastSeenAt = now };
         await unitOfWork.ExecuteAsync(
             async token =>
             {
-                await players.ReplacePlayerAsync(player with { LastSeenAt = now }, token);
-                if (player.NotificationChannels.Count > 0)
+                await players.ReplacePlayerAsync(player, token);
+                if (player.NotificationChannels.Count <= 0)
                 {
-                    var pending = await notifications.GetPendingAsync(player.Id, token);
-                    if (pending is null)
-                    {
-                        await notifications.InsertAsync(Notification.New(player.Id, now.AddDays(1)), token);
-                    }
-                    else if (now - player.LastSeenAt >= TimeSpan.FromHours(2))
-                    {
-                        await notifications.ReplaceAsync(pending with { SendAt = now.AddDays(1) }, token);
-                    }
+                    return Unit.Value;
                 }
 
-                return true;
+                var sendAt = player.LastSeenAt.AddDays(1);
+                await notifications.UpsertPendingAsync(
+                    Notification.New(player.Id, sendAt),
+                    player.LastSeenAt - oldLastSeenAt >= TimeSpan.FromHours(2),
+                    token);
+
+                return Unit.Value;
             },
             cancellationToken);
         cache.Set(player.Id, now, TimeSpan.FromMinutes(1));
