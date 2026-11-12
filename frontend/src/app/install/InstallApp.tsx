@@ -1,10 +1,10 @@
 import {useEffect,useId,useRef,useState} from 'react'
 import {Button,Card,Sheet} from '../../ui'
 import {inTelegram} from '../../telegram'
-import {dismissInstall,publishedPostFor,requestInstall,useInstall} from './state'
+import {dismissInstall,requestInstall,useInstall} from './state'
 import './install.css'
 
-export function InstallApp({entry,playerId}:{entry:'settings'|'banner';playerId?:string}){
+export function InstallApp({entry}:{entry:'settings'|'banner'}){
  const install=useInstall()
  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('')
  const dialog=useRef<HTMLDivElement>(null),heading=useRef<HTMLHeadingElement>(null),titleId=useId()
@@ -42,7 +42,7 @@ export function InstallApp({entry,playerId}:{entry:'settings'|'banner';playerId?
   finally{setBusy(false)}
  }
  if(install.installed)return null
- if(entry==='banner'&&(!publishedPostFor(playerId)||install.dismissed)&&!open)return null
+ if(entry==='banner'&&install.dismissed&&!open)return null
  return <>
   {entry==='settings'?<button type="button" className="install-settings" onClick={()=>void start()} disabled={busy}><span>Установить приложение</span><span aria-hidden="true">›</span></button>:<Card style={{marginBottom:12}}><div className="install-banner-heading"><img src="/android-chrome-192x192.png?v=wave-2" width={36} height={36} alt=""/><strong>Добавить «Реки» на экран</strong><button type="button" aria-label="Закрыть предложение установки" onClick={dismissInstall} disabled={busy}>×</button></div><p className="small muted">Значок «Рек» появится рядом с другими приложениями.</p><Button disabled={busy} onClick={()=>void start()}>{busy?'Открываем установку…':'Установить приложение'}</Button></Card>}
   {open&&<Sheet onClose={close}><div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId} className="install-dialog">
