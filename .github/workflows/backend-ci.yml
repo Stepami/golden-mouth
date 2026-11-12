@@ -10,6 +10,7 @@ on:
       - "frontend/src/api/generated/reki-api.ts"
       - ".github/workflows/backend-ci.yml"
   workflow_call:
+  # Required by master even for frontend-only releases.
   workflow_dispatch:
 
 permissions:
