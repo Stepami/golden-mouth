@@ -50,8 +50,7 @@ internal sealed class OnboardPlayerCommandHandler(
                 [SkillId.From("humor")] = new(1, 0, 0),
                 [SkillId.From("topic")] = new(1, 0, 0),
             },
-        };
-        completed = completed.AddExternalUserIds([command.ExternalUserId]);
+        }.AddExternalUserIds([command.ExternalUserId]);
 
         await unitOfWork.ExecuteAsync(
             async token =>

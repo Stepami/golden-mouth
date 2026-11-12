@@ -9,7 +9,7 @@ public sealed record Notification(
     DateTimeOffset SendAt,
     string Content)
 {
-    public const string DefaultContent = "Загляните в Реки — вас ждут новые истории.";
+    public const string DefaultContent = "Пора попадать в РЕКИ! Заходи в игру и пиши посты - тебя ждёт успех!";
 
     public static Notification New(PlayerId playerId, DateTimeOffset sendAt, string content = DefaultContent) =>
         new(NotificationId.From(sendAt), playerId, NotificationStatus.Pending, sendAt, content);
