@@ -1,3 +1,4 @@
+import {InstallApp} from '../app/install/InstallApp'
 import { LinkProfile } from '../app/LinkProfile'
 import { displayHandle } from '../app/handle'
 import { Streak } from '../ui/Streak'
@@ -360,6 +361,7 @@ function Settings() {
             <Segmented value={drama} onChange={setD} options={[{ id: 'soft', label: 'мягко' }, { id: 'mid', label: 'средне' }, { id: 'hot', label: 'остро' }, { id: 'off', label: 'без хейта' }]} /></div>
         </Card>
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
+          <InstallApp entry="settings" />
           {row('🎙 Голос канала', `${p.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`, false, () => openPanel('address'))}
           <AvatarPersonalization enabled={personalizeAvatar} onChange={enabled => setAvatarPersonalization(p.id, enabled)} />
           <div className="row" style={{ marginBottom: 12 }}><Avatar seed={p.handle} size={48} /><span className="small muted">Выбор сохраняется на этом устройстве.</span></div>
