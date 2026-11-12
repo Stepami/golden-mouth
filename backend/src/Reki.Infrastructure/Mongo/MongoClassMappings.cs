@@ -4,6 +4,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using Reki.Domain.Events;
 using Reki.Domain.Invites;
+using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -26,6 +27,7 @@ internal static class MongoClassMappings
             new BsonValueObjectConversions.RekiEventIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.InvitationIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.NotificationIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.PlayerIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
@@ -45,11 +47,16 @@ internal static class MongoClassMappings
         RegisterWithMongoId<DailyGameEvent, RekiEventId>(item => item.Id);
         RegisterWithMongoId<World, WorldId>(item => item.Id);
         RegisterWithMongoId<Invitation, InvitationId>(item => item.Id);
+        RegisterWithMongoId<Notification, NotificationId>(
+            item => item.Id,
+            configure: classMap => classMap.MapMember(item => item.SendAt)
+                .SetSerializer(new DateTimeOffsetSerializer(BsonType.DateTime)));
     }
 
     private static void RegisterWithMongoId<TDocument, TId>(
         Expression<Func<TDocument, TId>> idExpression,
-        bool ignoreExtraElements = false)
+        bool ignoreExtraElements = false,
+        Action<BsonClassMap<TDocument>>? configure = null)
     {
         if (BsonClassMap.IsClassMapRegistered(typeof(TDocument)))
         {
@@ -61,6 +68,7 @@ internal static class MongoClassMappings
             classMap.AutoMap();
             classMap.MapIdMember(idExpression);
             classMap.SetIgnoreExtraElements(ignoreExtraElements);
+            configure?.Invoke(classMap);
         });
     }
 }

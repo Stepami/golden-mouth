@@ -3,14 +3,18 @@ import {useEffect, useId, useRef, useState} from 'react'
 import {api} from '../../api/client'
 import {assertSession, sessionGeneration} from '../../api/session'
 import {inTelegram} from '../../telegram'
-import {Button, Sheet} from '../../ui'
+import {Button, Card, Sheet} from '../../ui'
 import {InstallApp} from '../install/InstallApp'
 import {runtimeConfig} from '../runtimeConfig'
 import {applicationServerKey, pushRegistration, pushSupport, subscribePush, validateSubscriptionKey} from './browser'
 
-export function PushNotifications({playerId}: {playerId: string}) {
+export function PushNotifications({playerId, entry = 'settings'}: {playerId: string; entry?: 'settings' | 'banner'}) {
+  const support = pushSupport(inTelegram)
+  const dismissalKey = `reki:push:offer-dismissed:v1:${playerId}`
+  const [dismissed, setDismissed] = useState(() => { try { return localStorage.getItem(dismissalKey) === '1' } catch { return false } })
+  const dismiss = () => { setDismissed(true); try { localStorage.setItem(dismissalKey, '1') } catch { /* Keep this visit's choice in memory. */ } }
   const [open, setOpen] = useState(false)
-  const [permission, setPermission] = useState<NotificationPermission>('default')
+  const [permission, setPermission] = useState<NotificationPermission>(() => support === 'supported' ? Notification.permission : 'default')
   const [saved, setSaved] = useState(false)
   const [subscribed, setSubscribed] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -18,8 +22,7 @@ export function PushNotifications({playerId}: {playerId: string}) {
   const pending = useRef(false), mounted = useRef(true)
   const dialog = useRef<HTMLDivElement>(null), heading = useRef<HTMLHeadingElement>(null)
   const titleId = useId()
-  const support = pushSupport(inTelegram)
-  const key = api.webPushAvailable() ? runtimeConfig.webPushPublicKey : ''
+  const key = runtimeConfig.webPushPublicKey
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
 
   const connect = async (ask: boolean) => {
@@ -55,11 +58,12 @@ export function PushNotifications({playerId}: {playerId: string}) {
   }
 
   useEffect(() => {
-    if (!open) return
+    if (!open && entry !== 'banner') return
     const refresh = () => { if (document.visibilityState !== 'hidden') void connect(false) }
     refresh()
     window.addEventListener('focus', refresh)
     document.addEventListener('visibilitychange', refresh)
+    if (!open) return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh) }
     const previous = document.activeElement as HTMLElement | null
     heading.current?.focus({preventScroll: true})
     const keyboard = (event: KeyboardEvent) => {
@@ -78,7 +82,7 @@ export function PushNotifications({playerId}: {playerId: string}) {
       document.removeEventListener('keydown', keyboard)
       previous?.focus({preventScroll: true})
     }
-  }, [open, playerId])
+  }, [open, playerId, entry])
 
   const status = busy ? 'Проверяем…' : error ? error : permission === 'denied'
     ? 'Браузер запрещает уведомления. Разреши их для «Рек» в настройках браузера или устройства, затем вернись сюда.'
@@ -86,6 +90,17 @@ export function PushNotifications({playerId}: {playerId: string}) {
     : subscribed ? 'Подписка есть в браузере, но её сохранение для этого аккаунта пока не подтверждено.'
     : permission === 'granted' ? 'Разрешение получено. Подключи уведомления для этого аккаунта.'
     : 'Браузер запросит разрешение по нажатию кнопки. Изменить его позже можно в настройках браузера или устройства.'
+
+  if (entry === 'banner') {
+    if (support !== 'supported' || !key || dismissed || permission === 'denied' || saved) return null
+    return <Card style={{marginBottom: 12}}>
+      <strong>Включить уведомления</strong>
+      <p className="small muted">Напомним о твоём мире, даже когда игра закрыта.</p>
+      {error && <p role="alert" className="small">{error}</p>}
+      <Button disabled={busy} onClick={() => void connect(true)}>{busy ? 'Подключаем…' : permission === 'granted' ? 'Подключить уведомления' : 'Разрешить'}</Button>
+      <Button secondary disabled={busy} onClick={dismiss} style={{marginTop: 8}}>Позже</Button>
+    </Card>
+  }
 
   return <>
     <button type="button" className="install-settings" onClick={() => setOpen(true)}><span>🔔 Уведомления</span><span aria-hidden="true">›</span></button>

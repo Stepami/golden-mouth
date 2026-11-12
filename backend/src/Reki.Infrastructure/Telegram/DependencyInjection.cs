@@ -2,7 +2,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Diagnostics;
 using Microsoft.Extensions.Http.Logging;
+using Microsoft.Extensions.Options;
 using OpenTelemetry.Trace;
+using Reki.Application.Notifications;
 using Reki.Infrastructure.Telegram.Auth;
 using Telegram.Bot;
 
@@ -15,6 +17,7 @@ internal static class DependencyInjection
         IConfiguration configuration)
     {
         services.AddOptions<TelegramOptions>().BindConfiguration(TelegramOptions.SectionName);
+        services.AddTransient<IOptionsFactory<TelegramBotClientOptions>, TelegramBotClientOptionsFactory>();
 
         services.AddRedaction();
         services.AddDownstreamDependencyMetadata<TelegramBotTelemetry>();
@@ -27,6 +30,8 @@ internal static class DependencyInjection
                 options.RequestPathLoggingMode = OutgoingPathLoggingMode.Formatted;
                 options.LogBody = false;
             });
+
+        services.AddSingleton<INotificationSender, TelegramNotificationSender>();
 
         return services.AddTelegramAuth(configuration);
     }

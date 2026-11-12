@@ -1,3 +1,4 @@
+import {PushNotifications} from '../app/push/PushNotifications'
 import {InstallApp} from '../app/install/InstallApp'
 import { Resources } from '../ui/Resources'
 import { WorldSwitchDialog } from '../ui/WorldSwitchDialog'
@@ -38,7 +39,7 @@ export function ChooseWorld() {
   const otherWorlds = owned.filter(world => world.id !== currentWorld?.id)
   const resume = async (world: WorldDocument) => { try { const next = await api.me(world.id); setPlayer(next); nav.push('03-5_stage') } catch { setError('Не получилось открыть мир.') } }
   return <div className="screen no-tab"><TopBar title="Миры" rightPlain right={player ? <Resources player={player} /> : undefined} />
-    <div className="pad world-catalog-page worlds-home"><InstallApp entry="banner" />{!player && <><h1>Выбери свою историю</h1><p className="muted">Готовые миры доступны сразу.</p></>}
+    <div className="pad world-catalog-page worlds-home"><InstallApp entry="banner" />{player && <PushNotifications key={player.id} playerId={player.id} entry="banner" />}{!player && <><h1>Выбери свою историю</h1><p className="muted">Готовые миры доступны сразу.</p></>}
       {getWorldDraft() && <Button secondary onClick={() => nav.push(getWorldDraft()?.definition.templateId === null ? '05-7b_own_world' : '01-4_channel')}>Продолжить настройку</Button>}
       {currentWorld && <><h2>Продолжить историю</h2><button className="world-resume card" onClick={() => resume(currentWorld)}><Avatar seed={currentWorld.avatar} avatarStyle={currentWorld.avatarStyle} profile={player ? { address: player.address, ageBand: player.ageBand, personalizeAvatar: avatarPersonalization(player.id) } : undefined} size={48} /><div><b>{currentWorld.name}</b><p className="small muted">{currentWorld.emoji} {currentWorld.title} · {currentWorld.subscribers} подписчиков</p><span>Продолжить →</span></div></button></>}
       {otherWorlds.length > 0 && <><h2>Мои истории</h2><div className="owned-stories">{otherWorlds.map(world => <button className="continue-world card" key={world.id} onClick={() => resume(world)}><Avatar seed={world.avatar} avatarStyle={world.avatarStyle} size={36} /><div><b>{world.name}</b><div className="small muted">{world.emoji} {world.title} · {world.subscribers} подписчиков</div></div><span>Играть →</span></button>)}</div></>}

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Reki.Application;
 using Reki.Application.Events;
 using Reki.Application.Invites;
+using Reki.Application.Notifications;
 using Reki.Application.Player;
 using Reki.Application.Posts;
 using Reki.Application.Worlds;
@@ -32,6 +33,7 @@ internal static class DependencyInjection
         services.AddSingleton<MongoSessionProvider>();
         services.AddSingleton<IUnitOfWork, MongoUnitOfWork>();
         services.AddSingleton<IPlayerRepository, MongoPlayerRepository>();
+        services.AddSingleton<INotificationRepository, MongoNotificationRepository>();
         services.AddSingleton<IWorldRepository, MongoWorldRepository>();
         services.AddSingleton<IPostRepository, MongoPostRepository>();
         services.AddSingleton<IInvitationRepository, MongoInvitationRepository>();

@@ -245,7 +245,7 @@ export async function registerPlayer(body: OnboardingRequest): Promise<PlayerRes
   if (!hasAccess()) {
     if (!registrationExternalId) throw new Error('Registration identity unavailable')
     const authorization = `Basic ${registrationExternalId}`
-    const response = await fetch(`${baseUrl}/onboarding`, {
+    const response = await fetch(`${baseUrl}/auth/onboarding`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: authorization },
       body: JSON.stringify(body), signal: AbortSignal.timeout(authTimeoutMs),
     })
