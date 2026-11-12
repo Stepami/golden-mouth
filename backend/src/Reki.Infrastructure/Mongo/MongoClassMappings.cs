@@ -47,7 +47,15 @@ internal static class MongoClassMappings
         RegisterWithMongoId<DailyGameEvent, RekiEventId>(item => item.Id);
         RegisterWithMongoId<World, WorldId>(item => item.Id);
         RegisterWithMongoId<Invitation, InvitationId>(item => item.Id);
-        RegisterWithMongoId<Notification, NotificationId>(item => item.Id);
+        if (!BsonClassMap.IsClassMapRegistered(typeof(Notification)))
+        {
+            BsonClassMap.RegisterClassMap<Notification>(classMap =>
+            {
+                classMap.AutoMap();
+                classMap.MapIdMember(item => item.Id);
+                classMap.MapMember(item => item.SendAt).SetSerializer(new DateTimeOffsetSerializer(BsonType.DateTime));
+            });
+        }
     }
 
     private static void RegisterWithMongoId<TDocument, TId>(

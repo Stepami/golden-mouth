@@ -32,11 +32,7 @@ internal sealed partial class SendNotificationsJob(
             if (player is null || player.NotificationChannels.Count == 0)
             {
                 await notifications.ReplaceAsync(
-                    notification with
-                    {
-                        Status = NotificationStatus.Sent,
-                        ExpiresAtUtc = timeProvider.GetUtcNow().AddDays(30).UtcDateTime,
-                    },
+                    notification with { Status = NotificationStatus.Sent },
                     cancellationToken);
                 continue;
             }
@@ -48,11 +44,7 @@ internal sealed partial class SendNotificationsJob(
                 async token =>
                 {
                     await notifications.ReplaceAsync(
-                        notification with
-                        {
-                            Status = NotificationStatus.Sent,
-                            ExpiresAtUtc = now.AddDays(30).UtcDateTime,
-                        },
+                        notification with { Status = NotificationStatus.Sent },
                         token);
                     await notifications.InsertAsync(
                         Notification.New(notification.PlayerId, now.AddDays(1), notification.Content),

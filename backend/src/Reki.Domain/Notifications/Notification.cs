@@ -7,8 +7,7 @@ public sealed record Notification(
     PlayerId PlayerId,
     NotificationStatus Status,
     DateTimeOffset SendAt,
-    string Content,
-    DateTime? ExpiresAtUtc = null)
+    string Content)
 {
     public const string DefaultContent = "Загляните в Реки — вас ждут новые истории.";
 
