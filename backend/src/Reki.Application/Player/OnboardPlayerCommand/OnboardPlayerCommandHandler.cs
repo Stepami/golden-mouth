@@ -71,7 +71,7 @@ internal sealed class OnboardPlayerCommandHandler(
             },
             cancellationToken);
 
-        await sender.Send(new UpdateLastSeenAt(completed, Force: true), cancellationToken);
+        await sender.Send(new UpdateLastSeenAt(completed), cancellationToken);
 
         analytics.TrackPlayer(
             completed,
