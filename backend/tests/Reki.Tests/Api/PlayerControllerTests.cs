@@ -76,7 +76,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         int? statusCode = null;
         try
         {
-            await new ExternalTelegramAuthClient(Factory.CreateClient()).CompleteOnboardingAsync(
+            await new AuthClient(Factory.CreateClient()).CompleteOnboardingAsync(
                 new OnboardingRequest
                 {
                     BirthGroup = BirthGroup.Teen,
@@ -84,7 +84,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                 },
                 CancellationToken.None);
         }
-        catch (ExternalTelegramAuthApiException caught)
+        catch (AuthApiException caught)
         {
             statusCode = caught.StatusCode;
         }
@@ -93,8 +93,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(statusCode).IsEqualTo(StatusCodes.Status401Unauthorized);
         using var malformedClient = Factory.CreateClient();
         malformedClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", "not-base64!");
-        var malformed = await Assert.ThrowsAsync<ExternalTelegramAuthApiException>(() =>
-            new ExternalTelegramAuthClient(malformedClient).CompleteOnboardingAsync(
+        var malformed = await Assert.ThrowsAsync<AuthApiException>(() =>
+            new AuthClient(malformedClient).CompleteOnboardingAsync(
                 new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None));
         await Assert.That(malformed?.StatusCode).IsEqualTo(StatusCodes.Status401Unauthorized);
         var after = await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);

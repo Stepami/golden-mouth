@@ -54,7 +54,7 @@ public sealed class TestApiClient : IDisposable
         using var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes(ExternalUserId.Telegram(telegramId).Value)));
-        await new ExternalTelegramAuthClient(client).CompleteOnboardingAsync(request, cancellationToken);
+        await new AuthClient(client).CompleteOnboardingAsync(request, cancellationToken);
         var externalId = ExternalUserId.Telegram(telegramId);
         var player = await _factory.Session.Database.GetCollection<PlayerProfile>("players")
             .Find(item => item.ExternalUserIds.Contains(externalId)).SingleAsync(cancellationToken);

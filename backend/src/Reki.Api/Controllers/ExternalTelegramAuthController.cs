@@ -1,9 +1,7 @@
-using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Requests.Auth;
-using Reki.Api.Requests.Player;
 using Reki.Application.Auth;
 using Reki.Infrastructure.Auth;
 using Telegram.Bot;
@@ -26,7 +24,8 @@ public sealed class ExternalTelegramAuthController(IAuthSessionService sessions)
     [Authorize(Policy = AuthConstants.Policies.RekiMiniAppGrant)]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> ExchangeMiniAppAsync(
         [FromForm] TokenExchangeRequest request,
-        [FromKeyedServices(AuthConstants.Grants.MiniApp)] IExternalUserIdProvider externalUserIdProvider,
+        [FromKeyedServices(AuthConstants.Grants.MiniApp)]
+        IExternalUserIdProvider externalUserIdProvider,
         CancellationToken cancellationToken)
     {
         var result = await sessions.IssueAsync(externalUserIdProvider, request.ClientId, cancellationToken);
@@ -38,28 +37,11 @@ public sealed class ExternalTelegramAuthController(IAuthSessionService sessions)
     [Authorize(Policy = AuthConstants.Policies.RekiTelegramLoginGrant)]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> ExchangeTelegramLoginAsync(
         [FromForm] TokenExchangeRequest request,
-        [FromKeyedServices(AuthConstants.Grants.TelegramLogin)] IExternalUserIdProvider externalUserIdProvider,
+        [FromKeyedServices(AuthConstants.Grants.TelegramLogin)]
+        IExternalUserIdProvider externalUserIdProvider,
         CancellationToken cancellationToken)
     {
         var result = await sessions.IssueAsync(externalUserIdProvider, request.ClientId, cancellationToken);
         return result.ToHttpResult();
-    }
-
-    [HttpPost("/onboarding", Name = "CompleteOnboarding")]
-    [Authorize(AuthenticationSchemes = AuthConstants.Schemes.Onboarding)]
-    public async Task<Ok> CompleteOnboardingAsync(
-        OnboardingRequest request,
-        [FromServices] ISender sender,
-        [FromKeyedServices(AuthConstants.Schemes.Onboarding)] IExternalUserIdProvider provider,
-        CancellationToken cancellationToken)
-    {
-        var externalId = await provider.GetExternalUserIdOrNullAsync(cancellationToken);
-        if (externalId is null)
-        {
-            throw new InvalidOperationException("Onboarding identity is missing.");
-        }
-
-        await sender.Send(request.ToOnboardPlayer(externalId.Value), cancellationToken);
-        return TypedResults.Ok();
     }
 }
