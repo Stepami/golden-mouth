@@ -1,3 +1,4 @@
+import {createPortal} from 'react-dom'
 import {useEffect,useId,useRef,useState} from 'react'
 import {Button,Card,Sheet} from '../../ui'
 import {inTelegram} from '../../telegram'
@@ -16,7 +17,7 @@ export function InstallApp({entry}:{entry:'settings'|'banner'}){
  useEffect(()=>{
   if(!open)return
   const previous=document.activeElement as HTMLElement|null
-  heading.current?.focus()
+  heading.current?.focus({preventScroll:true})
   const key=(event:KeyboardEvent)=>{
    if(event.key==='Escape'){event.preventDefault();close()}
    if(event.key==='Tab'){
@@ -28,7 +29,7 @@ export function InstallApp({entry}:{entry:'settings'|'banner'}){
    }
   }
   document.addEventListener('keydown',key)
-  return()=>{document.removeEventListener('keydown',key);previous?.focus()}
+  return()=>{document.removeEventListener('keydown',key);previous?.focus({preventScroll:true})}
  },[open,busy])
  const start=async()=>{
   setMessage('')
@@ -45,13 +46,13 @@ export function InstallApp({entry}:{entry:'settings'|'banner'}){
  if(entry==='banner'&&install.dismissed&&!open)return null
  return <>
   {entry==='settings'?<button type="button" className="install-settings" onClick={()=>void start()} disabled={busy}><span>Установить приложение</span><span aria-hidden="true">›</span></button>:<Card style={{marginBottom:12}}><div className="install-banner-heading"><img src="/android-chrome-192x192.png?v=wave-2" width={36} height={36} alt=""/><strong>Добавить «Реки» на экран</strong><button type="button" aria-label="Закрыть предложение установки" onClick={dismissInstall} disabled={busy}>×</button></div><p className="small muted">Значок «Рек» появится рядом с другими приложениями.</p><Button disabled={busy} onClick={()=>void start()}>{busy?'Открываем установку…':'Установить приложение'}</Button></Card>}
-  {open&&<Sheet onClose={close}><div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId} className="install-dialog">
+  {open&&createPortal(<Sheet onClose={close}><div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId} className="install-dialog">
    <h2 ref={heading} id={titleId} tabIndex={-1}>Установить «Реки»</h2>
    {embedded?<><p>Открой игру {ios?'в Safari':android?'в Chrome':'в обычном браузере'}.</p>{(ios||android)&&<p>Нажми ⋯ вверху окна и выбери «Открыть в браузере».</p>}<p className="small muted">{ios||android?'Нет такого пункта? Скопируй адрес ниже и вставь его в браузер.':'Скопируй адрес ниже и вставь его в Chrome, Edge или Safari.'}</p></>:ios?<ol><li>В Safari нажми «Поделиться».</li><li>Выбери «На экран “Домой”».</li><li>Нажми «Добавить».</li></ol>:android?<ol><li>В Chrome нажми ⋮.</li><li>Выбери «Установить приложение» или «Добавить на главный экран».</li></ol>:safari?<p>В меню Safari выбери «Файл» → «Добавить в Dock».</p>:<p>В меню браузера выбери «Установить приложение». В Edge этот пункт находится в разделе «Приложения».</p>}
    {install.prompt&&!embedded&&<Button disabled={busy} onClick={()=>void start()}>{busy?'Открываем установку…':'Открыть установку браузера'}</Button>}
    {embedded&&<><label className="small muted" htmlFor={`${titleId}-url`}>Адрес игры</label><input id={`${titleId}-url`} className="install-address" readOnly value={`${location.origin}/`} onFocus={e=>e.target.select()}/>{navigator.clipboard&&<Button secondary onClick={()=>void navigator.clipboard.writeText(`${location.origin}/`).then(()=>setMessage('Адрес скопирован')).catch(()=>setMessage('Выдели и скопируй адрес из поля выше.'))}>Скопировать адрес</Button>}</>}
    {message&&<p role="status" className="small">{message}</p>}
    <Button secondary disabled={busy} onClick={close}>Понятно</Button>
-  </div></Sheet>}
+  </div></Sheet>,document.body)}
  </>
 }
