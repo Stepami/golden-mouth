@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
@@ -15,6 +16,7 @@ using Reki.Application.Player.Responses;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
 using Reki.Domain.Invites;
+using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
@@ -26,6 +28,84 @@ namespace Reki.Tests.Api;
 [NotInParallel("ApiState")]
 public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
+    [Test]
+    [Arguments(119, false)]
+    [Arguments(120, true)]
+    public async Task Me_Activity_ReschedulesAtTwoHoursAsync(int minutes, bool rescheduled)
+    {
+        using var api = Factory.CreateApiClient(18302);
+        var response = await api.RegisterAsync(
+            new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick },
+            CancellationToken.None);
+        var now = Factory.Session.Clock.GetUtcNow();
+        var players = Database.GetCollection<PlayerProfile>("players");
+        var notifications = Database.GetCollection<Notification>("notifications");
+        var pending = await notifications
+            .Find(item => item.PlayerId == response.Id && item.Status == NotificationStatus.Pending)
+            .SingleAsync();
+        var initialSendAt = now.AddDays(2);
+        await notifications.ReplaceOneAsync(item => item.Id == pending.Id, pending with { SendAt = initialSendAt });
+        await players.UpdateOneAsync(
+            item => item.Id == response.Id,
+            Builders<PlayerProfile>.Update.Set(item => item.LastSeenAt, now.AddMinutes(-minutes)));
+        Factory.Services.GetRequiredService<IMemoryCache>().Remove(response.Id);
+
+        await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+
+        var saved = await notifications.Find(item => item.Id == pending.Id).SingleAsync();
+        var player = await players.Find(item => item.Id == response.Id).SingleAsync();
+        await Assert.That(saved.SendAt).IsEqualTo(rescheduled ? now.AddDays(1) : initialSendAt);
+        await Assert.That(player.LastSeenAt).IsEqualTo(now);
+        await Assert
+            .That(await notifications.CountDocumentsAsync(item =>
+                item.PlayerId == response.Id && item.Status == NotificationStatus.Pending)).IsEqualTo(1L);
+    }
+
+    [Test]
+    public async Task Me_WithoutNotificationChannels_DoesNotScheduleAsync()
+    {
+        using var api = Factory.CreateApiClient(18304);
+        var response = await api.RegisterAsync(
+            new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick },
+            CancellationToken.None);
+        var players = Database.GetCollection<PlayerProfile>("players");
+        var notifications = Database.GetCollection<Notification>("notifications");
+        await notifications.DeleteManyAsync(item => item.PlayerId == response.Id);
+        await players.UpdateOneAsync(
+            item => item.Id == response.Id,
+            Builders<PlayerProfile>.Update.Set(item => item.NotificationChannels, Array.Empty<PlayerNotificationChannel>()));
+        Factory.Services.GetRequiredService<IMemoryCache>().Remove(response.Id);
+
+        await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+
+        await Assert.That(await notifications.CountDocumentsAsync(item => item.PlayerId == response.Id)).IsEqualTo(0L);
+    }
+
+    [Test]
+    public async Task Me_CachedActivity_DoesNotUpdatePlayerOrScheduleAsync()
+    {
+        using var api = Factory.CreateApiClient(18303);
+        var response = await api.RegisterAsync(
+            new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick },
+            CancellationToken.None);
+        var now = Factory.Session.Clock.GetUtcNow();
+        var players = Database.GetCollection<PlayerProfile>("players");
+        var notifications = Database.GetCollection<Notification>("notifications");
+        var pending = await notifications
+            .Find(item => item.PlayerId == response.Id && item.Status == NotificationStatus.Pending)
+            .SingleAsync();
+        await players.UpdateOneAsync(
+            item => item.Id == response.Id,
+            Builders<PlayerProfile>.Update.Set(item => item.LastSeenAt, now.AddHours(-3)));
+
+        await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+
+        var player = await players.Find(item => item.Id == response.Id).SingleAsync();
+        var saved = await notifications.Find(item => item.Id == pending.Id).SingleAsync();
+        await Assert.That(player.LastSeenAt).IsEqualTo(now.AddHours(-3));
+        await Assert.That(saved.SendAt).IsEqualTo(pending.SendAt);
+    }
+
     [Test]
     public async Task Me_RegisteredPlayer_ReturnsProfileAsync()
     {
