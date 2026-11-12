@@ -1,0 +1,10 @@
+.install-settings { display:flex; align-items:center; justify-content:space-between; width:100%; gap:12px; padding:12px 0; border:0; border-bottom:1px solid var(--line2); background:none; color:inherit; text-align:left; font:inherit; }
+.install-banner-heading { display:flex; align-items:center; gap:10px; }
+.install-banner-heading strong { flex:1; }
+.install-banner-heading img { flex:none; border-radius:10px; }
+.install-banner-heading button { flex:none; width:44px; height:44px; border:0; background:none; color:var(--muted2); font-size:24px; }
+.install-dialog h2 { margin:0 0 16px; font-size:22px; }
+.install-dialog p,.install-dialog ol { line-height:1.5; }
+.install-dialog li { margin-block:8px; }
+.install-dialog .btn { margin-top:10px; }
+.install-address { width:100%; min-width:0; box-sizing:border-box; background:var(--card); color:var(--text); border:1px solid var(--line2); border-radius:10px; padding:12px; font:inherit; }

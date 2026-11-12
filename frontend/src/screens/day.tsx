@@ -1,3 +1,5 @@
+import {InstallApp} from '../app/install/InstallApp'
+import {notePublishedPost} from '../app/install/state'
 import { LinkProfile } from '../app/LinkProfile'
 import { displayHandle } from '../app/handle'
 import { Streak } from '../ui/Streak'
@@ -220,12 +222,14 @@ function Stage() {
   const list = usePostPages<ChannelPost>(cacheKey, loadPage)
   const gestures = usePostListGestures(cacheKey, list, list.refresh)
   const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
+  useEffect(()=>{if(list.ready&&list.items.length>0)notePublishedPost(p.id)},[list.ready,list.items.length,p.id])
   if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home /></div>
   return (
     <div className="screen channel-screen post-list-screen" ref={gestures.screenRef}>
       {pullIndicator}
       <ChannelHead />
       <div className="pad">
+        <InstallApp entry="banner" playerId={p.id} />
         <Streak streak={p.streak} />
         {banner && p.subs >= 1000 && <Card style={{ marginBottom: 10, background: 'linear-gradient(135deg,#2A1A2E,#1E1A33)', border: '1px solid #FF6B8B55', position: 'relative' }}>
           <button onClick={() => setBanner(false)} className="muted" style={{ position: 'absolute', right: 14, top: 10, background: 'none', border: 'none' }}>✕</button>
@@ -360,6 +364,7 @@ function Settings() {
             <Segmented value={drama} onChange={setD} options={[{ id: 'soft', label: 'мягко' }, { id: 'mid', label: 'средне' }, { id: 'hot', label: 'остро' }, { id: 'off', label: 'без хейта' }]} /></div>
         </Card>
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
+          <InstallApp entry="settings" />
           {row('🎙 Голос канала', `${p.voice} ›`, false, () => nav.push('05-9_voice'))}{row('🙂 Как к тебе обращаться', `${{ she: 'она', he: 'он', nick: 'по нику' }[p.address]} ›`, false, () => openPanel('address'))}
           <AvatarPersonalization enabled={personalizeAvatar} onChange={enabled => setAvatarPersonalization(p.id, enabled)} />
           <div className="row" style={{ marginBottom: 12 }}><Avatar seed={p.handle} size={48} /><span className="small muted">Выбор сохраняется на этом устройстве.</span></div>

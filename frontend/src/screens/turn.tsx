@@ -1,3 +1,4 @@
+import {notePublishedPost} from '../app/install/state'
 import { StoryGoal } from '../ui/StoryGoal'
 import { useEffect, useRef, useState } from 'react'
 import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
@@ -69,6 +70,7 @@ function Live() {
         return
       }
       if (!active) return
+      notePublishedPost(p.id)
       completePostDraft(draftKey(p), text)
       const latest = await refresh()
       if (!active) return
