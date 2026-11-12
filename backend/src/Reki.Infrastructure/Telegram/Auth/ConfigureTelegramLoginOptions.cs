@@ -9,7 +9,7 @@ namespace Reki.Infrastructure.Telegram.Auth;
 
 internal sealed class ConfigureTelegramLoginOptions(
     IOptions<TelegramOptions> telegramOptions,
-    ITelegramBotClient bot) : IConfigureNamedOptions<JwtBearerOptions>
+    IOptions<TelegramBotClientOptions> botOptions) : IConfigureNamedOptions<JwtBearerOptions>
 {
     public void Configure(JwtBearerOptions options) => Configure(AuthConstants.Schemes.TelegramLogin, options);
 
@@ -29,7 +29,7 @@ internal sealed class ConfigureTelegramLoginOptions(
             ValidateIssuer = true,
             ValidIssuer = AuthConstants.Issuers.Telegram,
             ValidateAudience = true,
-            ValidAudience = bot.BotId.ToString(CultureInfo.InvariantCulture),
+            ValidAudience = botOptions.Value.BotId.ToString(CultureInfo.InvariantCulture),
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             ValidAlgorithms = [SecurityAlgorithms.RsaSha256],

@@ -10,8 +10,11 @@ internal static class DependencyInjection
     {
         services.AddOptions<VapidKeyOptions>().BindConfiguration(VapidKeyOptions.SectionName);
         services.AddHttpClient<RekiPushServiceClient>()
-            .ConfigurePrimaryHttpMessageHandler(
-                () => new HttpClientHandler { AllowAutoRedirect = false });
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                AllowAutoRedirect = false,
+                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+            });
         services.AddSingleton<INotificationSender, WebPushNotificationSender>();
         return services;
     }
