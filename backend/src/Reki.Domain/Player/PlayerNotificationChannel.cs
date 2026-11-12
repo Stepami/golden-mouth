@@ -4,14 +4,14 @@ public sealed record PlayerNotificationChannel(
     NotificationChannelType Type,
     IReadOnlyDictionary<string, string> Properties)
 {
-    public static PlayerNotificationChannel? FromExternalIds(IEnumerable<ExternalUserId> externalIds)
-    {
-        var telegram = externalIds.Select(id => id.Value)
-            .FirstOrDefault(id => id.StartsWith("telegram:", StringComparison.Ordinal));
-        return telegram is null
-            ? null
-            : new PlayerNotificationChannel(
-                NotificationChannelType.Telegram,
-                new Dictionary<string, string> { ["chatId"] = telegram[9..] });
-    }
+    public static PlayerNotificationChannel Telegram(long chatId) =>
+        new(
+            NotificationChannelType.Telegram,
+            new Dictionary<string, string>
+                { ["chatId"] = chatId.ToString(System.Globalization.CultureInfo.InvariantCulture) });
+
+    public static PlayerNotificationChannel WebPush(string endpoint, string p256dh, string auth) =>
+        new(
+            NotificationChannelType.WebPush,
+            new Dictionary<string, string> { ["endpoint"] = endpoint, ["p256dh"] = p256dh, ["auth"] = auth });
 }

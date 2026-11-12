@@ -16,10 +16,7 @@ internal sealed class RegisterWebPushCommandHandler(
     public async ValueTask<Unit> Handle(RegisterWebPush command, CancellationToken cancellationToken)
     {
         var player = await context.Context.Player;
-        var channel = new PlayerNotificationChannel(
-            NotificationChannelType.WebPush,
-            new Dictionary<string, string>
-                { ["endpoint"] = command.Endpoint, ["p256dh"] = command.P256dh, ["auth"] = command.Auth });
+        var channel = PlayerNotificationChannel.WebPush(command.Endpoint, command.P256dh, command.Auth);
         var updated = player.AddNotificationChannel(channel);
         await unitOfWork.ExecuteAsync(
             async token =>

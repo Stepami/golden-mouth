@@ -33,11 +33,10 @@ internal sealed class OnboardPlayerCommandHandler(
         var currentBalance = balance.CurrentValue;
         var inviter = await ResolveInviterAsync(command, cancellationToken);
         var playerId = PlayerId.New();
-        var telegram = PlayerNotificationChannel.FromExternalIds([command.ExternalUserId]);
         var completed = new PlayerProfile
         {
             Id = playerId,
-            ExternalUserIds = [command.ExternalUserId],
+            ExternalUserIds = [],
             Settings = new PlayerSettings("all", "22:00-09:00", false),
             BirthGroup = command.BirthGroup,
             Address = command.Address,
@@ -53,16 +52,13 @@ internal sealed class OnboardPlayerCommandHandler(
                 [SkillId.From("topic")] = new(1, 0, 0),
             },
         };
-        if (telegram is not null)
-        {
-            completed = completed.AddNotificationChannel(telegram);
-        }
+        completed = completed.AddExternalUserIds([command.ExternalUserId]);
 
         await unitOfWork.ExecuteAsync(
             async token =>
             {
                 await playerRepository.CreatePlayerAsync(completed, token);
-                if (telegram is not null)
+                if (completed.NotificationChannels.Count > 0)
                 {
                     await notifications.InsertAsync(
                         Notification.New(playerId, timeProvider.GetUtcNow().AddDays(1)),

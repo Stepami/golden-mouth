@@ -21,14 +21,13 @@ internal sealed class AddNotifications(TimeProvider timeProvider) : RekiMigratio
         using var cursor = await players.FindAsync(session, FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken);
         await foreach (var player in cursor.ToAsyncEnumerable().WithCancellation(cancellationToken))
         {
-            var telegram = PlayerNotificationChannel.FromExternalIds(player.ExternalUserIds);
-            var updated = telegram is null ? player : player.AddNotificationChannel(telegram);
+            var updated = player.AddExternalUserIds(player.ExternalUserIds);
             await players.UpdateOneAsync(
                 session,
                 item => item.Id == player.Id,
                 Builders<PlayerProfile>.Update.Set(item => item.NotificationChannels, updated.NotificationChannels),
                 cancellationToken: cancellationToken);
-            if (telegram is not null)
+            if (updated.NotificationChannels.Count > 0)
             {
                 var notification = Notification.New(player.Id, startedAt.AddHours(1 + (Random.Shared.NextDouble() * 23)));
                 await notifications.InsertOneAsync(session, notification, cancellationToken: cancellationToken);

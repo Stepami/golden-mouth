@@ -3,7 +3,6 @@ using Reki.Application.Exceptions;
 using Reki.Application.Notifications;
 using Reki.Application.Player.DeletePlayerCommand;
 using Reki.Domain.Notifications;
-using Reki.Domain.Player;
 
 namespace Reki.Application.Player.MergePlayersCommand;
 
@@ -26,14 +25,9 @@ internal sealed class MergePlayersCommandHandler(
                      ?? throw new ResourceNotFoundException("Player not found.");
         await sender.Send(new DeletePlayer(command.FromPlayerId), cancellationToken);
         var updated = target.AddExternalUserIds(source.ExternalUserIds);
-        var telegram = PlayerNotificationChannel.FromExternalIds(source.ExternalUserIds);
-        if (telegram is not null)
-        {
-            updated = updated.AddNotificationChannel(telegram);
-        }
-
         await players.ReplacePlayerAsync(updated, cancellationToken);
-        if (telegram is not null && await notifications.GetPendingAsync(target.Id, cancellationToken) is null)
+        if (updated.NotificationChannels.Count > 0 &&
+            await notifications.GetPendingAsync(target.Id, cancellationToken) is null)
         {
             await notifications.InsertAsync(
                 Notification.New(target.Id, timeProvider.GetUtcNow().AddDays(1)),

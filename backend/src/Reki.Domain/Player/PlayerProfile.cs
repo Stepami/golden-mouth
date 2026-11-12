@@ -44,8 +44,19 @@ public sealed record PlayerProfile
             NotificationChannels = [.. NotificationChannels.Where(item => item.Type != channel.Type), channel],
         };
 
-    public PlayerProfile AddExternalUserIds(IEnumerable<ExternalUserId> ids) =>
-        this with { ExternalUserIds = ExternalUserIds.Concat(ids).Distinct().ToArray() };
+    public PlayerProfile AddExternalUserIds(IReadOnlyList<ExternalUserId> ids)
+    {
+        var updated = this with { ExternalUserIds = ExternalUserIds.Concat(ids).Distinct().ToArray() };
+        for (var index = 0; index < ids.Count; index++)
+        {
+            if (ids[index].TryGetTelegramId(out var chatId))
+            {
+                updated = updated.AddNotificationChannel(PlayerNotificationChannel.Telegram(chatId.Value));
+            }
+        }
+
+        return updated;
+    }
 
     public PlayerProfile ClaimPlusInterestBonus(int bonus)
     {

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Vogen;
 
 namespace Reki.Domain.Player;
@@ -10,6 +11,18 @@ public readonly partial struct ExternalUserId
     public static ExternalUserId Vk(string id) => From($"vk:{id}");
 
     public static ExternalUserId Yandex(string id) => From($"yandex:{id}");
+
+    public bool TryGetTelegramId([NotNullWhen(true)] out long? id)
+    {
+        if (Value.StartsWith("telegram:"))
+        {
+            id = long.Parse(Value.Split(':')[1]);
+            return true;
+        }
+
+        id = null;
+        return false;
+    }
 
     private static Validation Validate(string value) =>
         !string.IsNullOrWhiteSpace(value) && value.IndexOf(':') > 0 && !value.EndsWith(':')
