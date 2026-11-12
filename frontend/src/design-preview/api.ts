@@ -104,7 +104,8 @@ export function installPreviewApi() {
     if(state.energy<1){onError('failed');return;}
     const post:Post={id,text,authorId:`Player_${playerId.replaceAll('-','')}`,at:new Date().toISOString(),views:24,reactions:[],comments:[actorReply(sampleReply)]};
     currentPosts().unshift(post);spendEnergy();const delta=applyTurn(id);save();
-    onStatus?.('completed');onEvent({type:'result',result:{postId:id,delta,views:24,headline:'Пост опубликован',viral:false,flop:false,whys:[],ribbons:[]}});
+    onStatus?.('completed');onEvent({type:'result',post,predictedAuthorId:post.comments[0]?.authorId,result:{postId:id,delta,views:24,headline:'Пост опубликован',viral:false,flop:delta<0,whys:delta<0?[{icon:'🤔',label:'Грустный тон',value:''}]:[{icon:'🎯',label:'В тему',value:''}],ribbons:[]}});
+   if(post.comments[0])onEvent({type:'comment',comment:post.comments[0]});
    },1200);
    return ()=>clearTimeout(timer);
   },

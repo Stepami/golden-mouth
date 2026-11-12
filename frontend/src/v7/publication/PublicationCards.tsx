@@ -2,10 +2,10 @@ import {RewardArt} from '../ui/RewardArt';
 import {audiencePercent} from './resultCopy';
 import {SkillArt} from '../ui/GameArt';
 import {useEffect,useState} from 'react';
-import type { Player, PostResult, RoleSkillState } from '../../api/types';
+import type { CommentT, Player, PostResult, RoleSkillState } from '../../api/types';
 import { Button, Icon, LoadingIndicator, Progress } from '../ui';
 import type {QuestOutcome} from './outcomes';
-export type PublicationReceipt={worldId:string;actionId?:string;beforeSubscribers?:number;reactionText?:string;questId?:string;actionKind?:'post'|'comment';audienceKnown?:boolean;result:PostResult;before:Player['skills'];roleBefore?:RoleSkillState[];roleAfter?:RoleSkillState[];roleLabels?:string[];after?:Player['skills'];questReward?:{amount:number;title:string;questId:string;source?:'server'|'preview';balanceBefore?:number;balanceAfter?:number};questOutcome?:QuestOutcome};
+export type PublicationReceipt={worldId:string;worldTitle?:string;postText?:string;comment?:CommentT;commentState?:'pending'|'ready'|'failed';commentAuthor?:{name:string;avatar?:string};actionId?:string;beforeSubscribers?:number;reactionText?:string;questId?:string;actionKind?:'post'|'comment';audienceKnown?:boolean;result:PostResult;before:Player['skills'];roleBefore?:RoleSkillState[];roleAfter?:RoleSkillState[];roleLabels?:string[];after?:Player['skills'];questReward?:{amount:number;title:string;questId:string;source?:'server'|'preview';balanceBefore?:number;balanceAfter?:number};questOutcome?:QuestOutcome};
 export function PublicationWaiting({pending,unknown,text,status,onContinue,onStop}:{pending:boolean;unknown:boolean;text:string;status:string;onContinue:()=>void;onStop:()=>void}){
  const [takingLong,setTakingLong]=useState(false);
  useEffect(()=>{setTakingLong(false);if(!pending)return;const timer=setTimeout(()=>setTakingLong(true),15000);return()=>clearTimeout(timer);},[pending]);

@@ -38,7 +38,7 @@
   "stages": [{ "id": "mask", "from": 120 }, { "id": "views", "from": 1000 }, { "id": "strike", "from": 5000 }, { "id": "new_line", "from": 10000 }],
   "difficulties": {
     "easy": {
-      "topic_min_cosine": 0.55,
+      "topic_min_cosine": 0.35,
       "k": 1.0,
       "viral_x": 1.0,
       "hate_from": 5000,
@@ -57,7 +57,7 @@
       }
     },
     "normal": {
-      "topic_min_cosine": 0.65,
+      "topic_min_cosine": 0.45,
       "k": 1.1,
       "viral_x": 1.2,
       "hate_from": 3000,
@@ -76,7 +76,7 @@
       }
     },
     "hard": {
-      "topic_min_cosine": 0.75,
+      "topic_min_cosine": 0.55,
       "k": 1.25,
       "viral_x": 1.4,
       "hate_from": 1000,

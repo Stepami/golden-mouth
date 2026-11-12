@@ -1,3 +1,4 @@
+import {SharePost} from './publication/SharePost';
 import {OwnWorldInvite} from './screens/OwnWorldInvite';
 import {WorldEditor,type WorldEditorPreferences} from './screens/WorldEditor';
 import {setAvatarPersonalization} from '../app/avatarPersonalization';
@@ -150,6 +151,7 @@ export default function BackendApp() {
   const [gainAnimation,setGainAnimation]=useState<{delta:number;nonce:string}>();
   const [accountVisible,setAccountVisible]=useState(5);
   const [receipt, setReceipt] = useState<PublicationReceipt>();
+  const [sharedPost,setSharedPost]=useState<{owner:string;id:string;text?:string}>();
   const [showReceipt,setShowReceipt]=useState(false);
   const [publicationFailed, setPublicationFailed] = useState(false);
   const [prepared, setPrepared] = useState<{ title: string; prompt: string; questId?: string }>();
@@ -407,11 +409,11 @@ export default function BackendApp() {
     openCompose();
     if (roleTask) setPrepared({title: roleTask.context, prompt: roleTask.prompt, questId: roleTask.id});
   };
-  const updateDraft = (text: string) => {
+  const updateDraft = (text: string, fromIdea = false) => {
     setDraft(text);
     if (!player) return;
     if (reply) { const saved = readLocal<ReplyDraft>(replyKey(reply), { text: '' }); if (!saveLocal(replyKey(reply), { ...saved, text })) setStorageError(true); }
-    else { const k = draftKey(player); if (!savePostDraft(k, { ...readPostDraft(k), text, ownWords: true })) setStorageError(true); }
+    else { const k = draftKey(player), saved = readPostDraft(k); if (!savePostDraft(k, { ...saved, text, ownWords: fromIdea ? false : text.length === 0 || saved.ownWords })) setStorageError(true); }
   };
   const openThread = async (id: string) => {
     if (!id || pending) return;
@@ -435,10 +437,20 @@ export default function BackendApp() {
     if (!savePostDraft(k, { ...saved, text: draft, publicationId: id, submittedText: text, ownWords: command.ownWords, submittedOwnWords: command.ownWords })) setStorageError(true);
     sending.current = true; setPending(true); setUnknown(false); setPublicationFailed(false); setError(''); setStatus('pending'); setScreen('feed'); setStack([]);
     let publishedPostId='';
+    let publishedReceipt:PublicationReceipt|undefined;
     cancel.current = api.publish(text, id, event => {
-      if (event.type === 'comment') {
-        recordComments(publishedPostId,player.world,[event.comment]);
-        if (displayedWorld.current === player.world) void loadFeed(player);
+      if (event.type === 'comment' || event.type === 'comment-error') {
+        if(event.type==='comment'){
+          recordComments(publishedPostId,player.world,[event.comment]);
+          setPost(current=>current?.id===publishedPostId&&!current.comments.some(c=>c.id===event.comment.id)?{...current,comments:[...current.comments,event.comment]}:current);
+          if (displayedWorld.current === player.world) void loadFeed(player);
+        }
+        if(publishedReceipt){
+          const actor=event.type==='comment'?world?.cast.find(p=>`Star_${p.id}`===event.comment.authorId):undefined;
+          const updated:PublicationReceipt={...publishedReceipt,comment:event.type==='comment'?event.comment:publishedReceipt.comment,commentState:event.type==='comment'?'ready':'failed',commentAuthor:actor?{name:actor.name,avatar:actor.avatar}:publishedReceipt.commentAuthor};
+          publishedReceipt=resultHistory.save(updated);
+          setReceipt(current=>current?.actionId===id?{...current,comment:updated.comment,commentState:updated.commentState,commentAuthor:updated.commentAuthor}:current);
+        }
         return;
       }
       if (event.type !== 'result') return;
@@ -447,15 +459,16 @@ export default function BackendApp() {
       completePostDraft(k, id, text); setDraft(readPostDraft(k).text);
       const serverOutcome=parseQuestOutcome((event.result as unknown as {questOutcome?:unknown}).questOutcome);
 
-      const value = resultHistory.save(previewTurnReward({ worldId: player.world, actionId:id,beforeSubscribers:turnBefore.beforeSubscribers,reactionText:pickResultPhrase(event.result.delta),questId:turnBefore.questId, result: event.result, before: turnBefore.skills, roleBefore:turnBefore.roleSkills, roleLabels:activeRole?.skills.map(s=>s.name), questOutcome:serverOutcome??({status:'unverified',source:'server',title:roleTask?.context??'Твоя запись',reason:'Пост опубликован, но серверный исход квеста пока не возвращается.'}) }),text);
-      setReceipt(value);setShowReceipt(true);
+      const commenter=world?.cast.find(p=>`Star_${p.id}`===event.predictedAuthorId);
+      const value = resultHistory.save(previewTurnReward({ worldId: player.world, worldTitle:world?.title,postText:text,commentState:event.result.bestComment?'ready':'pending',commentAuthor:commenter?{name:commenter.name,avatar:commenter.avatar}:undefined,actionId:id,beforeSubscribers:turnBefore.beforeSubscribers,reactionText:pickResultPhrase(event.result.delta),questId:turnBefore.questId, result: event.result, before: turnBefore.skills, roleBefore:turnBefore.roleSkills, roleLabels:activeRole?.skills.map(s=>s.name), questOutcome:serverOutcome??({status:'unverified',source:'server',title:roleTask?.context??'Твоя запись',reason:'Пост опубликован, но серверный исход квеста пока не возвращается.'}) }),text);
+      publishedReceipt=value;setReceipt(value);setShowReceipt(true);
       if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,value);
       setToast(event.result); setGainAnimation({delta:event.result.delta,nonce:event.result.postId});
       const best=event.result.bestComment;
       const actor=best?world?.cast.find(p=>p.handle===best.avatar||p.id===best.avatar):undefined;
       if(best&&actor){const notice:ReactionNotice={id:event.result.postId,postId:event.result.postId,worldId:player.world,kind:'reaction',actorName:actor.name,text:best.text,relation:actor.relation};setReactionNotice(notice);}
       setPublicationFailed(false); setUnknown(false); setPending(false); sending.current = false; setStatus('completed');
-      setScreen('feed'); setStack([]); void refresh().then(p => { if(p.world!==value.worldId)return;const updated = { ...value, after: p.skills, roleAfter:p.roleSkills, questOutcome:p.lastTurn?.actionId===id?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome }; const savedResult=resultHistory.save(updated);setReceipt(current=>current?.actionId===updated.actionId?savedResult:current); if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated); const freshActor=best?worldDocumentOf(p.world).stars.find(s=>s.avatarSeed===best.avatar):undefined; if(freshActor){setReactionNotice(n=>n?.id===event.result.postId?{...n,relation:freshActor.relation}:n);setActivities(old=>{const next=old.map(a=>a.id===event.result.postId&&a.worldId===player.world?{...a,relation:freshActor.relation}:a);localSave('activity',next);return next;});} }).catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
+      setScreen('feed'); setStack([]); void refresh().then(p => { if(p.world!==value.worldId)return;const updated = { ...(publishedReceipt??value), after: p.skills, roleAfter:p.roleSkills, questOutcome:p.lastTurn?.actionId===id?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome }; const savedResult=resultHistory.save(updated);publishedReceipt=savedResult;setReceipt(current=>current?.actionId===updated.actionId?savedResult:current); if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated); const freshActor=best?worldDocumentOf(p.world).stars.find(s=>s.avatarSeed===best.avatar):undefined; if(freshActor){setReactionNotice(n=>n?.id===event.result.postId?{...n,relation:freshActor.relation}:n);setActivities(old=>{const next=old.map(a=>a.id===event.result.postId&&a.worldId===player.world?{...a,relation:freshActor.relation}:a);localSave('activity',next);return next;});} }).catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
     }, (state, reason) => {
       sending.current = false; setPending(false); setUnknown(state === 'unknown'); setPublicationFailed(state === 'failed');
       if (state === 'failed') { const latest = readPostDraft(k); savePostDraft(k, { text: latest.text, ownWords: latest.ownWords }); }
@@ -603,7 +616,7 @@ export default function BackendApp() {
   else if (screen === 'messages' && world) content = <><ScreenHeading title="Личка" /><EmptyState title="Сначала — общий разговор" action={<Button onClick={() => go('feed')}>Вернуться в ленту</Button>}>Личные сообщения скоро появятся.</EmptyState><section className="section"><h2 className="section-title">Собеседники</h2>{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}</section></>;
   else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={activityTab==='events'&&worldActivities.length>0&&<button className="link-button caption" onClick={()=>{const next=markWorldActivitiesRead(activities,player?.world);setActivities(next);localSave('activity',next);}}>Прочитать всё</button>}/>
     <ViewFilter value={activityTab} onChange={setActivityTab} options={[{value:'events',label:'События'},{value:'results',label:'Результаты'}]} label="Раздел уведомлений"/>
-    {activityTab==='results'?<ResultHistory items={resultHistory.items} onOpen={id=>void openThread(id)}/>:<>
+    {activityTab==='results'?<ResultHistory items={resultHistory.items} onOpen={id=>void openThread(id)} onNewPost={()=>void openCompose()} onShare={(id,text)=>{if(player)setSharedPost({owner:player.id,id,text});}}/>:<>
       {!worldActivities.length&&<EmptyState title="Пока тихо">Здесь появятся ответы персонажей, реакции на твои посты и отметки серии.</EmptyState>}
       {worldActivities.map(a=><ActivityItem key={a.id} title={a.title} text={a.kind==='likes'?a.postText??'Фрагмент публикации не сохранён':a.text} detail={a.kind==='likes'&&a.count!==undefined?`Реакций: ${a.count}`:undefined} actorName={a.kind==='likes'?undefined:a.actorName} actorAvatar={world?.cast.find(p=>p.name===a.actorName)?.avatar} symbol={a.kind==='streak'?'🔥':a.kind==='likes'?'♡':'✦'} read={a.read} onOpen={()=>{if(a.kind==='streak'){setActivities(old=>{const next=old.map(v=>v.id===a.id&&v.worldId===a.worldId?{...v,read:true}:v);localSave('activity',next);return next;});setOverlay('streak');}else void openThread(a.postId??a.id);}}/>)}
     </>}
@@ -624,7 +637,8 @@ export default function BackendApp() {
     {deleteOpen&&<AccountDeletion onDelete={deleteAccount} onClose={()=>setDeleteOpen(false)}/>}
     {reportId&&<ReportComment onSend={reason=>api.report(reportId,reason)} onClose={()=>setReportId(undefined)}/>}
     {showReceipt&&screen==='thread'&&player&&world&&<div className="result-status-bar">{renderWorldHud()}</div>}
-    {showReceipt&&receipt&&receipt.worldId===player?.world&&<ResultIsland key={receipt.actionId??receipt.result.postId} receipt={receipt} onRead={()=>void openThread(receipt.result.postId)} onClose={()=>setShowReceipt(false)}/>}
+    {showReceipt&&receipt&&receipt.worldId===player?.world&&<ResultIsland key={receipt.actionId??receipt.result.postId} receipt={receipt} onRead={()=>void openThread(receipt.result.postId)} onNewPost={()=>{setShowReceipt(false);void openCompose();}} onShare={()=>setSharedPost({owner:player!.id,id:receipt.result.postId,text:receipt.postText})} onClose={()=>{setShowReceipt(false);if(receipt.actionKind!=='comment'){setFeedFilter('mine');setScreen('feed');setStack([]);}}}/>}
+    {player&&sharedPost?.owner===player.id&&<SharePost playerId={player.id} postId={sharedPost.id} text={sharedPost.text} onClose={()=>setSharedPost(undefined)}/> }
     {reactionNotice&&!showReceipt&&<ReactionTicker notice={reactionNotice} onOpen={()=>{void openThread(reactionNotice.postId);setReactionNotice(undefined);}} onClose={()=>setReactionNotice(undefined)}/>}
     {gainAnimation&&<FollowersFlight delta={gainAnimation.delta} nonce={gainAnimation.nonce}/>}
     {overlay && <Dialog title={{ exit: 'Выйти из мира?', streak: 'Серия дней', skills: 'Навыки и отношения', 'text-size': 'Размер текста', 'local-like': 'Реакция', quote: 'Цитата', about: 'Новая версия' }[overlay]} onClose={() => setOverlay(null)}>

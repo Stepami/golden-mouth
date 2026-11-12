@@ -74,3 +74,22 @@ html[data-large-text=true] .result-island-title { padding-right:120px; }
 .result-island--archive { position:static; inset:auto; z-index:auto; max-height:none; overflow:visible; animation:none; transform:none; }
 .result-island--archive .result-island-delta { animation:none; }
 .result-island--archive .result-island-title { padding-right:0; }
+
+.post-result-island { overflow-wrap:anywhere; --result-accent:var(--color-ink); background:var(--color-surface,var(--color-paper)); border-color:var(--color-divider); }
+.post-result-island-heading { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; color:var(--color-muted); font-size:var(--text-caption,.8125rem); }
+.post-result-island-heading .result-island-close { flex:none; margin:-12px -12px -12px 0; }
+.post-result-island-reaction { margin-bottom:20px; }
+.post-result-island-reaction .row > div:last-child { min-width:0; }
+.post-result-island-reaction > p { margin:12px 0 0; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.5; }
+.post-result-island-delta { display:block; font-size:1.625rem; line-height:1.25; font-weight:600; margin-bottom:6px; }
+.post-result-island-analysis { margin:16px 0; }
+.post-result-island-analysis summary { min-height:44px; display:list-item; align-content:center; cursor:pointer; color:var(--color-muted); }
+.post-result-island-analysis dl { display:grid; gap:8px; margin-block:12px; }
+.post-result-island-analysis dl > div { display:flex; justify-content:space-between; gap:12px; }
+.post-result-island-analysis dd { margin:0; }
+.post-result-island-actions { display:grid; gap:8px; }
+.post-result-island--viral { border-color:var(--color-progress); }
+
+.post-result-island-delta.down { color:var(--color-error); }
+.post-result-island-delta.up { color:var(--color-success); }
+.post-result-island .post-result-island-actions > .button--ghost { justify-self:center; width:auto; min-height:44px; padding:8px 12px; border:0; box-shadow:none; background:none; color:var(--color-muted); }

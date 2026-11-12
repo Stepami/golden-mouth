@@ -70,7 +70,7 @@ internal sealed class CreatePostCommandHandler(
             1,
             false,
             false);
-        var score = await scorer.ScoreAsync(post, world, currentBalance, cancellationToken);
+        var score = await scorer.ScoreAsync(post, world, currentBalance, request.OwnWords, cancellationToken);
         var starId = await stars.GetRelevantCommenterAsync(world, post);
         var flopReason = score.FlopReason ?? (score.Topic > 0 ? null : "off_topic");
         var flop = flopReason is not null;
@@ -156,6 +156,11 @@ internal sealed class CreatePostCommandHandler(
             score.Topic > 0
                 ? new WhyResponse("🎯", "В тему", string.Empty)
                 : new WhyResponse("👎", "Не в тему", string.Empty));
+
+        foreach (var (label, multiplier) in progression.GrowthMultipliers)
+        {
+            whys.Add(new WhyResponse("×", label, $"×{multiplier.ToString("0.###", CultureInfo.InvariantCulture).Replace('.', ',')}"));
+        }
 
         var result = new PostResultResponse(
             post.Id,

@@ -202,17 +202,19 @@ export const api = {
     /** Р“РµРЅРµСЂР°С†РёСЏ, Р·Р°С‚РµРј РјРѕРґРµСЂР°С†РёСЏ Рё Р°РЅРёРјР°С†РёСЏ РјР°СЃСЃРёРІР° СЂРµР°РєС†РёР№; РїСЂРё РѕР±СЂС‹РІРµ СЃРІРµСЂСЏРµРј СЃРѕС…СЂР°РЅС‘РЅРЅС‹Р№ СЃС‚Р°С‚СѓСЃ. */
     publish(text: string, _id: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true, wantId?: string, recoveryOnly = false): () => void {
         let cancelled = false;
+        const generation = sessionGeneration();
         const timer = setTimeout(() => {
             if (recoveryOnly) { onError('unknown'); return; }
             onStatus?.('generating');
             void api.createPost(text, ownWords, wantId).then(async response => {
-                if (cancelled) return;
+                if (cancelled || generation !== sessionGeneration()) return;
                 onStatus?.('completed');
-                onEvent({type:'result',result:response.result});
+                onEvent({type:'result',result:response.result,post:response.post,predictedAuthorId:response.predictedAuthorId});
                 const updatedPost = await api.initialComment(response.post.id, response.predictedAuthorId).catch(() => undefined);
-                if (cancelled) return;
+                if (cancelled || generation !== sessionGeneration()) return;
                 const comment = updatedPost?.comments.at(-1);
                 if (comment) onEvent({type: 'comment', comment});
+                else onEvent({type: 'comment-error'});
             }).catch(() => { if (!cancelled) onError('unknown'); });
         }, 0);
         return () => { cancelled = true; clearTimeout(timer); };

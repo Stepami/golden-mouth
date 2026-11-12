@@ -31,7 +31,7 @@ function Compose() {
   const text = draft.text
   const [durable, setDurable] = useState(true)
   const edit = (value: string, fromIdea = false) => {
-    const next = { ...draft, text: value, ownWords: fromIdea ? false : draft.ownWords || value !== draft.text }
+    const next = { ...draft, text: value, ownWords: fromIdea ? false : value.length === 0 || draft.ownWords }
     setDraft(next); setDurable(savePostDraft(key, next))
   }
   useEffect(() => { setDurable(savePostDraft(key, draft)) }, [key, draft])

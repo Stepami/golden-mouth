@@ -30,9 +30,9 @@ export function ideasForWorld(world:WorldDocument){
   const legacy:Record<string,string>={'Айти-тусовка':'5720946a-ea7c-4a10-9c50-51ce3deefc53','Школа чародеев':'aec9494b-4118-4525-8458-e85d759c8dd9','Вечерело':'b3a1a522-0263-4796-a197-57a8731fc291','Игра домов':'8c02a7fb-3b55-4eb0-b957-1b4869ed9834'};
   return ideas[scenario?.templateId??legacy[world.title]??world.id]??world.postIdeas;
 }
-export function PostIdeas({ideas,draft,onDraft,disabled}:{ideas:string[];draft:string;onDraft:(text:string)=>void;disabled:boolean}){
+export function PostIdeas({ideas,draft,onDraft,disabled}:{ideas:string[];draft:string;onDraft:(text:string,fromIdea?:boolean)=>void;disabled:boolean}){
   const [replacement,setReplacement]=useState<string>();
-  return <>{ideas.length>0&&<section className="post-ideas" aria-label="Подсказки для поста"><p className="caption muted">О чём написать</p><div className="post-ideas-grid">{ideas.slice(0,3).map(text=><button className="post-idea" key={text} title={text} disabled={disabled} onClick={()=>draft.trim()?setReplacement(text):onDraft(text)}><span>{text}</span></button>)}</div></section>}
-    {replacement!==undefined&&<Dialog title="Заменить черновик?" onClose={()=>setReplacement(undefined)}><div className="stack"><p>Текущий текст заменится выбранной подсказкой.</p><Button onClick={()=>{onDraft(replacement);setReplacement(undefined);}}>Заменить</Button><Button variant="secondary" onClick={()=>setReplacement(undefined)}>Оставить мой текст</Button></div></Dialog>}
+  return <>{ideas.length>0&&<section className="post-ideas" aria-label="Подсказки для поста"><p className="caption muted">О чём написать</p><div className="post-ideas-grid">{ideas.slice(0,3).map(text=><button className="post-idea" key={text} title={text} disabled={disabled} onClick={()=>draft.trim()?setReplacement(text):onDraft(text,true)}><span>{text}</span></button>)}</div></section>}
+    {replacement!==undefined&&<Dialog title="Заменить черновик?" onClose={()=>setReplacement(undefined)}><div className="stack"><p>Текущий текст заменится выбранной подсказкой.</p><Button onClick={()=>{onDraft(replacement,true);setReplacement(undefined);}}>Заменить</Button><Button variant="secondary" onClick={()=>setReplacement(undefined)}>Оставить мой текст</Button></div></Dialog>}
   </>;
 }
