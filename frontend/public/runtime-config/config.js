@@ -1,5 +1,7 @@
 window.__REKI_CONFIG__ = Object.freeze({
   apiBaseUrl: '/api/v1',
+  // Set only when the notification backend and its matching VAPID pair are ready.
+  webPushPublicKey: '',
   appClientId: 'reki-app',
   vkApplicationId: 54888095,
   vkRedirectUrl: window.location.origin,

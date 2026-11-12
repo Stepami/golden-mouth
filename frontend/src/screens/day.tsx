@@ -1,3 +1,4 @@
+import {PushNotifications} from '../app/push/PushNotifications'
 import {InstallApp} from '../app/install/InstallApp'
 import { LinkProfile } from '../app/LinkProfile'
 import { displayHandle } from '../app/handle'
@@ -316,34 +317,16 @@ function Settings() {
     catch { setError('Не получилось выйти. Попробуй ещё раз.') }
     finally { setLoggingOut(false) }
   }
-  const [panel, setPanel] = useState<'notifications' | 'quiet' | 'support' | 'data' | 'address' | null>(null)
-  const [notifications, setNotifications] = useState(p.settings.notifications === 'off' ? 'off' : p.settings.notifications === 'important' ? 'important' : 'all')
-  const quietParts = p.settings.quiet.replace('–', '-').split('-')
-  const [quietOff, setQuietOff] = useState(p.settings.quiet === 'off')
-  const [quietStart, setQuietStart] = useState(quietParts[0]?.match(/^\d{2}:\d{2}$/) ? quietParts[0] : '22:00')
-  const [quietEnd, setQuietEnd] = useState(quietParts[1]?.match(/^\d{2}:\d{2}$/) ? quietParts[1] : '09:00')
+  const [panel, setPanel] = useState<'support' | 'data' | 'address' | null>(null)
   const [address, setAddress] = useState(p.address)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const openPanel = (value: typeof panel) => {
     // Reopening starts from saved preferences, discarding a cancelled edit.
-    if (value === 'notifications') setNotifications(p.settings.notifications === 'off' ? 'off' : p.settings.notifications === 'important' ? 'important' : 'all')
     if (value === 'address') setAddress(p.address)
-    if (value === 'quiet') {
-      setQuietOff(p.settings.quiet === 'off')
-      setQuietStart(quietParts[0]?.match(/^\d{2}:\d{2}$/) ? quietParts[0] : '22:00')
-      setQuietEnd(quietParts[1]?.match(/^\d{2}:\d{2}$/) ? quietParts[1] : '09:00')
-    }
     setError(''); setPanel(value)
   }
   const row = (t: string, r: string, last = false, onClick?: () => void) => <button type="button" onClick={onClick} disabled={!onClick || saving} className="row" style={{ width: '100%', textAlign: 'left', color: 'inherit', background: 'none', border: 'none', padding: '12px 0', borderBottom: last ? 'none' : '1px solid var(--line2)' }}><div style={{ flex: 1 }}>{t}</div><span className="muted">{r}</span></button>
-  const save = async (value: Partial<typeof p.settings>) => {
-    if (saving) return
-    setSaving(true); setError('')
-    try { await api.settings(value); patch({ settings: { ...p.settings, ...value } }); setPanel(null); return true }
-    catch { setError('Не получилось сохранить. Попробуй ещё раз.'); return false }
-    finally { setSaving(false) }
-  }
   const setD = async (d: Drama) => {
     if (saving) return
     setSaving(true); setError('')
@@ -356,7 +339,7 @@ function Settings() {
       <TopBar onBack={nav.back} title="Настройки" />
       <div className="pad">
         <Card style={{ padding: '2px 14px', marginBottom: 12 }}>
-          {row('🔔 Уведомления', `${p.settings.notifications === 'off' ? 'выключены' : p.settings.notifications === 'important' ? 'важные' : 'все'} ›`, false, () => openPanel('notifications'))}{row('🌙 Тихие часы', `${p.settings.quiet === 'off' ? 'выключены' : p.settings.quiet} ›`, false, () => openPanel('quiet'))}
+          <PushNotifications key={p.id} playerId={p.id} />
           <div style={{ padding: '12px 0' }}><div>🌩 Градус драмы</div><div className="small muted" style={{ margin: '2px 0 8px' }}>Сколько хейта и скандалов в мире. Фильтр 14+ работает всегда</div>
             <Segmented value={drama} onChange={setD} options={[{ id: 'soft', label: 'мягко' }, { id: 'mid', label: 'средне' }, { id: 'hot', label: 'остро' }, { id: 'off', label: 'без хейта' }]} /></div>
         </Card>
@@ -373,13 +356,10 @@ function Settings() {
       </div>
       {error && !panel && <div className="pad small" role="alert">{error}</div>}
       {panel && <Sheet onClose={() => { if (!saving) setPanel(null) }}>
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 12 }}>{({ notifications: 'Уведомления', quiet: 'Тихие часы', support: 'Поддержка', data: 'Мои данные и правила', address: 'Как к тебе обращаться' })[panel]}</div>
+        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 12 }}>{({ support: 'Поддержка', data: 'Мои данные и правила', address: 'Как к тебе обращаться' })[panel]}</div>
         {panel === 'address' && <><Segmented value={address} onChange={value => setAddress(value as typeof address)} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} /><Button disabled={saving} style={{ marginTop: 14, marginBottom: 8 }} onClick={async () => { if (saving) return; setSaving(true); setError(''); try { await api.settings({ address }); patch({ address }); setPanel(null) } catch { setError('Не получилось сохранить. Попробуй ещё раз.') } finally { setSaving(false) } }}>Сохранить</Button></>}
-        {panel === 'notifications' && <><Segmented value={notifications} onChange={setNotifications} options={[{ id: 'all', label: 'все' }, { id: 'important', label: 'важные' }, { id: 'off', label: 'выключены' }]} /><p className="small muted">Пока сохраняем твой выбор. Уведомления в боте появятся позже.</p></>}
-        {panel === 'quiet' && <><label className="quiet-toggle"><input type="checkbox" checked={quietOff} onChange={e => setQuietOff(e.target.checked)} /><span>Выключить тихие часы</span></label><div className="quiet-times"><label>С <input aria-label="Начало тихих часов" type="time" value={quietStart} disabled={quietOff} onChange={e => setQuietStart(e.target.value)} /></label><label>До <input aria-label="Конец тихих часов" type="time" value={quietEnd} disabled={quietOff} onChange={e => setQuietEnd(e.target.value)} /></label></div><p className="small muted">Пока сохраняем твой выбор. Тихие часы начнут действовать вместе с уведомлениями в боте.</p></>}
         {(panel === 'support' || panel === 'data') && <p className="muted">Скоро будет. Готовим этот раздел.</p>}
         {error && <p className="small" role="alert">{error}</p>}
-        {(panel === 'notifications' || panel === 'quiet') && <Button disabled={saving || (panel === 'quiet' && !quietOff && (!quietStart || !quietEnd))} onClick={() => save(panel === 'notifications' ? { notifications } : { quiet: quietOff ? 'off' : `${quietStart}-${quietEnd}` })} style={{ marginBottom: 8 }}>{saving ? 'Сохраняем…' : 'Сохранить'}</Button>}
         <Button secondary disabled={saving} onClick={() => setPanel(null)}>Закрыть</Button>
       </Sheet>}
       {del && <Sheet onClose={() => { if (!deleting) setDel(false) }}>

@@ -98,6 +98,6 @@
   "access": { "create_world_from_scratch": { "subs": 500, "or_first_friend": true } },
   "challenge": { "days": 3, "active_max": 1, "min_posts": 5, "score": "0.7 * avg(post_quality) + 0.3 * avg(reach / own_median_reach)" },
   "streak": { "rewards": { "3": "posts+2", "7": "card:week_on_air", "14": "frame", "30": "guest_star" }, "burns": false },
-  "notifications": { "max_per_day": 3, "quiet": ["22:00", "09:00"], "evening_teaser": ["17:00", "20:00"], "morning": "09:00" },
+  "notifications": { "interval_hours": 24, "new_session_gap_hours": 2, "last_seen_cache_seconds": 60, "job_interval_minutes": 5, "channels": ["Telegram", "WebPush"], "delivery": "all_channels", "retry": false },
   "safety": { "after_crisis_hate_off_days": 7, "report_review_hours": 24, "min_age": 14 }
 }

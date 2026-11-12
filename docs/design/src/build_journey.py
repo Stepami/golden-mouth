@@ -341,6 +341,8 @@ exec(open(os.path.join(D, 'journey_v32.py'), encoding='utf-8').read())  # #245 M
 exec(open(os.path.join(D, 'journey_v33.py'), encoding='utf-8').read())  # #236 VK login
 exec(open(os.path.join(D, 'journey_v34.py'), encoding='utf-8').read())  # #268 profile linking
 
+exec(open(os.path.join(D, 'journey_v35.py'), encoding='utf-8').read())  # #291 Web Push
+
 CH = os.environ.get('CHROME_BIN') or shutil.which('google-chrome') or shutil.which('chrome')
 if not CH and os.name == 'nt':
     CH = os.path.join(os.environ.get('PROGRAMFILES', 'C:\\Program Files'), 'Google', 'Chrome', 'Application', 'chrome.exe')

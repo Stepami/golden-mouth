@@ -1,5 +1,6 @@
 export interface RuntimeConfig {
   apiBaseUrl: string
+  webPushPublicKey: string
   appClientId: string
   vkApplicationId: number
   vkRedirectUrl: string
@@ -16,6 +17,7 @@ declare global {
 
 const fallbackConfig: Readonly<RuntimeConfig> = Object.freeze({
   apiBaseUrl: '/api/v1',
+  webPushPublicKey: '',
   appClientId: 'reki-app',
   vkApplicationId: 0,
   vkRedirectUrl: '',
@@ -47,7 +49,7 @@ function readRuntimeConfig(): Readonly<RuntimeConfig> {
   const vkRedirectUrl = typeof source?.vkRedirectUrl === 'string' ? source.vkRedirectUrl : fallbackConfig.vkRedirectUrl
   const yandexClientId = typeof source?.yandexClientId === 'string' ? source.yandexClientId : fallbackConfig.yandexClientId
   const yandexRedirectUrl = typeof source?.yandexRedirectUrl === 'string' ? source.yandexRedirectUrl : fallbackConfig.yandexRedirectUrl
-  return Object.freeze({ apiBaseUrl, appClientId, vkApplicationId, vkRedirectUrl, yandexClientId, yandexRedirectUrl, features: Object.freeze(features) })
+  return Object.freeze({ apiBaseUrl, webPushPublicKey: typeof source?.webPushPublicKey === 'string' ? source.webPushPublicKey : '', appClientId, vkApplicationId, vkRedirectUrl, yandexClientId, yandexRedirectUrl, features: Object.freeze(features) })
 }
 
 export const runtimeConfig = readRuntimeConfig()
