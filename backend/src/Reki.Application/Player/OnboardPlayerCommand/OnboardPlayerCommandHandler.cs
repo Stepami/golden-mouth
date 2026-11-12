@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Exceptions;
 using Reki.Application.Invites;
+using Reki.Application.Notifications;
 using Reki.Application.Telemetry;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
@@ -13,6 +14,7 @@ internal sealed class OnboardPlayerCommandHandler(
     IUnitOfWork unitOfWork,
     IInvitationRepository invitationRepository,
     IPlayerRepository playerRepository,
+    INotificationRepository notifications,
     GameDayPeriod gameDayPeriod,
     IOptionsMonitor<GameBalance> balance,
     TimeProvider timeProvider,
@@ -29,9 +31,12 @@ internal sealed class OnboardPlayerCommandHandler(
 
         var currentBalance = balance.CurrentValue;
         var inviter = await ResolveInviterAsync(command, cancellationToken);
+        var playerId = PlayerId.New();
+        var channels = NotificationSubscriptions.Create([command.ExternalUserId]);
         var completed = new PlayerProfile
         {
-            Id = PlayerId.New(),
+            Id = playerId,
+            NotificationChannels = channels,
             ExternalUserIds = [command.ExternalUserId],
             Settings = new PlayerSettings("all", "22:00-09:00", false),
             BirthGroup = command.BirthGroup,
@@ -52,10 +57,20 @@ internal sealed class OnboardPlayerCommandHandler(
             async token =>
             {
                 await playerRepository.CreatePlayerAsync(completed, token);
+                if (channels.Count > 0)
+                {
+                    await notifications.InsertAsync(
+                        NotificationSchedule.Create(playerId, timeProvider.GetUtcNow()),
+                        token);
+                }
 
                 if (inviter is not null)
                 {
-                    var invite = Invitation.Create(inviter.Id, completed.Id, timeProvider.GetUtcNow(), currentBalance.InviteBonusBoth);
+                    var invite = Invitation.Create(
+                        inviter.Id,
+                        completed.Id,
+                        timeProvider.GetUtcNow(),
+                        currentBalance.InviteBonusBoth);
                     await invitationRepository.CreateInviteAsync(invite, token);
                 }
 
@@ -63,7 +78,11 @@ internal sealed class OnboardPlayerCommandHandler(
             },
             cancellationToken);
 
-        analytics.TrackPlayer(completed, "player_created", new Dictionary<string, string>(), referred: inviter is not null);
+        analytics.TrackPlayer(
+            completed,
+            "player_created",
+            new Dictionary<string, string>(),
+            referred: inviter is not null);
         return completed;
     }
 

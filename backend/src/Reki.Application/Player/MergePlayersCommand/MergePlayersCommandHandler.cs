@@ -1,12 +1,15 @@
 using Mediator;
 using Reki.Application.Exceptions;
+using Reki.Application.Notifications;
 using Reki.Application.Player.DeletePlayerCommand;
 
 namespace Reki.Application.Player.MergePlayersCommand;
 
 internal sealed class MergePlayersCommandHandler(
     IPlayerRepository players,
-    ISender sender) : ICommandHandler<MergePlayers>
+    INotificationRepository notifications,
+    ISender sender,
+    TimeProvider timeProvider) : ICommandHandler<MergePlayers>
 {
     public async ValueTask<Unit> Handle(MergePlayers command, CancellationToken cancellationToken)
     {
@@ -16,11 +19,28 @@ internal sealed class MergePlayersCommandHandler(
         }
 
         var source = await players.GetPlayerAsync(command.FromPlayerId, cancellationToken)
-            ?? throw new ResourceNotFoundException("Player not found.");
+                     ?? throw new ResourceNotFoundException("Player not found.");
         var target = await players.GetPlayerAsync(command.ToPlayerId, cancellationToken)
-            ?? throw new ResourceNotFoundException("Player not found.");
+                     ?? throw new ResourceNotFoundException("Player not found.");
         await sender.Send(new DeletePlayer(command.FromPlayerId), cancellationToken);
-        await players.ReplacePlayerAsync(target.AddExternalUserIds(source.ExternalUserIds), cancellationToken);
+        var updated = target.AddExternalUserIds(source.ExternalUserIds);
+        var telegram = NotificationSubscriptions.Create(source.ExternalUserIds).FirstOrDefault();
+        if (telegram is not null)
+        {
+            updated = updated with
+            {
+                NotificationChannels = NotificationSubscriptions.WithChannel(updated.NotificationChannels, telegram),
+            };
+        }
+
+        await players.ReplacePlayerAsync(updated, cancellationToken);
+        if (telegram is not null && await notifications.GetPendingAsync(target.Id, cancellationToken) is null)
+        {
+            await notifications.InsertAsync(
+                NotificationSchedule.Create(target.Id, timeProvider.GetUtcNow()),
+                cancellationToken);
+        }
+
         return Unit.Value;
     }
 }
