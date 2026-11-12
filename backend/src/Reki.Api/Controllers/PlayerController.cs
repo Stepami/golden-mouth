@@ -10,6 +10,7 @@ using Reki.Application.Player.DeletePlayerCommand;
 using Reki.Application.Player.ExchangeEnergyCommand;
 using Reki.Application.Player.GetReferral;
 using Reki.Application.Player.MergePlayersCommand;
+using Reki.Application.Player.RegisterWebPushCommand;
 using Reki.Application.Player.Responses;
 using Reki.Application.Player.UpdateLastSeenAtCommand;
 using Reki.Application.RekiContext;
@@ -72,10 +73,18 @@ public sealed class PlayerController(
         return TypedResults.Ok();
     }
 
+    [HttpPut("me/notification-channels/web-push", Name = "RegisterWebPush")]
+    public async Task<Ok> RegisterWebPushAsync(WebPushSubscriptionRequest request, CancellationToken cancellationToken)
+    {
+        await sender.Send(new RegisterWebPush(request.Endpoint, request.P256dh, request.Auth), cancellationToken);
+        return TypedResults.Ok();
+    }
+
     [HttpPost("plus-interest", Name = "ClaimPlusInterest")]
     [ActionName("ClaimPlusInterest")]
     public async Task<Ok<PlusInterestResponse>> ClaimPlusInterestAsync(
-        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] PlusInterestRequest? request,
+        [FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)]
+        PlusInterestRequest? request,
         CancellationToken cancellationToken)
     {
         var bonus = await sender.Send(

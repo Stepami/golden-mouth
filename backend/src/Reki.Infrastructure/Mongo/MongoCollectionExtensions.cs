@@ -10,8 +10,9 @@ internal static class MongoCollectionExtensions
         MongoSessionProvider sessionProvider,
         Expression<Func<T, bool>> filter,
         T replacement,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken,
+        ReplaceOptions? options = null) =>
         sessionProvider.Current is { } session
-            ? collection.ReplaceOneAsync(session, filter, replacement, cancellationToken: cancellationToken)
-            : collection.ReplaceOneAsync(filter, replacement, cancellationToken: cancellationToken);
+            ? collection.ReplaceOneAsync(session, filter, replacement, options, cancellationToken)
+            : collection.ReplaceOneAsync(filter, replacement, options, cancellationToken);
 }

@@ -51,7 +51,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
             await Assert.That(await factory.Session.Database.GetCollection<BsonDocument>("players")
                 .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
             firstClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", externalId);
-            await exchange.CompleteOnboardingAsync(new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None);
+            await new AuthClient(firstClient).CompleteOnboardingAsync(new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None);
             first = await ExchangeAsync(firstClient, exchange, initData);
             second = await ExchangeAsync(firstClient, exchange, initData);
         }
@@ -165,7 +165,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
         // Act
         var initData = SignInitData(factory.Session.TelegramBotToken, 21004);
         client.DefaultRequestHeaders.Authorization = Basic(ExternalUserId.Telegram(21004).Value);
-        await exchange.CompleteOnboardingAsync(new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None);
+        await new AuthClient(client).CompleteOnboardingAsync(new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None);
         var token = await ExchangeAsync(client, exchange, initData);
 
         // Assert
@@ -239,7 +239,7 @@ public sealed class AuthControllerTests(ApiFactory factory)
         await Assert.That(await factory.Session.Database.GetCollection<BsonDocument>("players")
             .CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty)).IsEqualTo(0L);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", externalId);
-        await exchange.CompleteOnboardingAsync(
+        await new AuthClient(client).CompleteOnboardingAsync(
             new OnboardingRequest { BirthGroup = BirthGroup.Teen, Address = Address.Nick }, CancellationToken.None);
         var initData = SignInitData(factory.Session.TelegramBotToken, 21003);
         var mini = await ExchangeAsync(client, exchange, initData);

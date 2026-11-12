@@ -1,4 +1,5 @@
 using System.Diagnostics.Metrics;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -149,6 +150,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var beforePlayer = await Database.GetCollection<BsonDocument>("players").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
         var beforeWorld = await Database.GetCollection<BsonDocument>("worlds").Find(FilterDefinition<BsonDocument>.Empty).SingleAsync();
         Factory.Session.Clock.SetUtcNow(player.PostsPeriodStartedAtUtc.AddDays(1));
+        Factory.Services.GetRequiredService<IMemoryCache>().Remove(player.Id);
 
         var current = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         var owned = await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None);
@@ -280,7 +282,7 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         var schedules = await Database.GetCollection<BsonDocument>("ticker_CronTickers")
             .Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
 
-        await Assert.That(schedules.Count).IsEqualTo(4);
+        await Assert.That(schedules.Count).IsEqualTo(5);
         var recovery = schedules.Single(item => item["Function"].AsString == nameof(RestoreEnergyJob));
         await Assert.That(recovery["Expression"].AsString).IsEqualTo("0 * * * * *");
         var reset = schedules.Single(item => item["Function"].AsString == nameof(ResetGameDayJob));
@@ -289,6 +291,8 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
         await Assert.That(reset["Expression"].AsString).IsEqualTo("0 0 9 * * *");
         await Assert.That(count["Expression"].AsString).IsEqualTo("0 * * * * *");
         await Assert.That(prune["Expression"].AsString).IsEqualTo("0 0 3 * * *");
+        var notifications = schedules.Single(item => item["Function"].AsString == nameof(SendNotificationsJob));
+        await Assert.That(notifications["Expression"].AsString).IsEqualTo("0 */5 * * * *");
     }
 
     [Test]

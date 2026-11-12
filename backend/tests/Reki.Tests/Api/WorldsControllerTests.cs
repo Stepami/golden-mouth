@@ -91,7 +91,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         using var api = Factory.CreateApiClient(1021);
         var firstPlayer = await CreatePlayerWithWorldAsync(api);
         var firstId = await GetWorldIdAsync(api);
-        ExternalTelegramAuthApiException? exception = null;
+        AuthApiException? exception = null;
         try
         {
             await api.RegisterAsync(
@@ -102,7 +102,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
                 },
                 CancellationToken.None);
         }
-        catch (ExternalTelegramAuthApiException caught)
+        catch (AuthApiException caught)
         {
             exception = caught;
         }

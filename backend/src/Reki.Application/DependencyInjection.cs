@@ -19,6 +19,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        services.AddMemoryCache();
         services.AddOptions<GameBalance>()
             .Validate(
                 balance => balance.StarFeedOpenProbability is >= 0 and <= 1,

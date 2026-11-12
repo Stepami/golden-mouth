@@ -22,6 +22,7 @@
         <PackageVersion Include="TickerQ" Version="$(TickerQVersion)"/>
         <PackageVersion Include="TickerQ.Instrumentation.OpenTelemetry" Version="$(TickerQVersion)"/>
         <PackageVersion Include="Kot.MongoDB.Migrations.DI" Version="3.1.0"/>
+        <PackageVersion Include="Lib.Net.Http.WebPush" Version="3.3.1"/>
         <PackageVersion Include="MongoDB.Driver" Version="3.13.0"/>
         <PackageVersion Include="OpenIddict.AspNetCore" Version="$(OpenIddictVersion)"/>
         <PackageVersion Include="OpenIddict.MongoDb" Version="$(OpenIddictVersion)"/>
@@ -45,6 +46,7 @@
         <PackageVersion Include="Microsoft.Extensions.Http.Diagnostics" Version="$(MicrosoftTelemetryVersion)"/>
         <PackageVersion Include="Microsoft.Extensions.Telemetry.Abstractions" Version="$(MicrosoftTelemetryVersion)"/>
         <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="$(MicrosoftExtensionsVersion)"/>
+        <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="$(MicrosoftExtensionsVersion)"/>
         <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MicrosoftExtensionsVersion)"/>
         <PackageVersion Include="Microsoft.Extensions.Options" Version="$(MicrosoftExtensionsVersion)"/>
         <PackageVersion Include="Riok.Mapperly" Version="4.3.1"/>
@@ -57,7 +59,7 @@
         <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="$(MicrosoftTelemetryVersion)"/>
         <PackageVersion Include="Telegram.Bot" Version="22.10.4"/>
         <PackageVersion Include="Vogen" Version="8.0.7"/>
-        <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="$(MicrosoftExtensionsVersion)" />
+        <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="$(MicrosoftExtensionsVersion)"/>
         <!--OpenTelemetry-->
         <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OtelVersion)"/>
         <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="$(OtelVersion)"/>

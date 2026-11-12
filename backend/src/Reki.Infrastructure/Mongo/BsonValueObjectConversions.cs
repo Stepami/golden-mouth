@@ -1,5 +1,6 @@
 using Reki.Domain.Events;
 using Reki.Domain.Invites;
+using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
@@ -13,6 +14,7 @@ namespace Reki.Infrastructure.Mongo;
 [BsonSerializer<CommentId>]
 [BsonSerializer<RekiEventId>]
 [BsonSerializer<InvitationId>]
+[BsonSerializer<NotificationId>]
 [BsonSerializer<PlayerId>]
 [BsonSerializer<PostId>]
 [BsonSerializer<SessionId>]

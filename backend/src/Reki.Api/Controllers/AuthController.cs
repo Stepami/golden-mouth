@@ -1,9 +1,11 @@
+using Mediator;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Server.AspNetCore;
 using Reki.Api.Requests.Auth;
+using Reki.Api.Requests.Player;
 using Reki.Application.Auth;
 using Reki.Infrastructure.Auth;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -15,6 +17,25 @@ namespace Reki.Api.Controllers;
 [Route("auth")]
 public sealed class AuthController(IAuthSessionService sessions) : ControllerBase
 {
+    [HttpPost("onboarding", Name = "CompleteOnboarding")]
+    [Authorize(AuthenticationSchemes = AuthConstants.Schemes.Onboarding)]
+    public async Task<Ok> CompleteOnboardingAsync(
+        OnboardingRequest request,
+        [FromServices] ISender sender,
+        [FromKeyedServices(AuthConstants.Schemes.Onboarding)]
+        IExternalUserIdProvider provider,
+        CancellationToken cancellationToken)
+    {
+        var externalId = await provider.GetExternalUserIdOrNullAsync(cancellationToken);
+        if (externalId is null)
+        {
+            throw new InvalidOperationException("Onboarding identity is missing.");
+        }
+
+        await sender.Send(request.ToOnboardPlayer(externalId.Value), cancellationToken);
+        return TypedResults.Ok();
+    }
+
     [Authorize(Policy = AuthConstants.Policies.RekiRefreshGrant)]
     [HttpPost("refresh", Name = "RefreshAuth")]
     public async Task<Results<SignInHttpResult, ForbidHttpResult>> RefreshAsync(
@@ -24,7 +45,9 @@ public sealed class AuthController(IAuthSessionService sessions) : ControllerBas
         var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         return !result.Succeeded || result.Principal is null
             ? InvalidGrant()
-            : TypedResults.SignIn(result.Principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            : TypedResults.SignIn(
+                result.Principal,
+                authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
     [AllowAnonymous]

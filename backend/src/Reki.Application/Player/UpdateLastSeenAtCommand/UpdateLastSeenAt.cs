@@ -3,4 +3,4 @@ using Reki.Domain.Player;
 
 namespace Reki.Application.Player.UpdateLastSeenAtCommand;
 
-public sealed record UpdateLastSeenAt(PlayerProfile Player) : ICommand;
+public sealed record UpdateLastSeenAt(PlayerProfile Player, bool Force = false) : ICommand;
