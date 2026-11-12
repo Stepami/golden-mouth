@@ -106,7 +106,7 @@ export function PushNotifications({playerId, entry = 'settings'}: {playerId: str
     <button type="button" className="install-settings" onClick={() => setOpen(true)}><span>🔔 Уведомления</span><span aria-hidden="true">›</span></button>
     {open && createPortal(<Sheet onClose={() => setOpen(false)}><div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId} className="install-dialog" style={{overflowWrap: 'anywhere'}}>
       <h2 ref={heading} id={titleId} tabIndex={-1}>Уведомления</h2>
-      {support === 'telegram' ? <p>Напоминания будут приходить сообщением от бота в Telegram. Разрешение браузера здесь не нужно. Если бот заблокирован, сообщения не придут.</p>
+      {support === 'telegram' ? <p>Напоминания приходят в чат с ботом «Реки».</p>
         : support === 'embedded' ? <p>Для браузерных уведомлений открой «Реки» в обычном браузере.</p>
         : support === 'install' ? <><p>На iPhone и iPad уведомления доступны в установленном приложении на iOS 16.4 и новее. Добавь «Реки» на экран «Домой», открой с иконки и войди в аккаунт.</p><InstallApp entry="settings" /></>
         : support === 'unsupported' ? <p>Этот браузер не поддерживает уведомления для «Рек». Попробуй актуальную версию другого браузера. Подключение должно быть защищённым.</p>
