@@ -26,14 +26,14 @@ internal sealed class UpdateLastSeenAtCommandHandler(
             async token =>
             {
                 await players.ReplacePlayerAsync(player with { LastSeenAt = now }, token);
-                if (now - player.LastSeenAt >= TimeSpan.FromHours(2) && player.NotificationChannels.Count > 0)
+                if (player.NotificationChannels.Count > 0)
                 {
                     var pending = await notifications.GetPendingAsync(player.Id, token);
                     if (pending is null)
                     {
                         await notifications.InsertAsync(Notification.New(player.Id, now.AddDays(1)), token);
                     }
-                    else
+                    else if (now - player.LastSeenAt >= TimeSpan.FromHours(2))
                     {
                         await notifications.ReplaceAsync(pending with { SendAt = now.AddDays(1) }, token);
                     }
