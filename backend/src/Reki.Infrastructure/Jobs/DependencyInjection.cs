@@ -1,6 +1,4 @@
 using System.Text.Json.Serialization.Metadata;
-using Lib.Net.Http.WebPush;
-using Lib.Net.Http.WebPush.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Reki.Application.Posts;
@@ -26,18 +24,7 @@ internal static class DependencyInjection
         IJsonTypeInfoResolver jsonContext)
     {
         services.AddOptions<JobsOptions>().BindConfiguration(JobsOptions.SectionName);
-        services.AddSingleton(_ =>
-        {
-            var privateKey = configuration["VAPID_PRIVATE"] ??
-                             throw new InvalidOperationException("VAPID_PRIVATE is required.");
-            return new PushServiceClient(new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }))
-            {
-                AutoRetryAfter = false,
-                DefaultAuthentication = new VapidAuthentication(
-                    "BJmXVDwTVp0Hqu2Q2WE-fCC-yGs7iqFjh9DOniZuH-SIhvtPFi1fVtcU9mfTB4akGeKLzShYbZU5ywGRFEAxoZw",
-                    privateKey),
-            };
-        });
+
         services.AddSingleton<IStarFeedScheduler<ScheduleFromFeedRequest>, StarFeedOnFeedOpenedScheduler>();
         services.AddSingleton<IStarFeedScheduler<ScheduleFromPostRequest>, StarFeedOnPostPublishedScheduler>();
         services.AddSingleton<IStarFeedScheduler<ScheduleFromCommentRequest>, StarFeedOnCommentPublishedScheduler>();

@@ -1,28 +1,18 @@
-using System.Globalization;
-using System.Text.Json;
-using Lib.Net.Http.WebPush;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Reki.Application;
 using Reki.Application.Notifications;
 using Reki.Application.Player;
 using Reki.Domain.Notifications;
-using Reki.Domain.Player;
-using Telegram.Bot;
 using TickerQ.Utilities.Base;
 using TickerQ.Utilities.Interfaces;
 
 namespace Reki.Infrastructure.Jobs;
 
-internal sealed partial class SendNotificationsJob(
+internal sealed class SendNotificationsJob(
     INotificationRepository notifications,
     IPlayerRepository players,
     IUnitOfWork unitOfWork,
-    ITelegramBotClient telegram,
-    PushServiceClient push,
-    IOptions<JsonSerializerOptions> json,
     TimeProvider timeProvider,
-    ILogger<SendNotificationsJob> logger) : ITickerFunction
+    IEnumerable<INotificationSender> senders) : ITickerFunction
 {
     public async Task ExecuteAsync(TickerFunctionContext context, CancellationToken cancellationToken = default)
     {
@@ -37,7 +27,11 @@ internal sealed partial class SendNotificationsJob(
                 continue;
             }
 
-            await SendAsync(player, notification.Content, cancellationToken);
+            await Task.WhenAll(
+                player.NotificationChannels
+                    .SelectMany(channel =>
+                        senders.Select(sender =>
+                            sender.SendAsync(channel, notification, cancellationToken))));
 
             var now = timeProvider.GetUtcNow();
             await unitOfWork.ExecuteAsync(
@@ -52,54 +46,6 @@ internal sealed partial class SendNotificationsJob(
                     return true;
                 },
                 cancellationToken);
-        }
-    }
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Notification delivery failed for channel {ChannelType}")]
-    private static partial void LogDeliveryFailed(ILogger logger, NotificationChannelType channelType);
-
-    private async Task SendAsync(PlayerProfile player, string content, CancellationToken cancellationToken)
-    {
-        foreach (var channel in player.NotificationChannels)
-        {
-            try
-            {
-                switch (channel.Type)
-                {
-                    case NotificationChannelType.Telegram:
-                    {
-                        await telegram.SendMessage(
-                            long.Parse(channel.Properties["chatId"], CultureInfo.InvariantCulture),
-                            content,
-                            cancellationToken: cancellationToken);
-                        break;
-                    }
-
-                    case NotificationChannelType.WebPush:
-                    {
-                        var subscription = new PushSubscription { Endpoint = channel.Properties["endpoint"] };
-                        subscription.SetKey(PushEncryptionKeyName.P256DH, channel.Properties["p256dh"]);
-                        subscription.SetKey(PushEncryptionKeyName.Auth, channel.Properties["auth"]);
-                        var payload = JsonSerializer.Serialize(
-                            new Dictionary<string, string> { ["title"] = "Реки", ["body"] = content, ["url"] = "/" },
-                            json.Value);
-                        await push.RequestPushMessageDeliveryAsync(
-                            subscription,
-                            new PushMessage(payload),
-                            cancellationToken);
-                        break;
-                    }
-
-                    default:
-                    {
-                        break;
-                    }
-                }
-            }
-            catch (Exception) when (!cancellationToken.IsCancellationRequested)
-            {
-                LogDeliveryFailed(logger, channel.Type);
-            }
         }
     }
 }
