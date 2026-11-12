@@ -6,6 +6,7 @@ using Reki.Application.Invites;
 using Reki.Application.Notifications;
 using Reki.Application.Telemetry;
 using Reki.Domain.Invites;
+using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Player.OnboardPlayerCommand;
@@ -32,11 +33,10 @@ internal sealed class OnboardPlayerCommandHandler(
         var currentBalance = balance.CurrentValue;
         var inviter = await ResolveInviterAsync(command, cancellationToken);
         var playerId = PlayerId.New();
-        var channels = NotificationSubscriptions.Create([command.ExternalUserId]);
+        var telegram = PlayerNotificationChannel.FromExternalIds([command.ExternalUserId]);
         var completed = new PlayerProfile
         {
             Id = playerId,
-            NotificationChannels = channels,
             ExternalUserIds = [command.ExternalUserId],
             Settings = new PlayerSettings("all", "22:00-09:00", false),
             BirthGroup = command.BirthGroup,
@@ -53,14 +53,19 @@ internal sealed class OnboardPlayerCommandHandler(
                 [SkillId.From("topic")] = new(1, 0, 0),
             },
         };
+        if (telegram is not null)
+        {
+            completed = completed.AddNotificationChannel(telegram);
+        }
+
         await unitOfWork.ExecuteAsync(
             async token =>
             {
                 await playerRepository.CreatePlayerAsync(completed, token);
-                if (channels.Count > 0)
+                if (telegram is not null)
                 {
                     await notifications.InsertAsync(
-                        NotificationSchedule.Create(playerId, timeProvider.GetUtcNow()),
+                        Notification.New(playerId, timeProvider.GetUtcNow().AddDays(1)),
                         token);
                 }
 

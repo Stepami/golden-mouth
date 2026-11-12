@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Caching.Memory;
 using Reki.Application.Notifications;
+using Reki.Domain.Notifications;
 
 namespace Reki.Application.Player.UpdateLastSeenAtCommand;
 
@@ -30,7 +31,7 @@ internal sealed class UpdateLastSeenAtCommandHandler(
                     var pending = await notifications.GetPendingAsync(player.Id, token);
                     if (pending is null)
                     {
-                        await notifications.InsertAsync(NotificationSchedule.Create(player.Id, now), token);
+                        await notifications.InsertAsync(Notification.New(player.Id, now.AddDays(1)), token);
                     }
                     else
                     {

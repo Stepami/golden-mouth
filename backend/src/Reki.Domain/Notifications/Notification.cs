@@ -7,4 +7,10 @@ public sealed record Notification(
     PlayerId PlayerId,
     NotificationStatus Status,
     DateTimeOffset SendAt,
-    string Content);
+    string Content)
+{
+    public const string DefaultContent = "Загляните в Реки — вас ждут новые истории.";
+
+    public static Notification New(PlayerId playerId, DateTimeOffset sendAt, string content = DefaultContent) =>
+        new(NotificationId.From(sendAt), playerId, NotificationStatus.Pending, sendAt, content);
+}

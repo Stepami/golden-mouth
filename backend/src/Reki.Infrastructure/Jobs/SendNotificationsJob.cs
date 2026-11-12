@@ -43,7 +43,7 @@ internal sealed partial class SendNotificationsJob(
                 {
                     await notifications.ReplaceAsync(notification with { Status = NotificationStatus.Sent }, token);
                     await notifications.InsertAsync(
-                        NotificationSchedule.Create(notification.PlayerId, now) with { Content = notification.Content },
+                        Notification.New(notification.PlayerId, now.AddDays(1), notification.Content),
                         token);
                     return true;
                 },

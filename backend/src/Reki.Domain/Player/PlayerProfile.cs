@@ -38,6 +38,12 @@ public sealed record PlayerProfile
 
     public IReadOnlyList<PlayerNotificationChannel> NotificationChannels { get; init; } = [];
 
+    public PlayerProfile AddNotificationChannel(PlayerNotificationChannel channel) =>
+        this with
+        {
+            NotificationChannels = [.. NotificationChannels.Where(item => item.Type != channel.Type), channel],
+        };
+
     public PlayerProfile AddExternalUserIds(IEnumerable<ExternalUserId> ids) =>
         this with { ExternalUserIds = ExternalUserIds.Concat(ids).Distinct().ToArray() };
 
