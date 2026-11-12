@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization.Metadata;
+using Lib.Net.Http.WebPush;
+using Lib.Net.Http.WebPush.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Reki.Application.Posts;
@@ -24,16 +26,30 @@ internal static class DependencyInjection
         IJsonTypeInfoResolver jsonContext)
     {
         services.AddOptions<JobsOptions>().BindConfiguration(JobsOptions.SectionName);
+        services.AddSingleton(_ =>
+        {
+            var privateKey = configuration["VAPID_PRIVATE"] ??
+                             throw new InvalidOperationException("VAPID_PRIVATE is required.");
+            return new PushServiceClient(new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }))
+            {
+                AutoRetryAfter = false,
+                DefaultAuthentication = new VapidAuthentication(
+                    "BJmXVDwTVp0Hqu2Q2WE-fCC-yGs7iqFjh9DOniZuH-SIhvtPFi1fVtcU9mfTB4akGeKLzShYbZU5ywGRFEAxoZw",
+                    privateKey),
+            };
+        });
         services.AddSingleton<IStarFeedScheduler<ScheduleFromFeedRequest>, StarFeedOnFeedOpenedScheduler>();
         services.AddSingleton<IStarFeedScheduler<ScheduleFromPostRequest>, StarFeedOnPostPublishedScheduler>();
         services.AddSingleton<IStarFeedScheduler<ScheduleFromCommentRequest>, StarFeedOnCommentPublishedScheduler>();
 
         var jobs = configuration.GetSection(JobsOptions.SectionName).Get<JobsOptions>() ?? new JobsOptions();
-        var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ?? throw new InvalidOperationException("Mongo configuration is required.");
+        var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ??
+                    throw new InvalidOperationException("Mongo configuration is required.");
 
         services.MapTicker<GenerateStarFeedOnFeedOpenedJob, StarFeedRequest>().WithMaxConcurrency(2);
         services.MapTicker<GenerateStarFeedOnPostPublishedJob, StarFeedOnPostPublishedRequest>().WithMaxConcurrency(2);
-        services.MapTicker<GenerateStarFeedOnCommentPublishedJob, StarFeedOnCommentPublishedRequest>().WithMaxConcurrency(2);
+        services.MapTicker<GenerateStarFeedOnCommentPublishedJob, StarFeedOnCommentPublishedRequest>()
+            .WithMaxConcurrency(2);
         services.MapTicker<ResetGameDayJob>(ServiceLifetime.Singleton)
             .WithCron("0 0 9 * * *")
             .WithMaxConcurrency(1);
@@ -46,9 +62,13 @@ internal static class DependencyInjection
         services.MapTicker<PruneAuthJob>()
             .WithCron("0 0 3 * * *")
             .WithMaxConcurrency(1);
+        services.MapTicker<SendNotificationsJob>(ServiceLifetime.Singleton)
+            .WithCron("0 */5 * * * *")
+            .WithMaxConcurrency(1);
         services.AddTickerQ<RekiTimeTicker, CronTickerEntity>(options =>
         {
-            options.ConfigureScheduler(scheduler => scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
+            options.ConfigureScheduler(scheduler =>
+                scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
             options.AddOperationalStore(store => store.UseExistingMongoClient(mongo.DatabaseName));
             options.WithJsonContext(jsonContext);
             options.AddOpenTelemetryInstrumentation();
