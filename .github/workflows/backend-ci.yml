@@ -2,16 +2,8 @@ name: Backend CI
 
 on:
   push:
-    branches-ignore:
-      - master
-    paths:
-      - "backend/**"
-      - "frontend/nswag.frontend.json"
-      - "frontend/src/api/generated/reki-api.ts"
-      - ".github/workflows/backend-ci.yml"
+    branches-ignore: [master]
   workflow_call:
-  # Required by master even for frontend-only releases.
-  workflow_dispatch:
 
 permissions:
   contents: read

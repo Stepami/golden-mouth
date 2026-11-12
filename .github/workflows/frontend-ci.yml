@@ -2,13 +2,8 @@ name: Frontend CI
 
 on:
   push:
-    branches-ignore:
-      - master
-    paths:
-      - "frontend/**"
-      - ".github/workflows/frontend-ci.yml"
+    branches-ignore: [master]
   workflow_call:
-  workflow_dispatch:
 
 permissions:
   contents: read
