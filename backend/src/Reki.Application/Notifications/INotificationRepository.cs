@@ -13,7 +13,5 @@ public interface INotificationRepository
 
     ValueTask ReplaceAsync(Notification notification, CancellationToken cancellationToken);
 
-    ValueTask DeleteAsync(NotificationId id, CancellationToken cancellationToken);
-
     ValueTask DeleteForPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
 }

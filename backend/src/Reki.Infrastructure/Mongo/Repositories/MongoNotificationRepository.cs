@@ -52,9 +52,6 @@ internal sealed class MongoNotificationRepository(IMongoDatabase database, Mongo
             notification,
             cancellationToken);
 
-    public async ValueTask DeleteAsync(NotificationId id, CancellationToken cancellationToken) =>
-        await _notifications.DeleteOneAsync(item => item.Id == id, cancellationToken);
-
     public async ValueTask DeleteForPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
         await _notifications.DeleteManyAsync(
             sessionProvider.Session,

@@ -18,6 +18,10 @@ internal sealed class AddNotifications(TimeProvider timeProvider) : RekiMigratio
         var index = new CreateIndexModel<Notification>(
             Builders<Notification>.IndexKeys.Ascending(item => item.Status).Ascending(item => item.SendAt));
         await notifications.Indexes.CreateOneAsync(index, cancellationToken: cancellationToken);
+        var expiryIndex = new CreateIndexModel<Notification>(
+            Builders<Notification>.IndexKeys.Ascending(item => item.ExpiresAtUtc),
+            new CreateIndexOptions { ExpireAfter = TimeSpan.Zero });
+        await notifications.Indexes.CreateOneAsync(expiryIndex, cancellationToken: cancellationToken);
         using var cursor = await players.FindAsync(session, FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken);
         await foreach (var player in cursor.ToAsyncEnumerable().WithCancellation(cancellationToken))
         {
