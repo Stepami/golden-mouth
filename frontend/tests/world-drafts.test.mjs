@@ -13,7 +13,7 @@ function storage() {
   })
   return data
 }
-const draft = (world, name) => ({ definition: { ...blankWorld(), balanceKey: world, name }, address: 'nick', group: '18+' })
+const draft = (world, name) => ({ definition: { ...blankWorld(), templateId: world, name }, address: 'nick', group: '18+' })
 
 test('switching keeps independent drafts, isolates accounts and deletion clears archived settings', () => {
   globalThis.sessionStorage = storage()

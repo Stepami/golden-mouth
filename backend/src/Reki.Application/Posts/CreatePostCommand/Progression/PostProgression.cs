@@ -7,4 +7,5 @@ public sealed record PostProgression(
     double Quality,
     bool Viral,
     bool Flop,
-    IReadOnlyDictionary<SkillId, SkillProgress> Skills);
+    IReadOnlyDictionary<SkillId, SkillProgress> Skills,
+    IReadOnlyDictionary<string, double> GrowthMultipliers);

@@ -27,7 +27,7 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
         var world = currentBalance.Difficulties[gameWorld.Difficulty];
         var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
         var postIndex = player.Wallet.EnergyUsed + 1;
-        var multiplier = GetGrowthMultiplier(gameWorld, postIndex, ownWords);
+        var (multiplier, multipliers) = GetGrowthMultiplier(gameWorld, postIndex, ownWords);
         var viral = !flop && IsViral(publicationId, quality, world);
 
         var decay = currentBalance.Growth.Decay
@@ -40,6 +40,16 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
                      multiplier;
         var drama = (world.Drama ?? throw new InvalidOperationException("Drama balance is missing."))[gameWorld.Player.Drama];
         var viralMultiplier = viral ? currentBalance.Viral.Multiplier * world.ViralMultiplier : 1;
+        if (decay is < 1 or > 1)
+        {
+            multipliers["Посты за день"] = decay;
+        }
+
+        if (viral)
+        {
+            multipliers["Залёт"] = viralMultiplier;
+        }
+
         var subscriberDelta = flop
             ? -Math.Min(gameWorld.Player.Subscribers, Math.Min(
                 Math.Max(1, (long)Math.Round(growth * world.LossMultiplier * drama.LossMultiplier)),
@@ -51,7 +61,7 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
             postIndex,
             ownWords,
             wantCompleted);
-        return new PostProgression(subscriberDelta, quality, viral, flop, skills);
+        return new PostProgression(subscriberDelta, quality, viral, flop, skills, multipliers);
     }
 
     private static SkillId GetMainSkill(PostScore turn)
@@ -72,26 +82,30 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
         return value / (double)ulong.MaxValue;
     }
 
-    private double GetGrowthMultiplier(Domain.Worlds.World gameWorld, int postIndex, bool ownWords)
+    private (double Value, Dictionary<string, double> Factors) GetGrowthMultiplier(Domain.Worlds.World gameWorld, int postIndex, bool ownWords)
     {
         var currentBalance = balance.CurrentValue;
         double multiplier = 1;
+        var multipliers = new Dictionary<string, double>();
         if (gameWorld.Player.Subscribers < currentBalance.Growth.StarterBelowSubscribers)
         {
             multiplier *= currentBalance.Growth.StarterMultiplier;
+            multipliers["Старт канала"] = currentBalance.Growth.StarterMultiplier;
         }
 
         if (ownWords)
         {
             multiplier *= currentBalance.Growth.OwnWordsMultiplier;
+            multipliers["Свои слова"] = currentBalance.Growth.OwnWordsMultiplier;
         }
 
         if (gameWorld.Player.RestedPostsRemaining > 0 && postIndex <= currentBalance.Growth.RestedFirstPosts)
         {
             multiplier *= currentBalance.Growth.RestedMultiplier;
+            multipliers["Канал отдохнул"] = currentBalance.Growth.RestedMultiplier;
         }
 
-        return multiplier;
+        return (multiplier, multipliers);
     }
 
     private bool IsViral(string publicationId, double quality, DifficultyBalance world)
