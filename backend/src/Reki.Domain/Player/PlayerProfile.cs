@@ -36,6 +36,8 @@ public sealed record PlayerProfile
 
     public required PlayerSettings Settings { get; init; }
 
+    public IReadOnlyList<PlayerNotificationChannel> NotificationChannels { get; init; } = [];
+
     public PlayerProfile AddExternalUserIds(IEnumerable<ExternalUserId> ids) =>
         this with { ExternalUserIds = ExternalUserIds.Concat(ids).Distinct().ToArray() };
 

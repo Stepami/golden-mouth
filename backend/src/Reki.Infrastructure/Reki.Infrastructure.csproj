@@ -4,6 +4,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Lib.Net.Http.WebPush"/>
         <ProjectReference Include="..\Reki.Application\Reki.Application.csproj"/>
         <ProjectReference Include="..\Reki.Domain\Reki.Domain.csproj"/>
     </ItemGroup>
@@ -11,9 +12,9 @@
     <ItemGroup>
         <PackageReference Include="AspNetCore.Authentication.Basic"/>
         <PackageReference Include="AspNetCore.Authentication.ApiKey"/>
-        <PackageReference Include="CommunityToolkit.VectorData.InMemory" />
+        <PackageReference Include="CommunityToolkit.VectorData.InMemory"/>
         <PackageReference Include="DotNext.Threading"/>
-        <PackageReference Include="Kot.MongoDB.Migrations.DI" />
+        <PackageReference Include="Kot.MongoDB.Migrations.DI"/>
         <PackageReference Include="Microsoft.Extensions.AI"/>
         <PackageReference Include="Microsoft.Extensions.AI.OpenAI"/>
         <PackageReference Include="Microsoft.ML.Tokenizers"/>
@@ -22,7 +23,7 @@
         <PackageReference Include="Microsoft.Extensions.Compliance.Redaction"/>
         <PackageReference Include="Microsoft.Extensions.Http.Diagnostics"/>
         <PackageReference Include="Microsoft.Extensions.Telemetry.Abstractions"/>
-        <PackageReference Include="MongoDB.Analyzer" />
+        <PackageReference Include="MongoDB.Analyzer"/>
         <PackageReference Include="MongoDB.Driver"/>
         <PackageReference Include="OpenIddict.MongoDb"/>
         <PackageReference Include="OpenIddict.AspNetCore"/>
@@ -30,9 +31,9 @@
         <PackageReference Include="WebApiClientCore"/>
         <PackageReference Include="Microsoft.Extensions.Http.Resilience"/>
         <PackageReference Include="Telegram.Bot"/>
-        <PackageReference Include="TickerQ" />
-        <PackageReference Include="TickerQ.Instrumentation.OpenTelemetry" />
-        <PackageReference Include="alexjamesbrown.TickerQ.MongoDB" />
+        <PackageReference Include="TickerQ"/>
+        <PackageReference Include="TickerQ.Instrumentation.OpenTelemetry"/>
+        <PackageReference Include="alexjamesbrown.TickerQ.MongoDB"/>
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"/>
         <PackageReference Include="OpenTelemetry.Extensions.Hosting"/>
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore"/>

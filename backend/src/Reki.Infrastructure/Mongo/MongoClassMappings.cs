@@ -4,6 +4,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using Reki.Domain.Events;
 using Reki.Domain.Invites;
+using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -26,6 +27,7 @@ internal static class MongoClassMappings
             new BsonValueObjectConversions.RekiEventIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.InvitationIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.NotificationIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.PlayerIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
@@ -45,6 +47,7 @@ internal static class MongoClassMappings
         RegisterWithMongoId<DailyGameEvent, RekiEventId>(item => item.Id);
         RegisterWithMongoId<World, WorldId>(item => item.Id);
         RegisterWithMongoId<Invitation, InvitationId>(item => item.Id);
+        RegisterWithMongoId<Notification, NotificationId>(item => item.Id);
     }
 
     private static void RegisterWithMongoId<TDocument, TId>(
