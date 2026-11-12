@@ -93,13 +93,13 @@ export function PushNotifications({playerId, entry = 'settings'}: {playerId: str
 
   if (entry === 'banner') {
     if (support !== 'supported' || !key || dismissed || permission === 'denied' || saved) return null
-    return <Card style={{marginBottom: 12}}>
+    return <Card style={{marginBottom: 12}}><div className="browser-offer">
       <strong>Включить уведомления</strong>
       <p className="small muted">Напомним о твоём мире, даже когда игра закрыта.</p>
       {error && <p role="alert" className="small">{error}</p>}
-      <Button disabled={busy} onClick={() => void connect(true)}>{busy ? 'Подключаем…' : permission === 'granted' ? 'Подключить уведомления' : 'Разрешить'}</Button>
-      <Button secondary disabled={busy} onClick={dismiss} style={{marginTop: 8}}>Позже</Button>
-    </Card>
+      <div className="browser-offer-actions"><Button disabled={busy} onClick={() => void connect(true)}>{busy ? 'Подключаем…' : permission === 'granted' ? 'Подключить уведомления' : 'Разрешить'}</Button>
+      <button type="button" className="browser-offer-later" disabled={busy} onClick={dismiss}>Позже</button></div>
+    </div></Card>
   }
 
   return <>

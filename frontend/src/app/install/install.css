@@ -1,7 +1,5 @@
 .install-settings { display:flex; align-items:center; justify-content:space-between; width:100%; gap:12px; padding:12px 0; border:0; border-bottom:1px solid var(--line2); background:none; color:inherit; text-align:left; font:inherit; }
 .install-banner-heading { display:flex; align-items:center; gap:10px; }
-.install-banner-heading + p { margin:8px 0 16px; line-height:1.5; }
-.install-banner-heading strong { flex:1; }
 .install-banner-heading img { flex:none; border-radius:10px; }
 .install-banner-heading button { flex:none; width:44px; height:44px; border:0; background:none; color:var(--muted2); font-size:24px; }
 .install-dialog h2 { margin:0 0 16px; font-size:22px; }
@@ -15,3 +13,13 @@
 .install-step-symbol { display:grid; place-items:center; width:44px; height:44px; border:1px solid var(--line2); border-radius:10px; color:var(--text); background:var(--card2); }
 .install-step-label { color:#77b6ff; font-size:13px; font-weight:600; }
 .install-steps li > span:last-child { min-width:0; overflow-wrap:anywhere; }
+
+.browser-offer { min-width:0; overflow-wrap:anywhere; }
+.browser-offer-copy { flex:1; min-width:0; }
+.browser-offer p { margin-top:4px; line-height:1.5; }
+.browser-offer-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.browser-offer-actions .btn { width:auto; max-width:100%; min-height:44px; padding:10px 14px; border-radius:10px; font-size:14px; font-weight:600; }
+.browser-offer-actions .btn.secondary { background:var(--card2); border:1px solid var(--line2); }
+.browser-offer-later { min-height:44px; padding:10px 12px; border:0; background:none; color:var(--muted); font-size:14px; }
+.install-offer .browser-offer-actions { padding-left:42px; }
+.browser-offer button:focus-visible { outline:2px solid var(--lilac); outline-offset:3px; }
