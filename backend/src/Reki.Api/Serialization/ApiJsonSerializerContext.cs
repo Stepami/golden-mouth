@@ -90,6 +90,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(StartChallengeRequest))]
 [JsonSerializable(typeof(ReportRequest))]
 [JsonSerializable(typeof(UpdateSettingsRequest))]
+[JsonSerializable(typeof(WebPushSubscriptionRequest))]
 [JsonSerializable(typeof(FeedItemResponse[]))]
 [JsonSerializable(typeof(WorldPostsRequest))]
 [JsonSerializable(typeof(PageResponse<FeedItemResponse>))]
