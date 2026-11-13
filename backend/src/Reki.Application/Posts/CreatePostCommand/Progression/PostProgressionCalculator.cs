@@ -22,17 +22,15 @@ internal sealed class PostProgressionCalculator(
         GamePost post,
         bool ownWords)
     {
-        var currentBalance = balance.CurrentValue;
-
         var turn = await scorer.ScoreAsync(
             post,
             gameWorld,
-            currentBalance,
             ownWords);
         var flop = turn.FlopReason is not null;
 
         var starId = await stars.GetRelevantCommenterAsync(gameWorld, post);
 
+        var currentBalance = balance.CurrentValue;
         var world = currentBalance.Difficulties[gameWorld.Difficulty];
         var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
 

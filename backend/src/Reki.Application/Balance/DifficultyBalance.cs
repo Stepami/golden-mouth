@@ -12,5 +12,4 @@ public sealed record DifficultyBalance(
     IReadOnlyDictionary<string, double> Thresholds,
     IReadOnlyDictionary<string, double> ThresholdReductionPerStep,
     IReadOnlyDictionary<WorldDrama, DramaBalance> Drama,
-    IReadOnlyList<string> ReasonPriority,
     string EmotionTieBreak);

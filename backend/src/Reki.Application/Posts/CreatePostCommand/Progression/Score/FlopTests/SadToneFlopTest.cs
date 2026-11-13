@@ -1,21 +1,26 @@
+using Microsoft.Extensions.Options;
+using Reki.Application.Balance;
 using Reki.Application.Posts.ML;
 using Reki.Domain.Posts;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.CreatePostCommand.Progression.Score.FlopTests;
 
-internal sealed class SadToneFlopTest(PostTextAnalysis analysis, PostScoringContext context) : IFlopTest
+internal sealed class SadToneFlopTest(
+    PostTextAnalysis analysis,
+    IClassifier classifier,
+    IOptionsMonitor<GameBalance> balance) : IFlopTest
 {
-    public int Priority => context.Current.Balance.Difficulties[context.Current.World.Difficulty].ReasonPriority.Count;
+    public int Priority => 3;
 
-    public async Task<FlopTestResult> IsFlopAsync(GamePost post)
+    public async ValueTask<FlopTestResult> IsFlopAsync(GamePost post, World world)
     {
-        var emotion = await analysis.ClassifyAsync(ClassifierModels.EmotionModel, post.Text);
+        var emotion = await classifier.ClassifyAsync(ClassifierModels.EmotionModel, post.Text);
         var sad = emotion["sadness"];
         var fear = emotion["fear"];
-        var world = context.Current.World;
-        var tieBreak = context.Current.Balance.Difficulties[world.Difficulty].EmotionTieBreak;
-        var flop = sad >= analysis.Threshold("sad_tone") &&
-               (fear < analysis.Threshold("anxious_tone") || sad > fear || (sad.CompareTo(fear) == 0 && tieBreak == "sad_tone"));
+        var tieBreak = balance.CurrentValue.Difficulties[world.Difficulty].EmotionTieBreak;
+        var flop = sad >= analysis.Threshold("sad_tone", world) &&
+               (fear < analysis.Threshold("anxious_tone", world) || sad > fear || (sad.CompareTo(fear) == 0 && tieBreak == "sad_tone"));
         return flop ? FlopTestResult.Flop("sad_tone") : FlopTestResult.Ok;
     }
 }

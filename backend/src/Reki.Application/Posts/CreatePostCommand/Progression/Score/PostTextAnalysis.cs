@@ -1,6 +1,7 @@
 using System.Numerics.Tensors;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Options;
+using Reki.Application.Balance;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.ML;
 using Reki.Domain.Posts;
@@ -8,24 +9,17 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.CreatePostCommand.Progression.Score;
 
-internal sealed partial class PostTextAnalysis(
-    IClassifier classifier,
+internal sealed class PostTextAnalysis(
     INliScorer nli,
     IRekiEmbeddingGenerator<World> worldEmbedder,
     IRekiEmbeddingGenerator<GamePost> postEmbedder,
-    PostScoringContext context)
+    IOptionsMonitor<GameBalance> balance)
 {
-    public static string WithoutQuotes(string text) => QuotedText().Replace(text, string.Empty);
-
-    public double Threshold(string key)
+    public double Threshold(string key, World world)
     {
-        var world = context.Current.World;
-        var profile = context.Current.Balance.Difficulties[world.Difficulty];
+        var profile = balance.CurrentValue.Difficulties[world.Difficulty];
         return profile.Thresholds[key] - (profile.Drama[world.Player.Drama].ThresholdSteps * profile.ThresholdReductionPerStep[key]);
     }
-
-    public Task<IReadOnlyDictionary<string, double>> ClassifyAsync(string model, string text) =>
-        classifier.ClassifyAsync(model, text);
 
     public async Task<double[]> SkillsAsync(
         GamePost post,
@@ -48,11 +42,8 @@ internal sealed partial class PostTextAnalysis(
         var postVector = await postEmbedder.GenerateVectorAsync(post);
         var worldVector = await worldEmbedder.GenerateVectorAsync(world);
         var similarity = TensorPrimitives.CosineSimilarity(postVector.Span, worldVector.Span);
-        var topic = similarity >= (float)context.Current.Balance.Difficulties[world.Difficulty].TopicMinCosine ? 1d : 0d;
+        var topic = similarity >= (float)balance.CurrentValue.Difficulties[world.Difficulty].TopicMinCosine ? 1d : 0d;
 
         return [scores[0].Entailment, scores[1].Entailment, topic];
     }
-
-    [GeneratedRegex("«[^»]*»|„[^“]*“|\"[^\"]*\"|“[^”]*”", RegexOptions.Singleline)]
-    private static partial Regex QuotedText();
 }

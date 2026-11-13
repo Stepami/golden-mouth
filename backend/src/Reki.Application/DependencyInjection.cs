@@ -11,7 +11,6 @@ using Reki.Application.Posts.ML;
 using Reki.Application.Telemetry;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
-using PostTextAnalysis = Reki.Application.Posts.CreatePostCommand.Progression.Score.PostTextAnalysis;
 
 namespace Reki.Application;
 
@@ -34,7 +33,6 @@ public static class DependencyInjection
         services.AddSingleton<PlayerSafetyGuard>();
         services.AddSingleton<StarTurnPolicy>();
         services.AddSingleton<PostProgressionCalculator>();
-        services.AddSingleton<PostScoringContext>();
         services.AddSingleton<PostTextAnalysis>();
         services.AddSingleton<PostScorer>();
         services.AddSingleton<IFlopTest, AngryAbuseFlopTest>();
