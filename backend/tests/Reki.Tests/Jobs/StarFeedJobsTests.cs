@@ -422,7 +422,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
     [Arguments("missing-comment")]
     [Arguments("hidden-comment")]
     [Arguments("foreign-comment")]
-    public async Task Generate_UnavailableReactionSource_DoesNotCallAiOrPublishAsync(string scenario)
+    public async Task Generate_ReactionSource_HandlesDifferentScenariosAsync(string scenario)
     {
         // Arrange
         using var api = Factory.CreateApiClient(9512);
@@ -453,6 +453,16 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         using var scope = Factory.Services.CreateScope();
 
         // Act
+        if (scenario == "foreign-world")
+        {
+            Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Продолжение истории.")));
+            await scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnPostPublishedJob>().ExecuteAsync(
+                new TickerFunctionContext<StarFeedOnPostPublishedRequest>(new TickerFunctionContext(), new StarFeedOnPostPublishedRequest(player.Id, worldId, postId, now.ToUnixTimeMilliseconds(), post.Id)), CancellationToken.None);
+            await Assert.That(Factory.Llm.RequestCount).IsEqualTo(1);
+            await Assert.That((await repository.GetPostAsync(postId, CancellationToken.None))?.Text).IsEqualTo("Продолжение истории.");
+            return;
+        }
+
         if (isComment)
         {
             await Assert.That(() => scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnCommentPublishedJob>().ExecuteAsync(

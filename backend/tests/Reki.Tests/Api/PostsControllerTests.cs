@@ -22,7 +22,7 @@ namespace Reki.Tests.Api;
 public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
-    public async Task GetPost_AnotherOwnedWorld_ReturnsNoContentAsync()
+    public async Task GetPost_AnotherOwnedWorld_ReturnsPostAsync()
     {
         // Arrange
         const long user = 1093;
@@ -32,10 +32,10 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var before = await GetStoredPostAsync(postId);
 
         // Act
-        var response = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostAsync(postId, second.Id.ToString(), CancellationToken.None));
+        var response = await api.Posts.GetPostAsync(postId, second.Id.ToString(), CancellationToken.None);
 
         // Assert
-        await Assert.That(response?.StatusCode).IsEqualTo((int)HttpStatusCode.NoContent);
+        await Assert.That(response.PostId).IsEqualTo(PostId.From(postId));
         await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(before);
     }
 
@@ -359,7 +359,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task AddReply_OnAnotherPlayerPost_ReturnsNotFoundAsync()
+    public async Task AddReply_OnAnotherPlayerPost_SavesReplyAsync()
     {
         // Arrange
         const long ownerUserId = 1104;
@@ -377,12 +377,10 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         };
 
         // Act
-        var response = await Assert.ThrowsAsync<PostsApiException>(() => strangerApi.Posts.ReplyToPostAsync(
-            postId, worldId, request, CancellationToken.None));
-        await Assert.That(response).IsNotNull();
+        var response = await strangerApi.Posts.ReplyToPostAsync(postId, worldId, request, CancellationToken.None);
 
         // Assert
-        await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+        await Assert.That(response.Post.Comments.Any(comment => comment.RequestId == request.RequestId)).IsTrue();
     }
 
     [Test]
@@ -449,7 +447,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     [Arguments("energy")]
     [Arguments("foreign-world")]
     [Arguments("unsafe")]
-    public async Task AddReply_InvalidRootComment_DoesNotPublishOrChargeAsync(string scenario)
+    public async Task AddReply_RootComment_HandlesDifferentScenariosAsync(string scenario)
     {
         // Arrange
         const long user = 8741;
@@ -479,6 +477,12 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var beforePlayer = await GetStoredPlayerAsync(user);
         var beforeWorld = await GetStoredWorldAsync(user);
         var calls = Factory.Llm.RequestCount;
+        var requestedWorldId = world.Id.Value.ToString();
+        if (scenario == "foreign-world")
+        {
+            using var api = Factory.CreateApiClient(user);
+            requestedWorldId = (await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None)).Id.ToString();
+        }
 
         // Act
         var response = await SendReplyAsync(
@@ -487,20 +491,32 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             null,
             "invalid-root",
             "Комментарий к посту",
-            scenario == "foreign-world" ? "5dfe7e85-cc03-42d3-81f8-f4c9393dca6a" : world.Id.Value.ToString());
+            requestedWorldId);
 
         // Assert
         if (scenario == "unsafe")
         {
             await Assert.That(response.Generation?.Status).IsEqualTo(ReplyGenerationStatus.Failed);
         }
+        else if (scenario == "foreign-world")
+        {
+            await Assert.That(response.Status).IsEqualTo(HttpStatusCode.OK);
+            await Assert.That(Factory.Llm.RequestCount).IsGreaterThan(calls);
+        }
         else
         {
-            await Assert.That(response.Status).IsEqualTo(scenario == "foreign-world" ? HttpStatusCode.NotFound : HttpStatusCode.Conflict);
+            await Assert.That(response.Status).IsEqualTo(HttpStatusCode.Conflict);
             await Assert.That(Factory.Llm.RequestCount).IsEqualTo(calls);
         }
 
-        if (scenario == "unsafe")
+        if (scenario == "foreign-world")
+        {
+            await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(beforePost["Comments"].AsBsonArray.Count + 2);
+            await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"].AsInt32).IsEqualTo(beforePlayer["Wallet"]["Energy"].AsInt32 - 1);
+            var originalWorld = await Database.GetCollection<World>("worlds").Find(item => item.Id == world.Id).SingleAsync();
+            await Assert.That(originalWorld.Player.Subscribers).IsEqualTo(beforeWorld["Player"]["Subscribers"].ToInt64());
+        }
+        else if (scenario == "unsafe")
         {
             await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(beforePost["Comments"].AsBsonArray.Count + 1);
             await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"].AsInt32).IsLessThan(beforePlayer["Wallet"]["Energy"].AsInt32);
@@ -1025,7 +1041,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task Repost_UnavailableOriginal_CreatesPostAsync()
+    public async Task Repost_OriginalFromAnotherWorld_CreatesPostAsync()
     {
         using var api = Factory.CreateApiClient(1302);
         await CreatePlayerWithWorldAsync(api);
@@ -1035,8 +1051,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var before = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         var result = await api.Posts.CreatePostAsync(second.Id.ToString(), new CreatePostRequest { Text = string.Empty, RepostId = source.Id }, CancellationToken.None);
         await Assert.That(result.Post.RepostId).IsEqualTo(source.Id);
-        var missing = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostAsync(source.Id.ToString(), second.Id.ToString(), CancellationToken.None));
-        await Assert.That(missing?.StatusCode).IsEqualTo((int)HttpStatusCode.NoContent);
+        var original = await api.Posts.GetPostAsync(source.Id.ToString(), second.Id.ToString(), CancellationToken.None);
+        await Assert.That(original.PostId).IsEqualTo(source.Id);
         var after = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(after.Energy).IsEqualTo(before.Energy - 1);
     }
