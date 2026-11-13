@@ -57,7 +57,7 @@
       }
     },
     "normal": {
-      "topic_min_cosine": 0.5,
+      "topic_min_cosine": 0.45,
       "k": 1.1,
       "viral_x": 1.2,
       "hate_from": 3000,
@@ -76,7 +76,7 @@
       }
     },
     "hard": {
-      "topic_min_cosine": 0.65,
+      "topic_min_cosine": 0.55,
       "k": 1.25,
       "viral_x": 1.4,
       "hate_from": 1000,

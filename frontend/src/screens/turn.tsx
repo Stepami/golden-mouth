@@ -10,7 +10,7 @@ import { inTelegram } from '../telegram'
 import { Avatar, BottomCTA, Button, Comment, Gift, Ribbon, Sheet, TopBar, EnergyBadge, Whisper, fmt, plural } from '../ui'
 import { ChannelHead } from './onboarding'
 import { track } from '../app/log'
-import { contentOf } from '../api/worldContent'
+import { contentOf, worldOf } from '../api/worldContent'
 import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
@@ -31,7 +31,7 @@ function Compose() {
   const text = draft.text
   const [durable, setDurable] = useState(true)
   const edit = (value: string, fromIdea = false) => {
-    const next = { ...draft, text: value, ownWords: fromIdea ? false : draft.ownWords || value !== draft.text }
+    const next = { ...draft, text: value, ownWords: fromIdea ? false : value.length === 0 || draft.ownWords }
     setDraft(next); setDurable(savePostDraft(key, next))
   }
   useEffect(() => { setDurable(savePostDraft(key, draft)) }, [key, draft])
@@ -84,7 +84,7 @@ function Live() {
       setTyping(null)
       track('post_result', { delta: created.result.delta, viral: created.result.viral, flop: created.result.flop })
       const result = latest ? { ...created.result, completedWants: latest.wants.filter(want => want.done && p.wants.some(before => before.id === want.id && !before.done)).map(({ id, text, reward }) => ({ id, text, reward })) } : created.result
-      nav.replace(result.viral ? '02-5_viral' : result.flop ? '02-4_flop' : '02-3_result', { result, post: created.post, commentPromise })
+      nav.replace(result.viral ? '02-5_viral' : result.flop ? '02-4_flop' : '02-3_result', { result, post: created.post, commentPromise, predictedAuthorId: created.predictedAuthorId })
     })() }, 0)
     return () => { active = false; clearTimeout(start) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -148,55 +148,66 @@ function useCount(n: number, ms = 800) {
 const haptic = (kind: 'success' | 'warning' | 'light') => { if (!inTelegram) return; try { if (kind === 'light') hapticFeedback.impactOccurred.ifAvailable('light'); else hapticFeedback.notificationOccurred.ifAvailable(kind) } catch { /* вне Telegram */ } }
 
 function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post; theme: 'normal' | 'flop' | 'viral' }) {
-  const nav = useNav()
+  const nav = useNav(); const player = usePlayer()
   const [post, setPost] = useState(initialPost)
   const [commentFailed, setCommentFailed] = useState(false)
   const commentPromise = nav.params.commentPromise as Promise<Post | null> | undefined
   useEffect(() => {
     let active = true
-    void commentPromise?.then(saved => { if (active) { if (saved) setPost(saved); else setCommentFailed(true) } })
+    void commentPromise?.then(saved => { if (active) { if (saved) setPost(saved); else setCommentFailed(true) } }, () => { if (active) setCommentFailed(true) })
     return () => { active = false }
   }, [commentPromise])
-  const closeButton = useRef<HTMLButtonElement>(null)
-  useEffect(() => { closeButton.current?.focus(); const close = (event: KeyboardEvent) => { if (event.key === 'Escape') nav.replace('03-5_stage') }; document.addEventListener('keydown', close); return () => document.removeEventListener('keydown', close) }, [nav])
+  const closeButton = useRef<HTMLButtonElement>(null), dialog = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    closeButton.current?.focus()
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') nav.replace('03-5_stage')
+      if (event.key !== 'Tab') return
+      const items = dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled),summary,a[href]')
+      if (!items?.length) return
+      const first = items[0], last = items[items.length - 1]
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+    }
+    document.addEventListener('keydown', keyboard)
+    return () => document.removeEventListener('keydown', keyboard)
+  }, [nav])
   const viral = theme === 'viral'
-  const bestComment = r.bestComment ?? post.comments[0]
+  const stars = contentOf(player.world).stars
+  const comment = post.comments.find(item => item.star && !item.hidden)
+  const fallback = r.bestComment
+  const actor = stars.find(item => `Star_${item.id}` === comment?.authorId || item.avatarSeed === (comment?.avatar ?? fallback?.avatar) || `Star_${item.id}` === nav.params.predictedAuthorId)
+  const commentText = comment?.text ?? fallback?.text
   const shown = useCount(Math.abs(r.delta))
   const additive = r.whys.filter(why => /^[+−-]\d+(?:[.,]\d+)?$/.test(why.value))
   const explainsDelta = additive.length > 0 && additive.reduce((sum, why) => sum + Number(why.value.replace('−', '-').replace(',', '.')), 0) === r.delta
-  useEffect(() => { haptic(r.delta >= 0 ? 'success' : 'warning'); const ts = r.whys.map((_, i) => setTimeout(() => haptic('light'), 850 + i * 150)); return () => ts.forEach(clearTimeout) }, [r])
+  const explanation = r.delta === 0 ? 'Число подписчиков не изменилось.' : r.delta < 0 ? r.whys.find(why => !why.value.startsWith('×') && why.label !== 'В тему')?.label ?? r.headline : r.headline
+  useEffect(() => { haptic(r.delta >= 0 ? 'success' : 'warning') }, [r])
   return (
     <div className="screen no-tab">
       <ChannelHead />
       <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">только что</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}<span className="small muted" style={{ float: 'right' }}>👁 {fmt(r.views)}</span></div></div></div>
       <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.55)' }}>
-        <div className="sheet" style={{ background: viral ? 'linear-gradient(170deg,#1B2A4A,#2A1236 60%,#1A1A24)' : '#1A1A24', position: 'relative' }}>
+        <div ref={dialog} role="dialog" aria-modal="true" aria-label="Пост опубликован" className={`sheet post-result${viral ? ' post-result--viral' : ''}`}>
           <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')}>×</button>
-          <div className="small" style={{ paddingRight: 40, letterSpacing: '.06em', color: viral ? 'var(--gift)' : 'var(--muted2)' }}>{viral ? '🌊 ПОСТ ЗАЛЕТЕЛ В РЕКИ' : 'ИТОГ ПОСТА'}</div>
-          <div style={{ fontSize: 64, fontWeight: 900, lineHeight: 1.1 }} className={r.delta >= 0 ? 'up' : 'down'}>{r.delta >= 0 ? '+' : '−'}{fmt(shown)}</div>
-          <div className="muted2" style={{ marginBottom: 12 }}>{plural(shown, 'подписчик', 'подписчика', 'подписчиков')}</div>
-          <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{r.delta < 0 ? "Часть подписчиков ушла" : r.delta === 0 ? "Подписчиков столько же" : viral ? r.headline : "Твой пост заметили ✨"}</div>
-          {viral && <div className="confetti" aria-hidden>{Array.from({ length: 18 }, (_, i) => <i key={i} style={{ left: `${(i * 53) % 100}%`, animationDelay: `${(i % 6) * 0.12}s`, background: ['#FF6B8B', '#9B6BFF', '#FFD66B', '#6BFFB8'][i % 4] }} />)}</div>}
-
-          {commentFailed && <p className="small muted" role="status">Пост опубликован, но ответ звезды пока не появился.</p>}
-          <div className="result-awards" aria-live="polite">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
-          <details className="result-details"><summary>Разбор поста</summary>          <div>{r.whys.map((w, i) => <span key={w.label} className="chip pop" style={{ background: '#22222D', animationDelay: `${0.85 + i * 0.15}s` }}>{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[w.icon] ?? w.icon} {w.label} {(!/^[+−-]/.test(w.value) || explainsDelta) && <b className={/^[+×]/.test(w.value) ? 'up' : 'down'}>{w.value}</b>}</span>)}</div>
-          {bestComment && <div className="row" style={{ margin: '8px 0 12px' }}><Avatar seed={bestComment.avatar} size={28} mode="default" /><span className="small">«{bestComment.text}»</span></div>}
+          <div className="post-result-title">Пост опубликован</div>
+          <section className="post-result-reaction" aria-label="Ответ персонажа">
+            <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={comment?.author ?? actor?.name ?? 'Персонаж'} size={40} mode="default" /><div><strong>{comment?.author ?? actor?.name ?? 'Персонаж'}</strong><div className="small muted">{worldOf(player.world).title} · AI-персонаж</div></div></div>
+            {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
+          </section>
+          <div className={`post-result-delta ${r.delta > 0 ? 'up' : r.delta < 0 ? 'down' : ''}`}>{r.delta > 0 ? '+' : r.delta < 0 ? '−' : ''}{fmt(shown)} <span>{plural(Math.abs(r.delta), 'подписчик', 'подписчика', 'подписчиков')}</span></div>
+          <p className="small muted">{explanation}</p>
+          <details className="result-details"><summary>Разбор поста</summary><div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
+            <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
           </details>
-          {viral ? <>
-            <Button onClick={() => nav.push('02-7_share', { post })}>Поделиться залётом</Button>
-            <div className="small" style={{ textAlign: 'center', margin: '8px 0', color: 'var(--gift)' }}>Позови друга в свой мир</div>
-            <Button secondary onClick={() => nav.replace('03-5_stage')}>В канал</Button>
-          </> : <>
-            <Button onClick={() => nav.replace('02-6_thread', { post, commentPromise })}>Посмотреть реакции</Button>
-            {theme === 'normal' && <><button onClick={() => nav.push('02-7_share', { post })} aria-label="Поделиться постом" className="result-share">↗ Поделиться</button>
-              </>}
-          </>}
+          <div className="post-result-actions"><Button onClick={() => nav.replace('02-1_compose')}>Новый пост</Button><Button secondary onClick={() => nav.replace('02-6_thread', { post, commentPromise, focusReply: true })}>Комментировать</Button></div>
+          <button onClick={() => nav.push('02-7_share', { post })} className="result-share">Поделиться</button>
         </div>
       </div>
     </div>
   )
 }
+
 const Result = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.normal; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="normal" /> }
 const Flop = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.flop; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? 'сегодня сдавала пробник по ЕГЭ, всё сложно' }} theme="flop" /> }
 const Viral = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.viral; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="viral" /> }
@@ -270,6 +281,15 @@ function Thread() {
     })
     return () => { active = false }
   }, [commentPromise, load, threadKey])
+  const initialReplyFocused = useRef('')
+  useEffect(() => {
+    if (!nav.params.focusReply || load !== 'ready' || !post || initialReplyFocused.current === threadKey) return
+    const target = post.comments.find(comment => comment.star && !comment.hidden && stars.some(star => `Star_${star.id}` === comment.authorId))
+    if (!target) return
+    initialReplyFocused.current = threadKey
+    setDraft(current => current.commentId || current.submitted ? current : { ...current, commentId: target.id, requestId: crypto.randomUUID() })
+    requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.thread-reply-input')?.focus())
+  }, [post, load, threadKey, nav.params.focusReply])
   const postAuthor = stars.find(star => `Star_${star.id}` === post?.authorId)
   const isStarComment = (comment?: CommentT) => !!comment?.star && !comment.hidden && stars.some(star => `Star_${star.id}` === comment.authorId)
   const target = post?.comments.find(comment => comment.id === draft.commentId)
@@ -399,8 +419,14 @@ function Share() {
   const player = usePlayer()
   const { link, error: linkError, retry } = useReferralLink()
   const post = (nav.params.post as Post | undefined) ?? firstPost
-  const text = `Мой пост в Реках 🌊 А ты кем будешь в ${contentOf(player.world).where}?`
-  const toChat = () => { if (!link) return; track('share', { to: 'chat' }); if (inTelegram) shareURL.ifAvailable(link, text); else window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`) }
+  const text = `${post.text}\n\nМой пост в Реках 🌊`
+  const [shareError, setShareError] = useState('')
+  const toChat = async () => {
+    if (!link) return
+    track('share', { to: 'chat' }); setShareError('')
+    try { if (inTelegram) shareURL.ifAvailable(link, text); else if (navigator.share) await navigator.share({ title: 'Реки', text, url: link }); else window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer') }
+    catch (cause) { if (!(cause instanceof DOMException && cause.name === 'AbortError')) setShareError('Не получилось открыть отправку. Попробуй ещё раз.') }
+  }
   // Публичную картинку 9:16 Telegram загружает без заголовков авторизации.
   const storyCardUrl = new URL(`${apiBaseUrl ?? ''}/cards/story/${encodeURIComponent(player.id)}/${encodeURIComponent(post.id)}.png`, location.origin).toString()
   const toStory = () => { if (!link) return; track('share', { to: 'story' }); if (inTelegram) shareStory.ifAvailable(storyCardUrl, { text, widgetLink: { url: link, name: 'Играть' } }) }
@@ -409,7 +435,7 @@ function Share() {
       <TopBar onBack={nav.back} title="Поделиться" />
       <div className="pad">
         <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420)', borderRadius: 14, padding: 14, marginBottom: 12 }}>
-          <div className="small" style={{ color: 'var(--gift)' }}>РЕКИ · ПОСТ ЗАЛЕТЕЛ 🌊</div>
+          <div className="small" style={{ color: 'var(--gift)' }}>РЕКИ · МОЙ ПОСТ</div>
           <div style={{ margin: '8px 0' }}>{post.text}</div>
           <div className="small muted">👁 {fmt(post.views)}</div>
           <div className="small" style={{ marginTop: 8 }}>а ты кем будешь в {contentOf(player.world).where}? <b>▶ Играть</b></div>
@@ -418,7 +444,8 @@ function Share() {
         <div className="small muted">Telegram откроет список твоих чатов. Мы его не видим и никому не пишем сами.</div>
       </div>
       {linkError && <div className="pad" role="alert">Не удалось получить твою ссылку.<Button secondary onClick={retry}>Попробовать снова</Button></div>}
-      <BottomCTA disabled={!link} secondDisabled={!link} second="＋ В сторис" onSecond={toStory} main="Отправить в чат" onMain={toChat} />
+      {shareError && <p className="pad small" role="alert">{shareError}</p>}
+      <BottomCTA disabled={!link} secondDisabled={!link} second={inTelegram && shareStory.isAvailable() ? '＋ В сторис' : undefined} onSecond={toStory} main="Отправить в чат" onMain={() => void toChat()} />
     </div>
   )
 }

@@ -162,3 +162,10 @@ DEV-проход `journey_v22.py`: пример канала Маши с сге�
 Названия действий сверены с официальными справками: [Chrome iOS](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DiOS&hl=ru-RU), [Яндекс iOS](https://yandex.ru/support/browser-mobile-iphone/ru/troubleshooting/problems-site), [Яндекс Android](https://www.yandex.ru/support/browser-mobile-android-phone/ru/troubleshooting/problems-site).
 
 #291, 12.11.2026: `journey_v35.py` обновляет текущий экран настроек и окно Web Push. Подключён типизированный контракт backend #293; в каталоге автоматически видно предложение Web Push. Системное разрешение — по нажатию, «Позже» запоминается для аккаунта в браузере. Telegram Mini App объясняет доставку ботом.
+
+#297, 13.11.2026 (`journey_v37.py`): итоги 02-3/02-4/02-5 показывают ответ персонажа до разбора, реальный знак прироста и единые «Новый пост» / «Комментировать» / «Поделиться». Закрытие возвращает в канал; новый пост доступен независимо от ожидания комментария.
+
+| Состояние | Описание |
+|---|---|
+| [02-3a_result_waiting](02-3a_result_waiting.png) | Пост сохранён, ответ персонажа ещё готовится; действия доступны |
+| [02-3b_result_error](02-3b_result_error.png) | Ошибка комментария не отменяет пост и не блокирует действия |
