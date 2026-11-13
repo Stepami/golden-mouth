@@ -51,7 +51,7 @@ internal sealed class CreatePostCommandHandler(
         var currentBalance = balance.CurrentValue;
         if (player.Wallet.Energy < currentBalance.PostEnergyCost)
         {
-            throw new RequestConflictException("The daily post limit has been reached.");
+            throw new RequestConflictException("Not enough energy to publish a post.");
         }
 
         await safety.EnsureInputAllowedAsync(player, [command.Text], cancellationToken);

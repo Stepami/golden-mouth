@@ -21,7 +21,6 @@ internal sealed class GameBalanceOptionsFactory(
         var growth = configuration.GetRequiredSection("growth");
         var viral = configuration.GetRequiredSection("viral");
         var skills = configuration.GetRequiredSection("skills");
-        var challenge = configuration.GetRequiredSection("challenge");
         var thread = configuration.GetRequiredSection("thread");
         var energy = configuration.GetRequiredSection("energy");
         var postCost = energy.GetValue<int>("post_cost");
@@ -42,7 +41,6 @@ internal sealed class GameBalanceOptionsFactory(
                 item => Enum.Parse<WorldDifficulty>(item.Key, ignoreCase: true),
                 item => new DifficultyBalance(
                     item.GetValue<double>("k"),
-                    item.GetValue<double>("flop"),
                     item.GetValue<double>("viral_x"),
                     item.GetValue<long>("hate_from"),
                     item.GetValue<double>("loss_x"),
@@ -58,7 +56,7 @@ internal sealed class GameBalanceOptionsFactory(
 
         if (levelThresholds.Count != 10 ||
             difficulties.Count != 3 || Enum.GetValues<WorldDifficulty>().Any(value => !difficulties.ContainsKey(value)) ||
-            difficulties.Values.Any(value => value.GrowthCoefficient <= 0 || value.FlopChance is < 0 or > 1 || value.ViralMultiplier <= 0 || value.HateFrom < 0))
+            difficulties.Values.Any(value => value.GrowthCoefficient <= 0 || value.ViralMultiplier <= 0 || value.HateFrom < 0))
         {
             throw new InvalidOperationException("The game balance configuration is incomplete.");
         }
@@ -68,8 +66,6 @@ internal sealed class GameBalanceOptionsFactory(
             posts.GetValue<int>("plus_per_day"),
             posts.GetValue<int>("invite_bonus_both"),
             posts.GetValue<int>("plus_interest_bonus_once"),
-            posts.GetValue<int>("challenge_win_bonus_per_day"),
-            posts.GetValue<int>("challenge_win_bonus_days"),
             new GrowthBalance(
                 growth.GetValue<double>("power"),
                 growth.GetValue<double>("k"),
@@ -81,15 +77,11 @@ internal sealed class GameBalanceOptionsFactory(
                 viral.GetValue<double>("base"),
                 viral.GetValue<double>("per_quality"),
                 viral.GetValue<double>("x")),
-            new FlopBalance(0),
             new SkillBalance(
                 levelThresholds,
                 skills.GetValue<double>("xp_per_post_main"),
                 skills.GetValue<double>("xp_per_post_side"),
                 skills.GetValue<double>("xp_own_words_x")),
-            new ChallengeBalance(
-                challenge.GetValue<int>("days"),
-                challenge.GetValue<int>("min_posts")),
             new ThreadBalance(
                 thread.GetValue<int>("bonus_replies"),
                 thread.GetValue<int>("subscriber_bonus"),

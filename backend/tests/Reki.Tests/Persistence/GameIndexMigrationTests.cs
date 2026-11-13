@@ -1319,7 +1319,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(long.Parse(id[..12], NumberStyles.HexNumber, CultureInfo.InvariantCulture)).IsEqualTo(createdAt.ToUnixTimeMilliseconds());
     }
 
-    private static GameBalance CreateEnergyBalance() => new(10, 20, 5, 5, 3, 3, new GrowthBalance(1, 1, 0, 1, 1, 1000), new ViralBalance(0, 0, 1), new FlopBalance(1), new SkillBalance([], 1, 1, 1), new ChallengeBalance(3, 1), new ThreadBalance(3, 9), new Dictionary<WorldDifficulty, DifficultyBalance>());
+    private static GameBalance CreateEnergyBalance() => new(10, 20, 5, 5, new GrowthBalance(1, 1, 0, 1, 1, 1000), new ViralBalance(0, 0, 1), new SkillBalance([], 1, 1, 1), new ThreadBalance(3, 9), new Dictionary<WorldDifficulty, DifficultyBalance>());
 
     private static BsonDocument CreateLegacyReferralPlayer(string id, string? inviter, DateTimeOffset createdAt, int dailyBonus, int count, bool used) => new()
     {

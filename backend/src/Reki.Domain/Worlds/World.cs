@@ -54,8 +54,6 @@ public sealed record World
 
     public WorldStar? FindStar(AuthorId authorId) => Stars.FirstOrDefault(star => star.Id.ToAuthorId() == authorId);
 
-    public bool HasStar(StarId starId, string name) => Stars.Any(star => star.Id == starId && star.Name == name);
-
     public World PublishPost(
         long subscriberDelta,
         bool viral,

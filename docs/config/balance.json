@@ -7,9 +7,7 @@
     "plus_per_day": 20,
     "invite_bonus_both": 5,
     "plus_interest_bonus_once": 5,
-    "streak_day3_bonus": 2,
-    "challenge_win_bonus_per_day": 3,
-    "challenge_win_bonus_days": 3
+    "streak_day3_bonus": 2
   },
   "growth": {
     "formula": "delta = k * k_difficulty * (0.5 + quality) * subs^power * mult",
@@ -90,7 +88,6 @@
     }
   },
   "access": { "create_world_from_scratch": { "subs": 500, "or_first_friend": true } },
-  "challenge": { "days": 3, "active_max": 1, "min_posts": 5, "score": "0.7 * avg(post_quality) + 0.3 * avg(reach / own_median_reach)" },
   "streak": { "rewards": { "3": "posts+2", "7": "card:week_on_air", "14": "frame", "30": "guest_star" }, "burns": false },
   "safety": { "after_crisis_hate_off_days": 7, "report_review_hours": 24, "min_age": 14 }
 }
