@@ -1,3 +1,4 @@
+import { RepostAction } from '../ui/RepostAction'
 import { QuotedPost } from '../ui/QuotedPost'
 import { StoryGoal } from '../ui/StoryGoal'
 import { useEffect, useRef, useState } from 'react'
@@ -387,7 +388,7 @@ function Thread() {
     <div className="screen no-tab">
       <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions"><EnergyBadge value={player.postsLeft} /><button className="thread-exit" onClick={goBack}>{fromFeed ? 'В ленту →' : 'В канал →'}</button></div>} />
       <div className="pad">
-        <div className="card" style={{ marginBottom: 12 }}>{post.text}<QuotedPost repostId={post.repostId} /><div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}</div>{post.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>}</div></div>
+        <div className="card" style={{ marginBottom: 12 }}>{post.text}<QuotedPost repostId={post.repostId} /><div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group">{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}{!post.repostId && <RepostAction postId={post.id} />}</div>{post.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>}</div></div>
         {showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
         {!showHelp && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
         {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>
