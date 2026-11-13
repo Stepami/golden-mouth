@@ -38,6 +38,10 @@ public sealed class RepostsControllerTests(ApiFactory factory) : GameApiTestBase
         await Assert.That(restored.SubscriberDelta).IsEqualTo(0);
         await Assert.That(restored.EnergyLeft).IsEqualTo(after.Energy);
         await Assert.That(restored.Subscribers).IsEqualTo(results[0].Subscribers);
+        await Database.GetCollection<GamePost>("posts").DeleteOneAsync(post => post.Id == source.Id);
+        var removed = await api.Posts.UndoRepostAsync(results[0].PostId.ToString(), worldId, CancellationToken.None);
+        await Assert.That(removed.Active).IsFalse();
+        await Assert.That(removed.EnergyLeft).IsEqualTo(after.Energy);
     }
 
     [Test]

@@ -78,7 +78,10 @@ internal sealed class RepostCommandHandler(
                 delta = Math.Max(1, (long)Math.Round(growth));
                 var now = timeProvider.GetUtcNow();
                 repost = new GamePost(PostId.New(now), playerId.ToAuthorId(), world.Id, string.Empty, 0, [], now, delta, 0, 1, false, false, QuotedPostId: source.Id, IsRepost: true);
-                player = player.SpendEnergy(currentBalance.PostEnergyCost, now);
+                player = player.SpendEnergy(currentBalance.PostEnergyCost, now) with
+                {
+                    HitOwnWorldMilestone = player.HitOwnWorldMilestone || world.Player.Subscribers + delta >= currentBalance.OwnWorldSubscribers,
+                };
                 world = world with
                 {
                     Player = world.Player with { Subscribers = world.Player.Subscribers + delta },
