@@ -343,6 +343,7 @@ exec(open(os.path.join(D, 'journey_v34.py'), encoding='utf-8').read())  # #268 p
 
 exec(open(os.path.join(D, 'journey_v35.py'), encoding='utf-8').read())  # #291 Web Push
 exec(open(os.path.join(D, 'journey_v36.py'), encoding='utf-8').read())  # #291 compact browser offers
+exec(open(os.path.join(D, 'journey_v37.py'), encoding='utf-8').read())  # #297 publication result
 
 CH = os.environ.get('CHROME_BIN') or shutil.which('google-chrome') or shutil.which('chrome')
 if not CH and os.name == 'nt':

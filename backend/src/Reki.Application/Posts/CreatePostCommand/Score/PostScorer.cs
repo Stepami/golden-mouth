@@ -10,10 +10,10 @@ internal sealed class PostScorer(
     PostTextAnalysis analysis,
     IEnumerable<IFlopTest> flopTests)
 {
-    public async Task<PostScore> ScoreAsync(GamePost post, World world, GameBalance balance, CancellationToken cancellationToken)
+    public async Task<PostScore> ScoreAsync(GamePost post, World world, GameBalance balance, bool ownWords, CancellationToken cancellationToken)
     {
         context.Current = new PostScoringData(world, balance, cancellationToken);
-        var skills = await analysis.SkillsAsync(post, world, cancellationToken);
+        var skills = await analysis.SkillsAsync(post, world, ownWords, cancellationToken);
         if (post.RepostId is not null)
         {
             return new PostScore(skills[0], skills[1], 1, "🔥", null);

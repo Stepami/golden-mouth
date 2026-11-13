@@ -86,7 +86,7 @@ internal sealed class CreatePostCommandHandler(
             false,
             false,
             RepostId: command.RepostId);
-        var score = await scorer.ScoreAsync(post, world, currentBalance, cancellationToken);
+        var score = await scorer.ScoreAsync(post, world, currentBalance, command.OwnWords, cancellationToken);
         var starId = await stars.GetRelevantCommenterAsync(world, post);
         var flopReason = score.FlopReason ?? (score.Topic > 0 ? null : "off_topic");
         var flop = flopReason is not null;
