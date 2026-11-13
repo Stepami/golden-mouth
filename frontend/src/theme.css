@@ -458,3 +458,12 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .repost-options .btn { width: auto; max-width: 100%; padding: 10px 14px; font-size: 15px; }
 
 .quote-source { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; text-align: left; font: inherit; }
+
+.post-action-group { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.post-repost-button { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; width:44px; height:44px; padding:10px; border:1px solid var(--line); border-radius:50%; background:transparent; color:var(--muted); cursor:pointer; }
+.post-repost-button:hover { color:var(--accent); border-color:var(--accent); }
+.post-repost-button:disabled { opacity:.5; cursor:default; }
+
+.post-repost-label { margin-left: 6px; white-space: nowrap; }
+
+.post-repost-button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }

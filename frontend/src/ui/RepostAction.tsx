@@ -47,14 +47,14 @@ export function RepostAction({ postId, onChanged, undoOnly = false }: {
     finally { busy.current = false; setPending(false) }
   }
   return <>
-    <button type="button" className="text-button repost-action" disabled={pending} onClick={event => {
+    <button type="button" className="post-repost-button" aria-label={undoOnly ? "Убрать репост" : "Репостнуть публикацию"} aria-pressed={undoOnly ? true : undefined} title={undoOnly ? "Убрать репост" : "Репост"} disabled={pending} onClick={event => {
       event.stopPropagation(); undoOnly ? void remove() : setOpen(true)
-    }}>{undoOnly ? 'Убрать репост' : '↻ Репост · ⚡1'}</button>
+    }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m16 3 4 4-4 4M4 11V9a2 2 0 0 1 2-2h14M8 21l-4-4 4-4m12 0v2a2 2 0 0 1-2 2H4"/></svg></button>
     {note && <div className="small muted" role="status">{note}</div>}
     {open && createPortal(<Sheet onClose={() => { if (!pending) setOpen(false) }}>
       <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <h3 id={titleId} tabIndex={-1}>Репост</h3>
-      <p className="small muted">Репост даст +1 подписчика. Можно добавить свой текст. Навыки не меняются.</p>
+      <p className="small muted">+1 подписчик · навыки не растут</p>
       <div className="repost-options">
         <Button secondary onClick={() => { if (busy.current) return; busy.current = true; setOpen(false); nav.push('02-2_live', { text: '', ownWords: false, repostId: postId }) }}>Репостнуть · ⚡1</Button>
         <Button secondary disabled={pending} onClick={() => { if (busy.current) return; busy.current = true; setOpen(false); nav.push('02-1_compose', { repostId: postId }) }}>Добавить свой текст · ⚡1</Button>

@@ -103,6 +103,7 @@ function StarCard() {
 function FeedPostCard({ item, onChanged, onLike, returnTo = 'feed' }: { item: FeedItem; onChanged: () => void; onLike: (post: PostDetailResponse) => void; returnTo?: string }) {
   const nav = useNav()
   const p = usePlayer()
+  const own = item.authorId === `Player_${p.id.replaceAll('-', '').toLowerCase()}`
   const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId, returnTo }) : undefined
   return (
     <Card style={{ marginBottom: 12, position: 'relative' }}>
@@ -113,17 +114,14 @@ function FeedPostCard({ item, onChanged, onLike, returnTo = 'feed' }: { item: Fe
         onKeyDown={open ? event => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open() } } : undefined}
         style={open ? { cursor: 'pointer' } : undefined}
       >
-        <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} mode={item.starId ? 'default' : 'profile'} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{item.starId && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
-        {item.repostId && <div className="small muted">↻ Репост</div>}
-        <div style={{ marginTop: 12 }}><ExpandableText text={item.text} /></div>
+        <div className="row"><Avatar seed={own ? p.handle : item.avatar} world={own ? p.world : item.world ?? p.world} size={36} mode={own ? 'profile' : 'default'} /><div style={{ flex: 1, paddingRight: 24 }}><b>{own ? p.name : item.author}</b>{item.authorId?.startsWith('Star_') && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.repostId && <span className="post-repost-label">↻ Репост</span>}{item.demo && ' · демо'}</div></div></div>
+        {item.text.trim() && <div style={{ marginTop: 12 }}><ExpandableText text={item.text} /></div>}
         <QuotedPost repostId={item.repostId} />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
-          <div>{item.postId && !item.demo && item.likes != null && item.likedBy && <PostLikeAction postId={item.postId} likes={item.likes} likedBy={item.likedBy} onSaved={onLike} />}</div>
-          {item.commentCount != null && item.views != null && <span className="small muted" style={{ whiteSpace: 'nowrap' }}>💬 {item.commentCount} · 👁 {short(item.views)}</span>}
-        </div>
       </div>
-      {returnTo === 'channel' && item.repostId && !item.text.trim() && item.postId && <RepostAction postId={item.postId} undoOnly onChanged={onChanged} />}
-      {item.authorId?.startsWith('Star_') && !item.repostId && item.postId && <RepostAction postId={item.postId} onChanged={onChanged} />}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
+          <div className="post-action-group">{item.postId && !item.demo && item.likes != null && item.likedBy && <PostLikeAction postId={item.postId} likes={item.likes} likedBy={item.likedBy} onSaved={onLike} />}{!item.demo && !item.repostId && item.postId && <RepostAction postId={item.postId} onChanged={onChanged} />}{returnTo === 'channel' && item.repostId && !item.text.trim() && item.postId && <RepostAction postId={item.postId} undoOnly onChanged={onChanged} />}</div>
+          {item.commentCount != null && item.views != null && <span className="small muted" style={{ whiteSpace: 'nowrap' }}>💬 {item.commentCount} · 👁 {short(item.views)}</span>}
+      </div>
     </Card>
   )
 }
