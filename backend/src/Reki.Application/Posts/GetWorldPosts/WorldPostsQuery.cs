@@ -9,6 +9,5 @@ public sealed record WorldPostsQuery(
     PostId? Cursor,
     int PageSize,
     bool Feed = false,
-    AuthorId? LikedBy = null,
-    AuthorId? AuthorId = null)
+    AuthorId? LikedBy = null)
     : IQuery<WorldPostsPage>;

@@ -110,11 +110,10 @@ public sealed class PostsController(ISender sender) : ControllerBase
     [ActionName("GetChannelPosts")]
     public async Task<Ok<PageResponse<ChannelPostResponse>>> GetChannelPostsAsync(
         [FromQuery] WorldPostsRequest request,
-        [FromServices] IRekiContext rekiContext,
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            request.ToQuery(authorId: rekiContext.PlayerId.ToAuthorId()),
+            request.ToQuery(),
             cancellationToken);
         IReadOnlyList<ChannelPostResponse> response = [.. result.Items.Select(PostResponseMapper.MapChannelPost)];
         return TypedResults.Ok(new PageResponse<ChannelPostResponse>(response, result.NextCursor));

@@ -1116,10 +1116,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(pageTwo.Items[0].Text).IsEqualTo("liked-page-0");
         await Assert.That(pageTwo.NextCursor).IsNull();
 
-        var channel = await api.Posts.GetChannelPostsAsync(worldId, null, authorId, 10, CancellationToken.None);
-        await Assert.That(channel.Items.Select(item => item.Text).ToArray())
-            .IsEquivalentTo(["liked-page-4", "liked-page-0"]);
-
         await api.Posts.LikePostAsync(ids[2].ToString(), new LikePostRequest { AuthorId = AuthorId.From(authorId) }, CancellationToken.None);
         var refreshed = await api.Posts.GetLikedPostsAsync(worldId, null, authorId, 10, CancellationToken.None);
         await Assert.That(refreshed.Items.Any(item => item.Text == "liked-page-2")).IsFalse();

@@ -15,5 +15,5 @@ internal static partial class PostRequestMapper
 
     public static partial GenerateReply ToGenerateReply(this GenerateReplyRequest source, PostId postId, WorldId worldId);
 
-    public static partial WorldPostsQuery ToQuery(this WorldPostsRequest source, bool feed = false, AuthorId? authorId = null);
+    public static partial WorldPostsQuery ToQuery(this WorldPostsRequest source, bool feed = false);
 }
