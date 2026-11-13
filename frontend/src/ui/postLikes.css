@@ -1,12 +1,9 @@
 .post-likes { min-width: 0; }
-.post-likes-row { display: flex; align-items: center; gap: 10px; }
-.post-like-toggle { display: grid; place-items: center; flex: none; width: 44px; height: 44px; padding: 10px; border: 1px solid var(--line2); border-radius: 12px; background: var(--card2); color: var(--muted); }
-.post-like-toggle svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.post-like-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.post-like-toggle { min-height: 44px; min-width: 44px; justify-content: center; border: 0; margin: 0; color: var(--muted); }
+.post-like-toggle svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.post-like-toggle[aria-pressed="true"] { color: var(--accent); }
 .post-like-toggle[aria-pressed="true"] svg { fill: currentColor; }
 .post-like-toggle:disabled { cursor: wait; opacity: .55; }
 .post-like-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-.post-likes-count { display: flex; flex-direction: column; min-width: 0; }
-.post-likes-count strong { font-size: 18px; line-height: 1.2; font-variant-numeric: tabular-nums; }
-.post-likes-count > span { color: var(--muted); font-size: 11px; }
+.post-likes-count { color: var(--text); font-variant-numeric: tabular-nums; }
 .post-like-error { margin-top: 8px; color: var(--warn); font-size: 13px; overflow-wrap: anywhere; }
