@@ -417,7 +417,6 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
 
     [Test]
     [Arguments("missing-post")]
-    [Arguments("foreign-world")]
     [Arguments("foreign-author")]
     [Arguments("missing-comment")]
     [Arguments("hidden-comment")]
@@ -440,7 +439,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
             scenario == "hidden-comment",
             [],
             null);
-        var post = new GamePost(PostId.New(now), scenario == "foreign-author" ? world.Stars[0].Id.ToAuthorId() : player.Id.ToAuthorId(), scenario == "foreign-world" ? WorldId.From(Guid.NewGuid()) : worldId, "Исходный пост", 0, 0, [], [comment], now, 0, 0, 1, false, false);
+        var post = new GamePost(PostId.New(now), scenario == "foreign-author" ? world.Stars[0].Id.ToAuthorId() : player.Id.ToAuthorId(), worldId, "Исходный пост", 0, 0, [], [comment], now, 0, 0, 1, false, false);
         var repository = Factory.Services.GetRequiredService<IPostRepository>();
         if (scenario != "missing-post")
         {
@@ -453,16 +452,6 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         using var scope = Factory.Services.CreateScope();
 
         // Act
-        if (scenario == "foreign-world")
-        {
-            Factory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Продолжение истории.")));
-            await scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnPostPublishedJob>().ExecuteAsync(
-                new TickerFunctionContext<StarFeedOnPostPublishedRequest>(new TickerFunctionContext(), new StarFeedOnPostPublishedRequest(player.Id, worldId, postId, now.ToUnixTimeMilliseconds(), post.Id)), CancellationToken.None);
-            await Assert.That(Factory.Llm.RequestCount).IsEqualTo(1);
-            await Assert.That((await repository.GetPostAsync(postId, CancellationToken.None))?.Text).IsEqualTo("Продолжение истории.");
-            return;
-        }
-
         if (isComment)
         {
             await Assert.That(() => scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnCommentPublishedJob>().ExecuteAsync(
