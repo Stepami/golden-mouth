@@ -55,7 +55,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         using var api = Factory.CreateApiClient(1020);
         await CreatePlayerWithWorldAsync(api);
         var definition = await CreateWorldDefinitionAsync(api);
-        var star = definition.Stars[0] with { Id = StarId.From("my-star"), Name = "Своя звезда", Relation = 5 };
+        var star = definition.Stars[0] with { Id = StarId.From("my-star"), Name = "Своя звезда" };
         var request = definition with
         {
             Title = "Новый мир",
@@ -63,7 +63,6 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             AvatarStyle = "shapes",
             Roles = ["Автор"],
             Stars = [star],
-            Wants = definition.Wants.Select(want => want with { Done = true }).ToArray(),
             Achievements = definition.Achievements.Select(card => card with { Open = true }).ToArray(),
         };
 
@@ -79,9 +78,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(loaded.AvatarStyle).IsEqualTo(request.AvatarStyle);
         await Assert.That(loaded.Roles.Single()).IsEqualTo("Автор");
         await Assert.That(loaded.Stars.Single().Id.Value).IsEqualTo("my-star");
-        await Assert.That(loaded.Stars.Single().Relation).IsEqualTo(0);
         await Assert.That(loaded.Subscribers).IsEqualTo(120);
-        await Assert.That(loaded.Wants.Any(want => want.Done)).IsFalse();
         await Assert.That(loaded.Achievements.Any(card => card.Open)).IsFalse();
     }
 
@@ -239,11 +236,9 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             var original = await collection.Find(world => world.Id == id).SingleAsync();
             var progressed = original with
             {
-                Stars = original.Stars.Select(star => star with { Relation = 3 }).ToArray(),
                 Player = original.Player with
                 {
                     Subscribers = 730,
-                    Wants = original.Player.Wants.Select(want => want with { Done = true }).ToArray(),
                     Achievements = original.Player.Achievements.Select(item => item with { IsOpen = true }).ToArray(),
                 },
             };
@@ -264,8 +259,6 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             await Assert.That(updated.TemplateId).IsEqualTo(original.TemplateId);
             await Assert.That(updated.Player.PlayerId).IsEqualTo(original.Player.PlayerId);
             await Assert.That(updated.Player.Subscribers).IsEqualTo(730L);
-            await Assert.That(updated.Stars.All(star => star.Relation == 3)).IsTrue();
-            await Assert.That(updated.Player.Wants.All(want => want.Done)).IsTrue();
             await Assert.That(updated.Player.Achievements.All(item => item.IsOpen)).IsTrue();
             await Assert.That(updated.FindStar(removed.Id.ToAuthorId())).IsNull();
             await Assert.That(updated.Interface.Title).IsEqualTo(request.Title);

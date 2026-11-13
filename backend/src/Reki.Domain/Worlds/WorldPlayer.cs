@@ -18,13 +18,5 @@ public sealed record WorldPlayer
 
     public long Subscribers { get; init; }
 
-    public IReadOnlyList<DailyWant> Wants { get; init; } = [];
-
     public IReadOnlyList<AchievementProgress> Achievements { get; init; } = [];
-
-    public DateTimeOffset? LastPostAtUtc { get; init; }
-
-    public int RestedPostsRemaining { get; init; }
-
-    public DateTimeOffset PeriodStartedAtUtc { get; init; }
 }

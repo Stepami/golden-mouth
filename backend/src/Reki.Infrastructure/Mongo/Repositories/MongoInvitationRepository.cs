@@ -19,17 +19,6 @@ internal sealed class MongoInvitationRepository(
         await _invites.Find(item => item.InviteeId == inviteeId && !item.InviteeBonusUsed)
             .FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask<long> CountInviterBonusesAsync(
-        PlayerId inviterId,
-        DateTimeOffset periodStart,
-        DateTimeOffset periodEnd,
-        CancellationToken cancellationToken) =>
-        await _invites.CountDocumentsAsync(
-            sessionProvider.Session,
-            item => item.InviterId == inviterId && item.InviterBonusUsed &&
-                    item.InviterBonusUsedAtUtc >= periodStart && item.InviterBonusUsedAtUtc < periodEnd,
-            cancellationToken: cancellationToken);
-
     public async ValueTask UseInviteBonusAsync(Invitation invite, CancellationToken cancellationToken)
     {
         var update = Builders<Invitation>.Update

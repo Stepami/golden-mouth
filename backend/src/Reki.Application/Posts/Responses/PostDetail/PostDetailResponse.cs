@@ -8,5 +8,7 @@ public sealed record PostDetailResponse(
     AuthorId AuthorId,
     string Text,
     long Views,
-    IReadOnlyList<ReactionResponse> Reactions,
-    IReadOnlyList<CommentResponse> Comments);
+    long Likes,
+    IReadOnlyList<AuthorId> LikedBy,
+    IReadOnlyList<CommentResponse> Comments,
+    PostId? RepostId = null);

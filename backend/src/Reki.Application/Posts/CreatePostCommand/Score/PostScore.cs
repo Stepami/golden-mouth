@@ -4,5 +4,5 @@ internal sealed record PostScore(
     double Brave,
     double Humor,
     double Topic,
-    string Emoji,
+    bool PositiveEmotion,
     string? FlopReason);

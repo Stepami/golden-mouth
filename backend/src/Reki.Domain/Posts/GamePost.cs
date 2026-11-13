@@ -16,10 +16,16 @@ public sealed record GamePost(
     bool Viral,
     bool Flop,
     int Version = 0,
-    string ReactionEmoji = "🔥",
     AuthorId? PredictedAuthorId = null,
-    string? FlopReason = null)
+    string? FlopReason = null,
+    PostId? RepostId = null)
 {
+    public long Likes { get; init; }
+
+    public IReadOnlyList<AuthorId> LikedBy { get; init; } = [];
+
+    public static long CalculateLikes(long views, int percentage) => (long)Math.Ceiling((decimal)views * percentage / 100);
+
     public GameComment? FindRequest(string requestId) =>
         Comments.FirstOrDefault(item => string.Equals(item.RequestId, requestId, StringComparison.Ordinal));
 

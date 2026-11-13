@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Api.Requests.Player;
@@ -15,7 +14,6 @@ using Reki.Application.Worlds;
 using Reki.Application.Worlds.Responses;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Jobs;
 
 namespace Reki.Tests.Api;
 
@@ -164,8 +162,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             PostIdeas = template.PostIdeas,
             DemoPosts = template.DemoPosts,
             Rules = template.Rules.Select(rule => new WorldRuleRequest(rule.Text, rule.Locked)).ToArray(),
-            Stars = template.Stars.Select(star => new WorldStarRequest(star.Id, star.Name, star.Role, star.Trait, star.About, star.Voice, star.AvatarSeed, star.Relation)).ToArray(),
-            Wants = template.Wants.Select(want => new WantRequest(want.Id, want.Text, want.Reward, want.Done)).ToArray(),
+            Stars = template.Stars.Select(star => new WorldStarRequest(star.Id, star.Name, star.Role, star.Trait, star.About, star.Voice, star.AvatarSeed)).ToArray(),
             Achievements = template.Achievements.Select(card => new CollectionCardRequest(card.Id, card.Emoji, card.Title, card.Open)).ToArray(),
             Name = "Player",
             Avatar = "player",
@@ -173,12 +170,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
             Voice = template.Voice,
             Drama = template.Drama,
         };
-
-    protected async Task ResetGameDayAsync()
-    {
-        await using var scope = Factory.Services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<ResetGameDayJob>().ExecuteAsync(new(), CancellationToken.None);
-    }
 
     protected async Task<(string PostId, string CommentId)> PublishPostForThreadAsync(long telegramUserId)
     {

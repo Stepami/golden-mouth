@@ -1,15 +1,15 @@
 using System.ComponentModel.DataAnnotations;
+using Reki.Domain.Posts;
 
 namespace Reki.Api.Requests.Posts;
 
 public sealed record CreatePostRequest
 {
-    [Required]
-    [StringLength(2000, MinimumLength = 1)]
+    [Required(AllowEmptyStrings = true)]
+    [StringLength(2000)]
     public required string Text { get; init; }
 
-    public bool OwnWords { get; init; } = true;
+    public PostId? RepostId { get; init; }
 
-    [StringLength(64)]
-    public string? WantId { get; init; }
+    public bool OwnWords { get; init; } = true;
 }

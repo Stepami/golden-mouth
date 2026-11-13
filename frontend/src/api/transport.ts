@@ -1,7 +1,7 @@
 import { error, warn } from '../app/log'
 import { runtimeConfig } from '../app/runtimeConfig'
 import { getAccessToken, refreshAccess } from './auth'
-import { EventsClient, PlayerClient, PostsClient, SocialClient, TelemetryClient, WorldsClient } from './generated/reki-api'
+import { PlayerClient, PostsClient, SocialClient, TelemetryClient, WorldsClient } from './generated/reki-api'
 import type { GenerateReplyRequest, SwaggerResponse } from './generated/reki-api'
 import { assertSession, sessionGeneration } from './session'
 
@@ -20,7 +20,7 @@ export function transport(telemetry = false) {
     const firstToken = getAccessToken()
     if (!anonymous && firstToken) headers.set('Authorization', `Bearer ${firstToken}`)
     let response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
-    if (!anonymous && !(path === '/posts' && init.method === 'POST') && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
+    if (!anonymous && !(init.method === 'POST' && (path === '/posts' || /^\/posts\/[^/]+\/like$/.test(path))) && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
       headers.set('Authorization', `Bearer ${getAccessToken()}`)
       response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
     }
@@ -40,7 +40,7 @@ export function transport(telemetry = false) {
 }
 const http = transport()
 export const sdk = {
-  events: new EventsClient(baseUrl, http), player: new PlayerClient(baseUrl, http), posts: new PostsClient(baseUrl, http),
+  player: new PlayerClient(baseUrl, http), posts: new PostsClient(baseUrl, http),
   social: new SocialClient(baseUrl, http), telemetry: new TelemetryClient(baseUrl, http), worlds: new WorldsClient(baseUrl, http),
 }
 export async function data<T>(request: Promise<SwaggerResponse<T>>, authenticated = true): Promise<T> {

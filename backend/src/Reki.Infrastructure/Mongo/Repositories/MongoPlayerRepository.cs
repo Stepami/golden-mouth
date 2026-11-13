@@ -73,17 +73,4 @@ internal sealed class MongoPlayerRepository(
 
     public async ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken) =>
         await _players.CountDocumentsAsync(FilterDefinition<PlayerProfile>.Empty, cancellationToken: cancellationToken);
-
-    public async ValueTask<long> ResetGameDayAsync(
-        DateTimeOffset periodStart,
-        CancellationToken cancellationToken)
-    {
-        var filter = Builders<PlayerProfile>.Filter.Lt(player => player.PostsPeriodStartedAtUtc, periodStart);
-        var update = Builders<PlayerProfile>.Update
-            .Set(player => player.Wallet.EnergyUsed, 0)
-            .Set(player => player.PostsPeriodStartedAtUtc, periodStart)
-            .Inc(player => player.Version, 1);
-        var result = await _players.UpdateManyAsync(filter, update, cancellationToken: cancellationToken);
-        return result.ModifiedCount;
-    }
 }

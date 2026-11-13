@@ -1,8 +1,6 @@
 using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using Reki.Domain.Worlds;
 using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
@@ -99,7 +97,7 @@ internal sealed class ConsolidateWorldSchema : RekiMigrationBase
         world["Voice"] = settings.GetValue("Voice", world["Voice"]);
         var relations = player.GetValue("StarRelations", new BsonArray()).AsBsonArray;
         world["Stars"] = new BsonArray(world["Stars"].AsBsonArray.Select(value =>
-            MigrateRelation(BsonSerializer.Deserialize<WorldStar>(value.AsBsonDocument), relations).ToBsonDocument()));
+            MigrateRelation(value.AsBsonDocument, relations)));
         await worlds.ReplaceOneAsync(session, new BsonDocument("_id", worldId), world, new ReplaceOptions { IsUpsert = true }, cancellationToken);
 
         foreach (var collection in new[] { MongoCollections.Posts, MongoCollections.Publications, "stars_memory", MongoCollections.Events })
@@ -155,20 +153,20 @@ internal sealed class ConsolidateWorldSchema : RekiMigrationBase
         return migrated;
     }
 
-    private static WorldStar MigrateRelation(WorldStar star, BsonArray relations)
+    private static BsonDocument MigrateRelation(BsonDocument star, BsonArray relations)
     {
         var relation = relations.Select(value => value.AsBsonDocument)
-            .FirstOrDefault(value => value.GetValue("StarId", string.Empty) == star.Id.Value);
+            .FirstOrDefault(value => value.GetValue("StarId", string.Empty) == star.GetValue("_id", star.GetValue("Id", string.Empty)));
         if (relation is null)
         {
             return star;
         }
 
-        var persisted = star.ToBsonDocument();
+        var persisted = star.DeepClone().AsBsonDocument;
         persisted["Relation"] = relation.GetValue("Value", 0);
         persisted["RelationGainedInPeriod"] = relation.GetValue("GainedInPeriod", 0);
-        persisted["RelationPeriodStartedAtUtc"] = relation.GetValue("PeriodStartedAtUtc", persisted["RelationPeriodStartedAtUtc"]);
-        return BsonSerializer.Deserialize<WorldStar>(persisted);
+        persisted["RelationPeriodStartedAtUtc"] = relation.GetValue("PeriodStartedAtUtc", persisted.GetValue("RelationPeriodStartedAtUtc", new BsonArray { DateTimeOffset.UnixEpoch.Ticks, 0 }));
+        return persisted;
     }
 
     private static async Task DropIndexAsync(IMongoCollection<BsonDocument> collection, string name, CancellationToken cancellationToken)

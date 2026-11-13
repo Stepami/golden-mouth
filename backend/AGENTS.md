@@ -132,6 +132,7 @@ Solution содержит четыре production-проекта: Api, Applicati
 ```
 
 - Analyzer diagnostics являются build errors из-за `TreatWarningsAsErrors`; не добавляй глобальные `NoWarn`, `WarningsNotAsErrors` или blanket suppressions.
+- Перед запуском `dotnet build` из `backend/` сначала запускай `dotnet format` для затронутого solution или проекта.
 - Redundant `this.` qualification в handwritten code запрещена анализатором `IDE0003`; CI запускает общий `dotnet format style --verify-no-changes` gate без фильтра по diagnostic ID. StyleCop `SA1101` отключён как конфликтующий. Используй `this.` только когда он необходим для разрешения неоднозначности. Generated `*.g.cs` исключены через `generated_code = true`.
 - Настраивай severity и style централизованно в `.editorconfig`. Локальный suppression требует комментария с причиной и минимального scope.
 - `BannedSymbols.txt` хранится в корне `backend/` и содержит запрещённые API с объяснением безопасной альтернативы.

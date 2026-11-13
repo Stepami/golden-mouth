@@ -15,14 +15,10 @@ public static partial class WorldResponseMapper
     [MapperIgnoreSource(nameof(World.IsArchived))]
     public static partial WorldResponse ToResponse(this World source);
 
-    [MapperIgnoreSource(nameof(WorldStar.RelationGainedInPeriod))]
-    [MapperIgnoreSource(nameof(WorldStar.RelationPeriodStartedAtUtc))]
     [MapperIgnoreTarget(nameof(WorldStarResponse.ChannelSubscribers))]
     private static partial WorldStarResponse MapStar(WorldStar source);
 
     private static partial WorldRuleResponse MapRule(WorldRule source);
-
-    private static partial WantResponse MapWant(DailyWant source);
 
     [MapProperty(nameof(AchievementProgress.IsOpen), nameof(CollectionCardResponse.Open))]
     private static partial CollectionCardResponse MapAchievement(AchievementProgress source);

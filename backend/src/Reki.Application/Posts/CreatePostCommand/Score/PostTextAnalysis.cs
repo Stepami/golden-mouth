@@ -33,10 +33,15 @@ internal sealed partial class PostTextAnalysis(
         bool ownWords,
         CancellationToken cancellationToken)
     {
+        if (post.RepostId is not null && string.IsNullOrWhiteSpace(post.Text))
+        {
+            return [0, 0, 1];
+        }
+
         string[] hypotheses = ["Автор смело выражает своё мнение.", "Текст содержит юмор или шутку."];
         var scores = await nli.ScoreAsync(post.Text, hypotheses, cancellationToken);
 
-        if (!ownWords)
+        if (!ownWords || post.RepostId is not null)
         {
             return [scores[0].Entailment, scores[1].Entailment, 1d];
         }

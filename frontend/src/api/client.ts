@@ -11,13 +11,14 @@ import { clearWorldContent, installWorldContent, installWorldTemplates } from '.
 import { error } from '../app/log';
 import { sdk } from './transport';
 import type * as Wire from './generated/reki-api';
+import { SwaggerException } from './generated/reki-api';
 import * as map from './mappers';
 import { ApiError, data, stream } from './transport';
 export { ApiError } from './transport';
 import { sessionGeneration, assertSession, endSession } from './session';
 import { parse } from 'valibot';
 import { starGenerationEvent } from './streamEvents';
-import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, Player, Post, PostDetailResponse, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
+import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, Player, Post, PostDetailResponse, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
 let sessionPlayer: Player | undefined;
 let sessionIdentity: PlayerDocument | undefined;
 let ownedWorldSnapshot: WorldDocument[] | undefined;
@@ -27,6 +28,10 @@ const worldId = (): string => {
     if (!sessionPlayer?.worldInstanceId)
         throw new Error('World must be loaded before this request');
     return sessionPlayer.worldInstanceId;
+};
+const playerAuthorId = (): string => {
+    if (!sessionPlayer) throw new Error('Player must be loaded before this request');
+    return `Player_${sessionPlayer.id.replaceAll('-', '').toLowerCase()}`;
 };
 async function fetchTemplates(): Promise<void> {
     try {
@@ -133,7 +138,7 @@ async function loadPlayer(worldId?: string): Promise<Player | undefined> {
     installWorldContent([world]);
     return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, difficulty: world.difficulty, avatarStyle: world.avatarStyle,
         world: world.id, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
-        wants: world.wants, collection: world.achievements, bio: '', type: 'СЃРІРѕР№ РіРѕР»РѕСЃ',
+        collection: world.achievements, bio: '', type: 'СЃРІРѕР№ РіРѕР»РѕСЃ',
         voice: world.voice, drama: world.drama,
     });
 }
@@ -211,8 +216,8 @@ export const api = {
         await data(sdk.posts.deletePost(id));
         clearApiCache();
     },
-    createPost: async (text: string, ownWords: boolean, wantId?: string) => {
-        const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, wantId: wantId ?? null }));
+    createPost: async (text: string, ownWords: boolean, repostId?: string) => {
+        const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, repostId: repostId ?? null }));
         const { postId: id, ...post } = map.post(response.post);
         return { post: { ...post, id }, result: map.result(response.result), predictedAuthorId: response.predictedAuthorId };
     },
@@ -282,15 +287,41 @@ export const api = {
         }
     },
     feed: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<FeedItem>> => {
-        const page = await data(sdk.posts.getFeed(selectedWorldId ?? worldId(), cursor, undefined, signal));
+        const page = await data(sdk.posts.getFeed(selectedWorldId ?? worldId(), cursor, undefined, undefined, signal));
         return { ...page, items: page.items.map(map.feed) };
     },
     channelPosts: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<ChannelPost>> => {
-        const page = await data(sdk.posts.getChannelPosts(selectedWorldId ?? worldId(), cursor, undefined, signal));
+        const page = await data(sdk.posts.getChannelPosts(selectedWorldId ?? worldId(), cursor, undefined, undefined, signal));
         return { ...page, items: page.items.map(map.channelPost) };
     },
-    post: async (postId: string): Promise<Post> => {
-        return data(sdk.posts.getPost(postId, worldId())).then(map.post).then(({ postId: id, ...detail }) => ({ ...detail, id }));
+    likedPosts: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<FeedItem>> => {
+        const player = sessionPlayer;
+        const page = await data(sdk.posts.getLikedPosts(selectedWorldId ?? worldId(), cursor, playerAuthorId(), undefined, signal));
+        if (sessionPlayer?.id !== player?.id || sessionPlayer?.worldInstanceId !== player?.worldInstanceId)
+            throw new DOMException('World has changed', 'AbortError');
+        return { ...page, items: page.items.map(map.feed) };
+    },
+    togglePostLike: async (postId: string, signal?: AbortSignal): Promise<PostDetailResponse> => {
+        const player = sessionPlayer;
+        try {
+            const post = await data(sdk.posts.togglePostLike(postId, worldId(), { authorId: playerAuthorId() }, signal));
+            if (sessionPlayer?.id !== player?.id || sessionPlayer?.worldInstanceId !== player?.worldInstanceId)
+                throw new DOMException('World has changed', 'AbortError');
+            return map.post(post);
+        } finally {
+            clearApiCache();
+        }
+    },
+    post: async (postId: string): Promise<Post | null> => {
+        try {
+            const response = await data(sdk.posts.getPost(postId, worldId()));
+            if (response == null) return null;
+            const { postId: id, ...detail } = map.post(response);
+            return { ...detail, id };
+        } catch (cause) {
+            if (cause instanceof SwaggerException && cause.status === 204) return null;
+            throw cause;
+        }
     },
     friends: (): Promise<Friend[]> => data(sdk.social.getFriends()).then(friends => friends.map(map.friend)),
     dm: (starId: string): Promise<Dm> => data(sdk.social.getDirectMessages(starId, worldId())).then(map.dm),
@@ -299,8 +330,6 @@ export const api = {
         repliesLeft: number;
     }> => data(sdk.social.sendDirectMessage(starId, worldId(), { text })).then(value => ({ ...value, reply: value.reply ?? undefined, repliesLeft: Number(value.repliesLeft) })),
     forget: (starId: string, fact: string) => data(sdk.social.forgetStarMemory(starId, worldId(), { fact })),
-    eventToday: (): Promise<GameEvent> => data(sdk.events.getTodayEvent(worldId())),
-    answerEvent: (id: string, text: string) => data(sdk.events.answerEvent(id, worldId(), { text })),
     challenge: (): Promise<Challenge | null> => data(sdk.social.getActiveChallenge()).then(map.challenge),
     startChallenge: (friendId: string) => data(sdk.social.startChallenge({ friendId })),
     ownedWorldsSnapshot: (): WorldDocument[] | undefined => ownedWorldSnapshot ? structuredClone(ownedWorldSnapshot) : undefined,

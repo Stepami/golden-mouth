@@ -7,5 +7,7 @@ public sealed record ChannelPostResponse(
     string Text,
     DateTimeOffset CreatedAtUtc,
     long Views,
-    IReadOnlyList<ReactionResponse> Reactions,
-    int CommentCount);
+    long Likes,
+    IReadOnlyList<AuthorId> LikedBy,
+    int CommentCount,
+    PostId? RepostId = null);

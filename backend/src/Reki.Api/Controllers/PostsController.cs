@@ -13,6 +13,7 @@ using Reki.Application.Posts.Responses.FeedItem;
 using Reki.Application.Posts.Responses.PostDetail;
 using Reki.Application.Posts.Responses.Reply;
 using Reki.Application.Posts.Responses.Reply.Generation;
+using Reki.Application.Posts.TogglePostLikeCommand;
 using Reki.Application.RekiContext;
 using Reki.Application.Responses;
 using Reki.Domain.Posts;
@@ -33,7 +34,35 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CreatePostRequest request,
         [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken) =>
-        TypedResults.Ok(await sender.Send(new CreatePost(request.Text, request.OwnWords, request.WantId, worldId), cancellationToken));
+        TypedResults.Ok(await sender.Send(new CreatePost(request.Text, request.OwnWords, worldId, request.RepostId), cancellationToken));
+
+    [HttpPost("{postId}/like", Name = "TogglePostLike")]
+    [ActionName("TogglePostLike")]
+    public async Task<Ok<PostDetailResponse>> TogglePostLikeAsync(
+        PostId postId,
+        LikePostRequest request,
+        [FromQuery, BindRequired] WorldId worldId,
+        CancellationToken cancellationToken) =>
+        TypedResults.Ok(await sender.Send(new TogglePostLike(postId, worldId, request.AuthorId), cancellationToken));
+
+    [HttpGet("liked", Name = "GetLikedPosts")]
+    [ActionName("GetLikedPosts")]
+    public async Task<Results<Ok<PageResponse<FeedItemResponse>>, BadRequest>> GetLikedPostsAsync(
+        [FromQuery] WorldPostsRequest request,
+        [FromServices] IRekiContext rekiContext,
+        CancellationToken cancellationToken)
+    {
+        if (request.LikedBy is null)
+        {
+            return TypedResults.BadRequest();
+        }
+
+        var result = await sender.Send(request.ToQuery(liked: true), cancellationToken);
+        var worlds = await rekiContext.Worlds;
+        IReadOnlyList<FeedItemResponse> response =
+            [.. result.Items.Select(post => PostResponseMapper.MapFeedItem(post, worlds[post.WorldId]))];
+        return TypedResults.Ok(new PageResponse<FeedItemResponse>(response, result.NextCursor));
+    }
 
     [HttpPost("{postId}/replies", Name = "ReplyToPost")]
     [ActionName("ReplyToPost")]
@@ -90,7 +119,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
 
     [HttpGet("{postId}", Name = "GetPost")]
     [ActionName("GetPost")]
-    public async Task<Ok<PostDetailResponse>> GetPostAsync(
+    public async Task<Results<Ok<PostDetailResponse>, NoContent>> GetPostAsync(
         PostId postId,
         [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken)
@@ -98,7 +127,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         var result = await sender.Send(
             new PostDetailQuery(postId, worldId),
             cancellationToken);
-        return TypedResults.Ok(result);
+        return result is null ? TypedResults.NoContent() : TypedResults.Ok(result);
     }
 
     [HttpDelete("{postId}", Name = "DeletePost")]

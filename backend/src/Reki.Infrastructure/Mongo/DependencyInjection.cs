@@ -3,7 +3,6 @@ using Kot.MongoDB.Migrations.DI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Reki.Application;
-using Reki.Application.Events;
 using Reki.Application.Invites;
 using Reki.Application.Notifications;
 using Reki.Application.Player;
@@ -37,7 +36,6 @@ internal static class DependencyInjection
         services.AddSingleton<IWorldRepository, MongoWorldRepository>();
         services.AddSingleton<IPostRepository, MongoPostRepository>();
         services.AddSingleton<IInvitationRepository, MongoInvitationRepository>();
-        services.AddSingleton<IDailyGameEventRepository, MongoDailyGameEventRepository>();
         services.AddSingleton(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoClient);
         services.AddSingleton(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoDatabase);
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);

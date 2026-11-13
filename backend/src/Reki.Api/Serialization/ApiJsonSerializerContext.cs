@@ -2,7 +2,6 @@ using System.Net.ServerSentEvents;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Requests.Auth;
-using Reki.Api.Requests.Events;
 using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Posts;
 using Reki.Api.Requests.Social;
@@ -10,7 +9,6 @@ using Reki.Api.Requests.Telemetry;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Telemetry.ClientLogBatch;
 using Reki.Api.Requests.Worlds;
-using Reki.Application.Events.Responses;
 using Reki.Application.Player.Responses;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Feed;
@@ -26,7 +24,6 @@ using Reki.Application.Social.Responses.Challenge;
 using Reki.Application.Social.Responses.Dm;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds.Responses;
-using Reki.Domain.Events;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
@@ -68,7 +65,6 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(PostId))]
 [JsonSerializable(typeof(CommentId))]
 [JsonSerializable(typeof(InvitationId))]
-[JsonSerializable(typeof(RekiEventId))]
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]
 [JsonSerializable(typeof(PlayerResponse))]
@@ -77,6 +73,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(OnboardingRequest))]
 [JsonSerializable(typeof(MergePlayersRequest))]
 [JsonSerializable(typeof(CreatePostRequest))]
+[JsonSerializable(typeof(LikePostRequest))]
 [JsonSerializable(typeof(CreatePostResponse))]
 [JsonSerializable(typeof(ReplyRequest))]
 [JsonSerializable(typeof(GenerateReplyRequest))]
@@ -86,7 +83,6 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(SseItem<ReplyGenerationLiveEvent>))]
 [JsonSerializable(typeof(DirectMessageRequest))]
 [JsonSerializable(typeof(ForgetMemoryRequest))]
-[JsonSerializable(typeof(AnswerEventRequest))]
 [JsonSerializable(typeof(StartChallengeRequest))]
 [JsonSerializable(typeof(ReportRequest))]
 [JsonSerializable(typeof(UpdateSettingsRequest))]
@@ -104,7 +100,6 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(DmResponse))]
 [JsonSerializable(typeof(SendDirectMessageResponse))]
 [JsonSerializable(typeof(ChallengeResponse))]
-[JsonSerializable(typeof(GameEventResponse))]
 [JsonSerializable(typeof(WorldResponse))]
 [JsonSerializable(typeof(IReadOnlyList<WorldResponse>))]
 [JsonSerializable(typeof(CreateWorldRequest))]
@@ -123,7 +118,6 @@ namespace Reki.Api.Serialization;
         typeof(CamelCaseEnumConverter<BirthGroup>),
         typeof(CamelCaseEnumConverter<FeedItemKind>),
         typeof(CamelCaseEnumConverter<DirectMessageAuthor>),
-        typeof(CamelCaseEnumConverter<GameEventKind>),
         typeof(CamelCaseEnumConverter<ReplyGenerationStatus>),
         typeof(CamelCaseEnumConverter<ClientLogLevel>),
         typeof(KebabCaseEnumConverter<LaunchSurface>),

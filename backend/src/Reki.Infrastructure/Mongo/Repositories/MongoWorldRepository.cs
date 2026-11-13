@@ -1,5 +1,4 @@
 using MongoDB.Driver;
-using MongoDB.Driver.Linq;
 using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
@@ -49,30 +48,4 @@ internal sealed class MongoWorldRepository(
 
     public async ValueTask DeleteWorldsAsync(IReadOnlyList<WorldId> worldIds, CancellationToken cancellationToken) =>
         await _worlds.DeleteManyAsync(sessionProvider.Session, Builders<World>.Filter.In(item => item.Id, worldIds), cancellationToken: cancellationToken);
-
-    public async ValueTask<long> ResetGameDayAsync(
-        DateTimeOffset periodStart,
-        DateTimeOffset restedBefore,
-        int restedPosts,
-        CancellationToken cancellationToken)
-    {
-        var filter = Builders<World>.Filter.Lt(world => world.Player.PeriodStartedAtUtc, periodStart);
-        var rested = Builders<World>.Filter.Ne(world => world.Player.LastPostAtUtc, null) &
-                     Builders<World>.Filter.Lt(world => world.Player.LastPostAtUtc, restedBefore);
-        var update = Builders<World>.Update
-            .Set(world => world.Player.PeriodStartedAtUtc, periodStart)
-            .Set(world => world.Player.Wants.AllElements().Done, false)
-            .Set(world => world.Stars.AllElements().RelationGainedInPeriod, 0)
-            .Set(world => world.Stars.AllElements().RelationPeriodStartedAtUtc, periodStart)
-            .Inc(world => world.Version, 1);
-        var returning = await _worlds.UpdateManyAsync(
-            filter & rested,
-            update.Set(world => world.Player.RestedPostsRemaining, restedPosts),
-            cancellationToken: cancellationToken);
-        var active = await _worlds.UpdateManyAsync(
-            filter & Builders<World>.Filter.Not(rested),
-            update.Set(world => world.Player.RestedPostsRemaining, 0),
-            cancellationToken: cancellationToken);
-        return returning.ModifiedCount + active.ModifiedCount;
-    }
 }

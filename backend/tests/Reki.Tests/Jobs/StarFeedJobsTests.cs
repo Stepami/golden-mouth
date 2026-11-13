@@ -51,7 +51,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await job.ExecuteAsync(context, CancellationToken.None);
         Factory.Session.Clock.Advance(TimeSpan.FromMinutes(10));
         await job.ExecuteAsync(context, CancellationToken.None);
-        var feed = await api.Posts.GetFeedAsync(worldId, null, null, CancellationToken.None);
+        var feed = await api.Posts.GetFeedAsync(worldId, null, null, null, CancellationToken.None);
 
         // Assert
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(1);
@@ -195,7 +195,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await job.ExecuteAsync(context, CancellationToken.None);
 
         // Assert
-        var feed = await api.Posts.GetFeedAsync(worldId, null, null, CancellationToken.None);
+        var feed = await api.Posts.GetFeedAsync(worldId, null, null, null, CancellationToken.None);
         await Assert.That(feed.Items.Single().PostId).IsEqualTo(context.Request.PostId);
         await Assert.That(feed.Items.Single().Text).IsEqualTo("Новый день в мастерской.");
     }
@@ -238,7 +238,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         apiFactory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Сегодня репетировали новую сцену.")));
 
         // Act
-        var feed = await api.Posts.GetFeedAsync(worldId, null, null, CancellationToken.None);
+        var feed = await api.Posts.GetFeedAsync(worldId, null, null, null, CancellationToken.None);
         var scheduled = await tickers.Find(ticker => !existingIds.Contains(ticker.Id)).ToListAsync();
         var payload = TickerHelper.ReadTickerRequest<StarFeedRequest>(scheduled.Single().Request);
         using var scope = apiFactory.Services.CreateScope();

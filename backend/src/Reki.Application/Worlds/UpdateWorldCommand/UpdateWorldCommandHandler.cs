@@ -28,16 +28,6 @@ internal sealed class UpdateWorldCommandHandler(
             Version = world.Version + 1,
             TemplateId = world.TemplateId,
             IsArchived = world.IsArchived,
-            Stars = definition.Stars.Select(star =>
-            {
-                var previous = world.FindStar(star.Id);
-                return star with
-                {
-                    Relation = previous?.Relation ?? 0,
-                    RelationGainedInPeriod = previous?.RelationGainedInPeriod ?? 0,
-                    RelationPeriodStartedAtUtc = previous?.RelationPeriodStartedAtUtc ?? world.Player.PeriodStartedAtUtc,
-                };
-            }).ToArray(),
             Player = world.Player with
             {
                 Name = definition.Player.Name,
@@ -45,10 +35,6 @@ internal sealed class UpdateWorldCommandHandler(
                 Role = definition.Player.Role,
                 Voice = definition.Player.Voice,
                 Drama = definition.Player.Drama,
-                Wants = definition.Player.Wants.Select(want => want with
-                {
-                    Done = world.Player.Wants.FirstOrDefault(value => value.Id == want.Id)?.Done ?? false,
-                }).ToArray(),
                 Achievements = definition.Player.Achievements.Select(item => item with
                 {
                     IsOpen = world.Player.Achievements.FirstOrDefault(value => value.Id == item.Id)?.IsOpen ?? false,

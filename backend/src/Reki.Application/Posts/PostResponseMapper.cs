@@ -1,7 +1,6 @@
 using System.Globalization;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Feed;
-using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.ChannelPost;
 using Reki.Application.Posts.Responses.Comment;
 using Reki.Application.Posts.Responses.FeedItem;
@@ -56,15 +55,17 @@ public static partial class PostResponseMapper
             resolved.Role,
             post.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             post.Text,
-            CreateReactions(post),
+            post.Likes,
+            post.LikedBy,
             post.Views,
             post.Comments.Count,
-            null);
+            null,
+            post.RepostId,
+            post.AuthorId);
     }
 
     [MapProperty(nameof(GamePost.Id), nameof(ChannelPostResponse.PostId))]
     [MapProperty("Comments.Count", nameof(ChannelPostResponse.CommentCount))]
-    [MapPropertyFromSource(nameof(ChannelPostResponse.Reactions), Use = nameof(CreateReactions))]
     [MapperIgnoreSource(nameof(GamePost.AuthorId))]
     [MapperIgnoreSource(nameof(GamePost.WorldId))]
     [MapperIgnoreSource(nameof(GamePost.SubscriberDelta))]
@@ -73,13 +74,9 @@ public static partial class PostResponseMapper
     [MapperIgnoreSource(nameof(GamePost.Viral))]
     [MapperIgnoreSource(nameof(GamePost.Flop))]
     [MapperIgnoreSource(nameof(GamePost.Version))]
-    [MapperIgnoreSource(nameof(GamePost.ReactionEmoji))]
     [MapperIgnoreSource(nameof(GamePost.PredictedAuthorId))]
     [MapperIgnoreSource(nameof(GamePost.FlopReason))]
     public static partial ChannelPostResponse MapChannelPost(this GamePost post);
-
-    public static IReadOnlyList<ReactionResponse> CreateReactions(this GamePost post) =>
-        [new ReactionResponse(post.ReactionEmoji, post.Viral ? 3 : 1)];
 
     public static PostDetailResponse MapPost(this GamePost post, World world, PlayerId playerId) =>
         new(
@@ -87,8 +84,10 @@ public static partial class PostResponseMapper
             post.AuthorId,
             post.Text,
             post.Views,
-            CreateReactions(post),
-            post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray());
+            post.Likes,
+            post.LikedBy,
+            post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray(),
+            post.RepostId);
 
     private static CommentResponse MapComment(GamePost post, GameComment comment, World world, PlayerId playerId)
     {

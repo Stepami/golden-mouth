@@ -29,8 +29,4 @@ public interface IPlayerRepository
     IAsyncEnumerable<PlayerProfile> GetPlayersForEnergyRecoveryAsync(int cap, DateTimeOffset dueBefore, CancellationToken cancellationToken);
 
     ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
-
-    ValueTask<long> ResetGameDayAsync(
-        DateTimeOffset periodStart,
-        CancellationToken cancellationToken);
 }

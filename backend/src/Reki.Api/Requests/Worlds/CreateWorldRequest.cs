@@ -56,8 +56,6 @@ public sealed record CreateWorldRequest
 
     public IReadOnlyList<string> DemoPosts { get; init; } = [];
 
-    public IReadOnlyList<WantRequest> Wants { get; init; } = [];
-
     public IReadOnlyList<CollectionCardRequest> Achievements { get; init; } = [];
 
     public IReadOnlyList<string> Roles { get; init; } = [];

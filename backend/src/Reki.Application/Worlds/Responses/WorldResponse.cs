@@ -52,7 +52,5 @@ public sealed record WorldResponse
 
     public long Subscribers { get; init; }
 
-    public required IReadOnlyList<WantResponse> Wants { get; init; }
-
     public required IReadOnlyList<CollectionCardResponse> Achievements { get; init; }
 }

@@ -9,8 +9,6 @@ public sealed record PlayerWallet
 
     public int Energy { get; init; }
 
-    public int EnergyUsed { get; init; }
-
     public int Crystals { get; init; }
 
     public DateTimeOffset EnergyUpdatedAtUtc { get; init; }
@@ -41,7 +39,6 @@ public sealed record PlayerWallet
         return this with
         {
             Energy = Energy - cost,
-            EnergyUsed = EnergyUsed + cost,
             EnergyUpdatedAtUtc = Energy == Cap ? now.ToUniversalTime() : EnergyUpdatedAtUtc,
         };
     }

@@ -7,10 +7,7 @@ public sealed record WorldStar(
     StarTrait Trait,
     string About,
     string Voice,
-    string AvatarSeed,
-    int Relation,
-    int RelationGainedInPeriod,
-    DateTimeOffset RelationPeriodStartedAtUtc)
+    string AvatarSeed)
 {
     public static readonly WorldStar DeletedAccount = new(
         StarId.From("deleted"),
@@ -19,8 +16,5 @@ public sealed record WorldStar(
         default,
         string.Empty,
         string.Empty,
-        string.Empty,
-        0,
-        0,
-        DateTimeOffset.MinValue);
+        string.Empty);
 }

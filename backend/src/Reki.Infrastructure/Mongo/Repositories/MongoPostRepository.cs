@@ -77,6 +77,7 @@ internal sealed class MongoPostRepository(
         AuthorId? authorId,
         PostId? cursor,
         int pageSize,
+        AuthorId? likedBy,
         CancellationToken cancellationToken)
     {
         var limit = pageSize + 1;
@@ -89,6 +90,11 @@ internal sealed class MongoPostRepository(
         if (cursor is { } before)
         {
             filter &= Builders<GamePost>.Filter.Lt(item => item.Id, before);
+        }
+
+        if (likedBy is { } liker)
+        {
+            filter &= Builders<GamePost>.Filter.AnyEq(item => item.LikedBy, liker);
         }
 
         var posts = await _posts
@@ -113,6 +119,33 @@ internal sealed class MongoPostRepository(
         await _posts.Find(item => item.Id == postId && item.WorldId == worldId)
             .Project<GamePost>(WithoutEmbedding)
             .FirstOrDefaultAsync(cancellationToken);
+
+    public async ValueTask<GamePost?> ToggleLikeAsync(PostId postId, WorldId worldId, AuthorId authorId, CancellationToken cancellationToken)
+    {
+        var author = authorId.Value;
+        var exists = new BsonDocument("$in", new BsonArray { author, "$LikedBy" });
+        var remove = new BsonDocument("$filter", new BsonDocument
+        {
+            ["input"] = "$LikedBy",
+            ["as"] = "item",
+            ["cond"] = new BsonDocument("$ne", new BsonArray { "$$item", author }),
+        });
+        var add = new BsonDocument("$concatArrays", new BsonArray { "$LikedBy", new BsonArray { author } });
+        PipelineDefinition<GamePost, GamePost> pipeline = new[]
+        {
+            new BsonDocument("$set", new BsonDocument("LikedBy", new BsonDocument("$cond", new BsonArray { exists, remove, add }))),
+        };
+        var filter = Builders<GamePost>.Filter.Where(item => item.Id == postId && item.WorldId == worldId);
+        var update = Builders<GamePost>.Update.Pipeline(pipeline);
+        var options = new FindOneAndUpdateOptions<GamePost, GamePost>
+        {
+            ReturnDocument = ReturnDocument.After,
+            Projection = WithoutEmbedding,
+        };
+        return await (sessionProvider.Current is { } session
+            ? _posts.FindOneAndUpdateAsync(session, filter, update, options, cancellationToken)
+            : _posts.FindOneAndUpdateAsync(filter, update, options, cancellationToken));
+    }
 
     public async ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken) =>
         await _posts.Find(item => item.Id == postId)

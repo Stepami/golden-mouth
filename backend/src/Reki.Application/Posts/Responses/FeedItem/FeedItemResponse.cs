@@ -10,7 +10,10 @@ public sealed record FeedItemResponse(
     string? Role,
     string? Ago,
     string Text,
-    IReadOnlyList<ReactionResponse>? Reactions,
+    long? Likes,
+    IReadOnlyList<AuthorId>? LikedBy,
     long? Views,
     int? CommentCount,
-    string? Repost);
+    string? Repost,
+    PostId? RepostId = null,
+    AuthorId? AuthorId = null);
