@@ -59,9 +59,8 @@ public static partial class PostResponseMapper
             post.LikedBy,
             post.Views,
             post.Comments.Count,
-            null,
-            post.RepostId,
-            post.AuthorId);
+            post.AuthorId,
+            post.RepostId);
     }
 
     [MapProperty(nameof(GamePost.Id), nameof(ChannelPostResponse.PostId))]

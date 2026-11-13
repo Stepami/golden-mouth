@@ -29,7 +29,7 @@ internal sealed class WorldPostsQueryHandler(
 
         return await postRepository.GetPostsAsync(
             world.Id,
-            query.Feed || query.Liked ? null : world.Player.PlayerId.ToAuthorId(),
+            query.AuthorId,
             query.Cursor,
             query.PageSize,
             query.LikedBy,

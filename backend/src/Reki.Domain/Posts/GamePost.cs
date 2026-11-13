@@ -8,6 +8,8 @@ public sealed record GamePost(
     WorldId WorldId,
     string Text,
     long Views,
+    long Likes,
+    IReadOnlyList<AuthorId> LikedBy,
     IReadOnlyList<GameComment> Comments,
     DateTimeOffset CreatedAtUtc,
     long SubscriberDelta,
@@ -20,10 +22,6 @@ public sealed record GamePost(
     string? FlopReason = null,
     PostId? RepostId = null)
 {
-    public long Likes { get; init; }
-
-    public IReadOnlyList<AuthorId> LikedBy { get; init; } = [];
-
     public GameComment? FindRequest(string requestId) =>
         Comments.FirstOrDefault(item => string.Equals(item.RequestId, requestId, StringComparison.Ordinal));
 

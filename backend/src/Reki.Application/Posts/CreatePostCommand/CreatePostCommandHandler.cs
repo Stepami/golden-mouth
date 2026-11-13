@@ -58,6 +58,8 @@ internal sealed class CreatePostCommandHandler(
             world.Id,
             command.Text,
             0,
+            0,
+            [],
             [],
             now,
             0,

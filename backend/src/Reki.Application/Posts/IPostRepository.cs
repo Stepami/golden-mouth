@@ -32,7 +32,7 @@ public interface IPostRepository
         WorldId worldId,
         CancellationToken cancellationToken);
 
-    ValueTask<GamePost?> ToggleLikeAsync(PostId postId, WorldId worldId, AuthorId authorId, CancellationToken cancellationToken);
+    ValueTask LikePostAsync(PostId postId, AuthorId authorId, CancellationToken cancellationToken);
 
     /// <summary>Reads a story candidate; the caller must verify world ownership before exposing it.</summary>
     ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken);

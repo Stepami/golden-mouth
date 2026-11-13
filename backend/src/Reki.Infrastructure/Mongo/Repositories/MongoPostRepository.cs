@@ -122,7 +122,7 @@ internal sealed class MongoPostRepository(
             .Project<GamePost>(WithoutEmbedding)
             .FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask<GamePost?> ToggleLikeAsync(PostId postId, WorldId worldId, AuthorId authorId, CancellationToken cancellationToken)
+    public async ValueTask LikePostAsync(PostId postId, AuthorId authorId, CancellationToken cancellationToken)
     {
         var author = authorId.Value;
         var exists = new BsonDocument("$in", new BsonArray { author, "$LikedBy" });
@@ -137,16 +137,11 @@ internal sealed class MongoPostRepository(
         {
             new BsonDocument("$set", new BsonDocument("LikedBy", new BsonDocument("$cond", new BsonArray { exists, remove, add }))),
         };
-        var filter = Builders<GamePost>.Filter.Where(item => item.Id == postId && item.WorldId == worldId);
+        var filter = Builders<GamePost>.Filter.Where(item => item.Id == postId);
         var update = Builders<GamePost>.Update.Pipeline(pipeline);
-        var options = new FindOneAndUpdateOptions<GamePost, GamePost>
-        {
-            ReturnDocument = ReturnDocument.After,
-            Projection = WithoutEmbedding,
-        };
-        return await (sessionProvider.Current is { } session
-            ? _posts.FindOneAndUpdateAsync(session, filter, update, options, cancellationToken)
-            : _posts.FindOneAndUpdateAsync(filter, update, options, cancellationToken));
+        await (sessionProvider.Current is { } session
+            ? _posts.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken)
+            : _posts.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));
     }
 
     public async ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken) =>
