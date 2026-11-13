@@ -29,6 +29,10 @@ const worldId = (): string => {
         throw new Error('World must be loaded before this request');
     return sessionPlayer.worldInstanceId;
 };
+const playerAuthorId = (): string => {
+    if (!sessionPlayer) throw new Error('Player must be loaded before this request');
+    return `Player_${sessionPlayer.id.replaceAll('-', '').toLowerCase()}`;
+};
 async function fetchTemplates(): Promise<void> {
     try {
         const loaded = (await data(sdk.worlds.getWorldTemplates(), false)).map(map.world);
@@ -283,12 +287,30 @@ export const api = {
         }
     },
     feed: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<FeedItem>> => {
-        const page = await data(sdk.posts.getFeed(selectedWorldId ?? worldId(), cursor, undefined, signal));
+        const page = await data(sdk.posts.getFeed(selectedWorldId ?? worldId(), cursor, undefined, undefined, signal));
         return { ...page, items: page.items.map(map.feed) };
     },
     channelPosts: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<ChannelPost>> => {
-        const page = await data(sdk.posts.getChannelPosts(selectedWorldId ?? worldId(), cursor, undefined, signal));
+        const page = await data(sdk.posts.getChannelPosts(selectedWorldId ?? worldId(), cursor, undefined, undefined, signal));
         return { ...page, items: page.items.map(map.channelPost) };
+    },
+    likedPosts: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<FeedItem>> => {
+        const player = sessionPlayer;
+        const page = await data(sdk.posts.getLikedPosts(selectedWorldId ?? worldId(), cursor, playerAuthorId(), undefined, signal));
+        if (sessionPlayer?.id !== player?.id || sessionPlayer?.worldInstanceId !== player?.worldInstanceId)
+            throw new DOMException('World has changed', 'AbortError');
+        return { ...page, items: page.items.map(map.feed) };
+    },
+    togglePostLike: async (postId: string, signal?: AbortSignal): Promise<PostDetailResponse> => {
+        const player = sessionPlayer;
+        try {
+            const post = await data(sdk.posts.togglePostLike(postId, worldId(), { authorId: playerAuthorId() }, signal));
+            if (sessionPlayer?.id !== player?.id || sessionPlayer?.worldInstanceId !== player?.worldInstanceId)
+                throw new DOMException('World has changed', 'AbortError');
+            return map.post(post);
+        } finally {
+            clearApiCache();
+        }
     },
     post: async (postId: string): Promise<Post | null> => {
         try {
