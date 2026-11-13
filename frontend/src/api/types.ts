@@ -38,7 +38,6 @@ export type PostDetailResponse = Omit<Fields<Wire.PostDetailResponse>, 'views' |
   authorId?: string; views: number; likes: number; likedBy: string[]; reactions: Reaction[]; comments: CommentT[]
 }
 export type Post = Omit<PostDetailResponse, 'postId'> & { id: string; inRivers?: boolean; at?: string }
-export type ChannelPost = Omit<Fields<Wire.ChannelPostResponse>, 'views' | 'likes' | 'likedBy' | 'commentCount' | 'reactions' | 'repostId'> & Partial<Pick<Fields<Wire.ChannelPostResponse>, 'repostId'>> & { views: number; likes: number; likedBy: string[]; commentCount: number; reactions: Reaction[] }
 export type Why = Wire.WhyResponse
 export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views' | 'ribbons' | 'bestComment'> & {
   delta: number; views: number

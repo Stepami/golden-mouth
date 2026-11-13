@@ -35,7 +35,6 @@ export function energyWallet(value: Input<Wire.EnergyWalletResponse>): Wire.Ener
 const reactions = (likes: number | string | bigint, likedBy: string[]): Ui.Reaction[] => [{ emoji: '🔥', count: number(likes) + likedBy.length }]
 export const comment = (value: Input<Wire.CommentResponse>): Ui.CommentT => ({ ...value, depth: number(value.depth) })
 export const post = (value: Input<Wire.PostDetailResponse>): Ui.PostDetailResponse => ({ ...value, views: number(value.views), likes: number(value.likes), likedBy: value.likedBy, reactions: reactions(value.likes, value.likedBy), comments: value.comments.map(comment) })
-export const channelPost = (value: Input<Wire.ChannelPostResponse>): Ui.ChannelPost => ({ ...value, views: number(value.views), likes: number(value.likes), likedBy: value.likedBy, commentCount: number(value.commentCount), reactions: reactions(value.likes, value.likedBy) })
 export const result = (value: Input<Wire.PostResultResponse>): Ui.PostResult => ({ ...value, delta: number(value.delta), views: number(value.views), bestComment: value.bestComment ?? undefined, ribbons: value.ribbons.map(ribbon => ({ ...ribbon, sub: ribbon.sub ?? undefined })) })
 export function friend(value: Input<Wire.FriendResponse>): Ui.Friend {
   if (value.pronoun !== 'её' && value.pronoun !== 'его') throw new Error('Unknown friend pronoun')

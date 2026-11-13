@@ -18,7 +18,7 @@ export { ApiError } from './transport';
 import { sessionGeneration, assertSession, endSession } from './session';
 import { parse } from 'valibot';
 import { starGenerationEvent } from './streamEvents';
-import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, Player, Post, PostDetailResponse, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
+import type { PlayerDocument, PostsPage, Challenge, Dm, FeedItem, Friend, Player, Post, PostDetailResponse, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
 let sessionPlayer: Player | undefined;
 let sessionIdentity: PlayerDocument | undefined;
 let ownedWorldSnapshot: WorldDocument[] | undefined;
@@ -287,16 +287,21 @@ export const api = {
         }
     },
     feed: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<FeedItem>> => {
-        const page = await data(sdk.posts.getFeed(selectedWorldId ?? worldId(), cursor, undefined, undefined, signal));
+        const id = selectedWorldId ?? worldId();
+        const selected = ownedWorldSnapshot?.find(world => world.id === id);
+        if (!selected) throw new Error('World must be loaded before this request');
+        const authors = [playerAuthorId(), ...selected.stars.map(star => `Star_${star.id}`)];
+        const page = await data(sdk.posts.getPosts(id, authors, cursor, undefined, undefined, signal));
         return { ...page, items: page.items.map(map.feed) };
     },
-    channelPosts: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<ChannelPost>> => {
-        const page = await data(sdk.posts.getChannelPosts(selectedWorldId ?? worldId(), cursor, undefined, undefined, signal));
-        return { ...page, items: page.items.map(map.channelPost) };
+    channelPosts: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<FeedItem>> => {
+        const page = await data(sdk.posts.getPosts(selectedWorldId ?? worldId(), [playerAuthorId()], cursor, undefined, undefined, signal));
+        return { ...page, items: page.items.map(map.feed) };
     },
     likedPosts: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<FeedItem>> => {
         const player = sessionPlayer;
-        const page = await data(sdk.posts.getLikedPosts(selectedWorldId ?? worldId(), cursor, playerAuthorId(), undefined, signal));
+        const author = playerAuthorId();
+        const page = await data(sdk.posts.getPosts(selectedWorldId ?? worldId(), [author], cursor, author, undefined, signal));
         if (sessionPlayer?.id !== player?.id || sessionPlayer?.worldInstanceId !== player?.worldInstanceId)
             throw new DOMException('World has changed', 'AbortError');
         return { ...page, items: page.items.map(map.feed) };
