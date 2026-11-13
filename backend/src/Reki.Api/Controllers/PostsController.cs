@@ -60,7 +60,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         var result = await sender.Send(request.ToQuery(liked: true), cancellationToken);
         var worlds = await rekiContext.Worlds;
         IReadOnlyList<FeedItemResponse> response =
-            [.. result.Items.Select(post => PostResponseMapper.MapFeedItem(post, worlds[post.WorldId]))];
+            [.. result.Items.Select(post => post.MapFeedItem(worlds[post.WorldId]))];
         return TypedResults.Ok(new PageResponse<FeedItemResponse>(response, result.NextCursor));
     }
 
@@ -100,7 +100,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
             cancellationToken);
         var worlds = await rekiContext.Worlds;
         IReadOnlyList<FeedItemResponse> response =
-            [.. result.Items.Select(post => PostResponseMapper.MapFeedItem(post, worlds[post.WorldId]))];
+            [.. result.Items.Select(post => post.MapFeedItem(worlds[post.WorldId]))];
         return TypedResults.Ok(new PageResponse<FeedItemResponse>(response, result.NextCursor));
     }
 
