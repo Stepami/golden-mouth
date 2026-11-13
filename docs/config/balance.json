@@ -1,6 +1,7 @@
 {
   "_doc": "Действующий баланс ML-публикации #245. Источник правил: docs/game-flow.md и docs/ml-scoring.md. Backend читает /app/config/balance.json; валидные изменения применяются через IOptionsMonitor к следующим расчётам, время дневного сброса требует рестарта. Те же изменения сохраняются в репозитории для следующего image.",
   "feed": { "open_probability": 0.05 },
+  "repost": { "growth_multiplier": 0.25 },
   "energy": { "post_cost": 1, "comment_cost": 1, "initial": 10, "cap": 10, "regen_seconds": 600, "initial_crystals": 10, "exchange_crystals": 3, "exchange_target_energy": 10 },
   "posts": {
     "free_per_day": 10,

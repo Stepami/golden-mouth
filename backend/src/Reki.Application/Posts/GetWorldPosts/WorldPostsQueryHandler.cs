@@ -27,11 +27,14 @@ internal sealed class WorldPostsQueryHandler(
                 world.Id));
         }
 
-        return await postRepository.GetPostsAsync(
+        var page = await postRepository.GetPostsAsync(
             world.Id,
             query.Feed ? null : world.Player.PlayerId.ToAuthorId(),
             query.Cursor,
             query.PageSize,
             cancellationToken);
+        var ids = page.Items.Select(post => post.QuotedPostId).OfType<Domain.Posts.PostId>().Distinct().ToArray();
+        var sources = ids.Length == 0 ? [] : await postRepository.GetReferencedPostsAsync(world.Id, ids, cancellationToken);
+        return page with { Sources = sources.ToDictionary(post => post.Id) };
     }
 }

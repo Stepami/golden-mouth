@@ -433,3 +433,11 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .crystal-button { border:0; cursor:pointer; }
 
 .delete-trigger, .top button.delete-trigger { border: 1px solid #F06473; border-radius: 10px; padding: 4px 8px; }
+
+/* Reposts use the current card and text-button styles. */
+.quoted-post { display: block; width: 100%; box-sizing: border-box; margin: 12px 0 0; padding: 12px; border: 1px solid var(--line, #343440); border-radius: 12px; background: transparent; color: inherit; text-align: left; font: inherit; overflow-wrap: anywhere; }
+.quoted-post:disabled { opacity: 1; cursor: default; }
+.quoted-post-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; overflow: hidden; margin-top: 8px; white-space: pre-wrap; }
+.repost-action { min-height: 44px; margin-top: 4px; padding: 8px 0; text-align: left; }
+.repost-options { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.repost-options .btn { width: auto; max-width: 100%; padding: 10px 14px; font-size: 15px; }

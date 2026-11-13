@@ -908,6 +908,94 @@ export class PostsClient {
     /**
      * @return OK
      */
+    repostPost(postId: string, worldId: string, signal?: AbortSignal): Promise<SwaggerResponse<RepostResponse>> {
+        let url_ = this.baseUrl + "/posts/{postId}/repost?";
+        if (postId === undefined || postId === null)
+            throw new globalThis.Error("The parameter 'postId' must be defined.");
+        url_ = url_.replace("{postId}", encodeURIComponent("" + postId));
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
+            url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "PUT",
+            signal,
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processRepostPost(_response);
+        });
+    }
+
+    protected processRepostPost(response: Response): Promise<SwaggerResponse<RepostResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as RepostResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<RepostResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return OK
+     */
+    undoRepost(postId: string, worldId: string, signal?: AbortSignal): Promise<SwaggerResponse<RepostResponse>> {
+        let url_ = this.baseUrl + "/posts/{postId}/repost?";
+        if (postId === undefined || postId === null)
+            throw new globalThis.Error("The parameter 'postId' must be defined.");
+        url_ = url_.replace("{postId}", encodeURIComponent("" + postId));
+        if (worldId === undefined || worldId === null)
+            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
+        else
+            url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "DELETE",
+            signal,
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processUndoRepost(_response);
+        });
+    }
+
+    protected processUndoRepost(response: Response): Promise<SwaggerResponse<RepostResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as RepostResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<RepostResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return OK
+     */
     replyToPost(postId: string, worldId: string, body: ReplyRequest, signal?: AbortSignal): Promise<SwaggerResponse<ReplyResponse>> {
         let url_ = this.baseUrl + "/posts/{postId}/replies?";
         if (postId === undefined || postId === null)
@@ -1954,6 +2042,8 @@ export interface ChannelPostResponse {
     views: number;
     reactions: ReactionResponse[];
     commentCount: number;
+    quote?: QuotedPostResponse | null;
+    isRepost?: boolean;
 
     [key: string]: any;
 }
@@ -2027,6 +2117,7 @@ export interface CommentResponse {
 
 export interface CreatePostRequest {
     text: string;
+    quotedPostId?: string | null;
     ownWords?: boolean;
     wantId?: string | null;
 
@@ -2138,6 +2229,10 @@ export interface FeedItemResponse {
     views: number | null;
     commentCount: number | null;
     repost: string | null;
+    quote?: QuotedPostResponse | null;
+    canRepost?: boolean;
+    reposted?: boolean;
+    isRepost?: boolean;
 
     [key: string]: any;
 }
@@ -2268,6 +2363,8 @@ export interface PostDetailResponse {
     views: number;
     reactions: ReactionResponse[];
     comments: CommentResponse[];
+    quote?: QuotedPostResponse | null;
+    isRepost?: boolean;
 
     [key: string]: any;
 }
@@ -2292,6 +2389,15 @@ export interface ProblemDetails {
     status?: number | null;
     detail?: string | null;
     instance?: string | null;
+
+    [key: string]: any;
+}
+
+export interface QuotedPostResponse {
+    postId: string;
+    author: string | null;
+    avatar: string | null;
+    text: string | null;
 
     [key: string]: any;
 }
@@ -2351,6 +2457,16 @@ export interface ReplyResponse {
 export interface ReportRequest {
     commentId: string;
     reason: string;
+
+    [key: string]: any;
+}
+
+export interface RepostResponse {
+    postId: string | null;
+    active: boolean;
+    subscriberDelta: number;
+    energyLeft: number;
+    subscribers: number;
 
     [key: string]: any;
 }

@@ -18,7 +18,12 @@ public sealed record GamePost(
     int Version = 0,
     string ReactionEmoji = "🔥",
     AuthorId? PredictedAuthorId = null,
-    string? FlopReason = null)
+    string? FlopReason = null,
+    PostId? QuotedPostId = null,
+    bool IsRepost = false,
+    bool RepostHidden = false,
+    PostId? RepostId = null,
+    bool RepostActive = false)
 {
     public GameComment? FindRequest(string requestId) =>
         Comments.FirstOrDefault(item => string.Equals(item.RequestId, requestId, StringComparison.Ordinal));

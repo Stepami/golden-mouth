@@ -22,4 +22,5 @@ public sealed record GameBalance(
     int PostEnergyCost = 1,
     int OwnWorldSubscribers = 500,
     double StarFeedOpenProbability = 0,
-    int EnergyCap = 10);
+    int EnergyCap = 10,
+    double RepostGrowthMultiplier = 0.25);

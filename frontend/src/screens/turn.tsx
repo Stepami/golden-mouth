@@ -1,3 +1,4 @@
+import { QuotedPost } from '../ui/QuotedPost'
 import { StoryGoal } from '../ui/StoryGoal'
 import { useEffect, useRef, useState } from 'react'
 import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
@@ -23,7 +24,16 @@ import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 function Compose() {
   const nav = useNav(); const p = usePlayer()
   const ideas = contentOf(p.world).ideas
-  const key = draftKey(p)
+  const quotedPostId = typeof nav.params.quotedPostId === 'string' ? nav.params.quotedPostId : undefined
+  const key = draftKey(p) + (quotedPostId ? `:quote:${quotedPostId}` : '')
+  const [source, setSource] = useState<Post | null>(null)
+  const [sourceError, setSourceError] = useState(false)
+  useEffect(() => {
+    if (!quotedPostId) return
+    let active = true
+    void api.post(quotedPostId).then(post => { if (active) setSource(post) }).catch(() => { if (active) setSourceError(true) })
+    return () => { active = false }
+  }, [quotedPostId])
   const [draft, setDraft] = useState<PostDraft>(() => {
     const saved = readPostDraft(key)
     return saved.text.length || saved.wantId ? saved : { text: typeof nav.params.text === 'string' ? nav.params.text : '', ownWords: true }
@@ -37,13 +47,17 @@ function Compose() {
   useEffect(() => { setDurable(savePostDraft(key, draft)) }, [key, draft])
   return (
     <div className="screen no-tab">
-      <TopBar onBack={nav.back} title="Новый пост" rightPlain right={<EnergyBadge value={p.postsLeft} />} />
+      <TopBar onBack={nav.back} title={quotedPostId ? "Репост со своим текстом" : "Новый пост"} rightPlain right={<EnergyBadge value={p.postsLeft} />} />
       <div className="pad">
-        <StoryGoal world={p.world} firstStep />
-        <TextField label="Твой пост" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" /><div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>
+        {!quotedPostId && <StoryGoal world={p.world} firstStep />}
+        {quotedPostId && <div className="small muted" role="status">{sourceError ? 'Не удалось загрузить оригинал. Вернись в ленту и повтори.' : source ? 'Оригинал будет под твоим текстом.' : 'Загружаем оригинал…'}</div>}
+        {source && <QuotedPost quote={{ postId: source.id, text: source.text,
+          author: contentOf(p.world).stars.find(star => `Star_${star.id}` === source.authorId)?.name ?? null,
+          avatar: contentOf(p.world).stars.find(star => `Star_${star.id}` === source.authorId)?.avatarSeed ?? null }} />}
+        <TextField label="Твой пост" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!quotedPostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords }); nav.replace('02-2_live', { text, ownWords: draft.ownWords, wantId: draft.wantId }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
+      <BottomCTA main="Опубликовать" disabled={!text.trim() || (!!quotedPostId && !source)} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords, publication_kind: quotedPostId ? 'quote' : 'post' }); nav.replace('02-2_live', { text, ownWords: draft.ownWords, wantId: quotedPostId ? undefined : draft.wantId, quotedPostId }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
     </div>
   )
 }
@@ -61,15 +75,15 @@ function Live() {
     const start = setTimeout(() => { void (async () => {
       let created: Awaited<ReturnType<typeof api.createPost>>
       try {
-        created = await api.createPost(text, nav.params.ownWords !== false, typeof nav.params.wantId === 'string' ? nav.params.wantId : undefined)
+        created = await api.createPost(text, nav.params.ownWords !== false, typeof nav.params.wantId === 'string' ? nav.params.wantId : undefined, typeof nav.params.quotedPostId === 'string' ? nav.params.quotedPostId : undefined)
       } catch (cause) {
         if (!active) return
         if (cause instanceof ApiError && cause.problemType === 'urn:reki:problem:crisis') { nav.replace(p.ageBand === '14-17' || !p.ageBand ? '06-2_crisis' : '06-3_crisis_adult'); return }
-        nav.replace('02-2b_publish_error', { text, status: cause instanceof ApiError ? cause.status : undefined, uncertain: !(cause instanceof ApiError) || (cause.status >= 500 && cause.status !== 503) })
+        nav.replace('02-2b_publish_error', { text, quotedPostId: nav.params.quotedPostId, status: cause instanceof ApiError ? cause.status : undefined, uncertain: !(cause instanceof ApiError) || (cause.status >= 500 && cause.status !== 503) })
         return
       }
       if (!active) return
-      completePostDraft(draftKey(p), text)
+      completePostDraft(draftKey(p) + (typeof nav.params.quotedPostId === 'string' ? `:quote:${nav.params.quotedPostId}` : ''), text)
       const latest = await refresh()
       if (!active) return
       if (!latest) patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + created.result.delta) })
@@ -82,7 +96,7 @@ function Live() {
       await new Promise(resolve => setTimeout(resolve, 1300))
       if (!active) return
       setTyping(null)
-      track('post_result', { delta: created.result.delta, viral: created.result.viral, flop: created.result.flop })
+      track('post_result', { delta: created.result.delta, viral: created.result.viral, flop: created.result.flop, publication_kind: nav.params.quotedPostId ? 'quote' : 'post' })
       const result = latest ? { ...created.result, completedWants: latest.wants.filter(want => want.done && p.wants.some(before => before.id === want.id && !before.done)).map(({ id, text, reward }) => ({ id, text, reward })) } : created.result
       nav.replace(result.viral ? '02-5_viral' : result.flop ? '02-4_flop' : '02-3_result', { result, post: created.post, commentPromise })
     })() }, 0)
@@ -124,7 +138,7 @@ function PublishError() {
         <div className="sheet" role="alert" aria-live="assertive">
           <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>{uncertain ? 'Не удалось подтвердить публикацию' : 'Пост не опубликован'}</div>
           <div className="muted" style={{ marginBottom: 20 }}>{explanation}</div>
-          <Button onClick={() => nav.replace('02-1_compose', { text })}>Изменить текст</Button>
+          <Button onClick={() => nav.replace('02-1_compose', { text, quotedPostId: nav.params.quotedPostId })}>Изменить текст</Button>
           <Button secondary onClick={() => nav.replace('03-5_stage')}>В канал</Button>
 
         </div>
@@ -168,7 +182,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
   return (
     <div className="screen no-tab">
       <ChannelHead />
-      <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">только что</div>{post.text}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}<span className="small muted" style={{ float: 'right' }}>👁 {fmt(r.views)}</span></div></div></div>
+      <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">только что</div>{post.text}<QuotedPost quote={post.quote} /><div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}<span className="small muted" style={{ float: 'right' }}>👁 {fmt(r.views)}</span></div></div></div>
       <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.55)' }}>
         <div className="sheet" style={{ background: viral ? 'linear-gradient(170deg,#1B2A4A,#2A1236 60%,#1A1A24)' : '#1A1A24', position: 'relative' }}>
           <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')}>×</button>

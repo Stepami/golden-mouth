@@ -14,6 +14,7 @@ namespace Reki.Application.Posts.GenerateReplyCommand;
 
 internal sealed partial class GenerateReplyCommandHandler(
     ISender sender,
+    IPostRepository posts,
     IRekiContextAccessor rekiContextAccessor,
     StarTurnPolicy turnPolicy,
     IStarTurnGenerator generator,
@@ -28,6 +29,11 @@ internal sealed partial class GenerateReplyCommandHandler(
         var world = (await rekiContext.Worlds).GetValueOrDefault(command.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var post = await sender.Send(new PostQuery(command.PostId, world.Id), cancellationToken);
+        if (post.IsRepost)
+        {
+            throw new RequestConflictException("Open the original post to reply.");
+        }
+
         var star = world.FindStar(command.AuthorId)
             ?? throw new RequestConflictException("The author is not a star of this world.");
         var source = command.SourceCommentId is { } sourceId
@@ -47,10 +53,11 @@ internal sealed partial class GenerateReplyCommandHandler(
 
         var additionalStarId = source?.AdditionalReplierId;
         var branch = source?.ParentCommentId is { } parent ? post.GetBranch(parent) : [];
+        var quote = post.QuotedPostId is { } quoteId ? await posts.GetPostAsync(quoteId, world.Id, cancellationToken) : null;
         var turnContext = new StarReplyContext(
             new StarAgentProfile(world, star.Id, player.Address),
             star.Id,
-            post.Text,
+            quote is null ? post.Text : $"Цитата из поста {world.FindStar(quote.AuthorId)?.Name}: {quote.Text}\nТекст игрока: {post.Text}",
             branch,
             source?.Text,
             turnPolicy.IsHateEnabled(player, world),

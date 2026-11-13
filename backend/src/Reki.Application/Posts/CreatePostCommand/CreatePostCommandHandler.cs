@@ -43,6 +43,16 @@ internal sealed class CreatePostCommandHandler(
         var player = await context.Player;
         var world = (await context.Worlds).GetValueOrDefault(command.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
+        var source = command.QuotedPostId is { } sourceId
+            ? await posts.GetPostAsync(sourceId, world.Id, cancellationToken)
+                ?? throw new ResourceNotFoundException("Source post not found.")
+            : null;
+        if (string.IsNullOrWhiteSpace(command.Text) || (source is not null &&
+            (world.FindStar(source.AuthorId) is null || source.QuotedPostId is not null || command.WantId is not null)))
+        {
+            throw new RequestConflictException("The quote source or text is invalid.");
+        }
+
         var currentBalance = balance.CurrentValue;
         if (player.Wallet.Energy < currentBalance.PostEnergyCost)
         {
@@ -69,8 +79,9 @@ internal sealed class CreatePostCommandHandler(
             0,
             1,
             false,
-            false);
-        var score = await scorer.ScoreAsync(post, world, currentBalance, cancellationToken);
+            false,
+            QuotedPostId: command.QuotedPostId);
+        var score = await scorer.ScoreAsync(post, world, currentBalance, cancellationToken, source?.Text ?? string.Empty);
         var starId = await stars.GetRelevantCommenterAsync(world, post);
         var flopReason = score.FlopReason ?? (score.Topic > 0 ? null : "off_topic");
         var flop = flopReason is not null;
@@ -167,7 +178,7 @@ internal sealed class CreatePostCommandHandler(
             post.Viral,
             post.Flop,
             post.Views);
-        return new CreatePostResponse(post.MapPost(updatedWorld, player.Id), result, starId.ToAuthorId());
+        return new CreatePostResponse(post.MapPost(updatedWorld, player.Id, source), result, starId.ToAuthorId());
     }
 
     private static void TrackProgression(
@@ -192,6 +203,7 @@ internal sealed class CreatePostCommandHandler(
                 ["quality"] = post.Quality.ToString("0.###", CultureInfo.InvariantCulture),
                 ["post_index"] = after.Wallet.EnergyUsed.ToString(CultureInfo.InvariantCulture),
                 ["id"] = post.Id.Value.ToString("N"),
+                ["publication_kind"] = post.QuotedPostId is null ? "post" : "quote",
                 ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
             });
 

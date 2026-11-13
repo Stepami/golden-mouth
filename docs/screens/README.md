@@ -162,3 +162,11 @@ DEV-проход `journey_v22.py`: пример канала Маши с сге�
 Названия действий сверены с официальными справками: [Chrome iOS](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DiOS&hl=ru-RU), [Яндекс iOS](https://yandex.ru/support/browser-mobile-iphone/ru/troubleshooting/problems-site), [Яндекс Android](https://www.yandex.ru/support/browser-mobile-android-phone/ru/troubleshooting/problems-site).
 
 #291, 12.11.2026: `journey_v35.py` обновляет текущий экран настроек и окно Web Push. Подключён типизированный контракт backend #293; в каталоге автоматически видно предложение Web Push. Системное разрешение — по нажатию, «Позже» запоминается для аккаунта в браузере. Telegram Mini App объясняет доставку ботом.
+
+### Репосты в текущей дизайн-системе (#205, 13.11.2026)
+
+Снимки настоящих компонентов с синтетическими API-данными, не отдельный макет редизайна:
+
+- [03-3c_repost](03-3c_repost.png) — меню обычного репоста и цитаты, цена 1 энергия.
+- [02-1c_quote](02-1c_quote.png) — отдельный черновик своего текста с оригиналом.
+- [03-5c_repost](03-5c_repost.png) — оригинал с автором в своём канале, отмена репоста.

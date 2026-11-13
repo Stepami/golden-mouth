@@ -30,12 +30,13 @@ internal sealed partial class PostTextAnalysis(
     public async Task<double[]> SkillsAsync(
         GamePost post,
         World world,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string quoteContext = "")
     {
         string[] hypotheses = ["Автор смело выражает своё мнение.", "Текст содержит юмор или шутку."];
         var scores = await nli.ScoreAsync(post.Text, hypotheses, cancellationToken);
 
-        var postVector = await postEmbedder.GenerateVectorAsync(post, cancellationToken: cancellationToken);
+        var postVector = await postEmbedder.GenerateVectorAsync(quoteContext.Length == 0 ? post : post with { Text = $"{quoteContext}\n{post.Text}" }, cancellationToken: cancellationToken);
         var worldVector = await worldEmbedder.GenerateVectorAsync(world, cancellationToken: cancellationToken);
         var similarity = TensorPrimitives.CosineSimilarity(postVector.Span, worldVector.Span);
         var topic = similarity >= context.Current.Balance.Difficulties[world.Difficulty].TopicMinCosine ? 1d : 0d;

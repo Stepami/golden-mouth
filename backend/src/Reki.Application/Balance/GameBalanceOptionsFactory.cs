@@ -33,6 +33,12 @@ internal sealed class GameBalanceOptionsFactory(
             throw new InvalidOperationException("Energy costs must be positive.");
         }
 
+        var repostMultiplier = configuration.GetValue("repost:growth_multiplier", 0.25);
+        if (!double.IsFinite(repostMultiplier) || repostMultiplier <= 0 || repostMultiplier > 1)
+        {
+            throw new InvalidOperationException("The repost growth multiplier must be between zero and one.");
+        }
+
         var resetValue = posts["reset_time_msk"]
                          ?? throw new InvalidOperationException("posts.reset_time_msk is required.");
         if (!TimeOnly.TryParseExact(
@@ -135,6 +141,7 @@ internal sealed class GameBalanceOptionsFactory(
             postCost,
             configuration.GetValue<int>("access:create_world_from_scratch:subs"),
             configuration.GetValue<double>("feed:open_probability"),
-            energy.GetValue<int>("cap"));
+            energy.GetValue<int>("cap"),
+            repostMultiplier);
     }
 }

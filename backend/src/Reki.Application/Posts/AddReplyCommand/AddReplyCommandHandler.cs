@@ -35,10 +35,16 @@ internal sealed class AddReplyCommandHandler(
             ?? throw new ResourceNotFoundException("World not found.");
         var post = await posts.GetPostAsync(command.PostId, world.Id, cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");
+        if (post.IsRepost)
+        {
+            throw new RequestConflictException("Open the original post to reply.");
+        }
+
+        var quote = post.QuotedPostId is { } quoteId ? await posts.GetPostAsync(quoteId, world.Id, cancellationToken) : null;
         var isPlayer = command.AuthorId == player.Id.ToAuthorId();
         if (post.FindRequest(command.RequestId) is { } existing)
         {
-            return new ReplyResponse(existing.Id, existing.AuthorId, post.MapPost(world, player.Id), player.Wallet.Energy, world.Player.Subscribers);
+            return new ReplyResponse(existing.Id, existing.AuthorId, post.MapPost(world, player.Id, quote), player.Wallet.Energy, world.Player.Subscribers);
         }
 
         var comment = new GameComment(
@@ -93,6 +99,6 @@ internal sealed class AddReplyCommandHandler(
             await posts.SaveReplyAsync(post, cancellationToken);
         }
 
-        return new ReplyResponse(comment.Id, comment.AuthorId, post.MapPost(world, player.Id), player.Wallet.Energy, world.Player.Subscribers);
+        return new ReplyResponse(comment.Id, comment.AuthorId, post.MapPost(world, player.Id, quote), player.Wallet.Energy, world.Player.Subscribers);
     }
 }

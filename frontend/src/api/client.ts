@@ -211,11 +211,13 @@ export const api = {
         await data(sdk.posts.deletePost(id));
         clearApiCache();
     },
-    createPost: async (text: string, ownWords: boolean, wantId?: string) => {
-        const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, wantId: wantId ?? null }));
+    createPost: async (text: string, ownWords: boolean, wantId?: string, quotedPostId?: string) => {
+        const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, wantId: wantId ?? null, quotedPostId: quotedPostId ?? null }));
         const { postId: id, ...post } = map.post(response.post);
         return { post: { ...post, id }, result: map.result(response.result), predictedAuthorId: response.predictedAuthorId };
     },
+    repost: (postId: string, selectedWorldId: string) => data(sdk.posts.repostPost(postId, selectedWorldId)),
+    undoRepost: (postId: string, selectedWorldId: string) => data(sdk.posts.undoRepost(postId, selectedWorldId)),
     initialComment: async (postId: string, authorId: string, signal?: AbortSignal): Promise<Post> => {
         const currentWorld = worldId();
         const generated = await generateStar(postId, currentWorld, authorId, null, false, signal);
