@@ -8,4 +8,5 @@ public sealed record ChannelPostResponse(
     DateTimeOffset CreatedAtUtc,
     long Views,
     IReadOnlyList<ReactionResponse> Reactions,
-    int CommentCount);
+    int CommentCount,
+    PostId? RepostId = null);

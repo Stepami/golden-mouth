@@ -9,4 +9,5 @@ public sealed record PostDetailResponse(
     string Text,
     long Views,
     IReadOnlyList<ReactionResponse> Reactions,
-    IReadOnlyList<CommentResponse> Comments);
+    IReadOnlyList<CommentResponse> Comments,
+    PostId? RepostId = null);

@@ -43,6 +43,11 @@ internal sealed class CreatePostCommandHandler(
         var player = await context.Player;
         var world = (await context.Worlds).GetValueOrDefault(command.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
+        if (command.RepostId is null && string.IsNullOrWhiteSpace(command.Text))
+        {
+            throw new RequestConflictException("Post text is required.");
+        }
+
         var currentBalance = balance.CurrentValue;
         if (player.Wallet.Energy < currentBalance.PostEnergyCost)
         {
@@ -69,7 +74,8 @@ internal sealed class CreatePostCommandHandler(
             0,
             1,
             false,
-            false);
+            false,
+            RepostId: command.RepostId);
         var score = await scorer.ScoreAsync(post, world, currentBalance, command.OwnWords, cancellationToken);
         var starId = await stars.GetRelevantCommenterAsync(world, post);
         var flopReason = score.FlopReason ?? (score.Topic > 0 ? null : "off_topic");
@@ -81,7 +87,8 @@ internal sealed class CreatePostCommandHandler(
             command.OwnWords,
             wantCompleted,
             post.Id.ToString(),
-            flop);
+            flop,
+            post.RepostId is not null);
         var updatedWorld = world.PublishPost(
             progression.SubscriberDelta,
             progression.Viral,
@@ -192,6 +199,7 @@ internal sealed class CreatePostCommandHandler(
                 ["quality"] = post.Quality.ToString("0.###", CultureInfo.InvariantCulture),
                 ["post_index"] = after.Wallet.EnergyUsed.ToString(CultureInfo.InvariantCulture),
                 ["id"] = post.Id.Value.ToString("N"),
+                ["publication_kind"] = post switch { { RepostId: null } => "post", { Text: "" } => "repost", _ => "quote" },
                 ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
             });
 

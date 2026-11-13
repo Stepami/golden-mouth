@@ -33,7 +33,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CreatePostRequest request,
         [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken) =>
-        TypedResults.Ok(await sender.Send(new CreatePost(request.Text, request.OwnWords, request.WantId, worldId), cancellationToken));
+        TypedResults.Ok(await sender.Send(new CreatePost(request.Text, request.OwnWords, request.WantId, worldId, request.RepostId), cancellationToken));
 
     [HttpPost("{postId}/replies", Name = "ReplyToPost")]
     [ActionName("ReplyToPost")]
@@ -90,7 +90,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
 
     [HttpGet("{postId}", Name = "GetPost")]
     [ActionName("GetPost")]
-    public async Task<Ok<PostDetailResponse>> GetPostAsync(
+    public async Task<Results<Ok<PostDetailResponse>, NoContent>> GetPostAsync(
         PostId postId,
         [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken)
@@ -98,7 +98,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         var result = await sender.Send(
             new PostDetailQuery(postId, worldId),
             cancellationToken);
-        return TypedResults.Ok(result);
+        return result is null ? TypedResults.NoContent() : TypedResults.Ok(result);
     }
 
     [HttpDelete("{postId}", Name = "DeletePost")]

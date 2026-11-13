@@ -6,14 +6,14 @@ using Reki.Application.RekiContext;
 
 namespace Reki.Application.Posts.GetPostDetail;
 
-internal sealed class PostDetailQueryHandler(ISender sender, IRekiContextAccessor rekiContextAccessor) : IQueryHandler<PostDetailQuery, PostDetailResponse>
+internal sealed class PostDetailQueryHandler(ISender sender, IRekiContextAccessor rekiContextAccessor) : IQueryHandler<PostDetailQuery, PostDetailResponse?>
 {
-    public async ValueTask<PostDetailResponse> Handle(PostDetailQuery query, CancellationToken cancellationToken)
+    public async ValueTask<PostDetailResponse?> Handle(PostDetailQuery query, CancellationToken cancellationToken)
     {
         var rekiContext = rekiContextAccessor.Context;
         var world = (await rekiContext.Worlds).GetValueOrDefault(query.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var post = await sender.Send(new PostQuery(query.PostId, world.Id), cancellationToken);
-        return post.MapPost(world, rekiContext.PlayerId);
+        return post?.MapPost(world, rekiContext.PlayerId);
     }
 }

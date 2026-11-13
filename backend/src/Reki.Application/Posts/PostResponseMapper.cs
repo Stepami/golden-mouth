@@ -59,7 +59,9 @@ public static partial class PostResponseMapper
             CreateReactions(post),
             post.Views,
             post.Comments.Count,
-            null);
+            null,
+            post.RepostId,
+            post.AuthorId);
     }
 
     [MapProperty(nameof(GamePost.Id), nameof(ChannelPostResponse.PostId))]
@@ -88,7 +90,8 @@ public static partial class PostResponseMapper
             post.Text,
             post.Views,
             CreateReactions(post),
-            post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray());
+            post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray(),
+            post.RepostId);
 
     private static CommentResponse MapComment(GamePost post, GameComment comment, World world, PlayerId playerId)
     {

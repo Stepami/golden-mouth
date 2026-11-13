@@ -11,6 +11,7 @@ import { clearWorldContent, installWorldContent, installWorldTemplates } from '.
 import { error } from '../app/log';
 import { sdk } from './transport';
 import type * as Wire from './generated/reki-api';
+import { SwaggerException } from './generated/reki-api';
 import * as map from './mappers';
 import { ApiError, data, stream } from './transport';
 export { ApiError } from './transport';
@@ -211,8 +212,8 @@ export const api = {
         await data(sdk.posts.deletePost(id));
         clearApiCache();
     },
-    createPost: async (text: string, ownWords: boolean, wantId?: string) => {
-        const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, wantId: wantId ?? null }));
+    createPost: async (text: string, ownWords: boolean, wantId?: string, repostId?: string) => {
+        const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, wantId: wantId ?? null, repostId: repostId ?? null }));
         const { postId: id, ...post } = map.post(response.post);
         return { post: { ...post, id }, result: map.result(response.result), predictedAuthorId: response.predictedAuthorId };
     },
@@ -289,8 +290,16 @@ export const api = {
         const page = await data(sdk.posts.getChannelPosts(selectedWorldId ?? worldId(), cursor, undefined, signal));
         return { ...page, items: page.items.map(map.channelPost) };
     },
-    post: async (postId: string): Promise<Post> => {
-        return data(sdk.posts.getPost(postId, worldId())).then(map.post).then(({ postId: id, ...detail }) => ({ ...detail, id }));
+    post: async (postId: string): Promise<Post | null> => {
+        try {
+            const response = await data(sdk.posts.getPost(postId, worldId()));
+            if (response == null) return null;
+            const { postId: id, ...detail } = map.post(response);
+            return { ...detail, id };
+        } catch (cause) {
+            if (cause instanceof SwaggerException && cause.status === 204) return null;
+            throw cause;
+        }
     },
     friends: (): Promise<Friend[]> => data(sdk.social.getFriends()).then(friends => friends.map(map.friend)),
     dm: (starId: string): Promise<Dm> => data(sdk.social.getDirectMessages(starId, worldId())).then(map.dm),

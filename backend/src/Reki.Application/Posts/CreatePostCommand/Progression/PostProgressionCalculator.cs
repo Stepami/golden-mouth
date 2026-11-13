@@ -21,11 +21,17 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
         bool ownWords,
         bool wantCompleted,
         string publicationId,
-        bool flop)
+        bool flop,
+        bool repost = false)
     {
         var currentBalance = balance.CurrentValue;
         var world = currentBalance.Difficulties[gameWorld.Difficulty];
         var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
+        if (repost)
+        {
+            return new PostProgression(1, quality, false, false, player.Skills);
+        }
+
         var postIndex = player.Wallet.EnergyUsed + 1;
         var multiplier = GetGrowthMultiplier(gameWorld, postIndex, ownWords);
         var viral = !flop && IsViral(publicationId, quality, world);

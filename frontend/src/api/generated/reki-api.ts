@@ -1144,6 +1144,10 @@ export class PostsClient {
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PostDetailResponse;
             return new SwaggerResponse(status, _headers, result200);
             });
+        } else if (status === 204) {
+            return response.text().then((_responseText) => {
+            return throwException("No Content", status, _responseText, _headers);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
@@ -1954,6 +1958,7 @@ export interface ChannelPostResponse {
     views: number;
     reactions: ReactionResponse[];
     commentCount: number;
+    repostId?: string | null;
 
     [key: string]: any;
 }
@@ -2027,6 +2032,7 @@ export interface CommentResponse {
 
 export interface CreatePostRequest {
     text: string;
+    repostId?: string | null;
     ownWords?: boolean;
     wantId?: string | null;
 
@@ -2138,6 +2144,8 @@ export interface FeedItemResponse {
     views: number | null;
     commentCount: number | null;
     repost: string | null;
+    repostId?: string | null;
+    authorId?: string | null;
 
     [key: string]: any;
 }
@@ -2268,6 +2276,7 @@ export interface PostDetailResponse {
     views: number;
     reactions: ReactionResponse[];
     comments: CommentResponse[];
+    repostId?: string | null;
 
     [key: string]: any;
 }
