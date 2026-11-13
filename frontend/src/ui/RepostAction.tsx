@@ -54,7 +54,7 @@ export function RepostAction({ postId, onChanged, undoOnly = false }: {
     {open && createPortal(<Sheet onClose={() => { if (!pending) setOpen(false) }}>
       <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <h3 id={titleId} tabIndex={-1}>Репост</h3>
-      <p className="small muted">Репост даст +1 подписчика. Можно добавить свой текст. Навыки не меняются.</p>
+      <p className="small muted">+1 подписчик · навыки не растут</p>
       <div className="repost-options">
         <Button secondary onClick={() => { if (busy.current) return; busy.current = true; setOpen(false); nav.push('02-2_live', { text: '', ownWords: false, repostId: postId }) }}>Репостнуть · ⚡1</Button>
         <Button secondary disabled={pending} onClick={() => { if (busy.current) return; busy.current = true; setOpen(false); nav.push('02-1_compose', { repostId: postId }) }}>Добавить свой текст · ⚡1</Button>
