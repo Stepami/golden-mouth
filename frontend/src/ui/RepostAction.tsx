@@ -47,9 +47,9 @@ export function RepostAction({ postId, onChanged, undoOnly = false }: {
     finally { busy.current = false; setPending(false) }
   }
   return <>
-    <button type="button" className={undoOnly ? "text-button repost-action" : "post-repost-button"} aria-label={undoOnly ? undefined : "Репостнуть публикацию"} title={undoOnly ? undefined : "Репост"} disabled={pending} onClick={event => {
+    <button type="button" className="post-repost-button" aria-label={undoOnly ? "Убрать репост" : "Репостнуть публикацию"} aria-pressed={undoOnly ? true : undefined} title={undoOnly ? "Убрать репост" : "Репост"} disabled={pending} onClick={event => {
       event.stopPropagation(); undoOnly ? void remove() : setOpen(true)
-    }}>{undoOnly ? 'Убрать репост' : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m16 3 4 4-4 4M4 11V9a2 2 0 0 1 2-2h14M8 21l-4-4 4-4m12 0v2a2 2 0 0 1-2 2H4"/></svg>}</button>
+    }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m16 3 4 4-4 4M4 11V9a2 2 0 0 1 2-2h14M8 21l-4-4 4-4m12 0v2a2 2 0 0 1-2 2H4"/></svg></button>
     {note && <div className="small muted" role="status">{note}</div>}
     {open && createPortal(<Sheet onClose={() => { if (!pending) setOpen(false) }}>
       <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby={titleId}>
