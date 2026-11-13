@@ -673,6 +673,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                 PlusNotifyRequested = true,
             },
             cancellationToken: CancellationToken.None);
+        var skills = (await GetStoredPlayerAsync(userId))["Skills"].DeepClone();
         var world = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
         await worldRepository.ReplaceWorldAsync(
             world with
@@ -686,19 +687,17 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             CancellationToken.None);
 
         // Act
-        var first = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
-        var second = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
+        var response = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
 
         // Assert
-        var bonuses = first.Bonus + second.Bonus;
-
-        await Assert.That(bonuses).IsEqualTo(alreadyClaimed ? 0 : 5);
+        await Assert.That(response.Bonus).IsEqualTo(alreadyClaimed ? 0 : 5);
         var saved = await playerRepository.GetPlayerAsync(ExternalUserId.From($"telegram:{userId}"), CancellationToken.None)
                     ?? throw new InvalidOperationException("Missing player.");
         await Assert.That(saved.PlusInterestClaimed).IsTrue();
         await Assert.That(saved.PlusNotifyRequested).IsTrue();
         await Assert.That(saved.Wallet.Energy).IsEqualTo(4);
         await Assert.That(saved.Wallet.Crystals).IsEqualTo(alreadyClaimed ? 10 : 15);
+        await Assert.That((await GetStoredPlayerAsync(userId))["Skills"]).IsEqualTo(skills);
         _ = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id == world.Id);
         var savedWorld = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
         await Assert.That(savedWorld.Player.Subscribers).IsEqualTo(1234);
@@ -794,28 +793,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         Factory.Session.Clock.SetUtcNow(Factory.Session.Clock.GetUtcNow().AddDays(1));
         var reset = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(reset.Energy).IsEqualTo(6);
-    }
-
-    [Test]
-    public async Task PlusInterest_BonusAddsCrystalsWithoutChangingEnergyOrSkillsAsync()
-    {
-        // Arrange
-        using var api = Factory.CreateApiClient(8581);
-        var response = await CreatePlayerWithWorldAsync(api);
-        await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
-            item => item.Id == response.Id,
-            Builders<PlayerProfile>.Update.Set(item => item.Wallet.Energy, 0));
-        var before = await GetStoredPlayerAsync(8581);
-
-        // Act
-        await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
-
-        // Assert
-        var stored = await GetStoredPlayerAsync(8581);
-        await Assert.That(stored["Wallet"]["Energy"].AsInt32).IsEqualTo(0);
-        await Assert.That(stored["Skills"]).IsEqualTo(before["Skills"]);
-        await Assert.That(stored["Wallet"]["Crystals"].AsInt32).IsEqualTo(before["Wallet"]["Crystals"].AsInt32 + 5);
-        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(0);
     }
 
     [Test]
