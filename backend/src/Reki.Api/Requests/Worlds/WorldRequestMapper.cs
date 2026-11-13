@@ -30,7 +30,6 @@ internal static partial class WorldRequestMapper
     [MapperIgnoreSource(nameof(CreateWorldRequest.Summary))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.UnlockSkill))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.UnlockLevel))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Wants))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Achievements))]
     [MapPropertyFromSource(nameof(World.Interface), Use = nameof(ToWorldInterface))]
     [MapPropertyFromSource(nameof(World.Player), Use = nameof(ToWorldPlayer))]
@@ -51,7 +50,6 @@ internal static partial class WorldRequestMapper
     [MapperIgnoreSource(nameof(CreateWorldRequest.Voices))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.PostIdeas))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.DemoPosts))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Wants))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Achievements))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Roles))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Rules))]
@@ -80,16 +78,11 @@ internal static partial class WorldRequestMapper
     [MapperIgnoreSource(nameof(CreateWorldRequest.Stars))]
     [MapValue(nameof(WorldPlayer.PlayerId), Use = nameof(InitialPlayerId))]
     [MapValue(nameof(WorldPlayer.Subscribers), 0L)]
-    [MapValue(nameof(WorldPlayer.LastPostAtUtc), null)]
-    [MapValue(nameof(WorldPlayer.RestedPostsRemaining), 0)]
-    [MapValue(nameof(WorldPlayer.PeriodStartedAtUtc), Use = nameof(InitialPlayerPeriod))]
     private static partial WorldPlayer ToWorldPlayer(this CreateWorldRequest source);
 
     private static WorldId NewWorldId() => WorldId.New();
 
     private static PlayerId InitialPlayerId() => PlayerId.From("00000000000000000000000000000000");
-
-    private static DateTimeOffset InitialPlayerPeriod() => default;
 
     private static IReadOnlyList<WorldRule> MapRules(IReadOnlyList<WorldRuleRequest> source) =>
     [
@@ -99,21 +92,11 @@ internal static partial class WorldRequestMapper
         new("Без тем 18+ и травли по внешности", true),
     ];
 
-    [MapperIgnoreSource(nameof(WorldStarRequest.Relation))]
-    [MapValue(nameof(WorldStar.Relation), 0)]
-    [MapValue(nameof(WorldStar.RelationGainedInPeriod), 0)]
-    [MapValue(nameof(WorldStar.RelationPeriodStartedAtUtc), Use = nameof(InitialRelationPeriod))]
     private static partial WorldStar MapStar(WorldStarRequest source);
-
-    [MapperIgnoreSource(nameof(WantRequest.Done))]
-    [MapValue(nameof(DailyWant.Done), false)]
-    private static partial DailyWant MapWant(WantRequest source);
 
     [MapperIgnoreSource(nameof(CollectionCardRequest.Open))]
     [MapValue(nameof(AchievementProgress.IsOpen), false)]
     private static partial AchievementProgress MapAchievement(CollectionCardRequest source);
-
-    private static DateTimeOffset InitialRelationPeriod() => DateTimeOffset.UnixEpoch;
 
     private static WorldDifficulty MapDifficulty(WorldDifficulty source) => source switch
     {

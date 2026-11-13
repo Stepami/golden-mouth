@@ -31,7 +31,6 @@ public static class DependencyInjection
             options.Assemblies = [typeof(ApplicationAssemblyMarker)];
             options.ServiceLifetime = ServiceLifetime.Singleton;
         });
-        services.AddSingleton<GameDayPeriod>();
         services.AddSingleton<PlayerSafetyGuard>();
         services.AddSingleton<StarTurnPolicy>();
         services.AddSingleton<PostProgressionCalculator>();

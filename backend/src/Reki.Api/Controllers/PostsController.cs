@@ -33,7 +33,7 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CreatePostRequest request,
         [FromQuery, BindRequired] WorldId worldId,
         CancellationToken cancellationToken) =>
-        TypedResults.Ok(await sender.Send(new CreatePost(request.Text, request.OwnWords, request.WantId, worldId, request.RepostId), cancellationToken));
+        TypedResults.Ok(await sender.Send(new CreatePost(request.Text, request.OwnWords, worldId, request.RepostId), cancellationToken));
 
     [HttpPost("{postId}/replies", Name = "ReplyToPost")]
     [ActionName("ReplyToPost")]

@@ -45,12 +45,12 @@
 | `limit_reached` | упёрся в лимит | |
 | `plus_interest`, `plus_bonus_only` | 04-2 | |
 | `invite_sent`, `share` | позвать, поделиться | to (chat / story) |
-| `event_answered`, `challenge_post` | событие дня, пост в зарубу | kind, own |
+| `challenge_post` | пост в зарубу | kind, own |
 | `report`, `crisis_shown` | жалоба, кризис | reason, adult |
 
 ## Что пишет бэкенд сам
 
-`player_created` (группа возраста; событие создаётся до появления мира), `player_deleted` (после удаления данных и профиля; служебное событие), `world_created` (после сохранения мира: внутренний `world_id`, `template_id` = UUID шаблона (null для мира с нуля), `difficulty` = easy/normal/hard, возраст), `invite_converted`, `post_scored` (три шкалы, quality, дневной индекс расхода энергии в prop_post_index; ответы в треде тоже сдвигают индекс), `level_up`, `card_earned`, `stage_reached`, `hate_wave`, `challenge_started`, `challenge_finished`, `notification_sent`, `notification_opened`, `plus_shown`. Сервер видит то, чего не видит фронт: оценки модели, конверсию приглашений, уведомления.
+`player_created` (группа возраста; событие создаётся до появления мира), `player_deleted` (после удаления данных и профиля; служебное событие), `world_created` (после сохранения мира: внутренний `world_id`, `template_id` = UUID шаблона (null для мира с нуля), `difficulty` = easy/normal/hard, возраст), `invite_converted`, `post_scored` (три шкалы и quality), `level_up`, `card_earned`, `stage_reached`, `hate_wave`, `challenge_started`, `challenge_finished`, `notification_sent`, `notification_opened`, `plus_shown`. Сервер видит то, чего не видит фронт: оценки модели, конверсию приглашений, уведомления.
 
 ## Метрики теста
 
@@ -85,7 +85,7 @@ Distinct player_id не доказывают число людей: удален
 
 ## Продуктовый дашборд v2 — #127
 
-Все календарные дни аналитики — `Europe/Moscow` (UTC+3). Это календарные дни, не игровой сброс лимита в 09:00. Сегодняшний день помечается как неполный.
+Все календарные дни аналитики — `Europe/Moscow` (UTC+3). Это календарные дни. Сегодняшний день помечается как неполный.
 
 ### Авторитетные события и поля
 

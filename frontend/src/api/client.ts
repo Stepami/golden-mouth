@@ -18,7 +18,7 @@ export { ApiError } from './transport';
 import { sessionGeneration, assertSession, endSession } from './session';
 import { parse } from 'valibot';
 import { starGenerationEvent } from './streamEvents';
-import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, GameEvent, Player, Post, PostDetailResponse, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
+import type { PlayerDocument, PostsPage, Challenge, ChannelPost, Dm, FeedItem, Friend, Player, Post, PostDetailResponse, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
 let sessionPlayer: Player | undefined;
 let sessionIdentity: PlayerDocument | undefined;
 let ownedWorldSnapshot: WorldDocument[] | undefined;
@@ -134,7 +134,7 @@ async function loadPlayer(worldId?: string): Promise<Player | undefined> {
     installWorldContent([world]);
     return rememberPlayer({ ...player, postsLeft: player.energy, postsCap: Math.max(player.energy, player.settings.plus ? 20 : 10), firstPostInviteBonus: invitation.bonus, worldInstanceId: world.id, difficulty: world.difficulty, avatarStyle: world.avatarStyle,
         world: world.id, name: world.name, handle: world.avatar, role: world.role, subs: world.subscribers,
-        wants: world.wants, collection: world.achievements, bio: '', type: 'СЃРІРѕР№ РіРѕР»РѕСЃ',
+        collection: world.achievements, bio: '', type: 'СЃРІРѕР№ РіРѕР»РѕСЃ',
         voice: world.voice, drama: world.drama,
     });
 }
@@ -212,8 +212,8 @@ export const api = {
         await data(sdk.posts.deletePost(id));
         clearApiCache();
     },
-    createPost: async (text: string, ownWords: boolean, wantId?: string, repostId?: string) => {
-        const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, wantId: wantId ?? null, repostId: repostId ?? null }));
+    createPost: async (text: string, ownWords: boolean, repostId?: string) => {
+        const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, repostId: repostId ?? null }));
         const { postId: id, ...post } = map.post(response.post);
         return { post: { ...post, id }, result: map.result(response.result), predictedAuthorId: response.predictedAuthorId };
     },
@@ -308,8 +308,6 @@ export const api = {
         repliesLeft: number;
     }> => data(sdk.social.sendDirectMessage(starId, worldId(), { text })).then(value => ({ ...value, reply: value.reply ?? undefined, repliesLeft: Number(value.repliesLeft) })),
     forget: (starId: string, fact: string) => data(sdk.social.forgetStarMemory(starId, worldId(), { fact })),
-    eventToday: (): Promise<GameEvent> => data(sdk.events.getTodayEvent(worldId())),
-    answerEvent: (id: string, text: string) => data(sdk.events.answerEvent(id, worldId(), { text })),
     challenge: (): Promise<Challenge | null> => data(sdk.social.getActiveChallenge()).then(map.challenge),
     startChallenge: (friendId: string) => data(sdk.social.startChallenge({ friendId })),
     ownedWorldsSnapshot: (): WorldDocument[] | undefined => ownedWorldSnapshot ? structuredClone(ownedWorldSnapshot) : undefined,

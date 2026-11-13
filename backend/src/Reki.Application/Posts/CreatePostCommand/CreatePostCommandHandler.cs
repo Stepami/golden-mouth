@@ -42,7 +42,7 @@ internal sealed class CreatePostCommandHandler(
         var context = contextAccessor.Context;
         var player = await context.Player;
         var world = (await context.Worlds).GetValueOrDefault(command.WorldId)
-            ?? throw new ResourceNotFoundException("World not found.");
+                    ?? throw new ResourceNotFoundException("World not found.");
         if (command.RepostId is null && string.IsNullOrWhiteSpace(command.Text))
         {
             throw new RequestConflictException("Post text is required.");
@@ -51,13 +51,7 @@ internal sealed class CreatePostCommandHandler(
         var currentBalance = balance.CurrentValue;
         if (player.Wallet.Energy < currentBalance.PostEnergyCost)
         {
-            throw new RequestConflictException("The daily post limit has been reached.");
-        }
-
-        var wantCompleted = command.WantId is not null && world.Player.Wants.Any(want => want.Id == command.WantId && !want.Done);
-        if (command.WantId is not null && !wantCompleted)
-        {
-            throw new RequestConflictException("The selected daily want is unavailable.");
+            throw new RequestConflictException("Not enough energy to publish a post.");
         }
 
         await safety.EnsureInputAllowedAsync(player, [command.Text], cancellationToken);
@@ -85,29 +79,23 @@ internal sealed class CreatePostCommandHandler(
             world,
             score,
             command.OwnWords,
-            wantCompleted,
             post.Id.ToString(),
             flop,
             post.RepostId is not null);
         var updatedWorld = world.PublishPost(
             progression.SubscriberDelta,
             progression.Viral,
-            progression.Skills,
-            command.WantId,
-            starId,
-            now,
-            currentBalance.Relations.Minimum,
-            currentBalance.Relations.Maximum,
-            currentBalance.Relations.MaxGainPerDay,
-            currentBalance.Relations.StarCardAt);
+            progression.Skills);
         var updated = player.SpendPost(progression.Skills, currentBalance.PostEnergyCost, now) with
         {
-            HitOwnWorldMilestone = player.HitOwnWorldMilestone || updatedWorld.Player.Subscribers >= currentBalance.OwnWorldSubscribers,
+            HitOwnWorldMilestone = player.HitOwnWorldMilestone ||
+                                   updatedWorld.Player.Subscribers >= currentBalance.OwnWorldSubscribers,
         };
         post = post with
         {
             SubscriberDelta = progression.SubscriberDelta, Quality = progression.Quality, Viral = progression.Viral,
-            Flop = progression.Flop, ReactionEmoji = score.Emoji, PredictedAuthorId = starId.ToAuthorId(), FlopReason = flopReason,
+            Flop = progression.Flop, ReactionEmoji = score.Emoji, PredictedAuthorId = starId.ToAuthorId(),
+            FlopReason = flopReason,
         };
         var invite = await invitations.GetPendingInviteAsync(player.Id, cancellationToken);
         var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
@@ -119,19 +107,10 @@ internal sealed class CreatePostCommandHandler(
                 await worlds.ReplaceWorldAsync(updatedWorld, token);
                 if (updatedInvite is not null)
                 {
-                    var periodStart = updated.PostsPeriodStartedAtUtc;
-                    var inviterUses = await invitations.CountInviterBonusesAsync(
-                        updatedInvite.InviterId,
-                        periodStart,
-                        periodStart.AddDays(1),
-                        token);
-                    if (inviterUses < currentBalance.InviteBonusMaxPerDay)
+                    var inviter = await players.GetPlayerAsync(updatedInvite.InviterId, token);
+                    if (inviter is not null)
                     {
-                        var inviter = await players.GetPlayerAsync(updatedInvite.InviterId, token);
-                        if (inviter is not null)
-                        {
-                            await players.ReplacePlayerAsync(inviter.AwardReferral(), token);
-                        }
+                        await players.ReplacePlayerAsync(inviter.AwardReferral(), token);
                     }
 
                     await invitations.UseInviteBonusAsync(updatedInvite, token);
@@ -197,9 +176,9 @@ internal sealed class CreatePostCommandHandler(
                 ["humor"] = turn.Humor.ToString("0.###", CultureInfo.InvariantCulture),
                 ["topic"] = turn.Topic.ToString("0.###", CultureInfo.InvariantCulture),
                 ["quality"] = post.Quality.ToString("0.###", CultureInfo.InvariantCulture),
-                ["post_index"] = after.Wallet.EnergyUsed.ToString(CultureInfo.InvariantCulture),
                 ["id"] = post.Id.Value.ToString("N"),
-                ["publication_kind"] = post switch { { RepostId: null } => "post", { Text: "" } => "repost", _ => "quote" },
+                ["publication_kind"] =
+                    post switch { { RepostId: null } => "post", { Text: "" } => "repost", _ => "quote" },
                 ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
             });
 
@@ -213,7 +192,8 @@ internal sealed class CreatePostCommandHandler(
                     "level_up",
                     new Dictionary<string, string>
                     {
-                        ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant(),
+                        ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty,
+                        ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant(),
                         ["skill"] = skillId.Value,
                         ["level"] = progress.Level.ToString(CultureInfo.InvariantCulture),
                     });
@@ -228,7 +208,11 @@ internal sealed class CreatePostCommandHandler(
             analytics.TrackPlayer(
                 after,
                 "card_earned",
-                new Dictionary<string, string> { ["card"] = achievement.Id, ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant() });
+                new Dictionary<string, string>
+                {
+                    ["card"] = achievement.Id, ["template_id"] = afterWorld.TemplateId?.ToString() ?? string.Empty,
+                    ["difficulty"] = afterWorld.Difficulty.ToString().ToLowerInvariant(),
+                });
         }
     }
 }

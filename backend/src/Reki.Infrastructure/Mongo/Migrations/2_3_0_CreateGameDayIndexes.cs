@@ -1,7 +1,6 @@
 using Kot.MongoDB.Migrations;
+using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Domain.Player;
-using Reki.Domain.Worlds;
 using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
@@ -15,14 +14,14 @@ internal sealed class CreateGameDayIndexes : RekiMigrationBase
         IClientSessionHandle session,
         CancellationToken cancellationToken)
     {
-        await db.GetCollection<PlayerProfile>(MongoCollections.Players).Indexes.CreateOneAsync(
-            new CreateIndexModel<PlayerProfile>(
-                Builders<PlayerProfile>.IndexKeys.Ascending(player => player.PostsPeriodStartedAtUtc),
+        await db.GetCollection<BsonDocument>(MongoCollections.Players).Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("PostsPeriodStartedAtUtc"),
                 new CreateIndexOptions { Name = "ix_players_day_period" }),
             cancellationToken: cancellationToken);
-        await db.GetCollection<World>(MongoCollections.Worlds).Indexes.CreateOneAsync(
-            new CreateIndexModel<World>(
-                Builders<World>.IndexKeys.Ascending(world => world.Player.PeriodStartedAtUtc),
+        await db.GetCollection<BsonDocument>(MongoCollections.Worlds).Indexes.CreateOneAsync(
+            new CreateIndexModel<BsonDocument>(
+                Builders<BsonDocument>.IndexKeys.Ascending("Player.PeriodStartedAtUtc"),
                 new CreateIndexOptions { Name = "ix_worlds_day_period" }),
             cancellationToken: cancellationToken);
     }

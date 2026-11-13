@@ -13,9 +13,8 @@ export interface World {
   id: WorldId; title: string; emoji: string; description: string
   difficulty: WorldDifficulty; summary: string; lock?: { skill: SkillId; level: number }
 }
-export type Star = Omit<Fields<Wire.StarResponse>, 'relation'> & { relation: number }
+export type Star = Omit<Fields<Wire.StarResponse>, 'relation'>
 export type Skill = { [K in keyof Wire.SkillResponse]: number }
-export type Want = Wire.WantResponse
 export type CollectionCard = Wire.CollectionCardResponse
 export type PlayerDocument = Omit<Fields<Wire.PlayerResponse>, 'energy' | 'skills' | 'streak' | 'ageBand'> & {
   energy: number; skills: Record<SkillId, Skill>
@@ -26,7 +25,7 @@ export interface Player extends Omit<PlayerDocument, 'energy' | 'experiments'> {
   worldInstanceId?: string; difficulty?: WorldDifficulty; avatarStyle?: string
   name: string; handle: string; role: string; world: WorldId
   subs: number; postsLeft: number; postsCap: number; firstPostInviteBonus: number
-  wants: Want[]; collection: CollectionCard[]; bio: string; type: string
+  collection: CollectionCard[]; bio: string; type: string
   nextWorld?: { id: WorldId; title: string; need: string }; drama: Drama; voice: string
   experiments?: Wire.PlayerResponse['experiments']
 }
@@ -45,11 +44,9 @@ export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views'
   delta: number; views: number
   ribbons: (Omit<Fields<Wire.RibbonResponse>, 'sub'> & { sub?: string })[]
   bestComment?: Wire.BestCommentResponse
-  completedWants?: Pick<Want, 'id' | 'text' | 'reward'>[]
 }
 export type Friend = Omit<Fields<Wire.FriendResponse>, 'subs' | 'pronoun'> & { subs: number; pronoun: 'её' | 'его' }
 export type Challenge = Omit<Fields<NonNullable<Wire.ChallengeResponse>>, 'rival' | 'day' | 'days' | 'myScore' | 'rivalScore'> & { rival: Friend; day: number; days: number; myScore: number; rivalScore: number }
-export type GameEvent = Wire.GameEventResponse
 export type DmMessage = Wire.DirectMessageResponse
 export type Dm = Omit<Fields<Wire.DmResponse>, 'star' | 'repliesLeft'> & { star: Star; repliesLeft: number }
 // Feed rows omit absent wire values; demo rows also carry local catalog metadata.
@@ -60,7 +57,7 @@ export type FeedItem = Pick<Fields<Wire.FeedItemResponse>, 'kind' | 'text'> & { 
 }
 export type WorldDocument = Omit<Fields<Wire.WorldResponse>, 'difficulty' | 'subscribers' | 'stars' | 'unlockSkill' | 'unlockLevel'> & {
   difficulty: WorldDifficulty; subscribers: number; lock?: World['lock']
-  stars: (Omit<Fields<Wire.WorldStarResponse>, 'trait' | 'relation'> & { trait: number; relation: number })[]
+  stars: (Omit<Fields<Wire.WorldStarResponse>, 'trait'> & { trait: number })[]
   unlockSkill?: SkillId; unlockLevel?: number
 }
 export type WorldDefinition = Omit<WorldDocument, 'id' | 'subscribers' | 'lock'> & { templateId: WorldId | null }

@@ -2,7 +2,6 @@ namespace Reki.Domain.Player;
 
 public static class AchievementCatalog
 {
-    public const string StarCard = "star_card";
     public const string StarStory = "star_story";
     public const string FirstViral = "first_viral";
     public const string HateSurvived = "hate_survived";
@@ -19,7 +18,6 @@ public static class AchievementCatalog
     {
         return
         [
-            new(StarCard, "👑", "Карточка звезды", false),
             new(StarStory, "💬", "История звезды", false),
             new(FirstViral, "🌊", "Первый залёт", false),
             new(HateSurvived, "🌩", "Хейт пережит", false),

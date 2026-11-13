@@ -20,7 +20,7 @@ import { completePostDraft, draftKey, readPostDraft, savePostDraft, type PostDra
 import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 
 
-// 02-1: пост, желания дня, «Подскажи» дописывает черновик
+// 02-1: пост, «Подскажи» дописывает черновик
 function Compose() {
   const nav = useNav(); const p = usePlayer()
   const ideas = contentOf(p.world).ideas
@@ -28,7 +28,7 @@ function Compose() {
   const key = draftKey(p) + (repostId ? `:quote:${repostId}` : '')
   const [draft, setDraft] = useState<PostDraft>(() => {
     const saved = readPostDraft(key)
-    return saved.text.length || saved.wantId ? saved : { text: typeof nav.params.text === 'string' ? nav.params.text : '', ownWords: true }
+    return saved.text.length ? saved : { text: typeof nav.params.text === 'string' ? nav.params.text : '', ownWords: true }
   })
   const text = draft.text
   const [durable, setDurable] = useState(true)
@@ -46,7 +46,7 @@ function Compose() {
         <TextField label="Твой пост" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords, publication_kind: repostId ? 'quote' : 'post' }); nav.replace('02-2_live', { text, ownWords: draft.ownWords, wantId: repostId ? undefined : draft.wantId, repostId }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
+      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords, publication_kind: repostId ? 'quote' : 'post' }); nav.replace('02-2_live', { text, ownWords: draft.ownWords, repostId }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
     </div>
   )
 }
@@ -64,7 +64,7 @@ function Live() {
     const start = setTimeout(() => { void (async () => {
       let created: Awaited<ReturnType<typeof api.createPost>>
       try {
-        created = await api.createPost(text, nav.params.ownWords !== false, typeof nav.params.wantId === 'string' ? nav.params.wantId : undefined, typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined)
+        created = await api.createPost(text, nav.params.ownWords !== false, typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined)
       } catch (cause) {
         if (!active) return
         if (cause instanceof ApiError && cause.problemType === 'urn:reki:problem:crisis') { nav.replace(p.ageBand === '14-17' || !p.ageBand ? '06-2_crisis' : '06-3_crisis_adult'); return }
@@ -86,7 +86,7 @@ function Live() {
       if (!active) return
       setTyping(null)
       track('post_result', { delta: created.result.delta, viral: created.result.viral, flop: created.result.flop, publication_kind: nav.params.repostId ? text.length ? 'quote' : 'repost' : 'post' })
-      const result = latest ? { ...created.result, completedWants: latest.wants.filter(want => want.done && p.wants.some(before => before.id === want.id && !before.done)).map(({ id, text, reward }) => ({ id, text, reward })) } : created.result
+      const result = created.result
       nav.replace(result.viral ? '02-5_viral' : result.flop ? '02-4_flop' : '02-3_result', { result, post: created.post, commentPromise, predictedAuthorId: created.predictedAuthorId })
     })() }, 0)
     return () => { active = false; clearTimeout(start) }

@@ -20,9 +20,9 @@ export function prototypeWorld(source: WorldDefinition): WorldDefinition {
     postIdeas: source.postIdeas.length ? source.postIdeas : ['Сегодня я заметил кое-что необычное…', 'Кажется, у этой истории есть другая сторона…', 'Мне нужна ваша помощь, чтобы разобраться…'],
     demoPosts: source.demoPosts.length ? source.demoPosts : ['Нашёл необычную вещь. Кто-нибудь знает, откуда она?', 'Вчера все были уверены в одной версии. Сегодня — уже нет.', 'Мы решили проверить слух вместе. Записываю всё в ленту.'],
     stars: source.stars.length ? source.stars : [
-      { id: 'guide', name: 'Саша', role: 'Проводник по миру', about: 'Замечает необычные детали и помогает проверить первую версию событий.', voice: 'Тепло, с конкретными наблюдениями', avatarSeed: 'world-guide', trait: 1, relation: 0 },
-      { id: 'seeker', name: 'Женя', role: 'Искатель историй', about: 'Собирает находки и охотно спорит о том, что они означают.', voice: 'С любопытством и самоиронией', avatarSeed: 'world-seeker', trait: 4, relation: 0 },
-    ], wants: source.wants.length ? source.wants : common.wants.map(value => ({ ...value, done: false })), achievements: source.achievements.length ? source.achievements : common.achievements.map(value => ({ ...value, open: false })),
+      { id: 'guide', name: 'Саша', role: 'Проводник по миру', about: 'Замечает необычные детали и помогает проверить первую версию событий.', voice: 'Тепло, с конкретными наблюдениями', avatarSeed: 'world-guide', trait: 1 },
+      { id: 'seeker', name: 'Женя', role: 'Искатель историй', about: 'Собирает находки и охотно спорит о том, что они означают.', voice: 'С любопытством и самоиронией', avatarSeed: 'world-seeker', trait: 4 },
+    ], achievements: source.achievements.length ? source.achievements : common.achievements.map(value => ({ ...value, open: false })),
   }
 }
 export const isDevWorldPrototype = import.meta.env.DEV && ['localhost', '127.0.0.1'].includes(location.hostname)

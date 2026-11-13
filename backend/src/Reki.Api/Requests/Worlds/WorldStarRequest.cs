@@ -9,5 +9,4 @@ public sealed record WorldStarRequest(
     int Trait,
     string About,
     string Voice,
-    string AvatarSeed,
-    int Relation);
+    string AvatarSeed);

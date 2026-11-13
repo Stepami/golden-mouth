@@ -1,17 +1,10 @@
 import { worldOf } from '../api/worldContent'
-import { useState } from 'react'
-import { api } from '../api/client'
-import { events } from '../api/mock'
-import type { GameEvent } from '../api/types'
 import { useNav } from '../app/nav'
-import { useApi } from '../app/useApi'
 import { usePlayer } from '../app/store'
 import { Avatar, BottomCTA, Button, Card, Chip, Gift, SkillBar, fmt } from '../ui'
 import { ChannelHead } from './onboarding'
-import { track } from '../app/log'
 import { TELEGRAM_BOT_USERNAME } from '../app/telegramLinks'
 import { register } from '.'
-import { TextField } from '../ui/TextField'
 import { ChooseWorld as NewWorld } from './worldWizard'
 import { withWorldTemplates } from '../app/withWorldTemplates'
 
@@ -24,31 +17,6 @@ function TgBot({ time, children }: { time: string; children: React.ReactNode }) 
   )
 }
 
-/** Событие дня: это пост в канале, лимит не тратит; идеи или «своими словами ×1,3». */
-function EventCard({ e, border }: { e: GameEvent; border: string }) {
-  const nav = useNav()
-  const [text, setText] = useState('')
-  const [pick, setPick] = useState<string | null>(null)
-  const go = () => { track('event_answered', { kind: e.kind, own: pick === null }); api.answerEvent(e.id, text || pick || ''); nav.replace(e.kind === 'hate' ? '05-2b_hate_result' : '03-5_stage', { answer: text || pick }) }
-  return (
-    <div className="screen">
-      <ChannelHead />
-      <div className="pad">
-        <Card style={{ border: `1px solid ${border}` }}>
-          <span className="badge" style={e.kind === 'collab' ? { color: '#6BFFB8' } : undefined}>{e.badge}</span>
-          <div style={{ fontSize: 20, fontWeight: 800, margin: '8px 0 4px' }}>{e.title}</div>
-          <div className="small muted" style={{ marginBottom: 10 }}>{e.text}</div>
-          <div className="small" style={{ color: 'var(--lilac)', marginBottom: 8 }}>{e.note}</div>
-          <TextField label="Ответ на событие" value={text} fromIdea={pick !== null} onChange={(value, fromIdea) => { setText(value); setPick(fromIdea ? value : null) }} ideas={e.ideas} maxLength={500} />
-          <div className="small muted" style={{ marginTop: 10 }}>{e.reward}</div>
-        </Card>
-      </div>
-      {(pick || text.trim()) && <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={go}>Опубликовать</Button></div>}
-    </div>
-  )
-}
-const Collab = () => { const e = useApi(api.eventToday, events.collab); return <EventCard e={e} border="#6BFFB866" /> }
-const Hate = () => <EventCard e={events.hate} border="#FF6B8B66" />
 
 const EveningPush = () => <TgBot time="18:40">
   <div className="tgb">🌩 <b>Про тебя пишут.</b> Фансайт BLESK считает, что ты «пиаришься на Мире». Уже 200 комментариев</div><button className="tgbtn">Ответить фансайту</button>
@@ -60,27 +28,6 @@ const Morning = () => <TgBot time="09:00">
   <div className="tgb">✍️ 10 новых постов · 🔥 серия 3 дня: +2 поста</div><button className="tgbtn">Открыть Реки</button>
   <div className="small" style={{ color: '#6C8EA8', marginTop: 24, textAlign: 'center' }}>Пропустишь день: серия встанет на паузу, но не сгорит</div>
 </TgBot>
-
-function HateResult() {
-  const nav = useNav()
-  return (
-    <div className="screen no-tab">
-      <ChannelHead />
-      <div style={{ padding: '20px 18px', textAlign: 'center' }}>
-        <div style={{ fontSize: 56, marginTop: 6 }}>🌤</div>
-        <div style={{ fontSize: 26, fontWeight: 900, margin: '6px 0' }}>Волна прошла</div>
-        <div className="muted" style={{ marginBottom: 16 }}>Твой ответ: «{(nav.params.answer as string) ?? 'я тут ради сцены, а не ради Миры'}». Фансайт удалил пост, фанаты за тебя</div>
-        <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-          <Card style={{ flex: 1 }}><div style={{ fontSize: 24, fontWeight: 800 }} className="up">+410</div><div className="small muted">подписчиков</div></Card>
-          <Card style={{ flex: 1 }}><div style={{ fontSize: 24, fontWeight: 800 }} className="up">+12</div><div className="small muted">опыта смелости</div></Card>
-        </div>
-        <Card style={{ textAlign: 'left', border: '1px solid #FFB86B66', marginBottom: 12 }}><span className="badge">НОВАЯ КАРТОЧКА</span><div style={{ marginTop: 6 }}><b>Хейт пережит</b><div className="small muted">4/12 в коллекции</div></div></Card>
-        <Gift>Покажи друзьям, как держать удар: за первый пост друга ты получишь 3 кристалла</Gift>
-      </div>
-      <BottomCTA second="Дальше" onSecond={() => nav.replace('03-5_stage')} main="Поделиться" onMain={() => nav.push('02-7_share')} />
-    </div>
-  )
-}
 
 function NewStar() {
   const nav = useNav()
@@ -99,7 +46,7 @@ function NewStar() {
   )
 }
 
-/** «Пока тебя не было»: после пропуска сводка и одно событие-пост без лимита. «Канал отдохнул» только после 2+ дней. */
+/** «Пока тебя не было»: после пропуска сводка и одно событие-пост без лимита. */
 function WhileAway() {
   const nav = useNav(); const p = usePlayer()
   const days = (nav.params.days as number) ?? 2
@@ -113,7 +60,6 @@ function WhileAway() {
           <Card key={n} style={{ marginBottom: 8 }}><div className="row"><Avatar seed={a} mode="default" size={32} /><div className="small"><b>{n}</b> {t}</div></div></Card>
         ))}
         <Card style={{ margin: '12px 0', border: '1px solid #6BFFB866' }}><span className="badge" style={{ color: '#6BFFB8' }}>СОБЫТИЕ · БЕЗ ЛИМИТА</span><div style={{ fontWeight: 800, margin: '6px 0 2px' }}>Вернись громко</div><div className="small muted">Один пост про твоё возвращение не тратит лимит</div></Card>
-        {days >= 2 && <Gift>Канал отдохнул: первые 3 поста сегодня дают ×2</Gift>}
         <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Серия {p.streak.days} дня на паузе, не сгорела</div>
       </div>
       <BottomCTA main="Написать пост" onMain={() => nav.replace('02-1_compose')} />
@@ -131,7 +77,6 @@ function StatsCard() {
       <Card style={{ marginTop: 18, textAlign: 'left' }}>
         <SkillBar name="смелость" progress={.72} /><SkillBar name="юмор" progress={.64} /><SkillBar name="в тему" progress={.58} />
         <div className="small muted" style={{ marginTop: 6 }}>типаж: {p.type}</div>
-        <div className="small muted" style={{ marginTop: 10 }}>ЛУЧШАЯ ЗВЕЗДА</div><div>👑 Мира · отношения +4</div>
         <div className="small muted" style={{ marginTop: 6 }}>ПЕРЕЖИТО</div><div>🌩 хейт-волна фансайта</div>
       </Card>
       <div className="muted small" style={{ marginTop: 26 }}>а ты кем будешь в Сцене? · t.me/{TELEGRAM_BOT_USERNAME}</div>
@@ -141,13 +86,10 @@ function StatsCard() {
 
 
 register({
-  '05-0_event_collab': { component: Collab, title: 'Событие: коллаб' },
   '05-1_evening_push': { component: EveningPush, title: 'Бот: вечерний тизер' },
-  '05-2_event': { component: Hate, title: 'Событие: хейт-волна' },
-  '05-2b_hate_result': { component: HateResult, title: 'Итог хейт-волны' },
   '05-3_morning': { component: Morning, title: 'Бот: утро' },
   '05-3b_while_away': { component: WhileAway, title: 'Пока тебя не было' },
   '05-4_new_star': { component: NewStar, title: 'Новая звезда' },
   '05-6_stats_card': { component: StatsCard, title: 'Карточка статов' },
   '05-7_new_world': { component: withWorldTemplates(NewWorld), title: 'Новая линия мира' },
-}, { '05-0_event_collab': 0, '05-2_event': 0, '05-4_new_star': 0 })
+}, { '05-4_new_star': 0 })
