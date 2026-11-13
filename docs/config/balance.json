@@ -17,7 +17,8 @@
     "own_words_x": 1.3,
     "start_subs": 120, "subs_never_decrease_on_new_world": true
   },
-  "viral": { "base": 0.03, "per_quality": 0.06, "x": 3, "near_miss_band": 0.15 },
+  "viral": { "base": 0.03, "per_quality": 0.06, "emotion_bonus": 0.05, "x": 3, "near_miss_band": 0.15 },
+  "likes": { "min_percent": 2, "max_percent": 10 },
   "skills": {
     "ids": ["brave", "humor", "topic"],
     "levels_xp": [0, 8, 20, 36, 56, 80, 110, 150, 200, 270],
