@@ -29,6 +29,47 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
     private static readonly DateTimeOffset CreatedAt = new(2026, 10, 5, 15, 0, 0, 123, TimeSpan.FromHours(3));
 
     [Test]
+    public async Task AddPostLikes_MigratesViews_PreservesHistoryOnRetryAsync()
+    {
+        await using var scope = CreateDatabase();
+        var posts = scope.Database.GetCollection<BsonDocument>("posts");
+        var comments = new BsonArray { new BsonDocument { ["Text"] = "saved comment", ["Reactions"] = new BsonArray { new BsonDocument("Emoji", "🔥") } } };
+        var original = new[]
+        {
+            new BsonDocument { ["_id"] = "zero", ["Views"] = 0L, ["Viral"] = false, ["ReactionEmoji"] = "🔥", ["Text"] = "saved", ["Comments"] = comments.DeepClone() },
+            new BsonDocument { ["_id"] = "small", ["Views"] = 9L, ["Viral"] = true, ["ReactionEmoji"] = "❤️", ["Text"] = "saved", ["Comments"] = comments.DeepClone() },
+            new BsonDocument { ["_id"] = "hundred", ["Views"] = 100L, ["Viral"] = true, ["ReactionEmoji"] = "🤔", ["Text"] = "saved", ["Comments"] = comments.DeepClone() },
+        };
+        await posts.InsertManyAsync(original);
+        using var session = await mongo.MongoClient.StartSessionAsync();
+        var migration = new AddPostLikes();
+
+        await migration.UpAsync(scope.Database, session, CancellationToken.None);
+
+        var zero = await ReadAsync(scope.Database, "posts", "zero");
+        var small = await ReadAsync(scope.Database, "posts", "small");
+        var hundred = await ReadAsync(scope.Database, "posts", "hundred");
+        await Assert.That(zero["Likes"].ToInt64()).IsEqualTo(0);
+        await Assert.That(small["Likes"].ToInt64()).IsEqualTo(1);
+        await Assert.That(hundred["Likes"].ToInt64()).IsGreaterThanOrEqualTo(2);
+        await Assert.That(hundred["Likes"].ToInt64()).IsLessThanOrEqualTo(10);
+        foreach (var post in new[] { zero, small, hundred })
+        {
+            await Assert.That(post.Contains("ReactionEmoji")).IsFalse();
+            await Assert.That(post["LikedBy"].AsBsonArray).IsEmpty();
+            await Assert.That(post["Comments"]).IsEqualTo(comments);
+            await Assert.That(post["Text"].AsString).IsEqualTo("saved");
+        }
+
+        await posts.UpdateOneAsync(
+            new BsonDocument("_id", "hundred"),
+            Builders<BsonDocument>.Update.Set("LikedBy", new BsonArray { "Player_123" }));
+        var marked = await ReadAsync(scope.Database, "posts", "hundred");
+        await migration.UpAsync(scope.Database, session, CancellationToken.None);
+        await Assert.That(await ReadAsync(scope.Database, "posts", "hundred")).IsEqualTo(marked);
+    }
+
+    [Test]
     [Arguments(0, 0)]
     [Arguments(6, 6)]
     [Arguments(21, 10)]
