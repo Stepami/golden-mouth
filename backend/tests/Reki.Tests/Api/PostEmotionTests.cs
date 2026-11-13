@@ -70,11 +70,11 @@ public sealed class PostEmotionTests
         var ordinary = new PostScore(0.5, 0.5, 0.5, false, null);
         var positive = ordinary with { PositiveEmotion = true };
 
-        // The stable roll for publication 41 is about 12.18%: above 7.2% but below 13.2%.
-        var withoutBonus = calculator.Calculate(player, world, ordinary, false, "41", false);
-        var withBonus = calculator.Calculate(player, world, positive, false, "41", false);
-        var flop = calculator.Calculate(player, world, positive, false, "41", true);
-        var repost = calculator.Calculate(player, world, positive, false, "41", false, repost: true);
+        // The stable roll is 12.38%, between adding 5% before and after the difficulty multiplier.
+        var withoutBonus = calculator.Calculate(player, world, ordinary, false, "87", false);
+        var withBonus = calculator.Calculate(player, world, positive, false, "87", false);
+        var flop = calculator.Calculate(player, world, positive, false, "87", true);
+        var repost = calculator.Calculate(player, world, positive, false, "87", false, repost: true);
 
         await Assert.That(withoutBonus.Viral).IsFalse();
         await Assert.That(withBonus.Viral).IsTrue();
