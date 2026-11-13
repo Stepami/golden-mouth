@@ -103,8 +103,7 @@ function SkillUnlock() {
       <div style={{ fontSize: 26, fontWeight: 900 }}>Открыт приём: ответ хейтеру</div>
       <div className="muted" style={{ margin: '8px 0 22px' }}>Отвечай на хейт постом: за смелый ответ бонус к подписчикам</div>
       <Card style={{ textAlign: 'left', marginBottom: 10 }}>Дальше на смелости 6: <b>острый пост</b> (×2 награда и ×2 риск)</Card>
-      <Card style={{ textAlign: 'left' }}>Мира ценит смелость: с ней отношения растут быстрее</Card>
-      <BottomCTA main="Попробовать" onMain={() => nav.replace('05-2_event')} second="Позже" onSecond={() => nav.canBack ? nav.back() : nav.tab(0)} />
+      <BottomCTA main="Попробовать" onMain={() => nav.replace('02-1_compose')} second="Позже" onSecond={() => nav.canBack ? nav.back() : nav.tab(0)} />
     </div>
   )
 }

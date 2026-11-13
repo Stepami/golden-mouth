@@ -145,104 +145,6 @@ export class AuthClient {
     }
 }
 
-export class EventsClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    /**
-     * @return OK
-     */
-    getTodayEvent(worldId: string, signal?: AbortSignal): Promise<SwaggerResponse<GameEventResponse>> {
-        let url_ = this.baseUrl + "/events/today?";
-        if (worldId === undefined || worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
-        else
-            url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            signal,
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetTodayEvent(_response);
-        });
-    }
-
-    protected processGetTodayEvent(response: Response): Promise<SwaggerResponse<GameEventResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as GameEventResponse;
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<GameEventResponse>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
-     * @return OK
-     */
-    answerEvent(eventId: string, worldId: string, body: AnswerEventRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
-        let url_ = this.baseUrl + "/events/{eventId}/answer?";
-        if (eventId === undefined || eventId === null)
-            throw new globalThis.Error("The parameter 'eventId' must be defined.");
-        url_ = url_.replace("{eventId}", encodeURIComponent("" + eventId));
-        if (worldId === undefined || worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
-        else
-            url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_: RequestInit = {
-            body: content_,
-            method: "POST",
-            signal,
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processAnswerEvent(_response);
-        });
-    }
-
-    protected processAnswerEvent(response: Response): Promise<SwaggerResponse<void>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            return new SwaggerResponse(status, _headers, null as any);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
-    }
-}
-
 export class ExternalTelegramAuthClient {
     private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
     private baseUrl: string;
@@ -1914,12 +1816,6 @@ export interface AnalyticsEventRequest {
     [key: string]: any;
 }
 
-export interface AnswerEventRequest {
-    text: string;
-
-    [key: string]: any;
-}
-
 export interface AuthTokenResponse {
     token_type: string;
     access_token: string;
@@ -2034,7 +1930,6 @@ export interface CreatePostRequest {
     text: string;
     repostId?: string | null;
     ownWords?: boolean;
-    wantId?: string | null;
 
     [key: string]: any;
 }
@@ -2068,7 +1963,6 @@ export interface CreateWorldRequest {
     voices?: string[];
     postIdeas?: string[];
     demoPosts?: string[];
-    wants?: WantRequest[];
     achievements?: CollectionCardRequest[];
     roles?: string[];
     rules?: WorldRuleRequest[];
@@ -2164,21 +2058,6 @@ export interface FriendResponse {
     subs: number;
     lastPost: string;
     pronoun: string;
-
-    [key: string]: any;
-}
-
-export type GameEventKind = "collab" | "hate" | "gossip" | "brand";
-
-export interface GameEventResponse {
-    id: string;
-    kind: GameEventKind;
-    badge: string;
-    title: string;
-    text: string;
-    ideas: string[];
-    reward: string;
-    note: string;
 
     [key: string]: any;
 }
@@ -2437,24 +2316,6 @@ export interface UpdateSettingsRequest {
     [key: string]: any;
 }
 
-export interface WantRequest {
-    id: string;
-    text: string;
-    reward: string;
-    done: boolean;
-
-    [key: string]: any;
-}
-
-export interface WantResponse {
-    id: string;
-    text: string;
-    reward: string;
-    done: boolean;
-
-    [key: string]: any;
-}
-
 export interface WebPushSubscriptionRequest {
     endpoint: string;
     p256dh: string;
@@ -2500,7 +2361,6 @@ export interface WorldResponse {
     voice: string;
     drama: WorldDrama;
     subscribers?: number;
-    wants: WantResponse[];
     achievements: CollectionCardResponse[];
 
     [key: string]: any;
@@ -2528,7 +2388,6 @@ export interface WorldStarRequest {
     about: string;
     voice: string;
     avatarSeed: string;
-    relation: number;
 
     [key: string]: any;
 }
@@ -2541,7 +2400,6 @@ export interface WorldStarResponse {
     about: string;
     voice: string;
     avatarSeed: string;
-    relation: number;
     channelSubscribers?: number | null;
 
     [key: string]: any;

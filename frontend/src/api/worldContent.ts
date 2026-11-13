@@ -1,5 +1,5 @@
 import { worldArt } from '../app/worldArt'
-import type { Drama, Star, Want, WorldId, WorldDocument, WorldDefinition, World } from './types'
+import type { Drama, Star, WorldId, WorldDocument, WorldDefinition, World } from './types'
 
 export interface WorldContent {
   where: string
@@ -71,11 +71,6 @@ export function contentOf(world: string): WorldContent {
   return content
 }
 
-export function wantsFor(world: string): Want[] {
-  const document = documents[world as WorldId]
-  if (!document) throw new Error('World wants have not been loaded')
-  return structuredClone(document.wants)
-}
 export function worldDocumentOf(world: string): WorldDocument {
   const document = documents[world as WorldId]
   if (!document) throw new Error('World has not been loaded')

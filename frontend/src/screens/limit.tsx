@@ -28,7 +28,7 @@ function Limit() {
         <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>Мира ответит, когда появится энергия</div>
         <div className="muted" style={{ marginBottom: 14 }}>Она сказала «надо подумать 👀». Энергия восстанавливается по одной каждые 10 минут.</div>
         <Card style={{ textAlign: 'left', marginBottom: 12 }}><div className="small" style={{ color: 'var(--soft)', marginBottom: 4 }}>А пока бесплатно</div>читать треды · комментировать друзей · листать ленту</Card>
-        <Gift style={{ textAlign: 'left', fontSize: 15, padding: '12px 14px' }}>Позови друга: тебе 3 кристалла за его первый пост<div style={{ fontWeight: 600, fontSize: 12, marginTop: 2 }}>как только он сделает первый пост · до 3 друзей в день</div></Gift>
+        <Gift style={{ textAlign: 'left', fontSize: 15, padding: '12px 14px' }}>Позови друга: тебе 3 кристалла за его первый пост<div style={{ fontWeight: 600, fontSize: 12, marginTop: 2 }}>как только он сделает первый пост</div></Gift>
         <button onClick={() => nav.push('04-2_fake_door')} style={{ marginTop: 14, fontSize: 14, color: 'var(--muted2)', background: 'none', border: 'none' }}>Реки+: +10 энергии и все миры ›</button>
       </div>
       <BottomCTA main="Позвать друга" onMain={() => nav.push('04-3_invite')} />

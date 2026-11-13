@@ -44,7 +44,7 @@ export function useWorldDraft() { return useSyncExternalStore(listener => { list
 export function blankWorld(): WorldDefinition {
   return { templateId: null, title: '', emoji: '✨', description: '', where: '', difficulty: 'normal', summary: 'Твоя история', avatarStyle: 'lorelei',
     name: '', avatar: '', role: '', voice: '', drama: 'soft', roles: [], voices: [], postIdeas: [], demoPosts: [], firstContext: '', firstPrompt: '',
-    rules: [{ text: 'Без тем 18+ и травли по внешности', locked: true }], stars: [], wants: [], achievements: [] }
+    rules: [{ text: 'Без тем 18+ и травли по внешности', locked: true }], stars: [], achievements: [] }
 }
 
 /** Start the full editor supported by POST /worlds. AI quick setup remains a separate demo. */

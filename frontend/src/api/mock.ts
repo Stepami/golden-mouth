@@ -1,16 +1,11 @@
 // Демо-посты и фикстуры экранов. Миры и звёзды загружаются из API.
-import type { Challenge, Dm, Friend, GameEvent, Player, Post, PostResult } from './types'
+import type { Challenge, Dm, Friend, Player, Post, PostResult } from './types'
 
 export const player: Player = {
   id: '00000000000000000000000000000001', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', address: 'she',
   world: 'edfccf53-65c6-4eaf-8321-2391bc1758bd', subs: 120, postsLeft: 10, postsCap: 10, firstPostInviteBonus: 0,
   streak: { days: 4, week: [true, true, true, true, false, false, false], nextReward: '7 дней: карточка «Неделя в эфире»' },
   skills: { brave: { level: 6, progress: .4 }, humor: { level: 5, progress: .7 }, topic: { level: 4, progress: .3 } },
-  wants: [
-    { id: 'w1', text: 'Пошути про хореографа', reward: 'опыт ×1,3', done: false },
-    { id: 'w2', text: 'Ответь Еве в личке', reward: '+отношения', done: true },
-    { id: 'w3', text: 'Пост про свою ошибку', reward: 'опыт ×1,3', done: false },
-  ],
   collection: [
     { id: 'c1', emoji: '🌊', title: 'Первый залёт', open: true }, { id: 'c2', emoji: '👑', title: 'Мира', open: true },
     { id: 'c3', emoji: '💛', title: 'Соня', open: true }, { id: 'c4', emoji: '🌩', title: 'Хейт пережит', open: true },
@@ -77,9 +72,3 @@ export const friends: Friend[] = [
 ]
 export const challenge: Challenge = { id: 'ch1', me: 'Лиза', rival: friends[0], day: 2, days: 3, myScore: 3.4, rivalScore: 2.8, bestPost: 'Лиза, «зато уверенно» · ×6,1' }
 
-export const events: Record<'collab' | 'hate', GameEvent> = {
-  collab: { id: 'e1', kind: 'collab', badge: 'СОБЫТИЕ ДНЯ · ДЕНЬ 2', title: 'Бренд зовёт на коллаб', text: '«Блеск-тинт» хочет пост с тобой: «образ на первый день в агентстве». Как сделаешь?',
-    ideas: ['честно: «я даже не умею красить губы»', 'дерзко: «лучший тинт тот, что выжил на репетиции»'], reward: 'Справишься: карточка момента и +смелость', note: 'Это пост в твоём канале · лимит не тратит. Выбери идею или напиши свой' },
-  hate: { id: 'e2', kind: 'hate', badge: 'ЭТАП: УДАР · с 5k', title: 'Событие дня: хейт-волна', text: 'Фансайт BLESK: «трейни пиарится на Мире». Хейт только про посты, никогда про тебя. Как ответишь?',
-    ideas: ['«я тут ради сцены, а не ради Миры»', '«спасибо за охват 💅»', 'промолчать'], reward: 'Пережить волну: карточка момента и бонус к подписчикам', note: 'Ответ уйдёт постом в твой канал · лимит не тратит' },
-}
