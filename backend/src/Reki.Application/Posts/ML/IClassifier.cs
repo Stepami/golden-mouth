@@ -4,8 +4,7 @@ public interface IClassifier
 {
     Task<IReadOnlyDictionary<string, double>> ClassifyAsync(
         string model,
-        string text,
-        CancellationToken cancellationToken);
+        string text);
 }
 
 internal static class ClassifierModels

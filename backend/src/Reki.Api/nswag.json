@@ -46,7 +46,6 @@
       "excludedOperationIds": [],
       "additionalNamespaceUsages": [
         "PageResponseOfFeedItemResponse = Reki.Application.Responses.PageResponse<Reki.Application.Posts.Responses.FeedItem.FeedItemResponse>",
-        "PageResponseOfChannelPostResponse = Reki.Application.Responses.PageResponse<Reki.Application.Posts.Responses.ChannelPost.ChannelPostResponse>",
         "Microsoft.AspNetCore.Mvc",
         "Reki.Api.Requests.Auth",
         "Reki.Api.Requests.Player",
@@ -64,7 +63,6 @@
         "Reki.Application.Social.Responses.Dm",
         "Reki.Application.Social.Responses.Challenge",
         "Reki.Application.Posts.Responses.FeedItem",
-        "Reki.Application.Posts.Responses.ChannelPost",
         "Reki.Application.Posts.Responses.Comment",
         "Reki.Application.Posts.Responses.PostDetail",
         "Reki.Application.Posts.Responses.PostResult",

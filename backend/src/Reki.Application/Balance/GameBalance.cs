@@ -15,4 +15,6 @@ public sealed record GameBalance(
     int PostEnergyCost = 1,
     int OwnWorldSubscribers = 500,
     double StarFeedOpenProbability = 0,
-    int EnergyCap = 10);
+    int EnergyCap = 10,
+    int LikesMinPercent = 2,
+    int LikesMaxPercent = 10);

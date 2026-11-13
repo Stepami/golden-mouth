@@ -46,7 +46,7 @@ public sealed record PlayerWallet
     public PlayerWallet Replenish(int amount)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(amount);
-        return this with { Energy = Math.Min(Cap, Energy + amount) };
+        return this with { Crystals = Crystals + amount };
     }
 
     public PlayerWallet Restore(DateTimeOffset now)

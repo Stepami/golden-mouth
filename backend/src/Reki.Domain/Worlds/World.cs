@@ -54,21 +54,17 @@ public sealed record World
 
     public WorldStar? FindStar(AuthorId authorId) => Stars.FirstOrDefault(star => star.Id.ToAuthorId() == authorId);
 
-    public World PublishPost(
-        long subscriberDelta,
-        bool viral,
-        IReadOnlyDictionary<SkillId,
-        SkillProgress> skills)
+    public World PublishPost(PostProgression progression)
     {
         var updated = this with
         {
             Version = Version + 1,
             Player = Player with
             {
-                Subscribers = Math.Max(0, Player.Subscribers + subscriberDelta),
+                Subscribers = Math.Max(0, Player.Subscribers + progression.SubscriberDelta),
             },
         };
-        if (viral)
+        if (progression.Viral)
         {
             updated = updated.UnlockAchievement(AchievementCatalog.FirstViral);
         }
@@ -78,7 +74,7 @@ public sealed record World
             updated = updated.UnlockAchievement(AchievementCatalog.TenThousand);
         }
 
-        if (skills.Values.Any(skill => skill.Level >= 3))
+        if (progression.Skills.Values.Any(skill => skill.Level >= 3))
         {
             updated = updated.UnlockAchievement(AchievementCatalog.SkillMastery);
         }

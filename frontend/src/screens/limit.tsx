@@ -36,7 +36,7 @@ function Limit() {
   )
 }
 
-// 04-2: Реки+ тарифом; платёжки нет, «Хочу» пишет интерес и даёт +5 энергии
+// 04-2: Реки+ тарифом; платёжки нет, «Хочу» пишет интерес и даёт +5 кристаллов
 function FakeDoor() {
   const nav = useNav(); const p = usePlayer(); const { setPlayer } = useStore()
   const [sent, setSent] = useState(false)
@@ -51,7 +51,7 @@ function FakeDoor() {
       const result = await api.plusInterest(interest)
       setPlayer(await api.me())
       track(interest ? 'plus_interest' : 'plus_bonus_only')
-      setMessage(result.bonus > 0 ? `+${result.bonus} энергии уже у тебя` : 'Бонус уже был получен — повторно не начисляется')
+      setMessage(result.bonus > 0 ? `Кристаллы начислены: +${result.bonus} 💎` : 'Бонус уже был получен — повторно не начисляется')
       setSent(true)
     } catch { setError('Не получилось подтвердить бонус. Попробуй ещё раз.') }
     finally { setBusy(false) }
@@ -72,10 +72,10 @@ function FakeDoor() {
           {plan('Реки+', '349 ₽/мес', [['20 энергии в день', true], ['3 кристалла за друга', true], ['свой стиль канала', true], ['все миры сразу', true]], true)}
         </div>
         <div className="muted small" style={{ marginBottom: 12 }}>Реки+ ещё в работе, деньги не списываются. Можно оставить интерес к запуску. Рассылка в боте появится позже</div>
-        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#1F2A26,#1A1A24)', border: '1px solid #6BFFB855' }}><b className="up">{sent ? message : 'Можно получить +5 энергии один раз'}</b></Card>
+        <Card style={{ marginBottom: 12, background: 'linear-gradient(135deg,#1F2A26,#1A1A24)', border: '1px solid #6BFFB855' }}><b className="up">{sent ? message : 'Можно получить +5 кристаллов один раз'}</b></Card>
         {error && <p className="small" role="alert">{error}</p>}
         <Button onClick={() => take(true)} disabled={sent || busy} style={{ marginBottom: 8 }}>Хочу Реки+</Button>
-        <button className="muted small" onClick={() => take(false)} disabled={sent || busy} style={{ background: 'none', border: 'none' }}>Забрать только +5 энергии</button>
+        <button className="muted small" onClick={() => take(false)} disabled={sent || busy} style={{ background: 'none', border: 'none' }}>Забрать только +5 кристаллов</button>
         <Button secondary onClick={close} style={{ marginTop: 12 }}>Не сейчас</Button>
       </div></div>
     </div>
@@ -108,7 +108,7 @@ function Invite() {
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title="Позвать друзей" />
       <div className="pad">
-        <Card style={{ marginBottom: 20 }}><b>Открой создание своего мира</b><p style={{ marginTop: 12, lineHeight: 1.5 }}>Отправь ссылку другу. Когда он опубликует первый пост, создание мира откроется, а ты получишь 3 кристалла, а друг — до 5 энергии.</p></Card>
+        <Card style={{ marginBottom: 20 }}><b>Открой создание своего мира</b><p style={{ marginTop: 12, lineHeight: 1.5 }}>Отправь ссылку другу. Когда он опубликует первый пост, создание мира откроется, а вы оба получите кристаллы.</p></Card>
         <div className="label">Друг увидит твою карточку</div>
         <div style={{ background: 'linear-gradient(160deg,#2A1236,#141420 60%,#12203A)', borderRadius: 16, padding: 14, textAlign: 'center', marginBottom: 12 }}>
           <Avatar seed={p.handle} size={44} style={{ margin: '0 auto 6px' }} /><b>{p.name}</b>
@@ -134,7 +134,7 @@ function FriendJoined() {
         <div className="row" style={{ justifyContent: 'center', gap: 0, marginBottom: 12 }}><Avatar seed={p.handle} size={64} style={{ border: '3px solid #1A1A24' }} /><Avatar seed="katya" size={64} style={{ marginLeft: -14, border: '3px solid #1A1A24' }} /></div>
         <div style={{ fontSize: 22, fontWeight: 900 }}>Катя пришла по твоей карточке!</div>
         <div className="muted" style={{ margin: '6px 0 16px' }}>Она завела канал в Академии и сделала первый пост</div>
-        <Gift style={{ fontSize: 20, padding: 14 }}>Тебе 3 кристалла, другу до 5 энергии</Gift>
+        <Gift style={{ fontSize: 20, padding: 14 }}>Тебе и другу — кристаллы</Gift>
         <div className="small muted" style={{ marginTop: 12 }}>Вернётся завтра: откроется карточка «Дуэт»</div>
         <Button style={{ marginTop: 16 }} onClick={() => nav.replace('03-4b_friend_channel')}>К каналу Кати</Button>
       </div></div>

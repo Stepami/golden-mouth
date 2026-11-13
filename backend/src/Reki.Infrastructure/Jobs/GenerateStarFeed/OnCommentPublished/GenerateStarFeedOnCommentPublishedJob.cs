@@ -23,7 +23,7 @@ internal sealed class GenerateStarFeedOnCommentPublishedJob(
         CancellationToken cancellationToken = default)
     {
         var request = context.Request;
-        var source = await postRepository.GetPostAsync(request.SourcePostId, request.WorldId, cancellationToken)
+        var source = await postRepository.GetPostAsync(request.SourcePostId, cancellationToken)
             ?? throw new TerminateExecutionException("The feed source is unavailable.");
         var comment = source.Comments.FirstOrDefault(item => item.Id == request.SourceCommentId);
         if (comment is null || comment.Hidden || comment.AuthorId != request.PlayerId.ToAuthorId())
@@ -47,14 +47,14 @@ internal sealed class GenerateStarFeedOnCommentPublishedJob(
             throw new TerminateExecutionException("The feed world is unavailable.");
         }
 
-        if (await postRepository.GetPostAsync(postId, worldId, cancellationToken) is not null)
+        if (await postRepository.GetPostAsync(postId, cancellationToken) is not null)
         {
             return;
         }
 
         var star = world.Stars[(int)((uint)context.Id.GetHashCode() % (uint)world.Stars.Count)];
-        var own = await postRepository.GetPostsAsync(worldId, star.Id.ToAuthorId(), null, 20, cancellationToken);
-        var recent = await postRepository.GetPostsAsync(worldId, null, null, 10, cancellationToken);
+        var own = await postRepository.GetPostsAsync(worldId, [star.Id.ToAuthorId()], null, 20, null, cancellationToken);
+        var recent = await postRepository.GetPostsAsync(worldId, [], null, 10, null, cancellationToken);
         var profile = new StarAgentProfile(world, star.Id, player.Address);
         var replies = source.Comments.Where(item => !item.Hidden && item.ParentCommentId == comment.Id).TakeLast(8).ToArray();
         var feed = new StarFeedContext(profile, own.Items, recent.Items, StarFeedEventType.CommentPublished);
@@ -73,7 +73,7 @@ internal sealed class GenerateStarFeedOnCommentPublishedJob(
             throw new TerminateExecutionException("The feed world is unavailable.");
         }
 
-        var freshSource = await postRepository.GetPostAsync(source.Id, worldId, cancellationToken);
+        var freshSource = await postRepository.GetPostAsync(source.Id, cancellationToken);
         if (freshSource is null ||
             !freshSource.Comments.Any(item => item.Id == comment.Id && !item.Hidden && item.AuthorId == playerId.ToAuthorId()))
         {
@@ -81,7 +81,7 @@ internal sealed class GenerateStarFeedOnCommentPublishedJob(
         }
 
         var createdAt = DateTimeOffset.FromUnixTimeMilliseconds(request.CreatedAtUnixMilliseconds);
-        var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, [], createdAt, 0, 0, 1, false, false);
+        var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, 0, [], [], createdAt, 0, 0, 1, false, false);
         await postRepository.InsertPostAsync(post, cancellationToken);
     }
 }

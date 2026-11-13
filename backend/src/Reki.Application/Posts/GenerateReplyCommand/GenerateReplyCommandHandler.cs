@@ -6,14 +6,12 @@ using Microsoft.Extensions.Logging;
 using Reki.Application.Exceptions;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
-using Reki.Application.Posts.GetPost;
 using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.RekiContext;
 
 namespace Reki.Application.Posts.GenerateReplyCommand;
 
 internal sealed partial class GenerateReplyCommandHandler(
-    ISender sender,
     IPostRepository posts,
     IRekiContextAccessor rekiContextAccessor,
     StarTurnPolicy turnPolicy,
@@ -28,7 +26,7 @@ internal sealed partial class GenerateReplyCommandHandler(
         var player = await rekiContext.Player;
         var world = (await rekiContext.Worlds).GetValueOrDefault(command.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
-        var post = await sender.Send(new PostQuery(command.PostId, world.Id), cancellationToken)
+        var post = await posts.GetPostAsync(command.PostId, cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");
         var star = world.FindStar(command.AuthorId)
             ?? throw new RequestConflictException("The author is not a star of this world.");
@@ -50,7 +48,7 @@ internal sealed partial class GenerateReplyCommandHandler(
         var additionalStarId = source?.AdditionalReplierId;
         var branch = source?.ParentCommentId is { } parent ? post.GetBranch(parent) : [];
         var original = post.RepostId is { } repostId
-            ? await posts.GetPostAsync(repostId, world.Id, cancellationToken)
+            ? await posts.GetPostAsync(repostId, cancellationToken)
             : null;
         var turnContext = new StarReplyContext(
             new StarAgentProfile(world, star.Id, player.Address),

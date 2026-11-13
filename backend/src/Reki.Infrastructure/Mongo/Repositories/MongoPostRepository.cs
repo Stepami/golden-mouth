@@ -36,9 +36,10 @@ internal sealed class MongoPostRepository(
     }
 
     public async ValueTask<IReadOnlyList<PostSimilarity>> FindSimilarPostsAsync(
-        GamePost post, double threshold, CancellationToken cancellationToken)
+        GamePost post,
+        double threshold)
     {
-        var embedding = await embeddingGenerator.GenerateVectorAsync(post, cancellationToken: cancellationToken);
+        var embedding = await embeddingGenerator.GenerateVectorAsync(post);
         var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, post.WorldId) &
                      Builders<GamePost>.Filter.Eq(item => item.AuthorId, post.AuthorId);
         var match = filter.Render(new RenderArgs<GamePost>(_posts.DocumentSerializer, _posts.Settings.SerializerRegistry));
@@ -65,30 +66,37 @@ internal sealed class MongoPostRepository(
             }),
             new BsonDocument("$match", new BsonDocument("score", new BsonDocument("$gte", threshold))),
         };
-        using var cursor = await database.GetCollection<BsonDocument>(MongoCollections.Posts)
-            .AggregateAsync<BsonDocument>(pipeline, cancellationToken: cancellationToken);
-        var documents = await cursor.ToListAsync(cancellationToken);
+        using var cursor = await database
+            .GetCollection<BsonDocument>(MongoCollections.Posts)
+            .AggregateAsync<BsonDocument>(pipeline);
+        var documents = await cursor.ToListAsync();
         return documents.Select(item => new PostSimilarity(
             PostId.From(item["_id"].AsGuid), item["Text"].AsString, item["score"].ToDouble())).ToArray();
     }
 
     public async ValueTask<WorldPostsPage> GetPostsAsync(
         WorldId worldId,
-        AuthorId? authorId,
+        IReadOnlyCollection<AuthorId> authorIds,
         PostId? cursor,
         int pageSize,
+        AuthorId? likedBy,
         CancellationToken cancellationToken)
     {
         var limit = pageSize + 1;
         var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId);
-        if (authorId is { } author)
+        if (authorIds.Count > 0)
         {
-            filter &= Builders<GamePost>.Filter.Eq(item => item.AuthorId, author);
+            filter &= Builders<GamePost>.Filter.In(item => item.AuthorId, authorIds);
         }
 
         if (cursor is { } before)
         {
             filter &= Builders<GamePost>.Filter.Lt(item => item.Id, before);
+        }
+
+        if (likedBy is { } liker)
+        {
+            filter &= Builders<GamePost>.Filter.AnyEq(item => item.LikedBy, liker);
         }
 
         var posts = await _posts
@@ -108,16 +116,21 @@ internal sealed class MongoPostRepository(
 
     public async ValueTask<GamePost?> GetPostAsync(
         PostId postId,
-        WorldId worldId,
         CancellationToken cancellationToken) =>
-        await _posts.Find(item => item.Id == postId && item.WorldId == worldId)
-            .Project<GamePost>(WithoutEmbedding)
-            .FirstOrDefaultAsync(cancellationToken);
-
-    public async ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken) =>
         await _posts.Find(item => item.Id == postId)
             .Project<GamePost>(WithoutEmbedding)
             .FirstOrDefaultAsync(cancellationToken);
+
+    public async ValueTask LikePostAsync(PostId postId, AuthorId authorId, bool like, CancellationToken cancellationToken)
+    {
+        var filter = Builders<GamePost>.Filter.Where(item => item.Id == postId);
+        var update = like
+            ? Builders<GamePost>.Update.AddToSet(item => item.LikedBy, authorId)
+            : Builders<GamePost>.Update.Pull(item => item.LikedBy, authorId);
+        await (sessionProvider.Current is { } session
+            ? _posts.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken)
+            : _posts.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));
+    }
 
     public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken)
     {

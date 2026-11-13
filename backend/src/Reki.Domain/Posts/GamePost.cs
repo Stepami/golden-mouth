@@ -8,6 +8,8 @@ public sealed record GamePost(
     WorldId WorldId,
     string Text,
     long Views,
+    long Likes,
+    IReadOnlyList<AuthorId> LikedBy,
     IReadOnlyList<GameComment> Comments,
     DateTimeOffset CreatedAtUtc,
     long SubscriberDelta,
@@ -16,7 +18,6 @@ public sealed record GamePost(
     bool Viral,
     bool Flop,
     int Version = 0,
-    string ReactionEmoji = "🔥",
     AuthorId? PredictedAuthorId = null,
     string? FlopReason = null,
     PostId? RepostId = null)
@@ -63,4 +64,17 @@ public sealed record GamePost(
 
         return this with { Comments = [.. Comments, .. comments], Version = Version + 1 };
     }
+
+    public GamePost ApplyProgress(PostProgression progression) =>
+        this with
+        {
+            SubscriberDelta = progression.SubscriberDelta,
+            Quality = progression.Quality,
+            Viral = progression.Viral,
+            Flop = progression.Flop,
+            Views = progression.Views,
+            Likes = progression.Likes,
+            PredictedAuthorId = progression.Commenter.ToAuthorId(),
+            FlopReason = progression.Score.FlopReason,
+        };
 }
