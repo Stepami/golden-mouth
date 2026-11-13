@@ -28,7 +28,7 @@ public interface IPostRepository
         PostId postId,
         CancellationToken cancellationToken);
 
-    ValueTask LikePostAsync(PostId postId, AuthorId authorId, CancellationToken cancellationToken);
+    ValueTask LikePostAsync(PostId postId, AuthorId authorId, bool like, CancellationToken cancellationToken);
 
     ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken);
 

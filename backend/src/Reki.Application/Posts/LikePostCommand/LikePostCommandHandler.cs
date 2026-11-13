@@ -1,17 +1,20 @@
 using Mediator;
-using Reki.Application.Exceptions;
-using Reki.Application.Posts.GetPost;
 
 namespace Reki.Application.Posts.LikePostCommand;
 
-internal sealed class LikePostCommandHandler(IPostRepository posts, ISender sender)
-    : ICommandHandler<LikePost>
+internal sealed class LikePostCommandHandler(IPostRepository posts) : ICommandHandler<LikePost>
 {
     public async ValueTask<Unit> Handle(LikePost command, CancellationToken cancellationToken)
     {
-        _ = await sender.Send(new PostQuery(command.PostId), cancellationToken)
-            ?? throw new ResourceNotFoundException("Post not found.");
-        await posts.LikePostAsync(command.PostId, command.AuthorId, cancellationToken);
+        var post = await posts.GetPostAsync(command.PostId, cancellationToken);
+        if (post is null)
+        {
+            return Unit.Value;
+        }
+
+        var like = !post.LikedBy.Contains(command.AuthorId);
+
+        await posts.LikePostAsync(command.PostId, command.AuthorId, like, cancellationToken);
         return Unit.Value;
     }
 }

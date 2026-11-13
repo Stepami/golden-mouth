@@ -121,23 +121,12 @@ internal sealed class MongoPostRepository(
             .Project<GamePost>(WithoutEmbedding)
             .FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask LikePostAsync(PostId postId, AuthorId authorId, CancellationToken cancellationToken)
+    public async ValueTask LikePostAsync(PostId postId, AuthorId authorId, bool like, CancellationToken cancellationToken)
     {
-        var author = authorId.Value;
-        var exists = new BsonDocument("$in", new BsonArray { author, "$LikedBy" });
-        var remove = new BsonDocument("$filter", new BsonDocument
-        {
-            ["input"] = "$LikedBy",
-            ["as"] = "item",
-            ["cond"] = new BsonDocument("$ne", new BsonArray { "$$item", author }),
-        });
-        var add = new BsonDocument("$concatArrays", new BsonArray { "$LikedBy", new BsonArray { author } });
-        PipelineDefinition<GamePost, GamePost> pipeline = new[]
-        {
-            new BsonDocument("$set", new BsonDocument("LikedBy", new BsonDocument("$cond", new BsonArray { exists, remove, add }))),
-        };
         var filter = Builders<GamePost>.Filter.Where(item => item.Id == postId);
-        var update = Builders<GamePost>.Update.Pipeline(pipeline);
+        var update = like
+            ? Builders<GamePost>.Update.AddToSet(item => item.LikedBy, authorId)
+            : Builders<GamePost>.Update.Pull(item => item.LikedBy, authorId);
         await (sessionProvider.Current is { } session
             ? _posts.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken)
             : _posts.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));
