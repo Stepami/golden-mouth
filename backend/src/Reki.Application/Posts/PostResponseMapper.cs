@@ -70,7 +70,7 @@ public static partial class PostResponseMapper
             post.Views,
             post.Likes,
             post.LikedBy,
-            post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray(),
+            [.. post.Comments.Select(comment => MapComment(post, comment, world, playerId))],
             post.RepostId);
 
     private static CommentResponse MapComment(GamePost post, GameComment comment, World world, PlayerId playerId)
