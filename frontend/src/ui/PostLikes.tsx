@@ -10,16 +10,17 @@ export function PostLikes({ count, marked, onMark }: {
 }) {
   const [pending, setPending] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [animate, setAnimate] = useState(false)
   const busy = useRef(false)
   const toggle = async () => {
     if (busy.current) return
-    busy.current = true; setPending(true); setFailed(false)
-    try { await onMark(!marked) }
+    busy.current = true; setPending(true); setFailed(false); setAnimate(false)
+    try { await onMark(!marked); setAnimate(!marked) }
     catch { setFailed(true) }
     finally { busy.current = false; setPending(false) }
   }
   return <div className="post-likes" onClick={event => event.stopPropagation()}>
-    <button type="button" className="react post-like-toggle" aria-pressed={marked}
+    <button type="button" className={`react post-like-toggle${animate ? ' post-like-animated' : ''}`} aria-pressed={marked}
       aria-label={`${marked ? 'Убрать личную отметку' : 'Отметить пост для себя'}; лайки аудитории: ${fmt(count)}`}
       title={`${marked ? 'Убрать личную отметку' : 'Отметить пост для себя'}. Лайки аудитории: ${fmt(count)}`}
       disabled={pending} aria-busy={pending} onClick={() => void toggle()}>

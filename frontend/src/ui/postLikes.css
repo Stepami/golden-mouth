@@ -8,12 +8,12 @@
 .post-likes-count { color: var(--text); font-variant-numeric: tabular-nums; }
 .post-like-error { margin-top: 8px; color: var(--warn); font-size: 13px; overflow-wrap: anywhere; }
 .post-like-toggle[aria-busy="true"][aria-pressed="false"] svg { animation: post-like-wait .65s ease-in-out infinite; }
-.post-like-toggle[aria-pressed="true"] svg { animation: post-like-pop .5s cubic-bezier(.2,.8,.25,1); }
+.post-like-toggle.post-like-animated[aria-pressed="true"] svg { animation: post-like-pop .5s cubic-bezier(.2,.8,.25,1); }
 .post-like-toggle::before, .post-like-toggle::after { content: ''; position: absolute; left: 17px; top: 50%; opacity: 0; pointer-events: none; }
 .post-like-toggle::before { width: 4px; height: 4px; border-radius: 50%; box-shadow: -12px -12px 0 var(--accent), 10px -15px 0 var(--accent2), 13px 10px 0 var(--accent), -10px 13px 0 var(--accent2); }
 .post-like-toggle::after { width: 26px; height: 26px; border: 1px solid var(--accent); border-radius: 50%; }
-.post-like-toggle[aria-pressed="true"]::before { animation: post-like-burst .5s ease-out; }
-.post-like-toggle[aria-pressed="true"]::after { animation: post-like-ring .45s ease-out; }
+.post-like-toggle.post-like-animated[aria-pressed="true"]::before { animation: post-like-burst .5s ease-out; }
+.post-like-toggle.post-like-animated[aria-pressed="true"]::after { animation: post-like-ring .45s ease-out; }
 @keyframes post-like-wait { 50% { transform: scale(.84); } }
 @keyframes post-like-pop { 0% { transform: scale(.72); } 35% { transform: scale(1.3) rotate(-8deg); } 65% { transform: scale(.92) rotate(4deg); } 85% { transform: scale(1.08); } 100% { transform: scale(1); } }
 @keyframes post-like-burst { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.45); } }
