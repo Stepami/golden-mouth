@@ -58,7 +58,19 @@ export function usePostPages<T extends { postId?: string }>(key: string, load: (
     }
   }, [key, fetchPage])
 
+  const updateItems = useCallback((edit: (items: T[]) => T[]) => {
+    const before = latest.current
+    if (before.key !== key || !before.page) return
+    request.current?.abort()
+    request.current = null
+    const page = { ...before.page, items: edit(before.page.items) }
+    saveApiCache(key, page)
+    latest.current = { ...before, page, pending: null }
+    setState(latest.current)
+  }, [key])
+
   return {
+    updateItems,
     items: current.page?.items ?? [],
     hasNext: !!current.page?.nextCursor,
     nextCursor: current.page?.nextCursor ?? null,

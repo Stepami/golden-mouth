@@ -1,3 +1,4 @@
+import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
 import { RepostAction } from '../ui/RepostAction'
 import {PushNotifications} from '../app/push/PushNotifications'
@@ -12,7 +13,7 @@ import { contentOf, worldOf } from '../api/worldContent'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import { dm as dmMock, friends as friendsMock } from '../api/mock'
-import type { ChannelPost, DmMessage, Drama, FeedItem } from '../api/types'
+import type { ChannelPost, DmMessage, Drama, FeedItem, PostDetailResponse } from '../api/types'
 import { useNav } from '../app/nav'
 import { useApi } from '../app/useApi'
 import { usePostPages } from '../app/usePostPages'
@@ -99,10 +100,10 @@ function StarCard() {
 
 // 03-3: карточка поста в общей ленте. Открывается с клавиатуры (Enter/Space) и ведёт
 // только на свой postId с доступным ответом. Чужие карточки остаются в ленте.
-function FeedPostCard({ item, onChanged }: { item: FeedItem; onChanged: () => void }) {
+function FeedPostCard({ item, onChanged, onLike, returnTo = 'feed' }: { item: FeedItem; onChanged: () => void; onLike: (post: PostDetailResponse) => void; returnTo?: string }) {
   const nav = useNav()
   const p = usePlayer()
-  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId, returnTo: 'feed' }) : undefined
+  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId, returnTo }) : undefined
   return (
     <Card style={{ marginBottom: 12, position: 'relative' }}>
       <div
@@ -118,7 +119,7 @@ function FeedPostCard({ item, onChanged }: { item: FeedItem; onChanged: () => vo
         <div style={{ marginTop: 12 }}><ExpandableText text={item.text} /></div>
         <QuotedPost repostId={item.repostId} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{item.reactions?.map(r => <span key={r.emoji} className="react">{r.emoji} {short(r.count)}</span>)}</div>
+          <div>{item.postId && !item.demo && item.likes != null && item.likedBy && <PostLikeAction postId={item.postId} likes={item.likes} likedBy={item.likedBy} onSaved={onLike} />}</div>
           {item.commentCount != null && item.views != null && <span className="small muted" style={{ whiteSpace: 'nowrap' }}>💬 {item.commentCount} · 👁 {short(item.views)}</span>}
         </div>
       </div>
@@ -153,7 +154,7 @@ function Feed() {
       <div className="pad">
         {list.items.map((f, i) => f.kind === 'news'
           ? <Card key={`news-${i}`} style={{ marginBottom: 12, border: '1px solid #FFB86B44' }}><span className="badge">НОВОСТИ МИРА</span><div style={{ marginTop: 6 }}>{f.text}</div></Card>
-          : <div className={newIds.includes(f.postId ?? "") ? "feed-arrival" : undefined} key={f.postId ?? `post-${i}`}><FeedPostCard item={f} onChanged={() => { void list.refresh() }} /></div>)}
+          : <div className={newIds.includes(f.postId ?? "") ? "feed-arrival" : undefined} key={f.postId ?? `post-${i}`}><FeedPostCard item={f} onChanged={() => { void list.refresh() }} onLike={post => list.updateItems(items => items.map(item => item.postId === post.postId ? { ...item, likes: post.likes, likedBy: post.likedBy } : item))} /></div>)}
         {list.pending === 'first' && !list.ready && <Card>Загружаем ленту…</Card>}
         {list.error === 'first' && <Card>Не получилось обновить ленту. Потяни вниз от начала списка, чтобы повторить.</Card>}
         {list.ready && list.items.length === 0 && <Card>В ленте пока нет постов.</Card>}
@@ -248,7 +249,7 @@ function Stage() {
         <Button secondary style={{ marginBottom: 10 }} onClick={() => nav.push('04-3_invite')}>Позвать друга</Button>
         {list.pending === 'first' && !list.ready && <Card><span className="small muted">загружаем посты…</span></Card>}
         {list.error === 'first' && <Card><div className="small">Не получилось загрузить канал. Потяни вниз от начала списка, чтобы повторить.</div></Card>}
-        {list.items.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId, returnTo: 'channel' })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.repostId && <div className="small muted">↻ Репост</div>}{post.text}<QuotedPost repostId={post.repostId} />{post.repostId && !post.text.trim() && <RepostAction postId={post.postId} undoOnly onChanged={() => { void list.refresh() }} />}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
+        {list.items.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId, returnTo: 'channel' })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.repostId && <div className="small muted">↻ Репост</div>}{post.text}<QuotedPost repostId={post.repostId} />{post.repostId && !post.text.trim() && <RepostAction postId={post.postId} undoOnly onChanged={() => { void list.refresh() }} />}<div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><PostLikeAction postId={post.postId} likes={post.likes} likedBy={post.likedBy} onSaved={saved => list.updateItems(items => items.map(item => item.postId === saved.postId ? { ...item, likes: saved.likes, likedBy: saved.likedBy } : item))} /><span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
         <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.error === 'more' ? 'Не получилось загрузить посты. Потяни вниз от начала списка, чтобы обновить.' : list.ready && !list.hasNext ? 'Все посты загружены' : ''}</div>
       </div>
       <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
@@ -257,18 +258,42 @@ function Stage() {
   )
 }
 
+function MarkedPosts() {
+  const player = usePlayer()
+  const key = `marked-posts:${player.id}:${player.worldInstanceId ?? player.world}`
+  const load = useCallback((cursor: string | undefined, signal: AbortSignal) => api.likedPosts(player.worldInstanceId, cursor, signal), [player.worldInstanceId])
+  const list = usePostPages<FeedItem>(key, load)
+  const gestures = usePostListGestures(key, list, list.refresh)
+  const author = `Player_${player.id.replaceAll('-', '').toLowerCase()}`
+  return <div ref={gestures.screenRef} className="post-list-screen">
+    <div className="post-list-pull" role="status" style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
+    <div className="row" style={{ justifyContent: 'space-between', marginBottom: 4 }}><b style={{ fontSize: 18 }}>Отмеченные посты</b></div>
+    <p className="small muted" style={{ marginBottom: 14 }}>Твои отметки · {worldOf(player.world).title}</p>
+    {list.items.map(item => <FeedPostCard key={item.postId} item={item} returnTo="marked" onChanged={() => { void list.refresh() }} onLike={post => list.updateItems(items => post.likedBy.includes(author) ? items.map(item => item.postId === post.postId ? { ...item, likes: post.likes, likedBy: post.likedBy } : item) : items.filter(item => item.postId !== post.postId))} />)}
+    {list.pending === 'first' && !list.ready && <Card><span role="status">Загружаем отметки…</span></Card>}
+    {list.error && <Card><p role="alert">Не удалось загрузить отмеченные посты.</p><Button secondary onClick={() => void list.refresh()}>Повторить</Button></Card>}
+    {list.ready && !list.items.length && !list.error && <Card><b>Пока нет отмеченных постов</b><p className="small muted" style={{ marginTop: 8 }}>Нажми на сердце под постом, чтобы сохранить его здесь.</p></Card>}
+    <div ref={gestures.tailRef} className="post-list-tail" role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.ready && list.items.length > 0 && !list.hasNext ? 'Все отметки загружены' : ''}</div>
+  </div>
+}
+
 // 05-5: «Я»: статы, серия неделей, навыки, коллекция, следующий мир
 function Me() {
   const nav = useNav(); const p = usePlayer()
   const [skillHelp, setSkillHelp] = useState(false)
   const [linkProfile, setLinkProfile] = useState(false)
   const { refresh } = useStore()
+  const [tab, setTab] = useState<'overview' | 'marked'>(() => nav.params.profileTab === 'marked' ? 'marked' : 'overview')
   useEffect(() => { void refresh() }, [refresh])
   return (
     <div className="screen">
       <TopBar title="Я" rightPlain right={<button className="header-action" onClick={() => nav.push('05-8_settings')}>⚙ Настройки</button>} />
       <div style={{ padding: '0 16px', textAlign: 'center' }}><Avatar seed={p.handle} size={64} style={{ margin: '0 auto 6px' }} /><b style={{ fontSize: 18 }}>{p.name}</b>{p.handle && <div className="small muted" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="small muted profile-world-name">{worldOf(p.world).emoji} {worldOf(p.world).title}</div></div>
       <div className="pad">
+        <Segmented options={[{ id: 'overview', label: 'Обзор' }, { id: 'marked', label: 'Отмеченные' }]} value={tab} onChange={value => { setTab(value); nav.replace('05-5_collection', { ...nav.params, profileTab: value }) }} />
+      </div>
+      <div className="pad" style={{ paddingTop: 0 }}>
+        {tab === 'marked' ? <MarkedPosts key={`${p.id}:${p.worldInstanceId}`} /> : <>
         <div className="profile-stats">
           {[[`⚡ ${p.postsLeft}`, 'энергии'], ...(p.energyWallet ? [[`💎 ${p.energyWallet.crystals}`, 'кристаллы']] : []), [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
         </div>
@@ -292,6 +317,7 @@ function Me() {
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b><span className="small" style={{ color: 'var(--lilac)' }}>все ›</span></div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 6 }}>{p.collection.map(c => <div key={c.id} className={`slot${c.open ? ' on' : ''}`} onClick={() => c.emoji === '👑' && nav.push('03-2_star_card')} style={{ fontSize: c.open ? 22 : 14 }}>{c.open ? c.emoji : '?'}</div>)}</div>
         </Card>}
+        </>}
       </div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
       {linkProfile && <LinkProfile player={p} refresh={refresh} onClose={() => setLinkProfile(false)} />}
