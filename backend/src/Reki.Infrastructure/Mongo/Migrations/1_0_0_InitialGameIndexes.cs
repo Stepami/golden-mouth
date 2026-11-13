@@ -1,7 +1,6 @@
 using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Domain.Events;
 using Reki.Domain.Posts;
 using Reki.Infrastructure.Mongo.Repositories;
 
@@ -21,7 +20,7 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
         var posts = database.GetCollection<GamePost>(MongoCollections.Posts);
         var publications = database.GetCollection<BsonDocument>(MongoCollections.Publications);
         var memories = database.GetCollection<BsonDocument>("stars_memory");
-        var events = database.GetCollection<DailyGameEvent>(MongoCollections.Events);
+        var events = database.GetCollection<BsonDocument>(MongoCollections.Events);
         var challenges = database.GetCollection<BsonDocument>("challenges");
         var worlds = database.GetCollection<BsonDocument>(MongoCollections.Worlds);
 
@@ -35,9 +34,9 @@ internal sealed class InitialGameIndexes : RekiMigrationBase
         var memoryKeys = Builders<BsonDocument>.IndexKeys
             .Ascending("PlayerId")
             .Ascending("StarId");
-        var eventKeys = Builders<DailyGameEvent>.IndexKeys
-            .Ascending(item => item.PlayerId)
-            .Descending(item => item.DayStartedAtUtc);
+        var eventKeys = Builders<BsonDocument>.IndexKeys
+            .Ascending("PlayerId")
+            .Descending("DayStartedAtUtc");
         var challengeKey = Builders<BsonDocument>.IndexKeys
             .Ascending("Participants");
         var worldKeys = Builders<BsonDocument>.IndexKeys

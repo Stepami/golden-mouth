@@ -2,7 +2,6 @@ using System.Linq.Expressions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
-using Reki.Domain.Events;
 using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
@@ -24,8 +23,6 @@ internal static class MongoClassMappings
         BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.AuthorIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.CommentIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.RekiEventIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.InvitationIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.NotificationIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
@@ -42,9 +39,35 @@ internal static class MongoClassMappings
             new BsonValueObjectConversions.ExternalUserIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.WorldIdBsonSerializer());
-        RegisterWithMongoId<PlayerProfile, PlayerId>(item => item.Id);
+        RegisterWithMongoId<PlayerProfile, PlayerId>(item => item.Id, ignoreExtraElements: true);
+        if (!BsonClassMap.IsClassMapRegistered(typeof(PlayerWallet)))
+        {
+            BsonClassMap.RegisterClassMap<PlayerWallet>(classMap =>
+            {
+                classMap.AutoMap();
+                classMap.SetIgnoreExtraElements(true);
+            });
+        }
+
+        if (!BsonClassMap.IsClassMapRegistered(typeof(WorldPlayer)))
+        {
+            BsonClassMap.RegisterClassMap<WorldPlayer>(classMap =>
+            {
+                classMap.AutoMap();
+                classMap.SetIgnoreExtraElements(true);
+            });
+        }
+
+        if (!BsonClassMap.IsClassMapRegistered(typeof(WorldStar)))
+        {
+            BsonClassMap.RegisterClassMap<WorldStar>(classMap =>
+            {
+                classMap.AutoMap();
+                classMap.SetIgnoreExtraElements(true);
+            });
+        }
+
         RegisterWithMongoId<GamePost, PostId>(item => item.Id, ignoreExtraElements: true);
-        RegisterWithMongoId<DailyGameEvent, RekiEventId>(item => item.Id);
         RegisterWithMongoId<World, WorldId>(item => item.Id);
         RegisterWithMongoId<Invitation, InvitationId>(item => item.Id);
         RegisterWithMongoId<Notification, NotificationId>(

@@ -299,7 +299,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .SingleAsync();
 
         await Assert.That(statusCode).IsNotEqualTo(HttpStatusCode.OK);
-        await Assert.That(player["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(0);
+        await Assert.That(player["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
         await Assert.That(player["PausedAtUtc"].AsBsonDocument["DateTime"].ToUniversalTime())
             .IsEqualTo(new DateTime(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc));
         await Assert.That(player["HateDisabledUntilUtc"].AsBsonDocument["DateTime"].ToUniversalTime())
@@ -334,7 +334,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(stored["Version"].AsInt32).IsEqualTo(beforePost["Version"].AsInt32 + 8);
         await Assert.That(stored.Contains("ThreadReplies")).IsFalse();
         var player = await GetStoredPlayerAsync(telegramUserId);
-        await Assert.That(player["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(5);
         await Assert.That(player["Wallet"]["Energy"].AsInt32).IsEqualTo(5);
         var world = await GetStoredWorldAsync(telegramUserId);
         await Assert.That(world["Player"]["Subscribers"].ToInt64()).IsEqualTo(fourth.Subscribers);
@@ -621,8 +620,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             await Assert.That(detail.Comments.Single(item => item.AuthorId == chosenStar.Id.ToAuthorId()).ParentCommentId).IsNull();
         }
 
-        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32)
-            .IsEqualTo(beforePlayer["Wallet"]["EnergyUsed"].AsInt32 + 1);
+        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"].AsInt32)
+            .IsEqualTo(beforePlayer["Wallet"]["Energy"].AsInt32 - 1);
         var bonus = Factory.Services.GetRequiredService<IOptionsMonitor<GameBalance>>().CurrentValue.Thread.SubscriberBonus;
         await Assert.That((await GetStoredWorldAsync(user))["Player"]["Subscribers"].ToInt64())
             .IsEqualTo(beforeWorld["Player"]["Subscribers"].ToInt64() + bonus);
@@ -652,7 +651,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Assert
         await Assert.That(response.Status).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(before);
-        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"]).IsEqualTo(player["Wallet"]["EnergyUsed"]);
+        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"]).IsEqualTo(player["Wallet"]["Energy"]);
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(calls);
         await Assert.That((first.Post ?? throw new InvalidOperationException("Missing first post.")).Comments.Count).IsEqualTo(3);
     }
@@ -677,7 +676,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That((retry.Post ?? throw new InvalidOperationException("Missing retry post.")).Comments.Select(comment => comment.Id)).IsEquivalentTo((first.Post ?? throw new InvalidOperationException("Missing first post.")).Comments.Select(comment => comment.Id));
         await Assert.That(retry.EnergyLeft).IsEqualTo(first.EnergyLeft);
         await Assert.That(retry.Subscribers).IsEqualTo(first.Subscribers);
-        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"]).IsEqualTo(beforePlayer["Wallet"]["EnergyUsed"]);
+        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"]).IsEqualTo(beforePlayer["Wallet"]["Energy"]);
         await Assert.That((await GetStoredWorldAsync(user))["Player"]["Subscribers"]).IsEqualTo(beforeWorld["Player"]["Subscribers"]);
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(calls);
     }
@@ -742,7 +741,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var after = await GetStoredPostAsync(postId);
         await Assert.That(after["Comments"].AsBsonArray.Count).IsEqualTo(before["Comments"].AsBsonArray.Count + 1);
         await Assert.That(after["Comments"].AsBsonArray[^1]["RequestId"].AsString).IsEqualTo("invalid-model");
-        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32).IsGreaterThan(player["Wallet"]["EnergyUsed"].AsInt32);
+        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"].AsInt32).IsLessThan(player["Wallet"]["Energy"].AsInt32);
     }
 
     [Test]
@@ -768,7 +767,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         if (scenario is "energy" or "energy-over")
         {
             var playerId = (await GetStoredPlayerAsync(user))["_id"];
-            await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(new BsonDocument("_id", playerId), new BsonDocument("$set", new BsonDocument { { "Wallet.EnergyUsed", scenario == "energy" ? 10 : 11 }, { "Wallet.Energy", 0 } }));
+            await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(new BsonDocument("_id", playerId), new BsonDocument("$set", new BsonDocument { { "Wallet.Energy", 0 } }));
         }
 
         var before = await GetStoredPostAsync(postId);
@@ -790,7 +789,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         };
         await Assert.That(result.Status).IsEqualTo(expectedStatus);
         await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(before);
-        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"]).IsEqualTo(player["Wallet"]["EnergyUsed"]);
+        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"]).IsEqualTo(player["Wallet"]["Energy"]);
         await Assert.That((await GetStoredWorldAsync(user))["Player"]["Subscribers"]).IsEqualTo(world["Player"]["Subscribers"]);
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(calls);
     }
@@ -813,7 +812,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Assert
         await Assert.That(completed.Subscribers).IsEqualTo(before["Player"]["Subscribers"].ToInt64());
         await Assert.That((completed.Post ?? throw new InvalidOperationException("Missing completed post.")).Comments.Count).IsEqualTo(6);
-        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(2);
+        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"].AsInt32).IsEqualTo(8);
     }
 
     [Test]
@@ -915,29 +914,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Assert
         await Assert.That(response.Status).IsEqualTo(HttpStatusCode.OK);
         await Assert.That(completed.EnergyLeft).IsEqualTo(7);
-        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(3);
+        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"].AsInt32).IsEqualTo(7);
         await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(3);
         await Assert.That((await GetStoredPostAsync(secondPost.Id.Value.ToString("N")))["Comments"].AsBsonArray.Count).IsEqualTo(3);
-    }
-
-    [Test]
-    public async Task AddReply_NewGameDay_ResetsConsumedEnergyAsync()
-    {
-        // Arrange
-        const long user = 8711;
-        var (postId, targetId) = await PublishPostForThreadAsync(user);
-        var playerId = (await GetStoredPlayerAsync(user))["_id"];
-        await Database.GetCollection<BsonDocument>("players").UpdateOneAsync(new BsonDocument("_id", playerId), new BsonDocument("$set", new BsonDocument { { "Wallet.EnergyUsed", 10 }, { "Wallet.Energy", 3 } }));
-        Factory.Session.Clock.Advance(TimeSpan.FromDays(1));
-        await ResetGameDayAsync();
-
-        // Act
-        var completed = await ReplyAsync(user, postId, targetId, "new-day", "ответ нового дня");
-
-        // Assert
-        await Assert.That(completed.EnergyLeft).IsEqualTo(2);
-        await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(1);
-        await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(3);
     }
 
     [Test]
@@ -994,7 +973,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         else
         {
             await Assert.That((await GetStoredPostAsync(postId))["Comments"].AsBsonArray.Count).IsEqualTo(beforePost["Comments"].AsBsonArray.Count + 1);
-            await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(beforePlayer["Wallet"]["EnergyUsed"].AsInt32 + 1);
+            await Assert.That((await GetStoredPlayerAsync(user))["Wallet"]["Energy"].AsInt32).IsEqualTo(beforePlayer["Wallet"]["Energy"].AsInt32 - 1);
         }
     }
 

@@ -15,7 +15,6 @@ internal sealed class OnboardPlayerCommandHandler(
     IInvitationRepository invitationRepository,
     IPlayerRepository playerRepository,
     ISender sender,
-    GameDayPeriod gameDayPeriod,
     IOptionsMonitor<GameBalance> balance,
     TimeProvider timeProvider,
     ProductTelemetry analytics) : ICommandHandler<OnboardPlayer, PlayerProfile>
@@ -42,7 +41,6 @@ internal sealed class OnboardPlayerCommandHandler(
             AgeBand = command.AgeBand,
             Wallet = PlayerWallet.Create(timeProvider.GetUtcNow()),
             LastSeenAt = timeProvider.GetUtcNow(),
-            PostsPeriodStartedAtUtc = gameDayPeriod.PeriodStart,
             StreakDays = 1,
             Skills = new Dictionary<SkillId, SkillProgress>
             {

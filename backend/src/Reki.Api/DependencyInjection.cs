@@ -2,7 +2,6 @@ using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.OpenApi;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
-using Reki.Domain.Events;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
@@ -21,7 +20,6 @@ namespace Reki.Api;
 [OpenApiMarker<CommentId>]
 [OpenApiMarker<AuthorId>]
 [OpenApiMarker<Address>]
-[OpenApiMarker<RekiEventId>]
 internal static class DependencyInjection
 {
     public static IServiceCollection AddApi(this IServiceCollection services)

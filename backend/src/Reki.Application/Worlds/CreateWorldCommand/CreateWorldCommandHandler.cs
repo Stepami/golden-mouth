@@ -12,7 +12,6 @@ namespace Reki.Application.Worlds.CreateWorldCommand;
 internal sealed class CreateWorldCommandHandler(
     IWorldRepository worldRepository,
     IRekiContextAccessor rekiContextAccessor,
-    GameDayPeriod gameDayPeriod,
     IOptionsMonitor<GameBalance> balance,
     ProductTelemetry telemetry,
     IStarVectorStore starVectorStore) : ICommandHandler<CreateWorld, World>
@@ -33,7 +32,7 @@ internal sealed class CreateWorldCommandHandler(
         }
 
         var currentBalance = balance.CurrentValue;
-        var instance = source.Instantiate(player.Id, gameDayPeriod.PeriodStart);
+        var instance = source.Instantiate(player.Id);
         var world = instance with
         {
             Player = instance.Player with { Subscribers = currentBalance.Growth.StartingSubscribers },

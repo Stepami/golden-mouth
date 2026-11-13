@@ -15,7 +15,6 @@ using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
-using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.Mongo.Migrations;
 using Reki.Infrastructure.Mongo.Options;
 using Reki.Infrastructure.Mongo.Repositories;
@@ -137,9 +136,9 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var orphanedTicker = CreateTicker("orphaned-world-job", "old-post");
         orphanedTicker["Status"] = 3; // Completed history can outlive its deleted world.
         var unrelatedTicker = CreateTicker("other-job", "unused");
-        unrelatedTicker["Function"] = nameof(ResetGameDayJob);
+        unrelatedTicker["Function"] = "ResetGameDayJob";
         await database.GetCollection<BsonDocument>("ticker_TimeTickers").InsertManyAsync([ticker, orphanedTicker, unrelatedTicker]);
-        var cronSchedule = new BsonDocument { ["_id"] = "daily-reset", ["Function"] = nameof(ResetGameDayJob) };
+        var cronSchedule = new BsonDocument { ["_id"] = "daily-reset", ["Function"] = "ResetGameDayJob" };
         await database.GetCollection<BsonDocument>("ticker_CronTickers").InsertOneAsync(cronSchedule);
 
         // Act
@@ -400,11 +399,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
                 Avatar = "legacy-avatar",
                 Drama = collectionName == "worlds" ? WorldDrama.Mid : WorldDrama.Hot,
                 Subscribers = 9876,
-                Wants = [new DailyWant("saved", "Своё желание", "опыт", true)],
                 Achievements = [new AchievementProgress("saved", "⭐", "Достижение", true)],
-                LastPostAtUtc = DateTimeOffset.UnixEpoch.AddHours(1),
-                RestedPostsRemaining = 2,
-                PeriodStartedAtUtc = DateTimeOffset.UnixEpoch,
             },
         };
         var original = expected.ToBsonDocument();
@@ -584,7 +579,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             { "Subscribers", 987L }, { "TotalPostsPublished", 15 }, { "PostsSinceViral", 4 },
             { "ConsecutiveFlops", 2 }, { "PostsPeriodStartedAtUtc", period.DeepClone() },
             { "Settings", new BsonDocument { { "Voice", "Свой голос" }, { "Drama", "soft" }, { "Quiet", "22:00–9:00" } } },
-            { "Wants", new BsonArray { new DailyWant("saved-want", "Своё желание", "опыт", true).ToBsonDocument() } },
+            { "Wants", new BsonArray { new BsonDocument { { "Id", "saved-want" }, { "Text", "Своё желание" }, { "Reward", "опыт" }, { "Done", true } } } },
             { "Achievements", new BsonArray { achievement } },
             { "StarRelations", new BsonArray { new BsonDocument { { "StarId", template.Stars[0].Id.Value }, { "Value", 3 }, { "GainedInPeriod", 1 }, { "PeriodStartedAtUtc", period.DeepClone() } } } },
         };
@@ -621,7 +616,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(world["Player"]["Achievements"][0]["IsOpen"].AsBoolean).IsTrue();
         await Assert.That(world["Stars"][0]["Relation"].ToInt32()).IsEqualTo(3);
         await Assert.That(world["Stars"][0]["RelationGainedInPeriod"].ToInt32()).IsEqualTo(1);
-        await Assert.That(world["Stars"][0]["RelationPeriodStartedAtUtc"]).IsEqualTo(template.Stars[0].ToBsonDocument()["RelationPeriodStartedAtUtc"]);
+        await Assert.That(world["Stars"][0]["RelationPeriodStartedAtUtc"]).IsEqualTo(period);
         await Assert.That(world["Roles"]).IsEqualTo(new BsonArray(template.Roles));
         await Assert.That(world["Rules"]).IsEqualTo(new BsonArray(template.Rules.Select(rule => rule.ToBsonDocument())));
         await Assert.That(world["Interface"]["AvatarStyle"].AsString).IsEqualTo(template.Interface.AvatarStyle);
@@ -987,7 +982,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(templates.Select(world => world.Id.Value)).IsEquivalentTo([Guid.Parse("edfccf53-65c6-4eaf-8321-2391bc1758bd"), Guid.Parse("b018145e-c887-4d00-9f18-5c877d0af8be"), Guid.Parse("5720946a-ea7c-4a10-9c50-51ce3deefc53"), Guid.Parse("0cb3f809-6dfd-4ef1-af52-daa12a5b8804"), Guid.Parse("14049891-fe2b-4d98-b38f-0f37e6544052")]);
         await Assert.That(templates.All(world => world.Player.PlayerId.Value == Guid.Empty)).IsTrue();
         await Assert.That(templates.All(world => world.Stars.Count > 0 && world.Roles.Count > 0 && world.Rules.Count > 0)).IsTrue();
-        await Assert.That(templates.All(world => world.Player.Wants.Count == 3 && world.Player.Achievements.Count == 12)).IsTrue();
+        await Assert.That(templates.All(world => world.Player.Achievements.Count == 12)).IsTrue();
         await Assert.That(templates.SelectMany(world => world.Stars).All(star => Enum.IsDefined(star.Trait))).IsTrue();
         await Assert.That(templates.All(world => !string.IsNullOrWhiteSpace(world.Interface.AvatarStyle))).IsTrue();
     }
@@ -1006,10 +1001,10 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var template = await templates.Find(world => world.Id == stageId).SingleAsync();
         var edited = template with { Interface = template.Interface with { Title = "Обновлённый шаблон" } };
         await templates.ReplaceOneAsync(world => world.Id == stageId, edited);
-        var owned = template.Instantiate(PlayerId.From("7914ac6b4a791783fb72443b5461c5e8"), DateTimeOffset.UnixEpoch) with
+        var owned = template.Instantiate(PlayerId.From("7914ac6b4a791783fb72443b5461c5e8")) with
         {
             Player = template.Player with { PlayerId = PlayerId.From("7914ac6b4a791783fb72443b5461c5e8"), Subscribers = 987 },
-            Stars = [template.Stars[0] with { Name = "Своя звезда", Relation = 3 }],
+            Stars = [template.Stars[0] with { Name = "Своя звезда" }],
         };
         await database.GetCollection<World>(MongoCollections.Worlds).InsertOneAsync(owned);
 
@@ -1021,7 +1016,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(savedTemplate.Interface.Title).IsEqualTo(edited.Interface.Title);
         await Assert.That(savedWorld.Player.Subscribers).IsEqualTo(987L);
         await Assert.That(savedWorld.Stars.Single().Name).IsEqualTo("Своя звезда");
-        await Assert.That(savedWorld.Stars.Single().Relation).IsEqualTo(3);
     }
 
     [Test]
@@ -1325,7 +1319,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(long.Parse(id[..12], NumberStyles.HexNumber, CultureInfo.InvariantCulture)).IsEqualTo(createdAt.ToUnixTimeMilliseconds());
     }
 
-    private static GameBalance CreateEnergyBalance() => new(10, 20, new TimeOnly(9, 0), 5, 3, 5, 3, 3, new GrowthBalance(1, 1, [], 0, 1, 1, 2, 3, 2, 1000), new ViralBalance(0, 0, 1), new FlopBalance(1), new SkillBalance([], 1, 1, 10, 2, 3, 1, 1), new RelationBalance(0, 10, 3, 5, 3), new ChallengeBalance(3, 1), new ThreadBalance(3, 9), new Dictionary<WorldDifficulty, DifficultyBalance>());
+    private static GameBalance CreateEnergyBalance() => new(10, 20, 5, 5, 3, 3, new GrowthBalance(1, 1, 0, 1, 1, 1000), new ViralBalance(0, 0, 1), new FlopBalance(1), new SkillBalance([], 1, 1, 1), new ChallengeBalance(3, 1), new ThreadBalance(3, 9), new Dictionary<WorldDifficulty, DifficultyBalance>());
 
     private static BsonDocument CreateLegacyReferralPlayer(string id, string? inviter, DateTimeOffset createdAt, int dailyBonus, int count, bool used) => new()
     {

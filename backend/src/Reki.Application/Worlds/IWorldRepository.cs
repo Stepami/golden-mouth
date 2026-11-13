@@ -21,10 +21,4 @@ public interface IWorldRepository
     ValueTask ReplaceWorldAsync(World world, CancellationToken cancellationToken);
 
     ValueTask DeleteWorldsAsync(IReadOnlyList<WorldId> worldIds, CancellationToken cancellationToken);
-
-    ValueTask<long> ResetGameDayAsync(
-        DateTimeOffset periodStart,
-        DateTimeOffset restedBefore,
-        int restedPosts,
-        CancellationToken cancellationToken);
 }

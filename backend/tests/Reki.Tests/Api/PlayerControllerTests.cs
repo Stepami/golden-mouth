@@ -333,7 +333,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     }
 
     [Test]
-    public async Task Referral_FourFriendsPublish_LimitsInviterToThreeBonusesAsync()
+    public async Task Referral_FourFriendsPublish_GrantsEveryInviterBonusAsync()
     {
         // Arrange
         const long inviterUserId = 8012;
@@ -357,6 +357,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(inviter.Energy).IsEqualTo(10);
         await Assert.That(storedInviter.Contains("InviteBonusesEarnedInPeriod")).IsFalse();
         await Assert.That(storedInviter["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
+        await Assert.That(storedInviter["Wallet"]["Crystals"].AsInt32).IsEqualTo(22);
         await Assert.That(fourthFriend["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
         using var fourthApi = Factory.CreateApiClient(8016);
         await Assert.That((await fourthApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(10);
@@ -503,7 +504,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                  {
                      "posts",
                      "publications",
-                     "events",
                      "analytics",
                      "worlds",
                  })
@@ -590,7 +590,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             item => item.Id == player.Id,
             player with
             {
-                Wallet = player.Wallet with { Energy = 8, EnergyUsed = 2 },
+                Wallet = player.Wallet with { Energy = 8 },
                 Settings = player.Settings with { Plus = true },
             },
             cancellationToken: CancellationToken.None);
@@ -629,7 +629,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(saved.Settings.Quiet).IsEqualTo(player.Settings.Quiet);
         await Assert.That(savedWorld.Player.Subscribers).IsEqualTo(1234);
         await Assert.That(saved.Wallet.Energy).IsEqualTo(8);
-        await Assert.That(saved.Wallet.EnergyUsed).IsEqualTo(2);
     }
 
     [Test]
@@ -665,8 +664,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             item => item.Id == player.Id,
             player with
             {
-                PostsPeriodStartedAtUtc = player.PostsPeriodStartedAtUtc.AddDays(-1),
-                Wallet = player.Wallet with { EnergyUsed = 8, Energy = 4 },
+                Wallet = player.Wallet with { Energy = 4 },
                 PlusInterestClaimed = alreadyClaimed,
                 PlusNotifyRequested = true,
             },
@@ -675,17 +673,13 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await worldRepository.ReplaceWorldAsync(
             world with
             {
-                Stars = world.Stars.Select(star => star with { RelationGainedInPeriod = 3 }).ToArray(),
                 Version = world.Version + 1,
                 Player = world.Player with
                 {
                     Subscribers = 1234,
-                    PeriodStartedAtUtc = player.PostsPeriodStartedAtUtc.AddDays(-1),
-                    Wants = world.Player.Wants.Select(want => want with { Done = true }).ToArray(),
                 },
             },
             CancellationToken.None);
-        await ResetGameDayAsync();
 
         // Act
         var first = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
@@ -700,14 +694,8 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(saved.PlusInterestClaimed).IsTrue();
         await Assert.That(saved.PlusNotifyRequested).IsTrue();
         await Assert.That(saved.Wallet.Energy).IsEqualTo(alreadyClaimed ? 4 : 9);
-        await Assert.That(saved.Wallet.EnergyUsed).IsEqualTo(0);
-        await Assert.That(saved.PostsPeriodStartedAtUtc).IsEqualTo(player.PostsPeriodStartedAtUtc);
         _ = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id == world.Id);
         var savedWorld = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
-        await Assert.That(savedWorld.Player.Wants.All(want => !want.Done)).IsTrue();
-        await Assert.That(savedWorld.Stars.All(relation => relation.RelationGainedInPeriod == 0 &&
-                                                           relation.RelationPeriodStartedAtUtc ==
-                                                           player.PostsPeriodStartedAtUtc)).IsTrue();
         await Assert.That(savedWorld.Player.Subscribers).IsEqualTo(1234);
     }
 
@@ -729,7 +717,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Act
         Factory.Session.Clock.SetUtcNow(reset.AddSeconds(secondsAfterReset));
-        await ResetGameDayAsync();
         var currentInviter = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
         var currentFriend = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
@@ -756,7 +743,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
         var reset = new DateTimeOffset(2026, 10, 6, 6, 0, 0, TimeSpan.Zero);
         Factory.Session.Clock.SetUtcNow(reset);
-        await ResetGameDayAsync();
 
         // Act
         await PublishAsync(8551, "первый пост на границе дня");
@@ -780,7 +766,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var players = Database.GetCollection<PlayerProfile>("players");
         await players.UpdateOneAsync(
             item => item.Id == response.Id,
-            Builders<PlayerProfile>.Update.Set(item => item.Wallet.Energy, 6).Set(item => item.Wallet.EnergyUsed, 4));
+            Builders<PlayerProfile>.Update.Set(item => item.Wallet.Energy, 6));
 
         // Act
         await api.Player.UpdateSettingsAsync(new UpdateSettingsRequest { Plus = true }, CancellationToken.None);
@@ -795,25 +781,22 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(repeated.Energy).IsEqualTo(10);
         await Assert.That(disabled.Energy).IsEqualTo(10);
         var stored = await GetStoredPlayerAsync(8580);
-        await Assert.That(stored["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(4);
         await Assert.That(stored.Contains("DailyBonus")).IsFalse();
         await Assert.That(stored.Contains("ChallengeDailyBonus")).IsFalse();
         Factory.Session.Clock.SetUtcNow(Factory.Session.Clock.GetUtcNow().AddDays(1));
-        await ResetGameDayAsync();
         var reset = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(reset.Energy).IsEqualTo(10);
-        await Assert.That((await GetStoredPlayerAsync(8580))["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(0);
     }
 
     [Test]
-    public async Task PlusInterest_ExhaustedProgression_BonusDoesNotRestoreSkillRewardsAsync()
+    public async Task PlusInterest_Bonus_AllowsSkillRewardsAsync()
     {
         // Arrange
         using var api = Factory.CreateApiClient(8581);
         var response = await CreatePlayerWithWorldAsync(api);
         await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
             item => item.Id == response.Id,
-            Builders<PlayerProfile>.Update.Set(item => item.Wallet.Energy, 0).Set(item => item.Wallet.EnergyUsed, 10));
+            Builders<PlayerProfile>.Update.Set(item => item.Wallet.Energy, 0));
         var before = await GetStoredPlayerAsync(8581);
 
         // Act
@@ -823,8 +806,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Assert
         var stored = await GetStoredPlayerAsync(8581);
         await Assert.That(stored["Wallet"]["Energy"].AsInt32).IsEqualTo(4);
-        await Assert.That(stored["Wallet"]["EnergyUsed"].AsInt32).IsEqualTo(11);
-        await Assert.That(stored["Skills"]).IsEqualTo(before["Skills"]);
+        await Assert.That(stored["Skills"]).IsNotEqualTo(before["Skills"]);
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(4);
     }
 
@@ -836,7 +818,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var player = await CreatePlayerWithWorldAsync(api);
         await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
             item => item.Id == player.Id,
-            Builders<PlayerProfile>.Update.Set(item => item.Wallet.Energy, 7).Set(item => item.Wallet.EnergyUsed, 3));
+            Builders<PlayerProfile>.Update.Set(item => item.Wallet.Energy, 7));
 
         // Act
         var response = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
@@ -911,7 +893,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(result.Wallet.Amount).IsEqualTo(10);
         await Assert.That(result.Wallet.Crystals).IsEqualTo(remainingCrystals);
         await Assert.That(result.Wallet.NextEnergyAtUtc).IsNull();
-        await Assert.That(after["Wallet"]["EnergyUsed"]).IsEqualTo(before["Wallet"]["EnergyUsed"]);
         await Assert.That(after["Skills"]).IsEqualTo(before["Skills"]);
         await Assert.That(after["Settings"]).IsEqualTo(before["Settings"]);
         await Assert.That(after.Contains("EnergyExchangeRequestIds")).IsFalse();
@@ -975,7 +956,6 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             Builders<PlayerProfile>.Update
                 .Set(player => player.Wallet.Energy, energy)
                 .Set(player => player.Wallet.Crystals, crystals)
-                .Set(player => player.Wallet.EnergyUsed, 7)
                 .Set(player => player.Wallet.EnergyUpdatedAtUtc, Factory.Session.Clock.GetUtcNow())
                 .Inc(player => player.Version, 1));
 }

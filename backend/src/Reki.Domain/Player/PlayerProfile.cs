@@ -14,8 +14,6 @@ public sealed record PlayerProfile
 
     public required PlayerWallet Wallet { get; init; }
 
-    public DateTimeOffset PostsPeriodStartedAtUtc { get; init; }
-
     public DateTimeOffset LastSeenAt { get; init; }
 
     public bool PlusInterestClaimed { get; init; }

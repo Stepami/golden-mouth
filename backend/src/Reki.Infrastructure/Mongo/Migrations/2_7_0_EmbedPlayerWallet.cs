@@ -28,7 +28,7 @@ internal sealed class EmbedPlayerWallet(TimeProvider timeProvider) : RekiMigrati
             PlayerWallet.Cap,
             new BsonDocument("$max", new BsonArray { 0, IfNull("$Energy", 0) }),
         });
-        wallet[nameof(PlayerWallet.EnergyUsed)] = IfNull("$EnergyUsed", 0);
+        wallet["EnergyUsed"] = IfNull("$EnergyUsed", 0);
         wallet[nameof(PlayerWallet.Crystals)] = IfNull("$Crystals", PlayerWallet.InitialCrystals);
         var set = new BsonDocument("$set", new BsonDocument
         {

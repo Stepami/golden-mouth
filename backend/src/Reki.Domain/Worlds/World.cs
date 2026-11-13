@@ -31,7 +31,7 @@ public sealed record World
 
     public int Version { get; init; }
 
-    public World Instantiate(PlayerId owner, DateTimeOffset periodStart)
+    public World Instantiate(PlayerId owner)
     {
         if (Stars.Select(star => star.Id).Distinct().Count() != Stars.Count)
         {
@@ -42,20 +42,10 @@ public sealed record World
         {
             Id = WorldId.New(),
             Version = 0,
-            Stars = Stars.Select(star => star with
-            {
-                Relation = 0,
-                RelationGainedInPeriod = 0,
-                RelationPeriodStartedAtUtc = periodStart,
-            }).ToArray(),
             Player = Player with
             {
                 PlayerId = owner,
-                PeriodStartedAtUtc = periodStart,
-                Wants = Player.Wants.Select(want => want with { Done = false }).ToArray(),
                 Achievements = Player.Achievements.Select(item => item with { IsOpen = false }).ToArray(),
-                LastPostAtUtc = null,
-                RestedPostsRemaining = 0,
             },
         };
     }
@@ -70,40 +60,14 @@ public sealed record World
         long subscriberDelta,
         bool viral,
         IReadOnlyDictionary<SkillId,
-        SkillProgress> skills,
-        string? completedWantId,
-        StarId starId,
-        DateTimeOffset now,
-        int relationMinimum,
-        int relationMaximum,
-        int relationMaxGainPerDay,
-        int starCardAt)
+        SkillProgress> skills)
     {
-        var completedWant = Player.Wants.Any(want => want.Id == completedWantId && !want.Done);
-        var stars = Stars.Select(star =>
-        {
-            if (star.Id != starId || !completedWant)
-            {
-                return star;
-            }
-
-            var gain = star.RelationGainedInPeriod < relationMaxGainPerDay ? 1 : 0;
-            return star with
-            {
-                Relation = Math.Clamp(star.Relation + gain, relationMinimum, relationMaximum),
-                RelationGainedInPeriod = Math.Min(relationMaxGainPerDay, star.RelationGainedInPeriod + gain),
-            };
-        }).ToArray();
         var updated = this with
         {
-            Stars = stars,
             Version = Version + 1,
             Player = Player with
             {
                 Subscribers = Math.Max(0, Player.Subscribers + subscriberDelta),
-                Wants = Player.Wants.Select(want => want.Id == completedWantId ? want with { Done = true } : want).ToArray(),
-                LastPostAtUtc = now,
-                RestedPostsRemaining = Math.Max(0, Player.RestedPostsRemaining - 1),
             },
         };
         if (viral)
@@ -119,11 +83,6 @@ public sealed record World
         if (skills.Values.Any(skill => skill.Level >= 3))
         {
             updated = updated.UnlockAchievement(AchievementCatalog.SkillMastery);
-        }
-
-        if (stars.Any(star => star.Id == starId && star.Relation >= starCardAt))
-        {
-            updated = updated.UnlockAchievement(AchievementCatalog.StarCard);
         }
 
         return updated;

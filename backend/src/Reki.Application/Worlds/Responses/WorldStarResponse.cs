@@ -10,5 +10,4 @@ public sealed record WorldStarResponse(
     string About,
     string Voice,
     string AvatarSeed,
-    int Relation,
     long? ChannelSubscribers = null);

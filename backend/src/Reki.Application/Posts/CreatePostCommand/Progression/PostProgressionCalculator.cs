@@ -19,7 +19,6 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
         Domain.Worlds.World gameWorld,
         PostScore turn,
         bool ownWords,
-        bool wantCompleted,
         string publicationId,
         bool flop,
         bool repost = false)
@@ -32,19 +31,15 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
             return new PostProgression(1, quality, false, false, player.Skills);
         }
 
-        var postIndex = player.Wallet.EnergyUsed + 1;
-        var multiplier = GetGrowthMultiplier(gameWorld, postIndex, ownWords);
+        var multiplier = GetGrowthMultiplier(gameWorld, ownWords);
         var viral = !flop && IsViral(publicationId, quality, world);
 
-        var decay = currentBalance.Growth.Decay
-            .First(item => postIndex >= item.From && postIndex <= item.To)
-            .Multiplier;
         var growth = currentBalance.Growth.Coefficient * world.GrowthCoefficient *
                      (0.5 + quality) *
                      Math.Pow(Math.Max(1, gameWorld.Player.Subscribers), currentBalance.Growth.Power) *
-                     decay *
                      multiplier;
-        var drama = (world.Drama ?? throw new InvalidOperationException("Drama balance is missing."))[gameWorld.Player.Drama];
+        var drama =
+            (world.Drama ?? throw new InvalidOperationException("Drama balance is missing."))[gameWorld.Player.Drama];
         var viralMultiplier = viral ? currentBalance.Viral.Multiplier * world.ViralMultiplier : 1;
         var subscriberDelta = flop
             ? -Math.Min(gameWorld.Player.Subscribers, Math.Min(
@@ -54,9 +49,7 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
         var skills = AddSkillExperience(
             player,
             turn,
-            postIndex,
-            ownWords,
-            wantCompleted);
+            ownWords);
         return new PostProgression(subscriberDelta, quality, viral, flop, skills);
     }
 
@@ -78,7 +71,7 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
         return value / (double)ulong.MaxValue;
     }
 
-    private double GetGrowthMultiplier(Domain.Worlds.World gameWorld, int postIndex, bool ownWords)
+    private double GetGrowthMultiplier(Domain.Worlds.World gameWorld, bool ownWords)
     {
         var currentBalance = balance.CurrentValue;
         double multiplier = 1;
@@ -90,11 +83,6 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
         if (ownWords)
         {
             multiplier *= currentBalance.Growth.OwnWordsMultiplier;
-        }
-
-        if (gameWorld.Player.RestedPostsRemaining > 0 && postIndex <= currentBalance.Growth.RestedFirstPosts)
-        {
-            multiplier *= currentBalance.Growth.RestedMultiplier;
         }
 
         return multiplier;
@@ -111,35 +99,21 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
     private IReadOnlyDictionary<SkillId, SkillProgress> AddSkillExperience(
         PlayerProfile player,
         PostScore turn,
-        int postIndex,
-        bool ownWords,
-        bool wantCompleted)
+        bool ownWords)
     {
         var currentBalance = balance.CurrentValue;
-        if (postIndex > currentBalance.Skills.ExperiencePostLimit)
-        {
-            return player.Skills;
-        }
-
         var main = GetMainSkill(turn);
-        var multiplier = postIndex <= currentBalance.Skills.FirstPostsCount
-            ? currentBalance.Skills.FirstPostsMultiplier
-            : 1;
+        double multiplier = 1;
         if (ownWords)
         {
             multiplier *= currentBalance.Skills.OwnWordsMultiplier;
-        }
-
-        if (wantCompleted)
-        {
-            multiplier *= currentBalance.Skills.WantDoneMultiplier;
         }
 
         return player.Skills.ToDictionary(
             item => item.Key,
             item => item.Value.AddExperience(
                 (item.Key == main ? currentBalance.Skills.MainExperience : currentBalance.Skills.SideExperience) *
-                    multiplier,
+                multiplier,
                 currentBalance.Skills.LevelThresholds));
     }
 }

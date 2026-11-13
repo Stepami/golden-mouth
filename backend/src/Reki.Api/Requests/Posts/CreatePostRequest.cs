@@ -12,7 +12,4 @@ public sealed record CreatePostRequest
     public PostId? RepostId { get; init; }
 
     public bool OwnWords { get; init; } = true;
-
-    [StringLength(64)]
-    public string? WantId { get; init; }
 }

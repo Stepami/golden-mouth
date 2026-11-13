@@ -9,12 +9,6 @@ public interface IInvitationRepository
 
     ValueTask<Invitation?> GetPendingInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken);
 
-    ValueTask<long> CountInviterBonusesAsync(
-        PlayerId inviterId,
-        DateTimeOffset periodStart,
-        DateTimeOffset periodEnd,
-        CancellationToken cancellationToken);
-
     ValueTask UseInviteBonusAsync(Invitation invite, CancellationToken cancellationToken);
 
     ValueTask DeleteInvitesAsync(PlayerId playerId, CancellationToken cancellationToken);
