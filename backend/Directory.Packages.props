@@ -34,6 +34,7 @@
         <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="$(MicrosoftExtensionsVersion)"/>
         <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="$(MicrosoftExtensionsVersion)"/>
         <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="$(MicrosoftAiVersion)"/>
+        <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="10.0.15"/>
         <PackageVersion Include="Microsoft.Extensions.AI" Version="$(MicrosoftAiVersion)"/>
         <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="$(MicrosoftAiVersion)"/>
         <PackageVersion Include="Microsoft.Extensions.VectorData.Abstractions" Version="$(MicrosoftAiVersion)"/>

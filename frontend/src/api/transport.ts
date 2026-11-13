@@ -20,7 +20,7 @@ export function transport(telemetry = false) {
     const firstToken = getAccessToken()
     if (!anonymous && firstToken) headers.set('Authorization', `Bearer ${firstToken}`)
     let response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
-    if (!anonymous && !(path === '/posts' && init.method === 'POST') && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
+    if (!anonymous && !((path === '/posts' || path === '/me/energy/exchange') && init.method === 'POST') && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
       headers.set('Authorization', `Bearer ${getAccessToken()}`)
       response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
     }

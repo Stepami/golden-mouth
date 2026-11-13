@@ -10,5 +10,5 @@ const calls=[];globalThis.fetch=async(url)=>{calls.push(String(url));return Stri
 const server=await createServer({configFile:false,server:{middlewareMode:true},appType:'custom'});
 try{
  const auth=await server.ssrLoadModule('/src/api/auth.ts');const {transport}=await server.ssrLoadModule('/src/api/transport.ts');
- await test('exchange HTTP transport never replays POST or refreshes credentials after401',async()=>{auth.setInitData('controlled-fixture');await auth.loginMiniApp();await assert.rejects(transport(false,false).fetch('http://wallet-fixture.invalid/api/v1/me/energy/exchange',{method:'POST'}),e=>e.status===401);assert.equal(calls.filter(x=>x.endsWith('/me/energy/exchange')).length,1);assert.equal(calls.filter(x=>x.includes('/auth/refresh')).length,0);});
+ await test('exchange HTTP transport never replays POST or refreshes credentials after401',async()=>{auth.setInitData('controlled-fixture');await auth.loginMiniApp();await assert.rejects(transport().fetch('http://wallet-fixture.invalid/api/v1/me/energy/exchange',{method:'POST'}),e=>e.status===401);assert.equal(calls.filter(x=>x.endsWith('/me/energy/exchange')).length,1);assert.equal(calls.filter(x=>x.includes('/auth/refresh')).length,0);});
 }finally{await server.close();Object.assign(globalThis,previous);}

@@ -1,3 +1,20 @@
+import {SharePost} from './publication/SharePost';
+import {OwnWorldInvite} from './screens/OwnWorldInvite';
+import {WorldEditor,type WorldEditorPreferences} from './screens/WorldEditor';
+import {setAvatarPersonalization} from '../app/avatarPersonalization';
+import {setWorldDraft} from '../app/worldDraft';
+import {creditDevTurn,readDevCrystals} from './energy/devCrystalPreview';
+import {CrystalRewardBadge} from './energy/CrystalRewardBadge';
+import {pickResultPhrase} from './publication/resultCopy';
+import {ViewFilter,FeedFilter} from './ui/FeedFilter';
+import {MyPosts} from './screens/MyPosts';
+import {ComposerText} from './screens/ComposerText';
+import {firstPostFor} from './firstPost';
+import {DailyQuestCard} from './screens/DailyQuestCard';
+import {withEveningAppearance} from './eveningAppearance';
+import {ActivityItem} from './ui/ActivityItem';
+import {InviteFriend} from './screens/InviteFriend';
+import {PostIdeas,ideasForWorld} from './screens/PostIdeas';
 import {LinkProfile} from '../app/LinkProfile';
 import {useScrollEdges} from './ui/useScrollEdges';
 import {useEnergyWallet} from './energy/useEnergyWallet';
@@ -7,6 +24,8 @@ import {accountIdentity} from './accountIdentity';
 import {roleForWorld,scenarioForTemplate,definitionForRole} from './story/roles';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { activitiesForWorld, markWorldActivitiesRead, type Activity } from './activity';
+import {useResultHistory} from './publication/useResultHistory';
+import {ResultHistory} from './publication/ResultHistory';
 import { submissionFor, publicationError } from './submission';
 import { screenView, setExperiments, tap, event as trackEvent } from '../app/analytics';
 import { setScreen as setLogScreen } from '../app/log';
@@ -39,7 +58,7 @@ import {ReportComment} from './screens/ReportComment';
 import {receiptForRelease} from './releasePolicy';
 import {deleteConfirmedAccount} from './accountDeletion';
 import { personaFor, savePersona, clearPersonas } from './persona';
-import { WorldProgress, StreakDetails } from './screens/WorldResources';
+import { WorldProgress, StreakDetails, dayCount } from './screens/WorldResources';
 import { blankWorld } from '../app/worldDraft';
 import { pendingReferral, clearReferral } from '../app/referral';
 import { draftKey, readPostDraft, savePostDraft, completePostDraft } from '../app/postDraft';
@@ -51,20 +70,25 @@ import type { World, Person, Post, Approach } from './domain/types';
 import { Onboarding } from './screens/Onboarding';
 import { WorldIntro } from './screens/WorldIntro';
 import { WorldBrief } from './screens/WorldBrief';
-import { GoalCard, TaskCard } from './ui/GameBrief';
+import { GoalCard } from './ui/GameBrief';
 import { DesignSystem } from './screens/DesignSystem';
-import { NominalSignOut, LoadingIndicator, Avatar, Badge, BottomNav, Button, Chip, Dialog, EmptyState, Icon, Notice, PersonRow, PostCard, ProfileHeader, Progress, QuoteBlock, ResourceBadge, ResumeWorld, ScreenHeading, SettingsRow, TextField, WorldCard } from './ui';
+import { NominalSignOut, LoadingIndicator, Avatar, Badge, BottomNav, Button, Chip, Dialog, EmptyState, Icon, Notice, PersonRow, PostCard, ProfileHeader, Progress, QuoteBlock, ResumeWorld, ScreenHeading, SettingsRow, TextField, WorldCard } from './ui';
 
-type Screen = 'welcome' | 'age' | 'catalog' | 'search' | 'intro' | 'onboarding' | 'hero' | 'feed' | 'goals' | 'compose' | 'thread' | 'topic' | 'profile' | 'character' | 'messages' | 'activity' | 'account' | ResourcePageName;
+type Screen = 'own-world' | 'world-settings' | 'welcome' | 'age' | 'catalog' | 'search' | 'intro' | 'onboarding' | 'hero' | 'feed' | 'goals' | 'compose' | 'thread' | 'topic' | 'profile' | 'character' | 'messages' | 'activity' | 'account' | ResourcePageName;
 type ReplyTarget = { postId: string; commentId: string | null; name: string; text: string; authorId:string };
 type ReplyDraft = { text: string; requestId?: string; submittedText?: string; beforeSubscribers?:number; beforeSkills?:Player['skills']; roleBefore?:Player['roleSkills']; questId?:string; additionalStarId?:string };
 const statusLabels: Record<string, string> = { pending: 'Персонажи читают публикацию…', ready_for_moderation: 'Готовим результат…', completed: 'Публикация готова', failed: 'Публикация не отправлена' };
-const titleOf: Record<Screen, string> = { catalog: 'Миры', search: 'Поиск', intro: 'Вход в мир', onboarding: 'Знакомство', welcome: 'Знакомство', age: 'Возраст', hero: 'Ваш персонаж', feed: 'Лента', goals: 'Цели', compose: 'Новая публикация', thread: 'Обсуждение', topic: 'Тема', profile: 'Профиль персонажа', character: 'Собеседник', messages: 'Личка', activity: 'Уведомления', account: 'Профиль', resources:'Энергия',crystals:'Кристаллы' };
+const titleOf: Record<Screen, string> = { 'own-world':'Создать свой мир', 'world-settings':'Настройки мира', catalog: 'Миры', search: 'Поиск', intro: 'Вход в мир', onboarding: 'Знакомство', welcome: 'Знакомство', age: 'Возраст', hero: 'Ваш персонаж', feed: 'Лента', goals: 'Цели', compose: 'Новая публикация', thread: 'Обсуждение', topic: 'Тема', profile: 'Профиль персонажа', character: 'Собеседник', messages: 'Личка', activity: 'Уведомления', account: 'Профиль', resources:'Энергия',crystals:'Кристаллы' };
 
 const walletClient={read:()=>api.energyWallet(),exchange:()=>api.exchangeEnergy()};
 
 export default function BackendApp() {
   const [linkProfileOpen, setLinkProfileOpen] = useState(false);
+  const [inviteOpen,setInviteOpen]=useState(false);
+  const [checkingAccess,setCheckingAccess]=useState(false);
+  const [accessMessage,setAccessMessage]=useState('');
+  const [worldEdit,setWorldEdit]=useState<{id:string;definition:WorldDefinition}>();
+  const [worldToDelete,setWorldToDelete]=useState<WorldDocument>();
   const [deleteOpen,setDeleteOpen]=useState(false);
   const [reportId,setReportId]=useState<string>();
   const [hash, setHash] = useState(location.hash);
@@ -78,10 +102,12 @@ export default function BackendApp() {
   const [introStep, setIntroStep] = useState(0);
   const [player, setPlayer] = useState<Player>();
   const [world, setWorld] = useState<World>();
+  const [devCrystalState,setDevCrystalState]=useState<{owner:string;total:number}>();
   const accountEnergy=useEnergyWallet(player?.id,walletClient,w=>setPlayer(p=>p?{...p,postsLeft:w.amount,postsCap:w.cap}:p));
   const [booting, setBooting] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [feedFilter, setFeedFilter] = useState<'all' | 'mine'>('all');
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [feedLoading, setFeedLoading] = useState(false);
@@ -104,6 +130,7 @@ export default function BackendApp() {
   const [heroSkills, setHeroSkills] = useState<string[]>([]);
   const [heroSeed, setHeroSeed] = useState('');
   const [heroAvatar, setHeroAvatar] = useState<string>();
+  const [heroAppearance,setHeroAppearance]=useState<string>();
   const [avatarRemoved, setAvatarRemoved] = useState(false);
   const [roleScenarioSelected, setRoleScenarioSelected] = useState(false);
   const [draft, setDraft] = useState('');
@@ -112,8 +139,11 @@ export default function BackendApp() {
   const [approach, setApproach] = useState<Approach>('ask');
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState('');
+  const [typingActor,setTypingActor]=useState<string|null>(null);
   const [unknown, setUnknown] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [activityTab,setActivityTab]=useState<'events'|'results'>('events');
+  const resultHistory=useResultHistory(player?.id,player?.world);
   const [likes, setLikes] = useState<string[]>([]);
   const [storageError, setStorageError] = useState(false);
   const [toast, setToast] = useState<PostResult>();
@@ -121,6 +151,7 @@ export default function BackendApp() {
   const [gainAnimation,setGainAnimation]=useState<{delta:number;nonce:string}>();
   const [accountVisible,setAccountVisible]=useState(5);
   const [receipt, setReceipt] = useState<PublicationReceipt>();
+  const [sharedPost,setSharedPost]=useState<{owner:string;id:string;text?:string}>();
   const [showReceipt,setShowReceipt]=useState(false);
   const [publicationFailed, setPublicationFailed] = useState(false);
   const [prepared, setPrepared] = useState<{ title: string; prompt: string; questId?: string }>();
@@ -128,11 +159,13 @@ export default function BackendApp() {
   const [energyNudge,setEnergyNudge] = useState(0);
   const cancel = useRef<(() => void) | undefined>(undefined);
   const sending = useRef(false);
+  const crystalAwardsSeen=useRef(new Set<string>());
   const main = useRef<HTMLDivElement>(null);
   const appRoot = useRef<HTMLDivElement>(null);
   useScrollEdges(appRoot);
   const focusHeading = useRef<HTMLDivElement>(null);
   const feedRequest = useRef(0);
+  const livePlayer=useRef(player);livePlayer.current=player;
   const displayedWorld = useRef(world?.id);
   displayedWorld.current = world?.id;
   const threadRequest = useRef(0);
@@ -140,13 +173,13 @@ export default function BackendApp() {
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments); }, [player?.experiments]);
   const key = `reki:v7:${player?.id ?? api.playerId() ?? 'guest'}`;
   const localSave = (name: string, value: unknown) => { if (!saveLocal(`${key}:${name}`, value)) setStorageError(true); };
-  const go = (next: Screen) => { setError(''); setStack(s => [...s, screen]); setScreen(next); setToast(undefined); setReactionNotice(undefined); };
+  const go = (next: Screen, replace = false) => { setShowReceipt(false); setGainAnimation(undefined); setError(''); setStack(s => replace ? [] : [...s, screen]); setScreen(next); setToast(undefined); setReactionNotice(undefined); };
   const openResource = (next: ResourcePageName) => {
     void accountEnergy.refresh();
     if(['resources','crystals'].includes(screen)){setScreen(next);setError('');}else go(next);
   };
   const back = useCallback(() => { if (pending || busy) return; if (screen === 'intro' && introStep > 0) { setIntroStep(introStep - 1); return; } setError(''); setScreen(stack.at(-1) ?? (world ? 'feed' : 'catalog')); setStack(s => s.slice(0, -1)); }, [stack, world, pending, busy, screen, introStep]);
-  useEffect(() => screen==='hero'&&definition?.templateId ? undefined : syncBackButton(stack.length > 0 && screen !== 'age' && !pending, back), [back, stack.length, pending, screen, definition?.templateId]);
+  useEffect(() => (screen==='world-settings'||screen==='own-world'||screen==='hero'&&definition?.templateId) ? undefined : syncBackButton(stack.length > 0 && !['catalog','search','account','age'].includes(screen) && !pending, back), [back, stack.length, pending, screen, definition?.templateId]);
   useEffect(() => {
     if (booting || hash.startsWith('#system') || hash.startsWith('#result-review')) return;
     const id = `v7.${screen}`; setLogScreen(id); screenView(id);
@@ -159,6 +192,40 @@ export default function BackendApp() {
     setAccountVisible(5); setActivities(readLocal(`${key}:activity`, [])); setLikes(readLocal(`${key}:likes`, [])); setQualities(readLocal(`${key}:qualities`, []));
   }, [key, !!player]);
 
+  const recordComments = (postId:string, worldId:string, comments:ServerPost['comments']) => {
+    const confirmed=comments.filter(c=>!c.me&&!c.hidden&&(c.star||c.authorId?.startsWith('Star_')));
+    if(!confirmed.length)return;
+    setActivities(old=>{
+      const fresh=confirmed.filter(c=>!old.some(a=>a.id===`comment:${c.id}`)).map(c=>({id:`comment:${c.id}`,postId,worldId,title:`${c.author} отвечает`,actorName:c.author,text:c.text,read:false,kind:'reaction' as const}));
+      if(!fresh.length)return old;
+      const next=[...fresh.reverse(),...old];localSave('activity',next);return next;
+    });
+  };
+  useEffect(()=>{
+    if(!player||player.streak.days<1)return;
+    const id=`streak:${player.world}:${player.streak.days}`;
+    setActivities(old=>{
+      if(old.some(a=>a.id===id))return old;
+      const days=player.streak.days;
+      const next=[{id,worldId:player.world,title:days===1?'Первый день серии':`Серия: ${days} дней`,text:days===1?'Начало серии отмечено. Продолжи завтра постом или комментарием.':'Твоя серия продолжается.',kind:'streak' as const,read:false},...old];
+      localSave('activity',next);return next;
+    });
+  },[player?.id,player?.world,player?.streak.days]);
+  useEffect(()=>{
+    if(screen!=='activity'||!player)return;
+    let active=true;
+    void api.channelPosts(player.worldInstanceId??player.world).then(async page=>{
+      if(!active)return;
+      setActivities(old=>{
+        const updates=page.items.filter(p=>p.reactions.reduce((sum,r)=>sum+r.count,0)>0).map(p=>({id:`likes:${p.postId}`,postId:p.postId,worldId:player.world,title:'Реакции на твой пост',text:`Реакций: ${p.reactions.reduce((sum,r)=>sum+r.count,0)}`,postText:p.text,count:p.reactions.reduce((sum,r)=>sum+r.count,0),kind:'likes' as const,read:old.find(a=>a.worldId===player.world&&a.id===`likes:${p.postId}`&&a.count===p.reactions.reduce((sum,r)=>sum+r.count,0))?.read??false}));
+        const next=[...updates,...old.filter(a=>!updates.some(u=>u.worldId===a.worldId&&u.id===a.id))];localSave('activity',next);return next;
+      });
+      await Promise.all(page.items.filter(p=>p.commentCount>0).map(async item=>{
+        try{const post=await api.post(item.postId);if(active)recordComments(post.id,player.world,post.comments);}catch{/* Keep already confirmed events when details are unavailable. */}
+      }));
+    }).catch(()=>{/* Existing events stay visible when the server is unavailable. */});
+    return()=>{active=false;};
+  },[screen,player?.id,player?.world]);
   const loadFeed = useCallback(async (p: Player, more?: string) => {
     const request = ++feedRequest.current;
     setFeedLoading(true); setFeedError('');
@@ -177,14 +244,42 @@ export default function BackendApp() {
     return goal ? {...view, goal} : view;
   };
   const ownedView = (doc: WorldDocument) => storyView(doc);
-  const installPlayer = (p: Player) => { setPlayer(p); const doc = worldDocumentOf(p.world); setWorld(storyView(doc));
+  const lastWorld = owned.find(d => d.id === player?.world);
+  const orderedOwned = lastWorld ? [lastWorld, ...owned.filter(d => d.id !== lastWorld.id)] : owned;
+  const installPlayer = (p: Player) => { setPlayer(p);setAddress(p.address); const doc = worldDocumentOf(p.world); setWorld(storyView(doc));
     const draft = readPostDraft(draftKey(p));
     const savedReceipt = readLocal<PublicationReceipt | undefined>(`reki:v7:${p.id}:result:${p.world}`, undefined);
-    setReceipt(receiptForRelease(savedReceipt ? { ...savedReceipt, worldId: p.world } : undefined,false));
+    setReceipt(receiptForRelease(savedReceipt ? { ...savedReceipt, worldId: p.world } : undefined,import.meta.env.DEV));
     if(player?.world!==p.world)setShowReceipt(false);
     if (!sending.current) { setDraft(draft.text); setUnknown(!!draft.publicationId); setPublicationFailed(false); }
     return p; };
-  const refresh = async () => { const p = installPlayer(await api.me()); await loadFeed(p); await accountEnergy.refresh(); return p; };
+  const checkWorldAccess = async () => {
+    if(!player||checkingAccess)return;
+    setCheckingAccess(true);setAccessMessage('');
+    try{const p=await api.me();if(p.id===livePlayer.current?.id&&p.world===livePlayer.current?.world){setPlayer(p);if(!p.hitOwnWorldMilestone)setAccessMessage('Доступ пока не открыт. Проверь ещё раз после первого поста друга.');}}
+    catch{setAccessMessage('Не удалось проверить доступ. Попробуй ещё раз.');}finally{setCheckingAccess(false);}
+  };
+  const startOwnWorld = () => {
+    if(!player||busy||pending)return;
+    if(!player.hitOwnWorldMilestone){setInviteOpen(true);return;}
+    setDefinition({...blankWorld(),name:player.name,avatar:`generated-${crypto.randomUUID()}`,role:player.role,voice:'Живо и по делу',stars:[{id:crypto.randomUUID().replaceAll('-',''),name:'',role:'',about:'',voice:'Живо и по делу',avatarSeed:`generated-${crypto.randomUUID()}`,trait:1,relation:0}]});
+    setHeroChoice('custom');setRoleScenarioSelected(false);setHeroAvatar(undefined);setHeroAppearance(undefined);setAvatarRemoved(false);setHeroGoal('');setHeroSkills([]);setError('');go('own-world');
+  };
+  const openWorldSettings = () => {
+    if(!player||busy||pending)return;
+    const {id,subscribers:_subs,lock:_lock,...definition}=worldDocumentOf(player.world);
+    setWorldEdit({id,definition:{...definition,templateId:null}});setError('');go('world-settings');
+  };
+  const saveWorldSettings = async (definition:WorldDefinition) => {
+    if(!worldEdit||busy||pending)return;
+    setBusy(true);setError('');
+    try{
+      const p=await api.saveWorld(worldEdit.id,definition);setWorldDraft(null);
+      const own=await api.ownedWorlds();installWorldContent(own);setOwned(own);installPlayer(p);
+      setWorldEdit(undefined);setScreen('profile');setStack([]);
+    }catch(cause){setError(errorText(cause));}finally{setBusy(false);}
+  };
+  const refresh = async () => { const expected=player;const p=await api.me();if(livePlayer.current?.id===expected?.id&&livePlayer.current?.world===expected?.world&&p.world===expected?.world){installPlayer(p);await loadFeed(p);await accountEnergy.refresh();}return p; };
   const boot = useCallback(async () => {
     setBooting(true); setError('');
     try {
@@ -217,13 +312,13 @@ export default function BackendApp() {
     setIntroStep(0); setSelected(w); setSelectedVariant(storyVariant); go('intro');
   };
   const startHero = (w: World) => {
-    const def = worldDefinitionOf(w.id); setHeroBase(def); setDefinition(def); setHeroChoice(null); setRoleScenarioSelected(!!scenarioForTemplate(def.templateId) && (def.templateId !== 'aec9494b-4118-4525-8458-e85d759c8dd9' || selectedVariant)); setHeroGoal(''); setHeroSkills([]); setHeroAvatar(undefined); setHeroSeed(def.avatar); setAvatarRemoved(false); go('hero');
+    const def = worldDefinitionOf(w.id); setHeroBase(def); setDefinition(def); setHeroChoice(null); setRoleScenarioSelected(!!scenarioForTemplate(def.templateId) && (def.templateId !== 'aec9494b-4118-4525-8458-e85d759c8dd9' || selectedVariant)); setHeroGoal(''); setHeroSkills([]); setHeroAvatar(undefined); setHeroAppearance(undefined); setHeroSeed(def.avatar); setAvatarRemoved(false); go('hero');
   };
   const chooseHero = (choice?: { id: string }) => {
     if (!definition || !heroBase) return;
     setHeroChoice(choice?.id ?? 'custom');
     setHeroGoal((roleScenarioSelected ? scenarioForTemplate(heroBase.templateId)?.roles.find(r=>r.id===(choice?.id??'custom'))?.goal : undefined) || selected?.goal || '');
-    setHeroAvatar(undefined); setHeroSeed(choice?.id ?? crypto.randomUUID()); setAvatarRemoved(false);
+    setHeroAvatar(undefined); setHeroAppearance(undefined); setHeroSeed(choice?.id ?? crypto.randomUUID()); setAvatarRemoved(false);
     if (roleScenarioSelected) { setDefinition(definitionForRole(heroBase, choice?.id ?? 'custom')); return; }
     if (!choice) { setDefinition(heroBase); return; }
     const star = heroBase.stars.find(star => star.id === choice.id); if (!star) return;
@@ -240,14 +335,10 @@ export default function BackendApp() {
       catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
     } else startHero(target);
   };
-  const beginEntry = () => {
-    if (sending.current || busy) return;
-    feedRequest.current++; threadRequest.current++;
-    localSave('entry-required', true);
-    setWorld(undefined); setReceipt(undefined); setPublicationFailed(false);  setSelected(undefined); setPerson(undefined); setPost(undefined);
-    setFeed([]); setCursor(null); setReply(undefined); setQuote(undefined); setToast(undefined);
-    setOverlay(null); setUnknown(false); setError(''); setQuery(''); setGenre('Все');
-    interestOnly.current = false; setEntryAge(18); setAge(''); setScreen('welcome'); setStack([]);
+  const beginEntry = async () => {
+    if(sending.current||busy)return;
+    setBusy(true);setError('');
+    try{await api.logout();}catch{setError('Не удалось выйти. Попробуй ещё раз.');}finally{setBusy(false);}
   };
   const completeInterests = (values: string[]) => {
     setQualities(values); localSave('qualities', values); setQuery(''); setGenre('Все');
@@ -258,7 +349,8 @@ export default function BackendApp() {
     setEntryAge(value); setAge(ageBandOf(value) ?? '');
     interestOnly.current = false; setStack(['welcome', 'age']); setScreen('onboarding'); setError('');
   };
-  const createWorld = async () => {
+  const createWorld = async (submitted=definition,selectedAvatar=heroAvatar,preferences?:WorldEditorPreferences) => {
+    const definition=submitted;
     if (!definition || busy) return;
     setBusy(true); setError('');
     try {
@@ -268,10 +360,13 @@ export default function BackendApp() {
         clearReferral(); trackEvent('onboarding_step', { step: 'age', ok: true });
         saveLocal(`reki:v7:${api.playerId()}:qualities`, qualities); saveLocal(`reki:v7:${api.playerId()}:entry-required`, false);
       }
-      const created = await api.createWorld(definition);
+      if(player&&(preferences||heroChoice==='custom')&&(preferences?.address??address)!==player.address)await api.settings({address:preferences?.address??address});
+      const worldDefinition=withEveningAppearance(definition,heroChoice??'custom',avatarRemoved?undefined:heroAppearance);
+      const created = await api.createWorld(worldDefinition);
+      if(preferences){setWorldDraft(null);setAvatarPersonalization(created.id,preferences.personalizeAvatar);}
       const role = roleScenarioSelected ? scenarioForTemplate(definition.templateId)?.roles.find(r=>r.id===heroChoice) : undefined;
       const custom = !heroChoice || heroChoice==='custom';
-      const portrait = custom&&avatarRemoved ? '' : (custom?heroAvatar:undefined) || await heroPortrait(heroChoice ?? 'custom', heroSeed || definition.avatar, definition.templateId || created.world, definition.avatarStyle).catch(() => undefined);
+      const portrait = custom&&avatarRemoved ? '' : (custom?selectedAvatar:undefined) || await heroPortrait(heroChoice ?? 'custom', heroSeed || definition.avatar, definition.templateId || created.world, definition.avatarStyle).catch(() => undefined);
       if (!savePersona(created.id, created.world, { goal: role?.goal??heroGoal.trim(), skills: role?.skills.map(s=>s.name)??heroSkills, ...(role?{roleId:role.id,templateId:definition.templateId!}:{}), avatar: portrait })) setStorageError(true);
       accountIdentity(created.id,owned[0]?.name??created.name);
       const p = installPlayer(created); trackEvent('onboarding_step', { step: 'done', ok: true, world: p.world }); localSave('qualities', qualities);
@@ -279,12 +374,34 @@ export default function BackendApp() {
       setStoryOnboarding(true); setScreen('goals'); setStack([]); await loadFeed(p);
     } catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
   };
+  const previewTurnReward=(value:PublicationReceipt):PublicationReceipt=>{
+    if(!import.meta.env.DEV||!player||value.questReward?.source==='server')return value;
+    const award=creditDevTurn(player.id,value.actionId??value.result.postId);
+    if(!award)return value;
+    setDevCrystalState({owner:player.id,total:award.afterOffset});
+    return {...value,questReward:{questId:'dev-turn-preview',title:'Превью: за ход',amount:2,source:'preview',balanceBefore:accountEnergy.wallet?accountEnergy.wallet.crystals+award.beforeOffset:undefined,balanceAfter:accountEnergy.wallet?accountEnergy.wallet.crystals+award.afterOffset:undefined}};
+  };
   const replyKey = (target: ReplyTarget) => `${key}:reply:${player?.world}:${target.postId}:${target.commentId ?? 'root'}`;
-  const openCompose = (target?: ReplyTarget, context?: { name: string; text: string }) => {
-    if (!player || sending.current) return;
+  const openCompose = async (target?: ReplyTarget, context?: { name: string; text: string }) => {
+    if (!player || sending.current || busy) return;
     setPrepared(undefined); setReply(target); setQuote(context); setUnknown(false); setStatus('');
     if (target) { const saved = readLocal<ReplyDraft>(replyKey(target), { text: '' }); setDraft(saved.text); setUnknown(!!saved.requestId); }
-    else { const saved = readPostDraft(draftKey(player)); setDraft(saved.text); setUnknown(!!saved.publicationId); }
+    else {
+      const draftId=draftKey(player);
+      let saved=readPostDraft(draftId);
+      if(!context&&!saved.at&&!saved.text.trim()&&!saved.publicationId){
+        setBusy(true);
+        try{
+          const posts=await api.channelPosts(player.world);
+          if(!posts.items.length&&!posts.nextCursor){
+            const text=firstPostFor(worldDocumentOf(player.world),activeRole?.id);
+            if(text){saved={text,ownWords:false};if(!savePostDraft(draftId,saved))setStorageError(true);}
+          }
+        }catch { /* Keep the editor available when the first-post check is unavailable. */ }
+        finally{setBusy(false);}
+      }
+      setDraft(saved.text);setUnknown(!!saved.publicationId);
+    }
     go('compose');
   };
   const openFirstPost = () => {
@@ -292,16 +409,16 @@ export default function BackendApp() {
     openCompose();
     if (roleTask) setPrepared({title: roleTask.context, prompt: roleTask.prompt, questId: roleTask.id});
   };
-  const updateDraft = (text: string) => {
+  const updateDraft = (text: string, fromIdea = false) => {
     setDraft(text);
     if (!player) return;
     if (reply) { const saved = readLocal<ReplyDraft>(replyKey(reply), { text: '' }); if (!saveLocal(replyKey(reply), { ...saved, text })) setStorageError(true); }
-    else { const k = draftKey(player); if (!savePostDraft(k, { ...readPostDraft(k), text, ownWords: true })) setStorageError(true); }
+    else { const k = draftKey(player), saved = readPostDraft(k); if (!savePostDraft(k, { ...saved, text, ownWords: fromIdea ? false : text.length === 0 || saved.ownWords })) setStorageError(true); }
   };
   const openThread = async (id: string) => {
     if (!id || pending) return;
     const request = ++threadRequest.current; setPost(undefined); setThreadLoading(true); go('thread');
-    try { const p = await api.post(id); if (threadRequest.current === request) { setPost(p); const next = activities.map(a => a.id === id ? { ...a, read: true } : a); setActivities(next); localSave('activity', next); } }
+    try { const p = await api.post(id); if (threadRequest.current === request) { setPost(p); setActivities(old => { const next = old.map(a => a.worldId === player?.world && (a.id === id || a.postId === id) ? { ...a, read: true } : a); localSave('activity', next); return next; }); } }
     catch (cause) { if (threadRequest.current === request) setError(errorText(cause)); }
     finally { if (threadRequest.current === request) setThreadLoading(false); }
   };
@@ -313,33 +430,45 @@ export default function BackendApp() {
     const command = submissionFor(saved, draft, () => crypto.randomUUID());
     const { id, text, recovery } = command;
     const beforeKey=`${key}:turn-before:${player.world}:${id}`;
-    const fallback={skills:player.skills,roleSkills:player.roleSkills,questId:prepared?.questId??roleTask?.id};
+    const fallback={skills:player.skills,roleSkills:player.roleSkills,beforeSubscribers:player.subs,questId:prepared?.questId??roleTask?.id};
     if(!recovery)saveLocal(beforeKey,fallback);
     const turnBefore=readLocal(beforeKey,fallback);
     if (!recovery) trackEvent('post_publish', { len: text.length, own_words: command.ownWords });
     if (!savePostDraft(k, { ...saved, text: draft, publicationId: id, submittedText: text, ownWords: command.ownWords, submittedOwnWords: command.ownWords })) setStorageError(true);
     sending.current = true; setPending(true); setUnknown(false); setPublicationFailed(false); setError(''); setStatus('pending'); setScreen('feed'); setStack([]);
+    let publishedPostId='';
+    let publishedReceipt:PublicationReceipt|undefined;
     cancel.current = api.publish(text, id, event => {
-      if (event.type === 'comment') {
-        if (displayedWorld.current === player.world) void loadFeed(player);
+      if (event.type === 'comment' || event.type === 'comment-error') {
+        if(event.type==='comment'){
+          recordComments(publishedPostId,player.world,[event.comment]);
+          setPost(current=>current?.id===publishedPostId&&!current.comments.some(c=>c.id===event.comment.id)?{...current,comments:[...current.comments,event.comment]}:current);
+          if (displayedWorld.current === player.world) void loadFeed(player);
+        }
+        if(publishedReceipt){
+          const actor=event.type==='comment'?world?.cast.find(p=>`Star_${p.id}`===event.comment.authorId):undefined;
+          const updated:PublicationReceipt={...publishedReceipt,comment:event.type==='comment'?event.comment:publishedReceipt.comment,commentState:event.type==='comment'?'ready':'failed',commentAuthor:actor?{name:actor.name,avatar:actor.avatar}:publishedReceipt.commentAuthor};
+          publishedReceipt=resultHistory.save(updated);
+          setReceipt(current=>current?.actionId===id?{...current,comment:updated.comment,commentState:updated.commentState,commentAuthor:updated.commentAuthor}:current);
+        }
         return;
       }
       if (event.type !== 'result') return;
+      publishedPostId=event.result.postId;
       trackEvent('post_result', { delta: event.result.delta, viral: event.result.viral, flop: event.result.flop });
       completePostDraft(k, id, text); setDraft(readPostDraft(k).text);
       const serverOutcome=parseQuestOutcome((event.result as unknown as {questOutcome?:unknown}).questOutcome);
 
-      const value: PublicationReceipt = { worldId: player.world, questId:turnBefore.questId, result: event.result, before: turnBefore.skills, roleBefore:turnBefore.roleSkills, roleLabels:activeRole?.skills.map(s=>s.name), questOutcome:serverOutcome??({status:'unverified',source:'server',title:roleTask?.context??'Твоя запись',reason:'Пост опубликован, но серверный исход квеста пока не возвращается.'}) };
-      setReceipt(value);setShowReceipt(true); saveLocal(`${key}:result:${player.world}`, value);
+      const commenter=world?.cast.find(p=>`Star_${p.id}`===event.predictedAuthorId);
+      const value = resultHistory.save(previewTurnReward({ worldId: player.world, worldTitle:world?.title,postText:text,commentState:event.result.bestComment?'ready':'pending',commentAuthor:commenter?{name:commenter.name,avatar:commenter.avatar}:undefined,actionId:id,beforeSubscribers:turnBefore.beforeSubscribers,reactionText:pickResultPhrase(event.result.delta),questId:turnBefore.questId, result: event.result, before: turnBefore.skills, roleBefore:turnBefore.roleSkills, roleLabels:activeRole?.skills.map(s=>s.name), questOutcome:serverOutcome??({status:'unverified',source:'server',title:roleTask?.context??'Твоя запись',reason:'Пост опубликован, но серверный исход квеста пока не возвращается.'}) }),text);
+      publishedReceipt=value;setReceipt(value);setShowReceipt(true);
       if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,value);
       setToast(event.result); setGainAnimation({delta:event.result.delta,nonce:event.result.postId});
       const best=event.result.bestComment;
       const actor=best?world?.cast.find(p=>p.handle===best.avatar||p.id===best.avatar):undefined;
       if(best&&actor){const notice:ReactionNotice={id:event.result.postId,postId:event.result.postId,worldId:player.world,kind:'reaction',actorName:actor.name,text:best.text,relation:actor.relation};setReactionNotice(notice);}
       setPublicationFailed(false); setUnknown(false); setPending(false); sending.current = false; setStatus('completed');
-      const item: Activity = { id: event.result.postId, worldId: player.world, title: actor ? `${actor.name} отвечает на твою запись` : event.result.headline, text: best?.text ?? `${event.result.delta > 0 ? '+' : ''}${event.result.delta} подписчиков`, read: false, ...(actor&&best?{kind:'reaction' as const,actorName:actor.name,relation:actor.relation}: {}) };
-      setActivities(old => { const next = [item, ...old.filter(a => a.id !== item.id)].slice(0, 100); localSave('activity', next); return next; });
-      setScreen('feed'); setStack([]); void refresh().then(p => { const updated = { ...value, after: p.skills, roleAfter:p.roleSkills, questOutcome:p.lastTurn?.actionId===id?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome }; setReceipt(updated); saveLocal(`${key}:result:${player.world}`, updated); if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated); const freshActor=best?worldDocumentOf(p.world).stars.find(s=>s.avatarSeed===best.avatar):undefined; if(freshActor){setReactionNotice(n=>n?.id===event.result.postId?{...n,relation:freshActor.relation}:n);setActivities(old=>{const next=old.map(a=>a.id===event.result.postId&&a.worldId===player.world?{...a,relation:freshActor.relation}:a);localSave('activity',next);return next;});} }).catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
+      setScreen('feed'); setStack([]); void refresh().then(p => { if(p.world!==value.worldId)return;const updated = { ...(publishedReceipt??value), after: p.skills, roleAfter:p.roleSkills, questOutcome:p.lastTurn?.actionId===id?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome }; const savedResult=resultHistory.save(updated);publishedReceipt=savedResult;setReceipt(current=>current?.actionId===updated.actionId?savedResult:current); if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated); const freshActor=best?worldDocumentOf(p.world).stars.find(s=>s.avatarSeed===best.avatar):undefined; if(freshActor){setReactionNotice(n=>n?.id===event.result.postId?{...n,relation:freshActor.relation}:n);setActivities(old=>{const next=old.map(a=>a.id===event.result.postId&&a.worldId===player.world?{...a,relation:freshActor.relation}:a);localSave('activity',next);return next;});} }).catch(() => setFeedError('Публикация сохранена. Обнови ленту, чтобы увидеть результат.'));
     }, (state, reason) => {
       sending.current = false; setPending(false); setUnknown(state === 'unknown'); setPublicationFailed(state === 'failed');
       if (state === 'failed') { const latest = readPostDraft(k); savePostDraft(k, { text: latest.text, ownWords: latest.ownWords }); }
@@ -357,8 +486,8 @@ export default function BackendApp() {
       const controller=new AbortController();cancel.current=()=>controller.abort();
       snapshot=await api.reply(target.postId,target.commentId,requestId,text,target.authorId,{
         signal:controller.signal,additionalStarId:saved.additionalStarId,
-        onSaved:value=>{const first=!snapshot;snapshot=value;if(first)void accountEnergy.refresh();setPost({...value.post,id:value.post.postId});setPlayer(p=>p?{...p,postsLeft:value.energyLeft,subs:value.subscribers}:p);setScreen('thread');setStack(v=>v.filter(x=>x!=='compose'));},
-        onTyping:authorId=>setStatus(authorId?`${world?.cast.find(p=>`Star_${p.id}`===authorId)?.name??'Персонаж'} печатает…`:''),
+        onSaved:value=>{recordComments(target.postId,player.world,value.post.comments);const first=!snapshot;snapshot=value;if(first)void accountEnergy.refresh();setPost({...value.post,id:value.post.postId});setPlayer(p=>p?{...p,postsLeft:value.energyLeft,subs:value.subscribers}:p);setScreen('thread');setStack(v=>v.filter(x=>x!=='compose'));},
+        onTyping:authorId=>{setTypingActor(authorId);setStatus(authorId?`${world?.cast.find(p=>`Star_${p.id}`===authorId)?.name??'Персонаж'} печатает…`:'');},
         onAdditionalStar:id=>saveLocal(k,{...readLocal<ReplyDraft>(k,{text}),additionalStarId:id??undefined}),
       });
       completed=true;saveLocal(k,{text:''});setDraft('');setReply(undefined);setUnknown(false);setScreen('thread');setStack(v=>v.filter(x=>x!=='compose'));
@@ -369,9 +498,9 @@ export default function BackendApp() {
       if(snapshot){
 
         const delta=snapshot.subscribers-(saved.beforeSubscribers??player.subs);
-        const value:PublicationReceipt={worldId:player.world,questId:saved.questId??roleTask?.id,actionKind:'comment',audienceKnown:true,before:saved.beforeSkills??player.skills,roleBefore:saved.roleBefore??player.roleSkills,roleLabels:activeRole?.skills.map(s=>s.name),questOutcome:{status:'unverified',source:'server',title:'Твой комментарий',reason:completed?'Комментарий и реакция сохранены. Серверная оценка квеста пока не возвращается.':'Комментарий сохранён. Получение реакции ещё не завершено.'},result:{postId:target.postId,delta,headline:'Комментарий сохранён',whys:[],ribbons:[],viral:false,flop:false,views:snapshot.post.views}};
-        setReceipt(value);setShowReceipt(true);saveLocal(`${key}:result:${player.world}`,value);if(delta)setGainAnimation({delta,nonce:requestId});
-        void refresh().then(p=>{const updated={...value,after:p.skills,roleAfter:p.roleSkills,questOutcome:p.lastTurn?.actionId===requestId?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome};setReceipt(updated);saveLocal(`${key}:result:${player.world}`,updated);if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated);}).catch(()=>setFeedError('Комментарий сохранён. Обнови ленту, чтобы получить актуальные данные.'));
+        const value=resultHistory.save(previewTurnReward({worldId:player.world,actionId:requestId,beforeSubscribers:saved.beforeSubscribers??player.subs,reactionText:pickResultPhrase(delta),questId:saved.questId??roleTask?.id,actionKind:'comment',audienceKnown:true,before:saved.beforeSkills??player.skills,roleBefore:saved.roleBefore??player.roleSkills,roleLabels:activeRole?.skills.map(s=>s.name),questOutcome:{status:'unverified',source:'server',title:'Твой комментарий',reason:completed?'Комментарий и реакция сохранены. Серверная оценка квеста пока не возвращается.':'Комментарий сохранён. Получение реакции ещё не завершено.'},result:{postId:target.postId,delta,headline:'Комментарий сохранён',whys:[],ribbons:[],viral:false,flop:false,views:snapshot.post.views}}),text);
+        setReceipt(value);setShowReceipt(true);if(delta)setGainAnimation({delta,nonce:requestId});
+        void refresh().then(p=>{if(p.world!==value.worldId)return;const updated={...value,after:p.skills,roleAfter:p.roleSkills,questOutcome:p.lastTurn?.actionId===requestId?{...p.lastTurn.outcome,source:'server' as const}:value.questOutcome};const savedResult=resultHistory.save(updated);setReceipt(current=>current?.actionId===updated.actionId?savedResult:current);if(value.questId)saveLocal(`${key}:task-result:${player.world}:${value.questId}`,updated);}).catch(()=>setFeedError('Комментарий сохранён. Обнови ленту, чтобы получить актуальные данные.'));
       }
       sending.current=false;setPending(false);
     }
@@ -383,30 +512,41 @@ export default function BackendApp() {
     cancel.current?.(); feedRequest.current++;threadRequest.current++;setDeleteOpen(false);setPlayer(undefined);setWorld(undefined);setOwned([]);setFeed([]);setPost(undefined);setReceipt(undefined);setDraft('');setStack([]);setScreen('welcome');
   };
   const showPerson = (value: Person) => { if (value.id === 'player') go('profile'); else { const cast = world?.cast.find(p => p.id === value.id || p.name === value.name); setPerson(cast ?? value); go('character'); } };
-  const card = (p: Post, author: Person, count = 0, compact = false) => <PostCard key={p.id} post={{ ...p, liked: likes.includes(`${player?.world}:${p.id}`) }} author={author} replyCount={count} compact={compact}
+  const card = (p: Post, author: Person, count = 0, compact = false) => <PostCard key={p.id} post={{ ...p, liked: likes.includes(`${player?.world}:${p.id}`) }} author={{...author,avatar:author.avatar??world?.cast.find(c=>c.id===author.id||c.handle===author.handle)?.avatar}} replyCount={count} compact={compact}
     onReport={p.parentId && author.id!=='player' && p.text!=='Комментарий скрыт' ? ()=>setReportId(p.id) : undefined}
     onReply={p.parentId || p.id ? () => void openThread(p.parentId ?? p.id) : undefined} onAuthor={() => showPerson(author)}
     onLike={() => { const id = `${player?.world}:${p.id}`; const next = likes.includes(id) ? likes.filter(x => x !== id) : [...likes, id]; setLikes(next); localSave('likes', next); }}
     onQuote={() => { setQuote({ name: author.name, text: p.text }); setOverlay('quote'); }} />;
 
   useEffect(()=>{if(!energyNudge)return;const timer=setTimeout(()=>setEnergyNudge(0),6000);return()=>clearTimeout(timer);},[energyNudge]);
-  const renderFeed = () => <>
-    <div className="world-hud"><header className="world-header"><button className="world-switch" aria-label={`${world?.title??''}. ${formatAudience(player?.subs??0)} подписчиков. Выбрать мир`} onClick={() => setOverlay('exit')}><strong><WorldName name={world?.title??''}/><Icon name="chevron"/></strong><span className="channel-sidebar-count"><b className="channel-count-target">{formatAudience(player?.subs??0)}</b><span className="channel-count-label">подписчиков</span></span></button>
+  const crystalRewardsSeen=crystalAwardsSeen.current;
+  const devCrystals=import.meta.env.DEV&&player?(devCrystalState?.owner===player.id?devCrystalState:{owner:player.id,total:readDevCrystals(player.id).total,award:undefined}):undefined;
+  const displayCrystals=accountEnergy.wallet?accountEnergy.wallet.crystals+(devCrystals?.total??0):undefined;
+  const awarded=showReceipt?receipt?.questReward:undefined;
+  const crystalAward=(awarded?.source==='server'||(import.meta.env.DEV&&awarded?.source==='preview'))&&awarded.balanceBefore!==undefined&&awarded.balanceAfter!==undefined?{id:`${receipt!.actionId??receipt!.result.postId}:${awarded.questId}`,amount:awarded.amount,before:awarded.balanceBefore,after:awarded.balanceAfter}:undefined;
+  const renderWorldHud = () => <div className="world-hud"><header className="world-header"><button className="world-switch" aria-label={`${world?.title??''}. ${formatAudience(player?.subs??0)} подписчиков. Выбрать мир`} onClick={() => setOverlay('exit')}><strong><WorldName name={world?.title??''}/><Icon name="chevron"/></strong><span className="channel-sidebar-count"><Icon name="member"/><b className="channel-count-target">{formatAudience(player?.subs??0)}</b><span className="channel-count-label">подписчиков</span></span></button>
       <div key={energyNudge} className={`energy-hud${energyNudge?' is-empty':''}`}><EnergyBadge wallet={accountEnergy.wallet} amount={player?.postsLeft} onClick={()=>{setEnergyNudge(0);openResource('resources');}}/></div>
-      <ResourceBadge type="crystal" value={accountEnergy.wallet?String(accountEnergy.wallet.crystals):'—'} hint={accountEnergy.wallet?"Кристаллы для обмена на энергию":"Баланс кристаллов пока недоступен"} onClick={() => openResource('crystals')} />
-      <button className="profile-access campaign-avatar" aria-label={`Профиль персонажа. История: ${campaignProgress===undefined?'прогресс уточняется':`${campaignProgress}%`}`} onClick={() => go('profile')} style={{background:`conic-gradient(var(--campaign-ring) ${campaignProgress??0}%,var(--color-divider) 0)`}}><Avatar name={player?.name ?? ''} src={player ? personaFor(player.id, player.world).avatar : undefined} size="lg" /></button></header>
-    </div>
+      <CrystalRewardBadge balance={displayCrystals} preview={!!devCrystals} award={crystalAward} seen={crystalRewardsSeen} onClick={() => openResource('crystals')}/>
+      <button className="profile-access campaign-avatar" aria-label={`Профиль персонажа. История: ${campaignProgress===undefined?'прогресс уточняется':`${campaignProgress}%`}`} onClick={() => go('profile')} style={{background:`conic-gradient(var(--campaign-ring) ${campaignProgress??0}%,var(--color-divider) 0)`}}><Avatar name={player?.name ?? ''} src={player ? playerView(player).avatar : undefined} size="lg" /></button></header>
+    {player&&<button className="hud-streak" onClick={()=>setOverlay('streak')} aria-label={`Серия: ${player.streak.days}. Посмотреть дни`}>🔥 <strong>{dayCount(player.streak.days)}</strong><span>в серии</span></button>}
+    </div>;
+  const renderFeed = () => <>
+    {renderWorldHud()}
+    <FeedFilter value={feedFilter} onChange={setFeedFilter}/>
     {player?.postsLeft===0&&draft.trim()&&!pending&&<section className="section"><div className="energy-draft-notice"><strong>Черновик ждёт энергии</strong><blockquote className="energy-draft-text">{draft}</blockquote><p>Текст сохранён. Нажми на энергию вверху, чтобы посмотреть восстановление и обмен.</p><Button variant="secondary" onClick={()=>reply?openCompose(reply):openFirstPost()}>Вернуться к черновику</Button></div></section>}
     {!reply && (pending || unknown || publicationFailed) && <PublicationWaiting pending={pending} unknown={unknown} text={draft} status={status} onStop={stopWaiting} onContinue={() => { if (unknown) publish(); else openCompose(); }} />}
+    {feedFilter==='mine' && player ? <MyPosts key={`${player.id}:${player.world}`} worldId={player.worldInstanceId ?? player.world} author={playerView(player)} renderPost={card} onCompose={()=>openCompose()}/> : <>
     {feedError && <div className="section"><Notice title="Не удалось обновить ленту" tone="error">{feedError}</Notice></div>}
     {!feed.length && !feedLoading && !feedError && !pending && !unknown && !publicationFailed && <EmptyState title="Первое слово за тобой" action={<Button onClick={() => openCompose()}>Написать пост</Button>}>{world?.seedPost || 'Расскажи свою версию истории. Здесь появятся публикации и ответы.'}</EmptyState>}
     {feed.map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}
     {(feed.length > 0 || feedError || feedLoading) && (!pending || feed.length > 0) && <div className="section feed-footer"><Button variant="ghost" busy={feedLoading} onClick={() => void loadFeed(player!, cursor ?? undefined)}>{feedLoading ? 'Загружаем ленту' : cursor ? 'Показать ещё' : 'Обновить ленту'}</Button></div>}
+    </>}
   </>;
 
-  const worldActivities = activitiesForWorld(activities, player?.world).filter(a=>a.kind==='reaction'||a.kind==='mention'||a.kind==='follow');
+  const worldActivities = activitiesForWorld(activities, player?.world).filter(a=>!!a.kind);
   const selectedStory = scenarioForTemplate(definition?.templateId);
   const heroOptions = definition ? roleScenarioSelected && selectedStory ? selectedStory.roles.map(role=>({id:role.id,name:role.id==='custom'?'Свой персонаж':role.name,role:role.name,goal:role.goal,motivation:'motivation' in role?role.motivation:undefined,skills:role.skills})) : [...(heroBase??definition).stars.map(s=>({id:s.id,name:s.name,role:s.role,goal:selected?.goal||''})),{id:'custom',name:'Свой персонаж',role:'Твоя история',goal:selected?.goal||''}] : [];
+  const ownWorldInvite = player ? <OwnWorldInvite unlocked={!!player.hitOwnWorldMilestone} onInvite={()=>setInviteOpen(true)} onCreate={startOwnWorld} onCheck={()=>void checkWorldAccess()} checking={checkingAccess} message={accessMessage}/> : null;
   let content: ReactNode;
   if (booting) content = <div className="loading-state" role="status"><LoadingIndicator/><p>Открываем твои миры</p></div>;
   else if (screen === 'catalog' || screen === 'search') {
@@ -415,22 +555,24 @@ export default function BackendApp() {
     const filtered = filterCatalog(entries, query, genre);
     content = <><ScreenHeading title={screen === 'search' ? 'Найти свой мир' : 'Миры'} action={screen==='catalog'&&<button className="catalog-settings" aria-label="Настроить интересы" title="Интересы" onClick={()=>{interestOnly.current=true;go('onboarding');}}><Icon name="preferences"/></button>} />
       {screen === 'search' && <div className="search-field"><TextField label="Название или тема" value={query} onChange={e => setQuery(e.target.value)} placeholder="Магия, приключения, общение…" /></div>}
-      {screen === 'catalog' && owned.length > 0 && <section className="saved-worlds"><h2 className="section-title">Мои миры</h2><WorldCarousel>{owned.map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} />)}</WorldCarousel></section>}
+      {screen === 'catalog' && owned.length > 0 && <section className="saved-worlds"><h2 className="section-title">Мои миры</h2><WorldCarousel>{orderedOwned.map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} onDelete={()=>setWorldToDelete(d)} />)}</WorldCarousel></section>}
+      {screen==='catalog'&&ownWorldInvite}
       <div className="filter-strip">{['Все', ...new Set(entries.map(({ world }) => world.genre))].map(g => <Chip key={g} selected={genre === g} onClick={() => setGenre(g)}>{g}</Chip>)}</div>
       {filtered.length ? <div className="world-grid">{filtered.map(({ key, world: w, available, storyVariant }) => <WorldCard key={key} world={w} disabled={!available || busy} selected={available && selected?.id === w.id && selectedVariant === !!storyVariant} onClick={available ? () => void openWorld(w, !!storyVariant) : undefined} />)}</div> : <EmptyState title="Такого мира пока нет" action={<Button onClick={() => { setQuery(''); setGenre('Все'); if (!templates.length) void boot(); }}>Сбросить поиск</Button>}>Попробуй другое название или убери фильтр.</EmptyState>}
-      {player?.hitOwnWorldMilestone && <div className="section"><Button onClick={() => { setDefinition({ ...blankWorld(), name: player.name, avatar: player.handle, stars: [{ id: crypto.randomUUID(), name: '', role: '', about: '', voice: 'Живо и по делу', avatarSeed: 'guide', trait: 1, relation: 0 }] }); go('hero'); }}>Создать свой мир</Button></div>}
     </>;
   } else if (screen === 'intro' && selected) content = <WorldIntro key={selected.id} step={introStep} onStepChange={setIntroStep} world={selected} busy={busy} resume={owned.some(d => d.id === selected.id)} onBack={back} onEnter={() => void enter()} />;
   else if (screen === 'welcome') content = <Onboarding key="entry-welcome" initialStep={0} onTry={() => go('age')} onDone={() => go('age')} onBack={back} />;
   else if (screen === 'age') content = <AgeEntry initialAge={entryAge} minimumAge={14} requireConsent={true} onBack={value => { setEntryAge(value); back(); }} onContinue={continueAge} />;
   else if (screen === 'onboarding') content = <Onboarding key="entry-interests" initialStep={1} standalone={interestOnly.current} initialQualities={qualities} onBack={back} onDone={completeInterests} />;
-  else if (screen === 'hero' && definition && definition.templateId) content = <><HeroStudio onBack={back} startWithHero={selectedStory?.startWithHero}
+  else if (screen === 'hero' && definition && definition.templateId) content = <><HeroStudio onAppearance={setHeroAppearance} onBack={back} startWithHero={selectedStory?.startWithHero}
     options={heroOptions} selected={heroChoice} onChoose={id=>chooseHero(id==='custom'?undefined:{id})}
     name={definition.name} channel={definition.avatar} goal={heroGoal} onName={name=>setDefinition({...definition,name})} onChannel={avatar=>setDefinition({...definition,avatar})}
     skills={heroSkills} onSkills={setHeroSkills} seed={heroSeed||definition.avatar} avatar={heroAvatar} removed={avatarRemoved}
-    onLook={seed=>{setHeroSeed(seed);setHeroAvatar(undefined);setAvatarRemoved(false);}} onUpload={src=>{setHeroAvatar(src);setAvatarRemoved(false);}} onRemove={()=>{setHeroAvatar(undefined);setAvatarRemoved(true);}}
+    onLook={seed=>{setHeroSeed(seed);setHeroAvatar(undefined); setHeroAppearance(undefined);setAvatarRemoved(false);}} onUpload={src=>{setHeroAvatar(src);setAvatarRemoved(false);}} onRemove={()=>{setHeroAvatar(undefined); setHeroAppearance(undefined);setAvatarRemoved(true);}}
     address={address} onAddress={setAddress} worldId={definition.templateId} worldTitle={selected?.title||definition.title} style={definition.avatarStyle}
     busy={busy} canEnter={!!heroChoice&&!!definition.stars.length&&(heroChoice!=='custom'||!!(definition.name.trim()&&definition.avatar.trim()&&heroGoal.trim()))} onEnter={()=>void createWorld()}/></>;
+  else if (screen === 'own-world' && definition) content = <WorldEditor key="own-world" creating initial={definition} profile={player!} busy={busy} error={error} onBack={back} onSave={(value,portrait,preferences)=>void createWorld(value,portrait,preferences)}/>;
+  else if (screen === 'world-settings' && worldEdit) content = <WorldEditor key={worldEdit.id} initial={worldEdit.definition} editingId={worldEdit.id} profile={player!} busy={busy} error={error} onBack={back} onSave={value=>void saveWorldSettings(value)}/>;
   else if (screen === 'hero' && definition) content = <><ScreenHeading title="Свой мир" back={back} /><section className="section stack"><TextField label="Имя персонажа" maxLength={80} value={definition.name} onChange={e => setDefinition({ ...definition, name: e.target.value })} /><TextField label="Имя канала" maxLength={80} value={definition.avatar} onChange={e => setDefinition({ ...definition, avatar: e.target.value })} />
     <label>Как обращаться<select value={address} onChange={e => setAddress(e.target.value as Address)}><option value="nick">По имени</option><option value="she">Она</option><option value="he">Он</option></select></label>
     <TextField label="Кто ты в этом мире" value={definition.role} maxLength={80} onChange={e => setDefinition({ ...definition, role: e.target.value })} />
@@ -439,25 +581,21 @@ export default function BackendApp() {
     <Button busy={busy} disabled={!definition.name.trim() || !definition.avatar.trim() || !definition.role.trim() || !definition.title.trim() || !definition.stars.length || definition.stars.some(star => !star.name.trim() || !star.role.trim())} onClick={() => void createWorld()}>Начать историю</Button></section></>;
   else if (screen === 'feed' && player && world) content = renderFeed();
   else if (screen === 'goals' && world && player) {
-    const doc = worldDocumentOf(player.world);
-
-    const task = roleTask ?? (activeRole ? undefined : {title:world.goal,prompt:doc.postIdeas[0] || doc.firstPrompt || doc.firstContext,context:doc.firstContext});
     const savedDraft=readPostDraft(draftKey(player));
-    const taskReceipt=receiptForRelease((receipt?.questId===(roleTask??roleTask)?.id?receipt:undefined)??readLocal<PublicationReceipt|undefined>(`${key}:task-result:${player.world}:${(roleTask??roleTask)?.id}`,undefined)??(receipt?.worldId===player.world&&((roleTask&&receipt.questId===roleTask.id)||receipt.questId===roleTask?.id||receipt.questOutcome?.title===task?.title)?receipt:undefined),false);
-    content = <WorldBrief roleSkills={activeRole?.skills} campaignProgress={campaignProgress} campaignComplete={player.campaignProgress?.completed} practiceSkills={personaFor(player.id,player.world).skills??[]} world={world} player={player} avatar={personaFor(player.id, player.world).avatar} task={task} firstVisit={storyOnboarding} hasDraft={savedDraft.ownWords&&!!savedDraft.text.trim()} receipt={taskReceipt} onRead={taskReceipt?()=>void openThread(taskReceipt.result.postId):undefined} onWrite={openFirstPost} onFeed={() => { setStoryOnboarding(false); go('feed'); }} />;
+    content = <WorldBrief roleSkills={activeRole?.skills} world={world} player={player} avatar={playerView(player).avatar} firstVisit={storyOnboarding} hasDraft={savedDraft.ownWords&&!!savedDraft.text.trim()} onWrite={openFirstPost} onFeed={() => { setStoryOnboarding(false); go('feed'); }} />;
   }
   else if (screen === 'goals' && world) content = <><ScreenHeading title="Цели" subtitle={world.title} /><StoryBrief goal={world.goal || 'Найти свой голос и начать разговор.'} /><section className="section"><Button onClick={openFirstPost}>Написать пост →</Button></section></>;
   else if (screen === 'resources' || screen === 'crystals') content = <ResourcePages wallet={accountEnergy.wallet} exchangeBusy={accountEnergy.busy} exchangeMessage={accountEnergy.message} onExchange={()=>void accountEnergy.exchange()} onWalletRefresh={()=>void accountEnergy.refresh()} page={screen} energy={player?.postsLeft} onPage={openResource} onBack={back}/>;
   else if (screen === 'compose' && player) content = <>
     <ScreenHeading title={reply ? 'Продолжить разговор' : 'Новая публикация'} back={back} />
     <section className="section stack composer-body">
-      {prepared && <TaskCard title={prepared.title} prompt={prepared.prompt}/>}
-      <PracticeFocus skills={personaFor(player.id, player.world).skills ?? []}/>
+      {!reply&&<DailyQuestCard task={import.meta.env.DEV?{text:'Напиши 1 пост и оставь 1 комментарий',rewardCrystals:2}:undefined} preview={import.meta.env.DEV}/>}
       {(reply || quote) && !prepared && <QuoteBlock name={reply?.name ?? quote!.name} text={reply?.text ?? quote!.text}/>}
       <div className="row"><Avatar name={player.name} src={personaFor(player.id, player.world).avatar}/><strong>{player.name}</strong></div>
       <label className="sr-only" htmlFor="post-text">Текст публикации</label>
-      <textarea id="post-text" className="composer-text" value={draft} onChange={e=>updateDraft(e.target.value)} disabled={pending || unknown} maxLength={reply ? 1000 : 2000} autoFocus={!!reply}/>
-      <div className="composer-count caption muted">{draft.length} / {reply ? 1000 : 2000}</div>
+      <ComposerText key={`${player.world}:${reply?.postId??'post'}`} value={draft} onChange={e=>updateDraft(e.target.value)} animate={!reply&&!quote&&!readPostDraft(draftKey(player)).ownWords&&draft===firstPostFor(worldDocumentOf(player.world),activeRole?.id)} disabled={pending || unknown} maxLength={reply ? 1000 : 2000} autoFocus={!!reply}/>
+      <div className="composer-tools"><span className="caption muted">{draft.length} / {reply ? 1000 : 2000}</span><button className="link-button caption" disabled={!draft||pending||unknown} onClick={()=>updateDraft('')}>Очистить {reply?'ответ':'пост'}</button></div>
+      {!reply&&<PostIdeas ideas={ideasForWorld(worldDocumentOf(player.world))} draft={draft} onDraft={updateDraft} disabled={pending||unknown}/>}
       {quote && !reply && !prepared && <p className="caption muted">Контекст помогает написать пост. Связь цитирования на сервере пока недоступна.</p>}
       {pending && <div className="pending-line" role="status"><LoadingIndicator/>{statusLabels[status] ?? 'Отправляем ответ…'}</div>}
       {pending && <Button variant="secondary" onClick={stopWaiting}>Остановить ожидание</Button>}
@@ -465,18 +603,25 @@ export default function BackendApp() {
     </section>
   </>;
   else if (screen === 'thread' && player && world) {
+    const typingPerson=world.cast.find(p=>`Star_${p.id}`===typingActor);
     const view = post ? detailView(post, world, playerView(player)) : undefined;
     const postAuthor = post && world.cast.find(p => `Star_${p.id}` === post.authorId);
-    content = <><ScreenHeading title="Обсуждение" back={back} />{pending&&<div className="section stack" role="status"><div className="pending-line"><LoadingIndicator/>{status||'Получаем ответ персонажа…'}</div><Button variant="ghost" onClick={stopWaiting}>Остановить ожидание</Button></div>}{reply&&unknown&&!pending&&<section className="section"><Button onClick={()=>openCompose(reply)}>Продолжить получение ответа</Button><p className="caption muted">Сохранённый комментарий повторно не публикуется.</p></section>}{receipt&&receipt.worldId===player.world&&receipt.result.postId===post?.id&&<PublicationResult receipt={receipt} animateFollowers={!!gainAnimation} onRead={()=>document.querySelector('.thread-nested')?.scrollIntoView({block:'center'})}/>}{threadLoading && <div className="pending-line" role="status"><LoadingIndicator/>Загружаем обсуждение…</div>}{view && card(view.post, view.author, post!.comments.length)}{post?.comments.map(comment => {
+    content = <><ScreenHeading title="Обсуждение" back={back} />{pending&&<div className="section stack" role="status"><div className={`pending-line${typingActor?' npc-typing':''}`}>{typingActor?<><Avatar name={typingPerson?.name??'Персонаж'} src={typingPerson?.avatar}/><span>{typingPerson?.name??'Персонаж'} печатает<span className="npc-typing-dots" aria-hidden="true"><i/><i/><i/></span></span></>:<><LoadingIndicator/>{status||'Получаем ответ персонажа…'}</>}</div><Button variant="ghost" onClick={stopWaiting}>Остановить ожидание</Button></div>}{reply&&unknown&&!pending&&<section className="section"><Button onClick={()=>openCompose(reply)}>Продолжить получение ответа</Button><p className="caption muted">Сохранённый комментарий повторно не публикуется.</p></section>}{receipt&&receipt.worldId===player.world&&receipt.result.postId===post?.id&&<PublicationResult receipt={receipt} animateFollowers={!!gainAnimation} onRead={()=>document.querySelector('.thread-nested')?.scrollIntoView({block:'center'})}/>}{threadLoading && <div className="pending-line" role="status"><LoadingIndicator/>Загружаем обсуждение…</div>}{view && card(view.post, view.author, post!.comments.length)}{post?.comments.map(comment => {
       const author: Person = comment.me ? playerView(player) : world.cast.find(p => `Star_${p.id}` === comment.authorId) ?? { id: comment.authorId ?? comment.id, name: comment.author, handle: comment.avatar ?? '', role: comment.role ?? '', boundary: '' };
       return <div key={comment.id} className={comment.parentCommentId ? 'thread-nested' : ''}>{comment.parentCommentId && <span className="sr-only">Ответ на реплику</span>}{card({ id: comment.id, parentId: post.id, authorId: author.id, text: comment.hidden ? 'Комментарий скрыт' : comment.text, createdAt: '', likes: 0 }, author, 0, true)}{comment.star && !comment.hidden && world.cast.some(p => `Star_${p.id}` === comment.authorId) && <div className="reply-action"><Button variant="ghost" aria-label={`Ответить ${author.name}`} onClick={() => openCompose({ postId: post.id, commentId: comment.id, name: author.name, text: comment.text, authorId:`Star_${author.id}` })}>Ответить</Button></div>}</div>;
     })}{post && !post.comments.length && <EmptyState title="Здесь ещё нет ответов">Персонажи могут продолжить разговор после публикации.</EmptyState>}{postAuthor && post && <div className="section"><Button className="full" onClick={() => openCompose({ postId: post.id, commentId: null, name: postAuthor.name, text: post.text, authorId:`Star_${postAuthor.id}` })}>Начать разговор с автором</Button></div>}</>;
-  } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={personaFor(player.id, player.world).avatar} onBack={back} showStoryProgress storyProgress={campaignProgress} /><WorldProgress streak={player.streak} onStreak={()=>setOverlay('streak')}/><section className="section profile-overview"><div className="profile-audience"><ChannelAudience value={player.subs}/>{receipt?.worldId===player.world&&receipt.audienceKnown!==false&&<p className="caption last-turn-audience">{receipt.result.delta>0?'+':receipt.result.delta<0?'−':''}{Math.abs(receipt.result.delta)} за последний ход</p>}</div><GoalCard goal={world.goal} onClick={() => go('goals')} /><PracticeFocus skills={personaFor(player.id,player.world).skills??[]}/></section><CurrentSkills skills={player.skills} labels={activeRole?storyLabels:['Смелость','Юмор','В тему']} roleSkills={activeRole?.skills} values={player.roleSkills}/><section className="section"><Button variant="secondary" onClick={()=>setOverlay('exit')}>Выйти из мира</Button></section></>;
-  else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><ChannelAudience value={person.subscribers}/><span className="caption muted">@{person.handle} · AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
+  } else if (screen === 'profile' && player && world) content = <><ProfileHeader name={player.name} avatar={playerView(player).avatar} onBack={back} showStoryProgress storyProgress={campaignProgress} /><WorldProgress streak={player.streak} onStreak={()=>setOverlay('streak')}/><section className="section profile-overview"><div className="profile-audience"><ChannelAudience value={player.subs}/>{receipt?.worldId===player.world&&receipt.audienceKnown!==false&&<p className="caption last-turn-audience">{receipt.result.delta>0?'+':receipt.result.delta<0?'−':''}{Math.abs(receipt.result.delta)} за последний ход</p>}</div><GoalCard goal={world.goal} onClick={() => go('goals')} /><PracticeFocus skills={personaFor(player.id,player.world).skills??[]}/></section><CurrentSkills skills={player.skills} labels={activeRole?storyLabels:['Смелость','Юмор','В тему']} roleSkills={activeRole?.skills} values={player.roleSkills}/><section className="section stack"><Button variant="secondary" disabled={busy||pending} onClick={openWorldSettings}>Настройки мира</Button><Button variant="ghost" onClick={()=>setOverlay('exit')}>Выйти из мира</Button></section></>;
+  else if (screen === 'character' && person) content = <><ProfileHeader name={person.name} avatar={person.avatar} onBack={back} /><div className="character-bio"><ChannelAudience value={person.subscribers}/><span className="caption muted">{!person.handle.startsWith('generated-')&&`@${person.handle} · `}AI-персонаж</span><p>{person.boundary || person.role}</p>{person.relation !== undefined && <p className="caption muted">Отношения: {person.relation > 0 ? "+" : ""}{person.relation}</p>}</div>{feed.filter(item => item.author === person.name).map(item => { const view = feedView(item, playerView(player!)); return card(view.post, view.author, view.count); })}<div className="section"><Button onClick={() => { setReply(undefined); setQuote({ name: person.name, text: person.boundary || person.role }); go('topic'); }}>О чём поговорить</Button></div></>;
   else if (screen === 'topic' && world) content = <><div className="topic-header"><button className="back-button" onClick={back}>Назад</button><img className="topic-cover" src={world.hero} alt="" /><h1>{quote?.name ?? world.title}</h1><p>{quote?.text ?? world.topic}</p></div><section className="topic-people">{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}<Button className="full" onClick={() => openCompose(undefined, quote)}>Написать</Button></section></>;
   else if (screen === 'messages' && world) content = <><ScreenHeading title="Личка" /><EmptyState title="Сначала — общий разговор" action={<Button onClick={() => go('feed')}>Вернуться в ленту</Button>}>Личные сообщения скоро появятся.</EmptyState><section className="section"><h2 className="section-title">Собеседники</h2>{world.cast.map(p => <PersonRow key={p.id} person={p} detail={p.relation === undefined ? undefined : `Отношения: ${p.relation > 0 ? "+" : ""}${p.relation}`} onClick={() => showPerson(p)} />)}</section></>;
-  else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={worldActivities.length > 0 && <button className="link-button caption" onClick={() => { const next = markWorldActivitiesRead(activities, player?.world); setActivities(next); localSave('activity', next); }}>Прочитать всё</button>} />{!worldActivities.length && <EmptyState title="Пока тихо">Здесь появятся реакции персонажей и доступные упоминания твоего канала.</EmptyState>}{worldActivities.map(a=><ReactionTicker key={a.id} inline read={a.read} notice={{id:a.id,postId:a.id,worldId:a.worldId,kind:a.kind??'reaction',actorName:a.actorName??a.title,text:a.text,relation:a.relation}} onOpen={()=>void openThread(a.id)} onClose={()=>{const next=activities.map(v=>v.id===a.id?{...v,read:true}:v);setActivities(next);localSave('activity',next);}}/>)}</>;
-  else if (screen === 'account') content = <><ProfileHeader name={player?accountIdentity(player.id,owned[0]?.name??player.name).name:'Твой профиль'} neutralAvatar handle={player?accountIdentity(player.id,owned[0]?.name??player.name).handle:undefined} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? owned.slice(0,accountVisible).map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}{owned.length>accountVisible&&<Button variant="secondary" onClick={()=>setAccountVisible(n=>n+5)}>Показать ещё {Math.min(5,owned.length-accountVisible)}</Button>}</section><section className="account-settings">{player && <SettingsRow label="Привязать профиль" onClick={()=>setLinkProfileOpen(true)}/>}<SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => openResource('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><SettingsRow label="Удалить аккаунт" onClick={()=>setDeleteOpen(true)} disabled={pending || busy} /><NominalSignOut onSignOut={beginEntry} disabled={pending || busy} /></section></>;
+  else if (screen === 'activity') content = <><ScreenHeading title="Уведомления" action={activityTab==='events'&&worldActivities.length>0&&<button className="link-button caption" onClick={()=>{const next=markWorldActivitiesRead(activities,player?.world);setActivities(next);localSave('activity',next);}}>Прочитать всё</button>}/>
+    <ViewFilter value={activityTab} onChange={setActivityTab} options={[{value:'events',label:'События'},{value:'results',label:'Результаты'}]} label="Раздел уведомлений"/>
+    {activityTab==='results'?<ResultHistory items={resultHistory.items} onOpen={id=>void openThread(id)} onNewPost={()=>void openCompose()} onShare={(id,text)=>{if(player)setSharedPost({owner:player.id,id,text});}}/>:<>
+      {!worldActivities.length&&<EmptyState title="Пока тихо">Здесь появятся ответы персонажей, реакции на твои посты и отметки серии.</EmptyState>}
+      {worldActivities.map(a=><ActivityItem key={a.id} title={a.title} text={a.kind==='likes'?a.postText??'Фрагмент публикации не сохранён':a.text} detail={a.kind==='likes'&&a.count!==undefined?`Реакций: ${a.count}`:undefined} actorName={a.kind==='likes'?undefined:a.actorName} actorAvatar={world?.cast.find(p=>p.name===a.actorName)?.avatar} symbol={a.kind==='streak'?'🔥':a.kind==='likes'?'♡':'✦'} read={a.read} onOpen={()=>{if(a.kind==='streak'){setActivities(old=>{const next=old.map(v=>v.id===a.id&&v.worldId===a.worldId?{...v,read:true}:v);localSave('activity',next);return next;});setOverlay('streak');}else void openThread(a.postId??a.id);}}/>)}
+    </>}
+  </>;
+  else if (screen === 'account') content = <><ProfileHeader name={player?accountIdentity(player.id,owned[0]?.name??player.name).name:'Твой профиль'} neutralAvatar handle={player?accountIdentity(player.id,owned[0]?.name??player.name).handle:undefined} label="Профиль" /><section className="account-worlds"><h2 className="section-title">Мои миры</h2>{owned.length ? orderedOwned.slice(0,accountVisible).map(d => <ResumeWorld key={d.id} world={ownedView(d)} subtitle={d.name} busy={busy} onClick={() => void openWorld(ownedView(d))} onDelete={()=>setWorldToDelete(d)} />) : <Button onClick={() => go('catalog')}>Выбрать мир</Button>}{owned.length>accountVisible&&<Button variant="secondary" onClick={()=>setAccountVisible(n=>n+5)}>Показать ещё {Math.min(5,owned.length-accountVisible)}</Button>}</section>{ownWorldInvite}<section className="account-settings">{player&&<SettingsRow label="Пригласить друга" onClick={()=>setInviteOpen(true)}/>} {player && <SettingsRow label="Привязать профиль" onClick={()=>setLinkProfileOpen(true)}/>}<SettingsRow label="Ресурсы" value={`${player?.postsLeft ?? '—'} энергии`} onClick={() => openResource('resources')} /><SettingsRow label="Размер текста" value={`${textScale * 100}%`} onClick={() => setOverlay('text-size')} /><SettingsRow label="Интересы" value={qualities.join(' · ') || 'Выбрать'} onClick={() => { interestOnly.current = true; go('onboarding'); }} /><SettingsRow label="О новой версии" onClick={() => setOverlay('about')} /><SettingsRow label="Удалить аккаунт" onClick={()=>setDeleteOpen(true)} disabled={pending || busy} /><NominalSignOut onSignOut={()=>void beginEntry()} disabled={pending || busy} /></section></>;
   else content = <EmptyState title="Выбери мир" action={<Button onClick={() => go('catalog')}>К мирам</Button>}>Продолжи сохранённую историю или начни новую.</EmptyState>;
 
   const inWorld = !!world && !['catalog', 'search', 'account', 'intro', 'onboarding', 'welcome', 'age', 'hero'].includes(screen);
@@ -484,12 +629,16 @@ export default function BackendApp() {
   const nav = inWorld ? [ { id: 'feed', label: 'Лента', icon: 'feed' as const }, { id: 'goals', label: 'Цели', icon: 'goals' as const }, { id: 'compose', label: 'Написать', icon: 'compose' as const }, { id: 'activity', label: 'Уведомления', icon: 'activity' as const, badge: worldActivities.filter(a=>!a.read).length } ] : [ { id: 'catalog', label: 'Главная', icon: 'home' as const }, { id: 'search', label: 'Поиск', icon: 'search' as const }, { id: 'account', label: 'Профиль', icon: 'profile' as const } ];
   if(import.meta.env.DEV&&hash.startsWith('#result-review'))return <ResultReview/>;
   if (hash.startsWith('#system')) return <DesignSystem />;
-  return <div className="v7-stage"><div ref={appRoot} className={`app ${showNav ? 'app--nav' : ''} ${screen === 'intro' ? 'app--prologue' : ''} ${screen === 'hero' ? 'app--hero' : ''}`}><div className="app-body" ref={main}><div className="sr-only" tabIndex={-1} ref={focusHeading}>{titleOf[screen]}</div>{storageError && <Notice title="Не удалось сохранить на устройстве" tone="error">Не закрывай вкладку: черновик остаётся в памяти до перезагрузки.</Notice>}{error && <div className="section"><Notice title={screen==='thread'&&reply&&unknown?'Комментарий сохранён, ответ пока не готов':'Не получилось завершить действие'} tone="error">{error}</Notice>{!booting && !templates.length && <Button onClick={() => void boot()}>Повторить</Button>}</div>}{content}</div>
-    {showNav && <BottomNav items={nav.map(n => ({ ...n, disabled: pending }))} active={screen} onChange={id => { tap('tab', { to: `v7.${id}` }); id === 'compose' ? openFirstPost() : go(id as Screen); }} />}
+  return <div className="v7-stage"><div ref={appRoot} className={`app ${showNav ? 'app--nav' : ''} ${screen === 'intro' ? 'app--prologue' : ''} ${screen === 'hero' ? 'app--hero' : ''}`}><div className="app-body" ref={main}><div className="sr-only" tabIndex={-1} ref={focusHeading}>{titleOf[screen]}</div>{storageError && <Notice title="Не удалось сохранить на устройстве" tone="error">Не закрывай вкладку: черновик остаётся в памяти до перезагрузки.</Notice>}{error && !['world-settings','own-world'].includes(screen) && <div className="section"><Notice title={screen==='thread'&&reply&&unknown?'Комментарий сохранён, ответ пока не готов':'Не получилось завершить действие'} tone="error">{error}</Notice>{!booting && !templates.length && <Button onClick={() => void boot()}>Повторить</Button>}</div>}{resultHistory.error&&<div className="section"><Notice title="История результатов не сохранена" tone="error">{resultHistory.error}</Notice></div>}{content}</div>
+    {showNav && <BottomNav items={nav.map(n => ({ ...n, disabled: pending }))} active={screen} onChange={id => { tap('tab', { to: `v7.${id}` }); id === 'compose' ? openFirstPost() : go(id as Screen, true); }} />}
+    {worldToDelete&&<Dialog title="Удалить мир?" onClose={()=>setWorldToDelete(undefined)}><div className="stack"><p><strong>{worldToDelete.title}</strong><br/>{worldToDelete.name}</p><p>Удаление этого прохождения вместе с историей персонажа пока недоступно.</p><Button variant="danger" disabled>Удалить мир</Button><Button variant="secondary" onClick={()=>setWorldToDelete(undefined)}>Отмена</Button></div></Dialog>}
+    {inviteOpen&&<InviteFriend onClose={()=>setInviteOpen(false)}/>}
     {linkProfileOpen && player && <LinkProfile player={player} refresh={refresh} onClose={()=>setLinkProfileOpen(false)}/>}
     {deleteOpen&&<AccountDeletion onDelete={deleteAccount} onClose={()=>setDeleteOpen(false)}/>}
     {reportId&&<ReportComment onSend={reason=>api.report(reportId,reason)} onClose={()=>setReportId(undefined)}/>}
-    {showReceipt&&receipt&&receipt.worldId===player?.world&&<ResultIsland receipt={receipt} onRead={()=>void openThread(receipt.result.postId)} onClose={()=>setShowReceipt(false)}/>}
+    {showReceipt&&screen==='thread'&&player&&world&&<div className="result-status-bar">{renderWorldHud()}</div>}
+    {showReceipt&&receipt&&receipt.worldId===player?.world&&<ResultIsland key={receipt.actionId??receipt.result.postId} receipt={receipt} onRead={()=>void openThread(receipt.result.postId)} onNewPost={()=>{setShowReceipt(false);void openCompose();}} onShare={()=>setSharedPost({owner:player!.id,id:receipt.result.postId,text:receipt.postText})} onClose={()=>{setShowReceipt(false);if(receipt.actionKind!=='comment'){setFeedFilter('mine');setScreen('feed');setStack([]);}}}/>}
+    {player&&sharedPost?.owner===player.id&&<SharePost playerId={player.id} postId={sharedPost.id} text={sharedPost.text} onClose={()=>setSharedPost(undefined)}/> }
     {reactionNotice&&!showReceipt&&<ReactionTicker notice={reactionNotice} onOpen={()=>{void openThread(reactionNotice.postId);setReactionNotice(undefined);}} onClose={()=>setReactionNotice(undefined)}/>}
     {gainAnimation&&<FollowersFlight delta={gainAnimation.delta} nonce={gainAnimation.nonce}/>}
     {overlay && <Dialog title={{ exit: 'Выйти из мира?', streak: 'Серия дней', skills: 'Навыки и отношения', 'text-size': 'Размер текста', 'local-like': 'Реакция', quote: 'Цитата', about: 'Новая версия' }[overlay]} onClose={() => setOverlay(null)}>

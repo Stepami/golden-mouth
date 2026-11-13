@@ -53,7 +53,7 @@ export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views'
   bestComment?: Wire.BestCommentResponse; hook?: string
   completedWants?: Pick<Want, 'id' | 'text' | 'reward'>[]
 }
-export type LiveEvent = {type:'views';views:number}|{type:'typing';name:string}|{type:'react';emoji:string;count:number}|{type:'comment';comment:CommentT}|{type:'result';result:PostResult}
+export type LiveEvent = {type:'views';views:number}|{type:'typing';name:string}|{type:'react';emoji:string;count:number}|{type:'comment';comment:CommentT}|{type:'result';result:PostResult;post?:Post;predictedAuthorId?:string}|{type:'comment-error'}
 export type PublicationStatus = 'pending'|'generating'|'ready_for_moderation'|'completed'|'failed'
 export type PublicationFailure = {code:string}
 export type PublicationState = {status:PublicationStatus;result:PostResult|null;failure?:PublicationFailure}

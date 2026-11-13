@@ -1,3 +1,4 @@
+import {eveningTemplateId} from '../eveningAppearance';
 import scenarios from './roleScenarios.json' with {type:'json'};
 import type {WorldDefinition, WorldDocument} from '../../api/types';
 import type {Persona} from '../persona';
@@ -25,7 +26,7 @@ export function definitionForRole(base:WorldDefinition,roleId:string):WorldDefin
   firstContext:`${scenario.opening}\n\nТекущее задание: ${role.tasks[0].prompt}\nЦель персонажа: ${role.goal}`,
   stars:scenario.roles.filter(r=>r.id!=='custom'&&r.id!==roleId).map(r=>{
    const existing=base.stars.find(s=>s.id===r.id);
-   return {id:r.id,name:r.name,role:r.name,voice:'Самостоятельно отвечай с учётом своей цели и известных событий.',avatarSeed:existing?.avatarSeed??r.id,trait:existing?.trait??1,relation:0,about:r.goal};
+   return {id:r.id,name:r.name,role:r.name,voice:'Самостоятельно отвечай с учётом своей цели и известных событий.',avatarSeed:existing?.avatarSeed??r.id,trait:existing?.trait??1,relation:0,about:base.templateId===eveningTemplateId&&existing ? `${existing.about}\nЦель: ${r.goal}` : r.goal};
   }),
  };
 }

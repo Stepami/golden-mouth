@@ -18,7 +18,7 @@ export function Composer({
   name: string;
   avatar?: string;
   draft: string;
-  onDraft: (text: string) => void;
+  onDraft: (text: string, fromIdea?: boolean) => void;
   approach: Approach;
   onApproach: (a: Approach) => void;
   quest?: Quest;
@@ -41,7 +41,7 @@ export function Composer({
             <p>{quest.prompt}</p>
             <button
               className="link-button"
-              onClick={() => onDraft(quest.draft)}
+              onClick={() => onDraft(quest.draft, true)}
             >
               Помочь начать
             </button>

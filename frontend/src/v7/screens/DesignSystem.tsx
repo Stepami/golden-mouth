@@ -1,3 +1,7 @@
+import {ResultHistory} from '../publication/ResultHistory';
+import {player as examplePlayer,results as exampleResults} from '../../api/mock';
+import {ViewFilter,FeedFilter} from '../ui/FeedFilter';
+import {ActivityItem} from '../ui/ActivityItem';
 import { useState } from "react";
 import designTokens from "../design-tokens.json";
 import {
@@ -25,6 +29,8 @@ import { worlds } from "../domain/worlds";
 export function DesignSystem() {
   const night: Record<string, { $value: string }> = designTokens.$extensions.reki.modes.dark;
   const colors = Object.entries(designTokens.tokens).filter(([, token]) => token.$type === "color").map(([name, token]) => [name.replace("color-", ""), night[name]?.$value ?? String(token.$value)]);
+  const [activityFilter,setActivityFilter]=useState<'events'|'results'>('events');
+  const [feedFilter, setFeedFilter] = useState<'all' | 'mine'>('all');
   const [selected, setSelected] = useState("Все");
   const [dialog, setDialog] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -172,6 +178,8 @@ export function DesignSystem() {
               </Chip>
             ))}
           </div>
+          <h3>Переключение ленты / FeedFilter</h3>
+          <FeedFilter value={feedFilter} onChange={setFeedFilter}/>
           <h3>Иконки / Icon</h3>
           <div className="icon-gallery">
             {(
@@ -186,6 +194,7 @@ export function DesignSystem() {
                 "heart",
                 "comment",
                 "quote",
+                "trash",
               ] as IconName[]
             ).map((n) => (
               <div key={n}>
@@ -293,6 +302,19 @@ export function DesignSystem() {
               replyCount={2}
             />
           </div>
+          <h3>Уведомления: события и результаты</h3>
+          <ViewFilter value={activityFilter} onChange={setActivityFilter} options={[{value:'events',label:'События'},{value:'results',label:'Результаты'}]} label="Раздел уведомлений"/>
+          <p className="system-note">События: ответы, реакции и серия. Результаты: сохранённые итоги постов и комментариев. В истории нет автоскрытия, повторных начислений и наградных эффектов.</p>
+          <h3>История результата / ResultIsland · архив</h3>
+          <p className="system-note">Демонстрационный снимок: раскрытие не запускает наградные эффекты и начисления.</p>
+          <ResultHistory items={[{id:'example',createdAt:'2026-11-11T09:00:00+03:00',text:'Проверим обещание на конкретном примере.',receipt:{worldId:'example',actionId:'example',actionKind:'post',before:examplePlayer.skills,after:examplePlayer.skills,beforeSubscribers:examplePlayer.subs,result:exampleResults.normal}}]} onOpen={()=>setDialog(true)}/>
+          <h3>Уведомление / ActivityItem</h3>
+          <p className="caption muted">Заголовок — до двух строк. Текст — до трёх строк с многоточием. Нажатие открывает полный ответ. Прочитанная запись остаётся в списке.</p>
+          <div className="system-phone">
+            <ActivityItem title="Георгина Гречихина отвечает" actorName="Георгина Гречихина" text="Идея правильная, но давай сразу договоримся о правилах. Предлагаю разбирать по одной идее и сохранять ответы участников. Полный ответ откроется в обсуждении публикации, а здесь останется короткое превью." symbol="" read={false} onOpen={()=>setDialog(true)}/>
+            <ActivityItem title="Реакции на твой пост" text="Проверим обещание нового сервиса на конкретном примере, прежде чем спорить о его пользе." detail="Реакций: 12" symbol="♡" read={false} onOpen={()=>setDialog(true)}/>
+            <ActivityItem title="Первый день серии" text="Начало серии отмечено. Продолжи завтра постом или комментарием." symbol="🔥" read onOpen={()=>setDialog(true)}/>
+          </div>
           <h3>ProfileHeader + ProfileScore</h3>
           <div className="system-phone">
             <ProfileHeader
@@ -307,6 +329,7 @@ export function DesignSystem() {
             <ResumeWorld
               world={worlds[0]}
               subtitle="Гарри Поттер"
+              onDelete={()=>setDialog(true)}
               onClick={() => setDialog(true)}
             />
             <SettingsRow

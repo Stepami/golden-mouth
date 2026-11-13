@@ -1,3 +1,4 @@
+import {waitForTyping} from '../app/typingDelay';
 // Р¤Р°СЃР°Рґ API РїРѕРІРµСЂС… NSwag Fetch-РєР»РёРµРЅС‚Р°.
 // Р’Рѕ С„СЂРѕРЅС‚Рµ РќР•Рў СЃРµРєСЂРµС‚РѕРІ: runtime config РІРёРґРµРЅ РІ Р±СЂР°СѓР·РµСЂРµ. РљР»СЋС‡Рё LLM Рё С‚РѕРєРµРЅ Р±РѕС‚Р° Р¶РёРІСѓС‚ С‚РѕР»СЊРєРѕ РЅР° Р±СЌРєРµРЅРґРµ.
 import { clearPlayerDrafts } from '../app/postDraft';
@@ -142,13 +143,13 @@ async function loadPlayer(worldId?: string): Promise<Player> {
     });
 }
 export const api = {
-    clearSession: () => {
+    clearSession: (preserveDrafts = false) => {
         const playerId = sessionIdentity?.id ?? sessionPlayer?.id;
         endSession();
         playerRequests.clear();
         clearApiCache();
         if (playerId) {
-            clearPlayerDrafts(playerId);
+            if (!preserveDrafts) clearPlayerDrafts(playerId);
             clearAvatarPersonalization(playerId);
             try {
                 localStorage.removeItem(`reki:selected-world:v2:${playerId}`);
@@ -166,7 +167,7 @@ export const api = {
     },
     logout: async () => {
         await revokeSession();
-        api.clearSession();
+        api.clearSession(true);
     },
     energyWallet: () => data(sdk.player.getCurrentPlayer()).then(player=>{if(!player.energyWallet)throw Object.assign(new Error('Wallet is not supported by this API'),{code:'wallet_unavailable'});return map.energyWallet(player.energyWallet);}),
     exchangeEnergy: () => data(sdk.player.exchangeEnergy()).then(value=>({...value,wallet:value.wallet?map.energyWallet(value.wallet):null})),
@@ -201,17 +202,19 @@ export const api = {
     /** Р“РµРЅРµСЂР°С†РёСЏ, Р·Р°С‚РµРј РјРѕРґРµСЂР°С†РёСЏ Рё Р°РЅРёРјР°С†РёСЏ РјР°СЃСЃРёРІР° СЂРµР°РєС†РёР№; РїСЂРё РѕР±СЂС‹РІРµ СЃРІРµСЂСЏРµРј СЃРѕС…СЂР°РЅС‘РЅРЅС‹Р№ СЃС‚Р°С‚СѓСЃ. */
     publish(text: string, _id: string, onEvent: (e: LiveEvent) => void, onError: (state: 'failed' | 'unknown', reason?: PublicationFailure) => void, onStatus?: (status: PublicationStatus) => void, ownWords = true, wantId?: string, recoveryOnly = false): () => void {
         let cancelled = false;
+        const generation = sessionGeneration();
         const timer = setTimeout(() => {
             if (recoveryOnly) { onError('unknown'); return; }
             onStatus?.('generating');
             void api.createPost(text, ownWords, wantId).then(async response => {
-                if (cancelled) return;
+                if (cancelled || generation !== sessionGeneration()) return;
                 onStatus?.('completed');
-                onEvent({type:'result',result:response.result});
+                onEvent({type:'result',result:response.result,post:response.post,predictedAuthorId:response.predictedAuthorId});
                 const updatedPost = await api.initialComment(response.post.id, response.predictedAuthorId).catch(() => undefined);
-                if (cancelled) return;
+                if (cancelled || generation !== sessionGeneration()) return;
                 const comment = updatedPost?.comments.at(-1);
                 if (comment) onEvent({type: 'comment', comment});
+                else onEvent({type: 'comment-error'});
             }).catch(() => { if (!cancelled) onError('unknown'); });
         }, 0);
         return () => { cancelled = true; clearTimeout(timer); };
@@ -238,17 +241,20 @@ export const api = {
         const player = sessionPlayer;
         const replyWorldId = player?.worldInstanceId;
         if (!player || !replyWorldId) throw new Error('World must be loaded before this request');
+        let typing:{authorId:string;started:number}|undefined;
         const save = async (authorId: string, parentCommentId: string | null, id: string, content: string) => {
             const result = await data(sdk.posts.replyToPost(postId, replyWorldId, { authorId, commentId: parentCommentId, requestId: id, text: content }, options.signal));
             const saved = { post: map.post(result.post), energyLeft: Number(result.energyLeft), subscribers: Number(result.subscribers) };
             if (sessionPlayer?.id === player.id && sessionPlayer.worldInstanceId === replyWorldId)
                 sessionPlayer = { ...sessionPlayer, postsLeft: saved.energyLeft, subs: saved.subscribers };
+            if(options.onTyping&&typing?.authorId===authorId)await waitForTyping(typing.started,options.signal);
             options.onSaved?.(saved);
             return { ...saved, commentId: result.commentId };
         };
         const generate = async (authorId: string, sourceCommentId: string, additional: boolean) => {
             for (let attempt = 0; attempt < 2; attempt++) {
                 try {
+                    if(typing?.authorId!==authorId)typing={authorId,started:performance.now()};
                     options.onTyping?.(authorId);
                     let completed: { text: string; additionalStarId?: string | null } | undefined;
                     const response = await stream({ url: '/posts/{postId}/replies/generation', path: { postId }, query: { worldId: replyWorldId }, body: { authorId, sourceCommentId, additional } }, options.signal);

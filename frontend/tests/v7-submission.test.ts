@@ -4,7 +4,7 @@ import { submissionFor, publicationError } from '../src/v7/submission.ts';
 
 test('new publication does not submit retired quest selection', () => {
   const value = submissionFor({ text: 'before', ownWords: false, wantId: 'retired' }, 'new text', () => 'fresh');
-  assert.deepEqual(value, { id: 'fresh', text: 'new text', ownWords: true, wantId: undefined, recovery: false });
+  assert.deepEqual(value, { id: 'fresh', text: 'new text', ownWords: false, wantId: undefined, recovery: false });
 });
 test('unknown outcome preserves original id, text, mode and quest across reload', () => {
   const value = submissionFor({ text: 'edited after sending', ownWords: true, publicationId: 'same-id', submittedText: 'original', submittedOwnWords: false, submittedWantId: 'original-quest' }, 'different', () => { throw new Error('must not mint a duplicate'); });
@@ -15,10 +15,10 @@ test('older persisted draft can still recover without submittedText', () => {
   assert.equal(value.id, 'legacy-id'); assert.equal(value.text, 'saved'); assert.equal(value.ownWords, false); assert.equal(value.recovery, true);
 });
 
-test('unchanged prepared text keeps ownWords false; editing switches to own words', () => {
+test('prepared text keeps ownWords false after edits', () => {
   const saved = { text: 'prepared', ownWords: false };
   assert.equal(submissionFor(saved, 'prepared', () => 'new').ownWords, false);
-  assert.equal(submissionFor(saved, 'edited', () => 'new').ownWords, true);
+  assert.equal(submissionFor(saved, 'edited', () => 'new').ownWords, false);
 });
 
 test('technical and generated-response failures do not blame the player text', () => {
