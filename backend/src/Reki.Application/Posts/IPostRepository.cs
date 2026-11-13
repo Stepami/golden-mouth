@@ -18,7 +18,7 @@ public interface IPostRepository
     /// </summary>
     ValueTask<WorldPostsPage> GetPostsAsync(
         WorldId worldId,
-        AuthorId? authorId,
+        IReadOnlyCollection<AuthorId> authorIds,
         PostId? cursor,
         int pageSize,
         AuthorId? likedBy,

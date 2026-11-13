@@ -76,7 +76,7 @@ internal sealed class MongoPostRepository(
 
     public async ValueTask<WorldPostsPage> GetPostsAsync(
         WorldId worldId,
-        AuthorId? authorId,
+        IReadOnlyCollection<AuthorId> authorIds,
         PostId? cursor,
         int pageSize,
         AuthorId? likedBy,
@@ -84,9 +84,9 @@ internal sealed class MongoPostRepository(
     {
         var limit = pageSize + 1;
         var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId);
-        if (authorId is { } author)
+        if (authorIds.Count > 0)
         {
-            filter &= Builders<GamePost>.Filter.Eq(item => item.AuthorId, author);
+            filter &= Builders<GamePost>.Filter.In(item => item.AuthorId, authorIds);
         }
 
         if (cursor is { } before)
