@@ -44,7 +44,6 @@ export function friend(value: Input<Wire.FriendResponse>): Ui.Friend {
 export const challenge = (value: Input<Wire.ChallengeResponse> | null): Ui.Challenge | null => value ? ({ ...value, rival: friend(value.rival), day: number(value.day), days: number(value.days), myScore: number(value.myScore), rivalScore: number(value.rivalScore) }) : null
 export const dm = (value: Input<Wire.DmResponse>): Ui.Dm => ({ ...value, star: { ...value.star, channelSubscribers: value.star.channelSubscribers == null ? value.star.channelSubscribers : number(value.star.channelSubscribers) }, repliesLeft: number(value.repliesLeft) })
 export const feed = (value: Input<Wire.FeedItemResponse>): Ui.FeedItem => ({ ...value,
-  repostId: value.repostId ?? undefined, authorId: value.authorId ?? undefined, postId: value.postId ?? undefined, author: value.author ?? undefined, avatar: value.avatar ?? undefined, role: value.role ?? undefined, ago: value.ago ?? undefined, repost: value.repost ?? undefined,
-  likes: value.likes == null ? undefined : number(value.likes), likedBy: value.likedBy ?? undefined,
-  reactions: value.likes == null || value.likedBy == null ? undefined : reactions(value.likes, value.likedBy), views: value.views == null ? undefined : number(value.views), commentCount: value.commentCount == null ? undefined : number(value.commentCount),
+  repostId: value.repostId ?? undefined, likes: number(value.likes), likedBy: value.likedBy,
+  reactions: reactions(value.likes, value.likedBy), views: number(value.views), commentCount: number(value.commentCount),
 })

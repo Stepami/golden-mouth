@@ -101,7 +101,6 @@ function StarCard() {
 // только на свой postId с доступным ответом. Чужие карточки остаются в ленте.
 function FeedPostCard({ item, onChanged }: { item: FeedItem; onChanged: () => void }) {
   const nav = useNav()
-  const p = usePlayer()
   const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId, returnTo: 'feed' }) : undefined
   return (
     <Card style={{ marginBottom: 12, position: 'relative' }}>
@@ -114,7 +113,6 @@ function FeedPostCard({ item, onChanged }: { item: FeedItem; onChanged: () => vo
       >
         <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} mode={item.starId ? 'default' : 'profile'} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{item.starId && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
         {item.repostId && <div className="small muted">↻ Репост</div>}
-        {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>{p.name}</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
         <div style={{ marginTop: 12 }}><ExpandableText text={item.text} /></div>
         <QuotedPost repostId={item.repostId} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>

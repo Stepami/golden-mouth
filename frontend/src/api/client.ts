@@ -301,13 +301,12 @@ export const api = {
             throw new DOMException('World has changed', 'AbortError');
         return { ...page, items: page.items.map(map.feed) };
     },
-    togglePostLike: async (postId: string, signal?: AbortSignal): Promise<PostDetailResponse> => {
+    likePost: async (postId: string, signal?: AbortSignal): Promise<void> => {
         const player = sessionPlayer;
         try {
-            const post = await data(sdk.posts.togglePostLike(postId, worldId(), { authorId: playerAuthorId() }, signal));
+            await data(sdk.posts.likePost(postId, worldId(), { authorId: playerAuthorId() }, signal));
             if (sessionPlayer?.id !== player?.id || sessionPlayer?.worldInstanceId !== player?.worldInstanceId)
                 throw new DOMException('World has changed', 'AbortError');
-            return map.post(post);
         } finally {
             clearApiCache();
         }

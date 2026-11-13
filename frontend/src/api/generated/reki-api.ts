@@ -808,9 +808,9 @@ export class PostsClient {
     }
 
     /**
-     * @return OK
+     * @return No Content
      */
-    togglePostLike(postId: string, worldId: string, body: LikePostRequest, signal?: AbortSignal): Promise<SwaggerResponse<PostDetailResponse>> {
+    likePost(postId: string, worldId: string, body: LikePostRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
         let url_ = this.baseUrl + "/posts/{postId}/like?";
         if (postId === undefined || postId === null)
             throw new globalThis.Error("The parameter 'postId' must be defined.");
@@ -834,25 +834,23 @@ export class PostsClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processTogglePostLike(_response);
+            return this.processLikePost(_response);
         });
     }
 
-    protected processTogglePostLike(response: Response): Promise<SwaggerResponse<PostDetailResponse>> {
+    protected processLikePost(response: Response): Promise<SwaggerResponse<void>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
+        if (status === 204) {
             return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PostDetailResponse;
-            return new SwaggerResponse(status, _headers, result200);
+            return new SwaggerResponse(status, _headers, null as any);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<SwaggerResponse<PostDetailResponse>>(new SwaggerResponse(status, _headers, null as any));
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
@@ -2147,19 +2145,18 @@ export type FeedItemKind = "news" | "post";
 
 export interface FeedItemResponse {
     kind: FeedItemKind;
-    postId: string | null;
-    author: string | null;
-    avatar: string | null;
-    role: string | null;
-    ago: string | null;
+    postId: string;
+    author: string;
+    avatar: string;
+    role: string;
+    ago: string;
     text: string;
-    likes: number | null;
+    likes: number;
     likedBy: string[];
-    views: number | null;
-    commentCount: number | null;
-    repost: string | null;
+    views: number;
+    commentCount: number;
+    authorId: string;
     repostId?: string | null;
-    authorId?: string | null;
 
     [key: string]: any;
 }

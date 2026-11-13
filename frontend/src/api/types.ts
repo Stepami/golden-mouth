@@ -49,11 +49,9 @@ export type Friend = Omit<Fields<Wire.FriendResponse>, 'subs' | 'pronoun'> & { s
 export type Challenge = Omit<Fields<NonNullable<Wire.ChallengeResponse>>, 'rival' | 'day' | 'days' | 'myScore' | 'rivalScore'> & { rival: Friend; day: number; days: number; myScore: number; rivalScore: number }
 export type DmMessage = Wire.DirectMessageResponse
 export type Dm = Omit<Fields<Wire.DmResponse>, 'star' | 'repliesLeft'> & { star: Star; repliesLeft: number }
-// Feed rows omit absent wire values; demo rows also carry local catalog metadata.
-type FeedMetadata = Exclude<keyof Wire.FeedItemResponse, 'kind' | 'text' | 'views' | 'likes' | 'likedBy' | 'commentCount' | 'reactions'>
 export type PostsPage<T> = Pick<Wire.PageResponseOfFeedItemResponse, 'nextCursor'> & { items: T[] }
-export type FeedItem = Pick<Fields<Wire.FeedItemResponse>, 'kind' | 'text'> & { [K in FeedMetadata]?: NonNullable<Wire.FeedItemResponse[K]> } & {
-  postId?: string; likes?: number; likedBy?: string[]; reactions?: Reaction[]; views?: number; commentCount?: number; demo?: boolean; starId?: string; world?: WorldId
+export type FeedItem = Omit<Fields<Wire.FeedItemResponse>, 'views' | 'likes' | 'likedBy' | 'commentCount' | 'repostId'> & {
+  likes: number; likedBy: string[]; reactions: Reaction[]; views: number; commentCount: number; repostId?: string; demo?: boolean; starId?: string; world?: WorldId
 }
 export type WorldDocument = Omit<Fields<Wire.WorldResponse>, 'difficulty' | 'subscribers' | 'stars' | 'unlockSkill' | 'unlockLevel'> & {
   difficulty: WorldDifficulty; subscribers: number; lock?: World['lock']
