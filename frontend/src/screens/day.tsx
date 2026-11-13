@@ -13,7 +13,7 @@ import { contentOf, worldOf } from '../api/worldContent'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import { dm as dmMock, friends as friendsMock } from '../api/mock'
-import type { ChannelPost, DmMessage, Drama, FeedItem, PostDetailResponse } from '../api/types'
+import type { DmMessage, Drama, FeedItem, PostDetailResponse } from '../api/types'
 import { useNav } from '../app/nav'
 import { useApi } from '../app/useApi'
 import { usePostPages } from '../app/usePostPages'
@@ -115,7 +115,6 @@ function FeedPostCard({ item, onChanged, onLike, returnTo = 'feed' }: { item: Fe
       >
         <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} mode={item.starId ? 'default' : 'profile'} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{item.starId && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
         {item.repostId && <div className="small muted">↻ Репост</div>}
-        {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>{p.name}</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
         <div style={{ marginTop: 12 }}><ExpandableText text={item.text} /></div>
         <QuotedPost repostId={item.repostId} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
@@ -123,6 +122,7 @@ function FeedPostCard({ item, onChanged, onLike, returnTo = 'feed' }: { item: Fe
           {item.commentCount != null && item.views != null && <span className="small muted" style={{ whiteSpace: 'nowrap' }}>💬 {item.commentCount} · 👁 {short(item.views)}</span>}
         </div>
       </div>
+      {returnTo === 'channel' && item.repostId && !item.text.trim() && item.postId && <RepostAction postId={item.postId} undoOnly onChanged={onChanged} />}
       {item.authorId?.startsWith('Star_') && !item.repostId && item.postId && <RepostAction postId={item.postId} onChanged={onChanged} />}
     </Card>
   )
@@ -225,7 +225,7 @@ function Stage() {
   const cacheKey = `channel-keyset-v1:${p.id}:${p.worldInstanceId ?? p.world}`
   const [banner, setBanner] = useState(true)
   const loadPage = useCallback((cursor: string | undefined, signal: AbortSignal) => api.channelPosts(p.worldInstanceId, cursor, signal), [p.worldInstanceId])
-  const list = usePostPages<ChannelPost>(cacheKey, loadPage)
+  const list = usePostPages<FeedItem>(cacheKey, loadPage)
   const gestures = usePostListGestures(cacheKey, list, list.refresh)
   const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
   if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home /></div>
@@ -249,7 +249,7 @@ function Stage() {
         <Button secondary style={{ marginBottom: 10 }} onClick={() => nav.push('04-3_invite')}>Позвать друга</Button>
         {list.pending === 'first' && !list.ready && <Card><span className="small muted">загружаем посты…</span></Card>}
         {list.error === 'first' && <Card><div className="small">Не получилось загрузить канал. Потяни вниз от начала списка, чтобы повторить.</div></Card>}
-        {list.items.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId, returnTo: 'channel' })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.repostId && <div className="small muted">↻ Репост</div>}{post.text}<QuotedPost repostId={post.repostId} />{post.repostId && !post.text.trim() && <RepostAction postId={post.postId} undoOnly onChanged={() => { void list.refresh() }} />}<div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><PostLikeAction postId={post.postId} likes={post.likes} likedBy={post.likedBy} onSaved={saved => list.updateItems(items => items.map(item => item.postId === saved.postId ? { ...item, likes: saved.likes, likedBy: saved.likedBy } : item))} /><span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
+        {list.items.map(item => <FeedPostCard key={item.postId} item={item} returnTo="channel" onChanged={() => { void list.refresh() }} onLike={post => list.updateItems(items => items.map(item => item.postId === post.postId ? { ...item, likes: post.likes, likedBy: post.likedBy } : item))} />)}
         <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.error === 'more' ? 'Не получилось загрузить посты. Потяни вниз от начала списка, чтобы обновить.' : list.ready && !list.hasNext ? 'Все посты загружены' : ''}</div>
       </div>
       <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>

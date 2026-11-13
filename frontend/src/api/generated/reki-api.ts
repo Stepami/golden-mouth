@@ -808,65 +808,21 @@ export class PostsClient {
     }
 
     /**
-     * @return OK
-     */
-    togglePostLike(postId: string, worldId: string, body: LikePostRequest, signal?: AbortSignal): Promise<SwaggerResponse<PostDetailResponse>> {
-        let url_ = this.baseUrl + "/posts/{postId}/like?";
-        if (postId === undefined || postId === null)
-            throw new globalThis.Error("The parameter 'postId' must be defined.");
-        url_ = url_.replace("{postId}", encodeURIComponent("" + postId));
-        if (worldId === undefined || worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
-        else
-            url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_: RequestInit = {
-            body: content_,
-            method: "POST",
-            signal,
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processTogglePostLike(_response);
-        });
-    }
-
-    protected processTogglePostLike(response: Response): Promise<SwaggerResponse<PostDetailResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PostDetailResponse;
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<PostDetailResponse>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
      * @param cursor (optional) 
      * @param likedBy (optional) 
      * @param pageSize (optional) 
      * @return OK
      */
-    getLikedPosts(worldId: string, cursor?: string | undefined, likedBy?: string | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
-        let url_ = this.baseUrl + "/posts/liked?";
+    getPosts(worldId: string, authorIds: string[], cursor?: string | undefined, likedBy?: string | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
+        let url_ = this.baseUrl + "/posts?";
         if (worldId === undefined || worldId === null)
             throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
         else
             url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
+        if (authorIds === undefined || authorIds === null)
+            throw new globalThis.Error("The parameter 'authorIds' must be defined and cannot be null.");
+        else
+            authorIds && authorIds.forEach(item => { url_ += "authorIds=" + encodeURIComponent("" + item) + "&"; });
         if (cursor === null)
             throw new globalThis.Error("The parameter 'cursor' cannot be null.");
         else if (cursor !== undefined)
@@ -890,11 +846,11 @@ export class PostsClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetLikedPosts(_response);
+            return this.processGetPosts(_response);
         });
     }
 
-    protected processGetLikedPosts(response: Response): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
+    protected processGetPosts(response: Response): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -903,16 +859,54 @@ export class PostsClient {
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PageResponseOfFeedItemResponse;
             return new SwaggerResponse(status, _headers, result200);
             });
-        } else if (status === 400) {
-            return response.text().then((_responseText) => {
-            return throwException("Bad Request", status, _responseText, _headers);
-            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
         return Promise.resolve<SwaggerResponse<PageResponseOfFeedItemResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return No Content
+     */
+    likePost(postId: string, body: LikePostRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+        let url_ = this.baseUrl + "/posts/{postId}/like";
+        if (postId === undefined || postId === null)
+            throw new globalThis.Error("The parameter 'postId' must be defined.");
+        url_ = url_.replace("{postId}", encodeURIComponent("" + postId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(body);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            signal,
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processLikePost(_response);
+        });
+    }
+
+    protected processLikePost(response: Response): Promise<SwaggerResponse<void>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 204) {
+            return response.text().then((_responseText) => {
+            return new SwaggerResponse(status, _headers, null as any);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
@@ -1014,118 +1008,6 @@ export class PostsClient {
             });
         }
         return Promise.resolve<SwaggerResponse<FileResponse>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
-     * @param cursor (optional) 
-     * @param likedBy (optional) 
-     * @param pageSize (optional) 
-     * @return OK
-     */
-    getFeed(worldId: string, cursor?: string | undefined, likedBy?: string | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
-        let url_ = this.baseUrl + "/posts/feed?";
-        if (worldId === undefined || worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
-        else
-            url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
-        if (cursor === null)
-            throw new globalThis.Error("The parameter 'cursor' cannot be null.");
-        else if (cursor !== undefined)
-            url_ += "cursor=" + encodeURIComponent("" + cursor) + "&";
-        if (likedBy === null)
-            throw new globalThis.Error("The parameter 'likedBy' cannot be null.");
-        else if (likedBy !== undefined)
-            url_ += "likedBy=" + encodeURIComponent("" + likedBy) + "&";
-        if (pageSize === null)
-            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
-        else if (pageSize !== undefined)
-            url_ += "pageSize=" + encodeURIComponent("" + pageSize) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            signal,
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetFeed(_response);
-        });
-    }
-
-    protected processGetFeed(response: Response): Promise<SwaggerResponse<PageResponseOfFeedItemResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PageResponseOfFeedItemResponse;
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<PageResponseOfFeedItemResponse>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
-     * @param cursor (optional) 
-     * @param likedBy (optional) 
-     * @param pageSize (optional) 
-     * @return OK
-     */
-    getChannelPosts(worldId: string, cursor?: string | undefined, likedBy?: string | undefined, pageSize?: number | undefined, signal?: AbortSignal): Promise<SwaggerResponse<PageResponseOfChannelPostResponse>> {
-        let url_ = this.baseUrl + "/posts/mine?";
-        if (worldId === undefined || worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
-        else
-            url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
-        if (cursor === null)
-            throw new globalThis.Error("The parameter 'cursor' cannot be null.");
-        else if (cursor !== undefined)
-            url_ += "cursor=" + encodeURIComponent("" + cursor) + "&";
-        if (likedBy === null)
-            throw new globalThis.Error("The parameter 'likedBy' cannot be null.");
-        else if (likedBy !== undefined)
-            url_ += "likedBy=" + encodeURIComponent("" + likedBy) + "&";
-        if (pageSize === null)
-            throw new globalThis.Error("The parameter 'pageSize' cannot be null.");
-        else if (pageSize !== undefined)
-            url_ += "pageSize=" + encodeURIComponent("" + pageSize) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            signal,
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetChannelPosts(_response);
-        });
-    }
-
-    protected processGetChannelPosts(response: Response): Promise<SwaggerResponse<PageResponseOfChannelPostResponse>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PageResponseOfChannelPostResponse;
-            return new SwaggerResponse(status, _headers, result200);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<PageResponseOfChannelPostResponse>>(new SwaggerResponse(status, _headers, null as any));
     }
 
     /**
@@ -1965,19 +1847,6 @@ export interface ChallengeResponse {
     [key: string]: any;
 }
 
-export interface ChannelPostResponse {
-    postId: string;
-    text: string;
-    createdAtUtc: string;
-    views: number;
-    likes: number;
-    likedBy: string[];
-    commentCount: number;
-    repostId?: string | null;
-
-    [key: string]: any;
-}
-
 export interface ClientLogBatchRequest {
     session: string;
     entries: ClientLogEntryRequest[];
@@ -2147,19 +2016,18 @@ export type FeedItemKind = "news" | "post";
 
 export interface FeedItemResponse {
     kind: FeedItemKind;
-    postId: string | null;
-    author: string | null;
-    avatar: string | null;
-    role: string | null;
-    ago: string | null;
+    postId: string;
+    author: string;
+    avatar: string;
+    role: string;
+    ago: string;
     text: string;
-    likes: number | null;
+    likes: number;
     likedBy: string[];
-    views: number | null;
-    commentCount: number | null;
-    repost: string | null;
+    views: number;
+    commentCount: number;
+    authorId: string;
     repostId?: string | null;
-    authorId?: string | null;
 
     [key: string]: any;
 }
@@ -2221,13 +2089,6 @@ export interface OnboardingRequest {
     birthGroup: BirthGroup;
     ageBand?: string | null;
     address: OnboardingRequestAddress;
-
-    [key: string]: any;
-}
-
-export interface PageResponseOfChannelPostResponse {
-    items: ChannelPostResponse[];
-    nextCursor: string | null;
 
     [key: string]: any;
 }

@@ -20,7 +20,12 @@ internal sealed class WorldPostsQueryHandler(
         var world = worlds.GetValueOrDefault(query.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
 
-        if (query.Feed)
+        var authors = world.Stars
+            .Select(star => star.Id.ToAuthorId())
+            .Append(world.Player.PlayerId.ToAuthorId())
+            .ToHashSet();
+        var isFeed = authors.SetEquals(query.AuthorIds);
+        if (isFeed)
         {
             await feedScheduler.ScheduleFeedAsync(new ScheduleFromFeedRequest(
                 world.Player.PlayerId,
@@ -29,7 +34,7 @@ internal sealed class WorldPostsQueryHandler(
 
         return await postRepository.GetPostsAsync(
             world.Id,
-            query.Feed || query.Liked ? null : world.Player.PlayerId.ToAuthorId(),
+            isFeed ? [] : query.AuthorIds,
             query.Cursor,
             query.PageSize,
             query.LikedBy,

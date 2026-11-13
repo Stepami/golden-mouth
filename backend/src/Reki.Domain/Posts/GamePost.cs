@@ -8,6 +8,8 @@ public sealed record GamePost(
     WorldId WorldId,
     string Text,
     long Views,
+    long Likes,
+    IReadOnlyList<AuthorId> LikedBy,
     IReadOnlyList<GameComment> Comments,
     DateTimeOffset CreatedAtUtc,
     long SubscriberDelta,
@@ -20,12 +22,6 @@ public sealed record GamePost(
     string? FlopReason = null,
     PostId? RepostId = null)
 {
-    public long Likes { get; init; }
-
-    public IReadOnlyList<AuthorId> LikedBy { get; init; } = [];
-
-    public static long CalculateLikes(long views, int percentage) => (long)Math.Ceiling((decimal)views * percentage / 100);
-
     public GameComment? FindRequest(string requestId) =>
         Comments.FirstOrDefault(item => string.Equals(item.RequestId, requestId, StringComparison.Ordinal));
 
@@ -68,4 +64,17 @@ public sealed record GamePost(
 
         return this with { Comments = [.. Comments, .. comments], Version = Version + 1 };
     }
+
+    public GamePost ApplyProgress(PostProgression progression) =>
+        this with
+        {
+            SubscriberDelta = progression.SubscriberDelta,
+            Quality = progression.Quality,
+            Viral = progression.Viral,
+            Flop = progression.Flop,
+            Views = progression.Views,
+            Likes = progression.Likes,
+            PredictedAuthorId = progression.Commenter.ToAuthorId(),
+            FlopReason = progression.Score.FlopReason,
+        };
 }

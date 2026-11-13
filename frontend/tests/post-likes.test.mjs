@@ -2,11 +2,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { register } from 'node:module'
 register('./typescript-resolver.mjs', import.meta.url)
-const { post, channelPost, feed } = await import('../src/api/mappers.ts')
+const { post, feed } = await import('../src/api/mappers.ts')
 
-test('post detail and channel keep audience likes separate from personal marks', () => {
+test('post detail and feed preserve stored audience likes and personal marks', () => {
   const source = { postId: 'post', text: 'text', views: 100, likes: 7, likedBy: ['Player_one', 'Player_two'], comments: [], createdAtUtc: '2026-01-01T00:00:00Z', commentCount: 0 }
-  for (const mapped of [post(source), channelPost(source)]) {
+  for (const mapped of [post(source), feed({ ...source, kind: 'Post' })]) {
     assert.equal(mapped.likes, 7)
     assert.deepEqual(mapped.likedBy, ['Player_one', 'Player_two'])
     assert.equal(mapped.reactions, undefined)

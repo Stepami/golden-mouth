@@ -34,7 +34,6 @@ export function energyWallet(value: Input<Wire.EnergyWalletResponse>): Wire.Ener
 }
 export const comment = (value: Input<Wire.CommentResponse>): Ui.CommentT => ({ ...value, depth: number(value.depth) })
 export const post = (value: Input<Wire.PostDetailResponse>): Ui.PostDetailResponse => ({ ...value, views: number(value.views), likes: number(value.likes), likedBy: value.likedBy, comments: value.comments.map(comment) })
-export const channelPost = (value: Input<Wire.ChannelPostResponse>): Ui.ChannelPost => ({ ...value, views: number(value.views), likes: number(value.likes), likedBy: value.likedBy, commentCount: number(value.commentCount) })
 export const result = (value: Input<Wire.PostResultResponse>): Ui.PostResult => ({ ...value, delta: number(value.delta), views: number(value.views), bestComment: value.bestComment ?? undefined, ribbons: value.ribbons.map(ribbon => ({ ...ribbon, sub: ribbon.sub ?? undefined })) })
 export function friend(value: Input<Wire.FriendResponse>): Ui.Friend {
   if (value.pronoun !== 'её' && value.pronoun !== 'его') throw new Error('Unknown friend pronoun')
@@ -43,7 +42,7 @@ export function friend(value: Input<Wire.FriendResponse>): Ui.Friend {
 export const challenge = (value: Input<Wire.ChallengeResponse> | null): Ui.Challenge | null => value ? ({ ...value, rival: friend(value.rival), day: number(value.day), days: number(value.days), myScore: number(value.myScore), rivalScore: number(value.rivalScore) }) : null
 export const dm = (value: Input<Wire.DmResponse>): Ui.Dm => ({ ...value, star: { ...value.star, channelSubscribers: value.star.channelSubscribers == null ? value.star.channelSubscribers : number(value.star.channelSubscribers) }, repliesLeft: number(value.repliesLeft) })
 export const feed = (value: Input<Wire.FeedItemResponse>): Ui.FeedItem => ({ ...value,
-  repostId: value.repostId ?? undefined, authorId: value.authorId ?? undefined, postId: value.postId ?? undefined, author: value.author ?? undefined, avatar: value.avatar ?? undefined, role: value.role ?? undefined, ago: value.ago ?? undefined, repost: value.repost ?? undefined,
+  repostId: value.repostId ?? undefined, authorId: value.authorId ?? undefined, postId: value.postId ?? undefined, author: value.author ?? undefined, avatar: value.avatar ?? undefined, role: value.role ?? undefined, ago: value.ago ?? undefined,
   likes: value.likes == null ? undefined : number(value.likes), likedBy: value.likedBy ?? undefined,
   views: value.views == null ? undefined : number(value.views), commentCount: value.commentCount == null ? undefined : number(value.commentCount),
 })

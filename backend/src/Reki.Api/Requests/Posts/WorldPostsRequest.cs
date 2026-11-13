@@ -20,6 +20,12 @@ public sealed record WorldPostsRequest : IValidatableObject
     [FromQuery(Name = "cursor")]
     public PostId? Cursor { get; init; }
 
+    [Required]
+    [BindRequired]
+    [MinLength(1)]
+    [FromQuery(Name = "authorIds")]
+    public required AuthorId[] AuthorIds { get; init; }
+
     [FromQuery(Name = "likedBy")]
     public AuthorId? LikedBy { get; init; }
 

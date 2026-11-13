@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { fmt, short } from './index'
 import './postLikes.css'
 
-/** Values are confirmed by the API; a personal mark never changes audience likes. */
+/** The count and personal mark are confirmed by the API. */
 export function PostLikes({ count, marked, onMark }: {
   count: number
   marked: boolean
@@ -21,8 +21,8 @@ export function PostLikes({ count, marked, onMark }: {
   }
   return <div className="post-likes" onClick={event => event.stopPropagation()}>
     <button type="button" className={`react post-like-toggle${animate ? ' post-like-animated' : ''}`} aria-pressed={marked}
-      aria-label={`${marked ? 'Убрать личную отметку' : 'Отметить пост для себя'}; лайки аудитории: ${fmt(count)}`}
-      title={`${marked ? 'Убрать личную отметку' : 'Отметить пост для себя'}. Лайки аудитории: ${fmt(count)}`}
+      aria-label={`${marked ? 'Убрать личную отметку' : 'Отметить пост для себя'}; лайков: ${fmt(count)}`}
+      title={`${marked ? 'Убрать личную отметку' : 'Отметить пост для себя'}. Лайков: ${fmt(count)}`}
       disabled={pending} aria-busy={pending} onClick={() => void toggle()}>
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" /></svg>
       <span className="post-likes-count" aria-hidden="true">{short(count)}</span>

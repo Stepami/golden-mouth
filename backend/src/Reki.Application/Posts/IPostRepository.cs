@@ -9,7 +9,8 @@ public interface IPostRepository
     ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken);
 
     ValueTask<IReadOnlyList<PostSimilarity>> FindSimilarPostsAsync(
-        GamePost post, double threshold, CancellationToken cancellationToken);
+        GamePost post,
+        double threshold);
 
     /// <summary>
     /// Reads posts in a world whose ownership the application has already verified.
@@ -17,24 +18,17 @@ public interface IPostRepository
     /// </summary>
     ValueTask<WorldPostsPage> GetPostsAsync(
         WorldId worldId,
-        AuthorId? authorId,
+        IReadOnlyCollection<AuthorId> authorIds,
         PostId? cursor,
         int pageSize,
         AuthorId? likedBy,
         CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Reads a post only in the world whose ownership the application has already verified.
-    /// </summary>
     ValueTask<GamePost?> GetPostAsync(
         PostId postId,
-        WorldId worldId,
         CancellationToken cancellationToken);
 
-    ValueTask<GamePost?> ToggleLikeAsync(PostId postId, WorldId worldId, AuthorId authorId, CancellationToken cancellationToken);
-
-    /// <summary>Reads a story candidate; the caller must verify world ownership before exposing it.</summary>
-    ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken);
+    ValueTask LikePostAsync(PostId postId, AuthorId authorId, bool like, CancellationToken cancellationToken);
 
     ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken);
 

@@ -1,7 +1,6 @@
 using System.Globalization;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Feed;
-using Reki.Application.Posts.Responses.ChannelPost;
 using Reki.Application.Posts.Responses.Comment;
 using Reki.Application.Posts.Responses.FeedItem;
 using Reki.Application.Posts.Responses.PostDetail;
@@ -59,24 +58,9 @@ public static partial class PostResponseMapper
             post.LikedBy,
             post.Views,
             post.Comments.Count,
-            null,
-            post.RepostId,
-            post.AuthorId);
+            post.AuthorId,
+            post.RepostId);
     }
-
-    [MapProperty(nameof(GamePost.Id), nameof(ChannelPostResponse.PostId))]
-    [MapProperty("Comments.Count", nameof(ChannelPostResponse.CommentCount))]
-    [MapperIgnoreSource(nameof(GamePost.AuthorId))]
-    [MapperIgnoreSource(nameof(GamePost.WorldId))]
-    [MapperIgnoreSource(nameof(GamePost.SubscriberDelta))]
-    [MapperIgnoreSource(nameof(GamePost.Quality))]
-    [MapperIgnoreSource(nameof(GamePost.ReachRatio))]
-    [MapperIgnoreSource(nameof(GamePost.Viral))]
-    [MapperIgnoreSource(nameof(GamePost.Flop))]
-    [MapperIgnoreSource(nameof(GamePost.Version))]
-    [MapperIgnoreSource(nameof(GamePost.PredictedAuthorId))]
-    [MapperIgnoreSource(nameof(GamePost.FlopReason))]
-    public static partial ChannelPostResponse MapChannelPost(this GamePost post);
 
     public static PostDetailResponse MapPost(this GamePost post, World world, PlayerId playerId) =>
         new(
@@ -86,7 +70,7 @@ public static partial class PostResponseMapper
             post.Views,
             post.Likes,
             post.LikedBy,
-            post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray(),
+            [.. post.Comments.Select(comment => MapComment(post, comment, world, playerId))],
             post.RepostId);
 
     private static CommentResponse MapComment(GamePost post, GameComment comment, World world, PlayerId playerId)

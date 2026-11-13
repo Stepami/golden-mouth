@@ -51,7 +51,6 @@ internal sealed class GameBalanceOptionsFactory(
                     item.GetRequiredSection("drama").GetChildren().ToDictionary(
                         entry => Enum.Parse<WorldDrama>(entry.Key, ignoreCase: true),
                         entry => new DramaBalance(entry.GetValue<double>("hate_x"), entry.GetValue<int>("threshold_steps"), entry.GetValue<double>("loss_multiplier"))),
-                    item.GetSection("reason_priority").GetChildren().Select(entry => entry.Value ?? string.Empty).ToArray(),
                     item["emotion_tie_break"] ?? "sad_tone"));
 
         if (levelThresholds.Count != 10 ||

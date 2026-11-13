@@ -19,7 +19,7 @@ export function PostLikeAction({ postId, likes, likedBy, onSaved }: {
     onSaved(saved)
     track('tap', { to: 'post_mark', own: saved.likedBy.includes(author), id: postId })
   }
-  return <PostLikes key={scope} count={likes} marked={likedBy.includes(author)} onMark={async desired => {
+  return <PostLikes key={scope} count={likes + likedBy.length} marked={likedBy.includes(author)} onMark={async desired => {
     try {
       const saved = await api.togglePostLike(postId)
       confirmed(saved)

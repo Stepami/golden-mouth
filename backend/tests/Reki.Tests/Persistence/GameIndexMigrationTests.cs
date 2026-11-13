@@ -735,6 +735,8 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
             WorldId.From(Guid.Parse("e3791532-36fe-4109-84d5-ab7ca537e12a")),
             "post",
             10,
+            0,
+            [],
             [],
             DateTimeOffset.UnixEpoch,
             0,
@@ -1321,7 +1323,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
     private static BsonDocument CreatePost(string id, bool bsonDateTime)
     {
-        var document = new GamePost(PostId.New(CreatedAt), PlayerId.From(Guid.Parse("a96fb5ddf0564809a1d2bb5ed78a210f")).ToAuthorId(), WorldId.From(Guid.Parse("e3791532-36fe-4109-84d5-ab7ca537e12a")), id, 123, [], CreatedAt, 7, 0.8, 1.2, false, false, 5).ToBsonDocument();
+        var document = new GamePost(PostId.New(CreatedAt), PlayerId.From(Guid.Parse("a96fb5ddf0564809a1d2bb5ed78a210f")).ToAuthorId(), WorldId.From(Guid.Parse("e3791532-36fe-4109-84d5-ab7ca537e12a")), id, 123, 0, [], [], CreatedAt, 7, 0.8, 1.2, false, false, 5).ToBsonDocument();
         document["_id"] = id;
         document["Extra"] = new BsonDocument("Retained", true);
         if (bsonDateTime)
