@@ -1151,7 +1151,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task Likes_RejectsInvalidRequestsAsync()
+    public async Task Likes_RejectsInvalidFilters_AllowsKnownPostIdAsync()
     {
         const long user = 8203;
         var (postId, _) = await PublishPostForThreadAsync(user);
@@ -1160,17 +1160,15 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var player = await GetStoredPlayerAsync(user);
         var playerGuid = player["_id"].AsBsonBinaryData.ToGuid();
         var authorId = $"Player_{playerGuid:N}";
-        var before = await GetStoredPostAsync(postId);
-
         var missingAuthor = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetLikedPostsAsync(worldId, null, null, null, CancellationToken.None));
         var invalidAuthor = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetLikedPostsAsync(worldId, null, "invalid", null, CancellationToken.None));
         await Assert.That(missingAuthor?.StatusCode).IsEqualTo((int)HttpStatusCode.BadRequest);
         await Assert.That(invalidAuthor?.StatusCode).IsEqualTo((int)HttpStatusCode.BadRequest);
         using var otherApi = Factory.CreateApiClient(8205);
         await CreatePlayerWithWorldAsync(otherApi);
-        var foreignPost = await Assert.ThrowsAsync<PostsApiException>(() => otherApi.Posts.LikePostAsync(postId, new LikePostRequest { AuthorId = AuthorId.From(authorId) }, CancellationToken.None));
-        await Assert.That(foreignPost?.StatusCode).IsEqualTo((int)HttpStatusCode.NotFound);
-        await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(before);
+        await otherApi.Posts.LikePostAsync(postId, new LikePostRequest { AuthorId = AuthorId.From(authorId) }, CancellationToken.None);
+        var saved = await GetStoredPostAsync(postId);
+        await Assert.That(saved["LikedBy"].AsBsonArray.Single().AsString).IsEqualTo(authorId);
     }
 
     private Task<GamePost> ReadPostAsync(string id) =>

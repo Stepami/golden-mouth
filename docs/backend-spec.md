@@ -184,7 +184,7 @@ Token JSON содержит `token_type=Bearer`, `access_token`, `expires_in`, `
 | `POST /posts/:id/replies/generation?worldId=…` `{ authorId, sourceCommentId: string | null, additional }` (SSE) | `{ status, authorId, text?, additionalStarId?, code? }`; только текст, без записи; null — первый корневой комментарий | 02-2, 02-6 |
 | `GET /posts/:id?worldId=…` | `PostDetail`: текст, просмотры, `likes`, `likedBy`, готовые авторы комментариев, `parentCommentId`, `requestId`, `depth`, реакции комментария, `authorId`; доступ через владельца мира | 02-6 |
 | `GET /posts/mine` | Страница постов текущего игрока, newest-first; `postId`, текст, время, просмотры, `likes`, `likedBy` и число комментариев | 03-5 |
-| `POST /posts/:id/like` `{ authorId }` | Переключает авторский лайк; `worldId` не передаётся, ответа с постом нет, действие бесплатно | 02-6, 03-3, 03-5 |
+| `POST /posts/:id/like` `{ authorId }` | Переключает авторский лайк по `postId` без проверки мира; `worldId` не передаётся, ответа с постом нет, действие бесплатно | 02-6, 03-3, 03-5 |
 | `GET /posts/liked?worldId=…&likedBy=…` | Страница постов выбранного мира с указанным автором в `LikedBy`; `likedBy` обязателен, фильтр применяется до пагинации | 05-5 |
 | `GET /invitation` | `{ bonus }`: бонус за первый пост по неиспользованному инвайту, либо 0. Отдельный метод PlayerController; фронтенд запрашивает только для пустого канала, ошибка подсказки не блокирует публикацию | 01-6 |
 | `GET /referral` | `{ code }`: стабильный уникальный `ref_<PlayerId>` текущего авторизованного игрока; без Telegram ID и секретов, lookup через существующий `_id` | 04-3, 02-7 |
