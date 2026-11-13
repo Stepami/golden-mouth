@@ -97,12 +97,12 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
             services.RemoveAll<IValidateOptions<NliOptions>>();
             var nli = Substitute.For<INliScorer>();
-            nli.ScoreAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>())
+            nli.ScoreAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<string>>())
                 .Returns(call => ValueTask.FromResult<IReadOnlyList<NliScores>>(
                     call.ArgAt<IReadOnlyList<string>>(1).Select(_ => new NliScores(0.5, 0.5)).ToArray()));
             services.Replace(ServiceDescriptor.Singleton(nli));
             var classifier = Substitute.For<IClassifier>();
-            classifier.ClassifyAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            classifier.ClassifyAsync(Arg.Any<string>(), Arg.Any<string>())
                 .Returns(Task.FromResult<IReadOnlyDictionary<string, double>>(new Dictionary<string, double>
                 {
                     ["insult"] = 0,

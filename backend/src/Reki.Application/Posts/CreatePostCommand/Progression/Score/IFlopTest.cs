@@ -1,6 +1,6 @@
 using Reki.Domain.Posts;
 
-namespace Reki.Application.Posts.CreatePostCommand;
+namespace Reki.Application.Posts.CreatePostCommand.Progression.Score;
 
 public interface IFlopTest
 {

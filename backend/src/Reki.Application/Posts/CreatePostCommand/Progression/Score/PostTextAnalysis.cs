@@ -6,7 +6,7 @@ using Reki.Application.Posts.ML;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
-namespace Reki.Application.Posts.CreatePostCommand.Score;
+namespace Reki.Application.Posts.CreatePostCommand.Progression.Score;
 
 internal sealed partial class PostTextAnalysis(
     IClassifier classifier,
@@ -25,13 +25,12 @@ internal sealed partial class PostTextAnalysis(
     }
 
     public Task<IReadOnlyDictionary<string, double>> ClassifyAsync(string model, string text) =>
-        classifier.ClassifyAsync(model, text, context.Current.CancellationToken);
+        classifier.ClassifyAsync(model, text);
 
     public async Task<double[]> SkillsAsync(
         GamePost post,
         World world,
-        bool ownWords,
-        CancellationToken cancellationToken)
+        bool ownWords)
     {
         if (post.RepostId is not null && string.IsNullOrWhiteSpace(post.Text))
         {
@@ -39,15 +38,15 @@ internal sealed partial class PostTextAnalysis(
         }
 
         string[] hypotheses = ["Автор смело выражает своё мнение.", "Текст содержит юмор или шутку."];
-        var scores = await nli.ScoreAsync(post.Text, hypotheses, cancellationToken);
+        var scores = await nli.ScoreAsync(post.Text, hypotheses);
 
         if (!ownWords || post.RepostId is not null)
         {
             return [scores[0].Entailment, scores[1].Entailment, 1d];
         }
 
-        var postVector = await postEmbedder.GenerateVectorAsync(post, cancellationToken: cancellationToken);
-        var worldVector = await worldEmbedder.GenerateVectorAsync(world, cancellationToken: cancellationToken);
+        var postVector = await postEmbedder.GenerateVectorAsync(post);
+        var worldVector = await worldEmbedder.GenerateVectorAsync(world);
         var similarity = TensorPrimitives.CosineSimilarity(postVector.Span, worldVector.Span);
         var topic = similarity >= (float)context.Current.Balance.Difficulties[world.Difficulty].TopicMinCosine ? 1d : 0d;
 

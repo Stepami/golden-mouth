@@ -4,14 +4,14 @@ using Reki.Application.Balance;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.AI.Serializers;
-using Reki.Application.Posts.CreatePostCommand;
-using Reki.Application.Posts.CreatePostCommand.FlopTests;
 using Reki.Application.Posts.CreatePostCommand.Progression;
-using Reki.Application.Posts.CreatePostCommand.Score;
+using Reki.Application.Posts.CreatePostCommand.Progression.Score;
+using Reki.Application.Posts.CreatePostCommand.Progression.Score.FlopTests;
 using Reki.Application.Posts.ML;
 using Reki.Application.Telemetry;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
+using PostTextAnalysis = Reki.Application.Posts.CreatePostCommand.Progression.Score.PostTextAnalysis;
 
 namespace Reki.Application;
 

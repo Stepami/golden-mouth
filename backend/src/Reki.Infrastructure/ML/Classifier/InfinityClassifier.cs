@@ -11,18 +11,15 @@ internal sealed class InfinityClassifier(
 {
     public async Task<IReadOnlyDictionary<string, double>> ClassifyAsync(
         string model,
-        string text,
-        CancellationToken cancellationToken)
+        string text)
     {
         using var response = await client.PostAsJsonAsync(
             "classify",
             new ClassifyRequest(model, [text]),
-            jsonOptions.Value,
-            cancellationToken);
+            jsonOptions.Value);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ClassifyResponse>(
-            jsonOptions.Value,
-            cancellationToken) ?? throw new InvalidOperationException("Infinity returned no classification.");
+            jsonOptions.Value) ?? throw new InvalidOperationException("Infinity returned no classification.");
         return result.Data.Single().ToDictionary(item => item.Label, item => item.Score, StringComparer.Ordinal);
     }
 }

@@ -5,7 +5,7 @@
   "posts": {
     "free_per_day": 10,
     "plus_per_day": 20,
-    "invite_bonus_both": 5,
+    "invite_bonus_both": 1,
     "plus_interest_bonus_once": 5,
     "streak_day3_bonus": 2
   },

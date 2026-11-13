@@ -1,7 +1,6 @@
-using Reki.Application.Posts.CreatePostCommand.Score;
 using Reki.Domain.Posts;
 
-namespace Reki.Application.Posts.CreatePostCommand.FlopTests;
+namespace Reki.Application.Posts.CreatePostCommand.Progression.Score.FlopTests;
 
 internal sealed class NearCopyFlopTest(
     IPostRepository posts,
@@ -12,8 +11,9 @@ internal sealed class NearCopyFlopTest(
 
     public async Task<FlopTestResult> IsFlopAsync(GamePost post)
     {
-        var current = context.Current;
-        var history = await posts.FindSimilarPostsAsync(post, analysis.Threshold("near_copy_cosine"), current.CancellationToken);
+        var history = await posts.FindSimilarPostsAsync(
+            post,
+            analysis.Threshold("near_copy_cosine"));
         return history.Count > 0
             ? FlopTestResult.Flop("near_copy")
             : FlopTestResult.Ok;

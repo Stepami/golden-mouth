@@ -9,7 +9,8 @@ public interface IPostRepository
     ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken);
 
     ValueTask<IReadOnlyList<PostSimilarity>> FindSimilarPostsAsync(
-        GamePost post, double threshold, CancellationToken cancellationToken);
+        GamePost post,
+        double threshold);
 
     /// <summary>
     /// Reads posts in a world whose ownership the application has already verified.

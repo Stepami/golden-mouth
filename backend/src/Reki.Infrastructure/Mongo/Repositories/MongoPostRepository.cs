@@ -36,9 +36,10 @@ internal sealed class MongoPostRepository(
     }
 
     public async ValueTask<IReadOnlyList<PostSimilarity>> FindSimilarPostsAsync(
-        GamePost post, double threshold, CancellationToken cancellationToken)
+        GamePost post,
+        double threshold)
     {
-        var embedding = await embeddingGenerator.GenerateVectorAsync(post, cancellationToken: cancellationToken);
+        var embedding = await embeddingGenerator.GenerateVectorAsync(post);
         var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, post.WorldId) &
                      Builders<GamePost>.Filter.Eq(item => item.AuthorId, post.AuthorId);
         var match = filter.Render(new RenderArgs<GamePost>(_posts.DocumentSerializer, _posts.Settings.SerializerRegistry));
@@ -65,9 +66,10 @@ internal sealed class MongoPostRepository(
             }),
             new BsonDocument("$match", new BsonDocument("score", new BsonDocument("$gte", threshold))),
         };
-        using var cursor = await database.GetCollection<BsonDocument>(MongoCollections.Posts)
-            .AggregateAsync<BsonDocument>(pipeline, cancellationToken: cancellationToken);
-        var documents = await cursor.ToListAsync(cancellationToken);
+        using var cursor = await database
+            .GetCollection<BsonDocument>(MongoCollections.Posts)
+            .AggregateAsync<BsonDocument>(pipeline);
+        var documents = await cursor.ToListAsync();
         return documents.Select(item => new PostSimilarity(
             PostId.From(item["_id"].AsGuid), item["Text"].AsString, item["score"].ToDouble())).ToArray();
     }

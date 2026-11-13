@@ -1,7 +1,6 @@
 using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Reki.Domain.Posts;
 using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
@@ -18,7 +17,9 @@ internal sealed class AddPostLikes : RekiMigrationBase
         await foreach (var post in cursor.ToAsyncEnumerable().WithCancellation(cancellationToken))
         {
             var filter = Builders<BsonDocument>.Filter.Eq("_id", post["_id"]) & missing;
-            var likes = GamePost.CalculateLikes(post["Views"].ToInt64(), Random.Shared.Next(2, 11));
+            var percentage = Random.Shared.Next(2, 11);
+            var views = post["Views"].ToInt64();
+            var likes = (long)Math.Ceiling((decimal)views * percentage / 100);
             var update = Builders<BsonDocument>.Update.Set("Likes", likes).Set("LikedBy", new BsonArray()).Unset("ReactionEmoji");
             await posts.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken);
         }

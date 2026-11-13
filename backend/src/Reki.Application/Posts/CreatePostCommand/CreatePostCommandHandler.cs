@@ -8,8 +8,6 @@ using Reki.Application.Player;
 using Reki.Application.Posts.AI.Post;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.CreatePostCommand.Progression;
-using Reki.Application.Posts.CreatePostCommand.Score;
-using Reki.Application.Posts.ML;
 using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.PostResult;
 using Reki.Application.RekiContext;
@@ -29,8 +27,6 @@ internal sealed class CreatePostCommandHandler(
     IInvitationRepository invitations,
     IOptionsMonitor<GameBalance> balance,
     PostProgressionCalculator progressionCalculator,
-    PostScorer scorer,
-    IStarVectorStore stars,
     IRekiContextAccessor contextAccessor,
     PlayerSafetyGuard safety,
     TimeProvider timeProvider,
@@ -61,7 +57,7 @@ internal sealed class CreatePostCommandHandler(
             player.Id.ToAuthorId(),
             world.Id,
             command.Text,
-            Random.Shared.NextInt64(world.Player.Subscribers + 1),
+            0,
             [],
             now,
             0,
@@ -70,36 +66,28 @@ internal sealed class CreatePostCommandHandler(
             false,
             false,
             RepostId: command.RepostId);
-        var score = await scorer.ScoreAsync(post, world, currentBalance, command.OwnWords, cancellationToken);
-        var starId = await stars.GetRelevantCommenterAsync(world, post);
-        var flopReason = score.FlopReason ?? (score.Topic > 0 ? null : "off_topic");
-        var flop = flopReason is not null;
-        var progression = progressionCalculator.Calculate(
+
+        var progression = await progressionCalculator.CalculateAsync(
             player,
             world,
-            score,
-            command.OwnWords,
-            post.Id.ToString(),
-            flop,
-            post.RepostId is not null);
-        var updatedWorld = world.PublishPost(
-            progression.SubscriberDelta,
-            progression.Viral,
-            progression.Skills);
-        var updated = player.SpendPost(progression.Skills, currentBalance.PostEnergyCost, now) with
-        {
-            HitOwnWorldMilestone = player.HitOwnWorldMilestone ||
-                                   updatedWorld.Player.Subscribers >= currentBalance.OwnWorldSubscribers,
-        };
-        post = post with
-        {
-            SubscriberDelta = progression.SubscriberDelta, Quality = progression.Quality, Viral = progression.Viral,
-            Flop = progression.Flop, Likes = GamePost.CalculateLikes(post.Views, Random.Shared.Next(currentBalance.LikesMinPercent, currentBalance.LikesMaxPercent + 1)), PredictedAuthorId = starId.ToAuthorId(),
-            FlopReason = flopReason,
-        };
+            post,
+            command.OwnWords);
+        post = post.ApplyProgress(progression);
+
+        var updatedWorld = world.PublishPost(progression);
+        var hitOwnMilestone =
+            player.HitOwnWorldMilestone ||
+            updatedWorld.Player.Subscribers >= currentBalance.OwnWorldSubscribers;
+        var updated = player.SpendPost(
+            progression.Skills,
+            currentBalance.PostEnergyCost,
+            now,
+            hitOwnMilestone);
+
         var invite = await invitations.GetPendingInviteAsync(player.Id, cancellationToken);
         var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
         updated = updated with { Wallet = updated.Wallet.Replenish(updatedInvite?.BonusAmount ?? 0) };
+
         await unitOfWork.ExecuteAsync(
             async token =>
             {
@@ -121,10 +109,10 @@ internal sealed class CreatePostCommandHandler(
             },
             cancellationToken);
         telemetry.TrackWorldAudience(updatedWorld);
-        TrackProgression(player, updated, world, updatedWorld, post, score, telemetry);
+        TrackProgression(player, updated, world, updatedWorld, post, progression.Score, telemetry);
         await feedScheduler.ScheduleFeedAsync(new ScheduleFromPostRequest(player.Id, world.Id, post.Id));
         var headline = post.Viral ? "Пост залетел" : "Канал растёт";
-        var reason = score.FlopReason switch
+        var reason = progression.Score.FlopReason switch
         {
             "angry_abuse" => "Агрессивные оскорбления",
             "near_copy" => "Похожий пост уже был",
@@ -139,7 +127,7 @@ internal sealed class CreatePostCommandHandler(
         }
 
         whys.Add(
-            score.Topic > 0
+            progression.Score.Topic > 0
                 ? new WhyResponse("🎯", "В тему", string.Empty)
                 : new WhyResponse("👎", "Не в тему", string.Empty));
 
@@ -153,7 +141,11 @@ internal sealed class CreatePostCommandHandler(
             post.Viral,
             post.Flop,
             post.Views);
-        return new CreatePostResponse(post.MapPost(updatedWorld, player.Id), result, starId.ToAuthorId());
+
+        return new CreatePostResponse(
+            post.MapPost(updatedWorld, player.Id),
+            result,
+            progression.Commenter.ToAuthorId());
     }
 
     private static void TrackProgression(

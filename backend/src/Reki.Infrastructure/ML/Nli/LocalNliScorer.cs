@@ -23,10 +23,8 @@ internal sealed class LocalNliScorer : INliScorer, IDisposable
 
     public ValueTask<IReadOnlyList<NliScores>> ScoreAsync(
         string premise,
-        IReadOnlyList<string> hypotheses,
-        CancellationToken cancellationToken)
+        IReadOnlyList<string> hypotheses)
     {
-        cancellationToken.ThrowIfCancellationRequested();
         var rows = hypotheses.Select(hypothesis => EncodePair(_tokenizer, premise, hypothesis))
             .ToArray();
         var width = rows.Max(row => row.Ids.Length);
@@ -61,7 +59,6 @@ internal sealed class LocalNliScorer : INliScorer, IDisposable
             scores[index] = new NliScores(entailment / total, notEntailment / total);
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
         return ValueTask.FromResult<IReadOnlyList<NliScores>>(scores);
 
         static (long[] Ids, long[] Types) EncodePair(BertTokenizer tokenizer, string premise, string hypothesis)
