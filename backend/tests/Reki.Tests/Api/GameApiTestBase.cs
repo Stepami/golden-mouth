@@ -96,6 +96,16 @@ public abstract class GameApiTestBase(ApiFactory factory)
     protected static async Task<string> GetWorldIdAsync(TestApiClient api) =>
         (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single().Id.ToString();
 
+    protected static async Task<string[]> GetWorldAuthorsAsync(TestApiClient api)
+    {
+        var player = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        var world = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single();
+        return [player.Id.ToAuthorId().Value, .. world.Stars.Select(star => star.Id.ToAuthorId().Value)];
+    }
+
+    protected static async Task<string[]> GetPlayerAuthorAsync(TestApiClient api) =>
+        [(await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Id.ToAuthorId().Value];
+
     protected static IReadOnlyList<ReplyGenerationLiveEvent> ParseReplyGenerationEvents(string body) =>
         body.Split('\n').Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
             .Select(line => JsonSerializer.Deserialize(line[6..], ApiJsonSerializerContext.Default.ReplyGenerationLiveEvent)

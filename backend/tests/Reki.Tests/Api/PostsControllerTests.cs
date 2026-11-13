@@ -12,6 +12,7 @@ using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Jobs;
 
 namespace Reki.Tests.Api;
 
@@ -69,8 +70,18 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Act
         var worldId = await GetWorldIdAsync(api);
-        var feed = await api.Posts.GetFeedAsync(worldId, null, null, null, CancellationToken.None);
-        var channel = await api.Posts.GetChannelPostsAsync(worldId, null, null, null, CancellationToken.None);
+        var feedAuthors = await GetWorldAuthorsAsync(api);
+        var ownAuthors = await GetPlayerAuthorAsync(api);
+        var tickers = Database.GetCollection<RekiTimeTicker>("ticker_TimeTickers");
+        var existingIds = await tickers.Find(FilterDefinition<RekiTimeTicker>.Empty).Project(ticker => ticker.Id).ToListAsync();
+        await api.Posts.GetPostsAsync(worldId, null, feedAuthors[..^1], null, null, CancellationToken.None);
+        await api.Posts.GetPostsAsync(worldId, null, [.. feedAuthors, "Star_extra"], null, null, CancellationToken.None);
+        await Assert.That(await tickers.CountDocumentsAsync(ticker => !existingIds.Contains(ticker.Id))).IsEqualTo(0);
+        await api.Posts.GetPostsAsync(worldId, null, [.. feedAuthors, feedAuthors[0]], null, null, CancellationToken.None);
+        await api.Posts.GetPostsAsync(worldId, null, feedAuthors.Reverse().ToArray(), null, null, CancellationToken.None);
+        await Assert.That(await tickers.CountDocumentsAsync(ticker => !existingIds.Contains(ticker.Id))).IsEqualTo(2);
+        var feed = await api.Posts.GetPostsAsync(worldId, null, feedAuthors, null, null, CancellationToken.None);
+        var channel = await api.Posts.GetPostsAsync(worldId, null, ownAuthors, null, null, CancellationToken.None);
 
         // Assert
         await Assert.That(feed.Items.Count).IsEqualTo(10);
@@ -81,8 +92,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         string? cursor = null;
         for (var pageNumber = 0; pageNumber < 3; pageNumber++)
         {
-            var feedPage = await api.Posts.GetFeedAsync(worldId, cursor, null, 10, CancellationToken.None);
-            var channelPage = await api.Posts.GetChannelPostsAsync(worldId, cursor, null, 10, CancellationToken.None);
+            var feedPage = await api.Posts.GetPostsAsync(worldId, cursor, feedAuthors, null, 10, CancellationToken.None);
+            var channelPage = await api.Posts.GetPostsAsync(worldId, cursor, ownAuthors, null, 10, CancellationToken.None);
             var expectedIds = ordered.Skip(pageNumber * 10).Take(10)
                 .Select(post => post.Id).ToArray();
             await Assert.That(feedPage.Items.Select(post => post.PostId).SequenceEqual(expectedIds)).IsTrue();
@@ -92,21 +103,21 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             cursor = expectedIds[^1].ToString();
         }
 
-        var emptyFeed = await api.Posts.GetFeedAsync(worldId, cursor, null, 10, CancellationToken.None);
-        var emptyChannel = await api.Posts.GetChannelPostsAsync(worldId, cursor, null, 10, CancellationToken.None);
+        var emptyFeed = await api.Posts.GetPostsAsync(worldId, cursor, feedAuthors, null, 10, CancellationToken.None);
+        var emptyChannel = await api.Posts.GetPostsAsync(worldId, cursor, ownAuthors, null, 10, CancellationToken.None);
         await Assert.That(emptyFeed.Items.Count).IsEqualTo(0);
         await Assert.That(emptyChannel.Items.Count).IsEqualTo(0);
         await Assert.That(emptyFeed.NextCursor).IsNull();
         await Assert.That(emptyChannel.NextCursor).IsNull();
 
-        var sizedFeed = await api.Posts.GetFeedAsync(worldId, null, null, 4, CancellationToken.None);
-        var sizedChannel = await api.Posts.GetChannelPostsAsync(worldId, null, null, 4, CancellationToken.None);
+        var sizedFeed = await api.Posts.GetPostsAsync(worldId, null, feedAuthors, null, 4, CancellationToken.None);
+        var sizedChannel = await api.Posts.GetPostsAsync(worldId, null, ownAuthors, null, 4, CancellationToken.None);
         await Assert.That(sizedFeed.Items.Count).IsEqualTo(4);
         await Assert.That(sizedChannel.Items.Count).IsEqualTo(4);
         await Assert.That(sizedFeed.NextCursor).IsEqualTo(sizedFeed.Items[^1].PostId);
         await Assert.That(sizedChannel.NextCursor).IsEqualTo(sizedChannel.Items[^1].PostId);
-        var numberedFeed = await api.Posts.GetFeedAsync(worldId, feed.NextCursor?.ToString(), null, null, CancellationToken.None);
-        var numberedChannel = await api.Posts.GetChannelPostsAsync(worldId, channel.NextCursor?.ToString(), null, null, CancellationToken.None);
+        var numberedFeed = await api.Posts.GetPostsAsync(worldId, feed.NextCursor?.ToString(), feedAuthors, null, null, CancellationToken.None);
+        var numberedChannel = await api.Posts.GetPostsAsync(worldId, channel.NextCursor?.ToString(), ownAuthors, null, null, CancellationToken.None);
         await Assert.That(numberedFeed.Items.Count).IsEqualTo(10);
         await Assert.That(numberedChannel.Items.Count).IsEqualTo(10);
         await Assert.That(numberedFeed.Items[0].PostId).IsEqualTo(ordered[10].Id);
@@ -114,19 +125,32 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         foreach (var cursorValue in new[] { "text", "00000000000000000000000000000000", "123456789012345678901234" })
         {
-            var invalidFeed = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetFeedAsync(worldId, cursorValue, null, null, CancellationToken.None));
-            var invalidChannel = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetChannelPostsAsync(worldId, cursorValue, null, null, CancellationToken.None));
+            var invalidFeed = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostsAsync(worldId, cursorValue, feedAuthors, null, null, CancellationToken.None));
+            var invalidChannel = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostsAsync(worldId, cursorValue, ownAuthors, null, null, CancellationToken.None));
             await Assert.That(invalidFeed?.StatusCode).IsEqualTo((int)HttpStatusCode.BadRequest);
             await Assert.That(invalidChannel?.StatusCode).IsEqualTo((int)HttpStatusCode.BadRequest);
         }
 
         foreach (var pageSize in new[] { 0, -1, int.MaxValue })
         {
-            var invalidFeed = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetFeedAsync(worldId, null, null, pageSize, CancellationToken.None));
-            var invalidChannel = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetChannelPostsAsync(worldId, null, null, pageSize, CancellationToken.None));
+            var invalidFeed = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostsAsync(worldId, null, feedAuthors, null, pageSize, CancellationToken.None));
+            var invalidChannel = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostsAsync(worldId, null, ownAuthors, null, pageSize, CancellationToken.None));
             await Assert.That(invalidFeed?.StatusCode).IsEqualTo((int)HttpStatusCode.BadRequest);
             await Assert.That(invalidChannel?.StatusCode).IsEqualTo((int)HttpStatusCode.BadRequest);
         }
+
+        var removedAuthorPost = posts[0] with
+        {
+            Id = PostId.New(start.AddHours(3)),
+            AuthorId = StarId.From("removed").ToAuthorId(),
+            Text = "пост удалённой звезды",
+        };
+        await Database.GetCollection<GamePost>("posts").InsertOneAsync(removedAuthorPost);
+        var feedWithRemovedAuthor = await api.Posts.GetPostsAsync(worldId, null, feedAuthors, null, 100, CancellationToken.None);
+        var channelWithRemovedAuthor = await api.Posts.GetPostsAsync(worldId, null, ownAuthors, null, 100, CancellationToken.None);
+        var removed = feedWithRemovedAuthor.Items.Single(post => post.PostId == removedAuthorPost.Id);
+        await Assert.That(removed.Author).IsEqualTo("Удалённый аккаунт");
+        await Assert.That(channelWithRemovedAuthor.Items.Any(post => post.PostId == removedAuthorPost.Id)).IsFalse();
     }
 
     [Test]
@@ -139,7 +163,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await PublishAsync(telegramUserId, "пост для ленты");
 
         // Act
-        var feed = await api.Posts.GetFeedAsync(await GetWorldIdAsync(api), null, null, null, CancellationToken.None);
+        var feed = await api.Posts.GetPostsAsync(await GetWorldIdAsync(api), null, await GetWorldAuthorsAsync(api), null, null, CancellationToken.None);
 
         // Assert
         var item = feed.Items.Single(feedItem => feedItem.Text == "пост для ленты");
@@ -175,7 +199,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await PublishAsync(otherWorldUserId, "пост другого мира");
 
         // Act
-        var feed = await viewerApi.Posts.GetFeedAsync(await GetWorldIdAsync(viewerApi), null, null, null, CancellationToken.None);
+        var feed = await viewerApi.Posts.GetPostsAsync(await GetWorldIdAsync(viewerApi), null, await GetWorldAuthorsAsync(viewerApi), null, null, CancellationToken.None);
 
         // Assert
         var own = feed.Items.Single(feedItem => feedItem.Text == "пост зрителя");
@@ -200,12 +224,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await PublishAsync(otherUserId, "чужой пост канала");
 
         // Act
-        var channel = await ownerApi.Posts.GetChannelPostsAsync(
-            await GetWorldIdAsync(ownerApi),
-            null,
-            null,
-            null,
-            CancellationToken.None);
+        var channel = await ownerApi.Posts.GetPostsAsync(await GetWorldIdAsync(ownerApi), null, await GetPlayerAuthorAsync(ownerApi), null, null, CancellationToken.None);
 
         // Assert
         var texts = channel.Items.Select(post => post.Text).ToArray();
@@ -226,12 +245,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await CreatePlayerWithWorldAsync(api);
 
         // Act
-        var channel = await api.Posts.GetChannelPostsAsync(
-            await GetWorldIdAsync(api),
-            null,
-            null,
-            null,
-            CancellationToken.None);
+        var channel = await api.Posts.GetPostsAsync(await GetWorldIdAsync(api), null, await GetPlayerAuthorAsync(api), null, null, CancellationToken.None);
 
         // Assert
         await Assert.That(channel.Items).IsEmpty();
@@ -846,7 +860,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
 
         // Act
         var detail = await api.Posts.GetPostAsync(postId, world.Id.Value.ToString(), CancellationToken.None);
-        var feed = await api.Posts.GetFeedAsync(world.Id.Value.ToString(), null, null, null, CancellationToken.None);
+        var feed = await api.Posts.GetPostsAsync(world.Id.Value.ToString(), null, await GetWorldAuthorsAsync(api), null, null, CancellationToken.None);
         var turn = await ReplyAsync(user, postId, targetId, "star-post", "ответ на пост звезды");
 
         // Assert
@@ -1105,21 +1119,20 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             return post;
         }).ToArray();
         await posts.InsertManyAsync(records);
-        var pageOne = await api.Posts.GetLikedPostsAsync(worldId, null, authorId, 2, CancellationToken.None);
-        await Assert.That(pageOne.Items.Count).IsEqualTo(2);
+        var pageOne = await api.Posts.GetPostsAsync(worldId, null, [authorId], authorId, 1, CancellationToken.None);
+        await Assert.That(pageOne.Items.Count).IsEqualTo(1);
         await Assert.That(pageOne.Items[0].Text).IsEqualTo("liked-page-4");
-        await Assert.That(pageOne.Items[1].Text).IsEqualTo("liked-page-2");
         var cursor = pageOne.NextCursor;
         await Assert.That(cursor).IsNotNull();
-        var pageTwo = await api.Posts.GetLikedPostsAsync(worldId, cursor?.ToString(), authorId, 2, CancellationToken.None);
+        var pageTwo = await api.Posts.GetPostsAsync(worldId, cursor?.ToString(), [authorId], authorId, 1, CancellationToken.None);
         await Assert.That(pageTwo.Items.Count).IsEqualTo(1);
         await Assert.That(pageTwo.Items[0].Text).IsEqualTo("liked-page-0");
         await Assert.That(pageTwo.NextCursor).IsNull();
 
-        await api.Posts.LikePostAsync(ids[2].ToString(), new LikePostRequest { AuthorId = AuthorId.From(authorId) }, CancellationToken.None);
-        var refreshed = await api.Posts.GetLikedPostsAsync(worldId, null, authorId, 10, CancellationToken.None);
-        await Assert.That(refreshed.Items.Any(item => item.Text == "liked-page-2")).IsFalse();
-        var saved = await GetStoredPostAsync(ids[2].ToString());
+        await api.Posts.LikePostAsync(ids[4].ToString(), new LikePostRequest { AuthorId = AuthorId.From(authorId) }, CancellationToken.None);
+        var refreshed = await api.Posts.GetPostsAsync(worldId, null, [authorId], authorId, 10, CancellationToken.None);
+        await Assert.That(refreshed.Items.Select(item => item.Text)).IsEquivalentTo(["liked-page-0"]);
+        var saved = await GetStoredPostAsync(ids[4].ToString());
         await Assert.That(saved["Likes"].ToInt64()).IsEqualTo(4);
         await Assert.That(saved["LikedBy"].AsBsonArray).IsEmpty();
     }
@@ -1156,8 +1169,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var player = await GetStoredPlayerAsync(user);
         var playerGuid = player["_id"].AsBsonBinaryData.ToGuid();
         var authorId = $"Player_{playerGuid:N}";
-        var missingAuthor = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetLikedPostsAsync(worldId, null, null, null, CancellationToken.None));
-        var invalidAuthor = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetLikedPostsAsync(worldId, null, "invalid", null, CancellationToken.None));
+        var missingAuthor = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostsAsync(worldId, null, [], null, null, CancellationToken.None));
+        var invalidAuthor = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostsAsync(worldId, null, [authorId], "invalid", null, CancellationToken.None));
         await Assert.That(missingAuthor?.StatusCode).IsEqualTo((int)HttpStatusCode.BadRequest);
         await Assert.That(invalidAuthor?.StatusCode).IsEqualTo((int)HttpStatusCode.BadRequest);
         using var otherApi = Factory.CreateApiClient(8205);
