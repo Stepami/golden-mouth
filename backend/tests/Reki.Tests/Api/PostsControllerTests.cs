@@ -21,7 +21,7 @@ namespace Reki.Tests.Api;
 public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
-    public async Task GetPost_AnotherOwnedWorld_ReturnsNullAsync()
+    public async Task GetPost_AnotherOwnedWorld_ReturnsNoContentAsync()
     {
         // Arrange
         const long user = 1093;
@@ -31,10 +31,10 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var before = await GetStoredPostAsync(postId);
 
         // Act
-        var response = await api.Posts.GetPostAsync(postId, second.Id.ToString(), CancellationToken.None);
+        var response = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostAsync(postId, second.Id.ToString(), CancellationToken.None));
 
         // Assert
-        await Assert.That(response).IsNull();
+        await Assert.That(response?.StatusCode).IsEqualTo((int)HttpStatusCode.NoContent);
         await Assert.That(await GetStoredPostAsync(postId)).IsEqualTo(before);
     }
 
@@ -1037,8 +1037,8 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var before = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         var result = await api.Posts.CreatePostAsync(second.Id.ToString(), new CreatePostRequest { Text = string.Empty, RepostId = source.Id }, CancellationToken.None);
         await Assert.That(result.Post.RepostId).IsEqualTo(source.Id);
-        var missing = await api.Posts.GetPostAsync(source.Id.ToString(), second.Id.ToString(), CancellationToken.None);
-        await Assert.That(missing).IsNull();
+        var missing = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.GetPostAsync(source.Id.ToString(), second.Id.ToString(), CancellationToken.None));
+        await Assert.That(missing?.StatusCode).IsEqualTo((int)HttpStatusCode.NoContent);
         var after = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(after.Energy).IsEqualTo(before.Energy - 1);
     }

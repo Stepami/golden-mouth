@@ -11,6 +11,7 @@ import { clearWorldContent, installWorldContent, installWorldTemplates } from '.
 import { error } from '../app/log';
 import { sdk } from './transport';
 import type * as Wire from './generated/reki-api';
+import { SwaggerException } from './generated/reki-api';
 import * as map from './mappers';
 import { ApiError, data, stream } from './transport';
 export { ApiError } from './transport';
@@ -290,10 +291,15 @@ export const api = {
         return { ...page, items: page.items.map(map.channelPost) };
     },
     post: async (postId: string): Promise<Post | null> => {
-        const response = await data(sdk.posts.getPost(postId, worldId()));
-        if (response == null) return null;
-        const { postId: id, ...detail } = map.post(response);
-        return { ...detail, id };
+        try {
+            const response = await data(sdk.posts.getPost(postId, worldId()));
+            if (response == null) return null;
+            const { postId: id, ...detail } = map.post(response);
+            return { ...detail, id };
+        } catch (cause) {
+            if (cause instanceof SwaggerException && cause.status === 204) return null;
+            throw cause;
+        }
     },
     friends: (): Promise<Friend[]> => data(sdk.social.getFriends()).then(friends => friends.map(map.friend)),
     dm: (starId: string): Promise<Dm> => data(sdk.social.getDirectMessages(starId, worldId())).then(map.dm),
