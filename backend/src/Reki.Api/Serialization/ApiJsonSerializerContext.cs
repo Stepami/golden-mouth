@@ -13,7 +13,6 @@ using Reki.Application.Player.Responses;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Feed;
 using Reki.Application.Posts.Responses;
-using Reki.Application.Posts.Responses.ChannelPost;
 using Reki.Application.Posts.Responses.FeedItem;
 using Reki.Application.Posts.Responses.PostDetail;
 using Reki.Application.Posts.Responses.Reply;
@@ -73,6 +72,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(OnboardingRequest))]
 [JsonSerializable(typeof(MergePlayersRequest))]
 [JsonSerializable(typeof(CreatePostRequest))]
+[JsonSerializable(typeof(LikePostRequest))]
 [JsonSerializable(typeof(CreatePostResponse))]
 [JsonSerializable(typeof(ReplyRequest))]
 [JsonSerializable(typeof(GenerateReplyRequest))]
@@ -89,10 +89,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(FeedItemResponse[]))]
 [JsonSerializable(typeof(WorldPostsRequest))]
 [JsonSerializable(typeof(PageResponse<FeedItemResponse>))]
-[JsonSerializable(typeof(PageResponse<ChannelPostResponse>))]
 [JsonSerializable(typeof(IReadOnlyList<FeedItemResponse>))]
-[JsonSerializable(typeof(ChannelPostResponse[]))]
-[JsonSerializable(typeof(IReadOnlyList<ChannelPostResponse>))]
 [JsonSerializable(typeof(PostDetailResponse))]
 [JsonSerializable(typeof(FriendResponse[]))]
 [JsonSerializable(typeof(IReadOnlyList<FriendResponse>))]

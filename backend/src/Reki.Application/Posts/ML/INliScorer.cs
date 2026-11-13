@@ -4,8 +4,7 @@ public interface INliScorer
 {
     ValueTask<IReadOnlyList<NliScores>> ScoreAsync(
         string premise,
-        IReadOnlyList<string> hypotheses,
-        CancellationToken cancellationToken);
+        IReadOnlyList<string> hypotheses);
 }
 
 public sealed record NliScores(double Entailment, double NotEntailment);

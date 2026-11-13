@@ -97,8 +97,16 @@ public sealed record PlayerProfile
 
     public PlayerProfile WithWallet(PlayerWallet wallet) => this with { Wallet = wallet, Version = Version + 1 };
 
-    public PlayerProfile SpendPost(IReadOnlyDictionary<SkillId, SkillProgress> skills, int cost, DateTimeOffset now) =>
-        SpendEnergy(cost, now) with { Skills = skills };
+    public PlayerProfile SpendPost(
+        IReadOnlyDictionary<SkillId, SkillProgress> skills,
+        int cost,
+        DateTimeOffset now,
+        bool hitOwnMilestone) =>
+        SpendEnergy(cost, now) with
+        {
+            Skills = skills,
+            HitOwnWorldMilestone = hitOwnMilestone,
+        };
 
     public PlayerProfile SpendEnergy(int cost, DateTimeOffset now)
     {

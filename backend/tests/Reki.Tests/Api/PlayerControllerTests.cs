@@ -316,16 +316,17 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Assert
         await Assert.That(onboarded.Energy).IsEqualTo(10);
-        await Assert.That(pendingInvite.Bonus).IsEqualTo(5);
+        await Assert.That(pendingInvite.Bonus).IsEqualTo(1);
         await Assert.That(inviterAfterOnboarding.Energy).IsEqualTo(10);
         await Assert.That(inviterAfterOnboarding.HitOwnWorldMilestone).IsFalse();
         await Assert.That(inviter.HitOwnWorldMilestone).IsTrue();
         await Assert.That(inviter.Energy).IsEqualTo(10);
-        await Assert.That(friend.Energy).IsEqualTo(10);
+        await Assert.That(friend.Energy).IsEqualTo(9);
         await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
         await Assert.That(storedInviter["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
-        await Assert.That(storedFriend["Wallet"]["Energy"].AsInt32).IsEqualTo(9);
+        await Assert.That(storedFriend["Wallet"]["Energy"].AsInt32).IsEqualTo(8);
         await Assert.That(storedInviter["Wallet"]["Crystals"].AsInt32).IsEqualTo(13);
+        await Assert.That(storedFriend["Wallet"]["Crystals"].AsInt32).IsEqualTo(11);
         var invite = await GetStoredInviteAsync(storedFriend["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
         await Assert.That(invite["InviterBonusUsed"].AsBoolean).IsTrue();
         await Assert.That(invite["InviteeBonusUsed"].AsBoolean).IsTrue();
@@ -358,9 +359,10 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(storedInviter.Contains("InviteBonusesEarnedInPeriod")).IsFalse();
         await Assert.That(storedInviter["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
         await Assert.That(storedInviter["Wallet"]["Crystals"].AsInt32).IsEqualTo(22);
-        await Assert.That(fourthFriend["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
+        await Assert.That(fourthFriend["Wallet"]["Energy"].AsInt32).IsEqualTo(9);
+        await Assert.That(fourthFriend["Wallet"]["Crystals"].AsInt32).IsEqualTo(11);
         using var fourthApi = Factory.CreateApiClient(8016);
-        await Assert.That((await fourthApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(10);
+        await Assert.That((await fourthApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(9);
     }
 
     [Test]
@@ -391,13 +393,14 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         await PublishAsync(8561, "пост с существующим бонусом");
 
-        var expectedEnergy = alreadyUsed ? 4 : 9;
+        var expectedCrystals = alreadyUsed ? 10 : 11;
         await Assert.That((await GetStoredPlayerAsync(8560))["Wallet"]["Energy"].AsInt32).IsEqualTo(4);
-        await Assert.That((await GetStoredPlayerAsync(8561))["Wallet"]["Energy"].AsInt32).IsEqualTo(expectedEnergy - 1);
+        await Assert.That((await GetStoredPlayerAsync(8561))["Wallet"]["Energy"].AsInt32).IsEqualTo(3);
+        await Assert.That((await GetStoredPlayerAsync(8561))["Wallet"]["Crystals"].AsInt32).IsEqualTo(expectedCrystals);
         await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
             .IsEqualTo(4);
         await Assert.That((await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
-            .IsEqualTo(expectedEnergy - 1);
+            .IsEqualTo(3);
     }
 
     [Test]
@@ -559,12 +562,13 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         foreach (var interest in new[] { false, true, true })
         {
             var response = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = interest }, CancellationToken.None);
-            await Assert.That(response.Bonus).IsEqualTo(0);
+            await Assert.That(response.Bonus).IsEqualTo(interest ? 0 : 5);
             var saved = await playerRepository.GetPlayerAsync(ExternalUserId.From($"telegram:{8402}"), CancellationToken.None)
                         ?? throw new InvalidOperationException("Missing player.");
             await Assert.That(saved.PlusNotifyRequested).IsEqualTo(interest);
             var current = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
             await Assert.That(current.Energy).IsEqualTo(10);
+            await Assert.That(current.EnergyWallet?.Crystals).IsEqualTo(15);
         }
 
         using var legacyApi = Factory.CreateApiClient(8403);
@@ -669,6 +673,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                 PlusNotifyRequested = true,
             },
             cancellationToken: CancellationToken.None);
+        var skills = (await GetStoredPlayerAsync(userId))["Skills"].DeepClone();
         var world = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
         await worldRepository.ReplaceWorldAsync(
             world with
@@ -682,18 +687,17 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             CancellationToken.None);
 
         // Act
-        var first = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
-        var second = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
+        var response = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
 
         // Assert
-        var bonuses = first.Bonus + second.Bonus;
-
-        await Assert.That(bonuses).IsEqualTo(alreadyClaimed ? 0 : 5);
+        await Assert.That(response.Bonus).IsEqualTo(alreadyClaimed ? 0 : 5);
         var saved = await playerRepository.GetPlayerAsync(ExternalUserId.From($"telegram:{userId}"), CancellationToken.None)
                     ?? throw new InvalidOperationException("Missing player.");
         await Assert.That(saved.PlusInterestClaimed).IsTrue();
         await Assert.That(saved.PlusNotifyRequested).IsTrue();
-        await Assert.That(saved.Wallet.Energy).IsEqualTo(alreadyClaimed ? 4 : 9);
+        await Assert.That(saved.Wallet.Energy).IsEqualTo(4);
+        await Assert.That(saved.Wallet.Crystals).IsEqualTo(alreadyClaimed ? 10 : 15);
+        await Assert.That((await GetStoredPlayerAsync(userId))["Skills"]).IsEqualTo(skills);
         _ = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single(item => item.Id == world.Id);
         var savedWorld = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
         await Assert.That(savedWorld.Player.Subscribers).IsEqualTo(1234);
@@ -722,7 +726,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         // Assert
         await Assert.That(currentInviter.Energy).IsEqualTo(10);
-        await Assert.That(currentFriend.Energy).IsEqualTo(10);
+        await Assert.That(currentFriend.Energy).IsEqualTo(9);
         await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
         var invite = await Database.GetCollection<Invitation>("invites")
             .Find(item => item.InviteeId == friend.Id).SingleAsync();
@@ -750,7 +754,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Assert
         await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(10);
         var current = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(current.Energy).IsEqualTo(10);
+        await Assert.That(current.Energy).IsEqualTo(9);
         var invitation = await Database.GetCollection<Invitation>("invites")
             .Find(item => item.InviteeId == friend.Id).SingleAsync();
         await Assert.That(invitation.InviterBonusUsedAtUtc).IsEqualTo(reset);
@@ -777,37 +781,18 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var disabled = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Assert
-        await Assert.That(enabled.Energy).IsEqualTo(10);
-        await Assert.That(repeated.Energy).IsEqualTo(10);
-        await Assert.That(disabled.Energy).IsEqualTo(10);
+        await Assert.That(enabled.Energy).IsEqualTo(6);
+        await Assert.That(repeated.Energy).IsEqualTo(6);
+        await Assert.That(disabled.Energy).IsEqualTo(6);
+        await Assert.That(enabled.EnergyWallet?.Crystals).IsEqualTo(20);
+        await Assert.That(repeated.EnergyWallet?.Crystals).IsEqualTo(20);
+        await Assert.That(disabled.EnergyWallet?.Crystals).IsEqualTo(20);
         var stored = await GetStoredPlayerAsync(8580);
         await Assert.That(stored.Contains("DailyBonus")).IsFalse();
         await Assert.That(stored.Contains("ChallengeDailyBonus")).IsFalse();
         Factory.Session.Clock.SetUtcNow(Factory.Session.Clock.GetUtcNow().AddDays(1));
         var reset = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(reset.Energy).IsEqualTo(10);
-    }
-
-    [Test]
-    public async Task PlusInterest_Bonus_AllowsSkillRewardsAsync()
-    {
-        // Arrange
-        using var api = Factory.CreateApiClient(8581);
-        var response = await CreatePlayerWithWorldAsync(api);
-        await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
-            item => item.Id == response.Id,
-            Builders<PlayerProfile>.Update.Set(item => item.Wallet.Energy, 0));
-        var before = await GetStoredPlayerAsync(8581);
-
-        // Act
-        await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
-        await PublishAsync(8581, "пост после бонуса");
-
-        // Assert
-        var stored = await GetStoredPlayerAsync(8581);
-        await Assert.That(stored["Wallet"]["Energy"].AsInt32).IsEqualTo(4);
-        await Assert.That(stored["Skills"]).IsNotEqualTo(before["Skills"]);
-        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(4);
+        await Assert.That(reset.Energy).IsEqualTo(6);
     }
 
     [Test]

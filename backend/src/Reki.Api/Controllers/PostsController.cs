@@ -7,8 +7,8 @@ using Reki.Api.Requests.Posts;
 using Reki.Application.Posts;
 using Reki.Application.Posts.CreatePostCommand;
 using Reki.Application.Posts.GetPostDetail;
+using Reki.Application.Posts.LikePostCommand;
 using Reki.Application.Posts.Responses;
-using Reki.Application.Posts.Responses.ChannelPost;
 using Reki.Application.Posts.Responses.FeedItem;
 using Reki.Application.Posts.Responses.PostDetail;
 using Reki.Application.Posts.Responses.Reply;
@@ -35,6 +35,17 @@ public sealed class PostsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken) =>
         TypedResults.Ok(await sender.Send(new CreatePost(request.Text, request.OwnWords, worldId, request.RepostId), cancellationToken));
 
+    [HttpPost("{postId}/like", Name = "LikePost")]
+    [ActionName("LikePost")]
+    public async Task<NoContent> LikePostAsync(
+        PostId postId,
+        LikePostRequest request,
+        CancellationToken cancellationToken)
+    {
+        await sender.Send(new LikePost(postId, request.AuthorId), cancellationToken);
+        return TypedResults.NoContent();
+    }
+
     [HttpPost("{postId}/replies", Name = "ReplyToPost")]
     [ActionName("ReplyToPost")]
     public async Task<Ok<ReplyResponse>> ReplyToPostAsync(
@@ -59,33 +70,20 @@ public sealed class PostsController(ISender sender) : ControllerBase
         TypedResults.ServerSentEvents(sender.CreateStream(
             request.ToGenerateReply(postId, worldId), cancellationToken));
 
-    [HttpGet("feed", Name = "GetFeed")]
-    [ActionName("GetFeed")]
-    public async Task<Ok<PageResponse<FeedItemResponse>>> GetFeedAsync(
+    [HttpGet(Name = "GetPosts")]
+    [ActionName("GetPosts")]
+    public async Task<Ok<PageResponse<FeedItemResponse>>> GetPostsAsync(
         [FromQuery] WorldPostsRequest request,
         [FromServices] IRekiContext rekiContext,
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
-            request.ToQuery(feed: true),
+            request.ToQuery(),
             cancellationToken);
         var worlds = await rekiContext.Worlds;
         IReadOnlyList<FeedItemResponse> response =
-            [.. result.Items.Select(post => PostResponseMapper.MapFeedItem(post, worlds[post.WorldId]))];
+            [.. result.Items.Select(post => post.MapFeedItem(worlds[post.WorldId]))];
         return TypedResults.Ok(new PageResponse<FeedItemResponse>(response, result.NextCursor));
-    }
-
-    [HttpGet("mine", Name = "GetChannelPosts")]
-    [ActionName("GetChannelPosts")]
-    public async Task<Ok<PageResponse<ChannelPostResponse>>> GetChannelPostsAsync(
-        [FromQuery] WorldPostsRequest request,
-        CancellationToken cancellationToken)
-    {
-        var result = await sender.Send(
-            request.ToQuery(),
-            cancellationToken);
-        IReadOnlyList<ChannelPostResponse> response = [.. result.Items.Select(PostResponseMapper.MapChannelPost)];
-        return TypedResults.Ok(new PageResponse<ChannelPostResponse>(response, result.NextCursor));
     }
 
     [HttpGet("{postId}", Name = "GetPost")]

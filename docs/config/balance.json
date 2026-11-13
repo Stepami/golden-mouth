@@ -5,7 +5,7 @@
   "posts": {
     "free_per_day": 10,
     "plus_per_day": 20,
-    "invite_bonus_both": 5,
+    "invite_bonus_both": 1,
     "plus_interest_bonus_once": 5,
     "streak_day3_bonus": 2
   },
@@ -17,7 +17,8 @@
     "own_words_x": 1.3,
     "start_subs": 120, "subs_never_decrease_on_new_world": true
   },
-  "viral": { "base": 0.03, "per_quality": 0.06, "x": 3, "near_miss_band": 0.15 },
+  "viral": { "base": 0.03, "per_quality": 0.06, "emotion_bonus": 0.05, "x": 3, "near_miss_band": 0.15 },
+  "likes": { "min_percent": 2, "max_percent": 10 },
   "skills": {
     "ids": ["brave", "humor", "topic"],
     "levels_xp": [0, 8, 20, 36, 56, 80, 110, 150, 200, 270],
@@ -37,7 +38,6 @@
       "hate_every_days": [4, 5],
       "loss_x": 0.08,
       "max_subscriber_fraction": 0.005,
-      "reason_priority": ["angry_abuse", "near_copy"],
       "emotion_tie_break": "sad_tone",
       "thresholds": {"angry_abuse": 0.9, "near_copy_cosine": 0.98, "sad_tone": 0.98, "anxious_tone": 0.96},
       "threshold_reduction_per_step": {"angry_abuse": 0.05, "near_copy_cosine": 0.01, "sad_tone": 0.01, "anxious_tone": 0.01},
@@ -56,7 +56,6 @@
       "hate_every_days": [3, 4],
       "loss_x": 0.12,
       "max_subscriber_fraction": 0.01,
-      "reason_priority": ["angry_abuse", "near_copy"],
       "emotion_tie_break": "sad_tone",
       "thresholds": {"angry_abuse": 0.8, "near_copy_cosine": 0.96, "sad_tone": 0.96, "anxious_tone": 0.94},
       "threshold_reduction_per_step": {"angry_abuse": 0.05, "near_copy_cosine": 0.01, "sad_tone": 0.01, "anxious_tone": 0.01},
@@ -75,7 +74,6 @@
       "hate_every_days": [2, 3],
       "loss_x": 0.16,
       "max_subscriber_fraction": 0.015,
-      "reason_priority": ["angry_abuse", "near_copy"],
       "emotion_tie_break": "sad_tone",
       "thresholds": {"angry_abuse": 0.7, "near_copy_cosine": 0.94, "sad_tone": 0.94, "anxious_tone": 0.92},
       "threshold_reduction_per_step": {"angry_abuse": 0.05, "near_copy_cosine": 0.01, "sad_tone": 0.01, "anxious_tone": 0.01},

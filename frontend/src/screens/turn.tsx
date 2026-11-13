@@ -1,4 +1,5 @@
 import { RepostAction } from '../ui/RepostAction'
+import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
 import { StoryGoal } from '../ui/StoryGoal'
 import { useEffect, useRef, useState } from 'react'
@@ -79,7 +80,7 @@ function Live() {
       if (!latest) patch({ postsLeft: Math.max(0, p.postsLeft - 1), subs: Math.max(0, p.subs + created.result.delta) })
       setViews(created.post.views)
       setPhase('reacting')
-      setFloats(created.post.reactions.map((reaction, index) => ({ id: index, emoji: reaction.emoji, x: 25 + index * 20 })))
+      setFloats(created.post.likes > 0 ? [{ id: 0, emoji: '♡', x: 45 }] : [])
       const star = contentOf(p.world).stars.find(item => `Star_${item.id}` === created.predictedAuthorId)
       setTyping(star?.name ?? 'Звезда')
       const commentPromise = api.initialComment(created.post.id, created.predictedAuthorId).catch(() => null)
@@ -158,7 +159,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
   const commentPromise = nav.params.commentPromise as Promise<Post | null> | undefined
   useEffect(() => {
     let active = true
-    void commentPromise?.then(saved => { if (active) { if (saved) setPost(saved); else setCommentFailed(true) } }, () => { if (active) setCommentFailed(true) })
+    void commentPromise?.then(saved => { if (active) { if (saved) setPost(current => ({ ...current, comments: saved.comments })); else setCommentFailed(true) } }, () => { if (active) setCommentFailed(true) })
     return () => { active = false }
   }, [commentPromise])
   const closeButton = useRef<HTMLButtonElement>(null), dialog = useRef<HTMLDivElement>(null)
@@ -190,7 +191,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
   return (
     <div className="screen no-tab">
       <ChannelHead />
-      <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">только что</div>{post.text}<QuotedPost repostId={post.repostId} /><div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}<span className="small muted" style={{ float: 'right' }}>👁 {fmt(r.views)}</span></div></div></div>
+      <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">только что</div>{post.text}<QuotedPost repostId={post.repostId} /><div style={{ marginTop: 8 }}><span className="small muted">♡ {fmt(post.likes)}</span><span className="small muted" style={{ float: 'right' }}>👁 {fmt(r.views)}</span></div></div></div>
       <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.55)' }}>
         <div ref={dialog} role="dialog" aria-modal="true" aria-label="Пост опубликован" className={`sheet post-result${viral ? ' post-result--viral' : ''}`}>
           <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')}>×</button>
@@ -201,6 +202,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
           </section>
           <div className={`post-result-delta ${r.delta > 0 ? 'up' : r.delta < 0 ? 'down' : ''}`}>{r.delta > 0 ? '+' : r.delta < 0 ? '−' : ''}{fmt(shown)} <span>{plural(Math.abs(r.delta), 'подписчик', 'подписчика', 'подписчиков')}</span></div>
           <p className="small muted">{explanation}</p>
+          <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>
           <details className="result-details"><summary>Разбор поста</summary><div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
             <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
           </details>
@@ -329,7 +331,7 @@ function Thread() {
           if (ctrl.signal.aborted || activeKey.current !== key) return
           if (saved.post.comments.some(comment => comment.requestId === draft.requestId)) playerSaved = true
           const { postId: id, ...detail } = saved.post
-          setPost({ ...detail, id }); patch({ subs: saved.subscribers, postsLeft: saved.energyLeft })
+          setPost(current => ({ ...detail, id, likes: current?.likes ?? detail.likes, likedBy: current?.likedBy ?? detail.likedBy })); patch({ subs: saved.subscribers, postsLeft: saved.energyLeft })
         },
         onTyping: authorId => {
           if (ctrl.signal.aborted || activeKey.current !== key) return
@@ -337,7 +339,7 @@ function Thread() {
         } })
       if (ctrl.signal.aborted || activeKey.current !== key) return
       const { postId: id, ...detail } = event.post
-      setPost({ ...detail, id }); patch({ subs: event.subscribers, postsLeft: event.energyLeft })
+      setPost(current => ({ ...detail, id, likes: current?.likes ?? detail.likes, likedBy: current?.likedBy ?? detail.likedBy })); patch({ subs: event.subscribers, postsLeft: event.energyLeft })
       setDraft(fresh()); setTypingName(null)
       try { localStorage.removeItem(storageKey) } catch { /* optional storage */ }
     } catch (cause) {
@@ -360,11 +362,12 @@ function Thread() {
   const dismissHelp = () => { setShowHelp(false); try { localStorage.setItem(tutorialKey, 'seen') } catch { /* memory fallback */ } }
   const focusReply = (id: string) => { edit({ commentId: id }); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.thread-reply-input')?.focus()) }
   const fromFeed = nav.params.returnTo === 'feed' || (!nav.params.returnTo && !!postAuthor)
-  const goBack = () => { if (nav.params.returnTo && nav.canBack) nav.back(); else nav.replace(fromFeed ? '03-3_feed' : '03-5_stage') }
+  const fromMarked = nav.params.returnTo === 'marked'
+  const goBack = () => { if (nav.params.returnTo && nav.canBack) nav.back(); else if (fromMarked) nav.replace('05-5_collection', { profileTab: 'marked' }); else nav.replace(fromFeed ? '03-3_feed' : '03-5_stage') }
   const removePost = async () => {
     if (!post || deleting) return
     setDeleting(true); setDeleteError('')
-    try { await api.deletePost(post.id); nav.reset(fromFeed ? '03-3_feed' : '03-5_stage') }
+    try { await api.deletePost(post.id); nav.reset(fromMarked ? '05-5_collection' : fromFeed ? '03-3_feed' : '03-5_stage', fromMarked ? { profileTab: 'marked' } : {}) }
     catch { setDeleteError('Не получилось удалить пост. Попробуй ещё раз.'); setDeleting(false) }
   }
   if (load !== 'ready' || loadedKey !== threadKey) return (
@@ -386,9 +389,9 @@ function Thread() {
   post.comments.forEach(append)
   return (
     <div className="screen no-tab">
-      <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions"><EnergyBadge value={player.postsLeft} /><button className="thread-exit" onClick={goBack}>{fromFeed ? 'В ленту →' : 'В канал →'}</button></div>} />
+      <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions"><EnergyBadge value={player.postsLeft} /><button className="thread-exit" onClick={goBack}>{fromMarked ? 'К отметкам →' : fromFeed ? 'В ленту →' : 'В канал →'}</button></div>} />
       <div className="pad">
-        <div className="card" style={{ marginBottom: 12 }}>{post.text}<QuotedPost repostId={post.repostId} /><div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group">{post.reactions.map(reaction => <span key={reaction.emoji} className="react">{reaction.emoji} {reaction.count}</span>)}{!post.repostId && <RepostAction postId={post.id} />}</div>{post.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>}</div></div>
+        <div className="card" style={{ marginBottom: 12 }}>{post.text}<QuotedPost repostId={post.repostId} /><div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group"><PostLikeAction key={threadKey} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => current ? { ...current, likes: saved.likes, likedBy: saved.likedBy } : current)} />{!post.repostId && <RepostAction postId={post.id} />}</div>{post.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>}</div></div>
         {showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
         {!showHelp && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
         {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>

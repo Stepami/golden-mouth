@@ -29,16 +29,14 @@ export interface Player extends Omit<PlayerDocument, 'energy' | 'experiments'> {
   nextWorld?: { id: WorldId; title: string; need: string }; drama: Drama; voice: string
   experiments?: Wire.PlayerResponse['experiments']
 }
-export type Reaction = Omit<Fields<Wire.ReactionResponse>, 'count'> & { count: number }
 export type CommentReaction = Wire.CommentReactionResponse
 // Demo comments can omit server-enriched author/thread metadata.
 type CommentMetadata = 'star' | 'me' | 'hidden' | 'parentCommentId' | 'requestId' | 'authorId' | 'role' | 'reactions'
 export type CommentT = Omit<Fields<Wire.CommentResponse>, CommentMetadata | 'depth'> & Partial<Pick<Fields<Wire.CommentResponse>, CommentMetadata>> & { depth?: number }
-export type PostDetailResponse = Omit<Fields<Wire.PostDetailResponse>, 'views' | 'reactions' | 'comments' | 'authorId' | 'repostId'> & Partial<Pick<Fields<Wire.PostDetailResponse>, 'repostId'>> & {
-  authorId?: string; views: number; reactions: Reaction[]; comments: CommentT[]
+export type PostDetailResponse = Omit<Fields<Wire.PostDetailResponse>, 'views' | 'likes' | 'likedBy' | 'comments' | 'authorId' | 'repostId'> & Partial<Pick<Fields<Wire.PostDetailResponse>, 'repostId'>> & {
+  authorId?: string; views: number; likes: number; likedBy: string[]; comments: CommentT[]
 }
 export type Post = Omit<PostDetailResponse, 'postId'> & { id: string; inRivers?: boolean; at?: string }
-export type ChannelPost = Omit<Fields<Wire.ChannelPostResponse>, 'views' | 'commentCount' | 'reactions' | 'repostId'> & Partial<Pick<Fields<Wire.ChannelPostResponse>, 'repostId'>> & { views: number; commentCount: number; reactions: Reaction[] }
 export type Why = Wire.WhyResponse
 export type PostResult = Omit<Fields<Wire.PostResultResponse>, 'delta' | 'views' | 'ribbons' | 'bestComment'> & {
   delta: number; views: number
@@ -50,10 +48,10 @@ export type Challenge = Omit<Fields<NonNullable<Wire.ChallengeResponse>>, 'rival
 export type DmMessage = Wire.DirectMessageResponse
 export type Dm = Omit<Fields<Wire.DmResponse>, 'star' | 'repliesLeft'> & { star: Star; repliesLeft: number }
 // Feed rows omit absent wire values; demo rows also carry local catalog metadata.
-type FeedMetadata = Exclude<keyof Wire.FeedItemResponse, 'kind' | 'text' | 'views' | 'commentCount' | 'reactions'>
+type FeedMetadata = Exclude<keyof Wire.FeedItemResponse, 'kind' | 'text' | 'views' | 'likes' | 'likedBy' | 'commentCount'>
 export type PostsPage<T> = Pick<Wire.PageResponseOfFeedItemResponse, 'nextCursor'> & { items: T[] }
 export type FeedItem = Pick<Fields<Wire.FeedItemResponse>, 'kind' | 'text'> & { [K in FeedMetadata]?: NonNullable<Wire.FeedItemResponse[K]> } & {
-  postId?: string; reactions?: Reaction[]; views?: number; commentCount?: number; demo?: boolean; starId?: string; world?: WorldId
+  postId?: string; likes?: number; likedBy?: string[]; views?: number; commentCount?: number; demo?: boolean; starId?: string; world?: WorldId
 }
 export type WorldDocument = Omit<Fields<Wire.WorldResponse>, 'difficulty' | 'subscribers' | 'stars' | 'unlockSkill' | 'unlockLevel'> & {
   difficulty: WorldDifficulty; subscribers: number; lock?: World['lock']

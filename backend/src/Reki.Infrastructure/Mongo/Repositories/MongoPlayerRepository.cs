@@ -55,14 +55,14 @@ internal sealed class MongoPlayerRepository(
         CancellationToken cancellationToken)
     {
         var update = Builders<PlayerProfile>.Update
-            .Inc(item => item.Wallet.Energy, updated.Wallet.Energy - player.Wallet.Energy)
+            .Inc(item => item.Wallet.Crystals, updated.Wallet.Crystals - player.Wallet.Crystals)
             .Set(item => item.PlusInterestClaimed, updated.PlusInterestClaimed)
             .Inc(item => item.Version, updated.Version - player.Version);
         var result = await _players.UpdateOneAsync(
             item => item.Id == player.Id && !item.PlusInterestClaimed && item.Version == player.Version,
             update,
             cancellationToken: cancellationToken);
-        return result.ModifiedCount == 1 ? updated.Wallet.Energy - player.Wallet.Energy : 0;
+        return result.ModifiedCount == 1 ? updated.Wallet.Crystals - player.Wallet.Crystals : 0;
     }
 
     public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>

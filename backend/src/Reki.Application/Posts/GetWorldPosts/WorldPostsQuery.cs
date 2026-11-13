@@ -6,7 +6,8 @@ namespace Reki.Application.Posts.GetWorldPosts;
 
 public sealed record WorldPostsQuery(
     WorldId WorldId,
+    AuthorId[] AuthorIds,
     PostId? Cursor,
     int PageSize,
-    bool Feed = false)
+    AuthorId? LikedBy = null)
     : IQuery<WorldPostsPage>;
