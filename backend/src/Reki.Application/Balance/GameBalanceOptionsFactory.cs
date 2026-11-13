@@ -76,7 +76,8 @@ internal sealed class GameBalanceOptionsFactory(
             new ViralBalance(
                 viral.GetValue<double>("base"),
                 viral.GetValue<double>("per_quality"),
-                viral.GetValue<double>("x")),
+                viral.GetValue<double>("x"),
+                viral.GetValue<double>("emotion_bonus")),
             new SkillBalance(
                 levelThresholds,
                 skills.GetValue<double>("xp_per_post_main"),
@@ -90,6 +91,8 @@ internal sealed class GameBalanceOptionsFactory(
             postCost,
             configuration.GetValue<int>("access:create_world_from_scratch:subs"),
             configuration.GetValue<double>("feed:open_probability"),
-            energy.GetValue<int>("cap"));
+            energy.GetValue<int>("cap"),
+            configuration.GetValue<int>("likes:min_percent"),
+            configuration.GetValue<int>("likes:max_percent"));
     }
 }

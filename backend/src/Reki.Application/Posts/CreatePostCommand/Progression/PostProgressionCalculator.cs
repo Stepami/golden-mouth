@@ -32,7 +32,7 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
         }
 
         var multiplier = GetGrowthMultiplier(gameWorld, ownWords);
-        var viral = !flop && IsViral(publicationId, quality, world);
+        var viral = !flop && IsViral(publicationId, quality, turn.PositiveEmotion, world);
 
         var growth = currentBalance.Growth.Coefficient * world.GrowthCoefficient *
                      (0.5 + quality) *
@@ -88,10 +88,11 @@ internal sealed class PostProgressionCalculator(IOptionsMonitor<GameBalance> bal
         return multiplier;
     }
 
-    private bool IsViral(string publicationId, double quality, DifficultyBalance world)
+    private bool IsViral(string publicationId, double quality, bool positiveEmotion, DifficultyBalance world)
     {
         var currentBalance = balance.CurrentValue;
-        var chance = (currentBalance.Viral.BaseChance + (currentBalance.Viral.ChancePerQuality * quality)) *
+        var chance = (currentBalance.Viral.BaseChance + (currentBalance.Viral.ChancePerQuality * quality) +
+                      (positiveEmotion ? currentBalance.Viral.EmotionBonus : 0)) *
                      world.ViralMultiplier;
         return StableRoll(publicationId, "viral") < Math.Clamp(chance, 0, 1);
     }

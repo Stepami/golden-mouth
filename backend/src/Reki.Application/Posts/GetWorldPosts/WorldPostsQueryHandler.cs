@@ -29,9 +29,10 @@ internal sealed class WorldPostsQueryHandler(
 
         return await postRepository.GetPostsAsync(
             world.Id,
-            query.Feed ? null : world.Player.PlayerId.ToAuthorId(),
+            query.Feed || query.Liked ? null : world.Player.PlayerId.ToAuthorId(),
             query.Cursor,
             query.PageSize,
+            query.LikedBy,
             cancellationToken);
     }
 }

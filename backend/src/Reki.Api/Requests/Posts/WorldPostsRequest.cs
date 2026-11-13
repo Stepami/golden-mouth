@@ -20,6 +20,9 @@ public sealed record WorldPostsRequest : IValidatableObject
     [FromQuery(Name = "cursor")]
     public PostId? Cursor { get; init; }
 
+    [FromQuery(Name = "likedBy")]
+    public AuthorId? LikedBy { get; init; }
+
     [DefaultValue(DefaultPageSize)]
     [FromQuery(Name = "pageSize")]
     [Range(1, int.MaxValue - 1)]

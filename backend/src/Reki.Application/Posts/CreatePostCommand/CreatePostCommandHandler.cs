@@ -94,7 +94,7 @@ internal sealed class CreatePostCommandHandler(
         post = post with
         {
             SubscriberDelta = progression.SubscriberDelta, Quality = progression.Quality, Viral = progression.Viral,
-            Flop = progression.Flop, ReactionEmoji = score.Emoji, PredictedAuthorId = starId.ToAuthorId(),
+            Flop = progression.Flop, Likes = GamePost.CalculateLikes(post.Views, Random.Shared.Next(currentBalance.LikesMinPercent, currentBalance.LikesMaxPercent + 1)), PredictedAuthorId = starId.ToAuthorId(),
             FlopReason = flopReason,
         };
         var invite = await invitations.GetPendingInviteAsync(player.Id, cancellationToken);

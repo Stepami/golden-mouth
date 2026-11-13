@@ -16,7 +16,7 @@ internal sealed class PostScorer(
         var skills = await analysis.SkillsAsync(post, world, ownWords, cancellationToken);
         if (post.RepostId is not null)
         {
-            return new PostScore(skills[0], skills[1], 1, "🔥", null);
+            return new PostScore(skills[0], skills[1], 1, false, null);
         }
 
         var emotion = await analysis.ClassifyAsync(ClassifierModels.EmotionModel, post.Text);
@@ -26,16 +26,9 @@ internal sealed class PostScorer(
             .FirstOrDefaultAsync(result => result.IsFlop, cancellationToken);
         var reason = result?.Reason;
 
-        var emoji = new Dictionary<string, string>
-        {
-            ["anger"] = "👎",
-            ["sadness"] = "❤️",
-            ["surprise"] = "🤔",
-            ["joy"] = "🔥",
-            ["fear"] = "🤔",
-            ["no_emotion"] = "🔥",
-        }.MaxBy(item => emotion[item.Key]).Value;
+        string[] emotions = ["anger", "sadness", "surprise", "joy", "fear", "no_emotion"];
+        var strongest = emotions.MaxBy(item => emotion[item]);
 
-        return new PostScore(skills[0], skills[1], skills[2], emoji, reason);
+        return new PostScore(skills[0], skills[1], skills[2], strongest is "joy" or "surprise", reason);
     }
 }

@@ -20,6 +20,7 @@ public interface IPostRepository
         AuthorId? authorId,
         PostId? cursor,
         int pageSize,
+        AuthorId? likedBy,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -29,6 +30,8 @@ public interface IPostRepository
         PostId postId,
         WorldId worldId,
         CancellationToken cancellationToken);
+
+    ValueTask<GamePost?> ToggleLikeAsync(PostId postId, WorldId worldId, AuthorId authorId, CancellationToken cancellationToken);
 
     /// <summary>Reads a story candidate; the caller must verify world ownership before exposing it.</summary>
     ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken);
