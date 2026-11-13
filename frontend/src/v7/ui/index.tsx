@@ -1,3 +1,4 @@
+import {isGeneratedAvatar,resolveGeneratedAvatar} from '../generatedAvatar';
 import {LoadingIndicator} from './LoadingIndicator';
 export {LoadingIndicator} from './LoadingIndicator';
 import {LineIcon} from './LineIcon';
@@ -35,7 +36,7 @@ const iconFiles = {
   crystal: "s1-imgVector4.svg",
   member: "catalog-imgIconMemberFilled.svg",
 };
-export type IconName = keyof typeof iconFiles | "back" | "close" | "check" | "flame" | "chevron" | "retry" | "preferences";
+export type IconName = keyof typeof iconFiles | "back" | "close" | "check" | "flame" | "chevron" | "retry" | "preferences" | "trash";
 export function Icon({ name }: { name: IconName }) {
   return (
     <span className={`icon icon--${name}`} aria-hidden="true">
@@ -115,7 +116,9 @@ export function Avatar({
   size?: "sm" | "md" | "lg" | "xl";
 }) {
   const [failed, setFailed] = useState(false);
-  const image = displayPortrait(src, name);
+  const [generated,setGenerated]=useState<{source:string;uri:string}>();
+  useEffect(()=>{let active=true;if(src&&isGeneratedAvatar(src))void resolveGeneratedAvatar(src).then(uri=>{if(active)setGenerated({source:src,uri});}).catch(()=>{if(active)setFailed(true);});return()=>{active=false;};},[src]);
+  const image = isGeneratedAvatar(src) ? (generated&&generated.source===src?generated.uri:undefined) : displayPortrait(src, name);
   useEffect(() => setFailed(false), [image]);
   return (
     <span className={`avatar avatar--${size}`} aria-hidden="true">
@@ -625,13 +628,15 @@ export function ResumeWorld({
   subtitle,
   busy = false,
   onClick,
+  onDelete,
 }: {
   world: World;
   subtitle: string;
   busy?: boolean;
   onClick: () => void;
+  onDelete?: () => void;
 }) {
-  return (
+  const card = (
     <button
       className="resume-world"
       disabled={busy}
@@ -644,9 +649,10 @@ export function ResumeWorld({
         <strong>{world.title}</strong>
         <span className="caption muted block">{subtitle}</span>
       </span>
-      <Icon name="arrow" />
+      {!onDelete&&<Icon name="arrow" />}
     </button>
   );
+  return onDelete?<div className="owned-world">{card}<button className="owned-world-delete" disabled={busy} aria-label={`Удалить мир ${world.title}. Персонаж: ${subtitle}`} title="Удалить мир" onClick={onDelete}><Icon name="trash"/></button></div>:card;
 }
 export function SettingsRow({
   label,

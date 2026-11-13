@@ -1,0 +1,6 @@
+.own-world-invite { margin:var(--space-4) var(--page-gutter); padding:var(--space-4); border:1px solid var(--color-divider); border-radius:var(--card-radius); background:var(--color-surface); min-width:0; }
+.own-world-invite h2 { margin:0 0 var(--space-2); font-size:1.125rem; }
+.own-world-invite p { color:var(--color-muted); margin:0 0 var(--space-4); overflow-wrap:anywhere; }
+.own-world-unlock { display:flex; gap:var(--space-2); justify-content:space-between; margin-bottom:var(--space-2); font-size:var(--text-caption); }
+.own-world-invite-actions { display:grid; gap:var(--space-2); margin-top:var(--space-4); }
+.own-world-invite .button { width:100%; min-width:0; white-space:normal; }

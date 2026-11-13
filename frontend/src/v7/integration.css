@@ -198,3 +198,74 @@ html[data-large-text="true"] .world-intro .intro-cta { position: static; }
 
 .v7-stage .screen-heading > .row { flex-wrap: wrap; gap: 12px; }
 .v7-stage .screen-heading > .row > div { min-width: 0; flex: 1 1 160px; }
+
+/* DEV review: compose, invitations and confirmed activity. */
+.composer-tools { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.post-ideas { border-top:1px solid var(--color-divider); padding-top:12px; }
+.post-idea { width:100%; padding:16px; border:1px solid var(--color-divider); border-radius:16px; background:var(--color-surface); color:var(--color-ink); font:inherit; text-align:left; line-height:1.5; }
+.post-idea:disabled { opacity:.5; }
+.invite-friend p { line-height:1.5; }
+.invite-friend input { min-width:0; width:100%; }
+.hud-streak { display:flex; gap:6px; align-items:center; margin:0 24px 10px auto; padding:6px 10px; border:1px solid var(--color-divider); border-radius:24px; background:var(--color-surface); color:var(--color-ink); font:inherit; font-size:12px; }
+.hud-streak span { color:var(--color-muted); }
+.activity-row { padding:0; display:block; border-bottom:1px solid var(--color-divider); }
+.activity-open { width:100%; display:flex; align-items:flex-start; gap:12px; padding:20px 24px; background:transparent; border:0; color:var(--color-ink); font:inherit; text-align:left; }
+.activity-open>span:nth-child(2) { flex:1; min-width:0; }
+.activity-open strong { display:block; line-height:1.4; }
+.activity-text { display:block; margin-top:6px; font-size:14px; line-height:1.5; color:var(--color-muted); overflow-wrap:anywhere; }
+.activity-symbol { display:grid; place-items:center; width:40px; height:40px; flex:none; border-radius:50%; background:var(--color-surface); font-size:26px; }
+.activity-unread { width:7px; height:7px; border-radius:50%; background:var(--color-ink); margin-top:8px; flex:none; }
+.activity-row.is-read strong { font-weight:500; }
+.avatar-builder { display:grid; gap:12px; }
+.avatar-builder h4 { margin:8px 0 0; font-size:14px; color:var(--color-muted); font-weight:500; }
+.avatar-builder-options { display:flex; flex-wrap:wrap; gap:8px; }
+.avatar-builder .studio-looks { margin:0; }
+
+/* ActivityItem: the list shows previews, the destination contains the full reply. */
+.activity-open strong { margin-bottom:0; font:600 1rem/1.4 var(--font-body); }
+.activity-copy { flex:1; min-width:0; }
+.activity-open strong,.activity-text { display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; }
+.activity-open strong { -webkit-line-clamp:2; line-clamp:2; }
+.activity-text { -webkit-line-clamp:3; line-clamp:3; }
+.post-ideas>p { margin:0 0 8px; }
+.post-ideas-grid { display:flex; gap:var(--space-2); overflow-x:auto; scroll-snap-type:x proximity; padding-bottom:var(--space-2); }
+.post-ideas-grid .post-idea { flex:0 0 85%; min-width:0; padding:10px 12px; font-size:.875rem; line-height:1.4; overflow-wrap:anywhere; scroll-snap-align:start; }
+.post-ideas-grid .post-idea span { display:block; }
+
+.account-handle { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; overflow-wrap:normal; max-width:100%; }
+.owned-world { display:grid; grid-template-columns:minmax(0,1fr) 44px; align-items:center; min-width:0; }
+.owned-world .resume-world { min-width:0; margin:0; }
+.owned-world .resume-world .grow { min-width:0; overflow-wrap:anywhere; }
+.owned-world-delete { display:grid; place-items:center; width:44px; height:44px; min-width:44px; padding:0; border:0; background:transparent; color:var(--color-muted); cursor:pointer; }
+.owned-world-delete .icon,.owned-world-delete svg { width:20px; height:20px; }
+.saved-worlds-scroll .owned-world { background:var(--color-surface); border-radius:16px; }
+.saved-worlds-scroll .owned-world .resume-world { background:transparent; }
+
+html[data-theme] .owned-world .resume-world,html[data-theme] .saved-worlds-scroll .owned-world .resume-world { padding-inline-end:0; }
+
+
+/* One shared daily quest slot; condition and crystal reward await server data. */
+.daily-quest { min-width:0; }
+.daily-quest-heading { margin:0 0 var(--space-2); }
+.daily-quest-card { padding:var(--space-3); border:1px solid var(--color-divider); border-radius:var(--radius-md); background:var(--color-surface); font:400 .875rem/1.45 var(--font-body); }
+.daily-quest-card p { margin:0; }
+.daily-quest-reward { display:flex; flex-wrap:wrap; align-items:center; gap:var(--space-1); margin-top:var(--space-2); color:var(--color-muted); font:400 .8125rem/1.4 var(--font-body); }
+.daily-quest-amount { display:inline-flex; align-items:center; gap:var(--space-1); color:var(--color-crystal); font-weight:500; }
+.daily-quest-reward .icon { width:18px; height:18px; }
+
+.composer-editor { position:relative; min-width:0; }
+.composer-editor .composer-text { display:block; width:100%; padding:12px; line-height:1.45; }
+.composer-editor .composer-text.is-autotyping { color:transparent; caret-color:transparent; }
+.composer-typing { position:absolute; inset:1px; overflow:hidden; padding:12px; border-radius:inherit; pointer-events:none; white-space:pre-wrap; overflow-wrap:break-word; font:inherit; line-height:1.45; color:var(--color-ink); }
+.composer-typing-caret { display:inline-block; height:1em; margin-left:1px; border-left:2px solid currentColor; vertical-align:-.12em; animation:composer-caret-blink 650ms step-end infinite; }
+@keyframes composer-caret-blink { 50% { opacity:0; } }
+@media(prefers-reduced-motion:reduce) { .composer-typing-caret { animation:none; } }
+
+.npc-typing { gap:var(--space-2); min-height:48px; font:400 .875rem/1.4 var(--font-body); }
+.npc-typing>.avatar { width:28px; height:28px; flex:0 0 28px; }
+.npc-typing-dots { display:inline-flex; align-items:center; gap:3px; margin-left:5px; }
+.npc-typing-dots i { width:4px; height:4px; border-radius:50%; background:currentColor; animation:npc-typing-dot 1.1s ease-in-out infinite; }
+.npc-typing-dots i:nth-child(2) { animation-delay:150ms; }
+.npc-typing-dots i:nth-child(3) { animation-delay:300ms; }
+@keyframes npc-typing-dot { 0%,70%,100% { opacity:.3; transform:translateY(0); } 35% { opacity:1; transform:translateY(-2px); } }
+@media(prefers-reduced-motion:reduce) { .npc-typing-dots i { animation:none; opacity:1; } }
