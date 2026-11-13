@@ -102,7 +102,7 @@ function StarCard() {
 function FeedPostCard({ item, onChanged }: { item: FeedItem; onChanged: () => void }) {
   const nav = useNav()
   const p = usePlayer()
-  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId, returnTo: 'feed' }) : undefined
+  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.isRepost && item.quote?.text != null ? item.quote.postId : item.postId, returnTo: 'feed' }) : undefined
   return (
     <Card style={{ marginBottom: 12, position: 'relative' }}>
       <div
