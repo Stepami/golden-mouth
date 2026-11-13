@@ -14,7 +14,5 @@ public sealed record FeedItemResponse(
     long? Views,
     int? CommentCount,
     string? Repost,
-    QuotedPostResponse? Quote = null,
-    bool CanRepost = false,
-    bool Reposted = false,
-    bool IsRepost = false);
+    PostId? RepostId = null,
+    AuthorId? AuthorId = null);

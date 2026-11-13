@@ -102,7 +102,7 @@ function StarCard() {
 function FeedPostCard({ item, onChanged }: { item: FeedItem; onChanged: () => void }) {
   const nav = useNav()
   const p = usePlayer()
-  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.isRepost && item.quote?.text != null ? item.quote.postId : item.postId, returnTo: 'feed' }) : undefined
+  const open = item.postId ? () => nav.push('02-6_thread', { postId: item.postId, returnTo: 'feed' }) : undefined
   return (
     <Card style={{ marginBottom: 12, position: 'relative' }}>
       <div
@@ -113,16 +113,16 @@ function FeedPostCard({ item, onChanged }: { item: FeedItem; onChanged: () => vo
         style={open ? { cursor: 'pointer' } : undefined}
       >
         <div className="row"><Avatar seed={item.avatar!} world={item.world} size={36} mode={item.starId ? 'default' : 'profile'} /><div style={{ flex: 1, paddingRight: 24 }}><b>{item.author}</b>{item.starId && <span className="small" style={{ color: 'var(--accent)' }}> ★ звезда</span>} <span className="small muted">{item.role}</span><div className="tiny muted">{item.ago && postDate(item.ago)}{item.demo && ' · демо'}</div></div></div>
-        {item.isRepost && <div className="small muted">↻ Репост</div>}
+        {item.repostId && <div className="small muted">↻ Репост</div>}
         {item.repost && <div className="small" style={{ background: '#20202B', borderRadius: 10, padding: 8, margin: '8px 0' }}><b>{p.name}</b> <span className="muted">· в реках 🌊</span><div>{item.repost}</div></div>}
         <div style={{ marginTop: 12 }}><ExpandableText text={item.text} /></div>
-        <QuotedPost quote={item.quote} />
+        <QuotedPost repostId={item.repostId} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 8 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{item.reactions?.map(r => <span key={r.emoji} className="react">{r.emoji} {short(r.count)}</span>)}</div>
           {item.commentCount != null && item.views != null && <span className="small muted" style={{ whiteSpace: 'nowrap' }}>💬 {item.commentCount} · 👁 {short(item.views)}</span>}
         </div>
       </div>
-      {item.canRepost && item.postId && <RepostAction postId={item.postId} active={item.reposted} onChanged={onChanged} />}
+      {item.authorId?.startsWith('Star_') && !item.repostId && item.postId && <RepostAction postId={item.postId} onChanged={onChanged} />}
     </Card>
   )
 }
@@ -248,7 +248,7 @@ function Stage() {
         <Button secondary style={{ marginBottom: 10 }} onClick={() => nav.push('04-3_invite')}>Позвать друга</Button>
         {list.pending === 'first' && !list.ready && <Card><span className="small muted">загружаем посты…</span></Card>}
         {list.error === 'first' && <Card><div className="small">Не получилось загрузить канал. Потяни вниз от начала списка, чтобы повторить.</div></Card>}
-        {list.items.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.isRepost && post.quote?.text != null ? post.quote.postId : post.postId, returnTo: 'channel' })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.isRepost && <div className="small muted">↻ Репост</div>}{post.text}<QuotedPost quote={post.quote} />{post.isRepost && <RepostAction postId={post.postId} active undoOnly onChanged={() => { void list.refresh() }} />}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
+        {list.items.map(post => <Card key={post.postId} onClick={() => nav.push('02-6_thread', { postId: post.postId, returnTo: 'channel' })} style={{ marginBottom: 10 }}><div className="small muted" style={{ marginBottom: 6 }}>{postDate(post.createdAtUtc)} · в реках 🌊</div>{post.repostId && <div className="small muted">↻ Репост</div>}{post.text}<QuotedPost repostId={post.repostId} />{post.repostId && !post.text.trim() && <RepostAction postId={post.postId} undoOnly onChanged={() => { void list.refresh() }} />}<div style={{ marginTop: 8 }}>{post.reactions.map(reaction => <span className="react" key={reaction.emoji}>{reaction.emoji} {short(reaction.count)}</span>)}<span className="small muted" style={{ float: 'right' }}>💬 {post.commentCount} · 👁 {short(post.views)}</span></div></Card>)}
         <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.error === 'more' ? 'Не получилось загрузить посты. Потяни вниз от начала списка, чтобы обновить.' : list.ready && !list.hasNext ? 'Все посты загружены' : ''}</div>
       </div>
       <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>

@@ -33,8 +33,6 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
         "post_result",
         "post_scored",
         "post_failed",
-        "post_repost",
-        "post_repost_undo",
         "report",
         "screen_leave",
         "screen_view",
@@ -71,7 +69,6 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
         "post_index",
         "quality",
         "publication_kind",
-        "rewarded",
         "skill",
         "star",
         "step",
@@ -94,7 +91,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
                 continue;
             }
 
-            if (entry.Name is "post_repost" or "post_repost_undo" or "post_scored" or "player_created" or "player_deleted" or "world_created" or "level_up" or "card_earned" or "post_failed" || !_events.Contains(entry.Name))
+            if (entry.Name is "post_scored" or "player_created" or "player_deleted" or "world_created" or "level_up" or "card_earned" or "post_failed" || !_events.Contains(entry.Name))
             {
                 continue;
             }

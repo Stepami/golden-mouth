@@ -10,7 +10,8 @@ internal sealed class StarVectorStore(
     VectorStore vectorStore,
     IRekiEmbeddingGenerator<WorldStar> starEmbedder,
     IRekiEmbeddingGenerator<GamePost> postEmbedder,
-    IRekiEmbeddingGenerator<GameComment> commentEmbedder) : IStarVectorStore
+    IRekiEmbeddingGenerator<GameComment> commentEmbedder,
+    IPostRepository posts) : IStarVectorStore
 {
     private const double AdditionalReplyThreshold = 0.35;
 
@@ -52,6 +53,19 @@ internal sealed class StarVectorStore(
         World world,
         GamePost post)
     {
+        if (post.RepostId is { } repostId)
+        {
+            var source = await posts.GetPostAsync(repostId, world.Id, CancellationToken.None)
+                ?? throw new InvalidOperationException("Repost source not found.");
+            var first = source.Comments.FirstOrDefault(comment => !comment.Hidden);
+            if (first is not null && world.FindStar(first.AuthorId) is { } star)
+            {
+                return star.Id;
+            }
+
+            post = source;
+        }
+
         var embedding = await postEmbedder.GenerateVectorAsync(post);
 
         var collection = vectorStore.GetCollection<StarId, StarEntry>(world.Id.ToString(), _definition);

@@ -10,5 +10,4 @@ public sealed record PostDetailResponse(
     long Views,
     IReadOnlyList<ReactionResponse> Reactions,
     IReadOnlyList<CommentResponse> Comments,
-    QuotedPostResponse? Quote = null,
-    bool IsRepost = false);
+    PostId? RepostId = null);

@@ -12,79 +12,61 @@ namespace Reki.Tests.Api;
 public sealed class RepostsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
-    public async Task Repost_ConcurrentRetryUndoRestore_CommitsOnceAsync()
+    [Arguments("")]
+    [Arguments("Хочу обсудить эту мысль вместе с вами.")]
+    public async Task Repost_CreatesReferencedPostWithoutSkillGrowthAsync(string text)
     {
-        using var api = Factory.CreateApiClient(1201);
+        using var api = Factory.CreateApiClient(1301);
         await CreatePlayerWithWorldAsync(api);
         var worldId = await GetWorldIdAsync(api);
         var source = await CreateSourceAsync(worldId);
         var before = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        var results = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ =>
-            api.Posts.RepostPostAsync(source.Id.ToString(), worldId, CancellationToken.None)));
+        var result = await api.Posts.CreatePostAsync(worldId, new CreatePostRequest { Text = text, RepostId = source.Id }, CancellationToken.None);
         var after = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        var delta = results.Sum(result => result.SubscriberDelta);
-        await Assert.That(delta).IsGreaterThan(0);
-        await Assert.That(results.Select(result => result.PostId).Distinct().Count()).IsEqualTo(1);
+        await Assert.That(result.Result.Delta).IsEqualTo(1);
+        await Assert.That(result.Result.Viral).IsFalse();
+        await Assert.That(result.Result.Flop).IsFalse();
+        await Assert.That(result.Post.RepostId).IsEqualTo(source.Id);
+        await Assert.That(result.Post.Text).IsEqualTo(text);
         await Assert.That(after.Energy).IsEqualTo(before.Energy - 1);
         await Assert.That(after.Skills.All(item => item.Value == before.Skills[item.Key])).IsTrue();
         await Assert.That(after.EnergyWallet?.Crystals).IsEqualTo(before.EnergyWallet?.Crystals);
-        var channel = await api.Posts.GetChannelPostsAsync(worldId, null, null, CancellationToken.None);
-        await Assert.That(channel.Items.Count).IsEqualTo(1);
-        await Assert.That(channel.Items[0].Quote?.Text).IsEqualTo(source.Text);
-        await api.Posts.UndoRepostAsync(source.Id.ToString(), worldId, CancellationToken.None);
-        var hidden = await api.Posts.GetChannelPostsAsync(worldId, null, null, CancellationToken.None);
-        await Assert.That(hidden.Items.Count).IsEqualTo(0);
-        var restored = await api.Posts.RepostPostAsync(source.Id.ToString(), worldId, CancellationToken.None);
-        await Assert.That(restored.SubscriberDelta).IsEqualTo(0);
-        await Assert.That(restored.EnergyLeft).IsEqualTo(after.Energy);
-        await Assert.That(restored.Subscribers).IsEqualTo(results[0].Subscribers);
+        var read = await api.Posts.GetPostAsync(result.Post.PostId.ToString(), worldId, CancellationToken.None);
+        await Assert.That(read.RepostId).IsEqualTo(source.Id);
         await Database.GetCollection<GamePost>("posts").DeleteOneAsync(post => post.Id == source.Id);
-        var removed = await api.Posts.UndoRepostAsync(results[0].PostId.ToString(), worldId, CancellationToken.None);
-        await Assert.That(removed.Active).IsFalse();
-        await Assert.That(removed.EnergyLeft).IsEqualTo(after.Energy);
+        var retained = await api.Posts.GetPostAsync(result.Post.PostId.ToString(), worldId, CancellationToken.None);
+        await Assert.That(retained.Text).IsEqualTo(text);
+        await Assert.That(retained.RepostId).IsEqualTo(source.Id);
     }
 
     [Test]
-    public async Task Repost_InsufficientEnergyOrAnotherWorld_DoesNotCreateOrRewardAsync()
+    public async Task Repost_AnotherWorld_DoesNotSpendEnergyAsync()
     {
-        using var api = Factory.CreateApiClient(1202);
+        using var api = Factory.CreateApiClient(1302);
         await CreatePlayerWithWorldAsync(api);
         var worldId = await GetWorldIdAsync(api);
         var source = await CreateSourceAsync(worldId);
-        var before = await GetStoredPlayerAsync(1202);
-        await Database.GetCollection<MongoDB.Bson.BsonDocument>("players").UpdateOneAsync(
-            new MongoDB.Bson.BsonDocument("_id", before["_id"]),
-            MongoDB.Bson.BsonDocument.Parse("{ '$set': { 'Wallet.Energy': 0 } }"));
-        var conflict = await Assert.ThrowsAsync<PostsApiException>(() =>
-            api.Posts.RepostPostAsync(source.Id.ToString(), worldId, CancellationToken.None));
-        await Assert.That(conflict?.StatusCode).IsEqualTo((int)HttpStatusCode.Conflict);
         var second = await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
-        var missing = await Assert.ThrowsAsync<PostsApiException>(() =>
-            api.Posts.RepostPostAsync(source.Id.ToString(), second.Id.ToString(), CancellationToken.None));
+        var before = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        var missing = await Assert.ThrowsAsync<PostsApiException>(() => api.Posts.CreatePostAsync(second.Id.ToString(), new CreatePostRequest { Text = string.Empty, RepostId = source.Id }, CancellationToken.None));
         await Assert.That(missing?.StatusCode).IsEqualTo((int)HttpStatusCode.NotFound);
-        var channel = await api.Posts.GetChannelPostsAsync(worldId, null, null, CancellationToken.None);
-        await Assert.That(channel.Items.Count).IsEqualTo(0);
+        var after = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        await Assert.That(after.Energy).IsEqualTo(before.Energy);
     }
 
     [Test]
-    public async Task Quote_StoredReference_DeletedSourceIsRedactedAsync()
+    public async Task Repost_OriginalCommenter_IsReusedAsync()
     {
-        using var api = Factory.CreateApiClient(1203);
+        using var api = Factory.CreateApiClient(1303);
         await CreatePlayerWithWorldAsync(api);
         var worldId = await GetWorldIdAsync(api);
         var source = await CreateSourceAsync(worldId);
-        const string ownText = "Мне нравится эта идея: давайте обсудим её вместе.";
-        var before = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        var quote = await api.Posts.CreatePostAsync(worldId, new CreatePostRequest { Text = ownText, QuotedPostId = source.Id }, CancellationToken.None);
-        var after = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await Assert.That(after.Energy).IsEqualTo(before.Energy - 1);
-        await Assert.That(quote.Post.Text).IsEqualTo(ownText);
-        await Assert.That(quote.Post.Quote?.Text).IsEqualTo(source.Text);
-        await Database.GetCollection<GamePost>("posts").DeleteOneAsync(post => post.Id == source.Id);
-        var read = await api.Posts.GetPostAsync(quote.Post.PostId.ToString(), worldId, CancellationToken.None);
-        await Assert.That(read.Text).IsEqualTo(ownText);
-        await Assert.That(read.Quote?.Text).IsNull();
-        await Assert.That(read.Quote?.Author).IsNull();
+        var world = await Database.GetCollection<World>("worlds").Find(item => item.Id == source.WorldId).SingleAsync();
+        var author = world.Stars[1].Id.ToAuthorId();
+        var comment = new GameComment(CommentId.New(), null, null, author, "Обсудим эту идею.", false, [], null);
+        await Database.GetCollection<GamePost>("posts").UpdateOneAsync(post => post.Id == source.Id, Builders<GamePost>.Update.Set(post => post.Comments, new[] { comment }));
+        var result = await api.Posts.CreatePostAsync(worldId, new CreatePostRequest { Text = string.Empty, RepostId = source.Id }, CancellationToken.None);
+        await Assert.That(result.PredictedAuthorId).IsEqualTo(author);
     }
 
     private async Task<GamePost> CreateSourceAsync(string worldId)

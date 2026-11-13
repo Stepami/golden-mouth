@@ -17,8 +17,7 @@ internal sealed class PostQueryHandler(
         var worlds = await rekiContextAccessor.Context.Worlds;
         var world = worlds.GetValueOrDefault(query.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
-        var post = await postRepository.GetPostAsync(query.PostId, world.Id, cancellationToken)
+        return await postRepository.GetPostAsync(query.PostId, world.Id, cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");
-        return post.RepostHidden ? throw new ResourceNotFoundException("Post not found.") : post;
     }
 }

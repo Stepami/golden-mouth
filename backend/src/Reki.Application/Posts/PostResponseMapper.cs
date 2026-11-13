@@ -45,8 +45,7 @@ public static partial class PostResponseMapper
 
     public static FeedItemResponse MapFeedItem(
         this GamePost post,
-        World author,
-        GamePost? source = null)
+        World author)
     {
         var resolved = ResolveAuthor(post.AuthorId, author);
         return new(
@@ -61,30 +60,30 @@ public static partial class PostResponseMapper
             post.Views,
             post.Comments.Count,
             null,
-            MapQuote(post, source, author),
-            author.FindStar(post.AuthorId) is not null && post.QuotedPostId is null,
-            post.RepostActive,
-            post.IsRepost);
+            post.RepostId,
+            post.AuthorId);
     }
 
-    public static ChannelPostResponse MapChannelPost(GamePost post, World world, GamePost? source = null) =>
-        new(post.Id, post.Text, post.CreatedAtUtc, post.Views, CreateReactions(post), post.Comments.Count, MapQuote(post, source, world), post.IsRepost);
-
-    public static QuotedPostResponse? MapQuote(GamePost post, GamePost? source, World world)
-    {
-        if (post.QuotedPostId is not { } id)
-        {
-            return null;
-        }
-
-        var author = source is null ? null : world.FindStar(source.AuthorId);
-        return new QuotedPostResponse(id, author?.Name, author?.AvatarSeed, author is null ? null : source?.Text);
-    }
+    [MapProperty(nameof(GamePost.Id), nameof(ChannelPostResponse.PostId))]
+    [MapProperty("Comments.Count", nameof(ChannelPostResponse.CommentCount))]
+    [MapPropertyFromSource(nameof(ChannelPostResponse.Reactions), Use = nameof(CreateReactions))]
+    [MapperIgnoreSource(nameof(GamePost.AuthorId))]
+    [MapperIgnoreSource(nameof(GamePost.WorldId))]
+    [MapperIgnoreSource(nameof(GamePost.SubscriberDelta))]
+    [MapperIgnoreSource(nameof(GamePost.Quality))]
+    [MapperIgnoreSource(nameof(GamePost.ReachRatio))]
+    [MapperIgnoreSource(nameof(GamePost.Viral))]
+    [MapperIgnoreSource(nameof(GamePost.Flop))]
+    [MapperIgnoreSource(nameof(GamePost.Version))]
+    [MapperIgnoreSource(nameof(GamePost.ReactionEmoji))]
+    [MapperIgnoreSource(nameof(GamePost.PredictedAuthorId))]
+    [MapperIgnoreSource(nameof(GamePost.FlopReason))]
+    public static partial ChannelPostResponse MapChannelPost(this GamePost post);
 
     public static IReadOnlyList<ReactionResponse> CreateReactions(this GamePost post) =>
         [new ReactionResponse(post.ReactionEmoji, post.Viral ? 3 : 1)];
 
-    public static PostDetailResponse MapPost(this GamePost post, World world, PlayerId playerId, GamePost? source = null) =>
+    public static PostDetailResponse MapPost(this GamePost post, World world, PlayerId playerId) =>
         new(
             post.Id,
             post.AuthorId,
@@ -92,8 +91,7 @@ public static partial class PostResponseMapper
             post.Views,
             CreateReactions(post),
             post.Comments.Select(comment => MapComment(post, comment, world, playerId)).ToArray(),
-            MapQuote(post, source, world),
-            post.IsRepost);
+            post.RepostId);
 
     private static CommentResponse MapComment(GamePost post, GameComment comment, World world, PlayerId playerId)
     {

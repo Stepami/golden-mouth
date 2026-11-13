@@ -43,14 +43,19 @@ internal sealed class CreatePostCommandHandler(
         var player = await context.Player;
         var world = (await context.Worlds).GetValueOrDefault(command.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
-        var source = command.QuotedPostId is { } sourceId
-            ? await posts.GetPostAsync(sourceId, world.Id, cancellationToken)
-                ?? throw new ResourceNotFoundException("Source post not found.")
-            : null;
-        if (string.IsNullOrWhiteSpace(command.Text) || (source is not null &&
-            (world.FindStar(source.AuthorId) is null || source.QuotedPostId is not null || command.WantId is not null)))
+        if (command.RepostId is null && string.IsNullOrWhiteSpace(command.Text))
         {
-            throw new RequestConflictException("The quote source or text is invalid.");
+            throw new RequestConflictException("Post text is required.");
+        }
+
+        if (command.RepostId is { } sourceId)
+        {
+            var source = await posts.GetPostAsync(sourceId, world.Id, cancellationToken)
+                ?? throw new ResourceNotFoundException("Source post not found.");
+            if (world.FindStar(source.AuthorId) is null || source.RepostId is not null || command.WantId is not null)
+            {
+                throw new RequestConflictException("The repost source is unavailable.");
+            }
         }
 
         var currentBalance = balance.CurrentValue;
@@ -80,8 +85,8 @@ internal sealed class CreatePostCommandHandler(
             1,
             false,
             false,
-            QuotedPostId: command.QuotedPostId);
-        var score = await scorer.ScoreAsync(post, world, currentBalance, cancellationToken, source?.Text ?? string.Empty);
+            RepostId: command.RepostId);
+        var score = await scorer.ScoreAsync(post, world, currentBalance, cancellationToken);
         var starId = await stars.GetRelevantCommenterAsync(world, post);
         var flopReason = score.FlopReason ?? (score.Topic > 0 ? null : "off_topic");
         var flop = flopReason is not null;
@@ -92,7 +97,8 @@ internal sealed class CreatePostCommandHandler(
             command.OwnWords,
             wantCompleted,
             post.Id.ToString(),
-            flop);
+            flop,
+            post.RepostId is not null);
         var updatedWorld = world.PublishPost(
             progression.SubscriberDelta,
             progression.Viral,
@@ -178,7 +184,7 @@ internal sealed class CreatePostCommandHandler(
             post.Viral,
             post.Flop,
             post.Views);
-        return new CreatePostResponse(post.MapPost(updatedWorld, player.Id, source), result, starId.ToAuthorId());
+        return new CreatePostResponse(post.MapPost(updatedWorld, player.Id), result, starId.ToAuthorId());
     }
 
     private static void TrackProgression(
@@ -203,7 +209,7 @@ internal sealed class CreatePostCommandHandler(
                 ["quality"] = post.Quality.ToString("0.###", CultureInfo.InvariantCulture),
                 ["post_index"] = after.Wallet.EnergyUsed.ToString(CultureInfo.InvariantCulture),
                 ["id"] = post.Id.Value.ToString("N"),
-                ["publication_kind"] = post.QuotedPostId is null ? "post" : "quote",
+                ["publication_kind"] = post switch { { RepostId: null } => "post", { Text: "" } => "repost", _ => "quote" },
                 ["delta"] = post.SubscriberDelta.ToString(CultureInfo.InvariantCulture),
             });
 

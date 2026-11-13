@@ -78,7 +78,6 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(MergePlayersRequest))]
 [JsonSerializable(typeof(CreatePostRequest))]
 [JsonSerializable(typeof(CreatePostResponse))]
-[JsonSerializable(typeof(RepostResponse))]
 [JsonSerializable(typeof(ReplyRequest))]
 [JsonSerializable(typeof(GenerateReplyRequest))]
 [JsonSerializable(typeof(ReplyResponse))]

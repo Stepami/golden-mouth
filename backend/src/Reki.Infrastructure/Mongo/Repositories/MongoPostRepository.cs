@@ -26,13 +26,9 @@ internal sealed class MongoPostRepository(
 
     public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken)
     {
+        var embedding = await embeddingGenerator.GenerateVectorAsync(post, cancellationToken: cancellationToken);
         var document = post.ToBsonDocument();
-        if (!post.IsRepost)
-        {
-            var embedding = await embeddingGenerator.GenerateVectorAsync(post, cancellationToken: cancellationToken);
-            document["_embedding"] = new BsonArray(embedding.ToArray());
-        }
-
+        document["_embedding"] = new BsonArray(embedding.ToArray());
         var posts = database.GetCollection<BsonDocument>(MongoCollections.Posts);
         await (sessionProvider.Current is { } session
             ? posts.InsertOneAsync(session, document, cancellationToken: cancellationToken)
@@ -84,8 +80,7 @@ internal sealed class MongoPostRepository(
         CancellationToken cancellationToken)
     {
         var limit = pageSize + 1;
-        var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId) &
-                     Builders<GamePost>.Filter.Ne(item => item.RepostHidden, true);
+        var filter = Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId);
         if (authorId is { } author)
         {
             filter &= Builders<GamePost>.Filter.Eq(item => item.AuthorId, author);
@@ -115,9 +110,7 @@ internal sealed class MongoPostRepository(
         PostId postId,
         WorldId worldId,
         CancellationToken cancellationToken) =>
-        await (sessionProvider.Current is { } session
-            ? _posts.Find(session, item => item.Id == postId && item.WorldId == worldId)
-            : _posts.Find(item => item.Id == postId && item.WorldId == worldId))
+        await _posts.Find(item => item.Id == postId && item.WorldId == worldId)
             .Project<GamePost>(WithoutEmbedding)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -125,21 +118,6 @@ internal sealed class MongoPostRepository(
         await _posts.Find(item => item.Id == postId)
             .Project<GamePost>(WithoutEmbedding)
             .FirstOrDefaultAsync(cancellationToken);
-
-    public async ValueTask<IReadOnlyList<GamePost>> GetReferencedPostsAsync(
-        WorldId worldId, IReadOnlyCollection<PostId> ids, CancellationToken cancellationToken) =>
-        await _posts.Find(Builders<GamePost>.Filter.Eq(item => item.WorldId, worldId) &
-                          Builders<GamePost>.Filter.In(item => item.Id, ids))
-            .Project<GamePost>(WithoutEmbedding).ToListAsync(cancellationToken);
-
-    public async ValueTask SaveRepostStateAsync(GamePost post, CancellationToken cancellationToken) =>
-        await _posts.UpdateOneAsync(
-            sessionProvider.Session,
-            item => item.Id == post.Id && item.WorldId == post.WorldId,
-            Builders<GamePost>.Update.Set(item => item.RepostId, post.RepostId)
-                .Set(item => item.RepostActive, post.RepostActive)
-                .Set(item => item.RepostHidden, post.RepostHidden),
-            cancellationToken: cancellationToken);
 
     public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken)
     {

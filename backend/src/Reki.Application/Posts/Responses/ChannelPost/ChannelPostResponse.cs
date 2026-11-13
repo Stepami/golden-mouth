@@ -9,5 +9,4 @@ public sealed record ChannelPostResponse(
     long Views,
     IReadOnlyList<ReactionResponse> Reactions,
     int CommentCount,
-    QuotedPostResponse? Quote = null,
-    bool IsRepost = false);
+    PostId? RepostId = null);
