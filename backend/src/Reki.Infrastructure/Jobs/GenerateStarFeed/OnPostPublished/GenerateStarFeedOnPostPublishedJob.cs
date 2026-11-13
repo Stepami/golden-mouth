@@ -25,7 +25,7 @@ internal sealed class GenerateStarFeedOnPostPublishedJob(
         var request = context.Request;
         var source = await postRepository.GetPostAsync(request.SourcePostId, cancellationToken)
             ?? throw new TerminateExecutionException("The feed source is unavailable.");
-        if (source.WorldId != request.WorldId || source.AuthorId != request.PlayerId.ToAuthorId())
+        if (source.AuthorId != request.PlayerId.ToAuthorId())
         {
             throw new TerminateExecutionException("The feed source is invalid.");
         }
@@ -40,7 +40,7 @@ internal sealed class GenerateStarFeedOnPostPublishedJob(
             throw new TerminateExecutionException("The feed world is unavailable.");
         }
 
-        if (await postRepository.GetPostAsync(postId, cancellationToken) is { } existing && existing.WorldId == worldId)
+        if (await postRepository.GetPostAsync(postId, cancellationToken) is not null)
         {
             return;
         }
@@ -66,7 +66,7 @@ internal sealed class GenerateStarFeedOnPostPublishedJob(
         }
 
         var freshSource = await postRepository.GetPostAsync(source.Id, cancellationToken);
-        if (freshSource is null || freshSource.WorldId != worldId || freshSource.AuthorId != playerId.ToAuthorId())
+        if (freshSource is null || freshSource.AuthorId != playerId.ToAuthorId())
         {
             throw new TerminateExecutionException("The feed source is unavailable.");
         }

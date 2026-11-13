@@ -30,11 +30,6 @@ internal sealed partial class GenerateReplyCommandHandler(
             ?? throw new ResourceNotFoundException("World not found.");
         var post = await sender.Send(new PostQuery(command.PostId), cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");
-        if (post.WorldId != world.Id)
-        {
-            throw new ResourceNotFoundException("Post not found.");
-        }
-
         var star = world.FindStar(command.AuthorId)
             ?? throw new RequestConflictException("The author is not a star of this world.");
         var source = command.SourceCommentId is { } sourceId
@@ -57,11 +52,6 @@ internal sealed partial class GenerateReplyCommandHandler(
         var original = post.RepostId is { } repostId
             ? await posts.GetPostAsync(repostId, cancellationToken)
             : null;
-        if (original?.WorldId != world.Id)
-        {
-            original = null;
-        }
-
         var turnContext = new StarReplyContext(
             new StarAgentProfile(world, star.Id, player.Address),
             star.Id,

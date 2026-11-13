@@ -37,7 +37,7 @@ internal sealed class GenerateStarFeedOnFeedOpenedJob(
             throw new TerminateExecutionException("The feed world is unavailable.");
         }
 
-        if (await postRepository.GetPostAsync(postId, cancellationToken) is { } existing && existing.WorldId == worldId)
+        if (await postRepository.GetPostAsync(postId, cancellationToken) is not null)
         {
             return;
         }

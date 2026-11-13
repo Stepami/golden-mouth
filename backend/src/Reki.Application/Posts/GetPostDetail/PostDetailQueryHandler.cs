@@ -14,6 +14,6 @@ internal sealed class PostDetailQueryHandler(ISender sender, IRekiContextAccesso
         var world = (await rekiContext.Worlds).GetValueOrDefault(query.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
         var post = await sender.Send(new PostQuery(query.PostId), cancellationToken);
-        return post?.WorldId == world.Id ? post.MapPost(world, rekiContext.PlayerId) : null;
+        return post?.MapPost(world, rekiContext.PlayerId);
     }
 }

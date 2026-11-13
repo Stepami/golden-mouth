@@ -57,7 +57,7 @@ internal sealed class StarVectorStore(
         var repost = post.RepostId is { } repostId
             ? await posts.GetPostAsync(repostId, CancellationToken.None)
             : null;
-        if (repost is not null && repost.WorldId == world.Id)
+        if (repost is not null)
         {
             if (world.FindStar(repost.AuthorId) is { } author)
             {
