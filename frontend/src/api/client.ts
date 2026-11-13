@@ -33,6 +33,11 @@ const playerAuthorId = (): string => {
     if (!sessionPlayer) throw new Error('Player must be loaded before this request');
     return `Player_${sessionPlayer.id.replaceAll('-', '').toLowerCase()}`;
 };
+const worldAuthorIds = (id: string): string[] => {
+    const selected = ownedWorldSnapshot?.find(world => world.id === id);
+    if (!selected) throw new Error('World must be loaded before this request');
+    return [playerAuthorId(), ...selected.stars.map(star => `Star_${star.id}`)];
+};
 async function fetchTemplates(): Promise<void> {
     try {
         const loaded = (await data(sdk.worlds.getWorldTemplates(), false)).map(map.world);
@@ -288,9 +293,7 @@ export const api = {
     },
     feed: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<FeedItem>> => {
         const id = selectedWorldId ?? worldId();
-        const selected = ownedWorldSnapshot?.find(world => world.id === id);
-        if (!selected) throw new Error('World must be loaded before this request');
-        const authors = [playerAuthorId(), ...selected.stars.map(star => `Star_${star.id}`)];
+        const authors = worldAuthorIds(id);
         const page = await data(sdk.posts.getPosts(id, authors, cursor, undefined, undefined, signal));
         return { ...page, items: page.items.map(map.feed) };
     },
@@ -301,7 +304,8 @@ export const api = {
     likedPosts: async (selectedWorldId: string | undefined, cursor?: string, signal?: AbortSignal): Promise<PostsPage<FeedItem>> => {
         const player = sessionPlayer;
         const author = playerAuthorId();
-        const page = await data(sdk.posts.getPosts(selectedWorldId ?? worldId(), [author], cursor, author, undefined, signal));
+        const id = selectedWorldId ?? worldId();
+        const page = await data(sdk.posts.getPosts(id, worldAuthorIds(id), cursor, author, undefined, signal));
         if (sessionPlayer?.id !== player?.id || sessionPlayer?.worldInstanceId !== player?.worldInstanceId)
             throw new DOMException('World has changed', 'AbortError');
         return { ...page, items: page.items.map(map.feed) };
@@ -315,6 +319,13 @@ export const api = {
         } finally {
             clearApiCache();
         }
+    },
+    togglePostLike: async (postId: string, signal?: AbortSignal): Promise<PostDetailResponse> => {
+        await api.likePost(postId, signal);
+        const saved = await api.post(postId);
+        if (!saved) throw new Error('Post is unavailable');
+        const { id, ...detail } = saved;
+        return { ...detail, postId: id };
     },
     post: async (postId: string): Promise<Post | null> => {
         try {

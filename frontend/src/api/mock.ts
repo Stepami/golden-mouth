@@ -18,7 +18,7 @@ export const player: Player = {
 
 export const firstPost: Post = {
   id: 'post1', text: 'первый день трейни: перепутала право и лево три раза. хореограф сказал «зато уверенно» 🫠', views: 312,
-  likes: 16, likedBy: [], reactions: [{ emoji: '🔥', count: 16 }], at: 'только что', authorId: player.id,
+  likes: 16, likedBy: [], at: 'только что', authorId: player.id,
   comments: [
     { id: 'k1', authorId: 'Star_mira', depth: 0, parentCommentId: null, author: 'Мира', avatar: 'mira', handle: 'лидер BLESK', text: 'я на первой репетиции упала со сцены. «уверенно» это комплимент, поверь', star: true },
     { id: 'k2', parentCommentId: 'k1', authorId: player.id, depth: 1, reactions: [{ authorId: 'Star_mira', author: 'Мира', avatar: 'mira', star: true, me: false, emoji: '💛' }], author: 'Лиза · трейни', avatar: '@liza.trainee', handle: '', text: 'серьёзно? со сцены?? 😳', me: true },
@@ -33,7 +33,6 @@ export const channelPosts = [{
   views: firstPost.views,
   likes: firstPost.likes,
   likedBy: firstPost.likedBy,
-  reactions: firstPost.reactions,
   commentCount: firstPost.comments.length,
 }]
 export const liveComment = { id: 'k0', author: 'kpop_dasha', avatar: 'dasha', handle: 'фанатка', text: 'ЗАТО УВЕРЕННО 😭 это теперь мой девиз' }
