@@ -22,9 +22,10 @@ export function QuotedPost({ repostId }: { repostId?: string | null }) {
   }, [repostId, player.id, player.worldInstanceId, attempt])
   if (!repostId) return null
   const author = source && contentOf(player.world).stars.find(star => `Star_${star.id}` === source.authorId)
+  const own = source?.authorId === `Player_${player.id.replaceAll('-', '').toLowerCase()}`
   return <div className="quoted-post" onClick={event => event.stopPropagation()}>
     {source ? <button type="button" className="quote-source" onClick={() => nav.push('02-6_thread', { postId: repostId })}>
-      <span className="row"><Avatar seed={author?.avatarSeed ?? ''} mode="default" size={28} /><b>{author?.name ?? 'Автор'}</b></span>
+      <span className="row"><Avatar seed={own ? player.handle : author?.avatarSeed ?? ''} mode={own ? 'profile' : 'default'} size={28} /><b>{own ? player.name : author?.name ?? 'Автор'}</b></span>
       <span className="quoted-post-text">{source.text}</span>
     </button> : <span className="muted" role="status">{error === 'missing' ? 'Пост недоступен' : error === 'failed' ? 'Не удалось загрузить оригинал' : 'Загружаем оригинал…'}</span>}
     {error === 'failed' && <button className="text-button repost-action" onClick={() => setAttempt(value => value + 1)}>Повторить</button>}
