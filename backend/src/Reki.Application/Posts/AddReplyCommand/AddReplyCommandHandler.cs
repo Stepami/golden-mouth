@@ -33,8 +33,13 @@ internal sealed class AddReplyCommandHandler(
         var player = await context.Player;
         var world = (await context.Worlds).GetValueOrDefault(command.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
-        var post = await posts.GetPostAsync(command.PostId, world.Id, cancellationToken)
+        var post = await posts.GetPostAsync(command.PostId, cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");
+        if (post.WorldId != world.Id)
+        {
+            throw new ResourceNotFoundException("Post not found.");
+        }
+
         var isPlayer = command.AuthorId == player.Id.ToAuthorId();
         if (post.FindRequest(command.RequestId) is { } existing)
         {

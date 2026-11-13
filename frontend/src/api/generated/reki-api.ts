@@ -810,15 +810,11 @@ export class PostsClient {
     /**
      * @return No Content
      */
-    likePost(postId: string, worldId: string, body: LikePostRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
-        let url_ = this.baseUrl + "/posts/{postId}/like?";
+    likePost(postId: string, body: LikePostRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+        let url_ = this.baseUrl + "/posts/{postId}/like";
         if (postId === undefined || postId === null)
             throw new globalThis.Error("The parameter 'postId' must be defined.");
         url_ = url_.replace("{postId}", encodeURIComponent("" + postId));
-        if (worldId === undefined || worldId === null)
-            throw new globalThis.Error("The parameter 'worldId' must be defined and cannot be null.");
-        else
-            url_ += "worldId=" + encodeURIComponent("" + worldId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(body);

@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Requests.Posts;
+using Reki.Application.Exceptions;
 using Reki.Application.Posts;
 using Reki.Application.Posts.CreatePostCommand;
+using Reki.Application.Posts.GetPost;
 using Reki.Application.Posts.GetPostDetail;
 using Reki.Application.Posts.LikePostCommand;
 using Reki.Application.Posts.Responses;
@@ -41,10 +43,17 @@ public sealed class PostsController(ISender sender) : ControllerBase
     public async Task<NoContent> LikePostAsync(
         PostId postId,
         LikePostRequest request,
-        [FromQuery, BindRequired] WorldId worldId,
+        [FromServices] IRekiContext rekiContext,
         CancellationToken cancellationToken)
     {
-        await sender.Send(new LikePost(postId, worldId, request.AuthorId), cancellationToken);
+        var post = await sender.Send(new PostQuery(postId), cancellationToken)
+                   ?? throw new ResourceNotFoundException("Post not found.");
+        if (!(await rekiContext.Worlds).ContainsKey(post.WorldId))
+        {
+            throw new ResourceNotFoundException("Post not found.");
+        }
+
+        await sender.Send(new LikePost(postId, request.AuthorId), cancellationToken);
         return TypedResults.NoContent();
     }
 

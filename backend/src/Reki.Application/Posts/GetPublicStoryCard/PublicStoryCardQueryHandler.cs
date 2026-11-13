@@ -17,7 +17,7 @@ internal sealed class PublicStoryCardQueryHandler(
     {
         var player = await playerRepository.GetPlayerAsync(query.PlayerId, cancellationToken)
             ?? throw new ResourceNotFoundException("Player not found.");
-        var post = await postRepository.GetPublicStoryPostAsync(query.PostId, cancellationToken)
+        var post = await postRepository.GetPostAsync(query.PostId, cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");
         var world = await worldRepository.GetWorldAsync(player.Id, post.WorldId, cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");

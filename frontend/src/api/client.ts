@@ -304,7 +304,7 @@ export const api = {
     likePost: async (postId: string, signal?: AbortSignal): Promise<void> => {
         const player = sessionPlayer;
         try {
-            await data(sdk.posts.likePost(postId, worldId(), { authorId: playerAuthorId() }, signal));
+            await data(sdk.posts.likePost(postId, { authorId: playerAuthorId() }, signal));
             if (sessionPlayer?.id !== player?.id || sessionPlayer?.worldInstanceId !== player?.worldInstanceId)
                 throw new DOMException('World has changed', 'AbortError');
         } finally {

@@ -116,9 +116,8 @@ internal sealed class MongoPostRepository(
 
     public async ValueTask<GamePost?> GetPostAsync(
         PostId postId,
-        WorldId worldId,
         CancellationToken cancellationToken) =>
-        await _posts.Find(item => item.Id == postId && item.WorldId == worldId)
+        await _posts.Find(item => item.Id == postId)
             .Project<GamePost>(WithoutEmbedding)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -143,11 +142,6 @@ internal sealed class MongoPostRepository(
             ? _posts.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken)
             : _posts.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));
     }
-
-    public async ValueTask<GamePost?> GetPublicStoryPostAsync(PostId postId, CancellationToken cancellationToken) =>
-        await _posts.Find(item => item.Id == postId)
-            .Project<GamePost>(WithoutEmbedding)
-            .FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken)
     {
