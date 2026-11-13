@@ -36,16 +36,15 @@ internal sealed partial class PostTextAnalysis(
         string[] hypotheses = ["Автор смело выражает своё мнение.", "Текст содержит юмор или шутку."];
         var scores = await nli.ScoreAsync(post.Text, hypotheses, cancellationToken);
 
-        var topic = 1d;
-        if (ownWords)
+        if (!ownWords)
         {
-            var postVector = await postEmbedder.GenerateVectorAsync(post, cancellationToken: cancellationToken);
-            var worldVector = await worldEmbedder.GenerateVectorAsync(world, cancellationToken: cancellationToken);
-            var similarity = TensorPrimitives.CosineSimilarity(postVector.Span, worldVector.Span);
-
-            // Cosine and its threshold use the same precision so equality passes.
-            topic = similarity >= (float)context.Current.Balance.Difficulties[world.Difficulty].TopicMinCosine ? 1d : 0d;
+            return [scores[0].Entailment, scores[1].Entailment, 1d];
         }
+
+        var postVector = await postEmbedder.GenerateVectorAsync(post, cancellationToken: cancellationToken);
+        var worldVector = await worldEmbedder.GenerateVectorAsync(world, cancellationToken: cancellationToken);
+        var similarity = TensorPrimitives.CosineSimilarity(postVector.Span, worldVector.Span);
+        var topic = similarity >= (float)context.Current.Balance.Difficulties[world.Difficulty].TopicMinCosine ? 1d : 0d;
 
         return [scores[0].Entailment, scores[1].Entailment, topic];
     }

@@ -157,11 +157,6 @@ internal sealed class CreatePostCommandHandler(
                 ? new WhyResponse("🎯", "В тему", string.Empty)
                 : new WhyResponse("👎", "Не в тему", string.Empty));
 
-        foreach (var (label, multiplier) in progression.GrowthMultipliers)
-        {
-            whys.Add(new WhyResponse("×", label, $"×{multiplier.ToString("0.###", CultureInfo.InvariantCulture).Replace('.', ',')}"));
-        }
-
         var result = new PostResultResponse(
             post.Id,
             post.SubscriberDelta,
