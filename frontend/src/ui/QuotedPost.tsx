@@ -15,7 +15,7 @@ export function QuotedPost({ repostId }: { repostId?: string | null }) {
     setSource(null); setError(null)
     if (!repostId) return
     let active = true
-    void api.post(repostId).then(post => { if (active) setSource(post) }).catch(cause => {
+    void api.post(repostId).then(post => { if (active) { setSource(post); if (!post) setError('missing') } }).catch(cause => {
       if (active) setError(cause instanceof ApiError && cause.status === 404 ? 'missing' : 'failed')
     })
     return () => { active = false }

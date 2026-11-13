@@ -48,16 +48,6 @@ internal sealed class CreatePostCommandHandler(
             throw new RequestConflictException("Post text is required.");
         }
 
-        if (command.RepostId is { } sourceId)
-        {
-            var source = await posts.GetPostAsync(sourceId, world.Id, cancellationToken)
-                ?? throw new ResourceNotFoundException("Source post not found.");
-            if (world.FindStar(source.AuthorId) is null || source.RepostId is not null || command.WantId is not null)
-            {
-                throw new RequestConflictException("The repost source is unavailable.");
-            }
-        }
-
         var currentBalance = balance.CurrentValue;
         if (player.Wallet.Energy < currentBalance.PostEnergyCost)
         {

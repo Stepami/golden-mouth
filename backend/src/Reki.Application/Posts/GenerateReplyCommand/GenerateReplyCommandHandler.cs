@@ -28,7 +28,8 @@ internal sealed partial class GenerateReplyCommandHandler(
         var player = await rekiContext.Player;
         var world = (await rekiContext.Worlds).GetValueOrDefault(command.WorldId)
             ?? throw new ResourceNotFoundException("World not found.");
-        var post = await sender.Send(new PostQuery(command.PostId, world.Id), cancellationToken);
+        var post = await sender.Send(new PostQuery(command.PostId, world.Id), cancellationToken)
+            ?? throw new ResourceNotFoundException("Post not found.");
         var star = world.FindStar(command.AuthorId)
             ?? throw new RequestConflictException("The author is not a star of this world.");
         var source = command.SourceCommentId is { } sourceId

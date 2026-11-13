@@ -289,8 +289,11 @@ export const api = {
         const page = await data(sdk.posts.getChannelPosts(selectedWorldId ?? worldId(), cursor, undefined, signal));
         return { ...page, items: page.items.map(map.channelPost) };
     },
-    post: async (postId: string): Promise<Post> => {
-        return data(sdk.posts.getPost(postId, worldId())).then(map.post).then(({ postId: id, ...detail }) => ({ ...detail, id }));
+    post: async (postId: string): Promise<Post | null> => {
+        const response = await data(sdk.posts.getPost(postId, worldId()));
+        if (response == null) return null;
+        const { postId: id, ...detail } = map.post(response);
+        return { ...detail, id };
     },
     friends: (): Promise<Friend[]> => data(sdk.social.getFriends()).then(friends => friends.map(map.friend)),
     dm: (starId: string): Promise<Dm> => data(sdk.social.getDirectMessages(starId, worldId())).then(map.dm),

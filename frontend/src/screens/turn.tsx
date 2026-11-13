@@ -26,14 +26,6 @@ function Compose() {
   const ideas = contentOf(p.world).ideas
   const repostId = typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined
   const key = draftKey(p) + (repostId ? `:quote:${repostId}` : '')
-  const [source, setSource] = useState<Post | null>(null)
-  const [sourceError, setSourceError] = useState(false)
-  useEffect(() => {
-    if (!repostId) return
-    let active = true
-    void api.post(repostId).then(post => { if (active) setSource(post) }).catch(() => { if (active) setSourceError(true) })
-    return () => { active = false }
-  }, [repostId])
   const [draft, setDraft] = useState<PostDraft>(() => {
     const saved = readPostDraft(key)
     return saved.text.length || saved.wantId ? saved : { text: typeof nav.params.text === 'string' ? nav.params.text : '', ownWords: true }
@@ -50,12 +42,11 @@ function Compose() {
       <TopBar onBack={nav.back} title={repostId ? "Репост со своим текстом" : "Новый пост"} rightPlain right={<EnergyBadge value={p.postsLeft} />} />
       <div className="pad">
         {!repostId && <StoryGoal world={p.world} firstStep />}
-        {repostId && <div className="small muted" role="status">{sourceError ? 'Не удалось загрузить оригинал. Вернись в ленту и повтори.' : source ? 'Оригинал будет под твоим текстом.' : 'Загружаем оригинал…'}</div>}
-        {source && <QuotedPost repostId={repostId} />}
+        {repostId && <QuotedPost repostId={repostId} />}
         <TextField label="Твой пост" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim() || (!!repostId && !source)} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords, publication_kind: repostId ? 'quote' : 'post' }); nav.replace('02-2_live', { text, ownWords: draft.ownWords, wantId: repostId ? undefined : draft.wantId, repostId }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
+      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords, publication_kind: repostId ? 'quote' : 'post' }); nav.replace('02-2_live', { text, ownWords: draft.ownWords, wantId: repostId ? undefined : draft.wantId, repostId }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
     </div>
   )
 }
@@ -273,6 +264,7 @@ function Thread() {
     setLoad('loading')
     api.post(postId).then(found => {
       if (!alive) return
+      if (!found) { setPost(null); setLoad('unavailable'); return }
       setPost(found); setLoad('ready')
       const saved = found.comments.find(comment => comment.requestId === draft.requestId && (comment.parentCommentId ?? null) === draft.commentId && comment.text === draft.text)
       if (saved && found.comments.some(comment => comment.requestId === `${draft.requestId}-star`) &&
