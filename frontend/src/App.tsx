@@ -16,7 +16,7 @@ import { useAvatarPersonalization } from './app/avatarPersonalization'
 import type { WorldId } from './api/types'
 
 import { Landing } from './app/landing/Landing'
-import { beginLandingAuth, completeLandingAuth, landingAuthPending, isLandingPreview } from './app/landing/experiment'
+import { beginLandingAuth, completeLandingAuth, landingAuthPending, isLandingPreview, pendingLandingWorld } from './app/landing/experiment'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
 
@@ -53,14 +53,16 @@ function Shell() {
   useEffect(() => { setScreen(top.id); screenView(top.id) }, [top.id])
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments) }, [player?.experiments])
   useEffect(() => {
-    if ((playerState !== 'ready' && !(playerState === 'missing' && api.hasPlayer())) || explicitStart || top.id !== '01-1_invite') return
-    setStack([{ id: '01-3_world', params: {} }])
+    if (explicitStart || top.id !== '01-1_invite' || playerState === 'loading' || playerState === 'failed') return
+    const world = pendingLandingWorld()
+    if (world) setStack([{ id: api.hasPlayer() ? '01-3b_world_overview' : '01-2_age', params: { world, fromLanding: true } }])
+    else if (playerState === 'ready' || api.hasPlayer()) setStack([{ id: '01-3_world', params: {} }])
   }, [explicitStart, playerState, top.id])
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1 && top.id !== '02-6_thread', back), [stack.length, top.id, back])
 
   const Screen = SCREENS[top.id]?.component
-  const resolvingExistingPlayer = (playerState === 'ready' || playerState === 'missing' && api.hasPlayer()) && !explicitStart && top.id === '01-1_invite'
+  const resolvingExistingPlayer = (playerState === 'ready' || playerState === 'missing' && (api.hasPlayer() || !!pendingLandingWorld())) && !explicitStart && top.id === '01-1_invite'
   if (!Screen || playerState === 'loading' || resolvingExistingPlayer) return <div className="app"><div className="screen"><div className="pad" role="status">Загружаем твою игру…</div></div></div>
   if (playerState === 'failed') return <div className="app"><div className="screen"><div className="pad"><p>Не получилось загрузить игру.</p><button className="btn" onClick={() => location.reload()}>Попробовать снова</button></div></div></div>
   const people: React.ContextType<typeof AvatarPeople> = {}
@@ -115,8 +117,8 @@ export function App() {
         : 'Не получилось войти. Проверь подключение и попробуй снова.')
     }).finally(() => setBusy(false))
   }
-  if (!explicitStart && (landingPreview || ready && !authenticated && !registration && !resumable && !landingAccepted)) return <Landing preview={landingPreview} onContinue={() => {
-    if (!landingPreview) { beginLandingAuth(); trackLanding('landing_continue') }
+  if (!explicitStart && (landingPreview || ready && !authenticated && !registration && !resumable && !landingAccepted)) return <Landing preview={landingPreview} onContinue={worldId => {
+    if (!landingPreview) { beginLandingAuth(worldId); trackLanding('landing_continue') }
     setLandingAccepted(true); setLandingPreview(false)
   }} />
   if (!explicitStart && !ready) return <div className="app"><div className="screen"><div className="pad" role="status">Входим в игру…</div></div></div>

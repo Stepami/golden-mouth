@@ -1,7 +1,9 @@
 export type LandingVariant = 'worlds' | 'hogwarts'
-type Assignment = { variant: LandingVariant; source: 'link' | 'direct'; utm: Record<string, string>; firstPost?: boolean; initialVariant?: LandingVariant; switched?: boolean }
+type Assignment = { variant: LandingVariant; source: 'link' | 'direct'; utm: Record<string, string>; firstPost?: boolean; initialVariant?: LandingVariant; switched?: boolean; worldId?: string }
 const key = 'reki:landing:entry-v1'
 const authKey = `${key}:auth`
+const worldKey = `${key}:world`
+let worldFallback: string | undefined
 let fallback: Assignment | undefined
 const valid = (value: unknown): value is LandingVariant => value === 'worlds' || value === 'hogwarts'
 export const isLandingPreview = () => !!import.meta.env?.DEV && new URLSearchParams(location.search).get('preview') === 'landing'
@@ -10,6 +12,7 @@ export function requestedVariant(): LandingVariant | undefined {
   return valid(value) ? value : undefined
 }
 function read(): Assignment | undefined {
+  if (fallback) return fallback
   try {
     const value = JSON.parse(localStorage.getItem(key) ?? 'null') as Assignment | null
     if (value && valid(value.variant) && (value.source === 'link' || value.source === 'direct')) return value
@@ -31,6 +34,7 @@ export function assignLanding(): LandingVariant {
     if (value && /^[a-zA-Z0-9_.-]{1,64}$/.test(value)) utm[name] = value
   }
   const assignment: Assignment = { variant: requested ?? 'worlds', source: requested ? 'link' : 'direct', utm, firstPost: saved?.firstPost, initialVariant: saved?.initialVariant ?? saved?.variant ?? requested ?? 'worlds', switched: saved?.switched || !!saved && saved.variant !== requested }
+  clearLandingWorld()
   authFallback = false
   try { sessionStorage.removeItem(authKey) } catch { /* A new landing starts a new entry attempt. */ }
   save(assignment)
@@ -38,7 +42,7 @@ export function assignLanding(): LandingVariant {
 }
 export function landingContext(): Record<string, string> | undefined {
   const value = read()
-  return value ? { ...value.utm, landing_experiment: 'entry_v1', landing_variant: value.variant, landing_initial_variant: valid(value.initialVariant) ? value.initialVariant : value.variant, landing_switched: value.switched ? 'true' : 'false', landing_source: value.source } : undefined
+  return value ? { ...value.utm, landing_experiment: 'entry_v1', landing_variant: value.variant, landing_initial_variant: valid(value.initialVariant) ? value.initialVariant : value.variant, landing_switched: value.switched ? 'true' : 'false', landing_source: value.source, ...(value.worldId ? { landing_world_id: value.worldId } : {}) } : undefined
 }
 let authFallback = false
 export function landingAuthPending(): boolean {
@@ -46,7 +50,11 @@ export function landingAuthPending(): boolean {
   if (requested && requested !== read()?.variant) return false
   try { return sessionStorage.getItem(authKey) === '1' || authFallback } catch { return authFallback }
 }
-export function beginLandingAuth() {
+export function beginLandingAuth(worldId: string) {
+  worldFallback = worldId
+  try { sessionStorage.setItem(worldKey, worldId) } catch { /* Keep this visit usable. */ }
+  const value = read()
+  if (value) save({ ...value, worldId })
   authFallback = true
   try { sessionStorage.setItem(authKey, '1') } catch { /* Keep the button working. */ }
 }
@@ -61,4 +69,12 @@ export function completeLandingPost(): boolean {
   if (isLandingPreview() || !value || value.firstPost) return false
   save({ ...value, firstPost: true })
   return true
+}
+
+export function pendingLandingWorld(): string | undefined {
+  try { return worldFallback ?? sessionStorage.getItem(worldKey) ?? undefined } catch { return worldFallback }
+}
+export function clearLandingWorld() {
+  worldFallback = undefined
+  try { sessionStorage.removeItem(worldKey) } catch { /* In-memory state is enough for this visit. */ }
 }

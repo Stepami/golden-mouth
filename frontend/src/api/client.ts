@@ -1,3 +1,4 @@
+import { clearLandingWorld } from '../app/landing/experiment'
 import { completeLandingPost } from '../app/landing/experiment';
 // Р¤Р°СЃР°Рґ API РїРѕРІРµСЂС… NSwag Fetch-РєР»РёРµРЅС‚Р°.
 // Р’Рѕ С„СЂРѕРЅС‚Рµ РќР•Рў СЃРµРєСЂРµС‚РѕРІ: runtime config РІРёРґРµРЅ РІ Р±СЂР°СѓР·РµСЂРµ. РљР»СЋС‡Рё LLM Рё С‚РѕРєРµРЅ Р±РѕС‚Р° Р¶РёРІСѓС‚ С‚РѕР»СЊРєРѕ РЅР° Р±СЌРєРµРЅРґРµ.
@@ -173,6 +174,7 @@ export const api = {
     },
     logout: async () => {
         await revokeSession();
+        clearLandingWorld();
         api.clearSession();
     },
     loadWorldTemplates: loadTemplates,
