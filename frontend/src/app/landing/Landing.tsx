@@ -27,7 +27,6 @@ export function Landing({ onContinue, preview = false }: { onContinue: (worldId:
     return () => { active = false }
   }, [attempt])
   const chosen = available.find(world => world.id === selected)
-  const summary = chosen && (selected === worlds[2].templateId ? 'Первый год в школе магии, дружба и опасные тайны.' : chosen.summary)
   const viewed = useRef(false)
   const clicked = useRef(false)
   const heading = useRef<HTMLHeadingElement>(null)
@@ -49,7 +48,7 @@ export function Landing({ onContinue, preview = false }: { onContinue: (worldId:
     {variant === 'worlds' ? <>
       <section className="landing-copy"><h1 ref={heading} id="landing-title" tabIndex={-1}>Твой блог.<br />Твоя история.</h1><p>Выбери героя, пиши посты и смотри, как отвечает его мир.</p></section>
       <section className="landing-mosaic" aria-label="Игровые миры">{worlds.map(world => <button type="button" className="landing-world" key={world.id} aria-pressed={selected === world.templateId} onClick={() => setSelected(world.templateId)}><img src={`/landing/${world.id}-480.jpg`} width="480" height="720" alt="" fetchPriority={world.id === 'infobiz' ? 'high' : 'auto'} /><strong>{world.title}</strong></button>)}</section>
-      <p className="landing-world-summary" aria-live="polite">{summary ?? (error ? '' : available.length ? 'Этот мир сейчас недоступен. Выбери другой.' : 'Загружаем миры…')}</p>
+      <p className="landing-world-summary" aria-live="polite">{chosen?.summary ?? (error ? '' : available.length ? 'Этот мир сейчас недоступен. Выбери другой.' : 'Загружаем миры…')}</p>
     </> : <>
       <section className="landing-hero-copy"><div className="landing-eyebrow">Спасти Хогвартс</div><h1 ref={heading} id="landing-title" tabIndex={-1}>Хогвартс закрыт.<br />Спаси его от банкротства.</h1><p>Выбери героя. Веди его блог.<br />Решай, кому верить.</p></section>
       <section className="landing-other-worlds" aria-label="Другие игровые миры">{worlds.filter(world => world.id !== 'hogwarts').map(world => <div key={world.id}><img src={`/landing/${world.id}-480.jpg`} width="480" height="720" alt="" /><span>{world.id === 'infobiz' ? 'Инфобизеры' : world.title}</span></div>)}</section>
