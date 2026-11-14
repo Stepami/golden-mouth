@@ -1,4 +1,5 @@
-import { clearLandingWorld } from '../app/landing/experiment'
+import { hasAccess, needsRegistration } from '../api/auth'
+import { clearLandingWorld, loginFromWorldPreview } from '../app/landing/experiment'
 import { useState, type ReactNode } from 'react'
 import { useStore } from '../app/store'
 import { avatarPersonalization } from '../app/avatarPersonalization'
@@ -114,11 +115,10 @@ export function DramaPicker({ definition: d, beforeOptions, withDifficulty = tru
 export function WorldPrototypePreview() {
   const draft = useWorldDraft(); const nav = useNav()
   if (!draft) return <div className="screen no-tab"><TopBar title="Демо мира" onBack={nav.back} /><div className="pad"><Button onClick={() => nav.replace('01-3_world')}>Выбрать мир</Button></div></div>
-  const d = draft.definition; const [first, second] = d.stars
-  return <div className="screen no-tab"><TopBar title="Так начнётся твоя история" onBack={nav.back} /><div className="pad"><div className="small prototype-note">Демо · мир ещё не создан</div><h1>{d.emoji} {d.title}</h1><p className="muted">{d.description}</p><div className="pill">{dramaOptions.find(value => value.id === d.drama)?.title}</div>
-    <h2>Первая запись в ленте</h2><Card><div className="row"><Avatar seed={first?.avatarSeed} avatarStyle={d.avatarStyle} mode="default" /><div><b>{first?.name}</b><div className="small muted">{first?.role}</div></div></div><p>{d.firstContext}</p><div className="small muted">♡ 12　💬 2</div></Card>
-    {second && <Card><b>{second.name}</b><p>У меня есть другая версия. Давай сравним находки в ленте?</p></Card>}
-    <p className="small muted">Это пример наполнения для проверки интерфейса. После согласования AI сможет подбирать героев и завязку под твоё описание.</p>
+  const d = draft.definition; const first = d.stars.find(star => star.id === (draft.persona?.star.id === 'georgina' ? 'roman' : 'georgina')) ?? d.stars[0]
+  return <div className="screen no-tab"><TopBar title="Предпросмотр истории" onBack={nav.back} /><div className="pad"><div className="small prototype-note">Предпросмотр · без сохранения</div><h1>{d.emoji} {d.title}</h1><p className="muted">{d.description}</p><div className="pill">{dramaOptions.find(value => value.id === d.drama)?.title}</div>
+    <h2>Завязка истории</h2><Card><div className="row"><Avatar seed={first?.avatarSeed} avatarStyle={d.avatarStyle} mode="default" /><div><b>{first?.name}</b><div className="small muted">{first?.role}</div></div></div><p>{d.firstContext}</p><div className="small muted">♡ 12　💬 2</div></Card>
+    <p className="small muted">Это пример начала истории. Мир не сохраняется, посты не публикуются.</p>
     <button className="text-link" onClick={() => nav.push('05-12_world_advanced')}>Посмотреть расширенные настройки →</button>
-  </div><BottomCTA main="Вернуться к настройке" onMain={() => nav.back()} /></div>
+  </div><BottomCTA main="Вернуться к настройке" onMain={() => nav.back()} second={!hasAccess() && !needsRegistration() ? 'Войти и создать мир' : undefined} onSecond={() => loginFromWorldPreview(d.templateId)} /></div>
 }

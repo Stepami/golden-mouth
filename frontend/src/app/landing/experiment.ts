@@ -97,3 +97,10 @@ export function clearLandingWorld() {
   try { localStorage.removeItem(worldKey) } catch { /* Optional storage. */ }
   try { sessionStorage.removeItem(worldKey) } catch { /* In-memory state is enough for this visit. */ }
 }
+
+export function loginFromWorldPreview(worldId: string | null) {
+  if (worldId) beginLandingAuth(worldId)
+  const url = new URL(location.href)
+  for (const key of ['screen', 'gallery', 'world', 'shot', 'preview', 'landing']) url.searchParams.delete(key)
+  location.assign(url.pathname + url.search)
+}
