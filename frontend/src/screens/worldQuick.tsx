@@ -1,5 +1,4 @@
-import { hasAccess, needsRegistration } from '../api/auth'
-import { clearLandingWorld, loginFromWorldPreview } from '../app/landing/experiment'
+import { clearLandingWorld } from '../app/landing/experiment'
 import { useState, type ReactNode } from 'react'
 import { useStore } from '../app/store'
 import { avatarPersonalization } from '../app/avatarPersonalization'
@@ -120,5 +119,5 @@ export function WorldPrototypePreview() {
     <h2>Завязка истории</h2><Card><div className="row"><Avatar seed={first?.avatarSeed} avatarStyle={d.avatarStyle} mode="default" /><div><b>{first?.name}</b><div className="small muted">{first?.role}</div></div></div><p>{d.firstContext}</p><div className="small muted">♡ 12　💬 2</div></Card>
     <p className="small muted">Это пример начала истории. Мир не сохраняется, посты не публикуются.</p>
     <button className="text-link" onClick={() => nav.push('05-12_world_advanced')}>Посмотреть расширенные настройки →</button>
-  </div><BottomCTA main="Вернуться к настройке" onMain={() => nav.back()} second={!hasAccess() && !needsRegistration() ? 'Войти и создать мир' : undefined} onSecond={() => loginFromWorldPreview(d.templateId)} /></div>
+  </div><BottomCTA main="Вернуться к настройке" onMain={() => nav.back()} /></div>
 }
