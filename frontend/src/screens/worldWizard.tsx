@@ -100,6 +100,6 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
     <div className="quick-summary"><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} /><div><b>{d.name}</b><div className="small muted">{d.title} · {d.role}</div></div></div>
     {draft.previewOnly && <p className="small prototype-note">DEV-прототип: дальше — пример ленты, без создания мира в базе.</p>}
     {devPreview && <p className="small prototype-note">DEV-предпросмотр без сохранения.</p>}{error && <p role="alert">{error}</p>}{uncertain && <Button onClick={() => nav.replace('01-3_world')}>Проверить список миров</Button>}
-  </div><BottomCTA main={saving ? 'Сохраняем…' : draft.previewOnly ? 'Посмотреть пример' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'} disabled={saving || uncertain || !d.voice.trim() || d.stars.length === 0} onMain={save} second={!draft.previewOnly ? 'Посмотреть пример' : undefined} secondDisabled={saving || uncertain} onSecond={() => nav.push('05-7c_world_preview')} /></div>
+  </div><BottomCTA main={saving ? 'Сохраняем…' : draft.previewOnly ? 'Посмотреть пример' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'} disabled={saving || uncertain || !d.voice.trim() || d.stars.length === 0} onMain={save} /></div>
   return <WorldAdvanced draft={draft} saving={saving} error={error} uncertain={uncertain} onSave={save} onCheck={() => nav.replace('01-3_world')} />
 }
