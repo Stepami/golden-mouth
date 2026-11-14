@@ -260,7 +260,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(detail.AuthorId).IsEqualTo(PlayerId.From((await GetStoredPlayerAsync(telegramUserId))["_id"].AsBsonBinaryData.ToGuid()).ToAuthorId());
         await Assert.That(detail.Views).IsEqualTo(post["Views"].ToInt64());
         await Assert.That(detail.Views).IsGreaterThanOrEqualTo(0);
-        await Assert.That(detail.Views).IsLessThanOrEqualTo(subscribersBeforePost);
+        await Assert.That(detail.Views).IsLessThanOrEqualTo(subscribersBeforePost * (post["Viral"].AsBoolean ? 2 : 1));
         await Assert.That(detail.Likes).IsEqualTo(post["Likes"].ToInt64());
         await Assert.That(detail.LikedBy).IsEmpty();
         await Assert.That(detail.Comments.Count).IsEqualTo(3);

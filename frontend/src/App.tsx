@@ -22,6 +22,7 @@ type Entry = { id: ScreenId; params: Record<string, unknown> }
 
 /** ?screen=<код> открывает любой экран сразу (сравнение с docs/screens), ?gallery показывает список. */
 function startEntry(): Entry {
+  if (!hasExplicitStart()) return { id: '01-1_invite', params: {} }
   const q = new URLSearchParams(location.search)
   const s = q.get('screen')
   if (q.has('gallery')) return { id: 'gallery', params: {} }
@@ -31,7 +32,7 @@ function startEntry(): Entry {
 
 function hasExplicitStart(): boolean {
   const q = new URLSearchParams(location.search)
-  return q.has('screen') || q.has('gallery')
+  return !!import.meta.env.DEV && (q.has('screen') || q.has('gallery'))
 }
 
 function Shell() {
