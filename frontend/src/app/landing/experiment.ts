@@ -38,6 +38,7 @@ export function assignLanding(): LandingVariant {
   const assignment: Assignment = { variant, source, utm, firstPost: saved?.firstPost, initialVariant: saved?.initialVariant ?? saved?.variant ?? variant, switched: saved?.switched || !!saved && saved.variant !== variant }
   clearLandingWorld()
   authFallback = false
+  try { localStorage.removeItem(authKey) } catch { /* Optional storage. */ }
   try { sessionStorage.removeItem(authKey) } catch { /* A new landing starts a new entry attempt. */ }
   save(assignment)
   return assignment.variant
@@ -50,19 +51,28 @@ let authFallback = false
 export function landingAuthPending(): boolean {
   const requested = requestedVariant()
   if (requested && requested !== read()?.variant) return false
+  try { if (localStorage.getItem(authKey) === '1') return true } catch { /* Try the same-tab fallback. */ }
   try { return sessionStorage.getItem(authKey) === '1' || authFallback } catch { return authFallback }
 }
 export function beginLandingAuth(worldId: string) {
   worldFallback = worldId
-  try { sessionStorage.setItem(worldKey, worldId) } catch { /* Keep this visit usable. */ }
+  // OAuth can return in another tab, where sessionStorage is empty.
+  try {
+    localStorage.setItem(worldKey, worldId)
+    localStorage.setItem(authKey, '1')
+    sessionStorage.removeItem(worldKey)
+    sessionStorage.removeItem(authKey)
+  } catch {
+    try { sessionStorage.setItem(worldKey, worldId); sessionStorage.setItem(authKey, '1') } catch { /* Keep this visit usable. */ }
+  }
   const value = read()
   if (value) save({ ...value, worldId })
   authFallback = true
-  try { sessionStorage.setItem(authKey, '1') } catch { /* Keep the button working. */ }
 }
 export function completeLandingAuth(): boolean {
   if (isLandingPreview() || !landingAuthPending()) return false
   authFallback = false
+  try { localStorage.removeItem(authKey) } catch { /* Optional storage. */ }
   try { sessionStorage.removeItem(authKey) } catch { /* In-memory state is enough for this visit. */ }
   return true
 }
@@ -74,9 +84,16 @@ export function completeLandingPost(): boolean {
 }
 
 export function pendingLandingWorld(): string | undefined {
-  try { return worldFallback ?? sessionStorage.getItem(worldKey) ?? undefined } catch { return worldFallback }
+  if (worldFallback) return worldFallback
+  try { const world = localStorage.getItem(worldKey); if (world) return world } catch { /* Try the same-tab fallback. */ }
+  try { return sessionStorage.getItem(worldKey) ?? undefined } catch { return undefined }
+}
+export function landingEntryPending(): boolean {
+  const requested = requestedVariant()
+  return (!requested || requested === read()?.variant) && (landingAuthPending() || !!pendingLandingWorld())
 }
 export function clearLandingWorld() {
   worldFallback = undefined
+  try { localStorage.removeItem(worldKey) } catch { /* Optional storage. */ }
   try { sessionStorage.removeItem(worldKey) } catch { /* In-memory state is enough for this visit. */ }
 }

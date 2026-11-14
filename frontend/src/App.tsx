@@ -16,7 +16,7 @@ import { useAvatarPersonalization } from './app/avatarPersonalization'
 import type { WorldId } from './api/types'
 
 import { Landing } from './app/landing/Landing'
-import { beginLandingAuth, completeLandingAuth, landingAuthPending, isLandingPreview, pendingLandingWorld } from './app/landing/experiment'
+import { beginLandingAuth, completeLandingAuth, landingEntryPending, isLandingPreview, pendingLandingWorld } from './app/landing/experiment'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
 
@@ -96,7 +96,7 @@ export function App() {
   const [busy, setBusy] = useState(false)
   const [authError, setAuthError] = useState('')
   const explicitStart = hasExplicitStart()
-  const [landingAccepted, setLandingAccepted] = useState(landingAuthPending)
+  const [landingAccepted, setLandingAccepted] = useState(landingEntryPending)
   const [landingPreview, setLandingPreview] = useState(isLandingPreview)
   useEffect(() => {
     if (authenticated || registration) {
