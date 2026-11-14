@@ -17,9 +17,8 @@ if (yandexCallback) {
   document.head.append(script)
 } else {
   if (new URLSearchParams(location.search).has('shot')) document.documentElement.classList.add('shot')
-  if (initTelegram()) {
-    installGlobalHandlers()
-    installAnalytics()
-  }
+  initTelegram()
+  installGlobalHandlers()
+  installAnalytics()
   createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary><App /></ErrorBoundary></StrictMode>)
 }

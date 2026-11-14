@@ -1,4 +1,5 @@
 using Mediator;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -25,16 +26,32 @@ public sealed partial class TelemetryController(
     [ActionName("StartSession")]
     public SessionId StartSession() => SessionId.New();
 
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [HttpPost("events", Name = "SubmitAnalytics")]
     [ActionName("SubmitAnalytics")]
-    public async Task<NoContent> SubmitAnalyticsAsync(
+    public async Task<ActionResult> SubmitAnalyticsAsync(
         AnalyticsBatchRequest request,
         CancellationToken cancellationToken)
     {
-        await sender.Send(
-            request.ToSubmitAnalytics(),
-            cancellationToken);
-        return TypedResults.NoContent();
+        var auth = await HttpContext.AuthenticateAsync();
+        if (auth.Failure is not null ||
+            (auth.Principal?.Identity?.IsAuthenticated != true && Request.Headers.Authorization.Count > 0))
+        {
+            return Unauthorized();
+        }
+
+        var command = request.ToSubmitAnalytics() with
+        {
+            Anonymous = auth.Principal?.Identity?.IsAuthenticated != true,
+        };
+        if (command.Anonymous && command.ContainsProfileLink())
+        {
+            return Unauthorized();
+        }
+
+        await sender.Send(command, cancellationToken);
+        return NoContent();
     }
 
     [HttpPost("logs", Name = "SubmitClientLogs")]

@@ -1,3 +1,4 @@
+import { pendingLandingWorld } from '../app/landing/experiment'
 import { Resources } from '../ui/Resources'
 import { Streak } from '../ui/Streak'
 import { displayHandle } from '../app/handle'
@@ -31,7 +32,7 @@ function Steps({ n, back = true }: { n: number; back?: boolean }) {
 /** Exact portrait windows from the approved sketch; no regenerated character artwork. */
 function IntroPortrait({ character }: { character: 'masha' | 'gosha' }) {
   const masha = character === 'masha'
-  return <svg className={`intro-portrait intro-portrait-${character}`} viewBox={masha ? '85 626 116 116' : '142 931 168 168'} role="img" aria-label={masha ? 'Маша' : 'Гоша в круглых очках с волшебной палочкой'}>
+  return <svg className={`intro-portrait intro-portrait-${character}`} viewBox={masha ? '85 626 116 116' : '142 931 168 168'} role="img" aria-label={masha ? 'Гермиона' : 'Гарри в круглых очках с волшебной палочкой'}>
     <image href={approvedIntro} width="1036" height="1518" />
   </svg>
 }
@@ -43,10 +44,10 @@ function Invite() {
     <div className="brand">реки</div><h1>Твой пост<br />запускает историю.</h1>
     <p className="muted">Веди блог в вымышленном мире.<br />Пиши посты — персонажи ответят.</p>
     <div className="welcome-post card" aria-label="Пример игрового поста">
-      <div className="row"><IntroPortrait character="masha" /><div><b>Маша · Школа чародеев</b><div className="small muted">Пример игрового поста</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
-      <p>Выложила фото тайной комнаты. Утром дверь исчезла. Кто-нибудь ещё её видел? 👀</p>
+      <div className="row"><IntroPortrait character="masha" /><div><b>Гермиона · Спасти Хогвартс</b><div className="small muted">Пример игрового поста</div></div><span className="small muted" style={{ marginLeft: 'auto' }}>10k читателей</span></div>
+      <p>Хогвартс закрыт. Совет выбирает между школой и отелем. Какую идею вы готовы поддержать?</p>
       <div className="row"><span className="react">🔥 2,4k</span><span className="react">💀 890</span><span className="react">🫶 1,2k</span></div>
-      <div className="welcome-reply"><IntroPortrait character="gosha" /><div><b>Гоша · ученик школы магии</b><div>Я. И оставил там свою палочку. Пойдём искать дверь — только Георгине пока не говори.</div></div></div>
+      <div className="welcome-reply"><IntroPortrait character="gosha" /><div><b>Гарри · выпускник Хогвартса</b><div>Хочу вернуть школу. Готов публично поддержать проект, но за остальных обещать не буду.</div></div></div>
     </div>
     <p className="small muted welcome-disclaimer">Персонажи и фанаты виртуальные.<br />Посты остаются внутри игры.</p>
     <p className="welcome-world-choice">Выбери мир или создай свой</p>
@@ -84,7 +85,7 @@ function Age() {
         </Card>
         {!agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
       </div>
-      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 14 }); nav.push(age < 14 ? '01-2b_under14' : '01-3_world', { group: age < 18 ? '14-17' : '18+', ageBand: ageBand(age) }) }} />
+      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 14 }); const world = pendingLandingWorld(); nav.push(age < 14 ? '01-2b_under14' : world ? '01-3b_world_overview' : '01-3_world', { ...(world ? { world, fromLanding: true } : {}), group: age < 18 ? '14-17' : '18+', ageBand: ageBand(age) }) }} />
     </div>
   )
 }

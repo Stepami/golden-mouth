@@ -4,7 +4,7 @@ import { trackImage } from '../app/imageTiming'
 
 export const catalogCoverSizes = '(min-width: 430px) 342px, calc((100vw - 32px) * 0.86)'
 const fullCoverSizes = '(min-width: 430px) 430px, 100vw'
-export const coverSrcSet = (world: string) => `${worldArt[world].smallCover} 640w, ${worldArt[world].cover} 960w`
+export const coverSrcSet = (world: string) => `${worldArt[world].smallCover} ${worldArt[world].smallCoverWidth ?? 640}w, ${worldArt[world].cover} 960w`
 
 /** Starts alongside templates, not after the API/React waterfall. */
 export function preloadCatalogCover() {

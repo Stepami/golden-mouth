@@ -1,3 +1,5 @@
+import { hasAccess, needsRegistration } from '../api/auth'
+import { clearLandingWorld } from '../app/landing/experiment'
 import {PushNotifications} from '../app/push/PushNotifications'
 import {InstallApp} from '../app/install/InstallApp'
 import { Resources } from '../ui/Resources'
@@ -37,7 +39,7 @@ export function ChooseWorld() {
   }
   const currentWorld = player ? owned.find(world => world.id === player.worldInstanceId) ?? { ...worldDocumentOf(player.world), id: player.worldInstanceId ?? player.world, name: player.name, avatar: player.handle, subscribers: player.subs } : undefined
   const otherWorlds = owned.filter(world => world.id !== currentWorld?.id)
-  const resume = async (world: WorldDocument) => { try { const next = await api.me(world.id); setPlayer(next); nav.push('03-5_stage') } catch { setError('Не получилось открыть мир.') } }
+  const resume = async (world: WorldDocument) => { try { const next = await api.me(world.id); clearLandingWorld(); setPlayer(next); nav.push('03-5_stage') } catch { setError('Не получилось открыть мир.') } }
   return <div className="screen no-tab"><TopBar title="Миры" rightPlain right={player ? <Resources player={player} /> : undefined} />
     <div className="pad world-catalog-page worlds-home"><InstallApp entry="banner" />{player && <PushNotifications key={player.id} playerId={player.id} entry="banner" />}{!player && <><h1>Выбери свою историю</h1><p className="muted">Готовые миры доступны сразу.</p></>}
       {getWorldDraft() && <Button secondary onClick={() => nav.push(getWorldDraft()?.definition.templateId === null ? '05-7b_own_world' : '01-4_channel')}>Продолжить настройку</Button>}
@@ -76,9 +78,10 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
   const nav = useNav(); const { setPlayer } = useStore(); const d = draft.definition
   const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [uncertain, setUncertain] = useState(false)
   useEffect(() => { if (error) document.querySelector('[role="alert"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }) }, [error])
+  const devPreview = import.meta.env.DEV && new URLSearchParams(location.search).has('screen') && !hasAccess() && !needsRegistration()
   const save = async () => {
     if (saving || uncertain) return
-    if (draft.previewOnly) { nav.push('05-7c_world_preview'); return }
+    if (draft.previewOnly || devPreview) { nav.push('05-7c_world_preview'); return }
     setSaving(true); setError('')
     let creatingWorld = false
     try {
@@ -87,7 +90,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
       creatingWorld = !draft.editingId
       const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d)
       setAvatarPersonalization(player.id, draft.personalizeAvatar !== false)
-      setWorldDraft(null); setPlayer(player); nav.replace('03-5_stage')
+      clearLandingWorld(); setWorldDraft(null); setPlayer(player); nav.replace('03-5_stage')
     } catch (cause) {
       if (creatingWorld && !(cause instanceof ApiError)) { setUncertain(true); setError('Не удалось подтвердить создание. Сначала проверь список миров: повтор может создать ещё один экземпляр.') }
       else setError(cause instanceof ApiError && cause.status === 409 ? 'Мир изменился или создание с нуля пока недоступно. Твои изменения сохранены в черновике.' : cause instanceof ApiError && cause.status === 503 ? 'Проверка истории временно недоступна. Настройки сохранены — попробуй начать ещё раз чуть позже.' : 'Не получилось сохранить мир. Проверь поля и попробуй снова.')
@@ -96,7 +99,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
   if (quick) return <div className="screen no-tab"><TopBar title="Настроение истории" onBack={saving ? undefined : nav.back} /><div className="pad"><DramaPicker definition={d} beforeOptions={<div className="drama-world-edit"><Button secondary onClick={() => nav.push('05-12_world_advanced')}>Редактировать мир</Button><p className="small muted">Мир можно будет отредактировать позже</p></div>} />
     <div className="quick-summary"><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} /><div><b>{d.name}</b><div className="small muted">{d.title} · {d.role}</div></div></div>
     {draft.previewOnly && <p className="small prototype-note">DEV-прототип: дальше — пример ленты, без создания мира в базе.</p>}
-    {error && <p role="alert">{error}</p>}{uncertain && <Button onClick={() => nav.replace('01-3_world')}>Проверить список миров</Button>}
-  </div><BottomCTA main={saving ? 'Сохраняем…' : draft.previewOnly ? 'Посмотреть свою историю' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'} disabled={saving || uncertain || !d.voice.trim() || d.stars.length === 0} onMain={save} /></div>
+    {devPreview && <p className="small prototype-note">DEV-предпросмотр без сохранения.</p>}{error && <p role="alert">{error}</p>}{uncertain && <Button onClick={() => nav.replace('01-3_world')}>Проверить список миров</Button>}
+  </div><BottomCTA main={saving ? 'Сохраняем…' : draft.previewOnly ? 'Посмотреть пример' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'} disabled={saving || uncertain || !d.voice.trim() || d.stars.length === 0} onMain={save} /></div>
   return <WorldAdvanced draft={draft} saving={saving} error={error} uncertain={uncertain} onSave={save} onCheck={() => nav.replace('01-3_world')} />
 }
