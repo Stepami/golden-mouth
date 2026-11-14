@@ -44,7 +44,7 @@ export function Landing({ onContinue, preview = false }: { onContinue: (worldId:
     onContinue(chosen.id)
   }
   return <main className={`entry-landing entry-landing--${variant}${hero ? ' entry-landing--single' : ''}`} aria-labelledby="landing-title">
-    {hero && <img className="landing-hero-art" src={`/landing/${hero.id}-${hero.id === 'hogwarts' ? 960 : 480}.jpg`} srcSet={hero.id === 'hogwarts' ? '/landing/hogwarts-480.jpg 480w, /landing/hogwarts-960.jpg 960w' : undefined} sizes="(max-width: 430px) 100vw, 430px" alt="" fetchPriority="high" />}
+    {hero && <img className="landing-hero-art" src={hero.id === 'hogwarts' ? '/landing/hogwarts-960.jpg' : `/landing/${hero.id}-full.png`} srcSet={hero.id === 'hogwarts' ? '/landing/hogwarts-480.jpg 480w, /landing/hogwarts-960.jpg 960w' : hero.id === 'infobiz' ? '/landing/infobiz-full.png 1536w' : `/landing/${hero.id}-480.jpg 480w, /landing/${hero.id}-full.png 1024w`} sizes="(max-width: 430px) 100vw, 430px" alt="" fetchPriority="high" />}
     <header className="landing-brand"><img src="/android-chrome-192x192.png?v=wave-2" width="42" height="42" alt="" /><span>Реки</span></header>
     {variant === 'worlds' ? <>
       <section className="landing-copy"><h1 ref={heading} id="landing-title" tabIndex={-1}>Твой блог.<br />Твоя история.</h1><p>Выбери героя, пиши посты и смотри, как отвечает его мир.</p></section>
