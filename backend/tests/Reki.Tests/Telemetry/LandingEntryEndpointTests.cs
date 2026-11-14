@@ -22,11 +22,16 @@ public sealed class LandingEntryEndpointTests
         """;
 
     [Test]
-    public async Task AnonymousVisitorCanReportLandingBeforeRegistrationAsync()
+    [Arguments("worlds")]
+    [Arguments("hogwarts")]
+    [Arguments("infobiz")]
+    [Arguments("evening")]
+    [Arguments("houses")]
+    public async Task AnonymousVisitorCanReportLandingBeforeRegistrationAsync(string variant)
     {
         await using var server = await ServerAsync();
         using var client = server.GetTestClient();
-        using var response = await client.PostAsync("/entry-events", Body("landing_view"));
+        using var response = await client.PostAsync("/entry-events", Body("landing_view", variant));
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
     }
 
@@ -61,9 +66,9 @@ public sealed class LandingEntryEndpointTests
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
     }
 
-    private static StringContent Body(string name) => new(
+    private static StringContent Body(string name, string variant = "worlds") => new(
         "{\"events\":[{\"eventId\":\"33333333-3333-4333-8333-333333333333\",\"name\":\"" +
-        name + "\",\"timestamp\":1,\"visit\":" + Visit + "}]}",
+        name + "\",\"timestamp\":1,\"visit\":" + Visit.Replace("worlds", variant, StringComparison.Ordinal) + "}]}",
         Encoding.UTF8,
         "application/json");
 

@@ -13,11 +13,11 @@ public sealed record LandingVisitRequest
     public required string EntryId { get; init; }
 
     [Required]
-    [RegularExpression("^(worlds|hogwarts)$")]
+    [RegularExpression("^(worlds|hogwarts|infobiz|evening|houses)$")]
     public required string Variant { get; init; }
 
     [Required]
-    [RegularExpression("^(worlds|hogwarts)$")]
+    [RegularExpression("^(worlds|hogwarts|infobiz|evening|houses)$")]
     public required string InitialVariant { get; init; }
 
     [Required]

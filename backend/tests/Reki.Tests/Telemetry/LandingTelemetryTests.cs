@@ -19,12 +19,21 @@ public sealed class LandingTelemetryTests
         null);
 
     [Test]
-    public async Task AnonymousEntryDoesNotBecomeAnActivePlayerAsync()
+    [Arguments("worlds")]
+    [Arguments("hogwarts")]
+    [Arguments("infobiz")]
+    [Arguments("evening")]
+    [Arguments("houses")]
+    public async Task AnonymousEntryDoesNotBecomeAnActivePlayerAsync(string variant)
     {
         var log = new CaptureLogger();
         var clock = new FakeTimeProvider();
-        new LandingTelemetry(log, clock).TrackEntry(Entry(clock, "landing_view"));
+        new LandingTelemetry(log, clock).TrackEntry(Entry(clock, "landing_view") with
+        {
+            Visit = Visit with { Variant = variant, InitialVariant = variant },
+        });
         var fields = log.Scopes.Single();
+        await Assert.That(fields["landing_variant"]).IsEqualTo(variant);
         await Assert.That(fields["activity_kind"]).IsEqualTo("entry");
         await Assert.That(fields["landing_experiment"]).IsEqualTo("entry_v1");
         await Assert.That(fields.ContainsKey("player_id")).IsFalse();

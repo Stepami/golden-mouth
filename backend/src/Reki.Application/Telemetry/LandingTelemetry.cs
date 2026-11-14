@@ -47,8 +47,8 @@ internal sealed partial class LandingTelemetry(ILogger<LandingTelemetry> logger,
 
     private static bool IsValid(LandingVisit visit) =>
         visit.VisitorId != Guid.Empty && visit.EntryId != Guid.Empty &&
-        visit.Variant is "worlds" or "hogwarts" &&
-        visit.InitialVariant is "worlds" or "hogwarts" &&
+        visit.Variant is "worlds" or "hogwarts" or "infobiz" or "evening" or "houses" &&
+        visit.InitialVariant is "worlds" or "hogwarts" or "infobiz" or "evening" or "houses" &&
         visit.Source is "link" or "direct";
 
     private static Dictionary<string, object?> Attributes(
