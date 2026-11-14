@@ -53,7 +53,8 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
     [Test]
     public async Task Startup_PersistsRecurringSchedulesInMongoAsync()
     {
-        using var http = Factory.CreateClient();
+        await using var apiFactory = Factory.WithWebHostBuilder(builder => builder.UseSetting("Jobs:ExecutionEnabled", "true"));
+        using var http = apiFactory.CreateClient();
 
         var schedules = await Database.GetCollection<BsonDocument>("ticker_CronTickers")
             .Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();

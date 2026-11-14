@@ -42,6 +42,7 @@ services:
       Llm__BaseUrl: ${LLM_BASE_URL:?LLM_BASE_URL is required}
       Llm__Model: ${LLM_MODEL:?LLM_MODEL is required}
       Llm__TimeoutSeconds: ${LLM_TIMEOUT_SECONDS:-20}
+      Jobs__LicensePath: /run/secrets/tickerq_license
       Embedding__BaseUrl: http://infinity:7997/
       Embedding__Model: embedding
       Infinity__BaseUrl: http://infinity:7997/
@@ -54,6 +55,8 @@ services:
       - "127.0.0.1:${BACKEND_PORT:-8081}:8080"
     volumes:
       - infinity-models:/models:ro
+    secrets:
+      - tickerq_license
     depends_on:
       mongo:
         condition: service_healthy
@@ -202,6 +205,10 @@ services:
     volumes:
       - openobserve-data:/data
     restart: unless-stopped
+
+secrets:
+  tickerq_license:
+    file: ${TICKERQ_LICENSE_PATH:?TICKERQ_LICENSE_PATH is required}
 
 volumes:
   mongo-data:

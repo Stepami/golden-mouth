@@ -51,6 +51,7 @@ The project-wide Compose file lives in the repository root and starts the fronte
 cd ..
 $env:OPENOBSERVE_EMAIL = '<chosen local administrator email>'
 $env:OPENOBSERVE_PASSWORD = '<chosen local administrator password>'
+$env:TICKERQ_LICENSE_PATH = '<path to the TickerQ license file>'
 $env:TG_PAT = '<test Telegram bot token>'
 $env:AUTH_ISSUER = '<local issuer URL>'
 $env:AUTH_SIGNING_KEY = '<RSA private key PEM>'
@@ -138,22 +139,21 @@ Building the API produces an OpenAPI document. Building the test project regener
 
 ## Scheduled maintenance (TickerQ)
 
-TickerQ 10.4 uses `alexjamesbrown.TickerQ.MongoDB` 0.1.0 and the application's existing Mongo client/database. The provider stores schedules and execution history in `ticker_TimeTickers`, `ticker_CronTickers` and `ticker_CronTickerOccurrences` and creates its indexes at startup. Migration `2.3.0` creates the two game-day period indexes; it does not change game documents.
+TickerQ 11.5.1 uses the official `TickerQ.MongoDB` provider and the application's existing Mongo client/database. Scheduler mode requires a replica set. The runtime namespace is `reki`, and TickerQ creates its indexes at startup.
 
-- `ResetGameDayJob`: `0 0 9 * * *`, time zone `Europe/Moscow` (09:00 Moscow, 06:00 UTC).
-- `RefreshRegisteredPlayersJob`: `0 * * * * *`, once per minute, using MongoDB `CountDocumentsAsync` without reading profiles, worlds or invitations.
+- `RestoreEnergyJob` and `RefreshRegisteredPlayersJob`: once per minute.
+- `SendNotificationsJob`: every five minutes.
+- `PruneAuthJob`: daily at 03:00 in `Europe/Moscow`.
 
-`ResetGameDayJob` and `RefreshRegisteredPlayersJob` implement `ITickerFunction` and are registered with `MapTicker`; TickerQ uses the job class names as function names, and the schedules are unchanged. Both jobs access MongoDB directly. The count job is singleton and owns the registered-player gauge. `GameDayPeriod` calculates the current period from injected `TimeProvider` and `IOptions<GameBalance>`; the reset job receives balance options through DI as well. Startup does not run maintenance jobs. The jobs run on their schedules. Reset only touches older periods. It clears player energy/daily bonus, world wants and daily star relation gains, applies the existing rested-post rule, and increments document versions. Repeated runs do not reset the same period twice. Player/world reads and writes no longer perform daily normalization. Invitation usage and daily events retain their existing behavior. Daily reset no longer grants challenge bonuses; direct messages, friends, memory and challenges are compatibility stubs.
+Migration `2.7.6` drops the three legacy `ticker_` collections before TickerQ starts. Pending one-time jobs and execution history are lost; periodic schedules are recreated. Stop all old application instances before deploying this migration. Game collections are not removed.
 
-`Jobs__ExecutionEnabled=false` disables scheduler execution (used by component tests), but persisted schedule initialization remains enabled. In production leave execution enabled. A failed maintenance execution is recorded by TickerQ; the next scheduled execution recovers an interrupted reset safely.
+Set `TICKERQ_LICENSE_PATH` to the certificate file for Compose. For a direct application or test run, set `Jobs__LicensePath` to the certificate path, or place `tickerq.tqlicense` in the application content root. GitHub Actions uses the `TICKERQ_LICENSE` secret containing the certificate. Keep the file and its contents out of Git and Docker images. Readiness fails if job execution is enabled and the license is unavailable.
 
-TickerQ request serialization uses `ApiJsonSerializerContext` through `WithJsonContext`. Runtime middleware and migrations are skipped during build-time OpenAPI generation; controller/OpenAPI routes are mapped in both modes. TickerQ execution spans (`TickerQ`) join the existing OTLP trace pipeline. The registered-player gauge remains `reki.players.registered` from `Reki.Product`. Exceptions propagate to the scheduler; its instrumentation records execution results and errors. `JobsExceptionHandler` implements `ITickerExceptionHandler` and centrally logs failed attempts and cancellations. Technical reset logs include only player/world counts and the period start, without player IDs or player text, and go to the existing `backend` stream.
+`Jobs__ExecutionEnabled=false` selects TickerQ's queue-only mode for component tests: background execution and cron seeding are disabled. TickerQ request serialization uses `ApiJsonSerializerContext` through `WithJsonContext`, and execution spans join the existing OTLP trace pipeline. `JobsExceptionHandler` logs failed attempts and cancellations.
 
 ### Star feed generation (#148)
 
-Successful publications and thread replies schedule a one-off `GenerateStarFeedPostJob`. Feed reads do so with `feed.open_probability` from the balance file. The existing feed returns saved posts immediately; refresh to see new star posts. The backend uses a non-streaming chat response and the existing 14+ output checks. Player energy, audience and progression are unchanged.
-
-Type-safe `AddAsync<GenerateStarFeedPostJob, StarFeedRequest>` uses `RekiTimeTicker` defaults: three retries at 30, 120 and 600 seconds. These defaults apply to all application TimeTickers; cron maintenance retains its existing configuration. Technical failures propagate to TickerQ; invalid content and missing worlds terminate without retry. A BSON ObjectId string is created at scheduling and stored as a typed PostId in the request alongside typed PlayerId and WorldId. Repeated executions reuse it; the post collection's unique `_id` prevents duplicate posts. Concurrent executions of the same request can still spend AI tokens before one insert wins. Failed TickerQ scheduling results are logged; unexpected scheduler exceptions are not swallowed. ScheduleAsync always schedules; ScheduleFromFeedAsync uses random < feed.open_probability. Neither scheduler method accepts a cancellation token. MongoPostRepository uses a plain InsertPostAsync and insertion exceptions propagate to TickerQ. The AI history identifies authors and marks the selected star's own posts with isOwn. There is no transactional outbox between the business commit and scheduling.
+Publications, thread replies and feed reads schedule separate one-off star-feed jobs. `RekiTimeTicker` gives them three retries at 30, 120 and 600 seconds. Technical failures propagate to TickerQ; invalid content and missing worlds terminate without retry. A post ID is created at scheduling and reused on retries to prevent duplicate posts. There is no transactional outbox between the business commit and scheduling.
 
 ## Profile linking (#268)
 

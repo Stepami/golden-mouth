@@ -12,6 +12,7 @@ using Reki.Infrastructure.Mongo.Options;
 using TickerQ.DependencyInjection;
 using TickerQ.Instrumentation.OpenTelemetry;
 using TickerQ.MongoDB.DependencyInjection;
+using TickerQ.Utilities;
 using TickerQ.Utilities.Entities;
 
 namespace Reki.Infrastructure.Jobs;
@@ -33,24 +34,40 @@ internal static class DependencyInjection
         var mongo = configuration.GetRequiredSection(MongoOptions.SectionName).Get<MongoOptions>() ??
                     throw new InvalidOperationException("Mongo configuration is required.");
 
-        services.MapTicker<GenerateStarFeedOnFeedOpenedJob, StarFeedRequest>().WithMaxConcurrency(2);
-        services.MapTicker<GenerateStarFeedOnPostPublishedJob, StarFeedOnPostPublishedRequest>().WithMaxConcurrency(2);
-        services.MapTicker<GenerateStarFeedOnCommentPublishedJob, StarFeedOnCommentPublishedRequest>()
-            .WithMaxConcurrency(2);
-        services.MapTicker<RestoreEnergyJob>(ServiceLifetime.Singleton)
-            .WithCron("0 * * * * *")
-            .WithMaxConcurrency(1);
-        services.MapTicker<RefreshRegisteredPlayersJob>(ServiceLifetime.Singleton)
-            .WithCron("0 * * * * *")
-            .WithMaxConcurrency(1);
-        services.MapTicker<PruneAuthJob>()
-            .WithCron("0 0 3 * * *")
-            .WithMaxConcurrency(1);
-        services.MapTicker<SendNotificationsJob>(ServiceLifetime.Singleton)
-            .WithCron("0 */5 * * * *")
-            .WithMaxConcurrency(1);
+        services.AddScoped<GenerateStarFeedOnFeedOpenedJob>();
+        services.AddScoped<GenerateStarFeedOnPostPublishedJob>();
+        services.AddScoped<GenerateStarFeedOnCommentPublishedJob>();
+        services.AddSingleton<RestoreEnergyJob>();
+        services.AddSingleton<RefreshRegisteredPlayersJob>();
+        services.AddScoped<PruneAuthJob>();
+        services.AddSingleton<SendNotificationsJob>();
+
+        // TickerQ's registry is process-wide, but each host needs its own job services.
+        if (!TickerFunctionProvider.IsBuilt)
+        {
+            services.MapTicker<GenerateStarFeedOnFeedOpenedJob, StarFeedRequest>().WithMaxConcurrency(2);
+            services.MapTicker<GenerateStarFeedOnPostPublishedJob, StarFeedOnPostPublishedRequest>().WithMaxConcurrency(2);
+            services.MapTicker<GenerateStarFeedOnCommentPublishedJob, StarFeedOnCommentPublishedRequest>()
+                .WithMaxConcurrency(2);
+            services.MapTicker<RestoreEnergyJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
+            services.MapTicker<RefreshRegisteredPlayersJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
+            services.MapTicker<PruneAuthJob>().WithMaxConcurrency(1);
+            services.MapTicker<SendNotificationsJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
+        }
+
         services.AddTickerQ<RekiTimeTicker, CronTickerEntity>(options =>
         {
+            options.UseApplicationNamespace("reki");
+            if (jobs.LicensePath is not null)
+            {
+                options.UseLicense(jobs.LicensePath);
+            }
+
+            options.SeedCronTickers(crons => crons
+                .Add(nameof(RestoreEnergyJob), "0 * * * * *")
+                .Add(nameof(RefreshRegisteredPlayersJob), "0 * * * * *")
+                .Add(nameof(PruneAuthJob), "0 0 3 * * *")
+                .Add(nameof(SendNotificationsJob), "0 */5 * * * *"));
             options.ConfigureScheduler(scheduler =>
                 scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
             options.AddOperationalStore(store => store.UseExistingMongoClient(mongo.DatabaseName));
