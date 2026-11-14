@@ -1,3 +1,4 @@
+import { clearLandingWorld } from '../app/landing/experiment'
 import {PushNotifications} from '../app/push/PushNotifications'
 import {InstallApp} from '../app/install/InstallApp'
 import { Resources } from '../ui/Resources'
@@ -37,7 +38,7 @@ export function ChooseWorld() {
   }
   const currentWorld = player ? owned.find(world => world.id === player.worldInstanceId) ?? { ...worldDocumentOf(player.world), id: player.worldInstanceId ?? player.world, name: player.name, avatar: player.handle, subscribers: player.subs } : undefined
   const otherWorlds = owned.filter(world => world.id !== currentWorld?.id)
-  const resume = async (world: WorldDocument) => { try { const next = await api.me(world.id); setPlayer(next); nav.push('03-5_stage') } catch { setError('Не получилось открыть мир.') } }
+  const resume = async (world: WorldDocument) => { try { const next = await api.me(world.id); clearLandingWorld(); setPlayer(next); nav.push('03-5_stage') } catch { setError('Не получилось открыть мир.') } }
   return <div className="screen no-tab"><TopBar title="Миры" rightPlain right={player ? <Resources player={player} /> : undefined} />
     <div className="pad world-catalog-page worlds-home"><InstallApp entry="banner" />{player && <PushNotifications key={player.id} playerId={player.id} entry="banner" />}{!player && <><h1>Выбери свою историю</h1><p className="muted">Готовые миры доступны сразу.</p></>}
       {getWorldDraft() && <Button secondary onClick={() => nav.push(getWorldDraft()?.definition.templateId === null ? '05-7b_own_world' : '01-4_channel')}>Продолжить настройку</Button>}
@@ -87,7 +88,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
       creatingWorld = !draft.editingId
       const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d)
       setAvatarPersonalization(player.id, draft.personalizeAvatar !== false)
-      setWorldDraft(null); setPlayer(player); nav.replace('03-5_stage')
+      clearLandingWorld(); setWorldDraft(null); setPlayer(player); nav.replace('03-5_stage')
     } catch (cause) {
       if (creatingWorld && !(cause instanceof ApiError)) { setUncertain(true); setError('Не удалось подтвердить создание. Сначала проверь список миров: повтор может создать ещё один экземпляр.') }
       else setError(cause instanceof ApiError && cause.status === 409 ? 'Мир изменился или создание с нуля пока недоступно. Твои изменения сохранены в черновике.' : cause instanceof ApiError && cause.status === 503 ? 'Проверка истории временно недоступна. Настройки сохранены — попробуй начать ещё раз чуть позже.' : 'Не получилось сохранить мир. Проверь поля и попробуй снова.')

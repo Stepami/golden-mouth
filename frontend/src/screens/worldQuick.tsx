@@ -1,9 +1,10 @@
+import { clearLandingWorld } from '../app/landing/experiment'
 import { useState, type ReactNode } from 'react'
 import { useStore } from '../app/store'
 import { avatarPersonalization } from '../app/avatarPersonalization'
 import { displayHandle } from '../app/handle'
 import type { AgeBand } from '../app/ageBand'
-import { worldDefinitionOf } from '../api/worldContent'
+import { worldDefinitionOf, worlds } from '../api/worldContent'
 import { api } from '../api/client'
 import { WorldSwitchDialog } from '../ui/WorldSwitchDialog'
 import { presetGoalFor } from '../app/presetGoals'
@@ -20,7 +21,9 @@ export function WorldOverview() {
   const draft = useWorldDraft(); const nav = useNav(); const { player } = useStore()
   const [confirmSwitch, setConfirmSwitch] = useState(false)
   const world = nav.params.world as WorldId | undefined ?? draft?.definition.templateId
-  if (!world) return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={nav.back} /><div className="pad"><Button onClick={() => nav.replace('01-3_world')}>Выбрать мир</Button></div></div>
+  const catalog = () => { clearLandingWorld(); nav.replace('01-3_world', { group: nav.params.group, ageBand: nav.params.ageBand }) }
+  const back = () => nav.params.fromLanding ? catalog() : nav.back()
+  if (!world || !worlds.some(template => template.id === world)) return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={back} /><div className="pad"><p>Этот мир сейчас недоступен.</p><Button onClick={catalog}>Выбрать мир</Button></div></div>
   const d = worldDefinitionOf(world); const art = worldArt[d.templateId ?? '']; const goal = presetGoalFor(d)
   const begin = (confirmed = false) => {
     selectDraftOwner(player?.id ?? api.playerId() ?? 'onboarding')
@@ -28,7 +31,7 @@ export function WorldOverview() {
     if (!confirmed && previous && (previous.definition.templateId !== world || previous.editingId)) { setConfirmSwitch(true); return }
     const restored = savedWorldDraft(world)
     const profile = player ?? api.onboardingProfile()
-    setWorldDraft(restored && !restored.previewOnly ? restored : {
+    setWorldDraft(restored && !restored.previewOnly ? { ...restored, ...(nav.params.ageBand ? { group: nav.params.group as '14-17' | '18+', ageBand: nav.params.ageBand as AgeBand } : {}) } : {
       definition: d, heroOrder: d.stars.map(star => star.id), address: profile?.address ?? 'nick',
       group: profile ? (profile.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17',
       ageBand: profile?.ageBand ?? nav.params.ageBand as AgeBand | undefined,
@@ -37,7 +40,7 @@ export function WorldOverview() {
     setConfirmSwitch(false)
     nav.push('01-4_channel')
   }
-  return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={nav.back} />
+  return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={back} />
     {art && <WorldCover world={world} className="world-hero" priority alt={`Обложка мира «${d.title}»`} />}
     <div className="pad"><div className="small eyebrow">{art?.genre}</div><h1>{d.emoji} {d.title}</h1><p className="muted">{art?.pitch ?? d.description}</p>
       {goal && <Card><div className="small eyebrow">Твой путь</div><p>{goal.goal}</p></Card>}

@@ -1,3 +1,4 @@
+import { pendingLandingWorld } from '../app/landing/experiment'
 import { Resources } from '../ui/Resources'
 import { Streak } from '../ui/Streak'
 import { displayHandle } from '../app/handle'
@@ -84,7 +85,7 @@ function Age() {
         </Card>
         {!agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
       </div>
-      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 14 }); nav.push(age < 14 ? '01-2b_under14' : '01-3_world', { group: age < 18 ? '14-17' : '18+', ageBand: ageBand(age) }) }} />
+      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 14 }); const world = pendingLandingWorld(); nav.push(age < 14 ? '01-2b_under14' : world ? '01-3b_world_overview' : '01-3_world', { ...(world ? { world, fromLanding: true } : {}), group: age < 18 ? '14-17' : '18+', ageBand: ageBand(age) }) }} />
     </div>
   )
 }
