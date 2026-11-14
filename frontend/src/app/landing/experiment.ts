@@ -1,11 +1,11 @@
-export type LandingVariant = 'worlds' | 'hogwarts'
+export type LandingVariant = 'worlds' | 'hogwarts' | 'infobiz' | 'evening' | 'houses'
 type Assignment = { entryId?: string; variant: LandingVariant; source: 'link' | 'direct'; utm: Record<string, string>; firstPost?: boolean; initialVariant?: LandingVariant; switched?: boolean; worldId?: string }
 const key = 'reki:landing:entry-v1'
 const authKey = `${key}:auth`
 const worldKey = `${key}:world`
 let worldFallback: string | undefined
 let fallback: Assignment | undefined
-const valid = (value: unknown): value is LandingVariant => value === 'worlds' || value === 'hogwarts'
+const valid = (value: unknown): value is LandingVariant => value === 'worlds' || value === 'hogwarts' || value === 'infobiz' || value === 'evening' || value === 'houses'
 export const isLandingPreview = () => !!import.meta.env?.DEV && new URLSearchParams(location.search).get('preview') === 'landing'
 export function requestedVariant(): LandingVariant | undefined {
   const value = new URLSearchParams(location.search).get('landing')
@@ -26,7 +26,7 @@ function save(value: Assignment) {
 export function assignLanding(): LandingVariant {
   const saved = read()
   const requested = requestedVariant()
-  const variant = requested ?? 'hogwarts'
+  const variant = requested ?? 'worlds'
   const source = requested ? 'link' : 'direct'
   if (saved && variant === saved.variant && source === saved.source) return saved.variant
   const query = new URLSearchParams(location.search)
