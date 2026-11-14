@@ -19,10 +19,13 @@ internal sealed class AuthOperationTransformer : IOpenApiOperationTransformer
             "ExternalVkAuth_ExchangeVk" or "ExternalYandexAuth_ExchangeYandex" => typeof(TokenExchangeRequest),
             _ => null,
         };
-        if (requestType is not null &&
-            operation.RequestBody?.Content?.TryGetValue("application/x-www-form-urlencoded", out var form) == true)
+        if (requestType is not null && operation.RequestBody?.Content is { } requestContent &&
+            requestContent.TryGetValue("application/x-www-form-urlencoded", out var form))
         {
-            form.Schema = await GetNamedSchemaAsync(context, requestType, cancellationToken);
+            requestContent["application/x-www-form-urlencoded"] = new OpenApiMediaType((OpenApiMediaType)form)
+            {
+                Schema = await GetNamedSchemaAsync(context, requestType, cancellationToken),
+            };
         }
 
         if (operation.OperationId is "Auth_Refresh" or "ExternalTelegramAuth_ExchangeMiniApp" or "ExternalTelegramAuth_ExchangeTelegramLogin" or "ExternalVkAuth_ExchangeVk" or "ExternalYandexAuth_ExchangeYandex")
@@ -31,9 +34,9 @@ internal sealed class AuthOperationTransformer : IOpenApiOperationTransformer
             operation.Responses["200"] = new OpenApiResponse
             {
                 Description = "OK",
-                Content = new Dictionary<string, OpenApiMediaType>
+                Content = new Dictionary<string, IOpenApiMediaType>
                 {
-                    ["application/json"] = new()
+                    ["application/json"] = new OpenApiMediaType
                     {
                         Schema = await GetNamedSchemaAsync(context, typeof(AuthTokenResponse), cancellationToken),
                     },

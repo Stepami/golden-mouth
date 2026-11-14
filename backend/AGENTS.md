@@ -4,7 +4,7 @@
 
 ## Технологический контракт
 
-- .NET 10 (`net10.0`), `LangVersion=latest`, nullable reference types и warnings as errors.
+- .NET 11 (`net11.0`), `LangVersion=latest`, nullable reference types и warnings as errors.
 - Modular monolith, Clean Architecture и DDD в четырёх production-проектах: Api, Infrastructure, Application и Domain. Один процесс и один deployable; feature/use-case boundaries задаются папками и namespaces, а не новыми проектами.
 - MongoDB через `MongoDB.Driver` **3.9.0**. Entity Framework и другие ORM не добавлять.
 - HTTP API реализуется только ASP.NET Core controllers с attribute routing. Minimal API handlers для прикладных маршрутов не использовать.
@@ -233,7 +233,7 @@ Solution содержит четыре production-проекта: Api, Applicati
 
 ## Docker и секреты
 
-- Поддерживай multi-stage `Dockerfile`: build/publish в `mcr.microsoft.com/dotnet/sdk:10.0`, runtime в `mcr.microsoft.com/dotnet/aspnet:10.0`. Runtime image не содержит SDK и исходников.
+- Поддерживай multi-stage `Dockerfile`: build/publish в `mcr.microsoft.com/dotnet/sdk:11.0`, runtime в `mcr.microsoft.com/dotnet/aspnet:11.0`. Runtime image не содержит SDK и исходников.
 - Контейнер запускается non-root (`USER app`), слушает container port 8080 и корректно обрабатывает SIGTERM. Добавь `.dockerignore` для `.git`, IDE, `bin/`, `obj/`, test results и локальных секретов.
 - Образ собирается из чистого checkout командой из `backend/`; restore layer сначала копирует project/props files, затем source, чтобы сохранялся Docker cache.
 - API предоставляет отдельные `/health/live` и `/health/ready`; readiness проверяет критичные зависимости. Probe настраивается оркестратором/Compose, не запуском второй копии приложения внутри `HEALTHCHECK`.
