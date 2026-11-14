@@ -26,14 +26,16 @@ function save(value: Assignment) {
 export function assignLanding(): LandingVariant {
   const saved = read()
   const requested = requestedVariant()
-  if (saved && (!requested || requested === saved.variant)) return saved.variant
+  const variant = requested ?? 'hogwarts'
+  const source = requested ? 'link' : 'direct'
+  if (saved && variant === saved.variant && source === saved.source) return saved.variant
   const query = new URLSearchParams(location.search)
   const utm: Record<string, string> = {}
   for (const name of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content']) {
     const value = query.get(name)
     if (value && /^[a-zA-Z0-9_.-]{1,64}$/.test(value)) utm[name] = value
   }
-  const assignment: Assignment = { variant: requested ?? 'worlds', source: requested ? 'link' : 'direct', utm, firstPost: saved?.firstPost, initialVariant: saved?.initialVariant ?? saved?.variant ?? requested ?? 'worlds', switched: saved?.switched || !!saved && saved.variant !== requested }
+  const assignment: Assignment = { variant, source, utm, firstPost: saved?.firstPost, initialVariant: saved?.initialVariant ?? saved?.variant ?? variant, switched: saved?.switched || !!saved && saved.variant !== variant }
   clearLandingWorld()
   authFallback = false
   try { sessionStorage.removeItem(authKey) } catch { /* A new landing starts a new entry attempt. */ }

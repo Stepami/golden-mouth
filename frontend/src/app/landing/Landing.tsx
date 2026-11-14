@@ -15,7 +15,7 @@ const worlds = [
 ] as const
 
 export function Landing({ onContinue, preview = false }: { onContinue: (worldId: string) => void; preview?: boolean }) {
-  const [variant] = useState(() => preview ? requestedVariant() ?? 'worlds' : assignLanding())
+  const [variant] = useState(() => preview ? requestedVariant() ?? 'hogwarts' : assignLanding())
   const [selected, setSelected] = useState<string>(variant === 'hogwarts' ? worlds[2].templateId : worlds[0].templateId)
   const [available, setAvailable] = useState<World[]>([])
   const [error, setError] = useState(false)
