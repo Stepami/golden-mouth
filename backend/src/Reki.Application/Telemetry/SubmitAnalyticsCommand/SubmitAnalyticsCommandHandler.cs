@@ -15,7 +15,10 @@ internal sealed class SubmitAnalyticsCommandHandler(
     {
         if (command.Anonymous)
         {
-            telemetry.TrackAnonymousSubmission(command.Submission);
+            telemetry.TrackAnonymousSubmission(command.Submission with
+            {
+                Events = command.Submission.Events.Where(entry => SubmitAnalytics.IsLandingEvent(entry.Name)).ToArray(),
+            });
             return Unit.Value;
         }
 

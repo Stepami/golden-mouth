@@ -2,12 +2,12 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import vm from 'node:vm'
 import { stripTypeScriptTypes } from 'node:module'
-let calls=[], fail=true, links=0
+let calls=[], fail=true, links=0, rejectContinue=false
 class TelemetryClient {
  constructor(_base, options) { this.authenticated = !options.fetch }
  async submitAnalytics(body) {
   if(this.authenticated) { links++; assert.equal(body.events[0].name,'landing_profile_link'); return }
-  calls.push(structuredClone(body)); if(fail) throw {status:503}
+  calls.push(structuredClone(body)); assert.equal(body.events.length,1); if(fail) throw {status:503}; if(rejectContinue && body.events[0].name==='landing_continue') throw {status:400}
  }
 }
 const storage=new Map()
@@ -25,11 +25,18 @@ await api.flushEntryEvents()
 assert.equal(calls[1].events[0].props.event_id,id)
 await api.flushEntryEvents()
 assert.equal(calls.length,2)
+fail=true
+api.recordEntryStep('landing_continue'); await api.flushEntryEvents()
+api.recordEntryStep('landing_auth_complete'); await api.flushEntryEvents()
+const before=calls.length
+fail=false; rejectContinue=true
+await api.flushEntryEvents()
+assert.deepEqual(calls.slice(before).map(call=>call.events[0].name),['landing_continue','landing_auth_complete'])
 await api.linkEntryProfile(); await api.linkEntryProfile()
 assert.equal(links,1)
 api.resetEntryProfileLink(); await api.linkEntryProfile()
 assert.equal(links,2)
-console.log('PASS: anonymous delivery, stable retry ID, queue acknowledgement, authenticated link dedup/reset')
+console.log('PASS: anonymous delivery, stable retry ID, single-event 400 isolation, authenticated link dedup/reset')
 
 // Exercise the actual assignment used by all five landing URLs, including OAuth state.
 const experiment=fs.readFileSync(new URL('../src/app/landing/experiment.ts',import.meta.url),'utf8')

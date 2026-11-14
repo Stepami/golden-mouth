@@ -1,7 +1,5 @@
 using System.Text.Json.Serialization.Metadata;
-using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.OpenApi;
-using Microsoft.AspNetCore.RateLimiting;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Domain.Player;
@@ -37,17 +35,6 @@ internal static class DependencyInjection
             options.AddOperationTransformer<OperationMetadataTransformer>();
             options.AddOperationTransformer<AuthOperationTransformer>();
             options.AddDocumentTransformer<SecurityTransformer>();
-        });
-        services.AddRateLimiter(options =>
-        {
-            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            options.AddFixedWindowLimiter("landing-entry", limiter =>
-            {
-                limiter.PermitLimit = 600;
-                limiter.Window = TimeSpan.FromMinutes(1);
-                limiter.QueueLimit = 0;
-                limiter.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-            });
         });
         services.AddControllers();
         services.AddSerialization();

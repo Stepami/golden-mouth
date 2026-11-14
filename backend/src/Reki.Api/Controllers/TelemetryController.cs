@@ -1,8 +1,8 @@
 using Mediator;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Reki.Api.Requests.Telemetry;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Telemetry.ClientLogBatch;
@@ -27,8 +27,6 @@ public sealed partial class TelemetryController(
     public SessionId StartSession() => SessionId.New();
 
     [AllowAnonymous]
-    [EnableRateLimiting("landing-entry")]
-    [RequestSizeLimit(32768)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [HttpPost("events", Name = "SubmitAnalytics")]
     [ActionName("SubmitAnalytics")]
@@ -36,22 +34,23 @@ public sealed partial class TelemetryController(
         AnalyticsBatchRequest request,
         CancellationToken cancellationToken)
     {
-        var anonymous = User.Identity?.IsAuthenticated != true;
-        if (anonymous && Request.Headers.Authorization.Count > 0)
+        var auth = await HttpContext.AuthenticateAsync();
+        if (auth.Failure is not null ||
+            (auth.Principal?.Identity?.IsAuthenticated != true && Request.Headers.Authorization.Count > 0))
         {
             return Unauthorized();
         }
 
-        if (anonymous && (Request.ContentLength > 8192 || request.Events.Count is < 1 or > 5 ||
-            request.Platform != "web" || request.Experiments.Count != 0 ||
-            request.Events.Any(entry => entry.WorldId is not null || entry.Screen != "landing" || entry.Prev is not null ||
-                entry.Name is not ("landing_view" or "landing_continue" or "landing_auth_complete" or
-                    "landing_world_selected" or "landing_character_selected" or "landing_reaction_viewed"))))
+        var command = request.ToSubmitAnalytics() with
         {
-            return BadRequest();
+            Anonymous = auth.Principal?.Identity?.IsAuthenticated != true,
+        };
+        if (command.Anonymous && command.ContainsProfileLink())
+        {
+            return Unauthorized();
         }
 
-        await sender.Send(request.ToSubmitAnalytics() with { Anonymous = anonymous }, cancellationToken);
+        await sender.Send(command, cancellationToken);
         return NoContent();
     }
 

@@ -53,7 +53,7 @@ export function flushEntryEvents(): Promise<void> {
   flushing = (async () => {
     pending = pending.filter(e => e.t >= Date.now() - 86400000)
     while (pending.length) {
-      const events = pending.slice(0, 5), ids = new Set(events.map(e => e.props.event_id))
+      const events = pending.slice(0, 1), ids = new Set(events.map(e => e.props.event_id))
       try { await anonymous.submitAnalytics(batch(events)) }
       catch (cause) {
         if (!(typeof cause === 'object' && cause && 'status' in cause && cause.status === 400)) return
