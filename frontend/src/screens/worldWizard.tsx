@@ -81,7 +81,8 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
   const loginRequired = !draft.previewOnly && !hasAccess() && !needsRegistration()
   const save = async () => {
     if (saving || uncertain) return
-    if (draft.previewOnly || loginRequired) { nav.push('05-7c_world_preview'); return }
+    if (draft.previewOnly) { nav.push('05-7c_world_preview'); return }
+    if (loginRequired) { loginFromWorldPreview(d.templateId); return }
     setSaving(true); setError('')
     let creatingWorld = false
     try {
@@ -99,7 +100,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
   if (quick) return <div className="screen no-tab"><TopBar title="Настроение истории" onBack={saving ? undefined : nav.back} /><div className="pad"><DramaPicker definition={d} beforeOptions={<div className="drama-world-edit"><Button secondary onClick={() => nav.push('05-12_world_advanced')}>Редактировать мир</Button><p className="small muted">Мир можно будет отредактировать позже</p></div>} />
     <div className="quick-summary"><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} /><div><b>{d.name}</b><div className="small muted">{d.title} · {d.role}</div></div></div>
     {draft.previewOnly && <p className="small prototype-note">DEV-прототип: дальше — пример ленты, без создания мира в базе.</p>}
-    {loginRequired && <p className="small muted">Можно посмотреть пример истории без входа. Для создания мира нужна авторизация.</p>}{!loginRequired && error && <p role="alert">{error}</p>}{uncertain && <Button onClick={() => nav.replace('01-3_world')}>Проверить список миров</Button>}
-  </div><BottomCTA main={saving ? 'Сохраняем…' : loginRequired || draft.previewOnly ? 'Посмотреть историю' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'} disabled={saving || uncertain || !d.voice.trim() || d.stars.length === 0} onMain={save} second={loginRequired ? 'Войти и создать мир' : undefined} onSecond={() => loginFromWorldPreview(d.templateId)} /></div>
+    {loginRequired && <p className="small muted">Для сохранения игры нужно войти.</p>}{!loginRequired && error && <p role="alert">{error}</p>}{uncertain && <Button onClick={() => nav.replace('01-3_world')}>Проверить список миров</Button>}
+  </div><BottomCTA main={saving ? 'Сохраняем…' : draft.previewOnly ? 'Посмотреть пример' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'} disabled={saving || uncertain || !d.voice.trim() || d.stars.length === 0} onMain={save} second={!draft.previewOnly ? 'Посмотреть пример' : undefined} secondDisabled={saving || uncertain} onSecond={() => nav.push('05-7c_world_preview')} /></div>
   return <WorldAdvanced draft={draft} saving={saving} error={error} uncertain={uncertain} onSave={save} onCheck={() => nav.replace('01-3_world')} />
 }
