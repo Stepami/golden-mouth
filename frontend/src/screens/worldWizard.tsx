@@ -1,3 +1,4 @@
+import { hasAccess, needsRegistration } from '../api/auth'
 import { clearLandingWorld } from '../app/landing/experiment'
 import {PushNotifications} from '../app/push/PushNotifications'
 import {InstallApp} from '../app/install/InstallApp'
@@ -77,9 +78,10 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
   const nav = useNav(); const { setPlayer } = useStore(); const d = draft.definition
   const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [uncertain, setUncertain] = useState(false)
   useEffect(() => { if (error) document.querySelector('[role="alert"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }) }, [error])
+  const devPreview = import.meta.env.DEV && new URLSearchParams(location.search).has('screen') && !hasAccess() && !needsRegistration()
   const save = async () => {
     if (saving || uncertain) return
-    if (draft.previewOnly) { nav.push('05-7c_world_preview'); return }
+    if (draft.previewOnly || devPreview) { nav.push('05-7c_world_preview'); return }
     setSaving(true); setError('')
     let creatingWorld = false
     try {
@@ -97,7 +99,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
   if (quick) return <div className="screen no-tab"><TopBar title="Настроение истории" onBack={saving ? undefined : nav.back} /><div className="pad"><DramaPicker definition={d} beforeOptions={<div className="drama-world-edit"><Button secondary onClick={() => nav.push('05-12_world_advanced')}>Редактировать мир</Button><p className="small muted">Мир можно будет отредактировать позже</p></div>} />
     <div className="quick-summary"><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} /><div><b>{d.name}</b><div className="small muted">{d.title} · {d.role}</div></div></div>
     {draft.previewOnly && <p className="small prototype-note">DEV-прототип: дальше — пример ленты, без создания мира в базе.</p>}
-    {error && <p role="alert">{error}</p>}{uncertain && <Button onClick={() => nav.replace('01-3_world')}>Проверить список миров</Button>}
-  </div><BottomCTA main={saving ? 'Сохраняем…' : draft.previewOnly ? 'Посмотреть свою историю' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'} disabled={saving || uncertain || !d.voice.trim() || d.stars.length === 0} onMain={save} /></div>
+    {devPreview && <p className="small prototype-note">DEV-предпросмотр без сохранения.</p>}{error && <p role="alert">{error}</p>}{uncertain && <Button onClick={() => nav.replace('01-3_world')}>Проверить список миров</Button>}
+  </div><BottomCTA main={saving ? 'Сохраняем…' : draft.previewOnly ? 'Посмотреть пример' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'} disabled={saving || uncertain || !d.voice.trim() || d.stars.length === 0} onMain={save} /></div>
   return <WorldAdvanced draft={draft} saving={saving} error={error} uncertain={uncertain} onSave={save} onCheck={() => nav.replace('01-3_world')} />
 }
