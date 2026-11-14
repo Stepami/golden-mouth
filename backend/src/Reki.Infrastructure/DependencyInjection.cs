@@ -11,6 +11,7 @@ using Reki.Application.Balance;
 using Reki.Application.Posts.GetPublicStoryCard;
 using Reki.Infrastructure.AI;
 using Reki.Infrastructure.Auth;
+using Reki.Infrastructure.Cache;
 using Reki.Infrastructure.Jobs;
 using Reki.Infrastructure.ML;
 using Reki.Infrastructure.Mongo;
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
 
         services
+            .AddCache()
             .AddRekiContext()
             .AddChatClients()
             .AddEmbeddingClients()

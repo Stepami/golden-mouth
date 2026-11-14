@@ -50,8 +50,6 @@ public sealed record World
         };
     }
 
-    public WorldStar? FindStar(StarId starId) => Stars.SingleOrDefault(star => star.Id == starId);
-
     public WorldStar? FindStar(AuthorId authorId) => Stars.FirstOrDefault(star => star.Id.ToAuthorId() == authorId);
 
     public World PublishPost(PostProgression progression)

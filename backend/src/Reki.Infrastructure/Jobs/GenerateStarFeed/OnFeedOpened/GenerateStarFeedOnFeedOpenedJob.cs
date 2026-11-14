@@ -21,15 +21,12 @@ internal sealed class GenerateStarFeedOnFeedOpenedJob(
         TickerFunctionContext<StarFeedRequest> context,
         CancellationToken cancellationToken = default)
     {
-        var request = context.Request;
-        if (!request.ShouldGenerate)
+        var (playerId, worldId, postId, createdAtUnixMilliseconds, shouldGenerate) = context.Request;
+        if (!shouldGenerate)
         {
             return;
         }
 
-        var playerId = request.PlayerId;
-        var worldId = request.WorldId;
-        var postId = request.PostId;
         var player = await playerRepository.GetPlayerAsync(playerId, cancellationToken);
         var world = await worldRepository.GetWorldAsync(playerId, worldId, cancellationToken);
         if (player is null || world is null || world.Stars.Count == 0)
@@ -55,13 +52,13 @@ internal sealed class GenerateStarFeedOnFeedOpenedJob(
 
         // Recheck ownership after the external call, including deletion while generating.
         var freshWorld = await worldRepository.GetWorldAsync(playerId, worldId, cancellationToken);
-        if (freshWorld?.FindStar(star.Id) is null ||
+        if (freshWorld?.FindStar(star.Id.ToAuthorId()) is null ||
             await playerRepository.GetPlayerAsync(playerId, cancellationToken) is null)
         {
             throw new TerminateExecutionException("The feed world is unavailable.");
         }
 
-        var createdAt = DateTimeOffset.FromUnixTimeMilliseconds(request.CreatedAtUnixMilliseconds);
+        var createdAt = DateTimeOffset.FromUnixTimeMilliseconds(createdAtUnixMilliseconds);
         var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, 0, [], [], createdAt, 0, 0, 1, false, false);
         await postRepository.InsertPostAsync(post, cancellationToken);
     }

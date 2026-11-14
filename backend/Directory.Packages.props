@@ -10,7 +10,7 @@
         <MicrosoftTestingVersion>10.11.0</MicrosoftTestingVersion>
         <OpenIddictVersion>7.8.0</OpenIddictVersion>
         <OtelVersion>1.21.0</OtelVersion>
-        <OtelInstrVersion>1.20.2</OtelInstrVersion>
+        <OtelInstrVersion>1.21.0</OtelInstrVersion>
         <SkiaVersion>4.155.0</SkiaVersion>
         <TickerQVersion>10.4.0</TickerQVersion>
         <TUnitVersion>1.83.0</TUnitVersion>
@@ -65,7 +65,7 @@
         <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="$(OtelVersion)"/>
         <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OtelInstrVersion)"/>
         <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OtelInstrVersion)"/>
-        <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1"/>
+        <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OtelInstrVersion)"/>
         <!--Analyzers-->
         <PackageVersion Include="CSharpGuidelinesAnalyzer" Version="3.8.5"/>
         <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.12.1"/>

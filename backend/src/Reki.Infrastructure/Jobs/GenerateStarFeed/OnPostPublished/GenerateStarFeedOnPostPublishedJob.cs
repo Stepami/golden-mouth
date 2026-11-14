@@ -22,17 +22,14 @@ internal sealed class GenerateStarFeedOnPostPublishedJob(
         TickerFunctionContext<StarFeedOnPostPublishedRequest> context,
         CancellationToken cancellationToken = default)
     {
-        var request = context.Request;
-        var source = await postRepository.GetPostAsync(request.SourcePostId, cancellationToken)
+        var (playerId, worldId, postId, createdAtUnixMilliseconds, sourcePostId) = context.Request;
+        var source = await postRepository.GetPostAsync(sourcePostId, cancellationToken)
             ?? throw new TerminateExecutionException("The feed source is unavailable.");
-        if (source.AuthorId != request.PlayerId.ToAuthorId())
+        if (source.AuthorId != playerId.ToAuthorId())
         {
             throw new TerminateExecutionException("The feed source is invalid.");
         }
 
-        var playerId = request.PlayerId;
-        var worldId = request.WorldId;
-        var postId = request.PostId;
         var player = await playerRepository.GetPlayerAsync(playerId, cancellationToken);
         var world = await worldRepository.GetWorldAsync(playerId, worldId, cancellationToken);
         if (player is null || world is null || world.Stars.Count == 0)
@@ -59,7 +56,7 @@ internal sealed class GenerateStarFeedOnPostPublishedJob(
 
         // Recheck ownership after the external call, including deletion while generating.
         var freshWorld = await worldRepository.GetWorldAsync(playerId, worldId, cancellationToken);
-        if (freshWorld?.FindStar(star.Id) is null ||
+        if (freshWorld?.FindStar(star.Id.ToAuthorId()) is null ||
             await playerRepository.GetPlayerAsync(playerId, cancellationToken) is null)
         {
             throw new TerminateExecutionException("The feed world is unavailable.");
@@ -71,7 +68,7 @@ internal sealed class GenerateStarFeedOnPostPublishedJob(
             throw new TerminateExecutionException("The feed source is unavailable.");
         }
 
-        var createdAt = DateTimeOffset.FromUnixTimeMilliseconds(request.CreatedAtUnixMilliseconds);
+        var createdAt = DateTimeOffset.FromUnixTimeMilliseconds(createdAtUnixMilliseconds);
         var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, 0, [], [], createdAt, 0, 0, 1, false, false);
         await postRepository.InsertPostAsync(post, cancellationToken);
     }

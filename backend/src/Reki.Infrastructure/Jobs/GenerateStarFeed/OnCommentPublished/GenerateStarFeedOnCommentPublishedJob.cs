@@ -22,11 +22,11 @@ internal sealed class GenerateStarFeedOnCommentPublishedJob(
         TickerFunctionContext<StarFeedOnCommentPublishedRequest> context,
         CancellationToken cancellationToken = default)
     {
-        var request = context.Request;
-        var source = await postRepository.GetPostAsync(request.SourcePostId, cancellationToken)
+        var (playerId, worldId, postId, createdAtUnixMilliseconds, sourcePostId, sourceCommentId) = context.Request;
+        var source = await postRepository.GetPostAsync(sourcePostId, cancellationToken)
             ?? throw new TerminateExecutionException("The feed source is unavailable.");
-        var comment = source.Comments.FirstOrDefault(item => item.Id == request.SourceCommentId);
-        if (comment is null || comment.Hidden || comment.AuthorId != request.PlayerId.ToAuthorId())
+        var comment = source.Comments.FirstOrDefault(item => item.Id == sourceCommentId);
+        if (comment is null || comment.Hidden || comment.AuthorId != playerId.ToAuthorId())
         {
             throw new TerminateExecutionException("The feed comment is unavailable.");
         }
@@ -37,9 +37,6 @@ internal sealed class GenerateStarFeedOnCommentPublishedJob(
             throw new TerminateExecutionException("The feed branch is unavailable.");
         }
 
-        var playerId = request.PlayerId;
-        var worldId = request.WorldId;
-        var postId = request.PostId;
         var player = await playerRepository.GetPlayerAsync(playerId, cancellationToken);
         var world = await worldRepository.GetWorldAsync(playerId, worldId, cancellationToken);
         if (player is null || world is null || world.Stars.Count == 0)
@@ -59,15 +56,13 @@ internal sealed class GenerateStarFeedOnCommentPublishedJob(
         var replies = source.Comments.Where(item => !item.Hidden && item.ParentCommentId == comment.Id).TakeLast(8).ToArray();
         var feed = new StarFeedContext(profile, own.Items, recent.Items, StarFeedEventType.CommentPublished);
         var text = await generator.GenerateContentAsync(
-            new StarFeedCommentContext(feed, source, comment, [.. branch.TakeLast(8)], replies), cancellationToken);
-        if (text is null)
-        {
-            throw new TerminateExecutionException("The generated feed content is invalid.");
-        }
+                       new StarFeedCommentContext(feed, source, comment, [.. branch.TakeLast(8)], replies),
+                       cancellationToken)
+                   ?? throw new TerminateExecutionException("The generated feed content is invalid.");
 
         // Recheck ownership after the external call, including deletion while generating.
         var freshWorld = await worldRepository.GetWorldAsync(playerId, worldId, cancellationToken);
-        if (freshWorld?.FindStar(star.Id) is null ||
+        if (freshWorld?.FindStar(star.Id.ToAuthorId()) is null ||
             await playerRepository.GetPlayerAsync(playerId, cancellationToken) is null)
         {
             throw new TerminateExecutionException("The feed world is unavailable.");
@@ -80,7 +75,7 @@ internal sealed class GenerateStarFeedOnCommentPublishedJob(
             throw new TerminateExecutionException("The feed source is unavailable.");
         }
 
-        var createdAt = DateTimeOffset.FromUnixTimeMilliseconds(request.CreatedAtUnixMilliseconds);
+        var createdAt = DateTimeOffset.FromUnixTimeMilliseconds(createdAtUnixMilliseconds);
         var post = new GamePost(postId, star.Id.ToAuthorId(), worldId, text, 0, 0, [], [], createdAt, 0, 0, 1, false, false);
         await postRepository.InsertPostAsync(post, cancellationToken);
     }
