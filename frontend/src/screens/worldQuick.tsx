@@ -1,3 +1,4 @@
+import { recordEntryStep } from '../app/landing/openobserve'
 import { clearLandingWorld } from '../app/landing/experiment'
 import { useState, type ReactNode } from 'react'
 import { useStore } from '../app/store'
@@ -67,6 +68,7 @@ export function WorldOverview() {
     }
     setWorldDraft(next)
     setConfirmSwitch(false)
+    recordEntryStep('landing_world_selected')
     nav.push('01-4_channel')
   }
   return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={back} />
@@ -102,7 +104,7 @@ export function QuickChannelForm({ draft }: { draft: WorldDraft }) {
     {selected ? <Card><ExpandableText text={selected.star.about} /></Card> : <div className="quick-personal"><label className="label">Имя персонажа<input aria-label="Имя персонажа" value={d.name} maxLength={80} onChange={e => updateWorldDraft({ name: e.target.value })} /></label><label className="label">Кто ты в этом мире<input aria-label="Кто ты в этом мире" value={d.role} maxLength={80} onChange={e => updateWorldDraft({ role: e.target.value })} /></label></div>}
     <div className="label">Как к тебе обращаться</div><Segmented value={draft.address} onChange={(address: Address) => setWorldDraft({ ...draft, address })} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} />
     <details className="card profile-preview"><summary><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={40} /><span><b>{d.name || "Твой персонаж"}</b><span className="small muted">{displayHandle(d.avatar)}</span></span><span className="small">Изменить</span></summary><label className="label">Ник<input aria-label="Ник" value={d.avatar} maxLength={80} onChange={e => updateWorldDraft({ avatar: e.target.value })} /></label><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={56} /><AvatarPersonalization enabled={draft.personalizeAvatar !== false} onChange={personalizeAvatar => setWorldDraft({ ...draft, personalizeAvatar })} /></details>
-  </div><BottomCTA main="Выбрать градус драмы" disabled={!d.name.trim() || !d.role.trim() || !d.avatar.trim()} onMain={() => nav.push('01-4b_world_setup')} /></div>
+  </div><BottomCTA main="Выбрать градус драмы" disabled={!d.name.trim() || !d.role.trim() || !d.avatar.trim()} onMain={() => { recordEntryStep('landing_character_selected'); nav.push('01-4b_world_setup') }} /></div>
 }
 export function DifficultyPicker({ definition }: { definition: WorldDefinition }) {
   return <section><h2>Сложность</h2><Segmented value={definition.difficulty} onChange={difficulty => updateWorldDraft({ difficulty })} options={[{ id: 'easy', label: 'Легко' }, { id: 'normal', label: 'Средне' }, { id: 'hard', label: 'Сложно' }]} /><p className="small muted">Чем сложнее, тем быстрее рост подписчиков и выше риск провала. Изменение действует на следующие действия.</p></section>

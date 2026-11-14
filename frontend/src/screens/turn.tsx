@@ -1,3 +1,4 @@
+import { recordEntryStep } from '../app/landing/openobserve'
 import { RepostAction } from '../ui/RepostAction'
 import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
@@ -183,6 +184,17 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
   const fallback = r.bestComment
   const actor = stars.find(item => `Star_${item.id}` === comment?.authorId || item.avatarSeed === (comment?.avatar ?? fallback?.avatar) || `Star_${item.id}` === nav.params.predictedAuthorId)
   const commentText = comment?.text ?? fallback?.text
+  const entryReaction = useRef('')
+  useEffect(() => {
+    const seen = () => {
+      if (document.visibilityState !== 'visible' || !commentText?.trim() || entryReaction.current === post.id) return
+      entryReaction.current = post.id
+      recordEntryStep('landing_reaction_viewed', post.id)
+    }
+    seen()
+    document.addEventListener('visibilitychange', seen)
+    return () => document.removeEventListener('visibilitychange', seen)
+  }, [commentText, post.id])
   const shown = useCount(Math.abs(r.delta))
   const additive = r.whys.filter(why => /^[+−-]\d+(?:[.,]\d+)?$/.test(why.value))
   const explainsDelta = additive.length > 0 && additive.reduce((sum, why) => sum + Number(why.value.replace('−', '-').replace(',', '.')), 0) === r.delta

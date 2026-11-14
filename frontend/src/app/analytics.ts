@@ -2,6 +2,7 @@
 // Таксономия, воронки и вопросы: docs/analytics.md. Приватность: только обезличенный id, без текстов, ников, initData.
 import { apiBaseUrl as BASE } from './runtimeConfig'
 import { isLandingPreview, landingContext } from './landing/experiment'
+import { recordEntryStep, flushEntryEvents, linkEntryProfile, resetEntryProfileLink } from './landing/openobserve'
 import { ActiveTime } from './activeTime'
 import { inTelegram } from '../telegram'
 import { getSessionId, sendAnalytics } from '../api/telemetry'
@@ -13,8 +14,8 @@ let playerAvailable = false
 export const canSendTelemetry = () => playerAvailable
 export function setTelemetryPlayerAvailable(available: boolean) {
   playerAvailable = available
-  if (available) flushEvents()
-  else q.length = 0
+  if (available) { flushEvents(); void linkEntryProfile() }
+  else { q.length = 0; resetEntryProfileLink() }
 }
 
 let selectedDifficulty: string | undefined
@@ -69,8 +70,8 @@ export function installAnalytics() {
   const interact = () => activeTime.interact(performance.now())
   for (const name of ['pointerdown', 'keydown', 'scroll']) document.addEventListener(name, interact, { passive: true, capture: true })
   setInterval(recordActiveTime, 15_000)
-  setInterval(() => flushEvents(), 10_000)
-  window.addEventListener('pagehide', () => { recordActiveTime(); activeTime.visibility(performance.now(), false); flushEvents() })
+  setInterval(() => { flushEvents(); void flushEntryEvents(); if (playerAvailable) void linkEntryProfile() }, 10_000)
+  window.addEventListener('pagehide', () => { recordActiveTime(); activeTime.visibility(performance.now(), false); flushEvents(); void flushEntryEvents() })
   document.addEventListener('visibilitychange', () => {
     recordActiveTime()
     const visible = document.visibilityState === 'visible'
@@ -80,11 +81,13 @@ export function installAnalytics() {
   })
 }
 
-// Before login /events is authenticated, so the complete entry funnel lives in Metrika.
+// Landing and game events share /events; the server restricts anonymous batches.
 export function trackLanding(name: 'landing_view' | 'landing_continue' | 'landing_auth_complete' | 'landing_first_post') {
   const props = landingContext()
   if (!props || isLandingPreview()) return
   if (name !== 'landing_view') tap(name, { kind: props.landing_variant })
+  if (name === 'landing_first_post') void linkEntryProfile()
+  else recordEntryStep(name)
   if (import.meta.env.PROD) {
     const ym = (window as Window & { ym?: (id: number, method: string, goal: string, params: Record<string, string>) => void }).ym
     try { ym?.(114170439, 'reachGoal', name, props) } catch { /* Analytics never blocks entry or publishing. */ }

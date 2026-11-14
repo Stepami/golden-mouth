@@ -4,7 +4,7 @@ using Reki.Domain.Telemetry;
 
 namespace Reki.Api.Requests.Telemetry.AnalyticsBatch;
 
-public sealed record AnalyticsBatchRequest
+public sealed record AnalyticsBatchRequest : IValidatableObject
 {
     [Required]
     public required SessionId Session { get; init; }
@@ -22,5 +22,12 @@ public sealed record AnalyticsBatchRequest
     [Required]
     [MaxLength(100)]
     public required IReadOnlyList<AnalyticsEventRequest> Events { get; init; }
-}
 
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Events?.Any(entry => entry is null) is true)
+        {
+            yield return new ValidationResult("Events must not contain null items.", [nameof(Events)]);
+        }
+    }
+}
