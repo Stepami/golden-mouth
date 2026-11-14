@@ -33,7 +33,7 @@
         <PackageReference Include="Telegram.Bot"/>
         <PackageReference Include="TickerQ"/>
         <PackageReference Include="TickerQ.Instrumentation.OpenTelemetry"/>
-        <PackageReference Include="alexjamesbrown.TickerQ.MongoDB"/>
+        <PackageReference Include="TickerQ.MongoDB"/>
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol"/>
         <PackageReference Include="OpenTelemetry.Extensions.Hosting"/>
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore"/>
