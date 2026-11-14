@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { NavContext, TABS, type Nav, type ScreenId } from './app/nav'
 import { StoreProvider, useStore } from './app/store'
 import { SCREENS, TAB_OF } from './screens'
-import { screenView, setExperiments, tap } from './app/analytics'
+import { screenView, setExperiments, tap, trackLanding } from './app/analytics'
 import { setScreen } from './app/log'
 import { TelegramLaunch } from './app/TelegramLaunch'
 import { syncBackButton } from './telegram'
@@ -14,6 +14,9 @@ import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
 import { useAvatarPersonalization } from './app/avatarPersonalization'
 import type { WorldId } from './api/types'
+
+import { Landing } from './app/landing/Landing'
+import { beginLandingAuth, completeLandingAuth, landingAuthPending, isLandingPreview } from './app/landing/experiment'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
 
@@ -91,6 +94,14 @@ export function App() {
   const [busy, setBusy] = useState(false)
   const [authError, setAuthError] = useState('')
   const explicitStart = hasExplicitStart()
+  const [landingAccepted, setLandingAccepted] = useState(landingAuthPending)
+  const [landingPreview, setLandingPreview] = useState(isLandingPreview)
+  useEffect(() => {
+    if (authenticated || registration) {
+      setLandingAccepted(true)
+      if (!landingPreview && completeLandingAuth()) trackLanding('landing_auth_complete')
+    }
+  }, [authenticated, registration, landingPreview])
   useEffect(() => {
     if (explicitStart) return
     void startAuth().catch(() => { setAuthError('Нет соединения с игрой. Проверь подключение и продолжи вход.') }).finally(() => setReady(true))
@@ -104,6 +115,10 @@ export function App() {
         : 'Не получилось войти. Проверь подключение и попробуй снова.')
     }).finally(() => setBusy(false))
   }
+  if (!explicitStart && (landingPreview || ready && !authenticated && !registration && !resumable && !landingAccepted)) return <Landing preview={landingPreview} onContinue={() => {
+    if (!landingPreview) { beginLandingAuth(); trackLanding('landing_continue') }
+    setLandingAccepted(true); setLandingPreview(false)
+  }} />
   if (!explicitStart && !ready) return <div className="app"><div className="screen"><div className="pad" role="status">Входим в игру…</div></div></div>
   if (!explicitStart && !authenticated && !registration) return <TelegramLaunch error={authError} pendingProvider={pendingLogin ? pendingAuthProvider() === 'yandex' ? 'Яндекс ID' : pendingAuthProvider() === 'vk' ? 'VK' : 'Telegram' : undefined}>
     {resumable ? <div className="auth-providers">

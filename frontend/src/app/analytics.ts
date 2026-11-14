@@ -1,6 +1,7 @@
 // Продуктовая аналитика: кто куда ходит и что делает. Отдельно от журнала ошибок (app/log.ts).
 // Таксономия, воронки и вопросы: docs/analytics.md. Приватность: только обезличенный id, без текстов, ников, initData.
 import { apiBaseUrl as BASE } from './runtimeConfig'
+import { isLandingPreview, landingContext } from './landing/experiment'
 import { ActiveTime } from './activeTime'
 import { inTelegram } from '../telegram'
 import { getSessionId, sendAnalytics } from '../api/telemetry'
@@ -77,4 +78,15 @@ export function installAnalytics() {
     if (!visible) { event('app_hidden', { ms_on_screen: Date.now() - enteredAt }); flushEvents() }
     else { enteredAt = Date.now(); event('app_visible') }
   })
+}
+
+// Before login /events is authenticated, so the complete entry funnel lives in Metrika.
+export function trackLanding(name: 'landing_view' | 'landing_continue' | 'landing_auth_complete' | 'landing_first_post') {
+  const props = landingContext()
+  if (!props || isLandingPreview()) return
+  if (name !== 'landing_view') tap(name, { kind: props.landing_variant })
+  if (import.meta.env.PROD) {
+    const ym = (window as Window & { ym?: (id: number, method: string, goal: string, params: Record<string, string>) => void }).ym
+    try { ym?.(114170439, 'reachGoal', name, props) } catch { /* Analytics never blocks entry or publishing. */ }
+  }
 }

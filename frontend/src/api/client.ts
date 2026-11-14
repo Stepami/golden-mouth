@@ -1,3 +1,4 @@
+import { completeLandingPost } from '../app/landing/experiment';
 // Р¤Р°СЃР°Рґ API РїРѕРІРµСЂС… NSwag Fetch-РєР»РёРµРЅС‚Р°.
 // Р’Рѕ С„СЂРѕРЅС‚Рµ РќР•Рў СЃРµРєСЂРµС‚РѕРІ: runtime config РІРёРґРµРЅ РІ Р±СЂР°СѓР·РµСЂРµ. РљР»СЋС‡Рё LLM Рё С‚РѕРєРµРЅ Р±РѕС‚Р° Р¶РёРІСѓС‚ С‚РѕР»СЊРєРѕ РЅР° Р±СЌРєРµРЅРґРµ.
 import { clearPlayerDrafts } from '../app/postDraft';
@@ -6,7 +7,7 @@ import { clearAvatarPersonalization } from '../app/avatarPersonalization';
 import { clearReferral } from '../app/referral';
 import { clearTokens, logout as revokeSession, registerPlayer } from './auth';
 import { clearApiCache } from '../app/useApi';
-import { setAnalyticsWorld, setTelemetryPlayerAvailable } from '../app/analytics';
+import { setAnalyticsWorld, setTelemetryPlayerAvailable, trackLanding } from '../app/analytics';
 import { clearWorldContent, installWorldContent, installWorldTemplates } from './worldContent';
 import { error } from '../app/log';
 import { sdk } from './transport';
@@ -224,6 +225,7 @@ export const api = {
     createPost: async (text: string, ownWords: boolean, repostId?: string) => {
         const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, repostId: repostId ?? null }));
         const { postId: id, ...post } = map.post(response.post);
+        if (!repostId && completeLandingPost()) trackLanding('landing_first_post');
         return { post: { ...post, id }, result: map.result(response.result), predictedAuthorId: response.predictedAuthorId };
     },
     initialComment: async (postId: string, authorId: string, signal?: AbortSignal): Promise<Post> => {
