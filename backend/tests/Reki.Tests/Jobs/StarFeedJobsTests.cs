@@ -31,6 +31,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         using var api = Factory.CreateApiClient(9501);
         var player = await CreatePlayerWithWorldAsync(api);
         var worldId = await GetWorldIdAsync(api);
+        var authors = await GetWorldAuthorsAsync(api);
         var before = await GetStoredPlayerAsync(9501);
         var worldBefore = await GetStoredWorldAsync(9501);
         var createdAt = Factory.Session.Clock.GetUtcNow().AddMilliseconds(123);
@@ -51,7 +52,7 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
         await job.ExecuteAsync(context, CancellationToken.None);
         Factory.Session.Clock.Advance(TimeSpan.FromMinutes(10));
         await job.ExecuteAsync(context, CancellationToken.None);
-        var feed = await api.Posts.GetPostsAsync(worldId, null, await GetWorldAuthorsAsync(api), null, null, CancellationToken.None);
+        var feed = await api.Posts.GetPostsAsync(worldId, null, authors, null, null, CancellationToken.None);
 
         // Assert
         await Assert.That(Factory.Llm.RequestCount).IsEqualTo(1);
