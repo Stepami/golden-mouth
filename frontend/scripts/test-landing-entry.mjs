@@ -27,3 +27,29 @@ assert.equal(links,1)
 api.resetEntryProfileLink(); await api.linkEntryProfile()
 assert.equal(links,2)
 console.log('PASS: anonymous delivery, stable retry ID, queue acknowledgement, authenticated link dedup/reset')
+
+// Exercise the actual assignment used by all five landing URLs, including OAuth state.
+const experiment=fs.readFileSync(new URL('../src/app/landing/experiment.ts',import.meta.url),'utf8')
+  .replaceAll('import.meta.env?.DEV','false')
+const experimentJs=stripTypeScriptTypes(experiment).replace(/export /g,'')+
+  '\nObject.assign(exports,{assignLanding,landingContext,landingVisitIdentity,beginLandingAuth,completeLandingAuth,pendingLandingWorld})'
+for(const variant of ['worlds','hogwarts','infobiz','evening','houses']) {
+ const values=new Map(),location={search:'?landing='+variant+'&utm_campaign=launch'}
+ const store={getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)}
+ const sandbox={exports:{},location,URLSearchParams,crypto:globalThis.crypto,localStorage:store,sessionStorage:store}
+ vm.runInNewContext(experimentJs,sandbox)
+ const exp=sandbox.exports
+ assert.equal(exp.assignLanding(),variant)
+ const identity=exp.landingVisitIdentity()
+ exp.beginLandingAuth('selected-template')
+ assert.equal(exp.pendingLandingWorld(),'selected-template')
+ assert.equal(exp.completeLandingAuth(),true)
+ assert.equal(exp.landingContext().landing_variant,variant)
+ assert.equal(exp.landingContext().utm_campaign,'launch')
+ assert.equal(exp.landingVisitIdentity().entryId,identity.entryId)
+ location.search='?landing='+(variant==='worlds'?'hogwarts':'worlds')
+ exp.assignLanding()
+ assert.equal(exp.landingContext().landing_initial_variant,variant)
+ assert.equal(exp.landingContext().landing_switched,'true')
+}
+console.log('PASS: five landing variants, OAuth attribution, template persistence, campaign and switching')
