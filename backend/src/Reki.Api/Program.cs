@@ -73,6 +73,7 @@ public partial class Program
 
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseRateLimiter();
 
             var migrator = app.Services.GetRequiredService<IMigrator>();
             await migrator.MigrateAsync();

@@ -1,5 +1,5 @@
 export type LandingVariant = 'worlds' | 'hogwarts'
-type Assignment = { variant: LandingVariant; source: 'link' | 'direct'; utm: Record<string, string>; firstPost?: boolean; initialVariant?: LandingVariant; switched?: boolean; worldId?: string }
+type Assignment = { entryId?: string; variant: LandingVariant; source: 'link' | 'direct'; utm: Record<string, string>; firstPost?: boolean; initialVariant?: LandingVariant; switched?: boolean; worldId?: string }
 const key = 'reki:landing:entry-v1'
 const authKey = `${key}:auth`
 const worldKey = `${key}:world`
@@ -35,7 +35,7 @@ export function assignLanding(): LandingVariant {
     const value = query.get(name)
     if (value && /^[a-zA-Z0-9_.-]{1,64}$/.test(value)) utm[name] = value
   }
-  const assignment: Assignment = { variant, source, utm, firstPost: saved?.firstPost, initialVariant: saved?.initialVariant ?? saved?.variant ?? variant, switched: saved?.switched || !!saved && saved.variant !== variant }
+  const assignment: Assignment = { entryId: crypto.randomUUID(), variant, source, utm, firstPost: saved?.firstPost, initialVariant: saved?.initialVariant ?? saved?.variant ?? variant, switched: saved?.switched || !!saved && saved.variant !== variant }
   clearLandingWorld()
   authFallback = false
   try { localStorage.removeItem(authKey) } catch { /* Optional storage. */ }
@@ -96,4 +96,20 @@ export function clearLandingWorld() {
   worldFallback = undefined
   try { localStorage.removeItem(worldKey) } catch { /* Optional storage. */ }
   try { sessionStorage.removeItem(worldKey) } catch { /* In-memory state is enough for this visit. */ }
+}
+
+
+const visitorKey = 'reki:landing:visitor:v1'
+let visitorFallback: string | undefined
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+export function landingVisitIdentity(): { visitorId: string; entryId: string } | undefined {
+  const value = read()
+  if (!value) return
+  if (!visitorFallback) {
+    try { const stored = localStorage.getItem(visitorKey); if (stored && uuid.test(stored)) visitorFallback = stored } catch { /* Optional storage. */ }
+    visitorFallback ??= crypto.randomUUID()
+    try { localStorage.setItem(visitorKey, visitorFallback) } catch { /* No fingerprint fallback. */ }
+  }
+  if (!value.entryId || !uuid.test(value.entryId)) save({ ...value, entryId: crypto.randomUUID() })
+  return { visitorId: visitorFallback, entryId: read()!.entryId! }
 }

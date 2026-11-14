@@ -52,6 +52,7 @@
         "Reki.Api.Requests.Posts",
         "Reki.Api.Requests.Social",
         "Reki.Api.Requests.Telemetry",
+        "Reki.Api.Requests.Telemetry.Landing",
         "Reki.Api.Requests.Worlds",
         "Reki.Application.Player.Responses",
         "Reki.Application.Posts.Responses",
