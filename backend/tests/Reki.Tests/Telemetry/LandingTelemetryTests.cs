@@ -1,89 +1,74 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
+using Reki.Application.RekiContext;
 using Reki.Application.Telemetry;
+using Reki.Application.Telemetry.SubmitAnalyticsCommand;
+using Reki.Domain.Player;
+using Reki.Domain.Telemetry;
 
 namespace Reki.Tests.Telemetry;
 
 public sealed class LandingTelemetryTests
 {
-    private static LandingVisit Visit => new(
-        Guid.Parse("11111111-1111-4111-8111-111111111111"),
-        Guid.Parse("22222222-2222-4222-8222-222222222222"),
-        "worlds",
-        "worlds",
-        "link",
-        false,
-        "campaign_a",
-        "cpc",
-        "ads",
-        null);
-
     [Test]
     [Arguments("worlds")]
     [Arguments("hogwarts")]
     [Arguments("infobiz")]
     [Arguments("evening")]
     [Arguments("houses")]
-    public async Task AnonymousEntryDoesNotBecomeAnActivePlayerAsync(string variant)
+    public async Task AnonymousEntryDoesNotLoadProfileOrBecomeAnActivePlayerAsync(string variant)
     {
         var log = new CaptureLogger();
-        var clock = new FakeTimeProvider();
-        new LandingTelemetry(log, clock).TrackEntry(Entry(clock, "landing_view") with
-        {
-            Visit = Visit with { Variant = variant, InitialVariant = variant },
-        });
+        var accessor = Substitute.For<IRekiContextAccessor>();
+        accessor.Context.Returns(_ => throw new InvalidOperationException("Anonymous event must not load a profile."));
+        var telemetry = new ProductTelemetry(log, new FakeTimeProvider());
+        var handler = new SubmitAnalyticsCommandHandler(telemetry, accessor);
+        await handler.Handle(new SubmitAnalytics(Submission("landing_view", variant), Anonymous: true), CancellationToken.None);
         var fields = log.Scopes.Single();
         await Assert.That(fields["landing_variant"]).IsEqualTo(variant);
         await Assert.That(fields["activity_kind"]).IsEqualTo("entry");
-        await Assert.That(fields["landing_experiment"]).IsEqualTo("entry_v1");
         await Assert.That(fields.ContainsKey("player_id")).IsFalse();
-        await Assert.That(fields["visitor_id"]).IsEqualTo(Visit.VisitorId.ToString("N"));
     }
 
     [Test]
-    public async Task BrowserCannotSubmitServerMilestonesAsync()
+    public async Task ProfileLinkUsesServerIdentityAsync()
     {
         var log = new CaptureLogger();
-        var clock = new FakeTimeProvider();
-        var writer = new LandingTelemetry(log, clock);
-        writer.TrackEntry(Entry(clock, "post_scored"));
-        writer.TrackEntry(Entry(clock, "landing_profile_link"));
-        writer.TrackEntry(Entry(clock, "landing_first_post"));
-        await Assert.That(log.Scopes.Count).IsEqualTo(0);
-    }
-
-    [Test]
-    public async Task InvalidEntriesAreNotExportedAsync()
-    {
-        var log = new CaptureLogger();
-        var clock = new FakeTimeProvider();
-        var writer = new LandingTelemetry(log, clock);
-        var entry = Entry(clock, "landing_view");
-        writer.TrackEntry(entry with { Timestamp = entry.Timestamp + 600000 });
-        writer.TrackEntry(entry with { Visit = Visit with { VisitorId = Guid.Empty } });
-        writer.TrackEntry(entry with { Visit = Visit with { Variant = "other" } });
-        await Assert.That(log.Scopes.Count).IsEqualTo(0);
-    }
-
-    [Test]
-    public async Task PersonalDataCannotEnterCampaignAttributesAsync()
-    {
-        var log = new CaptureLogger();
-        var clock = new FakeTimeProvider();
-        new LandingTelemetry(log, clock).TrackEntry(
-            Entry(clock, "landing_continue") with
-            {
-                Visit = Visit with { Campaign = "person@example.test", Content = "private text" },
-            });
+        var player = new PlayerProfile
+        {
+            Id = PlayerId.From(Guid.NewGuid()), ExternalUserIds = [], BirthGroup = "18+", Address = Address.Nick,
+            Wallet = PlayerWallet.Create(DateTimeOffset.UtcNow), Skills = new Dictionary<SkillId, SkillProgress>(),
+            Settings = new PlayerSettings("all", "off", false),
+        };
+        new ProductTelemetry(log, new FakeTimeProvider()).TrackSubmission(player, Submission("landing_profile_link", "worlds"));
         var fields = log.Scopes.Single();
-        await Assert.That(fields.ContainsKey("landing_utm_campaign")).IsFalse();
-        await Assert.That(fields.ContainsKey("landing_utm_content")).IsFalse();
+        await Assert.That(fields["player_id"]).IsEqualTo(player.Id.Value.ToString("N"));
+        await Assert.That(fields["activity_kind"]).IsEqualTo("attribution");
+        await Assert.That(fields["entry_event_source"]).IsEqualTo("verified_profile");
     }
 
-    private static LandingEntryEvent Entry(TimeProvider clock, string name) => new(
-        Guid.NewGuid(), name, clock.GetUtcNow().ToUnixTimeMilliseconds(), Visit, null);
+    private static AnalyticsSubmission Submission(string name, string variant) => new(
+        SessionId.New(),
+        "web",
+        LaunchSurface.Browser,
+        new Dictionary<string, string>(),
+        [
+            new AnalyticsEntry(
+                null,
+                name,
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                string.Empty,
+                null,
+                new Dictionary<string, string>
+                {
+                    ["event_id"] = Guid.NewGuid().ToString(), ["visitor_id"] = Guid.NewGuid().ToString(),
+                    ["entry_id"] = Guid.NewGuid().ToString(), ["landing_variant"] = variant,
+                    ["landing_initial_variant"] = variant, ["landing_source"] = "link", ["landing_switched"] = "false",
+                }),
+        ]);
 
-    private sealed class CaptureLogger : ILogger<LandingTelemetry>
+    private sealed class CaptureLogger : ILogger<ProductTelemetry>
     {
         public List<IReadOnlyDictionary<string, object?>> Scopes { get; } = [];
 

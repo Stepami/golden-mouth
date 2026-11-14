@@ -2,6 +2,7 @@ using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Reki.Api.Requests.Telemetry;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Telemetry.ClientLogBatch;
@@ -25,16 +26,33 @@ public sealed partial class TelemetryController(
     [ActionName("StartSession")]
     public SessionId StartSession() => SessionId.New();
 
+    [AllowAnonymous]
+    [EnableRateLimiting("landing-entry")]
+    [RequestSizeLimit(32768)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [HttpPost("events", Name = "SubmitAnalytics")]
     [ActionName("SubmitAnalytics")]
-    public async Task<NoContent> SubmitAnalyticsAsync(
+    public async Task<ActionResult> SubmitAnalyticsAsync(
         AnalyticsBatchRequest request,
         CancellationToken cancellationToken)
     {
-        await sender.Send(
-            request.ToSubmitAnalytics(),
-            cancellationToken);
-        return TypedResults.NoContent();
+        var anonymous = User.Identity?.IsAuthenticated != true;
+        if (anonymous && Request.Headers.Authorization.Count > 0)
+        {
+            return Unauthorized();
+        }
+
+        if (anonymous && (Request.ContentLength > 8192 || request.Events.Count is < 1 or > 5 ||
+            request.Platform != "web" || request.Experiments.Count != 0 ||
+            request.Events.Any(entry => entry.WorldId is not null || entry.Screen != "landing" || entry.Prev is not null ||
+                entry.Name is not ("landing_view" or "landing_continue" or "landing_auth_complete" or
+                    "landing_world_selected" or "landing_character_selected" or "landing_reaction_viewed"))))
+        {
+            return BadRequest();
+        }
+
+        await sender.Send(request.ToSubmitAnalytics() with { Anonymous = anonymous }, cancellationToken);
+        return NoContent();
     }
 
     [HttpPost("logs", Name = "SubmitClientLogs")]

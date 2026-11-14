@@ -83,6 +83,12 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
     {
         foreach (var entry in submission.Events)
         {
+            if (entry.Name.StartsWith("landing_", StringComparison.Ordinal))
+            {
+                TrackLandingEntry(player, entry);
+                continue;
+            }
+
             if (entry.Name == "active_time" &&
                 (!entry.Properties.TryGetValue("ms", out var rawMs) ||
                  !long.TryParse(rawMs, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var ms) || ms is <= 0 or > 30000))
@@ -184,11 +190,61 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
         Write("world_audience_updated", attributes);
     }
 
+    public void TrackAnonymousSubmission(AnalyticsSubmission submission)
+    {
+        foreach (var entry in submission.Events)
+        {
+            TrackLandingEntry(null, entry);
+        }
+    }
+
     private static string ReadDifficulty(IReadOnlyDictionary<string, string> properties) =>
         properties.TryGetValue("difficulty", out var difficulty) && difficulty is "easy" or "normal" or "hard" ? difficulty : "unknown";
 
     private static string? ReadTemplateId(IReadOnlyDictionary<string, string> properties) =>
         properties.TryGetValue("template_id", out var template) && Guid.TryParse(template, out var id) ? id.ToString("D") : null;
+
+    private void TrackLandingEntry(PlayerProfile? player, Domain.Telemetry.AnalyticsEntry entry)
+    {
+        var link = entry.Name == "landing_profile_link";
+        if (link && player is null)
+        {
+            return;
+        }
+
+        var attributes = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["reki.stream"] = "product",
+            ["event_name"] = entry.Name,
+            ["activity_kind"] = link ? "attribution" : "entry",
+            ["entry_event_source"] = link ? "verified_profile" : "browser",
+            ["landing_experiment"] = "entry_v1",
+            ["event_time_unix_ms"] = entry.Timestamp,
+            ["received_time_unix_ms"] = timeProvider.GetUtcNow().ToUnixTimeMilliseconds(),
+        };
+        foreach (var key in new[]
+        {
+            "event_id", "visitor_id", "entry_id", "landing_variant", "landing_initial_variant",
+            "landing_source", "landing_utm_campaign", "landing_utm_medium", "landing_utm_source", "landing_utm_content", "entry_post_id",
+        })
+        {
+            if (entry.Properties.TryGetValue(key, out var value))
+            {
+                attributes[key] = key is "visitor_id" or "entry_id" or "event_id" or "entry_post_id"
+                    ? Guid.Parse(value).ToString("N")
+                    : value;
+            }
+        }
+
+        attributes["landing_switched"] = bool.Parse(entry.Properties["landing_switched"]);
+        if (link && player is { } linkedPlayer)
+        {
+            attributes["player_id"] = linkedPlayer.Id.Value.ToString("N");
+            attributes["age_group"] = linkedPlayer.AgeBand ?? linkedPlayer.BirthGroup;
+        }
+
+        Write(entry.Name, attributes);
+    }
 
     private Dictionary<string, object?> CreateAttributes(
         PlayerId playerId,

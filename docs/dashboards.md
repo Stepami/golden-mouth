@@ -68,13 +68,13 @@ Policy выполняется после retries для обычных отве�
 
 ## Тест браузерных лендингов — #205
 
-Основной отчёт — в продуктовом OpenObserve после выпуска сбора entry-events.
+Основной отчёт — в продуктовом OpenObserve после выпуска анонимного сбора через `/events`.
 Яндекс.Метрика получает прежние цели параллельно для дополнительной сверки;
 посещение её интерфейса для продуктового анализа не требуется.
 
 ### Полная A/B-воронка OpenObserve
 
-После выпуска entry-events источником служит product:
+После расширения `/events` источником служит product:
 landing_view → landing_continue → landing_auth_complete →
 landing_character_selected → landing_profile_link → первый обычный
 post_scored → landing_reaction_viewed. Мир уже может быть выбран на лендинге,

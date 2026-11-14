@@ -40,7 +40,6 @@ public static class DependencyInjection
         services.AddSingleton<IFlopTest, SadToneFlopTest>();
         services.AddSingleton<IFlopTest, AnxiousToneFlopTest>();
         services.AddSingleton<ProductTelemetry>();
-        services.AddSingleton<LandingTelemetry>();
         services.AddSingleton<IStarAgentInstructions, StarAgentInstructions>();
         services.AddSingleton<IStarTurnGenerator, StarTurnGenerator>();
         services.AddSingleton<IStarContentGenerator, StarContentGenerator>();

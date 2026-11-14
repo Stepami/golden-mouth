@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text;
-using System.Text.Json;
 using Mediator;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.RateLimiting;
@@ -9,18 +8,13 @@ using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Reki.Api.Controllers;
 using Reki.Api.Serialization;
+using Reki.Application.RekiContext;
 using WebMotions.Fake.Authentication.JwtBearer;
 
 namespace Reki.Tests.Telemetry;
 
 public sealed class LandingEntryEndpointTests
 {
-    private const string Visit = """
-        {"visitorId":"11111111-1111-4111-8111-111111111111",
-        "entryId":"22222222-2222-4222-8222-222222222222",
-        "variant":"worlds","initialVariant":"worlds","source":"link","switched":false}
-        """;
-
     [Test]
     [Arguments("worlds")]
     [Arguments("hogwarts")]
@@ -31,7 +25,7 @@ public sealed class LandingEntryEndpointTests
     {
         await using var server = await ServerAsync();
         using var client = server.GetTestClient();
-        using var response = await client.PostAsync("/entry-events", Body("landing_view", variant));
+        using var response = await client.PostAsync("/events", Body("landing_view", variant));
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
     }
 
@@ -41,9 +35,9 @@ public sealed class LandingEntryEndpointTests
         await using var server = await ServerAsync();
         using var client = server.GetTestClient();
         using var response = await client.PostAsync(
-            "/entry-events/link",
-            new StringContent(Visit, Encoding.UTF8, "application/json"));
-        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+            "/events",
+            Body("landing_profile_link"));
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
     }
 
     [Test]
@@ -51,7 +45,7 @@ public sealed class LandingEntryEndpointTests
     {
         await using var server = await ServerAsync();
         using var client = server.GetTestClient();
-        using var response = await client.PostAsync("/entry-events", Body("post_scored"));
+        using var response = await client.PostAsync("/events", Body("post_scored"));
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
     }
 
@@ -61,39 +55,81 @@ public sealed class LandingEntryEndpointTests
         await using var server = await ServerAsync();
         using var client = server.GetTestClient();
         using var response = await client.PostAsync(
-            "/entry-events",
+            "/events",
             new StringContent("{\"events\":[null]}", Encoding.UTF8, "application/json"));
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
     }
 
-    private static StringContent Body(string name, string variant = "worlds") => new(
-        "{\"events\":[{\"eventId\":\"33333333-3333-4333-8333-333333333333\",\"name\":\"" +
-        name + "\",\"timestamp\":1,\"visit\":" + Visit.Replace("worlds", variant, StringComparison.Ordinal) + "}]}",
+    [Test]
+    [Arguments("landing_first_post", "worlds", "campaign_a")]
+    [Arguments("landing_view", "unknown", "campaign_a")]
+    [Arguments("landing_view", "worlds", "person@example.test")]
+    public async Task PublicRouteRejectsInvalidFieldsAsync(string name, string variant, string campaign)
+    {
+        await using var server = await ServerAsync();
+        using var client = server.GetTestClient();
+        using var response = await client.PostAsync("/events", Body(name, variant, campaign));
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task AnonymousBatchSizeIsLimitedAsync()
+    {
+        await using var server = await ServerAsync();
+        using var client = server.GetTestClient();
+        using var content = Body("landing_view");
+        using var oversized = new StringContent(await content.ReadAsStringAsync() + new string(' ', 9000), Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync("/events", oversized);
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+    }
+
+    [Test]
+    public async Task AnonymousRequestsAreRateLimitedAsync()
+    {
+        await using var server = await ServerAsync(1);
+        using var client = server.GetTestClient();
+        using var first = await client.PostAsync("/events", Body("landing_view"));
+        using var second = await client.PostAsync("/events", Body("landing_view"));
+        await Assert.That(first.StatusCode).IsEqualTo(HttpStatusCode.NoContent);
+        await Assert.That(second.StatusCode).IsEqualTo(HttpStatusCode.TooManyRequests);
+    }
+
+    private static StringContent Body(string name, string variant = "worlds", string campaign = "campaign_a") => new(
+        $$$"""
+        {"session":"11111111-1111-4111-8111-111111111111","platform":"web","experiments":{},
+         "events":[{"screen":"landing","name":"{{{name}}}","t":{{{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}}},"props":{
+          "event_id":"33333333-3333-4333-8333-333333333333",
+          "visitor_id":"11111111-1111-4111-8111-111111111111",
+          "entry_id":"22222222-2222-4222-8222-222222222222",
+          "landing_variant":"{{{variant}}}","landing_initial_variant":"{{{variant}}}",
+          "landing_source":"link","landing_switched":false,"landing_utm_campaign":"{{{campaign}}}"}}]}
+        """,
         Encoding.UTF8,
         "application/json");
 
-    private static async Task<WebApplication> ServerAsync()
+    private static async Task<WebApplication> ServerAsync(int permitLimit = 600)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         var services = builder.Services;
         services.AddSingleton(Substitute.For<ISender>());
-        services.AddControllers().AddApplicationPart(typeof(EntryTelemetryController).Assembly)
-            .AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-                options.JsonSerializerOptions.TypeInfoResolverChain.Insert(0, ApiJsonSerializerContext.Default);
-            });
+        services.AddSingleton(Substitute.For<IRekiContext>());
+        services.AddSerialization();
+        services.AddControllers().AddApplicationPart(typeof(TelemetryController).Assembly);
         services.AddAuthentication(FakeJwtBearerDefaults.AuthenticationScheme).AddFakeJwtBearer();
         services.AddAuthorization(options => options.AddPolicy("RekiAppJwt", policy => policy
             .AddAuthenticationSchemes(FakeJwtBearerDefaults.AuthenticationScheme)
             .RequireAuthenticatedUser()));
-        services.AddRateLimiter(options => options.AddFixedWindowLimiter("landing-entry", limiter =>
+        services.AddRateLimiter(options =>
         {
-            limiter.PermitLimit = 600;
+            options.RejectionStatusCode = 429;
+            options.AddFixedWindowLimiter("landing-entry", limiter =>
+        {
+            limiter.PermitLimit = permitLimit;
             limiter.Window = TimeSpan.FromMinutes(1);
             limiter.QueueLimit = 0;
-        }));
+            });
+        });
 
         var app = builder.Build();
         app.UseRouting();

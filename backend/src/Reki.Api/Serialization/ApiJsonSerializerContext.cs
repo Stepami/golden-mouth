@@ -8,7 +8,6 @@ using Reki.Api.Requests.Social;
 using Reki.Api.Requests.Telemetry;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Telemetry.ClientLogBatch;
-using Reki.Api.Requests.Telemetry.Landing;
 using Reki.Api.Requests.Worlds;
 using Reki.Application.Player.Responses;
 using Reki.Application.Posts.AI;
@@ -38,8 +37,6 @@ using Reki.Infrastructure.Yandex;
 
 namespace Reki.Api.Serialization;
 
-[JsonSerializable(typeof(LandingEntryBatchRequest))]
-[JsonSerializable(typeof(LandingVisitRequest))]
 [JsonSerializable(typeof(EnergyExchangeResponse))]
 [JsonSerializable(typeof(EnergyWalletResponse))]
 [JsonSerializable(typeof(ProblemDetails))]

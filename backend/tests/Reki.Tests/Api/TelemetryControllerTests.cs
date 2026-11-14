@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
@@ -75,6 +76,39 @@ public sealed class TelemetryControllerTests(ApiFactory factory) : GameApiTestBa
         await Assert.That(audience.GetStructuredStateValue("subscriber_total"))
             .IsEqualTo(world.Subscribers.ToString(CultureInfo.InvariantCulture));
         await Assert.That(audience.GetStructuredStateValue("activity_kind")).IsEqualTo("inventory");
+    }
+
+    [Test]
+    public async Task LandingProfileLink_UsesAuthenticatedPlayerAsync()
+    {
+        using var api = Factory.CreateApiClient(1041);
+        var player = await CreatePlayerWithWorldAsync(api);
+        using var properties = JsonDocument.Parse("""
+                        {"event_id":"33333333-3333-4333-8333-333333333333",
+                         "visitor_id":"11111111-1111-4111-8111-111111111111",
+                         "entry_id":"22222222-2222-4222-8222-222222222222",
+                         "landing_variant":"infobiz","landing_initial_variant":"infobiz",
+                         "landing_source":"link","landing_switched":false}
+                        """);
+        await api.Telemetry.SubmitAnalyticsAsync(
+            new AnalyticsBatchRequest
+            {
+                Session = SessionId.New(), Platform = "web",
+                Events =
+                [
+                    new AnalyticsEventRequest
+                    {
+                        Name = "landing_profile_link", Screen = "landing", Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                        Props = properties.RootElement.EnumerateObject().ToDictionary(property => property.Name, property => property.Value.Clone()),
+                    },
+                ],
+            },
+            CancellationToken.None);
+        var link = Factory.Services.GetFakeLogCollector().GetSnapshot()
+            .Single(record => record.Category == typeof(ProductTelemetry).FullName &&
+                record.GetStructuredStateValue("event_name") == "landing_profile_link");
+        await Assert.That(link.GetStructuredStateValue("player_id")).IsEqualTo(player.Id.ToString());
+        await Assert.That(link.GetStructuredStateValue("activity_kind")).IsEqualTo("attribution");
     }
 
     [Test]

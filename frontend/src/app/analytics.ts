@@ -81,7 +81,7 @@ export function installAnalytics() {
   })
 }
 
-// Anonymous entry events use a narrow endpoint; authenticated game events keep /events.
+// Landing and game events share /events; the server restricts anonymous batches.
 export function trackLanding(name: 'landing_view' | 'landing_continue' | 'landing_auth_complete' | 'landing_first_post') {
   const props = landingContext()
   if (!props || isLandingPreview()) return

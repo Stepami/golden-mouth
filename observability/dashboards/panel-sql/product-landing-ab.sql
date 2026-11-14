@@ -1,4 +1,4 @@
--- Deployment gate: entry-events collector and new product fields must exist first.
+-- Deployment gate: anonymous /events collector and new product fields must exist first.
 -- Bind :from_ms, :to_ms, :now_ms and :campaign from the dashboard controls.
 -- Query the full available history: the period filters first exposure, not later steps.
 -- Anonymous visitors have no age: use All ages for the full acquisition funnel.
@@ -31,7 +31,7 @@ WITH clean_visitors AS (
   SELECT e.entry_id, min(p.event_time_unix_ms) AS posted
   FROM entries e JOIN links l ON e.entry_id = l.entry_id
   JOIN product p ON l.player_id = p.player_id
-  WHERE p.event_name = 'post_scored' AND p.prop_publication_kind = 'post'
+  WHERE p.event_name = 'post_scored' AND coalesce(p.prop_publication_kind, 'post') = 'post'
     AND p.event_time_unix_ms >= e.started AND p.event_time_unix_ms < e.started + 86400000
   GROUP BY e.entry_id
 ), steps AS (
@@ -48,7 +48,7 @@ WITH clean_visitors AS (
   LEFT JOIN publications p ON e.entry_id = p.entry_id
   LEFT JOIN links l ON e.entry_id = l.entry_id
   LEFT JOIN product post ON post.player_id = l.player_id
-    AND post.event_name = 'post_scored' AND post.prop_publication_kind = 'post'
+    AND post.event_name = 'post_scored' AND coalesce(post.prop_publication_kind, 'post') = 'post'
     AND post.event_time_unix_ms = p.posted
   GROUP BY e.entry_id, e.variant, e.campaign, e.started
 )

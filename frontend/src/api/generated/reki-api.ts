@@ -145,95 +145,6 @@ export class AuthClient {
     }
 }
 
-export class EntryTelemetryClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    /**
-     * @return No Content
-     */
-    submitLandingEntries(body: LandingEntryBatchRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
-        let url_ = this.baseUrl + "/entry-events";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_: RequestInit = {
-            body: content_,
-            method: "POST",
-            signal,
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processSubmitLandingEntries(_response);
-        });
-    }
-
-    protected processSubmitLandingEntries(response: Response): Promise<SwaggerResponse<void>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 204) {
-            return response.text().then((_responseText) => {
-            return new SwaggerResponse(status, _headers, null as any);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
-    }
-
-    /**
-     * @return No Content
-     */
-    linkLandingProfile(body: LandingVisitRequest, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
-        let url_ = this.baseUrl + "/entry-events/link";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(body);
-
-        let options_: RequestInit = {
-            body: content_,
-            method: "POST",
-            signal,
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processLinkLandingProfile(_response);
-        });
-    }
-
-    protected processLinkLandingProfile(response: Response): Promise<SwaggerResponse<void>> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 204) {
-            return response.text().then((_responseText) => {
-            return new SwaggerResponse(status, _headers, null as any);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<SwaggerResponse<void>>(new SwaggerResponse(status, _headers, null as any));
-    }
-}
-
 export class ExternalTelegramAuthClient {
     private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
     private baseUrl: string;
@@ -2149,37 +2060,6 @@ export interface GenerateReplyRequest {
 
 export interface InvitationResponse {
     bonus: number;
-
-    [key: string]: any;
-}
-
-export interface LandingEntryBatchRequest {
-    events: LandingEntryEventRequest[];
-
-    [key: string]: any;
-}
-
-export interface LandingEntryEventRequest {
-    eventId: string;
-    name: string;
-    timestamp: number;
-    visit: LandingVisitRequest;
-    postId?: string | null;
-
-    [key: string]: any;
-}
-
-export interface LandingVisitRequest {
-    visitorId: string;
-    entryId: string;
-    variant: string;
-    initialVariant: string;
-    source: string;
-    switched: boolean;
-    campaign?: string | null;
-    medium?: string | null;
-    trafficSource?: string | null;
-    content?: string | null;
 
     [key: string]: any;
 }
