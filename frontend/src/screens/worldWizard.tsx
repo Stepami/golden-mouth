@@ -90,7 +90,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
       creatingWorld = !draft.editingId
       const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d)
       setAvatarPersonalization(player.id, draft.personalizeAvatar !== false)
-      clearLandingWorld(); setWorldDraft(null); setPlayer(player); nav.replace('03-5_stage')
+      clearLandingWorld(); setWorldDraft(null); setPlayer(player); nav.replace('03-5_stage', { firstPostConfirmed: creatingWorld })
     } catch (cause) {
       if (creatingWorld && !(cause instanceof ApiError)) { setUncertain(true); setError('Не удалось подтвердить создание. Сначала проверь список миров: повтор может создать ещё один экземпляр.') }
       else setError(cause instanceof ApiError && cause.status === 409 ? 'Мир изменился или создание с нуля пока недоступно. Твои изменения сохранены в черновике.' : cause instanceof ApiError && cause.status === 503 ? 'Проверка истории временно недоступна. Настройки сохранены — попробуй начать ещё раз чуть позже.' : 'Не получилось сохранить мир. Проверь поля и попробуй снова.')

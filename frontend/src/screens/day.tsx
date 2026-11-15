@@ -226,7 +226,7 @@ function Stage() {
   const list = usePostPages<FeedItem>(cacheKey, loadPage)
   const gestures = usePostListGestures(cacheKey, list, list.refresh)
   const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
-  if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home /></div>
+  if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home firstPostConfirmed={nav.params.firstPostConfirmed === true || list.pending === null && !list.hasNext} /></div>
   return (
     <div className="screen channel-screen post-list-screen" ref={gestures.screenRef}>
       {pullIndicator}
@@ -250,7 +250,7 @@ function Stage() {
         {list.items.map(item => <FeedPostCard key={item.postId} item={item} returnTo="channel" onChanged={() => { void list.refresh() }} onLike={post => list.updateItems(items => items.map(item => item.postId === post.postId ? { ...item, likes: post.likes, likedBy: post.likedBy } : item))} />)}
         <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.error === 'more' ? 'Не получилось загрузить посты. Потяни вниз от начала списка, чтобы обновить.' : list.ready && !list.hasNext ? 'Все посты загружены' : ''}</div>
       </div>
-      <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit')}>Новый пост</Button></div>
+      <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit', { firstPostConfirmed: nav.params.firstPostConfirmed === true })}>Новый пост</Button></div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
     </div>
   )
