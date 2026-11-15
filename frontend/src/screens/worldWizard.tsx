@@ -34,7 +34,7 @@ export function ChooseWorld() {
     if (restored && !!restored.previewOnly === previewOnly) { setWorldDraft(restored); nav.push('05-7b_own_world', {}); return }
     const definition = blankWorld()
     const profile = player ?? api.onboardingProfile()
-    setWorldDraft({ definition, heroOrder: [], advanced: !previewOnly, previewOnly, address: profile?.address ?? 'nick', group: profile ? (profile.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: profile?.ageBand ?? nav.params.ageBand as AgeBand | undefined, personalizeAvatar: player ? avatarPersonalization(player.id) : true })
+    setWorldDraft({ definition, heroOrder: [], advanced: !previewOnly, previewOnly, address: profile?.address ?? 'nick', group: profile ? (profile.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17', ageBand: profile?.ageBand ?? nav.params.ageBand as AgeBand | undefined, birthYear: nav.params.birthYear as number | undefined, personalizeAvatar: player ? avatarPersonalization(player.id) : true })
     nav.push('05-7b_own_world', {})
   }
   const currentWorld = player ? owned.find(world => world.id === player.worldInstanceId) ?? { ...worldDocumentOf(player.world), id: player.worldInstanceId ?? player.world, name: player.name, avatar: player.handle, subscribers: player.subs } : undefined
@@ -85,7 +85,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
     setSaving(true); setError('')
     let creatingWorld = false
     try {
-      if (!api.hasPlayer()) { const identity = await api.onboarding({ birthGroup: draft.group, ageBand: draft.ageBand, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); clearWorldDrafts('onboarding'); selectDraftOwner(identity.id); setWorldDraft(draft) }
+      if (!api.hasPlayer()) { if (!draft.birthYear) { nav.push('01-2_age', { returnToCreation: true }); return } const identity = await api.onboarding({ birthGroup: draft.group, birthYear: draft.birthYear, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); clearWorldDrafts('onboarding'); selectDraftOwner(identity.id); setWorldDraft(draft) }
       await api.settings({ address: draft.address })
       creatingWorld = !draft.editingId
       const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d)

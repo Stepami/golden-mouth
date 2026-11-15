@@ -95,6 +95,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
                 new OnboardingRequest
                 {
                     BirthGroup = BirthGroup.Adult,
+                    BirthYear = 1990,
                     Address = Address.Nick,
                 },
                 CancellationToken.None);
@@ -222,6 +223,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             new OnboardingRequest
         {
             BirthGroup = BirthGroup.Adult,
+            BirthYear = 1990,
             Address = Address.Nick,
         },
             CancellationToken.None);

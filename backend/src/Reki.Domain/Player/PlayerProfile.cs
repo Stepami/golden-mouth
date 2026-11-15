@@ -32,6 +32,19 @@ public sealed record PlayerProfile
 
     public string? AgeBand { get; init; }
 
+    public int? BirthYear { get; init; }
+
+    public string GetAgeGroup(int currentYear) => BirthYear is { } year
+        ? (currentYear - year) switch
+        {
+            < 18 => "14-17",
+            < 25 => "18-24",
+            < 35 => "25-34",
+            < 45 => "35-44",
+            _ => "45+",
+        }
+        : AgeBand ?? BirthGroup;
+
     public required PlayerSettings Settings { get; init; }
 
     public IReadOnlyList<PlayerNotificationChannel> NotificationChannels { get; init; } = [];

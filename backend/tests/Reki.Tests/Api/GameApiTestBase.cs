@@ -120,6 +120,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             new OnboardingRequest
             {
                 BirthGroup = BirthGroup.Adult,
+                BirthYear = 1990,
                 Address = Address.Nick,
                 ReferralCode = referralCode,
             },

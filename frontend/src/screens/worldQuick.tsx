@@ -45,7 +45,7 @@ export function WorldOverview() {
   const draft = useWorldDraft(); const nav = useNav(); const { player } = useStore()
   const [confirmSwitch, setConfirmSwitch] = useState(false)
   const world = nav.params.world as WorldId | undefined ?? draft?.definition.templateId
-  const catalog = () => { clearLandingWorld(); nav.replace('01-3_world', { group: nav.params.group, ageBand: nav.params.ageBand }) }
+  const catalog = () => { clearLandingWorld(); nav.replace('01-3_world', { group: nav.params.group, ageBand: nav.params.ageBand, birthYear: nav.params.birthYear }) }
   const back = () => nav.params.fromLanding ? catalog() : nav.back()
   if (!world || !worlds.some(template => template.id === world)) return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={back} /><div className="pad"><p>Этот мир сейчас недоступен.</p><Button onClick={catalog}>Выбрать мир</Button></div></div>
   const d = worldDefinitionOf(world); const art = worldArt[d.templateId ?? '']; const selectedRole = draft?.definition.templateId === world && (draft.personaChosen || draft.persona) ? d.stars.find(star => star.id === draft.persona?.star.id)?.name : d.stars[0]?.name; const goal = presetGoalFor(d, selectedRole)
@@ -55,10 +55,11 @@ export function WorldOverview() {
     if (!confirmed && previous && (previous.definition.templateId !== world || previous.editingId)) { setConfirmSwitch(true); return }
     const restored = savedWorldDraft(world)
     const profile = player ?? api.onboardingProfile()
-    let next: WorldDraft = restored && !restored.previewOnly ? { ...restored, ...(nav.params.ageBand ? { group: nav.params.group as '14-17' | '18+', ageBand: nav.params.ageBand as AgeBand } : {}) } : {
+    let next: WorldDraft = restored && !restored.previewOnly ? { ...restored, ...(nav.params.ageBand ? { group: nav.params.group as '14-17' | '18+', ageBand: nav.params.ageBand as AgeBand, birthYear: nav.params.birthYear as number } : {}) } : {
       definition: d, heroOrder: d.stars.map(star => star.id), address: profile?.address ?? 'nick',
       group: profile ? (profile.ageBand === '14-17' ? '14-17' : '18+') : (nav.params.group as '14-17' | '18+') ?? '14-17',
       ageBand: profile?.ageBand ?? nav.params.ageBand as AgeBand | undefined,
+      birthYear: nav.params.birthYear as number | undefined,
       personalizeAvatar: player ? avatarPersonalization(player.id) : true,
     }
     next = refreshHogwartsDraft(next, d)

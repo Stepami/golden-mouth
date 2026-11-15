@@ -120,7 +120,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
             attributes["screen"] = entry.Screen;
             attributes["difficulty"] = ReadDifficulty(entry.Properties);
             attributes["template_id"] = ReadTemplateId(entry.Properties);
-            attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
+            attributes["age_group"] = player.GetAgeGroup(timeProvider.GetUtcNow().Year);
             if (entry.PreviousScreen is not null)
             {
                 attributes["previous_screen"] = entry.PreviousScreen;
@@ -152,7 +152,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
 
         attributes["difficulty"] = ReadDifficulty(properties);
         attributes["template_id"] = ReadTemplateId(properties);
-        attributes["age_group"] = player.AgeBand ?? player.BirthGroup;
+        attributes["age_group"] = player.GetAgeGroup(timeProvider.GetUtcNow().Year);
         if (eventName == "player_created" && referred is { } isReferral)
         {
             attributes["registration_source"] = isReferral ? "referral" : "direct";
@@ -241,7 +241,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
         if (link && player is { } linkedPlayer)
         {
             attributes["player_id"] = linkedPlayer.Id.Value.ToString("N");
-            attributes["age_group"] = linkedPlayer.AgeBand ?? linkedPlayer.BirthGroup;
+            attributes["age_group"] = linkedPlayer.GetAgeGroup(timeProvider.GetUtcNow().Year);
         }
 
         Write(entry.Name, attributes);

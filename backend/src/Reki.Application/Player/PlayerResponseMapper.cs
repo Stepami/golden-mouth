@@ -7,7 +7,7 @@ namespace Reki.Application.Player;
 [Mapper]
 public static partial class PlayerResponseMapper
 {
-    public static PlayerResponse ToResponse(this PlayerProfile player)
+    public static PlayerResponse ToResponse(this PlayerProfile player, int currentYear)
     {
         return new PlayerResponse(
             player.Id,
@@ -18,7 +18,7 @@ public static partial class PlayerResponseMapper
             MapSettings(player.Settings),
             new Dictionary<string, string>(),
             player.HitOwnWorldMilestone,
-            player.AgeBand ?? player.BirthGroup,
+            player.GetAgeGroup(currentYear),
             player.ToEnergyWalletResponse());
     }
 

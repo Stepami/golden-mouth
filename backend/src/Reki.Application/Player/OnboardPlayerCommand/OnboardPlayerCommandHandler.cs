@@ -38,7 +38,7 @@ internal sealed class OnboardPlayerCommandHandler(
             Settings = new PlayerSettings("all", "22:00-09:00", false),
             BirthGroup = command.BirthGroup,
             Address = command.Address,
-            AgeBand = command.AgeBand,
+            BirthYear = command.BirthYear,
             Wallet = PlayerWallet.Create(timeProvider.GetUtcNow()),
             LastSeenAt = timeProvider.GetUtcNow(),
             StreakDays = 1,

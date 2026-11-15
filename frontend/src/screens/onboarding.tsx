@@ -8,6 +8,7 @@ import approvedIntro from '../assets/intro-school-approved.png'
 import { useEffect, useRef, useState } from 'react'
 import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
+import { getWorldDraft, setWorldDraft } from '../app/worldDraft'
 import { worldOf, contentOf } from '../api/worldContent'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
@@ -78,7 +79,7 @@ function Age() {
         </div>
         <Card style={{ marginTop: 18 }}>
           <b>Сохраним твою игру?</b>
-          <div className="small muted" style={{ margin: '6px 0 10px' }}>Храним идентификатор способа входа и игру, сервер в России. Удалить всё можно в профиле в один тап. <span style={{ color: '#8CC8FF' }}>Подробнее</span></div>
+          <div className="small muted" style={{ margin: '6px 0 10px' }}>Храним идентификатор способа входа, год рождения и игру. Сервер в России. Удалить всё можно в профиле в один тап. <span style={{ color: '#8CC8FF' }}>Подробнее</span></div>
           <label className="row" style={{ gap: 8 }}>
             <button onClick={() => setAgree(!agree)} aria-pressed={agree} style={{ width: 22, height: 22, borderRadius: 6, border: agree ? 'none' : '2px solid #55536A', background: agree ? 'var(--grad)' : 'none', color: '#fff', fontSize: 14 }}>{agree ? '✓' : ''}</button>
             <span className="small">Согласие на обработку данных</span>
@@ -86,7 +87,7 @@ function Age() {
         </Card>
         {!agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
       </div>
-      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 18 }); if (age < 18) { nav.replace('01-2b_under14', { year, agree }); return } const world = pendingLandingWorld(); nav.push(world ? '01-3b_world_overview' : '01-3_world', { ...(world ? { world, fromLanding: true } : {}), group: '18+', ageBand: ageBand(age) }) }} />
+      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 18 }); if (age < 18) { nav.replace('01-2b_under14', { year, agree, returnToCreation: nav.params.returnToCreation }); return } const draft = getWorldDraft(); if (draft && !draft.editingId) setWorldDraft({ ...draft, birthYear: year, group: '18+', ageBand: ageBand(age) }); if (nav.params.returnToCreation) { nav.back(); return } const world = pendingLandingWorld(); nav.push(world ? '01-3b_world_overview' : '01-3_world', { ...(world ? { world, fromLanding: true } : {}), group: '18+', ageBand: ageBand(age), birthYear: year }) }} />
     </div>
   )
 }
@@ -99,7 +100,7 @@ function Under18() {
       <div style={{ fontSize: 64, margin: '40px 0 14px' }}>🌱</div>
       <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 10 }}>Игра доступна с 18 лет</div>
       <div className="muted">Играть в Реки можно с 18 лет. Если год рождения выбран по ошибке, его можно исправить.</div>
-      <BottomCTA main="Исправить возраст" onMain={() => nav.replace('01-2_age', { year: nav.params.year, agree: nav.params.agree })} />
+      <BottomCTA main="Исправить возраст" onMain={() => nav.replace('01-2_age', { year: nav.params.year, agree: nav.params.agree, returnToCreation: nav.params.returnToCreation })} />
     </div>
   )
 }

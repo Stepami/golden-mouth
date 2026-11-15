@@ -35,7 +35,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var api = Factory.CreateApiClient(18302);
         var response = await api.RegisterAsync(
-            new OnboardingRequest { BirthGroup = BirthGroup.Adult, Address = Address.Nick },
+            new OnboardingRequest { BirthGroup = BirthGroup.Adult, BirthYear = 1990, Address = Address.Nick },
             CancellationToken.None);
         var now = Factory.Session.Clock.GetUtcNow();
         var players = Database.GetCollection<PlayerProfile>("players");
@@ -66,7 +66,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var api = Factory.CreateApiClient(18304);
         var response = await api.RegisterAsync(
-            new OnboardingRequest { BirthGroup = BirthGroup.Adult, Address = Address.Nick },
+            new OnboardingRequest { BirthGroup = BirthGroup.Adult, BirthYear = 1990, Address = Address.Nick },
             CancellationToken.None);
         var players = Database.GetCollection<PlayerProfile>("players");
         var notifications = Database.GetCollection<Notification>("notifications");
@@ -86,7 +86,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var api = Factory.CreateApiClient(18303);
         var response = await api.RegisterAsync(
-            new OnboardingRequest { BirthGroup = BirthGroup.Adult, Address = Address.Nick },
+            new OnboardingRequest { BirthGroup = BirthGroup.Adult, BirthYear = 1990, Address = Address.Nick },
             CancellationToken.None);
         var now = Factory.Session.Clock.GetUtcNow();
         var players = Database.GetCollection<PlayerProfile>("players");
@@ -110,7 +110,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Me_RegisteredPlayer_ReturnsProfileAsync()
     {
         using var api = Factory.CreateApiClient(18301);
-        await api.RegisterAsync(new OnboardingRequest { BirthGroup = BirthGroup.Adult, Address = Address.Nick }, CancellationToken.None);
+        await api.RegisterAsync(new OnboardingRequest { BirthGroup = BirthGroup.Adult, BirthYear = 1990, Address = Address.Nick }, CancellationToken.None);
 
         var player = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
@@ -160,6 +160,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                 new OnboardingRequest
                 {
                     BirthGroup = BirthGroup.Adult,
+                    BirthYear = 1990,
                     Address = Address.Nick,
                 },
                 CancellationToken.None);
@@ -175,14 +176,14 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         malformedClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", "not-base64!");
         var malformed = await Assert.ThrowsAsync<AuthApiException>(() =>
             new AuthClient(malformedClient).CompleteOnboardingAsync(
-                new OnboardingRequest { BirthGroup = BirthGroup.Adult, Address = Address.Nick }, CancellationToken.None));
+                new OnboardingRequest { BirthGroup = BirthGroup.Adult, BirthYear = 1990, Address = Address.Nick }, CancellationToken.None));
         await Assert.That(malformed?.StatusCode).IsEqualTo(StatusCodes.Status401Unauthorized);
         var after = await players.CountDocumentsAsync(FilterDefinition<BsonDocument>.Empty, cancellationToken: CancellationToken.None);
         await Assert.That(after).IsEqualTo(before);
     }
 
     [Test]
-    public async Task Onboarding_WithAgeBand_PersistsCoarseBandAsync()
+    public async Task Onboarding_WithBirthYear_PersistsYearAndReturnsCurrentBandAsync()
     {
         const long userId = 10101;
         using var api = Factory.CreateApiClient(userId);
@@ -190,17 +191,18 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             new OnboardingRequest
             {
                 BirthGroup = BirthGroup.Adult,
-                AgeBand = "45+",
+                BirthYear = 1970,
                 Address = Address.Nick,
             },
             CancellationToken.None);
         var profile = await GetStoredPlayerAsync(userId);
-        await Assert.That(profile["AgeBand"].AsString).IsEqualTo("45+");
+        await Assert.That(profile["BirthYear"].AsInt32).IsEqualTo(1970);
+        await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).AgeBand).IsEqualTo("45+");
         await Assert.That(profile["BirthGroup"].AsString).IsEqualTo("18+");
     }
 
     [Test]
-    public async Task Onboarding_WithEnumContracts_PersistsAgeGroupWithoutBirthYearAsync()
+    public async Task Onboarding_WithEnumContracts_PersistsYearWithoutExactDateAsync()
     {
         const long telegramUserId = 1001;
         using var api = Factory.CreateApiClient(telegramUserId);
@@ -209,6 +211,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             new OnboardingRequest
             {
                 BirthGroup = BirthGroup.Adult,
+                BirthYear = 1990,
                 Address = Address.Nick,
             },
             CancellationToken.None);
@@ -227,7 +230,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(player["Skills"].AsBsonDocument.Names)
             .IsEquivalentTo(["brave", "humor", "topic"]);
         await Assert.That(player["BirthGroup"].AsString).IsEqualTo("18+");
-        await Assert.That(player.Names.Any(name => name.Contains("year", StringComparison.OrdinalIgnoreCase)))
+        await Assert.That(player.Names.Any(name => name.Contains("date", StringComparison.OrdinalIgnoreCase)))
             .IsFalse();
     }
 
@@ -526,7 +529,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var api = Factory.CreateApiClient(8400);
         await api.RegisterAsync(
-            new OnboardingRequest { BirthGroup = BirthGroup.Adult, Address = Address.Nick },
+            new OnboardingRequest { BirthGroup = BirthGroup.Adult, BirthYear = 1990, Address = Address.Nick },
             CancellationToken.None);
         foreach (var address in new[] { Address.She, Address.He, Address.Nick })
         {
@@ -825,7 +828,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Invitation_BeforeOnboarding_ReturnsEmptyAsync()
     {
         using var api = Factory.CreateApiClient(8583);
-        await api.RegisterAsync(new OnboardingRequest { BirthGroup = BirthGroup.Adult, Address = Address.Nick }, CancellationToken.None);
+        await api.RegisterAsync(new OnboardingRequest { BirthGroup = BirthGroup.Adult, BirthYear = 1990, Address = Address.Nick }, CancellationToken.None);
         var response = await api.Player.GetInvitationAsync(CancellationToken.None);
         await Assert.That(response.Bonus).IsEqualTo(0);
     }

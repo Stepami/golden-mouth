@@ -10,7 +10,7 @@ namespace Reki.Api.Requests.Player;
 internal static partial class PlayerRequestMapper
 {
     public static OnboardPlayer ToOnboardPlayer(this OnboardingRequest source, ExternalUserId externalUserId) =>
-        new(externalUserId, source.BirthGroup.ToStorageValue(), source.Address, source.ReferralCode, source.AgeBand);
+        new(externalUserId, source.BirthGroup.ToStorageValue(), source.Address, source.ReferralCode, source.BirthYear);
 
     public static partial UpdateSettings ToUpdateSettings(this UpdateSettingsRequest source);
 
