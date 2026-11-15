@@ -51,7 +51,6 @@ public static class DependencyInjection
 
         services.AddObservability();
         services.AddHealthChecks()
-            .AddCheck<TickerQLicenseHealthCheck>("tickerq", null, ["ready"])
             .AddCheck(
                 "self",
                 () => HealthCheckResult.Healthy(),

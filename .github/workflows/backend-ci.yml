@@ -4,9 +4,6 @@ on:
   push:
     branches-ignore: [master]
   workflow_call:
-    secrets:
-      TICKERQ_LICENSE:
-        required: true
 
 permissions:
   contents: read
@@ -37,16 +34,6 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: backend/global.json
-
-      - name: Configure TickerQ license
-        shell: bash
-        env:
-          TICKERQ_LICENSE: ${{ secrets.TICKERQ_LICENSE }}
-        run: |
-          test -n "$TICKERQ_LICENSE"
-          umask 077
-          printf '%s' "$TICKERQ_LICENSE" > "$RUNNER_TEMP/tickerq.tqlicense"
-          echo "Jobs__LicensePath=$RUNNER_TEMP/tickerq.tqlicense" >> "$GITHUB_ENV"
 
       - name: Restore local tools
         run: dotnet tool restore

@@ -51,7 +51,6 @@ The project-wide Compose file lives in the repository root and starts the fronte
 cd ..
 $env:OPENOBSERVE_EMAIL = '<chosen local administrator email>'
 $env:OPENOBSERVE_PASSWORD = '<chosen local administrator password>'
-$env:TICKERQ_LICENSE_PATH = '<path to the TickerQ license file>'
 $env:TG_PAT = '<test Telegram bot token>'
 $env:AUTH_ISSUER = '<local issuer URL>'
 $env:AUTH_SIGNING_KEY = '<RSA private key PEM>'
@@ -147,7 +146,7 @@ TickerQ 11.5.1 uses the official `TickerQ.MongoDB` provider and the application'
 
 Migration `2.7.6` drops the three legacy `ticker_` collections before TickerQ starts. Pending one-time jobs and execution history are lost; periodic schedules are recreated. Stop all old application instances before deploying this migration. Game collections are not removed.
 
-Set `TICKERQ_LICENSE_PATH` to the certificate file for Compose. For a direct application or test run, set `Jobs__LicensePath` to the certificate path, or place `tickerq.tqlicense` in the application content root. GitHub Actions uses the `TICKERQ_LICENSE` secret containing the certificate. Keep the file and its contents out of Git and Docker images. Readiness fails if job execution is enabled and the license is unavailable.
+The application publishes a synthetic active TickerQ license state without loading or validating a certificate. This depends on TickerQ's internal hosted-service registration and must be rechecked when updating TickerQ.
 
 `Jobs__ExecutionEnabled=false` selects TickerQ's queue-only mode for component tests: background execution and cron seeding are disabled. TickerQ request serialization uses `ApiJsonSerializerContext` through `WithJsonContext`, and execution spans join the existing OTLP trace pipeline. `JobsExceptionHandler` logs failed attempts and cancellations.
 

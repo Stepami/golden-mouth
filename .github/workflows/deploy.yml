@@ -70,7 +70,6 @@ jobs:
       LLM_MODEL: ${{ secrets.LLM_MODEL }}
       OPENOBSERVE_EMAIL: ${{ secrets.OPENOBSERVE_EMAIL }}
       OPENOBSERVE_PASSWORD: ${{ secrets.OPENOBSERVE_PASSWORD }}
-      TICKERQ_LICENSE: ${{ secrets.TICKERQ_LICENSE }}
 
     steps:
       - name: Check out tagged commit
@@ -78,17 +77,6 @@ jobs:
         with:
           ref: ${{ needs.validate-version.outputs.commit-sha }}
           persist-credentials: false
-
-      - name: Configure TickerQ license
-        shell: bash
-        run: |
-          test -n "$TICKERQ_LICENSE"
-          install -d -m 700 "$HOME/.local/share/reki"
-          umask 077
-          printf '%s' "$TICKERQ_LICENSE" > "$HOME/.local/share/reki/tickerq.tqlicense.tmp"
-          chmod 644 "$HOME/.local/share/reki/tickerq.tqlicense.tmp"
-          mv -f "$HOME/.local/share/reki/tickerq.tqlicense.tmp" "$HOME/.local/share/reki/tickerq.tqlicense"
-          echo "TICKERQ_LICENSE_PATH=$HOME/.local/share/reki/tickerq.tqlicense" >> "$GITHUB_ENV"
 
       - name: Validate production configuration
         shell: bash
