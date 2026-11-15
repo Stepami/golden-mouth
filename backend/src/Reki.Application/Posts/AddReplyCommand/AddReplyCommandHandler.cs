@@ -85,6 +85,17 @@ internal sealed class AddReplyCommandHandler(
                 },
                 cancellationToken);
 
+            telemetry.TrackPlayer(
+                player,
+                "comment_created",
+                new Dictionary<string, string>
+                {
+                    ["id"] = comment.Id.Value.ToString("N"),
+                    ["kind"] = comment.ParentCommentId is null ? "comment" : "reply",
+                    ["template_id"] = world.TemplateId?.ToString() ?? string.Empty,
+                    ["difficulty"] = world.Difficulty.ToString().ToLowerInvariant(),
+                },
+                world.Id);
             telemetry.TrackWorldAudience(world);
             await feedScheduler.ScheduleFeedAsync(new ScheduleFromCommentRequest(player.Id, world.Id, post.Id, comment.Id));
         }

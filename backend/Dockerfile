@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0-noble@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS restore
+FROM mcr.microsoft.com/dotnet/sdk:11.0@sha256:65f3c7c6a25a239ab3e6719f2896147e7b68242ff2d8818dd70498bde6ef8bea AS restore
 WORKDIR /src/backend
 
 COPY backend/Directory.Build.props backend/Directory.Packages.props backend/global.json ./
@@ -27,7 +27,7 @@ RUN dotnet publish src/Reki.Api/Reki.Api.csproj \
     && cp /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /app/publish/fonts/ \
     && cp /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf /app/publish/fonts/
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble@sha256:222759b391a1aaf241166672c8f99b2d4ada452e7b5319f3c6e8f265a37b5ad4 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:11.0@sha256:bc0d6653979efba491ab3d6f589d691f96c309c3c3ef81325efa6978e7b7f242 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 

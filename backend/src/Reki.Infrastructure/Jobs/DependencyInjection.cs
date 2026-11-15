@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Reki.Application.Posts;
 using Reki.Application.Posts.AI.Comment;
 using Reki.Application.Posts.AI.Feed;
@@ -37,20 +38,19 @@ internal static class DependencyInjection
         services.MapTicker<GenerateStarFeedOnPostPublishedJob, StarFeedOnPostPublishedRequest>().WithMaxConcurrency(2);
         services.MapTicker<GenerateStarFeedOnCommentPublishedJob, StarFeedOnCommentPublishedRequest>()
             .WithMaxConcurrency(2);
-        services.MapTicker<RestoreEnergyJob>(ServiceLifetime.Singleton)
-            .WithCron("0 * * * * *")
-            .WithMaxConcurrency(1);
-        services.MapTicker<RefreshRegisteredPlayersJob>(ServiceLifetime.Singleton)
-            .WithCron("0 * * * * *")
-            .WithMaxConcurrency(1);
-        services.MapTicker<PruneAuthJob>()
-            .WithCron("0 0 3 * * *")
-            .WithMaxConcurrency(1);
-        services.MapTicker<SendNotificationsJob>(ServiceLifetime.Singleton)
-            .WithCron("0 */5 * * * *")
-            .WithMaxConcurrency(1);
+        services.MapTicker<RestoreEnergyJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
+        services.MapTicker<RefreshRegisteredPlayersJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
+        services.MapTicker<PruneAuthJob>().WithMaxConcurrency(1);
+        services.MapTicker<SendNotificationsJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
+
         services.AddTickerQ<RekiTimeTicker, CronTickerEntity>(options =>
         {
+            options.UseApplicationNamespace("reki");
+            options.SeedCronTickers(crons => crons
+                .Add(nameof(RestoreEnergyJob), "0 * * * * *")
+                .Add(nameof(RefreshRegisteredPlayersJob), "0 * * * * *")
+                .Add(nameof(PruneAuthJob), "0 0 3 * * *")
+                .Add(nameof(SendNotificationsJob), "0 */5 * * * *"));
             options.ConfigureScheduler(scheduler =>
                 scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
             options.AddOperationalStore(store => store.UseExistingMongoClient(mongo.DatabaseName));
@@ -62,6 +62,12 @@ internal static class DependencyInjection
                 options.DisableBackgroundServices();
             }
         });
+
+        // The replacement must start before TickerQ initializes the scheduler.
+        var licenseService = services.Single(service =>
+            service.ServiceType == typeof(IHostedService) &&
+            service.ImplementationType?.FullName == "TickerQ.BackgroundServices.TickerQLicenseHostedService");
+        services[services.IndexOf(licenseService)] = ServiceDescriptor.Singleton<IHostedService, TickerQLicenseStateHostedService>();
         return services;
     }
 }

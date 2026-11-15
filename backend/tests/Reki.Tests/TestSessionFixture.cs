@@ -52,7 +52,10 @@ public sealed class TestSessionFixture : IAsyncInitializer, IAsyncDisposable
     {
         // Match production registration order, including TickerQ's BSON UUID serializer.
         new ServiceCollection().AddTickerQ<RekiTimeTicker, CronTickerEntity>(options =>
-            options.AddOperationalStore(store => store.UseExistingMongoClient(DatabaseName)));
+        {
+            options.UseApplicationNamespace("reki");
+            options.AddOperationalStore(store => store.UseExistingMongoClient(DatabaseName));
+        });
         MongoClassMappings.Register();
         await _mongo.InitializeAsync();
         _client = new MongoClient(ConnectionString);

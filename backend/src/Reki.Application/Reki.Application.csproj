@@ -11,8 +11,6 @@
         <PackageReference Include="Microsoft.Extensions.VectorData.Abstractions"/>
         <PackageReference Include="Riok.Mapperly" PrivateAssets="all"/>
         <PackageReference Include="Microsoft.Extensions.AI.Abstractions"/>
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
-        <PackageReference Include="Microsoft.Extensions.Options"/>
         <PackageReference Include="System.Numerics.Tensors"/>
     </ItemGroup>
     <ItemGroup>
