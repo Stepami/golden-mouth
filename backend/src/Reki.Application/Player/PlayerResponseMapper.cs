@@ -7,7 +7,7 @@ namespace Reki.Application.Player;
 [Mapper]
 public static partial class PlayerResponseMapper
 {
-    public static PlayerResponse ToResponse(this PlayerProfile player, int currentYear)
+    public static PlayerResponse ToPlayerResponse(this PlayerProfile player, int currentYear)
     {
         return new PlayerResponse(
             player.Id,

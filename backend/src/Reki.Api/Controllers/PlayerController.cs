@@ -34,7 +34,7 @@ public sealed class PlayerController(
     {
         var player = await rekiContext.Player;
         await sender.Send(new UpdateLastSeenAt(player), cancellationToken);
-        return TypedResults.Ok(player.ToResponse(timeProvider.GetUtcNow().Year));
+        return TypedResults.Ok(player.ToPlayerResponse(timeProvider.GetUtcNow().Year));
     }
 
     [HttpPost("me/energy/exchange", Name = "ExchangeEnergy")]
