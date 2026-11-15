@@ -81,7 +81,7 @@ export function worldDocumentOf(world: string): WorldDocument {
 const WORLD_FORMS: Record<string, { gen: string; acc: string }> = {
   'aec9494b-4118-4525-8458-e85d759c8dd9': { gen: 'Хогвартса', acc: 'Хогвартс' },
   'b3a1a522-0263-4796-a197-57a8731fc291': { gen: 'Вечерело', acc: 'Вечерело' }, '8c02a7fb-3b55-4eb0-b957-1b4869ed9834': { gen: 'Игры домов', acc: 'Игру домов' },
-  'edfccf53-65c6-4eaf-8321-2391bc1758bd': { gen: 'Сцены', acc: 'Сцену' }, 'b018145e-c887-4d00-9f18-5c877d0af8be': { gen: 'Академии', acc: 'Академию' }, '5720946a-ea7c-4a10-9c50-51ce3deefc53': { gen: 'Айти-тусовки', acc: 'Айти-тусовку' },
+  'edfccf53-65c6-4eaf-8321-2391bc1758bd': { gen: 'Сцены', acc: 'Сцену' }, 'b018145e-c887-4d00-9f18-5c877d0af8be': { gen: 'Академии', acc: 'Академию' }, '5720946a-ea7c-4a10-9c50-51ce3deefc53': { gen: 'Последних инфобизеров', acc: 'Последних инфобизеров' },
   '0cb3f809-6dfd-4ef1-af52-daa12a5b8804': { gen: 'Стрима', acc: 'Стрим' },
 }
 export function worldOf(id: string) {
