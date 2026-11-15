@@ -11,6 +11,10 @@ export function readPostDraft(key: string): PostDraft {
   } catch { /* memory fallback */ }
   return { text: '', ownWords: true }
 }
+export function hasPostDraft(key: string): boolean {
+  readPostDraft(key)
+  return memory.has(key)
+}
 export function savePostDraft(key: string, draft: PostDraft) {
   memory.set(key, { ...draft })
   try { localStorage.setItem(key, JSON.stringify(draft)); return true } catch { return false }
