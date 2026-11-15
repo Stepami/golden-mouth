@@ -131,14 +131,14 @@ export function ChannelHead() {
     </div>
   )
 }
-export function Home() {
+export function Home({ firstPostConfirmed = false }: { firstPostConfirmed?: boolean } = {}) {
   const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
   return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
     <Streak streak={p.streak} />
     <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{profile.firstContext}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
       {p.firstPostInviteBonus > 0 && <p>🎁 Первый пост даст кристаллы: +{p.firstPostInviteBonus} 💎</p>}
     </div><p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>
-  </div><div className="bottom-cta" style={{ bottom: 78 }}><button className="btn" onClick={() => nav.push('02-1_compose')}>Написать первый пост</button></div></div>
+  </div><div className="bottom-cta" style={{ bottom: 78 }}><button className="btn" onClick={() => nav.push('02-1_compose', { firstPostConfirmed })}>Написать первый пост</button></div></div>
 }
 
 register({
