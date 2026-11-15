@@ -13,13 +13,14 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="TUnit"/>
-        <PackageReference Include="TUnit.AspNetCore"/>
-        <PackageReference Include="Testcontainers"/>
+        <PackageReference Include="Humanizer"/>
         <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing"/>
         <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing"/>
         <PackageReference Include="NSubstitute"/>
-        <PackageReference Include="WireMock.Net"/>
+        <PackageReference Include="TUnit"/>
+        <PackageReference Include="TUnit.AspNetCore"/>
+        <PackageReference Include="Testcontainers"/>
+        <PackageReference Include="WireMock.Net.Minimal"/>
         <PackageReference Include="WebMotions.Fake.Authentication.JwtBearer"/>
     </ItemGroup>
 

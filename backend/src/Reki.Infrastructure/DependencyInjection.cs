@@ -76,7 +76,8 @@ public static class DependencyInjection
                 .AddMeter(
                     "Reki.GenAI",
                     "Reki.Embed",
-                    "Reki.Product")
+                    "Reki.Product",
+                    "Microsoft.Extensions.Caching.Memory.MemoryCache")
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation())

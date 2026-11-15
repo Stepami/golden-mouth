@@ -33,7 +33,10 @@ internal sealed class OperationMetadataTransformer : IOpenApiOperationTransforme
 
             // NSwag needs a binary schema to retain the response stream instead of
             // returning an empty FileResponse and disposing the HTTP response.
-            stream.Schema = new OpenApiSchema { Type = JsonSchemaType.String, Format = "binary" };
+            content["text/event-stream"] = new OpenApiMediaType((OpenApiMediaType)stream)
+            {
+                Schema = new OpenApiSchema { Type = JsonSchemaType.String, Format = "binary" },
+            };
             content.Remove("application/json");
         }
 

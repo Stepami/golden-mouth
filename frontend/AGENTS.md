@@ -16,7 +16,7 @@ Telegram Mini App: веб-страница, которая открываетс�
 - `src/screens/<группа>.tsx`: экраны, ключ = код макета (`01-3_world`). `?screen=<код>` открывает экран сразу, `?gallery` показывает все.
 - `src/ui/`: компоненты из макетов (Card, Button, Chip, Gift, Avatar, SkillBar, Ribbon, Whisper, Comment, Sheet…).
 - `src/api/generated/reki-api.ts`: закоммиченный NSwag Fetch-клиент и wire DTO. `src/api/types.ts`: производные модели экранов, `mock.ts`: данные галереи и fallback-состояний. `client.ts`: фасад настоящего API.
-- `nswag.frontend.json`: независимый frontend-конфиг существующего NSwag 14.7.1; сборка API генерирует TS после OpenAPI. Фронтенд собирается из закоммиченного клиента без .NET. Обновление: изменить API → собрать API → закоммитить TS-клиент → проверить фронт. Generated-файлы вручную не редактировать.
+- `nswag.frontend.json`: независимый frontend-конфиг существующего NSwag 14.8.0; сборка API генерирует TS после OpenAPI. Фронтенд собирается из закоммиченного клиента без .NET. Обновление: изменить API → собрать API → закоммитить TS-клиент → проверить фронт. Generated-файлы вручную не редактировать.
 - Runtime config содержит `apiBaseUrl` и feature flags. Mock/backend-переключения нет; ошибка API не должна создавать фиктивный успешный результат. SSE POST не повторять автоматически; сохранять отмену и восстановление по статусу.
 - `scripts/screens.sh [коды]`: скриншоты 390×844 в `shots/` для сравнения с `docs/screens/`.
 

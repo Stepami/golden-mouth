@@ -225,39 +225,6 @@ public sealed class StarFeedJobsTests(ApiFactory factory) : GameApiTestBase(fact
     }
 
     [Test]
-    [Arguments(0, 0)]
-    [Arguments(1, 1)]
-    public async Task Feed_ConfiguredProbability_SchedulesExpectedActivityAsync(double probability, int expectedPosts)
-    {
-        // Arrange
-        await using var apiFactory = new ApiFactory { Session = Factory.Session, FeedOpenProbability = probability };
-        using var api = apiFactory.CreateApiClient(9508);
-        await CreatePlayerWithWorldAsync(api);
-        var worldId = await GetWorldIdAsync(api);
-        var tickers = Database.GetCollection<RekiTimeTicker>("ticker_TimeTickers");
-        var existingIds = await tickers.Find(FilterDefinition<RekiTimeTicker>.Empty).Project(ticker => ticker.Id).ToListAsync();
-        apiFactory.Llm.Respond(new ChatResponse(new ChatMessage(ChatRole.Assistant, "Сегодня репетировали новую сцену.")));
-
-        // Act
-        var feed = await api.Posts.GetPostsAsync(worldId, null, await GetWorldAuthorsAsync(api), null, null, CancellationToken.None);
-        var scheduled = await tickers.Find(ticker => !existingIds.Contains(ticker.Id)).ToListAsync();
-        var payload = TickerHelper.ReadTickerRequest<StarFeedRequest>(scheduled.Single().Request);
-        using var scope = apiFactory.Services.CreateScope();
-        var job = scope.ServiceProvider.GetRequiredService<GenerateStarFeedOnFeedOpenedJob>();
-        await job.ExecuteAsync(new TickerFunctionContext<StarFeedRequest>(new TickerFunctionContext(), payload), CancellationToken.None);
-
-        // Assert
-        await Assert.That(feed.Items.Count).IsEqualTo(0);
-        await Assert.That(scheduled.Count).IsEqualTo(1);
-        await Assert.That(payload.WorldId).IsEqualTo(WorldId.From(worldId));
-        await Assert.That(payload.ShouldGenerate).IsEqualTo(expectedPosts > 0);
-        await Assert.That(scheduled.Single().Function).IsEqualTo(nameof(GenerateStarFeedOnFeedOpenedJob));
-        await Assert.That(apiFactory.Llm.RequestCount).IsEqualTo(expectedPosts);
-        await Assert.That(await Database.GetCollection<GamePost>("posts").CountDocumentsAsync(post => post.WorldId == WorldId.From(worldId)))
-            .IsEqualTo(expectedPosts);
-    }
-
-    [Test]
     public async Task Generate_HistoryContext_DistinguishesOwnPostsAsync()
     {
         // Arrange

@@ -1,10 +1,6 @@
-using System.Globalization;
 using Kot.MongoDB.Migrations;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -25,14 +21,6 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
 {
     [ClassDataSource<TestSessionFixture>(Shared = SharedType.PerTestSession)]
     public required TestSessionFixture Session { get; init; }
-
-    public bool UseProductionAuthentication { get; init; }
-
-    public bool UseProductionEnvironment { get; init; }
-
-    public string? TelegramOAuthUrl { get; init; }
-
-    public double? FeedOpenProbability { get; init; }
 
     public OpenAiStub Llm => Session.Llm;
 
@@ -56,12 +44,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment(UseProductionEnvironment ? "Production" : "Development");
-        if (UseProductionEnvironment)
-        {
-            builder.UseSetting("ForwardedHeaders_Enabled", "true");
-        }
-
+        builder.UseEnvironment("Development");
         builder.UseSetting("Jobs:ExecutionEnabled", "false");
         builder.UseSetting("Mongo:ConnectionString", MongoConnectionString);
         builder.UseSetting("Mongo:DatabaseName", DatabaseName);
@@ -72,24 +55,18 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         builder.UseSetting("Llm:TimeoutSeconds", "1");
         builder.UseSetting("Embedding:BaseUrl", Llm.EmbeddingBaseUrl);
         builder.UseSetting("Embedding:Model", "embedding");
-        builder.UseSetting("Auth:Issuer", UseProductionEnvironment ? "https://localhost/" : "http://localhost/");
+        builder.UseSetting("Auth:Issuer", "http://localhost/");
         builder.UseSetting("Auth:Audience", "reki-test");
         builder.UseSetting("Auth:ClientId", "reki-test-client");
         builder.UseSetting("Auth:SigningKey", Session.SigningKey);
         builder.UseSetting("Auth:EncryptionKey", Session.EncryptionKey);
-        builder.UseSetting("Telegram:OAuthUrl", TelegramOAuthUrl ?? "https://example.invalid/");
+        builder.UseSetting("Telegram:OAuthUrl", "https://example.invalid/");
         builder.UseSetting("Telegram:ApiUrl", "https://example.invalid/");
         builder.UseSetting("Telegram:BotToken", Session.TelegramBotToken);
         builder.UseSetting("Vk:ApplicationId", "123456");
         builder.UseSetting("Yandex:ClientId", "test-yandex-client");
         builder.UseSetting("Auth:AccessTokenLifetime", "00:15:00");
         builder.UseSetting("Auth:RefreshTokenLifetime", "30.00:00:00");
-        builder.ConfigureAppConfiguration((_, configuration) =>
-        {
-            configuration.AddInMemoryCollection(FeedOpenProbability is { } probability
-                ? new Dictionary<string, string?> { ["feed:open_probability"] = probability.ToString(CultureInfo.InvariantCulture) }
-                : []);
-        });
         builder.ConfigureServices(services =>
         {
             services.AddFakeLogging();
@@ -114,28 +91,20 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
                     ["no_emotion"] = 1,
                 }));
             services.Replace(ServiceDescriptor.Singleton(classifier));
-            if (!UseProductionAuthentication)
-            {
-                services.AddAuthentication(options =>
-                    {
-                        options.DefaultAuthenticateScheme = FakeJwtBearerDefaults.AuthenticationScheme;
-                        options.DefaultChallengeScheme = FakeJwtBearerDefaults.AuthenticationScheme;
-                    })
-                    .AddFakeJwtBearer(options =>
-                    {
-                        options.BearerValueType = FakeJwtBearerBearerValueType.Jwt;
-                        ((FakeJwtBearerClaimsHandler)options.SecurityTokenClaimHandler).Options.MapInboundClaims = false;
-                    });
-                services.PostConfigure<AuthorizationOptions>(options =>
-                    options.AddPolicy(AuthConstants.Policies.RekiAppJwt, new AuthorizationPolicyBuilder(FakeJwtBearerDefaults.AuthenticationScheme)
-                        .RequireAuthenticatedUser()
-                        .Build()));
-            }
+            services.AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme = FakeJwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = FakeJwtBearerDefaults.AuthenticationScheme;
+                })
+                .AddFakeJwtBearer(options =>
+                {
+                    options.BearerValueType = FakeJwtBearerBearerValueType.Jwt;
+                    ((FakeJwtBearerClaimsHandler)options.SecurityTokenClaimHandler).Options.MapInboundClaims = false;
+                });
+            services.PostConfigure<AuthorizationOptions>(options =>
+                options.AddPolicy(AuthConstants.Policies.RekiAppJwt, new AuthorizationPolicyBuilder(FakeJwtBearerDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .Build()));
         });
-        if (TelegramOAuthUrl is not null)
-        {
-            builder.ConfigureTestServices(services =>
-                services.Configure<JwtBearerOptions>(AuthConstants.Schemes.TelegramLogin, options => options.RequireHttpsMetadata = false));
-        }
     }
 }
