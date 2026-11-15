@@ -47,10 +47,10 @@ internal static class DependencyInjection
         {
             options.UseApplicationNamespace("reki");
             options.SeedCronTickers(crons => crons
-                .Add(nameof(RestoreEnergyJob), "0 * * * * *")
-                .Add(nameof(RefreshRegisteredPlayersJob), "0 * * * * *")
+                .Add(nameof(RestoreEnergyJob), "11 */2 * * * *")
+                .Add(nameof(RefreshRegisteredPlayersJob), "15 */30 * * * *")
                 .Add(nameof(PruneAuthJob), "0 0 3 * * *")
-                .Add(nameof(SendNotificationsJob), "0 */5 * * * *"));
+                .Add(nameof(SendNotificationsJob), "40 */5 * * * *"));
             options.ConfigureScheduler(scheduler =>
                 scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
             options.AddOperationalStore(store => store.UseExistingMongoClient(mongo.DatabaseName));

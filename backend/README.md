@@ -140,8 +140,9 @@ Building the API produces an OpenAPI document. Building the test project regener
 
 TickerQ 11.5.1 uses the official `TickerQ.MongoDB` provider and the application's existing Mongo client/database. Scheduler mode requires a replica set. The runtime namespace is `reki`, and TickerQ creates its indexes at startup.
 
-- `RestoreEnergyJob` and `RefreshRegisteredPlayersJob`: once per minute.
-- `SendNotificationsJob`: every five minutes.
+- `RestoreEnergyJob`: every two minutes, at second 11.
+- `RefreshRegisteredPlayersJob`: every 30 minutes, at second 15.
+- `SendNotificationsJob`: every five minutes, at second 40.
 - `PruneAuthJob`: daily at 03:00 in `Europe/Moscow`.
 
 Migration `2.7.6` drops the three legacy `ticker_` collections before TickerQ starts. Pending one-time jobs and execution history are lost; periodic schedules are recreated. Stop all old application instances before deploying this migration. Game collections are not removed.
