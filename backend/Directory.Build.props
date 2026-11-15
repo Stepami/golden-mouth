@@ -6,6 +6,7 @@
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
         <LangVersion>latest</LangVersion>
+        <Features>$(Features);runtime-async=on</Features>
         <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
         <Deterministic>true</Deterministic>
         <PathMap>$(MSBuildThisFileDirectory)=/_/backend/</PathMap>
