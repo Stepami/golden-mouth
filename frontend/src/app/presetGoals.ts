@@ -18,8 +18,9 @@ export const presetGoals: Record<string, PresetGoal> = {
     firstStep: 'После встречи в Драконьем Логове обсуди, какие личные обязательства участники готовы принять.',
   },
   '5720946a-ea7c-4a10-9c50-51ce3deefc53': {
-    goal: 'Заслужить доверие к своему разбору «Смены»: сравнить цену обещаний и результат проверки.',
-    firstStep: 'Опубликуй свою позицию о «Смене»: что нужно проверить, прежде чем верить обещанию заменить команду.',
+    goal: 'Попасть в первый IT-проект, не приписывая себе опыт.',
+    context: 'До ближайшего платежа месяц. Меркантил предлагает быстрый путь через курс «Вкат», а Куляш просит проверить его обещания.',
+    firstStep: 'Спроси Нику, как попасть в первый проект, если без коммерческого опыта не берут. Предложи разобрать конкретную работу вместо строки о стаже.',
   },
 }
 
@@ -42,12 +43,33 @@ const hogwartsRoleGoals: Record<string, PresetGoal> = {
   }
 }
 
+const infobizRoleGoals: Record<string, PresetGoal> = {
+  'Ника Борщ': {
+    goal: 'Закрыть вакансию готовым специалистом, не тратя время команды на обучение новичка.',
+    firstStep: 'Оспорь рекламу «Вката» и ответь таксисту: почему проект требует опыта, а первую задачу ему не дают?',
+  },
+  'Меркантил': {
+    goal: 'Собрать платный поток «Вката» и ответить за обещания рекламы.',
+    firstStep: 'Ответь Куляшу перед покупателями: что именно ты берёшься показать на курсе?',
+  },
+  'Бургер в Декабре': {
+    goal: 'Сделать заметный обзор спора о курсах и вывести историю Куляша к большой аудитории.',
+    firstStep: 'Вынеси в заголовок вопрос, на который захотят ответить и Меркантил, и Куляш.',
+  },
+  'Куляш AI': {
+    goal: 'Добиться публичной проверки обещаний «Вката» до нового набора.',
+    firstStep: 'Задай Меркантилу вопрос, на который не ответить размером канала: как проверить его обещание?',
+  },
+}
+
 /** Character/voice/drama choices keep the story; edited lore must not inherit its goal. */
 export function presetGoalFor(world: WorldDefinition | WorldDocument, personaName?: string) {
   const template = optionalWorldTemplate(world)
-  if (template?.id === 'aec9494b-4118-4525-8458-e85d759c8dd9') {
-    const role = personaName ?? Object.keys(hogwartsRoleGoals).find(name => world.description.includes(`\nПерсона игрока: ${name}.`))
-    if (role) return hogwartsRoleGoals[role]
+  const roleGoals = template?.id === 'aec9494b-4118-4525-8458-e85d759c8dd9' ? hogwartsRoleGoals
+    : template?.id === '5720946a-ea7c-4a10-9c50-51ce3deefc53' ? infobizRoleGoals : undefined
+  if (roleGoals) {
+    const role = personaName ?? Object.keys(roleGoals).find(name => world.description.includes(`\nПерсона игрока: ${name}.`))
+    if (role) return roleGoals[role]
   }
   return template ? presetGoals[template.id] : undefined
 }
