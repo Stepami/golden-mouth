@@ -8,7 +8,7 @@ namespace Reki.Infrastructure.Mongo.Migrations;
 
 internal sealed class RefreshInfobizWorld : RekiMigrationBase
 {
-    public override DatabaseVersion Version => new(2, 7, 6);
+    public override DatabaseVersion Version => new(2, 7, 7);
 
     public override async Task UpAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken)
     {
