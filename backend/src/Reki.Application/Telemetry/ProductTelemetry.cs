@@ -14,6 +14,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
         "app_hidden",
         "app_visible",
         "card_earned",
+        "comment_created",
         "crisis_shown",
         "event_answered",
         "hate_wave",
@@ -96,7 +97,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
                 continue;
             }
 
-            if (entry.Name is "post_scored" or "player_created" or "player_deleted" or "world_created" or "level_up" or "card_earned" or "post_failed" || !_events.Contains(entry.Name))
+            if (entry.Name is "comment_created" or "post_scored" or "player_created" or "player_deleted" or "world_created" or "level_up" or "card_earned" or "post_failed" || !_events.Contains(entry.Name))
             {
                 continue;
             }
