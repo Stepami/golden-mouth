@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Caching.Memory;
+﻿using System.Diagnostics.Metrics;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -6,11 +7,13 @@ namespace Reki.Infrastructure.Cache;
 
 internal sealed class RekiMemoryCache(
     IOptions<MemoryCacheOptions> optionsAccessor,
-    ILoggerFactory loggerFactory) : IMemoryCache
+    ILoggerFactory loggerFactory,
+    IMeterFactory meterFactory) : IMemoryCache
 {
     private readonly MemoryCache _memoryCache = new(
         optionsAccessor,
-        loggerFactory);
+        loggerFactory,
+        meterFactory);
 
     public bool TryGetValue(object key, out object? value)
     {

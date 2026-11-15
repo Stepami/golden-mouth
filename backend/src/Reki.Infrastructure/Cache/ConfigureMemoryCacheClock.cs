@@ -12,5 +12,6 @@ internal sealed class ConfigureMemoryCacheClock(
     public void Configure(MemoryCacheOptions options)
     {
         options.Clock = systemClock;
+        options.TrackStatistics = true;
     }
 }
