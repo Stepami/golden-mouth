@@ -29,11 +29,15 @@ function Compose() {
   const ideas = contentOf(p.world).ideas
   const repostId = typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined
   const key = draftKey(p) + (repostId ? `:quote:${repostId}` : '')
+  const mayPrefill = !repostId && typeof nav.params.text !== 'string' && !hasPostDraft(key)
+  const firstPostConfirmed = nav.params.firstPostConfirmed === true
   const [draft, setDraft] = useState<PostDraft>(() => {
     const saved = readPostDraft(key)
+    const idea = ideas.find(value => value.trim())
+    if (mayPrefill && firstPostConfirmed && idea) return { text: idea, ownWords: false }
     return saved.text.length ? saved : { text: typeof nav.params.text === 'string' ? nav.params.text : '', ownWords: true }
   })
-  const canPrefill = useRef(!repostId && typeof nav.params.text !== 'string' && !hasPostDraft(key))
+  const canPrefill = useRef(mayPrefill && !firstPostConfirmed)
   const [checkingFirstPost, setCheckingFirstPost] = useState(canPrefill.current)
   const text = draft.text
   const [durable, setDurable] = useState(true)
