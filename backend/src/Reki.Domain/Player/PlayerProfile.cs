@@ -34,6 +34,11 @@ public sealed record PlayerProfile
 
     public int? BirthYear { get; init; }
 
+
+    public required PlayerSettings Settings { get; init; }
+
+    public IReadOnlyList<PlayerNotificationChannel> NotificationChannels { get; init; } = [];
+
     public string GetAgeGroup(int currentYear) => BirthYear is { } year
         ? (currentYear - year) switch
         {
@@ -44,10 +49,6 @@ public sealed record PlayerProfile
             _ => "45+",
         }
         : AgeBand ?? BirthGroup;
-
-    public required PlayerSettings Settings { get; init; }
-
-    public IReadOnlyList<PlayerNotificationChannel> NotificationChannels { get; init; } = [];
 
     public PlayerProfile AddNotificationChannel(PlayerNotificationChannel channel) =>
         this with
