@@ -94,7 +94,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             await api.RegisterAsync(
                 new OnboardingRequest
                 {
-                    BirthGroup = BirthGroup.Teen,
+                    BirthGroup = BirthGroup.Adult,
                     Address = Address.Nick,
                 },
                 CancellationToken.None);
@@ -221,7 +221,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await api.RegisterAsync(
             new OnboardingRequest
         {
-            BirthGroup = BirthGroup.Teen,
+            BirthGroup = BirthGroup.Adult,
             Address = Address.Nick,
         },
             CancellationToken.None);

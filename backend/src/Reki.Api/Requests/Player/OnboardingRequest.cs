@@ -17,6 +17,11 @@ public sealed record OnboardingRequest : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (BirthGroup != BirthGroup.Adult)
+        {
+            yield return new ValidationResult("New accounts require age 18 or older.", [nameof(BirthGroup)]);
+        }
+
         if (AgeBand is not null && ((AgeBand == "14-17") != (BirthGroup == BirthGroup.Teen)))
         {
             yield return new ValidationResult("Age band must match birth group.", [nameof(AgeBand)]);

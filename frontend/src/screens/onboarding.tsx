@@ -54,24 +54,25 @@ function Invite() {
   </div><BottomCTA main="Начать играть" onMain={() => nav.push('01-2_age')} /></div>
 }
 
-// 01-2: год рождения, согласие не отмечено заранее; младше 14 → 01-2b
+// 01-2: new accounts are 18+; returning profiles keep their existing age band.
 function Age() {
   const nav = useNav()
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 91 }, (_, i) => currentYear - 10 - i)
-  const [year, setYear] = useState(2010)
-  const [agree, setAgree] = useState(false)
+  const initialYear = typeof nav.params.year === 'number' ? nav.params.year : currentYear - 18
+  const [year, setYear] = useState(initialYear)
+  const [agree, setAgree] = useState(nav.params.agree === true)
   const wheel = useRef<HTMLDivElement>(null)
-  useEffect(() => { if (wheel.current) wheel.current.scrollTop = years.indexOf(2010) * 38 }, [])
+  useEffect(() => { if (wheel.current) wheel.current.scrollTop = years.indexOf(initialYear) * 38 }, [])
   const onWheel = () => { const el = wheel.current; if (el) setYear(years[Math.min(years.length - 1, Math.max(0, Math.round(el.scrollTop / 38)))]) }
-  const age = new Date().getFullYear() - year
+  const age = currentYear - year
   return (
     <div className="screen no-tab">
       <Steps n={1} back={false} />
       <div style={{ padding: '4px 20px' }}>
         <div className="brand" style={{ fontSize: 26 }}>Реки</div>
         <div style={{ fontSize: 24, fontWeight: 800, margin: '14px 0 6px' }}>Год рождения</div>
-        <div className="muted" style={{ marginBottom: 10 }}>Чтобы звёзды говорили с тобой как надо</div>
+        <div className="muted" style={{ marginBottom: 10 }}>Игра 18+. Укажи год рождения.</div>
         <div ref={wheel} onScroll={onWheel} style={{ height: 230, overflowY: 'auto', scrollSnapType: 'y mandatory', background: '#14141B', borderRadius: 18, textAlign: 'center', padding: '96px 0' }}>
           {years.map(y => <div key={y} onClick={() => setYear(y)} style={{ scrollSnapAlign: 'center', height: 38, lineHeight: '38px', fontSize: y === year ? 22 : 18, fontWeight: y === year ? 800 : 400, color: y === year ? 'var(--text)' : 'var(--muted)', background: y === year ? '#22222D' : 'none', borderRadius: 10, margin: '0 12px' }}>{y}</div>)}
         </div>
@@ -85,20 +86,20 @@ function Age() {
         </Card>
         {!agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
       </div>
-      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 14 }); const world = pendingLandingWorld(); nav.push(age < 14 ? '01-2b_under14' : world ? '01-3b_world_overview' : '01-3_world', { ...(world ? { world, fromLanding: true } : {}), group: age < 18 ? '14-17' : '18+', ageBand: ageBand(age) }) }} />
+      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 18 }); if (age < 18) { nav.replace('01-2b_under14', { year, agree }); return } const world = pendingLandingWorld(); nav.push(world ? '01-3b_world_overview' : '01-3_world', { ...(world ? { world, fromLanding: true } : {}), group: '18+', ageBand: ageBand(age) }) }} />
     </div>
   )
 }
 
-function Under14() {
+function Under18() {
   const nav = useNav()
   return (
     <div className="screen no-tab" style={{ padding: '60px 26px', textAlign: 'center' }}>
       <div className="brand" style={{ fontSize: 26 }}>Реки</div>
       <div style={{ fontSize: 64, margin: '40px 0 14px' }}>🌱</div>
-      <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 10 }}>Пока рановато</div>
-      <div className="muted">Реки для тех, кому есть 14. Мы ничего не сохранили. Возвращайся, когда исполнится 14, мы будем ждать</div>
-      <BottomCTA main="Понятно" onMain={() => nav.replace('01-1_invite')} />
+      <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 10 }}>Игра доступна с 18 лет</div>
+      <div className="muted">Играть в Реки можно с 18 лет. Если год рождения выбран по ошибке, его можно исправить.</div>
+      <BottomCTA main="Исправить возраст" onMain={() => nav.replace('01-2_age', { year: nav.params.year, agree: nav.params.agree })} />
     </div>
   )
 }
@@ -128,7 +129,7 @@ export function Home() {
 register({
   '01-1_invite': { component: Invite, title: 'Приглашение от друга' },
   '01-2_age': { component: Age, title: 'Год рождения и согласие' },
-  '01-2b_under14': { component: Under14, title: 'Младше 14' },
+  '01-2b_under14': { component: Under18, title: 'Младше 18' },
   '01-3_world': { component: withWorldTemplates(World, true), title: 'Выбор мира' },
   '01-3b_world_overview': { component: withWorldTemplates(WorldOverview), title: 'Обзор мира' },
   '05-7c_world_preview': { component: WorldPrototypePreview, title: 'Демо своего мира' },
