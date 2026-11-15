@@ -16,6 +16,7 @@
 | Прогнать баланс | `game-balance-sim` |
 
 ## Как работать
+- Перед запуском DEV прочитай [runbook Docker DEV](docs/development.md): владение Mini, отдельная база, автоматический вход и браузерный smoke.
 - Задача = issue, работа в ветке, коммит с `#N`, PR с `Closes #N` или `Refs #N`.
 - Перед PR: `.github/scripts/check-secrets.sh --all`; если трогал фронт, `cd frontend && npx tsc -b && npm run build`.
 - Цепочка PR: базовую ветку не удалять, пока не слита вся цепочка, иначе GitHub закроет зависящие PR.
