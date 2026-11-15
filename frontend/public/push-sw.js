@@ -26,7 +26,11 @@ self.addEventListener('notificationclick', event => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     for (const client of windows) {
       if (new URL(client.url).origin !== self.location.origin) continue
-      try { await client.focus(); return } catch { /* Try another window or open a new one. */ }
+      try {
+        const notificationId = url.searchParams.get('notification')
+        if (notificationId) client.postMessage({ type: 'reki:notification-opened', id: notificationId })
+        await client.focus(); return
+      } catch { /* Try another window or open a new one. */ }
     }
     await self.clients.openWindow(url.href)
   })())
