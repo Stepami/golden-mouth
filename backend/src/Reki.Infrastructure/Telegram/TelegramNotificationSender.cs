@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Reki.Application.Notifications;
 using Reki.Domain.Notifications;
@@ -7,34 +7,17 @@ using Telegram.Bot;
 
 namespace Reki.Infrastructure.Telegram;
 
-internal sealed partial class TelegramNotificationSender(
+internal sealed class TelegramNotificationSender(
     ITelegramBotClient telegram,
-    ILogger<TelegramNotificationSender> logger)
-    : INotificationSender
+    ILogger<TelegramNotificationSender> logger,
+    TimeProvider timeProvider)
+    : NotificationSender(NotificationChannelType.Telegram, logger, timeProvider)
 {
-    public async Task SendAsync(
-        PlayerNotificationChannel channel,
-        Notification notification,
-        CancellationToken ct)
+    protected override async Task SendInternalAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct)
     {
-        if (channel.Type is not NotificationChannelType.Telegram)
-        {
-            return;
-        }
-
-        try
-        {
-            await telegram.SendMessage(
-                long.Parse(channel.Properties["chatId"], CultureInfo.InvariantCulture),
-                notification.Content,
-                cancellationToken: ct);
-        }
-        catch (Exception error)
-        {
-            LogSendError(error);
-        }
+        await telegram.SendMessage(
+            long.Parse(channel.Properties["chatId"], CultureInfo.InvariantCulture),
+            notification.Content,
+            cancellationToken: ct);
     }
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Notification delivery failed for channel Telegram")]
-    private partial void LogSendError(Exception ex);
 }

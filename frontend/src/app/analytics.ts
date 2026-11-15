@@ -14,8 +14,24 @@ let playerAvailable = false
 export const canSendTelemetry = () => playerAvailable
 export function setTelemetryPlayerAvailable(available: boolean) {
   playerAvailable = available
-  if (available) { flushEvents(); void linkEntryProfile() }
+  if (available) { recordNotificationOpen(); flushEvents(); void linkEntryProfile() }
   else { q.length = 0; resetEntryProfileLink() }
+}
+
+let pendingNotification: string | undefined
+function recordNotificationOpen() {
+  if (!playerAvailable || !pendingNotification) return
+  event('notification_opened', { id: pendingNotification, kind: 'webpush' })
+  pendingNotification = undefined
+  const url = new URL(location.href)
+  url.searchParams.delete('notification')
+  url.searchParams.delete('notification_channel')
+  history.replaceState(history.state, '', url)
+}
+function receiveNotificationOpen(id: unknown) {
+  if (typeof id !== 'string' || !/^[0-9a-f]{32}$/.test(id)) return
+  pendingNotification = id
+  recordNotificationOpen()
 }
 
 let selectedDifficulty: string | undefined
@@ -66,6 +82,11 @@ export async function flushEvents() {
 export function installAnalytics() {
   if (installed) return
   installed = true
+  const notificationUrl = new URL(location.href)
+  if (notificationUrl.searchParams.get('notification_channel') === 'webpush') receiveNotificationOpen(notificationUrl.searchParams.get('notification'))
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', ({ data }) => {
+    if (data?.type === 'reki:notification-opened') receiveNotificationOpen(data.id)
+  })
   event('session_start', { platform })
   const interact = () => activeTime.interact(performance.now())
   for (const name of ['pointerdown', 'keydown', 'scroll']) document.addEventListener(name, interact, { passive: true, capture: true })
