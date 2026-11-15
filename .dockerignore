@@ -15,4 +15,5 @@ backend/.claude
 backend/.codex
 backend/.idea
 backend/.vs
+**/*.tqlicense
 backend/apm_modules
