@@ -2087,7 +2087,7 @@ export interface MergePlayersRequest {
 export interface OnboardingRequest {
     referralCode?: string | null;
     birthGroup: BirthGroup;
-    ageBand?: string | null;
+    birthYear: number;
     address: OnboardingRequestAddress;
 
     [key: string]: any;
