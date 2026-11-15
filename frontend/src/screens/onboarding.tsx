@@ -77,6 +77,7 @@ function Age() {
     if (draft && !draft.editingId) setWorldDraft({ ...draft, birthYear: year, group: '18+', ageBand: ageBand(age) })
     if (nav.params.returnToCreation) { nav.back(); return }
     const world = pendingLandingWorld()
+    nav.replace('01-2_age', { year, agree })
     nav.push(world ? '01-3b_world_overview' : '01-3_world', {
       ...(world ? { world, fromLanding: true } : {}), group: '18+', ageBand: ageBand(age), birthYear: year,
     })
