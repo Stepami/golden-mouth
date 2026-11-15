@@ -67,6 +67,20 @@ function Age() {
   useEffect(() => { if (wheel.current) wheel.current.scrollTop = years.indexOf(initialYear) * 38 }, [])
   const onWheel = () => { const el = wheel.current; if (el) setYear(years[Math.min(years.length - 1, Math.max(0, Math.round(el.scrollTop / 38)))]) }
   const age = currentYear - year
+  const proceed = () => {
+    track('onboarding_step', { step: 'age', ok: age >= 18 })
+    if (age < 18) {
+      nav.replace('01-2b_under14', { year, agree, returnToCreation: nav.params.returnToCreation })
+      return
+    }
+    const draft = getWorldDraft()
+    if (draft && !draft.editingId) setWorldDraft({ ...draft, birthYear: year, group: '18+', ageBand: ageBand(age) })
+    if (nav.params.returnToCreation) { nav.back(); return }
+    const world = pendingLandingWorld()
+    nav.push(world ? '01-3b_world_overview' : '01-3_world', {
+      ...(world ? { world, fromLanding: true } : {}), group: '18+', ageBand: ageBand(age), birthYear: year,
+    })
+  }
   return (
     <div className="screen no-tab">
       <Steps n={1} back={false} />
@@ -87,7 +101,7 @@ function Age() {
         </Card>
         {!agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
       </div>
-      <BottomCTA main="Дальше" disabled={!agree} onMain={() => { track('onboarding_step', { step: 'age', ok: age >= 18 }); if (age < 18) { nav.replace('01-2b_under14', { year, agree, returnToCreation: nav.params.returnToCreation }); return } const draft = getWorldDraft(); if (draft && !draft.editingId) setWorldDraft({ ...draft, birthYear: year, group: '18+', ageBand: ageBand(age) }); if (nav.params.returnToCreation) { nav.back(); return } const world = pendingLandingWorld(); nav.push(world ? '01-3b_world_overview' : '01-3_world', { ...(world ? { world, fromLanding: true } : {}), group: '18+', ageBand: ageBand(age), birthYear: year }) }} />
+      <BottomCTA main="Дальше" disabled={!agree} onMain={proceed} />
     </div>
   )
 }

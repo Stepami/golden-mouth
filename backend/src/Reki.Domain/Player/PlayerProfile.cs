@@ -34,7 +34,6 @@ public sealed record PlayerProfile
 
     public int? BirthYear { get; init; }
 
-
     public required PlayerSettings Settings { get; init; }
 
     public IReadOnlyList<PlayerNotificationChannel> NotificationChannels { get; init; } = [];
