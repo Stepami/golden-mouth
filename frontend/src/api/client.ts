@@ -9,7 +9,7 @@ import { clearReferral } from '../app/referral';
 import { clearTokens, logout as revokeSession, registerPlayer } from './auth';
 import { clearApiCache } from '../app/useApi';
 import { setAnalyticsWorld, setTelemetryPlayerAvailable, trackLanding } from '../app/analytics';
-import { clearWorldContent, installWorldContent, installWorldTemplates } from './worldContent';
+import { clearWorldContent, installWorldContent, installWorldTemplates, postIdeasForWorld } from './worldContent';
 import { error } from '../app/log';
 import { sdk } from './transport';
 import type * as Wire from './generated/reki-api';
@@ -211,7 +211,7 @@ export const api = {
         return sessionIdentity;
     },
     createWorld: async (definition: WorldDefinition): Promise<Player> => {
-        const world = map.world(await data(sdk.worlds.createWorld(definition)));
+        const world = map.world(await data(sdk.worlds.createWorld({ ...definition, postIdeas: postIdeasForWorld(definition) })));
         return api.me(world.id);
     },
     deleteWorld: async (id: string) => {

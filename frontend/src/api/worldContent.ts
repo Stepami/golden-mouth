@@ -1,4 +1,5 @@
 import { worldArt } from '../app/worldArt'
+import rolePostIdeasData from '../app/rolePostIdeas.json'
 import type { Drama, Star, WorldId, WorldDocument, WorldDefinition, World } from './types'
 
 export interface WorldContent {
@@ -55,7 +56,7 @@ function toWorldContent(world: WorldDocument): WorldContent {
     stars: world.stars.map(star => ({ ...star, trait: traitNames[star.trait] ?? '' })),
     voices: world.voices, drama: world.drama, description: world.description,
     rules: world.rules.map(rule => rule.text), firstContext: world.firstContext, firstPrompt: world.firstPrompt,
-    ideas: world.postIdeas,
+    ideas: postIdeasForWorld(world),
   }
 }
 
@@ -102,4 +103,20 @@ export function optionalWorldTemplate(world: WorldDefinition | WorldDocument): W
   return Object.values(templateDocuments).find(template => template && template.title === world.title
     && template.description === world.description.split('\nПерсона игрока: ')[0]
     && template.where === world.where && template.firstContext === world.firstContext && template.firstPrompt === world.firstPrompt)
+}
+
+const rolePostIdeas: Record<string, Record<string, string>> = rolePostIdeasData
+
+export function postIdeasForWorld(world: WorldDefinition | WorldDocument): string[] {
+  const template = optionalWorldTemplate(world)
+  const roles = template && rolePostIdeas[template.id]
+  if (!template || !roles) return world.postIdeas
+  const knownStarters = new Set(Object.values(roles))
+  const baseIdeas = world.postIdeas.filter(idea => !knownStarters.has(idea))
+  // Edited/personalized ideas keep their own content rather than preset defaults.
+  if (baseIdeas.length !== template.postIdeas.length || baseIdeas.some((idea, i) => idea !== template.postIdeas[i])) return world.postIdeas
+  const star = template.stars.find(item => world.description.includes(`\nПерсона игрока: ${item.name}.`))
+  if (!star && world.description.includes('\nПерсона игрока: ')) return world.postIdeas
+  const starter = roles[star?.id ?? 'own']
+  return starter ? [starter, ...baseIdeas] : world.postIdeas
 }
