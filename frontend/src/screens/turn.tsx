@@ -19,7 +19,7 @@ import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
 import { TextField } from '../ui/TextField'
-import { completePostDraft, draftKey, readPostDraft, savePostDraft, type PostDraft } from '../app/postDraft'
+import { completePostDraft, draftKey, hasPostDraft, readPostDraft, savePostDraft, type PostDraft } from '../app/postDraft'
 import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 
 
@@ -33,13 +33,31 @@ function Compose() {
     const saved = readPostDraft(key)
     return saved.text.length ? saved : { text: typeof nav.params.text === 'string' ? nav.params.text : '', ownWords: true }
   })
+  const canPrefill = useRef(!repostId && typeof nav.params.text !== 'string' && !hasPostDraft(key))
+  const [checkingFirstPost, setCheckingFirstPost] = useState(canPrefill.current)
   const text = draft.text
   const [durable, setDurable] = useState(true)
   const edit = (value: string, fromIdea = false) => {
+    canPrefill.current = false
     const next = { ...draft, text: value, ownWords: fromIdea ? false : value.length === 0 || draft.ownWords }
     setDraft(next); setDurable(savePostDraft(key, next))
   }
-  useEffect(() => { setDurable(savePostDraft(key, draft)) }, [key, draft])
+  useEffect(() => {
+    if (draft.text.length || !canPrefill.current) setDurable(savePostDraft(key, draft))
+  }, [key, draft])
+  useEffect(() => {
+    if (!canPrefill.current) return
+    let active = true
+    void api.channelPosts(p.worldInstanceId).then(page => {
+      const idea = ideas.find(value => value.trim())
+      if (active && canPrefill.current && !page.items.length && !page.nextCursor && idea) {
+        canPrefill.current = false
+        setDraft({ text: idea, ownWords: false })
+      }
+    }).catch(() => { /* Keep the editor available; an untouched empty draft can retry on reopening. */ })
+      .finally(() => { if (active) setCheckingFirstPost(false) })
+    return () => { active = false }
+  }, [key])
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title={repostId ? "Репост со своим текстом" : "Новый пост"} rightPlain right={<EnergyBadge value={p.postsLeft} />} />
@@ -47,6 +65,7 @@ function Compose() {
         {!repostId && <StoryGoal world={p.world} firstStep />}
         {repostId && <QuotedPost repostId={repostId} />}
         <TextField label="Твой пост" value={text} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
+        {checkingFirstPost && <p className="small muted" role="status">Проверяем историю публикаций…</p>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
       <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords, publication_kind: repostId ? 'quote' : 'post' }); nav.replace('02-2_live', { text, ownWords: draft.ownWords, repostId }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
