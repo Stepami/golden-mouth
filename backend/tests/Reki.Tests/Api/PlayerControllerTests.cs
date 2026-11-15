@@ -183,7 +183,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     }
 
     [Test]
-    public async Task Onboarding_WithBirthYear_PersistsYearAndReturnsCurrentBandAsync()
+    public async Task Onboarding_WithBirthYear_PersistsSelectedYearAsync()
     {
         const long userId = 10101;
         using var api = Factory.CreateApiClient(userId);
