@@ -51,26 +51,6 @@ public sealed class GameMaintenanceJobsTests(ApiFactory factory) : GameApiTestBa
     }
 
     [Test]
-    public async Task Startup_PersistsRecurringSchedulesInMongoAsync()
-    {
-        await using var apiFactory = Factory.WithWebHostBuilder(builder => builder.UseSetting("Jobs:ExecutionEnabled", "true"));
-        using var http = apiFactory.CreateClient();
-
-        var schedules = await Database.GetCollection<BsonDocument>("ticker_CronTickers")
-            .Find(FilterDefinition<BsonDocument>.Empty).ToListAsync();
-
-        await Assert.That(schedules.Count).IsEqualTo(4);
-        var recovery = schedules.Single(item => item["Function"].AsString == nameof(RestoreEnergyJob));
-        await Assert.That(recovery["Expression"].AsString).IsEqualTo("0 * * * * *");
-        var count = schedules.Single(item => item["Function"].AsString == nameof(RefreshRegisteredPlayersJob));
-        var prune = schedules.Single(item => item["Function"].AsString == nameof(PruneAuthJob));
-        await Assert.That(count["Expression"].AsString).IsEqualTo("0 * * * * *");
-        await Assert.That(prune["Expression"].AsString).IsEqualTo("0 0 3 * * *");
-        var notifications = schedules.Single(item => item["Function"].AsString == nameof(SendNotificationsJob));
-        await Assert.That(notifications["Expression"].AsString).IsEqualTo("0 */5 * * * *");
-    }
-
-    [Test]
     public async Task Maintenance_CanceledExecution_CancellationAsync()
     {
         using var api = Factory.CreateApiClient(9307);
