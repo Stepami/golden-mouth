@@ -97,7 +97,7 @@ Hook и механика отдельной нити удалены. После 
 |---|---|
 | Сцена | Мира / mira, Соня / sonya, Ева / eva |
 | Академия | Айко / aiko, Рэн / ren, Юна / yuna |
-| Последние инфобизеры | Меркантил / greedy_wolf, Бургер в Декабре / 2kotleti_news, Куляш AI / alexey_nl, Ника / nika (@nika.recruit) |
+| Последние инфобизеры | Меркантил / greedy_wolf, Бургер в Декабре / 2kotleti_news, Куляш AI / alexey_nl, Ника Борщ / nika (@nika.recruit) |
 | Стрим | Глитч / glitch, Пиксель / pixel, Сейв / save |
 | Свой мир | Искра / spark, Компас / compass, Эхо / echo |
 
