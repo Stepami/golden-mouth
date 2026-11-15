@@ -35,6 +35,10 @@ export async function avatarUri(seed: string, world: WorldId = 'edfccf53-65c6-4e
   const key = `${world}:${style}:${seed}:${personalized ? `${profile.address}:${profile.ageBand ?? 'unknown'}` : 'default'}:v2`
   const got = cache.get(key); if (got) return got
   const base = { seed, size: 96, borderRadius: 50 }
+  if (chosenStyle === 'pixelArt' && seed.replace(/^@/, '') === 'nika.recruit') {
+    const uri = new DiceBearAvatar(active, { ...base, hairVariant: ['long04'], hairProbability: 100, hairColor: ['#e15ba9'], beardProbability: 0 }).toDataUri()
+    cache.set(key, uri); return uri
+  }
   if (!personalized) {
     const definition = active
     const uri = new DiceBearAvatar(definition, base).toDataUri()
