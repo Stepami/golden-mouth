@@ -1,4 +1,3 @@
-using System.Collections.Frozen;
 using System.Security.Claims;
 using DotNext.Threading;
 using Microsoft.AspNetCore.Http;
@@ -29,11 +28,7 @@ internal sealed class LazyRekiContext : IRekiContext
                 throw new ResourceNotFoundException("Player not found."),
             resettable: true);
         _worlds = new AsyncLazy<IReadOnlyDictionary<WorldId, World>>(
-            async ct =>
-            {
-                var worlds = await worldCache.GetWorldsAsync(PlayerId, ct);
-                return worlds.ToFrozenDictionary(world => world.Id);
-            },
+            async ct => await worldCache.GetWorldsAsync(PlayerId, ct),
             resettable: true);
     }
 

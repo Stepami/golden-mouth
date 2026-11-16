@@ -5,9 +5,11 @@ namespace Reki.Application.Worlds;
 
 public interface IWorldPlayerCache
 {
-    ValueTask<IReadOnlyList<World>> GetWorldsAsync(PlayerId playerId, CancellationToken cancellationToken);
+    ValueTask<IReadOnlyDictionary<WorldId, World>> GetWorldsAsync(PlayerId playerId, CancellationToken cancellationToken);
 
     void UpdateWorld(World world);
+
+    void ClearWorld(PlayerId playerId, WorldId worldId);
 
     void ClearPlayer(PlayerId playerId);
 }

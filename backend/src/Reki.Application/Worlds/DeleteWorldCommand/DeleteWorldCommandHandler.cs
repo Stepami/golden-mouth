@@ -19,7 +19,7 @@ internal sealed class DeleteWorldCommandHandler(
                 return Unit.Value;
             },
             cancellationToken);
-        worldCache.ClearPlayer(command.PlayerId);
+        worldCache.ClearWorld(command.PlayerId, command.WorldId);
         return Unit.Value;
     }
 }
