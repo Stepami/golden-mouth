@@ -31,9 +31,9 @@ internal sealed class OnboardPlayerCommandHandler(
         var currentBalance = balance.CurrentValue;
         var inviter = await ResolveInviterAsync(command, cancellationToken);
         var playerId = PlayerId.New();
-        var notificationChannels = command.ExternalUserId.TryGetTelegramId(out var chatId)
-            ? new[] { PlayerNotificationChannel.Telegram(chatId.Value) }
-            : Array.Empty<PlayerNotificationChannel>();
+        PlayerNotificationChannel[] notificationChannels = command.ExternalUserId.TryGetTelegramId(out var chatId)
+            ? [PlayerNotificationChannel.Telegram(chatId.Value)]
+            : [];
         var completed = new PlayerProfile(
             playerId,
             [command.ExternalUserId],
