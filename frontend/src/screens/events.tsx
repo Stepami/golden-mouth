@@ -26,7 +26,6 @@ const EveningPush = () => <TgBot time="18:40">
 const Morning = () => <TgBot time="09:00">
   <div className="tgb">☀️ <b>Мира ответила</b> про коллаб: «ладно, снимаем. но если упадёшь, это в тизер» 😏</div>
   <div className="tgb">✍️ 10 новых постов · 🔥 серия 3 дня: +2 поста</div><button className="tgbtn">Открыть Реки</button>
-  <div className="small" style={{ color: '#6C8EA8', marginTop: 24, textAlign: 'center' }}>Пропустишь день: серия встанет на паузу, но не сгорит</div>
 </TgBot>
 
 function NewStar() {
@@ -60,7 +59,7 @@ function WhileAway() {
           <Card key={n} style={{ marginBottom: 8 }}><div className="row"><Avatar seed={a} mode="default" size={32} /><div className="small"><b>{n}</b> {t}</div></div></Card>
         ))}
         <Card style={{ margin: '12px 0', border: '1px solid #6BFFB866' }}><span className="badge" style={{ color: '#6BFFB8' }}>СОБЫТИЕ · БЕЗ ЛИМИТА</span><div style={{ fontWeight: 800, margin: '6px 0 2px' }}>Вернись громко</div><div className="small muted">Один пост про твоё возвращение не тратит лимит</div></Card>
-        <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Серия {p.streak.days} дня на паузе, не сгорела</div>
+        <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Дней подряд: {p.streak.days}</div>
       </div>
       <BottomCTA main="Написать пост" onMain={() => nav.replace('02-1_compose')} />
     </div>

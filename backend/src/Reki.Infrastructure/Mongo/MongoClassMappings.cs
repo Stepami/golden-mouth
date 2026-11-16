@@ -48,7 +48,7 @@ internal static class MongoClassMappings
             classMap.MapMember(item => item.HitOwnWorldMilestone).SetDefaultValue(false);
             classMap.MapMember(item => item.LastSeenAt).SetDefaultValue(default(DateTimeOffset));
             classMap.MapMember(item => item.PlusInterestClaimed).SetDefaultValue(false);
-            classMap.MapMember(item => item.StreakDays).SetDefaultValue(0);
+            classMap.MapMember(item => item.Streaks).SetDefaultValue(Array.Empty<PlayerStreak>());
             classMap.MapMember(item => item.PausedAtUtc).SetDefaultValue((object?)null);
             classMap.MapMember(item => item.HateDisabledUntilUtc).SetDefaultValue((object?)null);
             classMap.MapMember(item => item.PlusNotifyRequested).SetDefaultValue(false);
@@ -62,15 +62,24 @@ internal static class MongoClassMappings
                     item.BirthYear,
                     item.Settings,
                     item.NotificationChannels,
+                    item.Streaks,
                     item.HitOwnWorldMilestone,
                     item.LastSeenAt,
                     item.PlusInterestClaimed,
-                    item.StreakDays,
                     item.PausedAtUtc,
                     item.HateDisabledUntilUtc,
                     item.Version,
                     item.PlusNotifyRequested));
         });
+
+        if (!BsonClassMap.IsClassMapRegistered(typeof(PlayerStreak)))
+        {
+            BsonClassMap.RegisterClassMap<PlayerStreak>(classMap =>
+            {
+                classMap.AutoMap();
+                classMap.MapCreator(item => new PlayerStreak(item.StartedAt, item.Count, item.IsActive));
+            });
+        }
 
         if (!BsonClassMap.IsClassMapRegistered(typeof(PlayerNotificationChannel)))
         {

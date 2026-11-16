@@ -6,6 +6,7 @@ public sealed class PlayerProfile
 {
     private readonly List<ExternalUserId> _externalUserIds;
     private readonly List<PlayerNotificationChannel> _notificationChannels;
+    private readonly List<PlayerStreak> _streaks;
     private readonly Dictionary<SkillId, SkillProgress> _skills;
 
     public PlayerProfile(
@@ -17,10 +18,10 @@ public sealed class PlayerProfile
         int birthYear,
         PlayerSettings settings,
         IReadOnlyList<PlayerNotificationChannel> notificationChannels,
+        IReadOnlyList<PlayerStreak> streaks,
         bool hitOwnWorldMilestone = false,
         DateTimeOffset lastSeenAt = default,
         bool plusInterestClaimed = false,
-        int streakDays = 0,
         DateTimeOffset? pausedAtUtc = null,
         DateTimeOffset? hateDisabledUntilUtc = null,
         int version = 0,
@@ -38,7 +39,8 @@ public sealed class PlayerProfile
         HitOwnWorldMilestone = hitOwnWorldMilestone;
         LastSeenAt = lastSeenAt;
         PlusInterestClaimed = plusInterestClaimed;
-        StreakDays = streakDays;
+        _streaks = [.. streaks];
+        Streaks = _streaks.AsReadOnly();
         PausedAtUtc = pausedAtUtc;
         HateDisabledUntilUtc = hateDisabledUntilUtc;
         Version = version;
@@ -61,7 +63,7 @@ public sealed class PlayerProfile
 
     public bool PlusInterestClaimed { get; private set; }
 
-    public int StreakDays { get; private set; }
+    public IReadOnlyList<PlayerStreak> Streaks { get; }
 
     public IReadOnlyDictionary<SkillId, SkillProgress> Skills { get; }
 
@@ -223,6 +225,33 @@ public sealed class PlayerProfile
     {
         Wallet.Replenish(amount);
         if (amount != 0)
+        {
+            Version++;
+        }
+    }
+
+    public void UpdateStreak(DateTimeOffset now)
+    {
+        if (_streaks.Count == 0)
+        {
+            _streaks.Add(PlayerStreak.New(now));
+            Version++;
+            return;
+        }
+
+        var streak = _streaks[^1];
+        var previousCount = streak.Count;
+        if (streak.IsActive)
+        {
+            streak.Progress(LastSeenAt, now);
+        }
+
+        if (!streak.IsActive)
+        {
+            _streaks.Add(PlayerStreak.New(now));
+        }
+
+        if (!streak.IsActive || streak.Count != previousCount)
         {
             Version++;
         }

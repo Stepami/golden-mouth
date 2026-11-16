@@ -9,11 +9,12 @@ public static partial class PlayerResponseMapper
 {
     public static PlayerResponse ToPlayerResponse(this PlayerProfile player)
     {
+        var streakDays = player.Streaks.Count > 0 && player.Streaks[^1].IsActive ? player.Streaks[^1].Count : 0;
         return new PlayerResponse(
             player.Id,
             player.Address,
             player.Wallet.Energy,
-            new StreakResponse(player.StreakDays, Enumerable.Range(0, 7).Select(day => day < Math.Min(7, player.StreakDays)).ToArray(), "ещё день — и бонус"),
+            new StreakResponse(streakDays, Enumerable.Range(0, 7).Select(day => day < Math.Min(7, streakDays)).ToArray(), "ещё день — и бонус"),
             MapSkills(player.Skills),
             MapSettings(player.Settings),
             new Dictionary<string, string>(),

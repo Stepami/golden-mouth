@@ -52,7 +52,7 @@ export const results: Record<'normal' | 'flop' | 'viral', PostResult> = {
     bestComment: { avatar: 'mira', text: '„уверенно“ это комплимент, поверь' } },
   flop: { postId: 'post2', delta: -4, headline: 'Агентство сделало вид, что не видело этот пост', views: 640, viral: false, flop: true,
     whys: [{ icon: '🎤', label: 'мимо темы мира', value: '−7' }, { icon: '😂', label: 'смешно', value: '+3' }],
-    ribbons: [{ icon: '💪', title: 'Провал тоже опыт: опыт смелости +1', sub: 'серия дней не сгорает' }],
+    ribbons: [{ icon: '💪', title: 'Провал тоже опыт: опыт смелости +1', sub: 'провал поста не влияет на серию' }],
     bestComment: { avatar: 'critic', text: 'а при чём тут Сцена?' } },
   viral: { postId: 'post1', delta: 620, headline: 'Мира сделала репост. Фанаты BLESK пошли смотреть, кто такая Лиза', views: 48000, viral: true, flop: false,
     whys: [{ icon: '👁', label: 'охват 48k', value: '×12' }],

@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Caching.Memory;
 using Reki.Application.Notifications;
+using Reki.Application.Player.UpdateStreakCommand;
 using Reki.Domain.Notifications;
 
 namespace Reki.Application.Player.UpdateLastSeenAtCommand;
@@ -8,6 +9,7 @@ namespace Reki.Application.Player.UpdateLastSeenAtCommand;
 internal sealed class UpdateLastSeenAtCommandHandler(
     IPlayerRepository players,
     INotificationRepository notifications,
+    ISender sender,
     IUnitOfWork unitOfWork,
     IMemoryCache cache,
     TimeProvider timeProvider)
@@ -15,13 +17,15 @@ internal sealed class UpdateLastSeenAtCommandHandler(
 {
     public async ValueTask<Unit> Handle(UpdateLastSeenAt command, CancellationToken cancellationToken)
     {
-        if (!command.Force && cache.TryGetValue(command.Player.Id, out DateTimeOffset _))
+        var now = timeProvider.GetUtcNow();
+        if (!command.Force && cache.TryGetValue(command.Player.Id, out DateTimeOffset lastUpdated) &&
+            lastUpdated.UtcDateTime.Date == now.UtcDateTime.Date)
         {
             return Unit.Value;
         }
 
-        var now = timeProvider.GetUtcNow();
         var oldLastSeenAt = command.Player.LastSeenAt;
+        await sender.Send(new UpdateStreak(command.Player, now), cancellationToken);
         var player = command.Player.UpdateLastSeenAt(now);
 
         await unitOfWork.ExecuteAsync(
