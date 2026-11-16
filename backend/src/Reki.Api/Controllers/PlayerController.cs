@@ -13,6 +13,7 @@ using Reki.Application.Player.MergePlayersCommand;
 using Reki.Application.Player.RegisterWebPushCommand;
 using Reki.Application.Player.Responses;
 using Reki.Application.Player.Streaks.GetStreak;
+using Reki.Application.Player.Streaks.UpdateStreakCommand;
 using Reki.Application.Player.UpdateLastSeenAtCommand;
 using Reki.Application.RekiContext;
 using Reki.Infrastructure.Auth;
@@ -33,13 +34,14 @@ public sealed class PlayerController(
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
         var player = await rekiContext.Player;
+        await sender.Send(new UpdateStreak(player.Id, player.LastSeenAt), cancellationToken);
         await sender.Send(new UpdateLastSeenAt(player), cancellationToken);
         return TypedResults.Ok(player.ToPlayerResponse());
     }
 
     [HttpGet("me/streak", Name = "GetPlayerStreak")]
     public async Task<Ok<PlayerStreakResponse>> GetPlayerStreakAsync(CancellationToken cancellationToken) =>
-        TypedResults.Ok(await sender.Send(new PlayerStreakQuery(rekiContext.PlayerId), cancellationToken));
+        TypedResults.Ok((await sender.Send(new PlayerStreakQuery(rekiContext.PlayerId), cancellationToken)).ToPlayerStreakResponse());
 
     [HttpPost("me/energy/exchange", Name = "ExchangeEnergy")]
     public async Task<Ok<EnergyExchangeResponse>> ExchangeEnergyAsync(CancellationToken cancellationToken)

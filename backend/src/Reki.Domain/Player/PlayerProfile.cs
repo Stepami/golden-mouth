@@ -226,7 +226,7 @@ public sealed class PlayerProfile
 
     public PlayerProfile UpdateLastSeenAt(DateTimeOffset now)
     {
-        if (now > LastSeenAt)
+        if (LastSeenAt != now)
         {
             LastSeenAt = now;
             Version++;

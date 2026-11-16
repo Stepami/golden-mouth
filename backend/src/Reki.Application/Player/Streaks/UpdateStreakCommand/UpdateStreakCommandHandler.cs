@@ -1,29 +1,46 @@
 using Mediator;
+using Microsoft.Extensions.Caching.Memory;
+using Reki.Application.Player.Streaks.GetStreak;
 using Reki.Domain.Player.Streaks;
 
 namespace Reki.Application.Player.Streaks.UpdateStreakCommand;
 
-internal sealed class UpdateStreakCommandHandler(IPlayerStreakRepository streaks) : ICommandHandler<UpdateStreak, bool>
+internal sealed class UpdateStreakCommandHandler(
+    ISender sender,
+    IPlayerStreakRepository streaks,
+    IUnitOfWork unitOfWork,
+    IMemoryCache cache,
+    TimeProvider timeProvider) : ICommandHandler<UpdateStreak>
 {
-    public async ValueTask<bool> Handle(UpdateStreak command, CancellationToken cancellationToken)
+    public async ValueTask<Unit> Handle(UpdateStreak command, CancellationToken cancellationToken)
     {
-        var streak = await streaks.GetLatestAsync(command.PlayerId, cancellationToken);
-        if (streak is not null)
+        var cached = await sender.Send(new PlayerStreakQuery(command.PlayerId), cancellationToken);
+        var now = timeProvider.GetUtcNow();
+        if (command.LastSeenAt.UtcDateTime.Date == now.UtcDateTime.Date)
         {
-            var progress = streak.Progress(command.Now);
-            if (progress == PlayerStreakProgress.None)
-            {
-                return false;
-            }
-
-            await streaks.SaveAsync(streak, cancellationToken);
-            if (progress == PlayerStreakProgress.Consecutive)
-            {
-                return true;
-            }
+            return Unit.Value;
         }
 
-        await streaks.SaveAsync(PlayerStreak.New(command.PlayerId, command.Now), cancellationToken);
-        return true;
+        var streak = new PlayerStreak(cached.Id, cached.PlayerId, cached.StartedAt, cached.Count, cached.IsActive);
+        var progress = streak.Progress(now);
+        if (progress == PlayerStreakProgress.None)
+        {
+            return Unit.Value;
+        }
+
+        await unitOfWork.ExecuteAsync(
+            async token =>
+            {
+                await streaks.SaveAsync(streak, token);
+                if (progress == PlayerStreakProgress.Stopped)
+                {
+                    await streaks.SaveAsync(PlayerStreak.New(command.PlayerId, now), token);
+                }
+
+                return Unit.Value;
+            },
+            _ => cache.Remove(CacheKeyPrefixes.PlayerStreak + command.PlayerId),
+            cancellationToken);
+        return Unit.Value;
     }
 }

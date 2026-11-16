@@ -11,6 +11,7 @@ using OpenIddict.MongoDb;
 using OpenIddict.MongoDb.Models;
 using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
+using Reki.Application;
 using Reki.Application.Player;
 using Reki.Application.Player.Responses;
 using Reki.Application.Telemetry;
@@ -48,7 +49,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await players.UpdateOneAsync(
             item => item.Id == response.Id,
             Builders<PlayerProfile>.Update.Set(item => item.LastSeenAt, now.AddMinutes(-minutes)));
-        Factory.Services.GetRequiredService<IMemoryCache>().Remove(response.Id);
+        Factory.Services.GetRequiredService<IMemoryCache>().Remove(CacheKeyPrefixes.UpdateLastSeenAt + ":" + response.Id);
 
         await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
@@ -74,7 +75,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await players.UpdateOneAsync(
             item => item.Id == response.Id,
             Builders<PlayerProfile>.Update.Set(item => item.NotificationChannels, Array.Empty<PlayerNotificationChannel>()));
-        Factory.Services.GetRequiredService<IMemoryCache>().Remove(response.Id);
+        Factory.Services.GetRequiredService<IMemoryCache>().Remove(CacheKeyPrefixes.UpdateLastSeenAt + ":" + response.Id);
 
         await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 

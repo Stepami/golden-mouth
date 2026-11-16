@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.Caching.Memory;
-using Reki.Application.Player.Responses;
 using Reki.Domain.Player.Streaks;
 
 namespace Reki.Application.Player.Streaks.GetStreak;
@@ -8,14 +7,14 @@ namespace Reki.Application.Player.Streaks.GetStreak;
 internal sealed class PlayerStreakQueryHandler(
     IPlayerStreakRepository streaks,
     IMemoryCache cache,
-    TimeProvider timeProvider) : IQueryHandler<PlayerStreakQuery, PlayerStreakResponse>
+    TimeProvider timeProvider) : IQueryHandler<PlayerStreakQuery, PlayerStreak>
 {
-    public async ValueTask<PlayerStreakResponse> Handle(
+    public async ValueTask<PlayerStreak> Handle(
         PlayerStreakQuery query,
         CancellationToken cancellationToken)
     {
         var key = CacheKeyPrefixes.PlayerStreak + query.PlayerId;
-        if (cache.TryGetValue(key, out PlayerStreakResponse? cached) && cached is not null)
+        if (cache.TryGetValue(key, out PlayerStreak? cached) && cached is not null)
         {
             return cached;
         }
@@ -27,8 +26,7 @@ internal sealed class PlayerStreakQueryHandler(
             await streaks.SaveAsync(streak, cancellationToken);
         }
 
-        var response = streak.ToPlayerStreakResponse();
-        cache.Set(key, response, TimeSpan.FromMinutes(1));
-        return response;
+        cache.Set(key, streak, TimeSpan.FromDays(1));
+        return streak;
     }
 }

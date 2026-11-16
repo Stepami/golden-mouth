@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Caching.Memory;
 using Reki.Application.Notifications;
-using Reki.Application.Player.Streaks.UpdateStreakCommand;
 using Reki.Domain.Notifications;
 
 namespace Reki.Application.Player.UpdateLastSeenAtCommand;
@@ -9,7 +8,6 @@ namespace Reki.Application.Player.UpdateLastSeenAtCommand;
 internal sealed class UpdateLastSeenAtCommandHandler(
     IPlayerRepository players,
     INotificationRepository notifications,
-    ISender sender,
     IUnitOfWork unitOfWork,
     IMemoryCache cache,
     TimeProvider timeProvider)
@@ -17,23 +15,23 @@ internal sealed class UpdateLastSeenAtCommandHandler(
 {
     public async ValueTask<Unit> Handle(UpdateLastSeenAt command, CancellationToken cancellationToken)
     {
-        var now = timeProvider.GetUtcNow();
-        if (!command.Force && cache.TryGetValue(command.Player.Id, out DateTimeOffset lastUpdated) &&
-            lastUpdated.UtcDateTime.Date == now.UtcDateTime.Date)
+        var key = CacheKeyPrefixes.UpdateLastSeenAt + ":" + command.Player.Id;
+        if (!command.Force && cache.TryGetValue(key, out DateTimeOffset _))
         {
             return Unit.Value;
         }
 
+        var now = timeProvider.GetUtcNow();
         var oldLastSeenAt = command.Player.LastSeenAt;
         var player = command.Player.UpdateLastSeenAt(now);
-        var streakChanged = await unitOfWork.ExecuteAsync(
+
+        await unitOfWork.ExecuteAsync(
             async token =>
             {
-                var changed = await sender.Send(new UpdateStreak(player.Id, now), token);
                 await players.ReplacePlayerAsync(player, token);
                 if (player.NotificationChannels.Count <= 0)
                 {
-                    return changed;
+                    return Unit.Value;
                 }
 
                 var sendAt = player.LastSeenAt.AddDays(1);
@@ -48,16 +46,10 @@ internal sealed class UpdateLastSeenAtCommandHandler(
                     await notifications.SaveAsync(pending, token);
                 }
 
-                return changed;
+                return Unit.Value;
             },
+            _ => cache.Set(key, now, TimeSpan.FromMinutes(5)),
             cancellationToken);
-        if (streakChanged)
-        {
-            cache.Remove(CacheKeyPrefixes.PlayerStreak + command.Player.Id);
-        }
-
-        cache.Set(command.Player.Id, now, TimeSpan.FromMinutes(1));
-
         return Unit.Value;
     }
 }
