@@ -16,7 +16,7 @@ internal sealed class AddPlayerStreaks : RekiMigrationBase
         await players.UpdateManyAsync(
             session,
             Builders<BsonDocument>.Filter.Empty,
-            Builders<BsonDocument>.Update.Unset("Streaks").Unset("StreakDays"),
+            Builders<BsonDocument>.Update.Unset("StreakDays"),
             cancellationToken: cancellationToken);
 
         var streaks = db.GetCollection<PlayerStreak>(MongoCollections.PlayerStreaks);
