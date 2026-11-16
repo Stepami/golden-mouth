@@ -19,6 +19,7 @@ using Reki.Application.Worlds;
 using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
+using Reki.Domain.Player.Streaks;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
 
@@ -29,6 +30,53 @@ namespace Reki.Tests.Api;
 [NotInParallel("ApiState")]
 public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
+    [Test]
+    [Arguments(0, 13, 1, false)]
+    [Arguments(1, 1, 2, false)]
+    [Arguments(1, 13, 2, false)]
+    [Arguments(2, 13, 1, true)]
+    public async Task GetPlayerStreak_VisitsAtDifferentTimes_ReturnsCurrentStreakAsync(
+        int daysAfterStart,
+        int visitHour,
+        int expectedCount,
+        bool newStreak)
+    {
+        // Arrange
+        var startedAt = new DateTimeOffset(2000, 1, 1, 2, 0, 0, TimeSpan.Zero);
+        Factory.Session.Clock.AdjustTime(startedAt);
+        using var api = Factory.CreateApiClient(18305);
+        var player = await api.RegisterAsync(
+            new OnboardingRequest { BirthYear = 1970, Address = Address.Nick },
+            CancellationToken.None);
+        var initial = await api.Player.GetPlayerStreakAsync(CancellationToken.None);
+        var visitAt = new DateTimeOffset(2000, 1, 1, visitHour, 0, 0, TimeSpan.Zero).AddDays(daysAfterStart);
+
+        // Act
+        Factory.Session.Clock.SetUtcNow(visitAt);
+        await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        var current = await api.Player.GetPlayerStreakAsync(CancellationToken.None);
+        await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        var repeated = await api.Player.GetPlayerStreakAsync(CancellationToken.None);
+        var saved = await Database.GetCollection<PlayerStreak>("player_streaks")
+            .Find(streak => streak.PlayerId == player.Id)
+            .ToListAsync(CancellationToken.None);
+
+        // Assert
+        await Assert.That(initial.Count).IsEqualTo(1);
+        await Assert.That(initial.StartedAt).IsEqualTo(startedAt);
+        await Assert.That(current.Count).IsEqualTo(expectedCount);
+        await Assert.That(current.IsActive).IsTrue();
+        await Assert.That(current.Id == initial.Id).IsEqualTo(!newStreak);
+        await Assert.That(current.StartedAt).IsEqualTo(newStreak ? visitAt : startedAt);
+        await Assert.That(repeated.Id).IsEqualTo(current.Id);
+        await Assert.That(repeated.Count).IsEqualTo(expectedCount);
+        await Assert.That(saved.Count).IsEqualTo(newStreak ? 2 : 1);
+        await Assert.That(saved.Single(streak => streak.IsActive).Id).IsEqualTo(current.Id);
+        await Assert.That(saved.Single(streak => streak.IsActive).Count).IsEqualTo(expectedCount);
+        await Assert.That(saved.Any(streak => streak.Id == initial.Id)).IsTrue();
+        await Assert.That(saved.Count(streak => !streak.IsActive)).IsEqualTo(newStreak ? 1 : 0);
+    }
+
     [Test]
     [Arguments(119, false)]
     [Arguments(120, true)]
