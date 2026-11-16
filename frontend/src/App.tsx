@@ -10,6 +10,8 @@ import { api } from './api/client'
 import { canResumeAuth, clearPendingLogin, hasAccess, hasInitData, hasPendingLogin, loginMiniApp, loginVk, loginWidget, loginYandex, needsRegistration, pendingAuthProvider, startAuth, subscribeAuth } from './api/auth'
 import { AuthProviders } from './app/AuthProviders'
 import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
+import { FirstPostReminder } from './app/FirstPostReminder'
+import { worldOf } from './api/worldContent'
 import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
 import { useAvatarPersonalization } from './app/avatarPersonalization'
@@ -77,6 +79,8 @@ function Shell() {
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'edfccf53-65c6-4eaf-8321-2391bc1758bd'}>
       <AvatarPeople.Provider value={people}><div className="app">
         <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration />
+        {/* Eligibility and the target world will come from #345; this is a DEV preview only. */}
+        {import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === 'first-post-reminder' && player && <FirstPostReminder key={player.id} worldId={player.worldInstanceId ?? player.world} worldTitle={worldOf(player.world).title} />}
         {tab !== undefined && (
           <nav className="tabbar" aria-label="Основная навигация">
             {[5, 0, 1, 2, 3, 4].map(i => { const t = TABS[i]; return (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} aria-current={i === tab ? 'page' : undefined} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button> })}

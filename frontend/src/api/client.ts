@@ -120,10 +120,10 @@ async function generateStar(postId: string, replyWorldId: string, authorId: stri
     throw new Error('Generation failed');
 }
 const playerRequests = new Map<string, Promise<Player>>();
-async function loadPlayer(worldId?: string): Promise<Player | undefined> {
+async function loadPlayer(worldId?: string, signal?: AbortSignal): Promise<Player | undefined> {
     const generation = sessionGeneration();
-    const profile = await data(sdk.player.getCurrentPlayer());
-    const streak = await data(sdk.player.getPlayerStreak());
+    const profile = await data(sdk.player.getCurrentPlayer(signal));
+    const streak = await data(sdk.player.getPlayerStreak(signal));
     assertSession(generation);
     const player = map.player(profile, streak ?? null);
     if (sessionIdentity?.id !== player.id)
@@ -131,8 +131,9 @@ async function loadPlayer(worldId?: string): Promise<Player | undefined> {
     sessionIdentity = player;
     setTelemetryPlayerAvailable(true);
     clearReferral();
-    const ownedWorlds = (await data(sdk.worlds.getOwnedWorlds())).map(map.world);
+    const ownedWorlds = (await data(sdk.worlds.getOwnedWorlds(signal))).map(map.world);
     assertSession(generation);
+    signal?.throwIfAborted();
     ownedWorldSnapshot = ownedWorlds;
     let selected: string | undefined;
     try {
@@ -180,19 +181,19 @@ export const api = {
     loadWorldTemplates: loadTemplates,
     invitation: async (signal?: AbortSignal): Promise<number> => Number((await data(sdk.player.getInvitation(signal))).bonus),
     restore: (): Promise<Player | undefined> => loadPlayer(),
-    me: (worldId?: string): Promise<Player> => {
+    me: (worldId?: string, signal?: AbortSignal): Promise<Player> => {
         const key = worldId ?? sessionPlayer?.worldInstanceId ?? '';
-        const pending = playerRequests.get(key);
+        const pending = signal ? undefined : playerRequests.get(key);
         if (pending)
             return pending;
-        const request = loadPlayer(worldId).then(player => {
+        const request = loadPlayer(worldId, signal).then(player => {
             if (!player) throw new Error('World must be created before this request');
             return player;
         }).finally(() => {
             if (playerRequests.get(key) === request)
                 playerRequests.delete(key);
         });
-        playerRequests.set(key, request);
+        if (!signal) playerRequests.set(key, request);
         return request;
     },
     registerWebPush: async (subscription: Wire.WebPushSubscriptionRequest) => data(sdk.player.registerWebPush(subscription, AbortSignal.timeout(15000)).then(response => {
