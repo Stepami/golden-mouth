@@ -135,6 +135,14 @@ dotnet_diagnostic.SA1118.severity = none
 [src/Reki.Domain/Worlds/StarTrait.cs]
 dotnet_diagnostic.AV1115.severity = none
 
+[src/Reki.Domain/Player/AddressType.cs]
+# Enum member names preserve the existing lowercase JSON/BSON values.
+dotnet_diagnostic.SA1300.severity = none
+
+[src/Reki.Infrastructure/ML/Classifier/ClassifyResponse.cs]
+# The classifier response uses nested arrays.
+dotnet_diagnostic.S2368.severity = none
+
 [src/Reki.Domain/Posts/GamePost.cs]
 dotnet_diagnostic.AV1553.severity = none
 
