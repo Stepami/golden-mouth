@@ -20,24 +20,22 @@ public sealed class PlayerStreak(
     public static PlayerStreak New(PlayerId playerId, DateTimeOffset startedAt) =>
         new(StreakId.New(startedAt), playerId, startedAt, 1, true);
 
-    public bool Progress(DateTimeOffset now)
+    public PlayerStreakProgress Progress(DateTimeOffset now)
     {
         var lastStreakDay = StartedAt.UtcDateTime.Date.AddDays(Count - 1);
         var days = (now.UtcDateTime.Date - lastStreakDay).Days;
         if (!IsActive || days <= 0)
         {
-            return false;
+            return PlayerStreakProgress.None;
         }
 
         if (days == 1)
         {
             Count++;
-        }
-        else
-        {
-            IsActive = false;
+            return PlayerStreakProgress.Consecutive;
         }
 
-        return true;
+        IsActive = false;
+        return PlayerStreakProgress.Stopped;
     }
 }

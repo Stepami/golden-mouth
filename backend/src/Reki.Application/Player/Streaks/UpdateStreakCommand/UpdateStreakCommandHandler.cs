@@ -10,13 +10,14 @@ internal sealed class UpdateStreakCommandHandler(IPlayerStreakRepository streaks
         var streak = await streaks.GetLatestAsync(command.PlayerId, cancellationToken);
         if (streak is { IsActive: true })
         {
-            if (!streak.Progress(command.Now))
+            var progress = streak.Progress(command.Now);
+            if (progress == PlayerStreakProgress.None)
             {
                 return false;
             }
 
             await streaks.SaveAsync(streak, cancellationToken);
-            if (streak.IsActive)
+            if (progress == PlayerStreakProgress.Consecutive)
             {
                 return true;
             }
