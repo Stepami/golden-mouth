@@ -20,13 +20,15 @@ internal sealed class PlayerStreakQueryHandler(
         }
 
         var streak = await streaks.GetLatestAsync(query.PlayerId, cancellationToken);
+        var startedAt = timeProvider.GetUtcNow();
         if (streak is null)
         {
-            streak = PlayerStreak.New(query.PlayerId, timeProvider.GetUtcNow());
+            streak = PlayerStreak.New(query.PlayerId, startedAt);
             await streaks.SaveAsync(streak, cancellationToken);
         }
 
-        cache.Set(key, streak, TimeSpan.FromDays(1));
+        var untilTomorrow = TimeSpan.FromDays(1) - startedAt.TimeOfDay - TimeSpan.FromTicks(1);
+        cache.Set(key, streak, untilTomorrow);
         return streak;
     }
 }

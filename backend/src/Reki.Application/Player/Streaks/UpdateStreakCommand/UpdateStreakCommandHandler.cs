@@ -14,14 +14,9 @@ internal sealed class UpdateStreakCommandHandler(
 {
     public async ValueTask<Unit> Handle(UpdateStreak command, CancellationToken cancellationToken)
     {
-        var cached = await sender.Send(new PlayerStreakQuery(command.PlayerId), cancellationToken);
+        var streak = await sender.Send(new PlayerStreakQuery(command.PlayerId), cancellationToken);
         var now = timeProvider.GetUtcNow();
-        if (command.LastSeenAt.UtcDateTime.Date == now.UtcDateTime.Date)
-        {
-            return Unit.Value;
-        }
 
-        var streak = new PlayerStreak(cached.Id, cached.PlayerId, cached.StartedAt, cached.Count, cached.IsActive);
         var progress = streak.Progress(now);
         if (progress == PlayerStreakProgress.None)
         {
