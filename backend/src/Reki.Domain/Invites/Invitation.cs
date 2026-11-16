@@ -1,6 +1,6 @@
-namespace Reki.Domain.Invites;
-
 using Reki.Domain.Player;
+
+namespace Reki.Domain.Invites;
 
 public sealed class Invitation(
     InvitationId id,
