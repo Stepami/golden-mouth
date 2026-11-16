@@ -6,8 +6,6 @@ public sealed record PlayerProfile
 
     public required IReadOnlyList<ExternalUserId> ExternalUserIds { get; init; }
 
-    public required string BirthGroup { get; init; }
-
     public required Address Address { get; init; }
 
     public bool HitOwnWorldMilestone { get; init; }
@@ -30,24 +28,11 @@ public sealed record PlayerProfile
 
     public bool PlusNotifyRequested { get; init; }
 
-    public string? AgeBand { get; init; }
-
-    public int? BirthYear { get; init; }
+    public required int BirthYear { get; init; }
 
     public required PlayerSettings Settings { get; init; }
 
     public IReadOnlyList<PlayerNotificationChannel> NotificationChannels { get; init; } = [];
-
-    public string GetAgeGroup(int currentYear) => BirthYear is { } year
-        ? (currentYear - year) switch
-        {
-            < 18 => "14-17",
-            < 25 => "18-24",
-            < 35 => "25-34",
-            < 45 => "35-44",
-            _ => "45+",
-        }
-        : AgeBand ?? BirthGroup;
 
     public PlayerProfile AddNotificationChannel(PlayerNotificationChannel channel) =>
         this with

@@ -72,7 +72,7 @@ internal sealed class PlayerSafetyGuard(
         var paused = player.StartCrisisPause(now, HateCooldown);
         await playerRepository.ReplacePlayerAsync(paused, cancellationToken);
 
-        throw new CrisisDetectedException(player.BirthGroup == "14-17");
+        throw new CrisisDetectedException();
     }
 
     private static string? OutputRejectionCategory(string text)

@@ -25,8 +25,7 @@ namespace Reki.Api.Controllers;
 public sealed class PlayerController(
     IRekiContext rekiContext,
     IInvitationRepository invitationRepository,
-    ISender sender,
-    TimeProvider timeProvider) : ControllerBase
+    ISender sender) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
     [ActionName("GetCurrentPlayer")]
@@ -34,7 +33,7 @@ public sealed class PlayerController(
     {
         var player = await rekiContext.Player;
         await sender.Send(new UpdateLastSeenAt(player), cancellationToken);
-        return TypedResults.Ok(player.ToPlayerResponse(timeProvider.GetUtcNow().Year));
+        return TypedResults.Ok(player.ToPlayerResponse());
     }
 
     [HttpPost("me/energy/exchange", Name = "ExchangeEnergy")]

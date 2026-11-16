@@ -120,7 +120,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
             attributes["screen"] = entry.Screen;
             attributes["difficulty"] = ReadDifficulty(entry.Properties);
             attributes["template_id"] = ReadTemplateId(entry.Properties);
-            attributes["age_group"] = player.GetAgeGroup(timeProvider.GetUtcNow().Year);
+            attributes["age_group"] = GetAgeGroup(player.BirthYear);
             if (entry.PreviousScreen is not null)
             {
                 attributes["previous_screen"] = entry.PreviousScreen;
@@ -152,7 +152,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
 
         attributes["difficulty"] = ReadDifficulty(properties);
         attributes["template_id"] = ReadTemplateId(properties);
-        attributes["age_group"] = player.GetAgeGroup(timeProvider.GetUtcNow().Year);
+        attributes["age_group"] = GetAgeGroup(player.BirthYear);
         if (eventName == "player_created" && referred is { } isReferral)
         {
             attributes["registration_source"] = isReferral ? "referral" : "direct";
@@ -205,6 +205,15 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
     private static string? ReadTemplateId(IReadOnlyDictionary<string, string> properties) =>
         properties.TryGetValue("template_id", out var template) && Guid.TryParse(template, out var id) ? id.ToString("D") : null;
 
+    private string GetAgeGroup(int birthYear) => ((long)timeProvider.GetUtcNow().Year - birthYear) switch
+    {
+        < 18 => "14-17",
+        < 25 => "18-24",
+        < 35 => "25-34",
+        < 45 => "35-44",
+        _ => "45+",
+    };
+
     private void TrackLandingEntry(PlayerProfile? player, Domain.Telemetry.AnalyticsEntry entry)
     {
         var link = entry.Name == "landing_profile_link";
@@ -241,7 +250,7 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
         if (link && player is { } linkedPlayer)
         {
             attributes["player_id"] = linkedPlayer.Id.Value.ToString("N");
-            attributes["age_group"] = linkedPlayer.GetAgeGroup(timeProvider.GetUtcNow().Year);
+            attributes["age_group"] = GetAgeGroup(linkedPlayer.BirthYear);
         }
 
         Write(entry.Name, attributes);

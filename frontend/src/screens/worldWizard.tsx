@@ -85,7 +85,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
     setSaving(true); setError('')
     let creatingWorld = false
     try {
-      if (!api.hasPlayer()) { if (!draft.birthYear) { nav.push('01-2_age', { returnToCreation: true }); return } const identity = await api.onboarding({ birthGroup: draft.group, birthYear: draft.birthYear, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); clearWorldDrafts('onboarding'); selectDraftOwner(identity.id); setWorldDraft(draft) }
+      if (!api.hasPlayer()) { if (!draft.birthYear) { nav.push('01-2_age', { returnToCreation: true }); return } const identity = await api.onboarding({ birthYear: draft.birthYear, address: draft.address, referralCode: pendingReferral() }); clearReferral(); setWorldDraft(null); clearWorldDrafts('onboarding'); selectDraftOwner(identity.id); setWorldDraft(draft) }
       await api.settings({ address: draft.address })
       creatingWorld = !draft.editingId
       const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d)

@@ -36,7 +36,6 @@ internal sealed class OnboardPlayerCommandHandler(
             Id = playerId,
             ExternalUserIds = [],
             Settings = new PlayerSettings("all", "22:00-09:00", false),
-            BirthGroup = command.BirthGroup,
             Address = command.Address,
             BirthYear = command.BirthYear,
             Wallet = PlayerWallet.Create(timeProvider.GetUtcNow()),

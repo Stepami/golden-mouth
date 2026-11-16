@@ -10,6 +10,6 @@ public sealed record PlayerResponse(
     IReadOnlyDictionary<SkillId, SkillResponse> Skills,
     PlayerSettingsResponse Settings,
     IReadOnlyDictionary<string, string> Experiments,
+    int BirthYear,
     bool HitOwnWorldMilestone = false,
-    string AgeBand = "",
     EnergyWalletResponse? EnergyWallet = null);

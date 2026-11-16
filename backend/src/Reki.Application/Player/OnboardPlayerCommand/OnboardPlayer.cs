@@ -5,7 +5,6 @@ namespace Reki.Application.Player.OnboardPlayerCommand;
 
 public sealed record OnboardPlayer(
     ExternalUserId ExternalUserId,
-    string BirthGroup,
     Address Address,
     string? ReferralCode,
     int BirthYear) : ICommand<PlayerProfile>;

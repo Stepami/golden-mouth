@@ -72,14 +72,12 @@ internal sealed partial class ApiExceptionHandler(
                 Type = "urn:reki:problem:content-rejected",
                 Detail = "Так не получится, попробуй по-другому.",
             },
-            CrisisDetectedException crisis => new ProblemDetails
+            CrisisDetectedException => new ProblemDetails
             {
                 Status = StatusCodes.Status422UnprocessableEntity,
                 Title = "Support is available",
                 Type = "urn:reki:problem:crisis",
-                Detail = crisis.IsTeen
-                    ? "Игра поставлена на паузу. Детский телефон доверия: 8-800-2000-122."
-                    : "Игра поставлена на паузу. Поговори с близким человеком или обратись к психологу.",
+                Detail = "Игра поставлена на паузу. Поговори с близким человеком или обратись к психологу.",
             },
             AiServiceUnavailableException => new ProblemDetails
             {

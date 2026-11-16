@@ -1,3 +1,4 @@
+import { ageBand as bandForAge } from '../app/ageBand'
 import type * as Wire from './generated/reki-api'
 import type * as Ui from './types'
 
@@ -16,15 +17,13 @@ export function world(value: Input<Wire.WorldResponse>): Ui.WorldDocument {
   }
 }
 export function player(value: Input<Wire.PlayerResponse>): Ui.PlayerDocument {
-  const band = value.ageBand
-  if (band && band !== '18+' && !['14-17', '18-24', '25-34', '35-44', '45+'].includes(band)) throw new Error('Unknown age band')
-  const ageBand = band === '14-17' || band === '18-24' || band === '25-34' || band === '35-44' || band === '45+' ? band : undefined
+  const ageBand = bandForAge(new Date().getUTCFullYear() - number(value.birthYear))
   const skill = (id: Ui.SkillId): Ui.Skill => {
     const item = value.skills[id]
     if (!item) throw new Error('Missing player skill')
     return { level: number(item.level), progress: number(item.progress) }
   }
-  return { ...value, energyWallet: value.energyWallet == null ? value.energyWallet : energyWallet(value.energyWallet), ageBand, energy: number(value.energy), streak: { ...value.streak, days: number(value.streak.days) }, skills: { brave: skill('brave'), humor: skill('humor'), topic: skill('topic') } }
+  return { ...value, birthYear: number(value.birthYear), energyWallet: value.energyWallet == null ? value.energyWallet : energyWallet(value.energyWallet), ageBand, energy: number(value.energy), streak: { ...value.streak, days: number(value.streak.days) }, skills: { brave: skill('brave'), humor: skill('humor'), topic: skill('topic') } }
 }
 export function energyWallet(value: Input<Wire.EnergyWalletResponse>): Wire.EnergyWalletResponse {
   return { ...value, amount: number(value.amount), cap: number(value.cap), regenSeconds: number(value.regenSeconds),

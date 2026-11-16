@@ -1832,8 +1832,6 @@ export interface BestCommentResponse {
     [key: string]: any;
 }
 
-export type BirthGroup = "14-17" | "18+";
-
 export interface ChallengeResponse {
     id: string;
     me: string;
@@ -2086,7 +2084,6 @@ export interface MergePlayersRequest {
 
 export interface OnboardingRequest {
     referralCode?: string | null;
-    birthGroup: BirthGroup;
     birthYear: number;
     address: OnboardingRequestAddress;
 
@@ -2108,8 +2105,8 @@ export interface PlayerResponse {
     skills: { [key: string]: SkillResponse; };
     settings: PlayerSettingsResponse;
     experiments: { [key: string]: string; };
+    birthYear: number;
     hitOwnWorldMilestone?: boolean;
-    ageBand?: string;
     energyWallet?: EnergyWalletResponse | null;
 
     [key: string]: any;

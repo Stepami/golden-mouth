@@ -10,16 +10,9 @@ namespace Reki.Api.Requests.Player;
 internal static partial class PlayerRequestMapper
 {
     public static OnboardPlayer ToOnboardPlayer(this OnboardingRequest source, ExternalUserId externalUserId) =>
-        new(externalUserId, source.BirthGroup.ToStorageValue(), source.Address, source.ReferralCode, source.BirthYear);
+        new(externalUserId, source.Address, source.ReferralCode, source.BirthYear);
 
     public static partial UpdateSettings ToUpdateSettings(this UpdateSettingsRequest source);
 
     public static ClaimPlusInterest ToClaimPlusInterest(this PlusInterestRequest? source) => new(source?.Interest ?? true);
-
-    private static string ToStorageValue(this BirthGroup source) => source switch
-    {
-        BirthGroup.Teen => "14-17",
-        BirthGroup.Adult => "18+",
-        _ => throw new ArgumentOutOfRangeException(nameof(source)),
-    };
 }
