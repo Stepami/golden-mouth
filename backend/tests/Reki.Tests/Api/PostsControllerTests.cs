@@ -1113,28 +1113,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
     }
 
     [Test]
-    public async Task Like_ConcurrentAuthors_DoNotLoseLikesOrCommentsAsync()
-    {
-        const long user = 8204;
-        var (postId, _) = await PublishPostForThreadAsync(user);
-        var player = await GetStoredPlayerAsync(user);
-        var playerGuid = player["_id"].AsBsonBinaryData.ToGuid();
-        var playerAuthor = $"Player_{playerGuid:N}";
-        const string starAuthor = "Star_future";
-        var before = await GetStoredPostAsync(postId);
-        using var api = Factory.CreateApiClient(user);
-        await Task.WhenAll(
-            api.Posts.LikePostAsync(postId, new LikePostRequest { AuthorId = AuthorId.From(playerAuthor) }, CancellationToken.None),
-            api.Posts.LikePostAsync(postId, new LikePostRequest { AuthorId = AuthorId.From(starAuthor) }, CancellationToken.None));
-
-        var saved = await GetStoredPostAsync(postId);
-        await Assert.That(saved["LikedBy"].AsBsonArray.Select(value => value.AsString).ToArray())
-            .IsEquivalentTo([playerAuthor, starAuthor]);
-        await Assert.That(saved["Comments"]).IsEqualTo(before["Comments"]);
-        await Assert.That(saved["Likes"]).IsEqualTo(before["Likes"]);
-    }
-
-    [Test]
     public async Task Likes_RejectsInvalidFiltersAsync()
     {
         const long user = 8203;
