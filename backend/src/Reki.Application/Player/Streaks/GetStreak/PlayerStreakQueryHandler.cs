@@ -23,8 +23,7 @@ internal sealed class PlayerStreakQueryHandler(
         var startedAt = timeProvider.GetUtcNow();
         if (streak is null)
         {
-            streak = PlayerStreak.New(query.PlayerId, startedAt);
-            await streaks.SaveAsync(streak, cancellationToken);
+            return PlayerStreak.New(query.PlayerId, startedAt);
         }
 
         var untilTomorrow = TimeSpan.FromDays(1) - startedAt.TimeOfDay - TimeSpan.FromTicks(1);

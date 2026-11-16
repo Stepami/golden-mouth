@@ -23,19 +23,20 @@ internal sealed class UpdateStreakCommandHandler(
             return Unit.Value;
         }
 
-        await unitOfWork.ExecuteAsync(
+        return await unitOfWork.ExecuteAsync(
             async token =>
             {
                 await streaks.SaveAsync(streak, token);
                 if (progress == PlayerStreakProgress.Stopped)
                 {
-                    await streaks.SaveAsync(PlayerStreak.New(command.PlayerId, now), token);
+                    var newStreak = PlayerStreak.New(command.PlayerId, now);
+                    newStreak.Progress(now);
+                    await streaks.SaveAsync(newStreak, token);
                 }
 
                 return Unit.Value;
             },
             _ => cache.Remove(CacheKeyPrefixes.PlayerStreak + command.PlayerId),
             cancellationToken);
-        return Unit.Value;
     }
 }

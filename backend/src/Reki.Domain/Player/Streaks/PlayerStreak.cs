@@ -18,13 +18,19 @@ public sealed class PlayerStreak(
     public bool IsActive { get; private set; } = isActive;
 
     public static PlayerStreak New(PlayerId playerId, DateTimeOffset startedAt) =>
-        new(StreakId.New(startedAt), playerId, startedAt, 1, true);
+        new(StreakId.New(startedAt), playerId, startedAt, 0, true);
 
     public PlayerStreakProgress Progress(DateTimeOffset now)
     {
+        if (Count == 0)
+        {
+            Count++;
+            return PlayerStreakProgress.Started;
+        }
+
         var lastStreakDay = StartedAt.UtcDateTime.Date.AddDays(Count - 1);
         var days = (now.UtcDateTime.Date - lastStreakDay).Days;
-        if (!IsActive || days <= 0)
+        if (days <= 0)
         {
             return PlayerStreakProgress.None;
         }
