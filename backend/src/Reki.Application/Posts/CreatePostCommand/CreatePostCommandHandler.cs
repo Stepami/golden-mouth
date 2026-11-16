@@ -25,7 +25,6 @@ internal sealed class CreatePostCommandHandler(
     IWorldRepository worlds,
     IWorldPlayerCache worldCache,
     IPostRepository posts,
-    IInvitationService invitations,
     IInvitationRepository invitationRepository,
     IOptionsMonitor<GameBalance> balance,
     PostProgressionCalculator progressionCalculator,
@@ -115,14 +114,7 @@ internal sealed class CreatePostCommandHandler(
                 await posts.InsertPostAsync(post, token);
                 return Unit.Value;
             },
-            _ =>
-            {
-                worldCache.UpdateWorld(updatedWorld);
-                if (updatedInvite is not null)
-                {
-                    invitations.ClearPlayer(player.Id);
-                }
-            },
+            _ => worldCache.UpdateWorld(updatedWorld),
             cancellationToken);
         telemetry.TrackWorldAudience(updatedWorld);
         TrackProgression(previousSkillLevels, previousAchievements, updated, updatedWorld, post, progression.Score, telemetry);

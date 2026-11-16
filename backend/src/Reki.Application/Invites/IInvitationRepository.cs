@@ -11,5 +11,5 @@ public interface IInvitationRepository
 
     ValueTask UseInviteBonusAsync(Invitation invite, CancellationToken cancellationToken);
 
-    ValueTask<IReadOnlyList<PlayerId>> DeleteInvitesAsync(PlayerId playerId, CancellationToken cancellationToken);
+    ValueTask DeleteInvitesAsync(PlayerId playerId, CancellationToken cancellationToken);
 }

@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
-using Reki.Application.Invites;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.AI.Serializers;
@@ -33,7 +32,6 @@ public static class DependencyInjection
         });
         services.AddSingleton<PlayerSafetyGuard>();
         services.AddSingleton<IWorldPlayerCache, WorldPlayerCache>();
-        services.AddSingleton<IInvitationService, InvitationService>();
         services.AddSingleton<StarTurnPolicy>();
         services.AddSingleton<PostProgressionCalculator>();
         services.AddSingleton<PostTextAnalysis>();

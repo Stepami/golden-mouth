@@ -34,12 +34,9 @@ internal sealed class MongoInvitationRepository(
             cancellationToken: cancellationToken);
     }
 
-    public async ValueTask<IReadOnlyList<PlayerId>> DeleteInvitesAsync(PlayerId playerId, CancellationToken cancellationToken)
-    {
-        var filter = Builders<Invitation>.Filter.Where(item => item.InviterId == playerId || item.InviteeId == playerId);
-        var invitees = await _invites.Find(sessionProvider.Session, filter)
-            .Project(item => item.InviteeId).ToListAsync(cancellationToken);
-        await _invites.DeleteManyAsync(sessionProvider.Session, filter, cancellationToken: cancellationToken);
-        return invitees;
-    }
+    public async ValueTask DeleteInvitesAsync(PlayerId playerId, CancellationToken cancellationToken) =>
+        await _invites.DeleteManyAsync(
+            sessionProvider.Session,
+            item => item.InviterId == playerId || item.InviteeId == playerId,
+            cancellationToken: cancellationToken);
 }

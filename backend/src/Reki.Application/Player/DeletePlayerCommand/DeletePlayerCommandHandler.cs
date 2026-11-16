@@ -16,7 +16,6 @@ internal sealed class DeletePlayerCommandHandler(
     IWorldRepository worlds,
     IWorldPlayerCache worldCache,
     IPostRepository posts,
-    IInvitationService invitations,
     IInvitationRepository invitationRepository,
     INotificationRepository notifications,
     ProductTelemetry telemetry)
@@ -32,20 +31,12 @@ internal sealed class DeletePlayerCommandHandler(
             {
                 await posts.DeletePostsAsync(playerId, [], token);
                 await worlds.DeleteWorldsAsync(playerId, [], token);
-                var affected = await invitationRepository.DeleteInvitesAsync(playerId, token);
+                await invitationRepository.DeleteInvitesAsync(playerId, token);
                 await notifications.DeleteForPlayerAsync(playerId, token);
                 await players.DeletePlayerAsync(playerId, token);
-                return affected;
+                return Unit.Value;
             },
-            invitees =>
-            {
-                worldCache.ClearPlayer(playerId);
-                invitations.ClearPlayer(playerId);
-                foreach (var invitee in invitees)
-                {
-                    invitations.ClearPlayer(invitee);
-                }
-            },
+            _ => worldCache.ClearPlayer(playerId),
             cancellationToken);
         await using var scope = scopeFactory.CreateAsyncScope();
         await scope.ServiceProvider.GetRequiredService<IAuthSessionService>()
