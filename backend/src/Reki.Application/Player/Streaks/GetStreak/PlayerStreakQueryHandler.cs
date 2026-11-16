@@ -22,7 +22,7 @@ internal sealed class PlayerStreakQueryHandler(IPlayerStreakRepository streaks, 
             await streaks.SaveAsync(streak, cancellationToken);
         }
 
-        var response = new PlayerStreakResponse(streak.Id.Value, streak.StartedAt, streak.Count, streak.IsActive);
+        var response = streak.ToPlayerStreakResponse();
         cache.Set(key, response, TimeSpan.FromMinutes(1));
         return response;
     }

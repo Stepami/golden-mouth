@@ -1,3 +1,5 @@
+using Reki.Domain.Player.Streaks;
+
 namespace Reki.Application.Player.Responses;
 
-public sealed record PlayerStreakResponse(Guid Id, DateTimeOffset StartedAt, int Count, bool IsActive);
+public sealed record PlayerStreakResponse(StreakId Id, DateTimeOffset StartedAt, int Count, bool IsActive);

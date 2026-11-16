@@ -1,5 +1,6 @@
 using Reki.Application.Player.Responses;
 using Reki.Domain.Player;
+using Reki.Domain.Player.Streaks;
 using Riok.Mapperly.Abstractions;
 
 namespace Reki.Application.Player;
@@ -34,6 +35,9 @@ public static partial class PlayerResponseMapper
             wallet.ExchangeUnavailableReason));
 
     public static EnergyWalletResponse ToEnergyWalletResponse(this PlayerProfile player) => player.Wallet.ToResponse();
+
+    [MapperIgnoreSource(nameof(PlayerStreak.PlayerId))]
+    public static partial PlayerStreakResponse ToPlayerStreakResponse(this PlayerStreak streak);
 
     private static partial IReadOnlyDictionary<SkillId, SkillResponse> MapSkills(IReadOnlyDictionary<SkillId, SkillProgress> source);
 
