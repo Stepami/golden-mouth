@@ -12,8 +12,8 @@ internal sealed class DeleteWorldCommandHandler(
         await unitOfWork.ExecuteAsync(
             async token =>
             {
-                await posts.DeletePostsAsync([command.WorldId], token);
-                await worlds.DeleteWorldsAsync([command.WorldId], token);
+                await posts.DeletePostsAsync(command.PlayerId, [command.WorldId], token);
+                await worlds.DeleteWorldsAsync(command.PlayerId, [command.WorldId], token);
                 return Unit.Value;
             },
             cancellationToken);

@@ -42,10 +42,20 @@ internal sealed class MongoWorldRepository(
         return await _worlds.Find(item => item.Player.PlayerId == playerId).ToListAsync(cancellationToken);
     }
 
-    public async ValueTask<IReadOnlyList<WorldId>> GetWorldIdsAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await _worlds.Find(sessionProvider.Session, item => item.Player.PlayerId == playerId)
-            .Project(item => item.Id).ToListAsync(cancellationToken);
+    public async ValueTask DeleteWorldsAsync(
+        PlayerId playerId,
+        IReadOnlyList<WorldId> worldIds,
+        CancellationToken cancellationToken)
+    {
+        var filter = Builders<World>.Filter.Eq(item => item.Player.PlayerId, playerId);
+        if (worldIds.Count > 0)
+        {
+            filter &= Builders<World>.Filter.In(item => item.Id, worldIds);
+        }
 
-    public async ValueTask DeleteWorldsAsync(IReadOnlyList<WorldId> worldIds, CancellationToken cancellationToken) =>
-        await _worlds.DeleteManyAsync(sessionProvider.Session, Builders<World>.Filter.In(item => item.Id, worldIds), cancellationToken: cancellationToken);
+        await _worlds.DeleteManyAsync(
+            sessionProvider.Session,
+            filter,
+            cancellationToken: cancellationToken);
+    }
 }

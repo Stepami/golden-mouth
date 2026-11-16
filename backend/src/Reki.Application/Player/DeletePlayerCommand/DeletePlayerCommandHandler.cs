@@ -28,9 +28,8 @@ internal sealed class DeletePlayerCommandHandler(
         await unitOfWork.ExecuteAsync(
             async token =>
             {
-                var worldIds = await worlds.GetWorldIdsAsync(playerId, token);
-                await posts.DeletePostsAsync(worldIds, token);
-                await worlds.DeleteWorldsAsync(worldIds, token);
+                await posts.DeletePostsAsync(playerId, [], token);
+                await worlds.DeleteWorldsAsync(playerId, [], token);
                 await invitations.DeleteInvitesAsync(playerId, token);
                 await notifications.DeleteForPlayerAsync(playerId, token);
                 await players.DeletePlayerAsync(playerId, token);

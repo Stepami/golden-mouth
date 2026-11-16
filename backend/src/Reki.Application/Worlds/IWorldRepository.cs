@@ -16,9 +16,10 @@ public interface IWorldRepository
 
     ValueTask<IReadOnlyList<World>> GetWorldsAsync(PlayerId playerId, CancellationToken cancellationToken);
 
-    ValueTask<IReadOnlyList<WorldId>> GetWorldIdsAsync(PlayerId playerId, CancellationToken cancellationToken);
-
     ValueTask ReplaceWorldAsync(World world, CancellationToken cancellationToken);
 
-    ValueTask DeleteWorldsAsync(IReadOnlyList<WorldId> worldIds, CancellationToken cancellationToken);
+    ValueTask DeleteWorldsAsync(
+        PlayerId playerId,
+        IReadOnlyList<WorldId> worldIds,
+        CancellationToken cancellationToken);
 }
