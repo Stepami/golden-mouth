@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using Microsoft.Extensions.Caching.Memory;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
@@ -16,7 +15,7 @@ internal sealed class WorldPlayerCache(IMemoryCache cache, IWorldRepository worl
             cache.Set(key, saved, TimeSpan.FromHours(1));
         }
 
-        return new ReadOnlyDictionary<WorldId, World>(saved);
+        return saved.AsReadOnly();
     }
 
     public void UpdateWorld(World world)
