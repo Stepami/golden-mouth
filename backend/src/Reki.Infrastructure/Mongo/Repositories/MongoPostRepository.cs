@@ -149,8 +149,7 @@ internal sealed class MongoPostRepository(
         IReadOnlyCollection<WorldId> worldIds,
         CancellationToken cancellationToken)
     {
-        var authorId = playerId.ToAuthorId();
-        var filter = Builders<GamePost>.Filter.Eq(item => item.AuthorId, authorId);
+        var filter = Builders<GamePost>.Filter.Eq(item => item.OwnerId, playerId);
         if (worldIds.Count > 0)
         {
             filter &= Builders<GamePost>.Filter.In(item => item.WorldId, worldIds);

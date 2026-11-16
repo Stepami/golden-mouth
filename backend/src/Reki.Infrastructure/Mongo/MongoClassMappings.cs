@@ -153,6 +153,7 @@ internal static class MongoClassMappings
 
         RegisterWithMongoId<GamePost, PostId>(item => item.Id, true, classMap =>
         {
+            classMap.MapMember(item => item.OwnerId).SetDefaultValue(PlayerId.Empty);
             classMap.MapMember(item => item.LikedBy).SetDefaultValue(Array.Empty<AuthorId>());
             classMap.MapMember(item => item.Comments).SetDefaultValue(Array.Empty<GameComment>());
             classMap.MapMember(item => item.Likes).SetDefaultValue(0L);
@@ -164,6 +165,7 @@ internal static class MongoClassMappings
                     item.Id,
                     item.AuthorId,
                     item.WorldId,
+                    item.OwnerId,
                     item.Text,
                     item.Views,
                     item.Likes,

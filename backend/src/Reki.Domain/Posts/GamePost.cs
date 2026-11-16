@@ -1,3 +1,4 @@
+using Reki.Domain.Player;
 using Reki.Domain.Worlds;
 
 namespace Reki.Domain.Posts;
@@ -11,6 +12,7 @@ public sealed class GamePost
         PostId id,
         AuthorId authorId,
         WorldId worldId,
+        PlayerId ownerId,
         string text,
         long views,
         long likes,
@@ -30,6 +32,7 @@ public sealed class GamePost
         Id = id;
         AuthorId = authorId;
         WorldId = worldId;
+        OwnerId = ownerId;
         Text = text;
         Views = views;
         Likes = likes;
@@ -54,6 +57,8 @@ public sealed class GamePost
     public AuthorId AuthorId { get; private set; }
 
     public WorldId WorldId { get; private set; }
+
+    public PlayerId OwnerId { get; private set; }
 
     public string Text { get; private set; }
 

@@ -56,6 +56,7 @@ internal sealed class CreatePostCommandHandler(
             PostId.New(now),
             player.Id.ToAuthorId(),
             world.Id,
+            player.Id,
             command.Text,
             0,
             0,
