@@ -6,9 +6,11 @@ namespace Reki.Application.Worlds.DeleteWorldCommand;
 internal sealed class DeleteWorldCommandHandler(
     IUnitOfWork unitOfWork,
     IWorldRepository worlds,
+    IWorldPlayerCache worldCache,
     IPostRepository posts) : ICommandHandler<DeleteWorld>
 {
-    public async ValueTask<Unit> Handle(DeleteWorld command, CancellationToken cancellationToken) =>
+    public async ValueTask<Unit> Handle(DeleteWorld command, CancellationToken cancellationToken)
+    {
         await unitOfWork.ExecuteAsync(
             async token =>
             {
@@ -17,4 +19,7 @@ internal sealed class DeleteWorldCommandHandler(
                 return Unit.Value;
             },
             cancellationToken);
+        worldCache.ClearPlayer(command.PlayerId);
+        return Unit.Value;
+    }
 }

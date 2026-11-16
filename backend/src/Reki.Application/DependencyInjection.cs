@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
+using Reki.Application.Invites;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.AI.Serializers;
@@ -9,6 +10,7 @@ using Reki.Application.Posts.CreatePostCommand.Progression.Score;
 using Reki.Application.Posts.CreatePostCommand.Progression.Score.FlopTests;
 using Reki.Application.Posts.ML;
 using Reki.Application.Telemetry;
+using Reki.Application.Worlds;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
@@ -30,6 +32,8 @@ public static class DependencyInjection
             options.ServiceLifetime = ServiceLifetime.Singleton;
         });
         services.AddSingleton<PlayerSafetyGuard>();
+        services.AddSingleton<IWorldPlayerCache, WorldPlayerCache>();
+        services.AddSingleton<IInvitationService, InvitationService>();
         services.AddSingleton<StarTurnPolicy>();
         services.AddSingleton<PostProgressionCalculator>();
         services.AddSingleton<PostTextAnalysis>();

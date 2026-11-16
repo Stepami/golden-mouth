@@ -9,6 +9,7 @@ using Reki.Application.Balance;
 using Reki.Application.Posts.ML;
 using Reki.Application.Posts.Responses.Reply;
 using Reki.Application.Posts.Responses.Reply.Generation;
+using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -839,6 +840,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             .Set("Player.Avatar", "new-avatar")
             .Set("Player.Role", "new-role")
             .Set(item => item.Stars, world.Stars.Select(star => star.Id.Value == selected ? star with { Name = "Новое имя звезды", AvatarSeed = "star-avatar", Role = "star-role" } : star).ToArray()));
+        Factory.Services.GetRequiredService<IWorldPlayerCache>().ClearPlayer(world.Player.PlayerId);
         var posts = Database.GetCollection<GamePost>("posts");
         var post = await posts.Find(item => item.Id == PostId.From(postId)).SingleAsync();
         await posts.UpdateOneAsync(item => item.Id == post.Id, Builders<GamePost>.Update.Set(item => item.AuthorId, StarId.From(selected).ToAuthorId()));

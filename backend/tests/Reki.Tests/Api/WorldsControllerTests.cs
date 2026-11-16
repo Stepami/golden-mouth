@@ -1,8 +1,10 @@
 using System.Net;
+using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Driver;
 using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Worlds;
+using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
@@ -239,6 +241,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
                 Builders<World>.Update
                     .Set(world => world.Player.Subscribers, 730)
                     .Set(world => world.Player.Achievements, original.Player.Achievements.Select(item => item with { IsOpen = true }).ToArray()));
+            Factory.Services.GetRequiredService<IWorldPlayerCache>().ClearPlayer(original.Player.PlayerId);
             var progressed = await collection.Find(world => world.Id == id).SingleAsync();
             var removed = progressed.Stars[0];
             var request = definition with
@@ -298,6 +301,7 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
         await Database.GetCollection<World>("worlds").UpdateOneAsync(
             world => world.Id == id,
             Builders<World>.Update.Set(world => world.Player.Subscribers, 499));
+        Factory.Services.GetRequiredService<IWorldPlayerCache>().ClearPlayer(player.Id);
         await Assert.That((await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).HitOwnWorldMilestone).IsFalse();
 
         var definition = (await CreateWorldDefinitionAsync(api)) with { Difficulty = WorldDifficulty.Hard };

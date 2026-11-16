@@ -20,7 +20,7 @@ internal sealed class LazyRekiContext : IRekiContext
     public LazyRekiContext(
         IHttpContextAccessor httpContextAccessor,
         IPlayerRepository playerRepository,
-        IWorldRepository worldRepository)
+        IWorldPlayerCache worldCache)
     {
         _httpContextAccessor = httpContextAccessor;
         _player = new AsyncLazy<PlayerProfile>(
@@ -31,7 +31,7 @@ internal sealed class LazyRekiContext : IRekiContext
         _worlds = new AsyncLazy<IReadOnlyDictionary<WorldId, World>>(
             async ct =>
             {
-                var worlds = await worldRepository.GetWorldsAsync(PlayerId, ct);
+                var worlds = await worldCache.GetWorldsAsync(PlayerId, ct);
                 return worlds.ToFrozenDictionary(world => world.Id);
             },
             resettable: true);

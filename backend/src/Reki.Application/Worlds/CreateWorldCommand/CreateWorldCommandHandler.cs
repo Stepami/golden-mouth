@@ -11,6 +11,7 @@ namespace Reki.Application.Worlds.CreateWorldCommand;
 
 internal sealed class CreateWorldCommandHandler(
     IWorldRepository worldRepository,
+    IWorldPlayerCache worldCache,
     IRekiContextAccessor rekiContextAccessor,
     IOptionsMonitor<GameBalance> balance,
     ProductTelemetry telemetry,
@@ -34,6 +35,7 @@ internal sealed class CreateWorldCommandHandler(
         var currentBalance = balance.CurrentValue;
         var world = source.Instantiate(player.Id, currentBalance.Growth.StartingSubscribers);
         await worldRepository.InsertWorldAsync(world, cancellationToken);
+        worldCache.UpdateWorld(world);
         telemetry.TrackPlayer(player, "world_created", new Dictionary<string, string> { ["template_id"] = world.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = world.Difficulty.ToString().ToLowerInvariant() }, world.Id);
         telemetry.TrackWorldAudience(world);
         await starVectorStore.WarmUpAsync(world);

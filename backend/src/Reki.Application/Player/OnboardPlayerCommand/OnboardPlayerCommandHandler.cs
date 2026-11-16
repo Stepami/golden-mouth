@@ -12,6 +12,7 @@ namespace Reki.Application.Player.OnboardPlayerCommand;
 
 internal sealed class OnboardPlayerCommandHandler(
     IUnitOfWork unitOfWork,
+    IInvitationService invitations,
     IInvitationRepository invitationRepository,
     IPlayerRepository playerRepository,
     ISender sender,
@@ -68,6 +69,7 @@ internal sealed class OnboardPlayerCommandHandler(
                 return true;
             },
             cancellationToken);
+        invitations.ClearPlayer(completed.Id);
 
         await sender.Send(new UpdateLastSeenAt(completed), cancellationToken);
 

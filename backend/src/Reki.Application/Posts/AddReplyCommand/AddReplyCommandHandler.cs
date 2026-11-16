@@ -20,6 +20,7 @@ internal sealed class AddReplyCommandHandler(
     IPostRepository posts,
     IPlayerRepository players,
     IWorldRepository worlds,
+    IWorldPlayerCache worldCache,
     IOptionsMonitor<GameBalance> balance,
     IRekiContextAccessor rekiContextAccessor,
     PlayerSafetyGuard safety,
@@ -82,6 +83,7 @@ internal sealed class AddReplyCommandHandler(
                     return Unit.Value;
                 },
                 cancellationToken);
+            worldCache.UpdateWorld(world);
 
             telemetry.TrackPlayer(
                 player,

@@ -23,8 +23,10 @@ internal sealed class CreatePostCommandHandler(
     IUnitOfWork unitOfWork,
     IPlayerRepository players,
     IWorldRepository worlds,
+    IWorldPlayerCache worldCache,
     IPostRepository posts,
-    IInvitationRepository invitations,
+    IInvitationService invitations,
+    IInvitationRepository invitationRepository,
     IOptionsMonitor<GameBalance> balance,
     PostProgressionCalculator progressionCalculator,
     IRekiContextAccessor contextAccessor,
@@ -90,7 +92,7 @@ internal sealed class CreatePostCommandHandler(
             now,
             hitOwnMilestone);
 
-        var invite = await invitations.GetPendingInviteAsync(player.Id, cancellationToken);
+        var invite = await invitationRepository.GetPendingInviteAsync(player.Id, cancellationToken);
         var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
         updated.ReplenishCrystals(updatedInvite?.BonusAmount ?? 0);
 
@@ -107,13 +109,19 @@ internal sealed class CreatePostCommandHandler(
                         await players.ReplacePlayerAsync(inviter.AwardReferral(), token);
                     }
 
-                    await invitations.UseInviteBonusAsync(updatedInvite, token);
+                    await invitationRepository.UseInviteBonusAsync(updatedInvite, token);
                 }
 
                 await posts.InsertPostAsync(post, token);
                 return Unit.Value;
             },
             cancellationToken);
+        worldCache.UpdateWorld(updatedWorld);
+        if (updatedInvite is not null)
+        {
+            invitations.ClearPlayer(player.Id);
+        }
+
         telemetry.TrackWorldAudience(updatedWorld);
         TrackProgression(previousSkillLevels, previousAchievements, updated, updatedWorld, post, progression.Score, telemetry);
         await feedScheduler.ScheduleFeedAsync(new ScheduleFromPostRequest(player.Id, world.Id, post.Id));
