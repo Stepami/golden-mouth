@@ -85,9 +85,7 @@ public sealed class GamePost
 
     public PostId? RepostId { get; private set; }
 
-    public bool IsLikedBy(AuthorId authorId) => _likedBy.Contains(authorId);
-
-    public bool ToggleLike(AuthorId authorId)
+    public void ToggleLike(AuthorId authorId)
     {
         var liked = !_likedBy.Remove(authorId);
         if (liked)
@@ -96,7 +94,6 @@ public sealed class GamePost
         }
 
         Version++;
-        return liked;
     }
 
     public GameComment? FindRequest(string requestId) =>

@@ -34,10 +34,16 @@ internal sealed class UpdateLastSeenAtCommandHandler(
                 }
 
                 var sendAt = player.LastSeenAt.AddDays(1);
-                await notifications.UpsertPendingAsync(
-                    Notification.New(player.Id, sendAt),
-                    player.LastSeenAt - oldLastSeenAt >= TimeSpan.FromHours(2),
-                    token);
+                var pending = await notifications.GetPendingAsync(player.Id, token);
+                if (pending is null)
+                {
+                    await notifications.SaveAsync(Notification.New(player.Id, sendAt), token);
+                }
+                else if (player.LastSeenAt - oldLastSeenAt >= TimeSpan.FromHours(2))
+                {
+                    pending.Reschedule(sendAt);
+                    await notifications.SaveAsync(pending, token);
+                }
 
                 return Unit.Value;
             },

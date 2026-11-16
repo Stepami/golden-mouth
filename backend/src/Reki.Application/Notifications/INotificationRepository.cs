@@ -5,7 +5,7 @@ namespace Reki.Application.Notifications;
 
 public interface INotificationRepository
 {
-    ValueTask UpsertPendingAsync(Notification notification, bool reschedule, CancellationToken cancellationToken);
+    ValueTask<Notification?> GetPendingAsync(PlayerId playerId, CancellationToken cancellationToken);
 
     IAsyncEnumerable<Notification> GetDueAsync(CancellationToken cancellationToken);
 
