@@ -122,7 +122,10 @@ async function generateStar(postId: string, replyWorldId: string, authorId: stri
 const playerRequests = new Map<string, Promise<Player>>();
 async function loadPlayer(worldId?: string): Promise<Player | undefined> {
     const generation = sessionGeneration();
-    const player = map.player(await data(sdk.player.getCurrentPlayer()));
+    const profile = await data(sdk.player.getCurrentPlayer());
+    const streak = await data(sdk.player.getPlayerStreak());
+    assertSession(generation);
+    const player = map.player(profile, streak ?? null);
     if (sessionIdentity?.id !== player.id)
         ownedWorldSnapshot = undefined;
     sessionIdentity = player;
@@ -203,8 +206,12 @@ export const api = {
     onboarding: async (body: Wire.OnboardingRequest): Promise<PlayerDocument> => {
         if (sessionIdentity)
             throw new Error('Onboarding has already been completed');
-        sessionIdentity =
-            map.player(await registerPlayer(body));
+        const generation = sessionGeneration();
+        const profile = await registerPlayer(body);
+        assertSession(generation);
+        const streak = await data(sdk.player.getPlayerStreak());
+        assertSession(generation);
+        sessionIdentity = map.player(profile, streak ?? null);
         setTelemetryPlayerAvailable(true);
         return sessionIdentity;
     },

@@ -344,6 +344,9 @@ exec(open(os.path.join(D, 'journey_v34.py'), encoding='utf-8').read())  # #268 p
 exec(open(os.path.join(D, 'journey_v35.py'), encoding='utf-8').read())  # #291 Web Push
 exec(open(os.path.join(D, 'journey_v36.py'), encoding='utf-8').read())  # #291 compact browser offers
 exec(open(os.path.join(D, 'journey_v37.py'), encoding='utf-8').read())  # #297 publication result
+exec(open(os.path.join(D, 'journey_v38.py'), encoding='utf-8').read())  # streak history
+exec(open(os.path.join(D, 'journey_v39.py'), encoding='utf-8').read())  # streak progress
+exec(open(os.path.join(D, 'journey_v40.py'), encoding='utf-8').read())  # streak years
 
 CH = os.environ.get('CHROME_BIN') or shutil.which('google-chrome') or shutil.which('chrome')
 if not CH and os.name == 'nt':

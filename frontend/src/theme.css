@@ -57,6 +57,14 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
 .brand { font-weight: 800; font-size: 20px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .pill { margin-left: auto; background: var(--card2); border-radius: 20px; padding: 6px 12px; font-size: 13px; color: var(--soft); white-space: nowrap; }
 .card { background: var(--card); border-radius: 18px; padding: 14px; }
+.streak-months { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; }
+.streak-month-cell { font-size: 12px; }
+.small.streak-month-label { font-size: clamp(8px, 2.4vw, 10px); line-height: 1; white-space: nowrap; }
+@media (max-width: 359px) {
+  .streak-months { grid-template-columns: repeat(6, minmax(0, 1fr)); row-gap: 8px; }
+  .streak-month-cell { font-size: 14px; }
+  .small.streak-month-label { font-size: 12px; }
+}
 .muted { color: var(--muted); } .muted2 { color: var(--muted2); } .small { font-size: 13px; } .tiny { font-size: 11px; }
 .up { color: var(--up); } .down { color: var(--accent); }
 .btn { border: none; border-radius: 14px; padding: 14px; font-weight: 700; font-size: 16px; width: 100%; color: #fff; background: var(--grad); }

@@ -16,14 +16,15 @@ export function world(value: Input<Wire.WorldResponse>): Ui.WorldDocument {
     stars: value.stars.map(star => ({ ...star, trait: number(star.trait), channelSubscribers: star.channelSubscribers == null ? star.channelSubscribers : number(star.channelSubscribers) })),
   }
 }
-export function player(value: Input<Wire.PlayerResponse>): Ui.PlayerDocument {
+export function player(value: Input<Wire.PlayerResponse>, streak: { count: number | string | bigint; isActive: boolean } | null): Ui.PlayerDocument {
   const ageBand = bandForAge(new Date().getUTCFullYear() - number(value.birthYear))
+  const streakDays = streak?.isActive ? number(streak.count) : 0
   const skill = (id: Ui.SkillId): Ui.Skill => {
     const item = value.skills[id]
     if (!item) throw new Error('Missing player skill')
     return { level: number(item.level), progress: number(item.progress) }
   }
-  return { ...value, birthYear: number(value.birthYear), energyWallet: value.energyWallet == null ? value.energyWallet : energyWallet(value.energyWallet), ageBand, energy: number(value.energy), streak: { ...value.streak, days: number(value.streak.days) }, skills: { brave: skill('brave'), humor: skill('humor'), topic: skill('topic') } }
+  return { ...value, birthYear: number(value.birthYear), energyWallet: value.energyWallet == null ? value.energyWallet : energyWallet(value.energyWallet), ageBand, energy: number(value.energy), streak: { days: streakDays, week: Array.from({ length: 7 }, (_, day) => day < streakDays), nextReward: 'ещё день — и бонус' }, skills: { brave: skill('brave'), humor: skill('humor'), topic: skill('topic') } }
 }
 export function energyWallet(value: Input<Wire.EnergyWalletResponse>): Wire.EnergyWalletResponse {
   return { ...value, amount: number(value.amount), cap: number(value.cap), regenSeconds: number(value.regenSeconds),

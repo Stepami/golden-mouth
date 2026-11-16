@@ -20,7 +20,6 @@ public sealed class PlayerProfile
         bool hitOwnWorldMilestone = false,
         DateTimeOffset lastSeenAt = default,
         bool plusInterestClaimed = false,
-        int streakDays = 0,
         DateTimeOffset? pausedAtUtc = null,
         DateTimeOffset? hateDisabledUntilUtc = null,
         int version = 0,
@@ -38,7 +37,6 @@ public sealed class PlayerProfile
         HitOwnWorldMilestone = hitOwnWorldMilestone;
         LastSeenAt = lastSeenAt;
         PlusInterestClaimed = plusInterestClaimed;
-        StreakDays = streakDays;
         PausedAtUtc = pausedAtUtc;
         HateDisabledUntilUtc = hateDisabledUntilUtc;
         Version = version;
@@ -60,8 +58,6 @@ public sealed class PlayerProfile
     public DateTimeOffset LastSeenAt { get; private set; }
 
     public bool PlusInterestClaimed { get; private set; }
-
-    public int StreakDays { get; private set; }
 
     public IReadOnlyDictionary<SkillId, SkillProgress> Skills { get; }
 

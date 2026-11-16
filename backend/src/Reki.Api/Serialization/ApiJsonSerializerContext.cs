@@ -25,6 +25,7 @@ using Reki.Application.Telemetry;
 using Reki.Application.Worlds.Responses;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
+using Reki.Domain.Player.Streaks;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
@@ -61,12 +62,14 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(VkUserInfoResponse))]
 [JsonSerializable(typeof(YandexUserInfoResponse))]
 [JsonSerializable(typeof(PlayerId))]
+[JsonSerializable(typeof(StreakId))]
 [JsonSerializable(typeof(PostId))]
 [JsonSerializable(typeof(CommentId))]
 [JsonSerializable(typeof(InvitationId))]
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]
 [JsonSerializable(typeof(PlayerResponse))]
+[JsonSerializable(typeof(PlayerStreakResponse))]
 [JsonSerializable(typeof(ReferralResponse))]
 [JsonSerializable(typeof(InvitationResponse))]
 [JsonSerializable(typeof(OnboardingRequest))]

@@ -25,7 +25,7 @@ def run(base, v, r, days=30):
         if r.random() < min(.97, p):
             played += 1; streak = streak + 1 if skip == 0 else 1; skip = 0; best = max(best, streak)
         else:
-            skip += 1                                                            # серия на паузе, не сгорает: при возврате продолжается
+            skip += 1                                                            # при возвращении начинается новая серия
             if skip >= 7 and churn_day is None: churn_day = d
     return played, best, churn_day
 for name, base in TYPES.items():

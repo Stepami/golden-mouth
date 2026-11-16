@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.OpenApi;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Domain.Player;
+using Reki.Domain.Player.Streaks;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
@@ -16,6 +17,7 @@ namespace Reki.Api;
 [OpenApiMarker<StarId>]
 [OpenApiMarker<SessionId>]
 [OpenApiMarker<PlayerId>]
+[OpenApiMarker<StreakId>]
 [OpenApiMarker<PostId>]
 [OpenApiMarker<CommentId>]
 [OpenApiMarker<AuthorId>]
