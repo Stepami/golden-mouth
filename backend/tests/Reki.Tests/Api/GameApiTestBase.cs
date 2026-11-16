@@ -119,7 +119,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         var player = await api.RegisterAsync(
             new OnboardingRequest
             {
-                BirthGroup = BirthGroup.Teen,
+                BirthYear = 1990,
                 Address = Address.Nick,
                 ReferralCode = referralCode,
             },

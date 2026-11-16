@@ -111,7 +111,6 @@ namespace Reki.Api.Serialization;
         typeof(JsonStringEnumConverter<AddressType>),
         typeof(CamelCaseEnumConverter<WorldDrama>),
         typeof(CamelCaseEnumConverter<WorldDifficulty>),
-        typeof(CamelCaseEnumConverter<BirthGroup>),
         typeof(CamelCaseEnumConverter<FeedItemKind>),
         typeof(CamelCaseEnumConverter<DirectMessageAuthor>),
         typeof(CamelCaseEnumConverter<ReplyGenerationStatus>),

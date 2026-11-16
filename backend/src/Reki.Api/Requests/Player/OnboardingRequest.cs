@@ -8,18 +8,16 @@ public sealed record OnboardingRequest : IValidatableObject
     [MaxLength(64)]
     public string? ReferralCode { get; init; }
 
-    public required BirthGroup BirthGroup { get; init; }
-
-    [RegularExpression("^(14-17|18-24|25-34|35-44|45\\+)$")]
-    public string? AgeBand { get; init; }
+    public required int BirthYear { get; init; }
 
     public required Address Address { get; init; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (AgeBand is not null && ((AgeBand == "14-17") != (BirthGroup == BirthGroup.Teen)))
+        var currentYear = validationContext.GetRequiredService<TimeProvider>().GetUtcNow().Year;
+        if (BirthYear > currentYear - 18)
         {
-            yield return new ValidationResult("Age band must match birth group.", [nameof(AgeBand)]);
+            yield return new ValidationResult("New accounts require age 18 or older.", [nameof(BirthYear)]);
         }
     }
 }

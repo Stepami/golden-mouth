@@ -6,8 +6,6 @@ public sealed record PlayerProfile
 
     public required IReadOnlyList<ExternalUserId> ExternalUserIds { get; init; }
 
-    public required string BirthGroup { get; init; }
-
     public required Address Address { get; init; }
 
     public bool HitOwnWorldMilestone { get; init; }
@@ -30,7 +28,7 @@ public sealed record PlayerProfile
 
     public bool PlusNotifyRequested { get; init; }
 
-    public string? AgeBand { get; init; }
+    public required int BirthYear { get; init; }
 
     public required PlayerSettings Settings { get; init; }
 

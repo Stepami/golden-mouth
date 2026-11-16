@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
@@ -23,24 +24,25 @@ public abstract partial class NotificationSender(
             // Only the routing tag belongs in the scope; event data comes from the message template.
             using var scope = logger.BeginScope(new Dictionary<string, object?> { ["reki.stream"] = "product" });
             LogSent(
-                notification.PlayerId.Value.ToString("N"),
-                notification.Id.Value.ToString("N"),
-                channelType.ToString().ToLowerInvariant(),
-                timeProvider.GetUtcNow().ToUnixTimeMilliseconds(),
                 "notification_sent",
-                "delivery");
+                notification.PlayerId.Value,
+                notification.Id.Value,
+                channelType.ToString().ToLowerInvariant(),
+                "delivery",
+                timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
         }
         catch (Exception error)
         {
-            LogSendError(error, notification.PlayerId.Value.ToString("N"), notification.Id.Value.ToString("N"), channelType);
+            LogSendError(error, notification.PlayerId.Value, notification.Id.Value, channelType);
         }
     }
 
     protected abstract Task SendInternalAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Notification accepted by provider: {event_name}, player {player_id}, notification {prop_id}, channel {prop_kind}, activity {activity_kind}, time {event_time_unix_ms}")]
-    private partial void LogSent(string player_id, string prop_id, string prop_kind, long event_time_unix_ms, string event_name, string activity_kind);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Notification accepted by provider: {event_name}, player {player_id:N}, notification {prop_id:N}, channel {prop_kind}, activity {activity_kind}, time {event_time_unix_ms}")]
+    [SuppressMessage("ReSharper", "InconsistentNaming")]
+    private partial void LogSent(string event_name, Guid player_id, Guid prop_id, string prop_kind, string activity_kind, long event_time_unix_ms);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Notification {NotificationId} delivery failed for player {PlayerId} via {ChannelType}")]
-    private partial void LogSendError(Exception ex, string playerId, string notificationId, NotificationChannelType channelType);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Notification {NotificationId:N} delivery failed for player {PlayerId:N} via {ChannelType}")]
+    private partial void LogSendError(Exception ex, Guid playerId, Guid notificationId, NotificationChannelType channelType);
 }
