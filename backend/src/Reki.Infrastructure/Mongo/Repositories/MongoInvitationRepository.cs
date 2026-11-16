@@ -25,7 +25,8 @@ internal sealed class MongoInvitationRepository(
             .Set(item => item.InviterBonusUsed, invite.InviterBonusUsed)
             .Set(item => item.InviteeBonusUsed, invite.InviteeBonusUsed)
             .Set(item => item.InviterBonusUsedAtUtc, invite.InviterBonusUsedAtUtc)
-            .Set(item => item.InviteeBonusUsedAtUtc, invite.InviteeBonusUsedAtUtc);
+            .Set(item => item.InviteeBonusUsedAtUtc, invite.InviteeBonusUsedAtUtc)
+            .Set(item => item.Version, invite.Version);
         await _invites.UpdateOneAsync(
             sessionProvider.Session,
             item => item.Id == invite.Id,

@@ -31,23 +31,25 @@ internal sealed class OnboardPlayerCommandHandler(
         var currentBalance = balance.CurrentValue;
         var inviter = await ResolveInviterAsync(command, cancellationToken);
         var playerId = PlayerId.New();
-        var completed = new PlayerProfile
-        {
-            Id = playerId,
-            ExternalUserIds = [],
-            Settings = new PlayerSettings("all", "22:00-09:00", false),
-            Address = command.Address,
-            BirthYear = command.BirthYear,
-            Wallet = PlayerWallet.Create(timeProvider.GetUtcNow()),
-            LastSeenAt = timeProvider.GetUtcNow(),
-            StreakDays = 1,
-            Skills = new Dictionary<SkillId, SkillProgress>
+        var notificationChannels = command.ExternalUserId.TryGetTelegramId(out var chatId)
+            ? new[] { PlayerNotificationChannel.Telegram(chatId.Value) }
+            : Array.Empty<PlayerNotificationChannel>();
+        var completed = new PlayerProfile(
+            playerId,
+            [command.ExternalUserId],
+            command.Address,
+            PlayerWallet.Create(timeProvider.GetUtcNow()),
+            new Dictionary<SkillId, SkillProgress>
             {
                 [SkillId.From("brave")] = new(1, 0, 0),
                 [SkillId.From("humor")] = new(1, 0, 0),
                 [SkillId.From("topic")] = new(1, 0, 0),
             },
-        }.AddExternalUserIds([command.ExternalUserId]);
+            command.BirthYear,
+            new PlayerSettings("all", "22:00-09:00", false),
+            lastSeenAt: timeProvider.GetUtcNow(),
+            streakDays: 1,
+            notificationChannels: notificationChannels);
 
         await unitOfWork.ExecuteAsync(
             async token =>

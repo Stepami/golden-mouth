@@ -20,12 +20,34 @@ internal sealed class MongoNotificationRepository(
         bool reschedule,
         CancellationToken cancellationToken)
     {
+        var pending = await _notifications.Find(
+                sessionProvider.Session,
+                item => item.PlayerId == notification.PlayerId && item.Status == NotificationStatus.Pending)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (pending is not null)
+        {
+            if (reschedule)
+            {
+                var version = pending.Version;
+                pending.Reschedule(notification.SendAt);
+                if (pending.Version != version)
+                {
+                    await _notifications.UpdateOneAsync(
+                        sessionProvider.Session,
+                        item => item.Id == pending.Id,
+                        Builders<Notification>.Update.Set(item => item.SendAt, pending.SendAt).Inc(item => item.Version, 1),
+                        cancellationToken: cancellationToken);
+                }
+            }
+
+            return;
+        }
+
         var updates = Builders<Notification>.Update
             .SetOnInsert(item => item.Id, notification.Id)
-            .SetOnInsert(item => item.Content, notification.Content);
-        updates = reschedule
-            ? updates.Set(item => item.SendAt, notification.SendAt)
-            : updates.SetOnInsert(item => item.SendAt, notification.SendAt);
+            .SetOnInsert(item => item.Content, notification.Content)
+            .SetOnInsert(item => item.Version, notification.Version)
+            .SetOnInsert(item => item.SendAt, notification.SendAt);
         await _notifications.UpdateOneAsync(
             sessionProvider.Session,
             item => item.PlayerId == notification.PlayerId && item.Status == NotificationStatus.Pending,

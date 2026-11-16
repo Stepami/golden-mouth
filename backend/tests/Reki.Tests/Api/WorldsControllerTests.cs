@@ -234,15 +234,12 @@ public sealed class WorldsControllerTests(ApiFactory factory) : GameApiTestBase(
             var collection = Database.GetCollection<World>("worlds");
             var id = created.Id;
             var original = await collection.Find(world => world.Id == id).SingleAsync();
-            var progressed = original with
-            {
-                Player = original.Player with
-                {
-                    Subscribers = 730,
-                    Achievements = original.Player.Achievements.Select(item => item with { IsOpen = true }).ToArray(),
-                },
-            };
-            await collection.ReplaceOneAsync(world => world.Id == id, progressed);
+            await collection.UpdateOneAsync(
+                world => world.Id == id,
+                Builders<World>.Update
+                    .Set(world => world.Player.Subscribers, 730)
+                    .Set(world => world.Player.Achievements, original.Player.Achievements.Select(item => item with { IsOpen = true }).ToArray()));
+            var progressed = await collection.Find(world => world.Id == id).SingleAsync();
             var removed = progressed.Stars[0];
             var request = definition with
             {

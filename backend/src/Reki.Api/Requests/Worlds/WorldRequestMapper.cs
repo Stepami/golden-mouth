@@ -14,31 +14,20 @@ internal static partial class WorldRequestMapper
     public static UpdateWorld ToUpdateWorld(this CreateWorldRequest source, WorldId worldId) =>
         new(worldId, source.ToWorld());
 
-    // These source fields are projected by the dedicated Interface and Player mappings.
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Name))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Avatar))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Role))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Title))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Description))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.AvatarStyle))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Voice))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Drama))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Where))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.FirstContext))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.FirstPrompt))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Emoji))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Summary))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.UnlockSkill))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.UnlockLevel))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Achievements))]
-    [MapPropertyFromSource(nameof(World.Interface), Use = nameof(ToWorldInterface))]
-    [MapPropertyFromSource(nameof(World.Player), Use = nameof(ToWorldPlayer))]
-    [MapValue(nameof(World.Id), Use = nameof(NewWorldId))]
-    [MapValue(nameof(World.Version), 0)]
-    [MapValue(nameof(World.IsArchived), false)]
-    [MapProperty(nameof(CreateWorldRequest.Difficulty), nameof(World.Difficulty), Use = nameof(MapDifficulty))]
-    [MapProperty(nameof(CreateWorldRequest.Rules), nameof(World.Rules), Use = nameof(MapRules))]
-    public static partial World ToWorld(this CreateWorldRequest source);
+    public static World ToWorld(this CreateWorldRequest source) => new(
+        WorldId.New(),
+        source.ToWorldInterface(),
+        source.ToWorldPlayer(),
+        source.TemplateId,
+        MapDifficulty(source.Difficulty),
+        false,
+        source.Roles,
+        source.Voices,
+        source.PostIdeas,
+        source.DemoPosts,
+        MapRules(source.Rules),
+        source.Stars.Select(MapStar).ToArray(),
+        0);
 
     // Project only interface settings from the flat HTTP request.
     [MapperIgnoreSource(nameof(CreateWorldRequest.TemplateId))]
@@ -57,32 +46,15 @@ internal static partial class WorldRequestMapper
     [MapperIgnoreSource(nameof(CreateWorldRequest.Difficulty))]
     private static partial WorldInterface ToWorldInterface(this CreateWorldRequest source);
 
-    // Project player settings and initialize fresh progress independently of submitted values.
-    [MapperIgnoreSource(nameof(CreateWorldRequest.TemplateId))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Title))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Description))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.AvatarStyle))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Where))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.FirstContext))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.FirstPrompt))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Emoji))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Summary))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Difficulty))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.UnlockSkill))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.UnlockLevel))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Voices))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.PostIdeas))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.DemoPosts))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Roles))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Rules))]
-    [MapperIgnoreSource(nameof(CreateWorldRequest.Stars))]
-    [MapValue(nameof(WorldPlayer.PlayerId), Use = nameof(InitialPlayerId))]
-    [MapValue(nameof(WorldPlayer.Subscribers), 0L)]
-    private static partial WorldPlayer ToWorldPlayer(this CreateWorldRequest source);
-
-    private static WorldId NewWorldId() => WorldId.New();
-
-    private static PlayerId InitialPlayerId() => PlayerId.From("00000000000000000000000000000000");
+    private static WorldPlayer ToWorldPlayer(this CreateWorldRequest source) => new(
+        PlayerId.From(Guid.Empty),
+        source.Voice,
+        source.Drama,
+        source.Name,
+        source.Role,
+        source.Avatar,
+        0,
+        source.Achievements.Select(MapAchievement).ToArray());
 
     private static IReadOnlyList<WorldRule> MapRules(IReadOnlyList<WorldRuleRequest> source) =>
     [

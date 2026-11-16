@@ -17,10 +17,10 @@ internal sealed class CreatePostCursorIndexes : RekiMigrationBase
         await posts.Indexes.CreateManyAsync(
         [
             new CreateIndexModel<GamePost>(
-                keys.Ascending(post => post.WorldId).Descending(post => post.Id),
+                keys.Ascending("WorldId").Descending("_id"),
                 new CreateIndexOptions { Name = "ix_posts_world_id" }),
             new CreateIndexModel<GamePost>(
-                keys.Ascending(post => post.WorldId).Ascending(post => post.AuthorId).Descending(post => post.Id),
+                keys.Ascending("WorldId").Ascending("AuthorId").Descending("_id"),
                 new CreateIndexOptions { Name = "ix_posts_world_author_id" }),
         ],
         cancellationToken);

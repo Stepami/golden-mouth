@@ -1,17 +1,17 @@
 namespace Reki.Domain.Player;
 
-public sealed record PlayerWallet
+public sealed class PlayerWallet(int energy, int crystals, DateTimeOffset energyUpdatedAtUtc)
 {
     public const int Cap = 10;
     public const int RegenSeconds = 600;
     public const int InitialCrystals = 10;
     public const int ExchangeCost = 3;
 
-    public int Energy { get; init; }
+    public int Energy { get; private set; } = energy;
 
-    public int Crystals { get; init; }
+    public int Crystals { get; private set; } = crystals;
 
-    public DateTimeOffset EnergyUpdatedAtUtc { get; init; }
+    public DateTimeOffset EnergyUpdatedAtUtc { get; private set; } = energyUpdatedAtUtc;
 
     public DateTimeOffset? NextEnergyAtUtc => Energy < Cap ? EnergyUpdatedAtUtc.AddSeconds(RegenSeconds) : null;
 
@@ -21,14 +21,9 @@ public sealed record PlayerWallet
 
     private string? InsufficientCrystalsReason => Crystals < ExchangeCost ? "insufficient_crystals" : null;
 
-    public static PlayerWallet Create(DateTimeOffset now) => new()
-    {
-        Energy = Cap,
-        Crystals = InitialCrystals,
-        EnergyUpdatedAtUtc = now.ToUniversalTime(),
-    };
+    public static PlayerWallet Create(DateTimeOffset now) => new(Cap, InitialCrystals, now.ToUniversalTime());
 
-    public PlayerWallet Spend(int cost, DateTimeOffset now)
+    internal void Spend(int cost, DateTimeOffset now)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(cost);
         if (Energy < cost)
@@ -36,43 +31,43 @@ public sealed record PlayerWallet
             throw new InvalidOperationException("Insufficient energy.");
         }
 
-        return this with
+        if (Energy == Cap)
         {
-            Energy = Energy - cost,
-            EnergyUpdatedAtUtc = Energy == Cap ? now.ToUniversalTime() : EnergyUpdatedAtUtc,
-        };
+            EnergyUpdatedAtUtc = now.ToUniversalTime();
+        }
+
+        Energy -= cost;
     }
 
-    public PlayerWallet Replenish(int amount)
+    internal void Replenish(int amount)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(amount);
-        return this with { Crystals = Crystals + amount };
+        Crystals += amount;
     }
 
-    public PlayerWallet Restore(DateTimeOffset now)
+    internal bool Restore(DateTimeOffset now)
     {
         var ticks = (long)((now - EnergyUpdatedAtUtc).TotalSeconds / RegenSeconds);
         if (Energy >= Cap || ticks <= 0)
         {
-            return this;
+            return false;
         }
 
         var gained = (int)Math.Min(Cap - Energy, ticks);
-        var energy = Energy + gained;
-        return this with
-        {
-            Energy = energy,
-            EnergyUpdatedAtUtc = energy == Cap ? now.ToUniversalTime() : EnergyUpdatedAtUtc.AddSeconds(gained * RegenSeconds),
-        };
+        Energy += gained;
+        EnergyUpdatedAtUtc = Energy == Cap ? now.ToUniversalTime() : EnergyUpdatedAtUtc.AddSeconds(gained * RegenSeconds);
+        return true;
     }
 
-    public PlayerWallet Exchange(DateTimeOffset now)
+    internal void Exchange(DateTimeOffset now)
     {
         if (ExchangeUnavailableReason is not null)
         {
             throw new InvalidOperationException("Energy exchange is unavailable.");
         }
 
-        return this with { Energy = Cap, Crystals = Crystals - ExchangeCost, EnergyUpdatedAtUtc = now.ToUniversalTime() };
+        Energy = Cap;
+        Crystals -= ExchangeCost;
+        EnergyUpdatedAtUtc = now.ToUniversalTime();
     }
 }

@@ -63,16 +63,22 @@ internal sealed class AddReplyCommandHandler(
                 ? post.Comments.First(item => item.Id == parentId).AuthorId
                 : post.AuthorId;
             var targetStar = world.Stars.First(star => star.Id.ToAuthorId() == targetAuthor);
-            comment = comment with
-            {
-                AdditionalReplierId = await starVectorStore.GetRelevantAdditionalReplierAsync(world, targetStar.Id, comment),
-            };
+            var additionalReplierId = await starVectorStore.GetRelevantAdditionalReplierAsync(world, targetStar.Id, comment);
+            comment = new GameComment(
+                comment.Id,
+                comment.ParentCommentId,
+                comment.RequestId,
+                comment.AuthorId,
+                comment.Text,
+                comment.Hidden,
+                comment.Reactions,
+                additionalReplierId);
             var bonus = post.Comments.Count(item => item.AuthorId == comment.AuthorId) < thread.BonusReplies ? thread.SubscriberBonus : 0;
             player = player.SpendEnergy(thread.EnergyCost, timeProvider.GetUtcNow());
             world = world.AwardThreadBonus(bonus);
         }
 
-        post = post.AddComments([comment]);
+        post.AddComments([comment]);
         if (isPlayer)
         {
             await unitOfWork.ExecuteAsync(

@@ -25,9 +25,9 @@ internal sealed partial class RefreshWorldContent(ILogger<RefreshWorldContent> l
         await RefreshCollectionAsync(db.GetCollection<World>(MongoCollections.Worlds), session, instances, content, cancellationToken);
     }
 
-    private static World ApplyContent(World world, WorldContent content) => world with
-    {
-        Interface = world.Interface with
+    private static World ApplyContent(World world, WorldContent content) => new World(
+        id: world.Id,
+        @interface: world.Interface with
         {
             Description = PreservePersona(world.Interface.Description, content.Interface.Description),
             Where = content.Interface.Where,
@@ -35,13 +35,17 @@ internal sealed partial class RefreshWorldContent(ILogger<RefreshWorldContent> l
             FirstContext = content.Interface.FirstContext,
             FirstPrompt = content.Interface.FirstPrompt,
         },
-        Roles = content.Roles,
-        Voices = content.Voices,
-        PostIdeas = content.PostIdeas,
-        DemoPosts = content.DemoPosts,
-        Rules = content.Rules,
-        Stars = world.Stars.Select(star => UpdateStar(star, content.Stars)).ToArray(),
-    };
+        player: world.Player,
+        templateId: world.TemplateId,
+        difficulty: world.Difficulty,
+        isArchived: world.IsArchived,
+        roles: content.Roles,
+        voices: content.Voices,
+        postIdeas: content.PostIdeas,
+        demoPosts: content.DemoPosts,
+        rules: content.Rules,
+        stars: world.Stars.Select(star => UpdateStar(star, content.Stars)).ToArray(),
+        version: world.Version);
 
     private static WorldStar UpdateStar(WorldStar star, IReadOnlyList<StarContent> content)
     {

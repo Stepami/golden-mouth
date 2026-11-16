@@ -1,9 +1,19 @@
+using System.Collections.ObjectModel;
+
 namespace Reki.Domain.Player;
 
-public sealed record PlayerNotificationChannel(
-    NotificationChannelType Type,
-    IReadOnlyDictionary<string, string> Properties)
+public sealed record PlayerNotificationChannel
 {
+    public PlayerNotificationChannel(NotificationChannelType type, IReadOnlyDictionary<string, string> properties)
+    {
+        Type = type;
+        Properties = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(properties));
+    }
+
+    public NotificationChannelType Type { get; }
+
+    public IReadOnlyDictionary<string, string> Properties { get; }
+
     public static PlayerNotificationChannel Telegram(long chatId) =>
         new(
             NotificationChannelType.Telegram,

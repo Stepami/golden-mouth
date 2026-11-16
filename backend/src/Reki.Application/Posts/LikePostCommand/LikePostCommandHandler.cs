@@ -12,7 +12,7 @@ internal sealed class LikePostCommandHandler(IPostRepository posts) : ICommandHa
             return Unit.Value;
         }
 
-        var like = !post.LikedBy.Contains(command.AuthorId);
+        var like = post.ToggleLike(command.AuthorId);
 
         await posts.LikePostAsync(command.PostId, command.AuthorId, like, cancellationToken);
         return Unit.Value;

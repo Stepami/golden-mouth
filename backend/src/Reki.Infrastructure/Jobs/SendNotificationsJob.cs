@@ -21,9 +21,8 @@ internal sealed class SendNotificationsJob(
             var player = await players.GetPlayerAsync(notification.PlayerId, cancellationToken);
             if (player is null || player.NotificationChannels.Count == 0)
             {
-                await notifications.SaveAsync(
-                    notification with { Status = NotificationStatus.Sent },
-                    cancellationToken);
+                notification.MarkSent();
+                await notifications.SaveAsync(notification, cancellationToken);
                 continue;
             }
 
@@ -37,9 +36,8 @@ internal sealed class SendNotificationsJob(
             await unitOfWork.ExecuteAsync(
                 async token =>
                 {
-                    await notifications.SaveAsync(
-                        notification with { Status = NotificationStatus.Sent },
-                        token);
+                    notification.MarkSent();
+                    await notifications.SaveAsync(notification, token);
                     await notifications.SaveAsync(
                         Notification.New(notification.PlayerId, now.AddDays(1), notification.Content),
                         token);

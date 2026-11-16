@@ -127,6 +127,10 @@ internal sealed class MongoPostRepository(
         var update = like
             ? Builders<GamePost>.Update.AddToSet(item => item.LikedBy, authorId)
             : Builders<GamePost>.Update.Pull(item => item.LikedBy, authorId);
+        filter &= like
+            ? Builders<GamePost>.Filter.Not(Builders<GamePost>.Filter.AnyEq(item => item.LikedBy, authorId))
+            : Builders<GamePost>.Filter.AnyEq(item => item.LikedBy, authorId);
+        update = update.Inc(item => item.Version, 1);
         await (sessionProvider.Current is { } session
             ? _posts.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken)
             : _posts.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));
@@ -137,7 +141,7 @@ internal sealed class MongoPostRepository(
         var filter = Builders<GamePost>.Filter.Where(item => item.Id == post.Id && item.WorldId == post.WorldId);
         var update = Builders<GamePost>.Update
             .Set(item => item.Comments, post.Comments)
-            .Set(item => item.Version, post.Version);
+            .Inc(item => item.Version, 1);
         await (sessionProvider.Current is { } session
             ? _posts.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken)
             : _posts.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));

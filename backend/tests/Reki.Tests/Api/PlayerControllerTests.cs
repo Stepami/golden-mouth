@@ -44,7 +44,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
             .Find(item => item.PlayerId == response.Id && item.Status == NotificationStatus.Pending)
             .SingleAsync();
         var initialSendAt = now.AddDays(2);
-        await notifications.ReplaceOneAsync(item => item.Id == pending.Id, pending with { SendAt = initialSendAt });
+        await notifications.UpdateOneAsync(item => item.Id == pending.Id, Builders<Notification>.Update.Set(item => item.SendAt, initialSendAt));
         await players.UpdateOneAsync(
             item => item.Id == response.Id,
             Builders<PlayerProfile>.Update.Set(item => item.LastSeenAt, now.AddMinutes(-minutes)));
@@ -588,27 +588,21 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var userId = ExternalUserId.From($"telegram:{8410}");
         var player = await playerRepository.GetPlayerAsync(userId, CancellationToken.None)
                      ?? throw new InvalidOperationException("Missing player.");
-        await Database.GetCollection<PlayerProfile>("players").ReplaceOneAsync(
+        await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
             item => item.Id == player.Id,
-            player with
-            {
-                Wallet = player.Wallet with { Energy = 8 },
-                Settings = player.Settings with { Plus = true },
-            },
+            Builders<PlayerProfile>.Update
+                .Set(item => item.Wallet.Energy, 8)
+                .Set(item => item.Settings.Plus, true),
             cancellationToken: CancellationToken.None);
 
         var world = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
-        await worldRepository.ReplaceWorldAsync(
-            world with
-            {
-                Version = world.Version + 1,
-                Player = world.Player with
-                {
-                    Subscribers = 1234,
-                    Voice = "Коротко и тепло",
-                },
-            },
-            CancellationToken.None);
+        await Database.GetCollection<World>("worlds").UpdateOneAsync(
+            item => item.Id == world.Id,
+            Builders<World>.Update
+                .Set(item => item.Player.Subscribers, 1234)
+                .Set(item => item.Player.Voice, "Коротко и тепло")
+                .Inc(item => item.Version, 1),
+            cancellationToken: CancellationToken.None);
 
         // Act
         await api.Worlds.UpdateWorldAsync(
@@ -662,27 +656,21 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         var worldRepository = Factory.Services.GetRequiredService<IWorldRepository>();
         var player = await playerRepository.GetPlayerAsync(ExternalUserId.From($"telegram:{userId}"), CancellationToken.None)
                      ?? throw new InvalidOperationException("Missing player.");
-        await Database.GetCollection<PlayerProfile>("players").ReplaceOneAsync(
+        await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
             item => item.Id == player.Id,
-            player with
-            {
-                Wallet = player.Wallet with { Energy = 4 },
-                PlusInterestClaimed = alreadyClaimed,
-                PlusNotifyRequested = true,
-            },
+            Builders<PlayerProfile>.Update
+                .Set(item => item.Wallet.Energy, 4)
+                .Set(item => item.PlusInterestClaimed, alreadyClaimed)
+                .Set(item => item.PlusNotifyRequested, true),
             cancellationToken: CancellationToken.None);
         var skills = (await GetStoredPlayerAsync(userId))["Skills"].DeepClone();
         var world = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
-        await worldRepository.ReplaceWorldAsync(
-            world with
-            {
-                Version = world.Version + 1,
-                Player = world.Player with
-                {
-                    Subscribers = 1234,
-                },
-            },
-            CancellationToken.None);
+        await Database.GetCollection<World>("worlds").UpdateOneAsync(
+            item => item.Id == world.Id,
+            Builders<World>.Update
+                .Set(item => item.Player.Subscribers, 1234)
+                .Inc(item => item.Version, 1),
+            cancellationToken: CancellationToken.None);
 
         // Act
         var response = await api.Player.ClaimPlusInterestAsync(new PlusInterestRequest { Interest = false }, CancellationToken.None);
