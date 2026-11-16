@@ -3,7 +3,7 @@ import { RepostAction } from '../ui/RepostAction'
 import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
 import { StoryGoal } from '../ui/StoryGoal'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
 import { api, ApiError } from '../api/client'
 import { firstPost, results } from '../api/mock'
@@ -284,6 +284,13 @@ function Thread() {
   const [deleting, setDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  const replyInput = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const input = replyInput.current
+    if (!input) return
+    input.style.height = 'auto'
+    input.style.height = `${input.scrollHeight}px`
+  }, [draft.text, load, threadKey])
   const controller = useRef<AbortController | null>(null)
   const activeKey = useRef(threadKey)
   activeKey.current = threadKey
@@ -330,7 +337,7 @@ function Thread() {
     if (!target) return
     initialReplyFocused.current = threadKey
     setDraft(current => current.commentId || current.submitted ? current : { ...current, commentId: target.id, requestId: crypto.randomUUID() })
-    requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.thread-reply-input')?.focus())
+    requestAnimationFrame(() => replyInput.current?.focus())
   }, [post, load, threadKey, nav.params.focusReply])
   const postAuthor = stars.find(star => `Star_${star.id}` === post?.authorId)
   const isStarComment = (comment?: CommentT) => !!comment?.star && !comment.hidden && stars.some(star => `Star_${star.id}` === comment.authorId)
@@ -395,7 +402,7 @@ function Thread() {
   const tutorialKey = `reki:thread-help:${player.id}`
   const [showHelp, setShowHelp] = useState(() => { try { return localStorage.getItem(tutorialKey) !== 'seen' } catch { return true } })
   const dismissHelp = () => { setShowHelp(false); try { localStorage.setItem(tutorialKey, 'seen') } catch { /* memory fallback */ } }
-  const focusReply = (id: string) => { edit({ commentId: id }); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.thread-reply-input')?.focus()) }
+  const focusReply = (id: string) => { edit({ commentId: id }); requestAnimationFrame(() => replyInput.current?.focus()) }
   const fromFeed = nav.params.returnTo === 'feed' || (!nav.params.returnTo && !!postAuthor)
   const fromMarked = nav.params.returnTo === 'marked'
   const goBack = () => { if (nav.params.returnTo && nav.canBack) nav.back(); else if (fromMarked) nav.replace('05-5_collection', { profileTab: 'marked' }); else nav.replace(fromFeed ? '03-3_feed' : '03-5_stage') }
@@ -423,7 +430,7 @@ function Thread() {
   post.comments.filter(comment => !comment.parentCommentId).forEach(append)
   post.comments.forEach(append)
   return (
-    <div className="screen no-tab">
+    <div className="screen no-tab thread-screen">
       <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions"><EnergyBadge value={player.postsLeft} /><button className="thread-exit" onClick={goBack}>{fromMarked ? 'К отметкам →' : fromFeed ? 'В ленту →' : 'В канал →'}</button></div>} />
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<QuotedPost repostId={post.repostId} /><div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group"><PostLikeAction key={threadKey} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => current ? { ...current, likes: saved.likes, likedBy: saved.likedBy } : current)} />{!post.repostId && <RepostAction postId={post.id} />}</div>{post.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>}</div></div>
@@ -436,7 +443,7 @@ function Thread() {
         </div>)}
         {typingName && <div className="card" role="status" aria-live="polite"><div className="small muted">{typingName} печатает...</div><div className="live-current" aria-hidden="true"><span /></div></div>}
         {targetAvailable && <div className="small muted" style={{ marginBottom: 8 }}>{draft.commentId === null ? 'Комментарий к посту' : 'Отвечаешь'}: {recipient}</div>}
-        {postAuthor && draft.commentId !== null && <button disabled={sending} onClick={() => { edit({ commentId: null }); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.thread-reply-input')?.focus()) }} style={{ background: 'none', border: 'none', color: 'var(--lilac)', marginBottom: 8 }}>К посту</button>}
+        {postAuthor && draft.commentId !== null && <button disabled={sending} onClick={() => { edit({ commentId: null }); requestAnimationFrame(() => replyInput.current?.focus()) }} style={{ background: 'none', border: 'none', color: 'var(--lilac)', marginBottom: 8 }}>К посту</button>}
         {draft.commentId && !targetAvailable && <div className="small muted" role="status" style={{ marginBottom: 8 }}>Этому аккаунту больше нельзя ответить. Выбери другой комментарий — текст ответа сохранён.</div>}
         {replyError && <div className="small" role="alert" style={{ color: 'var(--accent)', marginBottom: 12 }}>{replyError}</div>}
         <Button secondary disabled={sending} onClick={() => nav.replace('02-1_compose')}>Написать следующий пост</Button>
@@ -448,8 +455,8 @@ function Thread() {
         <Button disabled={deleting} onClick={removePost} style={{ marginBottom: 8, background: 'transparent', border: '2px solid #F06473', color: '#F06473' }}>{deleting ? 'Удаляем…' : 'Удалить пост'}</Button>
         <Button secondary disabled={deleting} onClick={() => setConfirmDelete(false)}>Отмена</Button>
       </Sheet>}
-      <div className="bottom-cta" style={{ flexDirection: 'row' }}>
-        <div className="card" style={{ flex: 1, padding: '12px 14px' }}><input className="thread-reply-input" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
+      <div className="bottom-cta thread-reply">
+        <div className="card thread-reply-field"><textarea ref={replyInput} className="thread-reply-input" rows={1} aria-label="Текст ответа" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
         <button className="card thread-reply-send" onClick={send} disabled={sending || !targetAvailable || !draft.text.trim() || (player.postsLeft < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
       </div>
     </div>

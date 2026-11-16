@@ -62,6 +62,11 @@ input, textarea { font: inherit; color: inherit; background: none; border: none;
 .btn { border: none; border-radius: 14px; padding: 14px; font-weight: 700; font-size: 16px; width: 100%; color: #fff; background: var(--grad); }
 .btn.secondary { background: #22222D; color: var(--text); }
 .btn:disabled { opacity: .45; }
+.screen.thread-screen { padding-bottom: calc(210px + env(safe-area-inset-bottom)); }
+.bottom-cta.thread-reply { flex-direction: row; align-items: flex-end; }
+.thread-reply-field { flex: 1; min-width: 0; padding: 12px 14px; }
+.thread-reply-input { display: block; line-height: 24px; max-height: 120px; overflow-y: auto; overflow-wrap: anywhere; }
+.thread-reply-send { flex-shrink: 0; }
 .thread-reply-input:disabled, .thread-reply-send:disabled { opacity: .45; cursor: default; }
 .chip { display: inline-block; border: none; border-radius: 20px; padding: 8px 14px; background: var(--card2); margin: 0 6px 8px 0; font-size: 14px; color: var(--text); }
 .chip.on { background: var(--grad); color: #fff; font-weight: 600; }
