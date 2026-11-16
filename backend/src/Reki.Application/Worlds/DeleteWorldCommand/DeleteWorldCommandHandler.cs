@@ -9,8 +9,7 @@ internal sealed class DeleteWorldCommandHandler(
     IWorldPlayerCache worldCache,
     IPostRepository posts) : ICommandHandler<DeleteWorld>
 {
-    public async ValueTask<Unit> Handle(DeleteWorld command, CancellationToken cancellationToken)
-    {
+    public async ValueTask<Unit> Handle(DeleteWorld command, CancellationToken cancellationToken) =>
         await unitOfWork.ExecuteAsync(
             async token =>
             {
@@ -18,8 +17,6 @@ internal sealed class DeleteWorldCommandHandler(
                 await worlds.DeleteWorldsAsync(command.PlayerId, [command.WorldId], token);
                 return Unit.Value;
             },
+            _ => worldCache.ClearWorld(command.PlayerId, command.WorldId),
             cancellationToken);
-        worldCache.ClearWorld(command.PlayerId, command.WorldId);
-        return Unit.Value;
-    }
 }

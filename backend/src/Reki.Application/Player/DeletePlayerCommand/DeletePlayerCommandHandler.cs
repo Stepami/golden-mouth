@@ -27,7 +27,7 @@ internal sealed class DeletePlayerCommandHandler(
         CancellationToken cancellationToken)
     {
         var playerId = command.PlayerId;
-        var invitees = await unitOfWork.ExecuteAsync(
+        await unitOfWork.ExecuteAsync(
             async token =>
             {
                 await posts.DeletePostsAsync(playerId, [], token);
@@ -37,14 +37,16 @@ internal sealed class DeletePlayerCommandHandler(
                 await players.DeletePlayerAsync(playerId, token);
                 return affected;
             },
+            invitees =>
+            {
+                worldCache.ClearPlayer(playerId);
+                invitations.ClearPlayer(playerId);
+                foreach (var invitee in invitees)
+                {
+                    invitations.ClearPlayer(invitee);
+                }
+            },
             cancellationToken);
-        worldCache.ClearPlayer(playerId);
-        invitations.ClearPlayer(playerId);
-        foreach (var invitee in invitees)
-        {
-            invitations.ClearPlayer(invitee);
-        }
-
         await using var scope = scopeFactory.CreateAsyncScope();
         await scope.ServiceProvider.GetRequiredService<IAuthSessionService>()
             .DeletePlayerSessionsAsync(playerId, cancellationToken);

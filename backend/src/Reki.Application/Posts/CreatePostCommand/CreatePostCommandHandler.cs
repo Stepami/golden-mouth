@@ -115,13 +115,15 @@ internal sealed class CreatePostCommandHandler(
                 await posts.InsertPostAsync(post, token);
                 return Unit.Value;
             },
+            _ =>
+            {
+                worldCache.UpdateWorld(updatedWorld);
+                if (updatedInvite is not null)
+                {
+                    invitations.ClearPlayer(player.Id);
+                }
+            },
             cancellationToken);
-        worldCache.UpdateWorld(updatedWorld);
-        if (updatedInvite is not null)
-        {
-            invitations.ClearPlayer(player.Id);
-        }
-
         telemetry.TrackWorldAudience(updatedWorld);
         TrackProgression(previousSkillLevels, previousAchievements, updated, updatedWorld, post, progression.Score, telemetry);
         await feedScheduler.ScheduleFeedAsync(new ScheduleFromPostRequest(player.Id, world.Id, post.Id));

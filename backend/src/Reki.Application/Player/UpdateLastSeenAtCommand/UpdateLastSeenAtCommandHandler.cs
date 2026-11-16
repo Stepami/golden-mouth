@@ -47,8 +47,8 @@ internal sealed class UpdateLastSeenAtCommandHandler(
 
                 return Unit.Value;
             },
+            _ => cache.Set(player.Id, now, TimeSpan.FromMinutes(1)),
             cancellationToken);
-        cache.Set(player.Id, now, TimeSpan.FromMinutes(1));
         return Unit.Value;
     }
 }

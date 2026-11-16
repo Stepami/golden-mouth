@@ -8,8 +8,14 @@ internal sealed class MongoUnitOfWork(
     IMongoClient client,
     MongoSessionProvider sessionProvider) : IUnitOfWork
 {
+    public Task<T> ExecuteAsync<T>(
+        Func<CancellationToken, Task<T>> operation,
+        CancellationToken cancellationToken) =>
+        ExecuteAsync(operation, static _ => { }, cancellationToken);
+
     public async Task<T> ExecuteAsync<T>(
         Func<CancellationToken, Task<T>> operation,
+        Action<T> onSuccess,
         CancellationToken cancellationToken)
     {
         if (sessionProvider.Current is not null)
@@ -18,9 +24,10 @@ internal sealed class MongoUnitOfWork(
         }
 
         using var session = await client.StartSessionAsync(cancellationToken: cancellationToken);
+        T result;
         try
         {
-            return await session.WithTransactionAsync(
+            result = await session.WithTransactionAsync(
                 async (transactionSession, token) =>
                 {
                     sessionProvider.Current = transactionSession;
@@ -39,5 +46,8 @@ internal sealed class MongoUnitOfWork(
         {
             throw new UnitOfWorkException("The transaction could not be completed.", exception);
         }
+
+        onSuccess(result);
+        return result;
     }
 }

@@ -82,8 +82,8 @@ internal sealed class AddReplyCommandHandler(
                     await worlds.ReplaceWorldAsync(world, token);
                     return Unit.Value;
                 },
+                _ => worldCache.UpdateWorld(world),
                 cancellationToken);
-            worldCache.UpdateWorld(world);
 
             telemetry.TrackPlayer(
                 player,
