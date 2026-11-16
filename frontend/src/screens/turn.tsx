@@ -288,8 +288,11 @@ function Thread() {
   useLayoutEffect(() => {
     const input = replyInput.current
     if (!input) return
+    const scrollTop = input.scrollTop
     input.style.height = 'auto'
     input.style.height = `${input.scrollHeight}px`
+    input.scrollTop = document.activeElement === input && input.selectionStart === input.value.length
+      ? input.scrollHeight : scrollTop
   }, [draft.text, load, threadKey])
   const controller = useRef<AbortController | null>(null)
   const activeKey = useRef(threadKey)
