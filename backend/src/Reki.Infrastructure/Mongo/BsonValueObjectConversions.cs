@@ -1,6 +1,7 @@
 using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
+using Reki.Domain.Player.Streaks;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
@@ -18,6 +19,7 @@ namespace Reki.Infrastructure.Mongo;
 [BsonSerializer<SessionId>]
 [BsonSerializer<SkillId>]
 [BsonSerializer<StarId>]
+[BsonSerializer<StreakId>]
 [BsonSerializer<ExternalUserId>]
 [BsonSerializer<WorldId>]
 internal partial class BsonValueObjectConversions;

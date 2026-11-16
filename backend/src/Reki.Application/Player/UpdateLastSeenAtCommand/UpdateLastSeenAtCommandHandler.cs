@@ -1,7 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Caching.Memory;
 using Reki.Application.Notifications;
-using Reki.Application.Player.UpdateStreakCommand;
+using Reki.Application.Player.Streaks.UpdateStreakCommand;
 using Reki.Domain.Notifications;
 
 namespace Reki.Application.Player.UpdateLastSeenAtCommand;
@@ -25,16 +25,15 @@ internal sealed class UpdateLastSeenAtCommandHandler(
         }
 
         var oldLastSeenAt = command.Player.LastSeenAt;
-        await sender.Send(new UpdateStreak(command.Player, now), cancellationToken);
         var player = command.Player.UpdateLastSeenAt(now);
-
-        await unitOfWork.ExecuteAsync(
+        var streakChanged = await unitOfWork.ExecuteAsync(
             async token =>
             {
+                var changed = await sender.Send(new UpdateStreak(player.Id, now), token);
                 await players.ReplacePlayerAsync(player, token);
                 if (player.NotificationChannels.Count <= 0)
                 {
-                    return Unit.Value;
+                    return changed;
                 }
 
                 var sendAt = player.LastSeenAt.AddDays(1);
@@ -49,10 +48,16 @@ internal sealed class UpdateLastSeenAtCommandHandler(
                     await notifications.SaveAsync(pending, token);
                 }
 
-                return Unit.Value;
+                return changed;
             },
-            _ => cache.Set(player.Id, now, TimeSpan.FromMinutes(1)),
             cancellationToken);
+        if (streakChanged)
+        {
+            cache.Remove(CacheKeyPrefixes.PlayerStreak + command.Player.Id);
+        }
+
+        cache.Set(command.Player.Id, now, TimeSpan.FromMinutes(1));
+
         return Unit.Value;
     }
 }

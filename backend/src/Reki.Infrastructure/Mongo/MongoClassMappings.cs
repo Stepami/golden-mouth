@@ -5,6 +5,7 @@ using MongoDB.Bson.Serialization.Serializers;
 using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
+using Reki.Domain.Player.Streaks;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
@@ -36,6 +37,8 @@ internal static class MongoClassMappings
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.StarIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
+            new BsonValueObjectConversions.StreakIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.ExternalUserIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.WorldIdBsonSerializer());
@@ -48,7 +51,6 @@ internal static class MongoClassMappings
             classMap.MapMember(item => item.HitOwnWorldMilestone).SetDefaultValue(false);
             classMap.MapMember(item => item.LastSeenAt).SetDefaultValue(default(DateTimeOffset));
             classMap.MapMember(item => item.PlusInterestClaimed).SetDefaultValue(false);
-            classMap.MapMember(item => item.Streaks).SetDefaultValue(Array.Empty<PlayerStreak>());
             classMap.MapMember(item => item.PausedAtUtc).SetDefaultValue((object?)null);
             classMap.MapMember(item => item.HateDisabledUntilUtc).SetDefaultValue((object?)null);
             classMap.MapMember(item => item.PlusNotifyRequested).SetDefaultValue(false);
@@ -62,7 +64,6 @@ internal static class MongoClassMappings
                     item.BirthYear,
                     item.Settings,
                     item.NotificationChannels,
-                    item.Streaks,
                     item.HitOwnWorldMilestone,
                     item.LastSeenAt,
                     item.PlusInterestClaimed,
@@ -72,14 +73,10 @@ internal static class MongoClassMappings
                     item.PlusNotifyRequested));
         });
 
-        if (!BsonClassMap.IsClassMapRegistered(typeof(PlayerStreak)))
+        RegisterWithMongoId<PlayerStreak, StreakId>(item => item.Id, configure: classMap =>
         {
-            BsonClassMap.RegisterClassMap<PlayerStreak>(classMap =>
-            {
-                classMap.AutoMap();
-                classMap.MapCreator(item => new PlayerStreak(item.StartedAt, item.Count, item.IsActive));
-            });
-        }
+            classMap.MapCreator(item => new PlayerStreak(item.Id, item.PlayerId, item.StartedAt, item.Count, item.IsActive));
+        });
 
         if (!BsonClassMap.IsClassMapRegistered(typeof(PlayerNotificationChannel)))
         {

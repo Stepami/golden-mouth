@@ -67,6 +67,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]
 [JsonSerializable(typeof(PlayerResponse))]
+[JsonSerializable(typeof(PlayerStreakResponse))]
 [JsonSerializable(typeof(ReferralResponse))]
 [JsonSerializable(typeof(InvitationResponse))]
 [JsonSerializable(typeof(OnboardingRequest))]

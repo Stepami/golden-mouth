@@ -6,7 +6,6 @@ public sealed record PlayerResponse(
     PlayerId Id,
     Address Address,
     int Energy,
-    StreakResponse Streak,
     IReadOnlyDictionary<SkillId, SkillResponse> Skills,
     PlayerSettingsResponse Settings,
     IReadOnlyDictionary<string, string> Experiments,

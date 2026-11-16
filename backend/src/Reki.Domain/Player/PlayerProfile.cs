@@ -6,7 +6,6 @@ public sealed class PlayerProfile
 {
     private readonly List<ExternalUserId> _externalUserIds;
     private readonly List<PlayerNotificationChannel> _notificationChannels;
-    private readonly List<PlayerStreak> _streaks;
     private readonly Dictionary<SkillId, SkillProgress> _skills;
 
     public PlayerProfile(
@@ -18,7 +17,6 @@ public sealed class PlayerProfile
         int birthYear,
         PlayerSettings settings,
         IReadOnlyList<PlayerNotificationChannel> notificationChannels,
-        IReadOnlyList<PlayerStreak> streaks,
         bool hitOwnWorldMilestone = false,
         DateTimeOffset lastSeenAt = default,
         bool plusInterestClaimed = false,
@@ -39,8 +37,6 @@ public sealed class PlayerProfile
         HitOwnWorldMilestone = hitOwnWorldMilestone;
         LastSeenAt = lastSeenAt;
         PlusInterestClaimed = plusInterestClaimed;
-        _streaks = [.. streaks];
-        Streaks = _streaks.AsReadOnly();
         PausedAtUtc = pausedAtUtc;
         HateDisabledUntilUtc = hateDisabledUntilUtc;
         Version = version;
@@ -62,8 +58,6 @@ public sealed class PlayerProfile
     public DateTimeOffset LastSeenAt { get; private set; }
 
     public bool PlusInterestClaimed { get; private set; }
-
-    public IReadOnlyList<PlayerStreak> Streaks { get; }
 
     public IReadOnlyDictionary<SkillId, SkillProgress> Skills { get; }
 
@@ -230,36 +224,9 @@ public sealed class PlayerProfile
         }
     }
 
-    public void UpdateStreak(DateTimeOffset now)
-    {
-        if (_streaks.Count == 0)
-        {
-            _streaks.Add(PlayerStreak.New(now));
-            Version++;
-            return;
-        }
-
-        var streak = _streaks[^1];
-        var previousCount = streak.Count;
-        if (streak.IsActive)
-        {
-            streak.Progress(LastSeenAt, now);
-        }
-
-        if (!streak.IsActive)
-        {
-            _streaks.Add(PlayerStreak.New(now));
-        }
-
-        if (!streak.IsActive || streak.Count != previousCount)
-        {
-            Version++;
-        }
-    }
-
     public PlayerProfile UpdateLastSeenAt(DateTimeOffset now)
     {
-        if (LastSeenAt != now)
+        if (now > LastSeenAt)
         {
             LastSeenAt = now;
             Version++;

@@ -1,8 +1,10 @@
 using Mediator;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Reki.Application.Auth;
 using Reki.Application.Invites;
 using Reki.Application.Notifications;
+using Reki.Application.Player.Streaks;
 using Reki.Application.Posts;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
@@ -12,6 +14,8 @@ namespace Reki.Application.Player.DeletePlayerCommand;
 internal sealed class DeletePlayerCommandHandler(
     IUnitOfWork unitOfWork,
     IPlayerRepository players,
+    IPlayerStreakRepository streaks,
+    IMemoryCache cache,
     IServiceScopeFactory scopeFactory,
     IWorldRepository worlds,
     IWorldPlayerCache worldCache,
@@ -33,11 +37,16 @@ internal sealed class DeletePlayerCommandHandler(
                 await worlds.DeleteWorldsAsync(playerId, [], token);
                 await invitationRepository.DeleteInvitesAsync(playerId, token);
                 await notifications.DeleteForPlayerAsync(playerId, token);
+                await streaks.DeleteForPlayerAsync(playerId, token);
                 await players.DeletePlayerAsync(playerId, token);
                 return Unit.Value;
             },
-            _ => worldCache.ClearPlayer(playerId),
+            _ =>
+            {
+                worldCache.ClearPlayer(playerId);
+            },
             cancellationToken);
+        cache.Remove(CacheKeyPrefixes.PlayerStreak + playerId);
         await using var scope = scopeFactory.CreateAsyncScope();
         await scope.ServiceProvider.GetRequiredService<IAuthSessionService>()
             .DeletePlayerSessionsAsync(playerId, cancellationToken);

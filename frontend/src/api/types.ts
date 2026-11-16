@@ -18,7 +18,7 @@ export type Skill = { [K in keyof Wire.SkillResponse]: number }
 export type CollectionCard = Wire.CollectionCardResponse
 export type PlayerDocument = Omit<Fields<Wire.PlayerResponse>, 'energy' | 'skills' | 'streak' | 'ageBand'> & {
   energy: number; skills: Record<SkillId, Skill>
-  streak: Omit<Fields<Wire.StreakResponse>, 'days'> & { days: number }
+  streak: { days: number; week: boolean[]; nextReward: string }
   ageBand?: import('../app/ageBand').AgeBand
 }
 export interface Player extends Omit<PlayerDocument, 'energy' | 'experiments'> {

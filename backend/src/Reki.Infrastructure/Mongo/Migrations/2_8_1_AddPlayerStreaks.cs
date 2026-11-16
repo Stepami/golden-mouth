@@ -1,6 +1,7 @@
 using Kot.MongoDB.Migrations;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Reki.Domain.Player.Streaks;
 using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
@@ -14,8 +15,26 @@ internal sealed class AddPlayerStreaks : RekiMigrationBase
         var players = db.GetCollection<BsonDocument>(MongoCollections.Players);
         await players.UpdateManyAsync(
             session,
-            Builders<BsonDocument>.Filter.Exists("Streaks", false),
-            Builders<BsonDocument>.Update.Set("Streaks", new BsonArray()).Unset("StreakDays"),
+            Builders<BsonDocument>.Filter.Empty,
+            Builders<BsonDocument>.Update.Unset("Streaks").Unset("StreakDays"),
             cancellationToken: cancellationToken);
+
+        var streaks = db.GetCollection<PlayerStreak>(MongoCollections.PlayerStreaks);
+        var keys = Builders<PlayerStreak>.IndexKeys;
+        await streaks.Indexes.CreateManyAsync(
+        [
+            new CreateIndexModel<PlayerStreak>(
+                keys.Ascending("PlayerId").Descending("StartedAt").Descending("_id"),
+                new CreateIndexOptions { Name = "ix_player_streaks_latest" }),
+            new CreateIndexModel<PlayerStreak>(
+                keys.Ascending("PlayerId"),
+                new CreateIndexOptions<PlayerStreak>
+                {
+                    Name = "ux_player_streaks_active",
+                    Unique = true,
+                    PartialFilterExpression = Builders<PlayerStreak>.Filter.Eq("IsActive", true),
+                }),
+        ],
+        cancellationToken);
     }
 }
