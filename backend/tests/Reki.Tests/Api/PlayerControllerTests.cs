@@ -49,7 +49,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await players.UpdateOneAsync(
             item => item.Id == response.Id,
             Builders<PlayerProfile>.Update.Set(item => item.LastSeenAt, now.AddMinutes(-minutes)));
-        Factory.Services.GetRequiredService<IMemoryCache>().Remove(CacheKeyPrefixes.UpdateLastSeenAt + ":" + response.Id);
+        Factory.Services.GetRequiredService<IMemoryCache>().Remove(CacheKeyPrefixes.UpdateLastSeenAt + response.Id);
 
         await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
@@ -75,7 +75,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await players.UpdateOneAsync(
             item => item.Id == response.Id,
             Builders<PlayerProfile>.Update.Set(item => item.NotificationChannels, Array.Empty<PlayerNotificationChannel>()));
-        Factory.Services.GetRequiredService<IMemoryCache>().Remove(CacheKeyPrefixes.UpdateLastSeenAt + ":" + response.Id);
+        Factory.Services.GetRequiredService<IMemoryCache>().Remove(CacheKeyPrefixes.UpdateLastSeenAt + response.Id);
 
         await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 

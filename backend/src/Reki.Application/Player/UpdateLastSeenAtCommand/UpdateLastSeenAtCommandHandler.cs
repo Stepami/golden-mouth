@@ -15,7 +15,7 @@ internal sealed class UpdateLastSeenAtCommandHandler(
 {
     public async ValueTask<Unit> Handle(UpdateLastSeenAt command, CancellationToken cancellationToken)
     {
-        var key = CacheKeyPrefixes.UpdateLastSeenAt + ":" + command.Player.Id;
+        var key = CacheKeyPrefixes.UpdateLastSeenAt + command.Player.Id;
         if (!command.Force && cache.TryGetValue(key, out DateTimeOffset _))
         {
             return Unit.Value;
