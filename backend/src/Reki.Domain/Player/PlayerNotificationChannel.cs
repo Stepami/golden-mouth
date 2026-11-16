@@ -24,4 +24,7 @@ public sealed record PlayerNotificationChannel
         new(
             NotificationChannelType.WebPush,
             new Dictionary<string, string> { ["endpoint"] = endpoint, ["p256dh"] = p256dh, ["auth"] = auth });
+
+    public bool IsSameWebPush(PlayerNotificationChannel existing) =>
+        existing.Type == NotificationChannelType.WebPush && Properties["endpoint"] == existing.Properties["endpoint"];
 }

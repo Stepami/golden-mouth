@@ -81,9 +81,27 @@ public sealed class PlayerProfile
 
     public PlayerProfile AddNotificationChannel(PlayerNotificationChannel channel)
     {
-        if (SetNotificationChannel(channel))
+        switch (channel.Type)
         {
-            Version++;
+            case NotificationChannelType.WebPush:
+            {
+                if (!_notificationChannels.Any(channel.IsSameWebPush))
+                {
+                    _notificationChannels.Add(channel);
+                    Version++;
+                }
+
+                break;
+            }
+
+            case NotificationChannelType.Telegram:
+            {
+                _notificationChannels.RemoveAll(item => item.Type == NotificationChannelType.Telegram);
+                _notificationChannels.Add(channel);
+                Version++;
+
+                break;
+            }
         }
 
         return this;
@@ -91,6 +109,7 @@ public sealed class PlayerProfile
 
     public PlayerProfile AddExternalUserIds(IReadOnlyList<ExternalUserId> ids)
     {
+        var previousVersion = Version;
         var changed = false;
         for (var index = 0; index < ids.Count; index++)
         {
@@ -102,11 +121,11 @@ public sealed class PlayerProfile
 
             if (ids[index].TryGetTelegramId(out var chatId))
             {
-                changed |= SetNotificationChannel(PlayerNotificationChannel.Telegram(chatId.Value));
+                AddNotificationChannel(PlayerNotificationChannel.Telegram(chatId.Value));
             }
         }
 
-        if (changed)
+        if (changed && Version == previousVersion)
         {
             Version++;
         }
@@ -230,29 +249,5 @@ public sealed class PlayerProfile
             Wallet.Replenish(crystals);
             Version++;
         }
-    }
-
-    private bool SetNotificationChannel(PlayerNotificationChannel channel)
-    {
-        PlayerNotificationChannel? existing = null;
-        var count = 0;
-        foreach (var item in _notificationChannels)
-        {
-            if (item.Type == channel.Type)
-            {
-                existing = item;
-                count++;
-            }
-        }
-
-        if (count == 1 && existing is not null && existing.Properties.Count == channel.Properties.Count &&
-            existing.Properties.All(item => channel.Properties.TryGetValue(item.Key, out var value) && value == item.Value))
-        {
-            return false;
-        }
-
-        _notificationChannels.RemoveAll(item => item.Type == channel.Type);
-        _notificationChannels.Add(channel);
-        return true;
     }
 }
