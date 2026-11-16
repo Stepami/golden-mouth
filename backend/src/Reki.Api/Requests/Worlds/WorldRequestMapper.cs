@@ -14,7 +14,7 @@ internal static partial class WorldRequestMapper
     public static UpdateWorld ToUpdateWorld(this CreateWorldRequest source, WorldId worldId) =>
         new(worldId, source.ToWorld());
 
-    [MapValue(nameof(World.Id), Use = nameof(NewWorldId))]
+    [MapValue(nameof(World.Id), Use = "Reki.Domain.Worlds.WorldId.New")]
     [MapValue(nameof(World.IsArchived), false)]
     [MapValue(nameof(World.Version), 0)]
     [MapPropertyFromSource(nameof(World.Interface), Use = nameof(ToWorldInterface))]
@@ -22,8 +22,6 @@ internal static partial class WorldRequestMapper
     [MapProperty(nameof(CreateWorldRequest.Difficulty), nameof(World.Difficulty), Use = nameof(MapDifficulty))]
     [MapProperty(nameof(CreateWorldRequest.Rules), nameof(World.Rules), Use = nameof(MapRules))]
     public static partial World ToWorld(this CreateWorldRequest source);
-
-    private static WorldId NewWorldId() => WorldId.New();
 
     // Project only interface settings from the flat HTTP request.
     [MapperIgnoreSource(nameof(CreateWorldRequest.TemplateId))]
@@ -42,7 +40,7 @@ internal static partial class WorldRequestMapper
     [MapperIgnoreSource(nameof(CreateWorldRequest.Difficulty))]
     private static partial WorldInterface ToWorldInterface(this CreateWorldRequest source);
 
-    [MapValue(nameof(WorldPlayer.PlayerId), Use = nameof(EmptyPlayerId))]
+    [MapValue(nameof(WorldPlayer.PlayerId), Use = "Reki.Domain.Player.PlayerId.Zero")]
     [MapValue(nameof(WorldPlayer.Subscribers), 0L)]
     [MapperIgnoreSource(nameof(CreateWorldRequest.TemplateId))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Title))]
@@ -63,8 +61,6 @@ internal static partial class WorldRequestMapper
     [MapperIgnoreSource(nameof(CreateWorldRequest.Rules))]
     [MapperIgnoreSource(nameof(CreateWorldRequest.Stars))]
     private static partial WorldPlayer ToWorldPlayer(this CreateWorldRequest source);
-
-    private static PlayerId EmptyPlayerId() => PlayerId.From(Guid.Empty);
 
     private static IReadOnlyList<WorldRule> MapRules(IReadOnlyList<WorldRuleRequest> source) =>
     [
