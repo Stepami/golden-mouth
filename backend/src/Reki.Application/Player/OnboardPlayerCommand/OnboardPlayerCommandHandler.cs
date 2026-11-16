@@ -41,9 +41,9 @@ internal sealed class OnboardPlayerCommandHandler(
             PlayerWallet.Create(timeProvider.GetUtcNow()),
             new Dictionary<SkillId, SkillProgress>
             {
-                [SkillId.From("brave")] = new(1, 0, 0),
-                [SkillId.From("humor")] = new(1, 0, 0),
-                [SkillId.From("topic")] = new(1, 0, 0),
+                [SkillId.Brave] = new(1, 0, 0),
+                [SkillId.Humor] = new(1, 0, 0),
+                [SkillId.Topic] = new(1, 0, 0),
             },
             command.BirthYear,
             new PlayerSettings("all", "22:00-09:00", false),
