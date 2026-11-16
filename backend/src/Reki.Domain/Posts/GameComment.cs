@@ -42,7 +42,7 @@ public sealed class GameComment
 
     public StarId? AdditionalReplierId { get; private set; }
 
-    public void SetPredictedCommenter(StarId? starId)
+    public void SetAdditionalReplier(StarId? starId)
     {
         AdditionalReplierId = starId;
     }
