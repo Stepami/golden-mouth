@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Reki.Application.Player.Responses;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Streaks;
@@ -18,6 +19,16 @@ public static partial class PlayerResponseMapper
             MapSettings(player.Settings),
             new Dictionary<string, string>(),
             player.BirthYear,
+            new DailyChallengeResponse(
+                player.DailyChallenge.Day,
+                player.DailyChallenge.Completion.ToDictionary(
+                    item => JsonNamingPolicy.CamelCase.ConvertName(item.Key.ToString()),
+                    item => item.Value),
+                player.DailyChallenge.Values.ToDictionary(
+                    world => world.Key.ToString(),
+                    world => (IReadOnlyDictionary<string, DailyTaskValuesResponse>)world.Value.ToDictionary(
+                        item => JsonNamingPolicy.CamelCase.ConvertName(item.Key.ToString()),
+                        item => new DailyTaskValuesResponse(item.Value.Target, item.Value.Progress, item.Value.StarId)))),
             player.HitOwnWorldMilestone,
             player.ToEnergyWalletResponse());
     }

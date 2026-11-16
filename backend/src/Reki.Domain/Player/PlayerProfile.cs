@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using Reki.Domain.Player.Challenges;
+using Reki.Domain.Worlds;
 
 namespace Reki.Domain.Player;
 
@@ -23,7 +25,8 @@ public sealed class PlayerProfile
         DateTimeOffset? pausedAtUtc = null,
         DateTimeOffset? hateDisabledUntilUtc = null,
         int version = 0,
-        bool plusNotifyRequested = false)
+        bool plusNotifyRequested = false,
+        PlayerChallenge? dailyChallenge = null)
     {
         Id = id;
         _externalUserIds = [.. externalUserIds];
@@ -41,6 +44,7 @@ public sealed class PlayerProfile
         HateDisabledUntilUtc = hateDisabledUntilUtc;
         Version = version;
         PlusNotifyRequested = plusNotifyRequested;
+        DailyChallenge = dailyChallenge ?? PlayerChallenge.Empty;
         _notificationChannels = [.. notificationChannels];
         NotificationChannels = _notificationChannels.AsReadOnly();
     }
@@ -74,6 +78,60 @@ public sealed class PlayerProfile
     public PlayerSettings Settings { get; private set; }
 
     public IReadOnlyList<PlayerNotificationChannel> NotificationChannels { get; }
+
+    public PlayerChallenge DailyChallenge { get; private set; }
+
+    public void RefreshDailyChallenge(
+        DateOnly day,
+        IReadOnlyCollection<World> worlds,
+        IReadOnlyDictionary<DailyTaskType, int[]> targets)
+    {
+        if (DailyChallenge.Day == day)
+        {
+            return;
+        }
+
+        var challenge = new PlayerChallenge(
+            day,
+            DailyChallenges.Value[day.DayOfWeek].ToDictionary(type => type, _ => false),
+            new Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>>());
+        var selectedTargets = DailyChallenges.Value[day.DayOfWeek].ToDictionary(
+            type => type,
+            type => Random.Shared.Next(targets[type][0], targets[type][1] + 1));
+        DailyChallenge = challenge with { Values = worlds.ToDictionary(world => world.Id, world => new Dictionary<DailyTaskType, DailyTaskValues>(challenge.CreateValues(world, selectedTargets))) };
+        Version++;
+    }
+
+    public void AddDailyChallengeWorld(World world, IReadOnlyDictionary<DailyTaskType, int[]> targets)
+    {
+        if (DailyChallenge.Day == DateOnly.MinValue || DailyChallenge.Values.ContainsKey(world.Id))
+        {
+            return;
+        }
+
+        var existing = DailyChallenge.Values.Values.FirstOrDefault();
+        var selectedTargets = DailyChallenges.Value[DailyChallenge.Day.DayOfWeek].ToDictionary(
+            type => type,
+            type => type is DailyTaskType.PostViews or DailyTaskType.PostLikes || existing is null
+                ? Random.Shared.Next(targets[type][0], targets[type][1] + 1)
+                : (int)existing[type].Target);
+        var values = new Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>>(DailyChallenge.Values)
+        {
+            [world.Id] = new Dictionary<DailyTaskType, DailyTaskValues>(DailyChallenge.CreateValues(world, selectedTargets)),
+        };
+        DailyChallenge = DailyChallenge with { Values = values };
+        Version++;
+    }
+
+    public void RemoveDailyChallengeWorld(WorldId worldId)
+    {
+        var values = new Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>>(DailyChallenge.Values);
+        if (values.Remove(worldId))
+        {
+            DailyChallenge = DailyChallenge with { Values = values };
+            Version++;
+        }
+    }
 
     public PlayerProfile AddNotificationChannel(PlayerNotificationChannel channel)
     {

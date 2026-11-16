@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Caching.Memory;
 using Reki.Application.Notifications;
+using Reki.Application.Player.RefreshDailyChallengeCommand;
 using Reki.Domain.Notifications;
 
 namespace Reki.Application.Player.UpdateLastSeenAtCommand;
@@ -9,12 +10,14 @@ internal sealed class UpdateLastSeenAtCommandHandler(
     IPlayerRepository players,
     INotificationRepository notifications,
     IUnitOfWork unitOfWork,
+    ISender sender,
     IMemoryCache cache,
     TimeProvider timeProvider)
     : ICommandHandler<UpdateLastSeenAt>
 {
     public async ValueTask<Unit> Handle(UpdateLastSeenAt command, CancellationToken cancellationToken)
     {
+        await sender.Send(new RefreshDailyChallenge(command.Player), cancellationToken);
         var key = CacheKeyPrefixes.UpdateLastSeenAt + command.Player.Id;
         if (!command.Force && cache.TryGetValue(key, out DateTimeOffset _))
         {

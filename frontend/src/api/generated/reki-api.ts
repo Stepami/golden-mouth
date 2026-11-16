@@ -1994,6 +1994,22 @@ export interface CreateWorldRequest {
     [key: string]: any;
 }
 
+export interface DailyChallengeResponse {
+    day: string;
+    completion: { [key: string]: boolean; };
+    values: { [key: string]: { [key: string]: DailyTaskValuesResponse; }; };
+
+    [key: string]: any;
+}
+
+export interface DailyTaskValuesResponse {
+    target: number;
+    progress: number;
+    starId: string | null;
+
+    [key: string]: any;
+}
+
 export type DirectMessageAuthor = "star" | "me";
 
 export interface DirectMessageRequest {
@@ -2142,6 +2158,7 @@ export interface PlayerResponse {
     settings: PlayerSettingsResponse;
     experiments: { [key: string]: string; };
     birthYear: number;
+    dailyChallenge: DailyChallengeResponse;
     hitOwnWorldMilestone?: boolean;
     energyWallet?: EnergyWalletResponse | null;
 

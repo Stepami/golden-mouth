@@ -10,5 +10,6 @@ public sealed record PlayerResponse(
     PlayerSettingsResponse Settings,
     IReadOnlyDictionary<string, string> Experiments,
     int BirthYear,
+    DailyChallengeResponse DailyChallenge,
     bool HitOwnWorldMilestone = false,
     EnergyWalletResponse? EnergyWallet = null);

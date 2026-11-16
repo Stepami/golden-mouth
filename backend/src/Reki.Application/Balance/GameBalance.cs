@@ -1,3 +1,4 @@
+using Reki.Domain.Player.Challenges;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Balance;
@@ -12,6 +13,7 @@ public sealed record GameBalance(
     SkillBalance Skills,
     ThreadBalance Thread,
     IReadOnlyDictionary<WorldDifficulty, DifficultyBalance> Difficulties,
+    IReadOnlyDictionary<DayOfWeek, IReadOnlyDictionary<DailyTaskType, int[]>> DailyChallengeTargets,
     int PostEnergyCost = 1,
     int OwnWorldSubscribers = 500,
     double StarFeedOpenProbability = 0,
