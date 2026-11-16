@@ -3,97 +3,165 @@ using Reki.Domain.Posts;
 
 namespace Reki.Domain.Worlds;
 
-public sealed record World
+public sealed class World
 {
-    public required WorldId Id { get; init; }
+    private readonly List<string> _roles;
+    private readonly List<string> _voices;
+    private readonly List<string> _postIdeas;
+    private readonly List<string> _demoPosts;
+    private readonly List<WorldRule> _rules;
+    private readonly List<WorldStar> _stars;
 
-    public required WorldInterface Interface { get; init; }
+    public World(
+        WorldId id,
+        WorldInterface @interface,
+        WorldPlayer player,
+        WorldId? templateId,
+        WorldDifficulty difficulty,
+        bool isArchived,
+        IReadOnlyList<string> roles,
+        IReadOnlyList<string> voices,
+        IReadOnlyList<string> postIdeas,
+        IReadOnlyList<string> demoPosts,
+        IReadOnlyList<WorldRule> rules,
+        IReadOnlyList<WorldStar> stars,
+        int version)
+    {
+        Id = id;
+        Interface = @interface;
+        Player = new WorldPlayer(player.PlayerId, player.Voice, player.Drama, player.Name, player.Role, player.Avatar, player.Subscribers, player.Achievements);
+        TemplateId = templateId;
+        Difficulty = difficulty;
+        IsArchived = isArchived;
+        Version = version;
+        _roles = [.. roles];
+        _voices = [.. voices];
+        _postIdeas = [.. postIdeas];
+        _demoPosts = [.. demoPosts];
+        _rules = [.. rules];
+        _stars = [.. stars];
+        Roles = _roles.AsReadOnly();
+        Voices = _voices.AsReadOnly();
+        PostIdeas = _postIdeas.AsReadOnly();
+        DemoPosts = _demoPosts.AsReadOnly();
+        Rules = _rules.AsReadOnly();
+        Stars = _stars.AsReadOnly();
+    }
 
-    public required WorldPlayer Player { get; init; }
+    public WorldId Id { get; private set; }
 
-    public WorldId? TemplateId { get; init; }
+    public WorldInterface Interface { get; private set; }
 
-    public WorldDifficulty Difficulty { get; init; } = WorldDifficulty.Normal;
+    public WorldPlayer Player { get; private set; }
 
-    public bool IsArchived { get; init; }
+    public WorldId? TemplateId { get; private set; }
 
-    public IReadOnlyList<string> Roles { get; init; } = [];
+    public WorldDifficulty Difficulty { get; private set; }
 
-    public IReadOnlyList<string> Voices { get; init; } = [];
+    public bool IsArchived { get; private set; }
 
-    public IReadOnlyList<string> PostIdeas { get; init; } = [];
+    public IReadOnlyList<string> Roles { get; }
 
-    public IReadOnlyList<string> DemoPosts { get; init; } = [];
+    public IReadOnlyList<string> Voices { get; }
 
-    public IReadOnlyList<WorldRule> Rules { get; init; } = [];
+    public IReadOnlyList<string> PostIdeas { get; }
 
-    public IReadOnlyList<WorldStar> Stars { get; init; } = [];
+    public IReadOnlyList<string> DemoPosts { get; }
 
-    public int Version { get; init; }
+    public IReadOnlyList<WorldRule> Rules { get; }
 
-    public World Instantiate(PlayerId owner)
+    public IReadOnlyList<WorldStar> Stars { get; }
+
+    public int Version { get; private set; }
+
+    public World Instantiate(PlayerId owner, long? startingSubscribers = null)
     {
         if (Stars.Select(star => star.Id).Distinct().Count() != Stars.Count)
         {
             throw new ArgumentException("Star identifiers must be unique in a world.");
         }
 
-        return this with
-        {
-            Id = WorldId.New(),
-            Version = 0,
-            Player = Player with
-            {
-                PlayerId = owner,
-                Achievements = Player.Achievements.Select(item => item with { IsOpen = false }).ToArray(),
-            },
-        };
+        var player = new WorldPlayer(owner, Player.Voice, Player.Drama, Player.Name, Player.Role, Player.Avatar, startingSubscribers ?? Player.Subscribers, Player.Achievements.Select(item => item with { IsOpen = false }).ToArray());
+        return new World(WorldId.New(), Interface, player, TemplateId, Difficulty, IsArchived, Roles, Voices, PostIdeas, DemoPosts, Rules, Stars, 0);
     }
 
     public WorldStar? FindStar(AuthorId authorId) => Stars.FirstOrDefault(star => star.Id.ToAuthorId() == authorId);
 
     public World PublishPost(PostProgression progression)
     {
-        var updated = this with
-        {
-            Version = Version + 1,
-            Player = Player with
-            {
-                Subscribers = Math.Max(0, Player.Subscribers + progression.SubscriberDelta),
-            },
-        };
+        var changed = Player.SetSubscribers(Math.Max(0, Player.Subscribers + progression.SubscriberDelta));
         if (progression.Viral)
         {
-            updated = updated.UnlockAchievement(AchievementCatalog.FirstViral);
+            changed |= Player.UnlockAchievement(AchievementCatalog.FirstViral);
         }
 
-        if (updated.Player.Subscribers >= 10_000)
+        if (Player.Subscribers >= 10_000)
         {
-            updated = updated.UnlockAchievement(AchievementCatalog.TenThousand);
+            changed |= Player.UnlockAchievement(AchievementCatalog.TenThousand);
         }
 
         if (progression.Skills.Values.Any(skill => skill.Level >= 3))
         {
-            updated = updated.UnlockAchievement(AchievementCatalog.SkillMastery);
+            changed |= Player.UnlockAchievement(AchievementCatalog.SkillMastery);
         }
 
-        return updated;
+        if (changed)
+        {
+            Version++;
+        }
+
+        return this;
     }
 
-    public World UnlockAchievement(string id) => this with
+    public World UnlockAchievement(string id)
     {
-        Player = Player with
+        if (Player.UnlockAchievement(id))
         {
-            Achievements = Player.Achievements.Select(item => item.Id == id ? item with { IsOpen = true } : item).ToArray(),
-        },
-    };
+            Version++;
+        }
 
-    public World AwardThreadBonus(long bonus) => this with
+        return this;
+    }
+
+    public World AwardThreadBonus(long bonus)
     {
-        Version = Version + 1,
-        Player = Player with
+        if (Player.SetSubscribers(Math.Max(0, Player.Subscribers + bonus)))
         {
-            Subscribers = Math.Max(0, Player.Subscribers + bonus),
-        },
-    };
+            Version++;
+        }
+
+        return this;
+    }
+
+    public void UpdateDefinition(World definition)
+    {
+        var changed = Interface != definition.Interface || Difficulty != definition.Difficulty ||
+            !_roles.SequenceEqual(definition.Roles) || !_voices.SequenceEqual(definition.Voices) ||
+            !_postIdeas.SequenceEqual(definition.PostIdeas) || !_demoPosts.SequenceEqual(definition.DemoPosts) ||
+            !_rules.SequenceEqual(definition.Rules) || !_stars.SequenceEqual(definition.Stars);
+        changed |= Player.UpdateDefinition(definition.Player);
+        if (!changed)
+        {
+            return;
+        }
+
+        Interface = definition.Interface;
+        Difficulty = definition.Difficulty;
+        Replace(_roles, definition.Roles);
+        Replace(_voices, definition.Voices);
+        Replace(_postIdeas, definition.PostIdeas);
+        Replace(_demoPosts, definition.DemoPosts);
+        Replace(_rules, definition.Rules);
+        Replace(_stars, definition.Stars);
+        Version++;
+    }
+
+    private static void Replace<T>(List<T> target, IReadOnlyList<T> source)
+    {
+        if (!target.SequenceEqual(source))
+        {
+            target.Clear();
+            target.AddRange(source);
+        }
+    }
 }

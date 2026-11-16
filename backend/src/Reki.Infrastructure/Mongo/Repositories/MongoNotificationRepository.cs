@@ -15,24 +15,11 @@ internal sealed class MongoNotificationRepository(
     private readonly IMongoCollection<Notification> _notifications =
         database.GetCollection<Notification>(MongoCollections.Notifications);
 
-    public async ValueTask UpsertPendingAsync(
-        Notification notification,
-        bool reschedule,
-        CancellationToken cancellationToken)
-    {
-        var updates = Builders<Notification>.Update
-            .SetOnInsert(item => item.Id, notification.Id)
-            .SetOnInsert(item => item.Content, notification.Content);
-        updates = reschedule
-            ? updates.Set(item => item.SendAt, notification.SendAt)
-            : updates.SetOnInsert(item => item.SendAt, notification.SendAt);
-        await _notifications.UpdateOneAsync(
-            sessionProvider.Session,
-            item => item.PlayerId == notification.PlayerId && item.Status == NotificationStatus.Pending,
-            updates,
-            new UpdateOptions { IsUpsert = true },
-            cancellationToken);
-    }
+    public async ValueTask<Notification?> GetPendingAsync(PlayerId playerId, CancellationToken cancellationToken) =>
+        await _notifications.Find(
+                sessionProvider.Session,
+                item => item.PlayerId == playerId && item.Status == NotificationStatus.Pending)
+            .FirstOrDefaultAsync(cancellationToken);
 
     public async IAsyncEnumerable<Notification> GetDueAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken)

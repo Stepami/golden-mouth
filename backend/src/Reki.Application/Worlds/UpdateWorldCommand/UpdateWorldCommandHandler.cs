@@ -22,27 +22,9 @@ internal sealed class UpdateWorldCommandHandler(
             throw new ContentRejectedException();
         }
 
-        var updated = definition with
-        {
-            Id = world.Id,
-            Version = world.Version + 1,
-            TemplateId = world.TemplateId,
-            IsArchived = world.IsArchived,
-            Player = world.Player with
-            {
-                Name = definition.Player.Name,
-                Avatar = definition.Player.Avatar,
-                Role = definition.Player.Role,
-                Voice = definition.Player.Voice,
-                Drama = definition.Player.Drama,
-                Achievements = definition.Player.Achievements.Select(item => item with
-                {
-                    IsOpen = world.Player.Achievements.FirstOrDefault(value => value.Id == item.Id)?.IsOpen ?? false,
-                }).ToArray(),
-            },
-        };
-        await worldRepository.ReplaceWorldAsync(updated, cancellationToken);
-        await starVectorStore.WarmUpAsync(updated);
+        world.UpdateDefinition(definition);
+        await worldRepository.ReplaceWorldAsync(world, cancellationToken);
+        await starVectorStore.WarmUpAsync(world);
 
         return Unit.Value;
     }

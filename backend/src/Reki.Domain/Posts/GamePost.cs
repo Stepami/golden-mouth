@@ -2,26 +2,100 @@ using Reki.Domain.Worlds;
 
 namespace Reki.Domain.Posts;
 
-public sealed record GamePost(
-    PostId Id,
-    AuthorId AuthorId,
-    WorldId WorldId,
-    string Text,
-    long Views,
-    long Likes,
-    IReadOnlyList<AuthorId> LikedBy,
-    IReadOnlyList<GameComment> Comments,
-    DateTimeOffset CreatedAtUtc,
-    long SubscriberDelta,
-    double Quality,
-    double ReachRatio,
-    bool Viral,
-    bool Flop,
-    int Version = 0,
-    AuthorId? PredictedAuthorId = null,
-    string? FlopReason = null,
-    PostId? RepostId = null)
+public sealed class GamePost
 {
+    private readonly List<AuthorId> _likedBy;
+    private readonly List<GameComment> _comments;
+
+    public GamePost(
+        PostId id,
+        AuthorId authorId,
+        WorldId worldId,
+        string text,
+        long views,
+        long likes,
+        IReadOnlyList<AuthorId> likedBy,
+        IReadOnlyList<GameComment> comments,
+        DateTimeOffset createdAtUtc,
+        long subscriberDelta,
+        double quality,
+        double reachRatio,
+        bool viral,
+        bool flop,
+        int version = 0,
+        AuthorId? predictedAuthorId = null,
+        string? flopReason = null,
+        PostId? repostId = null)
+    {
+        Id = id;
+        AuthorId = authorId;
+        WorldId = worldId;
+        Text = text;
+        Views = views;
+        Likes = likes;
+        _likedBy = [.. likedBy];
+        LikedBy = _likedBy.AsReadOnly();
+        _comments = [.. comments];
+        Comments = _comments.AsReadOnly();
+        CreatedAtUtc = createdAtUtc;
+        SubscriberDelta = subscriberDelta;
+        Quality = quality;
+        ReachRatio = reachRatio;
+        Viral = viral;
+        Flop = flop;
+        Version = version;
+        PredictedAuthorId = predictedAuthorId;
+        FlopReason = flopReason;
+        RepostId = repostId;
+    }
+
+    public PostId Id { get; private set; }
+
+    public AuthorId AuthorId { get; private set; }
+
+    public WorldId WorldId { get; private set; }
+
+    public string Text { get; private set; }
+
+    public long Views { get; private set; }
+
+    public long Likes { get; private set; }
+
+    public IReadOnlyList<AuthorId> LikedBy { get; }
+
+    public IReadOnlyList<GameComment> Comments { get; }
+
+    public DateTimeOffset CreatedAtUtc { get; private set; }
+
+    public long SubscriberDelta { get; private set; }
+
+    public double Quality { get; private set; }
+
+    public double ReachRatio { get; private set; }
+
+    public bool Viral { get; private set; }
+
+    public bool Flop { get; private set; }
+
+    public int Version { get; private set; }
+
+    public AuthorId? PredictedAuthorId { get; private set; }
+
+    public string? FlopReason { get; private set; }
+
+    public PostId? RepostId { get; private set; }
+
+    public void ToggleLike(AuthorId authorId)
+    {
+        var liked = !_likedBy.Remove(authorId);
+        if (liked)
+        {
+            _likedBy.Add(authorId);
+        }
+
+        Version++;
+    }
+
     public GameComment? FindRequest(string requestId) =>
         Comments.FirstOrDefault(item => string.Equals(item.RequestId, requestId, StringComparison.Ordinal));
 
@@ -47,8 +121,13 @@ public sealed record GamePost(
         return branch;
     }
 
-    public GamePost AddComments(IReadOnlyList<GameComment> comments)
+    public void AddComments(IReadOnlyList<GameComment> comments)
     {
+        if (comments.Count == 0)
+        {
+            return;
+        }
+
         var ids = Comments.Select(item => item.Id).ToHashSet();
         var requests = Comments.Select(item => item.RequestId).OfType<string>()
             .ToHashSet(StringComparer.Ordinal);
@@ -62,19 +141,28 @@ public sealed record GamePost(
             }
         }
 
-        return this with { Comments = [.. Comments, .. comments], Version = Version + 1 };
+        _comments.AddRange(comments);
+        Version++;
     }
 
-    public GamePost ApplyProgress(PostProgression progression) =>
-        this with
+    public void ApplyProgress(PostProgression progression)
+    {
+        var predictedAuthorId = progression.Commenter.ToAuthorId();
+        if (SubscriberDelta == progression.SubscriberDelta && Quality.CompareTo(progression.Quality) == 0 &&
+            Viral == progression.Viral && Flop == progression.Flop && Views == progression.Views &&
+            Likes == progression.Likes && PredictedAuthorId == predictedAuthorId && FlopReason == progression.Score.FlopReason)
         {
-            SubscriberDelta = progression.SubscriberDelta,
-            Quality = progression.Quality,
-            Viral = progression.Viral,
-            Flop = progression.Flop,
-            Views = progression.Views,
-            Likes = progression.Likes,
-            PredictedAuthorId = progression.Commenter.ToAuthorId(),
-            FlopReason = progression.Score.FlopReason,
-        };
+            return;
+        }
+
+        SubscriberDelta = progression.SubscriberDelta;
+        Quality = progression.Quality;
+        Viral = progression.Viral;
+        Flop = progression.Flop;
+        Views = progression.Views;
+        Likes = progression.Likes;
+        PredictedAuthorId = predictedAuthorId;
+        FlopReason = progression.Score.FlopReason;
+        Version++;
+    }
 }

@@ -4,11 +4,14 @@ using Vogen;
 namespace Reki.Domain.Player;
 
 [ValueObject<Guid>(comparison: ComparisonGeneration.Omit)]
+[Instance("Empty", "Guid.Empty")]
 public readonly partial struct PlayerId
 {
     public static PlayerId New() => From(Guid.NewGuid());
 
     public static PlayerId From(string value) => From(Guid.Parse(value));
+
+    public static PlayerId Zero() => Empty;
 
     /// <summary>Преобразует идентификатор игрока в идентификатор автора.</summary>
     /// <returns>Идентификатор автора с типом игрока.</returns>

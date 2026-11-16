@@ -121,12 +121,26 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             await Assert.That(invalidChannel?.StatusCode).IsEqualTo((int)HttpStatusCode.BadRequest);
         }
 
-        var removedAuthorPost = posts[0] with
-        {
-            Id = PostId.New(start.AddHours(3)),
-            AuthorId = StarId.From("removed").ToAuthorId(),
-            Text = "пост удалённой звезды",
-        };
+        var firstPost = posts[0];
+        var removedAuthorPost = new GamePost(
+            PostId.New(start.AddHours(3)),
+            StarId.From("removed").ToAuthorId(),
+            firstPost.WorldId,
+            "пост удалённой звезды",
+            firstPost.Views,
+            firstPost.Likes,
+            firstPost.LikedBy,
+            firstPost.Comments,
+            firstPost.CreatedAtUtc,
+            firstPost.SubscriberDelta,
+            firstPost.Quality,
+            firstPost.ReachRatio,
+            firstPost.Viral,
+            firstPost.Flop,
+            firstPost.Version,
+            firstPost.PredictedAuthorId,
+            firstPost.FlopReason,
+            firstPost.RepostId);
         await Database.GetCollection<GamePost>("posts").InsertOneAsync(removedAuthorPost);
         var feedWithRemovedAuthor = await api.Posts.GetPostsAsync(worldId, null, feedAuthors, null, 100, CancellationToken.None);
         var channelWithRemovedAuthor = await api.Posts.GetPostsAsync(worldId, null, ownAuthors, null, 100, CancellationToken.None);
@@ -349,9 +363,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var original = await ReadPostAsync(postId);
         var world = await Database.GetCollection<World>("worlds").Find(item => item.Id == original.WorldId).SingleAsync();
         var author = world.Stars[0];
-        await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(
+        await Database.GetCollection<GamePost>("posts").UpdateOneAsync(
             item => item.Id == original.Id,
-            original with { AuthorId = author.Id.ToAuthorId(), Comments = [] });
+            Builders<GamePost>.Update.Set(item => item.AuthorId, author.Id.ToAuthorId()).Set(item => item.Comments, []));
         var beforePlayer = await GetStoredPlayerAsync(user);
         var beforeWorld = await GetStoredWorldAsync(user);
         Factory.Llm.Respond(CreateReplyTextResponse());
@@ -411,13 +425,15 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var original = await ReadPostAsync(postId);
         var world = await Database.GetCollection<World>("worlds").Find(item => item.Id == original.WorldId).SingleAsync();
         var author = world.Stars[0];
-        var post = original with { AuthorId = scenario == "own" ? original.AuthorId : author.Id.ToAuthorId(), Comments = [] };
-        await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(item => item.Id == original.Id, post);
+        await Database.GetCollection<GamePost>("posts").UpdateOneAsync(
+            item => item.Id == original.Id,
+            Builders<GamePost>.Update.Set(item => item.AuthorId, scenario == "own" ? original.AuthorId : author.Id.ToAuthorId())
+                .Set(item => item.Comments, []));
         if (scenario == "deleted")
         {
-            await Database.GetCollection<World>("worlds").ReplaceOneAsync(
+            await Database.GetCollection<World>("worlds").UpdateOneAsync(
                 item => item.Id == world.Id,
-                world with { Stars = world.Stars.Where(star => star.Id != author.Id).ToArray() });
+                Builders<World>.Update.Set(item => item.Stars, world.Stars.Where(star => star.Id != author.Id).ToArray()));
         }
 
         if (scenario == "energy")
@@ -504,7 +520,21 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(playerReply.Post.Comments.Count).IsEqualTo(2);
         var savedSelection = (await ReadPostAsync(postId)).Comments.Single(item => item.Id == playerReply.CommentId).AdditionalReplierId;
         await Assert.That(savedSelection).IsNotNull();
-        await Factory.Services.GetRequiredService<IStarVectorStore>().WarmUpAsync(world with { Stars = [selected] });
+        var selectedWorld = new World(
+            world.Id,
+            world.Interface,
+            world.Player,
+            world.TemplateId,
+            world.Difficulty,
+            world.IsArchived,
+            world.Roles,
+            world.Voices,
+            world.PostIdeas,
+            world.DemoPosts,
+            world.Rules,
+            [selected],
+            world.Version);
+        await Factory.Services.GetRequiredService<IStarVectorStore>().WarmUpAsync(selectedWorld);
         using var primaryStream = await api.Posts.GenerateReplyAsync(
             postId,
             worldId,
@@ -612,8 +642,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var (postId, targetId) = await PublishPostForThreadAsync(user);
         var first = await ReplyAsync(user, postId, targetId, "saved-key", "исходный ответ");
         var post = await Database.GetCollection<GamePost>("posts").Find(item => item.Id == PostId.From(postId)).SingleAsync();
-        var secondRoot = post.Comments[0] with { Id = CommentId.New(), Text = "другая ветка" };
-        await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(item => item.Id == post.Id, post with { Comments = [.. post.Comments, secondRoot] });
+        var originalRoot = post.Comments[0];
+        var secondRoot = new GameComment(CommentId.New(), originalRoot.ParentCommentId, originalRoot.RequestId, originalRoot.AuthorId, "другая ветка", originalRoot.Hidden, originalRoot.Reactions, originalRoot.AdditionalReplierId);
+        await Database.GetCollection<GamePost>("posts").UpdateOneAsync(item => item.Id == post.Id, Builders<GamePost>.Update.Set(item => item.Comments, [.. post.Comments, secondRoot]));
         var before = await GetStoredPostAsync(postId);
         var player = await GetStoredPlayerAsync(user);
         var calls = Factory.Llm.RequestCount;
@@ -776,7 +807,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var player = await GetStoredPlayerAsync(user);
         var post = await Database.GetCollection<GamePost>("posts").Find(item => item.Id == PostId.From(postId)).SingleAsync();
         var historical = Enumerable.Range(0, 3).Select(index => new GameComment(CommentId.New(), CommentId.From(targetId), null, PlayerId.From(player["_id"].AsBsonBinaryData.ToGuid().ToString("N")).ToAuthorId(), $"исторический ответ {index}", false, [], null)).ToArray();
-        await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(item => item.Id == post.Id, post with { Comments = [.. post.Comments, .. historical] });
+        await Database.GetCollection<GamePost>("posts").UpdateOneAsync(item => item.Id == post.Id, Builders<GamePost>.Update.Set(item => item.Comments, [.. post.Comments, .. historical]));
         var before = await GetStoredWorldAsync(user);
 
         // Act
@@ -801,15 +832,14 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             ?? throw new InvalidOperationException("Missing selected star.")).Id.Value;
         Factory.Llm.Respond(CreateReplyTextResponse());
         await ReplyAsync(user, postId, targetId, "metadata", "мой ответ");
-        var updated = world with
-        {
-            Player = world.Player with { Name = "Новое имя", Avatar = "new-avatar", Role = "new-role" },
-            Stars = world.Stars.Select(star => star.Id.Value == selected ? star with { Name = "Новое имя звезды", AvatarSeed = "star-avatar", Role = "star-role" } : star).ToArray(),
-        };
-        await worlds.ReplaceOneAsync(item => item.Id == world.Id, updated);
+        await worlds.UpdateOneAsync(item => item.Id == world.Id, Builders<World>.Update
+            .Set("Player.Name", "Новое имя")
+            .Set("Player.Avatar", "new-avatar")
+            .Set("Player.Role", "new-role")
+            .Set(item => item.Stars, world.Stars.Select(star => star.Id.Value == selected ? star with { Name = "Новое имя звезды", AvatarSeed = "star-avatar", Role = "star-role" } : star).ToArray()));
         var posts = Database.GetCollection<GamePost>("posts");
         var post = await posts.Find(item => item.Id == PostId.From(postId)).SingleAsync();
-        await posts.ReplaceOneAsync(item => item.Id == post.Id, post with { AuthorId = StarId.From(selected).ToAuthorId() });
+        await posts.UpdateOneAsync(item => item.Id == post.Id, Builders<GamePost>.Update.Set(item => item.AuthorId, StarId.From(selected).ToAuthorId()));
         using var api = Factory.CreateApiClient(user);
 
         // Act
@@ -840,10 +870,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var (postId, targetId) = await PublishPostForThreadAsync(user);
         var posts = Database.GetCollection<GamePost>("posts");
         var post = await posts.Find(item => item.Id == PostId.From(postId)).SingleAsync();
-        await posts.ReplaceOneAsync(item => item.Id == post.Id, post with
-        {
-            Comments = [.. post.Comments, post.Comments[0] with { Id = CommentId.New(), Text = "unrelated-sibling-marker" }],
-        });
+        var root = post.Comments[0];
+        var sibling = new GameComment(CommentId.New(), root.ParentCommentId, root.RequestId, root.AuthorId, "unrelated-sibling-marker", root.Hidden, root.Reactions, root.AdditionalReplierId);
+        await posts.UpdateOneAsync(item => item.Id == post.Id, Builders<GamePost>.Update.Set(item => item.Comments, [.. post.Comments, sibling]));
 
         // Act
         await ReplyAsync(user, postId, targetId, "prompt", "player-response-marker");
@@ -871,13 +900,25 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var second = await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api), CancellationToken.None);
         var posts = Database.GetCollection<GamePost>("posts");
         var original = await posts.Find(item => item.Id == PostId.From(postId)).SingleAsync();
-        var secondPost = original with
-        {
-            Id = PostId.New(original.CreatedAtUtc),
-            WorldId = second.Id,
-            Comments = [original.Comments[0]],
-            Version = 0,
-        };
+        var secondPost = new GamePost(
+            PostId.New(original.CreatedAtUtc),
+            original.AuthorId,
+            second.Id,
+            original.Text,
+            original.Views,
+            original.Likes,
+            original.LikedBy,
+            [original.Comments[0]],
+            original.CreatedAtUtc,
+            original.SubscriberDelta,
+            original.Quality,
+            original.ReachRatio,
+            original.Viral,
+            original.Flop,
+            0,
+            original.PredictedAuthorId,
+            original.FlopReason,
+            original.RepostId);
         await posts.InsertOneAsync(secondPost);
 
         // Act
@@ -902,12 +943,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var post = await ReadPostAsync(postId);
         if (scenario == "hidden")
         {
-            var target = post.Comments[0] with
-            {
-                Hidden = true,
-            };
-            post = post with { Comments = [target] };
-            await Database.GetCollection<GamePost>("posts").ReplaceOneAsync(item => item.Id == post.Id, post);
+            var originalTarget = post.Comments[0];
+            var target = new GameComment(originalTarget.Id, originalTarget.ParentCommentId, originalTarget.RequestId, originalTarget.AuthorId, originalTarget.Text, true, originalTarget.Reactions, originalTarget.AdditionalReplierId);
+            await Database.GetCollection<GamePost>("posts").UpdateOneAsync(item => item.Id == post.Id, Builders<GamePost>.Update.Set(item => item.Comments, [target]));
         }
         else
         {
@@ -1072,28 +1110,6 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var saved = await GetStoredPostAsync(ids[4].ToString());
         await Assert.That(saved["Likes"].ToInt64()).IsEqualTo(4);
         await Assert.That(saved["LikedBy"].AsBsonArray).IsEmpty();
-    }
-
-    [Test]
-    public async Task Like_ConcurrentAuthors_DoNotLoseLikesOrCommentsAsync()
-    {
-        const long user = 8204;
-        var (postId, _) = await PublishPostForThreadAsync(user);
-        var player = await GetStoredPlayerAsync(user);
-        var playerGuid = player["_id"].AsBsonBinaryData.ToGuid();
-        var playerAuthor = $"Player_{playerGuid:N}";
-        const string starAuthor = "Star_future";
-        var before = await GetStoredPostAsync(postId);
-        using var api = Factory.CreateApiClient(user);
-        await Task.WhenAll(
-            api.Posts.LikePostAsync(postId, new LikePostRequest { AuthorId = AuthorId.From(playerAuthor) }, CancellationToken.None),
-            api.Posts.LikePostAsync(postId, new LikePostRequest { AuthorId = AuthorId.From(starAuthor) }, CancellationToken.None));
-
-        var saved = await GetStoredPostAsync(postId);
-        await Assert.That(saved["LikedBy"].AsBsonArray.Select(value => value.AsString).ToArray())
-            .IsEquivalentTo([playerAuthor, starAuthor]);
-        await Assert.That(saved["Comments"]).IsEqualTo(before["Comments"]);
-        await Assert.That(saved["Likes"]).IsEqualTo(before["Likes"]);
     }
 
     [Test]

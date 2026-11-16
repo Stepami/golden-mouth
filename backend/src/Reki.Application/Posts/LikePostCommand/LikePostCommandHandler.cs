@@ -12,9 +12,8 @@ internal sealed class LikePostCommandHandler(IPostRepository posts) : ICommandHa
             return Unit.Value;
         }
 
-        var like = !post.LikedBy.Contains(command.AuthorId);
-
-        await posts.LikePostAsync(command.PostId, command.AuthorId, like, cancellationToken);
+        post.ToggleLike(command.AuthorId);
+        await posts.SaveLikesAsync(post, cancellationToken);
         return Unit.Value;
     }
 }

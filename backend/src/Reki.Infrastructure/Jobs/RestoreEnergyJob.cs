@@ -24,10 +24,11 @@ internal sealed class RestoreEnergyJob(IUnitOfWork unitOfWork, IPlayerRepository
                         return false;
                     }
 
-                    var wallet = current.Wallet.Restore(now);
-                    if (wallet != current.Wallet)
+                    var previousVersion = current.Version;
+                    current.RestoreEnergy(now);
+                    if (current.Version != previousVersion)
                     {
-                        await players.ReplacePlayerAsync(current.WithWallet(wallet), token);
+                        await players.ReplacePlayerAsync(current, token);
                     }
 
                     return true;

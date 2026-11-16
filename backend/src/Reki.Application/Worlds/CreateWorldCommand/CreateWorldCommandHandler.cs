@@ -32,11 +32,7 @@ internal sealed class CreateWorldCommandHandler(
         }
 
         var currentBalance = balance.CurrentValue;
-        var instance = source.Instantiate(player.Id);
-        var world = instance with
-        {
-            Player = instance.Player with { Subscribers = currentBalance.Growth.StartingSubscribers },
-        };
+        var world = source.Instantiate(player.Id, currentBalance.Growth.StartingSubscribers);
         await worldRepository.InsertWorldAsync(world, cancellationToken);
         telemetry.TrackPlayer(player, "world_created", new Dictionary<string, string> { ["template_id"] = world.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = world.Difficulty.ToString().ToLowerInvariant() }, world.Id);
         telemetry.TrackWorldAudience(world);

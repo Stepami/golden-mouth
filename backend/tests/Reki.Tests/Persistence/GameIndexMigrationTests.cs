@@ -430,19 +430,29 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var database = scope.Database;
         using var session = await mongo.MongoClient.StartSessionAsync();
         var source = Common.TestGameData.CreateWorld();
-        var expected = source with
-        {
-            Difficulty = WorldDifficulty.Hard,
-            Interface = source.Interface with { Title = "Свой мир" },
-            Player = source.Player with
-            {
-                PlayerId = PlayerId.From(collectionName == "world_templates" ? "00000000000000000000000000000000" : "c7e5abd8b70c54a2d22beacd8a3e6377"),
-                Avatar = "legacy-avatar",
-                Drama = collectionName == "worlds" ? WorldDrama.Mid : WorldDrama.Hot,
-                Subscribers = 9876,
-                Achievements = [new AchievementProgress("saved", "⭐", "Достижение", true)],
-            },
-        };
+        var player = new WorldPlayer(
+            PlayerId.From(collectionName == "world_templates" ? "00000000000000000000000000000000" : "c7e5abd8b70c54a2d22beacd8a3e6377"),
+            source.Player.Voice,
+            collectionName == "worlds" ? WorldDrama.Mid : WorldDrama.Hot,
+            source.Player.Name,
+            source.Player.Role,
+            "legacy-avatar",
+            9876,
+            [new AchievementProgress("saved", "⭐", "Достижение", true)]);
+        var expected = new World(
+            source.Id,
+            source.Interface with { Title = "Свой мир" },
+            player,
+            source.TemplateId,
+            WorldDifficulty.Hard,
+            source.IsArchived,
+            source.Roles,
+            source.Voices,
+            source.PostIdeas,
+            source.DemoPosts,
+            source.Rules,
+            source.Stars,
+            source.Version);
         var original = expected.ToBsonDocument();
         original["Interface"]["Difficulty"] = original["Difficulty"];
         original.Remove("Difficulty");
@@ -1042,13 +1052,10 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var templates = database.GetCollection<World>(MongoCollections.WorldTemplates);
         var stageId = WorldId.From(Guid.Parse("edfccf53-65c6-4eaf-8321-2391bc1758bd"));
         var template = await templates.Find(world => world.Id == stageId).SingleAsync();
-        var edited = template with { Interface = template.Interface with { Title = "Обновлённый шаблон" } };
+        var edited = new World(template.Id, template.Interface with { Title = "Обновлённый шаблон" }, template.Player, template.TemplateId, template.Difficulty, template.IsArchived, template.Roles, template.Voices, template.PostIdeas, template.DemoPosts, template.Rules, template.Stars, template.Version);
         await templates.ReplaceOneAsync(world => world.Id == stageId, edited);
-        var owned = template.Instantiate(PlayerId.From("7914ac6b4a791783fb72443b5461c5e8")) with
-        {
-            Player = template.Player with { PlayerId = PlayerId.From("7914ac6b4a791783fb72443b5461c5e8"), Subscribers = 987 },
-            Stars = [template.Stars[0] with { Name = "Своя звезда" }],
-        };
+        var instance = template.Instantiate(PlayerId.From("7914ac6b4a791783fb72443b5461c5e8"), 987);
+        var owned = new World(instance.Id, instance.Interface, instance.Player, instance.TemplateId, instance.Difficulty, instance.IsArchived, instance.Roles, instance.Voices, instance.PostIdeas, instance.DemoPosts, instance.Rules, [template.Stars[0] with { Name = "Своя звезда" }], instance.Version);
         await database.GetCollection<World>(MongoCollections.Worlds).InsertOneAsync(owned);
 
         await migration.UpAsync(database, session, CancellationToken.None);

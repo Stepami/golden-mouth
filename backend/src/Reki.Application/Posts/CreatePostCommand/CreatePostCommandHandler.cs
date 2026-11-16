@@ -67,14 +67,17 @@ internal sealed class CreatePostCommandHandler(
             1,
             false,
             false,
-            RepostId: command.RepostId);
+            repostId: command.RepostId);
 
         var progression = await progressionCalculator.CalculateAsync(
             player,
             world,
             post,
             command.OwnWords);
-        post = post.ApplyProgress(progression);
+        post.ApplyProgress(progression);
+
+        var previousSkillLevels = player.Skills.ToDictionary(item => item.Key, item => item.Value.Level);
+        var previousAchievements = world.Player.Achievements.Where(item => item.IsOpen).Select(item => item.Id).ToHashSet();
 
         var updatedWorld = world.PublishPost(progression);
         var hitOwnMilestone =
@@ -88,7 +91,7 @@ internal sealed class CreatePostCommandHandler(
 
         var invite = await invitations.GetPendingInviteAsync(player.Id, cancellationToken);
         var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
-        updated = updated with { Wallet = updated.Wallet.Replenish(updatedInvite?.BonusAmount ?? 0) };
+        updated.ReplenishCrystals(updatedInvite?.BonusAmount ?? 0);
 
         await unitOfWork.ExecuteAsync(
             async token =>
@@ -111,7 +114,7 @@ internal sealed class CreatePostCommandHandler(
             },
             cancellationToken);
         telemetry.TrackWorldAudience(updatedWorld);
-        TrackProgression(player, updated, world, updatedWorld, post, progression.Score, telemetry);
+        TrackProgression(previousSkillLevels, previousAchievements, updated, updatedWorld, post, progression.Score, telemetry);
         await feedScheduler.ScheduleFeedAsync(new ScheduleFromPostRequest(player.Id, world.Id, post.Id));
         var headline = post.Viral ? "Пост залетел" : "Канал растёт";
         var reason = progression.Score.FlopReason switch
@@ -151,9 +154,9 @@ internal sealed class CreatePostCommandHandler(
     }
 
     private static void TrackProgression(
-        PlayerProfile before,
+        IReadOnlyDictionary<SkillId, int> previousSkillLevels,
+        IReadOnlySet<string> previousAchievements,
         PlayerProfile after,
-        World beforeWorld,
         World afterWorld,
         GamePost post,
         PostScore turn,
@@ -178,7 +181,7 @@ internal sealed class CreatePostCommandHandler(
 
         foreach (var (skillId, progress) in after.Skills)
         {
-            var previousLevel = before.Skills[skillId].Level;
+            var previousLevel = previousSkillLevels[skillId];
             if (progress.Level > previousLevel)
             {
                 analytics.TrackPlayer(
@@ -195,8 +198,7 @@ internal sealed class CreatePostCommandHandler(
         }
 
         var earned = afterWorld.Player.Achievements.Where(item =>
-            item.IsOpen && !beforeWorld.Player.Achievements.Any(previous =>
-                previous.Id == item.Id && previous.IsOpen));
+            item.IsOpen && !previousAchievements.Contains(item.Id));
         foreach (var achievement in earned)
         {
             analytics.TrackPlayer(

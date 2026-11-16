@@ -7,21 +7,55 @@ internal sealed partial class SeedWorldTemplates
 {
     internal static IReadOnlyList<World> CreateTemplates() =>
     [
-        new World
-        {
-            Id = WorldId.From("edfccf53-65c6-4eaf-8321-2391bc1758bd"),
-            Difficulty = WorldDifficulty.Easy,
-            Roles = ["🎤 Трейни", "📸 Фансайт", "💃 Хореограф", "🎧 Продюсер"],
-            Voices = ["коротко, с самоиронией", "ярко, с эмодзи", "честно, как в дневнике"],
-            PostIdeas = ["Сегодня на репетиции до меня дошло, что…", "Никто не предупреждал, что перед дебютом…", "Моя самая смешная ошибка на сцене…"],
-            DemoPosts = ["На репетиции перепутали право и лево. Теперь это авторская хореография 🫠", "Новый трек записали с первого дубля. Ладно, с первого после двадцатого.", "Фансайт заметил новую деталь в тизере раньше самого агентства 👀", "Перед выходом на сцену страшно всем. Просто у кого-то микрофон громче.", "Сегодня учились поддерживать друг друга, когда сбивается ритм. Это тоже репетиция."],
-            Rules = [
+        new World(
+            id: WorldId.From("edfccf53-65c6-4eaf-8321-2391bc1758bd"),
+            @interface: new()
+            {
+                Title = "Сцена",
+                Emoji = "🎤",
+                Summary = "мало провалов · хейт с 5k · ценят смелость",
+                Description = "Начни жизнь в айдол-агентстве: первые фанаты, внимание звёзд и истории за кулисами.",
+                Where = "Сцене",
+                FirstContext = "Твой блог теперь часть жизни агентства. Начни с истории о музыке, репетициях или закулисье.",
+                FirstPrompt = "Что происходит сегодня в агентстве?",
+                AvatarStyle = "lorelei",
+            },
+            player: new WorldPlayer(
+                playerId: PlayerId.From("00000000000000000000000000000000"),
+                voice: "коротко, с самоиронией",
+                drama: WorldDrama.Soft,
+                name: "Мой дебют",
+                role: "🎤 Трейни",
+                avatar: "@first.stage",
+                subscribers: 120,
+                achievements: [
+                    new AchievementProgress("star_card", "👑", "Карточка звезды", false),
+                    new AchievementProgress("star_story", "💬", "История звезды", false),
+                    new AchievementProgress("first_viral", "🌊", "Первый залёт", false),
+                    new AchievementProgress("hate_survived", "🌩", "Хейт пережит", false),
+                    new AchievementProgress("collaboration", "🎬", "Коллаб", false),
+                    new AchievementProgress("ten_thousand", "⭐", "10k", false),
+                    new AchievementProgress("skill_mastery", "🎓", "Мастерство", false),
+                    new AchievementProgress("profile_frame", "🖼", "Рамка профиля", false),
+                    new AchievementProgress("secret", "❔", "Тайная", false),
+                    new AchievementProgress("duet", "🤝", "Дуэт", false),
+                    new AchievementProgress("challenge", "⚔️", "Челлендж", false),
+                    new AchievementProgress("rematch", "🔁", "Реванш", false),
+                ]),
+            templateId: null,
+            difficulty: WorldDifficulty.Easy,
+            isArchived: false,
+            roles: ["🎤 Трейни", "📸 Фансайт", "💃 Хореограф", "🎧 Продюсер"],
+            voices: ["коротко, с самоиронией", "ярко, с эмодзи", "честно, как в дневнике"],
+            postIdeas: ["Сегодня на репетиции до меня дошло, что…", "Никто не предупреждал, что перед дебютом…", "Моя самая смешная ошибка на сцене…"],
+            demoPosts: ["На репетиции перепутали право и лево. Теперь это авторская хореография 🫠", "Новый трек записали с первого дубля. Ладно, с первого после двадцатого.", "Фансайт заметил новую деталь в тизере раньше самого агентства 👀", "Перед выходом на сцену страшно всем. Просто у кого-то микрофон громче.", "Сегодня учились поддерживать друг друга, когда сбивается ритм. Это тоже репетиция."],
+            rules: [
                 new WorldRule("Звёзды ценят смелость, юмор и истории о Сцене.", true),
                 new WorldRule("Фанаты обсуждают музыку и репетиции. Критика относится к постам, а не к человеку.", true),
                 new WorldRule("События: прослушивания, камбэки и коллабы.", true),
                 new WorldRule("Без тем 18+ и травли по внешности", true),
             ],
-            Stars = [
+            stars: [
                 new WorldStar(
                     StarId.From("mira"),
                     "Мира",
@@ -47,28 +81,29 @@ internal sealed partial class SeedWorldTemplates
                     "Лаконичная образная речь, паузы и точные детали звука или сцены. Загадочность через наблюдение, а не скрытую власть или мистические обещания.",
                     "eva"),
             ],
-            Version = 0,
-            Interface = new()
+            version: 0),
+        new World(
+            id: WorldId.From("b018145e-c887-4d00-9f18-5c877d0af8be"),
+            @interface: new()
             {
-                Title = "Сцена",
-                Emoji = "🎤",
-                Summary = "мало провалов · хейт с 5k · ценят смелость",
-                Description = "Начни жизнь в айдол-агентстве: первые фанаты, внимание звёзд и истории за кулисами.",
-                Where = "Сцене",
-                FirstContext = "Твой блог теперь часть жизни агентства. Начни с истории о музыке, репетициях или закулисье.",
-                FirstPrompt = "Что происходит сегодня в агентстве?",
-                AvatarStyle = "lorelei",
+                Title = "Академия",
+                Emoji = "🌸",
+                Summary = "рост ×1,1 · хейт с 3k · ценят «в тему»",
+                Description = "Стань частью аниме-академии: найди свой клуб, знакомься с героями и готовься к фестивалю.",
+                Where = "Академии",
+                FirstContext = "Ты в Академии: вокруг клубы, проекты и подготовка к фестивалю. Расскажи свою первую историю.",
+                FirstPrompt = "Что случилось сегодня в Академии?",
+                AvatarStyle = "notionists",
             },
-            Player = new()
-            {
-                PlayerId = PlayerId.From("00000000000000000000000000000000"),
-                Name = "Мой дебют",
-                Avatar = "@first.stage",
-                Role = "🎤 Трейни",
-                Voice = "коротко, с самоиронией",
-                Drama = WorldDrama.Soft,
-                Subscribers = 120,
-                Achievements = [
+            player: new WorldPlayer(
+                playerId: PlayerId.From("00000000000000000000000000000000"),
+                voice: "как в дневнике клуба",
+                drama: WorldDrama.Mid,
+                name: "Клуб после уроков",
+                role: "📚 Участник клуба",
+                avatar: "@after.class",
+                subscribers: 120,
+                achievements: [
                     new AchievementProgress("star_card", "👑", "Карточка звезды", false),
                     new AchievementProgress("star_story", "💬", "История звезды", false),
                     new AchievementProgress("first_viral", "🌊", "Первый залёт", false),
@@ -81,24 +116,21 @@ internal sealed partial class SeedWorldTemplates
                     new AchievementProgress("duet", "🤝", "Дуэт", false),
                     new AchievementProgress("challenge", "⚔️", "Челлендж", false),
                     new AchievementProgress("rematch", "🔁", "Реванш", false),
-                ],
-            },
-        },
-        new World
-        {
-            Id = WorldId.From("b018145e-c887-4d00-9f18-5c877d0af8be"),
-            Difficulty = WorldDifficulty.Normal,
-            Roles = ["📚 Участник клуба", "🎨 Мангака", "🎭 Организатор фестиваля", "🔬 Изобретатель"],
-            Voices = ["как в дневнике клуба", "с юмором и аниме-сравнениями", "спокойно и по делу"],
-            PostIdeas = ["Наш клуб готовился к фестивалю, но…", "Сегодня на занятии мы придумали…", "Самая неожиданная история после уроков…"],
-            DemoPosts = ["Наш клуб занял последнее место. Зато баннер теперь висит у входа 🎨", "Газету распечатали вверх ногами. Читаем с новой точки зрения.", "Изобретение работает! Правда, пока только как держатель для печенья.", "На фестивале будет сцена для каждого клуба. Даже для клуба тихого чтения.", "Манга о подготовке к экзаменам неожиданно превратилась в комедию."],
-            Rules = [
+                ]),
+            templateId: null,
+            difficulty: WorldDifficulty.Normal,
+            isArchived: false,
+            roles: ["📚 Участник клуба", "🎨 Мангака", "🎭 Организатор фестиваля", "🔬 Изобретатель"],
+            voices: ["как в дневнике клуба", "с юмором и аниме-сравнениями", "спокойно и по делу"],
+            postIdeas: ["Наш клуб готовился к фестивалю, но…", "Сегодня на занятии мы придумали…", "Самая неожиданная история после уроков…"],
+            demoPosts: ["Наш клуб занял последнее место. Зато баннер теперь висит у входа 🎨", "Газету распечатали вверх ногами. Читаем с новой точки зрения.", "Изобретение работает! Правда, пока только как держатель для печенья.", "На фестивале будет сцена для каждого клуба. Даже для клуба тихого чтения.", "Манга о подготовке к экзаменам неожиданно превратилась в комедию."],
+            rules: [
                 new WorldRule("Посты о клубах, дружбе и проектах помогают найти своих читателей.", true),
                 new WorldRule("Разные клубы спорят об идеях, но не унижают участников.", true),
                 new WorldRule("События: выставки, соревнования и школьный фестиваль.", true),
                 new WorldRule("Без тем 18+ и травли по внешности", true),
             ],
-            Stars = [
+            stars: [
                 new WorldStar(
                     StarId.From("aiko"),
                     "Айко",
@@ -124,28 +156,29 @@ internal sealed partial class SeedWorldTemplates
                     "Живая организаторская речь, конкретные планы фестиваля и идеи совместного участия. Энергия без давления и соревнования за внимание.",
                     "yuna"),
             ],
-            Version = 0,
-            Interface = new()
+            version: 0),
+        new World(
+            id: WorldId.From("5720946a-ea7c-4a10-9c50-51ce3deefc53"),
+            @interface: new()
             {
-                Title = "Академия",
-                Emoji = "🌸",
-                Summary = "рост ×1,1 · хейт с 3k · ценят «в тему»",
-                Description = "Стань частью аниме-академии: найди свой клуб, знакомься с героями и готовься к фестивалю.",
-                Where = "Академии",
-                FirstContext = "Ты в Академии: вокруг клубы, проекты и подготовка к фестивалю. Расскажи свою первую историю.",
-                FirstPrompt = "Что случилось сегодня в Академии?",
-                AvatarStyle = "notionists",
+                Title = "Айти-тусовка",
+                Emoji = "💻",
+                Summary = "рост ×1,25 · хейт с 1k · больше риска",
+                Description = "Заведи техноблог: делись проектами, спорь с авторами каналов и попадай в стартап-драмы.",
+                Where = "Айти-тусовке",
+                FirstContext = "Твой техноблог открыт. Поделись наблюдением о проекте, технологии или жизни в айти.",
+                FirstPrompt = "О чём будет твой первый технопост?",
+                AvatarStyle = "pixelArt",
             },
-            Player = new()
-            {
-                PlayerId = PlayerId.From("00000000000000000000000000000000"),
-                Name = "Клуб после уроков",
-                Avatar = "@after.class",
-                Role = "📚 Участник клуба",
-                Voice = "как в дневнике клуба",
-                Drama = WorldDrama.Mid,
-                Subscribers = 120,
-                Achievements = [
+            player: new WorldPlayer(
+                playerId: PlayerId.From("00000000000000000000000000000000"),
+                voice: "коротко, с айти-самоиронией",
+                drama: WorldDrama.Mid,
+                name: "Деплой и мемы",
+                role: "🧑\u200D💻 Разработчик",
+                avatar: "@hello.deploy",
+                subscribers: 120,
+                achievements: [
                     new AchievementProgress("star_card", "👑", "Карточка звезды", false),
                     new AchievementProgress("star_story", "💬", "История звезды", false),
                     new AchievementProgress("first_viral", "🌊", "Первый залёт", false),
@@ -158,25 +191,22 @@ internal sealed partial class SeedWorldTemplates
                     new AchievementProgress("duet", "🤝", "Дуэт", false),
                     new AchievementProgress("challenge", "⚔️", "Челлендж", false),
                     new AchievementProgress("rematch", "🔁", "Реванш", false),
-                ],
-            },
-        },
-        new World
-        {
-            Id = WorldId.From("5720946a-ea7c-4a10-9c50-51ce3deefc53"),
-            Difficulty = WorldDifficulty.Hard,
-            Roles = ["🧑\u200D💻 Разработчик", "🤖 AI-энтузиаст", "🧪 Тестировщик", "🚀 Автор стартапа", "🤝 Эйчар"],
-            Voices = ["коротко, с айти-самоиронией", "с фактами и примерами", "как заметки из лаборатории"],
-            PostIdeas = ["Сегодня мой код заработал, когда я…", "Проверил обещание новой AI-модели и обнаружил…", "Баг, который оказался фичей, пока…"],
-            DemoPosts = ["Стартап обещал заменить пять отделов. Пока заменил кнопку «Отправить» на «Спросить AI».", "Релиз перенесли на понедельник. Самая полезная технология недели — календарь 🍔", "Проверил модель на собственных тестах: красивое демо ещё не означает стабильный результат 🤖", "Нашёл баг за пять минут. До этого три часа объяснял себе, почему это невозможно.", "Цена подписки известна. Цена интеграции выясняется после первой встречи с легаси."],
-            Rules = [
+                ]),
+            templateId: null,
+            difficulty: WorldDifficulty.Hard,
+            isArchived: false,
+            roles: ["🧑\u200D💻 Разработчик", "🤖 AI-энтузиаст", "🧪 Тестировщик", "🚀 Автор стартапа", "🤝 Эйчар"],
+            voices: ["коротко, с айти-самоиронией", "с фактами и примерами", "как заметки из лаборатории"],
+            postIdeas: ["Сегодня мой код заработал, когда я…", "Проверил обещание новой AI-модели и обнаружил…", "Баг, который оказался фичей, пока…"],
+            demoPosts: ["Стартап обещал заменить пять отделов. Пока заменил кнопку «Отправить» на «Спросить AI».", "Релиз перенесли на понедельник. Самая полезная технология недели — календарь 🍔", "Проверил модель на собственных тестах: красивое демо ещё не означает стабильный результат 🤖", "Нашёл баг за пять минут. До этого три часа объяснял себе, почему это невозможно.", "Цена подписки известна. Цена интеграции выясняется после первой встречи с легаси."],
+            rules: [
                 new WorldRule("Ценятся опыт, проверяемые факты и шутки о технологиях.", true),
                 new WorldRule("Можно спорить о коде и обещаниях. Нельзя переходить на личность.", true),
                 new WorldRule("Персонажи — игровые адаптации, не настоящие авторы каналов.", true),
                 new WorldRule("События: релизы, хакатоны, эксперименты и коллабы.", true),
                 new WorldRule("Без тем 18+ и травли по внешности", true),
             ],
-            Stars = [
+            stars: [
                 new WorldStar(
                     StarId.From("greedy_wolf"),
                     "Меркантил",
@@ -202,28 +232,31 @@ internal sealed partial class SeedWorldTemplates
                     "Любопытство исследователя: гипотеза, эксперимент, ограничения результата. Понятные примеры AI без рекламных обещаний; представляется Куляш AI.",
                     "alexey_nl"),
             ],
-            Version = 0,
-            Interface = new()
+            version: 0),
+        new World(
+            id: WorldId.From("0cb3f809-6dfd-4ef1-af52-daa12a5b8804"),
+            @interface: new()
             {
-                Title = "Айти-тусовка",
-                Emoji = "💻",
-                Summary = "рост ×1,25 · хейт с 1k · больше риска",
-                Description = "Заведи техноблог: делись проектами, спорь с авторами каналов и попадай в стартап-драмы.",
-                Where = "Айти-тусовке",
-                FirstContext = "Твой техноблог открыт. Поделись наблюдением о проекте, технологии или жизни в айти.",
-                FirstPrompt = "О чём будет твой первый технопост?",
-                AvatarStyle = "pixelArt",
+                Title = "Стрим",
+                Emoji = "🎮",
+                Summary = "рост ×1,1 · ценят юмор",
+                Description = "Примерь жизнь стримера: собирай зрителей, знакомься с героями эфиров и обсуждай турниры.",
+                Where = "Стриме",
+                FirstContext = "Ты в мире эфиров, игровых чатов и турниров. Начни с истории, которую захочется обсудить.",
+                FirstPrompt = "Какую историю из мира стримов расскажешь?",
+                AvatarStyle = "thumbs",
+                UnlockSkill = "humor",
+                UnlockLevel = 4,
             },
-            Player = new()
-            {
-                PlayerId = PlayerId.From("00000000000000000000000000000000"),
-                Name = "Деплой и мемы",
-                Avatar = "@hello.deploy",
-                Role = "🧑\u200D💻 Разработчик",
-                Voice = "коротко, с айти-самоиронией",
-                Drama = WorldDrama.Mid,
-                Subscribers = 120,
-                Achievements = [
+            player: new WorldPlayer(
+                playerId: PlayerId.From("00000000000000000000000000000000"),
+                voice: "энергично, как в чате",
+                drama: WorldDrama.Mid,
+                name: "Ещё один раунд",
+                role: "🎮 Стример",
+                avatar: "@one.more.round",
+                subscribers: 120,
+                achievements: [
                     new AchievementProgress("star_card", "👑", "Карточка звезды", false),
                     new AchievementProgress("star_story", "💬", "История звезды", false),
                     new AchievementProgress("first_viral", "🌊", "Первый залёт", false),
@@ -236,24 +269,21 @@ internal sealed partial class SeedWorldTemplates
                     new AchievementProgress("duet", "🤝", "Дуэт", false),
                     new AchievementProgress("challenge", "⚔️", "Челлендж", false),
                     new AchievementProgress("rematch", "🔁", "Реванш", false),
-                ],
-            },
-        },
-        new World
-        {
-            Id = WorldId.From("0cb3f809-6dfd-4ef1-af52-daa12a5b8804"),
-            Difficulty = WorldDifficulty.Normal,
-            Roles = ["🎮 Стример", "🎙 Комментатор", "🛡 Модератор", "🏆 Киберспортсмен"],
-            Voices = ["энергично, как в чате", "с юмором и игровыми сравнениями", "спокойно, без капслока"],
-            PostIdeas = ["Первый эфир: три зрителя и…", "Чат попросил ещё один раунд, но…", "Самый смешной момент матча…"],
-            DemoPosts = ["Первый эфир: три зрителя. Один я, второй мой второй аккаунт, третий — легенда.", "Чат голосовал за сложность. Босс голосовал за мой выход в меню.", "Случайный рейд оказался самым тёплым вечером недели 🫶", "Сегодня комментировал матч без голоса. Получился самый спокойный стрим.", "Модераторы нашли новый способ победить токсичность: объяснить правила до матча."],
-            Rules = [
+                ]),
+            templateId: null,
+            difficulty: WorldDifficulty.Normal,
+            isArchived: false,
+            roles: ["🎮 Стример", "🎙 Комментатор", "🛡 Модератор", "🏆 Киберспортсмен"],
+            voices: ["энергично, как в чате", "с юмором и игровыми сравнениями", "спокойно, без капслока"],
+            postIdeas: ["Первый эфир: три зрителя и…", "Чат попросил ещё один раунд, но…", "Самый смешной момент матча…"],
+            demoPosts: ["Первый эфир: три зрителя. Один я, второй мой второй аккаунт, третий — легенда.", "Чат голосовал за сложность. Босс голосовал за мой выход в меню.", "Случайный рейд оказался самым тёплым вечером недели 🫶", "Сегодня комментировал матч без голоса. Получился самый спокойный стрим.", "Модераторы нашли новый способ победить токсичность: объяснить правила до матча."],
+            rules: [
                 new WorldRule("Истории из игр и самоирония привлекают зрителей.", true),
                 new WorldRule("Спорим о матчах, а не о людях. Модераторы следят за границами.", true),
                 new WorldRule("События: совместные эфиры, рейды и турниры.", true),
                 new WorldRule("Без тем 18+ и травли по внешности", true),
             ],
-            Stars = [
+            stars: [
                 new WorldStar(
                     StarId.From("glitch"),
                     "Глитч",
@@ -279,30 +309,29 @@ internal sealed partial class SeedWorldTemplates
                     "Спокойная поддержка и понятные правила дружелюбного чата. Предлагает безопасный следующий шаг новичку, не командует жизнью игрока.",
                     "save"),
             ],
-            Version = 0,
-            Interface = new()
+            version: 0),
+        new World(
+            id: WorldId.From("14049891-fe2b-4d98-b38f-0f37e6544052"),
+            @interface: new()
             {
-                Title = "Стрим",
-                Emoji = "🎮",
-                Summary = "рост ×1,1 · ценят юмор",
-                Description = "Примерь жизнь стримера: собирай зрителей, знакомься с героями эфиров и обсуждай турниры.",
-                Where = "Стриме",
-                FirstContext = "Ты в мире эфиров, игровых чатов и турниров. Начни с истории, которую захочется обсудить.",
-                FirstPrompt = "Какую историю из мира стримов расскажешь?",
-                AvatarStyle = "thumbs",
-                UnlockSkill = "humor",
-                UnlockLevel = 4,
+                Title = "Свой мир",
+                Emoji = "✨",
+                Summary = string.Empty,
+                Description = "Придумай свою жизнь: выбери мир и роль, веди блог и знакомься с героями своей истории.",
+                Where = "своём мире",
+                FirstContext = "Это твой мир и твоя роль. Первый пост познакомит героев с твоей историей.",
+                FirstPrompt = "С какого события начнётся твоя история?",
+                AvatarStyle = "shapes",
             },
-            Player = new()
-            {
-                PlayerId = PlayerId.From("00000000000000000000000000000000"),
-                Name = "Ещё один раунд",
-                Avatar = "@one.more.round",
-                Role = "🎮 Стример",
-                Voice = "энергично, как в чате",
-                Drama = WorldDrama.Mid,
-                Subscribers = 120,
-                Achievements = [
+            player: new WorldPlayer(
+                playerId: PlayerId.From("00000000000000000000000000000000"),
+                voice: "как хроника приключения",
+                drama: WorldDrama.Soft,
+                name: "Моя история",
+                role: "✨ Рассказчик",
+                avatar: "@my.story",
+                subscribers: 120,
+                achievements: [
                     new AchievementProgress("star_card", "👑", "Карточка звезды", false),
                     new AchievementProgress("star_story", "💬", "История звезды", false),
                     new AchievementProgress("first_viral", "🌊", "Первый залёт", false),
@@ -315,24 +344,21 @@ internal sealed partial class SeedWorldTemplates
                     new AchievementProgress("duet", "🤝", "Дуэт", false),
                     new AchievementProgress("challenge", "⚔️", "Челлендж", false),
                     new AchievementProgress("rematch", "🔁", "Реванш", false),
-                ],
-            },
-        },
-        new World
-        {
-            Id = WorldId.From("14049891-fe2b-4d98-b38f-0f37e6544052"),
-            Difficulty = WorldDifficulty.Normal,
-            Roles = ["✨ Рассказчик", "🧭 Исследователь", "🎨 Создатель", "📰 Хроникёр"],
-            Voices = ["как хроника приключения", "с юмором и фантазией", "как личный дневник"],
-            PostIdeas = ["В моём мире сегодня впервые…", "Никто не ожидал, что главный герой…", "Одна маленькая деталь изменила всё…"],
-            DemoPosts = ["Сегодня в городе появился новый маршрут. Все пошли искать, куда он ведёт.", "Герой забыл план приключения. Кажется, так и начинаются лучшие истории.", "Собрали совет жителей: у каждого была идея, и ни у кого не было печенья.", "Новая глава началась с самого обычного вопроса: «А что, если?»", "Маленькая деталь из первой истории вдруг оказалась самой важной."],
-            Rules = [
+                ]),
+            templateId: null,
+            difficulty: WorldDifficulty.Normal,
+            isArchived: false,
+            roles: ["✨ Рассказчик", "🧭 Исследователь", "🎨 Создатель", "📰 Хроникёр"],
+            voices: ["как хроника приключения", "с юмором и фантазией", "как личный дневник"],
+            postIdeas: ["В моём мире сегодня впервые…", "Никто не ожидал, что главный герой…", "Одна маленькая деталь изменила всё…"],
+            demoPosts: ["Сегодня в городе появился новый маршрут. Все пошли искать, куда он ведёт.", "Герой забыл план приключения. Кажется, так и начинаются лучшие истории.", "Собрали совет жителей: у каждого была идея, и ни у кого не было печенья.", "Новая глава началась с самого обычного вопроса: «А что, если?»", "Маленькая деталь из первой истории вдруг оказалась самой важной."],
+            rules: [
                 new WorldRule("Мир следует твоему описанию.", false),
                 new WorldRule("Персонажи обсуждают события и идеи, а не внешность или личность.", false),
                 new WorldRule("Безопасность 14+ работает в любом мире.", false),
                 new WorldRule("Без тем 18+ и травли по внешности", true),
             ],
-            Stars = [
+            stars: [
                 new WorldStar(
                     StarId.From("spark"),
                     "Искра",
@@ -358,42 +384,6 @@ internal sealed partial class SeedWorldTemplates
                     "Точная речь хроникёра, связывает прошлую деталь с текущим событием. Не придумывает воспоминания; не певец, музыка не его роль по умолчанию.",
                     "echo"),
             ],
-            Version = 0,
-            Interface = new()
-            {
-                Title = "Свой мир",
-                Emoji = "✨",
-                Summary = string.Empty,
-                Description = "Придумай свою жизнь: выбери мир и роль, веди блог и знакомься с героями своей истории.",
-                Where = "своём мире",
-                FirstContext = "Это твой мир и твоя роль. Первый пост познакомит героев с твоей историей.",
-                FirstPrompt = "С какого события начнётся твоя история?",
-                AvatarStyle = "shapes",
-            },
-            Player = new()
-            {
-                PlayerId = PlayerId.From("00000000000000000000000000000000"),
-                Name = "Моя история",
-                Avatar = "@my.story",
-                Role = "✨ Рассказчик",
-                Voice = "как хроника приключения",
-                Drama = WorldDrama.Soft,
-                Subscribers = 120,
-                Achievements = [
-                    new AchievementProgress("star_card", "👑", "Карточка звезды", false),
-                    new AchievementProgress("star_story", "💬", "История звезды", false),
-                    new AchievementProgress("first_viral", "🌊", "Первый залёт", false),
-                    new AchievementProgress("hate_survived", "🌩", "Хейт пережит", false),
-                    new AchievementProgress("collaboration", "🎬", "Коллаб", false),
-                    new AchievementProgress("ten_thousand", "⭐", "10k", false),
-                    new AchievementProgress("skill_mastery", "🎓", "Мастерство", false),
-                    new AchievementProgress("profile_frame", "🖼", "Рамка профиля", false),
-                    new AchievementProgress("secret", "❔", "Тайная", false),
-                    new AchievementProgress("duet", "🤝", "Дуэт", false),
-                    new AchievementProgress("challenge", "⚔️", "Челлендж", false),
-                    new AchievementProgress("rematch", "🔁", "Реванш", false),
-                ],
-            },
-        },
+            version: 0),
     ];
 }

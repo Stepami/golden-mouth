@@ -14,12 +14,13 @@ public interface IPlayerRepository
 
     ValueTask SavePlusNotificationAsync(
         PlayerProfile player,
-        PlayerProfile updated,
+        int previousVersion,
         CancellationToken cancellationToken);
 
     ValueTask<int> ClaimPlusInterestAsync(
         PlayerProfile player,
-        PlayerProfile updated,
+        int previousVersion,
+        int previousCrystals,
         CancellationToken cancellationToken);
 
     ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken);

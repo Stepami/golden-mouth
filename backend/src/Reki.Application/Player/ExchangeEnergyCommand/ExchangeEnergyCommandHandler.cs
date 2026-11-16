@@ -21,9 +21,9 @@ internal sealed class ExchangeEnergyCommandHandler(
                     return new EnergyExchangeResponse(false, null);
                 }
 
-                var updated = player.WithWallet(player.Wallet.Exchange(timeProvider.GetUtcNow()));
-                await players.ReplacePlayerAsync(updated, token);
-                return new EnergyExchangeResponse(true, updated.Wallet.ToResponse());
+                player.ExchangeEnergy(timeProvider.GetUtcNow());
+                await players.ReplacePlayerAsync(player, token);
+                return new EnergyExchangeResponse(true, player.Wallet.ToResponse());
             },
             cancellationToken);
     }

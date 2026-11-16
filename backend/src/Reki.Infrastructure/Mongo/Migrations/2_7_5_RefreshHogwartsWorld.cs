@@ -29,9 +29,9 @@ internal sealed class RefreshHogwartsWorld : RekiMigrationBase
             return content is null ? star : star with { Name = content.Name, Role = content.Role, About = content.About, Voice = content.Voice };
         }).ToList();
         stars.AddRange(cast.Where(item => stars.All(star => star.Id != item.Id)));
-        var updated = world with
-        {
-            Interface = world.Interface with
+        var updated = new World(
+            id: world.Id,
+            @interface: world.Interface with
             {
                 Title = "Спасти Хогвартс",
                 Emoji = "🏰",
@@ -42,22 +42,31 @@ internal sealed class RefreshHogwartsWorld : RekiMigrationBase
                 FirstPrompt = "Что ты предложишь для будущего Хогвартса?",
                 AvatarStyle = "notionists",
             },
-            Roles = ["Участник спора о будущем Хогвартса", "Выпускник Хогвартса", "Сторонник школьного проекта", "Сторонник коммерческого проекта"],
-            Voices = ["прямо и с аргументами", "с иронией и неудобными вопросами", "внимательно к чужим интересам"],
-            PostIdeas =
-            [
+            player: new WorldPlayer(
+                playerId: world.Player.PlayerId,
+                voice: world.Player.Voice,
+                drama: world.Player.Drama,
+                name: world.Player.Name,
+                role: "Участник спора о будущем Хогвартса",
+                avatar: world.Player.Avatar,
+                subscribers: world.Player.Subscribers,
+                achievements: world.Player.Achievements),
+            templateId: world.TemplateId,
+            difficulty: world.Difficulty,
+            isArchived: world.IsArchived,
+            roles: ["Участник спора о будущем Хогвартса", "Выпускник Хогвартса", "Сторонник школьного проекта", "Сторонник коммерческого проекта"],
+            voices: ["прямо и с аргументами", "с иронией и неудобными вопросами", "внимательно к чужим интересам"],
+            postIdeas: [
                 "Что должно стать с Хогвартсом: школой или отелем? Объясни свою позицию.",
                 "Чьи интересы выбранный проект учитывает, а кому придётся уступить?",
                 "Какое обещание о будущем замка ты можешь дать лично, не отвечая за остальных?",
             ],
-            DemoPosts =
-            [
+            demoPosts: [
                 "Совет рассматривает возвращение школы и коммерческое использование замка. Пока не одобрен ни один вариант. Проекты можно поддержать или оспорить по существу.",
                 "Хогвартс закрыт. Гарри хочет снова открыть школу, а Драко предлагает превратить замок в отель.",
                 "В ленте Гарри обещает вернуть школу, а Драко пересказывает предложение Люциуса о бизнесе. Оба звучат так, будто ответ очевиден.",
             ],
-            Rules =
-            [
+            rules: [
                 new WorldRule("История «Спасти Хогвартс» — о будущем закрытого замка. Приключения первого курса остались в прошлом героев; сейчас они взрослые. Специально подчёркивать возраст в репликах не нужно.", false),
                 new WorldRule("Хогвартс обанкротился. За его будущее спорят школьное и коммерческое направления. Решает совет попечителей; Драко не представляет весь совет. Пока ни один проект не принят и финансирование не подтверждено.", false),
                 new WorldRule("Стартовое сообщение совета пересказывает Гермиона; если эту роль выбрал игрок — Рон. Герои различают публичные сведения, собственные мотивы и то, что им ещё не сообщали.", false),
@@ -68,9 +77,8 @@ internal sealed class RefreshHogwartsWorld : RekiMigrationBase
                 new WorldRule("Если выбран свой персонаж, его цель — повлиять на решение совета: сохранить школу или открыть отель. В начале он слышит убедительные доводы с обеих сторон и учится отделять обещания от подтверждённых фактов.", false),
                 new WorldRule("Без тем 18+ и травли по внешности", true),
             ],
-            Player = world.Player with { Role = "Участник спора о будущем Хогвартса" },
-            Stars = stars,
-        };
+            stars: stars,
+            version: world.Version);
         await templates.ReplaceOneAsync(session, filter, updated, cancellationToken: cancellationToken);
     }
 

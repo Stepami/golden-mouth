@@ -16,19 +16,18 @@ internal sealed class UpdateSettingsCommandHandler(
     {
         var player = await rekiContextAccessor.Context.Player;
         var currentBalance = balance.CurrentValue;
-        var updated = player with
-        {
-            Settings = new PlayerSettings(
-                Notifications: command.Notifications ?? player.Settings.Notifications,
-                Quiet: command.Quiet ?? player.Settings.Quiet,
-                Plus: command.Plus ?? player.Settings.Plus),
-            Address = command.Address ?? player.Address,
-            Wallet = player.Wallet.Replenish(command.Plus is true && !player.Settings.Plus
-                ? Math.Max(0, currentBalance.PlusPostsPerDay - currentBalance.FreePostsPerDay)
-                : 0),
-            Version = player.Version + 1,
-        };
-        await playerRepository.ReplacePlayerAsync(updated, cancellationToken);
+        var settings = new PlayerSettings(
+            Notifications: command.Notifications ?? player.Settings.Notifications,
+            Quiet: command.Quiet ?? player.Settings.Quiet,
+            Plus: command.Plus ?? player.Settings.Plus);
+        var crystals = command.Plus is true && !player.Settings.Plus
+            ? Math.Max(0, currentBalance.PlusPostsPerDay - currentBalance.FreePostsPerDay)
+            : 0;
+        player.UpdateSettings(
+            settings,
+            command.Address ?? player.Address,
+            crystals);
+        await playerRepository.ReplacePlayerAsync(player, cancellationToken);
         return Unit.Value;
     }
 }

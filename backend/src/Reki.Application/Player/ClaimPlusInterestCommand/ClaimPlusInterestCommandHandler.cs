@@ -15,25 +15,26 @@ internal sealed class ClaimPlusInterestCommandHandler(
         CancellationToken cancellationToken)
     {
         var currentBalance = balance.CurrentValue;
-        var storedPlayer = await rekiContextAccessor.Context.Player;
-        var player = storedPlayer;
+        var player = await rekiContextAccessor.Context.Player;
 
         if (command.Interest)
         {
-            var subscribed = player.RequestPlusNotification();
-            if (!ReferenceEquals(subscribed, player))
+            var previousVersion = player.Version;
+            player.RequestPlusNotification();
+            if (player.Version != previousVersion)
             {
-                await playerRepository.SavePlusNotificationAsync(player, subscribed, cancellationToken);
-                player = subscribed;
+                await playerRepository.SavePlusNotificationAsync(player, previousVersion, cancellationToken);
             }
         }
 
-        var updated = player.ClaimPlusInterestBonus(currentBalance.PlusInterestBonus);
-        if (ReferenceEquals(updated, player))
+        var claimVersion = player.Version;
+        var previousCrystals = player.Wallet.Crystals;
+        player.ClaimPlusInterestBonus(currentBalance.PlusInterestBonus);
+        if (player.Version == claimVersion)
         {
             return 0;
         }
 
-        return await playerRepository.ClaimPlusInterestAsync(player, updated, cancellationToken);
+        return await playerRepository.ClaimPlusInterestAsync(player, claimVersion, previousCrystals, cancellationToken);
     }
 }

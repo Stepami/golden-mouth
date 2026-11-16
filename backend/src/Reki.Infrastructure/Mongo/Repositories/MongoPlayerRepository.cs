@@ -40,29 +40,30 @@ internal sealed class MongoPlayerRepository(
 
     public async ValueTask SavePlusNotificationAsync(
         PlayerProfile player,
-        PlayerProfile updated,
+        int previousVersion,
         CancellationToken cancellationToken)
     {
         var update = Builders<PlayerProfile>.Update
-            .Set(item => item.PlusNotifyRequested, updated.PlusNotifyRequested)
-            .Inc(item => item.Version, updated.Version - player.Version);
+            .Set(item => item.PlusNotifyRequested, player.PlusNotifyRequested)
+            .Inc(item => item.Version, player.Version - previousVersion);
         await _players.UpdateOneAsync(item => item.Id == player.Id, update, cancellationToken: cancellationToken);
     }
 
     public async ValueTask<int> ClaimPlusInterestAsync(
         PlayerProfile player,
-        PlayerProfile updated,
+        int previousVersion,
+        int previousCrystals,
         CancellationToken cancellationToken)
     {
         var update = Builders<PlayerProfile>.Update
-            .Inc(item => item.Wallet.Crystals, updated.Wallet.Crystals - player.Wallet.Crystals)
-            .Set(item => item.PlusInterestClaimed, updated.PlusInterestClaimed)
-            .Inc(item => item.Version, updated.Version - player.Version);
+            .Inc(item => item.Wallet.Crystals, player.Wallet.Crystals - previousCrystals)
+            .Set(item => item.PlusInterestClaimed, player.PlusInterestClaimed)
+            .Inc(item => item.Version, player.Version - previousVersion);
         var result = await _players.UpdateOneAsync(
-            item => item.Id == player.Id && !item.PlusInterestClaimed && item.Version == player.Version,
+            item => item.Id == player.Id && !item.PlusInterestClaimed && item.Version == previousVersion,
             update,
             cancellationToken: cancellationToken);
-        return result.ModifiedCount == 1 ? updated.Wallet.Crystals - player.Wallet.Crystals : 0;
+        return result.ModifiedCount == 1 ? player.Wallet.Crystals - previousCrystals : 0;
     }
 
     public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
