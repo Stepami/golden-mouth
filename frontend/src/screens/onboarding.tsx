@@ -10,6 +10,7 @@ import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
 import { getWorldDraft, setWorldDraft } from '../app/worldDraft'
 import { worldOf, contentOf } from '../api/worldContent'
+import { api } from '../api/client'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
 import { Avatar, BottomCTA, Card, fmt } from '../ui'
@@ -131,12 +132,25 @@ export function ChannelHead() {
     </div>
   )
 }
-export function Home({ firstPostConfirmed = false }: { firstPostConfirmed?: boolean } = {}) {
+export function Home({ firstPostConfirmed = false, channelEmpty = false }: { firstPostConfirmed?: boolean; channelEmpty?: boolean } = {}) {
   const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
+  const worldId = p.worldInstanceId ?? p.world
+  const [invitation, setInvitation] = useState<{ playerId: string; worldId: string; bonus: number }>()
+  useEffect(() => {
+    const controller = new AbortController()
+    const load = async () => {
+      if (!channelEmpty && (await api.channelPosts(worldId, undefined, controller.signal)).items.length > 0) return
+      const bonus = await api.invitation(controller.signal)
+      if (!controller.signal.aborted) setInvitation({ playerId: p.id, worldId, bonus })
+    }
+    void load().catch(() => {})
+    return () => controller.abort()
+  }, [p.id, worldId, channelEmpty])
+  const bonus = invitation?.playerId === p.id && invitation.worldId === worldId ? invitation.bonus : 0
   return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
     <Streak streak={p.streak} />
     <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{profile.firstContext}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
-      {p.firstPostInviteBonus > 0 && <p>🎁 Первый пост даст кристаллы: +{p.firstPostInviteBonus} 💎</p>}
+      {bonus > 0 && <p>🎁 Первый пост даст кристаллы: +{bonus} 💎</p>}
     </div><p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>
   </div><div className="bottom-cta" style={{ bottom: 78 }}><button className="btn" onClick={() => nav.push('02-1_compose', { firstPostConfirmed })}>Написать первый пост</button></div></div>
 }

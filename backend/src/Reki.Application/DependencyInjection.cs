@@ -9,6 +9,7 @@ using Reki.Application.Posts.CreatePostCommand.Progression.Score;
 using Reki.Application.Posts.CreatePostCommand.Progression.Score.FlopTests;
 using Reki.Application.Posts.ML;
 using Reki.Application.Telemetry;
+using Reki.Application.Worlds;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
@@ -30,6 +31,7 @@ public static class DependencyInjection
             options.ServiceLifetime = ServiceLifetime.Singleton;
         });
         services.AddSingleton<PlayerSafetyGuard>();
+        services.AddSingleton<IWorldPlayerCache, WorldPlayerCache>();
         services.AddSingleton<StarTurnPolicy>();
         services.AddSingleton<PostProgressionCalculator>();
         services.AddSingleton<PostTextAnalysis>();

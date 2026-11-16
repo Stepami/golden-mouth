@@ -24,7 +24,7 @@ namespace Reki.Api.Controllers;
 [Route("/")]
 public sealed class PlayerController(
     IRekiContext rekiContext,
-    IInvitationRepository invitationRepository,
+    IInvitationRepository invitations,
     ISender sender) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
@@ -47,7 +47,7 @@ public sealed class PlayerController(
     [ActionName("GetInvitation")]
     public async Task<Ok<InvitationResponse>> GetInvitationAsync(CancellationToken cancellationToken)
     {
-        var invitation = await invitationRepository.GetPendingInviteAsync(rekiContext.PlayerId, cancellationToken);
+        var invitation = await invitations.GetPendingInviteAsync(rekiContext.PlayerId, cancellationToken);
         return TypedResults.Ok(new InvitationResponse(invitation?.BonusAmount ?? 0));
     }
 

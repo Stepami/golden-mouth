@@ -1,4 +1,5 @@
 using Reki.Application.Posts.GetWorldPosts;
+using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
@@ -32,7 +33,10 @@ public interface IPostRepository
 
     ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken);
 
-    ValueTask DeletePostsAsync(IReadOnlyCollection<WorldId> worldIds, CancellationToken cancellationToken);
+    ValueTask DeletePostsAsync(
+        PlayerId playerId,
+        IReadOnlyCollection<WorldId> worldIds,
+        CancellationToken cancellationToken);
 
     ValueTask DeletePostAsync(PostId postId, CancellationToken cancellationToken);
 }

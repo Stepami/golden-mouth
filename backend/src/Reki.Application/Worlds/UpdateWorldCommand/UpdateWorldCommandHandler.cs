@@ -7,6 +7,7 @@ namespace Reki.Application.Worlds.UpdateWorldCommand;
 
 internal sealed class UpdateWorldCommandHandler(
     IWorldRepository worldRepository,
+    IWorldPlayerCache worldCache,
     IRekiContextAccessor contextAccessor,
     IStarVectorStore starVectorStore)
     : ICommandHandler<UpdateWorld>
@@ -24,6 +25,7 @@ internal sealed class UpdateWorldCommandHandler(
 
         world.UpdateDefinition(definition);
         await worldRepository.ReplaceWorldAsync(world, cancellationToken);
+        worldCache.UpdateWorld(world);
         await starVectorStore.WarmUpAsync(world);
 
         return Unit.Value;

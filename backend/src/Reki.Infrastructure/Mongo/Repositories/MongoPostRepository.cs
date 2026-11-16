@@ -4,6 +4,7 @@ using MongoDB.Driver;
 using Reki.Application.Posts;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.GetWorldPosts;
+using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
@@ -143,11 +144,22 @@ internal sealed class MongoPostRepository(
             : _posts.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));
     }
 
-    public async ValueTask DeletePostsAsync(IReadOnlyCollection<WorldId> worldIds, CancellationToken cancellationToken) =>
+    public async ValueTask DeletePostsAsync(
+        PlayerId playerId,
+        IReadOnlyCollection<WorldId> worldIds,
+        CancellationToken cancellationToken)
+    {
+        var filter = Builders<GamePost>.Filter.Eq(item => item.OwnerId, playerId);
+        if (worldIds.Count > 0)
+        {
+            filter &= Builders<GamePost>.Filter.In(item => item.WorldId, worldIds);
+        }
+
         await _posts.DeleteManyAsync(
             sessionProvider.Session,
-            Builders<GamePost>.Filter.In(item => item.WorldId, worldIds),
+            filter,
             cancellationToken: cancellationToken);
+    }
 
     public async ValueTask DeletePostAsync(PostId postId, CancellationToken cancellationToken) =>
         await (sessionProvider.Current is { } session
