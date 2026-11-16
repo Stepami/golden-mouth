@@ -21,11 +21,7 @@ internal sealed class AddPlayerStreaks : RekiMigrationBase
 
         var streaks = db.GetCollection<PlayerStreak>(MongoCollections.PlayerStreaks);
         var keys = Builders<PlayerStreak>.IndexKeys;
-        await streaks.Indexes.CreateManyAsync(
-        [
-            new CreateIndexModel<PlayerStreak>(
-                keys.Ascending("PlayerId").Descending("StartedAt").Descending("_id"),
-                new CreateIndexOptions { Name = "ix_player_streaks_latest" }),
+        await streaks.Indexes.CreateOneAsync(
             new CreateIndexModel<PlayerStreak>(
                 keys.Ascending("PlayerId"),
                 new CreateIndexOptions<PlayerStreak>
@@ -34,7 +30,6 @@ internal sealed class AddPlayerStreaks : RekiMigrationBase
                     Unique = true,
                     PartialFilterExpression = Builders<PlayerStreak>.Filter.Eq("IsActive", true),
                 }),
-        ],
-        cancellationToken);
+            cancellationToken: cancellationToken);
     }
 }

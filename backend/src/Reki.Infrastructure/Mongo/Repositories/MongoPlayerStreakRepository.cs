@@ -14,10 +14,8 @@ internal sealed class MongoPlayerStreakRepository(
 
     public async ValueTask<PlayerStreak?> GetLatestAsync(PlayerId playerId, CancellationToken cancellationToken) =>
         await (sessionProvider.Current is { } session
-                ? _streaks.Find(session, item => item.PlayerId == playerId)
-                : _streaks.Find(item => item.PlayerId == playerId))
-            .SortByDescending(item => item.StartedAt)
-            .ThenByDescending(item => item.Id)
+                ? _streaks.Find(session, item => item.PlayerId == playerId && item.IsActive)
+                : _streaks.Find(item => item.PlayerId == playerId && item.IsActive))
             .FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask SaveAsync(PlayerStreak streak, CancellationToken cancellationToken) =>

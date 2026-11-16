@@ -4,4 +4,4 @@ using Reki.Domain.Player;
 
 namespace Reki.Application.Player.Streaks.GetStreak;
 
-public sealed record PlayerStreakQuery(PlayerId PlayerId) : IQuery<PlayerStreakResponse?>;
+public sealed record PlayerStreakQuery(PlayerId PlayerId) : IQuery<PlayerStreakResponse>;

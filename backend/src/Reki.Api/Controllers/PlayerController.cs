@@ -38,8 +38,8 @@ public sealed class PlayerController(
     }
 
     [HttpGet("me/streak", Name = "GetPlayerStreak")]
-    public async Task<Ok<PlayerStreakResponse?>> GetPlayerStreakAsync(CancellationToken cancellationToken) =>
-        TypedResults.Ok<PlayerStreakResponse?>(await sender.Send(new PlayerStreakQuery(rekiContext.PlayerId), cancellationToken));
+    public async Task<Ok<PlayerStreakResponse>> GetPlayerStreakAsync(CancellationToken cancellationToken) =>
+        TypedResults.Ok(await sender.Send(new PlayerStreakQuery(rekiContext.PlayerId), cancellationToken));
 
     [HttpPost("me/energy/exchange", Name = "ExchangeEnergy")]
     public async Task<Ok<EnergyExchangeResponse>> ExchangeEnergyAsync(CancellationToken cancellationToken)

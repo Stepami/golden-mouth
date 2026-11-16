@@ -8,7 +8,7 @@ internal sealed class UpdateStreakCommandHandler(IPlayerStreakRepository streaks
     public async ValueTask<bool> Handle(UpdateStreak command, CancellationToken cancellationToken)
     {
         var streak = await streaks.GetLatestAsync(command.PlayerId, cancellationToken);
-        if (streak is { IsActive: true })
+        if (streak is not null)
         {
             var progress = streak.Progress(command.Now);
             if (progress == PlayerStreakProgress.None)
