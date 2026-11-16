@@ -10,7 +10,7 @@ namespace Reki.Api.Requests.Telemetry;
 [Mapper]
 internal static partial class TelemetryRequestMapper
 {
-    public static ReportComment ToReportComment(this ReportRequest source) => new(source.CommentId, source.Reason);
+    public static partial ReportComment ToReportComment(this ReportRequest source);
 
     public static SubmitAnalytics ToSubmitAnalytics(this AnalyticsBatchRequest source) => new(source.ToSubmission());
 
