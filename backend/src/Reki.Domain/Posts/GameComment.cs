@@ -41,4 +41,9 @@ public sealed class GameComment
     public IReadOnlyList<CommentReaction> Reactions => field ??= _reactions.AsReadOnly();
 
     public StarId? AdditionalReplierId { get; private set; }
+
+    public void SetPredictedCommenter(StarId? starId)
+    {
+        AdditionalReplierId = starId;
+    }
 }

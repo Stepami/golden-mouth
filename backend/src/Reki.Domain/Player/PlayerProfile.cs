@@ -8,7 +8,6 @@ public sealed class PlayerProfile
     private readonly List<PlayerNotificationChannel> _notificationChannels;
     private readonly Dictionary<SkillId, SkillProgress> _skills;
 
-#pragma warning disable AV1553 // Older player documents do not contain notification channels.
     public PlayerProfile(
         PlayerId id,
         IReadOnlyList<ExternalUserId> externalUserIds,
@@ -17,6 +16,7 @@ public sealed class PlayerProfile
         IReadOnlyDictionary<SkillId, SkillProgress> skills,
         int birthYear,
         PlayerSettings settings,
+        IReadOnlyList<PlayerNotificationChannel> notificationChannels,
         bool hitOwnWorldMilestone = false,
         DateTimeOffset lastSeenAt = default,
         bool plusInterestClaimed = false,
@@ -24,8 +24,7 @@ public sealed class PlayerProfile
         DateTimeOffset? pausedAtUtc = null,
         DateTimeOffset? hateDisabledUntilUtc = null,
         int version = 0,
-        bool plusNotifyRequested = false,
-        IReadOnlyList<PlayerNotificationChannel>? notificationChannels = null)
+        bool plusNotifyRequested = false)
     {
         Id = id;
         _externalUserIds = [.. externalUserIds];
@@ -44,10 +43,9 @@ public sealed class PlayerProfile
         HateDisabledUntilUtc = hateDisabledUntilUtc;
         Version = version;
         PlusNotifyRequested = plusNotifyRequested;
-        _notificationChannels = notificationChannels is null ? [] : [.. notificationChannels];
+        _notificationChannels = [.. notificationChannels];
         NotificationChannels = _notificationChannels.AsReadOnly();
     }
-#pragma warning restore AV1553
 
     public PlayerId Id { get; private set; }
 
@@ -211,13 +209,15 @@ public sealed class PlayerProfile
         }
     }
 
-    public void UpdateLastSeenAt(DateTimeOffset now)
+    public PlayerProfile UpdateLastSeenAt(DateTimeOffset now)
     {
         if (LastSeenAt != now)
         {
             LastSeenAt = now;
             Version++;
         }
+
+        return this;
     }
 
     public void UpdateSettings(PlayerSettings settings, Address address, int crystals)

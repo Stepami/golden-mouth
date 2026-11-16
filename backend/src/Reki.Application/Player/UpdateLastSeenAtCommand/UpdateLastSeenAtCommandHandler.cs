@@ -22,8 +22,8 @@ internal sealed class UpdateLastSeenAtCommandHandler(
 
         var now = timeProvider.GetUtcNow();
         var oldLastSeenAt = command.Player.LastSeenAt;
-        var player = command.Player;
-        player.UpdateLastSeenAt(now);
+        var player = command.Player.UpdateLastSeenAt(now);
+
         await unitOfWork.ExecuteAsync(
             async token =>
             {

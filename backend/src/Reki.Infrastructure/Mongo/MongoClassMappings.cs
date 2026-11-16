@@ -61,6 +61,7 @@ internal static class MongoClassMappings
                     item.Skills,
                     item.BirthYear,
                     item.Settings,
+                    item.NotificationChannels,
                     item.HitOwnWorldMilestone,
                     item.LastSeenAt,
                     item.PlusInterestClaimed,
@@ -68,8 +69,7 @@ internal static class MongoClassMappings
                     item.PausedAtUtc,
                     item.HateDisabledUntilUtc,
                     item.Version,
-                    item.PlusNotifyRequested,
-                    item.NotificationChannels));
+                    item.PlusNotifyRequested));
         });
 
         if (!BsonClassMap.IsClassMapRegistered(typeof(PlayerNotificationChannel)))

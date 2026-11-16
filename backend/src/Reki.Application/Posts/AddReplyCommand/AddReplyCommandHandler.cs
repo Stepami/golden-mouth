@@ -64,15 +64,7 @@ internal sealed class AddReplyCommandHandler(
                 : post.AuthorId;
             var targetStar = world.Stars.First(star => star.Id.ToAuthorId() == targetAuthor);
             var additionalReplierId = await starVectorStore.GetRelevantAdditionalReplierAsync(world, targetStar.Id, comment);
-            comment = new GameComment(
-                comment.Id,
-                comment.ParentCommentId,
-                comment.RequestId,
-                comment.AuthorId,
-                comment.Text,
-                comment.Hidden,
-                comment.Reactions,
-                additionalReplierId);
+            comment.SetPredictedCommenter(additionalReplierId);
             var bonus = post.Comments.Count(item => item.AuthorId == comment.AuthorId) < thread.BonusReplies ? thread.SubscriberBonus : 0;
             player = player.SpendEnergy(thread.EnergyCost, timeProvider.GetUtcNow());
             world = world.AwardThreadBonus(bonus);

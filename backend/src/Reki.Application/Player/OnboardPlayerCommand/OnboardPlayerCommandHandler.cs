@@ -47,9 +47,9 @@ internal sealed class OnboardPlayerCommandHandler(
             },
             command.BirthYear,
             new PlayerSettings("all", "22:00-09:00", false),
+            notificationChannels,
             lastSeenAt: timeProvider.GetUtcNow(),
-            streakDays: 1,
-            notificationChannels: notificationChannels);
+            streakDays: 1);
 
         await unitOfWork.ExecuteAsync(
             async token =>
