@@ -23,6 +23,33 @@ namespace Reki.Tests.Api;
 public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
+    public async Task ClaimOnboardingBonus_FirstPostWithPlayerComment_AddsTwoCrystalsAsync()
+    {
+        // Arrange
+        const long telegramUserId = 8301;
+        using var api = Factory.CreateApiClient(telegramUserId);
+        var player = await CreatePlayerWithWorldAsync(api);
+        var worldId = WorldId.From(await GetWorldIdAsync(api));
+        var authorId = player.Id.ToAuthorId();
+        var now = Factory.Session.Clock.GetUtcNow();
+        var comment = new GameComment(CommentId.New(), null, null, authorId, "Ответ на первый пост", false, [], null);
+        var post = new GamePost(
+            PostId.New(now), authorId, worldId, player.Id, "Первый пост", 0, 0,
+            [], [comment], now, 0, 0, 1, false, false);
+        await Database.GetCollection<GamePost>("posts").InsertOneAsync(post);
+        var before = await GetStoredPlayerAsync(telegramUserId);
+
+        // Act
+        var claimed = await api.Posts.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
+
+        // Assert
+        await Assert.That(claimed).IsTrue();
+        await Assert.That(before["Wallet"]["Crystals"].AsInt32).IsEqualTo(10);
+        var stored = await GetStoredPlayerAsync(telegramUserId);
+        await Assert.That(stored["Wallet"]["Crystals"].AsInt32).IsEqualTo(12);
+    }
+
+    [Test]
     public async Task Feed_WithMoreThanTwentyOwnPosts_ReturnsRequestedPagesAsync()
     {
         // Arrange

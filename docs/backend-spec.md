@@ -185,7 +185,7 @@ Token JSON содержит `token_type=Bearer`, `access_token`, `expires_in`, `
 | `POST /posts/:id/replies/generation?worldId=…` `{ authorId, sourceCommentId: string | null, additional }` (SSE) | `{ status, authorId, text?, additionalStarId?, code? }`; только текст, без записи; null — первый корневой комментарий | 02-2, 02-6 |
 | `GET /posts/:id?worldId=…` | `PostDetail`: текст, просмотры, `likes`, `likedBy`, готовые авторы комментариев, `parentCommentId`, `requestId`, `depth`, реакции комментария, `authorId`; доступ через владельца мира | 02-6 |
 | `POST /posts/:id/like` `{ authorId }` | Переключает авторский лайк по `postId` без проверки мира; `worldId` не передаётся, ответа с постом нет, действие бесплатно | 02-6, 03-3, 03-5 |
-| `GET /posts/onboarding-bonus/:postId` | `boolean`: проверка первого поста и комментария текущего игрока; без `worldId`, игрок определяется по JWT | 02-6 |
+| `GET /posts/onboarding-bonus/:postId` | `boolean`: `true` после начисления 2 кристаллов за первый пост и комментарий текущего игрока, `false` при невыполненных условиях; без `worldId`, игрок определяется по JWT | 02-6 |
 | `GET /invitation` | `{ bonus }`: бонус за первый пост по неиспользованному инвайту, либо 0. Отдельный метод PlayerController; фронтенд запрашивает только для пустого канала, ошибка подсказки не блокирует публикацию | 01-6 |
 | `GET /referral` | `{ code }`: стабильный уникальный `ref_<PlayerId>` текущего авторизованного игрока; без Telegram ID и секретов, lookup через существующий `_id` | 04-3, 02-7 |
 | `GET /posts?worldId=…&authorIds=…` | Страница постов выбранного мира, newest-first; обязательный массив `authorIds` фильтруется в MongoDB до пагинации, optional `likedBy` дополнительно фильтрует по автору отметки. Канал передаёт ID игрока; лента — игрока и всех текущих звёзд; отмеченные — полный текущий состав авторов мира и ID игрока в likedBy | 03-3, 03-5, 05-5 |
@@ -274,7 +274,7 @@ PATCH /settings принимает optional address (she/he/nick); POST /plus-in
 
 ### Проверка бонуса онбординга (#348)
 
-`GET /posts/onboarding-bonus/{postId}` требует игровой JWT и возвращает JSON boolean. `ClaimOnboardingBonus(PlayerProfile Player, PostId PostId)` получает профиль из серверного контекста. `CountPostsAsync(PlayerId)` считает сохранённые посты с владельцем и автором текущего игрока во всех мирах; посты звёзд не учитываются. Если количество не равно одному, пост не найден, принадлежит другому игроку или написан другим автором, результат — `false`. Иначе результат определяется наличием в посте комментария с `AuthorId` игрока. Проверка не требует `worldId`.
+`GET /posts/onboarding-bonus/{postId}` требует игровой JWT и возвращает JSON boolean. `ClaimOnboardingBonus(PlayerProfile Player, PostId PostId)` получает профиль из серверного контекста. `CountPostsAsync(PlayerId)` считает сохранённые посты с владельцем и автором текущего игрока во всех мирах; посты звёзд не учитываются. Если количество не равно одному, пост не найден, принадлежит другому игроку, написан другим автором или не содержит комментария с `AuthorId` игрока, результат — `false`, кошелёк не изменяется. При выполнении условий обработчик вызывает `PlayerProfile.ReplenishCrystals(2)` и сохраняет профиль через `IPlayerRepository.ReplacePlayerAsync` в существующем `IUnitOfWork`; только после сохранения возвращается `true`. Запрос не требует `worldId`. Защита от повторного начисления отложена: повтор успешного запроса снова начислит 2 кристалла, пока условия выполняются.
 
 ### Пагинация постов мира (#209, #211)
 
