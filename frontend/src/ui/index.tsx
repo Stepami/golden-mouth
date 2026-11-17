@@ -100,10 +100,10 @@ export function ExpandableText({ text }: { text: string }) {
   return <div><div className={expanded ? '' : 'text-preview'}>{text}</div><button className="text-link read-more" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(!expanded) }}> {expanded ? 'Свернуть' : 'Читать дальше'}</button></div>
 }
 
-export function Comment({ seed, name, handle, text, star, me, onMore }: { seed: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
+export function Comment({ seed, avatarStyle, name, handle, text, star, me, onMore }: { seed: string; avatarStyle?: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
   return (
     <div style={{ display: 'flex', gap: 10, marginBottom: 13 }}>
-      <Avatar seed={seed} size={34} mode={me ? 'profile' : 'default'} />
+      <Avatar seed={seed} avatarStyle={avatarStyle} size={34} mode={me ? 'profile' : 'default'} />
       <div style={{ flex: 1 }}>
         <div className="row comment-heading" style={{ gap: 6 }}><b>{name}</b><span className="muted small">{handle}</span>{star && <span className="small" style={{ color: 'var(--accent)' }}>★ звезда</span>}{me && <span className="small muted">ты</span>}
           {onMore && <button onClick={onMore} aria-label="Пожаловаться" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>}</div>

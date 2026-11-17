@@ -1,3 +1,4 @@
+import { useGuestSession } from '../app/landing/guestSession'
 import { readGuestHandoff } from '../app/landing/guestHandoff'
 import { tap } from '../app/analytics'
 import { recordEntryStep } from '../app/landing/openobserve'
@@ -21,7 +22,7 @@ import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import type { Address, WorldDefinition, WorldId } from '../api/types'
 
 
-function withPersona(draft: WorldDraft, star?: WorldDefinition['stars'][number]): WorldDraft {
+export function withPersona(draft: WorldDraft, star?: WorldDefinition['stars'][number]): WorldDraft {
   const d = draft.definition; const previous = draft.persona
   const heroOrder = draft.heroOrder ?? [...d.stars, ...(previous ? [previous.star] : [])].map(value => value.id)
   const restored = { ...d, stars: [...d.stars, ...(previous ? [previous.star] : [])], description: previous?.description ?? d.description, name: previous?.name ?? d.name, avatar: previous?.avatar ?? d.avatar, role: previous?.role ?? d.role }
@@ -44,14 +45,16 @@ function refreshHogwartsDraft(draft: WorldDraft, current: WorldDefinition): Worl
 }
 
 export function WorldOverview() {
-  const draft = useWorldDraft(); const nav = useNav(); const { player } = useStore()
+  const draft = useWorldDraft(); const nav = useNav(); const player = useStore()?.player
+  const guest = useGuestSession()
   const [confirmSwitch, setConfirmSwitch] = useState(false)
-  const world = nav.params.world as WorldId | undefined ?? draft?.definition.templateId
+  const world = guest?.world.templateId ?? (nav.params.world as WorldId | undefined) ?? draft?.definition.templateId
   const catalog = () => { clearLandingWorld(); nav.replace('01-3_world', { group: nav.params.group, ageBand: nav.params.ageBand, birthYear: nav.params.birthYear }) }
-  const back = () => nav.params.fromLanding ? catalog() : nav.back()
-  if (!world || !worlds.some(template => template.id === world)) return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={back} /><div className="pad"><p>Этот мир сейчас недоступен.</p><Button onClick={catalog}>Выбрать мир</Button></div></div>
-  const d = worldDefinitionOf(world); const art = worldArt[d.templateId ?? '']; const selectedRole = draft?.definition.templateId === world && (draft.personaChosen || draft.persona) ? d.stars.find(star => star.id === draft.persona?.star.id)?.name : d.stars[0]?.name; const goal = presetGoalFor(d, selectedRole)
+  const back = guest ? undefined : () => nav.params.fromLanding ? catalog() : nav.back()
+  if (!world || !guest && !worlds.some(template => template.id === world)) return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={back} /><div className="pad"><p>Этот мир сейчас недоступен.</p><Button onClick={catalog}>Выбрать мир</Button></div></div>
+  const d = guest?.world ?? worldDefinitionOf(world); const art = worldArt[d.templateId ?? '']; const selectedRole = draft?.definition.templateId === world && (draft.personaChosen || draft.persona) ? d.stars.find(star => star.id === draft.persona?.star.id)?.name : d.stars[0]?.name; const goal = guest?.goal ?? presetGoalFor(d, selectedRole)
   const begin = (confirmed = false) => {
+    if (guest) { nav.push('01-4_channel'); return }
     selectDraftOwner(player?.id ?? api.playerId() ?? 'onboarding')
     const previous = getWorldDraft()
     if (!confirmed && previous && (previous.definition.templateId !== world || previous.editingId)) { setConfirmSwitch(true); return }
@@ -97,26 +100,27 @@ export function QuickWorldForm({ draft }: { draft: WorldDraft }) {
   </div><BottomCTA main="Мой персонаж" disabled={!d.title.trim() || !d.description.trim()} onMain={() => { const current = getWorldDraft()!; setWorldDraft({ ...current, definition: draft.editingId ? d : prototypeWorld(d), previewOnly: !draft.editingId }); nav.push('01-4_channel') }} /></div>
 }
 export function QuickChannelForm({ draft }: { draft: WorldDraft }) {
+  const guest = useGuestSession()
   const nav = useNav(); const d = draft.definition; const selected = draft.persona
-  const choose = (star?: WorldDefinition['stars'][number]) => { tap('world_choose_character', { kind: star ? 'preset' : 'custom' }); setWorldDraft(withPersona(draft, star)) }
-  const goal = presetGoalFor(d)
+  const choose = (star?: WorldDefinition['stars'][number]) => { if (guest && star) { guest.chooseHero(star.id); return } tap('world_choose_character', { kind: star ? 'preset' : 'custom' }); setWorldDraft(withPersona(draft, star)) }
+  const goal = guest?.goal ?? presetGoalFor(d)
   const heroes = [...d.stars, ...(selected ? [selected.star] : [])].sort((a, b) => (draft.heroOrder?.indexOf(a.id) ?? 0) - (draft.heroOrder?.indexOf(b.id) ?? 0))
-  return <div className="screen no-tab"><TopBar title={`Персонаж · ${d.templateId === null ? '2 / 3' : '1 / 2'}`} onBack={nav.back} /><div className="pad"><h1>Кем ты будешь в этой истории?</h1><p className="muted">Свой персонаж или герой мира — история будет идти от твоего лица.</p>
+  return <div className="screen no-tab"><TopBar title={`Персонаж · ${d.templateId === null ? '2 / 3' : '1 / 2'}`} onBack={nav.back} /><div className="pad"><h1>Кем ты будешь в этой истории?</h1><p className="muted">{guest ? 'Выбери героя мира. История будет идти от твоего лица.' : 'Свой персонаж или герой мира — история будет идти от твоего лица.'}</p>
 
     {heroes.length > 1 && heroes.map(star => <button className={`persona-option ${selected?.star.id === star.id ? 'selected' : ''}`} aria-pressed={selected?.star.id === star.id} key={star.id} onClick={() => choose(star)}><Avatar seed={star.avatarSeed} avatarStyle={d.avatarStyle} world={d.templateId ?? undefined} mode="default" /><div><b>{star.name}</b><div className="small muted">{star.role}</div></div><span>{selected?.star.id === star.id ? '✓' : ''}</span></button>)}
-    <button className={`persona-option ${!selected ? 'selected' : ''}`} aria-pressed={!selected} onClick={() => choose()}><span>✦</span><div><b>Свой персонаж</b><div className="small muted">Твоё имя, твоя роль в истории</div></div><span>{!selected ? '✓' : ''}</span></button>
+    {!guest && <button className={`persona-option ${!selected ? 'selected' : ''}`} aria-pressed={!selected} onClick={() => choose()}><span>✦</span><div><b>Свой персонаж</b><div className="small muted">Твоё имя, твоя роль в истории</div></div><span>{!selected ? '✓' : ''}</span></button>}
     {goal && <Card><b>Твоя цель</b><p>{goal.goal}</p>{!selected && goal.context && <p className="small muted">{goal.context}</p>}<p className="small muted">{goal.firstStep}</p></Card>}
-    {selected ? <Card><ExpandableText text={selected.star.about} /></Card> : <div className="quick-personal"><label className="label">Имя персонажа<input aria-label="Имя персонажа" value={d.name} maxLength={80} onChange={e => updateWorldDraft({ name: e.target.value })} /></label><label className="label">Кто ты в этом мире<input aria-label="Кто ты в этом мире" value={d.role} maxLength={80} onChange={e => updateWorldDraft({ role: e.target.value })} /></label></div>}
-    <div className="label">Как к тебе обращаться</div><Segmented value={draft.address} onChange={(address: Address) => setWorldDraft({ ...draft, address })} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} />
-    <details className="card profile-preview"><summary><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={40} /><span><b>{d.name || "Твой персонаж"}</b><span className="small muted">{displayHandle(d.avatar)}</span></span><span className="small">Изменить</span></summary><label className="label">Ник<input aria-label="Ник" value={d.avatar} maxLength={80} onChange={e => updateWorldDraft({ avatar: e.target.value })} /></label><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={56} /><AvatarPersonalization enabled={draft.personalizeAvatar !== false} onChange={personalizeAvatar => setWorldDraft({ ...draft, personalizeAvatar })} /></details>
-  </div><BottomCTA main="Выбрать градус драмы" disabled={!d.name.trim() || !d.role.trim() || !d.avatar.trim()} onMain={() => { recordEntryStep('landing_character_selected'); nav.push('01-4b_world_setup') }} /></div>
+    {selected ? selected.star.about && <Card><ExpandableText text={selected.star.about} /></Card> : <div className="quick-personal"><label className="label">Имя персонажа<input aria-label="Имя персонажа" value={d.name} maxLength={80} onChange={e => updateWorldDraft({ name: e.target.value })} /></label><label className="label">Кто ты в этом мире<input aria-label="Кто ты в этом мире" value={d.role} maxLength={80} onChange={e => updateWorldDraft({ role: e.target.value })} /></label></div>}
+    {!guest && <><div className="label">Как к тебе обращаться</div><Segmented value={draft.address} onChange={(address: Address) => setWorldDraft({ ...draft, address })} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} />
+    <details className="card profile-preview"><summary><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={40} /><span><b>{d.name || "Твой персонаж"}</b><span className="small muted">{displayHandle(d.avatar)}</span></span><span className="small">Изменить</span></summary><label className="label">Ник<input aria-label="Ник" value={d.avatar} maxLength={80} onChange={e => updateWorldDraft({ avatar: e.target.value })} /></label><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={56} /><AvatarPersonalization enabled={draft.personalizeAvatar !== false} onChange={personalizeAvatar => setWorldDraft({ ...draft, personalizeAvatar })} /></details></>}
+  </div><BottomCTA main="Выбрать градус драмы" disabled={!d.name.trim() || !d.role.trim() || !d.avatar.trim()} onMain={() => { if (!guest) recordEntryStep('landing_character_selected'); nav.push('01-4b_world_setup') }} /></div>
 }
 export function DifficultyPicker({ definition }: { definition: WorldDefinition }) {
   return <section><h2>Сложность</h2><Segmented value={definition.difficulty} onChange={difficulty => updateWorldDraft({ difficulty })} options={[{ id: 'easy', label: 'Легко' }, { id: 'normal', label: 'Средне' }, { id: 'hard', label: 'Сложно' }]} /><p className="small muted">Чем сложнее, тем быстрее рост подписчиков и выше риск провала. Изменение действует на следующие действия.</p></section>
 }
 
-export function DramaPicker({ definition: d, beforeOptions, withDifficulty = true }: { definition: WorldDefinition; beforeOptions?: ReactNode; withDifficulty?: boolean }) {
-  return <>{withDifficulty && <DifficultyPicker definition={d} />}<h1>Сколько драмы добавим?</h1><p className="muted">Выбери настроение истории. Его можно изменить позже.</p>{beforeOptions}<div className="drama-options">{dramaOptions.map(option => <button className={`drama-option ${d.drama === option.id ? 'selected' : ''}`} aria-pressed={d.drama === option.id} onClick={() => { tap('world_choose_mood', { kind: option.id }); updateWorldDraft({ drama: option.id }) }} key={option.id}><span className="drama-icon">{option.icon}</span><div><b>{option.title}</b><p>{option.description}</p>{d.drama === option.id && <div className="drama-example">{option.example}</div>}</div><span>{d.drama === option.id ? '✓' : ''}</span></button>)}</div></>
+export function DramaPicker({ definition: d, beforeOptions, withDifficulty = true, fixed = false }: { definition: WorldDefinition; beforeOptions?: ReactNode; withDifficulty?: boolean; fixed?: boolean }) {
+  return <>{withDifficulty && <DifficultyPicker definition={d} />}<h1>Сколько драмы добавим?</h1><p className="muted">{fixed ? 'Пробная история начнётся в мягком режиме.' : 'Выбери настроение истории. Его можно изменить позже.'}</p>{beforeOptions}<div className="drama-options">{dramaOptions.filter(option => !fixed || option.id === d.drama).map(option => <button className={`drama-option ${d.drama === option.id ? 'selected' : ''}`} aria-pressed={d.drama === option.id} aria-disabled={fixed || undefined} onClick={fixed ? undefined : () => { tap('world_choose_mood', { kind: option.id }); updateWorldDraft({ drama: option.id }) }} key={option.id}><span className="drama-icon">{option.icon}</span><div><b>{option.title}</b><p>{option.description}</p>{d.drama === option.id && <div className="drama-example">{option.example}</div>}</div><span>{d.drama === option.id ? '✓' : ''}</span></button>)}</div></>
 }
 export function WorldPrototypePreview() {
   const draft = useWorldDraft(); const nav = useNav()

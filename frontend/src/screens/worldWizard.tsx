@@ -9,7 +9,7 @@ import {InstallApp} from '../app/install/InstallApp'
 import { Resources } from '../ui/Resources'
 import { WorldSwitchDialog } from '../ui/WorldSwitchDialog'
 import { WorldCover } from '../ui/WorldCover'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { api, ApiError } from '../api/client'
 import { worldDefinitionOf, worldDocumentOf, worlds } from '../api/worldContent'
 import type { WorldDocument } from '../api/types'
@@ -113,10 +113,26 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
       else setError(cause instanceof ApiError && cause.status === 409 ? 'Мир изменился или создание с нуля пока недоступно. Твои изменения сохранены в черновике.' : cause instanceof ApiError && cause.status === 503 ? 'Проверка истории временно недоступна. Настройки сохранены — попробуй начать ещё раз чуть позже.' : 'Не получилось сохранить мир. Проверь поля и попробуй снова.')
     } finally { setSaving(false) }
   }
-  if (quick) return <div className="screen no-tab"><TopBar title="Настроение истории" onBack={saving ? undefined : nav.back} /><div className="pad"><DramaPicker definition={d} beforeOptions={<div className="drama-world-edit"><Button secondary onClick={() => nav.push('05-12_world_advanced')}>Редактировать мир</Button><p className="small muted">Мир можно будет отредактировать позже</p></div>} />
-    <div className="quick-summary"><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} /><div><b>{d.name}</b><div className="small muted">{d.title} · {d.role}</div></div></div>
+  if (quick) return <QuickMoodSetup draft={draft} saving={saving} disabled={uncertain} action={saving ? 'Сохраняем…' : draft.previewOnly ? 'Посмотреть пример' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'} onStart={save}>
     {draft.previewOnly && <p className="small prototype-note">DEV-прототип: дальше — пример ленты, без создания мира в базе.</p>}
     {devPreview && <p className="small prototype-note">DEV-предпросмотр без сохранения.</p>}{error && <p role="alert">{error}</p>}{uncertain && <Button onClick={() => nav.replace('01-3_world')}>Проверить список миров</Button>}
-  </div><BottomCTA main={saving ? 'Сохраняем…' : draft.previewOnly ? 'Посмотреть пример' : draft.editingId ? 'Сохранить изменения' : 'Начать историю'} disabled={saving || uncertain || !d.voice.trim() || d.stars.length === 0} onMain={save} /></div>
+  </QuickMoodSetup>
   return <WorldAdvanced draft={draft} saving={saving} error={error} uncertain={uncertain} onSave={save} onCheck={() => nav.replace('01-3_world')} />
+}
+
+export function QuickMoodSetup({ draft, saving = false, disabled = false, fixed = false, action = 'Начать историю', onStart, children }: {
+  draft: NonNullable<ReturnType<typeof useWorldDraft>>
+  saving?: boolean
+  disabled?: boolean
+  fixed?: boolean
+  action?: string
+  onStart: () => void
+  children?: ReactNode
+}) {
+  const nav = useNav(); const d = draft.definition
+  return <div className="screen no-tab"><TopBar title="Настроение истории" onBack={saving ? undefined : nav.back} /><div className="pad">
+    <DramaPicker definition={d} fixed={fixed} withDifficulty={!fixed} beforeOptions={!fixed && <div className="drama-world-edit"><Button secondary onClick={() => nav.push('05-12_world_advanced')}>Редактировать мир</Button><p className="small muted">Мир можно будет отредактировать позже</p></div>} />
+    <div className="quick-summary"><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={fixed ? undefined : { address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} /><div><b>{d.name}</b><div className="small muted">{d.title} · {d.role}</div></div></div>
+    {children}
+  </div><BottomCTA main={action} disabled={saving || disabled || (!fixed && (!d.voice.trim() || d.stars.length === 0))} onMain={onStart} /></div>
 }

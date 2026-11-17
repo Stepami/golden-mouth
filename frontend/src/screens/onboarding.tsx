@@ -1,3 +1,4 @@
+import { useGuestSession } from '../app/landing/guestSession'
 import { acceptedRegistrationConsent } from '../app/landing/guestHandoff'
 import { landingContext, pendingLandingWorld } from '../app/landing/experiment'
 import { Resources } from '../ui/Resources'
@@ -11,10 +12,11 @@ import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
 import { getWorldDraft, setWorldDraft } from '../app/worldDraft'
 import { worldOf, contentOf } from '../api/worldContent'
+import type { Player } from '../api/types'
 import { api } from '../api/client'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
-import { Avatar, BottomCTA, Card, fmt } from '../ui'
+import { Avatar, BottomCTA, Button, Card, EnergyBadge, fmt } from '../ui'
 import { track } from '../app/log'
 import { tap, trackLandingAuth } from '../app/analytics'
 import { register } from '.'
@@ -134,18 +136,24 @@ function Under18() {
 
 // 01-6: первый экран: цель, квест, что такое Реки / навыки / коллекция
 export function ChannelHead() {
-  const p = useStore().player!; const nav = useNav()
-  const w = worldOf(p.world)
-  return (
-    <div className="top channel-header">
-      <button className="channel-author" onClick={() => nav.tab(4)}><Avatar seed={p.handle} size={36} />
-      <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div></button>
-      <Resources player={p} />
-    </div>
-  )
+  const guest = useGuestSession(); const profile = useStore()?.player; const nav = useNav()
+  const p = guest?.player ?? profile!
+  const w = guest?.world ?? worldOf(p.world)
+  const identity = <><Avatar seed={p.handle} avatarStyle={guest?.world.avatarStyle} size={36} />
+    <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div></>
+  return <div className="top channel-header">
+    {guest ? <div className="channel-author">{identity}</div> : <button className="channel-author" onClick={() => nav.tab(4)}>{identity}</button>}
+    {guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} />}
+  </div>
 }
+
 export function Home({ firstPostConfirmed = false, channelEmpty = false }: { firstPostConfirmed?: boolean; channelEmpty?: boolean } = {}) {
-  const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
+  const guest = useGuestSession()
+  return guest ? <HomeView player={guest.player} title={guest.world.title} context={guest.world.firstContext} goal={guest.goal} firstPostConfirmed guest /> : <LiveHome firstPostConfirmed={firstPostConfirmed} channelEmpty={channelEmpty} />
+}
+
+function LiveHome({ firstPostConfirmed, channelEmpty }: { firstPostConfirmed: boolean; channelEmpty: boolean }) {
+  const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
   const worldId = p.worldInstanceId ?? p.world
   const [invitation, setInvitation] = useState<{ playerId: string; worldId: string; bonus: number }>()
   useEffect(() => {
@@ -159,12 +167,23 @@ export function Home({ firstPostConfirmed = false, channelEmpty = false }: { fir
     return () => controller.abort()
   }, [p.id, worldId, channelEmpty])
   const bonus = invitation?.playerId === p.id && invitation.worldId === worldId ? invitation.bonus : 0
+  return <HomeView player={p} title={worldOf(p.world).title} context={profile.firstContext} goal={goal} firstPostConfirmed={firstPostConfirmed} bonus={bonus} />
+}
+
+function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus = 0, guest = false }: {
+  player: Pick<Player, 'world' | 'streak'>; title: string; context: string; goal: ReturnType<typeof usePresetGoal>; firstPostConfirmed: boolean; bonus?: number; guest?: boolean
+}) {
+  const nav = useNav()
+  const session = useGuestSession()
+  if (session?.published) return <div className="screen channel-screen"><ChannelHead /><div className="pad">
+    <Card><p>{session.post.text}</p><Button secondary onClick={() => nav.push('02-6_thread', { focusReply: true })}>Комментировать</Button></Card>
+  </div></div>
   return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
     <Streak streak={p.streak} />
-    <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{profile.firstContext}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
+    <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{context}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
       {bonus > 0 && <p>🎁 Первый пост даст кристаллы: +{bonus} 💎</p>}
     </div><p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>
-  </div><div className="bottom-cta" style={{ bottom: 78 }}><button className="btn" onClick={() => { tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }}>Написать первый пост</button></div></div>
+  </div><div className="bottom-cta" style={guest ? undefined : { bottom: 78 }}><button className="btn" onClick={() => { if (!guest) tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }}>Написать первый пост</button></div></div>
 }
 
 register({
