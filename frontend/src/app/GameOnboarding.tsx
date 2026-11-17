@@ -53,7 +53,7 @@ export function OnboardingBubble({ target, text }: { target: string; text: strin
   const dialog = node?.closest('[role="dialog"]')
   const hint = target === '.persona-option.selected' ? 'character' : target === '.drama-option.selected' ? 'mood' : null
   const inline = hint ? document.querySelector(`[data-game-onboarding-hint="${hint}"]`) : null
-  if (!node) return null
+  if (!node || !visible) return null
   return inline ? createPortal(bubble, inline) : dialog ? createPortal(bubble, dialog) : bubble
 }
 
