@@ -89,11 +89,11 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
   }, [host, editing])
   const waitingForReaction = !done && step === 3 && !!target && !targetReady
   const dock = <aside ref={card} className={`game-onboarding-progress${done ? ' game-onboarding-finish' : ''}${host ? ' is-inline' : ''}${editing ? ' is-editing' : ''}`} aria-label="Обучение" aria-live="polite">
-    <div className="game-onboarding-meta"><span><span className="game-onboarding-segments" aria-hidden="true">{[1, 2, 3].map(index => <i key={index} className={index <= step ? 'on' : ''} />)}</span>Знакомство с игрой · {step} из 3</span>{isGameOnboardingPreview() && <span className="game-onboarding-reward-hint">Награда 2 💎</span>}</div>
+    <div className="game-onboarding-meta"><span><span className="game-onboarding-segments" aria-hidden="true">{[1, 2, 3].map(index => <i key={index} className={index <= step ? 'on' : ''} />)}</span>Знакомство с игрой · {step} из 3</span><span className="game-onboarding-reward-hint">Награда 2 💎</span></div>
     <h2>{waitingForReaction ? 'Герой готовит ответ' : title}</h2>
     <p>{lockedSection ? 'Этот раздел откроется после знакомства с игрой.' : waitingForReaction ? 'Дождись реакции героя. При ошибке можно повторить загрузку разговора.' : text}</p>
-    {done && isGameOnboardingPreview() && <p className="game-onboarding-reward-status">DEV: предпросмотр без начисления</p>}
-    {done ? isGameOnboardingPreview() ? <button className="game-onboarding-collect" data-onboarding-collect disabled={collecting} aria-busy={collecting} onClick={event => void collectPreview(event.currentTarget)}>Забрать 2 💎</button> : <button onClick={acknowledgeGameOnboarding}>Продолжить историю</button> : onResume && <button onClick={onResume}>Вернуться к обучению</button>}
+    {done && <p className="game-onboarding-reward-status">{isGameOnboardingPreview() ? 'DEV: предпросмотр без начисления' : 'Начисление награды ожидает подключения'}</p>}
+    {done ? isGameOnboardingPreview() ? <button className="game-onboarding-collect" data-onboarding-collect disabled={collecting} aria-busy={collecting} onClick={event => void collectPreview(event.currentTarget)}>Забрать 2 💎</button> : <button className="game-onboarding-collect" disabled>Забрать 2 💎</button> : onResume && <button onClick={onResume}>Вернуться к обучению</button>}
   </aside>
   return host ? createPortal(dock, host) : dock
 }
