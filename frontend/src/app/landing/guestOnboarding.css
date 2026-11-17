@@ -115,7 +115,6 @@
 .guest-finish__channel strong, .guest-finish__channel span { display: block; line-height: 1.2; }
 .guest-finish__channel span { color: #dbc5e5; font-size: 12px; margin-top: 3px; }
 .guest-finish__gem { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 10px; color: #e9ddff; background: #55376d; font-size: 15px; }
-.guest-finish__close { position: absolute; z-index: 1; top: 8px; right: 8px; width: 36px; height: 36px; border: 1px solid #6f5a7c; border-radius: 50%; background: #211529; color: var(--text); font-size: 22px; }
 .guest-finish__popup-body { padding: 2px 14px 0; display: grid; gap: 14px; }
 .guest-finish__pitch { text-align: center; }
 .guest-finish__pitch h2 { font-size: clamp(26px, 8vw, 33px); line-height: 1.02; letter-spacing: -.04em; margin-bottom: 7px; }

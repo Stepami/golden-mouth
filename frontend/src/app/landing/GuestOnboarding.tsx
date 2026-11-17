@@ -119,15 +119,16 @@ function GuestFinish({ world, worldId, draft, selected, guest, speaker, onCollec
   const inFlight = useRef(false)
   const mounted = useRef(true)
   const [collecting, setCollecting] = useState(false)
-  const openSave = () => { if (dialog.current && !dialog.current.open) dialog.current.showModal() }
+  useLayoutEffect(() => {
+    if (draft.collected && dialog.current && !dialog.current.open) dialog.current.showModal()
+  }, [draft.collected])
   useEffect(() => {
     mounted.current = true
     return () => { mounted.current = false; flight.current.forEach(animation => animation.cancel()) }
   }, [])
 
   const collect = async () => {
-    if (draft.collected) { openSave(); return }
-    if (inFlight.current) return
+    if (draft.collected || inFlight.current) return
     inFlight.current = true
     setCollecting(true)
     const start = collectButton.current?.getBoundingClientRect()
@@ -154,7 +155,7 @@ function GuestFinish({ world, worldId, draft, selected, guest, speaker, onCollec
       await Promise.all(gems)
     }
     if (!mounted.current) return
-    onCollect(); setCollecting(false); openSave()
+    onCollect(); setCollecting(false)
   }
 
   const message = (hero: Hero, text: string, mine = false) => <div className="guest-finish__reply">
@@ -179,10 +180,9 @@ function GuestFinish({ world, worldId, draft, selected, guest, speaker, onCollec
       <div className="game-onboarding-meta"><span><span className="game-onboarding-segments" aria-hidden="true"><i className="on" /><i className="on" /><i className="on" /></span>Знакомство с игрой · 3 из 3</span><span className="game-onboarding-reward-hint">2 💎</span></div>
       <h2>Обучение завершено</h2>
       <p>Первый пост написан. Герой уже ответил тебе.</p>
-      <button ref={collectButton} disabled={collecting} className="game-onboarding-collect" onClick={() => void collect()}>{draft.collected ? 'Сохранить историю' : 'Забрать 2 💎'}</button>
+      <button ref={collectButton} disabled={collecting || draft.collected} className="game-onboarding-collect" onClick={() => void collect()}>Забрать 2 💎</button>
     </aside>
-    <dialog ref={dialog} className="sheet guest-finish__popup" aria-labelledby="guest-save-title">
-      <button type="button" className="guest-finish__close" onClick={() => dialog.current?.close()} aria-label="Закрыть">×</button>
+    <dialog ref={dialog} className="sheet guest-finish__popup" aria-labelledby="guest-save-title" onCancel={event => event.preventDefault()}>
       <div className="guest-finish__art" aria-hidden="true">
         <img src={worldArt[worldId].smallCover} alt="" />
         <div className="guest-finish__channel">
