@@ -17,10 +17,11 @@ export function transport(telemetry = false) {
     const headers = new Headers(init.headers)
     const path = new URL(String(url), baseUrl).pathname.slice(new URL(baseUrl).pathname.replace(/\/$/, '').length)
     const anonymous = path === '/sessions'
+    const onboardingClaim = init.method === 'GET' && /^\/posts\/onboarding-bonus\/[^/]+$/.test(path)
     const firstToken = getAccessToken()
     if (!anonymous && firstToken) headers.set('Authorization', `Bearer ${firstToken}`)
-    let response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
-    if (!anonymous && !(init.method === 'POST' && (path === '/posts' || /^\/posts\/[^/]+\/like$/.test(path))) && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
+    let response = await fetch(url, { ...init, headers, ...(onboardingClaim ? { cache: 'no-store' as const } : {}), ...(telemetry ? { keepalive: true } : {}) })
+    if (!anonymous && !onboardingClaim && !(init.method === 'POST' && (path === '/posts' || /^\/posts\/[^/]+\/like$/.test(path))) && response.status === 401 && (getAccessToken() !== firstToken || await refreshAccess())) {
       headers.set('Authorization', `Bearer ${getAccessToken()}`)
       response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
     }
