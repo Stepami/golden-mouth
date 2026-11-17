@@ -131,10 +131,10 @@ export function trackLandingAuth(...[name, params]: LandingAuthStep) {
 
 function reachLandingGoal(name: string, props: Record<string, string | undefined>) {
   if (import.meta.env.PROD) {
-    const ym = (window as Window & { ym?: (id: number, method: string, goal: string, params: Record<string, string>) => void }).ym
+    const ym = (window as Window & { ym?: (id: number, method: string, goal: string, params: Record<string, string | undefined>) => void }).ym
     try {
       const entry = landingVisitIdentity()
-      if (entry) ym?.(114170439, 'reachGoal', name, { ...props, entry_id: entry.entryId })
+      ym?.(114170439, 'reachGoal', name, entry ? { ...props, entry_id: entry.entryId } : props)
     } catch { /* Analytics never blocks entry or publishing. */ }
   }
 }

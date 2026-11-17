@@ -120,7 +120,7 @@ export function App() {
     if (!isGameOnboardingPreview() && (authenticated || registration)) {
       setLandingAccepted(true)
       if (!landingPreview && completeLandingAuth()) {
-        trackLanding('landing_auth_complete')
+        if (pendingLandingWorld()) trackLanding('landing_auth_complete')
         trackLandingAuth('landing_auth_verified', { auth_outcome: registration ? 'registration' : 'access' })
       }
     }
