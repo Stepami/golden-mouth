@@ -483,8 +483,8 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 
 /* Compact progress and one hint beside the current action. */
 .game-onboarding-progress { position: sticky; top: 0; z-index: 6; margin: 10px 16px; padding: 12px 14px; background: #29223b; border: 1px solid #b998ef; border-radius: 18px; }
-.game-onboarding-progress > div:first-child { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
-.game-onboarding-progress > div:first-child span { color: var(--muted); font-size: 12px; }
+.game-onboarding-progress > div:first-of-type { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.game-onboarding-progress > div:first-of-type span { color: var(--muted); font-size: 12px; }
 .game-onboarding-segments { display: flex; gap: 8px; margin-top: 9px; }
 .game-onboarding-segments > span { flex: 1; color: var(--muted); font-size: 10px; }
 .game-onboarding-segments i { display: block; height: 3px; margin-bottom: 4px; background: var(--line2); border-radius: 3px; }
