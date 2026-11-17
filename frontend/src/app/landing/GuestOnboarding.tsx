@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Avatar, Button } from '../../ui'
+import { Avatar, Button, TopBar } from '../../ui'
 import { TextField } from '../../ui/TextField'
 import rolePostIdeas from '../rolePostIdeas.json'
 import { worldArt } from '../worldArt'
@@ -86,7 +86,7 @@ const titles = {
   finish: 'Начало истории',
 }
 type Step = keyof typeof titles
-type GuestDraft = { worldId: string; step: Step; hero: string; text: string; reply: string }
+type GuestDraft = { worldId: string; step: Step; hero: string; text: string; reply: string; collected?: boolean }
 
 function readGuestDemo(): GuestDraft | undefined {
   try {
@@ -103,6 +103,93 @@ export function readGuestWorld(): string | undefined {
 
 export function clearGuestDemo(): void {
   try { localStorage.removeItem(storageKey) } catch { /* Storage may be unavailable. */ }
+}
+
+function GuestFinish({ world, worldId, draft, selected, guest, speaker, onCollect, onSave }: {
+  world: GuestWorld; worldId: string; draft: GuestDraft; selected: Hero; guest: Hero; speaker: Speaker
+  onCollect: () => void; onSave: () => void
+}) {
+  const counter = useRef<HTMLSpanElement>(null)
+  const dialog = useRef<HTMLDialogElement>(null)
+  const collectButton = useRef<HTMLButtonElement>(null)
+  const flight = useRef<Animation[]>([])
+  const inFlight = useRef(false)
+  const mounted = useRef(true)
+  const [collecting, setCollecting] = useState(false)
+  const openSave = () => { if (dialog.current && !dialog.current.open) dialog.current.showModal() }
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false; flight.current.forEach(animation => animation.cancel()) }
+  }, [])
+
+  const collect = async () => {
+    if (draft.collected) { openSave(); return }
+    if (inFlight.current) return
+    inFlight.current = true
+    setCollecting(true)
+    const start = collectButton.current?.getBoundingClientRect()
+    const end = counter.current?.getBoundingClientRect()
+    if (start && end && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const gems = [0, 1].map(index => {
+        const gem = document.createElement('span')
+        gem.className = 'game-onboarding-crystal-flight'
+        gem.textContent = '💎'
+        gem.setAttribute('aria-hidden', 'true')
+        gem.style.left = `${start.left + start.width / 2 - 14}px`
+        gem.style.top = `${start.top + start.height / 2 - 14}px`
+        document.body.append(gem)
+        const x = end.left + end.width / 2 - start.left - start.width / 2
+        const y = end.top + end.height / 2 - start.top - start.height / 2
+        const animation = gem.animate([
+          { transform: 'translate(0, 0) scale(.75)', opacity: 1 },
+          { transform: `translate(${x / 2 + (index ? 27 : -27)}px, ${y / 3}px) scale(1.1)`, opacity: 1, offset: .4 },
+          { transform: `translate(${x}px, ${y}px) scale(.35)`, opacity: 0 },
+        ], { duration: 620, delay: index * 80, easing: 'ease-out', fill: 'forwards' })
+        flight.current.push(animation)
+        return animation.finished.catch(() => undefined).finally(() => gem.remove())
+      })
+      await Promise.all(gems)
+    }
+    if (!mounted.current) return
+    onCollect(); setCollecting(false); openSave()
+  }
+
+  const message = (hero: Hero, text: string, mine = false) => <div className="guest-finish__reply">
+    <Avatar seed={hero.seed} world={worldId} avatarStyle={world.avatarStyle} mode="default" size={34} />
+    <div><b>{hero.name}</b> <span>{mine ? 'ты' : '★ звезда'}</span><p>{text}</p></div>
+  </div>
+
+  return <main className="app guest-finish">
+    <div className="screen no-tab thread-screen">
+      <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions">
+        <span className="small muted">Пробная история</span>
+        <span ref={counter} className="energy-badge thread-crystal-count" aria-label={`В демо: ${draft.collected ? 2 : 0} кристаллов`}>💎 {draft.collected ? 2 : 0}</span>
+      </div>} />
+      <div className="pad">
+        <div className="card"><div className="guest-onboarding__byline"><Avatar seed={selected.seed} world={worldId} avatarStyle={world.avatarStyle} mode="default" size={28} /><b>{selected.name}</b></div><p>{draft.text}</p></div>
+        {message(guest, speaker.first)}
+        {message(selected, draft.reply, true)}
+        {message(guest, speaker.second)}
+      </div>
+    </div>
+    <aside className="game-onboarding-progress guest-finish__reward">
+      <div className="game-onboarding-meta"><span><span className="game-onboarding-segments" aria-hidden="true"><i className="on" /><i className="on" /><i className="on" /></span>Знакомство с игрой · 3 из 3</span><span className="game-onboarding-reward-hint">2 💎</span></div>
+      <h2>Обучение завершено</h2>
+      <p>Первый пост написан. Герой уже ответил тебе.</p>
+      <button ref={collectButton} disabled={collecting} className="game-onboarding-collect" onClick={() => void collect()}>{draft.collected ? 'Сохранить историю' : 'Забрать 2 💎'}</button>
+    </aside>
+    <dialog ref={dialog} className="sheet guest-finish__popup" aria-labelledby="guest-save-title">
+      <button type="button" className="guest-finish__close" onClick={() => dialog.current?.close()} aria-label="Закрыть">×</button>
+      <div className="guest-finish__art"><img src={worldArt[worldId].smallCover} alt="" /></div>
+      <div className="guest-finish__popup-body">
+        <div className="guest-finish__badge">💎 +2 в пробной истории</div>
+        <h2 id="guest-save-title">Сохрани свою историю</h2>
+        <p>Ты уже написал первый пост и получил ответ героя. Создай аккаунт, чтобы сохранить черновик и продолжить историю.</p>
+        <Button onClick={onSave}>Зарегистрироваться и сохранить</Button>
+        <p className="small muted">В аккаунте 2 💎 начислятся за первый пост и ответ герою.</p>
+      </div>
+    </dialog>
+  </main>
 }
 
 export function GuestOnboarding({ worldId, onSave }: {
@@ -179,6 +266,12 @@ export function GuestOnboarding({ worldId, onSave }: {
   }
   const art = worldArt[worldId]
 
+  if (step === 'finish') return <GuestFinish
+    world={world} worldId={worldId} draft={draft} selected={selected} guest={guest} speaker={speaker}
+    onCollect={() => setDraft(current => ({ ...current, collected: true }))}
+    onSave={() => onSave({ text, reply, hero: draft.hero })}
+  />
+
   return <main className="guest-onboarding" aria-labelledby="guest-title">
     <div className="guest-onboarding__cover" aria-hidden="true">
       <img src={art.smallCover} alt="" />
@@ -212,18 +305,13 @@ export function GuestOnboarding({ worldId, onSave }: {
               <Avatar seed={guest.seed} label={guest.name} world={worldId} avatarStyle={world.avatarStyle} mode="default" size={31} />
               <div><b>{guest.name}</b><p>{speaker.first}</p></div>
             </div>}
-            {(step === 'respond' || step === 'finish') && <details className="guest-onboarding__details"><summary>Твой ответ</summary><p>{reply}</p></details>}
+            {step === 'respond' && <details className="guest-onboarding__details"><summary>Твой ответ</summary><p>{reply}</p></details>}
             {waiting && <div className="guest-onboarding__typing">{guest.name} печатает<span aria-hidden="true"><i /><i /><i /></span></div>}
-            {step === 'finish' && <div className="guest-onboarding__message">
-              <Avatar seed={guest.seed} label={guest.name} world={worldId} avatarStyle={world.avatarStyle} mode="default" size={31} />
-              <div><b>{guest.name}</b><p>{speaker.second}</p></div>
-            </div>}
           </div>
           {step === 'reply' && <>
             <TextField label="Текст ответа" value={reply} visibleLength={visibleLength} onInteract={() => setVisibleLength(undefined)} onChange={edit} maxLength={1000} rows={3} />
             <Button disabled={!reply.trim()} onClick={() => changeStep('respond')}>Ответить</Button>
           </>}
-          {step === 'finish' && <Button onClick={() => onSave({ text, reply, hero: draft.hero })}>Сохранить прогресс</Button>}
         </>}
       </>}
       {!storageAvailable && <p className="guest-onboarding__intro" role="status">Хранилище недоступно. Черновик останется в этой вкладке до обновления страницы.</p>}

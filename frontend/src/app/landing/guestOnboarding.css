@@ -84,3 +84,25 @@
 @media (prefers-reduced-motion: reduce) {
   .guest-onboarding__typing i, .guest-onboarding__message { animation: none; }
 }
+
+.guest-finish .screen { padding-bottom: 186px; }
+.guest-finish .card p { margin-top: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.guest-finish__reply { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; margin-top: 18px; }
+.guest-finish__reply b { font-size: 14px; }
+.guest-finish__reply span { font-size: 11px; color: var(--lilac); }
+.guest-finish__reply p { margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; color: var(--soft); }
+.guest-finish .guest-finish__reward { bottom: calc(12px + env(safe-area-inset-bottom)); }
+.guest-finish dialog.guest-finish__popup { box-sizing: border-box; position: fixed; inset: auto 0 max(14px, env(safe-area-inset-bottom)); margin: 0 auto; width: min(406px, calc(100% - 24px)); padding: 0; max-height: 88dvh; border: 1px solid #554765; color: var(--text); background: var(--card); }
+.guest-finish__popup::backdrop { background: rgb(8 8 12 / 76%); }
+.guest-finish__popup[open] { animation: guest-save-in .24s ease-out both; }
+.guest-finish__art { height: clamp(118px, 23dvh, 190px); background: #2a2035; }
+.guest-finish__art img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center 38%; }
+.guest-finish__close { position: absolute; top: 12px; right: 12px; width: 38px; height: 38px; border: 0; border-radius: 50%; background: var(--bg); color: var(--text); font-size: 22px; }
+.guest-finish__popup-body { padding: 20px; display: grid; gap: 12px; }
+.guest-finish__badge { justify-self: start; border-radius: 18px; background: #382d48; padding: 5px 10px; color: var(--lilac); font-size: 13px; }
+.guest-finish__popup-body h2 { font-size: clamp(25px, 7.4vw, 32px); line-height: 1.08; letter-spacing: -.025em; }
+.guest-finish__popup-body p { color: var(--soft); }
+.guest-finish__popup-body .small { color: var(--muted); }
+.guest-finish__popup-body .btn { margin-top: 4px; }
+@keyframes guest-save-in { from { transform: translateY(18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .guest-finish__popup[open] { animation: none; } }
