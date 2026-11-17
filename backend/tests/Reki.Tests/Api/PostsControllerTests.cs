@@ -34,8 +34,21 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         var now = Factory.Session.Clock.GetUtcNow();
         var comment = new GameComment(CommentId.New(), null, null, authorId, "Ответ на первый пост", false, [], null);
         var post = new GamePost(
-            PostId.New(now), authorId, worldId, player.Id, "Первый пост", 0, 0,
-            [], [comment], now, 0, 0, 1, false, false);
+            PostId.New(now),
+            authorId,
+            worldId,
+            player.Id,
+            "Первый пост",
+            0,
+            0,
+            [],
+            [comment],
+            now,
+            0,
+            0,
+            1,
+            false,
+            false);
         await Database.GetCollection<GamePost>("posts").InsertOneAsync(post);
         var before = await GetStoredPlayerAsync(telegramUserId);
 
