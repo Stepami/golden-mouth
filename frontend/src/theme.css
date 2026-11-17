@@ -480,3 +480,18 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .post-repost-label { margin-left: 6px; white-space: nowrap; }
 
 .post-repost-button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+
+/* One non-blocking coach mark; the target and normal navigation remain usable. */
+.game-onboarding-spotlight { position: fixed; z-index: 120; border: 2px solid var(--lilac); border-radius: 20px; box-shadow: 0 0 0 9999px #08080c66; pointer-events: none; }
+.game-onboarding-bubble { position: fixed; z-index: 121; left: max(16px, calc(50% - 195px + 16px)); width: min(358px, calc(100vw - 32px)); padding: 16px; box-sizing: border-box; background: #292239; border: 1px solid var(--lilac); border-radius: 18px; color: var(--text); box-shadow: 0 8px 24px #0005; }
+.game-onboarding-bubble.above::after { content: ''; position: absolute; bottom: -9px; left: 24px; width: 15px; height: 15px; background: #292239; border-right: 1px solid var(--lilac); border-bottom: 1px solid var(--lilac); transform: rotate(45deg); }
+.game-onboarding-heading { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.game-onboarding-heading b { font-size: 17px; }
+.game-onboarding-heading span { white-space: nowrap; color: var(--muted); font-size: 12px; }
+.game-onboarding-bubble p { margin: 10px 0 12px; color: #d4cee0; font-size: 14px; line-height: 1.45; }
+.game-onboarding-bubble button, .game-onboarding-resume button { border: 0; background: transparent; color: var(--lilac); padding: 7px 0; font: inherit; font-size: 13px; text-align: left; display: block; }
+.game-onboarding-resume { position: fixed; z-index: 121; top: 8px; left: max(16px, calc(50% - 179px)); width: min(358px, calc(100vw - 32px)); padding: 10px 14px; box-sizing: border-box; border-radius: 14px; border: 1px solid var(--lilac); background: #292239; font-size: 12px; }
+.post-result-actions > span { flex: 1; display: flex; }
+.post-result-actions > span > .btn { width: 100%; }
+.game-onboarding-preview-label { position: relative; z-index: 122; padding: 6px 12px; color: var(--lilac); background: #211b30; font-size: 11px; text-align: center; }
+.game-onboarding-preview-label button { border: 0; background: transparent; color: var(--lilac); font: inherit; text-decoration: underline; padding: 4px; }

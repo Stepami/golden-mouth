@@ -1,3 +1,4 @@
+import { onboardingPostSaved, onboardingReplySaved, updateGameOnboarding, useGameOnboarding } from '../app/GameOnboardingState'
 import { recordEntryStep } from '../app/landing/openobserve'
 import { RepostAction } from '../ui/RepostAction'
 import { PostLikeAction } from '../ui/PostLikeAction'
@@ -97,6 +98,7 @@ function Live() {
         nav.replace('02-2b_publish_error', { text, repostId: nav.params.repostId, status: cause instanceof ApiError ? cause.status : undefined, uncertain: !(cause instanceof ApiError) || (cause.status >= 500 && cause.status !== 503) })
         return
       }
+      if (!nav.params.repostId) onboardingPostSaved(p.worldInstanceId ?? p.world, created.post.id)
       if (!active) return
       if (!nav.params.repostId || text.length > 0) completePostDraft(draftKey(p) + (typeof nav.params.repostId === 'string' ? `:quote:${nav.params.repostId}` : ''), text)
       const latest = await refresh()
@@ -241,7 +243,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
           <details className="result-details"><summary>Разбор поста</summary><div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
             <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
           </details>
-          <div className="post-result-actions"><Button onClick={() => nav.replace('02-1_compose')}>Новый пост</Button><Button secondary onClick={() => nav.replace('02-6_thread', { post, commentPromise, focusReply: true })}>Комментировать</Button></div>
+          <div className="post-result-actions"><Button onClick={() => nav.replace('02-1_compose')}>Новый пост</Button><span data-game-onboarding-post={comment ? post.id : undefined}><Button secondary onClick={() => nav.replace('02-6_thread', { post, commentPromise, focusReply: true })}>Комментировать</Button></span></div>
           <button onClick={() => nav.push('02-7_share', { post })} className="result-share">Поделиться</button>
         </div>
       </div>
@@ -256,6 +258,7 @@ const Viral = () => { const n = useNav(); const r = (n.params.result as PostResu
 // 02-6: комментарий игрока сохраняется сразу, затем каждая звезда генерируется и сохраняется отдельно.
 function Thread() {
   const nav = useNav()
+  const onboarding = useGameOnboarding()
   const player = usePlayer()
   const { patch } = useStore()
   const publishedPost = nav.params.post as Post | undefined
@@ -315,6 +318,7 @@ function Thread() {
       if (!found) { setPost(null); setLoad('unavailable'); return }
       setPost(found); setLoad('ready')
       const saved = found.comments.find(comment => comment.requestId === draft.requestId && (comment.parentCommentId ?? null) === draft.commentId && comment.text === draft.text)
+      if (saved && draft.commentId) onboardingReplySaved(found.id)
       if (saved && found.comments.some(comment => comment.requestId === `${draft.requestId}-star`) &&
         (!draft.additionalStarId || found.comments.some(comment => comment.requestId === `${draft.requestId}-extra`))) setDraft(fresh())
     }).catch((cause: unknown) => {
@@ -345,6 +349,9 @@ function Thread() {
   const postAuthor = stars.find(star => `Star_${star.id}` === post?.authorId)
   const isStarComment = (comment?: CommentT) => !!comment?.star && !comment.hidden && stars.some(star => `Star_${star.id}` === comment.authorId)
   const target = post?.comments.find(comment => comment.id === draft.commentId)
+  useEffect(() => {
+    if (load === 'ready' && post && onboarding?.phase === 'reaction' && onboarding.postId === post.id && post.comments.some(isStarComment)) updateGameOnboarding({ phase: 'reply' })
+  }, [load, post, onboarding?.phase, onboarding?.postId])
   const targetAvailable = draft.commentId === null ? !!postAuthor : isStarComment(target)
   const recipient = draft.commentId === null ? postAuthor?.name : target?.author
   const edit = (change: Partial<Pick<Draft, 'text' | 'commentId'>>) => {
@@ -374,7 +381,7 @@ function Thread() {
         },
         onSaved: saved => {
           if (ctrl.signal.aborted || activeKey.current !== key) return
-          if (saved.post.comments.some(comment => comment.requestId === draft.requestId)) playerSaved = true
+          if (saved.post.comments.some(comment => comment.requestId === draft.requestId)) { playerSaved = true; if (draft.commentId) onboardingReplySaved(post.id) }
           const { postId: id, ...detail } = saved.post
           setPost(current => ({ ...detail, id, likes: current?.likes ?? detail.likes, likedBy: current?.likedBy ?? detail.likedBy })); patch({ subs: saved.subscribers, postsLeft: saved.energyLeft })
         },
@@ -383,6 +390,7 @@ function Thread() {
           setTypingName(authorId ? stars.find(star => `Star_${star.id}` === authorId)?.name ?? recipient ?? 'Звезда' : null)
         } })
       if (ctrl.signal.aborted || activeKey.current !== key) return
+      if (draft.commentId && event.post.comments.some(comment => comment.requestId === draft.requestId)) onboardingReplySaved(post.id)
       const { postId: id, ...detail } = event.post
       setPost(current => ({ ...detail, id, likes: current?.likes ?? detail.likes, likedBy: current?.likedBy ?? detail.likedBy })); patch({ subs: event.subscribers, postsLeft: event.energyLeft })
       setDraft(fresh()); setTypingName(null)
@@ -437,12 +445,12 @@ function Thread() {
       <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions"><EnergyBadge value={player.postsLeft} /><button className="thread-exit" onClick={goBack}>{fromMarked ? 'К отметкам →' : fromFeed ? 'В ленту →' : 'В канал →'}</button></div>} />
       <div className="pad">
         <div className="card" style={{ marginBottom: 12 }}>{post.text}<QuotedPost repostId={post.repostId} /><div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group"><PostLikeAction key={threadKey} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => current ? { ...current, likes: saved.likes, likedBy: saved.likedBy } : current)} />{!post.repostId && <RepostAction postId={post.id} />}</div>{post.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>}</div></div>
-        {showHelp && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
-        {!showHelp && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
+        {showHelp && !(onboarding?.postId === post.id && ['reaction', 'reply'].includes(onboarding.phase)) && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
+        {(!showHelp || onboarding?.postId === post.id && ['reaction', 'reply'].includes(onboarding.phase)) && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
         {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>
           <Comment seed={comment.avatar} name={comment.author} handle={comment.star ? comment.handle : comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} />
           {!!comment.reactions?.length && <div className="small" style={{ margin: '-6px 0 12px 44px' }}>{comment.reactions.map(reaction => <span key={`${reaction.authorId}:${reaction.emoji}`} title={reaction.author} className="react">{reaction.emoji} {reaction.author}</span>)}</div>}
-          {isStarComment(comment) && <button className="small" disabled={sending} onClick={() => focusReply(comment.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: draft.commentId === comment.id ? 'var(--accent)' : 'var(--lilac)' }}>{draft.commentId === comment.id ? 'Отвечаешь этому комментарию' : `Ответить герою ${comment.author}`}</button>}
+          {isStarComment(comment) && <button data-game-onboarding-post={!targetAvailable ? post.id : undefined} className="small" disabled={sending} onClick={() => focusReply(comment.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: draft.commentId === comment.id ? 'var(--accent)' : 'var(--lilac)' }}>{draft.commentId === comment.id ? 'Отвечаешь этому комментарию' : `Ответить герою ${comment.author}`}</button>}
         </div>)}
         {typingName && <div className="card" role="status" aria-live="polite"><div className="small muted">{typingName} печатает...</div><div className="live-current" aria-hidden="true"><span /></div></div>}
         {targetAvailable && <div className="small muted" style={{ marginBottom: 8 }}>{draft.commentId === null ? 'Комментарий к посту' : 'Отвечаешь'}: {recipient}</div>}
@@ -458,7 +466,7 @@ function Thread() {
         <Button disabled={deleting} onClick={removePost} style={{ marginBottom: 8, background: 'transparent', border: '2px solid #F06473', color: '#F06473' }}>{deleting ? 'Удаляем…' : 'Удалить пост'}</Button>
         <Button secondary disabled={deleting} onClick={() => setConfirmDelete(false)}>Отмена</Button>
       </Sheet>}
-      <div className="bottom-cta thread-reply">
+      <div className="bottom-cta thread-reply" data-game-onboarding-post={targetAvailable ? post.id : undefined}>
         <div className="card thread-reply-field"><textarea ref={replyInput} className="thread-reply-input" rows={1} aria-label="Текст ответа" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
         <button className="card thread-reply-send" onClick={send} disabled={sending || !targetAvailable || !draft.text.trim() || (player.postsLeft < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
       </div>

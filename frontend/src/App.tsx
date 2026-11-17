@@ -13,6 +13,8 @@ import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
 import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
 import { useAvatarPersonalization } from './app/avatarPersonalization'
+import { GameOnboarding, isGameOnboardingPreview } from './app/GameOnboarding'
+import { beginGameOnboarding, restartGameOnboardingPreview } from './app/GameOnboardingState'
 import type { WorldId } from './api/types'
 
 import { Landing } from './app/landing/Landing'
@@ -76,7 +78,8 @@ function Shell() {
     <NavContext.Provider value={nav}>
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'edfccf53-65c6-4eaf-8321-2391bc1758bd'}>
       <AvatarPeople.Provider value={people}><div className="app">
-        <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration />
+        {isGameOnboardingPreview() && <div className="game-onboarding-preview-label">DEV-обучение · действия сохраняются в игре <button onClick={() => restartGameOnboardingPreview(player?.worldInstanceId ?? player?.world)}>Начать просмотр заново</button></div>}
+        <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration /><GameOnboarding />
         {tab !== undefined && (
           <nav className="tabbar" aria-label="Основная навигация">
             {[5, 0, 1, 2, 3, 4].map(i => { const t = TABS[i]; return (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} aria-current={i === tab ? 'page' : undefined} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button> })}
@@ -99,8 +102,9 @@ export function App() {
   const explicitStart = hasExplicitStart()
   const [landingAccepted, setLandingAccepted] = useState(landingEntryPending)
   const [landingPreview, setLandingPreview] = useState(isLandingPreview)
+  useEffect(() => { if (registration && !isGameOnboardingPreview()) beginGameOnboarding() }, [registration])
   useEffect(() => {
-    if (authenticated || registration) {
+    if (!isGameOnboardingPreview() && (authenticated || registration)) {
       setLandingAccepted(true)
       if (!landingPreview && completeLandingAuth()) trackLanding('landing_auth_complete')
     }
