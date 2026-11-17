@@ -80,7 +80,7 @@ function Shell() {
     <NavContext.Provider value={nav}>
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'edfccf53-65c6-4eaf-8321-2391bc1758bd'}>
       <AvatarPeople.Provider value={people}><div className="app">
-        {isGameOnboardingPreview() && <div className="game-onboarding-preview-label">DEV-обучение · действия сохраняются в игре <button onClick={() => restartGameOnboardingPreview(player?.worldInstanceId ?? player?.world)}>Начать просмотр заново</button></div>}
+        {isGameOnboardingPreview() && <div className="game-onboarding-preview-label">DEV-обучение · действия сохраняются в игре <button onClick={() => restartGameOnboardingPreview(player?.worldInstanceId ?? player?.world)}>Начать просмотр заново</button><button onClick={() => { restartGameOnboardingPreview(); nav.push('01-3_world') }}>С выбора мира</button></div>}
         <GameOnboardingProgress /><div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration /><GameOnboarding />
         {tab !== undefined && (
           <nav className="tabbar" aria-label="Основная навигация">
