@@ -364,7 +364,7 @@ OpenObserve доступен через `https://openobserve.reki-app.ru`. Пр�
 
 ## Ежедневная выгрузка метрик
 
-`GET https://openobserve.reki-app.ru/api/v1/metrics/daily?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD` принимает включительный диапазон до 90 московских суток. В GitHub Actions Variables задай `METRICS_OPENOBSERVE_ACCOUNT` с идентификатором сервисной учётной записи OpenObserve. Сборщик передаёт её токен как Bearer. Шлюз формирует Basic из этого токена и идентификатора, а OpenObserve проверяет доступ к `/_search`.
+`GET https://openobserve.reki-app.ru/api/v1/metrics/daily?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD` принимает включительный диапазон до 90 московских суток. Возьми значение из заголовка `Authorization: Basic …` сервисной учётной записи OpenObserve и передай его сборщику как `Authorization: Bearer …`. Значение после схемы — готовая строка Base64 от `идентификатор:токен`. Шлюз заменяет `Bearer` на `Basic`, а OpenObserve проверяет доступ к `/_search`.
 
 Токены из раздела «Токены загрузки» предназначены для записи телеметрии. Для выгрузки нужен токен из раздела «Сервисные учётные записи». Он также действует при прямом обращении к API OpenObserve в пределах прав этой учётной записи.
 

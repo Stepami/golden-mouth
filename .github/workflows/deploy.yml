@@ -70,7 +70,6 @@ jobs:
       LLM_MODEL: ${{ secrets.LLM_MODEL }}
       OPENOBSERVE_EMAIL: ${{ secrets.OPENOBSERVE_EMAIL }}
       OPENOBSERVE_PASSWORD: ${{ secrets.OPENOBSERVE_PASSWORD }}
-      METRICS_OPENOBSERVE_ACCOUNT: ${{ vars.METRICS_OPENOBSERVE_ACCOUNT }}
 
     steps:
       - name: Check out tagged commit

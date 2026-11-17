@@ -34,11 +34,6 @@ async function get(r) {
         return fail(r, 405, 'Method not allowed');
     }
 
-    const account = process.env.METRICS_OPENOBSERVE_ACCOUNT;
-    if (!account) {
-        return fail(r, 503, 'Metrics export is not configured');
-    }
-
     const auth = /^Bearer ([A-Za-z0-9._~+/-]+=*)$/i.exec(r.headersIn.Authorization || '');
     if (!auth) {
         return fail(r, 401, 'Invalid or missing token');
@@ -65,7 +60,7 @@ async function get(r) {
         const response = await ngx.fetch('http://openobserve:5080/api/default/_search?type=logs', {
             method: 'POST',
             headers: {
-                Authorization: 'Basic ' + Buffer.from(account + ':' + auth[1]).toString('base64'),
+                Authorization: 'Basic ' + auth[1],
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
