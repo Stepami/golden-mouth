@@ -3,7 +3,7 @@ import { api } from '../api/client'
 import { needsRegistration } from '../api/auth'
 
 type Phase = 'setup' | 'post' | 'reaction' | 'reply' | 'done'
-export type GameOnboardingState = { phase: Phase; worldId?: string; postId?: string; setupScreen?: string; setupWorld?: string; conversationPostId?: string; replyRequestId?: string; completionSeen?: boolean }
+export type GameOnboardingState = { phase: Phase; worldId?: string; postId?: string; setupScreen?: string; setupWorld?: string; conversationPostId?: string; replyRequestId?: string; completionSeen?: boolean; bonusClaim?: 'pending' | 'confirmed' | 'uncertain' }
 export const isGameOnboardingPreview = () => import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === 'game-onboarding'
 const prefix = 'reki:game-onboarding:v1:'
 const storageId = (id: string) => isGameOnboardingPreview() ? `preview:${id}` : id
@@ -20,8 +20,10 @@ function read(id: string): GameOnboardingState | undefined {
 }
 function write(id: string, value: GameOnboardingState) {
   memory.set(storageId(id), value)
-  try { localStorage.setItem(prefix + storageId(id), JSON.stringify(value)) } catch { /* Session fallback. */ }
+  let durable = true
+  try { localStorage.setItem(prefix + storageId(id), JSON.stringify(value)) } catch { durable = false }
   listeners.forEach(listener => listener())
+  return durable
 }
 export function restartGameOnboardingPreview(worldId?: string) {
   const id = owner()
@@ -69,3 +71,10 @@ export function acknowledgeGameOnboarding() {
   if (id && state?.phase === 'done') write(id, { ...state, completionSeen: true })
 }
 export function gameOnboardingActive(state: GameOnboardingState | undefined) { return !!state && state.phase !== 'done' }
+
+// This device's UX guard is not server-side idempotency.
+export function setOnboardingBonusClaim(status: GameOnboardingState['bonusClaim'], playerId: string) {
+  if (isGameOnboardingPreview()) return false
+  const state = read(playerId)
+  return state?.phase === 'done' ? write(playerId, { ...state, bonusClaim: status }) : false
+}

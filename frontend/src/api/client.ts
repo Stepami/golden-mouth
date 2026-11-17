@@ -200,6 +200,7 @@ export const api = {
         return response;
     })),
     exchangeEnergy: async () => data(sdk.player.exchangeEnergy()),
+    claimOnboardingBonus: (postId: string, signal?: AbortSignal): Promise<boolean> => data(sdk.posts.claimOnboardingBonus(postId, signal)),
     playerId: (): string | undefined => sessionIdentity?.id,
     hasPlayer: (): boolean => sessionIdentity !== undefined,
     onboardingProfile: () => sessionIdentity,

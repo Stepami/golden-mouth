@@ -6,29 +6,64 @@ import { useNav } from './nav'
 import { useStore } from './store'
 import { pendingLandingWorld } from './landing/experiment'
 import { getWorldDraft } from './worldDraft'
-import { acknowledgeGameOnboarding, beginGameOnboardingPreview, onboardingPostSaved, onboardingReplySaved, updateGameOnboarding, useGameOnboarding, isGameOnboardingPreview } from './GameOnboardingState'
+import { acknowledgeGameOnboarding, gameOnboardingState, setOnboardingBonusClaim, beginGameOnboardingPreview, onboardingPostSaved, onboardingReplySaved, updateGameOnboarding, useGameOnboarding, isGameOnboardingPreview } from './GameOnboardingState'
 
 export { isGameOnboardingPreview } from './GameOnboardingState'
 
 function GameOnboardingCard({ target, title, text, step, done, lockedSection, onResume }: { target: string; title: string; text: string; step: number; done: boolean; lockedSection: boolean; onResume?: () => void }) {
   const card = useRef<HTMLElement>(null)
+  const { player, refresh } = useStore()
+  const onboarding = useGameOnboarding()
+  const [claimMessage, setClaimMessage] = useState('')
   const [host, setHost] = useState<HTMLElement | null>(null)
   const [editing, setEditing] = useState(false)
   const [targetReady, setTargetReady] = useState(false)
   const [collecting, setCollecting] = useState(false)
-  const flight = useRef<{ cancelled: boolean; nodes: HTMLElement[]; animations: Animation[] } | null>(null)
+  const flight = useRef<{ cancelled: boolean; controller: AbortController; nodes: HTMLElement[]; animations: Animation[] } | null>(null)
   useEffect(() => () => {
     const active = flight.current
     if (!active) return
     active.cancelled = true
+    active.controller.abort()
     active.animations.forEach(animation => animation.cancel())
     active.nodes.forEach(node => node.remove())
   }, [])
-  const collectPreview = async (button: HTMLButtonElement) => {
-    if (!isGameOnboardingPreview() || flight.current) return
-    const active = { cancelled: false, nodes: [] as HTMLElement[], animations: [] as Animation[] }
-    flight.current = active; setCollecting(true)
+  const collectReward = async (button: HTMLButtonElement) => {
+    if (flight.current) return
+    const preview = isGameOnboardingPreview(), playerId = player?.id, state = gameOnboardingState()
+    if (state?.phase !== 'done') return
+    const active = { cancelled: false, controller: new AbortController(), nodes: [] as HTMLElement[], animations: [] as Animation[] }
+    flight.current = active; setCollecting(true); setClaimMessage('')
+    let confirmed = state.bonusClaim === 'confirmed'
+    let canAcknowledge = preview
     try {
+      if (!preview) {
+        if (!playerId || !state.postId) { setClaimMessage('Не найден учебный пост. Вернись в канал.'); return }
+        if (!state.bonusClaim) {
+          if (!setOnboardingBonusClaim('pending', playerId)) {
+            setOnboardingBonusClaim(undefined, playerId)
+            setClaimMessage('Не удалось сохранить состояние на устройстве. Запрос награды не отправлен.'); return
+          }
+          const granted = await api.claimOnboardingBonus(state.postId, AbortSignal.any([active.controller.signal, AbortSignal.timeout(15000)]))
+          if (granted === false) {
+            setOnboardingBonusClaim(undefined, playerId)
+            if (!active.cancelled) setClaimMessage('Награда пока недоступна. Обучение сохранено.')
+            return
+          }
+          if (granted !== true) throw new Error('Unexpected bonus response')
+          confirmed = true
+          setOnboardingBonusClaim('confirmed', playerId)
+        }
+        if (active.cancelled) return
+        const latest = await refresh()
+        if (active.cancelled) return
+        if (!latest?.energyWallet || latest.id !== playerId) {
+          setClaimMessage(confirmed ? 'Сервер подтвердил награду, но баланс не загрузился. Обнови баланс — повторный запрос награды не отправляем.' : 'Не получилось обновить баланс. Повторный запрос награды не отправлен. Проверь позже.')
+          return
+        }
+        if (!confirmed) { setClaimMessage('Баланс обновлён. Начисление не подтверждено; повторный запрос награды не отправлен.'); return }
+        canAcknowledge = true
+      }
       const counter = document.querySelector<HTMLElement>('.crystal-button')
       if (!counter || matchMedia('(prefers-reduced-motion: reduce)').matches) return
       const start = button.getBoundingClientRect(), end = counter.getBoundingClientRect()
@@ -50,12 +85,17 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
         ], { duration: 650, delay: index * 90, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' }))
       }
       await Promise.all(active.animations.map(animation => animation.finished))
-    } catch { /* A preview animation failure must not block closing the preview. */ }
+    } catch {
+      if (!preview && !canAcknowledge) {
+        if (!confirmed && playerId) setOnboardingBonusClaim('uncertain', playerId)
+        if (!active.cancelled) setClaimMessage(confirmed ? 'Награда подтверждена. Обнови баланс, чтобы завершить.' : 'Не удалось подтвердить начисление. Проверь баланс позже; повторный запрос награды не отправляем.')
+      }
+    }
     finally {
       active.nodes.forEach(node => node.remove())
       if (!active.cancelled) {
         flight.current = null; setCollecting(false)
-        if (isGameOnboardingPreview()) acknowledgeGameOnboarding()
+        if (canAcknowledge && preview === isGameOnboardingPreview() && playerId === api.playerId()) acknowledgeGameOnboarding()
       }
     }
   }
@@ -92,8 +132,8 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
     <div className="game-onboarding-meta"><span><span className="game-onboarding-segments" aria-hidden="true">{[1, 2, 3].map(index => <i key={index} className={index <= step ? 'on' : ''} />)}</span>Знакомство с игрой · {step} из 3</span><span className="game-onboarding-reward-hint">Награда 2 💎</span></div>
     <h2>{waitingForReaction ? 'Герой готовит ответ' : title}</h2>
     <p>{lockedSection ? 'Этот раздел откроется после знакомства с игрой.' : waitingForReaction ? 'Дождись реакции героя. При ошибке можно повторить загрузку разговора.' : text}</p>
-    {done && <p className="game-onboarding-reward-status">{isGameOnboardingPreview() ? 'DEV: предпросмотр без начисления' : 'Начисление награды ожидает подключения'}</p>}
-    {done ? isGameOnboardingPreview() ? <button className="game-onboarding-collect" data-onboarding-collect disabled={collecting} aria-busy={collecting} onClick={event => void collectPreview(event.currentTarget)}>Забрать 2 💎</button> : <button className="game-onboarding-collect" disabled>Забрать 2 💎</button> : onResume && <button onClick={onResume}>Вернуться к обучению</button>}
+    {done && <p className="game-onboarding-reward-status">{isGameOnboardingPreview() ? 'DEV: предпросмотр без начисления' : claimMessage || (onboarding?.bonusClaim === 'confirmed' ? 'Награда подтверждена сервером. Обнови баланс, чтобы завершить.' : onboarding?.bonusClaim ? 'Результат начисления пока неизвестен. Можно проверить баланс; повторный запрос награды не отправляем.' : 'Забери награду за первый пост и разговор с героем.')}</p>}
+    {done ? <button className="game-onboarding-collect" data-onboarding-collect disabled={collecting} aria-busy={collecting} onClick={event => void collectReward(event.currentTarget)}>{!isGameOnboardingPreview() && onboarding?.bonusClaim ? onboarding.bonusClaim === 'confirmed' ? 'Обновить баланс' : 'Проверить баланс' : 'Забрать 2 💎'}</button> : onResume && <button onClick={onResume}>Вернуться к обучению</button>}
   </aside>
   return host ? createPortal(dock, host) : dock
 }
