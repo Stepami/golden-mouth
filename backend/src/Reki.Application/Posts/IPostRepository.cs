@@ -29,6 +29,8 @@ public interface IPostRepository
         PostId postId,
         CancellationToken cancellationToken);
 
+    ValueTask<long> CountPostsAsync(PlayerId playerId, CancellationToken cancellationToken);
+
     ValueTask SaveLikesAsync(GamePost post, CancellationToken cancellationToken);
 
     ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken);
