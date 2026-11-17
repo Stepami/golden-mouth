@@ -481,39 +481,32 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 
 .post-repost-button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 
-/* Compact progress and one hint beside the current action. */
-.game-onboarding-progress { position: sticky; top: 0; z-index: 6; margin: 10px 16px; padding: 12px 14px; background: #29223b; border: 1px solid #b998ef; border-radius: 18px; }
-.game-onboarding-progress > div:first-of-type { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
-.game-onboarding-progress > div:first-of-type span { color: var(--muted); font-size: 12px; }
-.game-onboarding-segments { display: flex; gap: 8px; margin-top: 9px; }
-.game-onboarding-segments > span { flex: 1; color: var(--muted); font-size: 10px; }
-.game-onboarding-segments i { display: block; height: 3px; margin-bottom: 4px; background: var(--line2); border-radius: 3px; }
-.game-onboarding-segments .complete i { background: var(--lilac); }
-.game-onboarding-segments .current i { background: var(--grad); }
-.game-onboarding-segments .current { color: var(--text); }
-.game-onboarding-spotlight { position: fixed; z-index: 120; border: 1px solid #c9a8ff99; border-radius: 18px; box-shadow: 0 0 0 3px #c9a8ff12; pointer-events: none; }
-.game-onboarding-bubble { position: fixed; z-index: 121; left: max(16px, calc(50% - 195px + 16px)); width: min(358px, calc(100vw - 32px)); padding: 11px 13px; box-sizing: border-box; background: #29223b; border: 1px solid #b998ef; border-radius: 12px; color: var(--text); box-shadow: 0 4px 16px #0003; }
-.game-onboarding-bubble.above::after { content: ''; position: absolute; bottom: -5px; left: 24px; width: 8px; height: 8px; background: #29223b; border-right: 1px solid #c9a8ff55; border-bottom: 1px solid #c9a8ff55; transform: rotate(45deg); }
-.game-onboarding-bubble p { margin: 0; color: var(--soft); font-size: 13px; line-height: 1.4; }
-.game-onboarding-bubble button, .game-onboarding-continue { border: 0; background: transparent; color: var(--lilac); padding: 7px 0; font: inherit; font-size: 12px; text-align: left; }
-.game-onboarding-continue { position: fixed; z-index: 15; bottom: 82px; left: 50%; transform: translateX(-50%); background: var(--card); padding: 10px 16px; border-radius: 20px; }
+/* One opaque learning dock; actions and the keyboard keep their own layout. */
+.game-onboarding-progress { position: fixed; z-index: 21; bottom: calc(89px + env(safe-area-inset-bottom)); left: max(12px, calc(50% - 215px + 12px)); width: min(406px, calc(100vw - 24px)); padding: 16px 17px 17px; background: #292335; border: 1px solid #554765; border-radius: 20px; box-shadow: 0 10px 30px #0005; }
+.app:not(:has(> .tabbar)) .game-onboarding-progress:not(.is-inline) { bottom: calc(12px + env(safe-area-inset-bottom)); }
+.game-onboarding-progress.is-inline { position: relative; inset: auto; transform: none; width: 100%; margin: 0 0 8px; flex: 0 0 100%; order: -1; }
+.game-onboarding-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--soft); }
+.game-onboarding-meta > span:first-child { display: flex; align-items: center; gap: 7px; }
+.game-onboarding-segments { display: inline-flex; gap: 4px; flex-shrink: 0; }
+.game-onboarding-segments i { width: 15px; height: 3px; border-radius: 2px; background: #645770; }
+.game-onboarding-segments i.on { background: var(--lilac); }
+.game-onboarding-progress .game-onboarding-reward-hint { flex-shrink: 0; white-space: nowrap; padding: 4px 9px; border-radius: 20px; background: #3a3048; color: #e1caff; font-weight: 600; }
+.game-onboarding-progress h2 { margin: 11px 0 5px; font-size: 18px; letter-spacing: -.2px; }
+.game-onboarding-progress p { margin: 0; font-size: 13px; color: #d1cadb; line-height: 1.45; }
+.game-onboarding-progress button { border: 0; background: transparent; color: var(--lilac); padding: 10px 0 0; font-size: 13px; text-align: left; }
+.game-onboarding-progress .game-onboarding-reward-status { margin-top: 8px; font-size: 11px; color: var(--muted); }
+.game-onboarding-progress.is-editing { padding: 10px 12px; }
+.game-onboarding-progress.is-editing h2, .game-onboarding-progress.is-editing > p { display: none; }
+.game-onboarding-active .screen { padding-bottom: var(--game-onboarding-bottom-space, 260px); }
+.game-onboarding-active:has(> .tabbar) .bottom-cta { bottom: calc(78px + env(safe-area-inset-bottom)) !important; }
+.game-onboarding-active .bottom-cta.thread-reply { flex-wrap: wrap; }
+.game-onboarding-target { background: var(--lilac) !important; color: #211a2d !important; border-color: transparent !important; box-shadow: none !important; }
+.world-roster > .game-onboarding-target { padding: 10px 13px; border-radius: 10px; font-size: 13px; font-weight: 650; }
+.persona-option.game-onboarding-target .muted, .drama-option.game-onboarding-target p { color: #41354f; }
+@media (max-width: 359px) { .game-onboarding-progress { padding: 13px; } .game-onboarding-meta { font-size: 10px; gap: 5px; } .game-onboarding-meta > span:first-child { gap: 5px; } .game-onboarding-segments i { width: 10px; } .game-onboarding-progress .game-onboarding-reward-hint { padding: 4px 6px; } }
 .post-result-actions > span { flex: 1; display: flex; }
 .post-result-actions > span > .btn { width: 100%; }
 .game-onboarding-preview-label { position: relative; z-index: 122; padding: 6px 12px; color: var(--lilac); background: #211b30; font-size: 11px; text-align: center; }
 .game-onboarding-preview-label button { border: 0; background: transparent; color: var(--lilac); font: inherit; text-decoration: underline; padding: 4px; }
 
-.game-onboarding-progress p { margin-top: 7px; font-size: 12px; color: var(--soft); }
-.game-onboarding-progress + div .top { position: relative; top: auto; }
-.game-onboarding-finish { display: flex; gap: 12px; margin: 14px 16px; padding: 16px; border: 1px solid #c9a8ff44; border-radius: 18px; background: linear-gradient(120deg,#201a2d,var(--card)); }
-.game-onboarding-finish-mark { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; color: var(--lilac); background: #c9a8ff15; }
-.game-onboarding-finish h2 { font-size: 17px; margin: 0 0 5px; }
-.game-onboarding-finish p { font-size: 13px; color: var(--soft); }
-.game-onboarding-finish .game-onboarding-reward { margin-top: 12px; color: var(--lilac); }
-.game-onboarding-reward span { color: var(--muted); font-size: 11px; }
-.game-onboarding-finish button { border: 0; background: transparent; color: var(--lilac); padding: 12px 0 0; font-size: 13px; }
-[data-game-onboarding-hint] .game-onboarding-bubble { position: relative; top: auto !important; left: auto; width: 100%; margin: 4px 0 12px; box-shadow: none; }
-.game-onboarding-action { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.game-onboarding-action .game-onboarding-reward-hint { flex-shrink: 0; white-space: nowrap; font-size: 11px; color: var(--lilac); }
-
 .tabbar button.locked { opacity: .55; }
-.game-onboarding-progress .game-onboarding-locked-message { margin: 0 0 10px; color: var(--lilac); }

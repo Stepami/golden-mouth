@@ -13,7 +13,7 @@ import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
 import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
 import { useAvatarPersonalization } from './app/avatarPersonalization'
-import { GameOnboarding, GameOnboardingProgress, isGameOnboardingPreview } from './app/GameOnboarding'
+import { GameOnboarding, isGameOnboardingPreview } from './app/GameOnboarding'
 import { beginGameOnboarding, gameOnboardingActive, useGameOnboarding, restartGameOnboardingPreview } from './app/GameOnboardingState'
 import type { WorldId } from './api/types'
 
@@ -77,16 +77,17 @@ function Shell() {
     people[player.handle] = { address: player.address, ageBand: player.ageBand, personalizeAvatar }
     people[player.id] = people[player.handle]
   }
-  const tab = top.id === '01-3_world' && !player ? undefined : TAB_OF[top.id]
+  const trainingScreen = learning && !!player && !top.id.startsWith('06-') && !['01-1_invite', '01-2_age', '01-2b_under14', '05-8_settings'].includes(top.id)
+  const tab = trainingScreen ? TAB_OF[top.id] ?? (onboarding?.phase === 'setup' ? 5 : 0) : top.id === '01-3_world' && !player ? undefined : TAB_OF[top.id]
   return (
     <NavContext.Provider value={nav}>
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'edfccf53-65c6-4eaf-8321-2391bc1758bd'}>
       <AvatarPeople.Provider value={people}><div className="app">
         {isGameOnboardingPreview() && <div className="game-onboarding-preview-label">DEV-обучение · действия сохраняются в игре <button onClick={() => restartGameOnboardingPreview(player?.worldInstanceId ?? player?.world)}>Начать просмотр заново</button><button onClick={() => { restartGameOnboardingPreview(); nav.push('01-3_world') }}>С выбора мира</button></div>}
-        <GameOnboardingProgress lockedSection={lockedSection} /><div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration /><GameOnboarding />
+        <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration /><GameOnboarding lockedSection={lockedSection} />
         {tab !== undefined && (
           <nav className="tabbar" aria-label="Основная навигация">
-            {[5, 0, 1, 2, 3, 4].map(i => { const t = TABS[i]; const locked = learning && i !== 0 && i !== 4; return (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} aria-current={i === tab ? 'page' : undefined} aria-disabled={locked || undefined} className={`${i === tab ? 'on' : ''}${locked ? ' locked' : ''}`} onClick={() => { if (locked) { setLockedSection(true); document.querySelector('.game-onboarding-progress')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); return } setLockedSection(false); tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button> })}
+            {[5, 0, 1, 2, 3, 4].map(i => { const t = TABS[i]; const locked = learning && i !== 4 && !(i === 5 && top.id === '01-3_world') && !(i === 0 && onboarding?.phase !== 'setup'); return (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} aria-current={i === tab ? 'page' : undefined} aria-disabled={locked || undefined} className={`${i === tab ? 'on' : ''}${locked ? ' locked' : ''}`} onClick={() => { if (locked) { setLockedSection(true); return } setLockedSection(false); if (top.id === t.screen) return; tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button> })}
           </nav>
         )}
       </div>
