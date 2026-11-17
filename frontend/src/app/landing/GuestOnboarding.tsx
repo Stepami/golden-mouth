@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Avatar, Button, TopBar } from '../../ui'
 import { TextField } from '../../ui/TextField'
-import rolePostIdeas from '../rolePostIdeas.json'
 import { worldArt } from '../worldArt'
 import './guestOnboarding.css'
 
@@ -12,6 +11,7 @@ type GuestWorld = {
   avatarStyle: string
   heroes: Hero[]
   speakers: [Speaker, Speaker]
+  firstPostIdea: string
   replyIdea: string
 }
 const worlds: Record<string, GuestWorld> = {
@@ -25,9 +25,10 @@ const worlds: Record<string, GuestWorld> = {
       { id: 'nika', name: 'Ника Борщ', seed: 'nika.recruit' },
     ],
     speakers: [
-      { id: 'nika', first: 'На лендинге «Вката» есть зарплата выпускника. А саму работу выпускника где посмотреть?', second: 'Тогда попрошу показать проект целиком. Хочу увидеть, какую задачу выпускник решал сам.' },
+      { id: 'nika', first: 'Для начала можно посмотреть небольшой учебный проект. Какую задачу из него покажем новичкам?', second: 'Тогда попрошу показать проект целиком. Хочу увидеть, какую задачу выпускник решал сам.' },
       { id: 'alexey_nl', first: 'У меня открыты рекламный лендинг и три вакансии. По какой из них проверяем обещание курса?', second: 'Договорились, разберу одно объявление по пунктам. Начну с того, какой опыт там просят.' },
     ],
+    firstPostIdea: 'Хочу собрать простой список для тех, кто ищет первую работу в IT. Какой навык стоит попробовать на маленьком проекте?',
     replyIdea: 'Давайте возьмём одну стартовую вакансию и сравним её требования с программой курса.',
   },
   'b3a1a522-0263-4796-a197-57a8731fc291': {
@@ -42,6 +43,7 @@ const worlds: Record<string, GuestWorld> = {
       { id: 'eduard', first: 'На поляне зажёгся свет, хотя генератор уже заглох. Ты помнишь, откуда он шёл?', second: 'У меня в кинотеатре есть снимок поляны до грозы. Можно сверить, где стоял фонарь.' },
       { id: 'isabella', first: 'Я забрала фотоаппарат с поляны. Последний кадр смазало, но на краю виден свет. Кто стоял у старого фонаря?', second: 'Пришлю кадр целиком. По краю заметна ещё одна деталь: чей-то зонт остался у ограды.' },
     ],
+    firstPostIdea: 'На поляне после дождя было необычно светло. У кого есть фотографии? Хочу собрать маленький альбом вечера.',
     replyIdea: 'Предлагаю сравнить снимки и восстановить порядок событий.',
   },
   'aec9494b-4118-4525-8458-e85d759c8dd9': {
@@ -57,6 +59,7 @@ const worlds: Record<string, GuestWorld> = {
       { id: 'georgina', first: 'Совет просит смету к пятнице. С чего начнём: с ремонта комнат или с расходов будущих учеников?', second: 'Запишу это в план для совета. Попрошу мадам Помфри добавить то, что мы забыли.' },
       { id: 'draco', first: 'Совет ждёт смету к пятнице. Какой расход ты можешь посчитать прямо сейчас?', second: 'Я принесу свой расчёт на то же крыло замка. Посмотрим, что совет скажет, когда увидит обе сметы.' },
     ],
+    firstPostIdea: 'Хочу составить первый план для замка. Давайте начнём с одного крыла: что там можно привести в порядок?',
     replyIdea: 'Начнём с одного крыла: сколько стоит подготовить там классы и комнаты для учеников?',
   },
   '8c02a7fb-3b55-4eb0-b957-1b4869ed9834': {
@@ -71,11 +74,11 @@ const worlds: Record<string, GuestWorld> = {
       { id: 'jon', first: 'На Севере ждут помощи. Кто назовёт день, когда у ворот появится первый обоз?', second: 'Передам дозорным. Пусть расчистят дорогу и приготовят место для припасов.' },
       { id: 'diana', first: 'Мои люди готовы собрать обоз. Сколько припасов нужно крепости на первую неделю?', second: 'Пусть распорядитель сверит это с запасами. Утром у нас будет список того, что можно отправить.' },
     ],
+    firstPostIdea: 'Дорога на Север ещё открыта. Предлагаю собрать обоз с припасами. Что положим в него в первую очередь?',
     replyIdea: 'Соберём припасы на неделю и укажем в письме дату, когда обоз сможет выйти.',
   },
 }
 
-const ideas: Record<string, Record<string, string>> = rolePostIdeas
 const storageKey = 'reki:guest-demo:v1'
 const titles = {
   hero: 'Выбери героя',
@@ -162,7 +165,7 @@ function GuestFinish({ world, worldId, draft, selected, guest, speaker, onCollec
   return <main className="app guest-finish">
     <div className="screen no-tab thread-screen">
       <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions">
-        <span className="small muted">Пробная история</span>
+        <span className="small muted">Пробная история · Мягко</span>
         <span ref={counter} className="energy-badge thread-crystal-count" aria-label={`В демо: ${draft.collected ? 2 : 0} кристаллов`}>💎 {draft.collected ? 2 : 0}</span>
       </div>} />
       <div className="pad">
@@ -184,8 +187,14 @@ function GuestFinish({ world, worldId, draft, selected, guest, speaker, onCollec
       <div className="guest-finish__popup-body">
         <div className="guest-finish__badge">💎 +2 в пробной истории</div>
         <h2 id="guest-save-title">Сохрани свою историю</h2>
-        <p>Ты уже написал первый пост и получил ответ героя. Создай аккаунт, чтобы сохранить черновик и продолжить историю.</p>
-        <Button onClick={onSave}>Зарегистрироваться и сохранить</Button>
+        <p>Сохрани черновик и продолжи игру со своим героем.</p>
+        <ul className="guest-finish__benefits">
+          <li><b>Блогер-миллионник.</b> Веди канал и расти до миллиона подписчиков.</li>
+          <li><b>Отношения с героями.</b> Заводи союзников и спорь с соперниками.</li>
+          <li><b>Свои миры.</b> Открой редактор по ходу игры и придумай собственную историю.</li>
+          <li><b>Тон «Остро».</b> Добавь конфликты, драмы и риск отмены.</li>
+        </ul>
+        <Button onClick={onSave}>Создать аккаунт и продолжить</Button>
         <p className="small muted">В аккаунте 2 💎 начислятся за первый пост и ответ герою.</p>
       </div>
     </dialog>
@@ -254,7 +263,7 @@ export function GuestOnboarding({ worldId, onSave }: {
 
   const startPost = () => {
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) setVisibleLength(0)
-    setDraft({ ...draft, step: 'post', text: ideas[worldId][draft.hero] })
+    setDraft({ ...draft, step: 'post', text: world.firstPostIdea })
   }
   const changeStep = (next: Step) => {
     setVisibleLength(undefined)
@@ -278,7 +287,7 @@ export function GuestOnboarding({ worldId, onSave }: {
     </div>
     <header className="guest-onboarding__world">
       <img src="/android-chrome-192x192.png?v=wave-2" width="32" height="32" alt="" />
-      <div><b>{world.title}</b><p>Пробная история</p></div>
+      <div><b>{world.title}</b><p>Пробная история · Мягко</p></div>
     </header>
     <section className="guest-onboarding__sheet">
       <h1 ref={heading} id="guest-title" tabIndex={-1}>{titles[step]}</h1>
