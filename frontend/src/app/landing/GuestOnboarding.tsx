@@ -183,19 +183,29 @@ function GuestFinish({ world, worldId, draft, selected, guest, speaker, onCollec
     </aside>
     <dialog ref={dialog} className="sheet guest-finish__popup" aria-labelledby="guest-save-title">
       <button type="button" className="guest-finish__close" onClick={() => dialog.current?.close()} aria-label="Закрыть">×</button>
-      <div className="guest-finish__art"><img src={worldArt[worldId].smallCover} alt="" /></div>
+      <div className="guest-finish__art" aria-hidden="true">
+        <img src={worldArt[worldId].smallCover} alt="" />
+        <div className="guest-finish__channel">
+          <div className="guest-finish__channel-avatar"><Avatar seed={selected.seed} world={worldId} avatarStyle={world.avatarStyle} mode="default" size={54} /></div>
+          <div><strong>{selected.name}</strong><span>Первый разговор начался</span></div>
+          <div className="guest-finish__gem">💎<b>+2</b></div>
+        </div>
+      </div>
       <div className="guest-finish__popup-body">
-        <div className="guest-finish__badge">💎 +2 в пробной истории</div>
-        <h2 id="guest-save-title">Сохрани свою историю</h2>
-        <p>Сохрани черновик и продолжи игру со своим героем.</p>
+        <div className="guest-finish__pitch">
+          <h2 id="guest-save-title">Твоя история<br />только началась</h2>
+          <p>Сохрани черновик и продолжи игру за своего героя.</p>
+        </div>
         <ul className="guest-finish__benefits">
-          <li><b>Блогер-миллионник.</b> Веди канал и расти до миллиона подписчиков.</li>
-          <li><b>Отношения с героями.</b> Заводи союзников и спорь с соперниками.</li>
-          <li><b>Свои миры.</b> Открой редактор по ходу игры и придумай собственную историю.</li>
-          <li><b>Тон «Остро».</b> Добавь конфликты, драмы и риск отмены.</li>
+          <li><span aria-hidden="true">📈</span><div><b>Канал до миллиона</b><p>Пиши посты и набирай подписчиков</p></div></li>
+          <li><span aria-hidden="true">💬</span><div><b>Отношения с героями</b><p>Спорь, дружи и находи союзников</p></div></li>
+          <li><span aria-hidden="true">🌍</span><div><b>Свой мир</b><p>Открой редактор по ходу игры</p></div></li>
+          <li><span aria-hidden="true">⚡</span><div><b>Тон «Остро»</b><p>Интриги, драмы и риск отмены</p></div></li>
         </ul>
-        <Button onClick={onSave}>Создать аккаунт и продолжить</Button>
-        <p className="small muted">В аккаунте 2 💎 начислятся за первый пост и ответ герою.</p>
+        <div className="guest-finish__actions">
+          <Button onClick={onSave}>Создать аккаунт и продолжить</Button>
+          <p className="small muted">2 💎 в аккаунте за первый пост и ответ герою</p>
+        </div>
       </div>
     </dialog>
   </main>
