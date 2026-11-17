@@ -1,4 +1,5 @@
-import { onboardingPostSaved, onboardingReplyStarted, onboardingReplySaved, gameOnboardingActive, updateGameOnboarding, useGameOnboarding } from '../app/GameOnboardingState'
+import { tap } from '../app/analytics'
+import { gameOnboardingState, onboardingPostSaved, onboardingReplyStarted, onboardingReplySaved, gameOnboardingActive, updateGameOnboarding, useGameOnboarding } from '../app/GameOnboardingState'
 import { recordEntryStep } from '../app/landing/openobserve'
 import { RepostAction } from '../ui/RepostAction'
 import { PostLikeAction } from '../ui/PostLikeAction'
@@ -107,11 +108,13 @@ function Live() {
   useEffect(() => {
     let active = true
     const start = setTimeout(() => { void (async () => {
+      const firstPost = gameOnboardingState()?.phase === 'post' && !nav.params.repostId
       let created: Awaited<ReturnType<typeof api.createPost>>
       try {
         created = await api.createPost(text, nav.params.ownWords !== false, typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined)
       } catch (cause) {
         if (!active) return
+        if (firstPost) track('onboarding_step', { step: 'post_save', ok: false, kind: cause instanceof ApiError ? String(cause.status) : 'unconfirmed' })
         if (cause instanceof ApiError && cause.problemType === 'urn:reki:problem:crisis') { nav.replace(p.ageBand === '14-17' || !p.ageBand ? '06-2_crisis' : '06-3_crisis_adult'); return }
         nav.replace('02-2b_publish_error', { text, repostId: nav.params.repostId, status: cause instanceof ApiError ? cause.status : undefined, uncertain: !(cause instanceof ApiError) || (cause.status >= 500 && cause.status !== 503) })
         return
@@ -127,7 +130,10 @@ function Live() {
       setFloats(created.post.likes > 0 ? [{ id: 0, emoji: '♡', x: 45 }] : [])
       const star = contentOf(p.world).stars.find(item => `Star_${item.id}` === created.predictedAuthorId)
       setTyping(star?.name ?? 'Звезда')
-      const commentPromise = api.initialComment(created.post.id, created.predictedAuthorId).catch(() => null)
+      const commentPromise = api.initialComment(created.post.id, created.predictedAuthorId).catch(() => null).then(saved => {
+        if (firstPost) track('onboarding_step', { step: 'initial_reaction_result', ok: !!saved?.comments.length })
+        return saved
+      })
       await new Promise(resolve => setTimeout(resolve, 1300))
       if (!active) return
       setTyping(null)
@@ -262,7 +268,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
           <details className="result-details"><summary>Разбор поста</summary><div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
             <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
           </details>
-          <div className="post-result-actions">{!gameOnboardingActive(onboarding) && <Button onClick={() => nav.replace('02-1_compose')}>Новый пост</Button>}<span data-game-onboarding-post={comment ? post.id : undefined}><Button secondary onClick={() => nav.replace('02-6_thread', { post, commentPromise, focusReply: true })}>Комментировать</Button></span></div>
+          <div className="post-result-actions">{!gameOnboardingActive(onboarding) && <Button onClick={() => { tap('result_open_next_post'); nav.replace('02-1_compose') }}>Новый пост</Button>}<span data-game-onboarding-post={comment ? post.id : undefined}><Button secondary onClick={() => { tap('post_open_conversation', { ok: !!comment }); nav.replace('02-6_thread', { post, commentPromise, focusReply: true }) }}>Комментировать</Button></span></div>
           <button onClick={() => nav.push('02-7_share', { post })} className="result-share">Поделиться</button>
         </div>
       </div>
@@ -395,6 +401,7 @@ function Thread() {
     controller.current = ctrl
     const key = threadKey
     let playerSaved = false
+    tap('reply_send')
     onboardingReplyStarted(post.id, draft.requestId)
     setSending(true); setReplyError(''); setTypingName(null); setDraft(current => ({ ...current, submitted: true }))
     try {
@@ -425,6 +432,7 @@ function Thread() {
     } catch (cause) {
       if (ctrl.signal.aborted || activeKey.current !== key) return
       const status = (cause as { status?: number })?.status
+      track('onboarding_step', { step: playerSaved ? 'reply_reaction_result' : 'reply_save', ok: false, kind: status ? String(status) : 'unconfirmed' })
       setReplyError(playerSaved && cause instanceof Error && cause.name === 'unsafe_generated_content'
         ? 'Комментарий сохранён. Ответ звезды не прошёл проверку 14+.'
         : playerSaved ? 'Комментарий сохранён. Ответ звезды пока не появился. Попробуй снова.'
@@ -440,7 +448,7 @@ function Thread() {
   const tutorialKey = `reki:thread-help:${player.id}`
   const [showHelp, setShowHelp] = useState(() => { try { return localStorage.getItem(tutorialKey) !== 'seen' } catch { return true } })
   const dismissHelp = () => { setShowHelp(false); try { localStorage.setItem(tutorialKey, 'seen') } catch { /* memory fallback */ } }
-  const focusReply = (id: string) => { edit({ commentId: id }); requestAnimationFrame(() => replyInput.current?.focus()) }
+  const focusReply = (id: string) => { tap('reply_select_hero'); edit({ commentId: id }); requestAnimationFrame(() => replyInput.current?.focus()) }
   const fromFeed = nav.params.returnTo === 'feed' || (!nav.params.returnTo && !!postAuthor)
   const fromMarked = nav.params.returnTo === 'marked'
   const goBack = () => { if (nav.params.returnTo && nav.canBack) nav.back(); else if (fromMarked) nav.replace('05-5_collection', { profileTab: 'marked' }); else nav.replace(fromFeed ? '03-3_feed' : '03-5_stage') }
@@ -484,7 +492,7 @@ function Thread() {
         {postAuthor && draft.commentId !== null && <button disabled={sending} onClick={() => { edit({ commentId: null }); requestAnimationFrame(() => replyInput.current?.focus()) }} style={{ background: 'none', border: 'none', color: 'var(--lilac)', marginBottom: 8 }}>К посту</button>}
         {draft.commentId && !targetAvailable && <div className="small muted" role="status" style={{ marginBottom: 8 }}>Этому аккаунту больше нельзя ответить. Выбери другой комментарий — текст ответа сохранён.</div>}
         {replyError && <div className="small" role="alert" style={{ color: 'var(--accent)', marginBottom: 12 }}>{replyError}</div>}
-        {!gameOnboardingActive(onboarding) && <Button secondary disabled={sending} onClick={() => nav.replace('02-1_compose')}>Написать следующий пост</Button>}
+        {!gameOnboardingActive(onboarding) && <Button secondary disabled={sending} onClick={() => { tap('thread_open_next_post'); nav.replace('02-1_compose') }}>Написать следующий пост</Button>}
       </div>
       {confirmDelete && <Sheet onClose={() => { if (!deleting) setConfirmDelete(false) }}>
         <h2>Удалить пост?</h2>

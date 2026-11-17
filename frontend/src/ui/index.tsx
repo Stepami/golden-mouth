@@ -41,7 +41,7 @@ export function BottomCTA({ main, onMain, second, onSecond, disabled, secondDisa
 export function TopBar({ title, onBack, right, rightPlain = false, children }: { title?: ReactNode; onBack?: () => void; right?: ReactNode; rightPlain?: boolean; children?: ReactNode }) {
   return (
     <header className="top">
-      {onBack && <button className="back" onClick={onBack} aria-label="Назад">‹</button>}
+      {onBack && <button className="back" onClick={() => { tap('back'); onBack() }} aria-label="Назад">‹</button>}
       {children ?? <b className="top-title">{title}</b>}
       {right !== undefined && <div className={rightPlain ? "top-action" : "pill"}>{right}</div>}
     </header>

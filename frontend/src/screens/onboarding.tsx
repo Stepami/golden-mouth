@@ -1,4 +1,4 @@
-import { pendingLandingWorld } from '../app/landing/experiment'
+import { landingContext, pendingLandingWorld } from '../app/landing/experiment'
 import { Resources } from '../ui/Resources'
 import { Streak } from '../ui/Streak'
 import { displayHandle } from '../app/handle'
@@ -15,6 +15,7 @@ import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
 import { Avatar, BottomCTA, Card, fmt } from '../ui'
 import { track } from '../app/log'
+import { tap, trackLandingAuth } from '../app/analytics'
 import { register } from '.'
 import { worldArt } from '../app/worldPrototype'
 import { WorldOverview, WorldPrototypePreview } from './worldQuick'
@@ -53,7 +54,7 @@ function Invite() {
     </div>
     <p className="small muted welcome-disclaimer">Персонажи и фанаты виртуальные.<br />Посты остаются внутри игры.</p>
     <p className="welcome-world-choice">Выбери мир или создай свой</p>
-  </div><BottomCTA main="Начать играть" onMain={() => nav.push('01-2_age')} /></div>
+  </div><BottomCTA main="Начать играть" onMain={() => nav.push('01-2_age', { fromLanding: !!landingContext() })} /></div>
 }
 
 // 01-2: new accounts are 18+; returning profiles keep their existing age band.
@@ -65,20 +66,29 @@ function Age() {
   const [year, setYear] = useState(initialYear)
   const [agree, setAgree] = useState(nav.params.agree === true)
   const wheel = useRef<HTMLDivElement>(null)
+  const viewed = useRef(false)
+  const fromLanding = nav.params.fromLanding === true
+  useEffect(() => {
+    if (fromLanding && !viewed.current) {
+      viewed.current = true
+      trackLandingAuth('landing_age_view')
+    }
+  }, [fromLanding])
   useEffect(() => { if (wheel.current) wheel.current.scrollTop = years.indexOf(initialYear) * 38 }, [])
   const onWheel = () => { const el = wheel.current; if (el) setYear(years[Math.min(years.length - 1, Math.max(0, Math.round(el.scrollTop / 38)))]) }
   const age = currentYear - year
   const proceed = () => {
     track('onboarding_step', { step: 'age', ok: age >= 18 })
     if (age < 18) {
-      nav.replace('01-2b_under14', { year, agree, returnToCreation: nav.params.returnToCreation })
+      nav.replace('01-2b_under14', { year, agree, fromLanding, returnToCreation: nav.params.returnToCreation })
       return
     }
+    if (fromLanding) trackLandingAuth('landing_age_continue')
     const draft = getWorldDraft()
     if (draft && !draft.editingId) setWorldDraft({ ...draft, birthYear: year, group: '18+', ageBand: ageBand(age) })
     if (nav.params.returnToCreation) { nav.back(); return }
     const world = pendingLandingWorld()
-    nav.replace('01-2_age', { year, agree })
+    nav.replace('01-2_age', { year, agree, fromLanding })
     nav.push(world ? '01-3b_world_overview' : '01-3_world', {
       ...(world ? { world, fromLanding: true } : {}), group: '18+', ageBand: ageBand(age), birthYear: year,
     })
@@ -96,7 +106,7 @@ function Age() {
         <Card style={{ marginTop: 18 }}>
           <b>Сохраним твою игру?</b>
           <label className="row" style={{ gap: 8, marginTop: 10 }}>
-            <button onClick={() => setAgree(!agree)} aria-pressed={agree} style={{ width: 22, height: 22, borderRadius: 6, border: agree ? 'none' : '2px solid #55536A', background: agree ? 'var(--grad)' : 'none', color: '#fff', fontSize: 14 }}>{agree ? '✓' : ''}</button>
+            <button onClick={() => { if (fromLanding) trackLandingAuth('landing_age_consent', { auth_outcome: agree ? 'unchecked' : 'checked' }); setAgree(!agree) }} aria-pressed={agree} style={{ width: 22, height: 22, borderRadius: 6, border: agree ? 'none' : '2px solid #55536A', background: agree ? 'var(--grad)' : 'none', color: '#fff', fontSize: 14 }}>{agree ? '✓' : ''}</button>
             <span className="small">Согласие на обработку данных</span>
           </label>
         </Card>
@@ -115,7 +125,7 @@ function Under18() {
       <div style={{ fontSize: 64, margin: '40px 0 14px' }}>🌱</div>
       <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 10 }}>Игра доступна с 18 лет</div>
       <div className="muted">Играть в Реки можно с 18 лет. Если год рождения выбран по ошибке, его можно исправить.</div>
-      <BottomCTA main="Исправить возраст" onMain={() => nav.replace('01-2_age', { year: nav.params.year, agree: nav.params.agree, returnToCreation: nav.params.returnToCreation })} />
+      <BottomCTA main="Исправить возраст" onMain={() => nav.replace('01-2_age', { year: nav.params.year, agree: nav.params.agree, fromLanding: nav.params.fromLanding, returnToCreation: nav.params.returnToCreation })} />
     </div>
   )
 }
@@ -152,7 +162,7 @@ export function Home({ firstPostConfirmed = false, channelEmpty = false }: { fir
     <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{profile.firstContext}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
       {bonus > 0 && <p>🎁 Первый пост даст кристаллы: +{bonus} 💎</p>}
     </div><p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>
-  </div><div className="bottom-cta" style={{ bottom: 78 }}><button className="btn" onClick={() => nav.push('02-1_compose', { firstPostConfirmed })}>Написать первый пост</button></div></div>
+  </div><div className="bottom-cta" style={{ bottom: 78 }}><button className="btn" onClick={() => { tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }}>Написать первый пост</button></div></div>
 }
 
 register({

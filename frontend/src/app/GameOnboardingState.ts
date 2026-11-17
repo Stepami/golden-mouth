@@ -1,3 +1,4 @@
+import { event } from './analytics'
 import { useSyncExternalStore } from 'react'
 import { api } from '../api/client'
 import { needsRegistration } from '../api/auth'
@@ -49,7 +50,12 @@ export function useGameOnboarding() {
 }
 export function updateGameOnboarding(change: Partial<GameOnboardingState>) {
   const id = owner(), current = gameOnboardingState()
-  if (id && current && current.phase !== 'done') write(id, { ...current, ...change })
+  if (!id || !current || current.phase === 'done') return
+  write(id, { ...current, ...change })
+  if (change.phase && change.phase !== current.phase && !isGameOnboardingPreview()) {
+    const step = { setup: 'setup', post: 'world_saved', reaction: 'post_saved', reply: 'reply_started', done: 'reply_saved' }[change.phase]
+    event('onboarding_step', { step, ok: true })
+  }
 }
 export function onboardingWorldSaved(worldId: string) {
   if (gameOnboardingState()?.phase === 'setup') updateGameOnboarding({ phase: 'post', worldId })

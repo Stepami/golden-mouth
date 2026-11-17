@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { NavContext, TABS, type Nav, type ScreenId } from './app/nav'
 import { StoreProvider, useStore } from './app/store'
 import { SCREENS, TAB_OF } from './screens'
-import { screenView, setExperiments, tap, trackLanding } from './app/analytics'
+import { screenView, setExperiments, tap, trackLanding, trackLandingAuth } from './app/analytics'
 import { setScreen } from './app/log'
 import { TelegramLaunch } from './app/TelegramLaunch'
 import { syncBackButton } from './telegram'
 import { api } from './api/client'
-import { canResumeAuth, clearPendingLogin, hasAccess, hasInitData, hasPendingLogin, loginMiniApp, loginVk, loginWidget, loginYandex, needsRegistration, pendingAuthProvider, startAuth, subscribeAuth } from './api/auth'
+import { canResumeAuth, clearPendingLogin, hasAccess, hasInitData, hasPendingLogin, loginMiniApp, loginVk, loginWidget, loginYandex, needsRegistration, pendingAuthProvider, startAuth, subscribeAuth, type AuthProvider } from './api/auth'
 import { AuthProviders } from './app/AuthProviders'
 import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
 import { runtimeConfig } from './app/runtimeConfig'
@@ -18,7 +18,7 @@ import { beginGameOnboarding, gameOnboardingActive, useGameOnboarding, restartGa
 import type { WorldId } from './api/types'
 
 import { Landing } from './app/landing/Landing'
-import { beginLandingAuth, completeLandingAuth, landingEntryPending, isLandingPreview, pendingLandingWorld } from './app/landing/experiment'
+import { beginLandingAuth, completeLandingAuth, landingAuthPending, landingEntryPending, isLandingPreview, pendingLandingWorld } from './app/landing/experiment'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
 
@@ -57,7 +57,12 @@ function Shell() {
     tab: i => { setStack([{ id: TABS[i].screen, params: {} }]); window.scrollTo(0, 0) },
   }), [top, stack.length])
 
-  useEffect(() => { setScreen(top.id); screenView(top.id) }, [top.id])
+  const Screen = SCREENS[top.id]?.component
+  const resolvingExistingPlayer = (playerState === 'ready' || playerState === 'missing' && (api.hasPlayer() || !!pendingLandingWorld())) && !explicitStart && top.id === '01-1_invite'
+  const visibleScreen = Screen && playerState !== 'loading' && playerState !== 'failed' && !resolvingExistingPlayer ? top.id : undefined
+  useEffect(() => {
+    if (visibleScreen) { setScreen(visibleScreen); screenView(visibleScreen) }
+  }, [visibleScreen])
   useEffect(() => { if (player?.experiments) setExperiments(player.experiments) }, [player?.experiments])
   useEffect(() => {
     if (explicitStart || top.id !== '01-1_invite' || playerState === 'loading' || playerState === 'failed') return
@@ -68,8 +73,6 @@ function Shell() {
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1 && top.id !== '02-6_thread', back), [stack.length, top.id, back])
 
-  const Screen = SCREENS[top.id]?.component
-  const resolvingExistingPlayer = (playerState === 'ready' || playerState === 'missing' && (api.hasPlayer() || !!pendingLandingWorld())) && !explicitStart && top.id === '01-1_invite'
   if (!Screen || playerState === 'loading' || resolvingExistingPlayer) return <div className="app"><div className="screen"><div className="pad" role="status">Загружаем твою игру…</div></div></div>
   if (playerState === 'failed') return <div className="app"><div className="screen"><div className="pad"><p>Не получилось загрузить игру.</p><button className="btn" onClick={() => location.reload()}>Попробовать снова</button></div></div></div>
   const people: React.ContextType<typeof AvatarPeople> = {}
@@ -107,36 +110,73 @@ export function App() {
   const explicitStart = hasExplicitStart()
   const [landingAccepted, setLandingAccepted] = useState(landingEntryPending)
   const [landingPreview, setLandingPreview] = useState(isLandingPreview)
+  const showLanding = !explicitStart && (landingPreview || ready && !authenticated && !registration && !resumable && !landingAccepted)
+  const showAuth = !showLanding && !explicitStart && ready && !authenticated && !registration
+  useEffect(() => {
+    if (showAuth && landingAuthPending()) trackLandingAuth('landing_auth_view')
+  }, [showAuth])
   useEffect(() => { if (registration && !isGameOnboardingPreview()) beginGameOnboarding() }, [registration])
   useEffect(() => {
     if (!isGameOnboardingPreview() && (authenticated || registration)) {
       setLandingAccepted(true)
-      if (!landingPreview && completeLandingAuth()) trackLanding('landing_auth_complete')
+      if (!landingPreview && completeLandingAuth()) {
+        trackLanding('landing_auth_complete')
+        trackLandingAuth('landing_auth_verified', { auth_outcome: registration ? 'registration' : 'access' })
+      }
     }
   }, [authenticated, registration, landingPreview])
   useEffect(() => {
     if (explicitStart) return
-    void startAuth().catch(() => { setAuthError('Нет соединения с игрой. Проверь подключение и продолжи вход.') }).finally(() => setReady(true))
+    const provider = pendingAuthProvider()
+    if (landingAuthPending() && canResumeAuth()) trackLandingAuth('landing_auth_resume', { auth_provider: provider, auth_action: 'automatic' })
+    void startAuth().catch(() => {
+      if (landingAuthPending()) trackLandingAuth('landing_auth_exchange_error', { auth_provider: provider })
+      setAuthError('Нет соединения с игрой. Проверь подключение и продолжи вход.')
+    }).finally(() => setReady(true))
   }, [explicitStart])
   useEffect(() => { if (ready && !authenticated && api.hasPlayer()) api.clearSession() }, [ready, authenticated])
-  const finishLogin = (request: Promise<unknown>) => {
+  const finishLogin = (request: Promise<unknown>, provider?: AuthProvider, providerReturned = false) => {
+    if (provider && providerReturned && landingAuthPending()) trackLandingAuth('landing_auth_provider_result', { auth_provider: provider, auth_outcome: 'proof' })
     setAuthError(''); setBusy(true)
     void request.catch(() => {
+      if (landingAuthPending()) trackLandingAuth('landing_auth_exchange_error', { auth_provider: provider })
       setAuthError(hasPendingLogin()
         ? 'Подтверждение входа сохранено. Проверь соединение с игрой и продолжи вход.'
         : 'Не получилось войти. Проверь подключение и попробуй снова.')
     }).finally(() => setBusy(false))
   }
-  if (!explicitStart && (landingPreview || ready && !authenticated && !registration && !resumable && !landingAccepted)) return <Landing preview={landingPreview} onContinue={worldId => {
-    if (!landingPreview) { beginLandingAuth(worldId); trackLanding('landing_continue') }
+  if (showLanding) return <Landing preview={landingPreview} onContinue={worldId => {
+    if (!landingPreview) {
+      beginLandingAuth(worldId)
+      if (worldId) trackLanding('landing_continue')
+      else trackLandingAuth('landing_login_click')
+    }
     setLandingAccepted(true); setLandingPreview(false)
   }} />
   if (!explicitStart && !ready) return <div className="app"><div className="screen"><div className="pad" role="status">Входим в игру…</div></div></div>
-  if (!explicitStart && !authenticated && !registration) return <TelegramLaunch error={authError} pendingProvider={pendingLogin ? pendingAuthProvider() === 'yandex' ? 'Яндекс ID' : pendingAuthProvider() === 'vk' ? 'VK' : 'Telegram' : undefined}>
+  if (showAuth) return <TelegramLaunch error={authError} pendingProvider={pendingLogin ? pendingAuthProvider() === 'yandex' ? 'Яндекс ID' : pendingAuthProvider() === 'vk' ? 'VK' : 'Telegram' : undefined}>
     {resumable ? <div className="auth-providers">
-      <button className="btn" disabled={busy} onClick={() => finishLogin(startAuth())}>{busy ? 'Входим…' : 'Продолжить вход'}</button>
-      {pendingLogin && <button className="btn secondary" disabled={busy} onClick={() => { clearPendingLogin(); setAuthError('') }}>Войти заново</button>}
-    </div> : <AuthProviders busy={busy} onMiniApp={hasInitData() ? () => finishLogin(loginMiniApp()) : undefined} onTelegram={token => finishLogin(loginWidget(token))} onVk={(token, expiry) => finishLogin(loginVk(token, expiry))} onYandex={(token, expiry) => finishLogin(loginYandex(token, expiry))} onError={() => { setBusy(false); setAuthError('Вход не завершён. Попробуй ещё раз.') }} />}
+      <button className="btn" disabled={busy} onClick={() => {
+        const provider = pendingAuthProvider()
+        if (landingAuthPending()) trackLandingAuth('landing_auth_resume', { auth_provider: provider, auth_action: 'manual' })
+        finishLogin(startAuth(), provider)
+      }}>{busy ? 'Входим…' : 'Продолжить вход'}</button>
+      {pendingLogin && <button className="btn secondary" disabled={busy} onClick={() => {
+        if (landingAuthPending()) trackLandingAuth('landing_auth_resume', { auth_provider: pendingAuthProvider(), auth_action: 'restart' })
+        clearPendingLogin(); setAuthError('')
+      }}>Войти заново</button>}
+    </div> : <AuthProviders busy={busy}
+      onMiniApp={hasInitData() ? () => finishLogin(loginMiniApp(), 'telegram') : undefined}
+      onTelegram={token => finishLogin(loginWidget(token), 'telegram', true)}
+      onVk={(token, expiry) => finishLogin(loginVk(token, expiry), 'vk', true)}
+      onYandex={(token, expiry) => finishLogin(loginYandex(token, expiry), 'yandex', true)}
+      onSelected={(provider, action) => {
+        if (landingAuthPending()) trackLandingAuth('landing_auth_provider_selected', { auth_provider: provider, auth_action: action })
+      }}
+      onError={(provider, outcome) => {
+        if (landingAuthPending()) trackLandingAuth('landing_auth_provider_result', { auth_provider: provider, auth_outcome: outcome })
+        setBusy(false); setAuthError('Вход не завершён. Попробуй ещё раз.')
+      }} />}
   </TelegramLaunch>
   return <StoreProvider><Shell /></StoreProvider>
 }
