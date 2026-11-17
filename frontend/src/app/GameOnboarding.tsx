@@ -15,6 +15,50 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
   const [host, setHost] = useState<HTMLElement | null>(null)
   const [editing, setEditing] = useState(false)
   const [targetReady, setTargetReady] = useState(false)
+  const [collecting, setCollecting] = useState(false)
+  const flight = useRef<{ cancelled: boolean; nodes: HTMLElement[]; animations: Animation[] } | null>(null)
+  useEffect(() => () => {
+    const active = flight.current
+    if (!active) return
+    active.cancelled = true
+    active.animations.forEach(animation => animation.cancel())
+    active.nodes.forEach(node => node.remove())
+  }, [])
+  const collectPreview = async (button: HTMLButtonElement) => {
+    if (!isGameOnboardingPreview() || flight.current) return
+    const active = { cancelled: false, nodes: [] as HTMLElement[], animations: [] as Animation[] }
+    flight.current = active; setCollecting(true)
+    try {
+      const counter = document.querySelector<HTMLElement>('.crystal-button')
+      if (!counter || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+      const start = button.getBoundingClientRect(), end = counter.getBoundingClientRect()
+      if (!end.width || !end.height) return
+      for (const index of [0, 1]) {
+        const gem = document.createElement('span')
+        gem.className = 'game-onboarding-crystal-flight'; gem.dataset.onboardingFlight = String(index)
+        gem.setAttribute('aria-hidden', 'true'); gem.textContent = '💎'
+        const offset = index === 0 ? -8 : 8
+        gem.style.left = `${start.left + start.width / 2 - 14 + offset}px`
+        gem.style.top = `${start.top + start.height / 2 - 14}px`
+        document.body.append(gem); active.nodes.push(gem)
+        const x = end.left + end.width / 2 - (start.left + start.width / 2 + offset)
+        const y = end.top + end.height / 2 - (start.top + start.height / 2)
+        active.animations.push(gem.animate([
+          { transform: 'translate(0, 0) scale(.8)', opacity: 1 },
+          { transform: `translate(${x * .4 + offset * 3}px, ${y * .35}px) scale(1.1)`, opacity: 1, offset: .4 },
+          { transform: `translate(${x}px, ${y}px) scale(.4)`, opacity: 0 },
+        ], { duration: 650, delay: index * 90, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' }))
+      }
+      await Promise.all(active.animations.map(animation => animation.finished))
+    } catch { /* A preview animation failure must not block closing the preview. */ }
+    finally {
+      active.nodes.forEach(node => node.remove())
+      if (!active.cancelled) {
+        flight.current = null; setCollecting(false)
+        if (isGameOnboardingPreview()) acknowledgeGameOnboarding()
+      }
+    }
+  }
   useLayoutEffect(() => {
     let highlighted: HTMLElement | null = null
     const update = () => {
@@ -48,8 +92,8 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
     <div className="game-onboarding-meta"><span><span className="game-onboarding-segments" aria-hidden="true">{[1, 2, 3].map(index => <i key={index} className={index <= step ? 'on' : ''} />)}</span>Знакомство с игрой · {step} из 3</span>{isGameOnboardingPreview() && <span className="game-onboarding-reward-hint">Награда 2 💎</span>}</div>
     <h2>{waitingForReaction ? 'Герой готовит ответ' : title}</h2>
     <p>{lockedSection ? 'Этот раздел откроется после знакомства с игрой.' : waitingForReaction ? 'Дождись реакции героя. При ошибке можно повторить загрузку разговора.' : text}</p>
-    {done && isGameOnboardingPreview() && <p className="game-onboarding-reward-status">Начисление 2 💎 ожидает подключения</p>}
-    {done ? <button onClick={acknowledgeGameOnboarding}>Продолжить историю</button> : onResume && <button onClick={onResume}>Вернуться к обучению</button>}
+    {done && isGameOnboardingPreview() && <p className="game-onboarding-reward-status">DEV: предпросмотр без начисления</p>}
+    {done ? isGameOnboardingPreview() ? <button className="game-onboarding-collect" data-onboarding-collect disabled={collecting} aria-busy={collecting} onClick={event => void collectPreview(event.currentTarget)}>Забрать 2 💎</button> : <button onClick={acknowledgeGameOnboarding}>Продолжить историю</button> : onResume && <button onClick={onResume}>Вернуться к обучению</button>}
   </aside>
   return host ? createPortal(dock, host) : dock
 }

@@ -510,3 +510,8 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .game-onboarding-preview-label button { border: 0; background: transparent; color: var(--lilac); font: inherit; text-decoration: underline; padding: 4px; }
 
 .tabbar button.locked { opacity: .55; }
+
+.game-onboarding-progress .game-onboarding-collect { width: 100%; margin-top: 12px; padding: 11px 14px; border-radius: 12px; background: var(--lilac); color: #211a2d; font-weight: 650; text-align: center; }
+.game-onboarding-collect:disabled { opacity: .6; cursor: default; }
+.game-onboarding-crystal-flight { position: fixed; z-index: 1000; width: 28px; height: 28px; font-size: 25px; line-height: 28px; pointer-events: none; will-change: transform, opacity; }
+.thread-crystal-count { flex-shrink: 0; font-size: 12px; white-space: nowrap; cursor: default; }
