@@ -124,6 +124,12 @@ export function App() {
   useEffect(() => {
     if (showAuth && landingAuthPending()) trackLandingAuth('landing_auth_view')
   }, [showAuth])
+  useEffect(() => {
+    if (needsConsent) trackLandingAuth('landing_registration_view')
+  }, [needsConsent])
+  useEffect(() => {
+    if (missingAccount) trackLandingAuth('landing_login_account_missing')
+  }, [missingAccount])
   useEffect(() => { if (registration && !isGameOnboardingPreview()) beginGameOnboarding() }, [registration])
   useEffect(() => {
     if (!isGameOnboardingPreview() && (authenticated || registration) && !missingAccount && !needsConsent) {

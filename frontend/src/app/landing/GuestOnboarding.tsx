@@ -1,3 +1,4 @@
+import { trackLandingAuth } from '../analytics'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Avatar, Button } from '../../ui'
 import { worldDefinitionOf, worlds as templates } from '../../api/worldContent'
@@ -37,11 +38,11 @@ const worlds: Record<string, GuestWorld> = {
       { id: 'nika', name: 'Ника Борщ', seed: 'nika.recruit', role: 'Рекрутер с завышенной планкой' },
     ],
     speakers: [
-      { id: 'nika', first: 'Для начала можно посмотреть небольшой учебный проект. Какую задачу из него покажем новичкам?', second: 'Тогда попрошу показать проект целиком. Хочу увидеть, какую задачу выпускник решал сам.' },
-      { id: 'alexey_nl', first: 'У меня открыты рекламный лендинг и три вакансии. По какой из них проверяем обещание курса?', second: 'Договорились, разберу одно объявление по пунктам. Начну с того, какой опыт там просят.' },
+      { id: 'nika', first: 'Я открыла резюме таксиста. В графе «опыт» пусто, а на работу он хочет уже в понедельник. Какую первую задачу ты бы доверил ему показать на собеседовании?', second: 'Хорошо. Пусть покажет ход работы и объяснит, где сам принял решение. Я посмотрю на проект, даже если в резюме всё ещё будет пусто.' },
+      { id: 'alexey_nl', first: 'На баннере «Вката» вижу обещание работы. В вакансии вижу требование опыта. Что положим рядом для проверки: программу курса или один проект выпускника?', second: 'Соберу всё в один пост: обещание, требования вакансии и что человек реально сделал. Тогда можно будет обсуждать факты.' },
     ],
-    firstPostIdea: 'Хочу собрать простой список для тех, кто ищет первую работу в IT. Какой навык стоит попробовать на маленьком проекте?',
-    replyIdea: 'Давайте возьмём одну стартовую вакансию и сравним её требования с программой курса.',
+    firstPostIdea: 'В чат написал таксист: хочет уйти в IT, но первый проект требует опыта. «Вкат» обещает помочь. Давайте выберем одну задачу, с которой он может начать.',
+    replyIdea: 'Предлагаю взять одну задачу из вакансии. Пусть решит её и покажет, как рассуждал.',
   },
   'b3a1a522-0263-4796-a197-57a8731fc291': {
     title: 'Вечерело',
@@ -53,11 +54,11 @@ const worlds: Record<string, GuestWorld> = {
       { id: 'yakov', name: 'Яков Чернов', seed: 'nessssssie', role: 'Проводник' },
     ],
     speakers: [
-      { id: 'eduard', first: 'На поляне зажёгся свет, хотя генератор уже заглох. Ты помнишь, откуда он шёл?', second: 'У меня в кинотеатре есть снимок поляны до грозы. Можно сверить, где стоял фонарь.' },
-      { id: 'isabella', first: 'Я забрала фотоаппарат с поляны. Последний кадр смазало, но на краю виден свет. Кто стоял у старого фонаря?', second: 'Пришлю кадр целиком. По краю заметна ещё одна деталь: чей-то зонт остался у ограды.' },
+      { id: 'eduard', first: 'Я разглядел мяч на мокрой траве, как раз когда гром накрыл звук удара. А на твоём кадре кто стоял у кромки леса?', second: 'Давай сверим с плёнкой из кинотеатра. Там видно поляну до грозы. Возможно, мы приняли отражение за свет фонаря.' },
+      { id: 'isabella', first: 'Биту уже убрали, а мяч я нашла у самой ограды. Последний кадр смазан, но на нём кто-то поднял зонт. Помнишь, кто остался после игры?', second: 'Покажу кадр целиком. Может, вместе поймём, почему отражение в луже было ярче самого фонаря.' },
     ],
-    firstPostIdea: 'На поляне после дождя было необычно светло. У кого есть фотографии? Хочу собрать маленький альбом вечера.',
-    replyIdea: 'Предлагаю сравнить снимки и восстановить порядок событий.',
+    firstPostIdea: 'Вчера на поляне мы играли в бейсбол под гром. После последнего удара за оградой мелькнул свет. У кого есть кадр того момента?',
+    replyIdea: 'Давай сравним наши кадры. Мой снят сразу после последнего удара.',
   },
   'aec9494b-4118-4525-8458-e85d759c8dd9': {
     title: 'Спасти Хогвартс',
@@ -70,11 +71,11 @@ const worlds: Record<string, GuestWorld> = {
       { id: 'draco', name: 'Драко Малфой', seed: 'dracom', role: 'За коммерческий проект замка' },
     ],
     speakers: [
-      { id: 'georgina', first: 'Совет просит смету к пятнице. С чего начнём: с ремонта комнат или с расходов будущих учеников?', second: 'Запишу это в план для совета. Попрошу мадам Помфри добавить то, что мы забыли.' },
-      { id: 'draco', first: 'Совет ждёт смету к пятнице. Какой расход ты можешь посчитать прямо сейчас?', second: 'Я принесу свой расчёт на то же крыло замка. Посмотрим, что совет скажет, когда увидит обе сметы.' },
+      { id: 'georgina', first: 'В Большом зале всё ещё стоят четыре длинных стола, а сверху капает прямо на шляпу. Если хотим снова принимать учеников, что чиним первым?', second: 'Внесу это в план для совета. Попрошу мадам Помфри проверить, что понадобится ученикам в первую неделю.' },
+      { id: 'draco', first: 'Я прошёл от ворот до Большого зала. Со свечами у замка всё отлично, с крышей хуже. Что в твоём плане оплачиваем первым?', second: 'Составлю свой расчёт для того же крыла. Положим обе сметы на стол совета и посмотрим, что можно открыть этой осенью.' },
     ],
-    firstPostIdea: 'Хочу составить первый план для замка. Давайте начнём с одного крыла: что там можно привести в порядок?',
-    replyIdea: 'Начнём с одного крыла: сколько стоит подготовить там классы и комнаты для учеников?',
+    firstPostIdea: 'Мы прошли в Большой зал. Свечи ещё горят, а Распределяющая шляпа лежит на столе под протекающей крышей. Что нужно сделать, чтобы осенью за этими столами снова сидели ученики?',
+    replyIdea: 'Сначала починим крышу над одним крылом. Потом посчитаем, сколько классов и спален там можно открыть.',
   },
   '8c02a7fb-3b55-4eb0-b957-1b4869ed9834': {
     title: 'Игра домов',
@@ -86,11 +87,11 @@ const worlds: Record<string, GuestWorld> = {
       { id: 'james', name: 'Джеймс Левлистер', seed: '_gold__lion', role: 'КороноУбийца' },
     ],
     speakers: [
-      { id: 'jon', first: 'На Севере ждут помощи. Кто назовёт день, когда у ворот появится первый обоз?', second: 'Передам дозорным. Пусть расчистят дорогу и приготовят место для припасов.' },
-      { id: 'diana', first: 'Мои люди готовы собрать обоз. Сколько припасов нужно крепости на первую неделю?', second: 'Пусть распорядитель сверит это с запасами. Утром у нас будет список того, что можно отправить.' },
+      { id: 'jon', first: 'В Драконьем Логове мы посмотрели на карту и наконец заговорили об одной дороге. У Стены ждут припасы. Кто может отправить первый обоз до снегов?', second: 'Попрошу дозорных открыть ворота к рассвету. Если обоз пойдёт в назначенный день, у нас будет время распределить припасы.' },
+      { id: 'diana', first: 'Перед советом я велела развернуть карту Северной дороги. Мои люди могут отправить обоз. Где лучше принять припасы, чтобы их хватило на неделю?', second: 'Попрошу распорядителя сверить это с запасами. До рассвета пришлю список, а после можно договориться с охраной дороги.' },
     ],
-    firstPostIdea: 'Дорога на Север ещё открыта. Предлагаю собрать обоз с припасами. Что положим в него в первую очередь?',
-    replyIdea: 'Соберём припасы на неделю и укажем в письме дату, когда обоз сможет выйти.',
+    firstPostIdea: 'Совет в Драконьем Логове закончился. На карте осталась одна дорога к Стене, пока её не занесло. Что отправим первым обозом?',
+    replyIdea: 'Начнём с еды и тёплых одеял на неделю. Обоз выйдет на рассвете, если у ворот его встретит дозор.',
   },
 }
 
@@ -163,9 +164,9 @@ export function clearGuestDemo(): void {
   try { localStorage.removeItem(storageKey) } catch { /* Storage may be unavailable. */ }
 }
 
-function GuestFinish({ worldId, collected, selected, avatarStyle, onCollect, onSave }: {
+function GuestFinish({ worldId, collected, selected, avatarStyle, onClaim, onCollect, onSave }: {
   worldId: string; collected: boolean; selected: WorldDefinition['stars'][number]; avatarStyle: string
-  onCollect: () => void; onSave: () => void
+  onClaim: () => void; onCollect: () => void; onSave: () => void
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const collectButton = useRef<HTMLButtonElement>(null)
@@ -184,6 +185,7 @@ function GuestFinish({ worldId, collected, selected, avatarStyle, onCollect, onS
   const collect = async () => {
     if (collected || inFlight.current) return
     inFlight.current = true
+    onClaim()
     setCollecting(true)
     const start = collectButton.current?.getBoundingClientRect()
     const end = document.querySelector('.guest-finish .thread-crystal-count')?.getBoundingClientRect()
@@ -314,8 +316,32 @@ export function GuestOnboarding({ worldId, onSave }: {
     return () => clearTimeout(timeout)
   }, [replySubmitted, replyDone])
 
+  const lastGuestScreen = useRef<string | undefined>(undefined)
+  const guestScreen = collected ? 'save_prompt' : replyDone ? 'reward' : replySubmitted ? 'reply_pending' : screen
+  useEffect(() => {
+    if (lastGuestScreen.current === guestScreen) return
+    lastGuestScreen.current = guestScreen
+    trackLandingAuth('landing_guest_screen', { guest_screen: guestScreen, guest_world: worldId, guest_hero: hero })
+  }, [guestScreen, worldId, hero])
+
+  const guestAction = (action: string, selectedHero = hero) => trackLandingAuth('landing_guest_action', {
+    guest_action: action, guest_world: worldId, guest_hero: selectedHero,
+  })
+
   function go(id: string, params?: Record<string, unknown>) {
     if (!Object.hasOwn(screens, id)) return
+    if (id !== screen) {
+      const action = ({
+        '01-3b_world_overview:01-4_channel': 'open_hero_picker',
+        '01-4_channel:01-4b_world_setup': 'confirm_hero',
+        '01-4b_world_setup:03-5_stage': 'start_story',
+        '03-5_stage:02-1_compose': 'open_editor',
+        '02-1_compose:02-2_live': 'publish_demo',
+        '02-3_result:02-6_thread': 'open_conversation',
+      } as Record<string, string>)[`${screen}:${id}`]
+      if (action) guestAction(action)
+    }
+
     setDraft(current => ({
       ...current, screen: id as Screen,
       ...(id === '02-2_live' && typeof params?.text === 'string' ? { text: params.text } : {}),
@@ -354,16 +380,16 @@ export function GuestOnboarding({ worldId, onSave }: {
   }
   return <NavContext.Provider value={nav}><AvatarWorld.Provider value={worldId}><GuestSessionContext.Provider value={{
     world, player, goal, post, result, published: !!published, speaker: other.name,
-    chooseHero: id => setDraft(current => ({ ...current, hero: id })), postIdea: fixture.firstPostIdea, text: draft.text,
+    chooseHero: id => { if (id !== hero) guestAction('choose_hero', id); setDraft(current => ({ ...current, hero: id })) }, postIdea: fixture.firstPostIdea, text: draft.text,
     editPost: value => setDraft(current => ({ ...current, text: value })), reply, replySubmitted: !!replySubmitted, replyDone: !!replyDone,
     editReply: value => setDraft(current => ({ ...current, reply: value })),
-    sendReply: () => setDraft(current => ({ ...current, reply, replySubmitted: true })),
+    sendReply: () => { guestAction('send_demo_reply'); setDraft(current => ({ ...current, reply, replySubmitted: true })) },
     crystals: collected ? 2 : 0, hint: !replyDone ? <GuestHint screen={screen} /> : undefined,
   }}>
     <main ref={game} className={replyDone ? 'app guest-finish' : 'app guest-game'}>
       <div key={screen}>{content}</div>
       {!replyDone && (screen === '02-2_live' || (screen === '02-6_thread' && replySubmitted)) && <GuestHint screen={screen} inline={false} />}
-      {replyDone && <GuestFinish worldId={worldId} selected={selected} avatarStyle={world.avatarStyle} collected={!!collected}
+      {replyDone && <GuestFinish worldId={worldId} selected={selected} avatarStyle={world.avatarStyle} collected={!!collected} onClaim={() => guestAction('claim_demo_reward')}
         onCollect={() => setDraft(current => ({ ...current, collected: true }))} onSave={() => onSave({ text, reply, hero })} />}
       {!storageAvailable && <p className="small muted pad" role="status">Хранилище недоступно. Черновик останется в этой вкладке до обновления страницы.</p>}
     </main>

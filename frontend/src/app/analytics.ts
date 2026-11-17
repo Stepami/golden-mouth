@@ -113,7 +113,9 @@ export function trackLanding(name: 'landing_view' | 'landing_continue' | 'landin
   reachLandingGoal(name, props)
 }
 
-type LandingAuthStep = [name: 'landing_login_click' | 'landing_auth_view' | 'landing_age_view' | 'landing_age_continue' | 'landing_catalog_retry' | 'landing_guest_start' | 'landing_guest_save_click' | 'landing_registration_consent']
+type LandingAuthStep = [name: 'landing_login_click' | 'landing_auth_view' | 'landing_age_view' | 'landing_age_continue' | 'landing_catalog_retry' | 'landing_guest_start' | 'landing_guest_save_click' | 'landing_registration_consent' | 'landing_registration_view' | 'landing_login_account_missing']
+  | [name: 'landing_guest_screen', params: { guest_screen: string; guest_world: string; guest_hero: string }]
+  | [name: 'landing_guest_action', params: { guest_action: string; guest_world: string; guest_hero: string }]
   | [name: 'landing_catalog_result', params: { auth_outcome: 'ready' | 'error' | 'empty' }]
   | [name: 'landing_world_action', params: { world_choice: 'worlds' | 'hogwarts' | 'infobiz' | 'evening' | 'houses'; auth_action: 'select' | 'switch' }]
   | [name: 'landing_age_consent', params: { auth_outcome: 'checked' | 'unchecked' }]
