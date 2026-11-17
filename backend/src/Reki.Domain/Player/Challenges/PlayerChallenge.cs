@@ -9,18 +9,34 @@ public sealed record PlayerChallenge(
 {
     public static PlayerChallenge Empty => new(DateOnly.MinValue, [], []);
 
-    internal IReadOnlyDictionary<DailyTaskType, DailyTaskValues> CreateValues(
-        World world,
-        IReadOnlyDictionary<DailyTaskType, int> targets)
+    public static PlayerChallenge New(
+        DateOnly day,
+        IReadOnlyCollection<World> worlds,
+        IReadOnlyDictionary<DailyTaskType, long> targets)
     {
-        var starId = world.Stars[Random.Shared.Next(world.Stars.Count)].Id;
-        return DailyChallenges.Value[Day.DayOfWeek].ToDictionary(
-            type => type,
-            type => new DailyTaskValues(
-                type is DailyTaskType.PostViews or DailyTaskType.PostLikes
-                    ? (long)Math.Ceiling((decimal)world.Player.Subscribers * targets[type] / 100)
-                    : targets[type],
-                0,
-                type == DailyTaskType.StarComment ? starId : null));
+        var completion = targets.ToDictionary(kvp => kvp.Key, _ => false);
+        return new PlayerChallenge(
+            day,
+            completion,
+            DailyTaskValues.Create(worlds, targets));
     }
+
+    internal void AddWorld(
+        World world,
+        IReadOnlyDictionary<DailyTaskType, long> targets)
+    {
+        if (Values.Count == 0)
+        {
+            Values[world.Id] = DailyTaskValues.CreateForWorld(world, targets);
+        }
+        else
+        {
+            var existingTargets = Values[Values.Keys.First()].ToDictionary(
+                target => target.Key,
+                target => target.Value.BaseTarget);
+            Values[world.Id] = DailyTaskValues.CreateForWorld(world, existingTargets);
+        }
+    }
+
+    internal bool RemoveWorld(WorldId worldId) => Values.Remove(worldId);
 }

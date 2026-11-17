@@ -91,44 +91,37 @@ public sealed class PlayerProfile
             return;
         }
 
-        var challenge = new PlayerChallenge(
+        DailyChallenge = PlayerChallenge.New(
             day,
-            DailyChallenges.Value[day.DayOfWeek].ToDictionary(type => type, _ => false),
-            new Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>>());
-        var selectedTargets = DailyChallenges.Value[day.DayOfWeek].ToDictionary(
-            type => type,
-            type => Random.Shared.Next(targets[type][0], targets[type][1] + 1));
-        DailyChallenge = challenge with { Values = worlds.ToDictionary(world => world.Id, world => new Dictionary<DailyTaskType, DailyTaskValues>(challenge.CreateValues(world, selectedTargets))) };
+            worlds,
+            targets.ToDictionary(
+                target => target.Key,
+                target => Random.Shared.NextInt64(target.Value[0], target.Value[1] + 1)));
         Version++;
     }
 
-    public void AddDailyChallengeWorld(World world, IReadOnlyDictionary<DailyTaskType, int[]> targets)
+    public void AddDailyChallengeWorld(
+        World world,
+        IReadOnlyDictionary<DailyTaskType, int[]> targets)
     {
         if (DailyChallenge.Day == DateOnly.MinValue || DailyChallenge.Values.ContainsKey(world.Id))
         {
             return;
         }
 
-        var existing = DailyChallenge.Values.Values.FirstOrDefault();
-        var selectedTargets = DailyChallenges.Value[DailyChallenge.Day.DayOfWeek].ToDictionary(
-            type => type,
-            type => type is DailyTaskType.PostViews or DailyTaskType.PostLikes || existing is null
-                ? Random.Shared.Next(targets[type][0], targets[type][1] + 1)
-                : (int)existing[type].Target);
-        var values = new Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>>(DailyChallenge.Values)
-        {
-            [world.Id] = new Dictionary<DailyTaskType, DailyTaskValues>(DailyChallenge.CreateValues(world, selectedTargets)),
-        };
-        DailyChallenge = DailyChallenge with { Values = values };
+        DailyChallenge.AddWorld(
+            world,
+            targets.ToDictionary(
+                target => target.Key,
+                target => Random.Shared.NextInt64(target.Value[0], target.Value[1] + 1)));
+
         Version++;
     }
 
     public void RemoveDailyChallengeWorld(WorldId worldId)
     {
-        var values = new Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>>(DailyChallenge.Values);
-        if (values.Remove(worldId))
+        if (DailyChallenge.RemoveWorld(worldId))
         {
-            DailyChallenge = DailyChallenge with { Values = values };
             Version++;
         }
     }
