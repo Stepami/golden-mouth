@@ -21,7 +21,7 @@ export function OnboardingBubble({ target, title, text, count, onSkip }: { targe
     }
     update()
     const observer = new MutationObserver(update)
-    observer.observe(document.querySelector('.app') ?? document.body, { childList: true, subtree: true })
+    observer.observe(document.querySelector('.app') ?? document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-game-onboarding-post', 'data-game-onboarding-world'] })
     window.addEventListener('resize', update); window.addEventListener('scroll', update, true)
     window.visualViewport?.addEventListener('resize', update)
     return () => { observer.disconnect(); window.removeEventListener('resize', update); window.removeEventListener('scroll', update, true); window.visualViewport?.removeEventListener('resize', update) }
