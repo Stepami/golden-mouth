@@ -1,3 +1,4 @@
+import { readGuestHandoff } from '../app/landing/guestHandoff'
 import { tap } from '../app/analytics'
 import { recordEntryStep } from '../app/landing/openobserve'
 import { clearLandingWorld } from '../app/landing/experiment'
@@ -66,7 +67,9 @@ export function WorldOverview() {
     next = refreshHogwartsDraft(next, d)
     if (!next.persona && !next.personaChosen && next.definition.stars.length > 1) {
       const customProfile = restored && (next.definition.name !== d.name || next.definition.avatar !== d.avatar)
-      next = customProfile ? { ...next, personaChosen: true } : withPersona(next, next.definition.stars[0])
+      const guest = readGuestHandoff()
+      const guestHero = guest?.worldId === world ? next.definition.stars.find(star => star.id === guest.hero) : undefined
+      next = customProfile ? { ...next, personaChosen: true } : withPersona(next, guestHero ?? next.definition.stars[0])
     }
     setWorldDraft(next)
     setConfirmSwitch(false)

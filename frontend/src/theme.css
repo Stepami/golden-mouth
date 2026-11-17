@@ -515,3 +515,6 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .game-onboarding-collect:disabled { opacity: .6; cursor: default; }
 .game-onboarding-crystal-flight { position: fixed; z-index: 1000; width: 28px; height: 28px; font-size: 25px; line-height: 28px; pointer-events: none; will-change: transform, opacity; }
 .thread-crystal-count { flex-shrink: 0; font-size: 12px; white-space: nowrap; cursor: default; }
+
+.registration-consent { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 14px 0; text-align: left; }
+.registration-consent input { width: 20px; height: 20px; flex: 0 0 20px; accent-color: var(--accent2); }

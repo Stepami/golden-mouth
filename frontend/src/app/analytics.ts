@@ -113,7 +113,7 @@ export function trackLanding(name: 'landing_view' | 'landing_continue' | 'landin
   reachLandingGoal(name, props)
 }
 
-type LandingAuthStep = [name: 'landing_login_click' | 'landing_auth_view' | 'landing_age_view' | 'landing_age_continue' | 'landing_catalog_retry']
+type LandingAuthStep = [name: 'landing_login_click' | 'landing_auth_view' | 'landing_age_view' | 'landing_age_continue' | 'landing_catalog_retry' | 'landing_guest_start' | 'landing_guest_save_click' | 'landing_registration_consent']
   | [name: 'landing_catalog_result', params: { auth_outcome: 'ready' | 'error' | 'empty' }]
   | [name: 'landing_world_action', params: { world_choice: 'worlds' | 'hogwarts' | 'infobiz' | 'evening' | 'houses'; auth_action: 'select' | 'switch' }]
   | [name: 'landing_age_consent', params: { auth_outcome: 'checked' | 'unchecked' }]

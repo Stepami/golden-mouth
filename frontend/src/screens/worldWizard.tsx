@@ -1,7 +1,9 @@
+import { clearGuestHandoff, readGuestHandoff, setRegistrationConsent } from '../app/landing/guestHandoff'
+import { draftKey, hasPostDraft, savePostDraft } from '../app/postDraft'
 import { event, tap } from '../app/analytics'
 import { registerGameOnboarding, onboardingWorldSaved } from '../app/GameOnboardingState'
 import { hasAccess, needsRegistration } from '../api/auth'
-import { clearLandingWorld } from '../app/landing/experiment'
+import { clearLandingWorld, pendingLandingWorld } from '../app/landing/experiment'
 import {PushNotifications} from '../app/push/PushNotifications'
 import {InstallApp} from '../app/install/InstallApp'
 import { Resources } from '../ui/Resources'
@@ -91,7 +93,18 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
       await api.settings({ address: draft.address })
       creatingWorld = !draft.editingId
       const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d)
-      if (creatingWorld) onboardingWorldSaved(player.worldInstanceId ?? player.world)
+      if (creatingWorld) {
+        onboardingWorldSaved(player.worldInstanceId ?? player.world)
+        const guest = readGuestHandoff()
+        if (guest && guest.worldId === pendingLandingWorld() && guest.worldId === d.templateId && guest.text.trim()) {
+          const key = draftKey(player)
+          if (!hasPostDraft(key)) {
+            savePostDraft(key, { text: guest.text, ownWords: true })
+            clearGuestHandoff()
+          }
+        }
+        setRegistrationConsent(false)
+      }
       setAvatarPersonalization(player.id, draft.personalizeAvatar !== false)
       clearLandingWorld(); setWorldDraft(null); setPlayer(player); nav.replace('03-5_stage', { firstPostConfirmed: creatingWorld })
     } catch (cause) {

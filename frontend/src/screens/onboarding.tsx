@@ -1,3 +1,4 @@
+import { acceptedRegistrationConsent } from '../app/landing/guestHandoff'
 import { landingContext, pendingLandingWorld } from '../app/landing/experiment'
 import { Resources } from '../ui/Resources'
 import { Streak } from '../ui/Streak'
@@ -64,7 +65,8 @@ function Age() {
   const years = Array.from({ length: 91 }, (_, i) => currentYear - 10 - i)
   const initialYear = typeof nav.params.year === 'number' ? nav.params.year : currentYear - 18
   const [year, setYear] = useState(initialYear)
-  const [agree, setAgree] = useState(nav.params.agree === true)
+  const preaccepted = acceptedRegistrationConsent()
+  const [agree, setAgree] = useState(nav.params.agree === true || preaccepted)
   const wheel = useRef<HTMLDivElement>(null)
   const viewed = useRef(false)
   const fromLanding = nav.params.fromLanding === true
@@ -103,13 +105,13 @@ function Age() {
         <div ref={wheel} onScroll={onWheel} style={{ height: 230, overflowY: 'auto', scrollSnapType: 'y mandatory', background: '#14141B', borderRadius: 18, textAlign: 'center', padding: '96px 0' }}>
           {years.map(y => <div key={y} onClick={() => setYear(y)} style={{ scrollSnapAlign: 'center', height: 38, lineHeight: '38px', fontSize: y === year ? 22 : 18, fontWeight: y === year ? 800 : 400, color: y === year ? 'var(--text)' : 'var(--muted)', background: y === year ? '#22222D' : 'none', borderRadius: 10, margin: '0 12px' }}>{y}</div>)}
         </div>
-        <Card style={{ marginTop: 18 }}>
+        {!preaccepted && <Card style={{ marginTop: 18 }}>
           <b>Сохраним твою игру?</b>
           <label className="row" style={{ gap: 8, marginTop: 10 }}>
             <button onClick={() => { if (fromLanding) trackLandingAuth('landing_age_consent', { auth_outcome: agree ? 'unchecked' : 'checked' }); setAgree(!agree) }} aria-pressed={agree} style={{ width: 22, height: 22, borderRadius: 6, border: agree ? 'none' : '2px solid #55536A', background: agree ? 'var(--grad)' : 'none', color: '#fff', fontSize: 14 }}>{agree ? '✓' : ''}</button>
             <span className="small">Согласие на обработку данных</span>
           </label>
-        </Card>
+        </Card>}
         {!agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
       </div>
       <BottomCTA main="Дальше" disabled={!agree} onMain={proceed} />

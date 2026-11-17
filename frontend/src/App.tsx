@@ -18,6 +18,8 @@ import { beginGameOnboarding, gameOnboardingActive, useGameOnboarding, restartGa
 import type { WorldId } from './api/types'
 
 import { Landing } from './app/landing/Landing'
+import { GuestOnboarding, readGuestWorld, clearGuestDemo } from './app/landing/GuestOnboarding'
+import { acceptedRegistrationConsent, readGuestHandoff, saveGuestHandoff, setRegistrationConsent } from './app/landing/guestHandoff'
 import { beginLandingAuth, completeLandingAuth, landingAuthPending, landingEntryPending, isLandingPreview, pendingLandingWorld } from './app/landing/experiment'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
@@ -67,7 +69,7 @@ function Shell() {
   useEffect(() => {
     if (explicitStart || top.id !== '01-1_invite' || playerState === 'loading' || playerState === 'failed') return
     const world = pendingLandingWorld()
-    if (world) setStack([{ id: api.hasPlayer() ? '01-3b_world_overview' : '01-2_age', params: { world, fromLanding: true } }])
+    if (world) setStack([{ id: api.hasPlayer() ? '01-3b_world_overview' : '01-2_age', params: { world, fromLanding: true, agree: acceptedRegistrationConsent() } }])
     else if (playerState === 'ready' || api.hasPlayer()) setStack([{ id: '01-3_world', params: {} }])
   }, [explicitStart, playerState, top.id])
   const back = useCallback(() => nav.back(), [nav])
@@ -110,21 +112,28 @@ export function App() {
   const explicitStart = hasExplicitStart()
   const [landingAccepted, setLandingAccepted] = useState(landingEntryPending)
   const [landingPreview, setLandingPreview] = useState(isLandingPreview)
-  const showLanding = !explicitStart && (landingPreview || ready && !authenticated && !registration && !resumable && !landingAccepted)
-  const showAuth = !showLanding && !explicitStart && ready && !authenticated && !registration
+  const [guestWorld, setGuestWorld] = useState(readGuestWorld)
+  const [signup, setSignup] = useState(() => !!readGuestHandoff() && landingEntryPending())
+  const [consentChecked, setConsentChecked] = useState(false)
+  const [consentAccepted, setConsentAccepted] = useState(acceptedRegistrationConsent)
+  const missingAccount = registration && landingAuthPending() && !signup && !consentAccepted && !pendingLandingWorld()
+  const needsConsent = signup && !consentAccepted && !authenticated
+  const showGuest = !explicitStart && ready && !authenticated && !registration && !resumable && !landingAccepted && !!guestWorld
+  const showLanding = !showGuest && !explicitStart && (landingPreview || ready && !authenticated && !registration && !resumable && !landingAccepted)
+  const showAuth = !showLanding && !showGuest && !explicitStart && ready && !authenticated && !registration && !needsConsent
   useEffect(() => {
     if (showAuth && landingAuthPending()) trackLandingAuth('landing_auth_view')
   }, [showAuth])
   useEffect(() => { if (registration && !isGameOnboardingPreview()) beginGameOnboarding() }, [registration])
   useEffect(() => {
-    if (!isGameOnboardingPreview() && (authenticated || registration)) {
+    if (!isGameOnboardingPreview() && (authenticated || registration) && !missingAccount && !needsConsent) {
       setLandingAccepted(true)
       if (!landingPreview && completeLandingAuth()) {
         if (pendingLandingWorld()) trackLanding('landing_auth_complete')
         trackLandingAuth('landing_auth_verified', { auth_outcome: registration ? 'registration' : 'access' })
       }
     }
-  }, [authenticated, registration, landingPreview])
+  }, [authenticated, registration, landingPreview, missingAccount, needsConsent])
   useEffect(() => {
     if (explicitStart) return
     const provider = pendingAuthProvider()
@@ -145,15 +154,39 @@ export function App() {
         : 'Не получилось войти. Проверь подключение и попробуй снова.')
     }).finally(() => setBusy(false))
   }
+  if (showGuest && guestWorld) return <GuestOnboarding key={guestWorld} worldId={guestWorld} onSave={draft => {
+    saveGuestHandoff({ ...draft, worldId: guestWorld })
+    setRegistrationConsent(false); setConsentAccepted(false); setConsentChecked(false)
+    beginLandingAuth(guestWorld)
+    trackLandingAuth('landing_guest_save_click')
+    setSignup(true); setLandingAccepted(true); clearGuestDemo()
+  }} />
   if (showLanding) return <Landing preview={landingPreview} onContinue={worldId => {
-    if (!landingPreview) {
-      beginLandingAuth(worldId)
-      if (worldId) trackLanding('landing_continue')
-      else trackLandingAuth('landing_login_click')
+    setLandingPreview(false)
+    if (worldId) {
+      trackLanding('landing_continue')
+      trackLandingAuth('landing_guest_start')
+      setGuestWorld(worldId)
+      return
     }
-    setLandingAccepted(true); setLandingPreview(false)
+    setRegistrationConsent(false); setConsentAccepted(false); setConsentChecked(false)
+    beginLandingAuth()
+    trackLandingAuth('landing_login_click')
+    setLandingAccepted(true)
   }} />
   if (!explicitStart && !ready) return <div className="app"><div className="screen"><div className="pad" role="status">Входим в игру…</div></div></div>
+  if (missingAccount) return <TelegramLaunch error="">
+    <p role="status">Аккаунт с этим способом входа не найден.</p>
+    <button className="btn" onClick={() => { setSignup(true); setConsentChecked(false); setConsentAccepted(false); setRegistrationConsent(false) }}>Перейти к регистрации</button>
+  </TelegramLaunch>
+  if (needsConsent) return <TelegramLaunch error="">
+    <h2>Создание аккаунта</h2>
+    <label className="registration-consent"><input type="checkbox" checked={consentChecked} onChange={e => setConsentChecked(e.currentTarget.checked)} />Согласие на обработку данных</label>
+    <button className="btn" disabled={!consentChecked} onClick={() => {
+      setRegistrationConsent(true); setConsentAccepted(true)
+      trackLandingAuth('landing_registration_consent')
+    }}>Продолжить регистрацию</button>
+  </TelegramLaunch>
   if (showAuth) return <TelegramLaunch error={authError} pendingProvider={pendingLogin ? pendingAuthProvider() === 'yandex' ? 'Яндекс ID' : pendingAuthProvider() === 'vk' ? 'VK' : 'Telegram' : undefined}>
     {resumable ? <div className="auth-providers">
       <button className="btn" disabled={busy} onClick={() => {
