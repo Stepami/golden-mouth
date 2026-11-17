@@ -77,7 +77,7 @@ function Shell() {
     people[player.handle] = { address: player.address, ageBand: player.ageBand, personalizeAvatar }
     people[player.id] = people[player.handle]
   }
-  const trainingScreen = learning && !!player && !top.id.startsWith('06-') && !['01-1_invite', '01-2_age', '01-2b_under14', '05-8_settings'].includes(top.id)
+  const trainingScreen = learning && !top.id.startsWith('06-') && !['01-1_invite', '01-2_age', '01-2b_under14', '05-8_settings'].includes(top.id)
   const tab = trainingScreen ? TAB_OF[top.id] ?? (onboarding?.phase === 'setup' ? 5 : 0) : top.id === '01-3_world' && !player ? undefined : TAB_OF[top.id]
   return (
     <NavContext.Provider value={nav}>
@@ -87,7 +87,7 @@ function Shell() {
         <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration /><GameOnboarding lockedSection={lockedSection} />
         {tab !== undefined && (
           <nav className="tabbar" aria-label="Основная навигация">
-            {[5, 0, 1, 2, 3, 4].map(i => { const t = TABS[i]; const locked = learning && i !== 4 && !(i === 5 && top.id === '01-3_world') && !(i === 0 && onboarding?.phase !== 'setup'); return (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} aria-current={i === tab ? 'page' : undefined} aria-disabled={locked || undefined} className={`${i === tab ? 'on' : ''}${locked ? ' locked' : ''}`} onClick={() => { if (locked) { setLockedSection(true); return } setLockedSection(false); if (top.id === t.screen) return; tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button> })}
+            {[5, 0, 1, 2, 3, 4].map(i => { const t = TABS[i]; const locked = learning && (!player || i !== 4 && !(i === 5 && top.id === '01-3_world') && !(i === 0 && onboarding?.phase !== 'setup')); return (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} aria-current={i === tab ? 'page' : undefined} aria-disabled={locked || undefined} className={`${i === tab ? 'on' : ''}${locked ? ' locked' : ''}`} onClick={() => { if (locked) { setLockedSection(true); return } setLockedSection(false); if (top.id === t.screen) return; tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button> })}
           </nav>
         )}
       </div>
