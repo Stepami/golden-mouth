@@ -7,12 +7,13 @@ public sealed record PlayerChallenge(
     Dictionary<DailyTaskType, bool> Completion,
     Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>> Values)
 {
-    public static PlayerChallenge Empty => new(DateOnly.MinValue, new Dictionary<DailyTaskType, bool>(), new Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>>());
+    public static PlayerChallenge Empty => new(DateOnly.MinValue, [], []);
 
     internal IReadOnlyDictionary<DailyTaskType, DailyTaskValues> CreateValues(
         World world,
         IReadOnlyDictionary<DailyTaskType, int> targets)
     {
+        var starId = world.Stars[Random.Shared.Next(world.Stars.Count)].Id;
         return DailyChallenges.Value[Day.DayOfWeek].ToDictionary(
             type => type,
             type => new DailyTaskValues(
@@ -20,6 +21,6 @@ public sealed record PlayerChallenge(
                     ? (long)Math.Ceiling((decimal)world.Player.Subscribers * targets[type] / 100)
                     : targets[type],
                 0,
-                type == DailyTaskType.StarComment && world.Stars.Count > 0 ? world.Stars[Random.Shared.Next(world.Stars.Count)].Id : null));
+                type == DailyTaskType.StarComment ? starId : null));
     }
 }
