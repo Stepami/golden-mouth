@@ -33,7 +33,7 @@ export function OnboardingBubble({ target, text }: { target: string; text: strin
     }
     update()
     const observer = new MutationObserver(update)
-    observer.observe(document.querySelector('.app') ?? document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-game-onboarding-post', 'data-game-onboarding-world'] })
+    observer.observe(document.querySelector('.app') ?? document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-game-onboarding-post', 'data-game-onboarding-world', 'aria-pressed'] })
     window.addEventListener('resize', update); window.addEventListener('scroll', update, true)
     window.visualViewport?.addEventListener('resize', update)
     return () => { observer.disconnect(); window.removeEventListener('resize', update); window.removeEventListener('scroll', update, true); window.visualViewport?.removeEventListener('resize', update) }
@@ -51,7 +51,7 @@ export function OnboardingBubble({ target, text }: { target: string; text: strin
     </aside>
   </>
   const dialog = node?.closest('[role="dialog"]')
-  const hint = target === '.persona-option' ? 'character' : target === '.drama-option.selected' ? 'mood' : null
+  const hint = target === '.persona-option.selected' ? 'character' : target === '.drama-option.selected' ? 'mood' : null
   const inline = hint ? document.querySelector(`[data-game-onboarding-hint="${hint}"]`) : null
   if (!node) return null
   return inline ? createPortal(bubble, inline) : dialog ? createPortal(bubble, dialog) : bubble
@@ -94,7 +94,7 @@ export function GameOnboarding() {
   let target = '', text = ''
   if (setup && screen === '01-3_world') { target = '.world-catalog > button:first-child'; text = 'Выбери, где начнётся твоя история.' }
   if (setup && screen === '01-3b_world_overview') { target = '.bottom-cta'; text = 'Мир уже выбран. Теперь выбери своего персонажа.' }
-  if (setup && screen === '01-4_channel') { target = '.persona-option'; text = 'Выбери, от чьего лица пойдёт история.' }
+  if (setup && screen === '01-4_channel') { target = '.persona-option.selected'; text = 'Выбери, от чьего лица пойдёт история.' }
   if (setup && screen === '01-4b_world_setup') { target = '.drama-option.selected'; text = 'Выбери градус драмы и начни историю.' }
   if (sameWorld && state.phase === 'post' && (screen === '03-5_stage' || screen === '01-6_home')) { target = '.bottom-cta'; text = 'Ты ведёшь канал своего героя. Напиши первый пост — можно дописать готовую идею.' }
   if (sameWorld && state.phase === 'post' && screen === '02-1_compose') { target = '.bottom-cta'; text = 'Дополни готовую идею или напиши свою. Опубликуй пост, чтобы увидеть реакцию героев.' }
