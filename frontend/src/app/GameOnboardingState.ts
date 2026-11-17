@@ -2,8 +2,8 @@ import { useSyncExternalStore } from 'react'
 import { api } from '../api/client'
 import { needsRegistration } from '../api/auth'
 
-type Phase = 'setup' | 'post' | 'reaction' | 'reply' | 'done' | 'skipped'
-export type GameOnboardingState = { phase: Phase; worldId?: string; postId?: string; setupScreen?: string; setupWorld?: string }
+type Phase = 'setup' | 'post' | 'reaction' | 'reply' | 'done'
+export type GameOnboardingState = { phase: Phase; worldId?: string; postId?: string; setupScreen?: string; setupWorld?: string; conversationPostId?: string; replyRequestId?: string; completionSeen?: boolean }
 export const isGameOnboardingPreview = () => import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === 'game-onboarding'
 const prefix = 'reki:game-onboarding:v1:'
 const storageId = (id: string) => isGameOnboardingPreview() ? `preview:${id}` : id
@@ -14,7 +14,7 @@ function read(id: string): GameOnboardingState | undefined {
   if (memory.has(storageId(id))) return memory.get(storageId(id))
   try {
     const value = JSON.parse(localStorage.getItem(prefix + storageId(id)) ?? 'null') as GameOnboardingState | null
-    if (value && ['setup', 'post', 'reaction', 'reply', 'done', 'skipped'].includes(value.phase)) memory.set(storageId(id), value)
+    if (value && ['setup', 'post', 'reaction', 'reply', 'done', 'skipped'].includes(value.phase)) memory.set(storageId(id), (value.phase as string) === 'skipped' ? { ...value, phase: value.postId ? 'reaction' : value.worldId ? 'post' : 'setup' } : value)
   } catch { /* Session fallback when storage is unavailable. */ }
   return memory.get(storageId(id))
 }
@@ -47,16 +47,25 @@ export function useGameOnboarding() {
 }
 export function updateGameOnboarding(change: Partial<GameOnboardingState>) {
   const id = owner(), current = gameOnboardingState()
-  if (id && current && current.phase !== 'done' && current.phase !== 'skipped') write(id, { ...current, ...change })
+  if (id && current && current.phase !== 'done') write(id, { ...current, ...change })
 }
 export function onboardingWorldSaved(worldId: string) {
   if (gameOnboardingState()?.phase === 'setup') updateGameOnboarding({ phase: 'post', worldId })
 }
 export function onboardingPostSaved(worldId: string, postId: string) {
   const state = gameOnboardingState()
-  if (state?.phase === 'post' && state.worldId === worldId) updateGameOnboarding({ phase: 'reaction', postId })
+  if (state?.phase === 'post' && state.worldId === worldId) updateGameOnboarding({ phase: 'reaction', postId, conversationPostId: postId })
 }
-export function onboardingReplySaved(postId: string) {
+export function onboardingReplyStarted(postId: string, requestId: string) {
   const state = gameOnboardingState()
-  if (state?.postId === postId && (state.phase === 'reaction' || state.phase === 'reply')) updateGameOnboarding({ phase: 'done' })
+  if (state?.postId && (state.conversationPostId ?? state.postId) === postId && (state.phase === 'reaction' || state.phase === 'reply')) updateGameOnboarding({ phase: 'reply', replyRequestId: requestId })
 }
+export function onboardingReplySaved(postId: string, requestId: string) {
+  const state = gameOnboardingState()
+  if ((state?.conversationPostId ?? state?.postId) === postId && state?.replyRequestId === requestId && state.phase === 'reply') updateGameOnboarding({ phase: 'done' })
+}
+export function acknowledgeGameOnboarding() {
+  const id = owner(), state = gameOnboardingState()
+  if (id && state?.phase === 'done') write(id, { ...state, completionSeen: true })
+}
+export function gameOnboardingActive(state: GameOnboardingState | undefined) { return !!state && state.phase !== 'done' }
