@@ -19,19 +19,10 @@ function moscowTime(timestamp) {
     return new Date(timestamp + MSK_OFFSET_MS).toISOString().replace('Z', '+03:00');
 }
 
-function tokenEquals(provided, expected) {
-    if (provided.length !== expected.length) {
-        return false;
-    }
-
-    let difference = 0;
-    for (let i = 0; i < expected.length; i++) {
-        difference |= provided.charCodeAt(i) ^ expected.charCodeAt(i);
-    }
-    return difference === 0;
-}
-
 function fail(r, status, error) {
+    if (status === 401) {
+        r.headersOut['WWW-Authenticate'] = 'Bearer';
+    }
     r.return(status, JSON.stringify({ error }));
 }
 
@@ -43,16 +34,13 @@ async function get(r) {
         return fail(r, 405, 'Method not allowed');
     }
 
-    const apiToken = process.env.METRICS_API_TOKEN || '';
     const account = process.env.METRICS_OPENOBSERVE_ACCOUNT;
-    const openObserveToken = process.env.METRICS_OPENOBSERVE_TOKEN;
-    if (apiToken.length < 32 || !account || !openObserveToken || apiToken === openObserveToken) {
+    if (!account) {
         return fail(r, 503, 'Metrics export is not configured');
     }
 
     const auth = /^Bearer ([A-Za-z0-9._~+/-]+=*)$/i.exec(r.headersIn.Authorization || '');
-    if (!auth || !tokenEquals(auth[1], apiToken)) {
-        r.headersOut['WWW-Authenticate'] = 'Bearer';
+    if (!auth) {
         return fail(r, 401, 'Invalid or missing token');
     }
 
@@ -64,16 +52,8 @@ async function get(r) {
         return fail(r, 400, 'Use a valid date_from and date_to in YYYY-MM-DD, up to 90 days through today');
     }
 
-    const excludedIds = (process.env.METRICS_EXCLUDED_PLAYER_IDS || '').trim().toLowerCase();
-    const excluded = excludedIds ? excludedIds.split(/\s*,\s*/) : [];
-    if (excluded.some(id => !/^[a-f0-9]{32}$/.test(id))) {
-        return fail(r, 503, 'Metrics export is not configured');
-    }
-
     try {
-        const ids = excluded.map(id => "'" + id + "'").join(', ') || "''";
         const sql = fs.readFileSync(SOURCE_DIR + '/query.sql', 'utf8')
-            .replace(/__EXCLUDED_PLAYERS__/g, ids)
             .replace(/__START_TIME__/g, String(start * 1000));
         const dates = [];
         for (let time = start; time < end; time += DAY_MS) {
@@ -85,14 +65,14 @@ async function get(r) {
         const response = await ngx.fetch('http://openobserve:5080/api/default/_search?type=logs', {
             method: 'POST',
             headers: {
-                Authorization: 'Basic ' + Buffer.from(account + ':' + openObserveToken).toString('base64'),
+                Authorization: 'Basic ' + Buffer.from(account + ':' + auth[1]).toString('base64'),
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 query: {
                     sql,
                     query_fn,
-                    start_time: excluded.length ? 1 : (start - DAY_MS) * 1000,
+                    start_time: (start - DAY_MS) * 1000,
                     end_time: Math.min(end, now) * 1000 - 1,
                     size: count,
                 },
@@ -100,6 +80,9 @@ async function get(r) {
             }),
         });
 
+        if (response.status === 401 || response.status === 403) {
+            return fail(r, 401, 'Invalid or unauthorized OpenObserve token');
+        }
         if (!response.ok) {
             r.warn('OpenObserve metrics search returned ' + response.status);
             return fail(r, 502, 'Metrics search failed');

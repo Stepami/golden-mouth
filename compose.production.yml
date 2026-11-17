@@ -2,10 +2,7 @@ services:
   gateway:
     image: nginx:1.29.1-alpine
     environment:
-      METRICS_API_TOKEN: ${METRICS_API_TOKEN:-}
       METRICS_OPENOBSERVE_ACCOUNT: ${METRICS_OPENOBSERVE_ACCOUNT:-}
-      METRICS_OPENOBSERVE_TOKEN: ${METRICS_OPENOBSERVE_TOKEN:-}
-      METRICS_EXCLUDED_PLAYER_IDS: ${METRICS_EXCLUDED_PLAYER_IDS:-}
     ports:
       - "80:80"
       - "443:443"
