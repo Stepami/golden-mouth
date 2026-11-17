@@ -81,13 +81,16 @@ jobs:
       - name: Validate production configuration
         shell: bash
         run: |
-          test -r /etc/reki/tls/fullchain.pem
-          test -r /etc/reki/tls/private.key
-          docker run --rm --entrypoint sh \
-            --volume /etc/letsencrypt:/etc/letsencrypt:ro \
-            nginx:1.29.1-alpine \
-            -c 'test -r /etc/letsencrypt/live/openobserve.reki-app.ru/fullchain.pem && test -r /etc/letsencrypt/live/openobserve.reki-app.ru/privkey.pem'
           docker compose config --quiet
+          docker run --rm --entrypoint nginx \
+            --add-host frontend:127.0.0.1 \
+            --add-host openobserve:127.0.0.1 \
+            --volume "$PWD/nginx.gateway.conf:/etc/nginx/nginx.conf:ro" \
+            --volume "$PWD/nginx.production.conf:/etc/nginx/conf.d/default.conf:ro" \
+            --volume "$PWD/observability/daily-metrics:/etc/nginx/daily-metrics:ro" \
+            --volume /etc/reki/tls:/etc/reki/tls:ro \
+            --volume /etc/letsencrypt:/etc/letsencrypt:ro \
+            nginx:1.29.1-alpine -t
 
       - name: Build release images
         shell: bash
