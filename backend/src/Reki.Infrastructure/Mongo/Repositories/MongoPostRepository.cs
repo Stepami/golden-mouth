@@ -122,6 +122,14 @@ internal sealed class MongoPostRepository(
             .Project<GamePost>(WithoutEmbedding)
             .FirstOrDefaultAsync(cancellationToken);
 
+    public async ValueTask<long> CountPostsAsync(PlayerId playerId, CancellationToken cancellationToken)
+    {
+        var authorId = playerId.ToAuthorId();
+        return await _posts.CountDocumentsAsync(
+            post => post.OwnerId == playerId && post.AuthorId == authorId,
+            cancellationToken: cancellationToken);
+    }
+
     public async ValueTask SaveLikesAsync(GamePost post, CancellationToken cancellationToken)
     {
         var filter = Builders<GamePost>.Filter.Where(item => item.Id == post.Id);
