@@ -40,3 +40,9 @@
 .guest-finish__actions p { margin-top: 10px; font-size: 11px; }
 @keyframes guest-save-in { from { transform: translateY(18px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .guest-finish__popup[open] { animation: none; } }
+
+.guest-game .screen { padding-bottom: var(--guest-footer-space, 126px); }
+.guest-hint p { margin-top: 7px; }
+.guest-game .thread-reply:has(> .guest-hint) { flex-wrap: wrap; }
+.guest-game .thread-reply:focus-within .guest-hint p { display: none; }
+.guest-game .drama-option:disabled:not(.selected) { opacity: .66; cursor: default; }

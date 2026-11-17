@@ -106,6 +106,25 @@ const screens = {
   '02-6_thread': Thread,
 }
 type Screen = keyof typeof screens
+const hints: Record<Screen, [number, string]> = {
+  '01-3b_world_overview': [1, 'Посмотри, что происходит в мире, и выбери персонажа.'],
+  '01-4_channel': [1, 'Выбери, от чьего лица пойдёт история.'],
+  '01-4b_world_setup': [1, 'Начни историю в мягком тоне.'],
+  '03-5_stage': [2, 'Открой редактор и напиши первый пост в своём канале.'],
+  '02-1_compose': [2, 'Дополни готовую идею или напиши свою.'],
+  '02-2_live': [2, 'Герои вот-вот увидят твой пост.'],
+  '02-3_result': [3, 'Открой комментарии и ответь герою.'],
+  '02-6_thread': [3, 'Напиши герою ответ, чтобы завершить обучение.'],
+}
+
+function GuestHint({ screen, inline = true }: { screen: Screen; inline?: boolean }) {
+  const [step, text] = hints[screen]
+  return <aside className={`game-onboarding-progress guest-hint${inline ? ' is-inline' : ''}`} aria-label="Подсказка обучения">
+    <div className="game-onboarding-meta"><span><span className="game-onboarding-segments" aria-hidden="true">{[1, 2, 3].map(n => <i key={n} className={n <= step ? 'on' : ''} />)}</span>Знакомство с игрой · {step} из 3</span><span className="game-onboarding-reward-hint">2 💎</span></div>
+    <p>{text}</p>
+  </aside>
+}
+
 type GuestDraft = {
   worldId: string
   screen: Screen
@@ -314,6 +333,18 @@ export function GuestOnboarding({ worldId, onSave }: {
     back: () => { const target = backTo[screen]; if (target) go(target) },
   }
 
+  const game = useRef<HTMLElement>(null)
+  useLayoutEffect(() => {
+    const root = game.current
+    const footer = root?.querySelector<HTMLElement>('.bottom-cta')
+    if (!footer || !root || replyDone) return
+    const size = () => root.style.setProperty('--guest-footer-space', `${footer.offsetHeight + 12}px`)
+    const observer = new ResizeObserver(size)
+    observer.observe(footer)
+    size()
+    return () => { observer.disconnect(); root.style.removeProperty('--guest-footer-space') }
+  }, [screen, replySubmitted, replyDone])
+
   let content
   if (screen === '01-4_channel') content = <QuickChannelForm draft={heroDraft} />
   else if (screen === '01-4b_world_setup') content = <QuickMoodSetup fixed draft={heroDraft} onStart={() => go('03-5_stage')} />
@@ -327,10 +358,11 @@ export function GuestOnboarding({ worldId, onSave }: {
     editPost: value => setDraft(current => ({ ...current, text: value })), reply, replySubmitted: !!replySubmitted, replyDone: !!replyDone,
     editReply: value => setDraft(current => ({ ...current, reply: value })),
     sendReply: () => setDraft(current => ({ ...current, reply, replySubmitted: true })),
-    crystals: collected ? 2 : 0,
+    crystals: collected ? 2 : 0, hint: !replyDone ? <GuestHint screen={screen} /> : undefined,
   }}>
-    <main className={replyDone ? 'app guest-finish' : 'app'}>
+    <main ref={game} className={replyDone ? 'app guest-finish' : 'app guest-game'}>
       <div key={screen}>{content}</div>
+      {!replyDone && (screen === '02-2_live' || (screen === '02-6_thread' && replySubmitted)) && <GuestHint screen={screen} inline={false} />}
       {replyDone && <GuestFinish worldId={worldId} selected={selected} avatarStyle={world.avatarStyle} collected={!!collected}
         onCollect={() => setDraft(current => ({ ...current, collected: true }))} onSave={() => onSave({ text, reply, hero })} />}
       {!storageAvailable && <p className="small muted pad" role="status">Хранилище недоступно. Черновик останется в этой вкладке до обновления страницы.</p>}

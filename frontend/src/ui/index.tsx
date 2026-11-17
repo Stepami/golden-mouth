@@ -1,3 +1,4 @@
+import { useGuestSession } from '../app/landing/guestSession'
 import { useContext, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { tap } from '../app/analytics'
 import { AvatarWorld, AvatarPeople, type AvatarProfile } from './avatar'
@@ -35,7 +36,8 @@ export function Button({ children, secondary, onClick, disabled, style }: { chil
 /** Кнопки внизу экрана: главная последней, вторичная над ней (как в макетах). */
 export function BottomCTA({ main, onMain, second, onSecond, disabled, secondDisabled }: { main: ReactNode; onMain?: () => void; second?: ReactNode; onSecond?: () => void; disabled?: boolean; secondDisabled?: boolean }) {
   // id кнопки для аналитики: main / second на текущем экране (экран добавит analytics.ts)
-  return <div className="bottom-cta">{second && <Button secondary disabled={secondDisabled} onClick={() => { tap('cta_second'); onSecond?.() }}>{second}</Button>}<Button onClick={() => { tap('cta_main'); onMain?.() }} disabled={disabled}>{main}</Button></div>
+  const hint = useGuestSession()?.hint
+  return <div className="bottom-cta">{hint}{second && <Button secondary disabled={secondDisabled} onClick={() => { tap('cta_second'); onSecond?.() }}>{second}</Button>}<Button onClick={() => { tap('cta_main'); onMain?.() }} disabled={disabled}>{main}</Button></div>
 }
 
 export function TopBar({ title, onBack, right, rightPlain = false, children }: { title?: ReactNode; onBack?: () => void; right?: ReactNode; rightPlain?: boolean; children?: ReactNode }) {

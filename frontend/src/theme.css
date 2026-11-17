@@ -518,3 +518,4 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 
 .registration-consent { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 14px 0; text-align: left; }
 .registration-consent input { width: 20px; height: 20px; flex: 0 0 20px; accent-color: var(--accent2); }
+.registration-login { margin-top: 12px; font-size: 13px; }

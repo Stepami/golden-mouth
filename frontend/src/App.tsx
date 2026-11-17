@@ -113,7 +113,7 @@ export function App() {
   const [landingAccepted, setLandingAccepted] = useState(landingEntryPending)
   const [landingPreview, setLandingPreview] = useState(isLandingPreview)
   const [guestWorld, setGuestWorld] = useState(readGuestWorld)
-  const [signup, setSignup] = useState(() => !!readGuestHandoff() && landingEntryPending())
+  const [signup, setSignup] = useState(() => !!readGuestHandoff() && !!pendingLandingWorld() && landingEntryPending())
   const [consentChecked, setConsentChecked] = useState(false)
   const [consentAccepted, setConsentAccepted] = useState(acceptedRegistrationConsent)
   const missingAccount = registration && landingAuthPending() && !signup && !consentAccepted && !pendingLandingWorld()
@@ -177,7 +177,7 @@ export function App() {
   if (!explicitStart && !ready) return <div className="app"><div className="screen"><div className="pad" role="status">Входим в игру…</div></div></div>
   if (missingAccount) return <TelegramLaunch error="">
     <p role="status">Аккаунт с этим способом входа не найден.</p>
-    <button className="btn" onClick={() => { setSignup(true); setConsentChecked(false); setConsentAccepted(false); setRegistrationConsent(false) }}>Перейти к регистрации</button>
+    <button className="btn" onClick={() => { const guest = readGuestHandoff(); if (guest) beginLandingAuth(guest.worldId); setSignup(true); setConsentChecked(false); setConsentAccepted(false); setRegistrationConsent(false) }}>Перейти к регистрации</button>
   </TelegramLaunch>
   if (needsConsent) return <TelegramLaunch error="">
     <h2>Создание аккаунта</h2>
@@ -186,6 +186,11 @@ export function App() {
       setRegistrationConsent(true); setConsentAccepted(true)
       trackLandingAuth('landing_registration_consent')
     }}>Продолжить регистрацию</button>
+    {!registration && <p className="registration-login">Уже есть аккаунт? <button type="button" className="text-button" onClick={() => {
+      beginLandingAuth()
+      setSignup(false); setConsentChecked(false); setConsentAccepted(false); setRegistrationConsent(false)
+      trackLandingAuth('landing_login_click')
+    }}>Войти</button></p>}
   </TelegramLaunch>
   if (showAuth) return <TelegramLaunch error={authError} pendingProvider={pendingLogin ? pendingAuthProvider() === 'yandex' ? 'Яндекс ID' : pendingAuthProvider() === 'vk' ? 'VK' : 'Telegram' : undefined}>
     {resumable ? <div className="auth-providers">
