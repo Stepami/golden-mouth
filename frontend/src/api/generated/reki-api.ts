@@ -802,6 +802,46 @@ export class PostsClient {
     /**
      * @return OK
      */
+    claimOnboardingBonus(postId: string, signal?: AbortSignal): Promise<SwaggerResponse<boolean>> {
+        let url_ = this.baseUrl + "/posts/onboarding-bonus/{postId}";
+        if (postId === undefined || postId === null)
+            throw new globalThis.Error("The parameter 'postId' must be defined.");
+        url_ = url_.replace("{postId}", encodeURIComponent("" + postId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            signal,
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processClaimOnboardingBonus(_response);
+        });
+    }
+
+    protected processClaimOnboardingBonus(response: Response): Promise<SwaggerResponse<boolean>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as boolean;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<boolean>>(new SwaggerResponse(status, _headers, null as any));
+    }
+
+    /**
+     * @return OK
+     */
     createPost(worldId: string, body: CreatePostRequest, signal?: AbortSignal): Promise<SwaggerResponse<CreatePostResponse>> {
         let url_ = this.baseUrl + "/posts?";
         if (worldId === undefined || worldId === null)

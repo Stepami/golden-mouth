@@ -362,6 +362,14 @@ OpenObserve доступен через `https://openobserve.reki-app.ru`. Пр�
 
 Справка: [поддомены Timeweb](https://timeweb.cloud/docs/domains/subdomains), [HTTP-01 Let’s Encrypt](https://letsencrypt.org/docs/challenge-types/), [режим webroot и renewal hooks Certbot](https://eff-certbot.readthedocs.io/en/stable/using.html).
 
+## Ежедневная выгрузка метрик
+
+`GET https://openobserve.reki-app.ru/api/v1/metrics/daily?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD` принимает включительный диапазон до 90 московских суток. Возьми значение из заголовка `Authorization: Basic …` сервисной учётной записи OpenObserve и передай его сборщику как `Authorization: Bearer …`. Значение после схемы — готовая строка Base64 от `идентификатор:токен`. Шлюз заменяет `Bearer` на `Basic`, а OpenObserve проверяет доступ к `/_search`.
+
+Токены из раздела «Токены загрузки» предназначены для записи телеметрии. Для выгрузки нужен токен из раздела «Сервисные учётные записи». Он также действует при прямом обращении к API OpenObserve в пределах прав этой учётной записи.
+
+DAU учитывает создание мира, публикацию и комментарий. Счётчик LLM использует chat-спаны публикаций, комментариев и связанных фоновых задач. Метрики включают тестовых игроков. `total_users` берётся из последнего замера Mongo за сутки. Замер обновляется раз в 30 минут. Если за одну из дат замера нет, API возвращает `503`. Перед подключением сверь историю с датой старта маркетинга и укажи эти отличия в форме.
+
 ## Закрытый доступ через SSH
 
 MongoDB, прямой порт OpenObserve, прямой порт фронтенда и прямой порт бэкенда слушают только loopback-интерфейс VDS. OpenObserve также доступен через HTTPS-шлюз на `openobserve.reki-app.ru`. Если нужен прямой доступ к одному из loopback-портов, открой туннель с доверенного компьютера:

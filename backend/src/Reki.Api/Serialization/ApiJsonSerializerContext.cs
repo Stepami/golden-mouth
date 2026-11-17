@@ -59,6 +59,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(AuthTokenResponse))]
 [JsonSerializable(typeof(Guid))]
 [JsonSerializable(typeof(long))]
+[JsonSerializable(typeof(bool))]
 [JsonSerializable(typeof(VkUserInfoResponse))]
 [JsonSerializable(typeof(YandexUserInfoResponse))]
 [JsonSerializable(typeof(PlayerId))]
