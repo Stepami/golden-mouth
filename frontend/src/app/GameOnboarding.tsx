@@ -10,7 +10,7 @@ import { acknowledgeGameOnboarding, beginGameOnboardingPreview, onboardingPostSa
 
 export { isGameOnboardingPreview } from './GameOnboardingState'
 
-export function GameOnboardingProgress() {
+export function GameOnboardingProgress({ lockedSection = false }: { lockedSection?: boolean }) {
   const state = useGameOnboarding(), nav = useNav()
   if (!state || state.completionSeen || (nav.current.startsWith('06-') || nav.current === '05-8_settings' || ['01-1_invite', '01-2_age', '01-2b_under14'].includes(nav.current))) return null
   if (state.phase === 'done') return <section className="game-onboarding-finish" role="status"><span className="game-onboarding-finish-mark">✓</span><div><h2>Обучение завершено</h2><p>Первый пост опубликован. Разговор начался.</p>{isGameOnboardingPreview() && <p className="game-onboarding-reward">2 💎 за обучение<br /><span>Начисление ожидает подключения</span></p>}<button onClick={acknowledgeGameOnboarding}>Продолжить историю</button></div></section>
@@ -18,7 +18,7 @@ export function GameOnboardingProgress() {
   const action = state.phase === 'setup' ? nav.current === '01-4_channel' ? 'Выбери персонажа' : nav.current === '01-4b_world_setup' ? 'Настрой настроение истории' : 'Выбери мир' : state.phase === 'post' ? 'Опубликуй первый пост' : state.phase === 'reaction' ? 'Дождись ответа героя' : 'Сохрани ответ герою'
   const routePostId = (nav.params.post as { id?: string } | undefined)?.id ?? nav.params.postId
   const awayFromConversation = nav.current === '02-6_thread' && state.postId && routePostId !== (state.conversationPostId ?? state.postId)
-  return <div className="game-onboarding-progress" role="status"><div><b>Глава {completed + 1}: {['История', 'Пост', 'Разговор'][completed]}</b><span>Выполнено {completed} из 3</span></div><div className="game-onboarding-segments" aria-label={`${completed} из 3 глав завершено`}>{['История', 'Пост', 'Разговор'].map((label, index) => <span key={label} className={index < completed ? 'complete' : index === completed ? 'current' : ''}><i />{label}</span>)}</div><p className="game-onboarding-action"><span>{awayFromConversation ? 'Вернись к разговору обучения' : action}</span>{isGameOnboardingPreview() && <span className="game-onboarding-reward-hint">За обучение 2 💎</span>}</p></div>
+  return <div className="game-onboarding-progress" role="status">{lockedSection && <p className="game-onboarding-locked-message">Этот раздел откроется после обучения</p>}<div><b>Глава {completed + 1}: {['История', 'Пост', 'Разговор'][completed]}</b><span>Выполнено {completed} из 3</span></div><div className="game-onboarding-segments" aria-label={`${completed} из 3 глав завершено`}>{['История', 'Пост', 'Разговор'].map((label, index) => <span key={label} className={index < completed ? 'complete' : index === completed ? 'current' : ''}><i />{label}</span>)}</div><p className="game-onboarding-action"><span>{awayFromConversation ? 'Вернись к разговору обучения' : action}</span>{isGameOnboardingPreview() && <span className="game-onboarding-reward-hint">За обучение 2 💎</span>}</p></div>
 }
 
 export function OnboardingBubble({ target, text }: { target: string; text: string }) {

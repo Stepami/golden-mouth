@@ -43,6 +43,8 @@ function Shell() {
   const { player, playerState } = useStore()
   const onboarding = useGameOnboarding()
   const learning = gameOnboardingActive(onboarding)
+  const [lockedSection, setLockedSection] = useState(false)
+  useEffect(() => setLockedSection(false), [top.id, onboarding?.phase])
   const personalizeAvatar = useAvatarPersonalization(player?.id ?? 'onboarding')
   const explicitStart = hasExplicitStart()
 
@@ -81,10 +83,10 @@ function Shell() {
       <AvatarWorld.Provider value={(top.params.world as WorldId) ?? player?.world ?? 'edfccf53-65c6-4eaf-8321-2391bc1758bd'}>
       <AvatarPeople.Provider value={people}><div className="app">
         {isGameOnboardingPreview() && <div className="game-onboarding-preview-label">DEV-обучение · действия сохраняются в игре <button onClick={() => restartGameOnboardingPreview(player?.worldInstanceId ?? player?.world)}>Начать просмотр заново</button><button onClick={() => { restartGameOnboardingPreview(); nav.push('01-3_world') }}>С выбора мира</button></div>}
-        <GameOnboardingProgress /><div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration /><GameOnboarding />
+        <GameOnboardingProgress lockedSection={lockedSection} /><div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration /><GameOnboarding />
         {tab !== undefined && (
           <nav className="tabbar" aria-label="Основная навигация">
-            {[5, 0, 1, 2, 3, 4].map(i => { const t = TABS[i]; return (learning && i !== 0 && i !== 4) || (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} aria-current={i === tab ? 'page' : undefined} className={i === tab ? 'on' : ''} onClick={() => { tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button> })}
+            {[5, 0, 1, 2, 3, 4].map(i => { const t = TABS[i]; const locked = learning && i !== 0 && i !== 4; return (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} aria-current={i === tab ? 'page' : undefined} aria-disabled={locked || undefined} className={`${i === tab ? 'on' : ''}${locked ? ' locked' : ''}`} onClick={() => { if (locked) { setLockedSection(true); document.querySelector('.game-onboarding-progress')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); return } setLockedSection(false); tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button> })}
           </nav>
         )}
       </div>
