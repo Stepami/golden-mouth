@@ -20,7 +20,7 @@ const pulsedPublications = new Set<string>()
 let cheerOffset = 0
 
 export function ResultCrowd({ delta, publication, world, avatarStyle, onPulse }: {
-  delta: number; publication: string; world: WorldId; avatarStyle?: string; onPulse?: () => void
+  delta: number; publication: string; world: WorldId; avatarStyle?: string; onPulse?: (phase: 'open' | 'wave', delta: number) => void
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [unavailable, setUnavailable] = useState(false)
@@ -36,15 +36,20 @@ export function ResultCrowd({ delta, publication, world, avatarStyle, onPulse }:
     let disposed = false
     let stop: ((settle?: boolean) => void) | undefined
     let mayPulse = false
-    const pulse = (first: boolean) => {
-      if (!onPulse || still || document.hidden) return
-      if (first && !pulsedPublications.has(publication)) {
-        pulsedPublications.add(publication)
-        mayPulse = true
-      }
-      if (mayPulse) onPulse()
+    const openingFrame = requestAnimationFrame(() => {
+      if (!onPulse || still || document.hidden || pulsedPublications.has(publication)) return
+      pulsedPublications.add(publication)
+      mayPulse = true
+      onPulse('open', delta)
+    })
+    const pulse = () => {
+      if (mayPulse && !still && !document.hidden) onPulse?.('wave', delta)
     }
-    const finish = () => { still = true; stop?.(true) }
+    const finish = () => {
+      still = true
+      cancelAnimationFrame(openingFrame)
+      stop?.(true)
+    }
     const visibility = () => { if (document.hidden) finish() }
     const motionChange = () => { if (motion.matches) finish() }
     document.addEventListener('visibilitychange', visibility)
@@ -60,6 +65,7 @@ export function ResultCrowd({ delta, publication, world, avatarStyle, onPulse }:
 
     return () => {
       disposed = true
+      cancelAnimationFrame(openingFrame)
       stop?.()
       document.removeEventListener('visibilitychange', visibility)
       motion.removeEventListener('change', motionChange)
