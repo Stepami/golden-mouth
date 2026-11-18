@@ -36,7 +36,7 @@ export function Compose() {
   const ownHandle = p.handle.trim().replace(/^@+/, '').toLowerCase()
   const mentions = world.stars.flatMap(star => {
     const handle = star.avatarSeed?.trim().replace(/^@+/, '')
-    return handle && /^[\p{L}\p{N}_-]+$/u.test(handle) && handle.toLowerCase() !== ownHandle
+    return handle && /^[\p{L}\p{N}_-]+(?:\.[\p{L}\p{N}_-]+)*$/u.test(handle) && handle.toLowerCase() !== ownHandle
       ? [{ id: star.id, name: star.name, avatarSeed: star.avatarSeed, handle }] : []
   })
   const repostId = typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined

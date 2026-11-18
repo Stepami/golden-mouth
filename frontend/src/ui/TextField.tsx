@@ -2,7 +2,7 @@ import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { Avatar } from '.'
 
 type Mention = { id: string; name: string; handle: string; avatarSeed: string }
-const mentionAtEnd = /(?:^|[^\p{L}\p{N}._%+@-])@([\p{L}\p{N}_-]*)$/u
+const mentionAtEnd = /(?:^|[^\p{L}\p{N}._%+@-])@([\p{L}\p{N}_.-]*)$/u
 
 /** Готовая идея заполняет только полностью пустое поле. Очистка обратима. */
 export function TextField({ label, value, onChange, ideas = [], maxLength = 2000, rows = 3, placeholder, disabled = false, fromIdea = false, visibleLength, onInteract, mentions }: {
@@ -33,7 +33,7 @@ export function TextField({ label, value, onChange, ideas = [], maxLength = 2000
   const insertMention = (item: Mention) => {
     if (!match || caret === null) return
     const start = caret - match[1].length - 1
-    const rest = value.slice(caret).replace(/^[\p{L}\p{N}_-]*/u, '')
+    const rest = value.slice(caret).replace(/^[\p{L}\p{N}_-]*(?:\.[\p{L}\p{N}_-]+)*/u, '')
     const prefix = value.slice(0, start) + '@' + item.handle
     const spacer = !rest || !/^[\s.,!?;:)\]]/.test(rest) ? ' ' : ''
     const next = prefix + spacer + rest
