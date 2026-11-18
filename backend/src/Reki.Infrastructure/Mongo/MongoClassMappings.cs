@@ -52,7 +52,9 @@ internal static class MongoClassMappings
             classMap.MapMember(item => item.Values)
                 .SetSerializer(
                     new DictionaryInterfaceImplementerSerializer<
-                        Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>>>(
+                        Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>>,
+                        WorldId,
+                        Dictionary<DailyTaskType, DailyTaskValues>>(
                         DictionaryRepresentation.ArrayOfDocuments));
         });
 
