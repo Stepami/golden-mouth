@@ -65,7 +65,7 @@ function rememberPlayer(player: Player): Player {
     }
     catch { /* memory fallback */ }
     setTelemetryPlayerAvailable(true);
-    sessionIdentity = { ...player, energy: player.postsLeft, experiments: player.experiments ?? {} };
+    sessionIdentity = { ...player, energy: player.postsLeft };
     sessionPlayer = player;
     setAnalyticsWorld(player.worldInstanceId, player.difficulty);
     return player;

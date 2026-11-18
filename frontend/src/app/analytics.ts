@@ -48,10 +48,6 @@ function recordActiveTime() {
 const q: AEvent[] = []
 let screen = '', prev: string | null = null, enteredAt = Date.now()
 const platform = (() => { try { return new URLSearchParams(location.hash.slice(1)).get('tgWebAppPlatform') ?? 'web' } catch { return 'web' } })()
-/** Флаги экспериментов (A/B), приходят с бэкенда в /me. Пример: { plus_offer: '10' | '20' }. */
-let experiments: Record<string, string> = {}
-export const setExperiments = (e: Record<string, string>) => { experiments = e }
-
 const clean = (p?: Props) => p && Object.fromEntries(Object.entries(p).map(([k, v]) => [k, typeof v === 'string' && v.length > 64 ? `len:${v.length}` : v]))
 
 export function event(name: string, props?: Props) {
@@ -75,7 +71,7 @@ export async function flushEvents() {
   if (!BASE || !playerAvailable || !q.length) return
   const session = await getSessionId().catch(() => undefined)
   if (!session || !playerAvailable || !q.length) return
-  const body: AnalyticsBatchRequest = { session, platform, launchSurface: inTelegram ? 'telegram-mini-app' : window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser', experiments, events: q.splice(0) }
+  const body: AnalyticsBatchRequest = { session, platform, launchSurface: inTelegram ? 'telegram-mini-app' : window.matchMedia('(display-mode: standalone)').matches ? 'standalone' : 'browser', experiments: {}, events: q.splice(0) }
   sendAnalytics(body).catch(() => {})
 }
 

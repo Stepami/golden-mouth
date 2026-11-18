@@ -2196,7 +2196,6 @@ export interface PlayerResponse {
     energy: number;
     skills: { [key: string]: SkillResponse; };
     settings: PlayerSettingsResponse;
-    experiments: { [key: string]: string; };
     birthYear: number;
     dailyChallenge: DailyChallengeResponse;
     hitOwnWorldMilestone?: boolean;

@@ -46,24 +46,15 @@ internal static class MongoClassMappings
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.WorldIdBsonSerializer());
 
-        var taskValuesSerializer = new DictionaryInterfaceImplementerSerializer<Dictionary<DailyTaskType, DailyTaskValues>, DailyTaskType, DailyTaskValues>(DictionaryRepresentation.ArrayOfDocuments);
-
-        if (!BsonClassMap.IsClassMapRegistered(typeof(PlayerChallenge)))
+        BsonClassMap.TryRegisterClassMap<PlayerChallenge>(classMap =>
         {
-            BsonClassMap.RegisterClassMap<PlayerChallenge>(classMap =>
-            {
-                classMap.AutoMap();
-                classMap.SetIgnoreExtraElements(true);
-                classMap.MapMember(item => item.Completion).SetSerializer(
-                    new DictionaryInterfaceImplementerSerializer<Dictionary<DailyTaskType, bool>, DailyTaskType, bool>(DictionaryRepresentation.ArrayOfDocuments));
-                classMap.MapMember(item => item.Values).SetSerializer(
-                    new DictionaryInterfaceImplementerSerializer<Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>>, WorldId, Dictionary<DailyTaskType, DailyTaskValues>>(
-                        DictionaryRepresentation.ArrayOfDocuments,
-                        BsonSerializer.LookupSerializer<WorldId>(),
-                        taskValuesSerializer));
-                classMap.MapCreator(item => new PlayerChallenge(item.Day, item.Completion, item.Values));
-            });
-        }
+            classMap.AutoMap();
+            classMap.MapMember(item => item.Values)
+                .SetSerializer(
+                    new DictionaryInterfaceImplementerSerializer<
+                        Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>>>(
+                        DictionaryRepresentation.ArrayOfDocuments));
+        });
 
         RegisterWithMongoId<PlayerProfile, PlayerId>(item => item.Id, true, classMap =>
         {
