@@ -24,7 +24,7 @@ function loadStyle(style: keyof typeof definitions): Promise<Style> {
   return pending
 }
 const cache = new Map<string, string>()
-export async function avatarUri(seed: string, world: WorldId = 'edfccf53-65c6-4eaf-8321-2391bc1758bd', profile?: AvatarProfile, styleOverride?: string): Promise<string> {
+export async function avatarUri(seed: string, world: WorldId = 'edfccf53-65c6-4eaf-8321-2391bc1758bd', profile?: AvatarProfile, styleOverride?: string, part?: 'head'): Promise<string> {
   let style = styleOverride ?? 'lorelei'
   if (!styleOverride) { try { style = worldOf(world).avatarStyle } catch { /* empty custom world uses portrait */ } }
   const chosenStyle = (Object.hasOwn(definitions, style) ? style : 'lorelei') as keyof typeof definitions
@@ -32,9 +32,11 @@ export async function avatarUri(seed: string, world: WorldId = 'edfccf53-65c6-4e
   const adventurerHair = chosenStyle === 'adventurer'
     ? Object.keys((await definitions.adventurer()).default.components.hair.variants) : []
   const personalized = profile && profile.personalizeAvatar !== false
-  const key = `${world}:${style}:${seed}:${personalized ? `${profile.address}:${profile.ageBand ?? 'unknown'}` : 'default'}:v2`
+  const key = `${world}:${style}:${seed}:${personalized ? `${profile.address}:${profile.ageBand ?? 'unknown'}` : 'default'}:v2${part ? ':head' : ''}`
   const got = cache.get(key); if (got) return got
-  const base = { seed, size: 96, borderRadius: 50 }
+  const base = part === 'head'
+    ? { seed, size: 96, clothesProbability: 0, clothesGraphicProbability: 0, gestureProbability: 0 }
+    : { seed, size: 96, borderRadius: 50 }
   if (chosenStyle === 'pixelArt' && seed.replace(/^@/, '') === 'nika.recruit') {
     const uri = new DiceBearAvatar(active, { ...base, hairVariant: ['long04'], hairProbability: 100, hairColor: ['#e15ba9'], beardProbability: 0 }).toDataUri()
     cache.set(key, uri); return uri
