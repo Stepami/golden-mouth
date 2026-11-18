@@ -345,7 +345,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
           <div className="post-result-content">
             <ResultDelta key={post.id} delta={r.delta} />
             {r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
-              world={player.world} avatarStyle={guest?.world.avatarStyle} onPulse={guest || realPost ? resultPulse : undefined} />}
+              world={player.world} avatarStyle={guest?.world.avatarStyle ?? profile?.avatarStyle} onPulse={guest || realPost ? resultPulse : undefined} />}
             <dl className="post-result-stats small muted">
               <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
               <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>

@@ -29,11 +29,35 @@ function crowdRows(amount: number): number[] {
   })
 }
 
+function drawHead(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+  const sample = document.createElement('canvas')
+  const width = sample.width = img.naturalWidth
+  const height = sample.height = img.naturalHeight
+  const pixels = sample.getContext('2d', { willReadFrequently: true })!
+  pixels.drawImage(img, 0, 0)
+  const { data } = pixels.getImageData(0, 0, width, height)
+  let left = width, right = -1, top = height, bottom = -1
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (data[(y * width + x) * 4 + 3] <= 8) continue
+      left = Math.min(left, x); right = Math.max(right, x)
+      top = Math.min(top, y); bottom = Math.max(bottom, y)
+    }
+  }
+  if (right < 0) return false
+  const headWidth = right - left + 1, headHeight = bottom - top + 1
+  const scale = Math.min(26 / headWidth, 26 / headHeight)
+  const w = headWidth * scale, h = headHeight * scale
+  ctx.drawImage(sample, left, top, headWidth, headHeight, 20 - w / 2, 30 - h, w, h)
+  return true
+}
+
 async function makeSprite(index: number, world: WorldId, avatarStyle?: string) {
   const sprite = document.createElement('canvas')
-  sprite.width = 40
-  sprite.height = 56
+  sprite.width = 80
+  sprite.height = 112
   const ctx = sprite.getContext('2d')!
+  ctx.scale(2, 2)
   const color = index % coats.length
   ctx.fillStyle = coats[color]
   ctx.beginPath()
@@ -46,17 +70,17 @@ async function makeSprite(index: number, world: WorldId, avatarStyle?: string) {
   ctx.moveTo(29, 39)
   ctx.lineTo(31, 53)
   ctx.stroke()
-  ctx.fillStyle = pastels[color]
-  ctx.beginPath()
-  ctx.ellipse(20, 17, 11.8, 13.5, 0, 0, 2 * Math.PI)
-  ctx.fill()
   try {
     const img = new Image()
-    img.src = await avatarUri(`result-crowd-${index}`, world, undefined, avatarStyle)
+    const seed = avatarStyle === 'lorelei' ? `vecherelo-gallery-neighbor-${index + 1}` : `result-crowd-${index}`
+    img.src = await avatarUri(seed, world, undefined, avatarStyle, 'head')
     await img.decode()
-    ctx.clip()
-    ctx.drawImage(img, 4, 1, 32, 32)
-  } catch { /* The coat and silhouette still render if the avatar style cannot load. */ }
+    if (drawHead(ctx, img)) return sprite
+  } catch { /* Keep a silhouette if the avatar cannot load. */ }
+  ctx.fillStyle = pastels[color]
+  ctx.beginPath()
+  ctx.ellipse(20, 17, 10, 13, 0, 0, 2 * Math.PI)
+  ctx.fill()
   return sprite
 }
 
@@ -75,7 +99,8 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
   const loss = delta < 0
   const rows = crowdRows(amount)
   const count = rows.reduce((sum, row) => sum + row, 0)
-  const sprites = await Promise.all(Array.from({ length: Math.min(count, 24) }, (_, index) => makeSprite(index, world, avatarStyle)))
+  const spriteLimit = avatarStyle === 'lorelei' ? 20 : 24
+  const sprites = await Promise.all(Array.from({ length: Math.min(count, spriteLimit) }, (_, index) => makeSprite(index, world, avatarStyle)))
   const waves = amount >= 500_000 ? 5 : amount >= 100_000 ? 3 : amount >= 38 ? 2 : 1
   const canvas = ctx.canvas
   let people: Figure[] = []
@@ -104,9 +129,10 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
         const id = people.length
         const x = margin + (col + .5) * spacing + (scatter(id + 47) - .5) * spacing * .5
         const wave = Math.min(waves - 1, Math.floor((depth * .70 + scatter(id + 912) * .30) * waves))
+        const size = Math.min(34, spacing * (.74 + scatter(id + 19) * .39))
+        const y = Math.max(size * 1.4 + 4, 39 + depth * (height - 48) + scatter(id + 140) * 7)
         people.push({
-          id, x, y: 39 + depth * (height - 48) + scatter(id + 140) * 7,
-          size: Math.min(34, spacing * (.74 + scatter(id + 19) * .39)),
+          id, x, y, size,
           depth, side: x < width / 2 ? -1 : 1, duration: 470 + scatter(id + 170) * 250,
           arrival: wave * (amount >= 500_000 ? 170 : 225) + scatter(id + 80) * 230,
           departure: 1060 + (id % 4) * 135 + scatter(id + 80) * 210,
@@ -139,7 +165,8 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
 
   function drawFigure(figure: Figure, x: number, y: number, travel: number, opacity: number, alternate = false) {
     const size = figure.size * (.8 + .2 * travel)
-    const index = (figure.id + (alternate ? 9 : 0)) % sprites.length
+    const spriteIndex = avatarStyle === 'lorelei' ? figure.id * 7 + Math.floor(figure.id / 5) : figure.id
+    const index = (spriteIndex + (alternate ? 9 : 0)) % sprites.length
     ctx.globalAlpha = opacity * (.57 + .43 * figure.depth)
     ctx.drawImage(sprites[index], x - size / 2, y - size * 1.4, size, size * 1.4)
   }
@@ -153,7 +180,7 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
     const boardWidth = Math.ceil(ctx.measureText(sign.text).width) + 16
     const side = holderX < width / 2 ? 1 : -1
     const shoulderX = holderX + side * size * .26
-    const shoulderY = feetY - size * .35
+    const shoulderY = feetY - size * .59
     const gripX = shoulderX + side * (8 + raise * 7)
     const gripY = shoulderY - 7 - raise * 5
     const y = Math.max(15, gripY - 22 - raise * 19)
@@ -204,7 +231,6 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
     ctx.globalAlpha = 1
     ctx.fillStyle = light
     ctx.fillRect(0, 0, width, height)
-    const placards: Placard[] = []
     for (const figure of people) {
       const { x, y, side, arrival, departure, duration, exchange, sign } = figure
       const edge = side < 0 ? -30 : width + 30
@@ -216,7 +242,7 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
         drawFigure(figure, leavingX, leavingY, 1, 1 - clamp((progress - .73) / .27))
         if (sign && progress < .83) {
           const raise = ease(clamp((time - sign.start) / 350))
-          if (raise) placards.push({ figure, x: leavingX, y: leavingY, raise, opacity: raise * (1 - clamp((progress - .47) / .36)) })
+          if (raise) drawPlacard({ figure, x: leavingX, y: leavingY, raise, opacity: raise * (1 - clamp((progress - .47) / .36)) })
         }
         continue
       }
@@ -247,10 +273,9 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
         const age = time - sign.start
         const raise = ease(clamp(age / 230))
         const opacity = still ? Number(sign.index === 0) : raise * (1 - clamp((age - 530) / 260))
-        if (opacity) placards.push({ figure, x: arrivedX, y: arrivedY, raise, opacity })
+        if (opacity) drawPlacard({ figure, x: arrivedX, y: arrivedY, raise, opacity })
       }
     }
-    for (const placard of placards) drawPlacard(placard)
     ctx.globalAlpha = 1
   }
 
