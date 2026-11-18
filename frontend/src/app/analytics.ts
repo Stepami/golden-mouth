@@ -1,12 +1,13 @@
 // Продуктовая аналитика: кто куда ходит и что делает. Отдельно от журнала ошибок (app/log.ts).
 // Таксономия, воронки и вопросы: docs/analytics.md. Приватность: только обезличенный id, без текстов, ников, initData.
 import { apiBaseUrl as BASE } from './runtimeConfig'
-import { isLandingPreview, landingContext } from './landing/experiment'
+import { isLandingPreview, landingContext, landingVisitIdentity } from './landing/experiment'
 import { recordEntryStep, flushEntryEvents, linkEntryProfile, resetEntryProfileLink } from './landing/openobserve'
 import { ActiveTime } from './activeTime'
 import { inTelegram } from '../telegram'
 import { getSessionId, sendAnalytics } from '../api/telemetry'
 import type { AnalyticsBatchRequest, AnalyticsEventRequest } from '../api/generated/reki-api'
+import type { AuthProvider } from '../api/auth'
 type Props = Record<string, string | number | boolean | null>
 export type AEvent = AnalyticsEventRequest & { t: number; props?: Props }
 
@@ -105,8 +106,33 @@ export function trackLanding(name: 'landing_view' | 'landing_continue' | 'landin
   if (name !== 'landing_view') tap(name, { kind: props.landing_variant })
   if (name === 'landing_first_post') void linkEntryProfile()
   else recordEntryStep(name)
+  reachLandingGoal(name, props)
+}
+
+type LandingAuthStep = [name: 'landing_login_click' | 'landing_auth_view' | 'landing_age_view' | 'landing_age_continue' | 'landing_catalog_retry' | 'landing_guest_start' | 'landing_guest_save_click' | 'landing_registration_consent' | 'landing_registration_view' | 'landing_login_account_missing']
+  | [name: 'landing_guest_screen', params: { guest_screen: string; guest_world: string; guest_hero: string }]
+  | [name: 'landing_guest_action', params: { guest_action: string; guest_world: string; guest_hero: string }]
+  | [name: 'landing_catalog_result', params: { auth_outcome: 'ready' | 'error' | 'empty' }]
+  | [name: 'landing_world_action', params: { world_choice: 'worlds' | 'hogwarts' | 'infobiz' | 'evening' | 'houses'; auth_action: 'select' | 'switch' }]
+  | [name: 'landing_age_consent', params: { auth_outcome: 'checked' | 'unchecked' }]
+  | [name: 'landing_auth_provider_selected', params: { auth_provider: AuthProvider; auth_action?: 'browser' | 'mini_app' }]
+  | [name: 'landing_auth_provider_result', params: { auth_provider: AuthProvider; auth_outcome: 'proof' | 'error' | 'cancel' | 'setup_error' }]
+  | [name: 'landing_auth_resume', params: { auth_provider?: AuthProvider; auth_action: 'automatic' | 'manual' | 'restart' }]
+  | [name: 'landing_auth_exchange_error', params: { auth_provider?: AuthProvider }]
+  | [name: 'landing_auth_verified', params: { auth_outcome: 'access' | 'registration' }]
+
+export function trackLandingAuth(...[name, params]: LandingAuthStep) {
+  const context = landingContext()
+  if (!context || isLandingPreview()) return
+  reachLandingGoal(name, { ...context, ...params })
+}
+
+function reachLandingGoal(name: string, props: Record<string, string | undefined>) {
   if (import.meta.env.PROD) {
-    const ym = (window as Window & { ym?: (id: number, method: string, goal: string, params: Record<string, string>) => void }).ym
-    try { ym?.(114170439, 'reachGoal', name, props) } catch { /* Analytics never blocks entry or publishing. */ }
+    const ym = (window as Window & { ym?: (id: number, method: string, goal: string, params: Record<string, string | undefined>) => void }).ym
+    try {
+      const entry = landingVisitIdentity()
+      ym?.(114170439, 'reachGoal', name, entry ? { ...props, entry_id: entry.entryId } : props)
+    } catch { /* Analytics never blocks entry or publishing. */ }
   }
 }

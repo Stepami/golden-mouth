@@ -54,16 +54,17 @@ export function landingAuthPending(): boolean {
   try { if (localStorage.getItem(authKey) === '1') return true } catch { /* Try the same-tab fallback. */ }
   try { return sessionStorage.getItem(authKey) === '1' || authFallback } catch { return authFallback }
 }
-export function beginLandingAuth(worldId: string) {
+export function beginLandingAuth(worldId?: string) {
   worldFallback = worldId
+  if (!worldId) clearLandingWorld()
   // OAuth can return in another tab, where sessionStorage is empty.
   try {
-    localStorage.setItem(worldKey, worldId)
+    if (worldId) localStorage.setItem(worldKey, worldId)
     localStorage.setItem(authKey, '1')
     sessionStorage.removeItem(worldKey)
     sessionStorage.removeItem(authKey)
   } catch {
-    try { sessionStorage.setItem(worldKey, worldId); sessionStorage.setItem(authKey, '1') } catch { /* Keep this visit usable. */ }
+    try { if (worldId) sessionStorage.setItem(worldKey, worldId); sessionStorage.setItem(authKey, '1') } catch { /* Keep this visit usable. */ }
   }
   const value = read()
   if (value) save({ ...value, worldId })

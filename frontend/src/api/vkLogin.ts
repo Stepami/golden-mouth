@@ -3,7 +3,7 @@ import { runtimeConfig } from '../app/runtimeConfig'
 interface VkProof { access_token: string; expires_in: number }
 interface VkWidget {
   render(options: { container: HTMLElement; showAlternativeLogin: boolean; fastAuthEnabled: boolean; styles: { height: 56; borderRadius: number } }): VkWidget
-  on(event: string, callback: (payload: { code: string; device_id: string }) => void): VkWidget
+  on(event: string, callback: (payload: { code: string; device_id: string; text?: string }) => void): VkWidget
   close(): void
 }
 interface VkSdk {
@@ -35,7 +35,7 @@ function loadVkSdk(): Promise<VkSdk> {
   }).catch(error => { loading = undefined; throw error })
 }
 
-export async function renderVkLogin(container: HTMLElement, onToken: (token: string, expiresIn: number) => void, onError: () => void): Promise<() => void> {
+export async function renderVkLogin(container: HTMLElement, onToken: (token: string, expiresIn: number) => void, onError: (outcome: 'error' | 'cancel') => void): Promise<() => void> {
   const VKID = await loadVkSdk()
   if (!container.isConnected) return () => {}
   VKID.Config.init({
@@ -45,11 +45,14 @@ export async function renderVkLogin(container: HTMLElement, onToken: (token: str
   let active = true
   const oneTap = new VKID.OneTap()
   oneTap.render({ container, showAlternativeLogin: true, fastAuthEnabled: false, styles: { height: 56, borderRadius: 14 } })
-    .on(VKID.WidgetEvents.ERROR, () => { if (active) onError() })
+    .on(VKID.WidgetEvents.ERROR, payload => {
+      // OneTap 2.6.1 forwards the SDK's NewTabHasBeenClosed error as text.
+      if (active) onError(payload?.text === 'New tab has been closed' ? 'cancel' : 'error')
+    })
     .on(VKID.OneTapInternalEvents.LOGIN_SUCCESS, payload => {
       void VKID.Auth.exchangeCode(payload.code, payload.device_id)
         .then(data => { if (active) onToken(data.access_token, data.expires_in) })
-        .catch(() => { if (active) onError() })
+        .catch(() => { if (active) onError('error') })
     })
   return () => { active = false; oneTap.close() }
 }
