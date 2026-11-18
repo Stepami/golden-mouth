@@ -15,6 +15,7 @@ const comparisonPlaces = [
   { name: 'Москвы', population: 13_010_112, year: 2021, source: 'https://rosstat.gov.ru/vpn/2020/Tom1_Chislennost_i_razmeshchenie_naseleniya' },
 ]
 
+const fractionLabel = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 })
 const pulsedPublications = new Set<string>()
 let cheerOffset = 0
 
@@ -68,10 +69,10 @@ export function ResultCrowd({ delta, publication, world, avatarStyle, onPulse }:
 
   const magnitude = Math.abs(delta)
   const place = delta > 0 ? comparisonPlaces.find(item => item.population >= magnitude) : undefined
-  const comparison = place && magnitude / place.population >= .1 ? place : undefined
-  if (!delta || (unavailable && !comparison)) return null
+  const percent = place ? magnitude / place.population * 100 : 0
+  if (!delta || (unavailable && !place)) return null
   return <div className="post-result-crowd">
     {!unavailable && <canvas ref={canvas} aria-hidden="true" />}
-    {comparison && <p className="post-result-fact">Это примерно <b>{Math.round(magnitude / comparison.population * 100)}% населения {comparison.name}</b>.</p>}
+    {place && <p className="post-result-fact">Это примерно <b>{percent < 10 ? fractionLabel.format(percent) : Math.round(percent)}% населения {place.name}</b>.</p>}
   </div>
 }

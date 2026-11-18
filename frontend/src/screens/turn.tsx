@@ -213,6 +213,43 @@ function resultPulse() {
   catch { /* The result remains available without haptics. */ }
 }
 
+function ResultDelta({ delta }: { delta: number }) {
+  const total = Math.abs(delta)
+  const [shown, setShown] = useState(() =>
+    document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches || new URLSearchParams(location.search).has('shot') ? total : 0)
+  useEffect(() => {
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    if (!total || motion.matches || document.hidden || new URLSearchParams(location.search).has('shot')) {
+      setShown(total)
+      return
+    }
+    const start = performance.now()
+    let frame = 0
+    const finish = () => { cancelAnimationFrame(frame); setShown(total) }
+    const pause = () => { if (document.hidden || motion.matches) finish() }
+    const tick = (now: number) => {
+      const progress = Math.min(1, Math.max(0, (now - start) / 720))
+      setShown(Math.min(total - Number(progress < 1), Math.round(total * (1 - (1 - progress) ** 3))))
+      if (progress < 1) frame = requestAnimationFrame(tick)
+    }
+    setShown(0)
+    frame = requestAnimationFrame(tick)
+    document.addEventListener('visibilitychange', pause)
+    motion.addEventListener('change', pause)
+    return () => {
+      cancelAnimationFrame(frame)
+      document.removeEventListener('visibilitychange', pause)
+      motion.removeEventListener('change', pause)
+    }
+  }, [total])
+  if (!delta) return <div className="post-result-delta"><span>Подписчиков столько же</span></div>
+  const sign = delta > 0 ? '+' : '−'
+  const unit = plural(total, 'подписчик', 'подписчика', 'подписчиков')
+  return <div className={`post-result-delta ${delta > 0 ? 'up' : 'down'}`} role="group" aria-label={`${sign}${resultNumber.format(total)} ${unit}`}>
+    <b aria-hidden="true">{sign}{resultNumber.format(shown)}</b> <span aria-hidden="true">{unit}</span>
+  </div>
+}
+
 function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post; theme: 'normal' | 'flop' | 'viral' }) {
   const guest = useGuestSession(); const profile = useStore()?.player
   const nav = useNav(); const player = guest?.player ?? profile!
@@ -290,16 +327,12 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
       <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.55)' }}>
         <div ref={dialog} role="dialog" aria-modal="true" aria-label="Пост опубликован" className={`sheet post-result${viral ? ' post-result--viral' : ''}`}>
           <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')}>×</button>
-          <div className="post-result-title">Пост опубликован</div>
+          <div className="post-result-title"><span className="post-result-check" aria-hidden="true">✓</span><span>Пост опубликован</span></div>
           <div className="post-result-content">
-            <div className={`post-result-delta ${r.delta > 0 ? 'up' : r.delta < 0 ? 'down' : ''}`}>
-              {r.delta === 0 ? <span>Подписчиков столько же</span> : <>
-                {r.delta > 0 ? '+' : '−'}{resultNumber.format(Math.abs(r.delta))} <span>{plural(Math.abs(r.delta), 'подписчик', 'подписчика', 'подписчиков')}</span>
-              </>}
-            </div>
+            <ResultDelta key={post.id} delta={r.delta} />
             {r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
               world={player.world} avatarStyle={guest?.world.avatarStyle} onPulse={guest || realPost ? resultPulse : undefined} />}
-            <dl className="post-result-stats">
+            <dl className="post-result-stats small muted">
               <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
               <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>
             </dl>
