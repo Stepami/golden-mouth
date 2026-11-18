@@ -38,7 +38,7 @@ internal sealed class MongoPlayerRepository(
     public async IAsyncEnumerable<PlayerProfile> GetActivePlayersAsync(
         DateTimeOffset since, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var filter = Builders<PlayerProfile>.Filter.Gte("LastSeenAt.DateTime", since.UtcDateTime);
+        var filter = Builders<PlayerProfile>.Filter.Gte(item => item.LastSeenAt, since);
         using var cursor = await _players.FindAsync(
             filter,
             cancellationToken: cancellationToken);
