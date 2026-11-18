@@ -8,7 +8,6 @@ import { Compose, Live, Result, Thread } from '../../screens/turn'
 import { AvatarWorld } from '../../ui/avatar'
 import { NavContext, type Nav } from '../nav'
 import { blankWorld } from '../worldDraft'
-import { presetGoalFor, presetGoals } from '../presetGoals'
 import { GuestSessionContext, type GuestPlayer } from './guestSession'
 import { worldArt } from '../worldArt'
 import './guestOnboarding.css'
@@ -21,6 +20,7 @@ type GuestWorld = {
   avatarStyle: string
   heroes: Hero[]
   speakers: [Speaker, Speaker]
+  intro: { goal: string; context: string; firstStep: string }
   firstPostIdea: string
   replyIdea: string
 }
@@ -39,6 +39,11 @@ const worlds: Record<string, GuestWorld> = {
       { id: 'nika', first: 'Я открыла резюме таксиста. В графе «опыт» пусто, а на работу он хочет уже в понедельник. Какую первую задачу ты бы доверил ему показать на собеседовании?', second: 'Хорошо. Пусть покажет ход работы и объяснит, где сам принял решение. Я посмотрю на проект, даже если в резюме всё ещё будет пусто.' },
       { id: 'alexey_nl', first: 'На баннере «Вката» вижу обещание работы. В вакансии вижу требование опыта. Что положим рядом для проверки: программу курса или один проект выпускника?', second: 'Соберу всё в один пост: обещание, требования вакансии и что человек реально сделал. Тогда можно будет обсуждать факты.' },
     ],
+    intro: {
+      goal: 'Дать новичку шанс в IT',
+      context: 'Таксист хочет сменить работу. «Вкат» обещает оффер, а рекрутер просит опыт. В комментах уже спорят 👀',
+      firstStep: 'Спроси подписчиков, с какой задачи новичок может начать.',
+    },
     firstPostIdea: 'В чат написал таксист: хочет уйти в IT, но первый проект требует опыта. «Вкат» обещает помочь. Давайте выберем одну задачу, с которой он может начать.',
     replyIdea: 'Предлагаю взять одну задачу из вакансии. Пусть решит её и покажет, как рассуждал.',
   },
@@ -52,10 +57,15 @@ const worlds: Record<string, GuestWorld> = {
       { id: 'yakov', name: 'Яков Чернов', seed: 'nessssssie', role: 'Проводник' },
     ],
     speakers: [
-      { id: 'eduard', first: 'Я разглядел мяч на мокрой траве, как раз когда гром накрыл звук удара. А на твоём кадре кто стоял у кромки леса?', second: 'Давай сверим с плёнкой из кинотеатра. Там видно поляну до грозы. Возможно, мы приняли отражение за свет фонаря.' },
-      { id: 'isabella', first: 'Биту уже убрали, а мяч я нашла у самой ограды. Последний кадр смазан, но на нём кто-то поднял зонт. Помнишь, кто остался после игры?', second: 'Покажу кадр целиком. Может, вместе поймём, почему отражение в луже было ярче самого фонаря.' },
+      { id: 'eduard', first: 'Мяч улетел к лесу. Сразу после удара грянул гром. На твоём фото видно, кто стоял у деревьев?', second: 'У меня в кинотеатре есть съёмка поляны до грозы. Давай сравним кадры. Может, это вообще был блик в луже?' },
+      { id: 'isabella', first: 'Мяч я нашла у ограды. На последнем кадре всё смазано, только зонт видно. Ты помнишь, кто остался на поляне?', second: 'Скину кадр целиком. Присмотрись к луже у ограды — там тоже что-то видно.' },
     ],
-    firstPostIdea: 'Вчера на поляне мы играли в бейсбол под гром. После последнего удара за оградой мелькнул свет. У кого есть кадр того момента?',
+    intro: {
+      goal: 'Дать Изабелле рассказать свою версию',
+      context: 'Гроза сорвала бейсбол. Изабелла уехала, а в ленте уже три версии того, что случилось. Эдуард предлагает сначала спросить её саму.',
+      firstStep: 'Спроси, кто остался на поляне после последнего удара.',
+    },
+    firstPostIdea: 'Вчера играли в бейсбол, пока не началась гроза. После последнего удара за оградой что-то вспыхнуло. Кто успел снять? 📸',
     replyIdea: 'Давай сравним наши кадры. Мой снят сразу после последнего удара.',
   },
   'aec9494b-4118-4525-8458-e85d759c8dd9': {
@@ -69,11 +79,16 @@ const worlds: Record<string, GuestWorld> = {
       { id: 'draco', name: 'Драко Малфой', seed: 'dracom', role: 'За коммерческий проект замка' },
     ],
     speakers: [
-      { id: 'georgina', first: 'В Большом зале всё ещё стоят четыре длинных стола, а сверху капает прямо на шляпу. Если хотим снова принимать учеников, что чиним первым?', second: 'Внесу это в план для совета. Попрошу мадам Помфри проверить, что понадобится ученикам в первую неделю.' },
-      { id: 'draco', first: 'Я прошёл от ворот до Большого зала. Со свечами у замка всё отлично, с крышей хуже. Что в твоём плане оплачиваем первым?', second: 'Составлю свой расчёт для того же крыла. Положим обе сметы на стол совета и посмотрим, что можно открыть этой осенью.' },
+      { id: 'georgina', first: 'Гарри, я уже подставила ведро под дыру в крыше. Шляпа сухая, ученикам пока сидеть негде 🪄 С чего начнём ремонт?', second: 'Окей, запишу для совета. А мадам Помфри спрошу, что нужно, чтобы принять учеников в первую неделю.' },
+      { id: 'draco', first: 'Свечи в Большом зале всё ещё летают. На крыше, похоже, держатся только свечи. Что будем чинить первым?', second: 'Окей, прикину цену для того же крыла. К пятнице у совета будут две сметы.' },
     ],
-    firstPostIdea: 'Мы прошли в Большой зал. Свечи ещё горят, а Распределяющая шляпа лежит на столе под протекающей крышей. Что нужно сделать, чтобы осенью за этими столами снова сидели ученики?',
-    replyIdea: 'Сначала починим крышу над одним крылом. Потом посчитаем, сколько классов и спален там можно открыть.',
+    intro: {
+      goal: 'Вернуть Хогвартс ученикам',
+      context: 'Хогвартс закрыли. Драко уже прикидывает, сколько брать за ночь в замке 👀 Гермиона хочет вернуть уроки, а Рон спрашивает, кто оплатит форму и учебники.',
+      firstStep: 'Напиши, с чего начнём спасать школу.',
+    },
+    firstPostIdea: 'Зашли в Большой зал. Свечи горят, на Шляпу капает с потолка. Можно вернуть уроки хотя бы в одно крыло. С чего начнём? ✨',
+    replyIdea: 'Давай начнём с крыши над одним классом. Сколько будет стоить ремонт?',
   },
   '8c02a7fb-3b55-4eb0-b957-1b4869ed9834': {
     title: 'Игра домов',
@@ -88,6 +103,11 @@ const worlds: Record<string, GuestWorld> = {
       { id: 'jon', first: 'В Драконьем Логове мы посмотрели на карту и наконец заговорили об одной дороге. У Стены ждут припасы. Кто может отправить первый обоз до снегов?', second: 'Попрошу дозорных открыть ворота к рассвету. Если обоз пойдёт в назначенный день, у нас будет время распределить припасы.' },
       { id: 'diana', first: 'Перед советом я велела развернуть карту Северной дороги. Мои люди могут отправить обоз. Где лучше принять припасы, чтобы их хватило на неделю?', second: 'Попрошу распорядителя сверить это с запасами. До рассвета пришлю список, а после можно договориться с охраной дороги.' },
     ],
+    intro: {
+      goal: 'Отправить помощь к Стене',
+      context: 'Совет закончился, а обоз на Север так и не собрали. Снег скоро перекроет дорогу.',
+      firstStep: 'Спроси дома, кто готов снарядить первый обоз.',
+    },
     firstPostIdea: 'Совет в Драконьем Логове закончился. На карте осталась одна дорога к Стене, пока её не занесло. Что отправим первым обозом?',
     replyIdea: 'Начнём с еды и тёплых одеял на неделю. Обоз выйдет на рассвете, если у ворот его встретит дозор.',
   },
@@ -229,10 +249,10 @@ function GuestFinish({ worldId, collected, selected, avatarStyle, onClaim, onCol
           <p>Сохрани черновик и продолжи игру за своего героя.</p>
         </div>
         <ul className="guest-finish__benefits">
-          <li><span aria-hidden="true">📈</span><div><b>Канал до миллиона</b><p>Пиши посты и набирай подписчиков</p></div></li>
-          <li><span aria-hidden="true">💬</span><div><b>Отношения с героями</b><p>Спорь, дружи и находи союзников</p></div></li>
-          <li><span aria-hidden="true">🌍</span><div><b>Свой мир</b><p>Открой редактор по ходу игры</p></div></li>
-          <li><span aria-hidden="true">⚡</span><div><b>Тон «Остро»</b><p>Интриги, драмы и риск отмены</p></div></li>
+          <li><span aria-hidden="true">📈</span><div><b>Канал до миллиона</b><p>Веди блог от лица героя. Смотри, какие посты залетают, и расти до миллиона.</p></div></li>
+          <li><span aria-hidden="true">💬</span><div><b>Отношения с героями</b><p>Герои отвечают на посты. Заводи союзников и спорь с соперниками в комментах.</p></div></li>
+          <li><span aria-hidden="true">🌍</span><div><b>Свой мир</b><p>Придумай своих героев, место и правила. Редактор откроется по ходу игры.</p></div></li>
+          <li><span aria-hidden="true">🌶️</span><div><b>Тон «Остро»</b><p>Горячие споры, драмы и риск отмены. Решай, что ответить.</p></div></li>
         </ul>
         <div className="guest-finish__actions">
           <Button onClick={onSave}>Создать аккаунт и продолжить</Button>
@@ -252,14 +272,14 @@ export function GuestOnboarding({ worldId, onSave }: {
     if (templates.some(template => template.id === worldId)) {
       const template = worldDefinitionOf(worldId)
       if (fixture.heroes.every(hero => template.stars.some(star => star.id === hero.id))) {
-        return { ...template, drama: 'mid', difficulty: 'normal', stars: fixture.heroes.map(hero => template.stars.find(star => star.id === hero.id)!) }
+        return { ...template, firstContext: fixture.intro.context, drama: 'mid', difficulty: 'normal', stars: fixture.heroes.map(hero => template.stars.find(star => star.id === hero.id)!) }
       }
     }
     // Returning guests can finish without requiring the template endpoint.
     const art = worldArt[worldId]
     return {
       ...blankWorld(), templateId: worldId, drama: 'mid', difficulty: 'normal', title: fixture.title, emoji: fixture.emoji, avatarStyle: fixture.avatarStyle,
-      description: art.pitch, summary: art.pitch, firstContext: art.pitch,
+      description: art.pitch, summary: art.pitch, firstContext: fixture.intro.context,
       stars: fixture.heroes.map(hero => ({ id: hero.id, name: hero.name, avatarSeed: hero.seed, role: hero.role, about: '', voice: '', trait: 0 })),
     }
   })
@@ -275,7 +295,7 @@ export function GuestOnboarding({ worldId, onSave }: {
   const other = world.stars.find(star => star.id === speaker.id)!
   const reply = draft.reply ?? fixture.replyIdea
   const text = draft.text ?? fixture.firstPostIdea
-  const goal = presetGoalFor(world, selected.name) ?? presetGoals[worldId]
+  const goal = fixture.intro
   const player: GuestPlayer = {
     id: 'guest', world: worldId, name: selected.name, handle: selected.avatarSeed,
     subs: published ? 4 : 0, postsLeft: replySubmitted ? 8 : published ? 9 : 10,
