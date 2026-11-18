@@ -13,6 +13,7 @@ using Reki.Infrastructure.AI;
 using Reki.Infrastructure.Auth;
 using Reki.Infrastructure.Cache;
 using Reki.Infrastructure.Jobs;
+using Reki.Infrastructure.Metrics;
 using Reki.Infrastructure.ML;
 using Reki.Infrastructure.Mongo;
 using Reki.Infrastructure.RekiContext;
@@ -33,6 +34,7 @@ public static class DependencyInjection
     {
         services.AddSingleton<IOptionsChangeTokenSource<GameBalance>, ConfigurationChangeTokenSource<GameBalance>>();
         services.AddSingleton(TimeProvider.System);
+        services.AddDailyMetrics();
         services.AddSingleton<IStoryCardRenderer, PngStoryCardRenderer>();
 
         services

@@ -387,6 +387,70 @@ export class ExternalYandexAuthClient {
     }
 }
 
+export class MetricsClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    /**
+     * @param date_from (optional) 
+     * @param date_to (optional) 
+     * @return OK
+     */
+    getDailyMetrics(date_from?: string | undefined, date_to?: string | undefined, signal?: AbortSignal): Promise<SwaggerResponse<DailyMetricsResponse>> {
+        let url_ = this.baseUrl + "/metrics/daily?";
+        if (date_from === null)
+            throw new globalThis.Error("The parameter 'date_from' cannot be null.");
+        else if (date_from !== undefined)
+            url_ += "date_from=" + encodeURIComponent("" + date_from) + "&";
+        if (date_to === null)
+            throw new globalThis.Error("The parameter 'date_to' cannot be null.");
+        else if (date_to !== undefined)
+            url_ += "date_to=" + encodeURIComponent("" + date_to) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            signal,
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetDailyMetrics(_response);
+        });
+    }
+
+    protected processGetDailyMetrics(response: Response): Promise<SwaggerResponse<DailyMetricsResponse>> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as DailyMetricsResponse;
+            return new SwaggerResponse(status, _headers, result200);
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as MetricsErrorResponse;
+            return throwException("Bad Request", status, _responseText, _headers, result400);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SwaggerResponse<DailyMetricsResponse>>(new SwaggerResponse(status, _headers, null as any));
+    }
+}
+
 export class PlayerClient {
     private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
     private baseUrl: string;
@@ -2042,6 +2106,27 @@ export interface DailyChallengeResponse {
     [key: string]: any;
 }
 
+export interface DailyMetricResponse {
+    date: string;
+    dau: number;
+    llm_requests: number;
+    tool_requests: number;
+    total_users: number;
+    new_users: number;
+    is_final: boolean;
+
+    [key: string]: any;
+}
+
+export interface DailyMetricsResponse {
+    startup_id: string;
+    timezone: string;
+    generated_at: string;
+    data: DailyMetricResponse[];
+
+    [key: string]: any;
+}
+
 export interface DailyTaskValuesResponse {
     target: number;
     progress: number;
@@ -2171,6 +2256,12 @@ export interface LogoutRequest {
 
 export interface MergePlayersRequest {
     fromPlayerId: string;
+
+    [key: string]: any;
+}
+
+export interface MetricsErrorResponse {
+    error: string;
 
     [key: string]: any;
 }

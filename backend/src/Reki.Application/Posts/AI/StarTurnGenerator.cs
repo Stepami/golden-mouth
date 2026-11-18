@@ -2,13 +2,15 @@ using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Reki.Application.Posts.GenerateReplyCommand;
+using Reki.Application.Telemetry;
 
 namespace Reki.Application.Posts.AI;
 
 internal sealed class StarTurnGenerator(
     IChatClient chatClient,
     IStarAgentInstructions instructions,
-    IOptions<LlmTurnSettings> settings) : IStarTurnGenerator
+    IOptions<LlmTurnSettings> settings,
+    ProductTelemetry telemetry) : IStarTurnGenerator
 {
     public async IAsyncEnumerable<ChatResponseUpdate> StreamReplyTurnAsync(
         StarReplyContext context,
@@ -40,6 +42,7 @@ internal sealed class StarTurnGenerator(
             new(ChatRole.User, userPrompt),
         ];
         var options = new ChatOptions { Temperature = settings.Value.Temperature };
+        telemetry.TrackLlmRequest(context.Agent.World.Player.PlayerId, "star_reply", context.TargetStarId.ToString());
         await foreach (var update in chatClient.GetStreamingResponseAsync(messages, options, cancellationToken))
         {
             yield return update;

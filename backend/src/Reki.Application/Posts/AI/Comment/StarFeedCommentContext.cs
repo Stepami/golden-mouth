@@ -11,6 +11,8 @@ public sealed record StarFeedCommentContext(
     IReadOnlyList<GameComment> Branch,
     IReadOnlyList<GameComment> ExistingReplies) : IStarFeedContext
 {
+    public StarAgentProfile Agent => Feed.Agent;
+
     public IEnumerable<ChatMessage> GetChatMessages(IStarAgentInstructions instructions)
     {
         var messages = Feed.GetChatMessages(instructions);

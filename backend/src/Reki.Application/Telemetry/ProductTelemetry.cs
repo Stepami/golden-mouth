@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Reki.Application.Telemetry.SubmitAnalyticsCommand;
 using Reki.Domain.Player;
@@ -189,6 +192,32 @@ internal sealed partial class ProductTelemetry(ILogger<ProductTelemetry> logger,
         attributes["difficulty"] = world.Difficulty.ToString().ToLowerInvariant();
         attributes["subscriber_total"] = world.Player.Subscribers;
         Write("world_audience_updated", attributes);
+    }
+
+    public void TrackLlmRequest(PlayerId playerId, string kind, string starId)
+    {
+        var activity = Activity.Current;
+        if (activity is null)
+        {
+            return;
+        }
+
+        var requestId = activity.TraceId.ToString();
+        for (var current = activity; current is not null; current = current.Parent)
+        {
+            if (current.GetTagItem("tickerq.job.id") is { } jobId)
+            {
+                requestId = jobId.ToString() ?? requestId;
+                break;
+            }
+        }
+
+        var id = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes($"{requestId}:{kind}:{starId}")));
+        var attributes = CreateAttributes(playerId, "llm_requested", timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
+        attributes["activity_kind"] = "usage";
+        attributes["prop_kind"] = kind;
+        attributes["prop_id"] = id;
+        Write("llm_requested", attributes);
     }
 
     public void TrackAnonymousSubmission(AnalyticsSubmission submission)

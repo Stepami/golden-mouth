@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.OpenApi;
+using Reki.Api.Metrics;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Domain.Player;
@@ -40,6 +41,11 @@ internal static class DependencyInjection
         });
         services.AddControllers();
         services.AddSerialization();
+        services.AddOptions<DailyMetricsAccessOptions>()
+            .BindConfiguration(DailyMetricsAccessOptions.SectionName)
+            .Validate(options => options.Token.Length is 0 or >= 32, "Daily metrics token must contain at least 32 characters.")
+            .ValidateOnStart();
+        services.AddSingleton<DailyMetricsAccessFilter>();
 
         return services;
     }

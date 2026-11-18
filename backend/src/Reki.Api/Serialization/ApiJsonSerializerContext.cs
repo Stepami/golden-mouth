@@ -9,6 +9,7 @@ using Reki.Api.Requests.Telemetry;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Api.Requests.Telemetry.ClientLogBatch;
 using Reki.Api.Requests.Worlds;
+using Reki.Application.Metrics.Responses;
 using Reki.Application.Player.Responses;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Feed;
@@ -33,6 +34,7 @@ using Reki.Domain.Worlds;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;
+using Reki.Infrastructure.Metrics;
 using Reki.Infrastructure.ML.Classifier;
 using Reki.Infrastructure.Vk;
 using Reki.Infrastructure.Yandex;
@@ -40,6 +42,10 @@ using Reki.Infrastructure.Yandex;
 namespace Reki.Api.Serialization;
 
 [JsonSerializable(typeof(EnergyExchangeResponse))]
+[JsonSerializable(typeof(DailyMetricsResponse))]
+[JsonSerializable(typeof(OpenObserveMetricsRequest))]
+[JsonSerializable(typeof(OpenObserveMetricsResponse))]
+[JsonSerializable(typeof(MetricsErrorResponse))]
 [JsonSerializable(typeof(EnergyWalletResponse))]
 [JsonSerializable(typeof(ProblemDetails))]
 [JsonSerializable(typeof(HttpValidationProblemDetails))]
