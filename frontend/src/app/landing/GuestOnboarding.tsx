@@ -5,8 +5,7 @@ import { worldDefinitionOf, worlds as templates } from '../../api/worldContent'
 import type { CommentT, Post, PostResult, WorldDefinition } from '../../api/types'
 import { Home } from '../../screens/onboarding'
 import { Compose, Live, Result, Thread } from '../../screens/turn'
-import { QuickChannelForm, WorldOverview, withPersona } from '../../screens/worldQuick'
-import { QuickMoodSetup } from '../../screens/worldWizard'
+import { QuickChannelForm, withPersona } from '../../screens/worldQuick'
 import { AvatarWorld } from '../../ui/avatar'
 import { NavContext, type Nav } from '../nav'
 import { blankWorld, type WorldDraft } from '../worldDraft'
@@ -97,9 +96,7 @@ const worlds: Record<string, GuestWorld> = {
 
 const storageKey = 'reki:guest-demo:v1'
 const screens = {
-  '01-3b_world_overview': WorldOverview,
   '01-4_channel': QuickChannelForm,
-  '01-4b_world_setup': QuickMoodSetup,
   '03-5_stage': Home,
   '02-1_compose': Compose,
   '02-2_live': Live,
@@ -108,9 +105,7 @@ const screens = {
 }
 type Screen = keyof typeof screens
 const hints: Record<Screen, [number, string]> = {
-  '01-3b_world_overview': [1, 'Посмотри, что происходит в мире, и выбери персонажа.'],
   '01-4_channel': [1, 'Выбери, от чьего лица пойдёт история.'],
-  '01-4b_world_setup': [1, 'Начни историю в мягком тоне.'],
   '03-5_stage': [2, 'Открой редактор и напиши первый пост в своём канале.'],
   '02-1_compose': [2, 'Дополни готовую идею или напиши свою.'],
   '02-2_live': [2, 'Герои вот-вот увидят твой пост.'],
@@ -143,6 +138,8 @@ function readGuestDemo(): GuestDraft | undefined {
     const draft = JSON.parse(localStorage.getItem(storageKey) ?? 'null')
     if (!draft || !Object.hasOwn(worlds, draft.worldId) || !worlds[draft.worldId].heroes.some(hero => hero.id === draft.hero)) return
     if (draft.text !== undefined && typeof draft.text !== 'string' || draft.reply !== undefined && typeof draft.reply !== 'string') return
+    if (draft.screen === '01-3b_world_overview') return { ...draft, screen: '01-4_channel' }
+    if (draft.screen === '01-4b_world_setup') return { ...draft, screen: '03-5_stage' }
     if (Object.hasOwn(screens, draft.screen)) return draft
     // Preserve previews started before the guest journey adopted the game screens.
     switch (draft.step) {
@@ -259,13 +256,13 @@ export function GuestOnboarding({ worldId, onSave }: {
     if (templates.some(template => template.id === worldId)) {
       const template = worldDefinitionOf(worldId)
       if (fixture.heroes.every(hero => template.stars.some(star => star.id === hero.id))) {
-        return { ...template, drama: 'soft', stars: fixture.heroes.map(hero => template.stars.find(star => star.id === hero.id)!) }
+        return { ...template, drama: 'mid', difficulty: 'normal', stars: fixture.heroes.map(hero => template.stars.find(star => star.id === hero.id)!) }
       }
     }
     // Returning guests can finish without requiring the template endpoint.
     const art = worldArt[worldId]
     return {
-      ...blankWorld(), templateId: worldId, title: fixture.title, emoji: fixture.emoji, avatarStyle: fixture.avatarStyle,
+      ...blankWorld(), templateId: worldId, drama: 'mid', difficulty: 'normal', title: fixture.title, emoji: fixture.emoji, avatarStyle: fixture.avatarStyle,
       description: art.pitch, summary: art.pitch, firstContext: art.pitch,
       stars: fixture.heroes.map(hero => ({ id: hero.id, name: hero.name, avatarSeed: hero.seed, role: hero.role, about: '', voice: '', trait: 0 })),
     }
@@ -273,7 +270,7 @@ export function GuestOnboarding({ worldId, onSave }: {
   const [draft, setDraft] = useState<GuestDraft>(() => {
     const saved = readGuestDemo()
     if (saved?.worldId === worldId) return saved
-    return { worldId, screen: '01-3b_world_overview', hero: fixture.heroes[0].id }
+    return { worldId, screen: '01-4_channel', hero: fixture.heroes[0].id }
   })
   const { screen, hero, published, replySubmitted, replyDone, collected } = draft
   const [storageAvailable, setStorageAvailable] = useState(true)
@@ -332,9 +329,7 @@ export function GuestOnboarding({ worldId, onSave }: {
     if (!Object.hasOwn(screens, id)) return
     if (id !== screen) {
       const action = ({
-        '01-3b_world_overview:01-4_channel': 'open_hero_picker',
-        '01-4_channel:01-4b_world_setup': 'confirm_hero',
-        '01-4b_world_setup:03-5_stage': 'start_story',
+        '01-4_channel:03-5_stage': 'start_story',
         '03-5_stage:02-1_compose': 'open_editor',
         '02-1_compose:02-2_live': 'publish_demo',
         '02-3_result:02-6_thread': 'open_conversation',
@@ -350,7 +345,6 @@ export function GuestOnboarding({ worldId, onSave }: {
     window.scrollTo(0, 0)
   }
   const backTo: Partial<Record<Screen, Screen>> = {
-    '01-4_channel': '01-3b_world_overview', '01-4b_world_setup': '01-4_channel',
     '02-1_compose': '03-5_stage',
   }
   const nav: Nav = {
@@ -373,7 +367,6 @@ export function GuestOnboarding({ worldId, onSave }: {
 
   let content
   if (screen === '01-4_channel') content = <QuickChannelForm draft={heroDraft} />
-  else if (screen === '01-4b_world_setup') content = <QuickMoodSetup fixed draft={heroDraft} onStart={() => go('03-5_stage')} />
   else {
     const View = screens[screen]
     content = <View />
