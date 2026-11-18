@@ -19,6 +19,10 @@ const taskCopy = {
   postLikes: { title: (n: number) => `Набери ${fmt(n)} ${plural(n, 'лайк', 'лайка', 'лайков')} при публикации поста`, compose: true },
 }
 type TaskType = keyof typeof taskCopy
+const taskSymbols: Record<TaskType, string> = {
+  posts: '✎', reposts: '↻', comments: '💬', likes: '♡', starComment: '★',
+  subscribers: '↗', unsubscribers: '↘', postViews: '◉', postLikes: '♥',
+}
 
 export function dailyTasksFor(player: Player) {
   const challenge = player.dailyChallenge
@@ -77,8 +81,8 @@ export function DailyTasks({ editor = false, repost = false, source = 'channel' 
         </div>
         <div className="daily-panel-summary"><span>{done} из {tasks.length} выполнено</span><span>Сегодня</span></div>
         <div className="daily-quest-list">
-          {tasks.map(task => <div className={`daily-quest-row${task.done ? ' is-done' : ''}`} key={task.type}>
-            <div className="daily-quest-heading"><b>{task.title}</b><span className="daily-quest-count">{task.done ? '✓' : `${task.progress}/${task.target}`}</span></div>
+          {tasks.map(task => <div className={`daily-quest-row${task.done ? ' is-done' : ''}`} key={task.type} data-kind={task.type}>
+            <div className="daily-quest-heading"><b><span className="daily-quest-symbol" aria-hidden="true">{taskSymbols[task.type as TaskType]}</span>{task.title}</b><span className="daily-quest-count">{task.done ? '✓' : `${task.progress}/${task.target}`}</span></div>
             {task.done ? <p className="small muted">Выполнено в одном из миров</p> : <div className="daily-quest-bottom">
               <progress aria-label={`Прогресс: ${task.title}`} value={task.progress} max={task.target} />
               {!(editor && (task.compose || (repost && task.type === 'reposts'))) && <button className="daily-quest-action" onClick={() => action(task)}>{task.compose ? 'Написать пост' : 'Открыть ленту'}</button>}

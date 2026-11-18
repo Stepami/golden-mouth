@@ -350,11 +350,11 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
               <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
               <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>
             </dl>
+            {!guest && dailyBaseline && <DailyTaskResult baseline={dailyBaseline} postId={post.id} />}
             <section className="post-result-reaction" aria-label="Ответ персонажа">
               <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={speaker ?? 'Персонаж'} size={40} avatarStyle={guest?.world.avatarStyle} mode="default" /><div><strong>{speaker ?? 'Персонаж'}</strong><div className="small muted">{guest?.world.title ?? worldOf(player.world).title} · AI-персонаж</div></div></div>
               {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
             </section>
-            {!guest && dailyBaseline && <DailyTaskResult baseline={dailyBaseline} postId={post.id} />}
             {!guest && <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>}
             <details className="result-details"><summary>Разбор поста</summary>
               {explanation && <p className="small muted">{explanation}</p>}
