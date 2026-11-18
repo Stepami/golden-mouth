@@ -21,7 +21,7 @@ import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import type { Address, WorldDefinition, WorldId } from '../api/types'
 
 
-function withPersona(draft: WorldDraft, star?: WorldDefinition['stars'][number]): WorldDraft {
+export function withPersona(draft: WorldDraft, star?: WorldDefinition['stars'][number]): WorldDraft {
   const d = draft.definition; const previous = draft.persona
   const heroOrder = draft.heroOrder ?? [...d.stars, ...(previous ? [previous.star] : [])].map(value => value.id)
   const restored = { ...d, stars: [...d.stars, ...(previous ? [previous.star] : [])], description: previous?.description ?? d.description, name: previous?.name ?? d.name, avatar: previous?.avatar ?? d.avatar, role: previous?.role ?? d.role }
@@ -68,7 +68,7 @@ export function WorldOverview() {
     if (!next.persona && !next.personaChosen && next.definition.stars.length > 1) {
       const customProfile = restored && (next.definition.name !== d.name || next.definition.avatar !== d.avatar)
       const handoff = readGuestHandoff()
-      const hero = handoff?.worldId === world ? next.definition.stars.find(star => star.id === handoff.hero) : undefined
+      const hero = handoff?.worldId === world && !handoff.dialogue && nav.params.fromLanding === true ? next.definition.stars.find(star => star.id === handoff.hero) : undefined
       next = customProfile ? { ...next, personaChosen: true } : withPersona(next, hero ?? next.definition.stars[0])
     }
     setWorldDraft(next)

@@ -17,10 +17,11 @@ import { GameOnboarding, isGameOnboardingPreview } from './app/GameOnboarding'
 import { beginGameOnboarding, gameOnboardingActive, useGameOnboarding, restartGameOnboardingPreview } from './app/GameOnboardingState'
 import type { WorldId } from './api/types'
 
+import { GuestImport } from './app/landing/GuestImport'
 import { Landing, landingWorldForVariant } from './app/landing/Landing'
 import { GuestOnboarding, readGuestWorld, clearGuestDemo } from './app/landing/GuestOnboarding'
-import { acceptedRegistrationConsent, readGuestHandoff, saveGuestHandoff, setRegistrationConsent } from './app/landing/guestHandoff'
-import { beginLandingAuth, completeLandingAuth, landingAuthPending, landingEntryPending, isLandingPreview, pendingLandingWorld, requestedVariant } from './app/landing/experiment'
+import { acceptedRegistrationConsent, clearGuestHandoff, readGuestHandoff, saveGuestHandoff, setRegistrationConsent } from './app/landing/guestHandoff'
+import { beginLandingAuth, clearLandingWorld, completeLandingAuth, landingAuthPending, landingEntryPending, isLandingPreview, pendingLandingWorld, requestedVariant } from './app/landing/experiment'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
 
@@ -42,7 +43,7 @@ function hasExplicitStart(): boolean {
 function Shell() {
   const [stack, setStack] = useState<Entry[]>(() => [startEntry()])
   const top = stack[stack.length - 1]
-  const { player, playerState } = useStore()
+  const { player, playerState, setPlayer } = useStore()
   const onboarding = useGameOnboarding()
   const learning = gameOnboardingActive(onboarding)
   const [lockedSection, setLockedSection] = useState(false)
@@ -59,21 +60,46 @@ function Shell() {
     tab: i => { setStack([{ id: TABS[i].screen, params: {} }]); window.scrollTo(0, 0) },
   }), [top, stack.length])
 
+  const importingGuest = top.id === 'guest_import'
   const Screen = SCREENS[top.id]?.component
+  const finishGuestImport = useCallback<React.ComponentProps<typeof GuestImport>['onDone']>(({ player, post, notice }) => {
+    setPlayer(player)
+    clearLandingWorld()
+    setRegistrationConsent(false)
+    nav.reset('02-6_thread', { post, guestImportNotice: notice })
+    clearGuestHandoff()
+  }, [nav, setPlayer])
+  const exitGuestImport = () => {
+    clearLandingWorld()
+    setRegistrationConsent(false)
+    nav.reset('01-3_world')
+  }
   const resolvingExistingPlayer = (playerState === 'ready' || playerState === 'missing' && (api.hasPlayer() || !!pendingLandingWorld())) && !explicitStart && top.id === '01-1_invite'
   const visibleScreen = Screen && playerState !== 'loading' && playerState !== 'failed' && !resolvingExistingPlayer ? top.id : undefined
   useEffect(() => {
     if (visibleScreen) { setScreen(visibleScreen); screenView(visibleScreen) }
   }, [visibleScreen])
   useEffect(() => {
-    if (explicitStart || top.id !== '01-1_invite' || playerState === 'loading' || playerState === 'failed') return
+    if (explicitStart || top.id !== '01-1_invite' || playerState === 'loading') return
+    const handoff = readGuestHandoff()
+    const currentPlayerId = api.playerId()
     const world = pendingLandingWorld()
-    if (world) setStack([{ id: api.hasPlayer() ? '01-3b_world_overview' : '01-2_age', params: { world, fromLanding: true, agree: acceptedRegistrationConsent() } }])
+    if (hasAccess() && handoff?.playerId && handoff.worldId === world && (!currentPlayerId || currentPlayerId === handoff.playerId)) {
+      setStack([{ id: 'guest_import', params: {} }])
+      return
+    }
+    if (playerState === 'failed') return
+    if (currentPlayerId && world && handoff?.worldId === world) {
+      clearLandingWorld()
+      setRegistrationConsent(false)
+      setStack([{ id: '01-3_world', params: {} }])
+    } else if (world) setStack([{ id: api.hasPlayer() ? '01-3b_world_overview' : '01-2_age', params: { world, fromLanding: true, agree: acceptedRegistrationConsent() } }])
     else if (playerState === 'ready' || api.hasPlayer()) setStack([{ id: '01-3_world', params: {} }])
   }, [explicitStart, playerState, top.id])
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1 && top.id !== '02-6_thread', back), [stack.length, top.id, back])
 
+  if (importingGuest) return <GuestImport birthYear={typeof top.params.birthYear === 'number' ? top.params.birthYear : undefined} onDone={finishGuestImport} onExit={exitGuestImport} />
   if (!Screen || playerState === 'loading' || resolvingExistingPlayer) return <div className="app"><div className="screen"><div className="pad" role="status">Загружаем твою игру…</div></div></div>
   if (playerState === 'failed') return <div className="app"><div className="screen"><div className="pad"><p>Не получилось загрузить игру.</p><button className="btn" onClick={() => location.reload()}>Попробовать снова</button></div></div></div>
   const people: React.ContextType<typeof AvatarPeople> = {}
@@ -164,11 +190,12 @@ export function App() {
     }).finally(() => setBusy(false))
   }
   if (showGuest && guestWorld) return <GuestOnboarding key={guestWorld} worldId={guestWorld} onSave={draft => {
-    saveGuestHandoff({ ...draft, worldId: guestWorld })
+    if (!saveGuestHandoff({ ...draft, id: crypto.randomUUID(), worldId: guestWorld })) return false
     setRegistrationConsent(false); setConsentAccepted(false); setConsentChecked(false)
     beginLandingAuth(guestWorld)
     trackLandingAuth('landing_guest_save_click')
     setSignup(true); setLandingAccepted(true); clearGuestDemo()
+    return true
   }} />
   if (showLanding) return <Landing preview={landingPreview} onContinue={worldId => {
     setLandingPreview(false)

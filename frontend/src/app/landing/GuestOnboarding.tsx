@@ -10,6 +10,7 @@ import { NavContext, type Nav } from '../nav'
 import { blankWorld } from '../worldDraft'
 import { GuestSessionContext, type GuestPlayer } from './guestSession'
 import { worldArt } from '../worldArt'
+import type { GuestDialogue } from './guestHandoff'
 import './guestOnboarding.css'
 
 type Hero = { id: string; name: string; seed: string; role: string }
@@ -181,7 +182,7 @@ export function clearGuestDemo(): void {
 
 function GuestFinish({ worldId, collected, selected, avatarStyle, onClaim, onCollect, onSave }: {
   worldId: string; collected: boolean; selected: WorldDefinition['stars'][number]; avatarStyle: string
-  onClaim: () => void; onCollect: () => void; onSave: () => void
+  onClaim: () => void; onCollect: () => void; onSave: () => boolean
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const collectButton = useRef<HTMLButtonElement>(null)
@@ -189,6 +190,7 @@ function GuestFinish({ worldId, collected, selected, avatarStyle, onClaim, onCol
   const inFlight = useRef(false)
   const mounted = useRef(true)
   const [collecting, setCollecting] = useState(false)
+  const [saveError, setSaveError] = useState(false)
   useLayoutEffect(() => {
     if (collected && dialog.current && !dialog.current.open) dialog.current.showModal()
   }, [collected])
@@ -257,7 +259,8 @@ function GuestFinish({ worldId, collected, selected, avatarStyle, onClaim, onCol
           <li><span aria-hidden="true">🌶️</span><div><b>Тон «Остро»</b><p>Драмы, споры и риск отмены.</p></div></li>
         </ul>
         <div className="guest-finish__actions">
-          <Button onClick={onSave}>Создать аккаунт и продолжить</Button>
+          <Button onClick={() => { if (!onSave()) setSaveError(true) }}>Создать аккаунт и продолжить</Button>
+          {saveError && <p role="alert">Не получилось сохранить историю на устройстве. Проверь, доступно ли хранилище браузера, и попробуй снова.</p>}
           <p className="small muted">2 💎 в аккаунте за первый пост и ответ герою</p>
         </div>
       </div>
@@ -267,7 +270,7 @@ function GuestFinish({ worldId, collected, selected, avatarStyle, onClaim, onCol
 
 export function GuestOnboarding({ worldId, onSave }: {
   worldId: string
-  onSave: (draft: { text: string; reply: string; hero?: string }) => void
+  onSave: (draft: { text: string; reply: string; hero: string; dialogue: GuestDialogue }) => boolean
 }) {
   const fixture = worlds[worldId]
   const [world] = useState<WorldDefinition>(() => {
@@ -393,7 +396,7 @@ export function GuestOnboarding({ worldId, onSave }: {
       <div key={screen}><View /></div>
       {!replyDone && (screen === '02-2_live' || (screen === '02-6_thread' && replySubmitted)) && <GuestHint screen={screen} inline={false} />}
       {replyDone && <GuestFinish worldId={worldId} selected={selected} avatarStyle={world.avatarStyle} collected={!!collected} onClaim={() => guestAction('claim_demo_reward')}
-        onCollect={() => setDraft(current => ({ ...current, collected: true }))} onSave={() => onSave({ text, reply, hero })} />}
+        onCollect={() => setDraft(current => ({ ...current, collected: true }))} onSave={() => onSave({ text, reply, hero, dialogue: { starId: other.id, first: speaker.first, final: speaker.second } })} />}
       {!storageAvailable && <p className="small muted pad" role="status">Хранилище недоступно. Черновик останется в этой вкладке до обновления страницы.</p>}
     </main>
   </GuestSessionContext.Provider></AvatarWorld.Provider></NavContext.Provider>

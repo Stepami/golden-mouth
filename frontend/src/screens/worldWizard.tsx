@@ -96,7 +96,7 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
       if (creatingWorld) {
         onboardingWorldSaved(player.worldInstanceId ?? player.world)
         const guest = readGuestHandoff()
-        if (guest && guest.worldId === pendingLandingWorld() && guest.worldId === d.templateId && guest.text.trim()) {
+        if (guest && !guest.dialogue && guest.worldId === pendingLandingWorld() && guest.worldId === d.templateId && guest.text.trim()) {
           const key = draftKey(player)
           if (!hasPostDraft(key)) {
             savePostDraft(key, { text: guest.text, ownWords: true })

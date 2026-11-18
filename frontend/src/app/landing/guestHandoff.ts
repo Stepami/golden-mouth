@@ -1,14 +1,31 @@
-type GuestHandoff = { worldId: string; hero?: string; text: string; reply: string }
+export type GuestDialogue = { starId: string; first: string; final: string }
+export type GuestHandoff = {
+  id?: string
+  worldId: string
+  hero?: string
+  text: string
+  reply: string
+  dialogue?: GuestDialogue
+  playerId?: string
+  worldPending?: boolean
+  worldInstanceId?: string
+  postPending?: boolean
+  postId?: string
+  initialCommentId?: string
+  playerCommentId?: string
+  finalCommentId?: string
+  claim?: 'pending' | 'confirmed' | 'declined'
+}
 const key = 'reki:guest-handoff:v1'
-let memory: GuestHandoff | undefined
 
-export function saveGuestHandoff(value: GuestHandoff) {
-  memory = value
-  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* Same-tab fallback. */ }
+export function saveGuestHandoff(value: GuestHandoff): boolean {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+    return true
+  } catch { return false }
 }
 
 export function readGuestHandoff(): GuestHandoff | undefined {
-  if (memory) return memory
   try {
     const value = JSON.parse(localStorage.getItem(key) ?? 'null') as GuestHandoff | null
     if (value && typeof value.worldId === 'string' && typeof value.text === 'string' && typeof value.reply === 'string') return value
@@ -16,8 +33,7 @@ export function readGuestHandoff(): GuestHandoff | undefined {
 }
 
 export function clearGuestHandoff() {
-  memory = undefined
-  try { localStorage.removeItem(key) } catch { /* Same-tab fallback. */ }
+  try { localStorage.removeItem(key) } catch { /* Optional cleanup after the persisted import completed. */ }
 }
 
 const consentKey = 'reki:landing:registration-consent'

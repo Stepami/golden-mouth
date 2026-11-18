@@ -1,5 +1,5 @@
 import { useGuestSession } from '../app/landing/guestSession'
-import { acceptedRegistrationConsent } from '../app/landing/guestHandoff'
+import { acceptedRegistrationConsent, readGuestHandoff } from '../app/landing/guestHandoff'
 import { landingContext, pendingLandingWorld } from '../app/landing/experiment'
 import { Resources } from '../ui/Resources'
 import { Streak } from '../ui/Streak'
@@ -14,6 +14,7 @@ import { getWorldDraft, setWorldDraft } from '../app/worldDraft'
 import { worldOf, contentOf } from '../api/worldContent'
 import type { Player } from '../api/types'
 import { api } from '../api/client'
+import { needsRegistration } from '../api/auth'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
 import { Avatar, BottomCTA, Button, Card, EnergyBadge, fmt } from '../ui'
@@ -92,6 +93,11 @@ function Age() {
     if (draft && !draft.editingId) setWorldDraft({ ...draft, birthYear: year, group: '18+', ageBand: ageBand(age) })
     if (nav.params.returnToCreation) { nav.back(); return }
     const world = pendingLandingWorld()
+    const handoff = readGuestHandoff()
+    if (preaccepted && needsRegistration() && world && handoff?.worldId === world && handoff.dialogue) {
+      nav.replace('guest_import', { birthYear: year })
+      return
+    }
     nav.replace('01-2_age', { year, agree, fromLanding })
     nav.push(world ? '01-3b_world_overview' : '01-3_world', {
       ...(world ? { world, fromLanding: true } : {}), group: '18+', ageBand: ageBand(age), birthYear: year,

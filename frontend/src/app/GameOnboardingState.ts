@@ -84,3 +84,11 @@ export function setOnboardingBonusClaim(status: GameOnboardingState['bonusClaim'
   const state = read(playerId)
   return state?.phase === 'done' ? write(playerId, { ...state, bonusClaim: status }) : false
 }
+
+export function completeGuestOnboarding(playerId: string, worldId: string, postId: string, bonusClaim: GameOnboardingState['bonusClaim']) {
+  if (api.playerId() !== playerId) return false
+  const durable = write(playerId, { phase: 'done', worldId, postId, conversationPostId: postId, completionSeen: true, bonusClaim })
+  memory.delete(storageId('registration'))
+  try { localStorage.removeItem(prefix + storageId('registration')) } catch { /* Optional cleanup. */ }
+  return durable
+}
