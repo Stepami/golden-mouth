@@ -1,0 +1,81 @@
+import { useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useNav } from '../app/nav'
+import { tap } from '../app/analytics'
+import { usePlayer, useStore } from '../app/store'
+import { contentOf } from '../api/worldContent'
+import { Button, Sheet, fmt, plural } from '.'
+
+const taskCopy = {
+  posts: { title: (n: number) => `Напиши ${fmt(n)} ${plural(n, 'пост', 'поста', 'постов')}`, compose: true },
+  reposts: { title: (n: number) => `Сделай ${fmt(n)} ${plural(n, 'репост', 'репоста', 'репостов')}`, compose: false },
+  comments: { title: (n: number) => `Напиши ${fmt(n)} ${plural(n, 'комментарий', 'комментария', 'комментариев')}`, compose: false },
+  likes: { title: (n: number) => `Поставь ${fmt(n)} ${plural(n, 'лайк', 'лайка', 'лайков')}`, compose: false },
+  starComment: { title: () => 'Получи комментарий звезды', compose: true },
+  subscribers: { title: (n: number) => `Привлеки ${fmt(n)} ${plural(n, 'подписчика', 'подписчиков', 'подписчиков')} публикациями`, compose: true },
+  unsubscribers: { title: (n: number) => `Получи ${fmt(n)} ${plural(n, 'отписку', 'отписки', 'отписок')} после публикаций`, compose: true },
+  postViews: { title: (n: number) => `Набери ${fmt(n)} ${plural(n, 'просмотр', 'просмотра', 'просмотров')} на одном посте`, compose: true },
+  postLikes: { title: (n: number) => `Набери ${fmt(n)} ${plural(n, 'лайк', 'лайка', 'лайков')} при публикации поста`, compose: true },
+}
+type TaskType = keyof typeof taskCopy
+
+export function DailyTasks({ editor = false, repost = false }: { editor?: boolean; repost?: boolean }) {
+  const player = usePlayer()
+  const { refresh } = useStore()
+  const nav = useNav()
+  const day = new Date().toISOString().slice(0, 10)
+  const challenge = player.dailyChallenge
+  const context = `${player.id}:${player.worldInstanceId}:${day}`
+  const [opened, setOpened] = useState('')
+  const [retry, setRetry] = useState({ context: '', busy: false, failed: false })
+  const busy = retry.context === context && retry.busy
+  const failed = retry.context === context && retry.failed
+  const values = challenge?.day === day && player.worldInstanceId ? challenge.values[player.worldInstanceId] : undefined
+  const tasks = Object.entries(values ?? {}).flatMap(([type, value]) => {
+    if (!Object.hasOwn(taskCopy, type)) return []
+    const copy = taskCopy[type as TaskType]
+    const star = type === 'starComment' ? contentOf(player.world).stars.find(star => star.id === value.starId) : undefined
+    return [{ type, ...value, title: star ? `Получи комментарий: ${star.name}` : copy.title(value.target), compose: copy.compose, done: challenge.completion[type] === true }]
+  })
+  const done = tasks.filter(task => task.done).length
+  const suitable = tasks.filter(task => repost ? task.type === 'reposts' : task.compose)
+  const featured = suitable.find(task => !task.done) ?? suitable[0]
+  const show = () => {
+    setOpened(context)
+    tap('daily_tasks_viewed', { kind: editor ? 'editor' : 'channel' })
+  }
+  const reload = async () => {
+    setRetry({ context, busy: true, failed: false })
+    const next = await refresh()
+    setRetry({ context, busy: false, failed: !next })
+  }
+  const action = (task: typeof tasks[number]) => {
+    tap('daily_task_action', { kind: task.type, to: task.compose ? '02-1_compose' : '03-3_feed' })
+    setOpened('')
+    if (task.compose) nav.push('02-1_compose')
+    else nav.tab(1)
+  }
+  const status = tasks.length ? `${done}/${tasks.length}` : 'Посмотреть'
+  return <>
+    {editor ? <section className="daily-editor card" aria-label="Ежедневные задания">
+      <div className="row small muted"><span>Ежедневные задания</span><span>{tasks.length ? `${done}/${tasks.length} ✓` : ''}</span></div>
+      {featured ? <><div className="daily-task-title"><b>{featured.title}</b><b>{featured.progress}/{featured.target}</b></div><progress aria-label="Прогресс в этом мире" value={featured.progress} max={featured.target} /><p className="small muted">{featured.done ? 'Выполнено в одном из миров' : 'Прогресс в этом мире'}</p></> : <p className="small muted">{tasks.length ? 'Для этого действия нет отдельного задания.' : 'Задания пока недоступны.'}</p>}
+      <p className="small muted daily-note">Учёт выполненных действий пока недоступен.</p>
+      <button className="daily-more" onClick={show}>{featured ? '▸ Остальные ежедневные' : 'Открыть задания дня'}</button>
+    </section> : <button className="daily-entry" onClick={show}><span>Задания дня</span><span>{status} ›</span></button>}
+    {opened === context && createPortal(<Sheet onClose={() => setOpened('')}>
+      <h2>Задания дня</h2>
+      <p className="small muted">{day.split('-').reverse().join('.')} · новый день в 00:00 UTC</p>
+      <p className="small muted daily-note">Учёт выполненных действий пока недоступен.</p>
+      {tasks.map(task => <div className="daily-quest-row" key={task.type}>
+        <div className="daily-task-title"><b>{task.title}</b><span>{task.progress}/{task.target}</span></div>
+        <p className="small muted">{task.done ? 'Выполнено в одном из миров' : 'Прогресс в этом мире'}</p>
+        {!(editor && (task.compose || (repost && task.type === 'reposts'))) && !task.done && <Button secondary onClick={() => action(task)}>{task.compose ? 'Написать пост' : 'Открыть ленту'}</Button>}
+      </div>)}
+      {!tasks.length && <p className="daily-note muted">Задания для этого мира пока недоступны. Можно продолжить играть.</p>}
+      {failed && <p className="small muted daily-note" role="status">Не получилось обновить задания. Попробуй ещё раз.</p>}
+      <Button secondary disabled={busy} onClick={reload}>{busy ? 'Обновляем…' : 'Обновить задания'}</Button>
+      <Button secondary onClick={() => setOpened('')}>К игре</Button>
+    </Sheet>, document.body)}
+  </>
+}

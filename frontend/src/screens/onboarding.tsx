@@ -1,5 +1,6 @@
 import { pendingLandingWorld } from '../app/landing/experiment'
 import { Resources } from '../ui/Resources'
+import { DailyTasks } from '../ui/DailyTasks'
 import { Streak } from '../ui/Streak'
 import { displayHandle } from '../app/handle'
 import { usePresetGoal } from '../ui/StoryGoal'
@@ -125,11 +126,14 @@ export function ChannelHead() {
   const p = useStore().player!; const nav = useNav()
   const w = worldOf(p.world)
   return (
+    <>
     <div className="top channel-header">
       <button className="channel-author" onClick={() => nav.tab(4)}><Avatar seed={p.handle} size={36} />
       <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div></button>
       <Resources player={p} />
     </div>
+    <DailyTasks />
+    </>
   )
 }
 export function Home({ firstPostConfirmed = false, channelEmpty = false }: { firstPostConfirmed?: boolean; channelEmpty?: boolean } = {}) {

@@ -4,6 +4,8 @@ import { RepostAction } from '../ui/RepostAction'
 import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
 import { StoryGoal } from '../ui/StoryGoal'
+import { DailyTasks } from '../ui/DailyTasks'
+import { Resources } from '../ui/Resources'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
 import { api, ApiError } from '../api/client'
@@ -83,8 +85,9 @@ function Compose() {
   }, [text, revealing])
   return (
     <div className="screen no-tab">
-      <TopBar onBack={nav.back} title={repostId ? "Репост со своим текстом" : "Новый пост"} rightPlain right={<EnergyBadge value={p.postsLeft} />} />
+      <TopBar onBack={nav.back} title={repostId ? "Репост со своим текстом" : "Новый пост"} rightPlain right={<Resources player={p} />} />
       <div className="pad">
+        <DailyTasks editor repost={!!repostId} />
         {!repostId && <StoryGoal world={p.world} firstStep />}
         {repostId && <QuotedPost repostId={repostId} />}
         <TextField label="Твой пост" value={text} visibleLength={visibleLength} onInteract={() => { canPrefill.current = false; setVisibleLength(undefined) }} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
