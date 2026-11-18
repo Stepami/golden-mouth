@@ -25,9 +25,13 @@ public interface IPlayerRepository
 
     ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
 
+    ValueTask SaveDailyChallengeAsync(PlayerProfile player, int previousVersion, CancellationToken cancellationToken);
+
     ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
 
     IAsyncEnumerable<PlayerProfile> GetPlayersForEnergyRecoveryAsync(int cap, DateTimeOffset dueBefore, CancellationToken cancellationToken);
+
+    IAsyncEnumerable<PlayerProfile> GetActivePlayersAsync(DateTimeOffset since, CancellationToken cancellationToken);
 
     ValueTask<long> CountPlayersAsync(CancellationToken cancellationToken);
 }

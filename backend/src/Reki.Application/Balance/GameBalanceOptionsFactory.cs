@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Reki.Domain.Player.Challenges;
 using Reki.Domain.Worlds;
 
 namespace Reki.Application.Balance;
@@ -34,6 +35,14 @@ internal sealed class GameBalanceOptionsFactory(
             .GetChildren()
             .Select(item => item.Get<double>())
             .ToArray();
+        IReadOnlyDictionary<DayOfWeek, IReadOnlyDictionary<DailyTaskType, int[]>> dailyChallengeTargets = configuration
+            .GetRequiredSection("daily_challenges")
+            .GetChildren()
+            .ToDictionary(
+                day => Enum.Parse<DayOfWeek>(day.Key, ignoreCase: true),
+                day => (IReadOnlyDictionary<DailyTaskType, int[]>)day.GetChildren().ToDictionary(
+                    item => Enum.Parse<DailyTaskType>(item.Key, ignoreCase: true),
+                    item => item.GetChildren().Select(value => value.Get<int>()).ToArray()));
         IReadOnlyDictionary<WorldDifficulty, DifficultyBalance> difficulties = configuration
             .GetRequiredSection("difficulties")
             .GetChildren()
@@ -87,6 +96,7 @@ internal sealed class GameBalanceOptionsFactory(
                 thread.GetValue<int>("subscriber_bonus"),
                 commentCost),
             difficulties,
+            dailyChallengeTargets,
             postCost,
             configuration.GetValue<int>("access:create_world_from_scratch:subs"),
             configuration.GetValue<double>("feed:open_probability"),
