@@ -42,6 +42,8 @@
 | `tap` | вкладка, главная / вторая кнопка экрана | id (`tab`, `cta_main`, `cta_second`), to |
 | `onboarding_step` | шаги онбординга | step (age / world / channel / world_settings / done), ok, world, address, star |
 | `post_publish`, `post_result` | пост и его итог | len, own_words (происхождение черновика); delta, viral, flop |
+| `tap` с `id=result_card_viewed` | карточка фактически показалась после подтверждённого результата; один раз на публикацию в сессии | `kind=gain\|loss\|unchanged` |
+| `tap` с `id=post_open_conversation` / `result_open_next_post` | из результата открыли разговор или редактор | `ok` у перехода к разговору показывает наличие реплики |
 | `limit_reached` | упёрся в лимит | |
 | `plus_interest`, `plus_bonus_only` | 04-2 | |
 | `invite_sent`, `share` | позвать, поделиться | to (chat / story) |
@@ -234,3 +236,5 @@ AI-ответы и повтор requestId не учитываются. Поля:
 ### Гостевая пробная история (#352)
 
 `landing_continue` остаётся кликом по главной кнопке посадочной, `landing_auth_complete` — подтверждённым завершением входа на пути с выбранным миром. В Метрике добавляются `landing_guest_start`, `landing_guest_screen`, `landing_guest_action`, `landing_guest_save_click`, `landing_registration_view` и `landing_registration_consent`. Разрезы `guest_world`, `guest_hero`, `guest_screen`, `guest_action` позволяют отличить просмотр шага от нажатия: выбор героя, начало истории, редактор, пробная публикация, разговор, отправка ответа и получение пробной награды. `landing_login_account_missing` отдельно отмечает вход без найденного аккаунта. Первая пробная публикация и ответ остаются локальными и не создают событий серверного поста или комментария. После регистрации черновик переносится в созданный мир, первый реальный пост и ответ считаются по существующим серверным событиям.
+
+Гостевая карточка результата (#356) использует существующие цели Метрики: `landing_guest_screen` с `guest_screen=02-3_result` и `landing_guest_action` с `guest_action=open_conversation`, далее `send_demo_reply`. Гостевой показ и ответ остаются в гостевой воронке. Сохранение реальных постов и комментариев подтверждают отдельные серверные события в OpenObserve; демо-действия не включаются в метрики сохранённых действий и D1. Анимация, плакаты и виброотклик не передают отдельные события.

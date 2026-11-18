@@ -6,6 +6,7 @@ import { RepostAction } from '../ui/RepostAction'
 import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
 import { StoryGoal, StoryGoalContent } from '../ui/StoryGoal'
+import { ResultCrowd } from '../ui/ResultCrowd'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
 import { api, ApiError } from '../api/client'
@@ -203,19 +204,51 @@ function PublishError() {
   )
 }
 
-/** Итог поста одной карточкой поверх канала: обычный, провал, залёт (праздничная тема). */
-/** Отсчёт числа 0 → n за 0,8 с (UX-аудит: «число считается, чипы по одному, haptic»). */
-function useCount(n: number, ms = 800) {
-  const [v, setV] = useState(0)
-  useEffect(() => {
-    if (new URLSearchParams(location.search).has('shot') || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setV(n); return }
-    const t0 = performance.now(); let raf = 0
-    const tick = (t: number) => { const k = Math.min(1, (t - t0) / ms); setV(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(tick) }
-    raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf)
-  }, [n, ms])
-  return v
+const resultNumber = new Intl.NumberFormat('ru-RU')
+const viewedResults = new Set<string>()
+
+function resultPulse() {
+  if (!inTelegram) return
+  try { hapticFeedback.impactOccurred.ifAvailable('light') }
+  catch { /* The result remains available without haptics. */ }
 }
-const haptic = (kind: 'success' | 'warning' | 'light') => { if (!inTelegram) return; try { if (kind === 'light') hapticFeedback.impactOccurred.ifAvailable('light'); else hapticFeedback.notificationOccurred.ifAvailable(kind) } catch { /* вне Telegram */ } }
+
+function ResultDelta({ delta }: { delta: number }) {
+  const total = Math.abs(delta)
+  const [shown, setShown] = useState(() =>
+    document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches || new URLSearchParams(location.search).has('shot') ? total : 0)
+  useEffect(() => {
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    if (!total || motion.matches || document.hidden || new URLSearchParams(location.search).has('shot')) {
+      setShown(total)
+      return
+    }
+    const start = performance.now()
+    let frame = 0
+    const finish = () => { cancelAnimationFrame(frame); setShown(total) }
+    const pause = () => { if (document.hidden || motion.matches) finish() }
+    const tick = (now: number) => {
+      const progress = Math.min(1, Math.max(0, (now - start) / 720))
+      setShown(Math.min(total - Number(progress < 1), Math.round(total * (1 - (1 - progress) ** 3))))
+      if (progress < 1) frame = requestAnimationFrame(tick)
+    }
+    setShown(0)
+    frame = requestAnimationFrame(tick)
+    document.addEventListener('visibilitychange', pause)
+    motion.addEventListener('change', pause)
+    return () => {
+      cancelAnimationFrame(frame)
+      document.removeEventListener('visibilitychange', pause)
+      motion.removeEventListener('change', pause)
+    }
+  }, [total])
+  if (!delta) return <div className="post-result-delta"><span>Подписчиков столько же</span></div>
+  const sign = delta > 0 ? '+' : '−'
+  const unit = plural(total, 'подписчик', 'подписчика', 'подписчиков')
+  return <div className={`post-result-delta ${delta > 0 ? 'up' : 'down'}`} role="group" aria-label={`${sign}${resultNumber.format(total)} ${unit}`}>
+    <b aria-hidden="true">{sign}{resultNumber.format(shown)}</b> <span aria-hidden="true">{unit}</span>
+  </div>
+}
 
 function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post; theme: 'normal' | 'flop' | 'viral' }) {
   const guest = useGuestSession(); const profile = useStore()?.player
@@ -231,7 +264,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
   }, [commentPromise])
   const closeButton = useRef<HTMLButtonElement>(null), dialog = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    closeButton.current?.focus()
+    closeButton.current?.focus({ preventScroll: true })
     const keyboard = (event: KeyboardEvent) => {
       if (event.key === 'Escape') nav.replace('03-5_stage')
       if (event.key !== 'Tab') return
@@ -250,6 +283,28 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
   const fallback = r.bestComment
   const actor = stars.find(item => `Star_${item.id}` === comment?.authorId || item.avatarSeed === (comment?.avatar ?? fallback?.avatar) || `Star_${item.id}` === nav.params.predictedAuthorId)
   const commentText = comment?.text ?? fallback?.text
+  const speaker = comment?.author ?? actor?.name
+  const savedPost = nav.params.post as Post | undefined
+  const realPost = !guest && savedPost?.id === r.postId ? savedPost : undefined
+  const viewedPostId = realPost?.id
+  const kind = r.delta > 0 ? 'gain' : r.delta < 0 ? 'loss' : 'unchanged'
+  const publicationKind = realPost?.repostId ? realPost.text.length ? 'quote' : 'repost' : 'post'
+  useEffect(() => {
+    if (!viewedPostId) return
+    let frame = 0
+    const seen = () => {
+      if (document.hidden || viewedResults.has(viewedPostId)) return
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        if (document.hidden || viewedResults.has(viewedPostId) || !dialog.current?.isConnected) return
+        viewedResults.add(viewedPostId)
+        tap('result_card_viewed', { kind, publication_kind: publicationKind })
+      })
+    }
+    seen()
+    document.addEventListener('visibilitychange', seen)
+    return () => { cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', seen) }
+  }, [viewedPostId, kind, publicationKind])
   const entryReaction = useRef('')
   useEffect(() => {
     if (guest) return
@@ -262,11 +317,9 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
     document.addEventListener('visibilitychange', seen)
     return () => document.removeEventListener('visibilitychange', seen)
   }, [commentText, post.id])
-  const shown = useCount(Math.abs(r.delta))
   const additive = r.whys.filter(why => /^[+−-]\d+(?:[.,]\d+)?$/.test(why.value))
   const explainsDelta = additive.length > 0 && additive.reduce((sum, why) => sum + Number(why.value.replace('−', '-').replace(',', '.')), 0) === r.delta
-  const explanation = r.delta === 0 ? 'Число подписчиков не изменилось.' : r.delta < 0 ? r.whys.find(why => !why.value.startsWith('×') && why.label !== 'В тему')?.label ?? r.headline : r.headline
-  useEffect(() => { if (!guest) haptic(r.delta >= 0 ? 'success' : 'warning') }, [r])
+  const explanation = r.delta < 0 ? r.whys.find(why => !why.value.startsWith('×') && why.label !== 'В тему')?.label ?? r.headline : r.headline
   return (
     <div className="screen no-tab">
       <ChannelHead />
@@ -274,19 +327,34 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
       <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.55)' }}>
         <div ref={dialog} role="dialog" aria-modal="true" aria-label="Пост опубликован" className={`sheet post-result${viral ? ' post-result--viral' : ''}`}>
           <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')}>×</button>
-          <div className="post-result-title">Пост опубликован</div>
-          <section className="post-result-reaction" aria-label="Ответ персонажа">
-            <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={comment?.author ?? actor?.name ?? 'Персонаж'} size={40} avatarStyle={guest?.world.avatarStyle} mode="default" /><div><strong>{comment?.author ?? actor?.name ?? 'Персонаж'}</strong><div className="small muted">{guest?.world.title ?? worldOf(player.world).title} · AI-персонаж</div></div></div>
-            {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
-          </section>
-          <div className={`post-result-delta ${r.delta > 0 ? 'up' : r.delta < 0 ? 'down' : ''}`}>{r.delta > 0 ? '+' : r.delta < 0 ? '−' : ''}{fmt(shown)} <span>{plural(Math.abs(r.delta), 'подписчик', 'подписчика', 'подписчиков')}</span></div>
-          <p className="small muted">{explanation}</p>
-          {!guest && <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>}
-          <details className="result-details"><summary>Разбор поста</summary><div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
-            <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
-          </details>
-          <div className="post-result-actions">{guest?.hint}{!guest && !gameOnboardingActive(onboarding) && <Button onClick={() => { tap('result_open_next_post'); nav.replace('02-1_compose') }}>Новый пост</Button>}<span data-game-onboarding-post={comment ? post.id : undefined}><Button secondary onClick={() => { if (!guest) tap('post_open_conversation', { ok: !!comment }); nav.replace('02-6_thread', { post, commentPromise, focusReply: true }) }}>Комментировать</Button></span></div>
-          {!guest && <button onClick={() => nav.push('02-7_share', { post })} className="result-share">Поделиться</button>}
+          <div className="post-result-title"><span className="post-result-check" aria-hidden="true">✓</span><span>Пост опубликован</span></div>
+          <div className="post-result-content">
+            <ResultDelta key={post.id} delta={r.delta} />
+            {r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
+              world={player.world} avatarStyle={guest?.world.avatarStyle} onPulse={guest || realPost ? resultPulse : undefined} />}
+            <dl className="post-result-stats small muted">
+              <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
+              <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>
+            </dl>
+            <section className="post-result-reaction" aria-label="Ответ персонажа">
+              <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={speaker ?? 'Персонаж'} size={40} avatarStyle={guest?.world.avatarStyle} mode="default" /><div><strong>{speaker ?? 'Персонаж'}</strong><div className="small muted">{guest?.world.title ?? worldOf(player.world).title} · AI-персонаж</div></div></div>
+              {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
+            </section>
+            {!guest && <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>}
+            <details className="result-details"><summary>Разбор поста</summary>
+              {explanation && <p className="small muted">{explanation}</p>}
+              <div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
+              <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
+            </details>
+            {!guest && <button onClick={() => nav.push('02-7_share', { post })} className="result-share">Поделиться</button>}
+          </div>
+          <div className="post-result-actions">
+            {guest?.hint}
+            <span data-game-onboarding-post={comment ? post.id : undefined}><Button onClick={() => { if (!guest) tap('post_open_conversation', { ok: !!comment }); nav.replace('02-6_thread', { post, commentPromise, focusReply: true }) }}>
+              {commentText ? (speaker ? `Ответить · ${speaker}` : 'Ответить') : 'Комментировать'}
+            </Button></span>
+            {!guest && !gameOnboardingActive(onboarding) && <Button secondary onClick={() => { tap('result_open_next_post'); nav.replace('02-1_compose') }}>Новый пост</Button>}
+          </div>
         </div>
       </div>
     </div>
