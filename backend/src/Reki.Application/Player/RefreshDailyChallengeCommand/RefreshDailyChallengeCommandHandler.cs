@@ -7,7 +7,7 @@ namespace Reki.Application.Player.RefreshDailyChallengeCommand;
 
 internal sealed class RefreshDailyChallengeCommandHandler(
     IPlayerRepository players,
-    IWorldRepository worlds,
+    IWorldPlayerCache worlds,
     IOptionsMonitor<GameBalance> balance,
     TimeProvider timeProvider) : ICommandHandler<RefreshDailyChallenge>
 {
@@ -24,7 +24,7 @@ internal sealed class RefreshDailyChallengeCommandHandler(
         var previousVersion = player.Version;
         player.RefreshDailyChallenge(
             day,
-            playerWorlds,
+            [.. playerWorlds.Values],
             balance.CurrentValue.DailyChallengeTargets[day.DayOfWeek]);
         await players.SaveDailyChallengeAsync(player, previousVersion, cancellationToken);
         return Unit.Value;
