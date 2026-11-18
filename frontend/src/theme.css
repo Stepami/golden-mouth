@@ -534,3 +534,12 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .registration-consent { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 14px 0; text-align: left; }
 .registration-consent input { width: 20px; height: 20px; flex: 0 0 20px; accent-color: var(--accent2); }
 .registration-login { margin-top: 12px; font-size: 13px; }
+
+.mention-menu { margin: 6px 0 10px; max-height: 235px; overflow-y: auto; border: 1px solid #5e4a75; border-radius: 14px; padding: 5px; background: #211d2c; }
+.mention-menu-label { padding: 6px 9px 4px; color: var(--muted); font-size: 12px; }
+.mention-choice { display: flex; align-items: center; gap: 9px; min-height: 46px; width: 100%; padding: 5px 9px; border: 0; border-radius: 9px; background: transparent; color: var(--text); text-align: left; }
+.mention-choice[aria-selected="true"], .mention-choice:hover { background: #36294a; }
+.mention-choice:focus-visible { outline: 2px solid var(--lilac); outline-offset: -2px; }
+.mention-choice b, .mention-choice small { display: block; overflow-wrap: anywhere; }
+.mention-choice b { font-size: 13px; }
+.mention-choice small { color: var(--lilac); font-size: 12px; }
