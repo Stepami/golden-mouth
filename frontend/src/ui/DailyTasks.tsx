@@ -4,7 +4,7 @@ import { useNav } from '../app/nav'
 import { tap } from '../app/analytics'
 import { usePlayer, useStore } from '../app/store'
 import { contentOf } from '../api/worldContent'
-import { Button, Sheet, fmt, plural } from '.'
+import { Sheet, fmt, plural } from '.'
 
 const taskCopy = {
   posts: { title: (n: number) => `Напиши ${fmt(n)} ${plural(n, 'пост', 'поста', 'постов')}`, compose: true },
@@ -64,18 +64,26 @@ export function DailyTasks({ editor = false, repost = false }: { editor?: boolea
       <button className="daily-more" onClick={show}>{featured ? '▸ Остальные ежедневные' : 'Открыть задания дня'}</button>
     </section> : <button className="daily-entry" onClick={show}><span>Задания дня</span><span>{status} ›</span></button>}
     {opened === context && createPortal(<Sheet onClose={() => setOpened('')}>
-      <h2>Задания дня</h2>
-      <p className="small muted">{day.split('-').reverse().join('.')} · новый день в 00:00 UTC</p>
-      <p className="small muted daily-note">Учёт выполненных действий пока недоступен.</p>
-      {tasks.map(task => <div className="daily-quest-row" key={task.type}>
-        <div className="daily-task-title"><b>{task.title}</b><span>{task.progress}/{task.target}</span></div>
-        <p className="small muted">{task.done ? 'Выполнено в одном из миров' : 'Прогресс в этом мире'}</p>
-        {!(editor && (task.compose || (repost && task.type === 'reposts'))) && !task.done && <Button secondary onClick={() => action(task)}>{task.compose ? 'Написать пост' : 'Открыть ленту'}</Button>}
-      </div>)}
-      {!tasks.length && <p className="daily-note muted">Задания для этого мира пока недоступны. Можно продолжить играть.</p>}
-      {failed && <p className="small muted daily-note" role="status">Не получилось обновить задания. Попробуй ещё раз.</p>}
-      <Button secondary disabled={busy} onClick={reload}>{busy ? 'Обновляем…' : 'Обновить задания'}</Button>
-      <Button secondary onClick={() => setOpened('')}>К игре</Button>
+      <div className="daily-panel" role="dialog" aria-label="Задания дня" onKeyDown={e => { if (e.key === 'Escape') setOpened('') }}>
+        <div className="daily-panel-head">
+          <div><h2>Задания дня</h2><p>Обновятся в 03:00 по Москве</p></div>
+          <button className="daily-icon-button" aria-label="Обновить задания" title="Обновить задания" disabled={busy} onClick={reload}>{busy ? '…' : '↻'}</button>
+          <button className="daily-icon-button" aria-label="Закрыть задания" onClick={() => setOpened('')} autoFocus>×</button>
+        </div>
+        <div className="daily-panel-summary"><span>{done} из {tasks.length} выполнено</span><span>Сегодня</span></div>
+        <div className="daily-quest-list">
+          {tasks.map(task => <div className={`daily-quest-row${task.done ? ' is-done' : ''}`} key={task.type}>
+            <div className="daily-quest-heading"><b>{task.title}</b><span className="daily-quest-count">{task.done ? '✓' : `${task.progress}/${task.target}`}</span></div>
+            {task.done ? <p className="small muted">Выполнено в одном из миров</p> : <div className="daily-quest-bottom">
+              <progress aria-label={`Прогресс: ${task.title}`} value={task.progress} max={task.target} />
+              {!(editor && (task.compose || (repost && task.type === 'reposts'))) && <button className="daily-quest-action" onClick={() => action(task)}>{task.compose ? 'Написать пост' : 'Открыть ленту'}</button>}
+            </div>}
+          </div>)}
+        </div>
+        {!tasks.length && <p className="daily-note muted">Задания для этого мира пока недоступны. Можно продолжить играть.</p>}
+        {failed && <p className="small daily-update-error" role="status">Не получилось обновить. Нажми ↻, чтобы повторить.</p>}
+        <p className="daily-panel-note">Прогресс пока не обновляется</p>
+      </div>
     </Sheet>, document.body)}
   </>
 }
