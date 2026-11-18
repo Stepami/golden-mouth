@@ -17,10 +17,10 @@ import { GameOnboarding, isGameOnboardingPreview } from './app/GameOnboarding'
 import { beginGameOnboarding, gameOnboardingActive, useGameOnboarding, restartGameOnboardingPreview } from './app/GameOnboardingState'
 import type { WorldId } from './api/types'
 
-import { Landing } from './app/landing/Landing'
+import { Landing, landingWorldForVariant } from './app/landing/Landing'
 import { GuestOnboarding, readGuestWorld, clearGuestDemo } from './app/landing/GuestOnboarding'
 import { acceptedRegistrationConsent, readGuestHandoff, saveGuestHandoff, setRegistrationConsent } from './app/landing/guestHandoff'
-import { beginLandingAuth, completeLandingAuth, landingAuthPending, landingEntryPending, isLandingPreview, pendingLandingWorld } from './app/landing/experiment'
+import { beginLandingAuth, completeLandingAuth, landingAuthPending, landingEntryPending, isLandingPreview, pendingLandingWorld, requestedVariant } from './app/landing/experiment'
 
 type Entry = { id: ScreenId; params: Record<string, unknown> }
 
@@ -112,7 +112,11 @@ export function App() {
   const explicitStart = hasExplicitStart()
   const [landingAccepted, setLandingAccepted] = useState(landingEntryPending)
   const [landingPreview, setLandingPreview] = useState(isLandingPreview)
-  const [guestWorld, setGuestWorld] = useState(readGuestWorld)
+  const [guestWorld, setGuestWorld] = useState(() => {
+    const savedWorld = readGuestWorld()
+    const linkedWorld = landingWorldForVariant(requestedVariant())
+    return !linkedWorld || linkedWorld === savedWorld ? savedWorld : undefined
+  })
   const [signup, setSignup] = useState(() => !!readGuestHandoff() && !!pendingLandingWorld() && landingEntryPending())
   const [consentChecked, setConsentChecked] = useState(false)
   const [consentAccepted, setConsentAccepted] = useState(acceptedRegistrationConsent)

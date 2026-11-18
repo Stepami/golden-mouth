@@ -7,7 +7,6 @@ interface GuestSession {
   world: WorldDefinition
   player: GuestPlayer
   goal?: { goal: string; firstStep: string; context?: string }
-  chooseHero: (id: string) => void
   post: Post
   result: PostResult
   published: boolean

@@ -5,10 +5,9 @@ import { worldDefinitionOf, worlds as templates } from '../../api/worldContent'
 import type { CommentT, Post, PostResult, WorldDefinition } from '../../api/types'
 import { Home } from '../../screens/onboarding'
 import { Compose, Live, Result, Thread } from '../../screens/turn'
-import { QuickChannelForm, withPersona } from '../../screens/worldQuick'
 import { AvatarWorld } from '../../ui/avatar'
 import { NavContext, type Nav } from '../nav'
-import { blankWorld, type WorldDraft } from '../worldDraft'
+import { blankWorld } from '../worldDraft'
 import { presetGoalFor, presetGoals } from '../presetGoals'
 import { GuestSessionContext, type GuestPlayer } from './guestSession'
 import { worldArt } from '../worldArt'
@@ -96,7 +95,6 @@ const worlds: Record<string, GuestWorld> = {
 
 const storageKey = 'reki:guest-demo:v1'
 const screens = {
-  '01-4_channel': QuickChannelForm,
   '03-5_stage': Home,
   '02-1_compose': Compose,
   '02-2_live': Live,
@@ -105,11 +103,10 @@ const screens = {
 }
 type Screen = keyof typeof screens
 const hints: Record<Screen, [number, string]> = {
-  '01-4_channel': [1, 'Выбери, от чьего лица пойдёт история.'],
-  '03-5_stage': [2, 'Открой редактор и напиши первый пост в своём канале.'],
-  '02-1_compose': [2, 'Дополни готовую идею или напиши свою.'],
+  '03-5_stage': [1, 'Открой редактор и напиши первый пост в своём канале.'],
+  '02-1_compose': [1, 'Дополни готовую идею или напиши свою.'],
   '02-2_live': [2, 'Герои вот-вот увидят твой пост.'],
-  '02-3_result': [3, 'Открой комментарии и ответь герою.'],
+  '02-3_result': [2, 'Открой комментарии и ответь герою.'],
   '02-6_thread': [3, 'Напиши герою ответ, чтобы завершить обучение.'],
 }
 
@@ -138,12 +135,11 @@ function readGuestDemo(): GuestDraft | undefined {
     const draft = JSON.parse(localStorage.getItem(storageKey) ?? 'null')
     if (!draft || !Object.hasOwn(worlds, draft.worldId) || !worlds[draft.worldId].heroes.some(hero => hero.id === draft.hero)) return
     if (draft.text !== undefined && typeof draft.text !== 'string' || draft.reply !== undefined && typeof draft.reply !== 'string') return
-    if (draft.screen === '01-3b_world_overview') return { ...draft, screen: '01-4_channel' }
-    if (draft.screen === '01-4b_world_setup') return { ...draft, screen: '03-5_stage' }
+    if (['01-3b_world_overview', '01-4_channel', '01-4b_world_setup'].includes(draft.screen)) return { ...draft, screen: '03-5_stage' }
     if (Object.hasOwn(screens, draft.screen)) return draft
     // Preserve previews started before the guest journey adopted the game screens.
     switch (draft.step) {
-      case 'hero': return { ...draft, screen: '01-4_channel', text: undefined }
+      case 'hero': return { ...draft, screen: '03-5_stage', text: undefined }
       case 'post': return { ...draft, screen: '02-1_compose' }
       case 'publish': return { ...draft, screen: '02-2_live' }
       case 'reply': return { ...draft, screen: '02-6_thread', published: true }
@@ -270,7 +266,7 @@ export function GuestOnboarding({ worldId, onSave }: {
   const [draft, setDraft] = useState<GuestDraft>(() => {
     const saved = readGuestDemo()
     if (saved?.worldId === worldId) return saved
-    return { worldId, screen: '01-4_channel', hero: fixture.heroes[0].id }
+    return { worldId, screen: '03-5_stage', hero: fixture.heroes[0].id }
   })
   const { screen, hero, published, replySubmitted, replyDone, collected } = draft
   const [storageAvailable, setStorageAvailable] = useState(true)
@@ -298,9 +294,6 @@ export function GuestOnboarding({ worldId, onSave }: {
     postId: post.id, delta: 4, views: post.views, headline: 'Персонаж заметил твой первый пост.', viral: false, flop: false,
     whys: [{ icon: '⭐', label: 'Герой заметил пост', value: '+4' }], ribbons: [],
   }
-  const initialDraft: WorldDraft = { definition: world, address: 'nick', group: '18+', heroOrder: world.stars.map(star => star.id) }
-  const heroDraft = withPersona(initialDraft, selected)
-
   useLayoutEffect(() => {
     try { localStorage.setItem(storageKey, JSON.stringify(draft)) }
     catch { setStorageAvailable(false) }
@@ -321,15 +314,14 @@ export function GuestOnboarding({ worldId, onSave }: {
     trackLandingAuth('landing_guest_screen', { guest_screen: guestScreen, guest_world: worldId, guest_hero: hero })
   }, [guestScreen, worldId, hero])
 
-  const guestAction = (action: string, selectedHero = hero) => trackLandingAuth('landing_guest_action', {
-    guest_action: action, guest_world: worldId, guest_hero: selectedHero,
+  const guestAction = (action: string) => trackLandingAuth('landing_guest_action', {
+    guest_action: action, guest_world: worldId, guest_hero: hero,
   })
 
   function go(id: string, params?: Record<string, unknown>) {
     if (!Object.hasOwn(screens, id)) return
     if (id !== screen) {
       const action = ({
-        '01-4_channel:03-5_stage': 'start_story',
         '03-5_stage:02-1_compose': 'open_editor',
         '02-1_compose:02-2_live': 'publish_demo',
         '02-3_result:02-6_thread': 'open_conversation',
@@ -365,22 +357,17 @@ export function GuestOnboarding({ worldId, onSave }: {
     return () => { observer.disconnect(); root.style.removeProperty('--guest-footer-space') }
   }, [screen, replySubmitted, replyDone])
 
-  let content
-  if (screen === '01-4_channel') content = <QuickChannelForm draft={heroDraft} />
-  else {
-    const View = screens[screen]
-    content = <View />
-  }
+  const View = screens[screen]
   return <NavContext.Provider value={nav}><AvatarWorld.Provider value={worldId}><GuestSessionContext.Provider value={{
     world, player, goal, post, result, published: !!published, speaker: other.name,
-    chooseHero: id => { if (id !== hero) guestAction('choose_hero', id); setDraft(current => ({ ...current, hero: id })) }, postIdea: fixture.firstPostIdea, text: draft.text,
+    postIdea: fixture.firstPostIdea, text: draft.text,
     editPost: value => setDraft(current => ({ ...current, text: value })), reply, replySubmitted: !!replySubmitted, replyDone: !!replyDone,
     editReply: value => setDraft(current => ({ ...current, reply: value })),
     sendReply: () => { guestAction('send_demo_reply'); setDraft(current => ({ ...current, reply, replySubmitted: true })) },
     crystals: collected ? 2 : 0, hint: !replyDone ? <GuestHint screen={screen} /> : undefined,
   }}>
     <main ref={game} className={replyDone ? 'app guest-finish' : 'app guest-game'}>
-      <div key={screen}>{content}</div>
+      <div key={screen}><View /></div>
       {!replyDone && (screen === '02-2_live' || (screen === '02-6_thread' && replySubmitted)) && <GuestHint screen={screen} inline={false} />}
       {replyDone && <GuestFinish worldId={worldId} selected={selected} avatarStyle={world.avatarStyle} collected={!!collected} onClaim={() => guestAction('claim_demo_reward')}
         onCollect={() => setDraft(current => ({ ...current, collected: true }))} onSave={() => onSave({ text, reply, hero })} />}

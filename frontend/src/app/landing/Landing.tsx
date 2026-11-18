@@ -14,6 +14,8 @@ const worlds = [
   { id: 'houses', templateId: '8c02a7fb-3b55-4eb0-b957-1b4869ed9834', title: 'Игра домов' },
 ] as const
 
+export const landingWorldForVariant = (variant: ReturnType<typeof requestedVariant>) => worlds.find(world => world.id === variant)?.templateId
+
 export function Landing({ onContinue, preview = false }: { onContinue: (worldId?: string) => void; preview?: boolean }) {
   const [variant] = useState(() => preview ? requestedVariant() ?? 'worlds' : assignLanding())
   const hero = worlds.find(world => world.id === variant)
