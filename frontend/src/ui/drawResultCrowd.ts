@@ -29,6 +29,29 @@ function crowdRows(amount: number): number[] {
   })
 }
 
+function drawHead(ctx: CanvasRenderingContext2D, img: HTMLImageElement) {
+  const sample = document.createElement('canvas')
+  const width = sample.width = img.naturalWidth
+  const height = sample.height = img.naturalHeight
+  const pixels = sample.getContext('2d', { willReadFrequently: true })!
+  pixels.drawImage(img, 0, 0)
+  const { data } = pixels.getImageData(0, 0, width, height)
+  let left = width, right = -1, top = height, bottom = -1
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (data[(y * width + x) * 4 + 3] <= 8) continue
+      left = Math.min(left, x); right = Math.max(right, x)
+      top = Math.min(top, y); bottom = Math.max(bottom, y)
+    }
+  }
+  if (right < 0) return false
+  const headWidth = right - left + 1, headHeight = bottom - top + 1
+  const scale = Math.min(26 / headWidth, 26 / headHeight)
+  const w = headWidth * scale, h = headHeight * scale
+  ctx.drawImage(sample, left, top, headWidth, headHeight, 20 - w / 2, 30 - h, w, h)
+  return true
+}
+
 async function makeSprite(index: number, world: WorldId, avatarStyle?: string) {
   const sprite = document.createElement('canvas')
   sprite.width = 80
@@ -47,18 +70,17 @@ async function makeSprite(index: number, world: WorldId, avatarStyle?: string) {
   ctx.moveTo(29, 39)
   ctx.lineTo(31, 53)
   ctx.stroke()
-  ctx.fillStyle = pastels[color]
-  ctx.beginPath()
-  ctx.ellipse(20, 17, 11.8, 13.5, 0, 0, 2 * Math.PI)
-  ctx.fill()
   try {
     const img = new Image()
     const seed = avatarStyle === 'lorelei' ? `vecherelo-gallery-neighbor-${index + 1}` : `result-crowd-${index}`
-    img.src = await avatarUri(seed, world, undefined, avatarStyle)
+    img.src = await avatarUri(seed, world, undefined, avatarStyle, 'head')
     await img.decode()
-    ctx.clip()
-    ctx.drawImage(img, 4, 1, 32, 32)
-  } catch { /* The coat and silhouette still render if the avatar style cannot load. */ }
+    if (drawHead(ctx, img)) return sprite
+  } catch { /* Keep a silhouette if the avatar cannot load. */ }
+  ctx.fillStyle = pastels[color]
+  ctx.beginPath()
+  ctx.ellipse(20, 17, 10, 13, 0, 0, 2 * Math.PI)
+  ctx.fill()
   return sprite
 }
 
@@ -158,7 +180,7 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
     const boardWidth = Math.ceil(ctx.measureText(sign.text).width) + 16
     const side = holderX < width / 2 ? 1 : -1
     const shoulderX = holderX + side * size * .26
-    const shoulderY = feetY - size * .35
+    const shoulderY = feetY - size * .59
     const gripX = shoulderX + side * (8 + raise * 7)
     const gripY = shoulderY - 7 - raise * 5
     const y = Math.max(15, gripY - 22 - raise * 19)
@@ -209,7 +231,6 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
     ctx.globalAlpha = 1
     ctx.fillStyle = light
     ctx.fillRect(0, 0, width, height)
-    const placards: Placard[] = []
     for (const figure of people) {
       const { x, y, side, arrival, departure, duration, exchange, sign } = figure
       const edge = side < 0 ? -30 : width + 30
@@ -221,7 +242,7 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
         drawFigure(figure, leavingX, leavingY, 1, 1 - clamp((progress - .73) / .27))
         if (sign && progress < .83) {
           const raise = ease(clamp((time - sign.start) / 350))
-          if (raise) placards.push({ figure, x: leavingX, y: leavingY, raise, opacity: raise * (1 - clamp((progress - .47) / .36)) })
+          if (raise) drawPlacard({ figure, x: leavingX, y: leavingY, raise, opacity: raise * (1 - clamp((progress - .47) / .36)) })
         }
         continue
       }
@@ -252,10 +273,9 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
         const age = time - sign.start
         const raise = ease(clamp(age / 230))
         const opacity = still ? Number(sign.index === 0) : raise * (1 - clamp((age - 530) / 260))
-        if (opacity) placards.push({ figure, x: arrivedX, y: arrivedY, raise, opacity })
+        if (opacity) drawPlacard({ figure, x: arrivedX, y: arrivedY, raise, opacity })
       }
     }
-    for (const placard of placards) drawPlacard(placard)
     ctx.globalAlpha = 1
   }
 
