@@ -1,4 +1,6 @@
-import { pendingLandingWorld } from '../app/landing/experiment'
+import { useGuestSession } from '../app/landing/guestSession'
+import { acceptedRegistrationConsent, readGuestHandoff } from '../app/landing/guestHandoff'
+import { landingContext, pendingLandingWorld } from '../app/landing/experiment'
 import { Resources } from '../ui/Resources'
 import { DailyTasks } from '../ui/DailyTasks'
 import { Streak } from '../ui/Streak'
@@ -11,11 +13,14 @@ import { withWorldTemplates } from '../app/withWorldTemplates'
 import { ageBand } from '../app/ageBand'
 import { getWorldDraft, setWorldDraft } from '../app/worldDraft'
 import { worldOf, contentOf } from '../api/worldContent'
+import type { Player } from '../api/types'
 import { api } from '../api/client'
+import { needsRegistration } from '../api/auth'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
-import { Avatar, BottomCTA, Card, fmt } from '../ui'
+import { Avatar, BottomCTA, Button, Card, EnergyBadge, fmt } from '../ui'
 import { track } from '../app/log'
+import { tap, trackLandingAuth } from '../app/analytics'
 import { register } from '.'
 import { worldArt } from '../app/worldPrototype'
 import { WorldOverview, WorldPrototypePreview } from './worldQuick'
@@ -54,7 +59,7 @@ function Invite() {
     </div>
     <p className="small muted welcome-disclaimer">Персонажи и фанаты виртуальные.<br />Посты остаются внутри игры.</p>
     <p className="welcome-world-choice">Выбери мир или создай свой</p>
-  </div><BottomCTA main="Начать играть" onMain={() => nav.push('01-2_age')} /></div>
+  </div><BottomCTA main="Начать играть" onMain={() => nav.push('01-2_age', { fromLanding: !!landingContext() })} /></div>
 }
 
 // 01-2: new accounts are 18+; returning profiles keep their existing age band.
@@ -64,22 +69,37 @@ function Age() {
   const years = Array.from({ length: 91 }, (_, i) => currentYear - 10 - i)
   const initialYear = typeof nav.params.year === 'number' ? nav.params.year : currentYear - 18
   const [year, setYear] = useState(initialYear)
-  const [agree, setAgree] = useState(nav.params.agree === true)
+  const preaccepted = acceptedRegistrationConsent()
+  const [agree, setAgree] = useState(nav.params.agree === true || preaccepted)
   const wheel = useRef<HTMLDivElement>(null)
+  const viewed = useRef(false)
+  const fromLanding = nav.params.fromLanding === true
+  useEffect(() => {
+    if (fromLanding && !viewed.current) {
+      viewed.current = true
+      trackLandingAuth('landing_age_view')
+    }
+  }, [fromLanding])
   useEffect(() => { if (wheel.current) wheel.current.scrollTop = years.indexOf(initialYear) * 38 }, [])
   const onWheel = () => { const el = wheel.current; if (el) setYear(years[Math.min(years.length - 1, Math.max(0, Math.round(el.scrollTop / 38)))]) }
   const age = currentYear - year
   const proceed = () => {
     track('onboarding_step', { step: 'age', ok: age >= 18 })
     if (age < 18) {
-      nav.replace('01-2b_under14', { year, agree, returnToCreation: nav.params.returnToCreation })
+      nav.replace('01-2b_under14', { year, agree, fromLanding, returnToCreation: nav.params.returnToCreation })
       return
     }
+    if (fromLanding) trackLandingAuth('landing_age_continue')
     const draft = getWorldDraft()
     if (draft && !draft.editingId) setWorldDraft({ ...draft, birthYear: year, group: '18+', ageBand: ageBand(age) })
     if (nav.params.returnToCreation) { nav.back(); return }
     const world = pendingLandingWorld()
-    nav.replace('01-2_age', { year, agree })
+    const handoff = readGuestHandoff()
+    if (preaccepted && needsRegistration() && world && handoff?.worldId === world && handoff.dialogue) {
+      nav.replace('guest_import', { birthYear: year })
+      return
+    }
+    nav.replace('01-2_age', { year, agree, fromLanding })
     nav.push(world ? '01-3b_world_overview' : '01-3_world', {
       ...(world ? { world, fromLanding: true } : {}), group: '18+', ageBand: ageBand(age), birthYear: year,
     })
@@ -94,13 +114,13 @@ function Age() {
         <div ref={wheel} onScroll={onWheel} style={{ height: 230, overflowY: 'auto', scrollSnapType: 'y mandatory', background: '#14141B', borderRadius: 18, textAlign: 'center', padding: '96px 0' }}>
           {years.map(y => <div key={y} onClick={() => setYear(y)} style={{ scrollSnapAlign: 'center', height: 38, lineHeight: '38px', fontSize: y === year ? 22 : 18, fontWeight: y === year ? 800 : 400, color: y === year ? 'var(--text)' : 'var(--muted)', background: y === year ? '#22222D' : 'none', borderRadius: 10, margin: '0 12px' }}>{y}</div>)}
         </div>
-        <Card style={{ marginTop: 18 }}>
+        {!preaccepted && <Card style={{ marginTop: 18 }}>
           <b>Сохраним твою игру?</b>
           <label className="row" style={{ gap: 8, marginTop: 10 }}>
-            <button onClick={() => setAgree(!agree)} aria-pressed={agree} style={{ width: 22, height: 22, borderRadius: 6, border: agree ? 'none' : '2px solid #55536A', background: agree ? 'var(--grad)' : 'none', color: '#fff', fontSize: 14 }}>{agree ? '✓' : ''}</button>
+            <button onClick={() => { if (fromLanding) trackLandingAuth('landing_age_consent', { auth_outcome: agree ? 'unchecked' : 'checked' }); setAgree(!agree) }} aria-pressed={agree} style={{ width: 22, height: 22, borderRadius: 6, border: agree ? 'none' : '2px solid #55536A', background: agree ? 'var(--grad)' : 'none', color: '#fff', fontSize: 14 }}>{agree ? '✓' : ''}</button>
             <span className="small">Согласие на обработку данных</span>
           </label>
-        </Card>
+        </Card>}
         {!agree && <div className="small muted" style={{ textAlign: 'center', marginTop: 10 }}>Отметь согласие, чтобы продолжить</div>}
       </div>
       <BottomCTA main="Дальше" disabled={!agree} onMain={proceed} />
@@ -116,28 +136,34 @@ function Under18() {
       <div style={{ fontSize: 64, margin: '40px 0 14px' }}>🌱</div>
       <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 10 }}>Игра доступна с 18 лет</div>
       <div className="muted">Играть в Реки можно с 18 лет. Если год рождения выбран по ошибке, его можно исправить.</div>
-      <BottomCTA main="Исправить возраст" onMain={() => nav.replace('01-2_age', { year: nav.params.year, agree: nav.params.agree, returnToCreation: nav.params.returnToCreation })} />
+      <BottomCTA main="Исправить возраст" onMain={() => nav.replace('01-2_age', { year: nav.params.year, agree: nav.params.agree, fromLanding: nav.params.fromLanding, returnToCreation: nav.params.returnToCreation })} />
     </div>
   )
 }
 
 // 01-6: первый экран: цель, квест, что такое Реки / навыки / коллекция
 export function ChannelHead() {
-  const p = useStore().player!; const nav = useNav()
-  const w = worldOf(p.world)
-  return (
-    <>
+  const guest = useGuestSession(); const profile = useStore()?.player; const nav = useNav()
+  const p = guest?.player ?? profile!
+  const w = guest?.world ?? worldOf(p.world)
+  const identity = <><Avatar seed={p.handle} avatarStyle={guest?.world.avatarStyle} size={36} />
+    <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div></>
+  return <>
     <div className="top channel-header">
-      <button className="channel-author" onClick={() => nav.tab(4)}><Avatar seed={p.handle} size={36} />
-      <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div></button>
-      <Resources player={p} />
+      {guest ? <div className="channel-author">{identity}</div> : <button className="channel-author" onClick={() => nav.tab(4)}>{identity}</button>}
+      {guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} />}
     </div>
-    <DailyTasks />
-    </>
-  )
+    {!guest && <DailyTasks />}
+  </>
 }
+
 export function Home({ firstPostConfirmed = false, channelEmpty = false }: { firstPostConfirmed?: boolean; channelEmpty?: boolean } = {}) {
-  const nav = useNav(); const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
+  const guest = useGuestSession()
+  return guest ? <HomeView player={guest.player} title={guest.world.title} context={guest.world.firstContext} goal={guest.goal} firstPostConfirmed guest /> : <LiveHome firstPostConfirmed={firstPostConfirmed} channelEmpty={channelEmpty} />
+}
+
+function LiveHome({ firstPostConfirmed, channelEmpty }: { firstPostConfirmed: boolean; channelEmpty: boolean }) {
+  const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
   const worldId = p.worldInstanceId ?? p.world
   const [invitation, setInvitation] = useState<{ playerId: string; worldId: string; bonus: number }>()
   useEffect(() => {
@@ -151,12 +177,23 @@ export function Home({ firstPostConfirmed = false, channelEmpty = false }: { fir
     return () => controller.abort()
   }, [p.id, worldId, channelEmpty])
   const bonus = invitation?.playerId === p.id && invitation.worldId === worldId ? invitation.bonus : 0
+  return <HomeView player={p} title={worldOf(p.world).title} context={profile.firstContext} goal={goal} firstPostConfirmed={firstPostConfirmed} bonus={bonus} />
+}
+
+function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus = 0, guest = false }: {
+  player: Pick<Player, 'world' | 'streak'>; title: string; context: string; goal: ReturnType<typeof usePresetGoal>; firstPostConfirmed: boolean; bonus?: number; guest?: boolean
+}) {
+  const nav = useNav()
+  const session = useGuestSession()
+  if (session?.published) return <div className="screen channel-screen"><ChannelHead /><div className="pad">
+    <Card><p>{session.post.text}</p></Card>
+  </div><BottomCTA main="Посмотреть реакции" onMain={() => nav.push('02-6_thread', { focusReply: true })} /></div>
   return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
     <Streak streak={p.streak} />
-    <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${worldOf(p.world).title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{profile.firstContext}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
+    <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{context}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
       {bonus > 0 && <p>🎁 Первый пост даст кристаллы: +{bonus} 💎</p>}
     </div><p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>
-  </div><div className="bottom-cta" style={{ bottom: 78 }}><button className="btn" onClick={() => nav.push('02-1_compose', { firstPostConfirmed })}>Написать первый пост</button></div></div>
+  </div><div className="bottom-cta" style={guest ? undefined : { bottom: 78 }}>{session?.hint}<button className="btn" onClick={() => { if (!guest) tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }}>Написать первый пост</button></div></div>
 }
 
 register({

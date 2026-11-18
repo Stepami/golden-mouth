@@ -1,3 +1,4 @@
+import { event, tap } from './analytics'
 import { createPortal } from 'react-dom'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { contentOf } from '../api/worldContent'
@@ -40,11 +41,13 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
       if (!preview) {
         if (!playerId || !state.postId) { setClaimMessage('Не найден учебный пост. Вернись в канал.'); return }
         if (!state.bonusClaim) {
+          tap('onboarding_claim')
           if (!setOnboardingBonusClaim('pending', playerId)) {
             setOnboardingBonusClaim(undefined, playerId)
             setClaimMessage('Не удалось сохранить состояние на устройстве. Запрос награды не отправлен.'); return
           }
           const granted = await api.claimOnboardingBonus(state.postId, AbortSignal.any([active.controller.signal, AbortSignal.timeout(15000)]))
+          if (typeof granted === 'boolean') event('onboarding_step', { step: 'reward', ok: granted })
           if (granted === false) {
             setOnboardingBonusClaim(undefined, playerId)
             if (!active.cancelled) setClaimMessage('Награда пока недоступна. Обучение сохранено.')
@@ -87,7 +90,10 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
       await Promise.all(active.animations.map(animation => animation.finished))
     } catch {
       if (!preview && !canAcknowledge) {
-        if (!confirmed && playerId) setOnboardingBonusClaim('uncertain', playerId)
+        if (!confirmed && playerId) {
+          event('onboarding_step', { step: 'reward', ok: false, kind: 'unconfirmed' })
+          setOnboardingBonusClaim('uncertain', playerId)
+        }
         if (!active.cancelled) setClaimMessage(confirmed ? 'Награда подтверждена. Обнови баланс, чтобы завершить.' : 'Не удалось подтвердить начисление. Проверь баланс позже; повторный запрос награды не отправляем.')
       }
     }
@@ -133,7 +139,7 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
     <h2>{waitingForReaction ? 'Герой готовит ответ' : title}</h2>
     <p>{lockedSection ? 'Этот раздел откроется после знакомства с игрой.' : waitingForReaction ? 'Дождись реакции героя. При ошибке можно повторить загрузку разговора.' : text}</p>
     {done && <p className="game-onboarding-reward-status">{isGameOnboardingPreview() ? 'DEV: предпросмотр без начисления' : claimMessage || (onboarding?.bonusClaim === 'confirmed' ? 'Награда подтверждена сервером. Обнови баланс, чтобы завершить.' : onboarding?.bonusClaim ? 'Результат начисления пока неизвестен. Можно проверить баланс; повторный запрос награды не отправляем.' : 'Забери награду за первый пост и разговор с героем.')}</p>}
-    {done ? <button className="game-onboarding-collect" data-onboarding-collect disabled={collecting} aria-busy={collecting} onClick={event => void collectReward(event.currentTarget)}>{!isGameOnboardingPreview() && onboarding?.bonusClaim ? onboarding.bonusClaim === 'confirmed' ? 'Обновить баланс' : 'Проверить баланс' : 'Забрать 2 💎'}</button> : onResume && <button onClick={onResume}>Вернуться к обучению</button>}
+    {done ? <button className="game-onboarding-collect" data-onboarding-collect disabled={collecting} aria-busy={collecting} onClick={event => void collectReward(event.currentTarget)}>{!isGameOnboardingPreview() && onboarding?.bonusClaim ? onboarding.bonusClaim === 'confirmed' ? 'Обновить баланс' : 'Проверить баланс' : 'Забрать 2 💎'}</button> : onResume && <button onClick={() => { if (!isGameOnboardingPreview()) tap('onboarding_resume'); onResume() }}>Вернуться к обучению</button>}
   </aside>
   return host ? createPortal(dock, host) : dock
 }

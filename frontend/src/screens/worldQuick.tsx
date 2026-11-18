@@ -1,3 +1,5 @@
+import { readGuestHandoff } from '../app/landing/guestHandoff'
+import { tap } from '../app/analytics'
 import { recordEntryStep } from '../app/landing/openobserve'
 import { clearLandingWorld } from '../app/landing/experiment'
 import { useState, type ReactNode } from 'react'
@@ -19,7 +21,7 @@ import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import type { Address, WorldDefinition, WorldId } from '../api/types'
 
 
-function withPersona(draft: WorldDraft, star?: WorldDefinition['stars'][number]): WorldDraft {
+export function withPersona(draft: WorldDraft, star?: WorldDefinition['stars'][number]): WorldDraft {
   const d = draft.definition; const previous = draft.persona
   const heroOrder = draft.heroOrder ?? [...d.stars, ...(previous ? [previous.star] : [])].map(value => value.id)
   const restored = { ...d, stars: [...d.stars, ...(previous ? [previous.star] : [])], description: previous?.description ?? d.description, name: previous?.name ?? d.name, avatar: previous?.avatar ?? d.avatar, role: previous?.role ?? d.role }
@@ -65,7 +67,9 @@ export function WorldOverview() {
     next = refreshHogwartsDraft(next, d)
     if (!next.persona && !next.personaChosen && next.definition.stars.length > 1) {
       const customProfile = restored && (next.definition.name !== d.name || next.definition.avatar !== d.avatar)
-      next = customProfile ? { ...next, personaChosen: true } : withPersona(next, next.definition.stars[0])
+      const handoff = readGuestHandoff()
+      const hero = handoff?.worldId === world && !handoff.dialogue && nav.params.fromLanding === true ? next.definition.stars.find(star => star.id === handoff.hero) : undefined
+      next = customProfile ? { ...next, personaChosen: true } : withPersona(next, hero ?? next.definition.stars[0])
     }
     setWorldDraft(next)
     setConfirmSwitch(false)
@@ -94,7 +98,7 @@ export function QuickWorldForm({ draft }: { draft: WorldDraft }) {
 }
 export function QuickChannelForm({ draft }: { draft: WorldDraft }) {
   const nav = useNav(); const d = draft.definition; const selected = draft.persona
-  const choose = (star?: WorldDefinition['stars'][number]) => setWorldDraft(withPersona(draft, star))
+  const choose = (star?: WorldDefinition['stars'][number]) => { tap('world_choose_character', { kind: star ? 'preset' : 'custom' }); setWorldDraft(withPersona(draft, star)) }
   const goal = presetGoalFor(d)
   const heroes = [...d.stars, ...(selected ? [selected.star] : [])].sort((a, b) => (draft.heroOrder?.indexOf(a.id) ?? 0) - (draft.heroOrder?.indexOf(b.id) ?? 0))
   return <div className="screen no-tab"><TopBar title={`Персонаж · ${d.templateId === null ? '2 / 3' : '1 / 2'}`} onBack={nav.back} /><div className="pad"><h1>Кем ты будешь в этой истории?</h1><p className="muted">Свой персонаж или герой мира — история будет идти от твоего лица.</p>
@@ -111,8 +115,8 @@ export function DifficultyPicker({ definition }: { definition: WorldDefinition }
   return <section><h2>Сложность</h2><Segmented value={definition.difficulty} onChange={difficulty => updateWorldDraft({ difficulty })} options={[{ id: 'easy', label: 'Легко' }, { id: 'normal', label: 'Средне' }, { id: 'hard', label: 'Сложно' }]} /><p className="small muted">Чем сложнее, тем быстрее рост подписчиков и выше риск провала. Изменение действует на следующие действия.</p></section>
 }
 
-export function DramaPicker({ definition: d, beforeOptions, withDifficulty = true }: { definition: WorldDefinition; beforeOptions?: ReactNode; withDifficulty?: boolean }) {
-  return <>{withDifficulty && <DifficultyPicker definition={d} />}<h1>Сколько драмы добавим?</h1><p className="muted">Выбери настроение истории. Его можно изменить позже.</p>{beforeOptions}<div className="drama-options">{dramaOptions.map(option => <button className={`drama-option ${d.drama === option.id ? 'selected' : ''}`} aria-pressed={d.drama === option.id} onClick={() => updateWorldDraft({ drama: option.id })} key={option.id}><span className="drama-icon">{option.icon}</span><div><b>{option.title}</b><p>{option.description}</p>{d.drama === option.id && <div className="drama-example">{option.example}</div>}</div><span>{d.drama === option.id ? '✓' : ''}</span></button>)}</div></>
+export function DramaPicker({ definition: d, beforeOptions, withDifficulty = true, fixed = false }: { definition: WorldDefinition; beforeOptions?: ReactNode; withDifficulty?: boolean; fixed?: boolean }) {
+  return <>{withDifficulty && <DifficultyPicker definition={d} />}<h1>Сколько драмы добавим?</h1><p className="muted">{fixed ? 'В пробной истории доступно «Мягко». Остальные варианты откроются после входа.' : 'Выбери настроение истории. Его можно изменить позже.'}</p>{beforeOptions}<div className="drama-options">{dramaOptions.map(option => <button className={`drama-option ${d.drama === option.id ? 'selected' : ''}`} aria-pressed={d.drama === option.id} disabled={fixed && d.drama !== option.id} onClick={fixed ? undefined : () => { tap('world_choose_mood', { kind: option.id }); updateWorldDraft({ drama: option.id }) }} key={option.id}><span className="drama-icon">{option.icon}</span><div><b>{option.title}</b>{(!fixed || d.drama === option.id) && <p>{option.description}</p>}{d.drama === option.id && <div className="drama-example">{option.example}</div>}</div><span>{d.drama === option.id ? '✓' : fixed ? '🔒' : ''}</span></button>)}</div></>
 }
 export function WorldPrototypePreview() {
   const draft = useWorldDraft(); const nav = useNav()

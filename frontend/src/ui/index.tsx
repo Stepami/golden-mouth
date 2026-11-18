@@ -1,3 +1,4 @@
+import { useGuestSession } from '../app/landing/guestSession'
 import { useContext, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { tap } from '../app/analytics'
 import { AvatarWorld, AvatarPeople, type AvatarProfile } from './avatar'
@@ -35,13 +36,14 @@ export function Button({ children, secondary, onClick, disabled, style }: { chil
 /** Кнопки внизу экрана: главная последней, вторичная над ней (как в макетах). */
 export function BottomCTA({ main, onMain, second, onSecond, disabled, secondDisabled }: { main: ReactNode; onMain?: () => void; second?: ReactNode; onSecond?: () => void; disabled?: boolean; secondDisabled?: boolean }) {
   // id кнопки для аналитики: main / second на текущем экране (экран добавит analytics.ts)
-  return <div className="bottom-cta">{second && <Button secondary disabled={secondDisabled} onClick={() => { tap('cta_second'); onSecond?.() }}>{second}</Button>}<Button onClick={() => { tap('cta_main'); onMain?.() }} disabled={disabled}>{main}</Button></div>
+  const hint = useGuestSession()?.hint
+  return <div className="bottom-cta">{hint}{second && <Button secondary disabled={secondDisabled} onClick={() => { tap('cta_second'); onSecond?.() }}>{second}</Button>}<Button onClick={() => { tap('cta_main'); onMain?.() }} disabled={disabled}>{main}</Button></div>
 }
 
 export function TopBar({ title, onBack, right, rightPlain = false, children }: { title?: ReactNode; onBack?: () => void; right?: ReactNode; rightPlain?: boolean; children?: ReactNode }) {
   return (
     <header className="top">
-      {onBack && <button className="back" onClick={onBack} aria-label="Назад">‹</button>}
+      {onBack && <button className="back" onClick={() => { tap('back'); onBack() }} aria-label="Назад">‹</button>}
       {children ?? <b className="top-title">{title}</b>}
       {right !== undefined && <div className={rightPlain ? "top-action" : "pill"}>{right}</div>}
     </header>
@@ -100,10 +102,10 @@ export function ExpandableText({ text }: { text: string }) {
   return <div><div className={expanded ? '' : 'text-preview'}>{text}</div><button className="text-link read-more" aria-expanded={expanded} onClick={event => { event.stopPropagation(); setExpanded(!expanded) }}> {expanded ? 'Свернуть' : 'Читать дальше'}</button></div>
 }
 
-export function Comment({ seed, name, handle, text, star, me, onMore }: { seed: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
+export function Comment({ seed, avatarStyle, name, handle, text, star, me, onMore }: { seed: string; avatarStyle?: string; name: string; handle: string; text: ReactNode; star?: boolean; me?: boolean; onMore?: () => void }) {
   return (
     <div style={{ display: 'flex', gap: 10, marginBottom: 13 }}>
-      <Avatar seed={seed} size={34} mode={me ? 'profile' : 'default'} />
+      <Avatar seed={seed} avatarStyle={avatarStyle} size={34} mode={me ? 'profile' : 'default'} />
       <div style={{ flex: 1 }}>
         <div className="row comment-heading" style={{ gap: 6 }}><b>{name}</b><span className="muted small">{handle}</span>{star && <span className="small" style={{ color: 'var(--accent)' }}>★ звезда</span>}{me && <span className="small muted">ты</span>}
           {onMore && <button onClick={onMore} aria-label="Пожаловаться" style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)' }}>⋯</button>}</div>

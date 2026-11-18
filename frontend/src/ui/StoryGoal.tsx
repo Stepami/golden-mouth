@@ -11,6 +11,10 @@ export function usePresetGoal(world: string) {
 
 export function StoryGoal({ world, firstStep = false }: { world: string; firstStep?: boolean }) {
   const goal = usePresetGoal(world)
+  return <StoryGoalContent goal={goal} firstStep={firstStep} />
+}
+
+export function StoryGoalContent({ goal, firstStep }: { goal: ReturnType<typeof usePresetGoal>; firstStep?: boolean }) {
   if (!goal) return null
   return <details className="card story-goal"><summary>Твой путь <span className="small muted">в этой истории</span></summary>
     <p>{goal.goal}</p>

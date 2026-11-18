@@ -204,11 +204,11 @@ export const api = {
     playerId: (): string | undefined => sessionIdentity?.id,
     hasPlayer: (): boolean => sessionIdentity !== undefined,
     onboardingProfile: () => sessionIdentity,
-    onboarding: async (body: Wire.OnboardingRequest): Promise<PlayerDocument> => {
+    onboarding: async (body: Wire.OnboardingRequest, onCreated?: (playerId: string) => void): Promise<PlayerDocument> => {
         if (sessionIdentity)
             throw new Error('Onboarding has already been completed');
         const generation = sessionGeneration();
-        const profile = await registerPlayer(body);
+        const profile = await registerPlayer(body, id => { assertSession(generation); onCreated?.(id); });
         assertSession(generation);
         const streak = await data(sdk.player.getPlayerStreak());
         assertSession(generation);
@@ -216,8 +216,9 @@ export const api = {
         setTelemetryPlayerAvailable(true);
         return sessionIdentity;
     },
-    createWorld: async (definition: WorldDefinition): Promise<Player> => {
+    createWorld: async (definition: WorldDefinition, onCreated?: (worldId: string) => void): Promise<Player> => {
         const world = map.world(await data(sdk.worlds.createWorld({ ...definition, postIdeas: postIdeasForWorld(definition) })));
+        onCreated?.(world.id);
         return api.me(world.id);
     },
     deleteWorld: async (id: string) => {
@@ -235,6 +236,11 @@ export const api = {
         const { postId: id, ...post } = map.post(response.post);
         if (!repostId && completeLandingPost()) trackLanding('landing_first_post');
         return { post: { ...post, id }, result: map.result(response.result), predictedAuthorId: response.predictedAuthorId };
+    },
+    savePresetReply: async (postId: string, commentId: string | null, requestId: string, text: string, starId?: string) => {
+        const authorId = starId ? `Star_${starId}` : playerAuthorId();
+        const result = await data(sdk.posts.replyToPost(postId, worldId(), { authorId, commentId, requestId, text }));
+        return result.commentId;
     },
     initialComment: async (postId: string, authorId: string, signal?: AbortSignal): Promise<Post> => {
         const currentWorld = worldId();

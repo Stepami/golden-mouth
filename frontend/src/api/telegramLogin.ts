@@ -29,10 +29,10 @@ export function preloadTelegramLogin(): Promise<void> {
   })
 }
 
-export function openTelegramLogin(clientId: number, onToken: (idToken: string) => void, onError: () => void): void {
+export function openTelegramLogin(clientId: number, onToken: (idToken: string) => void, onError: (outcome: 'error' | 'cancel') => void): void {
   // Called directly from the button click so the browser permits the popup.
   window.Telegram?.Login.auth({ client_id: clientId, scope: ['profile'] }, result => {
     if (result.id_token) onToken(result.id_token)
-    else if (result.error) onError()
+    else if (result.error) onError(result.error === 'popup_closed' ? 'cancel' : 'error')
   })
 }

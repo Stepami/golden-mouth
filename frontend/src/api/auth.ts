@@ -241,7 +241,8 @@ export function startAuth(): Promise<boolean> {
     return false
   })().finally(() => { startupRequest = undefined })
 }
-export async function registerPlayer(body: OnboardingRequest): Promise<PlayerResponse> {
+let confirmedRegistrationAccess: string | undefined
+export async function registerPlayer(body: OnboardingRequest, onCreated?: (playerId: string) => void): Promise<PlayerResponse> {
   if (!hasAccess()) {
     if (!registrationExternalId) throw new Error('Registration identity unavailable')
     const authorization = `Basic ${registrationExternalId}`
@@ -255,10 +256,18 @@ export async function registerPlayer(body: OnboardingRequest): Promise<PlayerRes
     else if (pendingWidgetToken) await resumeWidgetLogin()
     else await loginMiniApp()
     if (!hasAccess()) throw new Error('Registration could not be confirmed')
+    if (response.ok) confirmedRegistrationAccess = accessToken
   }
-  const response = await fetch(`${baseUrl}/me`, { headers: { Authorization: `Bearer ${accessToken}` } })
+  const profileAccess = accessToken
+  const response = await fetch(`${baseUrl}/me`, { headers: { Authorization: `Bearer ${profileAccess}` } })
   if (!response.ok) throw new Error(`Profile unavailable (${response.status})`)
-  return response.json() as Promise<PlayerResponse>
+  const profile = await response.json() as PlayerResponse
+  if (accessToken !== profileAccess) throw new Error('Registration session changed')
+  if (confirmedRegistrationAccess && confirmedRegistrationAccess === profileAccess) {
+    onCreated?.(profile.id)
+    confirmedRegistrationAccess = undefined
+  }
+  return profile
 }
 export async function logout(): Promise<void> {
   const refreshToken = storedRefresh()

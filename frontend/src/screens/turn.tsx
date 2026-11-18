@@ -1,9 +1,12 @@
-import { onboardingPostSaved, onboardingReplyStarted, onboardingReplySaved, gameOnboardingActive, updateGameOnboarding, useGameOnboarding } from '../app/GameOnboardingState'
+import { useGuestSession } from '../app/landing/guestSession'
+import { tap } from '../app/analytics'
+import { gameOnboardingState, onboardingPostSaved, onboardingReplyStarted, onboardingReplySaved, gameOnboardingActive, updateGameOnboarding, useGameOnboarding } from '../app/GameOnboardingState'
 import { recordEntryStep } from '../app/landing/openobserve'
 import { RepostAction } from '../ui/RepostAction'
 import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
-import { StoryGoal } from '../ui/StoryGoal'
+import { StoryGoal, StoryGoalContent } from '../ui/StoryGoal'
+import { ResultCrowd } from '../ui/ResultCrowd'
 import { DailyTasks } from '../ui/DailyTasks'
 import { DailyTaskResult, dailyTaskBaseline, type DailyTaskBaseline } from '../ui/DailyTaskResult'
 import { Resources } from '../ui/Resources'
@@ -28,21 +31,22 @@ import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 
 
 // 02-1: пост, «Подскажи» дописывает черновик
-function Compose() {
-  const nav = useNav(); const p = usePlayer()
-  const ideas = contentOf(p.world).ideas
+export function Compose() {
+  const guest = useGuestSession(); const profile = useStore()?.player
+  const nav = useNav(); const p = guest?.player ?? profile!
+  const ideas = guest ? [guest.postIdea] : contentOf(p.world).ideas
   const repostId = typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined
   const key = draftKey(p) + (repostId ? `:quote:${repostId}` : '')
-  const mayPrefill = !repostId && typeof nav.params.text !== 'string' && !hasPostDraft(key)
+  const mayPrefill = !repostId && typeof nav.params.text !== 'string' && (guest ? guest.text === undefined : !hasPostDraft(key))
   const firstPostConfirmed = nav.params.firstPostConfirmed === true
   const [visibleLength, setVisibleLength] = useState<number | undefined>(() => mayPrefill && firstPostConfirmed ? 0 : undefined)
   const [draft, setDraft] = useState<PostDraft>(() => {
-    const saved = readPostDraft(key)
+    const saved = guest ? { text: guest.text ?? '', ownWords: guest.text !== undefined } : readPostDraft(key)
     const idea = ideas.find(value => value.trim())
     if (mayPrefill && firstPostConfirmed && idea) return { text: idea, ownWords: false }
-    return saved.text.length ? saved : { text: typeof nav.params.text === 'string' ? nav.params.text : '', ownWords: true }
+    return saved.text.length || guest?.text !== undefined ? saved : { text: typeof nav.params.text === 'string' ? nav.params.text : '', ownWords: true }
   })
-  const canPrefill = useRef(mayPrefill && !firstPostConfirmed)
+  const canPrefill = useRef(!guest && mayPrefill && !firstPostConfirmed)
   const [checkingFirstPost, setCheckingFirstPost] = useState(canPrefill.current)
   const text = draft.text
   const [durable, setDurable] = useState(true)
@@ -50,10 +54,12 @@ function Compose() {
     canPrefill.current = false
     setVisibleLength(undefined)
     const next = { ...draft, text: value, ownWords: fromIdea ? false : value.length === 0 || draft.ownWords }
-    setDraft(next); setDurable(savePostDraft(key, next))
+    setDraft(next)
+    if (guest) guest.editPost(value)
+    else setDurable(savePostDraft(key, next))
   }
   useEffect(() => {
-    if (draft.text.length || !canPrefill.current) setDurable(savePostDraft(key, draft))
+    if (!guest && (draft.text.length || !canPrefill.current)) setDurable(savePostDraft(key, draft))
   }, [key, draft])
   useEffect(() => {
     if (!canPrefill.current) return
@@ -86,37 +92,50 @@ function Compose() {
   }, [text, revealing])
   return (
     <div className="screen no-tab">
-      <TopBar onBack={nav.back} title={repostId ? "Репост со своим текстом" : "Новый пост"} rightPlain right={<Resources player={p} />} />
+      <TopBar onBack={nav.back} title={repostId ? "Репост со своим текстом" : "Новый пост"} rightPlain right={guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} />} />
       <div className="pad">
-        <DailyTasks editor repost={!!repostId} />
-        {!repostId && <StoryGoal world={p.world} firstStep />}
+        {!guest && <DailyTasks editor repost={!!repostId} />}
+        {!repostId && (guest ? <StoryGoalContent goal={guest.goal} firstStep /> : <StoryGoal world={p.world} firstStep />)}
         {repostId && <QuotedPost repostId={repostId} />}
         <TextField label="Твой пост" value={text} visibleLength={visibleLength} onInteract={() => { canPrefill.current = false; setVisibleLength(undefined) }} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
         {checkingFirstPost && <p className="small muted" role="status">Проверяем историю публикаций…</p>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords, publication_kind: repostId ? 'quote' : 'post' }); nav.replace('02-2_live', { text, ownWords: draft.ownWords, repostId }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
+      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (guest) { nav.replace('02-2_live', { text }); return } if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords, publication_kind: repostId ? 'quote' : 'post' }); nav.replace('02-2_live', { text, ownWords: draft.ownWords, repostId }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
     </div>
   )
 }
 
 // 02-2: живая реакция 3–4 с, потом итог одной карточкой
-function Live() {
-  const nav = useNav(); const { patch, refresh } = useStore(); const p = usePlayer()
-  const text = (nav.params.text as string) ?? firstPost.text
+export function Live() {
+  const guest = useGuestSession(); const store = useStore()
+  const nav = useNav(); const p = guest?.player ?? store.player!
+  const text = guest?.text ?? (nav.params.text as string) ?? firstPost.text
   const [floats, setFloats] = useState<{ id: number; emoji: string; x: number }[]>([])
   const [views, setViews] = useState(0)
   const [typing, setTyping] = useState<string | null>(null)
   const [phase, setPhase] = useState<'generating' | 'reacting'>('generating')
   useEffect(() => {
+    if (guest) {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const reaction = setTimeout(() => {
+        setViews(guest.post.views); setPhase('reacting'); setTyping(guest.speaker)
+        if (!reduced && guest.post.likes > 0) setFloats([{ id: 0, emoji: '♡', x: 45 }])
+      }, reduced ? 0 : 230)
+      const finish = setTimeout(() => nav.replace('02-3_result'), reduced ? 0 : 1530)
+      return () => { clearTimeout(reaction); clearTimeout(finish) }
+    }
+    const { patch, refresh } = store
     let active = true
     const start = setTimeout(() => { void (async () => {
-      const dailyBaseline = dailyTaskBaseline(p)
+      const dailyBaseline = dailyTaskBaseline(store.player!)
+      const firstPost = gameOnboardingState()?.phase === 'post' && !nav.params.repostId
       let created: Awaited<ReturnType<typeof api.createPost>>
       try {
         created = await api.createPost(text, nav.params.ownWords !== false, typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined)
       } catch (cause) {
         if (!active) return
+        if (firstPost) track('onboarding_step', { step: 'post_save', ok: false, kind: cause instanceof ApiError ? String(cause.status) : 'unconfirmed' })
         if (cause instanceof ApiError && cause.problemType === 'urn:reki:problem:crisis') { nav.replace(p.ageBand === '14-17' || !p.ageBand ? '06-2_crisis' : '06-3_crisis_adult'); return }
         nav.replace('02-2b_publish_error', { text, repostId: nav.params.repostId, status: cause instanceof ApiError ? cause.status : undefined, uncertain: !(cause instanceof ApiError) || (cause.status >= 500 && cause.status !== 503) })
         return
@@ -132,7 +151,10 @@ function Live() {
       setFloats(created.post.likes > 0 ? [{ id: 0, emoji: '♡', x: 45 }] : [])
       const star = contentOf(p.world).stars.find(item => `Star_${item.id}` === created.predictedAuthorId)
       setTyping(star?.name ?? 'Звезда')
-      const commentPromise = api.initialComment(created.post.id, created.predictedAuthorId).catch(() => null)
+      const commentPromise = api.initialComment(created.post.id, created.predictedAuthorId).catch(() => null).then(saved => {
+        if (firstPost) track('onboarding_step', { step: 'initial_reaction_result', ok: !!saved?.comments.length })
+        return saved
+      })
       await new Promise(resolve => setTimeout(resolve, 1300))
       if (!active) return
       setTyping(null)
@@ -148,7 +170,7 @@ function Live() {
 
       <div className="pad" style={{ position: 'relative' }}>
         <div className="card" style={{ boxShadow: '0 0 0 2px rgba(255,107,139,.6),0 0 44px rgba(255,107,139,.35)', marginBottom: 12 }}>
-          <div className="small" style={{ color: 'var(--accent)', marginBottom: 6 }} aria-live="polite">{phase === 'generating' ? 'готовим публикацию' : 'только что опубликовано'}</div>{text}<QuotedPost repostId={typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined} />
+          <div className="small" style={{ color: 'var(--accent)', marginBottom: 6 }} aria-live="polite">{phase === 'generating' ? 'готовим публикацию' : 'только что опубликовано'}</div>{text}{!guest && <QuotedPost repostId={typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined} />}
           {phase === 'reacting'
             ? <div className="small muted" role="status" style={{ marginTop: 16 }}>👁 {fmt(views)} · Появляются реакции…</div>
             : <div className="live-current" aria-hidden="true"><span /></div>}
@@ -187,36 +209,76 @@ function PublishError() {
   )
 }
 
-/** Итог поста одной карточкой поверх канала: обычный, провал, залёт (праздничная тема). */
-/** Отсчёт числа 0 → n за 0,8 с (UX-аудит: «число считается, чипы по одному, haptic»). */
-function useCount(n: number, ms = 800) {
-  const [v, setV] = useState(0)
-  useEffect(() => {
-    if (new URLSearchParams(location.search).has('shot') || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setV(n); return }
-    const t0 = performance.now(); let raf = 0
-    const tick = (t: number) => { const k = Math.min(1, (t - t0) / ms); setV(Math.round(n * (1 - Math.pow(1 - k, 3)))); if (k < 1) raf = requestAnimationFrame(tick) }
-    raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf)
-  }, [n, ms])
-  return v
+const resultNumber = new Intl.NumberFormat('ru-RU')
+const viewedResults = new Set<string>()
+
+function resultPulse() {
+  if (!inTelegram) return
+  try { hapticFeedback.impactOccurred.ifAvailable('light') }
+  catch { /* The result remains available without haptics. */ }
 }
-const haptic = (kind: 'success' | 'warning' | 'light') => { if (!inTelegram) return; try { if (kind === 'light') hapticFeedback.impactOccurred.ifAvailable('light'); else hapticFeedback.notificationOccurred.ifAvailable(kind) } catch { /* вне Telegram */ } }
+
+function ResultDelta({ delta }: { delta: number }) {
+  const total = Math.abs(delta)
+  const [shown, setShown] = useState(() =>
+    document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches || new URLSearchParams(location.search).has('shot') ? total : 0)
+  useEffect(() => {
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    if (!total || motion.matches || document.hidden || new URLSearchParams(location.search).has('shot')) {
+      setShown(total)
+      return
+    }
+    const start = performance.now()
+    let frame = 0
+    const finish = () => { cancelAnimationFrame(frame); setShown(total) }
+    const pause = () => { if (document.hidden || motion.matches) finish() }
+    const tick = (now: number) => {
+      const progress = Math.min(1, Math.max(0, (now - start) / 720))
+      setShown(Math.min(total - Number(progress < 1), Math.round(total * (1 - (1 - progress) ** 3))))
+      if (progress < 1) frame = requestAnimationFrame(tick)
+    }
+    setShown(0)
+    frame = requestAnimationFrame(tick)
+    document.addEventListener('visibilitychange', pause)
+    motion.addEventListener('change', pause)
+    return () => {
+      cancelAnimationFrame(frame)
+      document.removeEventListener('visibilitychange', pause)
+      motion.removeEventListener('change', pause)
+    }
+  }, [total])
+  if (!delta) return <div className="post-result-delta"><span>Подписчиков столько же</span></div>
+  const sign = delta > 0 ? '+' : '−'
+  const unit = plural(total, 'подписчик', 'подписчика', 'подписчиков')
+  return <div className={`post-result-delta ${delta > 0 ? 'up' : 'down'}`} role="group" aria-label={`${sign}${resultNumber.format(total)} ${unit}`}>
+    <b aria-hidden="true">{sign}{resultNumber.format(shown)}</b> <span aria-hidden="true">{unit}</span>
+  </div>
+}
 
 function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post; theme: 'normal' | 'flop' | 'viral' }) {
-  const nav = useNav(); const player = usePlayer()
-  const { refresh } = useStore()
+  const guest = useGuestSession(); const store = useStore()
+  const nav = useNav(); const player = guest?.player ?? store.player!
+  const refresh = store?.refresh
   const dailyBaseline = nav.params.dailyBaseline as DailyTaskBaseline | undefined
   const onboarding = useGameOnboarding()
   const [post, setPost] = useState(initialPost)
   const [commentFailed, setCommentFailed] = useState(false)
   const commentPromise = nav.params.commentPromise as Promise<Post | null> | undefined
   useEffect(() => {
+    if (guest) return
     let active = true
-    void commentPromise?.then(saved => { if (active) { if (saved) { setPost(current => ({ ...current, comments: saved.comments })); void refresh() } else setCommentFailed(true) } }, () => { if (active) setCommentFailed(true) })
+    void commentPromise?.then(saved => {
+      if (!active) return
+      if (saved) {
+        setPost(current => ({ ...current, comments: saved.comments }))
+        void refresh?.()
+      } else setCommentFailed(true)
+    }, () => { if (active) setCommentFailed(true) })
     return () => { active = false }
-  }, [commentPromise, refresh])
+  }, [commentPromise, refresh, guest])
   const closeButton = useRef<HTMLButtonElement>(null), dialog = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    closeButton.current?.focus()
+    closeButton.current?.focus({ preventScroll: true })
     const keyboard = (event: KeyboardEvent) => {
       if (event.key === 'Escape') nav.replace('03-5_stage')
       if (event.key !== 'Tab') return
@@ -230,13 +292,36 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
     return () => document.removeEventListener('keydown', keyboard)
   }, [nav])
   const viral = theme === 'viral'
-  const stars = contentOf(player.world).stars
+  const stars = guest?.world.stars ?? contentOf(player.world).stars
   const comment = post.comments.find(item => item.star && !item.hidden)
   const fallback = r.bestComment
   const actor = stars.find(item => `Star_${item.id}` === comment?.authorId || item.avatarSeed === (comment?.avatar ?? fallback?.avatar) || `Star_${item.id}` === nav.params.predictedAuthorId)
   const commentText = comment?.text ?? fallback?.text
+  const speaker = comment?.author ?? actor?.name
+  const savedPost = nav.params.post as Post | undefined
+  const realPost = !guest && savedPost?.id === r.postId ? savedPost : undefined
+  const viewedPostId = realPost?.id
+  const kind = r.delta > 0 ? 'gain' : r.delta < 0 ? 'loss' : 'unchanged'
+  const publicationKind = realPost?.repostId ? realPost.text.length ? 'quote' : 'repost' : 'post'
+  useEffect(() => {
+    if (!viewedPostId) return
+    let frame = 0
+    const seen = () => {
+      if (document.hidden || viewedResults.has(viewedPostId)) return
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        if (document.hidden || viewedResults.has(viewedPostId) || !dialog.current?.isConnected) return
+        viewedResults.add(viewedPostId)
+        tap('result_card_viewed', { kind, publication_kind: publicationKind })
+      })
+    }
+    seen()
+    document.addEventListener('visibilitychange', seen)
+    return () => { cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', seen) }
+  }, [viewedPostId, kind, publicationKind])
   const entryReaction = useRef('')
   useEffect(() => {
+    if (guest) return
     const seen = () => {
       if (document.visibilityState !== 'visible' || !commentText?.trim() || entryReaction.current === post.id) return
       entryReaction.current = post.id
@@ -246,57 +331,72 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
     document.addEventListener('visibilitychange', seen)
     return () => document.removeEventListener('visibilitychange', seen)
   }, [commentText, post.id])
-  const shown = useCount(Math.abs(r.delta))
   const additive = r.whys.filter(why => /^[+−-]\d+(?:[.,]\d+)?$/.test(why.value))
   const explainsDelta = additive.length > 0 && additive.reduce((sum, why) => sum + Number(why.value.replace('−', '-').replace(',', '.')), 0) === r.delta
-  const explanation = r.delta === 0 ? 'Число подписчиков не изменилось.' : r.delta < 0 ? r.whys.find(why => !why.value.startsWith('×') && why.label !== 'В тему')?.label ?? r.headline : r.headline
-  useEffect(() => { haptic(r.delta >= 0 ? 'success' : 'warning') }, [r])
+  const explanation = r.delta < 0 ? r.whys.find(why => !why.value.startsWith('×') && why.label !== 'В тему')?.label ?? r.headline : r.headline
   return (
     <div className="screen no-tab">
       <ChannelHead />
-      <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">только что</div>{post.text}<QuotedPost repostId={post.repostId} /><div style={{ marginTop: 8 }}><span className="small muted">♡ {fmt(post.likes)}</span><span className="small muted" style={{ float: 'right' }}>👁 {fmt(r.views)}</span></div></div></div>
+      <div className="pad" style={{ opacity: .45 }}><div className="card"><div className="small muted">только что</div>{post.text}{!guest && <QuotedPost repostId={post.repostId} />}<div style={{ marginTop: 8 }}><span className="small muted">♡ {fmt(post.likes)}</span><span className="small muted" style={{ float: 'right' }}>👁 {fmt(r.views)}</span></div></div></div>
       <div className="sheet-bg" style={{ background: 'rgba(8,8,12,.55)' }}>
         <div ref={dialog} role="dialog" aria-modal="true" aria-label="Пост опубликован" className={`sheet post-result${viral ? ' post-result--viral' : ''}`}>
           <button ref={closeButton} className="result-close" aria-label="Закрыть итог и вернуться в канал" onClick={() => nav.replace('03-5_stage')}>×</button>
-          <div className="post-result-title">Пост опубликован</div>
-          <section className="post-result-reaction" aria-label="Ответ персонажа">
-            <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={comment?.author ?? actor?.name ?? 'Персонаж'} size={40} mode="default" /><div><strong>{comment?.author ?? actor?.name ?? 'Персонаж'}</strong><div className="small muted">{worldOf(player.world).title} · AI-персонаж</div></div></div>
-            {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
-          </section>
-          <div className={`post-result-delta ${r.delta > 0 ? 'up' : r.delta < 0 ? 'down' : ''}`}>{r.delta > 0 ? '+' : r.delta < 0 ? '−' : ''}{fmt(shown)} <span>{plural(Math.abs(r.delta), 'подписчик', 'подписчика', 'подписчиков')}</span></div>
-          <p className="small muted">{explanation}</p>
-          <DailyTaskResult baseline={dailyBaseline} postId={post.id} />
-          <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>
-          <details className="result-details"><summary>Разбор поста</summary><div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
-            <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
-          </details>
-          <div className="post-result-actions">{!gameOnboardingActive(onboarding) && <Button onClick={() => nav.replace('02-1_compose')}>Новый пост</Button>}<span data-game-onboarding-post={comment ? post.id : undefined}><Button secondary onClick={() => nav.replace('02-6_thread', { post, commentPromise, focusReply: true })}>Комментировать</Button></span></div>
-          <button onClick={() => nav.push('02-7_share', { post })} className="result-share">Поделиться</button>
+          <div className="post-result-title"><span className="post-result-check" aria-hidden="true">✓</span><span>Пост опубликован</span></div>
+          <div className="post-result-content">
+            <ResultDelta key={post.id} delta={r.delta} />
+            {r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
+              world={player.world} avatarStyle={guest?.world.avatarStyle} onPulse={guest || realPost ? resultPulse : undefined} />}
+            <dl className="post-result-stats small muted">
+              <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
+              <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>
+            </dl>
+            <section className="post-result-reaction" aria-label="Ответ персонажа">
+              <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={speaker ?? 'Персонаж'} size={40} avatarStyle={guest?.world.avatarStyle} mode="default" /><div><strong>{speaker ?? 'Персонаж'}</strong><div className="small muted">{guest?.world.title ?? worldOf(player.world).title} · AI-персонаж</div></div></div>
+              {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
+            </section>
+            {!guest && dailyBaseline && <DailyTaskResult baseline={dailyBaseline} postId={post.id} />}
+            {!guest && <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>}
+            <details className="result-details"><summary>Разбор поста</summary>
+              {explanation && <p className="small muted">{explanation}</p>}
+              <div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
+              <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>
+            </details>
+            {!guest && <button onClick={() => nav.push('02-7_share', { post })} className="result-share">Поделиться</button>}
+          </div>
+          <div className="post-result-actions">
+            {guest?.hint}
+            <span data-game-onboarding-post={comment ? post.id : undefined}><Button onClick={() => { if (!guest) tap('post_open_conversation', { ok: !!comment }); nav.replace('02-6_thread', { post, commentPromise, focusReply: true }) }}>
+              {commentText ? (speaker ? `Ответить · ${speaker}` : 'Ответить') : 'Комментировать'}
+            </Button></span>
+            {!guest && !gameOnboardingActive(onboarding) && <Button secondary onClick={() => { tap('result_open_next_post'); nav.replace('02-1_compose') }}>Новый пост</Button>}
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-const Result = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.normal; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="normal" /> }
+export const Result = () => { const n = useNav(); const guest = useGuestSession(); if (guest) return <ResultCard r={guest.result} post={guest.post} theme="normal" />; const r = (n.params.result as PostResult) ?? results.normal; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="normal" /> }
 const Flop = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.flop; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? 'сегодня сдавала пробник по ЕГЭ, всё сложно' }} theme="flop" /> }
 const Viral = () => { const n = useNav(); const r = (n.params.result as PostResult) ?? results.viral; return <ResultCard r={r} post={(n.params.post as Post) ?? { ...firstPost, id: r.postId, text: (n.params.text as string) ?? firstPost.text }} theme="viral" /> }
 
 // 02-6: комментарий игрока сохраняется сразу, затем каждая звезда генерируется и сохраняется отдельно.
-function Thread() {
+export function Thread() {
+  const guest = useGuestSession()
   const nav = useNav()
   const onboarding = useGameOnboarding()
-  const player = usePlayer()
-  const { patch } = useStore()
-  const publishedPost = nav.params.post as Post | undefined
+  const store = useStore()
+  const player = guest?.player ?? store.player!
+  const publishedPost = guest?.post ?? (nav.params.post as Post | undefined)
   const postId = typeof nav.params.postId === 'string' ? nav.params.postId : publishedPost?.id
-  const stars = contentOf(player.world).stars
+  const stars = guest?.world.stars ?? contentOf(player.world).stars
   const starIds = stars.map(star => star.id).join('\0')
   const threadKey = `${player.id}:${player.worldInstanceId ?? player.world}:${postId ?? 'mock'}`
   const storageKey = `reki:reply-draft:${threadKey}`
   type Draft = { requestId: string; commentId: string | null; text: string; submitted: boolean; additionalStarId?: string }
   const fresh = (): Draft => ({ requestId: crypto.randomUUID(), commentId: null, text: '', submitted: false })
   const readDraft = (): Draft => {
+    if (guest) return { requestId: 'guest-reply', commentId: publishedPost?.comments[0]?.id ?? null, text: guest.reply, submitted: guest.replySubmitted }
     try {
       const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null') as Draft | null
       if (saved && typeof saved.requestId === 'string' && saved.requestId.length > 0 && saved.requestId.length <= 64 && typeof saved.text === 'string' && saved.text.length <= 1000 && (saved.commentId === null || typeof saved.commentId === 'string')) return { ...saved, submitted: saved.submitted === true, additionalStarId: typeof saved.additionalStarId === 'string' ? saved.additionalStarId : undefined }
@@ -332,12 +432,12 @@ function Thread() {
     setLoad(postId ? 'loading' : 'ready'); setDraft(readDraft()); setSending(false); setTypingName(null); setReplyError('')
   }
   useEffect(() => {
-    if (loadedKey !== threadKey) return
+    if (guest || loadedKey !== threadKey) return
     try { localStorage.setItem(storageKey, JSON.stringify(draft)) } catch { /* optional storage */ }
   }, [draft, loadedKey, threadKey, storageKey])
   useEffect(() => () => { controller.current?.abort() }, [threadKey])
   useEffect(() => {
-    if (!postId) return
+    if (guest || !postId) return
     let alive = true
     setLoad('loading')
     api.post(postId).then(found => {
@@ -363,7 +463,7 @@ function Thread() {
   }, [postId, threadKey, reloadToken, starIds])
   const commentPromise = nav.params.commentPromise as Promise<Post | null> | undefined
   useEffect(() => {
-    if (load !== 'ready' || !commentPromise) return
+    if (guest || load !== 'ready' || !commentPromise) return
     let active = true
     void commentPromise.then(saved => {
       if (active && saved) setPost(current => current ? { ...current, comments: [...current.comments, ...saved.comments.filter(comment => !current.comments.some(existing => existing.id === comment.id))] } : saved)
@@ -372,7 +472,7 @@ function Thread() {
   }, [commentPromise, load, threadKey])
   const initialReplyFocused = useRef('')
   useEffect(() => {
-    if (!nav.params.focusReply || load !== 'ready' || !post || initialReplyFocused.current === threadKey) return
+    if (guest || !nav.params.focusReply || load !== 'ready' || !post || initialReplyFocused.current === threadKey) return
     const target = post.comments.find(comment => comment.star && !comment.hidden && stars.some(star => `Star_${star.id}` === comment.authorId))
     if (!target) return
     initialReplyFocused.current = threadKey
@@ -383,7 +483,7 @@ function Thread() {
   const isStarComment = (comment?: CommentT) => !!comment?.star && !comment.hidden && stars.some(star => `Star_${star.id}` === comment.authorId)
   const target = post?.comments.find(comment => comment.id === draft.commentId)
   useEffect(() => {
-    if (load !== 'ready' || !post || !onboarding?.postId || !['reaction', 'reply'].includes(onboarding.phase)) return
+    if (guest || load !== 'ready' || !post || !onboarding?.postId || !['reaction', 'reply'].includes(onboarding.phase)) return
     if ((post.id === (onboarding.conversationPostId ?? onboarding.postId) && (post.comments.some(isStarComment) || postAuthor)) && (onboarding.phase !== 'reply' || (onboarding.conversationPostId ?? onboarding.postId) !== post.id)) updateGameOnboarding({ phase: 'reply', conversationPostId: post.id, replyRequestId: undefined })
   }, [load, post, onboarding?.phase, onboarding?.postId, onboarding?.conversationPostId])
   const targetAvailable = draft.commentId === null ? !!postAuthor : isStarComment(target)
@@ -392,17 +492,21 @@ function Thread() {
     setDraft(current => {
       const next = { ...current, ...change }
       return next.text === current.text && next.commentId === current.commentId
-        ? current : { ...next, requestId: crypto.randomUUID(), submitted: false, additionalStarId: undefined }
+        ? current : { ...next, requestId: guest ? current.requestId : crypto.randomUUID(), submitted: false, additionalStarId: undefined }
     })
+    if (guest && change.text !== undefined) guest.editReply(change.text)
     setReplyError('')
   }
   const send = async () => {
     if (!post || !targetAvailable || !draft.text.trim() || sending) return
+    if (guest) { guest.sendReply(); return }
+    const { patch } = store
     if (player.postsLeft < 1 && !draft.submitted) { setReplyError('Энергия закончилась. Новая появится в 9:00.'); return }
     const ctrl = new AbortController()
     controller.current = ctrl
     const key = threadKey
     let playerSaved = false
+    tap('reply_send')
     onboardingReplyStarted(post.id, draft.requestId)
     setSending(true); setReplyError(''); setTypingName(null); setDraft(current => ({ ...current, submitted: true }))
     try {
@@ -433,6 +537,7 @@ function Thread() {
     } catch (cause) {
       if (ctrl.signal.aborted || activeKey.current !== key) return
       const status = (cause as { status?: number })?.status
+      track('onboarding_step', { step: playerSaved ? 'reply_reaction_result' : 'reply_save', ok: false, kind: status ? String(status) : 'unconfirmed' })
       setReplyError(playerSaved && cause instanceof Error && cause.name === 'unsafe_generated_content'
         ? 'Комментарий сохранён. Ответ звезды не прошёл проверку 14+.'
         : playerSaved ? 'Комментарий сохранён. Ответ звезды пока не появился. Попробуй снова.'
@@ -446,53 +551,57 @@ function Thread() {
     }
   }
   const tutorialKey = `reki:thread-help:${player.id}`
-  const [showHelp, setShowHelp] = useState(() => { try { return localStorage.getItem(tutorialKey) !== 'seen' } catch { return true } })
+  const [showHelp, setShowHelp] = useState(() => { if (guest) return false; try { return localStorage.getItem(tutorialKey) !== 'seen' } catch { return true } })
   const dismissHelp = () => { setShowHelp(false); try { localStorage.setItem(tutorialKey, 'seen') } catch { /* memory fallback */ } }
-  const focusReply = (id: string) => { edit({ commentId: id }); requestAnimationFrame(() => replyInput.current?.focus()) }
+  const focusReply = (id: string) => { tap('reply_select_hero'); edit({ commentId: id }); requestAnimationFrame(() => replyInput.current?.focus()) }
   const fromFeed = nav.params.returnTo === 'feed' || (!nav.params.returnTo && !!postAuthor)
   const fromMarked = nav.params.returnTo === 'marked'
-  const goBack = () => { if (nav.params.returnTo && nav.canBack) nav.back(); else if (fromMarked) nav.replace('05-5_collection', { profileTab: 'marked' }); else nav.replace(fromFeed ? '03-3_feed' : '03-5_stage') }
+  const goBack = () => { if (guest) nav.replace('03-5_stage'); else if (nav.params.returnTo && nav.canBack) nav.back(); else if (fromMarked) nav.replace('05-5_collection', { profileTab: 'marked' }); else nav.replace(fromFeed ? '03-3_feed' : '03-5_stage') }
   const removePost = async () => {
     if (!post || deleting) return
     setDeleting(true); setDeleteError('')
     try { await api.deletePost(post.id); nav.reset(fromMarked ? '05-5_collection' : fromFeed ? '03-3_feed' : '03-5_stage', fromMarked ? { profileTab: 'marked' } : {}) }
     catch { setDeleteError('Не получилось удалить пост. Попробуй ещё раз.'); setDeleting(false) }
   }
-  if (load !== 'ready' || loadedKey !== threadKey) return (
+  if (!guest && (load !== 'ready' || loadedKey !== threadKey)) return (
     <div className="screen no-tab"><TopBar onBack={goBack} title="Реакции" /><div className="pad"><div className="card" role="status">
       {load === 'loading' && <span className="small muted">Загружаем пост…</span>}
       {load === 'error' && <><div>Не получилось открыть пост.</div><Button onClick={() => setReloadToken(value => value + 1)}>Попробовать снова</Button></>}
       {load === 'unavailable' && <div>Этот пост больше не доступен.</div>}
     </div></div></div>
   )
-  if (!post) return null
+  const shownPost = guest?.post ?? post
+  if (!shownPost) return null
+  const replySending = guest ? guest.replySubmitted && !guest.replyDone : sending
+  const activeTypingName = guest ? replySending ? guest.speaker : null : typingName
   const ordered: CommentT[] = []
   const visited = new Set<string>()
   const append = (comment: CommentT) => {
     if (visited.has(comment.id)) return
     visited.add(comment.id); ordered.push(comment)
-    post.comments.filter(child => child.parentCommentId === comment.id).forEach(append)
+    shownPost.comments.filter(child => child.parentCommentId === comment.id).forEach(append)
   }
-  post.comments.filter(comment => !comment.parentCommentId).forEach(append)
-  post.comments.forEach(append)
+  shownPost.comments.filter(comment => !comment.parentCommentId).forEach(append)
+  shownPost.comments.forEach(append)
   return (
     <div className="screen no-tab thread-screen">
-      <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions"><EnergyBadge value={player.postsLeft} />{onboarding && player.energyWallet && <span className="crystal-button thread-crystal-count" data-onboarding-crystal-counter role="status" aria-label={`Кристаллы: ${player.energyWallet.crystals}`}>💎 {player.energyWallet.crystals}</span>}<button className="thread-exit" onClick={goBack}>{fromMarked ? 'К отметкам →' : fromFeed ? 'В ленту →' : 'В канал →'}</button></div>} />
+      <TopBar title="Реакции" rightPlain right={<div className="thread-header-actions"><EnergyBadge value={player.postsLeft} />{guest && <span className="crystal-button thread-crystal-count" role="status" aria-label={`Кристаллы в демо: ${guest.crystals}`}>💎 {guest.crystals}</span>}{!guest && onboarding && player.energyWallet && <span className="crystal-button thread-crystal-count" data-onboarding-crystal-counter role="status" aria-label={`Кристаллы: ${player.energyWallet.crystals}`}>💎 {player.energyWallet.crystals}</span>}{!guest?.replySubmitted && <button className="thread-exit" onClick={goBack}>{fromMarked ? 'К отметкам →' : fromFeed ? 'В ленту →' : 'В канал →'}</button>}</div>} />
       <div className="pad">
-        <div className="card" style={{ marginBottom: 12 }}>{post.text}<QuotedPost repostId={post.repostId} /><div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group"><PostLikeAction key={threadKey} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => current ? { ...current, likes: saved.likes, likedBy: saved.likedBy } : current)} />{!post.repostId && <RepostAction postId={post.id} />}</div>{post.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>}</div></div>
+        {typeof nav.params.guestImportNotice === 'string' && <div className="card" role="status">{nav.params.guestImportNotice}</div>}
+        <div className="card" style={{ marginBottom: 12 }}>{shownPost.text}{!guest && <QuotedPost repostId={shownPost.repostId} />}{!guest && <div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}><div className="post-action-group"><PostLikeAction key={threadKey} postId={shownPost.id} likes={shownPost.likes} likedBy={shownPost.likedBy} onSaved={saved => setPost(current => current ? { ...current, likes: saved.likes, likedBy: saved.likedBy } : current)} />{!shownPost.repostId && <RepostAction postId={shownPost.id} />}</div>{shownPost.authorId === `Player_${player.id.replaceAll('-', '')}` && <button type="button" className="delete-trigger" aria-label="Удалить пост" disabled={deleting} onClick={() => { setDeleteError(''); setConfirmDelete(true) }} style={{ background: 'none', fontSize: 20 }}>🧺</button>}</div>}</div>
         {showHelp && !onboarding && <div className="thread-help"><span className="thread-help-icon">💬</span><div><b>{postAuthor ? 'Обсуди пост с автором' : 'Герой ждёт ответа'}</b><p>{postAuthor ? 'Напиши комментарий к посту или нажми «Ответить» под репликой.' : 'Нажми «Ответить» под репликой и продолжи историю.'}</p><span className="small muted">{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</span></div><button aria-label="Скрыть подсказку" onClick={dismissHelp}>×</button></div>}
         {(!showHelp || !!onboarding) && <div className="small muted" style={{ marginBottom: 16 }}>{postAuthor ? 'Комментарий' : 'Ответ'} · 1 энергия</div>}
         {ordered.map(comment => <div key={comment.id} style={{ marginLeft: Math.min(comment.depth ?? 0, 2) * 14 }}>
-          <Comment seed={comment.avatar} name={comment.author} handle={comment.star ? comment.handle : comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} />
+          <Comment seed={comment.avatar} avatarStyle={guest?.world.avatarStyle} name={comment.author} handle={comment.star ? comment.handle : comment.role ?? comment.handle} text={comment.hidden ? 'Комментарий скрыт' : comment.text} star={comment.star} me={comment.me} />
           {!!comment.reactions?.length && <div className="small" style={{ margin: '-6px 0 12px 44px' }}>{comment.reactions.map(reaction => <span key={`${reaction.authorId}:${reaction.emoji}`} title={reaction.author} className="react">{reaction.emoji} {reaction.author}</span>)}</div>}
-          {isStarComment(comment) && <button data-game-onboarding-post={!targetAvailable ? post.id : undefined} className="small" disabled={sending} onClick={() => focusReply(comment.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: draft.commentId === comment.id ? 'var(--accent)' : 'var(--lilac)' }}>{draft.commentId === comment.id ? 'Отвечаешь этому комментарию' : `Ответить герою ${comment.author}`}</button>}
+          {!guest?.replySubmitted && isStarComment(comment) && <button data-game-onboarding-post={!targetAvailable ? shownPost.id : undefined} className="small" disabled={sending} onClick={() => focusReply(comment.id)} style={{ display: 'block', margin: '-8px 0 12px 44px', background: 'none', border: 'none', color: draft.commentId === comment.id ? 'var(--accent)' : 'var(--lilac)' }}>{draft.commentId === comment.id ? 'Отвечаешь этому комментарию' : `Ответить герою ${comment.author}`}</button>}
         </div>)}
-        {typingName && <div className="card" role="status" aria-live="polite"><div className="small muted">{typingName} печатает...</div><div className="live-current" aria-hidden="true"><span /></div></div>}
-        {targetAvailable && <div className="small muted" style={{ marginBottom: 8 }}>{draft.commentId === null ? 'Комментарий к посту' : 'Отвечаешь'}: {recipient}</div>}
+        {activeTypingName && <div className="card" role="status" aria-live="polite"><div className="small muted">{activeTypingName} печатает...</div><div className="live-current" aria-hidden="true"><span /></div></div>}
+        {targetAvailable && !guest?.replySubmitted && <div className="small muted" style={{ marginBottom: 8 }}>{draft.commentId === null ? 'Комментарий к посту' : 'Отвечаешь'}: {recipient}</div>}
         {postAuthor && draft.commentId !== null && <button disabled={sending} onClick={() => { edit({ commentId: null }); requestAnimationFrame(() => replyInput.current?.focus()) }} style={{ background: 'none', border: 'none', color: 'var(--lilac)', marginBottom: 8 }}>К посту</button>}
         {draft.commentId && !targetAvailable && <div className="small muted" role="status" style={{ marginBottom: 8 }}>Этому аккаунту больше нельзя ответить. Выбери другой комментарий — текст ответа сохранён.</div>}
         {replyError && <div className="small" role="alert" style={{ color: 'var(--accent)', marginBottom: 12 }}>{replyError}</div>}
-        {!gameOnboardingActive(onboarding) && <Button secondary disabled={sending} onClick={() => nav.replace('02-1_compose')}>Написать следующий пост</Button>}
+        {!guest && !gameOnboardingActive(onboarding) && <Button secondary disabled={sending} onClick={() => { tap('thread_open_next_post'); nav.replace('02-1_compose') }}>Написать следующий пост</Button>}
       </div>
       {confirmDelete && <Sheet onClose={() => { if (!deleting) setConfirmDelete(false) }}>
         <h2>Удалить пост?</h2>
@@ -501,10 +610,11 @@ function Thread() {
         <Button disabled={deleting} onClick={removePost} style={{ marginBottom: 8, background: 'transparent', border: '2px solid #F06473', color: '#F06473' }}>{deleting ? 'Удаляем…' : 'Удалить пост'}</Button>
         <Button secondary disabled={deleting} onClick={() => setConfirmDelete(false)}>Отмена</Button>
       </Sheet>}
-      <div className="bottom-cta thread-reply" data-game-onboarding-post={targetAvailable ? post.id : undefined}>
+      {!guest?.replySubmitted && <div className="bottom-cta thread-reply" data-game-onboarding-post={targetAvailable ? shownPost.id : undefined}>
+        {guest?.hint}
         <div className="card thread-reply-field"><textarea ref={replyInput} className="thread-reply-input" rows={1} aria-label="Текст ответа" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
         <button className="card thread-reply-send" onClick={send} disabled={sending || !targetAvailable || !draft.text.trim() || (player.postsLeft < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
-      </div>
+      </div>}
     </div>
   )
 }
