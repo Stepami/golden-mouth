@@ -1,0 +1,77 @@
+import { useEffect, useRef, useState } from 'react'
+import type { WorldId } from '../api/types'
+
+const comparisonPlaces = [
+  { name: 'Териберки', population: 550, year: 2021, source: 'https://www.wikidata.org/wiki/Q4353950#P1082' },
+  { name: 'Плёса', population: 1_896, year: 2021, source: 'https://www.wikidata.org/wiki/Q179486#P1082' },
+  { name: 'Суздаля', population: 9_286, year: 2021, source: 'https://www.wikidata.org/wiki/Q15757#P1082' },
+  { name: 'Великого Устюга', population: 28_670, year: 2021, source: 'https://iep.kolasc.net.ru/journal/wp-content/uploads/10-3-2023_SiR.pdf' },
+  { name: 'Выборга', population: 72_530, year: 2021, source: 'https://www.wikidata.org/wiki/Q14657#P1082' },
+  { name: 'Сергиева Посада', population: 101_756, year: 2021, source: 'https://rosstat.gov.ru/vpn/2020/Tom1_Chislennost_i_razmeshchenie_naseleniya' },
+  { name: 'Сочи', population: 466_078, year: 2021, source: 'https://rosstat.gov.ru/vpn/2020/Tom1_Chislennost_i_razmeshchenie_naseleniya' },
+  { name: 'Ярославля', population: 567_443, year: 2024, source: 'https://www.yarduma.ru/upload/iblock/395/mpvhvkrppwu8t0rno8l39xpf3etrd3ht/%D0%9D%D0%B0%D1%81%D0%B5%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5%20%D0%9C%D0%9E%20%D0%AF%D0%9E%20%D0%BD%D0%B0%2001.01.2024.pdf' },
+  { name: 'Казани', population: 1_308_660, year: 2021, source: 'https://rosstat.gov.ru/vpn/2020/Tom1_Chislennost_i_razmeshchenie_naseleniya' },
+  { name: 'Санкт-Петербурга', population: 5_601_911, year: 2021, source: 'https://rosstat.gov.ru/vpn/2020/Tom1_Chislennost_i_razmeshchenie_naseleniya' },
+  { name: 'Москвы', population: 13_010_112, year: 2021, source: 'https://rosstat.gov.ru/vpn/2020/Tom1_Chislennost_i_razmeshchenie_naseleniya' },
+]
+
+const pulsedPublications = new Set<string>()
+let cheerOffset = 0
+
+export function ResultCrowd({ delta, publication, world, avatarStyle, onPulse }: {
+  delta: number; publication: string; world: WorldId; avatarStyle?: string; onPulse?: () => void
+}) {
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const [unavailable, setUnavailable] = useState(false)
+
+  useEffect(() => {
+    const target = canvas.current
+    if (!target) return
+    const ctx = target.getContext('2d')
+    if (!ctx) { setUnavailable(true); return }
+
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    let still = motion.matches || document.hidden || new URLSearchParams(location.search).has('shot')
+    let disposed = false
+    let stop: ((settle?: boolean) => void) | undefined
+    let mayPulse = false
+    const pulse = (first: boolean) => {
+      if (!onPulse || still || document.hidden) return
+      if (first && !pulsedPublications.has(publication)) {
+        pulsedPublications.add(publication)
+        mayPulse = true
+      }
+      if (mayPulse) onPulse()
+    }
+    const finish = () => { still = true; stop?.(true) }
+    const visibility = () => { if (document.hidden) finish() }
+    const motionChange = () => { if (motion.matches) finish() }
+    document.addEventListener('visibilitychange', visibility)
+    motion.addEventListener('change', motionChange)
+    window.addEventListener('pagehide', finish)
+    const offset = cheerOffset
+    cheerOffset += 7
+    void import('./drawResultCrowd').then(async ({ prepareCrowd }) => {
+      if (disposed) return
+      const play = await prepareCrowd({ ctx, delta, world, avatarStyle, offset })
+      if (!disposed) stop = play(still, pulse)
+    }).catch(() => { if (!disposed) setUnavailable(true) })
+
+    return () => {
+      disposed = true
+      stop?.()
+      document.removeEventListener('visibilitychange', visibility)
+      motion.removeEventListener('change', motionChange)
+      window.removeEventListener('pagehide', finish)
+    }
+  }, [delta, publication, world, avatarStyle, onPulse])
+
+  const magnitude = Math.abs(delta)
+  const place = delta > 0 ? comparisonPlaces.find(item => item.population >= magnitude) : undefined
+  const comparison = place && magnitude / place.population >= .1 ? place : undefined
+  if (!delta || (unavailable && !comparison)) return null
+  return <div className="post-result-crowd">
+    {!unavailable && <canvas ref={canvas} aria-hidden="true" />}
+    {comparison && <p className="post-result-fact">Это примерно <b>{Math.round(magnitude / comparison.population * 100)}% населения {comparison.name}</b>.</p>}
+  </div>
+}
