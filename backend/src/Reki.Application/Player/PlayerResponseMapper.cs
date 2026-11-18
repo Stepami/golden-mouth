@@ -1,5 +1,6 @@
 using Reki.Application.Player.Responses;
 using Reki.Domain.Player;
+using Reki.Domain.Player.Challenges;
 using Reki.Domain.Player.Streaks;
 using Riok.Mapperly.Abstractions;
 
@@ -16,8 +17,8 @@ public static partial class PlayerResponseMapper
             player.Wallet.Energy,
             MapSkills(player.Skills),
             MapSettings(player.Settings),
-            new Dictionary<string, string>(),
             player.BirthYear,
+            MapDailyChallenge(player.DailyChallenge),
             player.HitOwnWorldMilestone,
             player.ToEnergyWalletResponse());
     }
@@ -42,6 +43,11 @@ public static partial class PlayerResponseMapper
     private static partial IReadOnlyDictionary<SkillId, SkillResponse> MapSkills(IReadOnlyDictionary<SkillId, SkillProgress> source);
 
     private static partial PlayerSettingsResponse MapSettings(PlayerSettings source);
+
+    private static partial DailyChallengeResponse MapDailyChallenge(PlayerChallenge source);
+
+    [MapperIgnoreSource(nameof(DailyTaskValues.BaseTarget))]
+    private static partial DailyTaskValuesResponse MapDailyTaskValues(DailyTaskValues source);
 
     [MapperIgnoreSource(nameof(SkillProgress.Experience))]
     private static partial SkillResponse MapSkill(SkillProgress source);

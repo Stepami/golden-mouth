@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using Reki.Domain.Player.Challenges;
+using Reki.Domain.Worlds;
 
 namespace Reki.Domain.Player;
 
@@ -23,7 +25,8 @@ public sealed class PlayerProfile
         DateTimeOffset? pausedAtUtc = null,
         DateTimeOffset? hateDisabledUntilUtc = null,
         int version = 0,
-        bool plusNotifyRequested = false)
+        bool plusNotifyRequested = false,
+        PlayerChallenge? dailyChallenge = null)
     {
         Id = id;
         _externalUserIds = [.. externalUserIds];
@@ -41,6 +44,7 @@ public sealed class PlayerProfile
         HateDisabledUntilUtc = hateDisabledUntilUtc;
         Version = version;
         PlusNotifyRequested = plusNotifyRequested;
+        DailyChallenge = dailyChallenge ?? PlayerChallenge.Empty;
         _notificationChannels = [.. notificationChannels];
         NotificationChannels = _notificationChannels.AsReadOnly();
     }
@@ -74,6 +78,53 @@ public sealed class PlayerProfile
     public PlayerSettings Settings { get; private set; }
 
     public IReadOnlyList<PlayerNotificationChannel> NotificationChannels { get; }
+
+    public PlayerChallenge DailyChallenge { get; private set; }
+
+    public void RefreshDailyChallenge(
+        DateOnly day,
+        IReadOnlyCollection<World> worlds,
+        IReadOnlyDictionary<DailyTaskType, int[]> targets)
+    {
+        if (DailyChallenge.Day == day)
+        {
+            return;
+        }
+
+        DailyChallenge = PlayerChallenge.New(
+            day,
+            worlds,
+            targets.ToDictionary(
+                target => target.Key,
+                target => Random.Shared.NextInt64(target.Value[0], target.Value[1] + 1)));
+        Version++;
+    }
+
+    public void AddDailyChallengeWorld(
+        World world,
+        IReadOnlyDictionary<DailyTaskType, int[]> targets)
+    {
+        if (DailyChallenge.Day == DateOnly.MinValue || DailyChallenge.Values.ContainsKey(world.Id))
+        {
+            return;
+        }
+
+        DailyChallenge.AddWorld(
+            world,
+            targets.ToDictionary(
+                target => target.Key,
+                target => Random.Shared.NextInt64(target.Value[0], target.Value[1] + 1)));
+
+        Version++;
+    }
+
+    public void RemoveDailyChallengeWorld(WorldId worldId)
+    {
+        if (DailyChallenge.RemoveWorld(worldId))
+        {
+            Version++;
+        }
+    }
 
     public PlayerProfile AddNotificationChannel(PlayerNotificationChannel channel)
     {

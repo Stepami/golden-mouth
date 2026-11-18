@@ -8,7 +8,7 @@ public sealed record PlayerResponse(
     int Energy,
     IReadOnlyDictionary<SkillId, SkillResponse> Skills,
     PlayerSettingsResponse Settings,
-    IReadOnlyDictionary<string, string> Experiments,
     int BirthYear,
+    DailyChallengeResponse DailyChallenge,
     bool HitOwnWorldMilestone = false,
     EnergyWalletResponse? EnergyWallet = null);

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { NavContext, TABS, type Nav, type ScreenId } from './app/nav'
 import { StoreProvider, useStore } from './app/store'
 import { SCREENS, TAB_OF } from './screens'
-import { screenView, setExperiments, tap, trackLanding } from './app/analytics'
+import { screenView, tap, trackLanding } from './app/analytics'
 import { setScreen } from './app/log'
 import { TelegramLaunch } from './app/TelegramLaunch'
 import { syncBackButton } from './telegram'
@@ -58,7 +58,6 @@ function Shell() {
   }), [top, stack.length])
 
   useEffect(() => { setScreen(top.id); screenView(top.id) }, [top.id])
-  useEffect(() => { if (player?.experiments) setExperiments(player.experiments) }, [player?.experiments])
   useEffect(() => {
     if (explicitStart || top.id !== '01-1_invite' || playerState === 'loading' || playerState === 'failed') return
     const world = pendingLandingWorld()

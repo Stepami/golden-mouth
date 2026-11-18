@@ -35,6 +35,19 @@ internal sealed class MongoPlayerRepository(
         }
     }
 
+    public async IAsyncEnumerable<PlayerProfile> GetActivePlayersAsync(
+        DateTimeOffset since, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var filter = Builders<PlayerProfile>.Filter.Gte(item => item.LastSeenAt, since);
+        using var cursor = await _players.FindAsync(
+            filter,
+            cancellationToken: cancellationToken);
+        await foreach (var player in cursor.ToAsyncEnumerable().WithCancellation(cancellationToken))
+        {
+            yield return player;
+        }
+    }
+
     public async ValueTask CreatePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
         await _players.InsertOneAsync(sessionProvider.Session, player, cancellationToken: cancellationToken);
 
@@ -68,6 +81,17 @@ internal sealed class MongoPlayerRepository(
 
     public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
         await _players.ReplaceOneAsync(sessionProvider, item => item.Id == player.Id, player, cancellationToken);
+
+    public async ValueTask SaveDailyChallengeAsync(PlayerProfile player, int previousVersion, CancellationToken cancellationToken)
+    {
+        var filter = Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id);
+        var update = Builders<PlayerProfile>.Update
+            .Set(item => item.DailyChallenge, player.DailyChallenge)
+            .Inc(item => item.Version, player.Version - previousVersion);
+        await (sessionProvider.Current is { } session
+            ? _players.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken)
+            : _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));
+    }
 
     public async ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
         await _players.DeleteOneAsync(sessionProvider.Session, item => item.Id == playerId, cancellationToken: cancellationToken);

@@ -4,6 +4,7 @@ import type { Challenge, Dm, Friend, Player, Post, PostResult } from './types'
 export const player: Player = {
   id: '00000000000000000000000000000001', name: 'Лиза · трейни', handle: '@liza.trainee', role: 'трейни', address: 'she', birthYear: 2000,
   world: 'edfccf53-65c6-4eaf-8321-2391bc1758bd', subs: 120, postsLeft: 10, postsCap: 10,
+  dailyChallenge: { day: '0001-01-01', completion: {}, values: {} },
   streak: { days: 4, week: [true, true, true, true, false, false, false], nextReward: '7 дней: карточка «Неделя в эфире»' },
   skills: { brave: { level: 6, progress: .4 }, humor: { level: 5, progress: .7 }, topic: { level: 4, progress: .3 } },
   collection: [

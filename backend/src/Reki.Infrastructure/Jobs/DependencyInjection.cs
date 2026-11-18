@@ -40,6 +40,7 @@ internal static class DependencyInjection
             .WithMaxConcurrency(2);
         services.MapTicker<RestoreEnergyJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
         services.MapTicker<RefreshRegisteredPlayersJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
+        services.MapTicker<RefreshDailyChallengesJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
         services.MapTicker<PruneAuthJob>().WithMaxConcurrency(1);
         services.MapTicker<SendNotificationsJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
 
@@ -49,6 +50,7 @@ internal static class DependencyInjection
             options.SeedCronTickers(crons => crons
                 .Add(nameof(RestoreEnergyJob), "11 */2 * * * *")
                 .Add(nameof(RefreshRegisteredPlayersJob), "15 */30 * * * *")
+                .Add(nameof(RefreshDailyChallengesJob), "0 0 9 * * *")
                 .Add(nameof(PruneAuthJob), "0 0 3 * * *")
                 .Add(nameof(SendNotificationsJob), "40 */5 * * * *"));
             options.ConfigureScheduler(scheduler =>
