@@ -207,9 +207,10 @@ function PublishError() {
 const resultNumber = new Intl.NumberFormat('ru-RU')
 const viewedResults = new Set<string>()
 
-function resultPulse() {
+function resultPulse(phase: 'open' | 'wave', delta: number) {
   if (!inTelegram) return
-  try { hapticFeedback.impactOccurred.ifAvailable('light') }
+  const style = phase === 'open' ? 'medium' : delta >= 50_000 ? 'heavy' : 'rigid'
+  try { hapticFeedback.impactOccurred.ifAvailable(style) }
   catch { /* The result remains available without haptics. */ }
 }
 

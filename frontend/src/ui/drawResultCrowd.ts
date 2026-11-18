@@ -279,15 +279,13 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
     ctx.globalAlpha = 1
   }
 
-  return (still: boolean, pulse: (first: boolean) => void) => {
+  return (still: boolean, pulse: () => void) => {
     const end = loss ? 2550 : amount < 12 ? 1770 : amount <= 38 ? 2850 : 4050
-    const hitAt = loss ? 1200 : 350
-    const settleAt = amount >= 1_000_000 ? 3100 : 1550
+    const hitAt = loss ? 1200 : amount >= 1_000_000 ? 3100 : amount >= 50_000 ? 1550 : 420
     const start = performance.now()
     let frame = 0
     let time = still ? end : 0
-    let first = false
-    let second = false
+    let pulsed = false
     const redraw = () => { resize(); draw(time, still) }
     const observer = new ResizeObserver(redraw)
     observer.observe(canvas)
@@ -297,8 +295,7 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
       if (elapsed - time >= 30 || elapsed === end) {
         time = elapsed
         draw(time, false)
-        if (!first && time >= hitAt) { first = true; pulse(true) }
-        if (!loss && amount >= 50_000 && !second && time >= settleAt) { second = true; pulse(false) }
+        if (!pulsed && time >= hitAt) { pulsed = true; pulse() }
       }
       if (time < end) frame = requestAnimationFrame(tick)
     }
