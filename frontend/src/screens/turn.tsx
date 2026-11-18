@@ -5,6 +5,7 @@ import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
 import { StoryGoal } from '../ui/StoryGoal'
 import { DailyTasks } from '../ui/DailyTasks'
+import { DailyTaskResult, dailyTaskBaseline, type DailyTaskBaseline } from '../ui/DailyTaskResult'
 import { Resources } from '../ui/Resources'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
@@ -110,6 +111,7 @@ function Live() {
   useEffect(() => {
     let active = true
     const start = setTimeout(() => { void (async () => {
+      const dailyBaseline = dailyTaskBaseline(p)
       let created: Awaited<ReturnType<typeof api.createPost>>
       try {
         created = await api.createPost(text, nav.params.ownWords !== false, typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined)
@@ -136,7 +138,7 @@ function Live() {
       setTyping(null)
       track('post_result', { delta: created.result.delta, viral: created.result.viral, flop: created.result.flop, publication_kind: nav.params.repostId ? text.length ? 'quote' : 'repost' : 'post' })
       const result = created.result
-      nav.replace(result.viral ? '02-5_viral' : result.flop ? '02-4_flop' : '02-3_result', { result, post: created.post, commentPromise, predictedAuthorId: created.predictedAuthorId })
+      nav.replace(result.viral ? '02-5_viral' : result.flop ? '02-4_flop' : '02-3_result', { result, post: created.post, dailyBaseline, commentPromise, predictedAuthorId: created.predictedAuthorId })
     })() }, 0)
     return () => { active = false; clearTimeout(start) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -201,15 +203,17 @@ const haptic = (kind: 'success' | 'warning' | 'light') => { if (!inTelegram) ret
 
 function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post; theme: 'normal' | 'flop' | 'viral' }) {
   const nav = useNav(); const player = usePlayer()
+  const { refresh } = useStore()
+  const dailyBaseline = nav.params.dailyBaseline as DailyTaskBaseline | undefined
   const onboarding = useGameOnboarding()
   const [post, setPost] = useState(initialPost)
   const [commentFailed, setCommentFailed] = useState(false)
   const commentPromise = nav.params.commentPromise as Promise<Post | null> | undefined
   useEffect(() => {
     let active = true
-    void commentPromise?.then(saved => { if (active) { if (saved) setPost(current => ({ ...current, comments: saved.comments })); else setCommentFailed(true) } }, () => { if (active) setCommentFailed(true) })
+    void commentPromise?.then(saved => { if (active) { if (saved) { setPost(current => ({ ...current, comments: saved.comments })); void refresh() } else setCommentFailed(true) } }, () => { if (active) setCommentFailed(true) })
     return () => { active = false }
-  }, [commentPromise])
+  }, [commentPromise, refresh])
   const closeButton = useRef<HTMLButtonElement>(null), dialog = useRef<HTMLDivElement>(null)
   useEffect(() => {
     closeButton.current?.focus()
@@ -261,6 +265,7 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
           </section>
           <div className={`post-result-delta ${r.delta > 0 ? 'up' : r.delta < 0 ? 'down' : ''}`}>{r.delta > 0 ? '+' : r.delta < 0 ? '−' : ''}{fmt(shown)} <span>{plural(Math.abs(r.delta), 'подписчик', 'подписчика', 'подписчиков')}</span></div>
           <p className="small muted">{explanation}</p>
+          <DailyTaskResult baseline={dailyBaseline} postId={post.id} />
           <div className="post-action-group"><PostLikeAction key={`${player.id}:${player.worldInstanceId}:${post.id}`} postId={post.id} likes={post.likes} likedBy={post.likedBy} onSaved={saved => setPost(current => ({ ...current, likes: saved.likes, likedBy: saved.likedBy }))} />{!post.repostId && <RepostAction postId={post.id} />}</div>
           <details className="result-details"><summary>Разбор поста</summary><div>{r.whys.map((why, i) => <span key={`${why.label}:${i}`} className="chip">{({ star: '⭐', brave: '🔥', humor: '😂', topic: '🎯', reach: '👁' } as Record<string, string>)[why.icon] ?? why.icon} {why.label} {(!/^[+−-]/.test(why.value) || explainsDelta) && <b className={/^[+×]/.test(why.value) ? 'up' : 'down'}>{why.value}</b>}</span>)}</div>
             <div className="result-awards">{r.ribbons.map(award => <Ribbon key={award.title} icon={award.icon} title={award.title} sub={award.sub} />)}</div>

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useNav } from '../app/nav'
 import { tap } from '../app/analytics'
 import { usePlayer, useStore } from '../app/store'
+import type { Player } from '../api/types'
 import { contentOf } from '../api/worldContent'
 import { Sheet, fmt, plural } from '.'
 
@@ -19,30 +20,34 @@ const taskCopy = {
 }
 type TaskType = keyof typeof taskCopy
 
-export function DailyTasks({ editor = false, repost = false }: { editor?: boolean; repost?: boolean }) {
-  const player = usePlayer()
-  const { refresh } = useStore()
-  const nav = useNav()
-  const day = new Date().toISOString().slice(0, 10)
+export function dailyTasksFor(player: Player) {
   const challenge = player.dailyChallenge
-  const context = `${player.id}:${player.worldInstanceId}:${day}`
-  const [opened, setOpened] = useState('')
-  const [retry, setRetry] = useState({ context: '', busy: false, failed: false })
-  const busy = retry.context === context && retry.busy
-  const failed = retry.context === context && retry.failed
-  const values = challenge?.day === day && player.worldInstanceId ? challenge.values[player.worldInstanceId] : undefined
-  const tasks = Object.entries(values ?? {}).flatMap(([type, value]) => {
+  const values = challenge?.day === new Date().toISOString().slice(0, 10) && player.worldInstanceId ? challenge.values[player.worldInstanceId] : undefined
+  return Object.entries(values ?? {}).flatMap(([type, value]) => {
     if (!Object.hasOwn(taskCopy, type)) return []
     const copy = taskCopy[type as TaskType]
     const star = type === 'starComment' ? contentOf(player.world).stars.find(star => star.id === value.starId) : undefined
     return [{ type, ...value, title: star ? `Получи комментарий: ${star.name}` : copy.title(value.target), compose: copy.compose, done: challenge.completion[type] === true }]
   })
+}
+
+export function DailyTasks({ editor = false, repost = false, source = 'channel' }: { editor?: boolean; repost?: boolean; source?: 'channel' | 'profile' }) {
+  const player = usePlayer()
+  const { refresh } = useStore()
+  const nav = useNav()
+  const day = new Date().toISOString().slice(0, 10)
+  const context = `${player.id}:${player.worldInstanceId}:${day}`
+  const [opened, setOpened] = useState('')
+  const [retry, setRetry] = useState({ context: '', busy: false, failed: false })
+  const busy = retry.context === context && retry.busy
+  const failed = retry.context === context && retry.failed
+  const tasks = dailyTasksFor(player)
   const done = tasks.filter(task => task.done).length
   const suitable = tasks.filter(task => repost ? task.type === 'reposts' : task.compose)
   const featured = suitable.find(task => !task.done) ?? suitable[0]
   const show = () => {
     setOpened(context)
-    tap('daily_tasks_viewed', { kind: editor ? 'editor' : 'channel' })
+    tap('daily_tasks_viewed', { kind: editor ? 'editor' : source })
   }
   const reload = async () => {
     setRetry({ context, busy: true, failed: false })
@@ -62,7 +67,7 @@ export function DailyTasks({ editor = false, repost = false }: { editor?: boolea
       {featured ? <><div className="daily-task-title"><b>{featured.title}</b><b>{featured.progress}/{featured.target}</b></div><progress aria-label="Прогресс в этом мире" value={featured.progress} max={featured.target} /><p className="small muted">{featured.done ? 'Выполнено в одном из миров' : 'Прогресс в этом мире'}</p></> : <p className="small muted">{tasks.length ? 'Для этого действия нет отдельного задания.' : 'Задания пока недоступны.'}</p>}
       <p className="small muted daily-note">Учёт выполненных действий пока недоступен.</p>
       <button className="daily-more" onClick={show}>{featured ? '▸ Остальные ежедневные' : 'Открыть задания дня'}</button>
-    </section> : <button className="daily-entry" onClick={show}><span>Задания дня</span><span>{status} ›</span></button>}
+    </section> : <button className="daily-entry" onClick={show}><span>Задания дня</span><span data-daily-count>{status} ›</span></button>}
     {opened === context && createPortal(<Sheet onClose={() => setOpened('')}>
       <div className="daily-panel" role="dialog" aria-label="Задания дня" onKeyDown={e => { if (e.key === 'Escape') setOpened('') }}>
         <div className="daily-panel-head">

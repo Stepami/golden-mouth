@@ -556,3 +556,9 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .daily-update-error { margin-top: 14px; color: var(--warn); }
 .daily-icon-button:focus-visible, .daily-quest-action:focus-visible { outline: 2px solid var(--lilac); outline-offset: 2px; }
 @media (max-width: 359px) { .daily-panel-head h2 { font-size: 20px; } .daily-icon-button { flex-basis: 36px; } .daily-quest-heading { gap: 10px; } .daily-quest-bottom { gap: 10px; } }
+.profile-daily .daily-entry { width: 100%; margin: 0 0 12px; }
+.daily-result { margin-top: 16px; padding: 12px; border: 1px solid var(--line2); border-radius: 12px; }
+.daily-result > b { color: var(--lilac); }
+.daily-result p { margin: 10px 0 4px; font-size: 13px; }
+.daily-progress-flyer { position: fixed; z-index: 51; pointer-events: none; color: var(--lilac); font-weight: 800; font-size: 20px; }
+[data-daily-count] { display: inline-block; }

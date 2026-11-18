@@ -6,6 +6,7 @@ import {InstallApp} from '../app/install/InstallApp'
 import { LinkProfile } from '../app/LinkProfile'
 import { displayHandle } from '../app/handle'
 import { Streak } from '../ui/Streak'
+import { DailyTasks } from '../ui/DailyTasks'
 import { ExpandableText } from '../ui'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import { setAvatarPersonalization, useAvatarPersonalization } from '../app/avatarPersonalization'
@@ -295,6 +296,8 @@ function Me() {
         <div className="profile-stats">
           {[[`⚡ ${p.postsLeft}`, 'энергии'], ...(p.energyWallet ? [[`💎 ${p.energyWallet.crystals}`, 'кристаллы']] : []), [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
         </div>
+        <Streak streak={p.streak} />
+        <div className="profile-daily"><DailyTasks source="profile" /></div>
         <Button secondary onClick={() => setLinkProfile(true)}>🔑 Привязать профиль</Button><p className="small muted energy-help">Пост и ответ расходуют энергию. Энергия восстанавливается по одной каждые 10 минут.</p>
         <div className="card own-world-unlock" style={{ marginTop: 0, marginBottom: 12 }}><b>{p.hitOwnWorldMilestone ? '✨ Свой мир открыт' : '✨ Создай свой мир'}</b>{p.hitOwnWorldMilestone ? <>
           <p className="small muted">Доступ подтверждён. Можно придумать свою историю.</p>
