@@ -176,8 +176,8 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus =
   const nav = useNav()
   const session = useGuestSession()
   if (session?.published) return <div className="screen channel-screen"><ChannelHead /><div className="pad">
-    <Card><p>{session.post.text}</p><Button secondary onClick={() => nav.push('02-6_thread', { focusReply: true })}>Комментировать</Button></Card>
-  </div></div>
+    <Card><p>{session.post.text}</p></Card>
+  </div><BottomCTA main="Посмотреть реакции" onMain={() => nav.push('02-6_thread', { focusReply: true })} /></div>
   return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
     <Streak streak={p.streak} />
     <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{context}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}

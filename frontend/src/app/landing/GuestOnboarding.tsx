@@ -130,8 +130,10 @@ const hints: Record<Screen, [number, string]> = {
   '02-6_thread': [3, 'Напиши герою ответ, чтобы завершить обучение.'],
 }
 
-function GuestHint({ screen, inline = true }: { screen: Screen; inline?: boolean }) {
-  const [step, text] = hints[screen]
+function GuestHint({ screen, published, inline = true }: { screen: Screen; published?: boolean; inline?: boolean }) {
+  const [step, text] = screen === '03-5_stage' && published
+    ? [2, 'Герой уже ответил. Открой реакции и продолжи разговор.']
+    : hints[screen]
   return <aside className={`game-onboarding-progress guest-hint${inline ? ' is-inline' : ''}`} aria-label="Подсказка обучения">
     <div className="game-onboarding-meta"><span><span className="game-onboarding-segments" aria-hidden="true">{[1, 2, 3].map(n => <i key={n} className={n <= step ? 'on' : ''} />)}</span>Знакомство с игрой · {step} из 3</span><span className="game-onboarding-reward-hint">2 💎</span></div>
     <p>{text}</p>
@@ -246,13 +248,13 @@ function GuestFinish({ worldId, collected, selected, avatarStyle, onClaim, onCol
       <div className="guest-finish__popup-body">
         <div className="guest-finish__pitch">
           <h2 id="guest-save-title">Твоя история<br />только началась</h2>
-          <p>Сохрани черновик и продолжи игру за своего героя.</p>
+          <p>Сохрани черновик и продолжи игру.</p>
         </div>
         <ul className="guest-finish__benefits">
-          <li><span aria-hidden="true">📈</span><div><b>Канал до миллиона</b><p>Веди блог от лица героя. Смотри, какие посты залетают, и расти до миллиона.</p></div></li>
-          <li><span aria-hidden="true">💬</span><div><b>Отношения с героями</b><p>Герои отвечают на посты. Заводи союзников и спорь с соперниками в комментах.</p></div></li>
-          <li><span aria-hidden="true">🌍</span><div><b>Свой мир</b><p>Придумай своих героев, место и правила. Редактор откроется по ходу игры.</p></div></li>
-          <li><span aria-hidden="true">🌶️</span><div><b>Тон «Остро»</b><p>Горячие споры, драмы и риск отмены. Решай, что ответить.</p></div></li>
+          <li><span aria-hidden="true">📈</span><div><b>Канал до миллиона</b><p>Пиши посты, которые залетают.</p></div></li>
+          <li><span aria-hidden="true">💬</span><div><b>Отношения с героями</b><p>Дружи и спорь с героями.</p></div></li>
+          <li><span aria-hidden="true">🌍</span><div><b>Свой мир</b><p>Придумай героев и правила.</p></div></li>
+          <li><span aria-hidden="true">🌶️</span><div><b>Тон «Остро»</b><p>Драмы, споры и риск отмены.</p></div></li>
         </ul>
         <div className="guest-finish__actions">
           <Button onClick={onSave}>Создать аккаунт и продолжить</Button>
@@ -345,6 +347,7 @@ export function GuestOnboarding({ worldId, onSave }: {
         '03-5_stage:02-1_compose': 'open_editor',
         '02-1_compose:02-2_live': 'publish_demo',
         '02-3_result:02-6_thread': 'open_conversation',
+        '03-5_stage:02-6_thread': 'open_conversation',
       } as Record<string, string>)[`${screen}:${id}`]
       if (action) guestAction(action)
     }
@@ -384,7 +387,7 @@ export function GuestOnboarding({ worldId, onSave }: {
     editPost: value => setDraft(current => ({ ...current, text: value })), reply, replySubmitted: !!replySubmitted, replyDone: !!replyDone,
     editReply: value => setDraft(current => ({ ...current, reply: value })),
     sendReply: () => { guestAction('send_demo_reply'); setDraft(current => ({ ...current, reply, replySubmitted: true })) },
-    crystals: collected ? 2 : 0, hint: !replyDone ? <GuestHint screen={screen} /> : undefined,
+    crystals: collected ? 2 : 0, hint: !replyDone ? <GuestHint screen={screen} published={published} /> : undefined,
   }}>
     <main ref={game} className={replyDone ? 'app guest-finish' : 'app guest-game'}>
       <div key={screen}><View /></div>
