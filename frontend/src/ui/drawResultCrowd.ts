@@ -31,9 +31,10 @@ function crowdRows(amount: number): number[] {
 
 async function makeSprite(index: number, world: WorldId, avatarStyle?: string) {
   const sprite = document.createElement('canvas')
-  sprite.width = 40
-  sprite.height = 56
+  sprite.width = 80
+  sprite.height = 112
   const ctx = sprite.getContext('2d')!
+  ctx.scale(2, 2)
   const color = index % coats.length
   ctx.fillStyle = coats[color]
   ctx.beginPath()
@@ -52,7 +53,8 @@ async function makeSprite(index: number, world: WorldId, avatarStyle?: string) {
   ctx.fill()
   try {
     const img = new Image()
-    img.src = await avatarUri(`result-crowd-${index}`, world, undefined, avatarStyle)
+    const seed = avatarStyle === 'lorelei' ? `vecherelo-gallery-neighbor-${index + 1}` : `result-crowd-${index}`
+    img.src = await avatarUri(seed, world, undefined, avatarStyle)
     await img.decode()
     ctx.clip()
     ctx.drawImage(img, 4, 1, 32, 32)
@@ -75,7 +77,8 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
   const loss = delta < 0
   const rows = crowdRows(amount)
   const count = rows.reduce((sum, row) => sum + row, 0)
-  const sprites = await Promise.all(Array.from({ length: Math.min(count, 24) }, (_, index) => makeSprite(index, world, avatarStyle)))
+  const spriteLimit = avatarStyle === 'lorelei' ? 20 : 24
+  const sprites = await Promise.all(Array.from({ length: Math.min(count, spriteLimit) }, (_, index) => makeSprite(index, world, avatarStyle)))
   const waves = amount >= 500_000 ? 5 : amount >= 100_000 ? 3 : amount >= 38 ? 2 : 1
   const canvas = ctx.canvas
   let people: Figure[] = []
@@ -104,9 +107,10 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
         const id = people.length
         const x = margin + (col + .5) * spacing + (scatter(id + 47) - .5) * spacing * .5
         const wave = Math.min(waves - 1, Math.floor((depth * .70 + scatter(id + 912) * .30) * waves))
+        const size = Math.min(34, spacing * (.74 + scatter(id + 19) * .39))
+        const y = Math.max(size * 1.4 + 4, 39 + depth * (height - 48) + scatter(id + 140) * 7)
         people.push({
-          id, x, y: 39 + depth * (height - 48) + scatter(id + 140) * 7,
-          size: Math.min(34, spacing * (.74 + scatter(id + 19) * .39)),
+          id, x, y, size,
           depth, side: x < width / 2 ? -1 : 1, duration: 470 + scatter(id + 170) * 250,
           arrival: wave * (amount >= 500_000 ? 170 : 225) + scatter(id + 80) * 230,
           departure: 1060 + (id % 4) * 135 + scatter(id + 80) * 210,
@@ -139,7 +143,8 @@ export async function prepareCrowd({ ctx, delta, world, avatarStyle, offset }: {
 
   function drawFigure(figure: Figure, x: number, y: number, travel: number, opacity: number, alternate = false) {
     const size = figure.size * (.8 + .2 * travel)
-    const index = (figure.id + (alternate ? 9 : 0)) % sprites.length
+    const spriteIndex = avatarStyle === 'lorelei' ? figure.id * 7 + Math.floor(figure.id / 5) : figure.id
+    const index = (spriteIndex + (alternate ? 9 : 0)) % sprites.length
     ctx.globalAlpha = opacity * (.57 + .43 * figure.depth)
     ctx.drawImage(sprites[index], x - size / 2, y - size * 1.4, size, size * 1.4)
   }
