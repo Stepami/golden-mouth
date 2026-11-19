@@ -31,7 +31,14 @@ import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 export function Compose() {
   const guest = useGuestSession(); const profile = useStore()?.player
   const nav = useNav(); const p = guest?.player ?? profile!
+  const world = guest ? guest.world : contentOf(p.world)
   const ideas = guest ? [guest.postIdea] : contentOf(p.world).ideas
+  const ownHandle = p.handle.trim().replace(/^@+/, '').toLowerCase()
+  const mentions = world.stars.flatMap(star => {
+    const handle = star.avatarSeed?.trim().replace(/^@+/, '')
+    return handle && /^[\p{L}\p{N}_-]+(?:\.[\p{L}\p{N}_-]+)*$/u.test(handle) && handle.toLowerCase() !== ownHandle
+      ? [{ id: star.id, name: star.name, avatarSeed: star.avatarSeed, handle }] : []
+  })
   const repostId = typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined
   const key = draftKey(p) + (repostId ? `:quote:${repostId}` : '')
   const mayPrefill = !repostId && typeof nav.params.text !== 'string' && (guest ? guest.text === undefined : !hasPostDraft(key))
@@ -93,7 +100,7 @@ export function Compose() {
       <div className="pad">
         {!repostId && (guest ? <StoryGoalContent goal={guest.goal} firstStep /> : <StoryGoal world={p.world} firstStep />)}
         {repostId && <QuotedPost repostId={repostId} />}
-        <TextField label="Твой пост" value={text} visibleLength={visibleLength} onInteract={() => { canPrefill.current = false; setVisibleLength(undefined) }} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
+        <TextField label="Твой пост" value={text} mentions={mentions} visibleLength={visibleLength} onInteract={() => { canPrefill.current = false; setVisibleLength(undefined) }} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
         {checkingFirstPost && <p className="small muted" role="status">Проверяем историю публикаций…</p>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
