@@ -26,9 +26,10 @@ internal sealed class AddReplyCommandHandler(
     PlayerSafetyGuard safety,
     ProductTelemetry telemetry,
     IStarFeedScheduler<ScheduleFromCommentRequest> feedScheduler,
-    IStarVectorStore starVectorStore) : ICommandHandler<AddReply, ReplyResponse>
+    IStarVectorStore starVectorStore,
+    IProductGoalRepository productGoals) : ICommandHandler<AddReply, ProductGoalResult<ReplyResponse>>
 {
-    public async ValueTask<ReplyResponse> Handle(AddReply command, CancellationToken cancellationToken)
+    public async ValueTask<ProductGoalResult<ReplyResponse>> Handle(AddReply command, CancellationToken cancellationToken)
     {
         var context = rekiContextAccessor.Context;
         var player = await context.Player;
@@ -39,7 +40,8 @@ internal sealed class AddReplyCommandHandler(
         var isPlayer = command.AuthorId == player.Id.ToAuthorId();
         if (post.FindRequest(command.RequestId) is { } existing)
         {
-            return new ReplyResponse(existing.Id, existing.AuthorId, post.MapPost(world, player.Id), player.Wallet.Energy, world.Player.Subscribers);
+            var saved = new ReplyResponse(existing.Id, existing.AuthorId, post.MapPost(world, player.Id), player.Wallet.Energy, world.Player.Subscribers);
+            return new ProductGoalResult<ReplyResponse>(saved, []);
         }
 
         var comment = new GameComment(
@@ -71,16 +73,18 @@ internal sealed class AddReplyCommandHandler(
             world = world.AwardThreadBonus(bonus);
         }
 
+        IReadOnlyList<string> goals = [];
         post.AddComments([comment]);
         if (isPlayer)
         {
-            await unitOfWork.ExecuteAsync(
+            await productGoals.EnsurePlayerAsync(player.Id, cancellationToken);
+            goals = await unitOfWork.ExecuteAsync(
                 async token =>
                 {
                     await posts.SaveReplyAsync(post, token);
                     await players.ReplacePlayerAsync(player, token);
                     await worlds.ReplaceWorldAsync(world, token);
-                    return Unit.Value;
+                    return await productGoals.RecordActivityAsync(player.Id, timeProvider.GetUtcNow(), ordinaryPost: false, token);
                 },
                 _ => worldCache.UpdateWorld(world),
                 cancellationToken);
@@ -104,6 +108,7 @@ internal sealed class AddReplyCommandHandler(
             await posts.SaveReplyAsync(post, cancellationToken);
         }
 
-        return new ReplyResponse(comment.Id, comment.AuthorId, post.MapPost(world, player.Id), player.Wallet.Energy, world.Player.Subscribers);
+        var response = new ReplyResponse(comment.Id, comment.AuthorId, post.MapPost(world, player.Id), player.Wallet.Energy, world.Player.Subscribers);
+        return new ProductGoalResult<ReplyResponse>(response, goals);
     }
 }

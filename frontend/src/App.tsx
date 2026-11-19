@@ -233,14 +233,14 @@ export function App() {
       <button className="btn" disabled={busy} onClick={() => {
         const provider = pendingAuthProvider()
         if (landingAuthPending()) trackLandingAuth('landing_auth_resume', { auth_provider: provider, auth_action: 'manual' })
-        finishLogin(startAuth(), provider)
+        finishLogin(startAuth(true), provider)
       }}>{busy ? 'Входим…' : 'Продолжить вход'}</button>
       {pendingLogin && <button className="btn secondary" disabled={busy} onClick={() => {
         if (landingAuthPending()) trackLandingAuth('landing_auth_resume', { auth_provider: pendingAuthProvider(), auth_action: 'restart' })
         clearPendingLogin(); setAuthError('')
       }}>Войти заново</button>}
     </div> : <AuthProviders busy={busy}
-      onMiniApp={hasInitData() ? () => finishLogin(loginMiniApp(), 'telegram') : undefined}
+      onMiniApp={hasInitData() ? () => finishLogin(loginMiniApp(true), 'telegram') : undefined}
       onTelegram={token => finishLogin(loginWidget(token), 'telegram', true)}
       onVk={(token, expiry) => finishLogin(loginVk(token, expiry), 'vk', true)}
       onYandex={(token, expiry) => finishLogin(loginYandex(token, expiry), 'yandex', true)}

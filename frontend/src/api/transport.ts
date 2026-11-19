@@ -1,3 +1,4 @@
+import { reachMetrikaGoal } from '../app/metrika'
 import { error, warn } from '../app/log'
 import { runtimeConfig } from '../app/runtimeConfig'
 import { getAccessToken, refreshAccess } from './auth'
@@ -11,9 +12,11 @@ export class ApiError extends Error {
     this.name = 'ApiError'
   }
 }
+const serverGoals = new Set(['post_1_daily', 'post_3_daily', 'dau', 'invited_friend_dau'])
 const baseUrl = new URL(runtimeConfig.apiBaseUrl, window.location.origin).href
 export function transport(telemetry = false) {
   return { async fetch(url: RequestInfo, init: RequestInit = {}): Promise<Response> {
+    const generation = sessionGeneration()
     const headers = new Headers(init.headers)
     const path = new URL(String(url), baseUrl).pathname.slice(new URL(baseUrl).pathname.replace(/\/$/, '').length)
     const anonymous = path === '/sessions'
@@ -25,7 +28,15 @@ export function transport(telemetry = false) {
       headers.set('Authorization', `Bearer ${getAccessToken()}`)
       response = await fetch(url, { ...init, headers, ...(telemetry ? { keepalive: true } : {}) })
     }
-    if (response.ok) return response
+    if (response.ok) {
+      if (generation === sessionGeneration()) {
+        const goals = response.headers.get('X-Reki-Metrika-Goals')
+        for (const goal of goals?.split(',') ?? []) {
+          if (serverGoals.has(goal)) reachMetrikaGoal(goal)
+        }
+      }
+      return response
+    }
     let problemType: string | undefined
     try {
       const body: unknown = await response.clone().json()

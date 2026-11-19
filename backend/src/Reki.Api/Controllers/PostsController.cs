@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Requests.Posts;
+using Reki.Api.Telemetry;
 using Reki.Application.Posts;
 using Reki.Application.Posts.ClaimOnboardingBonusCommand;
 using Reki.Application.Posts.CreatePostCommand;
@@ -42,8 +43,12 @@ public sealed class PostsController(ISender sender) : ControllerBase
     public async Task<Ok<CreatePostResponse>> CreatePostAsync(
         CreatePostRequest request,
         [FromQuery, BindRequired] WorldId worldId,
-        CancellationToken cancellationToken) =>
-        TypedResults.Ok(await sender.Send(new CreatePost(request.Text, request.OwnWords, worldId, request.RepostId), cancellationToken));
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(new CreatePost(request.Text, request.OwnWords, worldId, request.RepostId), cancellationToken);
+        ProductGoalHeaders.Write(Response, result.Goals);
+        return TypedResults.Ok(result.Result);
+    }
 
     [HttpPost("{postId}/like", Name = "LikePost")]
     [ActionName("LikePost")]
@@ -67,7 +72,8 @@ public sealed class PostsController(ISender sender) : ControllerBase
         var result = await sender.Send(
             request.ToAddReply(postId, worldId),
             cancellationToken);
-        return TypedResults.Ok(result);
+        ProductGoalHeaders.Write(Response, result.Goals);
+        return TypedResults.Ok(result.Result);
     }
 
     [HttpPost("{postId}/replies/generation", Name = "GenerateReply")]

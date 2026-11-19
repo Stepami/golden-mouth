@@ -1,3 +1,4 @@
+import { reachMetrikaGoal } from '../app/metrika'
 import { runtimeConfig } from '../app/runtimeConfig'
 import type { OnboardingRequest, PlayerResponse } from './generated/reki-api'
 
@@ -122,9 +123,12 @@ async function tokenRequest(path: string, fields: Record<string, string>, author
   }
   return response.json() as Promise<TokenResponse>
 }
-export async function loginMiniApp(): Promise<void> {
+export async function loginMiniApp(explicit = false): Promise<void> {
   const tokens = await tokenRequest('/auth/external/tg/miniapp', { grant_type: 'urn:reki:grant:telegram-mini-app' }, `TMiniApp ${initDataRaw}`)
-  if (tokens) saveTokens(tokens, 'telegram')
+  if (tokens) {
+    saveTokens(tokens, 'telegram')
+    if (explicit) reachMetrikaGoal('login_complete')
+  }
   explicitlyLoggedOut = false
   sessionStorage.removeItem(loggedOutKey)
 }
@@ -136,9 +140,9 @@ export async function loginWidget(idToken: string): Promise<void> {
   pendingWidgetToken = idToken
   schedulePendingExpiry()
   notify()
-  return resumeWidgetLogin()
+  return resumeWidgetLogin(true)
 }
-export function resumeWidgetLogin(): Promise<void> {
+export function resumeWidgetLogin(explicit = false): Promise<void> {
   if (widgetRequest) return widgetRequest
   schedulePendingExpiry()
   const idToken = pendingWidgetToken
@@ -146,7 +150,10 @@ export function resumeWidgetLogin(): Promise<void> {
   widgetRequest = (async () => {
     const tokens = await tokenRequest('/auth/external/tg/widget', { grant_type: 'urn:reki:grant:telegram-login' }, `Bearer ${idToken}`)
     if (pendingWidgetToken !== idToken) return
-    if (tokens) saveTokens(tokens, 'telegram')
+    if (tokens) {
+      saveTokens(tokens, 'telegram')
+      if (explicit) reachMetrikaGoal('login_complete')
+    }
     explicitlyLoggedOut = false
     sessionStorage.removeItem(loggedOutKey)
   })().finally(() => { widgetRequest = undefined })
@@ -157,9 +164,9 @@ export async function loginVk(token: string, expiresIn: number): Promise<void> {
   pendingVkToken = token
   pendingVkExpiresAt = Date.now() + expiresIn * 1000
   notify()
-  await resumeVkLogin()
+  await resumeVkLogin(true)
 }
-async function resumeVkLogin(): Promise<void> {
+async function resumeVkLogin(explicit = false): Promise<void> {
   if (!pendingVkToken || pendingVkExpiresAt <= Date.now()) {
     clearPendingLogin()
     throw new Error('VK login expired')
@@ -167,7 +174,10 @@ async function resumeVkLogin(): Promise<void> {
   const proof = pendingVkToken
   const tokens = await tokenRequest('/auth/external/vk', { grant_type: 'urn:reki:grant:vk' }, `Bearer ${proof}`)
   if (proof !== pendingVkToken) return
-  if (tokens) saveTokens(tokens, 'vk')
+  if (tokens) {
+    saveTokens(tokens, 'vk')
+    if (explicit) reachMetrikaGoal('login_complete')
+  }
   explicitlyLoggedOut = false
   sessionStorage.removeItem(loggedOutKey)
 }
@@ -176,9 +186,9 @@ export async function loginYandex(token: string, expiresIn: number): Promise<voi
   pendingYandexToken = token
   pendingYandexExpiresAt = Date.now() + expiresIn * 1000
   notify()
-  await resumeYandexLogin()
+  await resumeYandexLogin(true)
 }
-async function resumeYandexLogin(): Promise<void> {
+async function resumeYandexLogin(explicit = false): Promise<void> {
   if (!pendingYandexToken || pendingYandexExpiresAt <= Date.now()) {
     clearPendingLogin()
     throw new Error('Yandex login expired')
@@ -186,7 +196,10 @@ async function resumeYandexLogin(): Promise<void> {
   const proof = pendingYandexToken
   const tokens = await tokenRequest('/auth/external/yandex', { grant_type: 'urn:reki:grant:yandex' }, `Bearer ${proof}`)
   if (proof !== pendingYandexToken) return
-  if (tokens) saveTokens(tokens, 'yandex')
+  if (tokens) {
+    saveTokens(tokens, 'yandex')
+    if (explicit) reachMetrikaGoal('login_complete')
+  }
   explicitlyLoggedOut = false
   sessionStorage.removeItem(loggedOutKey)
 }
@@ -215,7 +228,7 @@ export function refreshAccess(): Promise<boolean> {
   })().finally(() => { refreshRequest = undefined })
   return refreshRequest
 }
-export function startAuth(): Promise<boolean> {
+export function startAuth(explicit = false): Promise<boolean> {
   return startupRequest ??= (async () => {
     if (accessToken) return true
     if (storedRefresh()) {
@@ -223,19 +236,19 @@ export function startAuth(): Promise<boolean> {
       if (restored) return true
     }
     if (pendingYandexToken) {
-      await resumeYandexLogin()
+      await resumeYandexLogin(explicit)
       return hasAccess()
     }
     if (pendingVkToken) {
-      await resumeVkLogin()
+      await resumeVkLogin(explicit)
       return hasAccess()
     }
     if (hasPendingWidgetLogin()) {
-      await resumeWidgetLogin()
+      await resumeWidgetLogin(explicit)
       return hasAccess()
     }
     if (initDataRaw && !explicitlyLoggedOut) {
-      await loginMiniApp()
+      await loginMiniApp(explicit)
       return hasAccess()
     }
     return false
@@ -251,6 +264,7 @@ export async function registerPlayer(body: OnboardingRequest, onCreated?: (playe
       body: JSON.stringify(body), signal: AbortSignal.timeout(authTimeoutMs),
     })
     if (!response.ok && response.status !== 409) throw new Error(`Registration failed (${response.status})`)
+    if (response.ok) reachMetrikaGoal('registration_complete')
     if (pendingYandexToken) await resumeYandexLogin()
     else if (pendingVkToken) await resumeVkLogin()
     else if (pendingWidgetToken) await resumeWidgetLogin()

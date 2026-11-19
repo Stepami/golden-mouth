@@ -1,5 +1,6 @@
 using Mediator;
 using Reki.Application.Posts.Responses.Reply;
+using Reki.Application.Telemetry;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
 
@@ -11,4 +12,4 @@ public sealed record AddReply(
     AuthorId AuthorId,
     string RequestId,
     string Text,
-    WorldId WorldId) : ICommand<ReplyResponse>;
+    WorldId WorldId) : ICommand<ProductGoalResult<ReplyResponse>>;
