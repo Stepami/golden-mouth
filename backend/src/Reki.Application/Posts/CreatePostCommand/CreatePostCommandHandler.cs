@@ -32,10 +32,9 @@ internal sealed class CreatePostCommandHandler(
     PlayerSafetyGuard safety,
     TimeProvider timeProvider,
     ProductTelemetry telemetry,
-    IStarFeedScheduler<ScheduleFromPostRequest> feedScheduler,
-    IProductGoalRepository productGoals) : ICommandHandler<CreatePost, ProductGoalResult<CreatePostResponse>>
+    IStarFeedScheduler<ScheduleFromPostRequest> feedScheduler) : ICommandHandler<CreatePost, CreatePostResponse>
 {
-    public async ValueTask<ProductGoalResult<CreatePostResponse>> Handle(CreatePost command, CancellationToken cancellationToken)
+    public async ValueTask<CreatePostResponse> Handle(CreatePost command, CancellationToken cancellationToken)
     {
         var context = contextAccessor.Context;
         var player = await context.Player;
@@ -96,8 +95,7 @@ internal sealed class CreatePostCommandHandler(
         var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
         updated.ReplenishCrystals(updatedInvite?.BonusAmount ?? 0);
 
-        await productGoals.EnsurePlayerAsync(player.Id, cancellationToken);
-        var goals = await unitOfWork.ExecuteAsync(
+        await unitOfWork.ExecuteAsync(
             async token =>
             {
                 await players.ReplacePlayerAsync(updated, token);
@@ -113,9 +111,8 @@ internal sealed class CreatePostCommandHandler(
                     await invitationRepository.UseInviteBonusAsync(updatedInvite, token);
                 }
 
-                var earned = await productGoals.RecordActivityAsync(player.Id, now, command.RepostId is null, token);
                 await posts.InsertPostAsync(post, token);
-                return earned;
+                return Unit.Value;
             },
             _ => worldCache.UpdateWorld(updatedWorld),
             cancellationToken);
@@ -153,8 +150,10 @@ internal sealed class CreatePostCommandHandler(
             post.Flop,
             post.Views);
 
-        var response = new CreatePostResponse(post.MapPost(updatedWorld, player.Id), result, progression.Commenter.ToAuthorId());
-        return new ProductGoalResult<CreatePostResponse>(response, goals);
+        return new CreatePostResponse(
+            post.MapPost(updatedWorld, player.Id),
+            result,
+            progression.Commenter.ToAuthorId());
     }
 
     private static void TrackProgression(

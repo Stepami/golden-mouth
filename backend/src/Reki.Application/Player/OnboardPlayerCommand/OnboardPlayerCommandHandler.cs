@@ -17,8 +17,7 @@ internal sealed class OnboardPlayerCommandHandler(
     ISender sender,
     IOptionsMonitor<GameBalance> balance,
     TimeProvider timeProvider,
-    ProductTelemetry analytics,
-    IProductGoalRepository productGoals) : ICommandHandler<OnboardPlayer, PlayerProfile>
+    ProductTelemetry analytics) : ICommandHandler<OnboardPlayer, PlayerProfile>
 {
     public async ValueTask<PlayerProfile> Handle(
         OnboardPlayer command,
@@ -63,7 +62,6 @@ internal sealed class OnboardPlayerCommandHandler(
                         timeProvider.GetUtcNow(),
                         currentBalance.InviteBonusBoth);
                     await invitationRepository.CreateInviteAsync(invite, token);
-                    await productGoals.EnrollReferralAsync(completed.Id, token);
                 }
 
                 return true;

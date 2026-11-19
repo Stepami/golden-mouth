@@ -123,11 +123,11 @@ async function tokenRequest(path: string, fields: Record<string, string>, author
   }
   return response.json() as Promise<TokenResponse>
 }
-export async function loginMiniApp(explicit = false): Promise<void> {
+export async function loginMiniApp(trackLogin = true): Promise<void> {
   const tokens = await tokenRequest('/auth/external/tg/miniapp', { grant_type: 'urn:reki:grant:telegram-mini-app' }, `TMiniApp ${initDataRaw}`)
   if (tokens) {
     saveTokens(tokens, 'telegram')
-    if (explicit) reachMetrikaGoal('login_complete')
+    if (trackLogin) reachMetrikaGoal('login_complete')
   }
   explicitlyLoggedOut = false
   sessionStorage.removeItem(loggedOutKey)
@@ -140,9 +140,9 @@ export async function loginWidget(idToken: string): Promise<void> {
   pendingWidgetToken = idToken
   schedulePendingExpiry()
   notify()
-  return resumeWidgetLogin(true)
+  return resumeWidgetLogin()
 }
-export function resumeWidgetLogin(explicit = false): Promise<void> {
+export function resumeWidgetLogin(trackLogin = true): Promise<void> {
   if (widgetRequest) return widgetRequest
   schedulePendingExpiry()
   const idToken = pendingWidgetToken
@@ -152,7 +152,7 @@ export function resumeWidgetLogin(explicit = false): Promise<void> {
     if (pendingWidgetToken !== idToken) return
     if (tokens) {
       saveTokens(tokens, 'telegram')
-      if (explicit) reachMetrikaGoal('login_complete')
+      if (trackLogin) reachMetrikaGoal('login_complete')
     }
     explicitlyLoggedOut = false
     sessionStorage.removeItem(loggedOutKey)
@@ -164,9 +164,9 @@ export async function loginVk(token: string, expiresIn: number): Promise<void> {
   pendingVkToken = token
   pendingVkExpiresAt = Date.now() + expiresIn * 1000
   notify()
-  await resumeVkLogin(true)
+  await resumeVkLogin()
 }
-async function resumeVkLogin(explicit = false): Promise<void> {
+async function resumeVkLogin(trackLogin = true): Promise<void> {
   if (!pendingVkToken || pendingVkExpiresAt <= Date.now()) {
     clearPendingLogin()
     throw new Error('VK login expired')
@@ -176,7 +176,7 @@ async function resumeVkLogin(explicit = false): Promise<void> {
   if (proof !== pendingVkToken) return
   if (tokens) {
     saveTokens(tokens, 'vk')
-    if (explicit) reachMetrikaGoal('login_complete')
+    if (trackLogin) reachMetrikaGoal('login_complete')
   }
   explicitlyLoggedOut = false
   sessionStorage.removeItem(loggedOutKey)
@@ -186,9 +186,9 @@ export async function loginYandex(token: string, expiresIn: number): Promise<voi
   pendingYandexToken = token
   pendingYandexExpiresAt = Date.now() + expiresIn * 1000
   notify()
-  await resumeYandexLogin(true)
+  await resumeYandexLogin()
 }
-async function resumeYandexLogin(explicit = false): Promise<void> {
+async function resumeYandexLogin(trackLogin = true): Promise<void> {
   if (!pendingYandexToken || pendingYandexExpiresAt <= Date.now()) {
     clearPendingLogin()
     throw new Error('Yandex login expired')
@@ -198,7 +198,7 @@ async function resumeYandexLogin(explicit = false): Promise<void> {
   if (proof !== pendingYandexToken) return
   if (tokens) {
     saveTokens(tokens, 'yandex')
-    if (explicit) reachMetrikaGoal('login_complete')
+    if (trackLogin) reachMetrikaGoal('login_complete')
   }
   explicitlyLoggedOut = false
   sessionStorage.removeItem(loggedOutKey)
@@ -228,7 +228,7 @@ export function refreshAccess(): Promise<boolean> {
   })().finally(() => { refreshRequest = undefined })
   return refreshRequest
 }
-export function startAuth(explicit = false): Promise<boolean> {
+export function startAuth(): Promise<boolean> {
   return startupRequest ??= (async () => {
     if (accessToken) return true
     if (storedRefresh()) {
@@ -236,19 +236,19 @@ export function startAuth(explicit = false): Promise<boolean> {
       if (restored) return true
     }
     if (pendingYandexToken) {
-      await resumeYandexLogin(explicit)
+      await resumeYandexLogin()
       return hasAccess()
     }
     if (pendingVkToken) {
-      await resumeVkLogin(explicit)
+      await resumeVkLogin()
       return hasAccess()
     }
     if (hasPendingWidgetLogin()) {
-      await resumeWidgetLogin(explicit)
+      await resumeWidgetLogin()
       return hasAccess()
     }
     if (initDataRaw && !explicitlyLoggedOut) {
-      await loginMiniApp(explicit)
+      await loginMiniApp()
       return hasAccess()
     }
     return false
@@ -265,10 +265,10 @@ export async function registerPlayer(body: OnboardingRequest, onCreated?: (playe
     })
     if (!response.ok && response.status !== 409) throw new Error(`Registration failed (${response.status})`)
     if (response.ok) reachMetrikaGoal('registration_complete')
-    if (pendingYandexToken) await resumeYandexLogin()
-    else if (pendingVkToken) await resumeVkLogin()
-    else if (pendingWidgetToken) await resumeWidgetLogin()
-    else await loginMiniApp()
+    if (pendingYandexToken) await resumeYandexLogin(false)
+    else if (pendingVkToken) await resumeVkLogin(false)
+    else if (pendingWidgetToken) await resumeWidgetLogin(false)
+    else await loginMiniApp(false)
     if (!hasAccess()) throw new Error('Registration could not be confirmed')
     if (response.ok) confirmedRegistrationAccess = accessToken
   }

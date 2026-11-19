@@ -8,7 +8,6 @@ using Reki.Application.Notifications;
 using Reki.Application.Player;
 using Reki.Application.Player.Streaks;
 using Reki.Application.Posts;
-using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
 using Reki.Infrastructure.Mongo.Options;
 using Reki.Infrastructure.Mongo.Repositories;
@@ -39,7 +38,6 @@ internal static class DependencyInjection
         services.AddSingleton<IWorldRepository, MongoWorldRepository>();
         services.AddSingleton<IPostRepository, MongoPostRepository>();
         services.AddSingleton<IInvitationRepository, MongoInvitationRepository>();
-        services.AddSingleton<IProductGoalRepository, MongoProductGoalRepository>();
         services.AddSingleton(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoClient);
         services.AddSingleton(sp => sp.GetRequiredService<MongoCompositionRoot>().MongoDatabase);
         services.AddHealthChecks().AddCheck<MongoHealthCheck>("mongodb", null, ["ready"]);

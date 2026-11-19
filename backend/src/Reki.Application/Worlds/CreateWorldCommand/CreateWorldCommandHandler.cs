@@ -18,11 +18,9 @@ internal sealed class CreateWorldCommandHandler(
     IRekiContextAccessor rekiContextAccessor,
     IOptionsMonitor<GameBalance> balance,
     ProductTelemetry telemetry,
-    IStarVectorStore starVectorStore,
-    TimeProvider timeProvider,
-    IProductGoalRepository productGoals) : ICommandHandler<CreateWorld, ProductGoalResult<World>>
+    IStarVectorStore starVectorStore) : ICommandHandler<CreateWorld, World>
 {
-    public async ValueTask<ProductGoalResult<World>> Handle(CreateWorld command, CancellationToken cancellationToken)
+    public async ValueTask<World> Handle(CreateWorld command, CancellationToken cancellationToken)
     {
         var player = await rekiContextAccessor.Context.Player;
         var source = command.Definition;
@@ -39,8 +37,7 @@ internal sealed class CreateWorldCommandHandler(
 
         var currentBalance = balance.CurrentValue;
         var world = source.Instantiate(player.Id, currentBalance.Growth.StartingSubscribers);
-        await productGoals.EnsurePlayerAsync(player.Id, cancellationToken);
-        var goals = await unitOfWork.ExecuteAsync(
+        await unitOfWork.ExecuteAsync(
             async token =>
             {
                 var previousVersion = player.Version;
@@ -51,13 +48,13 @@ internal sealed class CreateWorldCommandHandler(
                     await players.SaveDailyChallengeAsync(player, previousVersion, token);
                 }
 
-                return await productGoals.RecordActivityAsync(player.Id, timeProvider.GetUtcNow(), ordinaryPost: false, token);
+                return true;
             },
             _ => worldCache.UpdateWorld(world),
             cancellationToken);
         telemetry.TrackPlayer(player, "world_created", new Dictionary<string, string> { ["template_id"] = world.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = world.Difficulty.ToString().ToLowerInvariant() }, world.Id);
         telemetry.TrackWorldAudience(world);
         await starVectorStore.WarmUpAsync(world);
-        return new ProductGoalResult<World>(world, goals);
+        return world;
     }
 }

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Api.Requests.Worlds;
-using Reki.Api.Telemetry;
 using Reki.Application.RekiContext;
 using Reki.Application.Worlds;
 using Reki.Application.Worlds.DeleteWorldCommand;
@@ -43,9 +42,10 @@ public sealed class WorldsController(
     [ActionName("CreateWorld")]
     public async Task<Ok<WorldResponse>> CreateWorldAsync(CreateWorldRequest request, CancellationToken cancellationToken)
     {
-        var result = await sender.Send(request.ToCreateWorld(), cancellationToken);
-        ProductGoalHeaders.Write(Response, result.Goals);
-        return TypedResults.Ok(result.Result.ToResponse());
+        var world = await sender.Send(
+            request.ToCreateWorld(),
+            cancellationToken);
+        return TypedResults.Ok(world.ToResponse());
     }
 
     [HttpPut("{worldId}", Name = "UpdateWorld")]
