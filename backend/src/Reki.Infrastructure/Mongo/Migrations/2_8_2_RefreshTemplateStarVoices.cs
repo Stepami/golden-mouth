@@ -9,6 +9,8 @@ namespace Reki.Infrastructure.Mongo.Migrations;
 
 internal sealed class RefreshTemplateStarVoices : RekiMigrationBase
 {
+    private const string ReplyStyle = "В комментариях и ответах обычно 1–2 коротких предложения. Отреагируй на одну конкретную деталь. Если игрок просит объяснить подробнее, можно ответить развёрнуто.";
+
     public override DatabaseVersion Version => new(2, 8, 2);
 
     public override async Task UpAsync(IMongoDatabase db, IClientSessionHandle session, CancellationToken cancellationToken)
@@ -119,7 +121,7 @@ internal sealed class RefreshTemplateStarVoices : RekiMigrationBase
             var filter = Builders<World>.Filter.Where(world =>
                 world.Id == worldId && world.Player.PlayerId == owner && world.TemplateId == null && !world.IsArchived);
             filter &= Builders<World>.Filter.ElemMatch(world => world.Stars, star => star.Id == starId);
-            var update = Builders<World>.Update.Set(world => world.Stars.FirstMatchingElement().Voice, voice);
+            var update = Builders<World>.Update.Set(world => world.Stars.FirstMatchingElement().Voice, ReplyStyle + "\n" + voice);
             await templates.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken);
         }
     }
