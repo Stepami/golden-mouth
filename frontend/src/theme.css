@@ -528,6 +528,17 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 
 .game-onboarding-progress .game-onboarding-collect { width: 100%; margin-top: 12px; padding: 11px 14px; border-radius: 12px; background: var(--lilac); color: #211a2d; font-weight: 650; text-align: center; }
 .game-onboarding-collect:disabled { opacity: .6; cursor: default; }
+.screen:has(.next-story-dock) { padding-bottom: var(--next-story-bottom-space, 180px); }
+.app:has(> .tabbar) .bottom-cta:has(.next-story-dock) { bottom: calc(78px + env(safe-area-inset-bottom)) !important; }
+.game-onboarding-progress.next-story-dock { flex: none; margin: 0; padding: 12px 14px; }
+.next-story-dock .game-onboarding-meta + p { margin-top: 5px; }
+.next-story-dock h2 { margin-top: 3px; }
+.next-story-dock .next-story-dismiss { min-width: 36px; min-height: 36px; margin: -5px -6px -5px 0; padding: 0; color: var(--soft); font-size: 21px; text-align: center; }
+.next-story-dock .next-story-same { width: 100%; min-height: 40px; padding: 5px 2px 0; text-align: center; }
+.next-story-dock button:focus-visible { outline: 2px solid var(--lilac); outline-offset: 2px; }
+.story-first-step.next-story-idea { margin: 0 0 15px; }
+.next-story-idea p { margin-top: 4px; }
+@media (pointer: coarse) { .screen:has(textarea:focus) .next-story-dock { display: none; } }
 .game-onboarding-crystal-flight { position: fixed; z-index: 1000; width: 28px; height: 28px; font-size: 25px; line-height: 28px; pointer-events: none; will-change: transform, opacity; }
 .thread-crystal-count { flex-shrink: 0; font-size: 12px; white-space: nowrap; cursor: default; }
 

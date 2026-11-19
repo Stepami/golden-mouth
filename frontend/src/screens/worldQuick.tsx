@@ -13,21 +13,15 @@ import { WorldSwitchDialog } from '../ui/WorldSwitchDialog'
 import { presetGoalFor } from '../app/presetGoals'
 import { WorldCover } from '../ui/WorldCover'
 import { useNav } from '../app/nav'
-import { getWorldDraft, savedWorldDraft, selectDraftOwner, setWorldDraft, updateWorldDraft, useWorldDraft, type WorldDraft } from '../app/worldDraft'
+import { getWorldDraft, savedWorldDraft, selectDraftOwner, setWorldDraft, updateWorldDraft, useWorldDraft, withPersona, type WorldDraft } from '../app/worldDraft'
+import { NextStoryProgress } from '../app/NextStory'
+import { trackNextStory } from '../app/GameOnboardingState'
 import { dramaOptions, prototypeWorld, worldArt } from '../app/worldPrototype'
 import { Avatar, BottomCTA, Button, Card, ExpandableText, Segmented, TopBar } from '../ui'
 import { TextField } from '../ui/TextField'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import type { Address, WorldDefinition, WorldId } from '../api/types'
 
-
-export function withPersona(draft: WorldDraft, star?: WorldDefinition['stars'][number]): WorldDraft {
-  const d = draft.definition; const previous = draft.persona
-  const heroOrder = draft.heroOrder ?? [...d.stars, ...(previous ? [previous.star] : [])].map(value => value.id)
-  const restored = { ...d, stars: [...d.stars, ...(previous ? [previous.star] : [])], description: previous?.description ?? d.description, name: previous?.name ?? d.name, avatar: previous?.avatar ?? d.avatar, role: previous?.role ?? d.role }
-  if (!star) return { ...draft, heroOrder, personaChosen: true, persona: undefined, definition: restored }
-  return { ...draft, heroOrder, personaChosen: true, persona: { star, description: restored.description, name: restored.name, avatar: restored.avatar, role: restored.role }, definition: { ...restored, name: star.name, avatar: star.avatarSeed, role: star.role, description: `${restored.description}\nПерсона игрока: ${star.name}. ${star.about}`.slice(0, 2000), stars: restored.stars.filter(value => value.id !== star.id) } }
-}
 
 function refreshHogwartsDraft(draft: WorldDraft, current: WorldDefinition): WorldDraft {
   if (draft.editingId || current.templateId !== 'aec9494b-4118-4525-8458-e85d759c8dd9') return draft
@@ -98,18 +92,23 @@ export function QuickWorldForm({ draft }: { draft: WorldDraft }) {
 }
 export function QuickChannelForm({ draft }: { draft: WorldDraft }) {
   const nav = useNav(); const d = draft.definition; const selected = draft.persona
+  const nextStory = nav.params.nextStory === true
   const choose = (star?: WorldDefinition['stars'][number]) => { tap('world_choose_character', { kind: star ? 'preset' : 'custom' }); setWorldDraft(withPersona(draft, star)) }
   const goal = presetGoalFor(d)
   const heroes = [...d.stars, ...(selected ? [selected.star] : [])].sort((a, b) => (draft.heroOrder?.indexOf(a.id) ?? 0) - (draft.heroOrder?.indexOf(b.id) ?? 0))
-  return <div className="screen no-tab"><TopBar title={`Персонаж · ${d.templateId === null ? '2 / 3' : '1 / 2'}`} onBack={nav.back} /><div className="pad"><h1>Кем ты будешь в этой истории?</h1><p className="muted">Свой персонаж или герой мира — история будет идти от твоего лица.</p>
+  return <div className="screen no-tab"><TopBar title={nextStory ? 'Персонаж' : `Персонаж · ${d.templateId === null ? '2 / 3' : '1 / 2'}`} onBack={nav.back} /><div className="pad">{nextStory && <p className="small muted">{d.emoji} {d.title}</p>}<h1>Кем ты будешь в этой истории?</h1><p className="muted">Свой персонаж или герой мира — история будет идти от твоего лица.</p>
 
-    {heroes.length > 1 && heroes.map(star => <button className={`persona-option ${selected?.star.id === star.id ? 'selected' : ''}`} aria-pressed={selected?.star.id === star.id} key={star.id} onClick={() => choose(star)}><Avatar seed={star.avatarSeed} avatarStyle={d.avatarStyle} world={d.templateId ?? undefined} mode="default" /><div><b>{star.name}</b><div className="small muted">{star.role}</div></div><span>{selected?.star.id === star.id ? '✓' : ''}</span></button>)}
+    {heroes.length > 1 && heroes.filter(star => !nextStory || star.id !== nav.params.sourceStarId).map(star => <button className={`persona-option ${selected?.star.id === star.id ? 'selected' : ''}`} aria-pressed={selected?.star.id === star.id} key={star.id} onClick={() => choose(star)}><Avatar seed={star.avatarSeed} avatarStyle={d.avatarStyle} world={d.templateId ?? undefined} mode="default" /><div><b>{star.name}</b><div className="small muted">{star.role}</div></div><span>{selected?.star.id === star.id ? '✓' : ''}</span></button>)}
     <button className={`persona-option ${!selected ? 'selected' : ''}`} aria-pressed={!selected} onClick={() => choose()}><span>✦</span><div><b>Свой персонаж</b><div className="small muted">Твоё имя, твоя роль в истории</div></div><span>{!selected ? '✓' : ''}</span></button>
     {goal && <Card><b>Твоя цель</b><p>{goal.goal}</p>{!selected && goal.context && <p className="small muted">{goal.context}</p>}<p className="small muted">{goal.firstStep}</p></Card>}
     {selected ? <Card><ExpandableText text={selected.star.about} /></Card> : <div className="quick-personal"><label className="label">Имя персонажа<input aria-label="Имя персонажа" value={d.name} maxLength={80} onChange={e => updateWorldDraft({ name: e.target.value })} /></label><label className="label">Кто ты в этом мире<input aria-label="Кто ты в этом мире" value={d.role} maxLength={80} onChange={e => updateWorldDraft({ role: e.target.value })} /></label></div>}
     <div className="label">Как к тебе обращаться</div><Segmented value={draft.address} onChange={(address: Address) => setWorldDraft({ ...draft, address })} options={[{ id: 'she', label: 'она' }, { id: 'he', label: 'он' }, { id: 'nick', label: 'по нику' }]} />
     <details className="card profile-preview"><summary><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={40} /><span><b>{d.name || "Твой персонаж"}</b><span className="small muted">{displayHandle(d.avatar)}</span></span><span className="small">Изменить</span></summary><label className="label">Ник<input aria-label="Ник" value={d.avatar} maxLength={80} onChange={e => updateWorldDraft({ avatar: e.target.value })} /></label><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={{ address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} size={56} /><AvatarPersonalization enabled={draft.personalizeAvatar !== false} onChange={personalizeAvatar => setWorldDraft({ ...draft, personalizeAvatar })} /></details>
-  </div><BottomCTA main="Выбрать градус драмы" disabled={!d.name.trim() || !d.role.trim() || !d.avatar.trim()} onMain={() => { recordEntryStep('landing_character_selected'); nav.push('01-4b_world_setup') }} /></div>
+  </div><BottomCTA main="Выбрать градус драмы" hint={nextStory && <NextStoryProgress step={1}>Выбери, от чьего лица рассказать эту историю.</NextStoryProgress>} disabled={!d.name.trim() || !d.role.trim() || !d.avatar.trim()} onMain={() => {
+    if (nextStory && d.templateId) trackNextStory('role', d.templateId, { kind: selected ? 'preset' : 'custom', star: selected?.star.id })
+    else recordEntryStep('landing_character_selected')
+    nav.push('01-4b_world_setup', nextStory ? { nextStory, world: d.templateId } : undefined)
+  }} /></div>
 }
 export function DifficultyPicker({ definition }: { definition: WorldDefinition }) {
   return <section><h2>Сложность</h2><Segmented value={definition.difficulty} onChange={difficulty => updateWorldDraft({ difficulty })} options={[{ id: 'easy', label: 'Легко' }, { id: 'normal', label: 'Средне' }, { id: 'hard', label: 'Сложно' }]} /><p className="small muted">Чем сложнее, тем быстрее рост подписчиков и выше риск провала. Изменение действует на следующие действия.</p></section>

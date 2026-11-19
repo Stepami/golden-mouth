@@ -22,6 +22,8 @@ import { track } from '../app/log'
 import { tap, trackLandingAuth } from '../app/analytics'
 import { register } from '.'
 import { worldArt } from '../app/worldPrototype'
+import { NextStoryChannelHint } from '../app/NextStory'
+import { useNextStory } from '../app/GameOnboardingState'
 import { WorldOverview, WorldPrototypePreview } from './worldQuick'
 import { ChooseWorld as World, ChannelSetup as Channel, VoiceSetup as WorldSetup, StarsSetup as FirstStar } from './worldWizard'
 
@@ -161,8 +163,12 @@ export function Home({ firstPostConfirmed = false, channelEmpty = false }: { fir
 function LiveHome({ firstPostConfirmed, channelEmpty }: { firstPostConfirmed: boolean; channelEmpty: boolean }) {
   const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
   const worldId = p.worldInstanceId ?? p.world
+  const story = useNextStory()
+  const startingNextStory = story?.phase === 'post' && story.worldId === worldId
+  const starter = startingNextStory ? profile.ideas.find(idea => idea.trim()) : undefined
   const [invitation, setInvitation] = useState<{ playerId: string; worldId: string; bonus: number }>()
   useEffect(() => {
+    if (startingNextStory) return
     const controller = new AbortController()
     const load = async () => {
       if (!channelEmpty && (await api.channelPosts(worldId, undefined, controller.signal)).items.length > 0) return
@@ -171,13 +177,13 @@ function LiveHome({ firstPostConfirmed, channelEmpty }: { firstPostConfirmed: bo
     }
     void load().catch(() => {})
     return () => controller.abort()
-  }, [p.id, worldId, channelEmpty])
-  const bonus = invitation?.playerId === p.id && invitation.worldId === worldId ? invitation.bonus : 0
-  return <HomeView player={p} title={worldOf(p.world).title} context={profile.firstContext} goal={goal} firstPostConfirmed={firstPostConfirmed} bonus={bonus} />
+  }, [p.id, worldId, channelEmpty, startingNextStory])
+  const bonus = !startingNextStory && invitation?.playerId === p.id && invitation.worldId === worldId ? invitation.bonus : 0
+  return <HomeView player={p} title={worldOf(p.world).title} context={profile.firstContext} goal={goal} firstPostConfirmed={firstPostConfirmed || startingNextStory} bonus={bonus} starter={starter} hint={<NextStoryChannelHint player={p} />} />
 }
 
-function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus = 0, guest = false }: {
-  player: Pick<Player, 'world' | 'streak'>; title: string; context: string; goal: ReturnType<typeof usePresetGoal>; firstPostConfirmed: boolean; bonus?: number; guest?: boolean
+function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus = 0, guest = false, starter, hint }: {
+  player: Pick<Player, 'world' | 'streak'>; title: string; context: string; goal: ReturnType<typeof usePresetGoal>; firstPostConfirmed: boolean; bonus?: number; guest?: boolean; starter?: string; hint?: React.ReactNode
 }) {
   const nav = useNav()
   const session = useGuestSession()
@@ -185,11 +191,16 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus =
     <Card><p>{session.post.text}</p></Card>
   </div><BottomCTA main="Посмотреть реакции" onMain={() => nav.push('02-6_thread', { focusReply: true })} /></div>
   return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
-    <Streak streak={p.streak} />
-    <div className="card first-story">{worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${title}»`} />}{goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}<div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{context}</p>{goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
+    {!starter && <Streak streak={p.streak} />}
+    <div className="card first-story">
+      {worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${title}»`} />}
+      {goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}
+      {starter && <div className="story-first-step next-story-idea"><b className="small">Идея для поста</b><p>{starter}</p></div>}
+      <div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{context}</p>
+      {!starter && goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
       {bonus > 0 && <p>🎁 Первый пост даст кристаллы: +{bonus} 💎</p>}
-    </div><p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>
-  </div><div className="bottom-cta" style={guest ? undefined : { bottom: 78 }}>{session?.hint}<button className="btn" onClick={() => { if (!guest) tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }}>Написать первый пост</button></div></div>
+    </div>{!starter && <p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>}
+  </div><div className="bottom-cta" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}<button className="btn" onClick={() => { if (!guest) tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }}>Написать первый пост</button></div></div>
 }
 
 register({

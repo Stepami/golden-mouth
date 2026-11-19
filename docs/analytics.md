@@ -233,6 +233,8 @@ AI-ответы и повтор requestId не учитываются. Поля:
 
 Для обучения `onboarding_step` различает подтверждённые `world_saved`, `post_saved`, `reply_saved`, начало ответа `reply_started`, результат начальной реакции `initial_reaction_result` и выдачи `reward`. Ошибки сохранения и генерации имеют `ok=false` и, где доступно, HTTP-статус или `unconfirmed`.
 
+Предложение новой истории передаёт в `onboarding_step` шаги `next_story_shown`, `next_story_accepted`, `next_story_dismissed`, `next_story_role`, `next_story_world_saved`, `next_story_post_saved`. `template_id` — ID предложенного или выбранного шаблона. `kind` при принятии — `same_world` или `other_world`, при выборе роли — `preset` или `custom`. Для готовой роли `star` содержит ID персонажа из шаблона. Сохранение поста отмечается после подтверждения обычной публикации в новом экземпляре мира.
+
 ### Гостевая пробная история (#352)
 
 `landing_continue` остаётся кликом по главной кнопке посадочной, `landing_auth_complete` — подтверждённым завершением входа на пути с выбранным миром. В Метрике добавляются `landing_guest_start`, `landing_guest_screen`, `landing_guest_action`, `landing_guest_save_click`, `landing_registration_view` и `landing_registration_consent`. Разрезы `guest_world`, `guest_hero`, `guest_screen`, `guest_action` позволяют отличить просмотр шага от нажатия: выбор героя, начало истории, редактор, пробная публикация, разговор, отправка ответа и получение пробной награды. `landing_login_account_missing` отдельно отмечает вход без найденного аккаунта. Первая пробная публикация и ответ остаются локальными и не создают событий серверного поста или комментария. После регистрации черновик переносится в созданный мир, первый реальный пост и ответ считаются по существующим серверным событиям.
