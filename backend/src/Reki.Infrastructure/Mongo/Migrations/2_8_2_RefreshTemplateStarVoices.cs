@@ -9,7 +9,7 @@ namespace Reki.Infrastructure.Mongo.Migrations;
 
 internal sealed class RefreshTemplateStarVoices : RekiMigrationBase
 {
-    private const string ReplyStyle = "В комментариях и ответах обычно 1–2 коротких предложения. Отреагируй на одну конкретную деталь. Если игрок просит объяснить подробнее, можно ответить развёрнуто.";
+    private const string ReplyStyle = "Обычный комментарий или ответ — 1–2 коротких предложения, до 180 символов. Выбери одну деталь или один следующий шаг. Ответь длиннее, только если игрок прямо просит подробности.";
 
     public override DatabaseVersion Version => new(2, 8, 2);
 
