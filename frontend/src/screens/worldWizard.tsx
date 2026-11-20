@@ -2,7 +2,8 @@ import { reachMetrikaGoal } from '../app/metrika'
 import { clearGuestHandoff, readGuestHandoff, setRegistrationConsent } from '../app/landing/guestHandoff'
 import { draftKey, hasPostDraft, savePostDraft } from '../app/postDraft'
 import { event, tap } from '../app/analytics'
-import { registerGameOnboarding, onboardingWorldSaved } from '../app/GameOnboardingState'
+import { registerGameOnboarding, onboardingWorldSaved, nextStoryWorldSaved } from '../app/GameOnboardingState'
+import { NextStoryProgress } from '../app/NextStory'
 import { hasAccess, needsRegistration } from '../api/auth'
 import { clearLandingWorld, pendingLandingWorld } from '../app/landing/experiment'
 import {PushNotifications} from '../app/push/PushNotifications'
@@ -45,7 +46,7 @@ export function ChooseWorld() {
   const currentWorld = player ? owned.find(world => world.id === player.worldInstanceId) ?? { ...worldDocumentOf(player.world), id: player.worldInstanceId ?? player.world, name: player.name, avatar: player.handle, subscribers: player.subs } : undefined
   const otherWorlds = owned.filter(world => world.id !== currentWorld?.id)
   const resume = async (world: WorldDocument) => { try { const next = await api.me(world.id); clearLandingWorld(); setPlayer(next); nav.push('03-5_stage') } catch { setError('Не получилось открыть мир.') } }
-  return <div className="screen no-tab"><TopBar title="Миры" rightPlain right={player ? <Resources player={player} /> : undefined} />
+  return <div className="screen no-tab"><TopBar title="Миры" onBack={nav.params.nextStory === true ? nav.back : undefined} rightPlain right={player ? <Resources player={player} /> : undefined} />
     <div className="pad world-catalog-page worlds-home"><InstallApp entry="banner" />{player && <PushNotifications key={player.id} playerId={player.id} entry="banner" />}{!player && <><h1>Выбери свою историю</h1><p className="muted">Готовые миры доступны сразу.</p></>}
       {getWorldDraft() && <Button secondary onClick={() => nav.push(getWorldDraft()?.definition.templateId === null ? '05-7b_own_world' : '01-4_channel')}>Продолжить настройку</Button>}
       {currentWorld && <><h2>Продолжить историю</h2><button data-game-onboarding-world={currentWorld.id} className="world-resume card" onClick={() => resume(currentWorld)}><Avatar seed={currentWorld.avatar} avatarStyle={currentWorld.avatarStyle} profile={player ? { address: player.address, ageBand: player.ageBand, personalizeAvatar: avatarPersonalization(player.id) } : undefined} size={48} /><div><b>{currentWorld.name}</b><p className="small muted">{currentWorld.emoji} {currentWorld.title} · {currentWorld.subscribers} подписчиков</p><span>Продолжить →</span></div></button></>}
@@ -81,19 +82,24 @@ export function AdvancedSetup() { return <Ready>{draft => <StarsForm draft={draf
 export function StarsSetup() { return <Ready>{draft => <StarsForm draft={draft} />}</Ready> }
 function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typeof useWorldDraft>>; quick?: boolean }) {
   const nav = useNav(); const { setPlayer } = useStore(); const d = draft.definition
+  const nextStory = nav.params.nextStory === true
   const [saving, setSaving] = useState(false); const [error, setError] = useState(''); const [uncertain, setUncertain] = useState(false)
   useEffect(() => { if (error) document.querySelector('[role="alert"]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }) }, [error])
   const devPreview = import.meta.env.DEV && new URLSearchParams(location.search).has('screen') && !hasAccess() && !needsRegistration()
   const save = async () => {
     if (saving || uncertain) return
     if (draft.previewOnly || devPreview) { nav.push('05-7c_world_preview'); return }
+    const nextStoryPlayerId = nextStory ? api.playerId() : undefined
     setSaving(true); setError('')
     let creatingWorld = false
     try {
       if (!api.hasPlayer()) { if (!draft.birthYear) { nav.push('01-2_age', { returnToCreation: true }); return } const identity = await api.onboarding({ birthYear: draft.birthYear, address: draft.address, referralCode: pendingReferral() }); registerGameOnboarding(identity.id); clearReferral(); setWorldDraft(null); clearWorldDrafts('onboarding'); selectDraftOwner(identity.id); setWorldDraft(draft) }
       await api.settings({ address: draft.address })
       creatingWorld = !draft.editingId
-      const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d)
+      const templateId = d.templateId
+      const player = draft.editingId ? await api.saveWorld(draft.editingId, d) : await api.createWorld(d, nextStoryPlayerId && templateId ? worldId => {
+        if (api.playerId() === nextStoryPlayerId) nextStoryWorldSaved(worldId, templateId)
+      } : undefined)
       if (creatingWorld) {
         onboardingWorldSaved(player.worldInstanceId ?? player.world)
         const guest = readGuestHandoff()
@@ -107,7 +113,9 @@ function StarsForm({ draft, quick = false }: { draft: NonNullable<ReturnType<typ
         setRegistrationConsent(false)
       }
       setAvatarPersonalization(player.id, draft.personalizeAvatar !== false)
-      clearLandingWorld(); setWorldDraft(null); setPlayer(player); nav.replace('03-5_stage', { firstPostConfirmed: creatingWorld })
+      clearLandingWorld(); setWorldDraft(null); setPlayer(player)
+      if (nextStory) nav.reset('03-5_stage', { firstPostConfirmed: creatingWorld })
+      else nav.replace('03-5_stage', { firstPostConfirmed: creatingWorld })
     } catch (cause) {
       event('onboarding_step', { step: 'world_save', ok: false, kind: cause instanceof ApiError ? String(cause.status) : 'unconfirmed' })
       if (creatingWorld && !(cause instanceof ApiError)) { setUncertain(true); setError('Не удалось подтвердить создание. Сначала проверь список миров: повтор может создать ещё один экземпляр.') }
@@ -131,9 +139,10 @@ export function QuickMoodSetup({ draft, saving = false, disabled = false, fixed 
   children?: ReactNode
 }) {
   const nav = useNav(); const d = draft.definition
+  const nextStory = !fixed && nav.params.nextStory === true
   return <div className="screen no-tab"><TopBar title="Настроение истории" onBack={saving ? undefined : nav.back} /><div className="pad">
-    <DramaPicker definition={d} fixed={fixed} withDifficulty={!fixed} beforeOptions={!fixed && <div className="drama-world-edit"><Button secondary onClick={() => nav.push('05-12_world_advanced')}>Редактировать мир</Button><p className="small muted">Мир можно будет отредактировать позже</p></div>} />
+    <DramaPicker definition={d} fixed={fixed} withDifficulty={!fixed} beforeOptions={!fixed && !nextStory && <div className="drama-world-edit"><Button secondary onClick={() => nav.push('05-12_world_advanced')}>Редактировать мир</Button><p className="small muted">Мир можно будет отредактировать позже</p></div>} />
     <div className="quick-summary"><Avatar seed={d.avatar} avatarStyle={d.avatarStyle} profile={fixed ? undefined : { address: draft.address, ageBand: draft.ageBand, personalizeAvatar: draft.personalizeAvatar }} /><div><b>{d.name}</b><div className="small muted">{d.title} · {d.role}</div></div></div>
     {children}
-  </div><BottomCTA main={action} disabled={saving || disabled || (!fixed && (!d.voice.trim() || d.stars.length === 0))} onMain={onStart} /></div>
+  </div><BottomCTA main={action} hint={nextStory && <NextStoryProgress step={2}>Выбери, как быстро расти и насколько горячими будут споры.</NextStoryProgress>} disabled={saving || disabled || (!fixed && (!d.voice.trim() || d.stars.length === 0))} onMain={onStart} /></div>
 }

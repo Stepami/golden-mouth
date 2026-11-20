@@ -1,6 +1,7 @@
 import { useGuestSession } from '../app/landing/guestSession'
 import { tap } from '../app/analytics'
-import { gameOnboardingState, onboardingPostSaved, onboardingReplyStarted, onboardingReplySaved, gameOnboardingActive, updateGameOnboarding, useGameOnboarding } from '../app/GameOnboardingState'
+import { gameOnboardingState, onboardingPostSaved, onboardingReplyStarted, onboardingReplySaved, gameOnboardingActive, updateGameOnboarding, useGameOnboarding, nextStoryPostSaved } from '../app/GameOnboardingState'
+import { NextStoryEditorHint } from '../app/NextStory'
 import { recordEntryStep } from '../app/landing/openobserve'
 import { RepostAction } from '../ui/RepostAction'
 import { PostLikeAction } from '../ui/PostLikeAction'
@@ -115,7 +116,7 @@ export function Compose() {
         {checkingFirstPost && <p className="small muted" role="status">Проверяем историю публикаций…</p>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={publish} />
+      <BottomCTA main="Опубликовать" hint={!guest && !repostId && profile && <NextStoryEditorHint player={profile} />} disabled={!text.trim()} onMain={publish} />
     </div>
   )
 }
@@ -153,7 +154,11 @@ export function Live() {
         nav.replace('02-2b_publish_error', { text, repostId: nav.params.repostId, status: cause instanceof ApiError ? cause.status : undefined, uncertain: !(cause instanceof ApiError) || (cause.status >= 500 && cause.status !== 503) })
         return
       }
-      if (!nav.params.repostId) onboardingPostSaved(p.worldInstanceId ?? p.world, created.post.id)
+      if (!nav.params.repostId) {
+        const worldId = p.worldInstanceId ?? p.world
+        onboardingPostSaved(worldId, created.post.id)
+        nextStoryPostSaved(worldId)
+      }
       if (!active) return
       if (!nav.params.repostId || text.length > 0) completePostDraft(draftKey(p) + (typeof nav.params.repostId === 'string' ? `:quote:${nav.params.repostId}` : ''), text)
       const latest = await refresh()
