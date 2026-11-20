@@ -70,6 +70,7 @@ jobs:
       LLM_MODEL: ${{ secrets.LLM_MODEL }}
       OPENOBSERVE_EMAIL: ${{ secrets.OPENOBSERVE_EMAIL }}
       OPENOBSERVE_PASSWORD: ${{ secrets.OPENOBSERVE_PASSWORD }}
+      METRIKA_OPENOBSERVE_BASIC_AUTH: ${{ secrets.METRIKA_OPENOBSERVE_BASIC_AUTH }}
 
     steps:
       - name: Check out tagged commit
@@ -88,6 +89,7 @@ jobs:
             --volume "$PWD/nginx.gateway.conf:/etc/nginx/nginx.conf:ro" \
             --volume "$PWD/nginx.production.conf:/etc/nginx/conf.d/default.conf:ro" \
             --volume "$PWD/observability/daily-metrics:/etc/nginx/daily-metrics:ro" \
+            --volume "$PWD/observability/metrika-goals:/etc/nginx/metrika-goals:ro" \
             --volume /etc/reki/tls/fullchain.pem:/etc/nginx/tls/fullchain.pem:ro \
             --volume /etc/reki/tls/private.key:/etc/nginx/tls/private.key:ro \
             --volume /etc/letsencrypt:/etc/letsencrypt:ro \
