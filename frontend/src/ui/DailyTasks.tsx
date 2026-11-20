@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNav } from '../app/nav'
 import { tap } from '../app/analytics'
@@ -37,9 +37,19 @@ export function dailyTasksFor(player: Player) {
   })
 }
 
-function DailyTaskPreview({ tasks }: { tasks: ReturnType<typeof dailyTasksFor> }) {
+function DailyTaskPreview({ tasks, initialIndex }: { tasks: ReturnType<typeof dailyTasksFor>; initialIndex: number }) {
   const track = useRef<HTMLDivElement>(null)
-  const [shown, setShown] = useState(0)
+  const positioned = useRef(false)
+  const [shown, setShown] = useState(initialIndex)
+  useLayoutEffect(() => {
+    const list = track.current
+    if (!list || positioned.current) return
+    const slide = list.children.item(initialIndex)
+    if (!(slide instanceof HTMLElement)) return
+    list.scrollTo({ left: slide.offsetLeft, behavior: 'instant' })
+    setShown(initialIndex)
+    positioned.current = true
+  }, [initialIndex, tasks.length])
   const index = Math.min(shown, Math.max(0, tasks.length - 1))
   const move = (to: number) => {
     const slide = track.current?.children.item(to) as HTMLElement | null | undefined
@@ -91,7 +101,11 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
   const done = tasks.filter(task => task.done).length
   const suitable = tasks.filter(task => repost ? task.type === 'reposts' : task.compose)
   const featured = suitable.find(task => !task.done) ?? suitable[0]
-  if (editor) return <DailyTaskPreview key={`${context}:${repost}`} tasks={featured ? [featured, ...tasks.filter(task => task !== featured)] : tasks} />
+  if (editor) {
+    const requested = tasks.findIndex(task => task.type === nav.params.dailyTask)
+    const initialIndex = requested >= 0 ? requested : featured ? tasks.indexOf(featured) : 0
+    return <DailyTaskPreview key={`${context}:${repost}:${requested}`} tasks={tasks} initialIndex={initialIndex} />
+  }
 
   const show = () => {
     setOpened(context)
@@ -105,7 +119,7 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
   const action = (task: typeof tasks[number]) => {
     tap('daily_task_action', { kind: task.type, to: task.compose ? '02-1_compose' : '03-3_feed' })
     setOpened('')
-    if (task.compose) nav.push('02-1_compose')
+    if (task.compose) nav.push('02-1_compose', { dailyTask: task.type })
     else nav.tab(1)
   }
   const status = tasks.length ? `${done}/${tasks.length}` : 'Посмотреть'
