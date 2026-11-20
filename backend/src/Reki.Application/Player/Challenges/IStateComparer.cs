@@ -3,8 +3,17 @@ using Reki.Domain.Player;
 namespace Reki.Application.Player.Challenges;
 
 internal interface IStateComparer<TCommand, TResponse>
+    where TCommand : ITrackDailyProgress
 {
-    ValueTask<Func<TResponse, CancellationToken, ValueTask>> CaptureAsync(
+    internal interface IContinuation
+    {
+        ValueTask ApplyAsync(
+            TResponse response,
+            PlayerProfile player,
+            CancellationToken cancellationToken);
+    }
+
+    ValueTask<IContinuation> CaptureAsync(
         TCommand command,
         PlayerProfile player,
         CancellationToken cancellationToken);

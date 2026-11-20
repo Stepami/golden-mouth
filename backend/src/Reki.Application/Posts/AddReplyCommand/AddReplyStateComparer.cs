@@ -2,28 +2,36 @@ using Reki.Application.Player.Challenges;
 using Reki.Application.Posts.Responses.Reply;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Challenges;
+using Reki.Domain.Posts;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.AddReplyCommand;
 
 internal sealed class AddReplyStateComparer(IPostRepository posts) : IStateComparer<AddReply, ReplyResponse>
 {
-    public async ValueTask<Func<ReplyResponse, CancellationToken, ValueTask>> CaptureAsync(
+    public async ValueTask<IStateComparer<AddReply, ReplyResponse>.IContinuation> CaptureAsync(
         AddReply command,
         PlayerProfile player,
         CancellationToken cancellationToken)
     {
-        Func<ReplyResponse, CancellationToken, ValueTask> skip = static (_, _) => ValueTask.CompletedTask;
-        var challenge = player.DailyChallenge;
+        var skip = EmptyStateComparerContinuation<AddReply, ReplyResponse>.Instance;
+        var (day, _, values) = player.DailyChallenge;
         var worldId = command.WorldId;
-        if (!challenge.Values.TryGetValue(worldId, out var tasks))
+        if (!values.TryGetValue(worldId, out var tasks))
         {
             return skip;
         }
 
+        var authorId = command.AuthorId;
         var playerAuthor = player.Id.ToAuthorId();
-        var isPlayer = command.AuthorId == playerAuthor;
-        var starId = tasks.GetValueOrDefault(DailyTaskType.StarComment)?.StarId;
-        if (isPlayer ? !tasks.ContainsKey(DailyTaskType.Comments) : starId?.ToAuthorId() != command.AuthorId)
+        var type = authorId == playerAuthor ? DailyTaskType.Comments : DailyTaskType.StarComment;
+        if (!tasks.TryGetValue(type, out var task))
+        {
+            return skip;
+        }
+
+        var starId = task.StarId;
+        if (type == DailyTaskType.StarComment && starId?.ToAuthorId() != authorId)
         {
             return skip;
         }
@@ -34,24 +42,39 @@ internal sealed class AddReplyStateComparer(IPostRepository posts) : IStateCompa
             return skip;
         }
 
-        var day = challenge.Day;
-        if (!isPlayer && (post.RepostId is not null || post.AuthorId != playerAuthor ||
-                          DateOnly.FromDateTime(post.CreatedAtUtc.UtcDateTime) != day))
+        if (type == DailyTaskType.StarComment)
         {
-            return skip;
+            var isOwnOriginalPost = post.RepostId is null && post.AuthorId == playerAuthor;
+            if (!isOwnOriginalPost || DateOnly.FromDateTime(post.CreatedAtUtc.UtcDateTime) != day)
+            {
+                return skip;
+            }
         }
 
-        var commentCount = post.Comments.Count;
-        var authorId = command.AuthorId;
-        var type = isPlayer ? DailyTaskType.Comments : DailyTaskType.StarComment;
-        return (response, _) =>
+        return new ReplyContinuation(worldId, authorId, type, starId, post.Comments.Count);
+    }
+
+    private sealed class ReplyContinuation(
+        WorldId worldId,
+        AuthorId authorId,
+        DailyTaskType type,
+        StarId? starId,
+        int commentCount) : IStateComparer<AddReply, ReplyResponse>.IContinuation
+    {
+        public ValueTask ApplyAsync(
+            ReplyResponse response,
+            PlayerProfile player,
+            CancellationToken cancellationToken)
         {
             if (response.AuthorId == authorId && response.Post.Comments.Count > commentCount)
             {
-                player.ApplyDailyChallengeProgress(worldId, new Dictionary<DailyTaskType, long> { [type] = 1 }, starId);
+                player.ApplyDailyChallengeProgress(
+                    worldId,
+                    new Dictionary<DailyTaskType, long> { [type] = 1 },
+                    starId);
             }
 
             return ValueTask.CompletedTask;
-        };
+        }
     }
 }

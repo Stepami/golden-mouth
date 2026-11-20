@@ -2,12 +2,13 @@ using Reki.Application.Player.Challenges;
 using Reki.Application.Posts.Responses;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Challenges;
+using Reki.Domain.Worlds;
 
 namespace Reki.Application.Posts.CreatePostCommand;
 
 internal sealed class CreatePostStateComparer : IStateComparer<CreatePost, CreatePostResponse>
 {
-    public ValueTask<Func<CreatePostResponse, CancellationToken, ValueTask>> CaptureAsync(
+    public ValueTask<IStateComparer<CreatePost, CreatePostResponse>.IContinuation> CaptureAsync(
         CreatePost command,
         PlayerProfile player,
         CancellationToken cancellationToken)
@@ -15,32 +16,39 @@ internal sealed class CreatePostStateComparer : IStateComparer<CreatePost, Creat
         var worldId = command.WorldId;
         if (!player.DailyChallenge.Values.ContainsKey(worldId))
         {
-            return ValueTask.FromResult<Func<CreatePostResponse, CancellationToken, ValueTask>>(
-                static (_, _) => ValueTask.CompletedTask);
+            return ValueTask.FromResult(EmptyStateComparerContinuation<CreatePost, CreatePostResponse>.Instance);
         }
 
-        return ValueTask.FromResult<Func<CreatePostResponse, CancellationToken, ValueTask>>(
-            (response, _) =>
+        return ValueTask.FromResult<IStateComparer<CreatePost, CreatePostResponse>.IContinuation>(
+            new PostContinuation(worldId));
+    }
+
+    private sealed class PostContinuation(WorldId worldId) : IStateComparer<CreatePost, CreatePostResponse>.IContinuation
+    {
+        public ValueTask ApplyAsync(
+            CreatePostResponse response,
+            PlayerProfile player,
+            CancellationToken cancellationToken)
+        {
+            var isPost = response.Post.RepostId is null;
+            var delta = response.Result.Delta;
+            var changes = new Dictionary<DailyTaskType, long>
             {
-                var isPost = response.Post.RepostId is null;
-                var delta = response.Result.Delta;
-                var changes = new Dictionary<DailyTaskType, long>
-                {
-                    [isPost ? DailyTaskType.Posts : DailyTaskType.Reposts] = 1,
-                };
-                if (delta != 0)
-                {
-                    changes[delta > 0 ? DailyTaskType.Subscribers : DailyTaskType.Unsubscribers] = Math.Abs(delta);
-                }
+                [isPost ? DailyTaskType.Posts : DailyTaskType.Reposts] = 1,
+            };
+            if (delta != 0)
+            {
+                changes[delta > 0 ? DailyTaskType.Subscribers : DailyTaskType.Unsubscribers] = Math.Abs(delta);
+            }
 
-                if (isPost)
-                {
-                    changes[DailyTaskType.PostViews] = response.Result.Views;
-                    changes[DailyTaskType.PostLikes] = response.Post.Likes;
-                }
+            if (isPost)
+            {
+                changes[DailyTaskType.PostViews] = response.Result.Views;
+                changes[DailyTaskType.PostLikes] = response.Post.Likes;
+            }
 
-                player.ApplyDailyChallengeProgress(worldId, changes);
-                return ValueTask.CompletedTask;
-            });
+            player.ApplyDailyChallengeProgress(worldId, changes);
+            return ValueTask.CompletedTask;
+        }
     }
 }
