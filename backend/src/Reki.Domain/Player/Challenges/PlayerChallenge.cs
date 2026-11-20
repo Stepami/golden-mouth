@@ -21,6 +21,49 @@ public sealed record PlayerChallenge(
             DailyTaskValues.Create(worlds, targets));
     }
 
+    internal bool ApplyProgress(
+        WorldId worldId,
+        IReadOnlyList<(DailyTaskType Type, long Value)> changes,
+        StarId? starId)
+    {
+        if (!Values.TryGetValue(worldId, out var tasks))
+        {
+            return false;
+        }
+
+        var changed = false;
+        foreach (var (type, value) in changes)
+        {
+            if (!Completion.TryGetValue(type, out var completed) ||
+                !tasks.TryGetValue(type, out var task) ||
+                (type == DailyTaskType.StarComment && (starId is null || task.StarId != starId)))
+            {
+                continue;
+            }
+
+            var progress = type switch
+            {
+                DailyTaskType.PostViews or DailyTaskType.PostLikes => Math.Max(task.Progress, value),
+                DailyTaskType.StarComment => 1,
+                _ => task.Progress + value,
+            };
+
+            if (progress != task.Progress)
+            {
+                tasks[type] = task with { Progress = progress };
+                changed = true;
+            }
+
+            if (!completed && progress >= task.Target)
+            {
+                Completion[type] = true;
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
     internal void AddWorld(
         World world,
         IReadOnlyDictionary<DailyTaskType, long> targets)

@@ -126,6 +126,17 @@ public sealed class PlayerProfile
         }
     }
 
+    public void ApplyDailyChallengeProgress(
+        WorldId worldId,
+        IReadOnlyList<(DailyTaskType Type, long Value)> changes,
+        StarId? starId = null)
+    {
+        if (DailyChallenge.ApplyProgress(worldId, changes, starId))
+        {
+            Version++;
+        }
+    }
+
     public PlayerProfile AddNotificationChannel(PlayerNotificationChannel channel)
     {
         switch (channel.Type)
