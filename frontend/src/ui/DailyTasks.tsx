@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNav } from '../app/nav'
+import { gameOnboardingActive, useGameOnboarding } from '../app/GameOnboardingState'
 import { tap } from '../app/analytics'
 import { usePlayer, useStore } from '../app/store'
 import type { Player } from '../api/types'
@@ -90,6 +91,7 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
   const player = usePlayer()
   const { refresh } = useStore()
   const nav = useNav()
+  const learning = gameOnboardingActive(useGameOnboarding())
   const day = new Date().toISOString().slice(0, 10)
   const context = `${player.id}:${player.worldInstanceId}:${day}`
   const [opened, setOpened] = useState('')
@@ -136,7 +138,7 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
             <span className={task.done ? 'daily-channel-done' : 'muted'} aria-label={task.done ? 'Выполнено' : `${task.progress} из ${task.target}`}>{task.done ? '✓' : `${formatDailyNumber(task.progress)}/${formatDailyNumber(task.target)}`}</span>
           </>
           return <li key={task.type}>
-            {task.done ? <div className="daily-channel-task">{content}</div> : <button type="button" className="daily-channel-task daily-channel-action" data-wide-count={task.target >= 10_000 || undefined} onClick={() => action(task)}>
+            {task.done || (learning && !task.compose) ? <div className="daily-channel-task">{content}</div> : <button type="button" className="daily-channel-task daily-channel-action" data-wide-count={task.target >= 10_000 || undefined} onClick={() => action(task)}>
               {content}<span className="daily-channel-arrow" aria-hidden="true">›</span>
             </button>}
           </li>
@@ -159,7 +161,7 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
             <div className="daily-quest-heading" data-wide-count={!task.done && task.target >= 10_000 || undefined}><b><span className="daily-quest-symbol" aria-hidden="true">{taskSymbols[task.type as TaskType]}</span>{task.title}</b><span className="daily-quest-count">{task.done ? '✓' : `${formatDailyNumber(task.progress)}/${formatDailyNumber(task.target)}`}</span></div>
             {task.done ? <p className="small muted">Выполнено в одном из миров</p> : <div className="daily-quest-bottom">
               <progress aria-label={`Прогресс: ${task.title}`} value={task.progress} max={task.target} />
-              <button className="daily-quest-action" onClick={() => action(task)}>{task.compose ? 'Написать пост' : 'Открыть ленту'}</button>
+              {(task.compose || !learning) && <button className="daily-quest-action" onClick={() => action(task)}>{task.compose ? 'Написать пост' : 'Открыть ленту'}</button>}
             </div>}
           </div>)}
         </div>
