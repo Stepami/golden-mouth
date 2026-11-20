@@ -22,7 +22,7 @@ import { contentOf, worldOf } from '../api/worldContent'
 import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
-import { TextField } from '../ui/TextField'
+import { submitOnDesktopEnter, TextField } from '../ui/TextField'
 import { completePostDraft, draftKey, hasPostDraft, readPostDraft, savePostDraft, type PostDraft } from '../app/postDraft'
 import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 
@@ -94,17 +94,28 @@ export function Compose() {
     }, 30)
     return () => { window.clearInterval(timer); motion.removeEventListener('change', finish) }
   }, [text, revealing])
+  const publish = () => {
+    if (!text.trim()) return
+    if (guest) { nav.replace('02-2_live', { text }); return }
+    if (p.postsLeft > 0) {
+      track('post_publish', { len: text.length, own_words: draft.ownWords, publication_kind: repostId ? 'quote' : 'post' })
+      nav.replace('02-2_live', { text, ownWords: draft.ownWords, repostId })
+    } else {
+      track('limit_reached')
+      nav.replace('04-1_limit')
+    }
+  }
   return (
     <div className="screen no-tab">
       <TopBar onBack={nav.back} title={repostId ? "Репост со своим текстом" : "Новый пост"} rightPlain right={<EnergyBadge value={p.postsLeft} />} />
       <div className="pad">
         {!repostId && (guest ? <StoryGoalContent goal={guest.goal} firstStep /> : <StoryGoal world={p.world} firstStep />)}
         {repostId && <QuotedPost repostId={repostId} />}
-        <TextField label="Твой пост" value={text} mentions={mentions} visibleLength={visibleLength} onInteract={() => { canPrefill.current = false; setVisibleLength(undefined) }} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
+        <TextField label="Твой пост" value={text} mentions={mentions} onSubmit={publish} visibleLength={visibleLength} onInteract={() => { canPrefill.current = false; setVisibleLength(undefined) }} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
         {checkingFirstPost && <p className="small muted" role="status">Проверяем историю публикаций…</p>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (guest) { nav.replace('02-2_live', { text }); return } if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords, publication_kind: repostId ? 'quote' : 'post' }); nav.replace('02-2_live', { text, ownWords: draft.ownWords, repostId }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
+      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={publish} />
     </div>
   )
 }
@@ -481,6 +492,7 @@ export function Thread() {
   }, [load, post, onboarding?.phase, onboarding?.postId, onboarding?.conversationPostId])
   const targetAvailable = draft.commentId === null ? !!postAuthor : isStarComment(target)
   const recipient = draft.commentId === null ? postAuthor?.name : target?.author
+  const sendDisabled = sending || !targetAvailable || !draft.text.trim() || (player.postsLeft < 1 && !draft.submitted)
   const edit = (change: Partial<Pick<Draft, 'text' | 'commentId'>>) => {
     setDraft(current => {
       const next = { ...current, ...change }
@@ -605,8 +617,8 @@ export function Thread() {
       </Sheet>}
       {!guest?.replySubmitted && <div className="bottom-cta thread-reply" data-game-onboarding-post={targetAvailable ? shownPost.id : undefined}>
         {guest?.hint}
-        <div className="card thread-reply-field"><textarea ref={replyInput} className="thread-reply-input" rows={1} aria-label="Текст ответа" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
-        <button className="card thread-reply-send" onClick={send} disabled={sending || !targetAvailable || !draft.text.trim() || (player.postsLeft < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
+        <div className="card thread-reply-field"><textarea ref={replyInput} className="thread-reply-input" rows={1} aria-label="Текст ответа" value={draft.text} onChange={event => edit({ text: event.target.value })} onKeyDown={event => submitOnDesktopEnter(event, sendDisabled ? undefined : send)} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
+        <button className="card thread-reply-send" onClick={send} disabled={sendDisabled} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
       </div>}
     </div>
   )
