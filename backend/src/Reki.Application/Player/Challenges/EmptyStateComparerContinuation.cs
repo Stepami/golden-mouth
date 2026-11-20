@@ -9,11 +9,11 @@ internal sealed class EmptyStateComparerContinuation<TCommand, TResponse> :
     public static readonly IStateComparer<TCommand, TResponse>.IContinuation Instance =
         new EmptyStateComparerContinuation<TCommand, TResponse>();
 
-    public ValueTask ApplyAsync(
+    public ValueTask<bool> ApplyAsync(
         TResponse response,
         PlayerProfile player,
         CancellationToken cancellationToken)
     {
-        return ValueTask.CompletedTask;
+        return ValueTask.FromResult(false);
     }
 }

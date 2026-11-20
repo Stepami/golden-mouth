@@ -21,7 +21,7 @@ internal sealed partial class DailyProgressBehavior<TCommand, TResponse>(
         var day = player.DailyChallenge.Day;
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
-        if (day != today || day != player.DailyChallenge.Day)
+        if (day != today || day != player.DailyChallenge.Day || player.DailyChallenge.IsCompleted)
         {
             return await next(message, cancellationToken);
         }
@@ -41,8 +41,10 @@ internal sealed partial class DailyProgressBehavior<TCommand, TResponse>(
         try
         {
             var previousVersion = player.Version;
-            await continuation.ApplyAsync(response, player, cancellationToken);
-            await players.SaveDailyChallengeAsync(player, previousVersion, cancellationToken);
+            if (await continuation.ApplyAsync(response, player, cancellationToken))
+            {
+                await players.SaveDailyChallengeAsync(player, previousVersion, cancellationToken);
+            }
         }
         catch (Exception exception)
         {

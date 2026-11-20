@@ -9,7 +9,7 @@ public sealed record PlayerChallenge(
 {
     public static PlayerChallenge Empty => new(DateOnly.MinValue, [], []);
 
-    internal bool IsCompleted => Completion.Values.All(done => done);
+    public bool IsCompleted => Completion.Values.All(done => done);
 
     public static PlayerChallenge New(
         DateOnly day,

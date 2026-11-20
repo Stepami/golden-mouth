@@ -25,7 +25,7 @@ internal sealed class CreatePostStateComparer : IStateComparer<CreatePost, Creat
 
     private sealed class PostContinuation(WorldId worldId) : IStateComparer<CreatePost, CreatePostResponse>.IContinuation
     {
-        public ValueTask ApplyAsync(
+        public ValueTask<bool> ApplyAsync(
             CreatePostResponse response,
             PlayerProfile player,
             CancellationToken cancellationToken)
@@ -47,8 +47,8 @@ internal sealed class CreatePostStateComparer : IStateComparer<CreatePost, Creat
                 changes[DailyTaskType.PostLikes] = response.Post.Likes;
             }
 
-            player.ApplyDailyChallengeProgress(worldId, changes);
-            return ValueTask.CompletedTask;
+            var challengeChanged = player.ApplyDailyChallengeProgress(worldId, changes);
+            return ValueTask.FromResult(challengeChanged);
         }
     }
 }

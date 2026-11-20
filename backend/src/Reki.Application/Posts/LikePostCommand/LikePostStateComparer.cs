@@ -48,15 +48,20 @@ internal sealed class LikePostStateComparer(IPostRepository posts) : IStateCompa
         WorldId worldId,
         AuthorId authorId) : IStateComparer<LikePost, Unit>.IContinuation
     {
-        public async ValueTask ApplyAsync(Unit response, PlayerProfile player, CancellationToken cancellationToken)
+        public async ValueTask<bool> ApplyAsync(
+            Unit response,
+            PlayerProfile player,
+            CancellationToken cancellationToken)
         {
             var after = await posts.GetPostAsync(postId, cancellationToken);
             if (after is not null && after.LikedBy.Contains(authorId))
             {
-                player.ApplyDailyChallengeProgress(
+                return player.ApplyDailyChallengeProgress(
                     worldId,
                     new Dictionary<DailyTaskType, long> { [DailyTaskType.Likes] = 1 });
             }
+
+            return false;
         }
     }
 }

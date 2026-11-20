@@ -126,18 +126,19 @@ public sealed class PlayerProfile
         }
     }
 
-    public void ApplyDailyChallengeProgress(
+    public bool ApplyDailyChallengeProgress(
         WorldId worldId,
         IReadOnlyDictionary<DailyTaskType, long> changes,
         StarId? starId = null)
     {
         if (DailyChallenge.IsCompleted)
         {
-            return;
+            return false;
         }
 
         DailyChallenge.ApplyProgress(worldId, changes, starId);
         Version++;
+        return true;
     }
 
     public PlayerProfile AddNotificationChannel(PlayerNotificationChannel channel)

@@ -65,20 +65,21 @@ internal sealed class AddReplyStateComparer(IPostRepository posts) : IStateCompa
         StarId? starId,
         int commentCount) : IStateComparer<AddReply, ReplyResponse>.IContinuation
     {
-        public ValueTask ApplyAsync(
+        public ValueTask<bool> ApplyAsync(
             ReplyResponse response,
             PlayerProfile player,
             CancellationToken cancellationToken)
         {
             if (response.AuthorId == authorId && response.Post.Comments.Count > commentCount)
             {
-                player.ApplyDailyChallengeProgress(
+                var challengeChanged = player.ApplyDailyChallengeProgress(
                     worldId,
                     new Dictionary<DailyTaskType, long> { [type] = 1 },
                     starId);
+                return ValueTask.FromResult(challengeChanged);
             }
 
-            return ValueTask.CompletedTask;
+            return ValueTask.FromResult(false);
         }
     }
 }

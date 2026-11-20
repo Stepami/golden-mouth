@@ -7,7 +7,7 @@ internal interface IStateComparer<TCommand, TResponse>
 {
     internal interface IContinuation
     {
-        ValueTask ApplyAsync(
+        ValueTask<bool> ApplyAsync(
             TResponse response,
             PlayerProfile player,
             CancellationToken cancellationToken);
