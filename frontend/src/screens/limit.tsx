@@ -1,3 +1,4 @@
+import { reachMetrikaGoal } from '../app/metrika'
 import { useState } from 'react'
 import { copyTextToClipboard, shareURL } from '@tma.js/sdk'
 import { api } from '../api/client'
@@ -31,7 +32,7 @@ function Limit() {
         <Gift style={{ textAlign: 'left', fontSize: 15, padding: '12px 14px' }}>Позови друга: тебе 3 кристалла за его первый пост<div style={{ fontWeight: 600, fontSize: 12, marginTop: 2 }}>как только он сделает первый пост</div></Gift>
         <button onClick={() => nav.push('04-2_fake_door')} style={{ marginTop: 14, fontSize: 14, color: 'var(--muted2)', background: 'none', border: 'none' }}>Реки+: +10 энергии и все миры ›</button>
       </div>
-      <BottomCTA main="Позвать друга" onMain={() => nav.push('04-3_invite')} />
+      <BottomCTA main="Позвать друга" onMain={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }} />
     </div>
   )
 }
