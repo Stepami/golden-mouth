@@ -83,7 +83,6 @@ function DailyTaskPreview({ tasks, initialIndex }: { tasks: ReturnType<typeof da
           : <progress aria-label={`Прогресс: ${task.title}`} value={task.progress} max={task.target} />}
       </article>)}
     </div> : <p className="small muted">Задания пока недоступны.</p>}
-    {tasks.length > 0 && <p className="tiny muted daily-editor-note">Зачёт пока недоступен</p>}
   </section>
 }
 
@@ -166,7 +165,6 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
         </div>
         {!tasks.length && <p className="daily-note muted">Задания для этого мира пока недоступны. Можно продолжить играть.</p>}
         {failed && <p className="small daily-update-error" role="status">Не получилось обновить. Нажми ↻, чтобы повторить.</p>}
-        <p className="daily-panel-note">Прогресс пока не обновляется</p>
       </div>
     </Sheet>, document.body)}
   </>

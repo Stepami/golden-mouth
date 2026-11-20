@@ -585,7 +585,6 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .daily-editor-track:has(.daily-editor-slide:nth-child(2))::after { content: ''; flex: 0 0 12px; }
 .daily-editor-slide { flex: 0 0 calc(100% - 20px); min-width: 0; padding: 10px; background: var(--card2); border-radius: 12px; scroll-snap-align: start; }
 .daily-editor-slide:only-child { flex-basis: 100%; }
-.daily-editor-note { margin-top: 8px; }
 @media (prefers-reduced-motion: reduce) { .daily-editor-track { scroll-behavior: auto; } }
 .daily-task-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 0 0 6px; font-size: 13px; }
 .daily-task-title > :last-child { flex-shrink: 0; }
@@ -622,7 +621,6 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .daily-quest-action:hover { border-color: var(--lilac); }
 .daily-quest-row.is-done .daily-quest-count { color: var(--up); }
 .daily-quest-row.is-done p { margin-top: 6px; font-size: 12px; }
-.daily-panel-note { margin-top: 18px; text-align: center; color: var(--muted); font-size: 12px; }
 .daily-update-error { margin-top: 14px; color: var(--warn); }
 .daily-icon-button:focus-visible, .daily-quest-action:focus-visible { outline: 2px solid var(--lilac); outline-offset: 2px; }
 @media (max-width: 359px) { .daily-panel-head h2 { font-size: 20px; } .daily-icon-button { flex-basis: 36px; } .daily-quest-heading { gap: 10px; } .daily-quest-bottom { gap: 10px; } }

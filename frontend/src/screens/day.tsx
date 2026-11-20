@@ -222,15 +222,16 @@ function FriendChannel() {
 
 // 03-5: канал: баннер этапа, навыки, коллекция, посты
 function Stage() {
-  const nav = useNav(); const p = usePlayer()
+  const nav = useNav(); const p = usePlayer(); const { refresh } = useStore()
   const [skillHelp, setSkillHelp] = useState(false)
   const cacheKey = `channel-keyset-v1:${p.id}:${p.worldInstanceId ?? p.world}`
+  useEffect(() => { void refresh() }, [refresh, cacheKey])
   const [banner, setBanner] = useState(true)
   const loadPage = useCallback((cursor: string | undefined, signal: AbortSignal) => api.channelPosts(p.worldInstanceId, cursor, signal), [p.worldInstanceId])
   const list = usePostPages<FeedItem>(cacheKey, loadPage)
   const hasRegularPost = list.items.some(item => item.postId && !item.repostId)
   useEffect(() => { if (hasRegularPost) nextStoryPostSaved(p.worldInstanceId ?? p.world) }, [hasRegularPost, p.worldInstanceId, p.world])
-  const gestures = usePostListGestures(cacheKey, list, list.refresh)
+  const gestures = usePostListGestures(cacheKey, list, () => Promise.all([list.refresh(), refresh()]))
   const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
   if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home channelEmpty firstPostConfirmed={nav.params.firstPostConfirmed === true || list.pending === null && !list.hasNext} /></div>
   return (

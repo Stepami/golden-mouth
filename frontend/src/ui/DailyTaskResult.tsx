@@ -15,8 +15,9 @@ export function DailyTaskResult({ baseline, postId }: { baseline?: DailyTaskBase
   const valid = baseline && baseline.playerId === player.id && baseline.worldId === player.worldInstanceId
     && baseline.day === player.dailyChallenge?.day && baseline.day === new Date().toISOString().slice(0, 10)
   const changes = valid ? dailyTasksFor(player).flatMap(task => {
-    const before = baseline.tasks.find(previous => previous.type === task.type && previous.target === task.target)
-    return before && task.progress > before.progress ? [{ ...task, previousProgress: before.progress, completedNow: task.done && !before.done }] : []
+    if (task.type === 'comments' || task.type === 'likes') return []
+    const before = baseline.tasks.find(previous => previous.type === task.type && previous.target === task.target && !previous.done)
+    return before && task.progress > before.progress ? [{ ...task, previousProgress: before.progress, completedNow: task.done }] : []
   }) : []
   const changeKey = changes.map(task => task.type).join(',')
   useEffect(() => {

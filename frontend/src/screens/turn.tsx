@@ -174,8 +174,10 @@ export function Live() {
       setFloats(created.post.likes > 0 ? [{ id: 0, emoji: '♡', x: 45 }] : [])
       const star = contentOf(p.world).stars.find(item => `Star_${item.id}` === created.predictedAuthorId)
       setTyping(star?.name ?? 'Звезда')
+      const starTask = dailyBaseline.tasks.find(task => task.type === 'starComment' && !task.done)
       const commentPromise = api.initialComment(created.post.id, created.predictedAuthorId).catch(() => null).then(saved => {
         if (firstPost) track('onboarding_step', { step: 'initial_reaction_result', ok: !!saved?.comments.length })
+        if (!created.post.repostId && starTask?.starId && saved?.comments.some(comment => comment.authorId === `Star_${starTask.starId}`)) void refresh()
         return saved
       })
       await new Promise(resolve => setTimeout(resolve, 1300))
@@ -282,7 +284,6 @@ function ResultDelta({ delta }: { delta: number }) {
 function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post; theme: 'normal' | 'flop' | 'viral' }) {
   const guest = useGuestSession(); const store = useStore()
   const nav = useNav(); const player = guest?.player ?? store.player!
-  const refresh = store?.refresh
   const dailyBaseline = nav.params.dailyBaseline as DailyTaskBaseline | undefined
   const onboarding = useGameOnboarding()
   const [post, setPost] = useState(initialPost)
@@ -293,13 +294,11 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
     let active = true
     void commentPromise?.then(saved => {
       if (!active) return
-      if (saved) {
-        setPost(current => ({ ...current, comments: saved.comments }))
-        void refresh?.()
-      } else setCommentFailed(true)
+      if (saved) setPost(current => ({ ...current, comments: saved.comments }))
+      else setCommentFailed(true)
     }, () => { if (active) setCommentFailed(true) })
     return () => { active = false }
-  }, [commentPromise, refresh, guest])
+  }, [commentPromise, guest])
   const closeButton = useRef<HTMLButtonElement>(null), dialog = useRef<HTMLDivElement>(null)
   useEffect(() => {
     closeButton.current?.focus({ preventScroll: true })
