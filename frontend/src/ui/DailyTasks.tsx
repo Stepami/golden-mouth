@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNav } from '../app/nav'
 import { tap } from '../app/analytics'
@@ -37,6 +37,46 @@ export function dailyTasksFor(player: Player) {
   })
 }
 
+function DailyTaskPreview({ tasks }: { tasks: ReturnType<typeof dailyTasksFor> }) {
+  const track = useRef<HTMLDivElement>(null)
+  const [shown, setShown] = useState(0)
+  const index = Math.min(shown, Math.max(0, tasks.length - 1))
+  const move = (to: number) => {
+    const slide = track.current?.children.item(to) as HTMLElement | null | undefined
+    if (slide) track.current?.scrollTo({ left: slide.offsetLeft })
+  }
+
+  return <section className="daily-editor card" aria-label="Ежедневные задания">
+    <div className="daily-editor-head">
+      <div>
+        <h2>Задания дня</h2>
+        {tasks.length > 1 && <p className="tiny muted">Все задания активны</p>}
+      </div>
+      {tasks.length > 1 && <div className="daily-editor-pager">
+        <button type="button" className="text-button" aria-label="Предыдущая карточка" onClick={() => move(index - 1)} disabled={index === 0}>‹</button>
+        <span className="tiny muted" aria-label={`Карточка ${index + 1} из ${tasks.length}`}>{index + 1}/{tasks.length}</span>
+        <button type="button" className="text-button" aria-label="Следующая карточка" onClick={() => move(index + 1)} disabled={index === tasks.length - 1}>›</button>
+      </div>}
+    </div>
+    {tasks.length ? <div ref={track} className="daily-editor-track" onScroll={event => {
+      const target = event.currentTarget
+      const second = target.children.item(1) as HTMLElement | null
+      if (second?.offsetLeft) setShown(Math.max(0, Math.round(target.scrollLeft / second.offsetLeft)))
+    }}>
+      {tasks.map(task => <article key={task.type} className="daily-editor-slide" aria-label={task.title}>
+        <div className="daily-task-title" data-wide-count={!task.done && task.target >= 10_000 || undefined}>
+          <b>{task.title}</b>
+          <b className={task.done ? 'daily-channel-done' : 'muted'} aria-label={task.done ? 'Выполнено' : undefined}>{task.done ? '✓' : `${formatDailyNumber(task.progress)}/${formatDailyNumber(task.target)}`}</b>
+        </div>
+        {task.done
+          ? <p className="tiny muted">Выполнено в одном из миров</p>
+          : <progress aria-label={`Прогресс: ${task.title}`} value={task.progress} max={task.target} />}
+      </article>)}
+    </div> : <p className="small muted">Задания пока недоступны.</p>}
+    {tasks.length > 0 && <p className="tiny muted daily-editor-note">Зачёт пока недоступен</p>}
+  </section>
+}
+
 export function DailyTasks({ editor = false, repost = false, inline = false, source = 'channel' }: { editor?: boolean; repost?: boolean; inline?: boolean; source?: 'channel' | 'profile' }) {
   const player = usePlayer()
   const { refresh } = useStore()
@@ -51,9 +91,11 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
   const done = tasks.filter(task => task.done).length
   const suitable = tasks.filter(task => repost ? task.type === 'reposts' : task.compose)
   const featured = suitable.find(task => !task.done) ?? suitable[0]
+  if (editor) return <DailyTaskPreview key={`${context}:${repost}`} tasks={featured ? [featured, ...tasks.filter(task => task !== featured)] : tasks} />
+
   const show = () => {
     setOpened(context)
-    tap('daily_tasks_viewed', { kind: editor ? 'editor' : source })
+    tap('daily_tasks_viewed', { kind: source })
   }
   const reload = async () => {
     setRetry({ context, busy: true, failed: false })
@@ -68,12 +110,7 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
   }
   const status = tasks.length ? `${done}/${tasks.length}` : 'Посмотреть'
   return <>
-    {editor ? <section className="daily-editor card" aria-label="Ежедневные задания">
-      <div className="row small muted"><span>Ежедневные задания</span><span>{tasks.length ? `${done}/${tasks.length} ✓` : ''}</span></div>
-      {featured ? <><div className="daily-task-title" data-wide-count={featured.target >= 10_000 || undefined}><b>{featured.title}</b><b>{formatDailyNumber(featured.progress)}/{formatDailyNumber(featured.target)}</b></div><progress aria-label="Прогресс в этом мире" value={featured.progress} max={featured.target} /><p className="small muted">{featured.done ? 'Выполнено в одном из миров' : 'Прогресс в этом мире'}</p></> : <p className="small muted">{tasks.length ? 'Для этого действия нет отдельного задания.' : 'Задания пока недоступны.'}</p>}
-      <p className="small muted daily-note">Учёт выполненных действий пока недоступен.</p>
-      <button className="daily-more" onClick={show}>{featured ? '▸ Остальные ежедневные' : 'Открыть задания дня'}</button>
-    </section> : inline ? <section className="daily-channel card" aria-label="Задания дня">
+    {inline ? <section className="daily-channel card" aria-label="Задания дня">
       <div className="daily-channel-head">
         <h2>Задания дня</h2>
         <span className="tiny muted">Смена в 03:00 МСК</span>
@@ -109,7 +146,7 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
             <div className="daily-quest-heading" data-wide-count={!task.done && task.target >= 10_000 || undefined}><b><span className="daily-quest-symbol" aria-hidden="true">{taskSymbols[task.type as TaskType]}</span>{task.title}</b><span className="daily-quest-count">{task.done ? '✓' : `${formatDailyNumber(task.progress)}/${formatDailyNumber(task.target)}`}</span></div>
             {task.done ? <p className="small muted">Выполнено в одном из миров</p> : <div className="daily-quest-bottom">
               <progress aria-label={`Прогресс: ${task.title}`} value={task.progress} max={task.target} />
-              {!(editor && (task.compose || (repost && task.type === 'reposts'))) && <button className="daily-quest-action" onClick={() => action(task)}>{task.compose ? 'Написать пост' : 'Открыть ленту'}</button>}
+              <button className="daily-quest-action" onClick={() => action(task)}>{task.compose ? 'Написать пост' : 'Открыть ленту'}</button>
             </div>}
           </div>)}
         </div>
