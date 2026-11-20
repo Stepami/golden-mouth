@@ -4,8 +4,10 @@ import { api } from '../api/client'
 import { needsRegistration } from '../api/auth'
 
 type Phase = 'setup' | 'post' | 'reaction' | 'reply' | 'done'
-export type GameOnboardingState = { phase: Phase; worldId?: string; postId?: string; setupScreen?: string; setupWorld?: string; conversationPostId?: string; replyRequestId?: string; completionSeen?: boolean; bonusClaim?: 'pending' | 'confirmed' | 'uncertain' }
+type NextStory = { phase: 'offered' | 'dismissed' } | { phase: 'post' | 'done'; worldId: string; templateId: string }
+export type GameOnboardingState = { phase: Phase; worldId?: string; postId?: string; setupScreen?: string; setupWorld?: string; conversationPostId?: string; replyRequestId?: string; completionSeen?: boolean; bonusClaim?: 'pending' | 'confirmed' | 'uncertain'; nextStory?: NextStory }
 export const isGameOnboardingPreview = () => import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === 'game-onboarding'
+export const isNextStoryPreview = () => import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === 'next-story'
 const prefix = 'reki:game-onboarding:v1:'
 const storageId = (id: string) => isGameOnboardingPreview() ? `preview:${id}` : id
 const memory = new Map<string, GameOnboardingState>()
@@ -45,8 +47,9 @@ export function registerGameOnboarding(id: string) {
   try { localStorage.removeItem(prefix + storageId('registration')) } catch { /* Optional storage. */ }
 }
 export function gameOnboardingState() { const id = owner(); return id ? read(id) : undefined }
+const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } }
 export function useGameOnboarding() {
-  return useSyncExternalStore(listener => { listeners.add(listener); return () => { listeners.delete(listener) } }, gameOnboardingState)
+  return useSyncExternalStore(subscribe, gameOnboardingState)
 }
 export function updateGameOnboarding(change: Partial<GameOnboardingState>) {
   const id = owner(), current = gameOnboardingState()
@@ -91,4 +94,46 @@ export function completeGuestOnboarding(playerId: string, worldId: string, postI
   memory.delete(storageId('registration'))
   try { localStorage.removeItem(prefix + storageId('registration')) } catch { /* Optional cleanup. */ }
   return durable
+}
+
+function nextStoryOwner() {
+  const id = api.playerId()
+  return id && (isNextStoryPreview() ? `next-story-preview:${id}` : id)
+}
+
+function nextStoryState() {
+  const id = nextStoryOwner()
+  return id ? read(id)?.nextStory : undefined
+}
+
+export function useNextStory() { return useSyncExternalStore(subscribe, nextStoryState) }
+
+export function trackNextStory(step: string, templateId: string, props?: { kind?: string; star?: string }) {
+  if (!isNextStoryPreview()) event('onboarding_step', { step: `next_story_${step}`, template_id: templateId, ok: true, ...props })
+}
+
+function saveNextStory(nextStory: NextStory) {
+  const id = nextStoryOwner()
+  if (!id) return false
+  const state = read(id)
+  if (state?.phase !== 'done' && !isNextStoryPreview()) return false
+  write(id, { ...state, phase: 'done', nextStory })
+  return true
+}
+
+export function nextStoryOfferShown(templateId: string) {
+  if (!nextStoryState() && saveNextStory({ phase: 'offered' })) trackNextStory('shown', templateId)
+}
+
+export function dismissNextStory(templateId: string) {
+  if (saveNextStory({ phase: 'dismissed' })) trackNextStory('dismissed', templateId)
+}
+
+export function nextStoryWorldSaved(worldId: string, templateId: string) {
+  if (saveNextStory({ phase: 'post', worldId, templateId })) trackNextStory('world_saved', templateId)
+}
+
+export function nextStoryPostSaved(worldId: string) {
+  const state = nextStoryState()
+  if (state?.phase === 'post' && state.worldId === worldId && saveNextStory({ ...state, phase: 'done' })) trackNextStory('post_saved', state.templateId)
 }

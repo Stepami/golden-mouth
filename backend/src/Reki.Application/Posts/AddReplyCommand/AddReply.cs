@@ -1,4 +1,5 @@
 using Mediator;
+using Reki.Application.Player.Challenges;
 using Reki.Application.Posts.Responses.Reply;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -11,4 +12,4 @@ public sealed record AddReply(
     AuthorId AuthorId,
     string RequestId,
     string Text,
-    WorldId WorldId) : ICommand<ReplyResponse>;
+    WorldId WorldId) : ICommand<ReplyResponse>, ITrackDailyProgress;

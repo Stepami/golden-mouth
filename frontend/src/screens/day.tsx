@@ -1,3 +1,4 @@
+import { reachMetrikaGoal } from '../app/metrika'
 import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
 import { RepostAction } from '../ui/RepostAction'
@@ -6,6 +7,7 @@ import {InstallApp} from '../app/install/InstallApp'
 import { LinkProfile } from '../app/LinkProfile'
 import { displayHandle } from '../app/handle'
 import { Streak } from '../ui/Streak'
+import { DailyTasks } from '../ui/DailyTasks'
 import { ExpandableText } from '../ui'
 import { AvatarPersonalization } from '../ui/AvatarPersonalization'
 import { setAvatarPersonalization, useAvatarPersonalization } from '../app/avatarPersonalization'
@@ -24,6 +26,8 @@ import { usePlayer, useStore } from '../app/store'
 import { Avatar, Bubble, Button, Card, Chip, Gift, Segmented, SkillBar, Sheet, TopBar, fmt, short } from '../ui'
 import { beginOwnWorld } from '../app/worldDraft'
 import { ChannelHead, Home } from './onboarding'
+import { NextStoryChannelHint, NextStoryChannelOffer } from '../app/NextStory'
+import { nextStoryPostSaved } from '../app/GameOnboardingState'
 import { register } from '.'
 import { TextField } from '../ui/TextField'
 
@@ -182,7 +186,7 @@ function Friends() {
           <div className="row"><div style={{ fontSize: 26 }}>⚔️</div><div style={{ flex: 1 }}><b>Заруба на 3 дня</b><div className="small muted">Только если оба согласны. Считаем качество постов, а не число подписчиков</div></div></div>
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <Button style={{ padding: 10, fontSize: 14, flex: 1 }} onClick={() => nav.push('03-4c_challenge')}>Вызвать друга</Button>
-            <Button secondary style={{ padding: 10, fontSize: 14, flex: 1 }} onClick={() => nav.push('04-3_invite')}>Сыграй мою историю</Button>
+            <Button secondary style={{ padding: 10, fontSize: 14, flex: 1 }} onClick={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }}>Сыграй мою историю</Button>
           </div>
         </Card>
       </div>
@@ -218,13 +222,16 @@ function FriendChannel() {
 
 // 03-5: канал: баннер этапа, навыки, коллекция, посты
 function Stage() {
-  const nav = useNav(); const p = usePlayer()
+  const nav = useNav(); const p = usePlayer(); const { refresh } = useStore()
   const [skillHelp, setSkillHelp] = useState(false)
   const cacheKey = `channel-keyset-v1:${p.id}:${p.worldInstanceId ?? p.world}`
+  useEffect(() => { void refresh() }, [refresh, cacheKey])
   const [banner, setBanner] = useState(true)
   const loadPage = useCallback((cursor: string | undefined, signal: AbortSignal) => api.channelPosts(p.worldInstanceId, cursor, signal), [p.worldInstanceId])
   const list = usePostPages<FeedItem>(cacheKey, loadPage)
-  const gestures = usePostListGestures(cacheKey, list, list.refresh)
+  const hasRegularPost = list.items.some(item => item.postId && !item.repostId)
+  useEffect(() => { if (hasRegularPost) nextStoryPostSaved(p.worldInstanceId ?? p.world) }, [hasRegularPost, p.worldInstanceId, p.world])
+  const gestures = usePostListGestures(cacheKey, list, () => Promise.all([list.refresh(), refresh()]))
   const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
   if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home channelEmpty firstPostConfirmed={nav.params.firstPostConfirmed === true || list.pending === null && !list.hasNext} /></div>
   return (
@@ -243,14 +250,15 @@ function Stage() {
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Навыки · из 10</b><button className="text-button small" onClick={() => setSkillHelp(true)}>как поднять ›</button></div>
           {(Object.keys(SKILL_NAMES) as (keyof typeof SKILL_NAMES)[]).map(k => <SkillBar key={k} name={SKILL_NAMES[k]} level={p.skills[k].level} progress={p.skills[k].progress} />)}
         </Card>
+        <NextStoryChannelOffer player={p} />
         {runtimeConfig.features.collection && <Card style={{ marginBottom: 10 }} onClick={() => nav.tab(4)}><div className="row"><div style={{ fontSize: 22 }}>🃏</div><div style={{ flex: 1 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b></div><span className="muted">›</span></div></Card>}
-        <Button secondary style={{ marginBottom: 10 }} onClick={() => nav.push('04-3_invite')}>Позвать друга</Button>
+        <Button secondary style={{ marginBottom: 10 }} onClick={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }}>Позвать друга</Button>
         {list.pending === 'first' && !list.ready && <Card><span className="small muted">загружаем посты…</span></Card>}
         {list.error === 'first' && <Card><div className="small">Не получилось загрузить канал. Потяни вниз от начала списка, чтобы повторить.</div></Card>}
         {list.items.map(item => <FeedPostCard key={item.postId} item={item} returnTo="channel" onChanged={() => { void list.refresh() }} onLike={post => list.updateItems(items => items.map(item => item.postId === post.postId ? { ...item, likes: post.likes, likedBy: post.likedBy } : item))} />)}
         <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.error === 'more' ? 'Не получилось загрузить посты. Потяни вниз от начала списка, чтобы обновить.' : list.ready && !list.hasNext ? 'Все посты загружены' : ''}</div>
       </div>
-      <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit', { firstPostConfirmed: nav.params.firstPostConfirmed === true })}>Новый пост</Button></div>
+      <div className="bottom-cta" style={{ bottom: 78 }}><NextStoryChannelHint player={p} /><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit', { firstPostConfirmed: nav.params.firstPostConfirmed === true })}>Новый пост</Button></div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
     </div>
   )
@@ -295,6 +303,8 @@ function Me() {
         <div className="profile-stats">
           {[[`⚡ ${p.postsLeft}`, 'энергии'], ...(p.energyWallet ? [[`💎 ${p.energyWallet.crystals}`, 'кристаллы']] : []), [fmt(p.subs), 'подписчиков']].map(([v, l]) => <Card key={l} style={{ padding: 14, textAlign: 'center' }}><div style={{ fontWeight: 800, fontSize: 16 }}>{v}</div><div className="small muted">{l}</div></Card>)}
         </div>
+        <Streak streak={p.streak} />
+        <div className="profile-daily"><DailyTasks source="profile" /></div>
         <Button secondary onClick={() => setLinkProfile(true)}>🔑 Привязать профиль</Button><p className="small muted energy-help">Пост и ответ расходуют энергию. Энергия восстанавливается по одной каждые 10 минут.</p>
         <div className="card own-world-unlock" style={{ marginTop: 0, marginBottom: 12 }}><b>{p.hitOwnWorldMilestone ? '✨ Свой мир открыт' : '✨ Создай свой мир'}</b>{p.hitOwnWorldMilestone ? <>
           <p className="small muted">Доступ подтверждён. Можно придумать свою историю.</p>
@@ -303,7 +313,7 @@ function Me() {
           <div className="own-unlock-goal"><b>Пригласи 1 друга</b><span>0/1</span></div>
           <progress aria-label="Друзья с первым постом до открытия своего мира" value={0} max={1} />
           <p className="small muted">Мир откроется, когда друг опубликует первый пост.</p>
-          <Button onClick={() => nav.push('04-3_invite')}>Пригласить друга</Button>
+          <Button onClick={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }}>Пригласить друга</Button>
           <p className="small muted own-unlock-alternative">Или набери 500 подписчиков в одном мире.</p>
         </>}</div>
         <div className="profile-world-settings"><Button secondary onClick={() => nav.push('05-11_world_rules')}>Настройки мира</Button></div>

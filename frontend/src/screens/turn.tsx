@@ -1,12 +1,16 @@
 import { useGuestSession } from '../app/landing/guestSession'
 import { tap } from '../app/analytics'
-import { gameOnboardingState, onboardingPostSaved, onboardingReplyStarted, onboardingReplySaved, gameOnboardingActive, updateGameOnboarding, useGameOnboarding } from '../app/GameOnboardingState'
+import { gameOnboardingState, onboardingPostSaved, onboardingReplyStarted, onboardingReplySaved, gameOnboardingActive, updateGameOnboarding, useGameOnboarding, nextStoryPostSaved } from '../app/GameOnboardingState'
+import { NextStoryEditorHint } from '../app/NextStory'
 import { recordEntryStep } from '../app/landing/openobserve'
 import { RepostAction } from '../ui/RepostAction'
 import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
 import { StoryGoal, StoryGoalContent } from '../ui/StoryGoal'
 import { ResultCrowd } from '../ui/ResultCrowd'
+import { DailyTasks } from '../ui/DailyTasks'
+import { DailyTaskResult, dailyTaskBaseline, type DailyTaskBaseline } from '../ui/DailyTaskResult'
+import { Resources } from '../ui/Resources'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { hapticFeedback, shareStory, shareURL } from '@tma.js/sdk'
 import { api, ApiError } from '../api/client'
@@ -22,7 +26,7 @@ import { contentOf, worldOf } from '../api/worldContent'
 import { apiBaseUrl, runtimeConfig } from '../app/runtimeConfig'
 import { useReferralLink } from '../app/useReferralLink'
 import { register } from '.'
-import { TextField } from '../ui/TextField'
+import { submitOnDesktopEnter, TextField } from '../ui/TextField'
 import { completePostDraft, draftKey, hasPostDraft, readPostDraft, savePostDraft, type PostDraft } from '../app/postDraft'
 import { blankWorld, selectDraftOwner, setWorldDraft } from '../app/worldDraft'
 
@@ -94,17 +98,29 @@ export function Compose() {
     }, 30)
     return () => { window.clearInterval(timer); motion.removeEventListener('change', finish) }
   }, [text, revealing])
+  const publish = () => {
+    if (!text.trim()) return
+    if (guest) { nav.replace('02-2_live', { text }); return }
+    if (p.postsLeft > 0) {
+      track('post_publish', { len: text.length, own_words: draft.ownWords, publication_kind: repostId ? 'quote' : 'post' })
+      nav.replace('02-2_live', { text, ownWords: draft.ownWords, repostId })
+    } else {
+      track('limit_reached')
+      nav.replace('04-1_limit')
+    }
+  }
   return (
     <div className="screen no-tab">
-      <TopBar onBack={nav.back} title={repostId ? "Репост со своим текстом" : "Новый пост"} rightPlain right={<EnergyBadge value={p.postsLeft} />} />
+      <TopBar onBack={nav.back} title={repostId ? "Репост со своим текстом" : "Новый пост"} rightPlain right={guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} />} />
       <div className="pad">
+        {!guest && <DailyTasks editor repost={!!repostId} />}
         {!repostId && (guest ? <StoryGoalContent goal={guest.goal} firstStep /> : <StoryGoal world={p.world} firstStep />)}
         {repostId && <QuotedPost repostId={repostId} />}
-        <TextField label="Твой пост" value={text} mentions={mentions} visibleLength={visibleLength} onInteract={() => { canPrefill.current = false; setVisibleLength(undefined) }} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
+        <TextField label="Твой пост" value={text} mentions={mentions} onSubmit={publish} visibleLength={visibleLength} onInteract={() => { canPrefill.current = false; setVisibleLength(undefined) }} fromIdea={!draft.ownWords} onChange={edit} maxLength={500} rows={6} placeholder="Расскажи, что произошло…" />{!repostId && <div className="compose-ideas"><div className="small muted">О чём написать</div>{ideas.slice(0, 3).map(idea => <button className="opt" key={idea} onClick={() => { const next = idea.replace(/[«»]/g, ''); const isIdea = ideas.some(value => value.replace(/[«»]/g, '') === text); if (!text.trim() || isIdea || window.confirm('Заменить написанный текст выбранной идеей?')) edit(next, true) }}>{idea}</button>)}{text.length > 0 && <p className="small muted">Идею можно дописать своими словами.</p>}</div>}
         {checkingFirstPost && <p className="small muted" role="status">Проверяем историю публикаций…</p>}
         {!durable && <p className="small muted" role="status">Черновик доступен в этой сессии. Хранилище устройства недоступно.</p>}
       </div>
-      <BottomCTA main="Опубликовать" disabled={!text.trim()} onMain={() => { if (guest) { nav.replace('02-2_live', { text }); return } if (p.postsLeft > 0) { track('post_publish', { len: text.length, own_words: draft.ownWords, publication_kind: repostId ? 'quote' : 'post' }); nav.replace('02-2_live', { text, ownWords: draft.ownWords, repostId }) } else { track('limit_reached'); nav.replace('04-1_limit') } }} />
+      <BottomCTA main="Опубликовать" hint={!guest && !repostId && profile && <NextStoryEditorHint player={profile} />} disabled={!text.trim()} onMain={publish} />
     </div>
   )
 }
@@ -131,6 +147,7 @@ export function Live() {
     const { patch, refresh } = store
     let active = true
     const start = setTimeout(() => { void (async () => {
+      const dailyBaseline = dailyTaskBaseline(store.player!)
       const firstPost = gameOnboardingState()?.phase === 'post' && !nav.params.repostId
       let created: Awaited<ReturnType<typeof api.createPost>>
       try {
@@ -142,7 +159,11 @@ export function Live() {
         nav.replace('02-2b_publish_error', { text, repostId: nav.params.repostId, status: cause instanceof ApiError ? cause.status : undefined, uncertain: !(cause instanceof ApiError) || (cause.status >= 500 && cause.status !== 503) })
         return
       }
-      if (!nav.params.repostId) onboardingPostSaved(p.worldInstanceId ?? p.world, created.post.id)
+      if (!nav.params.repostId) {
+        const worldId = p.worldInstanceId ?? p.world
+        onboardingPostSaved(worldId, created.post.id)
+        nextStoryPostSaved(worldId)
+      }
       if (!active) return
       if (!nav.params.repostId || text.length > 0) completePostDraft(draftKey(p) + (typeof nav.params.repostId === 'string' ? `:quote:${nav.params.repostId}` : ''), text)
       const latest = await refresh()
@@ -153,8 +174,10 @@ export function Live() {
       setFloats(created.post.likes > 0 ? [{ id: 0, emoji: '♡', x: 45 }] : [])
       const star = contentOf(p.world).stars.find(item => `Star_${item.id}` === created.predictedAuthorId)
       setTyping(star?.name ?? 'Звезда')
+      const starTask = dailyBaseline.tasks.find(task => task.type === 'starComment' && !task.done)
       const commentPromise = api.initialComment(created.post.id, created.predictedAuthorId).catch(() => null).then(saved => {
         if (firstPost) track('onboarding_step', { step: 'initial_reaction_result', ok: !!saved?.comments.length })
+        if (!created.post.repostId && starTask?.starId && saved?.comments.some(comment => comment.authorId === `Star_${starTask.starId}`)) void refresh()
         return saved
       })
       await new Promise(resolve => setTimeout(resolve, 1300))
@@ -162,7 +185,7 @@ export function Live() {
       setTyping(null)
       track('post_result', { delta: created.result.delta, viral: created.result.viral, flop: created.result.flop, publication_kind: nav.params.repostId ? text.length ? 'quote' : 'repost' : 'post' })
       const result = created.result
-      nav.replace(result.viral ? '02-5_viral' : result.flop ? '02-4_flop' : '02-3_result', { result, post: created.post, commentPromise, predictedAuthorId: created.predictedAuthorId })
+      nav.replace(result.viral ? '02-5_viral' : result.flop ? '02-4_flop' : '02-3_result', { result, post: created.post, dailyBaseline, commentPromise, predictedAuthorId: created.predictedAuthorId })
     })() }, 0)
     return () => { active = false; clearTimeout(start) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -259,17 +282,23 @@ function ResultDelta({ delta }: { delta: number }) {
 }
 
 function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post; theme: 'normal' | 'flop' | 'viral' }) {
-  const guest = useGuestSession(); const profile = useStore()?.player
-  const nav = useNav(); const player = guest?.player ?? profile!
+  const guest = useGuestSession(); const store = useStore()
+  const nav = useNav(); const player = guest?.player ?? store.player!
+  const dailyBaseline = nav.params.dailyBaseline as DailyTaskBaseline | undefined
   const onboarding = useGameOnboarding()
   const [post, setPost] = useState(initialPost)
   const [commentFailed, setCommentFailed] = useState(false)
   const commentPromise = nav.params.commentPromise as Promise<Post | null> | undefined
   useEffect(() => {
+    if (guest) return
     let active = true
-    void commentPromise?.then(saved => { if (active) { if (saved) setPost(current => ({ ...current, comments: saved.comments })); else setCommentFailed(true) } }, () => { if (active) setCommentFailed(true) })
+    void commentPromise?.then(saved => {
+      if (!active) return
+      if (saved) setPost(current => ({ ...current, comments: saved.comments }))
+      else setCommentFailed(true)
+    }, () => { if (active) setCommentFailed(true) })
     return () => { active = false }
-  }, [commentPromise])
+  }, [commentPromise, guest])
   const closeButton = useRef<HTMLButtonElement>(null), dialog = useRef<HTMLDivElement>(null)
   useEffect(() => {
     closeButton.current?.focus({ preventScroll: true })
@@ -339,11 +368,12 @@ function ResultCard({ r, post: initialPost, theme }: { r: PostResult; post: Post
           <div className="post-result-content">
             <ResultDelta key={post.id} delta={r.delta} />
             {r.delta !== 0 && <ResultCrowd key={post.id} delta={r.delta} publication={guest ? `guest:${player.world}:${player.handle}` : post.id}
-              world={player.world} avatarStyle={guest?.world.avatarStyle ?? profile?.avatarStyle} onPulse={guest || realPost ? resultPulse : undefined} />}
+              world={player.world} avatarStyle={guest?.world.avatarStyle ?? store?.player?.avatarStyle} onPulse={guest || realPost ? resultPulse : undefined} />}
             <dl className="post-result-stats small muted">
               <div><dt>Просмотры</dt><dd>{resultNumber.format(r.views)}</dd></div>
               <div><dt>Лайки</dt><dd>{resultNumber.format(post.likes)}</dd></div>
             </dl>
+            {!guest && dailyBaseline && <DailyTaskResult baseline={dailyBaseline} postId={post.id} />}
             <section className="post-result-reaction" aria-label="Ответ персонажа">
               <div className="row"><Avatar seed={comment?.avatar ?? actor?.avatarSeed ?? fallback?.avatar} label={speaker ?? 'Персонаж'} size={40} avatarStyle={guest?.world.avatarStyle} mode="default" /><div><strong>{speaker ?? 'Персонаж'}</strong><div className="small muted">{guest?.world.title ?? worldOf(player.world).title} · AI-персонаж</div></div></div>
               {commentText ? <p>{commentText}</p> : <p className="muted" role="status">{commentFailed || !commentPromise ? 'Ответ персонажа пока не загрузился.' : 'Персонаж готовит ответ…'}</p>}
@@ -481,6 +511,7 @@ export function Thread() {
   }, [load, post, onboarding?.phase, onboarding?.postId, onboarding?.conversationPostId])
   const targetAvailable = draft.commentId === null ? !!postAuthor : isStarComment(target)
   const recipient = draft.commentId === null ? postAuthor?.name : target?.author
+  const sendDisabled = sending || !targetAvailable || !draft.text.trim() || (player.postsLeft < 1 && !draft.submitted)
   const edit = (change: Partial<Pick<Draft, 'text' | 'commentId'>>) => {
     setDraft(current => {
       const next = { ...current, ...change }
@@ -605,8 +636,8 @@ export function Thread() {
       </Sheet>}
       {!guest?.replySubmitted && <div className="bottom-cta thread-reply" data-game-onboarding-post={targetAvailable ? shownPost.id : undefined}>
         {guest?.hint}
-        <div className="card thread-reply-field"><textarea ref={replyInput} className="thread-reply-input" rows={1} aria-label="Текст ответа" value={draft.text} onChange={event => edit({ text: event.target.value })} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
-        <button className="card thread-reply-send" onClick={send} disabled={sending || !targetAvailable || !draft.text.trim() || (player.postsLeft < 1 && !draft.submitted)} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
+        <div className="card thread-reply-field"><textarea ref={replyInput} className="thread-reply-input" rows={1} aria-label="Текст ответа" value={draft.text} onChange={event => edit({ text: event.target.value })} onKeyDown={event => submitOnDesktopEnter(event, sendDisabled ? undefined : send)} placeholder={targetAvailable ? (draft.commentId === null ? 'Комментарий · 1 энергия' : 'Ответ · 1 энергия') : 'Выбери комментарий звезды'} maxLength={1000} disabled={!targetAvailable || sending} /></div>
+        <button className="card thread-reply-send" onClick={send} disabled={sendDisabled} style={{ padding: '14px 18px', background: 'var(--grad)', border: 'none' }} aria-label={draft.submitted ? 'Повторить ответ' : 'Отправить за 1 энергию'}>➤</button>
       </div>}
     </div>
   )

@@ -5,9 +5,10 @@ namespace Reki.Domain.Player.Challenges;
 public sealed record DailyTaskValues(
     long BaseTarget,
     long Target,
-    long Progress,
     StarId? StarId)
 {
+    public long Progress { get; private set; }
+
     internal static Dictionary<WorldId, Dictionary<DailyTaskType, DailyTaskValues>> Create(
         IReadOnlyCollection<World> worlds,
         IReadOnlyDictionary<DailyTaskType, long> targets) =>
@@ -30,8 +31,9 @@ public sealed record DailyTaskValues(
                 return new DailyTaskValues(
                     targets[target.Key],
                     targetValue,
-                    0,
                     target.Key == DailyTaskType.StarComment ? starId : null);
             });
     }
+
+    internal void UpdateProgress(long progress) => Progress = progress;
 }
