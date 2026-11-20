@@ -9,6 +9,7 @@ import { contentOf } from '../api/worldContent'
 import { Sheet, plural } from '.'
 
 export const formatDailyNumber = new Intl.NumberFormat('ru-RU').format
+const dailyRefreshTime = '09:00 МСК'
 
 const taskCopy = {
   posts: { title: (n: number) => `Напиши ${formatDailyNumber(n)} ${plural(n, 'пост', 'поста', 'постов')}`, compose: true },
@@ -128,7 +129,7 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
     {inline ? <section className="daily-channel card" aria-label="Задания дня">
       <div className="daily-channel-head">
         <h2>Задания дня</h2>
-        <span className="tiny muted">Смена в 03:00 МСК</span>
+        <span className="tiny muted">Обновление в {dailyRefreshTime}</span>
       </div>
       {tasks.length ? <ul className="daily-channel-list">
         {tasks.map(task => {
@@ -151,7 +152,7 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
     {opened === context && createPortal(<Sheet onClose={() => setOpened('')}>
       <div className="daily-panel" role="dialog" aria-label="Задания дня" onKeyDown={e => { if (e.key === 'Escape') setOpened('') }}>
         <div className="daily-panel-head">
-          <div><h2>Задания дня</h2><p>Обновятся в 03:00 по Москве</p></div>
+          <div><h2>Задания дня</h2><p>Плановое обновление в {dailyRefreshTime}</p></div>
           <button className="daily-icon-button" aria-label="Обновить задания" title="Обновить задания" disabled={busy} onClick={reload}>{busy ? '…' : '↻'}</button>
           <button className="daily-icon-button" aria-label="Закрыть задания" onClick={() => setOpened('')} autoFocus>×</button>
         </div>
