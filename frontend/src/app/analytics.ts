@@ -1,3 +1,4 @@
+import { reachMetrikaGoal } from './metrika'
 // Продуктовая аналитика: кто куда ходит и что делает. Отдельно от журнала ошибок (app/log.ts).
 // Таксономия, воронки и вопросы: docs/analytics.md. Приватность: только обезличенный id, без текстов, ников, initData.
 import { apiBaseUrl as BASE } from './runtimeConfig'
@@ -106,7 +107,7 @@ export function trackLanding(name: 'landing_view' | 'landing_continue' | 'landin
   if (name !== 'landing_view') tap(name, { kind: props.landing_variant })
   if (name === 'landing_first_post') void linkEntryProfile()
   else recordEntryStep(name)
-  reachLandingGoal(name, props)
+  reachMetrikaGoal(name, props)
 }
 
 type LandingAuthStep = [name: 'landing_login_click' | 'landing_auth_view' | 'landing_age_view' | 'landing_age_continue' | 'landing_catalog_retry' | 'landing_guest_start' | 'landing_guest_save_click' | 'landing_registration_consent' | 'landing_registration_view' | 'landing_login_account_missing']
@@ -124,15 +125,5 @@ type LandingAuthStep = [name: 'landing_login_click' | 'landing_auth_view' | 'lan
 export function trackLandingAuth(...[name, params]: LandingAuthStep) {
   const context = landingContext()
   if (!context || isLandingPreview()) return
-  reachLandingGoal(name, { ...context, ...params })
-}
-
-function reachLandingGoal(name: string, props: Record<string, string | undefined>) {
-  if (import.meta.env.PROD) {
-    const ym = (window as Window & { ym?: (id: number, method: string, goal: string, params: Record<string, string | undefined>) => void }).ym
-    try {
-      const entry = landingVisitIdentity()
-      ym?.(114170439, 'reachGoal', name, entry ? { ...props, entry_id: entry.entryId } : props)
-    } catch { /* Analytics never blocks entry or publishing. */ }
-  }
+  reachMetrikaGoal(name, params)
 }

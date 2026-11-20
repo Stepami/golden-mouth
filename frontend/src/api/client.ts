@@ -1,3 +1,4 @@
+import { trackMetrikaActivity } from '../app/metrika';
 import { clearLandingWorld } from '../app/landing/experiment'
 import { completeLandingPost } from '../app/landing/experiment';
 // Р¤Р°СЃР°Рґ API РїРѕРІРµСЂС… NSwag Fetch-РєР»РёРµРЅС‚Р°.
@@ -218,6 +219,7 @@ export const api = {
     },
     createWorld: async (definition: WorldDefinition, onCreated?: (worldId: string) => void): Promise<Player> => {
         const world = map.world(await data(sdk.worlds.createWorld({ ...definition, postIdeas: postIdeasForWorld(definition) })));
+        trackMetrikaActivity('world', world.id);
         onCreated?.(world.id);
         return api.me(world.id);
     },
@@ -234,12 +236,14 @@ export const api = {
     createPost: async (text: string, ownWords: boolean, repostId?: string) => {
         const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, repostId: repostId ?? null }));
         const { postId: id, ...post } = map.post(response.post);
+        trackMetrikaActivity('post', id);
         if (!repostId && completeLandingPost()) trackLanding('landing_first_post');
         return { post: { ...post, id }, result: map.result(response.result), predictedAuthorId: response.predictedAuthorId };
     },
     savePresetReply: async (postId: string, commentId: string | null, requestId: string, text: string, starId?: string) => {
         const authorId = starId ? `Star_${starId}` : playerAuthorId();
         const result = await data(sdk.posts.replyToPost(postId, worldId(), { authorId, commentId, requestId, text }));
+        if (!starId) trackMetrikaActivity('comment', result.commentId);
         return result.commentId;
     },
     initialComment: async (postId: string, authorId: string, signal?: AbortSignal): Promise<Post> => {
@@ -268,6 +272,7 @@ export const api = {
             return { ...saved, commentId: result.commentId };
         };
         const playerReply = await save(`Player_${player.id.replaceAll('-', '')}`, commentId, requestId, text);
+        trackMetrikaActivity('comment', playerReply.commentId);
         try {
             const mainId = `${requestId}-star`;
             const main = playerReply.post.comments.some(comment => comment.requestId === mainId) && options.additionalStarId
