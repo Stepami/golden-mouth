@@ -4,8 +4,8 @@ import { Avatar } from '.'
 type Mention = { id: string; name: string; handle: string; avatarSeed: string }
 const mentionAtEnd = /(?:^|[^\p{L}\p{N}._%+@-])@([\p{L}\p{N}_.-]*)$/u
 
-export function submitOnDesktopEnter(event: KeyboardEvent<HTMLTextAreaElement>, submit?: () => void) {
-  if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey ||
+export function submitOnDesktopEnter(event: KeyboardEvent<HTMLTextAreaElement>, submit?: () => void, allowCommand = false) {
+  if (event.key !== 'Enter' || event.shiftKey || event.altKey || event.ctrlKey || (event.metaKey && !allowCommand) ||
     event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229 ||
     !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return
   event.preventDefault()
@@ -79,10 +79,11 @@ export function TextField({ label, value, onChange, ideas = [], maxLength = 2000
       aria-controls={choices.length ? menuId : undefined} aria-activedescendant={selected >= 0 ? `${menuId}-${selected}` : undefined}
       onKeyDown={event => {
         if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
-        if (!choices.length) {
-          if (onSubmit) submitOnDesktopEnter(event, onSubmit)
+        if (onSubmit && (!choices.length || (event.key === 'Enter' && event.metaKey))) {
+          submitOnDesktopEnter(event, onSubmit, true)
           return
         }
+        if (!choices.length) return
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
           event.preventDefault()
           setActive((selected + (event.key === 'ArrowDown' ? 1 : -1) + choices.length) % choices.length)
