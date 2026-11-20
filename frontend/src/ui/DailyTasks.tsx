@@ -5,18 +5,20 @@ import { tap } from '../app/analytics'
 import { usePlayer, useStore } from '../app/store'
 import type { Player } from '../api/types'
 import { contentOf } from '../api/worldContent'
-import { Sheet, fmt, plural } from '.'
+import { Sheet, plural } from '.'
+
+export const formatDailyNumber = new Intl.NumberFormat('ru-RU').format
 
 const taskCopy = {
-  posts: { title: (n: number) => `Напиши ${fmt(n)} ${plural(n, 'пост', 'поста', 'постов')}`, compose: true },
-  reposts: { title: (n: number) => `Сделай ${fmt(n)} ${plural(n, 'репост', 'репоста', 'репостов')}`, compose: false },
-  comments: { title: (n: number) => `Напиши ${fmt(n)} ${plural(n, 'комментарий', 'комментария', 'комментариев')}`, compose: false },
-  likes: { title: (n: number) => `Поставь ${fmt(n)} ${plural(n, 'лайк', 'лайка', 'лайков')}`, compose: false },
+  posts: { title: (n: number) => `Напиши ${formatDailyNumber(n)} ${plural(n, 'пост', 'поста', 'постов')}`, compose: true },
+  reposts: { title: (n: number) => `Сделай ${formatDailyNumber(n)} ${plural(n, 'репост', 'репоста', 'репостов')}`, compose: false },
+  comments: { title: (n: number) => `Напиши ${formatDailyNumber(n)} ${plural(n, 'комментарий', 'комментария', 'комментариев')}`, compose: false },
+  likes: { title: (n: number) => `Поставь ${formatDailyNumber(n)} ${plural(n, 'лайк', 'лайка', 'лайков')}`, compose: false },
   starComment: { title: () => 'Получи комментарий звезды', compose: true },
-  subscribers: { title: (n: number) => `Привлеки ${fmt(n)} ${plural(n, 'подписчика', 'подписчиков', 'подписчиков')} публикациями`, compose: true },
-  unsubscribers: { title: (n: number) => `Получи ${fmt(n)} ${plural(n, 'отписку', 'отписки', 'отписок')} после публикаций`, compose: true },
-  postViews: { title: (n: number) => `Набери ${fmt(n)} ${plural(n, 'просмотр', 'просмотра', 'просмотров')} на одном посте`, compose: true },
-  postLikes: { title: (n: number) => `Набери ${fmt(n)} ${plural(n, 'лайк', 'лайка', 'лайков')} при публикации поста`, compose: true },
+  subscribers: { title: (n: number) => `Привлеки ${formatDailyNumber(n)} ${plural(n, 'подписчика', 'подписчиков', 'подписчиков')} публикациями`, compose: true },
+  unsubscribers: { title: (n: number) => `Получи ${formatDailyNumber(n)} ${plural(n, 'отписку', 'отписки', 'отписок')} после публикаций`, compose: true },
+  postViews: { title: (n: number) => `Набери ${formatDailyNumber(n)} ${plural(n, 'просмотр', 'просмотра', 'просмотров')} на посте`, compose: true },
+  postLikes: { title: (n: number) => `Набери ${formatDailyNumber(n)} ${plural(n, 'лайк', 'лайка', 'лайков')} на посте`, compose: true },
 }
 type TaskType = keyof typeof taskCopy
 const taskSymbols: Record<TaskType, string> = {
@@ -68,7 +70,7 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
   return <>
     {editor ? <section className="daily-editor card" aria-label="Ежедневные задания">
       <div className="row small muted"><span>Ежедневные задания</span><span>{tasks.length ? `${done}/${tasks.length} ✓` : ''}</span></div>
-      {featured ? <><div className="daily-task-title"><b>{featured.title}</b><b>{featured.progress}/{featured.target}</b></div><progress aria-label="Прогресс в этом мире" value={featured.progress} max={featured.target} /><p className="small muted">{featured.done ? 'Выполнено в одном из миров' : 'Прогресс в этом мире'}</p></> : <p className="small muted">{tasks.length ? 'Для этого действия нет отдельного задания.' : 'Задания пока недоступны.'}</p>}
+      {featured ? <><div className="daily-task-title" data-wide-count={featured.target >= 10_000 || undefined}><b>{featured.title}</b><b>{formatDailyNumber(featured.progress)}/{formatDailyNumber(featured.target)}</b></div><progress aria-label="Прогресс в этом мире" value={featured.progress} max={featured.target} /><p className="small muted">{featured.done ? 'Выполнено в одном из миров' : 'Прогресс в этом мире'}</p></> : <p className="small muted">{tasks.length ? 'Для этого действия нет отдельного задания.' : 'Задания пока недоступны.'}</p>}
       <p className="small muted daily-note">Учёт выполненных действий пока недоступен.</p>
       <button className="daily-more" onClick={show}>{featured ? '▸ Остальные ежедневные' : 'Открыть задания дня'}</button>
     </section> : inline && tasks.length ? <section className="daily-channel card" aria-label="Задания дня">
@@ -77,10 +79,10 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
         <button type="button" className="text-button" onClick={show} aria-haspopup="dialog">Подробнее ›</button>
       </div>
       <ul className="daily-channel-list">
-        {tasks.map(task => <li className="daily-channel-task" key={task.type}>
+        {tasks.map(task => <li className="daily-channel-task" data-wide-count={!task.done && task.target >= 10_000 || undefined} key={task.type}>
           <span className="daily-quest-symbol" aria-hidden="true">{taskSymbols[task.type as TaskType]}</span>
           <span>{task.title}</span>
-          <span className={task.done ? 'daily-channel-done' : 'muted'} aria-label={task.done ? 'Выполнено' : `${task.progress} из ${task.target}`}>{task.done ? '✓' : `${task.progress}/${task.target}`}</span>
+          <span className={task.done ? 'daily-channel-done' : 'muted'} aria-label={task.done ? 'Выполнено' : `${task.progress} из ${task.target}`}>{task.done ? '✓' : `${formatDailyNumber(task.progress)}/${formatDailyNumber(task.target)}`}</span>
         </li>)}
       </ul>
     </section> : <button className="daily-entry" onClick={show}><span>Задания дня</span><span data-daily-count>{status} ›</span></button>}
@@ -94,7 +96,7 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
         <div className="daily-panel-summary"><span>{done} из {tasks.length} выполнено</span><span>Сегодня</span></div>
         <div className="daily-quest-list">
           {tasks.map(task => <div className={`daily-quest-row${task.done ? ' is-done' : ''}`} key={task.type} data-kind={task.type}>
-            <div className="daily-quest-heading"><b><span className="daily-quest-symbol" aria-hidden="true">{taskSymbols[task.type as TaskType]}</span>{task.title}</b><span className="daily-quest-count">{task.done ? '✓' : `${task.progress}/${task.target}`}</span></div>
+            <div className="daily-quest-heading" data-wide-count={!task.done && task.target >= 10_000 || undefined}><b><span className="daily-quest-symbol" aria-hidden="true">{taskSymbols[task.type as TaskType]}</span>{task.title}</b><span className="daily-quest-count">{task.done ? '✓' : `${formatDailyNumber(task.progress)}/${formatDailyNumber(task.target)}`}</span></div>
             {task.done ? <p className="small muted">Выполнено в одном из миров</p> : <div className="daily-quest-bottom">
               <progress aria-label={`Прогресс: ${task.title}`} value={task.progress} max={task.target} />
               {!(editor && (task.compose || (repost && task.type === 'reposts'))) && <button className="daily-quest-action" onClick={() => action(task)}>{task.compose ? 'Написать пост' : 'Открыть ленту'}</button>}

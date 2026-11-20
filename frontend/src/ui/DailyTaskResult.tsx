@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { Player } from '../api/types'
 import { usePlayer } from '../app/store'
-import { dailyTasksFor } from './DailyTasks'
+import { dailyTasksFor, formatDailyNumber } from './DailyTasks'
 
 export function dailyTaskBaseline(player: Player) {
   return { playerId: player.id, worldId: player.worldInstanceId, day: player.dailyChallenge?.day, tasks: dailyTasksFor(player) }
@@ -66,7 +66,7 @@ export function DailyTaskResult({ baseline, postId }: { baseline?: DailyTaskBase
   }, [postId, player.id, player.worldInstanceId, baseline?.day, changeKey])
   if (!changes.length) return null
   return <section ref={root} className="daily-result" aria-label="Прогресс заданий дня" role="status" aria-live="polite">
-    {changes.map(task => <div className={`daily-result-row${task.completedNow ? ' is-complete' : ''}`} key={task.type} data-daily-result={task.type}>
+    {changes.map(task => <div className={`daily-result-row${task.completedNow ? ' is-complete' : ''}`} key={task.type} data-daily-result={task.type} data-wide-count={!task.completedNow && task.target >= 10_000 || undefined}>
       <span className="daily-result-mark" aria-hidden="true">{task.completedNow ? '✓' : '↗'}</span>
       <div>
         <b>{task.completedNow ? 'Задание дня выполнено' : 'Пост пошёл в зачёт'}</b>
@@ -76,8 +76,8 @@ export function DailyTaskResult({ baseline, postId }: { baseline?: DailyTaskBase
         </div>}
       </div>
       {!task.completedNow && <span className="daily-result-count">
-        <span className="daily-result-count-before" aria-hidden="true">{task.previousProgress} из {task.target}</span>
-        <span className="daily-result-count-after">{task.progress} из {task.target}</span>
+        <span className="daily-result-count-before" aria-hidden="true">{formatDailyNumber(task.previousProgress)} из {formatDailyNumber(task.target)}</span>
+        <span className="daily-result-count-after">{formatDailyNumber(task.progress)} из {formatDailyNumber(task.target)}</span>
       </span>}
     </div>)}
   </section>

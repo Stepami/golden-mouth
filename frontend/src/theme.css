@@ -623,6 +623,20 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .daily-result-bar > span { display: block; width: 100%; height: 100%; background: var(--lilac); border-radius: inherit; transform-origin: left; }
 .daily-result-count { display: grid; font-size: 12px; white-space: nowrap; }
 .daily-result-count > span { grid-area: 1 / 1; }
+/* Long titles wrap inside their column and large counters use their own line. */
+.daily-channel-task > :nth-child(2), .daily-task-title > :first-child, .daily-quest-heading > b, .daily-result-row p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.daily-channel-task[data-wide-count] { row-gap: 3px; }
+.daily-channel-task[data-wide-count] > :nth-child(2),
+.daily-channel-task[data-wide-count] > :last-child,
+.daily-result-row[data-wide-count] > :nth-child(2) { grid-column: 2 / -1; }
+.daily-result-row[data-wide-count] { row-gap: 4px; }
+.daily-result-row[data-wide-count] .daily-result-count { grid-column: 2; justify-self: start; }
+.daily-task-title[data-wide-count], .daily-quest-heading[data-wide-count] { flex-direction: column; align-items: stretch; gap: 3px; }
+.daily-task-title[data-wide-count] > :last-child, .daily-quest-heading[data-wide-count] > :last-child { font-size: 12px; color: var(--muted); }
+.daily-quest-heading[data-wide-count] > :last-child { padding-left: 36px; }
 .daily-result-count-before { opacity: 0; }
 [data-daily-count] { display: inline-block; }
 .mention-menu { margin: 6px 0 10px; max-height: 235px; overflow-y: auto; border: 1px solid #5e4a75; border-radius: 14px; padding: 5px; background: #211d2c; }
