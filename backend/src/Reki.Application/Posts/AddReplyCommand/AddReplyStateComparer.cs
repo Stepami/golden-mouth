@@ -46,7 +46,7 @@ internal sealed class AddReplyStateComparer(IPostRepository posts, DailyProgress
         var type = isPlayer ? DailyTaskType.Comments : DailyTaskType.StarComment;
         return (response, token) =>
             response.AuthorId == authorId && response.Post.Comments.Count > commentCount
-                ? progress.ApplyAsync(playerId, day, worldId, [(type, 1)], token, starId)
+                ? progress.ApplyAsync(playerId, day, worldId, new Dictionary<DailyTaskType, long> { [type] = 1 }, token, starId)
                 : ValueTask.CompletedTask;
     }
 }

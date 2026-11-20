@@ -128,7 +128,7 @@ public sealed class PlayerProfile
 
     public void ApplyDailyChallengeProgress(
         WorldId worldId,
-        IReadOnlyList<(DailyTaskType Type, long Value)> changes,
+        IReadOnlyDictionary<DailyTaskType, long> changes,
         StarId? starId = null)
     {
         if (DailyChallenge.ApplyProgress(worldId, changes, starId))

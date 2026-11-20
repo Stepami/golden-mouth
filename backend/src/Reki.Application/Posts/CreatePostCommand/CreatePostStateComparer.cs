@@ -27,16 +27,19 @@ internal sealed class CreatePostStateComparer(DailyProgress progress) : IStateCo
             {
                 var isPost = response.Post.RepostId is null;
                 var delta = response.Result.Delta;
-                List<(DailyTaskType Type, long Value)> changes = [(isPost ? DailyTaskType.Posts : DailyTaskType.Reposts, 1)];
+                var changes = new Dictionary<DailyTaskType, long>
+                {
+                    [isPost ? DailyTaskType.Posts : DailyTaskType.Reposts] = 1,
+                };
                 if (delta != 0)
                 {
-                    changes.Add(delta > 0 ? (DailyTaskType.Subscribers, delta) : (DailyTaskType.Unsubscribers, -delta));
+                    changes[delta > 0 ? DailyTaskType.Subscribers : DailyTaskType.Unsubscribers] = Math.Abs(delta);
                 }
 
                 if (isPost)
                 {
-                    changes.Add((DailyTaskType.PostViews, response.Result.Views));
-                    changes.Add((DailyTaskType.PostLikes, response.Post.Likes));
+                    changes[DailyTaskType.PostViews] = response.Result.Views;
+                    changes[DailyTaskType.PostLikes] = response.Post.Likes;
                 }
 
                 return progress.ApplyAsync(playerId, day, worldId, changes, token);

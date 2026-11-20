@@ -12,7 +12,7 @@ internal sealed class DailyProgress(IPlayerRepository players, TimeProvider time
         PlayerId playerId,
         DateOnly day,
         WorldId worldId,
-        IReadOnlyList<(DailyTaskType Type, long Value)> changes,
+        IReadOnlyDictionary<DailyTaskType, long> changes,
         CancellationToken cancellationToken,
         StarId? starId = null)
     {

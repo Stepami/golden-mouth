@@ -23,7 +23,7 @@ public sealed record PlayerChallenge(
 
     internal bool ApplyProgress(
         WorldId worldId,
-        IReadOnlyList<(DailyTaskType Type, long Value)> changes,
+        IReadOnlyDictionary<DailyTaskType, long> changes,
         StarId? starId)
     {
         if (!Values.TryGetValue(worldId, out var tasks))
@@ -48,9 +48,8 @@ public sealed record PlayerChallenge(
                 _ => task.Progress + value,
             };
 
-            if (progress != task.Progress)
+            if (task.UpdateProgress(progress))
             {
-                tasks[type] = task with { Progress = progress };
                 changed = true;
             }
 

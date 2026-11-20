@@ -35,7 +35,7 @@ internal sealed class LikePostStateComparer(IPostRepository posts, DailyProgress
             var after = await posts.GetPostAsync(postId, token);
             if (after is not null && after.LikedBy.Contains(authorId))
             {
-                await progress.ApplyAsync(playerId, day, worldId, [(DailyTaskType.Likes, 1)], token);
+                await progress.ApplyAsync(playerId, day, worldId, new Dictionary<DailyTaskType, long> { [DailyTaskType.Likes] = 1 }, token);
             }
         };
     }
