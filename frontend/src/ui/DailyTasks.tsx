@@ -76,13 +76,11 @@ function DailyTaskPreview({ tasks, initialIndex }: { tasks: ReturnType<typeof da
       if (second?.offsetLeft) setShown(Math.max(0, Math.round(target.scrollLeft / second.offsetLeft)))
     }}>
       {tasks.map(task => <article key={task.type} className="daily-editor-slide" aria-label={task.title}>
-        <div className="daily-task-title" data-wide-count={!task.done && task.target >= 10_000 || undefined}>
+        <div className="daily-task-title" data-wide-count={task.target >= 10_000 || undefined}>
           <b>{task.title}</b>
-          <b className={task.done ? 'daily-channel-done' : 'muted'} aria-label={task.done ? 'Выполнено' : undefined}>{task.done ? '✓' : `${formatDailyNumber(task.progress)}/${formatDailyNumber(task.target)}`}</b>
+          <b className="muted">{formatDailyNumber(task.progress)}/{formatDailyNumber(task.target)}</b>
         </div>
-        {task.done
-          ? <p className="tiny muted">Выполнено в одном из миров</p>
-          : <progress aria-label={`Прогресс: ${task.title}`} value={task.progress} max={task.target} />}
+        <progress aria-label={`Прогресс: ${task.title}`} value={task.progress} max={task.target} />
       </article>)}
     </div> : <p className="small muted">Задания пока недоступны.</p>}
   </section>
@@ -100,14 +98,23 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
   const busy = retry.context === context && retry.busy
   const failed = retry.context === context && retry.failed
   const tasks = dailyTasksFor(player)
-  const done = tasks.filter(task => task.done).length
-  const suitable = tasks.filter(task => repost ? task.type === 'reposts' : task.compose)
-  const featured = suitable.find(task => !task.done) ?? suitable[0]
+  const remaining = tasks.filter(task => !task.done)
+  const done = tasks.length - remaining.length
+  const completed = tasks.length > 0 && remaining.length === 0
   if (editor) {
-    const requested = tasks.findIndex(task => task.type === nav.params.dailyTask)
-    const initialIndex = requested >= 0 ? requested : featured ? tasks.indexOf(featured) : 0
-    return <DailyTaskPreview key={`${context}:${repost}:${requested}`} tasks={tasks} initialIndex={initialIndex} />
+    if (completed) return null
+    const requested = remaining.findIndex(task => task.type === nav.params.dailyTask)
+    const suggested = remaining.findIndex(task => repost ? task.type === 'reposts' : task.compose)
+    const initialIndex = requested >= 0 ? requested : Math.max(0, suggested)
+    return <DailyTaskPreview key={`${context}:${repost}:${done}:${requested}`} tasks={remaining} initialIndex={initialIndex} />
   }
+
+  if (inline && completed) return <section className="daily-channel card" aria-label="Задания дня">
+    <div className="daily-channel-head">
+      <h2>Задания дня</h2>
+      <span className="small daily-channel-done">{done} из {tasks.length} ✓</span>
+    </div>
+  </section>
 
   const show = () => {
     setOpened(context)
