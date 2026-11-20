@@ -2,6 +2,7 @@ import { useGuestSession } from '../app/landing/guestSession'
 import { acceptedRegistrationConsent, readGuestHandoff } from '../app/landing/guestHandoff'
 import { landingContext, pendingLandingWorld } from '../app/landing/experiment'
 import { Resources } from '../ui/Resources'
+import { DailyTasks } from '../ui/DailyTasks'
 import { Streak } from '../ui/Streak'
 import { displayHandle } from '../app/handle'
 import { usePresetGoal } from '../ui/StoryGoal'
@@ -149,10 +150,13 @@ export function ChannelHead() {
   const w = guest?.world ?? worldOf(p.world)
   const identity = <><Avatar seed={p.handle} avatarStyle={guest?.world.avatarStyle} size={36} />
     <div className="channel-header-copy"><b>{p.name}</b>{p.handle && <div className="muted small" style={{ overflowWrap: 'anywhere' }}>{displayHandle(p.handle)}</div>}<div className="muted small">{fmt(p.subs)} подписчиков · {w.emoji} {w.title}</div></div></>
-  return <div className="top channel-header">
-    {guest ? <div className="channel-author">{identity}</div> : <button className="channel-author" onClick={() => nav.tab(4)}>{identity}</button>}
-    {guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} />}
-  </div>
+  return <>
+    <div className="top channel-header">
+      {guest ? <div className="channel-author">{identity}</div> : <button className="channel-author" onClick={() => nav.tab(4)}>{identity}</button>}
+      {guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} />}
+    </div>
+    {!guest && nav.current !== '02-2_live' && <DailyTasks inline={nav.current === '03-5_stage'} />}
+  </>
 }
 
 export function Home({ firstPostConfirmed = false, channelEmpty = false }: { firstPostConfirmed?: boolean; channelEmpty?: boolean } = {}) {
