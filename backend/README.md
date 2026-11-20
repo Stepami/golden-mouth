@@ -142,6 +142,7 @@ TickerQ 11.5.1 uses the official `TickerQ.MongoDB` provider and the application'
 
 - `RestoreEnergyJob`: every two minutes, at second 11.
 - `RefreshRegisteredPlayersJob`: every 30 minutes, at second 15.
+- `RefreshDailyChallengesJob`: daily at 09:00 in `Europe/Moscow`. `GET /me` also refreshes the player's card for the current UTC date.
 - `SendNotificationsJob`: every five minutes, at second 40.
 - `PruneAuthJob`: daily at 03:00 in `Europe/Moscow`.
 
@@ -150,6 +151,14 @@ Migration `2.7.6` drops the three legacy `ticker_` collections before TickerQ st
 The application publishes a synthetic active TickerQ license state without loading or validating a certificate. This depends on TickerQ's internal hosted-service registration and must be rechecked when updating TickerQ.
 
 `Jobs__ExecutionEnabled=false` selects TickerQ's queue-only mode for component tests: background execution and cron seeding are disabled. TickerQ request serialization uses `ApiJsonSerializerContext` through `WithJsonContext`, and execution spans join the existing OTLP trace pipeline. `JobsExceptionHandler` logs failed attempts and cancellations.
+
+### Daily challenge progress (#308)
+
+`GET /me` returns the player's current UTC card. After a successful `CreatePost`, `AddReply` or `LikePost`, a Mediator behavior runs the command's captured continuation. It applies the saved action to the tasks in that world. `PlayerChallenge` updates progress and marks the task complete for the player as soon as one world reaches the target.
+
+Posts and reposts have separate counters. Subscriber gains and losses use the publication delta. Views and automatic likes use the highest value of a single original post. Saving a player comment advances the comment counter. For a star comment, the target star must reply to an original post by the player on the same UTC date as the post. A manual like counts when the player adds it to a post in their world. Removing the like preserves earned progress.
+
+Progress is saved separately from the game action. A tracking failure is logged and the successful action still returns its result.
 
 ### Star feed generation (#148)
 

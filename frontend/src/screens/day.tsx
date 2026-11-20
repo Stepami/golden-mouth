@@ -1,3 +1,4 @@
+import { reachMetrikaGoal } from '../app/metrika'
 import { PostLikeAction } from '../ui/PostLikeAction'
 import { QuotedPost } from '../ui/QuotedPost'
 import { RepostAction } from '../ui/RepostAction'
@@ -185,7 +186,7 @@ function Friends() {
           <div className="row"><div style={{ fontSize: 26 }}>⚔️</div><div style={{ flex: 1 }}><b>Заруба на 3 дня</b><div className="small muted">Только если оба согласны. Считаем качество постов, а не число подписчиков</div></div></div>
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <Button style={{ padding: 10, fontSize: 14, flex: 1 }} onClick={() => nav.push('03-4c_challenge')}>Вызвать друга</Button>
-            <Button secondary style={{ padding: 10, fontSize: 14, flex: 1 }} onClick={() => nav.push('04-3_invite')}>Сыграй мою историю</Button>
+            <Button secondary style={{ padding: 10, fontSize: 14, flex: 1 }} onClick={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }}>Сыграй мою историю</Button>
           </div>
         </Card>
       </div>
@@ -250,7 +251,7 @@ function Stage() {
         </Card>
         <NextStoryChannelOffer player={p} />
         {runtimeConfig.features.collection && <Card style={{ marginBottom: 10 }} onClick={() => nav.tab(4)}><div className="row"><div style={{ fontSize: 22 }}>🃏</div><div style={{ flex: 1 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b></div><span className="muted">›</span></div></Card>}
-        <Button secondary style={{ marginBottom: 10 }} onClick={() => nav.push('04-3_invite')}>Позвать друга</Button>
+        <Button secondary style={{ marginBottom: 10 }} onClick={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }}>Позвать друга</Button>
         {list.pending === 'first' && !list.ready && <Card><span className="small muted">загружаем посты…</span></Card>}
         {list.error === 'first' && <Card><div className="small">Не получилось загрузить канал. Потяни вниз от начала списка, чтобы повторить.</div></Card>}
         {list.items.map(item => <FeedPostCard key={item.postId} item={item} returnTo="channel" onChanged={() => { void list.refresh() }} onLike={post => list.updateItems(items => items.map(item => item.postId === post.postId ? { ...item, likes: post.likes, likedBy: post.likedBy } : item))} />)}
@@ -311,7 +312,7 @@ function Me() {
           <div className="own-unlock-goal"><b>Пригласи 1 друга</b><span>0/1</span></div>
           <progress aria-label="Друзья с первым постом до открытия своего мира" value={0} max={1} />
           <p className="small muted">Мир откроется, когда друг опубликует первый пост.</p>
-          <Button onClick={() => nav.push('04-3_invite')}>Пригласить друга</Button>
+          <Button onClick={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }}>Пригласить друга</Button>
           <p className="small muted own-unlock-alternative">Или набери 500 подписчиков в одном мире.</p>
         </>}</div>
         <div className="profile-world-settings"><Button secondary onClick={() => nav.push('05-11_world_rules')}>Настройки мира</Button></div>

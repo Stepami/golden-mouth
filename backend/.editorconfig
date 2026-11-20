@@ -118,12 +118,13 @@ dotnet_diagnostic.SA1615.severity = none
 dotnet_diagnostic.SA1623.severity = none
 dotnet_diagnostic.S6960.severity = none
 
+# The Async suffix is optional throughout the backend.
+dotnet_diagnostic.AV1755.severity = none
+dotnet_diagnostic.S4261.severity = none
+dotnet_diagnostic.VSTHRD200.severity = none
+
 [src/Reki.Application/**/*.cs]
 dotnet_diagnostic.SA1649.severity = none
-
-[src/Reki.Application/**/*Handler.cs]
-# Mediator fixes the asynchronous interface member name as Handle; handlers cannot append Async.
-dotnet_diagnostic.AV1755.severity = none
 
 [src/Reki.Infrastructure/Mongo/Migrations/*.cs]
 # Migration filenames include their version; class names remain stable for migration history.

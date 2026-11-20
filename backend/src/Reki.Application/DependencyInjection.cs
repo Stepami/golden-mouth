@@ -1,13 +1,20 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
+using Reki.Application.Player.Challenges;
+using Reki.Application.Posts.AddReplyCommand;
 using Reki.Application.Posts.AI;
 using Reki.Application.Posts.AI.Safety;
 using Reki.Application.Posts.AI.Serializers;
+using Reki.Application.Posts.CreatePostCommand;
 using Reki.Application.Posts.CreatePostCommand.Progression;
 using Reki.Application.Posts.CreatePostCommand.Progression.Score;
 using Reki.Application.Posts.CreatePostCommand.Progression.Score.FlopTests;
+using Reki.Application.Posts.LikePostCommand;
 using Reki.Application.Posts.ML;
+using Reki.Application.Posts.Responses;
+using Reki.Application.Posts.Responses.Reply;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
 using Reki.Domain.Posts;
@@ -29,7 +36,11 @@ public static class DependencyInjection
         {
             options.Assemblies = [typeof(ApplicationAssemblyMarker)];
             options.ServiceLifetime = ServiceLifetime.Singleton;
+            options.PipelineBehaviors = [typeof(DailyProgressBehavior<,>)];
         });
+        services.AddSingleton<IStateComparer<CreatePost, CreatePostResponse>, CreatePostStateComparer>();
+        services.AddSingleton<IStateComparer<AddReply, ReplyResponse>, AddReplyStateComparer>();
+        services.AddSingleton<IStateComparer<LikePost, Unit>, LikePostStateComparer>();
         services.AddSingleton<PlayerSafetyGuard>();
         services.AddSingleton<IWorldPlayerCache, WorldPlayerCache>();
         services.AddSingleton<StarTurnPolicy>();

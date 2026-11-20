@@ -9,6 +9,8 @@ public sealed record PlayerChallenge(
 {
     public static PlayerChallenge Empty => new(DateOnly.MinValue, [], []);
 
+    public bool IsCompleted => Completion.Values.All(done => done);
+
     public static PlayerChallenge New(
         DateOnly day,
         IReadOnlyCollection<World> worlds,
@@ -19,6 +21,40 @@ public sealed record PlayerChallenge(
             day,
             completion,
             DailyTaskValues.Create(worlds, targets));
+    }
+
+    internal void ApplyProgress(
+        WorldId worldId,
+        IReadOnlyDictionary<DailyTaskType, long> changes,
+        StarId? starId)
+    {
+        if (!Values.TryGetValue(worldId, out var tasks))
+        {
+            return;
+        }
+
+        foreach (var (type, value) in changes)
+        {
+            if (!Completion.ContainsKey(type) ||
+                !tasks.TryGetValue(type, out var task) ||
+                (type == DailyTaskType.StarComment && (starId is null || task.StarId != starId)))
+            {
+                continue;
+            }
+
+            var progress = type switch
+            {
+                DailyTaskType.PostViews or DailyTaskType.PostLikes => Math.Max(task.Progress, value),
+                DailyTaskType.StarComment => 1,
+                _ => task.Progress + value,
+            };
+
+            task.UpdateProgress(progress);
+            if (progress >= task.Target)
+            {
+                Completion[type] = true;
+            }
+        }
     }
 
     internal void AddWorld(

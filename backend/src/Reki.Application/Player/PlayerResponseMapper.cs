@@ -44,6 +44,7 @@ public static partial class PlayerResponseMapper
 
     private static partial PlayerSettingsResponse MapSettings(PlayerSettings source);
 
+    [MapperIgnoreSource(nameof(PlayerChallenge.IsCompleted))]
     private static partial DailyChallengeResponse MapDailyChallenge(PlayerChallenge source);
 
     [MapperIgnoreSource(nameof(DailyTaskValues.BaseTarget))]

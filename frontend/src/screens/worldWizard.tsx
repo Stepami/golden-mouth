@@ -1,3 +1,4 @@
+import { reachMetrikaGoal } from '../app/metrika'
 import { clearGuestHandoff, readGuestHandoff, setRegistrationConsent } from '../app/landing/guestHandoff'
 import { draftKey, hasPostDraft, savePostDraft } from '../app/postDraft'
 import { event, tap } from '../app/analytics'
@@ -58,7 +59,7 @@ export function ChooseWorld() {
         <div className="own-unlock-goal"><b>Пригласи 1 друга</b><span>0/1</span></div>
         <progress aria-label="Друзья с первым постом до открытия своего мира" value={0} max={1} />
         <p className="small muted">Мир откроется, когда друг опубликует первый пост.</p>
-        {player && <Button onClick={() => nav.push('04-3_invite')}>Пригласить друга</Button>}
+        {player && <Button onClick={() => { reachMetrikaGoal('invite_friend_click'); nav.push('04-3_invite') }}>Пригласить друга</Button>}
         <p className="small muted own-unlock-alternative">Или набери 500 подписчиков в одном мире.</p>
       </>}
         {isDevWorldPrototype && new URLSearchParams(location.search).has('devtools') && <details className="editor-extra"><summary>DEV: пример настройки</summary><Button secondary onClick={() => startOwn(true)}>Попробовать быструю настройку · DEV</Button></details>}
