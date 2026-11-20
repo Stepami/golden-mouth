@@ -548,8 +548,55 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .story-first-step.next-story-idea { margin: 0 0 15px; }
 .next-story-idea p { margin-top: 4px; }
 @media (pointer: coarse) { .screen:has(textarea:focus) .next-story-dock { display: none; } }
-.game-onboarding-crystal-flight { position: fixed; z-index: 1000; width: 28px; height: 28px; font-size: 25px; line-height: 28px; pointer-events: none; will-change: transform, opacity; }
+.game-onboarding-crystal-flight {
+  position: fixed;
+  z-index: 1000;
+  width: 32px;
+  height: 32px;
+  clip-path: polygon(25% 5%, 75% 5%, 96% 32%, 50% 97%, 4% 32%);
+  background: conic-gradient(from 45deg at 49% 34%, #81daff, #4677b8 25%, #777cf4 38%, #206dbd 54%, #6ed5ff 72%, #d4fcff 84%, #81daff);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.game-onboarding-crystal-flight::before,
+.game-onboarding-crystal-flight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.game-onboarding-crystal-flight::before {
+  clip-path: polygon(26% 5%, 74% 5%, 66% 30%, 33% 30%);
+  background: linear-gradient(175deg, #f1ffff 3%, #a8e4ff 92%);
+}
+.game-onboarding-crystal-flight::after {
+  clip-path: polygon(33% 30%, 66% 30%, 50% 95%);
+  background: linear-gradient(150deg, #bcf4ff, #706dff 80%);
+}
 .thread-crystal-count { flex-shrink: 0; font-size: 12px; white-space: nowrap; cursor: default; }
+[data-onboarding-crystal-counter] {
+  position: relative;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.thread-crystal-count[data-onboarding-crystal-counter] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 16px;
+  background: var(--card2);
+}
+[data-onboarding-flight-balance] .onboarding-crystal-balance { display: none; }
+[data-onboarding-flight-balance]::after { content: attr(data-onboarding-flight-balance); }
+.game-onboarding-crystal-delta {
+  position: absolute;
+  top: 100%;
+  right: 5px;
+  z-index: 2;
+  color: #a6e5ff;
+  font-weight: 700;
+  pointer-events: none;
+}
 
 .registration-consent { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 14px 0; text-align: left; }
 .registration-consent input { width: 20px; height: 20px; flex: 0 0 20px; accent-color: var(--accent2); }
