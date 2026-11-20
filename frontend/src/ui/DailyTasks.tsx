@@ -73,18 +73,28 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
       {featured ? <><div className="daily-task-title" data-wide-count={featured.target >= 10_000 || undefined}><b>{featured.title}</b><b>{formatDailyNumber(featured.progress)}/{formatDailyNumber(featured.target)}</b></div><progress aria-label="Прогресс в этом мире" value={featured.progress} max={featured.target} /><p className="small muted">{featured.done ? 'Выполнено в одном из миров' : 'Прогресс в этом мире'}</p></> : <p className="small muted">{tasks.length ? 'Для этого действия нет отдельного задания.' : 'Задания пока недоступны.'}</p>}
       <p className="small muted daily-note">Учёт выполненных действий пока недоступен.</p>
       <button className="daily-more" onClick={show}>{featured ? '▸ Остальные ежедневные' : 'Открыть задания дня'}</button>
-    </section> : inline && tasks.length ? <section className="daily-channel card" aria-label="Задания дня">
+    </section> : inline ? <section className="daily-channel card" aria-label="Задания дня">
       <div className="daily-channel-head">
         <h2>Задания дня</h2>
-        <button type="button" className="text-button" onClick={show} aria-haspopup="dialog">Подробнее ›</button>
+        <span className="tiny muted">Смена в 03:00 МСК</span>
       </div>
-      <ul className="daily-channel-list">
-        {tasks.map(task => <li className="daily-channel-task" data-wide-count={!task.done && task.target >= 10_000 || undefined} key={task.type}>
-          <span className="daily-quest-symbol" aria-hidden="true">{taskSymbols[task.type as TaskType]}</span>
-          <span>{task.title}</span>
-          <span className={task.done ? 'daily-channel-done' : 'muted'} aria-label={task.done ? 'Выполнено' : `${task.progress} из ${task.target}`}>{task.done ? '✓' : `${formatDailyNumber(task.progress)}/${formatDailyNumber(task.target)}`}</span>
-        </li>)}
-      </ul>
+      {tasks.length ? <ul className="daily-channel-list">
+        {tasks.map(task => {
+          const content = <>
+            <span className="daily-quest-symbol" aria-hidden="true">{taskSymbols[task.type as TaskType]}</span>
+            <span className="daily-channel-title">{task.title}</span>
+            <span className={task.done ? 'daily-channel-done' : 'muted'} aria-label={task.done ? 'Выполнено' : `${task.progress} из ${task.target}`}>{task.done ? '✓' : `${formatDailyNumber(task.progress)}/${formatDailyNumber(task.target)}`}</span>
+          </>
+          return <li key={task.type}>
+            {task.done ? <div className="daily-channel-task">{content}</div> : <button type="button" className="daily-channel-task daily-channel-action" data-wide-count={task.target >= 10_000 || undefined} onClick={() => action(task)}>
+              {content}<span className="daily-channel-arrow" aria-hidden="true">›</span>
+            </button>}
+          </li>
+        })}
+      </ul> : <div className="daily-channel-empty">
+        <p className="small muted" role="status">{failed ? 'Не получилось обновить задания.' : 'Задания пока недоступны.'}</p>
+        <button type="button" className="text-button" onClick={reload} disabled={busy}>{busy ? 'Обновляем…' : 'Обновить'}</button>
+      </div>}
     </section> : <button className="daily-entry" onClick={show}><span>Задания дня</span><span data-daily-count>{status} ›</span></button>}
     {opened === context && createPortal(<Sheet onClose={() => setOpened('')}>
       <div className="daily-panel" role="dialog" aria-label="Задания дня" onKeyDown={e => { if (e.key === 'Escape') setOpened('') }}>

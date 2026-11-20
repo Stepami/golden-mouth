@@ -559,13 +559,17 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .daily-channel { margin: 10px 16px 0; border: 1px solid var(--line2); }
 .daily-channel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .daily-channel-head h2 { font-size: 15px; line-height: 1.25; }
-.daily-channel-head .text-button { min-height: 32px; padding: 0 2px; font-size: 13px; white-space: nowrap; }
-.daily-channel-head .text-button:focus-visible { outline: 2px solid var(--lilac); outline-offset: 2px; border-radius: 6px; }
+.daily-channel-head > span { text-align: right; }
+.daily-channel-empty { margin-top: 8px; }
 .daily-channel-list { list-style: none; margin: 2px 0 0; padding: 0; }
 .daily-channel-task { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 7px 0; font-size: 13px; line-height: 1.35; }
-.daily-channel-task + .daily-channel-task { border-top: 1px solid var(--line2); }
+.daily-channel-list > li + li { border-top: 1px solid var(--line2); }
+.daily-channel-action { width: 100%; min-height: 40px; grid-template-columns: 24px minmax(0, 1fr) auto 8px; border: 0; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.daily-channel-action:hover .daily-channel-title, .daily-channel-arrow { color: var(--lilac); }
+.daily-channel-action:focus-visible, .daily-channel-empty .text-button:focus-visible { outline: 2px solid var(--lilac); outline-offset: 2px; border-radius: 6px; }
+.daily-channel-arrow { grid-column: 4; grid-row: 1; font-size: 16px; }
 .daily-channel-task .daily-quest-symbol { width: 24px; height: 24px; border-radius: 7px; font-size: 13px; }
-.daily-channel-task > :last-child { font-variant-numeric: tabular-nums; }
+.daily-channel-task > :nth-child(3) { font-variant-numeric: tabular-nums; }
 .daily-channel-done { color: var(--up); }
 .daily-entry span:last-child { color: var(--lilac); }
 .daily-editor { border: 1px solid var(--lilac); margin-bottom: 16px; }
@@ -629,8 +633,8 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
   overflow-wrap: anywhere;
 }
 .daily-channel-task[data-wide-count] { row-gap: 3px; }
-.daily-channel-task[data-wide-count] > :nth-child(2),
-.daily-channel-task[data-wide-count] > :last-child,
+.daily-channel-action[data-wide-count] > :nth-child(2),
+.daily-channel-action[data-wide-count] > :nth-child(3) { grid-column: 2 / 4; }
 .daily-result-row[data-wide-count] > :nth-child(2) { grid-column: 2 / -1; }
 .daily-result-row[data-wide-count] { row-gap: 4px; }
 .daily-result-row[data-wide-count] .daily-result-count { grid-column: 2; justify-self: start; }
