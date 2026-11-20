@@ -35,7 +35,7 @@ export function dailyTasksFor(player: Player) {
   })
 }
 
-export function DailyTasks({ editor = false, repost = false, source = 'channel' }: { editor?: boolean; repost?: boolean; source?: 'channel' | 'profile' }) {
+export function DailyTasks({ editor = false, repost = false, inline = false, source = 'channel' }: { editor?: boolean; repost?: boolean; inline?: boolean; source?: 'channel' | 'profile' }) {
   const player = usePlayer()
   const { refresh } = useStore()
   const nav = useNav()
@@ -71,6 +71,18 @@ export function DailyTasks({ editor = false, repost = false, source = 'channel' 
       {featured ? <><div className="daily-task-title"><b>{featured.title}</b><b>{featured.progress}/{featured.target}</b></div><progress aria-label="Прогресс в этом мире" value={featured.progress} max={featured.target} /><p className="small muted">{featured.done ? 'Выполнено в одном из миров' : 'Прогресс в этом мире'}</p></> : <p className="small muted">{tasks.length ? 'Для этого действия нет отдельного задания.' : 'Задания пока недоступны.'}</p>}
       <p className="small muted daily-note">Учёт выполненных действий пока недоступен.</p>
       <button className="daily-more" onClick={show}>{featured ? '▸ Остальные ежедневные' : 'Открыть задания дня'}</button>
+    </section> : inline && tasks.length ? <section className="daily-channel card" aria-label="Задания дня">
+      <div className="daily-channel-head">
+        <h2>Задания дня</h2>
+        <button type="button" className="text-button" onClick={show} aria-haspopup="dialog">Подробнее ›</button>
+      </div>
+      <ul className="daily-channel-list">
+        {tasks.map(task => <li className="daily-channel-task" key={task.type}>
+          <span className="daily-quest-symbol" aria-hidden="true">{taskSymbols[task.type as TaskType]}</span>
+          <span>{task.title}</span>
+          <span className={task.done ? 'daily-channel-done' : 'muted'} aria-label={task.done ? 'Выполнено' : `${task.progress} из ${task.target}`}>{task.done ? '✓' : `${task.progress}/${task.target}`}</span>
+        </li>)}
+      </ul>
     </section> : <button className="daily-entry" onClick={show}><span>Задания дня</span><span data-daily-count>{status} ›</span></button>}
     {opened === context && createPortal(<Sheet onClose={() => setOpened('')}>
       <div className="daily-panel" role="dialog" aria-label="Задания дня" onKeyDown={e => { if (e.key === 'Escape') setOpened('') }}>

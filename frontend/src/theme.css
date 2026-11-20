@@ -556,6 +556,17 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .registration-login { margin-top: 12px; font-size: 13px; }
 
 .daily-entry { display: flex; justify-content: space-between; gap: 12px; margin: 10px 16px 0; padding: 10px 14px; border: 1px solid var(--line2); border-radius: 12px; background: var(--card); font-size: 13px; }
+.daily-channel { margin: 10px 16px 0; border: 1px solid var(--line2); }
+.daily-channel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.daily-channel-head h2 { font-size: 15px; line-height: 1.25; }
+.daily-channel-head .text-button { min-height: 32px; padding: 0 2px; font-size: 13px; white-space: nowrap; }
+.daily-channel-head .text-button:focus-visible { outline: 2px solid var(--lilac); outline-offset: 2px; border-radius: 6px; }
+.daily-channel-list { list-style: none; margin: 2px 0 0; padding: 0; }
+.daily-channel-task { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 7px 0; font-size: 13px; line-height: 1.35; }
+.daily-channel-task + .daily-channel-task { border-top: 1px solid var(--line2); }
+.daily-channel-task .daily-quest-symbol { width: 24px; height: 24px; border-radius: 7px; font-size: 13px; }
+.daily-channel-task > :last-child { font-variant-numeric: tabular-nums; }
+.daily-channel-done { color: var(--up); }
 .daily-entry span:last-child { color: var(--lilac); }
 .daily-editor { border: 1px solid var(--lilac); margin-bottom: 16px; }
 .daily-editor > .row { justify-content: space-between; }
