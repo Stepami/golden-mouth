@@ -25,6 +25,8 @@ import { usePlayer, useStore } from '../app/store'
 import { Avatar, Bubble, Button, Card, Chip, Gift, Segmented, SkillBar, Sheet, TopBar, fmt, short } from '../ui'
 import { beginOwnWorld } from '../app/worldDraft'
 import { ChannelHead, Home } from './onboarding'
+import { NextStoryChannelHint, NextStoryChannelOffer } from '../app/NextStory'
+import { nextStoryPostSaved } from '../app/GameOnboardingState'
 import { register } from '.'
 import { TextField } from '../ui/TextField'
 
@@ -225,6 +227,8 @@ function Stage() {
   const [banner, setBanner] = useState(true)
   const loadPage = useCallback((cursor: string | undefined, signal: AbortSignal) => api.channelPosts(p.worldInstanceId, cursor, signal), [p.worldInstanceId])
   const list = usePostPages<FeedItem>(cacheKey, loadPage)
+  const hasRegularPost = list.items.some(item => item.postId && !item.repostId)
+  useEffect(() => { if (hasRegularPost) nextStoryPostSaved(p.worldInstanceId ?? p.world) }, [hasRegularPost, p.worldInstanceId, p.world])
   const gestures = usePostListGestures(cacheKey, list, list.refresh)
   const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
   if (list.ready && list.items.length === 0 && !list.error) return <div ref={gestures.screenRef} className="post-list-screen">{pullIndicator}<Home channelEmpty firstPostConfirmed={nav.params.firstPostConfirmed === true || list.pending === null && !list.hasNext} /></div>
@@ -244,6 +248,7 @@ function Stage() {
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Навыки · из 10</b><button className="text-button small" onClick={() => setSkillHelp(true)}>как поднять ›</button></div>
           {(Object.keys(SKILL_NAMES) as (keyof typeof SKILL_NAMES)[]).map(k => <SkillBar key={k} name={SKILL_NAMES[k]} level={p.skills[k].level} progress={p.skills[k].progress} />)}
         </Card>
+        <NextStoryChannelOffer player={p} />
         {runtimeConfig.features.collection && <Card style={{ marginBottom: 10 }} onClick={() => nav.tab(4)}><div className="row"><div style={{ fontSize: 22 }}>🃏</div><div style={{ flex: 1 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b></div><span className="muted">›</span></div></Card>}
         <Button secondary style={{ marginBottom: 10 }} onClick={() => nav.push('04-3_invite')}>Позвать друга</Button>
         {list.pending === 'first' && !list.ready && <Card><span className="small muted">загружаем посты…</span></Card>}
@@ -251,7 +256,7 @@ function Stage() {
         {list.items.map(item => <FeedPostCard key={item.postId} item={item} returnTo="channel" onChanged={() => { void list.refresh() }} onLike={post => list.updateItems(items => items.map(item => item.postId === post.postId ? { ...item, likes: post.likes, likedBy: post.likedBy } : item))} />)}
         <div className="post-list-tail" ref={gestures.tailRef} role="status">{list.pending === 'more' ? 'Загружаем посты…' : list.error === 'more' ? 'Не получилось загрузить посты. Потяни вниз от начала списка, чтобы обновить.' : list.ready && !list.hasNext ? 'Все посты загружены' : ''}</div>
       </div>
-      <div className="bottom-cta" style={{ bottom: 78 }}><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit', { firstPostConfirmed: nav.params.firstPostConfirmed === true })}>Новый пост</Button></div>
+      <div className="bottom-cta" style={{ bottom: 78 }}><NextStoryChannelHint player={p} /><Button onClick={() => nav.push(p.postsLeft > 0 ? '02-1_compose' : '04-1_limit', { firstPostConfirmed: nav.params.firstPostConfirmed === true })}>Новый пост</Button></div>
       {skillHelp && <SkillHelp onClose={() => setSkillHelp(false)} />}
     </div>
   )
