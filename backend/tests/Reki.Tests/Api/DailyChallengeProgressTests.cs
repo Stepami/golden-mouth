@@ -29,13 +29,13 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
         // Act
         var first = await PublishAsync(api, worldId, "Сегодня мы готовимся к концерту.");
         var afterFirst = await ReadChallengeAsync(api);
-        var second = await PublishFlopAsync(api, worldId);
-        var afterSecond = await ReadChallengeAsync(api);
         var star = await ReplyAsync(api, worldId, first.Post.PostId, first.PredictedAuthorId);
         var reply = await ReplyAsync(api, worldId, first.Post.PostId, player.Id.ToAuthorId(), star.CommentId);
         var afterReply = await ReadChallengeAsync(api);
         var repost = await PublishAsync(api, worldId, string.Empty, first.Post.PostId);
         var afterRepost = await ReadChallengeAsync(api);
+        var second = await PublishFlopAsync(api, worldId);
+        var afterSecond = await ReadChallengeAsync(api);
 
         // Assert
         await Assert.That(first.Result.Delta).IsGreaterThan(0);
@@ -45,11 +45,11 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
         await Assert.That(afterSecond.Values[worldId][DailyTaskType.Posts].Progress).IsEqualTo(2L);
         await Assert.That(afterSecond.Values[worldId][DailyTaskType.PostLikes].Progress).IsEqualTo(Math.Max(first.Post.Likes, second.Post.Likes));
         await Assert.That(second.Result.Delta).IsLessThan(0);
-        await Assert.That(afterSecond.Values[worldId][DailyTaskType.Subscribers].Progress).IsEqualTo(first.Result.Delta);
         await Assert.That(reply.Subscribers).IsGreaterThan(star.Subscribers);
         await Assert.That(afterReply.Values[worldId][DailyTaskType.Subscribers].Progress).IsEqualTo(first.Result.Delta);
         await Assert.That(afterRepost.Values[worldId][DailyTaskType.Subscribers].Progress).IsEqualTo(first.Result.Delta + repost.Result.Delta);
-        await Assert.That(afterRepost.Values[worldId][DailyTaskType.PostLikes].Progress).IsEqualTo(Math.Max(first.Post.Likes, second.Post.Likes));
+        await Assert.That(afterRepost.Values[worldId][DailyTaskType.PostLikes].Progress).IsEqualTo(first.Post.Likes);
+        await Assert.That(afterSecond.Values[worldId][DailyTaskType.Subscribers].Progress).IsEqualTo(first.Result.Delta + repost.Result.Delta);
     }
 
     [Test]
@@ -77,6 +77,15 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
         }
 
         var completed = await ReadChallengeAsync(api);
+        var repostTarget = completed.Values[firstWorld][DailyTaskType.Reposts].Target;
+        for (var count = 1L; count < repostTarget; count++)
+        {
+            await PublishAsync(api, firstWorld, string.Empty, first.Post.PostId);
+        }
+
+        var finishedCard = await ReadChallengeAsync(api);
+        await PublishAsync(api, secondWorld, "Сегодня следующая репетиция.");
+        var afterFinish = await ReadChallengeAsync(api);
         await api.Worlds.DeleteWorldAsync(firstWorld.ToString(), CancellationToken.None);
         var afterDelete = await ReadChallengeAsync(api);
 
@@ -93,6 +102,9 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
         await Assert.That(completed.Values[firstWorld][DailyTaskType.Posts].Progress).IsEqualTo(target);
         await Assert.That(completed.Values[secondWorld][DailyTaskType.Posts].Progress).IsEqualTo(1L);
         await Assert.That(completed.Completion[DailyTaskType.Posts]).IsTrue();
+        await Assert.That(finishedCard.Completion.Values.All(done => done)).IsTrue();
+        await Assert.That(finishedCard.Values[firstWorld][DailyTaskType.Reposts].Progress).IsEqualTo(repostTarget);
+        await Assert.That(afterFinish.Values[secondWorld][DailyTaskType.Posts].Progress).IsEqualTo(1L);
         await Assert.That(afterDelete.Values.ContainsKey(firstWorld)).IsFalse();
         await Assert.That(afterDelete.Completion[DailyTaskType.Posts]).IsTrue();
     }

@@ -35,14 +35,5 @@ public sealed record DailyTaskValues(
             });
     }
 
-    internal bool UpdateProgress(long progress)
-    {
-        if (Progress == progress)
-        {
-            return false;
-        }
-
-        Progress = progress;
-        return true;
-    }
+    internal void UpdateProgress(long progress) => Progress = progress;
 }

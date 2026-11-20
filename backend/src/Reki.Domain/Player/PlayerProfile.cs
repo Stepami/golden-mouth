@@ -131,10 +131,13 @@ public sealed class PlayerProfile
         IReadOnlyDictionary<DailyTaskType, long> changes,
         StarId? starId = null)
     {
-        if (DailyChallenge.ApplyProgress(worldId, changes, starId))
+        if (DailyChallenge.IsCompleted)
         {
-            Version++;
+            return;
         }
+
+        DailyChallenge.ApplyProgress(worldId, changes, starId);
+        Version++;
     }
 
     public PlayerProfile AddNotificationChannel(PlayerNotificationChannel channel)
