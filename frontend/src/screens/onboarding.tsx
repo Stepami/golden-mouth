@@ -155,7 +155,7 @@ export function ChannelHead() {
       {guest ? <div className="channel-author">{identity}</div> : <button className="channel-author" onClick={() => nav.tab(4)}>{identity}</button>}
       {guest ? <EnergyBadge value={p.postsLeft} /> : <Resources player={profile!} />}
     </div>
-    {!guest && <DailyTasks inline={nav.current === '03-5_stage'} />}
+    {!guest && nav.current !== '02-2_live' && <DailyTasks inline={nav.current === '03-5_stage'} />}
   </>
 }
 
