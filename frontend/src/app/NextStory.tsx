@@ -53,7 +53,8 @@ function NextStoryOffer({ player }: { player: Player }) {
   }, [])
   useEffect(() => { if (target) nextStoryOfferShown(target.id) }, [target])
   if (!target) return null
-  const pitch = worldArt[target.id]?.pitch || target.summary?.trim() || target.description
+  const art = worldArt[target.id]
+  const pitch = art?.pitch || target.summary?.trim() || target.description
 
   const begin = (world: World, confirmed = false) => {
     selectDraftOwner(player.id)
@@ -75,27 +76,37 @@ function NextStoryOffer({ player }: { player: Player }) {
     nav.push('01-4_channel', { nextStory: true, sourceStarId: sourceStar?.id, world: world.id })
   }
 
-  return <NextStoryDock label="Другая история">
-    <div className="game-onboarding-meta"><span>Другая история</span><button type="button" className="next-story-dismiss" aria-label="Закрыть предложение" onClick={() => dismissNextStory(target.id)}>×</button></div>
-    <h2>{target.emoji} {target.title}</h2><p className="next-story-pitch">{pitch}</p>
-    <button type="button" className="game-onboarding-collect" onClick={() => begin(target)}>{other ? 'Попробовать эту историю' : 'Сыграть за другого героя'}</button>
-    {other && same && <button type="button" className="next-story-same" onClick={() => begin(same)}>Сыграть за другого героя в этом мире</button>}
-    {alternatives.length > 1 && <button type="button" className="next-story-same" onClick={() => nav.push('01-3_world', { nextStory: true })}>Все миры →</button>}
+  return <aside className="card next-story-offer" aria-label="Другая история">
+    <div className="next-story-offer-head">
+      <button type="button" className="next-story-world" aria-label={other ? `Попробовать «${target.title}»` : 'Сыграть за другого героя'} onClick={() => begin(target)}>
+        <span className="next-story-thumb" aria-hidden="true">{art ? <img src={art.smallCover} alt="" decoding="async" /> : target.emoji}</span>
+        <span className="next-story-copy"><span className="tiny muted">{other ? 'Другая история' : 'Другая роль'}</span><b>{target.title}</b></span>
+        <span className="next-story-arrow" aria-hidden="true">›</span>
+      </button>
+      <button type="button" className="next-story-dismiss" aria-label="Закрыть предложение" onClick={() => dismissNextStory(target.id)}>×</button>
+    </div>
+    {pitch && <p className="small muted next-story-pitch">{pitch}</p>}
+    {(other && same || alternatives.length > 1) && <div className="next-story-links">
+      {other && same && <button type="button" className="text-button small" aria-label="Сыграть за другого героя в этом мире" onClick={() => begin(same)}>Другая роль</button>}
+      {alternatives.length > 1 && <button type="button" className="text-button small" onClick={() => nav.push('01-3_world', { nextStory: true })}>Все миры →</button>}
+    </div>}
     {pending && <WorldSwitchDialog title={getWorldDraft()?.definition.title ?? ''} onConfirm={() => begin(pending, true)} onCancel={() => setPending(undefined)} />}
-  </NextStoryDock>
+  </aside>
+}
+
+export function NextStoryChannelOffer({ player }: { player: Player }) {
+  const story = useNextStory(), original = useGameOnboarding()
+  if (story && story.phase !== 'offered') return null
+  if (original && !original.completionSeen) return null
+  const completedHere = original?.phase === 'done' && original.worldId === (player.worldInstanceId ?? player.world) && original.completionSeen
+  if (!isNextStoryPreview() && (isGameOnboardingPreview() || !completedHere)) return null
+  return <NextStoryOffer player={player} />
 }
 
 export function NextStoryChannelHint({ player }: { player: Player }) {
-  const story = useNextStory(), original = useGameOnboarding()
-  const worldId = player.worldInstanceId ?? player.world
-  if (story?.phase === 'post' && story.worldId === worldId) {
-    return <NextStoryProgress step={3}>{contentOf(player.world).ideas.some(idea => idea.trim()) ? 'Идею можно переписать в редакторе.' : 'Напиши первый пост от лица своего героя.'}</NextStoryProgress>
-  }
-  if (story && story.phase !== 'offered') return null
-  if (original && !original.completionSeen) return null
-  const completedHere = original?.phase === 'done' && original.worldId === worldId && original.completionSeen
-  if (!isNextStoryPreview() && (isGameOnboardingPreview() || !completedHere)) return null
-  return <NextStoryOffer player={player} />
+  const story = useNextStory()
+  if (story?.phase !== 'post' || story.worldId !== (player.worldInstanceId ?? player.world)) return null
+  return <NextStoryProgress step={3}>{contentOf(player.world).ideas.some(idea => idea.trim()) ? 'Идею можно переписать в редакторе.' : 'Напиши первый пост от лица своего героя.'}</NextStoryProgress>
 }
 
 export function NextStoryEditorHint({ player }: { player: Player }) {

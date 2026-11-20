@@ -22,7 +22,7 @@ import { track } from '../app/log'
 import { tap, trackLandingAuth } from '../app/analytics'
 import { register } from '.'
 import { worldArt } from '../app/worldPrototype'
-import { NextStoryChannelHint } from '../app/NextStory'
+import { NextStoryChannelHint, NextStoryChannelOffer } from '../app/NextStory'
 import { useNextStory } from '../app/GameOnboardingState'
 import { WorldOverview, WorldPrototypePreview } from './worldQuick'
 import { ChooseWorld as World, ChannelSetup as Channel, VoiceSetup as WorldSetup, StarsSetup as FirstStar } from './worldWizard'
@@ -180,11 +180,11 @@ function LiveHome({ firstPostConfirmed, channelEmpty }: { firstPostConfirmed: bo
     return () => controller.abort()
   }, [p.id, worldId, channelEmpty, startingNextStory])
   const bonus = !startingNextStory && invitation?.playerId === p.id && invitation.worldId === worldId ? invitation.bonus : 0
-  return <HomeView player={p} title={worldOf(p.world).title} context={profile.firstContext} goal={goal} firstPostConfirmed={firstPostConfirmed || startingNextStory} bonus={bonus} starter={starter} prompt={prompt} hint={<NextStoryChannelHint player={p} />} />
+  return <HomeView player={p} title={worldOf(p.world).title} context={profile.firstContext} goal={goal} firstPostConfirmed={firstPostConfirmed || startingNextStory} bonus={bonus} starter={starter} prompt={prompt} offer={<NextStoryChannelOffer player={p} />} hint={<NextStoryChannelHint player={p} />} />
 }
 
-function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus = 0, guest = false, starter, prompt, hint }: {
-  player: Pick<Player, 'world' | 'streak'>; title: string; context: string; goal: ReturnType<typeof usePresetGoal>; firstPostConfirmed: boolean; bonus?: number; guest?: boolean; starter?: string; prompt?: string; hint?: React.ReactNode
+function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus = 0, guest = false, starter, prompt, offer, hint }: {
+  player: Pick<Player, 'world' | 'streak'>; title: string; context: string; goal: ReturnType<typeof usePresetGoal>; firstPostConfirmed: boolean; bonus?: number; guest?: boolean; starter?: string; prompt?: string; offer?: React.ReactNode; hint?: React.ReactNode
 }) {
   const nav = useNav()
   const session = useGuestSession()
@@ -194,6 +194,7 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus =
   </div><BottomCTA main="Посмотреть реакции" onMain={() => nav.push('02-6_thread', { focusReply: true })} /></div>
   return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
     {!suggested && <Streak streak={p.streak} />}
+    {offer}
     <div className="card first-story">
       {worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${title}»`} />}
       {goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}

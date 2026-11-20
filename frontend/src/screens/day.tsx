@@ -24,7 +24,7 @@ import { usePlayer, useStore } from '../app/store'
 import { Avatar, Bubble, Button, Card, Chip, Gift, Segmented, SkillBar, Sheet, TopBar, fmt, short } from '../ui'
 import { beginOwnWorld } from '../app/worldDraft'
 import { ChannelHead, Home } from './onboarding'
-import { NextStoryChannelHint } from '../app/NextStory'
+import { NextStoryChannelHint, NextStoryChannelOffer } from '../app/NextStory'
 import { nextStoryPostSaved } from '../app/GameOnboardingState'
 import { register } from '.'
 import { TextField } from '../ui/TextField'
@@ -247,6 +247,7 @@ function Stage() {
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}><b>Навыки · из 10</b><button className="text-button small" onClick={() => setSkillHelp(true)}>как поднять ›</button></div>
           {(Object.keys(SKILL_NAMES) as (keyof typeof SKILL_NAMES)[]).map(k => <SkillBar key={k} name={SKILL_NAMES[k]} level={p.skills[k].level} progress={p.skills[k].progress} />)}
         </Card>
+        <NextStoryChannelOffer player={p} />
         {runtimeConfig.features.collection && <Card style={{ marginBottom: 10 }} onClick={() => nav.tab(4)}><div className="row"><div style={{ fontSize: 22 }}>🃏</div><div style={{ flex: 1 }}><b>Коллекция {p.collection.filter(c => c.open).length}/12</b></div><span className="muted">›</span></div></Card>}
         <Button secondary style={{ marginBottom: 10 }} onClick={() => nav.push('04-3_invite')}>Позвать друга</Button>
         {list.pending === 'first' && !list.ready && <Card><span className="small muted">загружаем посты…</span></Card>}
