@@ -1,29 +1,26 @@
 using Reki.Application.Player.Challenges;
 using Reki.Application.Posts.Responses;
-using Reki.Application.RekiContext;
+using Reki.Domain.Player;
 using Reki.Domain.Player.Challenges;
 
 namespace Reki.Application.Posts.CreatePostCommand;
 
-internal sealed class CreatePostStateComparer(DailyProgress progress) : IStateComparer<CreatePost, CreatePostResponse>
+internal sealed class CreatePostStateComparer : IStateComparer<CreatePost, CreatePostResponse>
 {
-    public ValueTask<Func<CreatePostResponse, CancellationToken, ValueTask>?> CaptureAsync(
+    public ValueTask<Func<CreatePostResponse, CancellationToken, ValueTask>> CaptureAsync(
         CreatePost command,
-        IRekiContext context,
-        PlayerChallenge challenge,
+        PlayerProfile player,
         CancellationToken cancellationToken)
     {
         var worldId = command.WorldId;
-        if (!challenge.Values.ContainsKey(worldId))
+        if (!player.DailyChallenge.Values.ContainsKey(worldId))
         {
-            return default;
+            return ValueTask.FromResult<Func<CreatePostResponse, CancellationToken, ValueTask>>(
+                static (_, _) => ValueTask.CompletedTask);
         }
 
-        var playerId = context.PlayerId;
-        var day = challenge.Day;
-
-        return ValueTask.FromResult<Func<CreatePostResponse, CancellationToken, ValueTask>?>(
-            (response, token) =>
+        return ValueTask.FromResult<Func<CreatePostResponse, CancellationToken, ValueTask>>(
+            (response, _) =>
             {
                 var isPost = response.Post.RepostId is null;
                 var delta = response.Result.Delta;
@@ -42,7 +39,8 @@ internal sealed class CreatePostStateComparer(DailyProgress progress) : IStateCo
                     changes[DailyTaskType.PostLikes] = response.Post.Likes;
                 }
 
-                return progress.ApplyAsync(playerId, day, worldId, changes, token);
+                player.ApplyDailyChallengeProgress(worldId, changes);
+                return ValueTask.CompletedTask;
             });
     }
 }

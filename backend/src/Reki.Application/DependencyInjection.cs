@@ -38,7 +38,6 @@ public static class DependencyInjection
             options.ServiceLifetime = ServiceLifetime.Singleton;
             options.PipelineBehaviors = [typeof(DailyProgressBehavior<,>)];
         });
-        services.AddSingleton<DailyProgress>();
         services.AddSingleton<IStateComparer<CreatePost, CreatePostResponse>, CreatePostStateComparer>();
         services.AddSingleton<IStateComparer<AddReply, ReplyResponse>, AddReplyStateComparer>();
         services.AddSingleton<IStateComparer<LikePost, Unit>, LikePostStateComparer>();

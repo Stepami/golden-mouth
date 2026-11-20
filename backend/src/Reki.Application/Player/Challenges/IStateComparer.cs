@@ -1,13 +1,11 @@
-using Reki.Application.RekiContext;
-using Reki.Domain.Player.Challenges;
+using Reki.Domain.Player;
 
 namespace Reki.Application.Player.Challenges;
 
 internal interface IStateComparer<TCommand, TResponse>
 {
-    ValueTask<Func<TResponse, CancellationToken, ValueTask>?> CaptureAsync(
+    ValueTask<Func<TResponse, CancellationToken, ValueTask>> CaptureAsync(
         TCommand command,
-        IRekiContext context,
-        PlayerChallenge challenge,
+        PlayerProfile player,
         CancellationToken cancellationToken);
 }

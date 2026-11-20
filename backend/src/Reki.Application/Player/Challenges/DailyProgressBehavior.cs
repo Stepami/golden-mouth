@@ -1,31 +1,34 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
 using Reki.Application.RekiContext;
+using Reki.Domain.Player;
 
 namespace Reki.Application.Player.Challenges;
 
 internal sealed partial class DailyProgressBehavior<TCommand, TResponse>(
     IStateComparer<TCommand, TResponse> comparer,
     IRekiContextAccessor contextAccessor,
-    DailyProgress progress,
+    IPlayerRepository players,
+    TimeProvider timeProvider,
     ILogger<DailyProgressBehavior<TCommand, TResponse>> logger) : IPipelineBehavior<TCommand, TResponse>
     where TCommand : ITrackDailyProgress
 {
-#pragma warning disable AV1755 // Mediator defines the asynchronous entry point as Handle.
     public async ValueTask<TResponse> Handle(
         TCommand message,
         MessageHandlerDelegate<TCommand, TResponse> next,
         CancellationToken cancellationToken)
-#pragma warning restore AV1755
     {
-        Func<TResponse, CancellationToken, ValueTask>? apply = null;
+        PlayerProfile? player = null;
+        DateOnly day = default;
+        Func<TResponse, CancellationToken, ValueTask> apply = static (_, _) => ValueTask.CompletedTask;
         try
         {
-            var context = contextAccessor.Context;
-            var challenge = (await context.Player).DailyChallenge;
-            if (challenge.Day == progress.Day)
+            var candidate = await contextAccessor.Context.Player;
+            day = candidate.DailyChallenge.Day;
+            if (day == GetUtcDay())
             {
-                apply = await comparer.CaptureAsync(message, context, challenge, cancellationToken);
+                apply = await comparer.CaptureAsync(message, candidate, cancellationToken);
+                player = candidate;
             }
         }
         catch (Exception exception) when (exception is not (OutOfMemoryException or AccessViolationException))
@@ -35,11 +38,21 @@ internal sealed partial class DailyProgressBehavior<TCommand, TResponse>(
 
         var response = await next(message, cancellationToken);
 
-        if (apply is not null)
+        if (player is not null)
         {
             try
             {
+                if (day != GetUtcDay() || day != player.DailyChallenge.Day)
+                {
+                    return response;
+                }
+
+                var previousVersion = player.Version;
                 await apply(response, cancellationToken);
+                if (day == GetUtcDay() && day == player.DailyChallenge.Day)
+                {
+                    await players.SaveDailyChallengeAsync(player, previousVersion, cancellationToken);
+                }
             }
             catch (Exception exception) when (exception is not (OutOfMemoryException or AccessViolationException))
             {
@@ -49,6 +62,8 @@ internal sealed partial class DailyProgressBehavior<TCommand, TResponse>(
 
         return response;
     }
+
+    private DateOnly GetUtcDay() => DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
     [LoggerMessage(
         Level = LogLevel.Warning,

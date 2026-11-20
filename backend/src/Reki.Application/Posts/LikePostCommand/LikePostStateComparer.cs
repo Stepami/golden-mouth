@@ -1,23 +1,23 @@
 using Mediator;
 using Reki.Application.Player.Challenges;
-using Reki.Application.RekiContext;
+using Reki.Domain.Player;
 using Reki.Domain.Player.Challenges;
 
 namespace Reki.Application.Posts.LikePostCommand;
 
-internal sealed class LikePostStateComparer(IPostRepository posts, DailyProgress progress) : IStateComparer<LikePost, Unit>
+internal sealed class LikePostStateComparer(IPostRepository posts) : IStateComparer<LikePost, Unit>
 {
-    public async ValueTask<Func<Unit, CancellationToken, ValueTask>?> CaptureAsync(
+    public async ValueTask<Func<Unit, CancellationToken, ValueTask>> CaptureAsync(
         LikePost command,
-        IRekiContext context,
-        PlayerChallenge challenge,
+        PlayerProfile player,
         CancellationToken cancellationToken)
     {
-        var playerId = context.PlayerId;
+        Func<Unit, CancellationToken, ValueTask> skip = static (_, _) => ValueTask.CompletedTask;
+        var challenge = player.DailyChallenge;
         var authorId = command.AuthorId;
-        if (authorId != playerId.ToAuthorId() || !challenge.Completion.ContainsKey(DailyTaskType.Likes))
+        if (authorId != player.Id.ToAuthorId() || !challenge.Completion.ContainsKey(DailyTaskType.Likes))
         {
-            return null;
+            return skip;
         }
 
         var postId = command.PostId;
@@ -25,17 +25,16 @@ internal sealed class LikePostStateComparer(IPostRepository posts, DailyProgress
         if (post is null || post.LikedBy.Contains(authorId) ||
             !challenge.Values.TryGetValue(post.WorldId, out var tasks) || !tasks.ContainsKey(DailyTaskType.Likes))
         {
-            return null;
+            return skip;
         }
 
         var worldId = post.WorldId;
-        var day = challenge.Day;
         return async (_, token) =>
         {
             var after = await posts.GetPostAsync(postId, token);
             if (after is not null && after.LikedBy.Contains(authorId))
             {
-                await progress.ApplyAsync(playerId, day, worldId, new Dictionary<DailyTaskType, long> { [DailyTaskType.Likes] = 1 }, token);
+                player.ApplyDailyChallengeProgress(worldId, new Dictionary<DailyTaskType, long> { [DailyTaskType.Likes] = 1 });
             }
         };
     }
