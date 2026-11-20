@@ -16,42 +16,46 @@ internal sealed class AddReplyStateComparer(IPostRepository posts) : IStateCompa
     {
         var skip = EmptyStateComparerContinuation<AddReply, ReplyResponse>.Instance;
         var (day, _, values) = player.DailyChallenge;
-        var worldId = command.WorldId;
-        if (!values.TryGetValue(worldId, out var tasks))
+
+        if (!values.TryGetValue(command.WorldId, out var tasks))
         {
             return skip;
         }
 
-        var authorId = command.AuthorId;
-        var playerAuthor = player.Id.ToAuthorId();
-        var type = authorId == playerAuthor ? DailyTaskType.Comments : DailyTaskType.StarComment;
+        var type = command.AuthorId == player.Id.ToAuthorId()
+            ? DailyTaskType.Comments
+            : DailyTaskType.StarComment;
         if (!tasks.TryGetValue(type, out var task))
         {
             return skip;
         }
 
-        var starId = task.StarId;
-        if (type == DailyTaskType.StarComment && starId?.ToAuthorId() != authorId)
+        var targetStarDidNotComment =
+            type == DailyTaskType.StarComment &&
+            task.StarId?.ToAuthorId() != command.AuthorId;
+        if (targetStarDidNotComment)
         {
             return skip;
         }
 
         var post = await posts.GetPostAsync(command.PostId, cancellationToken);
-        if (post is null || post.WorldId != worldId)
+        if (post is null || post.WorldId != command.WorldId)
         {
             return skip;
         }
 
         if (type == DailyTaskType.StarComment)
         {
-            var isOwnOriginalPost = post.RepostId is null && post.AuthorId == playerAuthor;
+            var isOwnOriginalPost =
+                post.RepostId is null &&
+                post.AuthorId == player.Id.ToAuthorId();
             if (!isOwnOriginalPost || DateOnly.FromDateTime(post.CreatedAtUtc.UtcDateTime) != day)
             {
                 return skip;
             }
         }
 
-        return new ReplyContinuation(worldId, authorId, type, starId, post.Comments.Count);
+        return new ReplyContinuation(command.WorldId, command.AuthorId, type, task.StarId, post.Comments.Count);
     }
 
     private sealed class ReplyContinuation(

@@ -15,31 +15,31 @@ internal sealed class LikePostStateComparer(IPostRepository posts) : IStateCompa
         CancellationToken cancellationToken)
     {
         var skip = EmptyStateComparerContinuation<LikePost, Unit>.Instance;
-        var challenge = player.DailyChallenge;
-        var authorId = command.AuthorId;
-        if (authorId != player.Id.ToAuthorId())
+        var (_, completion, values) = player.DailyChallenge;
+
+        var playerMayLiked =
+            command.AuthorId == player.Id.ToAuthorId() &&
+            completion.ContainsKey(DailyTaskType.Likes);
+        if (!playerMayLiked)
         {
             return skip;
         }
 
-        if (!challenge.Completion.ContainsKey(DailyTaskType.Likes))
+        var post = await posts.GetPostAsync(command.PostId, cancellationToken);
+        if (post is null || post.LikedBy.Contains(command.AuthorId))
         {
             return skip;
         }
 
-        var postId = command.PostId;
-        var post = await posts.GetPostAsync(postId, cancellationToken);
-        if (post is null || post.LikedBy.Contains(authorId))
+        var worldHasLikesTask =
+            values.TryGetValue(post.WorldId, out var tasks) &&
+            tasks.ContainsKey(DailyTaskType.Likes);
+        if (!worldHasLikesTask)
         {
             return skip;
         }
 
-        if (!challenge.Values.TryGetValue(post.WorldId, out var tasks) || !tasks.ContainsKey(DailyTaskType.Likes))
-        {
-            return skip;
-        }
-
-        return new LikeContinuation(posts, postId, post.WorldId, authorId);
+        return new LikeContinuation(posts, command.PostId, post.WorldId, command.AuthorId);
     }
 
     private sealed class LikeContinuation(
