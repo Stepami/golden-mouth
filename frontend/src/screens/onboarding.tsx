@@ -166,6 +166,7 @@ function LiveHome({ firstPostConfirmed, channelEmpty }: { firstPostConfirmed: bo
   const story = useNextStory()
   const startingNextStory = story?.phase === 'post' && story.worldId === worldId
   const starter = startingNextStory ? profile.ideas.find(idea => idea.trim()) : undefined
+  const prompt = startingNextStory && !starter ? profile.firstPrompt?.trim() : undefined
   const [invitation, setInvitation] = useState<{ playerId: string; worldId: string; bonus: number }>()
   useEffect(() => {
     if (startingNextStory) return
@@ -179,27 +180,28 @@ function LiveHome({ firstPostConfirmed, channelEmpty }: { firstPostConfirmed: bo
     return () => controller.abort()
   }, [p.id, worldId, channelEmpty, startingNextStory])
   const bonus = !startingNextStory && invitation?.playerId === p.id && invitation.worldId === worldId ? invitation.bonus : 0
-  return <HomeView player={p} title={worldOf(p.world).title} context={profile.firstContext} goal={goal} firstPostConfirmed={firstPostConfirmed || startingNextStory} bonus={bonus} starter={starter} hint={<NextStoryChannelHint player={p} />} />
+  return <HomeView player={p} title={worldOf(p.world).title} context={profile.firstContext} goal={goal} firstPostConfirmed={firstPostConfirmed || startingNextStory} bonus={bonus} starter={starter} prompt={prompt} hint={<NextStoryChannelHint player={p} />} />
 }
 
-function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus = 0, guest = false, starter, hint }: {
-  player: Pick<Player, 'world' | 'streak'>; title: string; context: string; goal: ReturnType<typeof usePresetGoal>; firstPostConfirmed: boolean; bonus?: number; guest?: boolean; starter?: string; hint?: React.ReactNode
+function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus = 0, guest = false, starter, prompt, hint }: {
+  player: Pick<Player, 'world' | 'streak'>; title: string; context: string; goal: ReturnType<typeof usePresetGoal>; firstPostConfirmed: boolean; bonus?: number; guest?: boolean; starter?: string; prompt?: string; hint?: React.ReactNode
 }) {
   const nav = useNav()
   const session = useGuestSession()
+  const suggested = starter || prompt
   if (session?.published) return <div className="screen channel-screen"><ChannelHead /><div className="pad">
     <Card><p>{session.post.text}</p></Card>
   </div><BottomCTA main="Посмотреть реакции" onMain={() => nav.push('02-6_thread', { focusReply: true })} /></div>
   return <div className="screen first-story-screen"><ChannelHead /><div className="pad">
-    {!starter && <Streak streak={p.streak} />}
+    {!suggested && <Streak streak={p.streak} />}
     <div className="card first-story">
       {worldArt[p.world] && <WorldCover world={p.world} className="first-story-cover" priority alt={`Мир «${title}»`} />}
       {goal && <div className="first-story-goal"><div className="small eyebrow">Твой путь</div><h1>{goal.goal}</h1></div>}
-      {starter && <div className="story-first-step next-story-idea"><b className="small">Идея для поста</b><p>{starter}</p></div>}
+      {suggested && <div className="story-first-step next-story-idea"><b className="small">{starter ? "Идея для поста" : "Первый шаг"}</b><p>{suggested}</p></div>}
       <div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{context}</p>
-      {!starter && goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
+      {!suggested && goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
       {bonus > 0 && <p>🎁 Первый пост даст кристаллы: +{bonus} 💎</p>}
-    </div>{!starter && <p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>}
+    </div>{!suggested && <p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>}
   </div><div className="bottom-cta" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}<button className="btn" onClick={() => { if (!guest) tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }}>Написать первый пост</button></div></div>
 }
 

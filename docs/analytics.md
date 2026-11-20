@@ -233,7 +233,7 @@ AI-ответы и повтор requestId не учитываются. Поля:
 
 Для обучения `onboarding_step` различает подтверждённые `world_saved`, `post_saved`, `reply_saved`, начало ответа `reply_started`, результат начальной реакции `initial_reaction_result` и выдачи `reward`. Ошибки сохранения и генерации имеют `ok=false` и, где доступно, HTTP-статус или `unconfirmed`.
 
-Предложение новой истории передаёт в `onboarding_step` шаги `next_story_shown`, `next_story_accepted`, `next_story_dismissed`, `next_story_role`, `next_story_world_saved`, `next_story_post_saved`. `template_id` — ID предложенного или выбранного шаблона. `kind` при принятии — `same_world` или `other_world`, при выборе роли — `preset` или `custom`. Для готовой роли `star` содержит ID персонажа из шаблона. Сохранение поста отмечается после подтверждения обычной публикации в новом экземпляре мира.
+Предложение новой истории передаёт в `onboarding_step` шаги `next_story_shown`, `next_story_accepted`, `next_story_dismissed`, `next_story_role`, `next_story_world_saved`, `next_story_post_saved`. `template_id` — ID предложенного или выбранного шаблона. `kind` при принятии — `same_world`, `other_world` или `catalog`, при выборе роли — `preset` или `custom`. Для готовой роли `star` содержит ID персонажа из шаблона. Сохранение поста отмечается после подтверждения обычной публикации в новом экземпляре мира.
 
 ### Гостевая пробная история (#352)
 

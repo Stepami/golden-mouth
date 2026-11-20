@@ -533,6 +533,7 @@ summary:focus-visible { outline: 2px solid var(--lilac); outline-offset: 4px; bo
 .game-onboarding-progress.next-story-dock { flex: none; margin: 0; padding: 12px 14px; }
 .next-story-dock .game-onboarding-meta + p { margin-top: 5px; }
 .next-story-dock h2 { margin-top: 3px; }
+.next-story-dock .next-story-pitch { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .next-story-dock .next-story-dismiss { min-width: 36px; min-height: 36px; margin: -5px -6px -5px 0; padding: 0; color: var(--soft); font-size: 21px; text-align: center; }
 .next-story-dock .next-story-same { width: 100%; min-height: 40px; padding: 5px 2px 0; text-align: center; }
 .next-story-dock button:focus-visible { outline: 2px solid var(--lilac); outline-offset: 2px; }

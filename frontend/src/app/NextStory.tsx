@@ -1,21 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { api } from '../api/client'
 import type { Player, World } from '../api/types'
-import { optionalWorldTemplate, worldDefinitionOf, worldDocumentOf, worlds } from '../api/worldContent'
+import { contentOf, optionalWorldTemplate, worldDefinitionOf, worldDocumentOf, worlds } from '../api/worldContent'
 import { WorldSwitchDialog } from '../ui/WorldSwitchDialog'
 import { avatarPersonalization } from './avatarPersonalization'
+import { worldArt } from './worldArt'
 import { dismissNextStory, isGameOnboardingPreview, isNextStoryPreview, nextStoryOfferShown, trackNextStory, useGameOnboarding, useNextStory } from './GameOnboardingState'
 import { useNav } from './nav'
 import { getWorldDraft, savedWorldDraft, selectDraftOwner, setWorldDraft, withPersona, type WorldDraft } from './worldDraft'
-
-const evening = 'b3a1a522-0263-4796-a197-57a8731fc291'
-const hogwarts = 'aec9494b-4118-4525-8458-e85d759c8dd9'
-const hooks: Record<string, { title: string; text: string }> = {
-  [evening]: { title: 'Кто попал в кадр у леса?', text: 'Гроза сорвала бейсбол. Изабелла успела сделать последний снимок.' },
-  [hogwarts]: { title: 'Школа или отель?', text: 'Хогвартс закрылся. Гарри хочет вернуть учеников, а Драко предлагает открыть в замке отель.' },
-  '8c02a7fb-3b55-4eb0-b957-1b4869ed9834': { title: 'Кто придёт на помощь Северу?', text: 'В Драконьем Логове увидели мертвеца. Теперь каждый дом должен решить, за кого он готов сражаться.' },
-  '5720946a-ea7c-4a10-9c50-51ce3deefc53': { title: 'Курс обещает работу. А что получат выпускники?', text: 'Меркантил продаёт «Вкат», Куляш требует доказательств, а Ника ищет людей с опытом.' },
-}
 
 function NextStoryDock({ label, children }: { label: string; children: ReactNode }) {
   const element = useRef<HTMLElement>(null)
@@ -51,15 +43,17 @@ function NextStoryOffer({ player }: { player: Player }) {
   const source = worldDocumentOf(player.world)
   const same = ready ? optionalWorldTemplate(source) : undefined
   const alternatives = ready ? worlds.filter(world => world.id !== same?.id && world.title !== source.title) : []
-  const other = alternatives.find(world => world.id === (same?.id === evening ? hogwarts : evening)) ?? alternatives[0]
+  const played = new Set(api.ownedWorldsSnapshot()?.map(world => optionalWorldTemplate(world)?.id))
+  const other = alternatives.find(world => !played.has(world.id)) ?? alternatives[0]
+  const target = other ?? same
   useEffect(() => {
     let active = true
     void api.loadWorldTemplates().then(() => { if (active) setReady(true) }).catch(() => { /* The optional offer can try again when returning to Channel. */ })
     return () => { active = false }
   }, [])
-  useEffect(() => { if (other) nextStoryOfferShown(other.id) }, [other])
-  if (!other) return null
-  const hook = hooks[other.id] ?? { title: other.title, text: other.description }
+  useEffect(() => { if (target) nextStoryOfferShown(target.id) }, [target])
+  if (!target) return null
+  const pitch = worldArt[target.id]?.pitch || target.summary?.trim() || target.description
 
   const begin = (world: World, confirmed = false) => {
     selectDraftOwner(player.id)
@@ -82,10 +76,11 @@ function NextStoryOffer({ player }: { player: Player }) {
   }
 
   return <NextStoryDock label="Другая история">
-    <div className="game-onboarding-meta"><span>Другая история</span><button type="button" className="next-story-dismiss" aria-label="Закрыть предложение" onClick={() => dismissNextStory(other.id)}>×</button></div>
-    <h2>{hook.title}</h2><p>{hook.text}</p>
-    <button type="button" className="game-onboarding-collect" onClick={() => begin(other)}>Попробовать «{other.title}»</button>
-    {same && <button type="button" className="next-story-same" onClick={() => begin(same)}>Сыграть за другого героя в этом мире</button>}
+    <div className="game-onboarding-meta"><span>Другая история</span><button type="button" className="next-story-dismiss" aria-label="Закрыть предложение" onClick={() => dismissNextStory(target.id)}>×</button></div>
+    <h2>{target.emoji} {target.title}</h2><p className="next-story-pitch">{pitch}</p>
+    <button type="button" className="game-onboarding-collect" onClick={() => begin(target)}>{other ? 'Попробовать эту историю' : 'Сыграть за другого героя'}</button>
+    {other && same && <button type="button" className="next-story-same" onClick={() => begin(same)}>Сыграть за другого героя в этом мире</button>}
+    {alternatives.length > 1 && <button type="button" className="next-story-same" onClick={() => nav.push('01-3_world', { nextStory: true })}>Все миры →</button>}
     {pending && <WorldSwitchDialog title={getWorldDraft()?.definition.title ?? ''} onConfirm={() => begin(pending, true)} onCancel={() => setPending(undefined)} />}
   </NextStoryDock>
 }
@@ -93,7 +88,9 @@ function NextStoryOffer({ player }: { player: Player }) {
 export function NextStoryChannelHint({ player }: { player: Player }) {
   const story = useNextStory(), original = useGameOnboarding()
   const worldId = player.worldInstanceId ?? player.world
-  if (story?.phase === 'post' && story.worldId === worldId) return <NextStoryProgress step={3}>Идею можно переписать в редакторе.</NextStoryProgress>
+  if (story?.phase === 'post' && story.worldId === worldId) {
+    return <NextStoryProgress step={3}>{contentOf(player.world).ideas.some(idea => idea.trim()) ? 'Идею можно переписать в редакторе.' : 'Напиши первый пост от лица своего героя.'}</NextStoryProgress>
+  }
   if (story && story.phase !== 'offered') return null
   if (original && !original.completionSeen) return null
   const completedHere = original?.phase === 'done' && original.worldId === worldId && original.completionSeen
@@ -104,5 +101,5 @@ export function NextStoryChannelHint({ player }: { player: Player }) {
 export function NextStoryEditorHint({ player }: { player: Player }) {
   const story = useNextStory()
   if (story?.phase !== 'post' || story.worldId !== (player.worldInstanceId ?? player.world)) return null
-  return <NextStoryProgress step={3}>Дополни идею или расскажи эту сцену своими словами.</NextStoryProgress>
+  return <NextStoryProgress step={3}>{contentOf(player.world).ideas.some(idea => idea.trim()) ? 'Дополни идею или расскажи эту сцену своими словами.' : 'Расскажи, с чего начинается история твоего героя.'}</NextStoryProgress>
 }

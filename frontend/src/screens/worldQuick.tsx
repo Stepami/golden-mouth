@@ -40,8 +40,9 @@ function refreshHogwartsDraft(draft: WorldDraft, current: WorldDefinition): Worl
 export function WorldOverview() {
   const draft = useWorldDraft(); const nav = useNav(); const { player } = useStore()
   const [confirmSwitch, setConfirmSwitch] = useState(false)
+  const nextStory = nav.params.nextStory === true && !!player
   const world = nav.params.world as WorldId | undefined ?? draft?.definition.templateId
-  const catalog = () => { clearLandingWorld(); nav.replace('01-3_world', { group: nav.params.group, ageBand: nav.params.ageBand, birthYear: nav.params.birthYear }) }
+  const catalog = () => { clearLandingWorld(); nav.replace('01-3_world', { group: nav.params.group, ageBand: nav.params.ageBand, birthYear: nav.params.birthYear, nextStory }) }
   const back = () => nav.params.fromLanding ? catalog() : nav.back()
   if (!world || !worlds.some(template => template.id === world)) return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={back} /><div className="pad"><p>Этот мир сейчас недоступен.</p><Button onClick={catalog}>Выбрать мир</Button></div></div>
   const d = worldDefinitionOf(world); const art = worldArt[d.templateId ?? '']; const selectedRole = draft?.definition.templateId === world && (draft.personaChosen || draft.persona) ? d.stars.find(star => star.id === draft.persona?.star.id)?.name : d.stars[0]?.name; const goal = presetGoalFor(d, selectedRole)
@@ -67,8 +68,9 @@ export function WorldOverview() {
     }
     setWorldDraft(next)
     setConfirmSwitch(false)
-    recordEntryStep('landing_world_selected')
-    nav.push('01-4_channel')
+    if (nextStory) trackNextStory('accepted', world, { kind: 'catalog' })
+    else recordEntryStep('landing_world_selected')
+    nav.push('01-4_channel', nextStory ? { nextStory, world } : undefined)
   }
   return <div className="screen no-tab world-overview"><TopBar title="Обзор мира" onBack={back} />
     {art && <WorldCover world={world} className="world-hero" priority alt={`Обложка мира «${d.title}»`} />}
