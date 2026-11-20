@@ -14,7 +14,7 @@ import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
 import { useAvatarPersonalization } from './app/avatarPersonalization'
 import { GameOnboarding, isGameOnboardingPreview } from './app/GameOnboarding'
-import { beginGameOnboarding, gameOnboardingActive, useGameOnboarding, restartGameOnboardingPreview } from './app/GameOnboardingState'
+import { beginGameOnboarding, gameOnboardingActive, useGameOnboarding, restartGameOnboardingPreview, isNextStoryPreview } from './app/GameOnboardingState'
 import type { WorldId } from './api/types'
 
 import { GuestImport } from './app/landing/GuestImport'
@@ -94,7 +94,7 @@ function Shell() {
       setRegistrationConsent(false)
       setStack([{ id: '01-3_world', params: {} }])
     } else if (world) setStack([{ id: api.hasPlayer() ? '01-3b_world_overview' : '01-2_age', params: { world, fromLanding: true, agree: acceptedRegistrationConsent() } }])
-    else if (playerState === 'ready' || api.hasPlayer()) setStack([{ id: '01-3_world', params: {} }])
+    else if (playerState === 'ready' || api.hasPlayer()) setStack([{ id: isNextStoryPreview() && playerState === 'ready' ? '03-5_stage' : '01-3_world', params: {} }])
   }, [explicitStart, playerState, top.id])
   const back = useCallback(() => nav.back(), [nav])
   useEffect(() => syncBackButton(stack.length > 1 && top.id !== '02-6_thread', back), [stack.length, top.id, back])

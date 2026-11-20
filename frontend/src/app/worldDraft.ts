@@ -5,6 +5,14 @@ import { avatarPersonalization } from './avatarPersonalization'
 export interface WorldDraft {
   definition: WorldDefinition; heroOrder?: string[]; personaChosen?: boolean; advanced?: boolean; previewOnly?: boolean; persona?: { star: WorldDefinition['stars'][number]; description: string; name: string; avatar: string; role: string }; editingId?: string; reason?: string; address: Address; group: '14-17' | '18+'; ageBand?: AgeBand; birthYear?: number; personalizeAvatar?: boolean
 }
+
+export function withPersona(draft: WorldDraft, star?: WorldDefinition['stars'][number]): WorldDraft {
+  const d = draft.definition; const previous = draft.persona
+  const heroOrder = draft.heroOrder ?? [...d.stars, ...(previous ? [previous.star] : [])].map(value => value.id)
+  const restored = { ...d, stars: [...d.stars, ...(previous ? [previous.star] : [])], description: previous?.description ?? d.description, name: previous?.name ?? d.name, avatar: previous?.avatar ?? d.avatar, role: previous?.role ?? d.role }
+  if (!star) return { ...draft, heroOrder, personaChosen: true, persona: undefined, definition: restored }
+  return { ...draft, heroOrder, personaChosen: true, persona: { star, description: restored.description, name: restored.name, avatar: restored.avatar, role: restored.role }, definition: { ...restored, name: star.name, avatar: star.avatarSeed, role: star.role, description: `${restored.description}\nПерсона игрока: ${star.name}. ${star.about}`.slice(0, 2000), stars: restored.stars.filter(value => value.id !== star.id) } }
+}
 const key = 'reki:world-setup:v2'
 let current: WorldDraft | null = null
 let owner = ''
