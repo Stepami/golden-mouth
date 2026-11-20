@@ -11,6 +11,8 @@ import { acknowledgeGameOnboarding, gameOnboardingState, setOnboardingBonusClaim
 
 export { isGameOnboardingPreview } from './GameOnboardingState'
 
+const rewardCrystals = 2
+
 function GameOnboardingCard({ target, title, text, step, done, lockedSection, onResume }: { target: string; title: string; text: string; step: number; done: boolean; lockedSection: boolean; onResume?: () => void }) {
   const card = useRef<HTMLElement>(null)
   const { player, refresh } = useStore()
@@ -20,7 +22,7 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
   const [editing, setEditing] = useState(false)
   const [targetReady, setTargetReady] = useState(false)
   const [collecting, setCollecting] = useState(false)
-  const flight = useRef<{ cancelled: boolean; controller: AbortController; nodes: HTMLElement[]; animations: Animation[] } | null>(null)
+  const flight = useRef<{ cancelled: boolean; controller: AbortController; nodes: HTMLElement[]; animations: Animation[]; counter?: HTMLElement } | null>(null)
   useEffect(() => () => {
     const active = flight.current
     if (!active) return
@@ -28,15 +30,21 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
     active.controller.abort()
     active.animations.forEach(animation => animation.cancel())
     active.nodes.forEach(node => node.remove())
+    active.counter?.removeAttribute('data-onboarding-flight-balance')
   }, [])
   const collectReward = async (button: HTMLButtonElement) => {
     if (flight.current) return
     const preview = isGameOnboardingPreview(), playerId = player?.id, state = gameOnboardingState()
     if (state?.phase !== 'done') return
-    const active = { cancelled: false, controller: new AbortController(), nodes: [] as HTMLElement[], animations: [] as Animation[] }
+    const counter = matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? undefined
+      : document.querySelector<HTMLElement>('[data-onboarding-crystal-counter]') ?? undefined
+    const active = { cancelled: false, controller: new AbortController(), nodes: [] as HTMLElement[], animations: [] as Animation[], counter }
     flight.current = active; setCollecting(true); setClaimMessage('')
     let confirmed = state.bonusClaim === 'confirmed'
     let canAcknowledge = preview
+    let displayBalance = player?.energyWallet?.crystals
+    const startingBalance = displayBalance
     try {
       if (!preview) {
         if (!playerId || !state.postId) { setClaimMessage('Не найден учебный пост. Вернись в канал.'); return }
@@ -56,6 +64,9 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
           if (granted !== true) throw new Error('Unexpected bonus response')
           confirmed = true
           setOnboardingBonusClaim('confirmed', playerId)
+          if (counter && !active.cancelled && startingBalance !== undefined) {
+            counter.dataset.onboardingFlightBalance = String(startingBalance)
+          }
         }
         if (active.cancelled) return
         const latest = await refresh()
@@ -66,28 +77,58 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
         }
         if (!confirmed) { setClaimMessage('Баланс обновлён. Начисление не подтверждено; повторный запрос награды не отправлен.'); return }
         canAcknowledge = true
+        if (state.bonusClaim || startingBalance === undefined || latest.energyWallet.crystals - startingBalance !== rewardCrystals) return
       }
-      const counter = document.querySelector<HTMLElement>('.crystal-button')
-      if (!counter || matchMedia('(prefers-reduced-motion: reduce)').matches) return
-      const start = button.getBoundingClientRect(), end = counter.getBoundingClientRect()
+      if (!counter?.isConnected) return
+      const start = button.getBoundingClientRect()
+      const end = (counter.querySelector('.onboarding-crystal-icon') ?? counter).getBoundingClientRect()
       if (!end.width || !end.height) return
-      for (const index of [0, 1]) {
+      const flying = Array.from({ length: rewardCrystals }, (_, index) => {
         const gem = document.createElement('span')
         gem.className = 'game-onboarding-crystal-flight'; gem.dataset.onboardingFlight = String(index)
-        gem.setAttribute('aria-hidden', 'true'); gem.textContent = '💎'
-        const offset = index === 0 ? -8 : 8
-        gem.style.left = `${start.left + start.width / 2 - 14 + offset}px`
-        gem.style.top = `${start.top + start.height / 2 - 14}px`
+        gem.setAttribute('aria-hidden', 'true')
+        const offset = index === 0 ? -13 : 13
+        const fromX = start.left + start.width / 2 + offset, fromY = start.top + start.height / 2
+        gem.style.left = `${fromX - 16}px`
+        gem.style.top = `${fromY - 16}px`
         document.body.append(gem); active.nodes.push(gem)
-        const x = end.left + end.width / 2 - (start.left + start.width / 2 + offset)
-        const y = end.top + end.height / 2 - (start.top + start.height / 2)
-        active.animations.push(gem.animate([
-          { transform: 'translate(0, 0) scale(.8)', opacity: 1 },
-          { transform: `translate(${x * .4 + offset * 3}px, ${y * .35}px) scale(1.1)`, opacity: 1, offset: .4 },
-          { transform: `translate(${x}px, ${y}px) scale(.4)`, opacity: 0 },
-        ], { duration: 650, delay: index * 90, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' }))
-      }
-      await Promise.all(active.animations.map(animation => animation.finished))
+        const x = end.left + end.width / 2 - fromX
+        const y = end.top + end.height / 2 - fromY
+        const animation = gem.animate([
+          { transform: 'translate(0, 5px) scale(.7)', opacity: 0 },
+          { transform: `translate(${offset}px, -30px) rotate(${offset}deg) scale(1.15)`, opacity: 1, offset: .24 },
+          { transform: `translate(${x * .5 + offset}px, ${y * .54 - 12}px) rotate(14deg) scale(.85)`, opacity: 1, offset: .65 },
+          { transform: `translate(${x}px, ${y}px) rotate(35deg) scale(.24)`, opacity: .3 },
+        ], { duration: 610, delay: 85 + index * 130, easing: 'cubic-bezier(.24,.58,.23,1)', fill: 'both' })
+        active.animations.push(animation)
+        return animation.finished.then(() => {
+          gem.remove()
+          if (active.cancelled) return
+          if (!preview && displayBalance !== undefined) {
+            counter.dataset.onboardingFlightBalance = String(++displayBalance)
+          }
+          active.animations.push(counter.animate([
+            { transform: 'scale(1)' },
+            { transform: 'scale(1.12)', boxShadow: '0 0 0 4px #a6e5ff35', offset: .32 },
+            { transform: 'scale(1)', boxShadow: '0 0 0 9px #a6e5ff00' },
+          ], { duration: 260, easing: 'ease-out' }))
+        })
+      })
+      await Promise.all(flying)
+      if (!preview) setClaimMessage(`Начислено +${rewardCrystals} кристалла`)
+      const delta = document.createElement('span')
+      delta.className = 'game-onboarding-crystal-delta'
+      delta.textContent = `+${rewardCrystals}`
+      delta.setAttribute('aria-hidden', 'true')
+      counter.append(delta); active.nodes.push(delta)
+      const lift = delta.animate([
+        { opacity: 0, transform: 'translateY(-3px)' },
+        { opacity: 1, transform: 'translateY(0)', offset: .25 },
+        { opacity: 1, transform: 'translateY(0)', offset: .65 },
+        { opacity: 0, transform: 'translateY(4px)' },
+      ], { duration: 420 })
+      active.animations.push(lift)
+      await lift.finished
     } catch {
       if (!preview && !canAcknowledge) {
         if (!confirmed && playerId) {
@@ -99,6 +140,7 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
     }
     finally {
       active.nodes.forEach(node => node.remove())
+      active.counter?.removeAttribute('data-onboarding-flight-balance')
       if (!active.cancelled) {
         flight.current = null; setCollecting(false)
         if (canAcknowledge && preview === isGameOnboardingPreview() && playerId === api.playerId()) acknowledgeGameOnboarding()
@@ -139,7 +181,7 @@ function GameOnboardingCard({ target, title, text, step, done, lockedSection, on
     <h2>{waitingForReaction ? 'Герой готовит ответ' : title}</h2>
     <p>{lockedSection ? 'Этот раздел откроется после знакомства с игрой.' : waitingForReaction ? 'Дождись реакции героя. При ошибке можно повторить загрузку разговора.' : text}</p>
     {done && <p className="game-onboarding-reward-status">{isGameOnboardingPreview() ? 'DEV: предпросмотр без начисления' : claimMessage || (onboarding?.bonusClaim === 'confirmed' ? 'Награда подтверждена сервером. Обнови баланс, чтобы завершить.' : onboarding?.bonusClaim ? 'Результат начисления пока неизвестен. Можно проверить баланс; повторный запрос награды не отправляем.' : 'Забери награду за первый пост и разговор с героем.')}</p>}
-    {done ? <button className="game-onboarding-collect" data-onboarding-collect disabled={collecting} aria-busy={collecting} onClick={event => void collectReward(event.currentTarget)}>{!isGameOnboardingPreview() && onboarding?.bonusClaim ? onboarding.bonusClaim === 'confirmed' ? 'Обновить баланс' : 'Проверить баланс' : 'Забрать 2 💎'}</button> : onResume && <button onClick={() => { if (!isGameOnboardingPreview()) tap('onboarding_resume'); onResume() }}>Вернуться к обучению</button>}
+    {done ? <button className="game-onboarding-collect" data-onboarding-collect disabled={collecting} aria-busy={collecting} onClick={event => void collectReward(event.currentTarget)}>{collecting ? 'Забираем награду…' : !isGameOnboardingPreview() && onboarding?.bonusClaim ? onboarding.bonusClaim === 'confirmed' ? 'Обновить баланс' : 'Проверить баланс' : 'Забрать 2 💎'}</button> : onResume && <button onClick={() => { if (!isGameOnboardingPreview()) tap('onboarding_resume'); onResume() }}>Вернуться к обучению</button>}
   </aside>
   return host ? createPortal(dock, host) : dock
 }
