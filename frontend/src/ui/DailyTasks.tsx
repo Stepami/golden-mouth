@@ -101,13 +101,22 @@ export function DailyTasks({ editor = false, repost = false, inline = false, sou
   const failed = retry.context === context && retry.failed
   const tasks = dailyTasksFor(player)
   const done = tasks.filter(task => task.done).length
-  const suitable = tasks.filter(task => repost ? task.type === 'reposts' : task.compose)
-  const featured = suitable.find(task => !task.done) ?? suitable[0]
+  const completed = tasks.length > 0 && done === tasks.length
   if (editor) {
+    if (completed) return null
+    const suitable = tasks.filter(task => repost ? task.type === 'reposts' : task.compose)
+    const featured = suitable.find(task => !task.done) ?? suitable[0]
     const requested = tasks.findIndex(task => task.type === nav.params.dailyTask)
     const initialIndex = requested >= 0 ? requested : featured ? tasks.indexOf(featured) : 0
     return <DailyTaskPreview key={`${context}:${repost}:${requested}`} tasks={tasks} initialIndex={initialIndex} />
   }
+
+  if (inline && completed) return <section className="daily-channel card" aria-label="Задания дня">
+    <div className="daily-channel-head">
+      <h2>Задания дня</h2>
+      <span className="small daily-channel-done">{done} из {tasks.length} ✓</span>
+    </div>
+  </section>
 
   const show = () => {
     setOpened(context)
