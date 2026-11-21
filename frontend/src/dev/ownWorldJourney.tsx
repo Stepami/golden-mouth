@@ -1,9 +1,17 @@
 import { useEffect, useRef } from 'react'
 import { TABS } from '../app/nav'
-import eveningCover from '../assets/evening-640-v4.webp'
+import { worldArt } from '../app/worldArt'
+import hogwartsPreviewCover from '../../public/landing/hogwarts-480.jpg?url'
 import { VoiceCoverImage, type VoiceCover } from './ownWorldCover'
 import { exampleCover } from './ownWorldExample'
 import './ownWorldJourney.css'
+
+const presetPreviews = [
+  { id: 'b3a1a522-0263-4796-a197-57a8731fc291', title: 'Вечерело', emoji: '🌲' },
+  { id: 'aec9494b-4118-4525-8458-e85d759c8dd9', title: 'Спасти Хогвартс', emoji: '🏰', cover: hogwartsPreviewCover },
+  { id: '8c02a7fb-3b55-4eb0-b957-1b4869ed9834', title: 'Игра домов', emoji: '👑' },
+  { id: '5720946a-ea7c-4a10-9c50-51ce3deefc53', title: 'Последние инфобизеры', emoji: '💻' },
+]
 
 const cues = {
   1: 'Хватит нескольких фраз.',
@@ -81,16 +89,21 @@ export function VoiceWorldsPreview({ unlocked, savedWorld, cover, onUnlock, onCr
       </section>}
       <section>
         <h2>Выбери новую историю</h2>
-        <article className="world-cover-card voice-journey-world-card">
-          <div className="world-cover-image">
-            <img src={eveningCover} alt="" />
-            <span className="world-genre">🌆 Тайны и романтика</span>
-          </div>
-          <div className="world-cover-copy">
-            <h3>Вечерело</h3>
-            <p>Исчезнувшие улицы, чужие воспоминания и знакомства после заката.</p>
-          </div>
-        </article>
+        <div className="world-catalog voice-preset-catalog" role="region" aria-label="Готовые миры" tabIndex={0}>
+          {presetPreviews.map(({ id, title, emoji, cover }) => {
+            const art = worldArt[id]
+            return <article className="world-cover-card voice-journey-world-card" key={id}>
+              <div className="world-cover-image">
+                <img src={cover ?? art.smallCover} alt="" />
+                <span className="world-genre">{emoji} {art.genre}</span>
+              </div>
+              <div className="world-cover-copy">
+                <h3>{title}</h3>
+                <p>{art.pitch}</p>
+              </div>
+            </article>
+          })}
+        </div>
       </section>
       {!savedWorld && <section className="card own-world-unlock">
         <div className="row voice-journey-unlock-heading">

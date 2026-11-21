@@ -19,6 +19,15 @@
   margin: 0 0 8px;
 }
 
+.voice-worlds-catalog .voice-preset-catalog {
+  margin-bottom: 0;
+}
+
+.voice-preset-catalog:focus-visible {
+  outline: 2px solid var(--lilac);
+  outline-offset: 2px;
+}
+
 .voice-journey-world-card {
   cursor: default;
 }
