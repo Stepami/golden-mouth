@@ -12,9 +12,39 @@ type VoiceSummary = {
   rules: string
 }
 
-type VoiceDraft = WorldDefinition & { people: string }
+type VoiceDraft = WorldDefinition & { people: string; portraitSeeds: Record<string, string> }
 type Hero = WorldDefinition['stars'][number]
 const traits = ['Смелость', 'Поддержка', 'Загадка', 'Воображение', 'Любопытство', 'Энергия', 'Ирония и расчёт', 'Сухой юмор', 'Самоирония', 'Азарт', 'Внимание']
+const achievementCards = [
+  ['star_card', '👑', 'Карточка звезды'],
+  ['star_story', '💬', 'История звезды'],
+  ['first_viral', '🌊', 'Первый залёт'],
+  ['hate_survived', '🌩', 'Хейт пережит'],
+  ['collaboration', '🎬', 'Коллаб'],
+  ['ten_thousand', '⭐', '10k'],
+  ['skill_mastery', '🎓', 'Мастерство'],
+  ['profile_frame', '🖼', 'Рамка профиля'],
+  ['secret', '❔', 'Тайная'],
+  ['duet', '🤝', 'Дуэт'],
+  ['challenge', '⚔️', 'Челлендж'],
+  ['rematch', '🔁', 'Реванш'],
+]
+
+export function voiceWorldIssue(draft: WorldDefinition): string | null {
+  if (!draft.name.trim() || !draft.avatar.trim() || !draft.role.trim()) return 'Укажи имя, ник и роль своего персонажа.'
+  if (!draft.title.trim() || !draft.description.trim()) return 'Укажи название и описание мира.'
+  if (!draft.voice.trim()) return 'Укажи стиль подсказок для постов.'
+  if (!draft.stars.length) return 'Добавь хотя бы одного героя, который будет отвечать на посты.'
+  if (draft.stars.some(hero => !hero.name.trim() || !hero.role.trim() || !hero.about.trim() || !hero.voice.trim())) {
+    return 'Укажи имя, роль, характер и манеру общения каждого героя.'
+  }
+  if (draft.rules.some(rule => !rule.text.trim())) return 'Заполни или убери пустые особенности мира.'
+  return null
+}
+
+export function voicePortraitSeed(draft: VoiceDraft, personId: string, fallback: string) {
+  return draft.portraitSeeds[personId] || fallback || personId
+}
 
 function rulesText(rules: VoiceDraft['rules']) {
   return rules.filter(rule => !rule.locked).map(rule => rule.text).join('\n')
@@ -45,23 +75,25 @@ function exampleWorld(summary: VoiceSummary): VoiceDraft {
     avatarStyle: 'adventurer',
     role: 'Воздушный почтальон',
     people: summary.people,
+    portraitSeeds: {},
     voice: 'Живо, с любопытством и лёгким юмором',
     firstPrompt: 'Кто из подписчиков помнит путь к острову с посылки?',
     roles: ['Воздушный почтальон', 'Смотритель маяка', 'Собиратель старых карт'],
     voices: ['Живо, с лёгким юмором', 'Как в путевом дневнике'],
     postIdeas: ['У меня посылка для острова, которого нет на картах…', 'На рассвете попробую проверить старый маршрут…'],
     demoPosts: ['На посылке адрес острова, который исчез сто лет назад. Может, у кого-то осталась старая карта?'],
-    achievements: [{ id: 'first-route', emoji: '✉️', title: 'Первый маршрут', open: false }],
+    achievements: achievementCards.map(([id, emoji, title]) => ({ id, emoji, title, open: false })),
     stars: [
       { id: 'lis', name: 'Лис', role: 'Картограф', about: 'Хранит старые карты и знает про исчезнувшие маршруты больше, чем говорит.', voice: 'Сдержанно, с сухим юмором', avatarSeed: 'cloud-cartographer-lis', trait: 2 },
       { id: 'mika', name: 'Мика', role: 'Смотритель маяка', about: 'Каждое утро отмечает в журнале острова, которые видны с башни.', voice: 'Тепло, короткими фразами', avatarSeed: 'cloud-lighthouse-mika', trait: 4 },
+      { id: 'ruta', name: 'Рута', role: 'Диспетчер воздушных маршрутов', about: 'Проверяет маршруты на рассвете и первой замечает, когда рейс исчезает из журнала.', voice: 'Коротко и точно, как в рации', avatarSeed: 'cloud-dispatcher-ruta', trait: 10 },
     ],
   }, summary)
 }
 
 export function useVoiceFullDraft(summary: VoiceSummary) {
   const [draft, setDraft] = useState(() => exampleWorld(summary))
-  return { draft, setDraft, openEditor: () => setDraft(previous => applyQuickEdits(previous, summary)) }
+  return { draft, setDraft, previewDraft: applyQuickEdits(draft, summary), openEditor: () => setDraft(previous => applyQuickEdits(previous, summary)) }
 }
 
 function Portrait({ seed, style, name, size = 42 }: { seed: string; style: string; name: string; size?: number }) {
@@ -86,7 +118,7 @@ function peopleOf(draft: VoiceDraft) {
 export function VoicePortraits({ draft }: { draft: VoiceDraft }) {
   return <ul className="voice-portraits" aria-label="Персонажи мира">
     {peopleOf(draft).map(person => <li key={person.id}>
-      <Portrait seed={person.avatarSeed || person.id} style={draft.avatarStyle} name={person.name} size={36} />
+      <Portrait seed={voicePortraitSeed(draft, person.id, person.avatarSeed)} style={draft.avatarStyle} name={person.name} size={36} />
       <span><b>{person.name || 'Без имени'}</b><small>{person.role}</small></span>
     </li>)}
   </ul>
@@ -162,12 +194,16 @@ export function VoiceFullEditor({ draft, onChange, onClose, onPreview }: {
   function changeHero(id: string, change: Partial<Hero>) {
     patch({ stars: draft.stars.map(hero => hero.id === id ? { ...hero, ...change } : hero) })
   }
+  function changePortrait(id: string) {
+    patch({ portraitSeeds: { ...draft.portraitSeeds, [id]: crypto.randomUUID() } })
+  }
   function addHero() {
     const id = crypto.randomUUID()
     patch({ stars: [...draft.stars, { id, name: '', role: '', about: '', voice: '', avatarSeed: id, trait: 1 }] })
     setNewHero(id)
   }
   const summary = voiceDraftSummary(draft)
+  const issue = voiceWorldIssue(draft)
   const field = (label: string, key: {
     [K in keyof VoiceDraft]-?: VoiceDraft[K] extends string ? K : never
   }[keyof VoiceDraft], rows?: number, maxLength?: number) => (
@@ -180,12 +216,12 @@ export function VoiceFullEditor({ draft, onChange, onClose, onPreview }: {
     </div>
     <Section title="Твой персонаж" hint={draft.name || 'Имя, занятие и портрет'}>
       <div className="row">
-        <Portrait seed={draft.avatar || 'player'} style={draft.avatarStyle} name={draft.name} size={52} />
-        <button type="button" className="text-link" onClick={() => patch({ avatar: crypto.randomUUID() })}>Другой портрет</button>
+        <Portrait seed={voicePortraitSeed(draft, 'player', draft.avatar)} style={draft.avatarStyle} name={draft.name} size={52} />
+        <button type="button" className="text-link" onClick={() => changePortrait('player')}>Другой портрет</button>
       </div>
       {field('Имя персонажа', 'name', 1, 80)}
       {field('Кто ты в этой истории', 'role', 1, 80)}
-      {field('Ключ портрета', 'avatar', 1, 80)}
+      {field('Ник персонажа', 'avatar', 1, 80)}
       <Choice label="Стиль портретов" value={draft.avatarStyle} onChange={avatarStyle => patch({ avatarStyle })} options={[
         { id: 'adventurer', title: 'Приключения' }, { id: 'lorelei', title: 'Портрет' }, { id: 'notionists', title: 'Скетч' },
         { id: 'pixelArt', title: 'Пиксели' }, { id: 'thumbs', title: 'Мини' }, { id: 'shapes', title: 'Формы' },
@@ -206,25 +242,24 @@ export function VoiceFullEditor({ draft, onChange, onClose, onPreview }: {
     <Section title="Герои вокруг тебя" hint={draft.stars.map(hero => hero.name.trim()).filter(Boolean).join(', ') || 'Персонажи мира'}>
       {draft.stars.map(hero => <details className="editor-extra hero-editor voice-list-fields" key={hero.id} open={newHero === hero.id ? true : undefined}>
         <summary>
-          <Portrait seed={hero.avatarSeed || hero.id} style={draft.avatarStyle} name={hero.name} />
+          <Portrait seed={voicePortraitSeed(draft, hero.id, hero.avatarSeed)} style={draft.avatarStyle} name={hero.name} />
           <span><b>{hero.name || 'Новый герой'}</b><span className="small muted">{hero.role || 'Добавь занятие героя'}</span></span>
         </summary>
         <Field label="Имя героя" value={hero.name} onChange={name => changeHero(hero.id, { name })} maxLength={80} autoFocus={newHero === hero.id} />
         <Field label="Чем занимается герой" value={hero.role} onChange={role => changeHero(hero.id, { role })} maxLength={80} />
         <Field label="Характер и история" value={hero.about} onChange={about => changeHero(hero.id, { about })} rows={3} />
         <Field label="Как герой общается" value={hero.voice} onChange={voice => changeHero(hero.id, { voice })} rows={2} />
-        <Field label="Ключ портрета героя" value={hero.avatarSeed} onChange={avatarSeed => changeHero(hero.id, { avatarSeed })} maxLength={80} />
+        <Field label="Ник героя" value={hero.avatarSeed} onChange={avatarSeed => changeHero(hero.id, { avatarSeed })} maxLength={80} />
         <label className="voice-field">
           Главная черта
           <select value={hero.trait} onChange={event => changeHero(hero.id, { trait: Number(event.target.value) })}>
             {traits.map((title, index) => <option value={index} key={title}>{title}</option>)}
           </select>
         </label>
-        <button type="button" className="text-link" onClick={() => changeHero(hero.id, { avatarSeed: crypto.randomUUID() })}>Другой портрет</button>
+        <button type="button" className="text-link" onClick={() => changePortrait(hero.id)}>Другой портрет</button>
         <button type="button" className="text-link" onClick={() => patch({ stars: draft.stars.filter(item => item.id !== hero.id) })}>Убрать героя</button>
       </details>)}
       <button type="button" className="btn secondary" onClick={addHero}>＋ Добавить героя</button>
-      {field('Кратко о персонажах', 'people', 3)}
     </Section>
     <Section title="Настроение истории" hint={dramaOptions.find(option => option.id === draft.drama)?.title ?? 'Драма и стиль подсказок'}>
       <Choice label="Градус драмы" value={draft.drama} options={dramaOptions} onChange={drama => patch({ drama })} />
@@ -248,16 +283,16 @@ export function VoiceFullEditor({ draft, onChange, onClose, onPreview }: {
       <StringFields title="Варианты занятия" values={draft.roles} onChange={roles => patch({ roles })} />
       <StringFields title="Варианты стиля" values={draft.voices} onChange={voices => patch({ voices })} />
       <details className="editor-extra voice-list-fields">
-        <summary>Достижения коллекции</summary>
+        <summary>Достижения коллекции · {draft.achievements.length}</summary>
+        <p className="small muted">Можно изменить название и значок. Условия получения задаёт игра.</p>
         {draft.achievements.map((achievement, index) => <div className="voice-full-list-item" key={achievement.id}>
           <Field label="Название достижения" value={achievement.title} onChange={title => patch({ achievements: draft.achievements.map((item, i) => i === index ? { ...item, title } : item) })} />
           <Field label="Значок достижения" value={achievement.emoji} maxLength={8} onChange={emoji => patch({ achievements: draft.achievements.map((item, i) => i === index ? { ...item, emoji } : item) })} />
-          <button type="button" className="text-link" onClick={() => patch({ achievements: draft.achievements.filter((_, i) => i !== index) })}>Убрать достижение</button>
         </div>)}
-        <button type="button" className="chip" onClick={() => patch({ achievements: [...draft.achievements, { id: crypto.randomUUID(), title: '', emoji: '⭐', open: false }] })}>＋ Добавить достижение</button>
       </details>
     </Section>
-    <button type="button" className="btn" onClick={() => onPreview(summary)}>Посмотреть канал</button>
+    {issue && <p className="small muted" id="voice-world-issue" role="status">{issue}</p>}
+    <button type="button" className="btn" disabled={issue !== null} aria-describedby={issue ? 'voice-world-issue' : undefined} onClick={() => onPreview(summary)}>Начать историю</button>
     <button type="button" className="text-link voice-full-back" onClick={() => onClose(summary)}>К быстрому черновику</button>
   </main>
 }

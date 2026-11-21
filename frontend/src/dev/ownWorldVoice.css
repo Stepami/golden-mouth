@@ -197,12 +197,85 @@
   min-height: 6em;
 }
 
-.voice-channel p {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+.voice-preview h1[tabindex="-1"]:focus { outline: none; }
+
+.voice-preview .voice-wait {
+  min-height: min(530px, 72svh);
+  align-content: center;
+  justify-items: center;
+  gap: 19px;
+  text-align: center;
 }
 
-.voice-channel h2 {
-  font-size: 16px;
-  margin-bottom: 7px;
+.voice-magic {
+  display: grid;
+  place-items: center;
+  width: 136px;
+  height: 136px;
+  border: 1px solid var(--line2);
+  border-radius: 32px;
+  background: radial-gradient(circle at 50% 45%, #362745, var(--card) 73%);
+  color: var(--lilac);
+}
+
+.voice-wait-copy p { margin-top: 8px; }
+
+.voice-magic-wave { display: flex; align-items: center; gap: 5px; }
+.voice-magic-wave i {
+  width: 4px;
+  height: 18px;
+  border-radius: 4px;
+  background: currentColor;
+  animation: voice-wave-breathe 900ms ease-in-out infinite alternate;
+}
+.voice-magic-wave i:nth-child(2n) { height: 30px; animation-delay: -180ms; }
+.voice-magic-wave i:nth-child(3n) { height: 40px; animation-delay: -360ms; }
+.voice-magic-wave i:nth-child(4) { height: 49px; animation-delay: -540ms; }
+
+.voice-magic-pieces {
+  display: grid;
+  grid-template-columns: repeat(2, 31px);
+  gap: 6px;
+}
+.voice-magic-pieces span {
+  display: grid;
+  place-items: center;
+  height: 31px;
+  border: 1px solid var(--line2);
+  border-radius: 9px;
+  background: var(--card2);
+  animation: voice-piece-appear 450ms ease-out both;
+}
+.voice-magic-pieces span:nth-child(2) { animation-delay: 140ms; }
+.voice-magic-pieces span:nth-child(3) { animation-delay: 280ms; }
+.voice-magic-pieces span:nth-child(4) { animation-delay: 420ms; }
+
+.voice-magic-stars { position: relative; font-size: 42px; }
+.voice-magic-stars span { display: block; animation: voice-piece-appear 600ms ease-out both; }
+.voice-magic-stars i { position: absolute; font: inherit; font-size: 17px; line-height: 1; font-style: normal; animation: voice-piece-appear 490ms ease-out both; }
+.voice-magic-stars i:nth-child(2) { left: -17px; top: 4px; animation-delay: 120ms; }
+.voice-magic-stars i:nth-child(3) { right: -16px; top: 3px; animation-delay: 240ms; }
+.voice-magic-stars i:nth-child(4) { right: -13px; bottom: 0; animation-delay: 360ms; }
+
+.voice-wait-light {
+  width: 96px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--line2);
+}
+.voice-wait-light span {
+  display: block;
+  width: 44%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--grad);
+  animation: voice-light-pass 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes voice-wave-breathe { from { transform: scaleY(.42); opacity: .53; } to { transform: scaleY(1); opacity: 1; } }
+@keyframes voice-piece-appear { from { transform: translateY(7px) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes voice-light-pass { from { transform: translateX(0); } to { transform: translateX(127%); } }
+@media (prefers-reduced-motion: reduce) {
+  .voice-wait * { animation: none !important; }
 }
