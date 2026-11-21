@@ -8,6 +8,7 @@ public sealed record GameBalance(
     int PlusPostsPerDay,
     int InviteBonusBoth,
     int PlusInterestBonus,
+    BonusBalance Bonuses,
     GrowthBalance Growth,
     ViralBalance Viral,
     SkillBalance Skills,

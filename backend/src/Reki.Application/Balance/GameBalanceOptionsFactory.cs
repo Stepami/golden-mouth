@@ -19,6 +19,7 @@ internal sealed class GameBalanceOptionsFactory(
     protected override GameBalance CreateInstance(string name)
     {
         var posts = configuration.GetRequiredSection("posts");
+        var bonuses = configuration.GetRequiredSection("bonuses");
         var growth = configuration.GetRequiredSection("growth");
         var viral = configuration.GetRequiredSection("viral");
         var skills = configuration.GetRequiredSection("skills");
@@ -62,7 +63,8 @@ internal sealed class GameBalanceOptionsFactory(
                         entry => new DramaBalance(entry.GetValue<double>("hate_x"), entry.GetValue<int>("threshold_steps"), entry.GetValue<double>("loss_multiplier"))),
                     item["emotion_tie_break"] ?? "sad_tone"));
 
-        if (levelThresholds.Count != 10 ||
+        if (bonuses.GetValue<int>("post_interval") <= 0 || bonuses.GetValue<int>("streak_interval") <= 0 ||
+            !bonuses.GetRequiredSection("streak_days").GetChildren().Any() || levelThresholds.Count != 10 ||
             difficulties.Count != 3 || Enum.GetValues<WorldDifficulty>().Any(value => !difficulties.ContainsKey(value)) ||
             difficulties.Values.Any(value => value.GrowthCoefficient <= 0 || value.ViralMultiplier <= 0 || value.HateFrom < 0))
         {
@@ -74,6 +76,20 @@ internal sealed class GameBalanceOptionsFactory(
             posts.GetValue<int>("plus_per_day"),
             posts.GetValue<int>("invite_bonus_both"),
             posts.GetValue<int>("plus_interest_bonus_once"),
+            new BonusBalance(
+                bonuses.GetValue<int>("onboarding_crystals"),
+                bonuses.GetValue<int>("viral_card_multiplier"),
+                bonuses.GetValue<int>("flop_guard_views"),
+                bonuses.GetValue<int>("booster_hours"),
+                bonuses.GetValue<int>("booster_extension_days"),
+                bonuses.GetValue<int>("skill_level_crystals"),
+                bonuses.GetValue<int>("post_interval"),
+                bonuses.GetValue<int>("post_interval_crystals"),
+                bonuses.GetValue<int>("viral_post_crystals"),
+                bonuses.GetValue<int>("challenge_crystals"),
+                bonuses.GetRequiredSection("streak_days").GetChildren().Select(day => day.Get<int>()).ToArray(),
+                bonuses.GetValue<int>("streak_interval"),
+                bonuses.GetValue<int>("streak_crystals")),
             new GrowthBalance(
                 growth.GetValue<double>("power"),
                 growth.GetValue<double>("k"),
