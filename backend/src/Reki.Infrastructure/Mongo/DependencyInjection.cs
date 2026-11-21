@@ -3,6 +3,7 @@ using Kot.MongoDB.Migrations.DI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Reki.Application;
+using Reki.Application.Bonuses;
 using Reki.Application.Invites;
 using Reki.Application.Notifications;
 using Reki.Application.Player;
@@ -32,6 +33,7 @@ internal static class DependencyInjection
         services.AddSingleton<MongoCompositionRoot>();
         services.AddSingleton<MongoSessionProvider>();
         services.AddSingleton<IUnitOfWork, MongoUnitOfWork>();
+        services.AddSingleton<IBonusRepository, MongoBonusRepository>();
         services.AddSingleton<IPlayerRepository, MongoPlayerRepository>();
         services.AddSingleton<IPlayerStreakRepository, MongoPlayerStreakRepository>();
         services.AddSingleton<INotificationRepository, MongoNotificationRepository>();

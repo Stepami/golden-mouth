@@ -3,6 +3,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Options;
 using MongoDB.Bson.Serialization.Serializers;
+using Reki.Domain.Bonuses;
 using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
@@ -25,6 +26,7 @@ internal static class MongoClassMappings
         BsonSerializer.TryRegisterSerializer(new EnumSerializer<AddressType>(BsonType.String));
         BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.AddressBsonSerializer());
         BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.AuthorIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.BonusIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.CommentIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.InvitationIdBsonSerializer());
@@ -45,6 +47,8 @@ internal static class MongoClassMappings
             new BsonValueObjectConversions.ExternalUserIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(
             new BsonValueObjectConversions.WorldIdBsonSerializer());
+
+        RegisterBonuses();
 
         BsonClassMap.TryRegisterClassMap<PlayerChallenge>(classMap =>
         {
@@ -72,6 +76,7 @@ internal static class MongoClassMappings
             classMap.MapMember(item => item.PlusNotifyRequested).SetDefaultValue(false);
             classMap.MapMember(item => item.BirthYear).SetDefaultValue(0);
             classMap.MapMember(item => item.DailyChallenge).SetDefaultValue((object?)null);
+            classMap.MapMember(item => item.PublishedPostCount).SetDefaultValue(0L);
             classMap.MapCreator(item => new PlayerProfile(
                     item.Id,
                     item.ExternalUserIds,
@@ -88,7 +93,8 @@ internal static class MongoClassMappings
                     item.HateDisabledUntilUtc,
                     item.Version,
                     item.PlusNotifyRequested,
-                    item.DailyChallenge));
+                    item.DailyChallenge,
+                    item.PublishedPostCount));
         });
 
         RegisterWithMongoId<PlayerStreak, StreakId>(item => item.Id, configure: classMap =>
@@ -264,6 +270,41 @@ internal static class MongoClassMappings
                     item.Content,
                     item.Version));
             });
+    }
+
+    private static void RegisterBonuses()
+    {
+        RegisterWithMongoId<Bonus, BonusId>(bonus => bonus.Id, configure: classMap =>
+        {
+            classMap.MapMember(bonus => bonus.PlayerId);
+            classMap.SetIsRootClass(true);
+        });
+        BsonClassMap.TryRegisterClassMap<CrystalsBonus>(classMap =>
+        {
+            classMap.AutoMap();
+            classMap.MapMember(bonus => bonus.Amount);
+            classMap.MapCreator(bonus => new CrystalsBonus(bonus.Id, bonus.PlayerId, bonus.Amount, bonus.IsClaimed));
+        });
+        BsonClassMap.TryRegisterClassMap<ViralCardBonus>(classMap =>
+        {
+            classMap.AutoMap();
+            classMap.MapMember(bonus => bonus.Multiplier);
+            classMap.MapCreator(bonus =>
+                new ViralCardBonus(bonus.Id, bonus.PlayerId, bonus.Multiplier, bonus.IsClaimed));
+        });
+        BsonClassMap.TryRegisterClassMap<FlopGuardBonus>(classMap =>
+        {
+            classMap.AutoMap();
+            classMap.MapMember(bonus => bonus.Adder);
+            classMap.MapCreator(bonus => new FlopGuardBonus(bonus.Id, bonus.PlayerId, bonus.Adder, bonus.IsClaimed));
+        });
+        BsonClassMap.TryRegisterClassMap<PostBoosterBonus>(classMap =>
+        {
+            classMap.AutoMap();
+            classMap.MapMember(bonus => bonus.ActiveUntil);
+            classMap.MapCreator(bonus =>
+                new PostBoosterBonus(bonus.Id, bonus.PlayerId, bonus.ActiveUntil, bonus.IsClaimed));
+        });
     }
 
     private static void RegisterWithMongoId<TDocument, TId>(
