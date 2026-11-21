@@ -182,21 +182,6 @@
   resize: vertical;
 }
 
-.voice-transcript {
-  border-bottom: 1px solid var(--line2);
-}
-
-.voice-transcript summary {
-  min-height: 44px;
-  padding: 10px 0;
-  color: var(--lilac);
-}
-
-.voice-transcript textarea {
-  margin-bottom: 12px;
-  min-height: 6em;
-}
-
 .voice-preview h1[tabindex="-1"]:focus { outline: none; }
 
 .voice-preview .voice-wait {

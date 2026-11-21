@@ -293,15 +293,6 @@ function App() {
           </label>
         </div>
       </div>
-      <details className="voice-transcript">
-        <summary>{typing ? 'Твой текст' : 'Пример расшифровки'}</summary>
-        <textarea
-          aria-label={typing ? 'Твой текст' : 'Пример расшифровки'}
-          rows={5}
-          value={typing ? text : transcript}
-          onChange={event => typing ? setText(event.target.value) : setTranscript(event.target.value)}
-        />
-      </details>
       <button type="button" className="btn secondary" onClick={() => { openEditor(); setPage('full') }}>Полный редактор</button>
       {worldIssue && <p className="small muted">{worldIssue}</p>}
       <button type="button" className="btn" disabled={!!worldIssue} onClick={() => { openEditor(); startStory(draft) }}>Начать историю</button>
