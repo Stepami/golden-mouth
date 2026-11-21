@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../theme.css'
 import './ownWorldVoice.css'
+import { useVoiceFullDraft, VoiceFullEditor, VoicePortraits, voiceDraftSummary } from './ownWorldFullEditor'
 
 const story = 'Я доставляю письма в городе над облаками. Сегодня картограф Лис нашёл посылку с адресом острова, который исчез сто лет назад. Летать между островами можно только на рассвете.'
 const prompts = [
-  'Где всё происходит?',
-  'За кого играешь и кто рядом?',
-  'Что случилось сегодня?',
-  'Какие правила здесь действуют?',
+  { icon: '🌍', label: 'Место', example: 'Город над облаками' },
+  { icon: '👥', label: 'Герои', example: 'Курьер и картограф' },
+  { icon: '⚡', label: 'Завязка', example: 'Пришла странная посылка' },
+  { icon: '📜', label: 'Правило', example: 'Полёты только на рассвете' },
 ]
 const sampleDraft = {
   title: 'Город над облаками',
@@ -16,7 +17,6 @@ const sampleDraft = {
   people: 'Ты доставляешь письма между островами. Картограф Лис знает старые маршруты и приносит тебе странную посылку.',
   rules: 'Перелетать между островами можно только на рассвете.',
 }
-const postIdea = 'Расскажи подписчикам о странной посылке и спроси, кто помнит путь к пропавшему острову.'
 
 function release(stream: MediaStream) {
   stream.getTracks().forEach(track => track.stop())
@@ -130,6 +130,10 @@ function Recorder({ onText, onExample }: { onText: () => void; onExample: () => 
       disabled={busy}
       onClick={recording ? stop : audio ? onExample : record}
     >
+      {!busy && !recording && !audio && <svg className="voice-mic" viewBox="0 0 20 20" aria-hidden="true">
+        <rect x="7" y="2" width="6" height="10" rx="3" />
+        <path d="M4 9a6 6 0 0 0 12 0M10 15v3M7 18h6" />
+      </svg>}
       {phase === 'permission' ? 'Ждём доступ к микрофону…' : phase === 'stopping' ? 'Завершаем запись…'
         : recording ? 'Остановить запись' : audio ? 'Показать пример расшифровки' : 'Записать голос'}
     </button>
@@ -143,7 +147,7 @@ function Recorder({ onText, onExample }: { onText: () => void; onExample: () => 
   </div>
 }
 
-type Page = 'story' | 'transcript' | 'draft' | 'channel'
+type Page = 'story' | 'transcript' | 'draft' | 'full' | 'channel'
 
 function App() {
   const [page, setPage] = useState<Page>('story')
@@ -151,6 +155,15 @@ function App() {
   const [text, setText] = useState('')
   const [transcript, setTranscript] = useState(story)
   const [draft, setDraft] = useState(sampleDraft)
+  const { draft: fullDraft, setDraft: setFullDraft, openEditor } = useVoiceFullDraft(draft)
+  const returnToDraft = (updated: typeof sampleDraft) => {
+    setDraft(updated)
+    setPage('draft')
+  }
+  const showChannel = (updated: typeof sampleDraft) => {
+    setDraft(updated)
+    setPage('channel')
+  }
   const heading = useRef<HTMLHeadingElement>(null)
   const textInput = useRef<HTMLTextAreaElement>(null)
 
@@ -169,24 +182,20 @@ function App() {
         type="button"
         className="back"
         aria-label="Назад"
-        onClick={() => setPage(page === 'channel' ? 'draft' : page === 'draft' && !typing ? 'transcript' : 'story')}
+        onClick={() => page === 'full' ? returnToDraft(voiceDraftSummary(fullDraft)) : setPage(page === 'channel' ? 'draft' : page === 'draft' && !typing ? 'transcript' : 'story')}
       >‹</button>}
-      <b className="top-title">{page === 'story' ? 'Свой мир' : page === 'transcript' ? 'Расшифровка' : page === 'draft' ? 'Черновик мира' : 'Твой канал'}</b>
+      <b className="top-title">{page === 'story' ? 'Свой мир' : page === 'transcript' ? 'Расшифровка' : page === 'draft' ? 'Черновик мира' : page === 'full' ? 'Настройка мира' : 'Твой канал'}</b>
       <span className="pill">Превью</span>
     </header>
     {page === 'story' && <main className="pad voice-story">
-      <h1>Расскажи про свой мир</h1>
-      <section aria-label="Подсказки для истории">
-        <div className="card">
-          <ul className="voice-prompts">
-            {prompts.map(prompt => <li key={prompt}>{prompt}</li>)}
-          </ul>
-        </div>
-      </section>
-      <figure className="voice-sample">
-        <figcaption>Например</figcaption>
-        <blockquote>{story}</blockquote>
-      </figure>
+      <h1>Расскажи —<br />и окажись внутри</h1>
+      <ul className="voice-prompts" aria-label="Что рассказать о мире">
+        {prompts.map(({ icon, label, example }) => <li className="card" key={label}>
+          <span className="voice-prompt-icon" aria-hidden="true">{icon}</span>
+          <b>{label}</b>
+          <span className="small muted">{example}</span>
+        </li>)}
+      </ul>
       {typing ? <div className="voice-recorder">
         <label className="voice-field">
           Твоя история
@@ -212,7 +221,7 @@ function App() {
     {page === 'draft' && <main className="pad voice-review">
       <div className="voice-intro">
         <h1 ref={heading} tabIndex={-1}>Проверь черновик</h1>
-        <p className="muted">Здесь показан пример. Любое поле можно изменить.</p>
+        <p className="muted">Пример. Детали можно менять.</p>
       </div>
       <div className="card">
         <div className="voice-fields">
@@ -224,10 +233,7 @@ function App() {
             Мир и завязка
             <textarea rows={3} value={draft.opening} onChange={event => setDraft({ ...draft, opening: event.target.value })} />
           </label>
-          <label className="voice-field">
-            Ты и персонажи
-            <textarea rows={3} value={draft.people} onChange={event => setDraft({ ...draft, people: event.target.value })} />
-          </label>
+          <VoicePortraits draft={fullDraft} />
           <label className="voice-field">
             Правила мира
             <textarea rows={2} value={draft.rules} onChange={event => setDraft({ ...draft, rules: event.target.value })} />
@@ -243,14 +249,17 @@ function App() {
           onChange={event => typing ? setText(event.target.value) : setTranscript(event.target.value)}
         />
       </details>
+      <button type="button" className="btn secondary" onClick={() => { openEditor(); setPage('full') }}>Полный редактор</button>
       <button type="button" className="btn" onClick={() => setPage('channel')}>Посмотреть канал</button>
     </main>}
+    {page === 'full' && <VoiceFullEditor draft={fullDraft} onChange={setFullDraft} onClose={returnToDraft} onPreview={showChannel} />}
     {page === 'channel' && <main className="pad voice-channel">
       <h1 ref={heading} tabIndex={-1}>{draft.title.trim() || 'Мой мир'}</h1>
       <p className="muted">{draft.opening}</p>
+      <VoicePortraits draft={fullDraft} />
       <div className="card">
         <h2>Пример первого поста</h2>
-        <p>{postIdea}</p>
+        <p>{fullDraft.firstPrompt}</p>
       </div>
     </main>}
   </div>

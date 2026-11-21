@@ -1,0 +1,92 @@
+.voice-portraits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px 14px;
+  list-style: none;
+}
+
+.voice-portraits li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.voice-portraits b,
+.voice-portraits small {
+  display: block;
+  font-size: 13px;
+}
+
+.voice-portraits small {
+  color: var(--muted);
+}
+
+.voice-portrait {
+  display: block;
+  flex: none;
+  border-radius: 50%;
+  background: var(--card2);
+}
+
+.voice-portrait-placeholder {
+  display: grid;
+  place-items: center;
+  background: var(--grad);
+  font-weight: 700;
+}
+
+.voice-full .editor-section-head {
+  padding: 13px 14px;
+  min-height: 64px;
+  overflow-wrap: anywhere;
+}
+
+.voice-full .editor-section-head::after {
+  content: '+';
+  flex: none;
+  color: var(--lilac);
+}
+
+.voice-full .editor-section[open] > .editor-section-head::after {
+  content: '−';
+}
+
+.voice-full .editor-section-body {
+  padding: 0 14px 14px;
+}
+
+.voice-full-fields,
+.voice-full-list-item {
+  display: grid;
+  gap: 10px;
+}
+
+.voice-full .editor-extra {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.voice-list-fields > .voice-field + .voice-field {
+  margin-top: 9px;
+}
+
+.voice-full-list-item + .voice-full-list-item {
+  margin-top: 7px;
+}
+
+.voice-full .voice-full-list-item .text-link {
+  justify-self: start;
+  padding-block: 5px;
+}
+
+.voice-full .voice-field select {
+  margin: 0;
+  font-size: 16px;
+}
+
+.voice-full-back {
+  justify-self: center;
+}
