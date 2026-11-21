@@ -1,0 +1,199 @@
+.voice-preview .top {
+  padding-top: calc(10px + env(safe-area-inset-top));
+}
+
+.voice-preview main {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+}
+
+.voice-preview h1 {
+  font-size: clamp(28px, 8vw, 34px);
+  letter-spacing: -.035em;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.voice-preview .voice-story h1 {
+  max-width: 12em;
+}
+
+.voice-preview :is(button, input, textarea, summary):focus-visible {
+  outline: 2px solid var(--lilac);
+  outline-offset: 2px;
+}
+
+.voice-prompts {
+  display: grid;
+  gap: 7px;
+  list-style: none;
+}
+
+.voice-prompts li {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  color: var(--soft);
+}
+
+.voice-prompts li::before {
+  content: '';
+  flex: none;
+  width: 5px;
+  height: 5px;
+  align-self: start;
+  margin-top: .57em;
+  border-radius: 50%;
+  background: var(--lilac);
+}
+
+.voice-sample {
+  border-left: 2px solid var(--accent2);
+  padding: 1px 10px 1px 12px;
+}
+
+.voice-sample figcaption {
+  color: var(--lilac);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.voice-sample blockquote {
+  color: var(--soft);
+  line-height: 1.5;
+}
+
+.voice-recorder {
+  display: grid;
+  gap: 10px;
+}
+
+.voice-recorder audio {
+  display: block;
+  width: 100%;
+  color-scheme: dark;
+}
+
+.voice-preview .voice-alternatives {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0 10px;
+}
+
+.voice-preview :is(.voice-alternatives, .voice-recorder) .text-link {
+  min-height: 44px;
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.voice-choose-mode {
+  justify-self: start;
+}
+
+.voice-note {
+  margin-top: -6px;
+}
+
+.voice-live {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.voice-live time {
+  margin-left: auto;
+  color: var(--soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.voice-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  color: var(--accent);
+}
+
+.voice-wave i {
+  display: block;
+  width: 3px;
+  height: 10px;
+  border-radius: 3px;
+  background: currentColor;
+}
+
+.voice-wave i:nth-child(even) {
+  height: 15px;
+}
+
+.voice-wave i:nth-child(3) {
+  height: 22px;
+}
+
+.voice-error {
+  color: var(--warn);
+  font-size: 14px;
+}
+
+.voice-intro p {
+  margin-top: 7px;
+}
+
+.voice-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.voice-field {
+  display: grid;
+  gap: 5px;
+  color: var(--soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.voice-preview :is(input, textarea) {
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 8px 9px;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.voice-preview textarea {
+  display: block;
+  field-sizing: content;
+  min-height: 3.9em;
+  resize: vertical;
+}
+
+.voice-transcript {
+  border-bottom: 1px solid var(--line2);
+}
+
+.voice-transcript summary {
+  min-height: 44px;
+  padding: 10px 0;
+  color: var(--lilac);
+}
+
+.voice-transcript textarea {
+  margin-bottom: 12px;
+  min-height: 6em;
+}
+
+.voice-channel p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.voice-channel h2 {
+  font-size: 16px;
+  margin-bottom: 7px;
+}
