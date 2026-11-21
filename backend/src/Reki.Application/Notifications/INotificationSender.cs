@@ -5,7 +5,7 @@ namespace Reki.Application.Notifications;
 
 public interface INotificationSender
 {
-    Task SendAsync(
+    Task<NotificationStatus> SendAsync(
         PlayerNotificationChannel channel,
         Notification notification,
         CancellationToken ct);

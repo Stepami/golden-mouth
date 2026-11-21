@@ -10,31 +10,34 @@ public abstract partial class NotificationSender(
     ILogger<NotificationSender> logger,
     TimeProvider timeProvider) : INotificationSender
 {
-    public async Task SendAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct)
+    public async Task<NotificationStatus> SendAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct)
     {
         if (channel.Type != channelType)
         {
-            return;
+            return NotificationStatus.Pending;
         }
 
         try
         {
             await SendInternalAsync(channel, notification, ct);
-
-            // Only the routing tag belongs in the scope; event data comes from the message template.
-            using var scope = logger.BeginScope(new Dictionary<string, object?> { ["reki.stream"] = "product" });
-            LogSent(
-                "notification_sent",
-                notification.PlayerId.Value,
-                notification.Id.Value,
-                channelType.ToString().ToLowerInvariant(),
-                "delivery",
-                timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
         }
         catch (Exception error)
         {
-            LogSendError(error, notification.PlayerId.Value, notification.Id.Value, channelType);
+            ct.ThrowIfCancellationRequested();
+            LogSendError(notification.PlayerId.Value, notification.Id.Value, channelType, error.GetType().Name);
+            return NotificationStatus.Failed;
         }
+
+        // Only the routing tag belongs in the scope; event data comes from the message template.
+        using var scope = logger.BeginScope(new Dictionary<string, object?> { ["reki.stream"] = "product" });
+        LogSent(
+            "notification_sent",
+            notification.PlayerId.Value,
+            notification.Id.Value,
+            channelType.ToString().ToLowerInvariant(),
+            "delivery",
+            timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
+        return NotificationStatus.Sent;
     }
 
     protected abstract Task SendInternalAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct);
@@ -43,6 +46,6 @@ public abstract partial class NotificationSender(
     [SuppressMessage("ReSharper", "InconsistentNaming")]
     private partial void LogSent(string event_name, Guid player_id, Guid prop_id, string prop_kind, string activity_kind, long event_time_unix_ms);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Notification {NotificationId:N} delivery failed for player {PlayerId:N} via {ChannelType}")]
-    private partial void LogSendError(Exception ex, Guid playerId, Guid notificationId, NotificationChannelType channelType);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Notification {NotificationId:N} delivery failed for player {PlayerId:N} via {ChannelType} ({Category})")]
+    private partial void LogSendError(Guid playerId, Guid notificationId, NotificationChannelType channelType, string category);
 }

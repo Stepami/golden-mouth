@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Reki.Application.Notifications;
+using Reki.Domain.Player;
 
 namespace Reki.Infrastructure.WebPush;
 
@@ -15,7 +16,7 @@ internal static class DependencyInjection
                 AllowAutoRedirect = false,
                 PooledConnectionLifetime = TimeSpan.FromMinutes(2),
             });
-        services.AddSingleton<INotificationSender, WebPushNotificationSender>();
+        services.AddKeyedSingleton<INotificationSender, WebPushNotificationSender>(NotificationChannelType.WebPush);
         return services;
     }
 }

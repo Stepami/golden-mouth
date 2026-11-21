@@ -82,6 +82,14 @@ internal sealed class MongoPlayerRepository(
     public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
         await _players.ReplaceOneAsync(sessionProvider, item => item.Id == player.Id, player, cancellationToken);
 
+    public async ValueTask RemoveNotificationChannelsAsync(
+        PlayerId playerId, PlayerNotificationChannel[] channels, CancellationToken cancellationToken) =>
+        await _players.UpdateOneAsync(
+            sessionProvider.Session,
+            player => player.Id == playerId,
+            Builders<PlayerProfile>.Update.PullAll(player => player.NotificationChannels, channels).Inc(player => player.Version, 1),
+            cancellationToken: cancellationToken);
+
     public async ValueTask SaveDailyChallengeAsync(PlayerProfile player, int previousVersion, CancellationToken cancellationToken)
     {
         var filter = Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id);

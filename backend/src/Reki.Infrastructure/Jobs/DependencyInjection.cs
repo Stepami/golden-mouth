@@ -6,6 +6,7 @@ using Reki.Application.Posts;
 using Reki.Application.Posts.AI.Comment;
 using Reki.Application.Posts.AI.Feed;
 using Reki.Application.Posts.AI.Post;
+using Reki.Domain.Player;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;
@@ -42,7 +43,16 @@ internal static class DependencyInjection
         services.MapTicker<RefreshRegisteredPlayersJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
         services.MapTicker<RefreshDailyChallengesJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
         services.MapTicker<PruneAuthJob>().WithMaxConcurrency(1);
-        services.MapTicker<SendNotificationsJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
+
+        // Keep the existing cron function as the entry point of the chain.
+        const string notificationSchedule = nameof(SendNotificationsJob);
+        services.MapTicker(
+                notificationSchedule,
+                (_, provider, token) => provider.GetRequiredService<SendNotificationsJob>().PrepareAsync(token))
+            .WithMaxConcurrency(1);
+        services.MapTickerGroup("Notifications")
+            .MapTicker<SendNotificationsJob, NotificationChannelType>("Deliver")
+            .WithMaxConcurrency(2);
 
         services.AddTickerQ<RekiTimeTicker, CronTickerEntity>(options =>
         {
@@ -52,11 +62,19 @@ internal static class DependencyInjection
                 .Add(nameof(RefreshRegisteredPlayersJob), "15 */30 * * * *")
                 .Add(nameof(RefreshDailyChallengesJob), "0 0 9 * * *")
                 .Add(nameof(PruneAuthJob), "0 0 3 * * *")
-                .Add(nameof(SendNotificationsJob), "40 */5 * * * *"));
+                .Add(notificationSchedule, cron => cron
+                    .WithExpression("40 */5 * * * *")
+                    .SkipIfAlreadyRunning(true)
+                    .StartWith(notificationSchedule)
+                    .ThenMany(branches =>
+                    {
+                        branches.Add<SendNotificationsJob, NotificationChannelType>(NotificationChannelType.Telegram);
+                        branches.Add<SendNotificationsJob, NotificationChannelType>(NotificationChannelType.WebPush);
+                    })));
             options.ConfigureScheduler(scheduler =>
                 scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
             options.AddOperationalStore(store => store.UseExistingMongoClient(mongo.DatabaseName));
-            options.WithJsonContext(jsonContext);
+            options.WithJsonContext(JsonTypeInfoResolver.Combine(jsonContext, NotificationJobsJsonContext.Default));
             options.AddOpenTelemetryInstrumentation();
             options.SetExceptionHandler<JobsExceptionHandler>();
             if (!jobs.ExecutionEnabled)
