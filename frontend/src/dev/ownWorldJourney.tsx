@@ -60,7 +60,10 @@ function VoiceWorldFeature() {
       </div>
       <figcaption>{exampleCover.title}</figcaption>
     </figure>
-    <p className="voice-feature-title">Опиши мир голосом. Получишь героев и идею для первого поста.</p>
+    <p className="voice-feature-title">
+      На Патонге пропал скутер. На видео — твоя куртка.
+      <span className="small muted">Надиктуй свою завязку и сыграй в ней.</span>
+    </p>
   </div>
 }
 
