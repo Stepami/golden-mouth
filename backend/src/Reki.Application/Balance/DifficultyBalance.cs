@@ -6,8 +6,6 @@ public sealed record DifficultyBalance(
     double GrowthCoefficient,
     double ViralMultiplier,
     long HateFrom,
-    double LossMultiplier,
-    double MaxSubscriberFraction,
     double TopicMinCosine,
     IReadOnlyDictionary<string, double> Thresholds,
     IReadOnlyDictionary<string, double> ThresholdReductionPerStep,

@@ -52,14 +52,15 @@ internal sealed class GameBalanceOptionsFactory(
                     item.GetValue<double>("k"),
                     item.GetValue<double>("viral_x"),
                     item.GetValue<long>("hate_from"),
-                    item.GetValue<double>("loss_x"),
-                    item.GetValue<double>("max_subscriber_fraction"),
                     item.GetValue<double>("topic_min_cosine"),
                     item.GetRequiredSection("thresholds").GetChildren().ToDictionary(entry => entry.Key, entry => entry.Get<double>()),
                     item.GetRequiredSection("threshold_reduction_per_step").GetChildren().ToDictionary(entry => entry.Key, entry => entry.Get<double>()),
                     item.GetRequiredSection("drama").GetChildren().ToDictionary(
                         entry => Enum.Parse<WorldDrama>(entry.Key, ignoreCase: true),
-                        entry => new DramaBalance(entry.GetValue<double>("hate_x"), entry.GetValue<int>("threshold_steps"), entry.GetValue<double>("loss_multiplier"))),
+                        entry => new DramaBalance(
+                            entry.GetValue<double>("hate_x"),
+                            entry.GetValue<int>("threshold_steps"),
+                            entry.GetValue("loss_multiplier", 1d))),
                     item["emotion_tie_break"] ?? "sad_tone"));
 
         if (levelThresholds.Count != 10 ||

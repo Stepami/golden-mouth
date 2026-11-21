@@ -9,6 +9,10 @@ public sealed record PostScore(
     bool PositiveEmotion,
     string? FlopReason)
 {
+    public double Quality => Math.Clamp((Brave + Humor + Topic) / 3, 0, 1);
+
+    public bool IsFlop => FlopReason is not null;
+
     public SkillId GetMainSkill()
     {
         if (Brave >= Humor && Brave >= Topic)

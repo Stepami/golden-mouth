@@ -1,6 +1,3 @@
-using System.Buffers.Binary;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
 using Reki.Application.Posts.CreatePostCommand.Progression.Score;
@@ -13,6 +10,9 @@ namespace Reki.Application.Posts.CreatePostCommand.Progression;
 
 internal sealed class PostProgressionCalculator(
     PostScorer scorer,
+    ViralityCalculator viralityCalculator,
+    PostNumbersCalculator postNumbersCalculator,
+    SubscriberDeltaCalculator subscriberDeltaCalculator,
     IStarVectorStore stars,
     IOptionsMonitor<GameBalance> balance)
 {
@@ -26,60 +26,16 @@ internal sealed class PostProgressionCalculator(
             post,
             gameWorld,
             ownWords);
-        var flop = turn.FlopReason is not null;
 
         var starId = await stars.GetRelevantCommenterAsync(gameWorld, post);
+        var (viral, flop) = viralityCalculator.IsViral(post, turn, gameWorld);
+        var (views, likes) = postNumbersCalculator.Calculate(gameWorld, viral);
+        var subscriberDelta = subscriberDeltaCalculator.GetDelta(gameWorld, post, turn, ownWords, viral, flop);
+        var skills = AddSkillExperience(player, post, turn, ownWords);
 
-        var currentBalance = balance.CurrentValue;
-        var world = currentBalance.Difficulties[gameWorld.Difficulty];
-        var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
-
-        var views = Random.Shared.NextInt64(gameWorld.Player.Subscribers + 1);
-        var percentage = Random.Shared.Next(currentBalance.LikesMinPercent, currentBalance.LikesMaxPercent + 1);
-        var likes = (long)Math.Ceiling((decimal)views * percentage / 100);
-
-        if (post.RepostId is not null)
-        {
-            return new PostProgression(
-                1,
-                quality,
-                false,
-                false,
-                player.Skills,
-                views,
-                likes,
-                starId,
-                turn);
-        }
-
-        var multiplier = GetGrowthMultiplier(gameWorld, ownWords);
-        var viral = !flop && IsViral(post.Id.ToString(), quality, turn.PositiveEmotion, world);
-        if (viral)
-        {
-            views *= 2;
-            likes *= 2 * 3;
-        }
-
-        var growth = currentBalance.Growth.Coefficient * world.GrowthCoefficient *
-                     (0.5 + quality) *
-                     Math.Pow(Math.Max(1, gameWorld.Player.Subscribers), currentBalance.Growth.Power) *
-                     multiplier;
-        var drama =
-            (world.Drama ?? throw new InvalidOperationException("Drama balance is missing."))[gameWorld.Player.Drama];
-        var viralMultiplier = viral ? currentBalance.Viral.Multiplier * world.ViralMultiplier : 1;
-        var subscriberDelta = flop
-            ? -Math.Min(gameWorld.Player.Subscribers, Math.Min(
-                Math.Max(1, (long)Math.Round(growth * world.LossMultiplier * drama.LossMultiplier)),
-                Math.Max(1, (long)Math.Floor(gameWorld.Player.Subscribers * world.MaxSubscriberFraction * drama.LossMultiplier))))
-            : Math.Max(1, (long)Math.Round(growth * viralMultiplier));
-
-        var skills = AddSkillExperience(
-            player,
-            turn,
-            ownWords);
         return new PostProgression(
             subscriberDelta,
-            quality,
+            turn.Quality,
             viral,
             flop,
             skills,
@@ -89,45 +45,17 @@ internal sealed class PostProgressionCalculator(
             turn);
     }
 
-    private static double StableRoll(string publicationId, string purpose)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(
-            $"{publicationId}:{purpose}"));
-        var value = BinaryPrimitives.ReadUInt64LittleEndian(hash);
-        return value / (double)ulong.MaxValue;
-    }
-
-    private double GetGrowthMultiplier(World gameWorld, bool ownWords)
-    {
-        var currentBalance = balance.CurrentValue;
-        double multiplier = 1;
-        if (gameWorld.Player.Subscribers < currentBalance.Growth.StarterBelowSubscribers)
-        {
-            multiplier *= currentBalance.Growth.StarterMultiplier;
-        }
-
-        if (ownWords)
-        {
-            multiplier *= currentBalance.Growth.OwnWordsMultiplier;
-        }
-
-        return multiplier;
-    }
-
-    private bool IsViral(string publicationId, double quality, bool positiveEmotion, DifficultyBalance world)
-    {
-        var currentBalance = balance.CurrentValue;
-        var chance = (currentBalance.Viral.BaseChance + (currentBalance.Viral.ChancePerQuality * quality) +
-                      (positiveEmotion ? currentBalance.Viral.EmotionBonus : 0)) *
-                     world.ViralMultiplier;
-        return StableRoll(publicationId, "viral") < Math.Clamp(chance, 0, 1);
-    }
-
     private IReadOnlyDictionary<SkillId, SkillProgress> AddSkillExperience(
         PlayerProfile player,
+        GamePost post,
         PostScore turn,
         bool ownWords)
     {
+        if (post.RepostId is not null)
+        {
+            return player.Skills;
+        }
+
         var currentBalance = balance.CurrentValue;
         var main = turn.GetMainSkill();
         double multiplier = 1;

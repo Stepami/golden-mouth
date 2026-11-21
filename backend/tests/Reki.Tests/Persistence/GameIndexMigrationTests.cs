@@ -11,6 +11,7 @@ using NSubstitute;
 using OpenIddict.MongoDb;
 using OpenIddict.MongoDb.Models;
 using Reki.Application.Balance;
+using Reki.Domain.Bonuses;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Challenges;
@@ -28,6 +29,59 @@ namespace Reki.Tests.Persistence;
 public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 {
     private static readonly DateTimeOffset CreatedAt = new(2026, 10, 5, 15, 0, 0, 123, TimeSpan.FromHours(3));
+
+    [Test]
+    public async Task GrantPlayerBonuses_Retry_PreservesInitialGrantsAsync()
+    {
+        // Arrange
+        await using var scope = CreateDatabase();
+        var database = scope.Database;
+        var author = PlayerId.New();
+        var inactive = PlayerId.New();
+        var players = database.GetCollection<BsonDocument>("players");
+        await players.InsertManyAsync([LegacyPlayer(author, 13), LegacyPlayer(inactive, 4)]);
+        var bonuses = database.GetCollection<Bonus>("bonuses");
+        var options = new RekiMigrationOptions(Options.Create(new MongoOptions { DatabaseName = database.DatabaseNamespace.DatabaseName }));
+        var migrator = MigratorBuilder.FromMongoClient(mongo.MongoClient, options)
+            .LoadMigrations([new GrantExistingPlayerBonuses()]).Build();
+
+        // Act
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
+        var initial = await bonuses.Find(FilterDefinition<Bonus>.Empty).ToListAsync();
+        var card = initial.OfType<ViralCardBonus>().First(bonus => bonus.PlayerId == author);
+        await bonuses.UpdateOneAsync(bonus => bonus.Id == card.Id, Builders<Bonus>.Update.Set(bonus => bonus.IsClaimed, true));
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
+
+        // Assert
+        await Assert.That(initial.Count).IsEqualTo(12);
+        await Assert.That(initial.All(bonus => !bonus.IsClaimed)).IsTrue();
+        var stored = await bonuses.Find(FilterDefinition<Bonus>.Empty).ToListAsync();
+        await Assert.That(stored.Select(bonus => bonus.Id)).IsEquivalentTo(initial.Select(bonus => bonus.Id));
+        await Assert.That(stored.Where(bonus => bonus.IsClaimed).Select(bonus => bonus.Id)).IsEquivalentTo([card.Id]);
+        foreach (var (playerId, expectedCrystals) in new[] { (author, 15), (inactive, 6) })
+        {
+            var profile = await database.GetCollection<PlayerProfile>("players").Find(player => player.Id == playerId).SingleAsync();
+            await Assert.That(profile.Wallet.Crystals).IsEqualTo(expectedCrystals);
+            await Assert.That(profile.Wallet.Energy).IsEqualTo(7);
+            var cards = stored.Where(bonus => bonus.PlayerId == playerId).ToArray();
+            await Assert.That(cards.OfType<ViralCardBonus>().Select(bonus => bonus.Multiplier)).IsEquivalentTo([5, 5, 5]);
+            await Assert.That(cards.OfType<FlopGuardBonus>().Select(bonus => bonus.Adder)).IsEquivalentTo([10, 10, 10]);
+            await Assert.That(cards.OfType<CrystalsBonus>()).IsEmpty();
+        }
+
+        static BsonDocument LegacyPlayer(PlayerId id, int crystals)
+        {
+            return new PlayerProfile(
+                id,
+                [],
+                Address.Nick,
+                new PlayerWallet(7, crystals, CreatedAt),
+                new Dictionary<SkillId, SkillProgress>(),
+                1990,
+                new PlayerSettings("all", "off", false),
+                []).ToBsonDocument();
+        }
+    }
 
     [Test]
     public async Task AddPostLikes_MigratesViews_PreservesHistoryOnRetryAsync()
