@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 import type { WorldDefinition } from '../api/types'
 import { blankWorld } from '../app/worldDraft'
 import { dramaOptions } from '../app/worldPrototype'
@@ -60,7 +61,7 @@ function applyQuickEdits(draft: VoiceDraft, summary: VoiceSummary): VoiceDraft {
     ...draft.rules.filter(rule => rule.locked),
     ...summary.rules.split('\n').filter(rule => rule.trim()).map(text => ({ text, locked: false })),
   ]
-  return { ...draft, title: summary.title, firstContext: summary.opening, people: summary.people, rules }
+  return { ...draft, title: summary.title, firstContext: summary.opening, rules }
 }
 
 function exampleWorld(summary: VoiceSummary): VoiceDraft {
@@ -116,6 +117,17 @@ function peopleOf(draft: VoiceDraft) {
   return [{ id: 'player', name: draft.name, role: draft.role, avatarSeed: draft.avatar }, ...draft.stars]
 }
 
+function rosterText(draft: VoiceDraft) {
+  return peopleOf(draft)
+    .filter(person => person.name.trim() || person.role.trim())
+    .map(person => [person.name.trim(), person.role.trim()].filter(Boolean).join(' — '))
+    .join('\n')
+}
+
+function rerollPortraitSeeds(draft: VoiceDraft, id: string) {
+  return { ...draft.portraitSeeds, [id]: crypto.randomUUID() }
+}
+
 export function VoicePortraits({ draft }: { draft: VoiceDraft }) {
   return <ul className="voice-portraits" aria-label="Персонажи мира">
     {peopleOf(draft).map(person => <li key={person.id}>
@@ -123,6 +135,39 @@ export function VoicePortraits({ draft }: { draft: VoiceDraft }) {
       <span><b>{person.name || 'Без имени'}</b><small>{person.role}</small></span>
     </li>)}
   </ul>
+}
+
+export function VoiceQuickCharacters({ draft, onChange }: { draft: VoiceDraft; onChange: (draft: VoiceDraft) => void }) {
+  const [selectedId, setSelectedId] = useState('')
+  const people = peopleOf(draft)
+  const selected = people.find(person => person.id === selectedId)
+  function editPerson(change: { name: string } | { role: string }) {
+    const next = selectedId === 'player'
+      ? { ...draft, ...change }
+      : { ...draft, stars: draft.stars.map(hero => hero.id === selectedId ? { ...hero, ...change } : hero) }
+    onChange({ ...next, people: rosterText(next) })
+  }
+  return <section className="voice-quick-characters" aria-label="Персонажи мира">
+    <ul className="voice-quick-character-list">
+      {people.map(person => <li key={person.id}>
+        <button type="button" className="voice-quick-character" aria-expanded={person.id === selectedId}
+          aria-label={`Редактировать ${person.name.trim() || (person.id === 'player' ? 'своего персонажа' : 'героя')}`}
+          onClick={() => setSelectedId(person.id === selectedId ? '' : person.id)}>
+          <Portrait seed={voicePortraitSeed(draft, person.id, person.avatarSeed)} style={draft.avatarStyle} name={person.name} size={32} />
+          <span className="voice-quick-character-copy"><b>{person.name.trim() || 'Без имени'}</b><small>{person.role}</small></span>
+          <span className="voice-edit-mark" aria-hidden="true">✎</span>
+        </button>
+      </li>)}
+    </ul>
+    {selected && <div className="voice-quick-character-fields" key={selected.id}>
+      <Field label="Имя" maxLength={80} value={selected.name} onChange={name => editPerson({ name })} />
+      <Field label="Роль" maxLength={80} value={selected.role} onChange={role => editPerson({ role })} />
+      <div className="voice-quick-character-actions">
+        <button type="button" className="text-link" onClick={() => onChange({ ...draft, portraitSeeds: rerollPortraitSeeds(draft, selected.id) })}>Другой портрет</button>
+        <button type="button" className="text-link" onClick={() => setSelectedId('')}>Готово</button>
+      </div>
+    </div>}
+  </section>
 }
 
 function Field({ label, value, onChange, rows = 1, maxLength = 2000, autoFocus }: {
@@ -155,21 +200,46 @@ function Choice<T extends string>({ label, value, options, onChange }: {
   </label>
 }
 
-function Section({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
-  return <details className="editor-section">
-    <summary className="editor-section-head">
+function Section({ id, open, onToggle, title, hint, children }: {
+  id: string; open: boolean; onToggle: () => void; title: string; hint: string; children: ReactNode
+}) {
+  return <section className="editor-section">
+    <button type="button" className="editor-section-head" aria-expanded={open} aria-controls={`voice-section-${id}`} onClick={event => {
+      const header = event.currentTarget
+      onToggle()
+      if (!open) requestAnimationFrame(() => header.scrollIntoView({ block: 'nearest' }))
+    }}>
       <span><b>{title}</b><span className="small muted">{hint}</span></span>
-    </summary>
-    <div className="editor-section-body voice-full-fields">{children}</div>
-  </details>
+    </button>
+    <div id={`voice-section-${id}`} className="editor-section-body voice-full-fields" hidden={!open}>{children}</div>
+  </section>
+}
+
+function removeEditorRow(button: HTMLButtonElement, remove: () => void) {
+  const row = button.closest('.voice-edit-row')
+  const list = row?.parentElement
+  if (!list || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !list.animate) {
+    remove()
+    return
+  }
+  const startHeight = list.getBoundingClientRect().height
+  const starts = Array.from(list.children).filter(item => item !== row).map(item => item.getBoundingClientRect().top)
+  flushSync(remove)
+  const endHeight = list.getBoundingClientRect().height
+  const timing = { duration: 140, easing: 'ease-out' }
+  Array.from(list.children).forEach((item, index) => {
+    const distance = starts[index] - item.getBoundingClientRect().top
+    if (distance) item.animate([{ transform: `translateY(${distance}px)` }, { transform: 'none' }], timing)
+  })
+  if (startHeight !== endHeight) list.animate([{ height: `${startHeight}px` }, { height: `${endHeight}px` }], timing)
 }
 
 function StringFields({ title, values, onChange }: { title: string; values: string[]; onChange: (values: string[]) => void }) {
   return <details className="editor-extra voice-list-fields">
     <summary>{title} · {values.length}</summary>
-    {values.map((value, index) => <div className="voice-full-list-item" key={index}>
+    {values.map((value, index) => <div className="voice-full-list-item voice-edit-row" key={index}>
       <Field label={`${title} ${index + 1}`} value={value} rows={2} onChange={text => onChange(values.map((item, i) => i === index ? text : item))} />
-      <button type="button" className="text-link" onClick={() => onChange(values.filter((_, i) => i !== index))}>Убрать</button>
+      <button type="button" className="text-link" onClick={event => removeEditorRow(event.currentTarget, () => onChange(values.filter((_, i) => i !== index)))}>Убрать</button>
     </div>)}
     <button type="button" className="chip" onClick={() => onChange([...values, ''])}>＋ Добавить</button>
   </details>
@@ -183,14 +253,15 @@ export function VoiceFullEditor({ draft, cover, onCoverChange, onChange, onClose
   onClose: (summary: VoiceSummary) => void
   onPreview: (summary: VoiceSummary) => void
 }) {
+  const [openSection, setOpenSection] = useState('')
   const [newHero, setNewHero] = useState('')
+  const [selectedAchievementId, setSelectedAchievementId] = useState('')
+  const selectedAchievement = draft.achievements.find(item => item.id === selectedAchievementId)
+  const authorRules = draft.rules.flatMap((rule, index) => rule.locked ? [] : [{ rule, index }])
+  const section = (id: string) => ({ id, open: openSection === id, onToggle: () => setOpenSection(openSection === id ? '' : id) })
   function patch(change: Partial<VoiceDraft>) {
     const next = { ...draft, ...change }
     // Preserve freeform quick notes until the player changes the names or roles in the full editor.
-    const rosterText = (value: VoiceDraft) => peopleOf(value)
-      .filter(person => person.name.trim() || person.role.trim())
-      .map(person => [person.name.trim(), person.role.trim()].filter(Boolean).join(' — '))
-      .join('\n')
     const roster = rosterText(next)
     onChange(roster !== rosterText(draft) ? { ...next, people: roster } : next)
   }
@@ -198,7 +269,10 @@ export function VoiceFullEditor({ draft, cover, onCoverChange, onChange, onClose
     patch({ stars: draft.stars.map(hero => hero.id === id ? { ...hero, ...change } : hero) })
   }
   function changePortrait(id: string) {
-    patch({ portraitSeeds: { ...draft.portraitSeeds, [id]: crypto.randomUUID() } })
+    patch({ portraitSeeds: rerollPortraitSeeds(draft, id) })
+  }
+  function changeAchievement(change: { title: string } | { emoji: string }) {
+    patch({ achievements: draft.achievements.map(item => item.id === selectedAchievementId ? { ...item, ...change } : item) })
   }
   function addHero() {
     const id = crypto.randomUUID()
@@ -215,9 +289,9 @@ export function VoiceFullEditor({ draft, cover, onCoverChange, onChange, onClose
   return <main className="pad voice-full">
     <div className="voice-intro">
       <h1 tabIndex={-1}>Полный редактор</h1>
-      <p className="muted">Поля заполнены примером. Можно править.</p>
+      <p className="muted">Открой раздел, который хочешь изменить.</p>
     </div>
-    <Section title="Твой персонаж" hint={draft.name || 'Имя, занятие и портрет'}>
+    <Section {...section('player')} title="Твой персонаж" hint={draft.name || 'Имя, роль и портрет'}>
       <div className="row">
         <Portrait seed={voicePortraitSeed(draft, 'player', draft.avatar)} style={draft.avatarStyle} name={draft.name} size={52} />
         <button type="button" className="text-link" onClick={() => changePortrait('player')}>Другой портрет</button>
@@ -230,7 +304,7 @@ export function VoiceFullEditor({ draft, cover, onCoverChange, onChange, onClose
         { id: 'pixelArt', title: 'Пиксели' }, { id: 'thumbs', title: 'Мини' }, { id: 'shapes', title: 'Формы' },
       ]} />
     </Section>
-    <Section title="Мир и начало истории" hint={draft.title || 'Место, атмосфера и завязка'}>
+    <Section {...section('world')} title="Мир и завязка" hint={draft.title || 'Название, место и начало истории'}>
       {field('Название мира', 'title', 1, 120)}
       {field('Где всё происходит', 'where', 1, 200)}
       {field('О чём этот мир', 'description', 3)}
@@ -242,11 +316,11 @@ export function VoiceFullEditor({ draft, cover, onCoverChange, onChange, onClose
         {field('Короткое описание', 'summary', 2, 200)}
       </details>
     </Section>
-    <Section title="Обложка мира" hint={cover ? 'Загружена' : 'Карточка в каталоге'}>
+    <Section {...section('cover')} title="Обложка мира" hint={cover ? 'Загружена' : 'Карточка в каталоге'}>
       <VoiceCoverEditor cover={cover} title={draft.title} description={draft.summary} onChange={onCoverChange} />
     </Section>
-    <Section title="Герои вокруг тебя" hint={draft.stars.map(hero => hero.name.trim()).filter(Boolean).join(', ') || 'Персонажи мира'}>
-      {draft.stars.map(hero => <details className="editor-extra hero-editor voice-list-fields" key={hero.id} open={newHero === hero.id ? true : undefined}>
+    <Section {...section('heroes')} title="Герои вокруг тебя" hint={draft.stars.length ? `${draft.stars.length} в мире` : 'Добавь героя'}>
+      {draft.stars.map(hero => <details className="editor-extra hero-editor voice-list-fields voice-edit-row" key={hero.id} open={newHero === hero.id ? true : undefined}>
         <summary>
           <Portrait seed={voicePortraitSeed(draft, hero.id, hero.avatarSeed)} style={draft.avatarStyle} name={hero.name} />
           <span><b>{hero.name || 'Новый герой'}</b><span className="small muted">{hero.role || 'Добавь занятие героя'}</span></span>
@@ -263,39 +337,42 @@ export function VoiceFullEditor({ draft, cover, onCoverChange, onChange, onClose
           </select>
         </label>
         <button type="button" className="text-link" onClick={() => changePortrait(hero.id)}>Другой портрет</button>
-        <button type="button" className="text-link" onClick={() => patch({ stars: draft.stars.filter(item => item.id !== hero.id) })}>Убрать героя</button>
+        <button type="button" className="text-link" onClick={event => removeEditorRow(event.currentTarget, () => patch({ stars: draft.stars.filter(item => item.id !== hero.id) }))}>Убрать героя</button>
       </details>)}
       <button type="button" className="btn secondary" onClick={addHero}>＋ Добавить героя</button>
     </Section>
-    <Section title="Настроение истории" hint={dramaOptions.find(option => option.id === draft.drama)?.title ?? 'Драма и стиль подсказок'}>
+    <Section {...section('tone')} title="Настроение истории" hint="Драма, сложность и стиль подсказок">
       <Choice label="Градус драмы" value={draft.drama} options={dramaOptions} onChange={drama => patch({ drama })} />
       <Choice label="Сложность" value={draft.difficulty} options={[
         { id: 'easy', title: 'Легко' }, { id: 'normal', title: 'Средне' }, { id: 'hard', title: 'Сложно' },
       ]} onChange={difficulty => patch({ difficulty })} />
       {field('Стиль подсказок для постов', 'voice', 2, 200)}
     </Section>
-    <Section title="Особенности мира" hint={draft.rules.find(rule => !rule.locked && rule.text)?.text || 'Как устроен мир'}>
-      {draft.rules.map((rule, index) => rule.locked
-        ? <div className="age-rule-note" key={index}><b>Ограничения контента</b><p>{rule.text}</p></div>
-        : <div className="voice-full-list-item" key={index}>
-          <Field label={`Особенность ${index + 1 - draft.rules.slice(0, index).filter(item => item.locked).length}`} value={rule.text} rows={2} onChange={text => patch({ rules: draft.rules.map((item, i) => i === index ? { ...item, text } : item) })} />
-          <button type="button" className="text-link" onClick={() => patch({ rules: draft.rules.filter((_, i) => i !== index) })}>Убрать особенность</button>
-        </div>)}
+    <Section {...section('rules')} title="Правила мира" hint="Как устроен твой мир">
+      {authorRules.map(({ rule, index }, position) => <div className="voice-full-list-item voice-edit-row" key={index}>
+        <Field label={`Особенность ${position + 1}`} value={rule.text} rows={2} onChange={text => patch({ rules: draft.rules.map((item, i) => i === index ? { ...item, text } : item) })} />
+        <button type="button" className="text-link" onClick={event => removeEditorRow(event.currentTarget, () => patch({ rules: draft.rules.filter((_, i) => i !== index) }))}>Убрать особенность</button>
+      </div>)}
       <button type="button" className="chip" onClick={() => patch({ rules: [...draft.rules, { text: '', locked: false }] })}>＋ Добавить особенность</button>
     </Section>
-    <Section title="Дополнительные настройки игры" hint="Идеи для постов и варианты настроек">
+    <Section {...section('extras')} title="Идеи и варианты" hint="Посты, занятия и стили">
       <StringFields title="Идеи для постов" values={draft.postIdeas} onChange={postIdeas => patch({ postIdeas })} />
       <StringFields title="Примеры постов" values={draft.demoPosts} onChange={demoPosts => patch({ demoPosts })} />
       <StringFields title="Варианты занятия" values={draft.roles} onChange={roles => patch({ roles })} />
       <StringFields title="Варианты стиля" values={draft.voices} onChange={voices => patch({ voices })} />
-      <details className="editor-extra voice-list-fields">
-        <summary>Достижения коллекции · {draft.achievements.length}</summary>
-        <p className="small muted">Можно изменить название и значок. Условия получения задаёт игра.</p>
-        {draft.achievements.map((achievement, index) => <div className="voice-full-list-item" key={achievement.id}>
-          <Field label="Название достижения" value={achievement.title} onChange={title => patch({ achievements: draft.achievements.map((item, i) => i === index ? { ...item, title } : item) })} />
-          <Field label="Значок достижения" value={achievement.emoji} maxLength={8} onChange={emoji => patch({ achievements: draft.achievements.map((item, i) => i === index ? { ...item, emoji } : item) })} />
-        </div>)}
-      </details>
+    </Section>
+    <Section {...section('achievements')} title="Достижения" hint="Названия и значки коллекции">
+      <div className="voice-achievements">
+        {draft.achievements.map(achievement => <button type="button" className="voice-achievement" key={achievement.id}
+          aria-pressed={achievement.id === selectedAchievementId} onClick={() => setSelectedAchievementId(achievement.id === selectedAchievementId ? '' : achievement.id)}>
+          <span aria-hidden="true">{achievement.emoji}</span><span>{achievement.title.trim() || 'Без названия'}</span>
+        </button>)}
+      </div>
+      {selectedAchievement && <div className="voice-achievement-fields" key={selectedAchievement.id}>
+        <Field label="Название достижения" value={selectedAchievement.title} onChange={title => changeAchievement({ title })} />
+        <Field label="Значок достижения" value={selectedAchievement.emoji} maxLength={8} onChange={emoji => changeAchievement({ emoji })} />
+        <button type="button" className="text-link" onClick={() => setSelectedAchievementId('')}>Готово</button>
+      </div>}
     </Section>
     {issue && <p className="small muted" id="voice-world-issue" role="status">{issue}</p>}
     <button type="button" className="btn" disabled={issue !== null} aria-describedby={issue ? 'voice-world-issue' : undefined} onClick={() => onPreview(summary)}>Начать историю</button>

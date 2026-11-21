@@ -1,0 +1,100 @@
+.voice-journey-hint.game-onboarding-progress {
+  margin: 0;
+  order: 0;
+  padding: 9px 12px 10px;
+  border-radius: 13px;
+  box-shadow: none;
+}
+
+.voice-journey-hint .game-onboarding-meta {
+  margin-bottom: 4px;
+}
+
+.voice-preview .voice-worlds-catalog {
+  gap: 16px;
+  overflow-wrap: anywhere;
+}
+
+.voice-worlds-catalog h2 {
+  margin: 0 0 8px;
+}
+
+.voice-journey-world-card {
+  cursor: default;
+}
+
+.voice-journey-world-card h3 {
+  font-size: 18px;
+}
+
+.voice-worlds-catalog .voice-journey-world-card p {
+  min-height: 0;
+  margin: 4px 0 0;
+}
+
+.voice-journey-world-card .text-link {
+  min-height: 44px;
+  padding: 8px 0;
+}
+
+.voice-journey-world-card .voice-world-cover {
+  height: 100%;
+  border-radius: 0;
+}
+
+.voice-journey-cover-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  background: var(--card2);
+  font-size: 40px;
+}
+
+.voice-worlds-catalog .own-world-unlock {
+  margin: 0;
+}
+
+.voice-journey-unlock-heading {
+  justify-content: space-between;
+}
+
+.voice-journey-unlock-heading h2 {
+  margin: 0;
+}
+
+.voice-worlds-catalog .own-unlock-goal {
+  margin-top: 11px;
+}
+
+.voice-worlds-catalog .own-world-unlock progress {
+  margin: 8px 0 0;
+}
+
+.voice-worlds-catalog .own-world-unlock p {
+  margin: 7px 0;
+}
+
+.voice-preview:has(> .voice-journey-tabs) > main {
+  padding-bottom: calc(98px + env(safe-area-inset-bottom));
+}
+
+.voice-journey-tabs .on:disabled {
+  opacity: 1;
+}
+
+.voice-journey-tabs button:disabled:not(.on) {
+  opacity: .6;
+}
+
+.voice-preview .voice-journey-celebration {
+  flex: 1;
+  align-content: center;
+}
+
+.voice-journey-celebration .unlock-celebration {
+  margin: 0;
+}
+
+.voice-journey-celebration .unlock-sparkles {
+  margin-bottom: 8px;
+}

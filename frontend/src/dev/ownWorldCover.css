@@ -18,3 +18,13 @@
 .voice-cover-file:focus-within { outline: 2px solid var(--lilac); border-radius: 6px; }
 .voice-cover-adjust label { display: grid; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--muted); }
 .voice-preview .voice-cover-adjust input[type="range"] { width: 100%; padding: 0; accent-color: var(--lilac); }
+
+.voice-cover-library { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.voice-cover-library button { border: 1px solid var(--line2); padding: 0; text-align: start; overflow: hidden; font-size: 13px; cursor: pointer; }
+.voice-cover-library button[aria-pressed="true"] { border-color: var(--lilac); }
+.voice-cover-library button img { display: block; width: 100%; height: 64px; object-fit: cover; }
+.voice-cover-library button span { display: block; padding: 7px; }
+@media (prefers-reduced-motion: no-preference) {
+  .voice-cover-library, .voice-cover-editor .voice-world-cover { animation: voice-cover-in 170ms ease-out both; }
+}
+@keyframes voice-cover-in { from { transform: translateY(5px); opacity: .5; } to { transform: none; opacity: 1; } }

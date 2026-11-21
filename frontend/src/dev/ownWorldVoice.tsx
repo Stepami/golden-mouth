@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import '../theme.css'
 import './ownWorldVoice.css'
-import { useVoiceFullDraft, VoiceFullEditor, VoicePortraits, voiceDraftSummary, voiceWorldIssue } from './ownWorldFullEditor'
+import { useVoiceFullDraft, VoiceFullEditor, VoiceQuickCharacters, voiceDraftSummary, voiceWorldIssue } from './ownWorldFullEditor'
 import { VoiceOwnWorldPlay } from './ownWorldPlayPreview'
-import { VoiceCoverImage, type VoiceCover } from './ownWorldCover'
+import { suggestVoiceCover, VoiceCoverImage, type VoiceCover } from './ownWorldCover'
+import { VoiceJourneyHint, VoiceUnlockPreview, VoiceWorldNav, VoiceWorldsPreview } from './ownWorldJourney'
 
 const story = 'Я доставляю письма в городе над облаками. Сегодня картограф Лис нашёл посылку с адресом острова, который исчез сто лет назад. Летать между островами можно только на рассвете.'
 const prompts = [
@@ -148,7 +149,7 @@ function Recorder({ audio, onAudio, onText, onNext }: {
   </div>
 }
 
-type Page = 'story' | 'listening' | 'transcript' | 'assembling' | 'draft' | 'full' | 'opening' | 'channel' | 'compose' | 'result'
+type Page = 'worlds' | 'unlock' | 'story' | 'listening' | 'transcript' | 'assembling' | 'draft' | 'full' | 'opening' | 'channel' | 'compose' | 'result'
 type LoadingPage = 'listening' | 'assembling' | 'opening'
 
 const loadingSteps: Record<LoadingPage, { title: string; caption: string; next: Page; duration: number }> = {
@@ -158,7 +159,7 @@ const loadingSteps: Record<LoadingPage, { title: string; caption: string; next: 
 }
 
 const pageTitle: Record<Page, string> = {
-  story: 'Свой мир', listening: 'Расшифровка', transcript: 'Расшифровка', assembling: 'Черновик мира',
+  worlds: 'Миры', unlock: 'Свой мир', story: 'Свой мир', listening: 'Расшифровка', transcript: 'Расшифровка', assembling: 'Черновик мира',
   draft: 'Черновик мира', full: 'Настройка мира', opening: 'Твой мир', channel: 'Твой канал',
   compose: 'Новый пост', result: 'Твой канал',
 }
@@ -180,7 +181,9 @@ function LoadingScreen({ phase }: { phase: LoadingPage }) {
 }
 
 function App() {
-  const [page, setPage] = useState<Page>('story')
+  const [page, setPage] = useState<Page>('worlds')
+  const [unlocked, setUnlocked] = useState(false)
+  const [created, setCreated] = useState(false)
   const [typing, setTyping] = useState(false)
   const [text, setText] = useState('')
   const [audio, setAudio] = useState('')
@@ -188,6 +191,11 @@ function App() {
   const [draft, setDraft] = useState(sampleDraft)
   const [cover, setCover] = useState<VoiceCover | null>(null)
   const coverUrl = cover?.url
+  const coverEdited = useRef(false)
+  const changeCover = (next: VoiceCover | null) => {
+    coverEdited.current = true
+    setCover(next)
+  }
   const [postDraft, setPostDraft] = useState<string | null>(null)
   const [publishedText, setPublishedText] = useState('')
   const { draft: fullDraft, previewDraft: playWorld, setDraft: setFullDraft, openEditor } = useVoiceFullDraft(draft)
@@ -203,14 +211,14 @@ function App() {
   const worldIssue = voiceWorldIssue(playWorld)
   const postText = postDraft ?? fullDraft.postIdeas.find(idea => idea.trim()) ?? ''
   const previousPage: Partial<Record<Page, Page>> = {
-    assembling: typing ? 'story' : 'transcript', draft: typing ? 'story' : 'transcript',
+    story: 'worlds', unlock: 'worlds', assembling: typing ? 'story' : 'transcript', draft: typing ? 'story' : 'transcript',
     opening: 'draft', channel: 'draft', compose: 'channel', result: 'channel',
   }
   const heading = useRef<HTMLHeadingElement>(null)
   const textInput = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (coverUrl) return () => URL.revokeObjectURL(coverUrl)
+    if (coverUrl?.startsWith('blob:')) return () => URL.revokeObjectURL(coverUrl)
   }, [coverUrl])
 
   useEffect(() => {
@@ -231,13 +239,17 @@ function App() {
     if (!phase) return
     const step = loadingSteps[phase]
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const timer = window.setTimeout(() => setPage(step.next), reduced ? 300 : step.duration)
+    const timer = window.setTimeout(() => {
+      if (phase === 'assembling' && !coverEdited.current) setCover(suggestVoiceCover(typing ? text : transcript))
+      if (phase === 'opening') setCreated(true)
+      setPage(step.next)
+    }, reduced ? 300 : step.duration)
     return () => window.clearTimeout(timer)
-  }, [phase])
+  }, [phase, text, transcript, typing])
 
   return <div className="app voice-preview">
     <header className="top">
-      {page !== 'story' && <button
+      {page !== 'worlds' && <button
         type="button"
         className="back"
         aria-label="Назад"
@@ -246,6 +258,15 @@ function App() {
       <b className="top-title">{pageTitle[page]}</b>
       <span className="pill">Превью</span>
     </header>
+    {page === 'worlds' && <VoiceWorldsPreview
+      unlocked={unlocked}
+      savedWorld={created ? { title: playWorld.title, summary: playWorld.summary } : null}
+      cover={cover}
+      onUnlock={() => { setUnlocked(true); setPage('unlock') }}
+      onCreate={() => setPage('story')}
+      onOpenWorld={() => setPage('channel')}
+    />}
+    {page === 'unlock' && <VoiceUnlockPreview onCreate={() => setPage('story')} onLater={() => setPage('worlds')} />}
     {phase && <LoadingScreen phase={phase} />}
     {page === 'story' && <main className="pad voice-story">
       <h1>Расскажи —<br />и окажись внутри</h1>
@@ -256,6 +277,7 @@ function App() {
           <span className="small muted">{example}</span>
         </li>)}
       </ul>
+      <VoiceJourneyHint step={1} />
       {typing ? <div className="voice-recorder">
         <label className="voice-field">
           Твоя история
@@ -294,24 +316,26 @@ function App() {
             Мир и завязка
             <textarea rows={3} value={draft.opening} onChange={event => setDraft({ ...draft, opening: event.target.value })} />
           </label>
-          <VoicePortraits draft={fullDraft} />
+          <VoiceQuickCharacters draft={fullDraft} onChange={setFullDraft} />
           <label className="voice-field">
             Правила мира
             <textarea rows={2} value={draft.rules} onChange={event => setDraft({ ...draft, rules: event.target.value })} />
           </label>
         </div>
       </div>
+      <VoiceJourneyHint step={2} />
       <button type="button" className="btn secondary" onClick={() => { openEditor(); setPage('full') }}>Полный редактор</button>
       {worldIssue && <p className="small muted">{worldIssue}</p>}
       <button type="button" className="btn" disabled={!!worldIssue} onClick={() => { openEditor(); startStory(draft) }}>Начать историю</button>
     </main>}
-    {page === 'full' && <VoiceFullEditor draft={fullDraft} cover={cover} onCoverChange={setCover} onChange={setFullDraft} onClose={returnToDraft} onPreview={startStory} />}
+    {page === 'full' && <VoiceFullEditor draft={fullDraft} cover={cover} onCoverChange={changeCover} onChange={setFullDraft} onClose={returnToDraft} onPreview={startStory} />}
     {(page === 'channel' || page === 'compose' || page === 'result') && <VoiceOwnWorldPlay
       step={page}
       draft={playWorld}
       cover={cover}
       postText={postText}
       publishedText={publishedText}
+      hint={!publishedText && <VoiceJourneyHint step={3} />}
       onText={setPostDraft}
       onCompose={() => setPage('compose')}
       onPublish={() => {
@@ -322,6 +346,7 @@ function App() {
       onChannel={() => setPage('channel')}
       onRead={() => setPage('result')}
     />}
+    {(page === 'channel' || page === 'result') && <VoiceWorldNav active="channel" onWorlds={() => setPage('worlds')} onChannel={() => setPage('channel')} />}
   </div>
 }
 

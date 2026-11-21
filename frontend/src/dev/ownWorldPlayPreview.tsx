@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ComponentProps } from 'react'
+import { useEffect, useRef, type ComponentProps, type ReactNode } from 'react'
 import { VoicePortraits, voicePortraitSeed } from './ownWorldFullEditor'
 import './ownWorldPlayPreview.css'
 import { VoiceCoverImage, type VoiceCover } from './ownWorldCover'
@@ -9,6 +9,7 @@ type PlayProps = {
   cover: VoiceCover | null
   postText: string
   publishedText: string
+  hint?: ReactNode
   onText: (text: string) => void
   onCompose: () => void
   onPublish: () => void
@@ -16,7 +17,7 @@ type PlayProps = {
   onRead: () => void
 }
 
-export function VoiceOwnWorldPlay({ step, draft, cover, postText, publishedText, onText, onCompose, onPublish, onChannel, onRead }: PlayProps) {
+export function VoiceOwnWorldPlay({ step, draft, cover, postText, publishedText, hint, onText, onCompose, onPublish, onChannel, onRead }: PlayProps) {
   const heading = useRef<HTMLHeadingElement>(null)
   useEffect(() => { heading.current?.focus({ preventScroll: true }) }, [step])
 
@@ -35,6 +36,7 @@ export function VoiceOwnWorldPlay({ step, draft, cover, postText, publishedText,
         <h2>Сегодня всё начинается</h2>
         <p className="first-story-context">{draft.firstContext}</p>
       </section>}
+      {hint}
       <button className="btn" type="button" onClick={onCompose}>Написать первый пост</button>
     </>}
   </main>
