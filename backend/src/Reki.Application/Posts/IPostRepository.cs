@@ -9,8 +9,6 @@ public interface IPostRepository
 {
     ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken);
 
-    ValueTask InsertPostAsync(GamePost post, ReadOnlyMemory<float> embedding, CancellationToken cancellationToken);
-
     ValueTask<IReadOnlyList<PostSimilarity>> FindSimilarPostsAsync(
         GamePost post,
         double threshold);

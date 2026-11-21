@@ -9,13 +9,6 @@
     "plus_interest_bonus_once": 5,
     "streak_day3_bonus": 2
   },
-  "bonuses": {
-    "onboarding_crystals": 2, "viral_card_multiplier": 5, "flop_guard_views": 10,
-    "booster_hours": 8, "booster_extension_days": 1,
-    "skill_level_crystals": 1, "post_interval": 5, "post_interval_crystals": 1,
-    "viral_post_crystals": 1, "challenge_crystals": 2,
-    "streak_days": [3, 7, 10, 14, 21, 28, 30], "streak_interval": 5, "streak_crystals": 1
-  },
   "growth": {
     "formula": "delta = k * k_difficulty * (0.5 + quality) * subs^power * mult",
     "power": 0.6,

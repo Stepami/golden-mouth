@@ -1,39 +1,31 @@
 using Mediator;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
-using Reki.Application.Balance;
-using Reki.Application.Exceptions;
-using Reki.Domain.Player;
+using Reki.Application.Player.Streaks.GetStreak;
 using Reki.Domain.Player.Streaks;
 
 namespace Reki.Application.Player.Streaks.UpdateStreakCommand;
 
 internal sealed class UpdateStreakCommandHandler(
+    ISender sender,
     IPlayerStreakRepository streaks,
-    IPlayerRepository players,
     IUnitOfWork unitOfWork,
     IMemoryCache cache,
-    IOptionsMonitor<GameBalance> balance,
-    TimeProvider timeProvider) : ICommandHandler<UpdateStreak, PlayerProfile>
+    TimeProvider timeProvider) : ICommandHandler<UpdateStreak>
 {
-    public async ValueTask<PlayerProfile> Handle(UpdateStreak command, CancellationToken cancellationToken)
+    public async ValueTask<Unit> Handle(UpdateStreak command, CancellationToken cancellationToken)
     {
+        var streak = await sender.Send(new PlayerStreakQuery(command.PlayerId), cancellationToken);
         var now = timeProvider.GetUtcNow();
-        var rewards = balance.CurrentValue.Bonuses;
 
-        var (updated, changed) = await unitOfWork.ExecuteAsync(
+        var progress = streak.Progress(now);
+        if (progress == PlayerStreakProgress.None)
+        {
+            return Unit.Value;
+        }
+
+        return await unitOfWork.ExecuteAsync(
             async token =>
             {
-                var player = await players.GetPlayerAsync(command.PlayerId, token)
-                             ?? throw new ResourceNotFoundException("Player not found.");
-                var streak = await streaks.GetLatestAsync(command.PlayerId, token)
-                             ?? PlayerStreak.New(command.PlayerId, now);
-                var progress = streak.Progress(now);
-                if (progress == PlayerStreakProgress.None)
-                {
-                    return (player, false);
-                }
-
                 await streaks.SaveAsync(streak, token);
                 if (progress == PlayerStreakProgress.Stopped)
                 {
@@ -42,22 +34,9 @@ internal sealed class UpdateStreakCommandHandler(
                     await streaks.SaveAsync(newStreak, token);
                 }
 
-                if (progress == PlayerStreakProgress.Consecutive &&
-                    (rewards.StreakDays.Contains(streak.Count) ||
-                     (streak.Count > rewards.StreakDays.Max() && streak.Count % rewards.StreakInterval == 0)))
-                {
-                    player.ReplenishCrystals(rewards.StreakCrystals);
-                    await players.ReplacePlayerAsync(player, token);
-                }
-
-                return (player, true);
+                return Unit.Value;
             },
+            _ => cache.Remove(CacheKeyPrefixes.PlayerStreak + command.PlayerId),
             cancellationToken);
-        if (changed)
-        {
-            cache.Remove(CacheKeyPrefixes.PlayerStreak + command.PlayerId);
-        }
-
-        return updated;
     }
 }

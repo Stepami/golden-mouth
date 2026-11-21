@@ -1,5 +1,5 @@
 using MongoDB.Driver;
-using Reki.Application.Bonuses;
+using Reki.Application.Player;
 using Reki.Domain.Bonuses;
 using Reki.Domain.Player;
 
@@ -32,10 +32,4 @@ internal sealed class MongoBonusRepository(
             bonus,
             ct,
             new ReplaceOptions { IsUpsert = true });
-
-    public async ValueTask DeleteForPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await _bonuses.DeleteManyAsync(
-            sessionProvider.Session,
-            item => item.PlayerId == playerId,
-            cancellationToken: cancellationToken);
 }

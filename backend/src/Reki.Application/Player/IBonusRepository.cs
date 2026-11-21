@@ -1,7 +1,7 @@
 using Reki.Domain.Bonuses;
 using Reki.Domain.Player;
 
-namespace Reki.Application.Bonuses;
+namespace Reki.Application.Player;
 
 public interface IBonusRepository
 {
@@ -11,6 +11,4 @@ public interface IBonusRepository
 #pragma warning restore AV1554
 
     Task SaveBonus(Bonus bonus, CancellationToken ct);
-
-    ValueTask DeleteForPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);
 }

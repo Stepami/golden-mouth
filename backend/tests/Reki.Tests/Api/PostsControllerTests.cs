@@ -7,11 +7,9 @@ using MongoDB.Driver;
 using Reki.Api.Requests.Posts;
 using Reki.Application.Balance;
 using Reki.Application.Posts.ML;
-using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.Reply;
 using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.Worlds;
-using Reki.Domain.Bonuses;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -44,7 +42,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             0,
             0,
             [],
-            [],
+            [comment],
             now,
             0,
             0,
@@ -53,129 +51,15 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             false);
         await Database.GetCollection<GamePost>("posts").InsertOneAsync(post);
         var before = await GetStoredPlayerAsync(telegramUserId);
-        var bonuses = Database.GetCollection<Bonus>("bonuses");
-        var initial = await bonuses.Find(bonus => bonus.PlayerId == player.Id).ToListAsync();
-        var early = await api.Posts.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
-        await Database.GetCollection<GamePost>("posts").UpdateOneAsync(
-            item => item.Id == post.Id, Builders<GamePost>.Update.Push(item => item.Comments, comment));
 
         // Act
         var claimed = await api.Posts.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
-        var repeated = await api.Posts.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
 
         // Assert
-        await Assert.That(early).IsFalse();
         await Assert.That(claimed).IsTrue();
-        await Assert.That(repeated).IsFalse();
-        await Assert.That(initial.Count).IsEqualTo(3);
-        await Assert.That(initial.All(bonus => !bonus.IsClaimed)).IsTrue();
-        await Assert.That(initial.OfType<CrystalsBonus>().Single().Amount).IsEqualTo(2);
-        await Assert.That(initial.OfType<ViralCardBonus>().Single().Multiplier).IsEqualTo(5);
-        await Assert.That(initial.OfType<FlopGuardBonus>().Single().Adder).IsEqualTo(10);
         await Assert.That(before["Wallet"]["Crystals"].AsInt32).IsEqualTo(10);
         var stored = await GetStoredPlayerAsync(telegramUserId);
         await Assert.That(stored["Wallet"]["Crystals"].AsInt32).IsEqualTo(12);
-        var saved = await bonuses.Find(bonus => bonus.PlayerId == player.Id).ToListAsync();
-        await Assert.That(saved.Where(bonus => bonus.IsClaimed).Select(bonus => bonus.Id))
-            .IsEquivalentTo([initial.OfType<CrystalsBonus>().Single().Id]);
-    }
-
-    [Test]
-    [Arguments(false, 5)]
-    [Arguments(true, 1)]
-    public async Task CreatePost_FifthViralPostWithLevelUp_AddsThreeCrystalsAsync(bool natural, int cardMultiplier)
-    {
-        // Arrange
-        const long user = 8302;
-        var balance = SetNaturalViralChance(natural ? 2 : 0, 10);
-        using var api = Factory.CreateApiClient(user);
-        var player = await CreatePlayerWithWorldAsync(api);
-        var world = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single();
-        var subscribers = (await GetStoredWorldAsync(user))["Player"]["Subscribers"].ToInt64();
-        await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
-            item => item.Id == player.Id,
-            Builders<PlayerProfile>.Update.Set(item => item.PublishedPostCount, 4L).Set("Skills.topic.Experience", 7d));
-        var bonuses = Database.GetCollection<Bonus>("bonuses");
-        await bonuses.InsertOneAsync(new PostBoosterBonus(BonusId.New(), player.Id, Factory.Session.Clock.GetUtcNow().AddHours(1)));
-        var difficulty = balance.Difficulties[world.Difficulty];
-        var growth = balance.Growth.Coefficient * difficulty.GrowthCoefficient * (0.5 + (2d / 3)) *
-                     Math.Pow(subscribers, balance.Growth.Power) * balance.Growth.StarterMultiplier;
-        var ordinaryViralDelta = (long)Math.Round(growth * balance.Viral.Multiplier * difficulty.ViralMultiplier);
-
-        // Act
-        var request = new CreatePostRequest
-        {
-            Text = "Показываю афишу следующего концерта.",
-            OwnWords = false,
-        };
-        var result = await api.Posts.CreatePostAsync(world.Id.ToString(), request, CancellationToken.None);
-
-        // Assert
-        await Assert.That(result.Result.Viral).IsTrue();
-        await Assert.That(result.Result.Flop).IsFalse();
-        await Assert.That(result.Result.Delta).IsEqualTo(ordinaryViralDelta * cardMultiplier);
-        await Assert.That(result.Post.Views % (2 * cardMultiplier)).IsEqualTo(0L);
-        var baseViews = result.Post.Views / (2 * cardMultiplier);
-        await Assert.That(baseViews).IsLessThanOrEqualTo(subscribers);
-        await Assert.That(result.Post.Likes).IsEqualTo((long)Math.Ceiling(baseViews * 0.10m) * 6 * cardMultiplier);
-        var savedPost = await ReadPostAsync(result.Post.PostId.ToString());
-        await Assert.That(savedPost.Views).IsEqualTo(result.Result.Views);
-        await Assert.That(savedPost.Likes).IsEqualTo(result.Post.Likes);
-        var saved = await GetStoredPlayerAsync(user);
-        await Assert.That(saved["Wallet"]["Crystals"].AsInt32).IsEqualTo(13);
-        await Assert.That(saved["PublishedPostCount"].ToInt64()).IsEqualTo(5L);
-        await Assert.That(saved["Skills"]["topic"]["Level"].AsInt32).IsEqualTo(2);
-        var storedBonuses = await bonuses.Find(bonus => bonus.PlayerId == player.Id).ToListAsync();
-        await Assert.That(storedBonuses.OfType<ViralCardBonus>().Single().IsClaimed).IsEqualTo(!natural);
-        await Assert.That(storedBonuses.OfType<FlopGuardBonus>().Single().IsClaimed).IsFalse();
-        await Assert.That(storedBonuses.OfType<PostBoosterBonus>().Single().IsClaimed).IsFalse();
-    }
-
-    [Test]
-    public async Task CreatePost_ActiveBooster_UsesNextOneAtExpiryAsync()
-    {
-        // Arrange
-        SetNaturalViralChance(0, 100);
-        var clock = Factory.Session.Clock;
-        var now = clock.GetUtcNow();
-        using var api = Factory.CreateApiClient(8303);
-        var player = await CreatePlayerWithWorldAsync(api);
-        var worldId = WorldId.From(await GetWorldIdAsync(api));
-        var bonuses = Database.GetCollection<Bonus>("bonuses");
-        await bonuses.OfType<ViralCardBonus>().DeleteManyAsync(item => item.PlayerId == player.Id);
-        await bonuses.OfType<FlopGuardBonus>().DeleteManyAsync(item => item.PlayerId == player.Id);
-        var first = new PostBoosterBonus(BonusId.From(Guid.CreateVersion7(now)), player.Id, now.AddHours(1));
-        var second = new PostBoosterBonus(BonusId.From(Guid.CreateVersion7(now.AddSeconds(1))), player.Id, now.AddHours(2));
-        await bonuses.InsertManyAsync([first, second]);
-
-        // Act
-        var boosted = await PublishOrdinaryAsync("Объявляю расписание концертов.");
-        var protectedPost = await PublishFlopAsync(api, worldId);
-        var beforeExpiration = await bonuses.OfType<PostBoosterBonus>().Find(item => item.PlayerId == player.Id).ToListAsync();
-        clock.SetUtcNow(first.ActiveUntil);
-        var next = await PublishOrdinaryAsync("В афише появилось новое выступление.");
-        var afterFirstExpiration = await bonuses.OfType<PostBoosterBonus>().Find(item => item.PlayerId == player.Id).ToListAsync();
-        clock.SetUtcNow(second.ActiveUntil);
-        var unboosted = await PublishOrdinaryAsync("Готовим встречу с участниками концерта.");
-        var afterSecondExpiration = await bonuses.OfType<PostBoosterBonus>().Find(item => item.PlayerId == player.Id).ToListAsync();
-
-        // Assert
-        await Assert.That(boosted.Result.Viral).IsTrue();
-        await Assert.That(boosted.Post.Views % 2).IsEqualTo(0L);
-        await Assert.That(boosted.Post.Likes).IsEqualTo(boosted.Post.Views * 3);
-        await Assert.That(protectedPost.Result.Flop).IsFalse();
-        await Assert.That(protectedPost.Result.Delta).IsGreaterThan(0);
-        await Assert.That(protectedPost.Result.Views).IsEqualTo(protectedPost.Post.Likes + 10);
-        await Assert.That(beforeExpiration.All(item => !item.IsClaimed)).IsTrue();
-        await Assert.That(next.Result.Viral).IsTrue();
-        await Assert.That(afterFirstExpiration.Where(item => item.IsClaimed).Select(item => item.Id)).IsEquivalentTo([first.Id]);
-        await Assert.That(unboosted.Result.Viral).IsFalse();
-        await Assert.That(unboosted.Result.Flop).IsFalse();
-        await Assert.That(afterSecondExpiration.Where(item => item.IsClaimed).Select(item => item.Id)).IsEquivalentTo([first.Id, second.Id]);
-        await Assert.That((await GetStoredPlayerAsync(8303))["Wallet"]["Crystals"].AsInt32).IsEqualTo(12);
-
-        Task<CreatePostResponse> PublishOrdinaryAsync(string text) =>
-            api.Posts.CreatePostAsync(worldId.ToString(), new CreatePostRequest { Text = text, OwnWords = false }, CancellationToken.None);
     }
 
     [Test]
@@ -433,7 +317,7 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         await Assert.That(detail.AuthorId).IsEqualTo(PlayerId.From((await GetStoredPlayerAsync(telegramUserId))["_id"].AsBsonBinaryData.ToGuid()).ToAuthorId());
         await Assert.That(detail.Views).IsEqualTo(post["Views"].ToInt64());
         await Assert.That(detail.Views).IsGreaterThanOrEqualTo(0);
-        await Assert.That(detail.Views).IsLessThanOrEqualTo(subscribersBeforePost * (post["Viral"].AsBoolean ? 10 : 1));
+        await Assert.That(detail.Views).IsLessThanOrEqualTo(subscribersBeforePost * (post["Viral"].AsBoolean ? 2 : 1));
         await Assert.That(detail.Likes).IsEqualTo(post["Likes"].ToInt64());
         await Assert.That(detail.LikedBy).IsEmpty();
         await Assert.That(detail.Comments.Count).IsEqualTo(3);

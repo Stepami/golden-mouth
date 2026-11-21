@@ -26,8 +26,7 @@ public sealed class PlayerProfile
         DateTimeOffset? hateDisabledUntilUtc = null,
         int version = 0,
         bool plusNotifyRequested = false,
-        PlayerChallenge? dailyChallenge = null,
-        long publishedPostCount = 0)
+        PlayerChallenge? dailyChallenge = null)
     {
         Id = id;
         _externalUserIds = [.. externalUserIds];
@@ -46,7 +45,6 @@ public sealed class PlayerProfile
         Version = version;
         PlusNotifyRequested = plusNotifyRequested;
         DailyChallenge = dailyChallenge ?? PlayerChallenge.Empty;
-        PublishedPostCount = publishedPostCount;
         _notificationChannels = [.. notificationChannels];
         NotificationChannels = _notificationChannels.AsReadOnly();
     }
@@ -82,8 +80,6 @@ public sealed class PlayerProfile
     public IReadOnlyList<PlayerNotificationChannel> NotificationChannels { get; }
 
     public PlayerChallenge DailyChallenge { get; private set; }
-
-    public long PublishedPostCount { get; private set; }
 
     public void RefreshDailyChallenge(
         DateOnly day,
@@ -260,7 +256,6 @@ public sealed class PlayerProfile
         }
 
         HitOwnWorldMilestone = hitOwnMilestone;
-        PublishedPostCount++;
         Version++;
         return this;
     }

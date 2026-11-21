@@ -29,8 +29,7 @@ internal sealed class MongoWorldRepository(
 
     public async ValueTask<World?> GetWorldAsync(PlayerId playerId, WorldId worldId, CancellationToken cancellationToken)
     {
-        var filter = Builders<World>.Filter.Where(item => item.Player.PlayerId == playerId && item.Id == worldId);
-        return await (sessionProvider.Current is { } session ? _worlds.Find(session, filter) : _worlds.Find(filter))
+        return await _worlds.Find(item => item.Player.PlayerId == playerId && item.Id == worldId)
             .FirstOrDefaultAsync(cancellationToken);
     }
 

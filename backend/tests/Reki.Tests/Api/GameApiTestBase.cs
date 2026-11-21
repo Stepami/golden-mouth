@@ -1,20 +1,13 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using NSubstitute;
-using NSubstitute.Extensions;
 using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Posts;
 using Reki.Api.Requests.Worlds;
 using Reki.Api.Serialization;
-using Reki.Application.Balance;
 using Reki.Application.Player;
 using Reki.Application.Player.Responses;
-using Reki.Application.Posts.ML;
-using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.Reply;
 using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.Worlds;
@@ -26,8 +19,6 @@ namespace Reki.Tests.Api;
 
 public abstract class GameApiTestBase(ApiFactory factory)
 {
-    private bool _postBalanceOverridden;
-
     protected ApiFactory Factory { get; } = factory;
 
     protected IMongoDatabase Database => Factory.Session.Database;
@@ -43,15 +34,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         Factory.Session.ClearGameDataAsync(cancellationToken);
 
     [After(Test)]
-    public void ResetExternalState()
-    {
-        Factory.Session.ResetExternalState();
-        if (_postBalanceOverridden)
-        {
-            Factory.Services.GetRequiredService<IOptionsMonitorCache<GameBalance>>().TryRemove(Options.DefaultName);
-            _postBalanceOverridden = false;
-        }
-    }
+    public void ResetExternalState() => Factory.Session.ResetExternalState();
 
     protected static JsonDocument ParsePlayerLayer(ChatMessage layer) =>
         JsonDocument.Parse(layer.Text[(layer.Text.IndexOf("DATA_JSON:", StringComparison.Ordinal) + "DATA_JSON:".Length)..].Trim());
@@ -127,39 +110,6 @@ public abstract class GameApiTestBase(ApiFactory factory)
         body.Split('\n').Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
             .Select(line => JsonSerializer.Deserialize(line[6..], ApiJsonSerializerContext.Default.ReplyGenerationLiveEvent)
                 ?? throw new InvalidOperationException("The generation event was empty.")).ToArray();
-
-    protected GameBalance SetNaturalViralChance(double chance, int? likesPercent = null)
-    {
-        var balance = Factory.Services.GetRequiredService<IOptionsMonitor<GameBalance>>().CurrentValue;
-        _postBalanceOverridden = true;
-        var forced = balance with
-        {
-            Viral = balance.Viral with { BaseChance = chance, ChancePerQuality = 0, EmotionBonus = 0 },
-            LikesMinPercent = likesPercent ?? balance.LikesMinPercent,
-            LikesMaxPercent = likesPercent ?? balance.LikesMaxPercent,
-        };
-        var cache = Factory.Services.GetRequiredService<IOptionsMonitorCache<GameBalance>>();
-        cache.TryRemove(Options.DefaultName);
-        cache.TryAdd(Options.DefaultName, forced);
-        return forced;
-    }
-
-    protected async Task<CreatePostResponse> PublishFlopAsync(TestApiClient api, WorldId worldId)
-    {
-        const string text = "Весь день грущу после отмены концерта.";
-        var classifier = Factory.Services.GetRequiredService<IClassifier>();
-        var original = await classifier.ClassifyAsync(ClassifierModels.EmotionModel, text);
-        var sad = new Dictionary<string, double>(original) { ["sadness"] = 1, ["no_emotion"] = 0 };
-        classifier.Configure().ClassifyAsync(ClassifierModels.EmotionModel, text).Returns(sad);
-        try
-        {
-            return await api.Posts.CreatePostAsync(worldId.ToString(), new CreatePostRequest { Text = text }, CancellationToken.None);
-        }
-        finally
-        {
-            classifier.Configure().ClassifyAsync(ClassifierModels.EmotionModel, text).Returns(original);
-        }
-    }
 
     protected async Task<PlayerResponse> CreatePlayerWithWorldAsync(
         TestApiClient api,

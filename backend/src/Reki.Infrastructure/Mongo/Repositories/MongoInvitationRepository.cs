@@ -15,12 +15,9 @@ internal sealed class MongoInvitationRepository(
     public async ValueTask CreateInviteAsync(Invitation invite, CancellationToken cancellationToken) =>
         await _invites.InsertOneAsync(sessionProvider.Session, invite, cancellationToken: cancellationToken);
 
-    public async ValueTask<Invitation?> GetPendingInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken)
-    {
-        var filter = Builders<Invitation>.Filter.Where(item => item.InviteeId == inviteeId && !item.InviteeBonusUsed);
-        return await (sessionProvider.Current is { } session ? _invites.Find(session, filter) : _invites.Find(filter))
+    public async ValueTask<Invitation?> GetPendingInviteAsync(PlayerId inviteeId, CancellationToken cancellationToken) =>
+        await _invites.Find(item => item.InviteeId == inviteeId && !item.InviteeBonusUsed)
             .FirstOrDefaultAsync(cancellationToken);
-    }
 
     public async ValueTask UseInviteBonusAsync(Invitation invite, CancellationToken cancellationToken)
     {

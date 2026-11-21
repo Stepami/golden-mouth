@@ -1,9 +1,11 @@
-using MongoDB.Driver;
+using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+using NSubstitute.Extensions;
 using Reki.Api.Requests.Posts;
 using Reki.Application.Player.Responses;
+using Reki.Application.Posts.ML;
 using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.Reply;
-using Reki.Domain.Bonuses;
 using Reki.Domain.Player.Challenges;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -42,30 +44,21 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
         await Assert.That(afterFirst.Values[worldId][DailyTaskType.PostLikes].Progress).IsEqualTo(first.Post.Likes);
         await Assert.That(afterSecond.Values[worldId][DailyTaskType.Posts].Progress).IsEqualTo(2L);
         await Assert.That(afterSecond.Values[worldId][DailyTaskType.PostLikes].Progress).IsEqualTo(Math.Max(first.Post.Likes, second.Post.Likes));
-        await Assert.That(second.Result.Flop).IsFalse();
-        await Assert.That(second.Result.Delta).IsGreaterThan(0);
-        await Assert.That(second.Result.Views).IsGreaterThanOrEqualTo(10L);
-        var guard = await Database.GetCollection<Bonus>("bonuses").OfType<FlopGuardBonus>()
-            .Find(bonus => bonus.PlayerId == player.Id).SingleAsync();
-        await Assert.That(guard.IsClaimed).IsTrue();
+        await Assert.That(second.Result.Delta).IsLessThan(0);
         await Assert.That(reply.Subscribers).IsGreaterThan(star.Subscribers);
         await Assert.That(afterReply.Values[worldId][DailyTaskType.Subscribers].Progress).IsEqualTo(first.Result.Delta);
         await Assert.That(afterRepost.Values[worldId][DailyTaskType.Subscribers].Progress).IsEqualTo(first.Result.Delta + repost.Result.Delta);
         await Assert.That(afterRepost.Values[worldId][DailyTaskType.PostLikes].Progress).IsEqualTo(first.Post.Likes);
-        await Assert.That(afterSecond.Values[worldId][DailyTaskType.Subscribers].Progress)
-            .IsEqualTo(first.Result.Delta + repost.Result.Delta + second.Result.Delta);
+        await Assert.That(afterSecond.Values[worldId][DailyTaskType.Subscribers].Progress).IsEqualTo(first.Result.Delta + repost.Result.Delta);
     }
 
     [Test]
     public async Task CreatePost_Friday_KeepsProgressPerWorldWithSharedCompletionAsync()
     {
         // Arrange
-        const long user = 8932;
-        SetNaturalViralChance(0);
         Factory.Session.Clock.SetUtcNow(new DateTimeOffset(2026, 10, 9, 12, 0, 0, TimeSpan.Zero));
-        using var api = Factory.CreateApiClient(user);
-        var player = await CreatePlayerWithWorldAsync(api);
-        await Database.GetCollection<Bonus>("bonuses").OfType<FlopGuardBonus>().DeleteManyAsync(bonus => bonus.PlayerId == player.Id);
+        using var api = Factory.CreateApiClient(8932);
+        await CreatePlayerWithWorldAsync(api);
         var firstWorld = WorldId.From(await GetWorldIdAsync(api));
         var secondWorld = (await api.Worlds.CreateWorldAsync(
             await CreateWorldDefinitionAsync(api, WorldTemplate.Academy), CancellationToken.None)).Id;
@@ -85,18 +78,14 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
 
         var completed = await ReadChallengeAsync(api);
         var repostTarget = completed.Values[firstWorld][DailyTaskType.Reposts].Target;
-        for (var count = 1L; count < repostTarget - 1; count++)
+        for (var count = 1L; count < repostTarget; count++)
         {
             await PublishAsync(api, firstWorld, string.Empty, first.Post.PostId);
         }
 
-        var beforeFinish = await GetStoredPlayerAsync(user);
-        await PublishAsync(api, firstWorld, string.Empty, first.Post.PostId);
         var finishedCard = await ReadChallengeAsync(api);
-        var finishedWallet = (await GetStoredPlayerAsync(user))["Wallet"]["Crystals"].AsInt32;
         await PublishAsync(api, secondWorld, "Сегодня следующая репетиция.");
         var afterFinish = await ReadChallengeAsync(api);
-        var afterFinishWallet = (await GetStoredPlayerAsync(user))["Wallet"]["Crystals"].AsInt32;
         await api.Worlds.DeleteWorldAsync(firstWorld.ToString(), CancellationToken.None);
         var afterDelete = await ReadChallengeAsync(api);
 
@@ -115,9 +104,6 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
         await Assert.That(completed.Completion[DailyTaskType.Posts]).IsTrue();
         await Assert.That(finishedCard.Completion.Values.All(done => done)).IsTrue();
         await Assert.That(finishedCard.Values[firstWorld][DailyTaskType.Reposts].Progress).IsEqualTo(repostTarget);
-        var publicationReward = beforeFinish["PublishedPostCount"].ToInt64() == 4 ? 1 : 0;
-        await Assert.That(finishedWallet).IsEqualTo(beforeFinish["Wallet"]["Crystals"].AsInt32 + 2 + publicationReward);
-        await Assert.That(afterFinishWallet).IsEqualTo(finishedWallet);
         await Assert.That(afterFinish.Values[secondWorld][DailyTaskType.Posts].Progress).IsEqualTo(1L);
         await Assert.That(afterDelete.Values.ContainsKey(firstWorld)).IsFalse();
         await Assert.That(afterDelete.Completion[DailyTaskType.Posts]).IsTrue();
@@ -246,4 +232,21 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
                 Text = "Обсудим это на репетиции.",
             },
             CancellationToken.None);
+
+    private async Task<CreatePostResponse> PublishFlopAsync(TestApiClient api, WorldId worldId)
+    {
+        const string text = "Весь день грущу после отмены концерта.";
+        var classifier = Factory.Services.GetRequiredService<IClassifier>();
+        var original = await classifier.ClassifyAsync(ClassifierModels.EmotionModel, text);
+        var sad = new Dictionary<string, double>(original) { ["sadness"] = 1, ["no_emotion"] = 0 };
+        classifier.Configure().ClassifyAsync(ClassifierModels.EmotionModel, text).Returns(sad);
+        try
+        {
+            return await PublishAsync(api, worldId, text);
+        }
+        finally
+        {
+            classifier.Configure().ClassifyAsync(ClassifierModels.EmotionModel, text).Returns(original);
+        }
+    }
 }

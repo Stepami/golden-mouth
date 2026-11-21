@@ -76,7 +76,6 @@ internal static class MongoClassMappings
             classMap.MapMember(item => item.PlusNotifyRequested).SetDefaultValue(false);
             classMap.MapMember(item => item.BirthYear).SetDefaultValue(0);
             classMap.MapMember(item => item.DailyChallenge).SetDefaultValue((object?)null);
-            classMap.MapMember(item => item.PublishedPostCount).SetDefaultValue(0L);
             classMap.MapCreator(item => new PlayerProfile(
                     item.Id,
                     item.ExternalUserIds,
@@ -93,8 +92,7 @@ internal static class MongoClassMappings
                     item.HateDisabledUntilUtc,
                     item.Version,
                     item.PlusNotifyRequested,
-                    item.DailyChallenge,
-                    item.PublishedPostCount));
+                    item.DailyChallenge));
         });
 
         RegisterWithMongoId<PlayerStreak, StreakId>(item => item.Id, configure: classMap =>

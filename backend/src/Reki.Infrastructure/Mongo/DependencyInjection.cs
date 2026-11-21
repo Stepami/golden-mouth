@@ -3,7 +3,6 @@ using Kot.MongoDB.Migrations.DI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Reki.Application;
-using Reki.Application.Bonuses;
 using Reki.Application.Invites;
 using Reki.Application.Notifications;
 using Reki.Application.Player;

@@ -40,31 +40,19 @@ internal sealed class CreateWorldCommandHandler(
         await unitOfWork.ExecuteAsync(
             async token =>
             {
-                var current = await players.GetPlayerAsync(player.Id, token)
-                              ?? throw new ResourceNotFoundException("Player not found.");
-                var previousVersion = current.Version;
-                current.AddDailyChallengeWorld(
-                    world,
-                    currentBalance.DailyChallengeTargets[current.DailyChallenge.Day.DayOfWeek]);
+                var previousVersion = player.Version;
+                player.AddDailyChallengeWorld(world, currentBalance.DailyChallengeTargets[player.DailyChallenge.Day.DayOfWeek]);
                 await worldRepository.InsertWorldAsync(world, token);
-                if (current.Version != previousVersion)
+                if (player.Version != previousVersion)
                 {
-                    await players.SaveDailyChallengeAsync(current, previousVersion, token);
+                    await players.SaveDailyChallengeAsync(player, previousVersion, token);
                 }
 
                 return true;
             },
             _ => worldCache.UpdateWorld(world),
             cancellationToken);
-        telemetry.TrackPlayer(
-            player,
-            "world_created",
-            new Dictionary<string, string>
-            {
-                ["template_id"] = world.TemplateId?.ToString() ?? string.Empty,
-                ["difficulty"] = world.Difficulty.ToString().ToLowerInvariant(),
-            },
-            world.Id);
+        telemetry.TrackPlayer(player, "world_created", new Dictionary<string, string> { ["template_id"] = world.TemplateId?.ToString() ?? string.Empty, ["difficulty"] = world.Difficulty.ToString().ToLowerInvariant() }, world.Id);
         telemetry.TrackWorldAudience(world);
         await starVectorStore.WarmUpAsync(world);
         return world;

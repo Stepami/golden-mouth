@@ -40,14 +40,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var inactive = PlayerId.New();
         var players = database.GetCollection<BsonDocument>("players");
         await players.InsertManyAsync([LegacyPlayer(author, 13), LegacyPlayer(inactive, 4)]);
-        var firstWorld = WorldId.From(Guid.CreateVersion7());
-        var secondWorld = WorldId.From(Guid.CreateVersion7());
-        var original = PostId.New(CreatedAt);
-        await database.GetCollection<GamePost>("posts").InsertManyAsync([
-            new GamePost(original, author.ToAuthorId(), firstWorld, author, "Первый пост", 0, 0, [], [], CreatedAt, 0, 0, 0, false, false),
-            new GamePost(PostId.New(CreatedAt), author.ToAuthorId(), secondWorld, author, "Цитата", 0, 0, [], [], CreatedAt, 0, 0, 0, false, false, repostId: original),
-            new GamePost(PostId.New(CreatedAt), AuthorId.From("Star_guest"), secondWorld, inactive, "Пост звезды", 0, 0, [], [], CreatedAt, 0, 0, 0, false, false),
-        ]);
         var bonuses = database.GetCollection<Bonus>("bonuses");
         using var session = await mongo.MongoClient.StartSessionAsync();
         var migration = new GrantExistingPlayerBonuses();
@@ -69,12 +61,11 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var stored = await bonuses.Find(FilterDefinition<Bonus>.Empty).ToListAsync();
         await Assert.That(stored.Select(bonus => bonus.Id)).IsEquivalentTo(initial.Select(bonus => bonus.Id));
         await Assert.That(stored.Where(bonus => bonus.IsClaimed).Select(bonus => bonus.Id)).IsEquivalentTo([card.Id]);
-        foreach (var (playerId, expectedCrystals, expectedPostCount) in new[] { (author, 15, 2L), (inactive, 6, 0L) })
+        foreach (var (playerId, expectedCrystals) in new[] { (author, 15), (inactive, 6) })
         {
             var profile = await database.GetCollection<PlayerProfile>("players").Find(player => player.Id == playerId).SingleAsync();
             await Assert.That(profile.Wallet.Crystals).IsEqualTo(expectedCrystals);
             await Assert.That(profile.Wallet.Energy).IsEqualTo(7);
-            await Assert.That(profile.PublishedPostCount).IsEqualTo(expectedPostCount);
             var cards = stored.Where(bonus => bonus.PlayerId == playerId).ToArray();
             await Assert.That(cards.OfType<ViralCardBonus>().Select(bonus => bonus.Multiplier)).IsEquivalentTo([5, 5, 5]);
             await Assert.That(cards.OfType<FlopGuardBonus>().Select(bonus => bonus.Adder)).IsEquivalentTo([10, 10, 10]);
@@ -83,7 +74,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
 
         static BsonDocument LegacyPlayer(PlayerId id, int crystals)
         {
-            var profile = new PlayerProfile(
+            return new PlayerProfile(
                 id,
                 [],
                 Address.Nick,
@@ -92,8 +83,6 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
                 1990,
                 new PlayerSettings("all", "off", false),
                 []).ToBsonDocument();
-            profile.Remove("PublishedPostCount");
-            return profile;
         }
     }
 
@@ -1439,7 +1428,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await Assert.That(long.Parse(id[..12], NumberStyles.HexNumber, CultureInfo.InvariantCulture)).IsEqualTo(createdAt.ToUnixTimeMilliseconds());
     }
 
-    private static GameBalance CreateEnergyBalance() => new(10, 20, 5, 5, new BonusBalance(2, 5, 10, 8, 1, 1, 5, 1, 1, 2, [3, 7, 10, 14, 21, 28, 30], 5, 1), new GrowthBalance(1, 1, 0, 1, 1, 1000), new ViralBalance(0, 0, 1), new SkillBalance([], 1, 1, 1), new ThreadBalance(3, 9), new Dictionary<WorldDifficulty, DifficultyBalance>(), new Dictionary<DayOfWeek, IReadOnlyDictionary<DailyTaskType, int[]>>());
+    private static GameBalance CreateEnergyBalance() => new(10, 20, 5, 5, new GrowthBalance(1, 1, 0, 1, 1, 1000), new ViralBalance(0, 0, 1), new SkillBalance([], 1, 1, 1), new ThreadBalance(3, 9), new Dictionary<WorldDifficulty, DifficultyBalance>(), new Dictionary<DayOfWeek, IReadOnlyDictionary<DailyTaskType, int[]>>());
 
     private static BsonDocument CreateLegacyReferralPlayer(string id, string? inviter, DateTimeOffset createdAt, int dailyBonus, int count, bool used) => new()
     {
