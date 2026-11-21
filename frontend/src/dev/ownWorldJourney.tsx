@@ -3,7 +3,7 @@ import { TABS } from '../app/nav'
 import eveningCover from '../assets/evening-640-v4.webp'
 import { VoiceCoverImage, type VoiceCover } from './ownWorldCover'
 import { VoicePortraits } from './ownWorldFullEditor'
-import skyWorld from './own-world-sky-example.webp'
+import { exampleCover, examplePost } from './ownWorldExample'
 import './ownWorldJourney.css'
 
 const cues = {
@@ -51,7 +51,7 @@ type FeatureDraft = ComponentProps<typeof VoicePortraits>['draft']
 function VoiceWorldFeature({ draft }: { draft: FeatureDraft }) {
   return <div className="voice-world-feature">
     <figure className="voice-feature-art">
-      <img src={skyWorld} alt="Город на летающих островах над облаками" />
+      <img src={exampleCover.url} alt={exampleCover.alt} />
       <div className="voice-feature-record" aria-hidden="true">
         <div className="voice-feature-mic">
           <svg viewBox="0 0 24 24">
@@ -61,19 +61,19 @@ function VoiceWorldFeature({ draft }: { draft: FeatureDraft }) {
         </div>
         <div className="voice-feature-waves"><i /><i /><i /><i /><i /></div>
       </div>
-      <figcaption>Город над облаками</figcaption>
+      <figcaption>{exampleCover.title}</figcaption>
     </figure>
-    <p className="voice-feature-title">Расскажи идею. Играй в своём мире.</p>
+    <p className="voice-feature-title">На Патонге пропал скутер. На видео — твоя куртка.</p>
     <div className="voice-feature-outputs">
       <div className="voice-feature-output">
-        <div className="voice-feature-cast" aria-hidden="true"><VoicePortraits draft={{ ...draft, stars: draft.stars.slice(0, 2) }} /></div>
-        <b>Свои герои</b>
-        <span className="small muted">Ответят на посты</span>
+        <div className="voice-feature-cast" aria-hidden="true"><VoicePortraits draft={{ ...draft, stars: draft.stars.slice(0, 3) }} /></div>
+        <b>Мэй, Тон и Лена</b>
+        <span className="small muted">У каждого своя версия</span>
       </div>
       <div className="voice-feature-output">
         <div className="voice-feature-post" aria-hidden="true"><span>✎</span><div><i /><i /></div></div>
-        <b>Свой канал</b>
-        <span className="small muted">С идеей первого поста</span>
+        <b>Первый пост</b>
+        <span className="small muted">{examplePost}</span>
       </div>
     </div>
   </div>

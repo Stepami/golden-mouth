@@ -5,6 +5,7 @@ import { blankWorld } from '../app/worldDraft'
 import { dramaOptions } from '../app/worldPrototype'
 import { avatarUri } from '../ui/avatarRenderer'
 import { VoiceCoverEditor, type VoiceCover } from './ownWorldCover'
+import { exampleWorldDetails } from './ownWorldExample'
 import './ownWorldFullEditor.css'
 
 type VoiceSummary = {
@@ -67,29 +68,10 @@ function applyQuickEdits(draft: VoiceDraft, summary: VoiceSummary): VoiceDraft {
 function exampleWorld(summary: VoiceSummary): VoiceDraft {
   return applyQuickEdits({
     ...blankWorld(),
-    emoji: '☁️',
-    summary: 'Почта и тайны летающих островов',
-    title: 'Город над облаками',
-    description: 'На летающих островах новости разносят почтальоны. В старых картах остались маршруты, которыми давно никто не пользуется.',
-    where: 'Архипелаг летающих островов',
-    name: 'Рин',
-    avatar: 'cloud-courier-rin',
-    avatarStyle: 'adventurer',
-    role: 'Воздушный почтальон',
+    ...exampleWorldDetails,
     people: summary.people,
     portraitSeeds: {},
-    voice: 'Живо, с любопытством и лёгким юмором',
-    firstPrompt: 'Кто из подписчиков помнит путь к острову с посылки?',
-    roles: ['Воздушный почтальон', 'Смотритель маяка', 'Собиратель старых карт'],
-    voices: ['Живо, с лёгким юмором', 'Как в путевом дневнике'],
-    postIdeas: ['У меня посылка для острова, которого нет на картах…', 'На рассвете попробую проверить старый маршрут…'],
-    demoPosts: ['На посылке адрес острова, который исчез сто лет назад. Может, у кого-то осталась старая карта?'],
     achievements: achievementCards.map(([id, emoji, title]) => ({ id, emoji, title, open: false })),
-    stars: [
-      { id: 'lis', name: 'Лис', role: 'Картограф', about: 'Хранит старые карты и знает про исчезнувшие маршруты больше, чем говорит.', voice: 'Сдержанно, с сухим юмором', avatarSeed: 'cloud-cartographer-lis', trait: 2 },
-      { id: 'mika', name: 'Мика', role: 'Смотритель маяка', about: 'Каждое утро отмечает в журнале острова, которые видны с башни.', voice: 'Тепло, короткими фразами', avatarSeed: 'cloud-lighthouse-mika', trait: 4 },
-      { id: 'ruta', name: 'Рута', role: 'Диспетчер воздушных маршрутов', about: 'Проверяет маршруты на рассвете и первой замечает, когда рейс исчезает из журнала.', voice: 'Коротко и точно, как в рации', avatarSeed: 'cloud-dispatcher-ruta', trait: 10 },
-    ],
   }, summary)
 }
 

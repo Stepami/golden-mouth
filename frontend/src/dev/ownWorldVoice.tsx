@@ -7,19 +7,7 @@ import { VoiceOwnWorldPlay } from './ownWorldPlayPreview'
 import { suggestVoiceCover, VoiceCoverImage, type VoiceCover } from './ownWorldCover'
 import { VoiceJourneyHint, VoiceUnlockPreview, VoiceWorldNav, VoiceWorldsPreview } from './ownWorldJourney'
 
-const story = 'Я доставляю письма в городе над облаками. Сегодня картограф Лис нашёл посылку с адресом острова, который исчез сто лет назад. Летать между островами можно только на рассвете.'
-const prompts = [
-  { icon: '🌍', label: 'Место', example: 'Город над облаками' },
-  { icon: '👥', label: 'Герои', example: 'Курьер и картограф' },
-  { icon: '⚡', label: 'Завязка', example: 'Пришла странная посылка' },
-  { icon: '📜', label: 'Правило', example: 'Полёты только на рассвете' },
-]
-const sampleDraft = {
-  title: 'Город над облаками',
-  opening: 'Город стоит на летающих островах. Сегодня нашлась посылка с адресом острова, который исчез сто лет назад.',
-  people: 'Ты доставляешь письма между островами. Картограф Лис знает старые маршруты и приносит тебе странную посылку.',
-  rules: 'Перелетать между островами можно только на рассвете.',
-}
+import { exampleDraft as sampleDraft, examplePrompts as prompts, exampleStory as story } from './ownWorldExample'
 
 function release(stream: MediaStream) {
   stream.getTracks().forEach(track => track.stop())

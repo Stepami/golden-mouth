@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ComponentProps, type ReactNode } from 'react'
 import { VoicePortraits, voicePortraitSeed } from './ownWorldFullEditor'
+import { exampleReaction } from './ownWorldExample'
 import './ownWorldPlayPreview.css'
 import { VoiceCoverImage, type VoiceCover } from './ownWorldCover'
 
@@ -75,7 +76,7 @@ export function VoiceOwnWorldPlay({ step, draft, cover, postText, publishedText,
     {hero && <section className="post-result-reaction voice-play-reaction">
       <h2>Пример реакции</h2>
       <VoicePortraits draft={{ ...draft, name: hero.name, role: hero.role, avatar: hero.avatarSeed || hero.id, portraitSeeds: { player: voicePortraitSeed(draft, hero.id, hero.avatarSeed || hero.id) }, stars: [] }} />
-      <p>Зацепило. Если решишь разобраться, дай знать. Мне тоже интересно, что там на самом деле.</p>
+      <p>{hero.id === 'mai' ? exampleReaction : 'На записи лица не видно. Я бы сначала спросил у тех, кто был на улице.'}</p>
     </section>}
     <button className="btn" type="button" onClick={onChannel}>К каналу</button>
   </main>
