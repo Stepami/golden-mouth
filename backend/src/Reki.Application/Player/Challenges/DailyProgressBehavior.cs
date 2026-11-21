@@ -1,5 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Reki.Application.Balance;
 using Reki.Application.RekiContext;
 
 namespace Reki.Application.Player.Challenges;
@@ -8,6 +10,8 @@ internal sealed partial class DailyProgressBehavior<TCommand, TResponse>(
     IStateComparer<TCommand, TResponse> comparer,
     IRekiContextAccessor contextAccessor,
     IPlayerRepository players,
+    IUnitOfWork unitOfWork,
+    IOptionsMonitor<GameBalance> balance,
     TimeProvider timeProvider,
     ILogger<DailyProgressBehavior<TCommand, TResponse>> logger) : IPipelineBehavior<TCommand, TResponse>
     where TCommand : ITrackDailyProgress
@@ -21,7 +25,7 @@ internal sealed partial class DailyProgressBehavior<TCommand, TResponse>(
         var day = player.DailyChallenge.Day;
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
-        if (day != today || day != player.DailyChallenge.Day || player.DailyChallenge.IsCompleted)
+        if (day != today || player.DailyChallenge.IsCompleted)
         {
             return await next(message, cancellationToken);
         }
@@ -37,14 +41,32 @@ internal sealed partial class DailyProgressBehavior<TCommand, TResponse>(
         }
 
         var response = await next(message, cancellationToken);
+        if (continuation == EmptyStateComparerContinuation<TCommand, TResponse>.Instance)
+        {
+            return response;
+        }
 
         try
         {
-            var previousVersion = player.Version;
-            if (await continuation.ApplyAsync(response, player, cancellationToken))
-            {
-                await players.SaveDailyChallengeAsync(player, previousVersion, cancellationToken);
-            }
+            await unitOfWork.ExecuteAsync(
+                async token =>
+                {
+                    var current = await players.GetPlayerAsync(player.Id, token);
+                    if (current is null || current.DailyChallenge.Day != day || current.DailyChallenge.IsCompleted ||
+                        !await continuation.ApplyAsync(response, current, token))
+                    {
+                        return Unit.Value;
+                    }
+
+                    if (current.DailyChallenge.IsCompleted)
+                    {
+                        current.ReplenishCrystals(balance.CurrentValue.Bonuses.ChallengeCrystals);
+                    }
+
+                    await players.ReplacePlayerAsync(current, token);
+                    return Unit.Value;
+                },
+                cancellationToken);
         }
         catch (Exception exception)
         {

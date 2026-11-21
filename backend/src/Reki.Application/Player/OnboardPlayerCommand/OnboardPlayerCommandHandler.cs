@@ -1,10 +1,12 @@
 using Mediator;
 using Microsoft.Extensions.Options;
 using Reki.Application.Balance;
+using Reki.Application.Bonuses;
 using Reki.Application.Exceptions;
 using Reki.Application.Invites;
 using Reki.Application.Player.UpdateLastSeenAtCommand;
 using Reki.Application.Telemetry;
+using Reki.Domain.Bonuses;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
 
@@ -14,6 +16,7 @@ internal sealed class OnboardPlayerCommandHandler(
     IUnitOfWork unitOfWork,
     IInvitationRepository invitationRepository,
     IPlayerRepository playerRepository,
+    IBonusRepository bonuses,
     ISender sender,
     IOptionsMonitor<GameBalance> balance,
     TimeProvider timeProvider,
@@ -54,6 +57,12 @@ internal sealed class OnboardPlayerCommandHandler(
             async token =>
             {
                 await playerRepository.CreatePlayerAsync(completed, token);
+                var rewards = currentBalance.Bonuses;
+                await bonuses.SaveBonus(
+                    new ViralCardBonus(BonusId.New(), playerId, rewards.ViralCardMultiplier),
+                    token);
+                await bonuses.SaveBonus(new FlopGuardBonus(BonusId.New(), playerId, rewards.FlopGuardViews), token);
+                await bonuses.SaveBonus(new CrystalsBonus(BonusId.New(), playerId, rewards.OnboardingCrystals), token);
                 if (inviter is not null)
                 {
                     var invite = Invitation.Create(

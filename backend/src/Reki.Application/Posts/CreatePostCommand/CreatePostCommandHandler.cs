@@ -65,60 +65,103 @@ internal sealed class CreatePostCommandHandler(
         var (score, commenter) = await progressionCalculator.ScoreAsync(world, draft, command.OwnWords);
         var embedding = await postEmbedder.GenerateVectorAsync(draft, cancellationToken: cancellationToken);
 
-        var (post, progression, updated, updatedWorld, previousSkillLevels, previousAchievements) = await unitOfWork.ExecuteAsync(
-            async token =>
-            {
-                var currentPlayer = await players.GetPlayerAsync(playerId, token)
-                                    ?? throw new ResourceNotFoundException("Player not found.");
-                var currentWorld = await worlds.GetWorldAsync(playerId, world.Id, token)
-                                   ?? throw new ResourceNotFoundException("World not found.");
-                if (currentPlayer.Wallet.Energy < currentBalance.PostEnergyCost)
+        var (post, progression, updated, updatedWorld, previousSkillLevels, previousAchievements) =
+            await unitOfWork.ExecuteAsync(
+                async token =>
                 {
-                    throw new RequestConflictException("Not enough energy to publish a post.");
-                }
-
-                var savedPost = CreateDraft();
-                var outcome = PostProgressionCalculator.GetOutcome(currentWorld, savedPost, score, currentBalance);
-                var bonus = !outcome.IsRepost && !outcome.Viral
-                    ? await ClaimPostBonusAsync(playerId, outcome.Flop, now, token)
-                    : null;
-                var appliedProgression = PostProgressionCalculator.Calculate(
-                    currentPlayer, currentWorld, command.OwnWords, outcome, score, commenter, bonus, currentBalance);
-                savedPost.ApplyProgress(appliedProgression);
-
-                var skillLevelsBefore = currentPlayer.Skills.ToDictionary(item => item.Key, item => item.Value.Level);
-                var achievementsBefore = currentWorld.Player.Achievements.Where(item => item.IsOpen)
-                    .Select(item => item.Id).ToHashSet();
-                var publishedWorld = currentWorld.PublishPost(appliedProgression);
-                var hitOwnMilestone = currentPlayer.HitOwnWorldMilestone ||
-                                      publishedWorld.Player.Subscribers >= currentBalance.OwnWorldSubscribers;
-                var updatedPlayer = currentPlayer.SpendPost(
-                    appliedProgression.Skills, currentBalance.PostEnergyCost, now, hitOwnMilestone);
-
-                var invite = await invitationRepository.GetPendingInviteAsync(playerId, token);
-                var updatedInvite = invite?.UseInviteeBonus(now).UseInviterBonus(now);
-                updatedPlayer.ReplenishCrystals(updatedInvite?.BonusAmount ?? 0);
-                await players.ReplacePlayerAsync(updatedPlayer, token);
-                await worlds.ReplaceWorldAsync(publishedWorld, token);
-                if (updatedInvite is not null)
-                {
-                    var inviter = await players.GetPlayerAsync(updatedInvite.InviterId, token);
-                    if (inviter is not null)
+                    var currentPlayer = await players.GetPlayerAsync(playerId, token)
+                                        ?? throw new ResourceNotFoundException("Player not found.");
+                    var currentWorld = await worlds.GetWorldAsync(playerId, world.Id, token)
+                                       ?? throw new ResourceNotFoundException("World not found.");
+                    if (currentPlayer.Wallet.Energy < currentBalance.PostEnergyCost)
                     {
-                        await players.ReplacePlayerAsync(inviter.AwardReferral(), token);
+                        throw new RequestConflictException("Not enough energy to publish a post.");
                     }
 
-                    await invitationRepository.UseInviteBonusAsync(updatedInvite, token);
-                }
+                    var savedPost = CreateDraft();
+                    var outcome = PostProgressionCalculator.GetOutcome(currentWorld, savedPost, score, currentBalance);
+                    var bonus = !outcome.IsRepost && !outcome.Viral
+                        ? await ClaimPostBonusAsync(playerId, outcome.Flop, now, token)
+                        : null;
+                    var appliedProgression = PostProgressionCalculator.Calculate(
+                        currentPlayer,
+                        currentWorld,
+                        command.OwnWords,
+                        outcome,
+                        score,
+                        commenter,
+                        bonus,
+                        currentBalance);
+                    savedPost.ApplyProgress(appliedProgression);
 
-                await posts.InsertPostAsync(savedPost, embedding, token);
-                return (Post: savedPost, Progression: appliedProgression, Player: updatedPlayer, World: publishedWorld,
-                    PreviousSkillLevels: skillLevelsBefore, PreviousAchievements: achievementsBefore);
-            },
-            publication => worldCache.UpdateWorld(publication.World),
-            cancellationToken);
+                    var skillLevelsBefore =
+                        currentPlayer.Skills.ToDictionary(item => item.Key, item => item.Value.Level);
+                    var achievementsBefore = currentWorld.Player.Achievements.Where(item => item.IsOpen)
+                        .Select(item => item.Id).ToHashSet();
+                    var publishedWorld = currentWorld.PublishPost(appliedProgression);
+                    var hitOwnMilestone = currentPlayer.HitOwnWorldMilestone ||
+                                          publishedWorld.Player.Subscribers >= currentBalance.OwnWorldSubscribers;
+                    var updatedPlayer = currentPlayer.SpendPost(
+                        appliedProgression.Skills, currentBalance.PostEnergyCost, now, hitOwnMilestone);
+
+                    var rewards = currentBalance.Bonuses;
+                    var earnedLevels = updatedPlayer.Skills.Sum(item =>
+                        Math.Max(0, item.Value.Level - skillLevelsBefore[item.Key]));
+                    var crystals = earnedLevels * rewards.SkillLevelCrystals;
+                    if (updatedPlayer.PublishedPostCount % rewards.PostInterval == 0)
+                    {
+                        crystals += rewards.PostIntervalCrystals;
+                    }
+
+                    if (savedPost.Viral)
+                    {
+                        crystals += rewards.ViralPostCrystals;
+                    }
+
+                    var invite = await invitationRepository.GetPendingInviteAsync(playerId, token);
+                    updatedPlayer.ReplenishCrystals(crystals + (invite?.BonusAmount ?? 0));
+                    await players.ReplacePlayerAsync(updatedPlayer, token);
+                    await worlds.ReplaceWorldAsync(publishedWorld, token);
+                    if (invite is not null)
+                    {
+                        var inviter = invite.InviterBonusUsed
+                            ? null
+                            : await players.GetPlayerAsync(invite.InviterId, token);
+                        if (inviter is not null)
+                        {
+                            await players.ReplacePlayerAsync(inviter.AwardReferral(), token);
+                            var activeUntil = now.AddHours(rewards.BoosterHours);
+                            if (await GetActiveBoosterAsync(inviter.Id, now, token) is not null)
+                            {
+                                activeUntil = activeUntil.AddDays(rewards.BoosterExtensionDays);
+                            }
+
+                            await bonuses.SaveBonus(
+                                new PostBoosterBonus(BonusId.New(), inviter.Id, activeUntil),
+                                token);
+                        }
+
+                        await invitationRepository.UseInviteBonusAsync(
+                            invite.UseInviteeBonus(now).UseInviterBonus(now),
+                            token);
+                    }
+
+                    await posts.InsertPostAsync(savedPost, embedding, token);
+                    return (Post: savedPost, Progression: appliedProgression, Player: updatedPlayer,
+                        World: publishedWorld,
+                        PreviousSkillLevels: skillLevelsBefore, PreviousAchievements: achievementsBefore);
+                },
+                publication => worldCache.UpdateWorld(publication.World),
+                cancellationToken);
         telemetry.TrackWorldAudience(updatedWorld);
-        TrackProgression(previousSkillLevels, previousAchievements, updated, updatedWorld, post, progression.Score, telemetry);
+        TrackProgression(
+            previousSkillLevels,
+            previousAchievements,
+            updated,
+            updatedWorld,
+            post,
+            progression.Score,
+            telemetry);
         await feedScheduler.ScheduleFeedAsync(new ScheduleFromPostRequest(playerId, world.Id, post.Id));
         var headline = post.Viral ? "Пост залетел" : "Канал растёт";
         var reason = progression.Score.FlopReason switch

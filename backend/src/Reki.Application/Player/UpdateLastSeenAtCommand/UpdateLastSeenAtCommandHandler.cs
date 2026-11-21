@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Caching.Memory;
+using Reki.Application.Exceptions;
 using Reki.Application.Notifications;
 using Reki.Domain.Notifications;
 
@@ -22,12 +23,13 @@ internal sealed class UpdateLastSeenAtCommandHandler(
         }
 
         var now = timeProvider.GetUtcNow();
-        var oldLastSeenAt = command.Player.LastSeenAt;
-        var player = command.Player.UpdateLastSeenAt(now);
-
         await unitOfWork.ExecuteAsync(
             async token =>
             {
+                var player = await players.GetPlayerAsync(command.Player.Id, token)
+                             ?? throw new ResourceNotFoundException("Player not found.");
+                var oldLastSeenAt = player.LastSeenAt;
+                player.UpdateLastSeenAt(now);
                 await players.ReplacePlayerAsync(player, token);
                 if (player.NotificationChannels.Count <= 0)
                 {

@@ -34,16 +34,16 @@ public sealed class PlayerController(
     [ActionName("GetCurrentPlayer")]
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
-        var player = await rekiContext.Player;
-        await sender.Send(new UpdateStreak(player.Id), cancellationToken);
-        await sender.Send(new RefreshDailyChallenge(player), cancellationToken);
-        await sender.Send(new UpdateLastSeenAt(player), cancellationToken);
-        return TypedResults.Ok(player.ToPlayerResponse());
+        var player = await sender.Send(new UpdateStreak(rekiContext.PlayerId), cancellationToken);
+        var refreshed = await sender.Send(new RefreshDailyChallenge(player), cancellationToken);
+        await sender.Send(new UpdateLastSeenAt(refreshed), cancellationToken);
+        return TypedResults.Ok(refreshed.ToPlayerResponse());
     }
 
     [HttpGet("me/streak", Name = "GetPlayerStreak")]
     public async Task<Ok<PlayerStreakResponse>> GetPlayerStreakAsync(CancellationToken cancellationToken) =>
-        TypedResults.Ok((await sender.Send(new PlayerStreakQuery(rekiContext.PlayerId), cancellationToken)).ToPlayerStreakResponse());
+        TypedResults.Ok((await sender.Send(new PlayerStreakQuery(rekiContext.PlayerId), cancellationToken))
+            .ToPlayerStreakResponse());
 
     [HttpPost("me/energy/exchange", Name = "ExchangeEnergy")]
     public async Task<Ok<EnergyExchangeResponse>> ExchangeEnergyAsync(CancellationToken cancellationToken)
