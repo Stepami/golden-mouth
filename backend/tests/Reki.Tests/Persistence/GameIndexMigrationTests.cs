@@ -41,19 +41,16 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         var players = database.GetCollection<BsonDocument>("players");
         await players.InsertManyAsync([LegacyPlayer(author, 13), LegacyPlayer(inactive, 4)]);
         var bonuses = database.GetCollection<Bonus>("bonuses");
-        using var session = await mongo.MongoClient.StartSessionAsync();
-        var migration = new GrantExistingPlayerBonuses();
+        var options = new RekiMigrationOptions(Options.Create(new MongoOptions { DatabaseName = database.DatabaseNamespace.DatabaseName }));
+        var migrator = MigratorBuilder.FromMongoClient(mongo.MongoClient, options)
+            .LoadMigrations([new GrantExistingPlayerBonuses()]).Build();
 
         // Act
-        session.StartTransaction();
-        await migration.UpAsync(database, session, CancellationToken.None);
-        await session.CommitTransactionAsync();
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
         var initial = await bonuses.Find(FilterDefinition<Bonus>.Empty).ToListAsync();
         var card = initial.OfType<ViralCardBonus>().First(bonus => bonus.PlayerId == author);
         await bonuses.UpdateOneAsync(bonus => bonus.Id == card.Id, Builders<Bonus>.Update.Set(bonus => bonus.IsClaimed, true));
-        session.StartTransaction();
-        await migration.UpAsync(database, session, CancellationToken.None);
-        await session.CommitTransactionAsync();
+        await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
 
         // Assert
         await Assert.That(initial.Count).IsEqualTo(12);

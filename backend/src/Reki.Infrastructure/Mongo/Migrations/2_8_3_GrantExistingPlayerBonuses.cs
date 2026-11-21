@@ -28,41 +28,25 @@ internal sealed class GrantExistingPlayerBonuses : RekiMigrationBase
         using var cursor = await players.Find(session, FilterDefinition<PlayerProfile>.Empty)
             .Project(player => player.Id)
             .ToCursorAsync(cancellationToken);
-        while (await cursor.MoveNextAsync(cancellationToken))
+        await foreach (var playerId in cursor.ToAsyncEnumerable().WithCancellation(cancellationToken))
         {
-            var playerIds = cursor.Current.ToArray();
-            var grantIds = playerIds.Select(playerId => BonusId.From(playerId.Value));
-            var existing = await bonuses
-                .Find(session, Builders<Bonus>.Filter.In(bonus => bonus.Id, grantIds))
-                .Project(bonus => bonus.Id)
-                .ToListAsync(cancellationToken);
-            var granted = existing.ToHashSet();
-            var pending = playerIds.Where(playerId => !granted.Contains(BonusId.From(playerId.Value))).ToArray();
-            if (pending.Length == 0)
-            {
-                continue;
-            }
-
-            var update = Builders<PlayerProfile>.Update
-                .Inc(player => player.Wallet.Crystals, 2)
-                .Inc(player => player.Version, 1);
-            await players.UpdateManyAsync(
+            await bonuses.InsertManyAsync(
                 session,
-                Builders<PlayerProfile>.Filter.In(player => player.Id, pending),
-                update,
+                [
+                    new ViralCardBonus(BonusId.New(), playerId, 5),
+                    new ViralCardBonus(BonusId.New(), playerId, 5),
+                    new ViralCardBonus(BonusId.New(), playerId, 5),
+                    new FlopGuardBonus(BonusId.New(), playerId, 10),
+                    new FlopGuardBonus(BonusId.New(), playerId, 10),
+                    new FlopGuardBonus(BonusId.New(), playerId, 10),
+                ],
                 cancellationToken: cancellationToken);
-            await bonuses.InsertManyAsync(session, pending.SelectMany(GetGrant), cancellationToken: cancellationToken);
         }
-    }
 
-    private static Bonus[] GetGrant(PlayerId playerId) =>
-    [
-        // The first card doubles as the per-player grant marker and is retained after being claimed.
-        new ViralCardBonus(BonusId.From(playerId.Value), playerId, 5),
-        new ViralCardBonus(BonusId.New(), playerId, 5),
-        new ViralCardBonus(BonusId.New(), playerId, 5),
-        new FlopGuardBonus(BonusId.New(), playerId, 10),
-        new FlopGuardBonus(BonusId.New(), playerId, 10),
-        new FlopGuardBonus(BonusId.New(), playerId, 10),
-    ];
+        await players.UpdateManyAsync(
+            session,
+            FilterDefinition<PlayerProfile>.Empty,
+            Builders<PlayerProfile>.Update.Inc(player => player.Wallet.Crystals, 2).Inc(player => player.Version, 1),
+            cancellationToken: cancellationToken);
+    }
 }
