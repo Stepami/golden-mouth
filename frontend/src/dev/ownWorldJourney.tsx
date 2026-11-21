@@ -1,7 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ComponentProps } from 'react'
 import { TABS } from '../app/nav'
 import eveningCover from '../assets/evening-640-v4.webp'
 import { VoiceCoverImage, type VoiceCover } from './ownWorldCover'
+import { VoicePortraits } from './ownWorldFullEditor'
+import skyWorld from './own-world-sky-example.webp'
 import './ownWorldJourney.css'
 
 const cues = {
@@ -44,10 +46,44 @@ export function VoiceWorldNav({ active, onWorlds, onChannel }: {
   </nav>
 }
 
-export function VoiceWorldsPreview({ unlocked, savedWorld, cover, onUnlock, onCreate, onOpenWorld }: {
+type FeatureDraft = ComponentProps<typeof VoicePortraits>['draft']
+
+function VoiceWorldFeature({ draft }: { draft: FeatureDraft }) {
+  return <div className="voice-world-feature">
+    <figure className="voice-feature-art">
+      <img src={skyWorld} alt="Город на летающих островах над облаками" />
+      <div className="voice-feature-record" aria-hidden="true">
+        <div className="voice-feature-mic">
+          <svg viewBox="0 0 24 24">
+            <rect x="9" y="3" width="6" height="11" rx="3" />
+            <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5v4M8.5 21.5h7" />
+          </svg>
+        </div>
+        <div className="voice-feature-waves"><i /><i /><i /><i /><i /></div>
+      </div>
+      <figcaption>Город над облаками</figcaption>
+    </figure>
+    <p className="voice-feature-title">Расскажи идею. Играй в своём мире.</p>
+    <div className="voice-feature-outputs">
+      <div className="voice-feature-output">
+        <div className="voice-feature-cast" aria-hidden="true"><VoicePortraits draft={{ ...draft, stars: draft.stars.slice(0, 2) }} /></div>
+        <b>Свои герои</b>
+        <span className="small muted">Ответят на посты</span>
+      </div>
+      <div className="voice-feature-output">
+        <div className="voice-feature-post" aria-hidden="true"><span>✎</span><div><i /><i /></div></div>
+        <b>Свой канал</b>
+        <span className="small muted">С идеей первого поста</span>
+      </div>
+    </div>
+  </div>
+}
+
+export function VoiceWorldsPreview({ unlocked, savedWorld, cover, draft, onUnlock, onCreate, onOpenWorld }: {
   unlocked: boolean
   savedWorld: { title: string; summary?: string } | null
   cover: VoiceCover | null
+  draft: FeatureDraft
   onUnlock: () => void
   onCreate: () => void
   onOpenWorld: () => void
@@ -85,8 +121,8 @@ export function VoiceWorldsPreview({ unlocked, savedWorld, cover, onUnlock, onCr
           <h2>Свой мир</h2>
           <span className="small muted">{unlocked ? 'Открыт' : '🔒 Закрыт'}</span>
         </div>
+        <VoiceWorldFeature draft={draft} />
         {unlocked ? <>
-          <p>Придумай место, героев и начало истории.</p>
           <button type="button" className="btn" onClick={onCreate}>Создать свой мир</button>
         </> : <>
           <div className="own-unlock-goal"><b>Пригласи 1 друга</b><span>0/1</span></div>

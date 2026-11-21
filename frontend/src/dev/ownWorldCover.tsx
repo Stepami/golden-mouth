@@ -2,13 +2,15 @@ import { useId, useState } from 'react'
 import evening from '../assets/evening-960-v4.webp'
 import houses from '../assets/houses-960-v4.webp'
 import offices from '../assets/it-960-v4.webp'
+import skyWorld from './own-world-sky-example.webp'
 import './ownWorldCover.css'
 
 export type VoiceCover = { url: string; x: number; y: number }
 
 const library = [
   { title: 'Вечерний город', url: evening },
-  { title: 'Северный замок', url: houses, tags: /замок|север|снег|королев|остров|облак|магия/i },
+  { title: 'Город над облаками', url: skyWorld, tags: /облак|летающ|дирижаб/i },
+  { title: 'Северный замок', url: houses, tags: /замок|север|снег|королев|остров|магия/i },
   { title: 'Большой офис', url: offices, tags: /офис|стартап|технолог|програм|работа/i },
 ]
 
