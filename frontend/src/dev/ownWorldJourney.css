@@ -19,6 +19,25 @@
   margin: 0 0 8px;
 }
 
+.voice-worlds-heading {
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.voice-worlds-heading h2 {
+  margin: 0;
+}
+
+.voice-worlds-heading .text-link {
+  min-height: 44px;
+  padding: 8px 0;
+}
+
+.voice-worlds-saved {
+  display: grid;
+  gap: 12px;
+}
+
 .voice-worlds-catalog .voice-preset-catalog {
   margin-bottom: 0;
 }
@@ -144,7 +163,7 @@
 .voice-feature-art::after {
   z-index: -1;
   content: '';
-  background: linear-gradient(180deg, transparent 12%, #0e0e1329 37%, #0e0e13c9 77%, #13131b 100%);
+  background: linear-gradient(180deg, transparent 8%, #0e0e1345 30%, #0e0e13b8 50%, #0e0e13e0 78%, #13131b 100%);
 }
 
 .voice-feature-art figcaption > span {

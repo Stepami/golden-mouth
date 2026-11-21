@@ -9,42 +9,43 @@ type PlayProps = {
   draft: ComponentProps<typeof VoicePortraits>['draft']
   cover: VoiceCover | null
   postText: string
+  posts: string[]
   publishedText: string
   hint?: ReactNode
   onText: (text: string) => void
   onCompose: () => void
   onPublish: () => void
   onChannel: () => void
-  onRead: () => void
+  onRead: (index: number) => void
 }
 
-export function VoiceOwnWorldPlay({ step, draft, cover, postText, publishedText, hint, onText, onCompose, onPublish, onChannel, onRead }: PlayProps) {
+export function VoiceOwnWorldPlay({ step, draft, cover, postText, posts, publishedText, hint, onText, onCompose, onPublish, onChannel, onRead }: PlayProps) {
   const heading = useRef<HTMLHeadingElement>(null)
   useEffect(() => { heading.current?.focus({ preventScroll: true }) }, [step])
+  const firstPost = posts.length === 0
 
   if (step === 'channel') return <main className="pad voice-play">
     {cover && <VoiceCoverImage cover={cover} />}
     <h1 ref={heading} tabIndex={-1}>{draft.title.trim() || 'Мой мир'}</h1>
     <div className="voice-play-cast"><VoicePortraits draft={draft} /></div>
-    {publishedText ? <>
-      <article className="card voice-play-card">
-        <h2>Твой первый пост</h2>
-        <p className="voice-published-text">{publishedText}</p>
-      </article>
-      <button className="btn" type="button" onClick={onRead}>Открыть пост</button>
-    </> : <>
+    {firstPost && <>
       {draft.firstContext.trim() && <section className="card first-story voice-play-context">
         <h2>Сегодня всё начинается</h2>
         <p className="first-story-context">{draft.firstContext}</p>
       </section>}
       {hint}
-      <button className="btn" type="button" onClick={onCompose}>Написать первый пост</button>
     </>}
+    <button className="btn" type="button" onClick={onCompose}>{firstPost ? 'Написать первый пост' : 'Написать пост'}</button>
+    {posts.map((text, index) => <article className="card voice-play-card" key={index}>
+      <h2>{index === 0 ? 'Твой первый пост' : `Пост ${index + 1}`}</h2>
+      <p className="voice-published-text">{text}</p>
+      <button className="text-link" type="button" onClick={() => onRead(index)}>Открыть пост</button>
+    </article>)}
   </main>
 
   if (step === 'compose') return <main className="pad voice-play">
-    <h1 ref={heading} tabIndex={-1}>Первый пост</h1>
-    {draft.firstPrompt.trim() && <aside className="compose-topic voice-play-prompt">
+    <h1 ref={heading} tabIndex={-1}>{firstPost ? 'Первый пост' : 'Новый пост'}</h1>
+    {firstPost && draft.firstPrompt.trim() && <aside className="compose-topic voice-play-prompt">
       <b className="small">О чём написать</b>
       <p>{draft.firstPrompt}</p>
     </aside>}

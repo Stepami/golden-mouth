@@ -64,28 +64,33 @@ function VoiceWorldFeature() {
   </figure>
 }
 
-export function VoiceWorldsPreview({ unlocked, savedWorld, cover, onUnlock, onCreate, onOpenWorld }: {
+export function VoiceWorldsPreview({ unlocked, savedWorlds, onUnlock, onCreate, onOpenWorld, onChannel }: {
   unlocked: boolean
-  savedWorld: { title: string; summary?: string } | null
-  cover: VoiceCover | null
+  savedWorlds: { draft: { title: string; summary: string }; cover: VoiceCover | null }[]
   onUnlock: () => void
   onCreate: () => void
-  onOpenWorld: () => void
+  onOpenWorld: (index: number) => void
+  onChannel?: () => void
 }) {
   return <>
     <main className="pad worlds-home voice-worlds-catalog">
-      {savedWorld && <section>
-        <h2>Мои истории</h2>
-        <article className="world-cover-card voice-journey-world-card">
-          <div className="world-cover-image">
-            {cover ? <VoiceCoverImage cover={cover} /> : <div className="voice-journey-cover-empty" aria-hidden="true">🌍</div>}
-          </div>
-          <div className="world-cover-copy">
-            <h3>{savedWorld.title.trim() || 'Мой мир'}</h3>
-            {savedWorld.summary?.trim() && <p>{savedWorld.summary}</p>}
-            <button type="button" className="text-link" onClick={onOpenWorld}>Открыть мир</button>
-          </div>
-        </article>
+      {savedWorlds.length > 0 && <section>
+        <div className="row voice-worlds-heading">
+          <h2>Мои истории</h2>
+          <button type="button" className="text-link" onClick={onCreate}>Создать свой мир</button>
+        </div>
+        <div className="voice-worlds-saved">
+          {savedWorlds.map(({ draft, cover }, index) => <article className="world-cover-card voice-journey-world-card" key={index}>
+            <div className="world-cover-image">
+              {cover ? <VoiceCoverImage cover={cover} /> : <div className="voice-journey-cover-empty" aria-hidden="true">🌍</div>}
+            </div>
+            <div className="world-cover-copy">
+              <h3>{draft.title.trim() || 'Мой мир'}</h3>
+              {draft.summary.trim() && <p>{draft.summary}</p>}
+              <button type="button" className="text-link" onClick={() => onOpenWorld(index)}>Открыть мир</button>
+            </div>
+          </article>)}
+        </div>
       </section>}
       <section>
         <h2>Выбери новую историю</h2>
@@ -105,7 +110,7 @@ export function VoiceWorldsPreview({ unlocked, savedWorld, cover, onUnlock, onCr
           })}
         </div>
       </section>
-      {!savedWorld && <section className="card own-world-unlock">
+      {savedWorlds.length === 0 && <section className="card own-world-unlock">
         <div className="row voice-journey-unlock-heading">
           <h2>Свой мир</h2>
           <span className="small muted voice-world-access">
@@ -133,7 +138,7 @@ export function VoiceWorldsPreview({ unlocked, savedWorld, cover, onUnlock, onCr
         </div>
       </section>}
     </main>
-    <VoiceWorldNav active="worlds" onChannel={savedWorld ? onOpenWorld : undefined} />
+    <VoiceWorldNav active="worlds" onChannel={onChannel} />
   </>
 }
 
