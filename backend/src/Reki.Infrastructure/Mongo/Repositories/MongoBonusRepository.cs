@@ -11,10 +11,8 @@ internal sealed class MongoBonusRepository(
 {
     private readonly IMongoCollection<Bonus> _bonuses = database.GetCollection<Bonus>(MongoCollections.Bonuses);
 
-#pragma warning disable AV1554 // Match the optional cancellation token in IBonusRepository.
     public async Task<TBonus?> GetActiveBonus<TBonus>(PlayerId id, CancellationToken ct = default)
         where TBonus : Bonus
-#pragma warning restore AV1554
     {
         var bonuses = _bonuses.OfType<TBonus>();
         var filter = Builders<TBonus>.Filter.Where(bonus => bonus.PlayerId == id && !bonus.IsClaimed);
