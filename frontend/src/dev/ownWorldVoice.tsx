@@ -7,23 +7,38 @@ import { VoiceOwnWorldPlay } from './ownWorldPlayPreview'
 import { suggestVoiceCover, VoiceCoverImage, type VoiceCover } from './ownWorldCover'
 import { VoiceJourneyHint, VoiceUnlockPreview, VoiceWorldNav, VoiceWorldsPreview } from './ownWorldJourney'
 
-import { exampleDraft as sampleDraft, examplePrompts as prompts, exampleStory as story } from './ownWorldExample'
+import { exampleDraft as sampleDraft, exampleStory as story } from './ownWorldExample'
+
+const prompts = [
+  { icon: '📍', label: 'Место', question: 'Где всё происходит?' },
+  { icon: '👥', label: 'Герои', question: 'За кого ты играешь и кто рядом?' },
+  { icon: '⚡', label: 'Завязка', question: 'Что случилось сегодня?' },
+  { icon: '📜', label: 'Правило', question: 'Какое правило здесь важно?' },
+]
 
 function release(stream: MediaStream) {
   stream.getTracks().forEach(track => track.stop())
 }
 
-function Recorder({ audio, onAudio, onText, onNext }: {
-  audio: string
-  onAudio: (url: string) => void
+function Recorder({ audio, onAudio, onText, onTranscribe }: {
+  audio: Blob | null
+  onAudio: (audio: Blob) => void
   onText: () => void
-  onNext: () => void
+  onTranscribe: () => void
 }) {
   const recorder = useRef<MediaRecorder | null>(null)
   const mounted = useRef(false)
   const [phase, setPhase] = useState<'idle' | 'permission' | 'recording' | 'stopping'>('idle')
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState('')
+  const playback = useRef<HTMLAudioElement>(null)
+
+  useEffect(() => {
+    if (!audio || phase !== 'idle' || !playback.current) return
+    const url = URL.createObjectURL(audio)
+    playback.current.src = url
+    return () => URL.revokeObjectURL(url)
+  }, [audio, phase])
 
   useEffect(() => {
     mounted.current = true
@@ -74,14 +89,13 @@ function Recorder({ audio, onAudio, onText, onNext }: {
         recorder.current = null
         setPhase('idle')
         if (chunks.length) {
-          onAudio(URL.createObjectURL(new Blob(chunks, { type: current.mimeType })))
+          onAudio(new Blob(chunks, { type: current.mimeType }))
         } else {
           setError('Запись получилась пустой. Попробуй ещё раз.')
         }
       }
       recorder.current = current
       current.start()
-      onAudio('')
       setElapsed(0)
       setPhase('recording')
     } catch (cause) {
@@ -114,26 +128,23 @@ function Recorder({ audio, onAudio, onText, onNext }: {
         <time>{clock}</time>
       </div>
     </div>}
-    {audio && <audio controls src={audio} aria-label="Прослушать запись" />}
+    {audio && phase === 'idle' && <audio ref={playback} controls aria-label="Прослушать запись" />}
     {error && <p className="voice-error" role="alert">{error}</p>}
     <button type="button" className="btn"
       disabled={busy}
-      onClick={recording ? stop : audio ? onNext : record}
+      onClick={recording ? stop : audio ? onTranscribe : record}
     >
       {!busy && !recording && !audio && <svg className="voice-mic" viewBox="0 0 20 20" aria-hidden="true">
         <rect x="7" y="2" width="6" height="10" rx="3" />
         <path d="M4 9a6 6 0 0 0 12 0M10 15v3M7 18h6" />
       </svg>}
       {phase === 'permission' ? 'Ждём доступ к микрофону…' : phase === 'stopping' ? 'Завершаем запись…'
-        : recording ? 'Остановить запись' : audio ? 'Далее' : 'Записать голос'}
+        : recording ? 'Остановить запись' : audio ? 'Расшифровать запись' : 'Начать запись'}
     </button>
-    <div className="voice-alternatives">
+    {phase === 'idle' && <div className="voice-alternatives">
       <button type="button" className="text-link" onClick={onText}>Напечатать историю</button>
-      {audio
-        ? <button type="button" className="text-link" disabled={busy} onClick={record}>Перезаписать</button>
-        : <button type="button" className="text-link" onClick={onNext}>Показать пример</button>}
-    </div>
-    <p className="small muted voice-note">Запись остаётся в этом браузере.</p>
+      {audio && <button type="button" className="text-link" onClick={record}>Перезаписать</button>}
+    </div>}
   </div>
 }
 
@@ -174,7 +185,7 @@ function App() {
   const [created, setCreated] = useState(false)
   const [typing, setTyping] = useState(false)
   const [text, setText] = useState('')
-  const [audio, setAudio] = useState('')
+  const [audio, setAudio] = useState<Blob | null>(null)
   const [transcript, setTranscript] = useState(story)
   const [draft, setDraft] = useState(sampleDraft)
   const [cover, setCover] = useState<VoiceCover | null>(null)
@@ -208,11 +219,6 @@ function App() {
   useEffect(() => {
     if (coverUrl?.startsWith('blob:')) return () => URL.revokeObjectURL(coverUrl)
   }, [coverUrl])
-
-  useEffect(() => {
-    if (!audio) return
-    return () => URL.revokeObjectURL(audio)
-  }, [audio])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -257,28 +263,33 @@ function App() {
     {page === 'unlock' && <VoiceUnlockPreview onCreate={() => setPage('story')} onLater={() => setPage('worlds')} />}
     {phase && <LoadingScreen phase={phase} />}
     {page === 'story' && <main className="pad voice-story">
-      <h1>Расскажи —<br />и окажись внутри</h1>
+      <h1>Расскажи про свой мир</h1>
+      <VoiceJourneyHint step={1} />
       <ul className="voice-prompts" aria-label="Что рассказать о мире">
-        {prompts.map(({ icon, label, example }) => <li className="card" key={label}>
+        {prompts.map(({ icon, label, question }) => <li className="card" key={label}>
           <span className="voice-prompt-icon" aria-hidden="true">{icon}</span>
           <b>{label}</b>
-          <span className="small muted">{example}</span>
+          <span className="small muted">{question}</span>
         </li>)}
       </ul>
-      <VoiceJourneyHint step={1} />
+      <details className="voice-story-example">
+        <summary className="text-link">Пример рассказа</summary>
+        <p>{story}</p>
+        {!text.trim() && <button type="button" className="text-link" onClick={() => { setText(story); setTyping(true) }}>Вставить в текст истории</button>}
+      </details>
       {typing ? <div className="voice-recorder">
         <label className="voice-field">
           Твоя история
           <textarea ref={textInput} rows={3} value={text} onChange={event => setText(event.target.value)} placeholder="Всё начинается в…" />
         </label>
         <button type="button" className="btn" disabled={!text.trim()} onClick={() => setPage('assembling')}>Собрать черновик</button>
-        <button type="button" className="text-link voice-choose-mode" onClick={() => setTyping(false)}>Записать голосом</button>
-      </div> : <Recorder audio={audio} onAudio={setAudio} onText={() => setTyping(true)} onNext={() => setPage('listening')} />}
+        <button type="button" className="text-link voice-choose-mode" onClick={() => setTyping(false)}>Перейти к записи</button>
+      </div> : <Recorder audio={audio} onAudio={setAudio} onText={() => setTyping(true)} onTranscribe={() => setPage('listening')} />}
     </main>}
     {page === 'transcript' && <main className="pad voice-review">
       <div className="voice-intro">
         <h1 ref={heading} tabIndex={-1}>Проверь, что получилось</h1>
-        <p className="muted">Это пример расшифровки. Здесь можно поправить имена и детали.</p>
+        <p className="muted">В превью здесь пример расшифровки. Текст можно изменить.</p>
       </div>
       <div className="card">
         <label className="voice-field">
