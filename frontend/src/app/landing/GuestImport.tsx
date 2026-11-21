@@ -9,6 +9,7 @@ import { trackLanding } from '../analytics'
 import { completeLandingPost } from './experiment'
 import { recordEntryStep } from './openobserve'
 import { completeGuestOnboarding } from '../GameOnboardingState'
+import { rememberDailyTaskPost } from '../dailyTaskIntro'
 import { pendingReferral } from '../referral'
 import { acceptedRegistrationConsent, readGuestHandoff, saveGuestHandoff, type GuestHandoff } from './guestHandoff'
 
@@ -134,6 +135,7 @@ async function transferGuestStory(birthYear?: number): Promise<Imported> {
   if (!completeGuestOnboarding(playerId, worldId, postId, state.claim === 'confirmed' ? 'confirmed' : state.claim === 'pending' ? 'uncertain' : undefined)) {
     throw new GuestImportError('Проверь хранилище браузера, чтобы завершить сохранение.')
   }
+  if (!post.repostId) rememberDailyTaskPost(playerId, post.id, true)
   return { player, post, notice }
 }
 

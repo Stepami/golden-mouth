@@ -229,7 +229,9 @@ function Stage() {
   const [banner, setBanner] = useState(true)
   const loadPage = useCallback((cursor: string | undefined, signal: AbortSignal) => api.channelPosts(p.worldInstanceId, cursor, signal), [p.worldInstanceId])
   const list = usePostPages<FeedItem>(cacheKey, loadPage)
-  const hasRegularPost = list.items.some(item => item.postId && !item.repostId)
+  const regularPosts = list.items.filter(item => item.postId && !item.repostId)
+  const hasRegularPost = regularPosts.length > 0
+  const firstPublishedPostId = list.ready && list.pending === null && !list.error && !list.hasNext && regularPosts.length === 1 ? regularPosts[0].postId : undefined
   useEffect(() => { if (hasRegularPost) nextStoryPostSaved(p.worldInstanceId ?? p.world) }, [hasRegularPost, p.worldInstanceId, p.world])
   const gestures = usePostListGestures(cacheKey, list, () => Promise.all([list.refresh(), refresh()]))
   const pullIndicator = <div className="post-list-pull" role="status" aria-hidden={!gestures.distance && !(list.pending === 'first' && list.ready)} style={{ height: list.pending === 'first' && list.ready ? 44 : gestures.distance }}>{list.pending === 'first' ? 'Обновляем…' : gestures.releaseToRefresh ? 'Отпусти, чтобы обновить' : 'Потяни вниз, чтобы обновить'}</div>
@@ -237,7 +239,7 @@ function Stage() {
   return (
     <div className="screen channel-screen post-list-screen" ref={gestures.screenRef}>
       {pullIndicator}
-      <ChannelHead />
+      <ChannelHead firstPublishedPostId={firstPublishedPostId} />
       <div className="pad">
         <Streak streak={p.streak} />
         {banner && p.subs >= 1000 && <Card style={{ marginBottom: 10, background: 'linear-gradient(135deg,#2A1A2E,#1E1A33)', border: '1px solid #FF6B8B55', position: 'relative' }}>
