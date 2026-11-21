@@ -1,6 +1,7 @@
 import { useGuestSession } from '../app/landing/guestSession'
 import { tap } from '../app/analytics'
-import { gameOnboardingState, onboardingPostSaved, onboardingReplyStarted, onboardingReplySaved, gameOnboardingActive, updateGameOnboarding, useGameOnboarding, nextStoryPostSaved } from '../app/GameOnboardingState'
+import { gameOnboardingState, onboardingPostSaved, onboardingReplyStarted, onboardingReplySaved, gameOnboardingActive, updateGameOnboarding, useGameOnboarding, nextStoryPostSaved, isGameOnboardingPreview, isNextStoryPreview } from '../app/GameOnboardingState'
+import { rememberDailyTaskPost } from '../app/dailyTaskIntro'
 import { NextStoryEditorHint } from '../app/NextStory'
 import { recordEntryStep } from '../app/landing/openobserve'
 import { RepostAction } from '../ui/RepostAction'
@@ -148,7 +149,8 @@ export function Live() {
     let active = true
     const start = setTimeout(() => { void (async () => {
       const dailyBaseline = dailyTaskBaseline(store.player!)
-      const firstPost = gameOnboardingState()?.phase === 'post' && !nav.params.repostId
+      const onboarding = gameOnboardingState()
+      const firstPost = onboarding?.phase === 'post' && !nav.params.repostId
       let created: Awaited<ReturnType<typeof api.createPost>>
       try {
         created = await api.createPost(text, nav.params.ownWords !== false, typeof nav.params.repostId === 'string' ? nav.params.repostId : undefined)
@@ -161,6 +163,9 @@ export function Live() {
       }
       if (!nav.params.repostId) {
         const worldId = p.worldInstanceId ?? p.world
+        if (!created.post.repostId && !isGameOnboardingPreview() && !isNextStoryPreview()) {
+          rememberDailyTaskPost(p.id, created.post.id, firstPost && onboarding?.worldId === worldId)
+        }
         onboardingPostSaved(worldId, created.post.id)
         nextStoryPostSaved(worldId)
       }

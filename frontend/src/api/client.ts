@@ -9,7 +9,7 @@ import { clearAvatarPersonalization } from '../app/avatarPersonalization';
 import { clearReferral } from '../app/referral';
 import { clearTokens, logout as revokeSession, registerPlayer } from './auth';
 import { clearApiCache } from '../app/useApi';
-import { setAnalyticsWorld, setTelemetryPlayerAvailable, trackLanding } from '../app/analytics';
+import { event, setAnalyticsWorld, setTelemetryPlayerAvailable, trackLanding } from '../app/analytics';
 import { clearWorldContent, installWorldContent, installWorldTemplates, postIdeasForWorld } from './worldContent';
 import { error } from '../app/log';
 import { sdk } from './transport';
@@ -24,6 +24,12 @@ import { starGenerationEvent } from './streamEvents';
 import type { PlayerDocument, PostsPage, Challenge, Dm, FeedItem, Friend, Player, Post, PostDetailResponse, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
 let sessionPlayer: Player | undefined;
 let sessionIdentity: PlayerDocument | undefined;
+let observedDailyTasks: {
+    playerId: string;
+    day: string;
+    progress: Map<string, number>;
+    completed: Set<string>;
+} | undefined;
 let ownedWorldSnapshot: WorldDocument[] | undefined;
 let templates: WorldDocument[] = [];
 let templatesRequest: Promise<void> | undefined;
@@ -59,6 +65,37 @@ function loadTemplates(): Promise<void> {
         return Promise.resolve();
     return templatesRequest ??= fetchTemplates().finally(() => { templatesRequest = undefined; });
 }
+function observeDailyTaskProgress(player: Player) {
+    const challenge = player.dailyChallenge;
+    const world = player.worldInstanceId;
+    if (!world || challenge?.day !== new Date().toISOString().slice(0, 10))
+        return;
+    if (observedDailyTasks?.playerId !== player.id || observedDailyTasks.day !== challenge.day) {
+        observedDailyTasks = { playerId: player.id, day: challenge.day, progress: new Map(), completed: new Set() };
+    }
+    const observation = observedDailyTasks;
+    for (const [kind, task] of Object.entries(challenge.values[world] ?? {})) {
+        const key = `${world}:${kind}:${task.target}`;
+        const before = observation.progress.get(key);
+        if (before !== undefined && task.progress <= before)
+            continue;
+        observation.progress.set(key, task.progress);
+        if (before === undefined)
+            continue;
+        event('onboarding_step', {
+            step: 'daily_tasks_progress',
+            id: `${challenge.day}:${kind}:${task.target}:${task.progress}`,
+            kind,
+            delta: task.progress - before,
+            completed: challenge.completion[kind] === true && !observation.completed.has(kind),
+            ok: true,
+        });
+    }
+    for (const [kind, completed] of Object.entries(challenge.completion)) {
+        if (completed)
+            observation.completed.add(kind);
+    }
+}
 function rememberPlayer(player: Player): Player {
     try {
         if (player.worldInstanceId)
@@ -69,6 +106,7 @@ function rememberPlayer(player: Player): Player {
     sessionIdentity = { ...player, energy: player.postsLeft };
     sessionPlayer = player;
     setAnalyticsWorld(player.worldInstanceId, player.difficulty);
+    observeDailyTaskProgress(player);
     return player;
 }
 async function readSse<T>(response: Response, decode: (value: unknown) => T, onEvent: (event: T) => void | Promise<void>): Promise<void> {
@@ -171,6 +209,7 @@ export const api = {
         sessionIdentity = undefined;
         ownedWorldSnapshot = undefined;
         setTelemetryPlayerAvailable(false);
+        observedDailyTasks = undefined;
         setAnalyticsWorld(undefined);
     },
     logout: async () => {
