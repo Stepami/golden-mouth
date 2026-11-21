@@ -1,11 +1,9 @@
-using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
-using NSubstitute.Extensions;
+using MongoDB.Driver;
 using Reki.Api.Requests.Posts;
 using Reki.Application.Player.Responses;
-using Reki.Application.Posts.ML;
 using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.Reply;
+using Reki.Domain.Bonuses;
 using Reki.Domain.Player.Challenges;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -24,6 +22,8 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
         Factory.Session.Clock.SetUtcNow(new DateTimeOffset(2026, 10, 8, 12, 0, 0, TimeSpan.Zero));
         using var api = Factory.CreateApiClient(8931);
         var player = await CreatePlayerWithWorldAsync(api);
+        await Database.GetCollection<Bonus>("bonuses").OfType<FlopGuardBonus>()
+            .DeleteOneAsync(bonus => bonus.PlayerId == player.Id);
         var worldId = WorldId.From(await GetWorldIdAsync(api));
 
         // Act
@@ -56,9 +56,11 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
     public async Task CreatePost_Friday_KeepsProgressPerWorldWithSharedCompletionAsync()
     {
         // Arrange
+        const long user = 8932;
         Factory.Session.Clock.SetUtcNow(new DateTimeOffset(2026, 10, 9, 12, 0, 0, TimeSpan.Zero));
-        using var api = Factory.CreateApiClient(8932);
-        await CreatePlayerWithWorldAsync(api);
+        using var api = Factory.CreateApiClient(user);
+        var player = await CreatePlayerWithWorldAsync(api);
+        await Database.GetCollection<Bonus>("bonuses").DeleteManyAsync(bonus => bonus.PlayerId == player.Id);
         var firstWorld = WorldId.From(await GetWorldIdAsync(api));
         var secondWorld = (await api.Worlds.CreateWorldAsync(
             await CreateWorldDefinitionAsync(api, WorldTemplate.Academy), CancellationToken.None)).Id;
@@ -78,14 +80,20 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
 
         var completed = await ReadChallengeAsync(api);
         var repostTarget = completed.Values[firstWorld][DailyTaskType.Reposts].Target;
-        for (var count = 1L; count < repostTarget; count++)
+        for (var count = 1L; count < repostTarget - 1; count++)
         {
             await PublishAsync(api, firstWorld, string.Empty, first.Post.PostId);
         }
 
+        var beforeFinish = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        var priorPosts = await Database.GetCollection<GamePost>("posts")
+            .CountDocumentsAsync(post => post.OwnerId == player.Id && post.AuthorId == player.Id.ToAuthorId());
+        await PublishAsync(api, firstWorld, string.Empty, first.Post.PostId);
         var finishedCard = await ReadChallengeAsync(api);
-        await PublishAsync(api, secondWorld, "Сегодня следующая репетиция.");
+        var finishedWallet = (await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).EnergyWallet?.Crystals;
+        var nextPost = await PublishAsync(api, secondWorld, "Сегодня следующая репетиция.");
         var afterFinish = await ReadChallengeAsync(api);
+        var afterFinishWallet = (await api.Player.GetCurrentPlayerAsync(CancellationToken.None)).EnergyWallet?.Crystals;
         await api.Worlds.DeleteWorldAsync(firstWorld.ToString(), CancellationToken.None);
         var afterDelete = await ReadChallengeAsync(api);
 
@@ -104,6 +112,9 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
         await Assert.That(completed.Completion[DailyTaskType.Posts]).IsTrue();
         await Assert.That(finishedCard.Completion.Values.All(done => done)).IsTrue();
         await Assert.That(finishedCard.Values[firstWorld][DailyTaskType.Reposts].Progress).IsEqualTo(repostTarget);
+        var publicationReward = (priorPosts + 1) % 5 == 0 ? 1 : 0;
+        await Assert.That(finishedWallet - beforeFinish.EnergyWallet?.Crystals).IsEqualTo(publicationReward + 2);
+        await Assert.That(afterFinishWallet - finishedWallet).IsEqualTo(nextPost.Result.Viral ? 1 : 0);
         await Assert.That(afterFinish.Values[secondWorld][DailyTaskType.Posts].Progress).IsEqualTo(1L);
         await Assert.That(afterDelete.Values.ContainsKey(firstWorld)).IsFalse();
         await Assert.That(afterDelete.Completion[DailyTaskType.Posts]).IsTrue();
@@ -232,21 +243,4 @@ public sealed class DailyChallengeProgressTests(ApiFactory factory) : GameApiTes
                 Text = "Обсудим это на репетиции.",
             },
             CancellationToken.None);
-
-    private async Task<CreatePostResponse> PublishFlopAsync(TestApiClient api, WorldId worldId)
-    {
-        const string text = "Весь день грущу после отмены концерта.";
-        var classifier = Factory.Services.GetRequiredService<IClassifier>();
-        var original = await classifier.ClassifyAsync(ClassifierModels.EmotionModel, text);
-        var sad = new Dictionary<string, double>(original) { ["sadness"] = 1, ["no_emotion"] = 0 };
-        classifier.Configure().ClassifyAsync(ClassifierModels.EmotionModel, text).Returns(sad);
-        try
-        {
-            return await PublishAsync(api, worldId, text);
-        }
-        finally
-        {
-            classifier.Configure().ClassifyAsync(ClassifierModels.EmotionModel, text).Returns(original);
-        }
-    }
 }

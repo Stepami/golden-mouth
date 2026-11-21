@@ -53,6 +53,9 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
         await migrator.MigrateAsync(cancellationToken: CancellationToken.None);
 
         // Assert
+        using var indexes = await database.GetCollection<GamePost>(MongoCollections.Posts).Indexes.ListAsync();
+        await Assert.That((await indexes.ToListAsync()).Single(index => index["name"] == "ix_posts_owner_author")["key"])
+            .IsEqualTo(new BsonDocument { { "OwnerId", 1 }, { "AuthorId", 1 } });
         await Assert.That(initial.Count).IsEqualTo(12);
         await Assert.That(initial.All(bonus => !bonus.IsClaimed)).IsTrue();
         var stored = await bonuses.Find(FilterDefinition<Bonus>.Empty).ToListAsync();

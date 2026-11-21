@@ -5,8 +5,10 @@ namespace Reki.Application.Player;
 
 public interface IBonusRepository
 {
-    Task<TBonus?> GetActiveBonus<TBonus>(PlayerId id, CancellationToken ct = default)
+    Task<TBonus?> TryClaimBonus<TBonus>(PlayerId id, CancellationToken ct)
         where TBonus : Bonus;
 
-    Task SaveBonus(Bonus bonus, CancellationToken ct);
+    Task InsertBonusesAsync(IReadOnlyList<Bonus> bonuses, CancellationToken ct);
+
+    Task DeleteForPlayerAsync(PlayerId id, CancellationToken ct);
 }

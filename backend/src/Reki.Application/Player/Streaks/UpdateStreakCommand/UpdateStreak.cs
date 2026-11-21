@@ -3,4 +3,4 @@ using Reki.Domain.Player;
 
 namespace Reki.Application.Player.Streaks.UpdateStreakCommand;
 
-public sealed record UpdateStreak(PlayerId PlayerId) : ICommand;
+public sealed record UpdateStreak(PlayerProfile Player) : ICommand;

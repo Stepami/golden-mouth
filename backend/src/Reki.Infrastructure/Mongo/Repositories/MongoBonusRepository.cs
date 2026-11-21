@@ -11,23 +11,22 @@ internal sealed class MongoBonusRepository(
 {
     private readonly IMongoCollection<Bonus> _bonuses = database.GetCollection<Bonus>(MongoCollections.Bonuses);
 
-    public async Task<TBonus?> GetActiveBonus<TBonus>(PlayerId id, CancellationToken ct = default)
-        where TBonus : Bonus
-    {
-        var bonuses = _bonuses.OfType<TBonus>();
-        var filter = Builders<TBonus>.Filter.Where(bonus => bonus.PlayerId == id && !bonus.IsClaimed);
-        return await (sessionProvider.Current is { } session
-                ? bonuses.Find(session, filter)
-                : bonuses.Find(filter))
-            .SortBy(bonus => bonus.Id)
-            .FirstOrDefaultAsync(ct);
-    }
+    public async Task<TBonus?> TryClaimBonus<TBonus>(PlayerId id, CancellationToken ct)
+        where TBonus : Bonus =>
+        await _bonuses.OfType<TBonus>().FindOneAndUpdateAsync(
+            sessionProvider.Session,
+            Builders<TBonus>.Filter.Where(bonus => bonus.PlayerId == id && !bonus.IsClaimed),
+            Builders<TBonus>.Update.Set(bonus => bonus.IsClaimed, true),
+            new FindOneAndUpdateOptions<TBonus>
+            {
+                Sort = Builders<TBonus>.Sort.Ascending(bonus => bonus.Id),
+                ReturnDocument = ReturnDocument.After,
+            },
+            ct);
 
-    public Task SaveBonus(Bonus bonus, CancellationToken ct) =>
-        _bonuses.ReplaceOneAsync(
-            sessionProvider,
-            item => item.Id == bonus.Id,
-            bonus,
-            ct,
-            new ReplaceOptions { IsUpsert = true });
+    public Task InsertBonusesAsync(IReadOnlyList<Bonus> bonuses, CancellationToken ct) =>
+        _bonuses.InsertManyAsync(sessionProvider.Session, bonuses, cancellationToken: ct);
+
+    public Task DeleteForPlayerAsync(PlayerId id, CancellationToken ct) =>
+        _bonuses.DeleteManyAsync(sessionProvider.Session, bonus => bonus.PlayerId == id, cancellationToken: ct);
 }

@@ -1,13 +1,18 @@
 using System.Text.Json;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using NSubstitute;
+using NSubstitute.Extensions;
 using Reki.Api.Requests.Player;
 using Reki.Api.Requests.Posts;
 using Reki.Api.Requests.Worlds;
 using Reki.Api.Serialization;
 using Reki.Application.Player;
 using Reki.Application.Player.Responses;
+using Reki.Application.Posts.ML;
+using Reki.Application.Posts.Responses;
 using Reki.Application.Posts.Responses.Reply;
 using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.Worlds;
@@ -110,6 +115,26 @@ public abstract class GameApiTestBase(ApiFactory factory)
         body.Split('\n').Where(line => line.StartsWith("data: ", StringComparison.Ordinal))
             .Select(line => JsonSerializer.Deserialize(line[6..], ApiJsonSerializerContext.Default.ReplyGenerationLiveEvent)
                 ?? throw new InvalidOperationException("The generation event was empty.")).ToArray();
+
+    protected async Task<CreatePostResponse> PublishFlopAsync(TestApiClient api, WorldId worldId)
+    {
+        const string text = "Весь день грущу после отмены концерта.";
+        var classifier = Factory.Services.GetRequiredService<IClassifier>();
+        var original = await classifier.ClassifyAsync(ClassifierModels.EmotionModel, text);
+        var sad = new Dictionary<string, double>(original) { ["sadness"] = 1, ["no_emotion"] = 0 };
+        classifier.Configure().ClassifyAsync(ClassifierModels.EmotionModel, text).Returns(sad);
+        try
+        {
+            return await api.Posts.CreatePostAsync(
+                worldId.ToString(),
+                new CreatePostRequest { Text = text, OwnWords = false },
+                CancellationToken.None);
+        }
+        finally
+        {
+            classifier.Configure().ClassifyAsync(ClassifierModels.EmotionModel, text).Returns(original);
+        }
+    }
 
     protected async Task<PlayerResponse> CreatePlayerWithWorldAsync(
         TestApiClient api,
@@ -283,7 +308,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
         }
     }
 
-    protected async Task PublishAsync(long telegramUserId, string text)
+    protected async Task<CreatePostResponse> PublishAsync(long telegramUserId, string text)
     {
         using var api = Factory.CreateApiClient(telegramUserId);
         var worldId = await GetWorldIdAsync(api);
@@ -301,6 +326,7 @@ public abstract class GameApiTestBase(ApiFactory factory)
             worldId,
             new ReplyRequest { AuthorId = completed.AuthorId, Text = completed.Text ?? string.Empty, RequestId = Guid.NewGuid().ToString("N") },
             CancellationToken.None);
+        return created;
     }
 
     protected async Task AssertCollectionHasNoPlayerAsync(string collectionName, BsonDocument filter)

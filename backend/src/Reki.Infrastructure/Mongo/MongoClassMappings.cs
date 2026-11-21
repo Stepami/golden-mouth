@@ -296,13 +296,6 @@ internal static class MongoClassMappings
             classMap.MapMember(bonus => bonus.Adder);
             classMap.MapCreator(bonus => new FlopGuardBonus(bonus.Id, bonus.PlayerId, bonus.Adder, bonus.IsClaimed));
         });
-        BsonClassMap.TryRegisterClassMap<PostBoosterBonus>(classMap =>
-        {
-            classMap.AutoMap();
-            classMap.MapMember(bonus => bonus.ActiveUntil);
-            classMap.MapCreator(bonus =>
-                new PostBoosterBonus(bonus.Id, bonus.PlayerId, bonus.ActiveUntil, bonus.IsClaimed));
-        });
     }
 
     private static void RegisterWithMongoId<TDocument, TId>(

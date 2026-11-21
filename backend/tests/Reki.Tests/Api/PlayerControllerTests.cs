@@ -17,12 +17,14 @@ using Reki.Application.Player;
 using Reki.Application.Player.Responses;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds;
+using Reki.Domain.Bonuses;
 using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Streaks;
 using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
+using TUnit.Assertions.Enums;
 
 namespace Reki.Tests.Api;
 
@@ -31,6 +33,39 @@ namespace Reki.Tests.Api;
 [NotInParallel("ApiState")]
 public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
+    [Test]
+    public async Task Me_ConsecutiveVisits_AwardsCrystalsOnMilestoneDaysAsync()
+    {
+        // Arrange
+        var clock = Factory.Session.Clock;
+        var start = clock.GetUtcNow();
+        using var api = Factory.CreateApiClient(18306);
+        var player = await CreatePlayerWithWorldAsync(api);
+        var startingCrystals = player.EnergyWallet?.Crystals;
+
+        // Act
+        var awardedDays = new List<int>();
+        var previousCrystals = startingCrystals;
+        for (var day = 1; day <= 35; day++)
+        {
+            clock.SetUtcNow(start.AddDays(day - 1));
+            var current = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+            if (current.EnergyWallet?.Crystals > previousCrystals)
+            {
+                awardedDays.Add(day);
+            }
+
+            previousCrystals = current.EnergyWallet?.Crystals;
+        }
+
+        var repeated = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+
+        // Assert
+        await Assert.That(awardedDays).IsEquivalentTo([3, 7, 10, 14, 21, 28, 30, 35], CollectionOrdering.Matching);
+        await Assert.That(previousCrystals - startingCrystals).IsEqualTo(8);
+        await Assert.That(repeated.EnergyWallet?.Crystals).IsEqualTo(previousCrystals);
+    }
+
     [Test]
     [Arguments(0, 13, 1, false)]
     [Arguments(1, 1, 2, false)]
@@ -348,17 +383,17 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         const long friendUserId = 8011;
         using var inviterApi = Factory.CreateApiClient(inviterUserId);
         using var friendApi = Factory.CreateApiClient(friendUserId);
-        await CreatePlayerWithWorldAsync(inviterApi);
+        var inviterProfile = await CreatePlayerWithWorldAsync(inviterApi);
         var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
         var onboarded = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
         var pendingInvite = await friendApi.Player.GetInvitationAsync(CancellationToken.None);
         var inviterAfterOnboarding = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Act
-        await PublishAsync(friendUserId, "первый пост друга");
+        var firstPost = await PublishAsync(friendUserId, "первый пост друга");
         var inviter = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
         var friend = await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
-        await PublishAsync(friendUserId, "второй пост друга");
+        var secondPost = await PublishAsync(friendUserId, "второй пост друга");
         var storedInviter = await GetStoredPlayerAsync(inviterUserId);
         var storedFriend = await GetStoredPlayerAsync(friendUserId);
 
@@ -374,11 +409,15 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(storedInviter["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
         await Assert.That(storedFriend["Wallet"]["Energy"].AsInt32).IsEqualTo(8);
         await Assert.That(storedInviter["Wallet"]["Crystals"].AsInt32).IsEqualTo(13);
-        await Assert.That(storedFriend["Wallet"]["Crystals"].AsInt32).IsEqualTo(11);
+        var friendViralPosts = (firstPost.Result.Viral ? 1 : 0) + (secondPost.Result.Viral ? 1 : 0);
+        await Assert.That(storedFriend["Wallet"]["Crystals"].AsInt32).IsEqualTo(11 + friendViralPosts);
         var invite = await GetStoredInviteAsync(storedFriend["_id"].AsBsonBinaryData.ToGuid().ToString("N"));
         await Assert.That(invite["InviterBonusUsed"].AsBoolean).IsTrue();
         await Assert.That(invite["InviteeBonusUsed"].AsBoolean).IsTrue();
         await Assert.That(invite["InviterBonusUsedAtUtc"]).IsEqualTo(invite["InviteeBonusUsedAtUtc"]);
+        var cards = await Database.GetCollection<Bonus>("bonuses").Find(bonus => bonus.PlayerId == inviterProfile.Id).ToListAsync();
+        await Assert.That(cards.OfType<FlopGuardBonus>().Count(card => !card.IsClaimed && card.Adder == 10)).IsEqualTo(4);
+        await Assert.That(cards.OfType<ViralCardBonus>().Count(card => !card.IsClaimed && card.Multiplier == 5)).IsEqualTo(4);
     }
 
     [Test]
@@ -387,15 +426,16 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Arrange
         const long inviterUserId = 8012;
         using var inviterApi = Factory.CreateApiClient(inviterUserId);
-        await CreatePlayerWithWorldAsync(inviterApi);
+        var inviterProfile = await CreatePlayerWithWorldAsync(inviterApi);
         var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
 
         // Act
+        var lastPostWentViral = false;
         for (long friendUserId = 8013; friendUserId <= 8016; friendUserId++)
         {
             using var friendApi = Factory.CreateApiClient(friendUserId);
             await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
-            await PublishAsync(friendUserId, "первый пост друга");
+            lastPostWentViral = (await PublishAsync(friendUserId, "первый пост друга")).Result.Viral;
         }
 
         var inviter = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
@@ -408,9 +448,13 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(storedInviter["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
         await Assert.That(storedInviter["Wallet"]["Crystals"].AsInt32).IsEqualTo(22);
         await Assert.That(fourthFriend["Wallet"]["Energy"].AsInt32).IsEqualTo(9);
-        await Assert.That(fourthFriend["Wallet"]["Crystals"].AsInt32).IsEqualTo(11);
         using var fourthApi = Factory.CreateApiClient(8016);
-        await Assert.That((await fourthApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(9);
+        var fourthProfile = await fourthApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        await Assert.That(fourthFriend["Wallet"]["Crystals"].AsInt32).IsEqualTo(lastPostWentViral ? 12 : 11);
+        await Assert.That(fourthProfile.Energy).IsEqualTo(9);
+        var cards = await Database.GetCollection<Bonus>("bonuses").Find(bonus => bonus.PlayerId == inviterProfile.Id).ToListAsync();
+        await Assert.That(cards.OfType<FlopGuardBonus>().Count(card => !card.IsClaimed && card.Adder == 10)).IsEqualTo(13);
+        await Assert.That(cards.OfType<ViralCardBonus>().Count(card => !card.IsClaimed && card.Multiplier == 5)).IsEqualTo(13);
     }
 
     [Test]
@@ -439,12 +483,13 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
                     .Set(item => item.InviterBonusUsedAtUtc, now));
         }
 
-        await PublishAsync(8561, "пост с существующим бонусом");
+        var published = await PublishAsync(8561, "пост с существующим бонусом");
 
-        var expectedCrystals = alreadyUsed ? 10 : 11;
+        var expectedCrystals = (alreadyUsed ? 10 : 11) + (published.Result.Viral ? 1 : 0);
         await Assert.That((await GetStoredPlayerAsync(8560))["Wallet"]["Energy"].AsInt32).IsEqualTo(4);
         await Assert.That((await GetStoredPlayerAsync(8561))["Wallet"]["Energy"].AsInt32).IsEqualTo(3);
-        await Assert.That((await GetStoredPlayerAsync(8561))["Wallet"]["Crystals"].AsInt32).IsEqualTo(expectedCrystals);
+        await Assert.That((await GetStoredPlayerAsync(8561))["Wallet"]["Crystals"].AsInt32)
+            .IsEqualTo(expectedCrystals);
         await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)
             .IsEqualTo(4);
         await Assert.That((await friendApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy)

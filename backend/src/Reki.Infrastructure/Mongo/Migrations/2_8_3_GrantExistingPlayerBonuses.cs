@@ -2,6 +2,7 @@ using Kot.MongoDB.Migrations;
 using MongoDB.Driver;
 using Reki.Domain.Bonuses;
 using Reki.Domain.Player;
+using Reki.Domain.Posts;
 using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
@@ -21,6 +22,13 @@ internal sealed class GrantExistingPlayerBonuses : RekiMigrationBase
                     .Ascending(bonus => bonus.IsClaimed)
                     .Ascending(bonus => bonus.Id),
                 new CreateIndexOptions { Name = "ix_bonuses_player_active" }),
+            cancellationToken: cancellationToken);
+
+        var posts = db.GetCollection<GamePost>(MongoCollections.Posts);
+        await posts.Indexes.CreateOneAsync(
+            new CreateIndexModel<GamePost>(
+                Builders<GamePost>.IndexKeys.Ascending(post => post.OwnerId).Ascending(post => post.AuthorId),
+                new CreateIndexOptions { Name = "ix_posts_owner_author" }),
             cancellationToken: cancellationToken);
 
         var players = db.GetCollection<PlayerProfile>(MongoCollections.Players);
