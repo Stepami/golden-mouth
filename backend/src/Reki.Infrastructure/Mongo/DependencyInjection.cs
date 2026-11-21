@@ -32,6 +32,7 @@ internal static class DependencyInjection
         services.AddSingleton<MongoCompositionRoot>();
         services.AddSingleton<MongoSessionProvider>();
         services.AddSingleton<IUnitOfWork, MongoUnitOfWork>();
+        services.AddSingleton<IBonusRepository, MongoBonusRepository>();
         services.AddSingleton<IPlayerRepository, MongoPlayerRepository>();
         services.AddSingleton<IPlayerStreakRepository, MongoPlayerStreakRepository>();
         services.AddSingleton<INotificationRepository, MongoNotificationRepository>();

@@ -1,3 +1,4 @@
+using Reki.Domain.Bonuses;
 using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
@@ -11,6 +12,7 @@ namespace Reki.Infrastructure.Mongo;
 
 [BsonSerializer<Address>]
 [BsonSerializer<AuthorId>]
+[BsonSerializer<BonusId>]
 [BsonSerializer<CommentId>]
 [BsonSerializer<InvitationId>]
 [BsonSerializer<NotificationId>]

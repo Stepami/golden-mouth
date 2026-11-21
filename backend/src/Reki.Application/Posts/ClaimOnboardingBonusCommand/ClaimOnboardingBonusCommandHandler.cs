@@ -1,11 +1,13 @@
 using Mediator;
 using Reki.Application.Player;
+using Reki.Domain.Bonuses;
 
 namespace Reki.Application.Posts.ClaimOnboardingBonusCommand;
 
 internal sealed class ClaimOnboardingBonusCommandHandler(
     IPostRepository posts,
     IPlayerRepository players,
+    IBonusRepository bonuses,
     IUnitOfWork unitOfWork)
     : ICommandHandler<ClaimOnboardingBonus, bool>
 {
@@ -32,9 +34,14 @@ internal sealed class ClaimOnboardingBonusCommandHandler(
         return await unitOfWork.ExecuteAsync(
             async token =>
             {
-                command.Player.ReplenishCrystals(2);
-                await players.ReplacePlayerAsync(command.Player, token);
-                return true;
+                var bonus = await bonuses.TryClaimBonus<CrystalsBonus>(playerId, token);
+                if (bonus is not null)
+                {
+                    command.Player.ReplenishCrystals(bonus.Amount);
+                    await players.ReplacePlayerAsync(command.Player, token);
+                }
+
+                return bonus?.IsClaimed == true;
             },
             cancellationToken);
     }

@@ -2,6 +2,7 @@ namespace Reki.Infrastructure.Mongo.Repositories;
 
 internal static class MongoCollections
 {
+    public const string Bonuses = "bonuses";
     public const string Players = "players";
     public const string PlayerStreaks = "player_streaks";
     public const string Notifications = "notifications";

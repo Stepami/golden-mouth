@@ -10,6 +10,7 @@ using Reki.Application.Posts.ML;
 using Reki.Application.Posts.Responses.Reply;
 using Reki.Application.Posts.Responses.Reply.Generation;
 using Reki.Application.Worlds;
+using Reki.Domain.Bonuses;
 using Reki.Domain.Player;
 using Reki.Domain.Posts;
 using Reki.Domain.Worlds;
@@ -23,7 +24,7 @@ namespace Reki.Tests.Api;
 public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(factory)
 {
     [Test]
-    public async Task ClaimOnboardingBonus_FirstPostWithPlayerComment_AddsTwoCrystalsAsync()
+    public async Task ClaimOnboardingBonus_FirstPostWithPlayerComment_AddsTwoCrystalsOnceAsync()
     {
         // Arrange
         const long telegramUserId = 8301;
@@ -50,16 +51,73 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
             false,
             false);
         await Database.GetCollection<GamePost>("posts").InsertOneAsync(post);
-        var before = await GetStoredPlayerAsync(telegramUserId);
+        var before = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Act
         var claimed = await api.Posts.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
+        var repeated = await api.Posts.ClaimOnboardingBonusAsync(post.Id.ToString(), CancellationToken.None);
 
         // Assert
         await Assert.That(claimed).IsTrue();
-        await Assert.That(before["Wallet"]["Crystals"].AsInt32).IsEqualTo(10);
-        var stored = await GetStoredPlayerAsync(telegramUserId);
-        await Assert.That(stored["Wallet"]["Crystals"].AsInt32).IsEqualTo(12);
+        await Assert.That(repeated).IsFalse();
+        var after = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        await Assert.That(after.EnergyWallet?.Crystals - before.EnergyWallet?.Crystals).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task CreatePost_FifthViralPostWithLevelUp_AwardsThreeCrystalsAsync()
+    {
+        // Arrange
+        using var api = Factory.CreateApiClient(8302);
+        var player = await CreatePlayerWithWorldAsync(api);
+        var worldId = await GetWorldIdAsync(api);
+        var otherWorld = await api.Worlds.CreateWorldAsync(await CreateWorldDefinitionAsync(api, WorldTemplate.Academy), CancellationToken.None);
+        var otherWorldId = otherWorld.Id.ToString();
+        var source = await CreateSourceAsync(otherWorldId);
+        for (var number = 0; number < 4; number++)
+        {
+            await api.Posts.CreatePostAsync(otherWorldId, new CreatePostRequest { Text = string.Empty, RepostId = source.Id }, CancellationToken.None);
+        }
+
+        await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
+            item => item.Id == player.Id, Builders<PlayerProfile>.Update.Set("Skills.topic.Experience", 7d));
+
+        // Act
+        var post = await api.Posts.CreatePostAsync(
+            worldId,
+            new CreatePostRequest { Text = "Показываю афишу следующего концерта.", OwnWords = false },
+            CancellationToken.None);
+        var after = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+
+        // Assert
+        await Assert.That(post.Result.Viral).IsTrue();
+        await Assert.That(after.Skills[SkillId.Topic].Level).IsEqualTo(2);
+        await Assert.That(after.EnergyWallet?.Crystals).IsEqualTo(13);
+    }
+
+    [Test]
+    public async Task CreatePost_FlopGuard_ReversesSubscriberLossAsync()
+    {
+        // Arrange
+        using var api = Factory.CreateApiClient(8303);
+        await CreatePlayerWithWorldAsync(api);
+        var world = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single();
+        var bonuses = Database.GetCollection<Bonus>("bonuses");
+        using var unprotectedApi = Factory.CreateApiClient(8304);
+        var unprotected = await CreatePlayerWithWorldAsync(unprotectedApi);
+        await bonuses.OfType<FlopGuardBonus>().DeleteOneAsync(item => item.PlayerId == unprotected.Id);
+        var unprotectedWorld = WorldId.From(await GetWorldIdAsync(unprotectedApi));
+
+        // Act
+        var ordinary = await PublishFlopAsync(unprotectedApi, unprotectedWorld);
+        var post = await PublishFlopAsync(api, world.Id);
+
+        // Assert
+        await Assert.That(ordinary.Result.Delta).IsLessThan(0);
+        await Assert.That(post.Result.Viral).IsFalse();
+        await Assert.That(post.Result.Flop).IsFalse();
+        await Assert.That(post.Result.Delta).IsEqualTo(-ordinary.Result.Delta);
+        await Assert.That(post.Result.Views).IsGreaterThanOrEqualTo(10L);
     }
 
     [Test]
@@ -296,7 +354,9 @@ public sealed class PostsControllerTests(ApiFactory factory) : GameApiTestBase(f
         // Arrange
         const long telegramUserId = 1031;
         using var api = Factory.CreateApiClient(telegramUserId);
-        await CreatePlayerWithWorldAsync(api);
+        var profile = await CreatePlayerWithWorldAsync(api);
+        await Database.GetCollection<Bonus>("bonuses").OfType<ViralCardBonus>()
+            .DeleteOneAsync(bonus => bonus.PlayerId == profile.Id);
         var subscribersBeforePost = (await GetStoredWorldAsync(telegramUserId))["Player"]["Subscribers"].ToInt64();
         await PublishAsync(telegramUserId, "пост с комментариями");
         var player = await GetStoredPlayerAsync(telegramUserId);

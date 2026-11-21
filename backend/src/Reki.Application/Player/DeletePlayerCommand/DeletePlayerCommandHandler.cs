@@ -20,6 +20,7 @@ internal sealed class DeletePlayerCommandHandler(
     IPostRepository posts,
     IInvitationRepository invitationRepository,
     INotificationRepository notifications,
+    IBonusRepository bonuses,
     ProductTelemetry telemetry)
     : ICommandHandler<DeletePlayer>
 {
@@ -36,6 +37,7 @@ internal sealed class DeletePlayerCommandHandler(
                 await invitationRepository.DeleteInvitesAsync(playerId, token);
                 await notifications.DeleteForPlayerAsync(playerId, token);
                 await streaks.DeleteForPlayerAsync(playerId, token);
+                await bonuses.DeleteForPlayerAsync(playerId, token);
                 await players.DeletePlayerAsync(playerId, token);
                 return Unit.Value;
             },

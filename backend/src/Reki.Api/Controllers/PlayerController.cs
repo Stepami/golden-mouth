@@ -35,7 +35,7 @@ public sealed class PlayerController(
     public async Task<Ok<PlayerResponse>> GetCurrentPlayerAsync(CancellationToken cancellationToken)
     {
         var player = await rekiContext.Player;
-        await sender.Send(new UpdateStreak(player.Id), cancellationToken);
+        await sender.Send(new UpdateStreak(player), cancellationToken);
         await sender.Send(new RefreshDailyChallenge(player), cancellationToken);
         await sender.Send(new UpdateLastSeenAt(player), cancellationToken);
         return TypedResults.Ok(player.ToPlayerResponse());

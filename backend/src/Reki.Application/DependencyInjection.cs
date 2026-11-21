@@ -44,6 +44,9 @@ public static class DependencyInjection
         services.AddSingleton<PlayerSafetyGuard>();
         services.AddSingleton<IWorldPlayerCache, WorldPlayerCache>();
         services.AddSingleton<StarTurnPolicy>();
+        services.AddSingleton<ViralityCalculator>();
+        services.AddSingleton<PostNumbersCalculator>();
+        services.AddSingleton<SubscriberDeltaCalculator>();
         services.AddSingleton<PostProgressionCalculator>();
         services.AddSingleton<PostTextAnalysis>();
         services.AddSingleton<PostScorer>();

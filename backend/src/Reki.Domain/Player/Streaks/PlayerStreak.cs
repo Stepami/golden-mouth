@@ -7,6 +7,8 @@ public sealed class PlayerStreak(
     int count,
     bool isActive)
 {
+    private static readonly int[] AwardDays = [3, 7, 10, 14, 21, 28, 30];
+
     public StreakId Id { get; private set; } = id;
 
     public PlayerId PlayerId { get; private set; } = playerId;
@@ -19,6 +21,8 @@ public sealed class PlayerStreak(
 
     public static PlayerStreak New(PlayerId playerId, DateTimeOffset startedAt) =>
         new(StreakId.New(startedAt), playerId, startedAt, 0, true);
+
+    public bool ShouldAward() => IsActive && (AwardDays.Contains(Count) || (Count > AwardDays[^1] && Count % 5 == 0));
 
     public PlayerStreakProgress Progress(DateTimeOffset now)
     {
