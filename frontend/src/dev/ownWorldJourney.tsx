@@ -46,25 +46,14 @@ export function VoiceWorldNav({ active, onWorlds, onChannel }: {
 }
 
 function VoiceWorldFeature() {
-  return <div className="voice-world-feature">
-    <figure className="voice-feature-art">
-      <img src={exampleCover.url} alt={exampleCover.alt} />
-      <div className="voice-feature-record" aria-hidden="true">
-        <div className="voice-feature-mic">
-          <svg viewBox="0 0 24 24">
-            <rect x="9" y="3" width="6" height="11" rx="3" />
-            <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5v4M8.5 21.5h7" />
-          </svg>
-        </div>
-        <div className="voice-feature-waves"><i /><i /><i /><i /><i /></div>
-      </div>
-      <figcaption>{exampleCover.title}</figcaption>
-    </figure>
-    <p className="voice-feature-title">
-      На Патонге пропал скутер. На видео — твоя куртка.
-      <span className="small muted">Надиктуй свою завязку и сыграй в ней.</span>
-    </p>
-  </div>
+  return <figure className="voice-feature-art">
+    <img src={exampleCover.url} alt={exampleCover.alt} />
+    <figcaption>
+      <span>Собери свой мир</span>
+      <h3>На Патонге пропал скутер.</h3>
+      <p>На видео — твоя куртка.</p>
+    </figcaption>
+  </figure>
 }
 
 export function VoiceWorldsPreview({ unlocked, savedWorld, cover, onUnlock, onCreate, onOpenWorld }: {
@@ -106,18 +95,29 @@ export function VoiceWorldsPreview({ unlocked, savedWorld, cover, onUnlock, onCr
       {!savedWorld && <section className="card own-world-unlock">
         <div className="row voice-journey-unlock-heading">
           <h2>Свой мир</h2>
-          <span className="small muted">{unlocked ? 'Открыт' : '🔒 Закрыт'}</span>
+          <span className="small muted voice-world-access">
+            {!unlocked && <svg viewBox="0 0 16 16" width="13" height="14" aria-hidden="true">
+              <rect x="3" y="7" width="10" height="7" rx="2" />
+              <path d="M5 7V5a3 3 0 0 1 6 0v2" />
+            </svg>}
+            {unlocked ? 'Открыт' : 'Закрыт'}
+          </span>
         </div>
         <VoiceWorldFeature />
-        {unlocked
-          ? <button type="button" className="btn" onClick={onCreate}>Создать свой мир</button>
-          : <div className="voice-unlock-details">
-            <div>
-              <b>Как открыть</b>
-              <p className="small muted">Первый пост приглашённого друга или 500 подписчиков в одном мире.</p>
-            </div>
-            <button type="button" className="text-link" onClick={onUnlock}>Попробовать в демо</button>
-          </div>}
+        <div className="voice-feature-actions">
+          <button type="button" className="btn voice-feature-cta" onClick={unlocked ? onCreate : onUnlock}>
+            <svg className="voice-mic" viewBox="0 0 20 20" aria-hidden="true">
+              <rect x="7" y="2" width="6" height="10" rx="3" />
+              <path d="M4 9a6 6 0 0 0 12 0M10 15v3M7 18h6" />
+            </svg>
+            {unlocked ? 'Создать свой мир' : 'Попробовать на примере'}
+          </button>
+          <p className="small voice-feature-pitch">Надиктуй любую задумку. ИИ соберёт из неё игровой мир.</p>
+          {!unlocked && <details className="voice-unlock-details">
+            <summary>Как открыть свой мир</summary>
+            <p>Пригласи друга, который опубликует первый пост, или набери 500 подписчиков в одном мире.</p>
+          </details>}
+        </div>
       </section>}
     </main>
     <VoiceWorldNav active="worlds" onChannel={savedWorld ? onOpenWorld : undefined} />
