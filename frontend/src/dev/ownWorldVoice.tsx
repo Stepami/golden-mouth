@@ -22,12 +22,16 @@ function release(stream: MediaStream) {
   stream.getTracks().forEach(track => track.stop())
 }
 
-function Recorder({ onText, onExample }: { onText: () => void; onExample: () => void }) {
+function Recorder({ audio, onAudio, onText, onNext }: {
+  audio: string
+  onAudio: (url: string) => void
+  onText: () => void
+  onNext: () => void
+}) {
   const recorder = useRef<MediaRecorder | null>(null)
   const mounted = useRef(false)
   const [phase, setPhase] = useState<'idle' | 'permission' | 'recording' | 'stopping'>('idle')
   const [elapsed, setElapsed] = useState(0)
-  const [audio, setAudio] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -41,11 +45,6 @@ function Recorder({ onText, onExample }: { onText: () => void; onExample: () => 
       release(current.stream)
     }
   }, [])
-
-  useEffect(() => {
-    if (!audio) return
-    return () => URL.revokeObjectURL(audio)
-  }, [audio])
 
   useEffect(() => {
     if (phase !== 'recording') return
@@ -84,14 +83,14 @@ function Recorder({ onText, onExample }: { onText: () => void; onExample: () => 
         recorder.current = null
         setPhase('idle')
         if (chunks.length) {
-          setAudio(URL.createObjectURL(new Blob(chunks, { type: current.mimeType })))
+          onAudio(URL.createObjectURL(new Blob(chunks, { type: current.mimeType })))
         } else {
           setError('Запись получилась пустой. Попробуй ещё раз.')
         }
       }
       recorder.current = current
       current.start()
-      setAudio('')
+      onAudio('')
       setElapsed(0)
       setPhase('recording')
     } catch (cause) {
@@ -128,20 +127,20 @@ function Recorder({ onText, onExample }: { onText: () => void; onExample: () => 
     {error && <p className="voice-error" role="alert">{error}</p>}
     <button type="button" className="btn"
       disabled={busy}
-      onClick={recording ? stop : audio ? onExample : record}
+      onClick={recording ? stop : audio ? onNext : record}
     >
       {!busy && !recording && !audio && <svg className="voice-mic" viewBox="0 0 20 20" aria-hidden="true">
         <rect x="7" y="2" width="6" height="10" rx="3" />
         <path d="M4 9a6 6 0 0 0 12 0M10 15v3M7 18h6" />
       </svg>}
       {phase === 'permission' ? 'Ждём доступ к микрофону…' : phase === 'stopping' ? 'Завершаем запись…'
-        : recording ? 'Остановить запись' : audio ? 'Показать пример расшифровки' : 'Записать голос'}
+        : recording ? 'Остановить запись' : audio ? 'Далее' : 'Записать голос'}
     </button>
     <div className="voice-alternatives">
       <button type="button" className="text-link" onClick={onText}>Напечатать историю</button>
       {audio
         ? <button type="button" className="text-link" disabled={busy} onClick={record}>Перезаписать</button>
-        : <button type="button" className="text-link" onClick={onExample}>Показать пример</button>}
+        : <button type="button" className="text-link" onClick={onNext}>Показать пример</button>}
     </div>
     <p className="small muted voice-note">Запись остаётся в этом браузере.</p>
   </div>
@@ -153,6 +152,7 @@ function App() {
   const [page, setPage] = useState<Page>('story')
   const [typing, setTyping] = useState(false)
   const [text, setText] = useState('')
+  const [audio, setAudio] = useState('')
   const [transcript, setTranscript] = useState(story)
   const [draft, setDraft] = useState(sampleDraft)
   const { draft: fullDraft, setDraft: setFullDraft, openEditor } = useVoiceFullDraft(draft)
@@ -166,6 +166,11 @@ function App() {
   }
   const heading = useRef<HTMLHeadingElement>(null)
   const textInput = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (!audio) return
+    return () => URL.revokeObjectURL(audio)
+  }, [audio])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -201,9 +206,9 @@ function App() {
           Твоя история
           <textarea ref={textInput} rows={3} value={text} onChange={event => setText(event.target.value)} placeholder="Всё начинается в…" />
         </label>
-        <button type="button" className="btn" onClick={() => setPage('draft')}>Показать пример черновика</button>
+        <button type="button" className="btn" disabled={!text.trim()} onClick={() => setPage('draft')}>Собрать черновик</button>
         <button type="button" className="text-link voice-choose-mode" onClick={() => setTyping(false)}>Записать голосом</button>
-      </div> : <Recorder onText={() => setTyping(true)} onExample={() => setPage('transcript')} />}
+      </div> : <Recorder audio={audio} onAudio={setAudio} onText={() => setTyping(true)} onNext={() => setPage('transcript')} />}
     </main>}
     {page === 'transcript' && <main className="pad voice-review">
       <div className="voice-intro">
@@ -216,7 +221,7 @@ function App() {
           <textarea rows={7} value={transcript} onChange={event => setTranscript(event.target.value)} />
         </label>
       </div>
-      <button type="button" className="btn" onClick={() => setPage('draft')}>Показать пример черновика</button>
+      <button type="button" className="btn" disabled={!transcript.trim()} onClick={() => setPage('draft')}>Собрать черновик</button>
     </main>}
     {page === 'draft' && <main className="pad voice-review">
       <div className="voice-intro">
