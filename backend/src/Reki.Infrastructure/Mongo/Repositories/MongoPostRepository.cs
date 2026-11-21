@@ -28,6 +28,11 @@ internal sealed class MongoPostRepository(
     public async ValueTask InsertPostAsync(GamePost post, CancellationToken cancellationToken)
     {
         var embedding = await embeddingGenerator.GenerateVectorAsync(post, cancellationToken: cancellationToken);
+        await InsertPostAsync(post, embedding, cancellationToken);
+    }
+
+    public async ValueTask InsertPostAsync(GamePost post, ReadOnlyMemory<float> embedding, CancellationToken cancellationToken)
+    {
         var document = post.ToBsonDocument();
         document["_embedding"] = new BsonArray(embedding.ToArray());
         var posts = database.GetCollection<BsonDocument>(MongoCollections.Posts);
@@ -117,17 +122,20 @@ internal sealed class MongoPostRepository(
 
     public async ValueTask<GamePost?> GetPostAsync(
         PostId postId,
-        CancellationToken cancellationToken) =>
-        await _posts.Find(item => item.Id == postId)
-            .Project<GamePost>(WithoutEmbedding)
-            .FirstOrDefaultAsync(cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        var filter = Builders<GamePost>.Filter.Eq(item => item.Id, postId);
+        return await (sessionProvider.Current is { } session ? _posts.Find(session, filter) : _posts.Find(filter))
+            .Project<GamePost>(WithoutEmbedding).FirstOrDefaultAsync(cancellationToken);
+    }
 
     public async ValueTask<long> CountPostsAsync(PlayerId playerId, CancellationToken cancellationToken)
     {
         var authorId = playerId.ToAuthorId();
-        return await _posts.CountDocumentsAsync(
-            post => post.OwnerId == playerId && post.AuthorId == authorId,
-            cancellationToken: cancellationToken);
+        var filter = Builders<GamePost>.Filter.Where(post => post.OwnerId == playerId && post.AuthorId == authorId);
+        return await (sessionProvider.Current is { } session
+            ? _posts.CountDocumentsAsync(session, filter, cancellationToken: cancellationToken)
+            : _posts.CountDocumentsAsync(filter, cancellationToken: cancellationToken));
     }
 
     public async ValueTask SaveLikesAsync(GamePost post, CancellationToken cancellationToken)
