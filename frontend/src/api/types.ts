@@ -21,13 +21,12 @@ export type PlayerDocument = Omit<Fields<Wire.PlayerResponse>, 'energy' | 'skill
   streak: { days: number; week: boolean[]; nextReward: string }
   ageBand?: import('../app/ageBand').AgeBand
 }
-export interface Player extends Omit<PlayerDocument, 'energy' | 'experiments'> {
+export interface Player extends Omit<PlayerDocument, 'energy'> {
   worldInstanceId?: string; difficulty?: WorldDifficulty; avatarStyle?: string
   name: string; handle: string; role: string; world: WorldId
   subs: number; postsLeft: number; postsCap: number
   collection: CollectionCard[]; bio: string; type: string
   nextWorld?: { id: WorldId; title: string; need: string }; drama: Drama; voice: string
-  experiments?: Wire.PlayerResponse['experiments']
 }
 export type CommentReaction = Wire.CommentReactionResponse
 // Demo comments can omit server-enriched author/thread metadata.

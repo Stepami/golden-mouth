@@ -28,12 +28,17 @@ export function assignLanding(): LandingVariant {
   const requested = requestedVariant()
   const variant = requested ?? 'worlds'
   const source = requested ? 'link' : 'direct'
-  if (saved && variant === saved.variant && source === saved.source) return saved.variant
   const query = new URLSearchParams(location.search)
   const utm: Record<string, string> = {}
   for (const name of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content']) {
     const value = query.get(name)
     if (value && /^[a-zA-Z0-9_.-]{1,64}$/.test(value)) utm[name] = value
+  }
+  if (saved && variant === saved.variant && source === saved.source) {
+    const entries = Object.entries(utm)
+    if (entries.length === 0 || (entries.length === Object.keys(saved.utm).length && entries.every(([name, value]) => saved.utm[name] === value))) {
+      return saved.variant
+    }
   }
   const assignment: Assignment = { entryId: crypto.randomUUID(), variant, source, utm, firstPost: saved?.firstPost, initialVariant: saved?.initialVariant ?? saved?.variant ?? variant, switched: saved?.switched || !!saved && saved.variant !== variant }
   clearLandingWorld()
@@ -54,16 +59,17 @@ export function landingAuthPending(): boolean {
   try { if (localStorage.getItem(authKey) === '1') return true } catch { /* Try the same-tab fallback. */ }
   try { return sessionStorage.getItem(authKey) === '1' || authFallback } catch { return authFallback }
 }
-export function beginLandingAuth(worldId: string) {
+export function beginLandingAuth(worldId?: string) {
   worldFallback = worldId
+  if (!worldId) clearLandingWorld()
   // OAuth can return in another tab, where sessionStorage is empty.
   try {
-    localStorage.setItem(worldKey, worldId)
+    if (worldId) localStorage.setItem(worldKey, worldId)
     localStorage.setItem(authKey, '1')
     sessionStorage.removeItem(worldKey)
     sessionStorage.removeItem(authKey)
   } catch {
-    try { sessionStorage.setItem(worldKey, worldId); sessionStorage.setItem(authKey, '1') } catch { /* Keep this visit usable. */ }
+    try { if (worldId) sessionStorage.setItem(worldKey, worldId); sessionStorage.setItem(authKey, '1') } catch { /* Keep this visit usable. */ }
   }
   const value = read()
   if (value) save({ ...value, worldId })

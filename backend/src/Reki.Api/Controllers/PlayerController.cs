@@ -10,6 +10,7 @@ using Reki.Application.Player.DeletePlayerCommand;
 using Reki.Application.Player.ExchangeEnergyCommand;
 using Reki.Application.Player.GetReferral;
 using Reki.Application.Player.MergePlayersCommand;
+using Reki.Application.Player.RefreshDailyChallengeCommand;
 using Reki.Application.Player.RegisterWebPushCommand;
 using Reki.Application.Player.Responses;
 using Reki.Application.Player.Streaks.GetStreak;
@@ -35,6 +36,7 @@ public sealed class PlayerController(
     {
         var player = await rekiContext.Player;
         await sender.Send(new UpdateStreak(player.Id), cancellationToken);
+        await sender.Send(new RefreshDailyChallenge(player), cancellationToken);
         await sender.Send(new UpdateLastSeenAt(player), cancellationToken);
         return TypedResults.Ok(player.ToPlayerResponse());
     }

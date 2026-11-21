@@ -1,11 +1,16 @@
 services:
   gateway:
     image: nginx:1.29.1-alpine
+    environment:
+      METRIKA_OPENOBSERVE_BASIC_AUTH: ${METRIKA_OPENOBSERVE_BASIC_AUTH:-}
     ports:
       - "80:80"
       - "443:443"
     volumes:
+      - ./nginx.gateway.conf:/etc/nginx/nginx.conf:ro
       - ./nginx.production.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./observability/daily-metrics:/etc/nginx/daily-metrics:ro
+      - ./observability/metrika-goals:/etc/nginx/metrika-goals:ro
       - /var/lib/reki/acme-webroot:/var/www/letsencrypt:ro
       - /etc/reki/tls/fullchain.pem:/etc/nginx/tls/fullchain.pem:ro
       - /etc/reki/tls/private.key:/etc/nginx/tls/private.key:ro

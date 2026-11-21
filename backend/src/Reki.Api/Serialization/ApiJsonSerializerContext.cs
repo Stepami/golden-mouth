@@ -25,6 +25,7 @@ using Reki.Application.Telemetry;
 using Reki.Application.Worlds.Responses;
 using Reki.Domain.Invites;
 using Reki.Domain.Player;
+using Reki.Domain.Player.Challenges;
 using Reki.Domain.Player.Streaks;
 using Reki.Domain.Posts;
 using Reki.Domain.Telemetry;
@@ -59,6 +60,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(AuthTokenResponse))]
 [JsonSerializable(typeof(Guid))]
 [JsonSerializable(typeof(long))]
+[JsonSerializable(typeof(bool))]
 [JsonSerializable(typeof(VkUserInfoResponse))]
 [JsonSerializable(typeof(YandexUserInfoResponse))]
 [JsonSerializable(typeof(PlayerId))]
@@ -118,6 +120,7 @@ namespace Reki.Api.Serialization;
         typeof(CamelCaseEnumConverter<DirectMessageAuthor>),
         typeof(CamelCaseEnumConverter<ReplyGenerationStatus>),
         typeof(CamelCaseEnumConverter<ClientLogLevel>),
+        typeof(CamelCaseEnumConverter<DailyTaskType>),
         typeof(KebabCaseEnumConverter<LaunchSurface>),
     ],
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]

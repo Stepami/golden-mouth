@@ -10,6 +10,7 @@ using OpenIddict.Abstractions;
 using OpenIddict.MongoDb;
 using OpenIddict.MongoDb.Models;
 using Reki.Api.Requests.Player;
+using Reki.Api.Requests.Posts;
 using Reki.Api.Requests.Telemetry.AnalyticsBatch;
 using Reki.Application;
 using Reki.Application.Player;
@@ -630,50 +631,43 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Settings_PartialUpdates_PreserveOtherFieldsAsync()
     {
         // Arrange
+        const string voice = "Коротко и тепло";
         using var api = Factory.CreateApiClient(8410);
-        await CreatePlayerWithWorldAsync(api);
+        var player = await api.RegisterAsync(
+            new OnboardingRequest { BirthYear = 1990, Address = Address.Nick },
+            CancellationToken.None);
+        var world = await api.Worlds.CreateWorldAsync(
+            (await CreateWorldDefinitionAsync(api)) with { Voice = voice, Drama = WorldDrama.Mid },
+            CancellationToken.None);
+        var worldId = world.Id.ToString();
+        await api.Player.UpdateSettingsAsync(new UpdateSettingsRequest { Plus = true }, CancellationToken.None);
+        await api.Posts.CreatePostAsync(worldId, new CreatePostRequest { Text = "Пост для проверки настроек" }, CancellationToken.None);
+        var playerBefore = await api.Player.GetCurrentPlayerAsync(CancellationToken.None);
+        var worldBefore = (await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single();
         var playerRepository = Factory.Services.GetRequiredService<IPlayerRepository>();
         var worldRepository = Factory.Services.GetRequiredService<IWorldRepository>();
-        var userId = ExternalUserId.From($"telegram:{8410}");
-        var player = await playerRepository.GetPlayerAsync(userId, CancellationToken.None)
-                     ?? throw new InvalidOperationException("Missing player.");
-        await Database.GetCollection<PlayerProfile>("players").UpdateOneAsync(
-            item => item.Id == player.Id,
-            Builders<PlayerProfile>.Update
-                .Set(item => item.Wallet.Energy, 8)
-                .Set(item => item.Settings.Plus, true),
-            cancellationToken: CancellationToken.None);
-
-        var world = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
-        await Database.GetCollection<World>("worlds").UpdateOneAsync(
-            item => item.Id == world.Id,
-            Builders<World>.Update
-                .Set(item => item.Player.Subscribers, 1234)
-                .Set(item => item.Player.Voice, "Коротко и тепло")
-                .Inc(item => item.Version, 1),
-            cancellationToken: CancellationToken.None);
 
         // Act
         await api.Worlds.UpdateWorldAsync(
-            await GetWorldIdAsync(api),
-            DefinitionOf((await api.Worlds.GetOwnedWorldsAsync(CancellationToken.None)).Single()) with { Drama = WorldDrama.Off },
+            worldId,
+            DefinitionOf(worldBefore) with { Drama = WorldDrama.Off },
             CancellationToken.None);
         await api.Player.UpdateSettingsAsync(new UpdateSettingsRequest { Address = Address.She }, CancellationToken.None);
         await api.Player.UpdateSettingsAsync(new UpdateSettingsRequest { Plus = false }, CancellationToken.None);
         await api.Player.UpdateSettingsAsync(new UpdateSettingsRequest(), CancellationToken.None);
 
         // Assert
-        var saved = await playerRepository.GetPlayerAsync(userId, CancellationToken.None)
+        var saved = await playerRepository.GetPlayerAsync(player.Id, CancellationToken.None)
                     ?? throw new InvalidOperationException("Missing player.");
         var savedWorld = (await worldRepository.GetWorldsAsync(player.Id, CancellationToken.None)).Single();
         await Assert.That(savedWorld.Player.Drama).IsEqualTo(WorldDrama.Off);
         await Assert.That(saved.Address).IsEqualTo(Address.She);
         await Assert.That(saved.Settings.Plus).IsFalse();
-        await Assert.That(savedWorld.Player.Voice).IsEqualTo("Коротко и тепло");
-        await Assert.That(saved.Settings.Notifications).IsEqualTo(player.Settings.Notifications);
-        await Assert.That(saved.Settings.Quiet).IsEqualTo(player.Settings.Quiet);
-        await Assert.That(savedWorld.Player.Subscribers).IsEqualTo(1234);
-        await Assert.That(saved.Wallet.Energy).IsEqualTo(8);
+        await Assert.That(savedWorld.Player.Voice).IsEqualTo(voice);
+        await Assert.That(saved.Settings.Notifications).IsEqualTo(playerBefore.Settings.Notifications);
+        await Assert.That(saved.Settings.Quiet).IsEqualTo(playerBefore.Settings.Quiet);
+        await Assert.That(savedWorld.Player.Subscribers).IsEqualTo(worldBefore.Subscribers);
+        await Assert.That(saved.Wallet.Energy).IsEqualTo(playerBefore.Energy);
     }
 
     [Test]

@@ -1,0 +1,24 @@
+#ResultArray#
+by_date = {}
+today = format_timestamp!(now(), format: "%F", timezone: "Europe/Moscow")
+for_each(array!(.)) -> |_, row| {
+  by_date = set!(by_date, [string!(row.date)], row)
+}
+days = []
+for_each(__DATES__) -> |_, day| {
+  row = get(by_date, [day]) ?? null
+  if is_null(row) {
+    row = {"dau": 0, "llm_requests": 0, "new_users": 0}
+  }
+  days = push(days, {
+    "date": day,
+    "dau": row.dau,
+    "llm_requests": row.llm_requests,
+    "tool_requests": 0,
+    "total_users": row.total_users,
+    "new_users": row.new_users,
+    "is_final": day < today
+  })
+}
+. = days
+.

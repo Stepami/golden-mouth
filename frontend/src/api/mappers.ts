@@ -24,7 +24,9 @@ export function player(value: Input<Wire.PlayerResponse>, streak: { count: numbe
     if (!item) throw new Error('Missing player skill')
     return { level: number(item.level), progress: number(item.progress) }
   }
-  return { ...value, birthYear: number(value.birthYear), energyWallet: value.energyWallet == null ? value.energyWallet : energyWallet(value.energyWallet), ageBand, energy: number(value.energy), streak: { days: streakDays, week: Array.from({ length: 7 }, (_, day) => day < streakDays), nextReward: 'ещё день — и бонус' }, skills: { brave: skill('brave'), humor: skill('humor'), topic: skill('topic') } }
+  return { ...value, birthYear: number(value.birthYear), energyWallet: value.energyWallet == null ? value.energyWallet : energyWallet(value.energyWallet), ageBand, energy: number(value.energy), streak: { days: streakDays, week: Array.from({ length: 7 }, (_, day) => day < streakDays), nextReward: 'ещё день — и бонус' }, skills: { brave: skill('brave'), humor: skill('humor'), topic: skill('topic') },
+    dailyChallenge: { ...value.dailyChallenge, values: Object.fromEntries(Object.entries(value.dailyChallenge.values).map(([worldId, tasks]) => [worldId, Object.fromEntries(Object.entries(tasks).map(([type, task]) => [type, { ...task, target: number(task.target), progress: number(task.progress) }]))])) },
+  }
 }
 export function energyWallet(value: Input<Wire.EnergyWalletResponse>): Wire.EnergyWalletResponse {
   return { ...value, amount: number(value.amount), cap: number(value.cap), regenSeconds: number(value.regenSeconds),

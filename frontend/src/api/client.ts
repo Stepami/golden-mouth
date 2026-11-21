@@ -1,3 +1,4 @@
+import { trackMetrikaActivity } from '../app/metrika';
 import { clearLandingWorld } from '../app/landing/experiment'
 import { completeLandingPost } from '../app/landing/experiment';
 // Р¤Р°СЃР°Рґ API РїРѕРІРµСЂС… NSwag Fetch-РєР»РёРµРЅС‚Р°.
@@ -8,7 +9,7 @@ import { clearAvatarPersonalization } from '../app/avatarPersonalization';
 import { clearReferral } from '../app/referral';
 import { clearTokens, logout as revokeSession, registerPlayer } from './auth';
 import { clearApiCache } from '../app/useApi';
-import { setAnalyticsWorld, setTelemetryPlayerAvailable, trackLanding } from '../app/analytics';
+import { event, setAnalyticsWorld, setTelemetryPlayerAvailable, trackLanding } from '../app/analytics';
 import { clearWorldContent, installWorldContent, installWorldTemplates, postIdeasForWorld } from './worldContent';
 import { error } from '../app/log';
 import { sdk } from './transport';
@@ -23,6 +24,12 @@ import { starGenerationEvent } from './streamEvents';
 import type { PlayerDocument, PostsPage, Challenge, Dm, FeedItem, Friend, Player, Post, PostDetailResponse, WorldDocument, WorldDefinition, WorldId, WorldUpdate } from './types';
 let sessionPlayer: Player | undefined;
 let sessionIdentity: PlayerDocument | undefined;
+let observedDailyTasks: {
+    playerId: string;
+    day: string;
+    progress: Map<string, number>;
+    completed: Set<string>;
+} | undefined;
 let ownedWorldSnapshot: WorldDocument[] | undefined;
 let templates: WorldDocument[] = [];
 let templatesRequest: Promise<void> | undefined;
@@ -58,6 +65,37 @@ function loadTemplates(): Promise<void> {
         return Promise.resolve();
     return templatesRequest ??= fetchTemplates().finally(() => { templatesRequest = undefined; });
 }
+function observeDailyTaskProgress(player: Player) {
+    const challenge = player.dailyChallenge;
+    const world = player.worldInstanceId;
+    if (!world || challenge?.day !== new Date().toISOString().slice(0, 10))
+        return;
+    if (observedDailyTasks?.playerId !== player.id || observedDailyTasks.day !== challenge.day) {
+        observedDailyTasks = { playerId: player.id, day: challenge.day, progress: new Map(), completed: new Set() };
+    }
+    const observation = observedDailyTasks;
+    for (const [kind, task] of Object.entries(challenge.values[world] ?? {})) {
+        const key = `${world}:${kind}:${task.target}`;
+        const before = observation.progress.get(key);
+        if (before !== undefined && task.progress <= before)
+            continue;
+        observation.progress.set(key, task.progress);
+        if (before === undefined)
+            continue;
+        event('onboarding_step', {
+            step: 'daily_tasks_progress',
+            id: `${challenge.day}:${kind}:${task.target}:${task.progress}`,
+            kind,
+            delta: task.progress - before,
+            completed: challenge.completion[kind] === true && !observation.completed.has(kind),
+            ok: true,
+        });
+    }
+    for (const [kind, completed] of Object.entries(challenge.completion)) {
+        if (completed)
+            observation.completed.add(kind);
+    }
+}
 function rememberPlayer(player: Player): Player {
     try {
         if (player.worldInstanceId)
@@ -65,9 +103,10 @@ function rememberPlayer(player: Player): Player {
     }
     catch { /* memory fallback */ }
     setTelemetryPlayerAvailable(true);
-    sessionIdentity = { ...player, energy: player.postsLeft, experiments: player.experiments ?? {} };
+    sessionIdentity = { ...player, energy: player.postsLeft };
     sessionPlayer = player;
     setAnalyticsWorld(player.worldInstanceId, player.difficulty);
+    observeDailyTaskProgress(player);
     return player;
 }
 async function readSse<T>(response: Response, decode: (value: unknown) => T, onEvent: (event: T) => void | Promise<void>): Promise<void> {
@@ -171,6 +210,7 @@ export const api = {
         sessionIdentity = undefined;
         ownedWorldSnapshot = undefined;
         setTelemetryPlayerAvailable(false);
+        observedDailyTasks = undefined;
         setAnalyticsWorld(undefined);
     },
     logout: async () => {
@@ -201,14 +241,15 @@ export const api = {
         return response;
     })),
     exchangeEnergy: async () => data(sdk.player.exchangeEnergy()),
+    claimOnboardingBonus: (postId: string, signal?: AbortSignal): Promise<boolean> => data(sdk.posts.claimOnboardingBonus(postId, signal)),
     playerId: (): string | undefined => sessionIdentity?.id,
     hasPlayer: (): boolean => sessionIdentity !== undefined,
     onboardingProfile: () => sessionIdentity,
-    onboarding: async (body: Wire.OnboardingRequest): Promise<PlayerDocument> => {
+    onboarding: async (body: Wire.OnboardingRequest, onCreated?: (playerId: string) => void): Promise<PlayerDocument> => {
         if (sessionIdentity)
             throw new Error('Onboarding has already been completed');
         const generation = sessionGeneration();
-        const profile = await registerPlayer(body);
+        const profile = await registerPlayer(body, id => { assertSession(generation); onCreated?.(id); });
         assertSession(generation);
         const streak = await data(sdk.player.getPlayerStreak());
         assertSession(generation);
@@ -216,8 +257,10 @@ export const api = {
         setTelemetryPlayerAvailable(true);
         return sessionIdentity;
     },
-    createWorld: async (definition: WorldDefinition): Promise<Player> => {
+    createWorld: async (definition: WorldDefinition, onCreated?: (worldId: string) => void): Promise<Player> => {
         const world = map.world(await data(sdk.worlds.createWorld({ ...definition, postIdeas: postIdeasForWorld(definition) })));
+        trackMetrikaActivity('world', world.id);
+        onCreated?.(world.id);
         return api.me(world.id);
     },
     deleteWorld: async (id: string) => {
@@ -233,8 +276,15 @@ export const api = {
     createPost: async (text: string, ownWords: boolean, repostId?: string) => {
         const response = await data(sdk.posts.createPost(worldId(), { text, ownWords, repostId: repostId ?? null }));
         const { postId: id, ...post } = map.post(response.post);
+        trackMetrikaActivity('post', id);
         if (!repostId && completeLandingPost()) trackLanding('landing_first_post');
         return { post: { ...post, id }, result: map.result(response.result), predictedAuthorId: response.predictedAuthorId };
+    },
+    savePresetReply: async (postId: string, commentId: string | null, requestId: string, text: string, starId?: string) => {
+        const authorId = starId ? `Star_${starId}` : playerAuthorId();
+        const result = await data(sdk.posts.replyToPost(postId, worldId(), { authorId, commentId, requestId, text }));
+        if (!starId) trackMetrikaActivity('comment', result.commentId);
+        return result.commentId;
     },
     initialComment: async (postId: string, authorId: string, signal?: AbortSignal): Promise<Post> => {
         const currentWorld = worldId();
@@ -262,6 +312,7 @@ export const api = {
             return { ...saved, commentId: result.commentId };
         };
         const playerReply = await save(`Player_${player.id.replaceAll('-', '')}`, commentId, requestId, text);
+        trackMetrikaActivity('comment', playerReply.commentId);
         try {
             const mainId = `${requestId}-star`;
             const main = playerReply.post.comments.some(comment => comment.requestId === mainId) && options.additionalStarId
