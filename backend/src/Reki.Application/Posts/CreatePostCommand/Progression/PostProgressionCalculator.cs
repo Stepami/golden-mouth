@@ -26,57 +26,44 @@ internal sealed class PostProgressionCalculator(
             post,
             gameWorld,
             ownWords);
-        var flop = turn.FlopReason is not null;
-
         var starId = await stars.GetRelevantCommenterAsync(gameWorld, post);
 
         var currentBalance = balance.CurrentValue;
         var world = currentBalance.Difficulties[gameWorld.Difficulty];
         var quality = Math.Clamp((turn.Brave + turn.Humor + turn.Topic) / 3, 0, 1);
 
-        var views = Random.Shared.NextInt64(gameWorld.Player.Subscribers + 1);
-        var percentage = Random.Shared.Next(currentBalance.LikesMinPercent, currentBalance.LikesMaxPercent + 1);
-        var likes = (long)Math.Ceiling((decimal)views * percentage / 100);
-
-        if (post.RepostId is not null)
+        var isRepost = post.RepostId is not null;
+        var flop = !isRepost && turn.FlopReason is not null;
+        var viral = !isRepost && !flop && IsViral(post.Id.ToString(), quality, turn.PositiveEmotion, world);
+        var skills = player.Skills;
+        long subscriberDelta = 1;
+        if (!isRepost)
         {
-            return new PostProgression(
-                1,
-                quality,
-                false,
-                false,
-                player.Skills,
-                views,
-                likes,
-                starId,
-                turn);
+            var multiplier = GetGrowthMultiplier(gameWorld, ownWords);
+            var growth = currentBalance.Growth.Coefficient * world.GrowthCoefficient *
+                         (0.5 + quality) *
+                         Math.Pow(Math.Max(1, gameWorld.Player.Subscribers), currentBalance.Growth.Power) *
+                         multiplier;
+            var drama =
+                (world.Drama ?? throw new InvalidOperationException("Drama balance is missing."))[
+                    gameWorld.Player.Drama];
+            var viralMultiplier = viral ? currentBalance.Viral.Multiplier * world.ViralMultiplier : 1;
+            subscriberDelta = flop
+                ? -Math.Min(
+                    gameWorld.Player.Subscribers,
+                    Math.Min(
+                        Math.Max(1, (long)Math.Round(growth * world.LossMultiplier * drama.LossMultiplier)),
+                        Math.Max(
+                            1,
+                            (long)Math.Floor(gameWorld.Player.Subscribers * world.MaxSubscriberFraction *
+                                             drama.LossMultiplier))))
+                : Math.Max(1, (long)Math.Round(growth * viralMultiplier));
+
+            skills = AddSkillExperience(player, turn, ownWords);
         }
 
-        var multiplier = GetGrowthMultiplier(gameWorld, ownWords);
-        var viral = !flop && IsViral(post.Id.ToString(), quality, turn.PositiveEmotion, world);
-        if (viral)
-        {
-            views *= 2;
-            likes *= 2 * 3;
-        }
-
-        var growth = currentBalance.Growth.Coefficient * world.GrowthCoefficient *
-                     (0.5 + quality) *
-                     Math.Pow(Math.Max(1, gameWorld.Player.Subscribers), currentBalance.Growth.Power) *
-                     multiplier;
-        var drama =
-            (world.Drama ?? throw new InvalidOperationException("Drama balance is missing."))[gameWorld.Player.Drama];
-        var viralMultiplier = viral ? currentBalance.Viral.Multiplier * world.ViralMultiplier : 1;
-        var subscriberDelta = flop
-            ? -Math.Min(gameWorld.Player.Subscribers, Math.Min(
-                Math.Max(1, (long)Math.Round(growth * world.LossMultiplier * drama.LossMultiplier)),
-                Math.Max(1, (long)Math.Floor(gameWorld.Player.Subscribers * world.MaxSubscriberFraction * drama.LossMultiplier))))
-            : Math.Max(1, (long)Math.Round(growth * viralMultiplier));
-
-        var skills = AddSkillExperience(
-            player,
-            turn,
-            ownWords);
+        var (views, likes) =
+            PostMetricsCalculator.Calculate(gameWorld.Player.Subscribers, isRepost, viral, currentBalance);
         return new PostProgression(
             subscriberDelta,
             quality,
