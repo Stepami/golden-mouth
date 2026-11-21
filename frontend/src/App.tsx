@@ -10,6 +10,8 @@ import { api } from './api/client'
 import { canResumeAuth, clearPendingLogin, hasAccess, hasInitData, hasPendingLogin, loginMiniApp, loginVk, loginWidget, loginYandex, needsRegistration, pendingAuthProvider, startAuth, subscribeAuth, type AuthProvider } from './api/auth'
 import { AuthProviders } from './app/AuthProviders'
 import { WorldUnlockCelebration } from './app/WorldUnlockCelebration'
+import { FirstPostReminder } from './app/FirstPostReminder'
+import { worldOf } from './api/worldContent'
 import { runtimeConfig } from './app/runtimeConfig'
 import { AvatarWorld, AvatarPeople } from './ui/avatar'
 import { useAvatarPersonalization } from './app/avatarPersonalization'
@@ -115,6 +117,8 @@ function Shell() {
       <AvatarPeople.Provider value={people}><div className="app">
         {isGameOnboardingPreview() && <div className="game-onboarding-preview-label">DEV-обучение · действия сохраняются в игре <button onClick={() => restartGameOnboardingPreview(player?.worldInstanceId ?? player?.world)}>Начать просмотр заново</button><button onClick={() => { restartGameOnboardingPreview(); nav.push('01-3_world') }}>С выбора мира</button></div>}
         <div key={top.id} className={top.id === '01-3_world' ? 'worlds-arrival' : undefined}><Screen /></div><WorldUnlockCelebration /><GameOnboarding lockedSection={lockedSection} />
+        {/* Eligibility and the target world will come from #345; this is a DEV preview only. */}
+        {import.meta.env.DEV && new URLSearchParams(location.search).get('preview') === 'first-post-reminder' && player && <FirstPostReminder key={player.id} worldId={player.worldInstanceId ?? player.world} worldTitle={worldOf(player.world).title} />}
         {tab !== undefined && (
           <nav className="tabbar" aria-label="Основная навигация">
             {[5, 0, 1, 2, 3, 4].map(i => { const t = TABS[i]; const locked = learning && (!player || i !== 4 && !(i === 5 && top.id === '01-3_world') && !(i === 0 && onboarding?.phase !== 'setup')); return (i === 2 && !runtimeConfig.features.dm) || (i === 3 && !runtimeConfig.features.friends) ? null : <button key={t.title} aria-current={i === tab ? 'page' : undefined} aria-disabled={locked || undefined} className={`${i === tab ? 'on' : ''}${locked ? ' locked' : ''}`} onClick={() => { if (locked) { setLockedSection(true); return } setLockedSection(false); if (top.id === t.screen) return; tap('tab', { to: t.screen }); nav.tab(i) }}><b>{t.icon}</b>{t.title}</button> })}
