@@ -64,6 +64,11 @@ internal sealed class PostProgressionCalculator(
                      (0.5 + quality) *
                      Math.Pow(Math.Max(1, gameWorld.Player.Subscribers), currentBalance.Growth.Power) *
                      multiplier;
+        if (flop)
+        {
+            growth *= world.Drama[gameWorld.Player.Drama].LossMultiplier;
+        }
+
         var viralMultiplier = viral ? currentBalance.Viral.Multiplier * world.ViralMultiplier : 1;
         var delta = Math.Max(1L, (long)Math.Round(growth * viralMultiplier));
         var subscriberDelta = flop ? -Math.Min(gameWorld.Player.Subscribers, delta) : delta;
