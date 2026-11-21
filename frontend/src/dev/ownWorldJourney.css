@@ -62,16 +62,27 @@
   margin: 0;
 }
 
-.voice-worlds-catalog .own-unlock-goal {
-  margin-top: 11px;
+.voice-unlock-details {
+  display: grid;
+  gap: 2px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line2);
 }
 
-.voice-worlds-catalog .own-world-unlock progress {
-  margin: 8px 0 0;
+.voice-unlock-details b {
+  font-size: 13px;
 }
 
-.voice-worlds-catalog .own-world-unlock p {
-  margin: 7px 0;
+.voice-worlds-catalog .voice-unlock-details p {
+  margin: 3px 0 0;
+}
+
+.voice-worlds-catalog .voice-unlock-details .text-link {
+  justify-self: start;
+  min-height: 44px;
+  margin-top: 0;
+  padding: 0;
 }
 
 .voice-preview:has(> .voice-journey-tabs) > main {
@@ -179,29 +190,3 @@
   font-size: 14px;
   font-weight: 650;
 }
-
-.voice-feature-outputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.voice-feature-output {
-  display: grid;
-  align-content: start;
-  gap: 2px;
-  min-width: 0;
-  padding: 9px;
-  border: 1px solid var(--line2);
-  border-radius: 11px;
-  background: var(--card2);
-}
-.voice-feature-output b { font-size: 13px; }
-.voice-feature-output > span { font-size: 11px; line-height: 1.3; }
-
-.voice-feature-cast .voice-portraits { display: flex; gap: 2px; margin: 0; }
-.voice-feature-cast .voice-portraits li { min-width: 0; flex: none; }
-.voice-feature-cast .voice-portraits li > span:last-child { display: none; }
-.voice-feature-cast .voice-portrait { width: 25px; height: 25px; }
-.voice-feature-cast { min-height: 27px; }
-
-.voice-feature-post { display: flex; align-items: center; gap: 6px; height: 27px; color: var(--lilac); }
-.voice-feature-post > span { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 7px; background: #342747; }
-.voice-feature-post > div { display: grid; gap: 3px; width: 32px; }
-.voice-feature-post i { height: 2px; border-radius: 2px; background: #716182; }
-.voice-feature-post i:last-child { width: 72%; }

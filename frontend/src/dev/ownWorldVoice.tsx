@@ -250,7 +250,6 @@ function App() {
       unlocked={unlocked}
       savedWorld={created ? { title: playWorld.title, summary: playWorld.summary } : null}
       cover={cover}
-      draft={playWorld}
       onUnlock={() => { setUnlocked(true); setPage('unlock') }}
       onCreate={() => setPage('story')}
       onOpenWorld={() => setPage('channel')}
