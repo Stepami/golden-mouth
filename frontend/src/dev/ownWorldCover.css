@@ -1,0 +1,20 @@
+.voice-cover-editor { display: grid; gap: 10px; min-width: 0; }
+.voice-world-cover, .voice-cover-empty {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  background: var(--card2);
+  object-fit: cover;
+}
+.voice-cover-empty { display: grid; place-items: center; font-size: 13px; }
+.voice-cover-catalog { padding: 0; overflow: hidden; border: 1px solid var(--line2); }
+.voice-cover-catalog :is(.voice-world-cover, .voice-cover-empty) { border-radius: 0; }
+.voice-cover-copy { display: grid; gap: 3px; padding: 10px 12px; }
+.voice-cover-actions { display: flex; flex-wrap: wrap; justify-content: space-between; column-gap: 10px; }
+.voice-cover-actions .text-button { min-height: 42px; padding: 8px 3px; }
+.voice-cover-file { position: relative; display: inline-grid; align-items: center; }
+.voice-cover-file input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.voice-cover-file:focus-within { outline: 2px solid var(--lilac); border-radius: 6px; }
+.voice-cover-adjust label { display: grid; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.voice-preview .voice-cover-adjust input[type="range"] { width: 100%; padding: 0; accent-color: var(--lilac); }

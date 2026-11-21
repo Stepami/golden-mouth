@@ -1,10 +1,12 @@
 import { useEffect, useRef, type ComponentProps } from 'react'
 import { VoicePortraits, voicePortraitSeed } from './ownWorldFullEditor'
 import './ownWorldPlayPreview.css'
+import { VoiceCoverImage, type VoiceCover } from './ownWorldCover'
 
 type PlayProps = {
   step: 'channel' | 'compose' | 'result'
   draft: ComponentProps<typeof VoicePortraits>['draft']
+  cover: VoiceCover | null
   postText: string
   publishedText: string
   onText: (text: string) => void
@@ -14,11 +16,12 @@ type PlayProps = {
   onRead: () => void
 }
 
-export function VoiceOwnWorldPlay({ step, draft, postText, publishedText, onText, onCompose, onPublish, onChannel, onRead }: PlayProps) {
+export function VoiceOwnWorldPlay({ step, draft, cover, postText, publishedText, onText, onCompose, onPublish, onChannel, onRead }: PlayProps) {
   const heading = useRef<HTMLHeadingElement>(null)
   useEffect(() => { heading.current?.focus({ preventScroll: true }) }, [step])
 
   if (step === 'channel') return <main className="pad voice-play">
+    {cover && <VoiceCoverImage cover={cover} />}
     <h1 ref={heading} tabIndex={-1}>{draft.title.trim() || 'Мой мир'}</h1>
     <div className="voice-play-cast"><VoicePortraits draft={draft} /></div>
     {publishedText ? <>

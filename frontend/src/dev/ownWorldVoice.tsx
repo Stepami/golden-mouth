@@ -4,6 +4,7 @@ import '../theme.css'
 import './ownWorldVoice.css'
 import { useVoiceFullDraft, VoiceFullEditor, VoicePortraits, voiceDraftSummary, voiceWorldIssue } from './ownWorldFullEditor'
 import { VoiceOwnWorldPlay } from './ownWorldPlayPreview'
+import { VoiceCoverImage, type VoiceCover } from './ownWorldCover'
 
 const story = 'Я доставляю письма в городе над облаками. Сегодня картограф Лис нашёл посылку с адресом острова, который исчез сто лет назад. Летать между островами можно только на рассвете.'
 const prompts = [
@@ -185,6 +186,8 @@ function App() {
   const [audio, setAudio] = useState('')
   const [transcript, setTranscript] = useState(story)
   const [draft, setDraft] = useState(sampleDraft)
+  const [cover, setCover] = useState<VoiceCover | null>(null)
+  const coverUrl = cover?.url
   const [postDraft, setPostDraft] = useState<string | null>(null)
   const [publishedText, setPublishedText] = useState('')
   const { draft: fullDraft, previewDraft: playWorld, setDraft: setFullDraft, openEditor } = useVoiceFullDraft(draft)
@@ -205,6 +208,10 @@ function App() {
   }
   const heading = useRef<HTMLHeadingElement>(null)
   const textInput = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (coverUrl) return () => URL.revokeObjectURL(coverUrl)
+  }, [coverUrl])
 
   useEffect(() => {
     if (!audio) return
@@ -278,6 +285,7 @@ function App() {
       </div>
       <div className="card">
         <div className="voice-fields">
+          {cover && <VoiceCoverImage cover={cover} />}
           <label className="voice-field">
             Название
             <input value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} />
@@ -297,10 +305,11 @@ function App() {
       {worldIssue && <p className="small muted">{worldIssue}</p>}
       <button type="button" className="btn" disabled={!!worldIssue} onClick={() => { openEditor(); startStory(draft) }}>Начать историю</button>
     </main>}
-    {page === 'full' && <VoiceFullEditor draft={fullDraft} onChange={setFullDraft} onClose={returnToDraft} onPreview={startStory} />}
+    {page === 'full' && <VoiceFullEditor draft={fullDraft} cover={cover} onCoverChange={setCover} onChange={setFullDraft} onClose={returnToDraft} onPreview={startStory} />}
     {(page === 'channel' || page === 'compose' || page === 'result') && <VoiceOwnWorldPlay
       step={page}
       draft={playWorld}
+      cover={cover}
       postText={postText}
       publishedText={publishedText}
       onText={setPostDraft}

@@ -3,6 +3,7 @@ import type { WorldDefinition } from '../api/types'
 import { blankWorld } from '../app/worldDraft'
 import { dramaOptions } from '../app/worldPrototype'
 import { avatarUri } from '../ui/avatarRenderer'
+import { VoiceCoverEditor, type VoiceCover } from './ownWorldCover'
 import './ownWorldFullEditor.css'
 
 type VoiceSummary = {
@@ -174,7 +175,9 @@ function StringFields({ title, values, onChange }: { title: string; values: stri
   </details>
 }
 
-export function VoiceFullEditor({ draft, onChange, onClose, onPreview }: {
+export function VoiceFullEditor({ draft, cover, onCoverChange, onChange, onClose, onPreview }: {
+  cover: VoiceCover | null
+  onCoverChange: (cover: VoiceCover | null) => void
   draft: VoiceDraft
   onChange: (draft: VoiceDraft) => void
   onClose: (summary: VoiceSummary) => void
@@ -238,6 +241,9 @@ export function VoiceFullEditor({ draft, onChange, onClose, onPreview }: {
         {field('Значок', 'emoji', 1, 8)}
         {field('Короткое описание', 'summary', 2, 200)}
       </details>
+    </Section>
+    <Section title="Обложка мира" hint={cover ? 'Загружена' : 'Карточка в каталоге'}>
+      <VoiceCoverEditor cover={cover} title={draft.title} description={draft.summary} onChange={onCoverChange} />
     </Section>
     <Section title="Герои вокруг тебя" hint={draft.stars.map(hero => hero.name.trim()).filter(Boolean).join(', ') || 'Персонажи мира'}>
       {draft.stars.map(hero => <details className="editor-extra hero-editor voice-list-fields" key={hero.id} open={newHero === hero.id ? true : undefined}>
