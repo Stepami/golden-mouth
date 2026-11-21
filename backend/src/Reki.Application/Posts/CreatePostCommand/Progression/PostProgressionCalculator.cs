@@ -64,14 +64,9 @@ internal sealed class PostProgressionCalculator(
                      (0.5 + quality) *
                      Math.Pow(Math.Max(1, gameWorld.Player.Subscribers), currentBalance.Growth.Power) *
                      multiplier;
-        var drama =
-            (world.Drama ?? throw new InvalidOperationException("Drama balance is missing."))[gameWorld.Player.Drama];
         var viralMultiplier = viral ? currentBalance.Viral.Multiplier * world.ViralMultiplier : 1;
-        var subscriberDelta = flop
-            ? -Math.Min(gameWorld.Player.Subscribers, Math.Min(
-                Math.Max(1, (long)Math.Round(growth * world.LossMultiplier * drama.LossMultiplier)),
-                Math.Max(1, (long)Math.Floor(gameWorld.Player.Subscribers * world.MaxSubscriberFraction * drama.LossMultiplier))))
-            : Math.Max(1, (long)Math.Round(growth * viralMultiplier));
+        var delta = Math.Max(1L, (long)Math.Round(growth * viralMultiplier));
+        var subscriberDelta = flop ? -Math.Min(gameWorld.Player.Subscribers, delta) : delta;
 
         var skills = AddSkillExperience(
             player,
