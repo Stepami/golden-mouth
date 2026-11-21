@@ -1,0 +1,68 @@
+.voice-play {
+  overflow-wrap: anywhere;
+}
+
+.voice-play h2 {
+  font-size: 16px;
+}
+
+.voice-play .post-result-check {
+  flex: none;
+}
+
+.voice-play-cast .voice-portraits > li:first-child {
+  flex-basis: 100%;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line2);
+}
+
+.voice-play-cast .voice-portraits > li:first-child .voice-portrait {
+  width: 46px;
+  height: 46px;
+}
+
+.voice-play-cast .voice-portraits > li:first-child b {
+  font-size: 17px;
+}
+
+.voice-play .voice-play-context {
+  gap: 8px;
+  margin: 0;
+  padding: 16px;
+}
+
+.voice-play-context .first-story-context {
+  font-size: 17px;
+}
+
+.voice-play .voice-play-prompt {
+  margin: 0;
+}
+
+.voice-play .voice-play-prompt p {
+  margin: 4px 0 0;
+}
+
+.voice-play-form,
+.voice-play-card,
+.voice-play-reaction {
+  display: grid;
+  gap: 8px;
+}
+
+.voice-play-form {
+  gap: 12px;
+}
+
+.voice-play-form .voice-field textarea {
+  min-height: 9em;
+}
+
+.voice-play .voice-play-reaction,
+.voice-play .voice-play-reaction p {
+  margin: 0;
+}
+
+.voice-published-text {
+  white-space: pre-wrap;
+}

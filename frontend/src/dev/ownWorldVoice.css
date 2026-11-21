@@ -1,0 +1,278 @@
+.voice-preview .top {
+  padding-top: calc(10px + env(safe-area-inset-top));
+}
+
+.voice-preview main {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+}
+
+.voice-preview h1 {
+  font-size: clamp(28px, 8vw, 34px);
+  letter-spacing: -.035em;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.voice-preview .voice-story h1 {
+  max-width: 12em;
+}
+
+.voice-preview :is(button, input, textarea, summary):focus-visible {
+  outline: 2px solid var(--lilac);
+  outline-offset: 2px;
+}
+
+.voice-prompts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.voice-prompts li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-content: start;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 11px;
+  border: 1px solid var(--line2);
+  min-width: 0;
+}
+
+.voice-prompt-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--card2);
+}
+
+.voice-prompts li > .muted {
+  grid-column: 1 / -1;
+  line-height: 1.3;
+}
+
+.voice-recorder .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.voice-mic {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.voice-recorder {
+  display: grid;
+  gap: 10px;
+}
+
+.voice-recorder audio {
+  display: block;
+  width: 100%;
+  color-scheme: dark;
+}
+
+.voice-preview .voice-alternatives {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0 10px;
+}
+
+.voice-preview :is(.voice-alternatives, .voice-recorder) .text-link {
+  min-height: 44px;
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.voice-choose-mode {
+  justify-self: start;
+}
+
+.voice-story-example {
+  margin-top: -6px;
+}
+
+.voice-story-example .text-link {
+  min-height: 44px;
+  padding: 10px 0;
+  font-size: 14px;
+}
+
+.voice-story-example p {
+  color: var(--soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.voice-live {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.voice-live time {
+  margin-left: auto;
+  color: var(--soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.voice-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  color: var(--accent);
+}
+
+.voice-wave i {
+  display: block;
+  width: 3px;
+  height: 10px;
+  border-radius: 3px;
+  background: currentColor;
+}
+
+.voice-wave i:nth-child(even) {
+  height: 15px;
+}
+
+.voice-wave i:nth-child(3) {
+  height: 22px;
+}
+
+.voice-error {
+  color: var(--warn);
+  font-size: 14px;
+}
+
+.voice-intro p {
+  margin-top: 7px;
+}
+
+.voice-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.voice-field {
+  display: grid;
+  gap: 5px;
+  color: var(--soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.voice-preview :is(input, textarea) {
+  border: 1px solid var(--line2);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 8px 9px;
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.voice-preview textarea {
+  display: block;
+  field-sizing: content;
+  min-height: 3.9em;
+  resize: vertical;
+}
+
+.voice-preview h1[tabindex="-1"]:focus { outline: none; }
+
+.voice-preview .voice-wait {
+  min-height: min(530px, 72svh);
+  align-content: center;
+  justify-items: center;
+  gap: 19px;
+  text-align: center;
+}
+
+.voice-magic {
+  display: grid;
+  place-items: center;
+  width: 136px;
+  height: 136px;
+  border: 1px solid var(--line2);
+  border-radius: 32px;
+  background: radial-gradient(circle at 50% 45%, #362745, var(--card) 73%);
+  color: var(--lilac);
+}
+
+.voice-wait-copy p { margin-top: 8px; }
+
+.voice-magic-wave { display: flex; align-items: center; gap: 5px; }
+.voice-magic-wave i {
+  width: 4px;
+  height: 18px;
+  border-radius: 4px;
+  background: currentColor;
+  animation: voice-wave-breathe 900ms ease-in-out infinite alternate;
+}
+.voice-magic-wave i:nth-child(2n) { height: 30px; animation-delay: -180ms; }
+.voice-magic-wave i:nth-child(3n) { height: 40px; animation-delay: -360ms; }
+.voice-magic-wave i:nth-child(4) { height: 49px; animation-delay: -540ms; }
+
+.voice-magic-pieces {
+  display: grid;
+  grid-template-columns: repeat(2, 31px);
+  gap: 6px;
+}
+.voice-magic-pieces span {
+  display: grid;
+  place-items: center;
+  height: 31px;
+  border: 1px solid var(--line2);
+  border-radius: 9px;
+  background: var(--card2);
+  animation: voice-piece-appear 450ms ease-out both;
+}
+.voice-magic-pieces span:nth-child(2) { animation-delay: 140ms; }
+.voice-magic-pieces span:nth-child(3) { animation-delay: 280ms; }
+.voice-magic-pieces span:nth-child(4) { animation-delay: 420ms; }
+
+.voice-magic-stars { position: relative; font-size: 42px; }
+.voice-magic-stars span { display: block; animation: voice-piece-appear 600ms ease-out both; }
+.voice-magic-stars i { position: absolute; font: inherit; font-size: 17px; line-height: 1; font-style: normal; animation: voice-piece-appear 490ms ease-out both; }
+.voice-magic-stars i:nth-child(2) { left: -17px; top: 4px; animation-delay: 120ms; }
+.voice-magic-stars i:nth-child(3) { right: -16px; top: 3px; animation-delay: 240ms; }
+.voice-magic-stars i:nth-child(4) { right: -13px; bottom: 0; animation-delay: 360ms; }
+
+.voice-wait-light {
+  width: 96px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--line2);
+}
+.voice-wait-light span {
+  display: block;
+  width: 44%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--grad);
+  animation: voice-light-pass 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes voice-wave-breathe { from { transform: scaleY(.42); opacity: .53; } to { transform: scaleY(1); opacity: 1; } }
+@keyframes voice-piece-appear { from { transform: translateY(7px) scale(.9); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes voice-light-pass { from { transform: translateX(0); } to { transform: translateX(127%); } }
+@media (prefers-reduced-motion: reduce) {
+  .voice-wait * { animation: none !important; }
+}
