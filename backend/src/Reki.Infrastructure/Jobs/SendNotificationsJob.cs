@@ -30,7 +30,6 @@ internal sealed class SendNotificationsJob(
             var sender = services.GetRequiredKeyedService<INotificationSender>(type);
             var status = await sender.SendAsync(channel, notification, cancellationToken);
             notification.Complete(status);
-            var expectedVersion = player.Version;
 
             await unitOfWork.ExecuteAsync(
                 async token =>
@@ -42,10 +41,8 @@ internal sealed class SendNotificationsJob(
                         if (recent.Count == 3 && recent.All(item => item.Status == NotificationStatus.Failed))
                         {
                             player.RemoveNotificationChannel(type);
-                            if (await players.ReplacePlayerAsync(player, token, expectedVersion))
-                            {
-                                return status;
-                            }
+                            await players.ReplacePlayerAsync(player, token);
+                            return status;
                         }
                     }
 

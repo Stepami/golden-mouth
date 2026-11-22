@@ -23,7 +23,7 @@ public interface IPlayerRepository
         int previousCrystals,
         CancellationToken cancellationToken);
 
-    ValueTask<bool> ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken, int? expectedVersion = null);
+    ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
 
     ValueTask SaveDailyChallengeAsync(PlayerProfile player, int previousVersion, CancellationToken cancellationToken);
 

@@ -79,19 +79,8 @@ internal sealed class MongoPlayerRepository(
         return result.ModifiedCount == 1 ? player.Wallet.Crystals - previousCrystals : 0;
     }
 
-    public async ValueTask<bool> ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken, int? expectedVersion = null)
-    {
-        var filter = Builders<PlayerProfile>.Filter.Eq(item => item.Id, player.Id);
-        if (expectedVersion is { } version)
-        {
-            filter &= Builders<PlayerProfile>.Filter.Eq(item => item.Version, version);
-        }
-
-        var result = await (sessionProvider.Current is { } session
-            ? _players.ReplaceOneAsync(session, filter, player, cancellationToken: cancellationToken)
-            : _players.ReplaceOneAsync(filter, player, cancellationToken: cancellationToken));
-        return result.MatchedCount == 1;
-    }
+    public async ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken) =>
+        await _players.ReplaceOneAsync(sessionProvider, item => item.Id == player.Id, player, cancellationToken);
 
     public async ValueTask SaveDailyChallengeAsync(PlayerProfile player, int previousVersion, CancellationToken cancellationToken)
     {
