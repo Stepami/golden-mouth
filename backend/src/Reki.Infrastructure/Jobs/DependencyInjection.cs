@@ -44,12 +44,7 @@ internal static class DependencyInjection
         services.MapTicker<RefreshDailyChallengesJob>(ServiceLifetime.Singleton).WithMaxConcurrency(1);
         services.MapTicker<PruneAuthJob>().WithMaxConcurrency(1);
 
-        // Keep the existing cron function as the entry point of the chain.
-        const string notificationSchedule = nameof(SendNotificationsJob);
-        services.MapTicker(notificationSchedule, (_, _) => Task.CompletedTask).WithMaxConcurrency(1);
-        services.MapTickerGroup("Notifications")
-            .MapTicker<SendNotificationsJob, NotificationChannelType>("Deliver")
-            .WithMaxConcurrency(2);
+        services.MapTicker<SendNotificationsJob, NotificationChannelType>().WithMaxConcurrency(2);
 
         services.AddTickerQ<RekiTimeTicker, CronTickerEntity>(options =>
         {
@@ -59,10 +54,10 @@ internal static class DependencyInjection
                 .Add(nameof(RefreshRegisteredPlayersJob), "15 */30 * * * *")
                 .Add(nameof(RefreshDailyChallengesJob), "0 0 9 * * *")
                 .Add(nameof(PruneAuthJob), "0 0 3 * * *")
-                .Add(notificationSchedule, cron => cron
+                .Add(cron => cron
                     .WithExpression("40 */5 * * * *")
-                    .SkipIfAlreadyRunning(true)
-                    .StartWith(notificationSchedule)
+                    .SkipIfAlreadyRunning()
+                    .StartWith<SendNotificationsJob, NotificationChannelType>(NotificationChannelType.None)
                     .ThenMany(branches =>
                     {
                         branches.Add<SendNotificationsJob, NotificationChannelType>(NotificationChannelType.Telegram);

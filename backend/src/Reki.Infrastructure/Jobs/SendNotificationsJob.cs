@@ -17,7 +17,13 @@ internal sealed class SendNotificationsJob(
 {
     public async Task ExecuteAsync(TickerFunctionContext<NotificationChannelType> context, CancellationToken cancellationToken = default)
     {
+        // Legacy standalone jobs without a payload deserialize as Telegram and have no parent.
         var type = context.Request;
+        if (type == NotificationChannelType.None || context.ParentId is null)
+        {
+            return;
+        }
+
         await foreach (var notification in notifications.GetDueAsync(type, cancellationToken))
         {
             var player = await players.GetPlayerAsync(notification.PlayerId, cancellationToken);
