@@ -41,22 +41,18 @@ internal sealed class MongoNotificationRepository(
     public async ValueTask DeleteAsync(NotificationId id, CancellationToken cancellationToken) =>
         await _notifications.DeleteOneAsync(item => item.Id == id, cancellationToken);
 
-    public async ValueTask<IReadOnlyList<NotificationStatus>> GetLastThreeAsync(
+    public async ValueTask<IReadOnlyList<Notification>> GetLastThreeAsync(
         PlayerId playerId,
         NotificationChannelType channelType,
-        CancellationToken cancellationToken)
-    {
-        var recent = await _notifications.Find(
+        CancellationToken cancellationToken) =>
+        await _notifications.Find(
                 sessionProvider.Session,
                 item => item.PlayerId == playerId && item.ChannelType == channelType &&
-                        (item.Status == NotificationStatus.Sent || item.Status == NotificationStatus.Failed))
+                        item.Status != NotificationStatus.Pending)
             .SortByDescending(item => item.SendAt)
             .ThenByDescending(item => item.Id)
             .Limit(3)
-            .Project(item => new { item.Status })
             .ToListAsync(cancellationToken);
-        return recent.Select(item => item.Status).ToArray();
-    }
 
     public async ValueTask SaveAsync(Notification notification, CancellationToken cancellationToken) =>
         await _notifications.ReplaceOneAsync(

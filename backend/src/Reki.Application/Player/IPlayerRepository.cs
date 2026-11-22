@@ -25,6 +25,8 @@ public interface IPlayerRepository
 
     ValueTask ReplacePlayerAsync(PlayerProfile player, CancellationToken cancellationToken);
 
+    ValueTask RemoveNotificationChannelsAsync(PlayerId playerId, PlayerNotificationChannel[] channels, CancellationToken cancellationToken);
+
     ValueTask SaveDailyChallengeAsync(PlayerProfile player, int previousVersion, CancellationToken cancellationToken);
 
     ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken);

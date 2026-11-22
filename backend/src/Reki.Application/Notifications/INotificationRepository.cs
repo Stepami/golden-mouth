@@ -9,6 +9,10 @@ public interface INotificationRepository
 
     IAsyncEnumerable<Notification> GetDueAsync(NotificationChannelType channelType, CancellationToken cancellationToken);
 
+    ValueTask<IReadOnlyList<Notification>> GetLastThreeAsync(PlayerId playerId, NotificationChannelType channelType, CancellationToken cancellationToken);
+
+    ValueTask DeleteAsync(NotificationId id, CancellationToken cancellationToken);
+
     ValueTask SaveAsync(Notification notification, CancellationToken cancellationToken);
 
     ValueTask DeleteForPlayerAsync(PlayerId playerId, CancellationToken cancellationToken);

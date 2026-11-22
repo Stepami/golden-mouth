@@ -1,17 +1,17 @@
 using Microsoft.Extensions.DependencyInjection;
 using Reki.Application;
 using Reki.Application.Notifications;
+using Reki.Application.Player;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
-using Reki.Infrastructure.Mongo.Repositories;
 using TickerQ.Utilities.Base;
 using TickerQ.Utilities.Interfaces;
 
 namespace Reki.Infrastructure.Jobs;
 
 internal sealed class SendNotificationsJob(
-    MongoNotificationRepository notifications,
-    MongoPlayerRepository players,
+    INotificationRepository notifications,
+    IPlayerRepository players,
     IUnitOfWork unitOfWork,
     IServiceProvider services,
     TimeProvider timeProvider) : ITickerFunction<NotificationChannelType>
@@ -41,7 +41,7 @@ internal sealed class SendNotificationsJob(
                     if (status == NotificationStatus.Failed)
                     {
                         var recent = await notifications.GetLastThreeAsync(notification.PlayerId, type, token);
-                        if (recent.Count == 3 && recent.All(item => item == NotificationStatus.Failed))
+                        if (recent.Count == 3 && recent.All(item => item.Status == NotificationStatus.Failed))
                         {
                             await players.RemoveNotificationChannelsAsync(notification.PlayerId, channels, token);
                         }
