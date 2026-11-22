@@ -1,5 +1,4 @@
-﻿using Reki.Domain.Notifications;
-using Reki.Domain.Player;
+using Reki.Domain.Notifications;
 
 namespace Reki.Application.Notifications;
 

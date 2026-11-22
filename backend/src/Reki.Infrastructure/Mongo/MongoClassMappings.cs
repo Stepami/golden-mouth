@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Linq.Expressions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -49,6 +50,7 @@ internal static class MongoClassMappings
             new BsonValueObjectConversions.WorldIdBsonSerializer());
 
         RegisterBonuses();
+        RegisterNotificationChannels();
 
         BsonClassMap.TryRegisterClassMap<PlayerChallenge>(classMap =>
         {
@@ -65,7 +67,18 @@ internal static class MongoClassMappings
         RegisterWithMongoId<PlayerProfile, PlayerId>(item => item.Id, true, classMap =>
         {
             classMap.MapMember(item => item.ExternalUserIds);
-            classMap.MapMember(item => item.NotificationChannels).SetDefaultValue(Array.Empty<PlayerNotificationChannel>());
+            classMap.MapMember(item => item.NotificationChannels)
+                .SetDefaultValue(ReadOnlyDictionary<NotificationChannelType, PlayerNotificationChannel>.Empty)
+                .SetSerializer(new ImpliedImplementationInterfaceSerializer<
+                    IReadOnlyDictionary<NotificationChannelType, PlayerNotificationChannel>,
+                    ReadOnlyDictionary<NotificationChannelType, PlayerNotificationChannel>>(
+                    new ReadOnlyDictionaryInterfaceImplementerSerializer<
+                        ReadOnlyDictionary<NotificationChannelType, PlayerNotificationChannel>,
+                        NotificationChannelType,
+                        PlayerNotificationChannel>(
+                        DictionaryRepresentation.Document,
+                        new EnumSerializer<NotificationChannelType>(BsonType.String),
+                        BsonSerializer.LookupSerializer<PlayerNotificationChannel>())));
             classMap.MapMember(item => item.Skills);
             classMap.MapMember(item => item.Version).SetDefaultValue(0);
             classMap.MapMember(item => item.HitOwnWorldMilestone).SetDefaultValue(false);
@@ -99,17 +112,6 @@ internal static class MongoClassMappings
         {
             classMap.MapCreator(item => new PlayerStreak(item.Id, item.PlayerId, item.StartedAt, item.Count, item.IsActive));
         });
-
-        if (!BsonClassMap.IsClassMapRegistered(typeof(PlayerNotificationChannel)))
-        {
-            BsonClassMap.RegisterClassMap<PlayerNotificationChannel>(classMap =>
-            {
-                classMap.AutoMap();
-                classMap.MapMember(item => item.Type);
-                classMap.MapMember(item => item.Properties);
-                classMap.MapCreator(item => new PlayerNotificationChannel(item.Type, item.Properties));
-            });
-        }
 
         if (!BsonClassMap.IsClassMapRegistered(typeof(PlayerWallet)))
         {
@@ -270,6 +272,28 @@ internal static class MongoClassMappings
                     item.Content,
                     item.Version));
             });
+    }
+
+    private static void RegisterNotificationChannels()
+    {
+        BsonClassMap.TryRegisterClassMap<PlayerNotificationChannel>(classMap => classMap.AutoMap());
+        BsonClassMap.TryRegisterClassMap<TelegramNotificationChannel>(classMap =>
+        {
+            classMap.AutoMap();
+            classMap.MapMember(item => item.ChatId);
+            classMap.MapCreator(item => new TelegramNotificationChannel(item.ChatId));
+        });
+        BsonClassMap.TryRegisterClassMap<WebPushNotificationChannel>(classMap =>
+        {
+            classMap.AutoMap();
+            classMap.MapMember(item => item.Subscriptions);
+            classMap.MapCreator(item => new WebPushNotificationChannel(item.Subscriptions));
+        });
+        BsonClassMap.TryRegisterClassMap<WebPushSubscription>(classMap =>
+        {
+            classMap.AutoMap();
+            classMap.MapCreator(item => new WebPushSubscription(item.Endpoint, item.P256dh, item.Auth));
+        });
     }
 
     private static void RegisterBonuses()

@@ -6,7 +6,7 @@ using Reki.Application.Posts;
 using Reki.Application.Posts.AI.Comment;
 using Reki.Application.Posts.AI.Feed;
 using Reki.Application.Posts.AI.Post;
-using Reki.Domain.Player;
+using Reki.Domain.Notifications;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnCommentPublished;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnFeedOpened;
 using Reki.Infrastructure.Jobs.GenerateStarFeed.OnPostPublished;

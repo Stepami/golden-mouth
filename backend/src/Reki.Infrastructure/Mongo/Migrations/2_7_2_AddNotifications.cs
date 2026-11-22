@@ -38,7 +38,7 @@ internal sealed class AddNotifications(TimeProvider timeProvider) : RekiMigratio
             if (updated.NotificationChannels.Count > 0)
             {
                 var sendAt = startedAt.AddHours(1 + (Random.Shared.NextDouble() * 23));
-                var pending = updated.NotificationChannels.Select(channel => channel.Type).Distinct()
+                var pending = updated.NotificationChannels.Keys
                     .Select(channelType => Notification.New(player.Id, channelType, sendAt));
                 await notifications.InsertManyAsync(session, pending, cancellationToken: cancellationToken);
             }

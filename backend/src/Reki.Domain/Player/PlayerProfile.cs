@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Reki.Domain.Notifications;
 using Reki.Domain.Player.Challenges;
 using Reki.Domain.Worlds;
 
@@ -7,7 +8,7 @@ namespace Reki.Domain.Player;
 public sealed class PlayerProfile
 {
     private readonly List<ExternalUserId> _externalUserIds;
-    private readonly List<PlayerNotificationChannel> _notificationChannels;
+    private readonly Dictionary<NotificationChannelType, PlayerNotificationChannel> _notificationChannels;
     private readonly Dictionary<SkillId, SkillProgress> _skills;
 
     public PlayerProfile(
@@ -18,7 +19,7 @@ public sealed class PlayerProfile
         IReadOnlyDictionary<SkillId, SkillProgress> skills,
         int birthYear,
         PlayerSettings settings,
-        IReadOnlyList<PlayerNotificationChannel> notificationChannels,
+        IReadOnlyDictionary<NotificationChannelType, PlayerNotificationChannel> notificationChannels,
         bool hitOwnWorldMilestone = false,
         DateTimeOffset lastSeenAt = default,
         bool plusInterestClaimed = false,
@@ -45,8 +46,8 @@ public sealed class PlayerProfile
         Version = version;
         PlusNotifyRequested = plusNotifyRequested;
         DailyChallenge = dailyChallenge ?? PlayerChallenge.Empty;
-        _notificationChannels = [.. notificationChannels];
-        NotificationChannels = _notificationChannels.AsReadOnly();
+        _notificationChannels = new Dictionary<NotificationChannelType, PlayerNotificationChannel>(notificationChannels);
+        NotificationChannels = new ReadOnlyDictionary<NotificationChannelType, PlayerNotificationChannel>(_notificationChannels);
     }
 
     public PlayerId Id { get; private set; }
@@ -77,7 +78,7 @@ public sealed class PlayerProfile
 
     public PlayerSettings Settings { get; private set; }
 
-    public IReadOnlyList<PlayerNotificationChannel> NotificationChannels { get; }
+    public IReadOnlyDictionary<NotificationChannelType, PlayerNotificationChannel> NotificationChannels { get; }
 
     public PlayerChallenge DailyChallenge { get; private set; }
 
@@ -143,30 +144,17 @@ public sealed class PlayerProfile
 
     public PlayerProfile AddNotificationChannel(PlayerNotificationChannel channel)
     {
-        switch (channel.Type)
-        {
-            case NotificationChannelType.WebPush:
-            {
-                if (!_notificationChannels.Any(channel.IsSameWebPush))
-                {
-                    _notificationChannels.Add(channel);
-                    Version++;
-                }
-
-                break;
-            }
-
-            case NotificationChannelType.Telegram:
-            {
-                _notificationChannels.RemoveAll(item => item.Type == NotificationChannelType.Telegram);
-                _notificationChannels.Add(channel);
-                Version++;
-
-                break;
-            }
-        }
-
+        _notificationChannels[channel.Type] = channel;
+        Version++;
         return this;
+    }
+
+    public void RemoveNotificationChannel(NotificationChannelType type)
+    {
+        if (_notificationChannels.Remove(type))
+        {
+            Version++;
+        }
     }
 
     public PlayerProfile AddExternalUserIds(IReadOnlyList<ExternalUserId> ids)
@@ -183,7 +171,7 @@ public sealed class PlayerProfile
 
             if (ids[index].TryGetTelegramId(out var chatId))
             {
-                AddNotificationChannel(PlayerNotificationChannel.Telegram(chatId.Value));
+                AddNotificationChannel(new TelegramNotificationChannel(chatId.Value));
             }
         }
 

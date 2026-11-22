@@ -5,7 +5,7 @@ using Microsoft.Extensions.Http.Logging;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Trace;
 using Reki.Application.Notifications;
-using Reki.Domain.Player;
+using Reki.Domain.Notifications;
 using Reki.Infrastructure.Telegram.Auth;
 using Telegram.Bot;
 

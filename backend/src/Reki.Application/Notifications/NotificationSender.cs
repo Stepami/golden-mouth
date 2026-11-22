@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Reki.Domain.Notifications;
-using Reki.Domain.Player;
 
 namespace Reki.Application.Notifications;
 
@@ -10,16 +9,17 @@ public abstract partial class NotificationSender(
     ILogger<NotificationSender> logger,
     TimeProvider timeProvider) : INotificationSender
 {
-    public async Task<NotificationStatus> SendAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct)
-    {
-        if (channel.Type != channelType)
-        {
-            return NotificationStatus.Pending;
-        }
+    public Task<NotificationStatus> SendAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct) =>
+        channel.Type == channelType ? SendInternalAsync(channel, notification, ct) : Task.FromResult(NotificationStatus.Pending);
 
+    protected abstract Task<NotificationStatus> SendInternalAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct);
+
+    protected async Task<NotificationStatus> SendDestinationAsync(Notification notification, Func<Task> sendAsync, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
         try
         {
-            await SendInternalAsync(channel, notification, ct);
+            await sendAsync();
         }
         catch (Exception error)
         {
@@ -39,8 +39,6 @@ public abstract partial class NotificationSender(
             timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
         return NotificationStatus.Sent;
     }
-
-    protected abstract Task SendInternalAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Notification accepted by provider: {event_name}, player {player_id:N}, notification {prop_id:N}, channel {prop_kind}, activity {activity_kind}, time {event_time_unix_ms}")]
     [SuppressMessage("ReSharper", "InconsistentNaming")]

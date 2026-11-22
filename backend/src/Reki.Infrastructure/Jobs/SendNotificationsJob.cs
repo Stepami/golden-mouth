@@ -3,7 +3,6 @@ using Reki.Application;
 using Reki.Application.Notifications;
 using Reki.Application.Player;
 using Reki.Domain.Notifications;
-using Reki.Domain.Player;
 using TickerQ.Utilities.Base;
 using TickerQ.Utilities.Interfaces;
 
@@ -22,17 +21,16 @@ internal sealed class SendNotificationsJob(
         await foreach (var notification in notifications.GetDueAsync(type, cancellationToken))
         {
             var player = await players.GetPlayerAsync(notification.PlayerId, cancellationToken);
-            var channels = player?.NotificationChannels.Where(channel => channel.Type == type).ToArray();
-            if (channels is not { Length: > 0 })
+            if (player is null || !player.NotificationChannels.TryGetValue(type, out var channel))
             {
                 await notifications.DeleteAsync(notification.Id, cancellationToken);
                 continue;
             }
 
             var sender = services.GetRequiredKeyedService<INotificationSender>(type);
-            var results = await Task.WhenAll(channels.Select(channel => sender.SendAsync(channel, notification, cancellationToken)));
-            var status = results.Contains(NotificationStatus.Sent) ? NotificationStatus.Sent : NotificationStatus.Failed;
+            var status = await sender.SendAsync(channel, notification, cancellationToken);
             notification.Complete(status);
+            var expectedVersion = player.Version;
 
             await unitOfWork.ExecuteAsync(
                 async token =>
@@ -43,13 +41,15 @@ internal sealed class SendNotificationsJob(
                         var recent = await notifications.GetLastThreeAsync(notification.PlayerId, type, token);
                         if (recent.Count == 3 && recent.All(item => item.Status == NotificationStatus.Failed))
                         {
-                            await players.RemoveNotificationChannelsAsync(notification.PlayerId, channels, token);
+                            player.RemoveNotificationChannel(type);
+                            if (await players.ReplacePlayerAsync(player, token, expectedVersion))
+                            {
+                                return status;
+                            }
                         }
                     }
 
-                    var current = await players.GetPlayerAsync(notification.PlayerId, token);
-                    if (current?.NotificationChannels.Any(channel => channel.Type == type) == true &&
-                        await notifications.GetPendingAsync(notification.PlayerId, type, token) is null)
+                    if (await notifications.GetPendingAsync(notification.PlayerId, type, token) is null)
                     {
                         var next = Notification.New(notification.PlayerId, type, timeProvider.GetUtcNow().AddDays(1), notification.Content);
                         await notifications.SaveAsync(next, token);

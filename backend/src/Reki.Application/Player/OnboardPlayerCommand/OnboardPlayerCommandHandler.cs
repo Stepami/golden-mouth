@@ -7,6 +7,7 @@ using Reki.Application.Player.UpdateLastSeenAtCommand;
 using Reki.Application.Telemetry;
 using Reki.Domain.Bonuses;
 using Reki.Domain.Invites;
+using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 
 namespace Reki.Application.Player.OnboardPlayerCommand;
@@ -33,9 +34,12 @@ internal sealed class OnboardPlayerCommandHandler(
         var currentBalance = balance.CurrentValue;
         var inviter = await ResolveInviterAsync(command, cancellationToken);
         var playerId = PlayerId.New();
-        PlayerNotificationChannel[] notificationChannels = command.ExternalUserId.TryGetTelegramId(out var chatId)
-            ? [PlayerNotificationChannel.Telegram(chatId.Value)]
-            : [];
+        var notificationChannels = new Dictionary<NotificationChannelType, PlayerNotificationChannel>();
+        if (command.ExternalUserId.TryGetTelegramId(out var chatId))
+        {
+            notificationChannels.Add(NotificationChannelType.Telegram, new TelegramNotificationChannel(chatId.Value));
+        }
+
         var completed = new PlayerProfile(
             playerId,
             [command.ExternalUserId],

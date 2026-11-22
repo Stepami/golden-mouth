@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Reki.Application.Notifications;
-using Reki.Domain.Player;
+using Reki.Domain.Notifications;
 
 namespace Reki.Infrastructure.WebPush;
 

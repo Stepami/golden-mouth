@@ -1,4 +1,4 @@
-namespace Reki.Domain.Player;
+namespace Reki.Domain.Notifications;
 
 public enum NotificationChannelType
 {

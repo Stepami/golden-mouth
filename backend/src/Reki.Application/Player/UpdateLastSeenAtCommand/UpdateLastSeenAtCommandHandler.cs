@@ -30,7 +30,7 @@ internal sealed class UpdateLastSeenAtCommandHandler(
             {
                 await players.ReplacePlayerAsync(player, token);
                 var sendAt = player.LastSeenAt.AddDays(1);
-                foreach (var type in player.NotificationChannels.Select(channel => channel.Type).Distinct())
+                foreach (var type in player.NotificationChannels.Keys)
                 {
                     var pending = await notifications.GetPendingAsync(player.Id, type, token);
                     if (pending is null)
