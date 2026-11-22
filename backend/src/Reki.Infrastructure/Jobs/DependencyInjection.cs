@@ -74,7 +74,7 @@ internal static class DependencyInjection
             options.ConfigureScheduler(scheduler =>
                 scheduler.SchedulerTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Moscow"));
             options.AddOperationalStore(store => store.UseExistingMongoClient(mongo.DatabaseName));
-            options.WithJsonContext(JsonTypeInfoResolver.Combine(jsonContext, NotificationJobsJsonContext.Default));
+            options.WithJsonContext(jsonContext);
             options.AddOpenTelemetryInstrumentation();
             options.SetExceptionHandler<JobsExceptionHandler>();
             if (!jobs.ExecutionEnabled)

@@ -50,6 +50,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(StarFeedSourceContent))]
 [JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
+[JsonSerializable(typeof(NotificationChannelType))]
 [JsonSerializable(typeof(StarFeedRequest))]
 [JsonSerializable(typeof(StarFeedOnPostPublishedRequest))]
 [JsonSerializable(typeof(StarFeedOnCommentPublishedRequest))]
