@@ -46,10 +46,7 @@ internal static class DependencyInjection
 
         // Keep the existing cron function as the entry point of the chain.
         const string notificationSchedule = nameof(SendNotificationsJob);
-        services.MapTicker(
-                notificationSchedule,
-                (_, provider, token) => provider.GetRequiredService<SendNotificationsJob>().PrepareAsync(token))
-            .WithMaxConcurrency(1);
+        services.MapTicker(notificationSchedule, (_, _) => Task.CompletedTask).WithMaxConcurrency(1);
         services.MapTickerGroup("Notifications")
             .MapTicker<SendNotificationsJob, NotificationChannelType>("Deliver")
             .WithMaxConcurrency(2);

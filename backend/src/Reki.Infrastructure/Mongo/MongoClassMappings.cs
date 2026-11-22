@@ -258,11 +258,13 @@ internal static class MongoClassMappings
             item => item.Id,
             configure: classMap =>
             {
+                classMap.MapMember(item => item.ChannelType).SetDefaultValue(default(NotificationChannelType));
                 classMap.MapMember(item => item.SendAt).SetSerializer(new DateTimeOffsetSerializer(BsonType.DateTime));
                 classMap.MapMember(item => item.Version).SetDefaultValue(0);
                 classMap.MapCreator(item => new Notification(
                     item.Id,
                     item.PlayerId,
+                    item.ChannelType,
                     item.Status,
                     item.SendAt,
                     item.Content,

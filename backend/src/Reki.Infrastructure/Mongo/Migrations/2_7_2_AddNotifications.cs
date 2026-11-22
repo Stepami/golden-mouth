@@ -37,8 +37,10 @@ internal sealed class AddNotifications(TimeProvider timeProvider) : RekiMigratio
                 cancellationToken: cancellationToken);
             if (updated.NotificationChannels.Count > 0)
             {
-                var notification = Notification.New(player.Id, startedAt.AddHours(1 + (Random.Shared.NextDouble() * 23)));
-                await notifications.InsertOneAsync(session, notification, cancellationToken: cancellationToken);
+                var sendAt = startedAt.AddHours(1 + (Random.Shared.NextDouble() * 23));
+                var pending = updated.NotificationChannels.Select(channel => channel.Type).Distinct()
+                    .Select(channelType => Notification.New(player.Id, channelType, sendAt));
+                await notifications.InsertManyAsync(session, pending, cancellationToken: cancellationToken);
             }
         }
     }

@@ -5,9 +5,9 @@ namespace Reki.Application.Notifications;
 
 public interface INotificationRepository
 {
-    ValueTask<Notification?> GetPendingAsync(PlayerId playerId, CancellationToken cancellationToken);
+    ValueTask<Notification?> GetPendingAsync(PlayerId playerId, NotificationChannelType channelType, CancellationToken cancellationToken);
 
-    IAsyncEnumerable<Notification> GetDueAsync(CancellationToken cancellationToken);
+    IAsyncEnumerable<Notification> GetDueAsync(NotificationChannelType channelType, CancellationToken cancellationToken);
 
     ValueTask SaveAsync(Notification notification, CancellationToken cancellationToken);
 
