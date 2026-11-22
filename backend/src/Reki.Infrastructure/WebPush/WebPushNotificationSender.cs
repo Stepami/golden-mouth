@@ -14,19 +14,14 @@ internal sealed class WebPushNotificationSender(
     TimeProvider timeProvider)
     : NotificationSender(NotificationChannelType.WebPush, logger, timeProvider)
 {
-    protected override async Task<NotificationStatus> SendInternalAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct)
+    protected override async Task SendInternalAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct)
     {
         var webPushChannel = (WebPushNotificationChannel)channel;
-        var statuses = await Task.WhenAll(webPushChannel.Subscriptions.Values.Select(subscription =>
-            SendDestinationAsync(notification, () => SendSubscriptionAsync(subscription, notification, ct), ct)));
-        return statuses.Contains(NotificationStatus.Sent) ? NotificationStatus.Sent : NotificationStatus.Failed;
-    }
+        if (webPushChannel.Subscriptions.Count == 0)
+        {
+            throw new InvalidOperationException("Web Push channel has no subscriptions.");
+        }
 
-    private Task SendSubscriptionAsync(WebPushSubscription destination, Notification notification, CancellationToken ct)
-    {
-        var subscription = new PushSubscription { Endpoint = destination.Endpoint };
-        subscription.SetKey(PushEncryptionKeyName.P256DH, destination.P256dh);
-        subscription.SetKey(PushEncryptionKeyName.Auth, destination.Auth);
         var payload = JsonSerializer.Serialize(
             new Dictionary<string, string>
             {
@@ -35,6 +30,22 @@ internal sealed class WebPushNotificationSender(
                 ["url"] = $"/?notification={notification.Id.Value:N}&notification_channel=webpush",
             },
             json.Value);
-        return push.RequestPushMessageDeliveryAsync(subscription, new PushMessage(payload), ct);
+        var deliveries = webPushChannel.Subscriptions.Values.Select(destination => SendSubscriptionAsync(destination, payload, ct)).ToArray();
+        try
+        {
+            await Task.WhenAll(deliveries);
+        }
+        catch (Exception) when (!ct.IsCancellationRequested && deliveries.Any(delivery => delivery.IsCompletedSuccessfully))
+        {
+            // One accepted subscription is enough to mark this notification as sent.
+        }
+    }
+
+    private async Task SendSubscriptionAsync(WebPushSubscription destination, string payload, CancellationToken ct)
+    {
+        var subscription = new PushSubscription { Endpoint = destination.Endpoint };
+        subscription.SetKey(PushEncryptionKeyName.P256DH, destination.P256dh);
+        subscription.SetKey(PushEncryptionKeyName.Auth, destination.Auth);
+        await push.RequestPushMessageDeliveryAsync(subscription, new PushMessage(payload), ct);
     }
 }

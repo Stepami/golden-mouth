@@ -9,36 +9,36 @@ public abstract partial class NotificationSender(
     ILogger<NotificationSender> logger,
     TimeProvider timeProvider) : INotificationSender
 {
-    public Task<NotificationStatus> SendAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct) =>
-        channel.Type == channelType ? SendInternalAsync(channel, notification, ct) : Task.FromResult(NotificationStatus.Pending);
-
-    protected abstract Task<NotificationStatus> SendInternalAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct);
-
-    protected async Task<NotificationStatus> SendDestinationAsync(Notification notification, Func<Task> sendAsync, CancellationToken ct)
+    public async Task<NotificationStatus> SendAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct)
     {
-        ct.ThrowIfCancellationRequested();
+        if (channel.Type != channelType)
+        {
+            return NotificationStatus.Pending;
+        }
+
         try
         {
-            await sendAsync();
+            await SendInternalAsync(channel, notification, ct);
+
+            // Only the routing tag belongs in the scope; event data comes from the message template.
+            using var scope = logger.BeginScope(new Dictionary<string, object?> { ["reki.stream"] = "product" });
+            LogSent(
+                "notification_sent",
+                notification.PlayerId.Value,
+                notification.Id.Value,
+                channelType.ToString().ToLowerInvariant(),
+                "delivery",
+                timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
+            return NotificationStatus.Sent;
         }
         catch (Exception error)
         {
-            ct.ThrowIfCancellationRequested();
             LogSendError(error, notification.PlayerId.Value, notification.Id.Value, channelType);
             return NotificationStatus.Failed;
         }
-
-        // Only the routing tag belongs in the scope; event data comes from the message template.
-        using var scope = logger.BeginScope(new Dictionary<string, object?> { ["reki.stream"] = "product" });
-        LogSent(
-            "notification_sent",
-            notification.PlayerId.Value,
-            notification.Id.Value,
-            channelType.ToString().ToLowerInvariant(),
-            "delivery",
-            timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
-        return NotificationStatus.Sent;
     }
+
+    protected abstract Task SendInternalAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Notification accepted by provider: {event_name}, player {player_id:N}, notification {prop_id:N}, channel {prop_kind}, activity {activity_kind}, time {event_time_unix_ms}")]
     [SuppressMessage("ReSharper", "InconsistentNaming")]

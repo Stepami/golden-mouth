@@ -11,9 +11,6 @@ internal sealed class TelegramNotificationSender(
     TimeProvider timeProvider)
     : NotificationSender(NotificationChannelType.Telegram, logger, timeProvider)
 {
-    protected override Task<NotificationStatus> SendInternalAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct) =>
-        SendDestinationAsync(
-            notification,
-            () => telegram.SendMessage(((TelegramNotificationChannel)channel).ChatId, notification.Content, cancellationToken: ct),
-            ct);
+    protected override Task SendInternalAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct) =>
+        telegram.SendMessage(((TelegramNotificationChannel)channel).ChatId, notification.Content, cancellationToken: ct);
 }
