@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using Lib.Net.Http.WebPush;
 using Microsoft.Extensions.Logging;
@@ -30,14 +31,28 @@ internal sealed class WebPushNotificationSender(
                 ["url"] = $"/?notification={notification.Id.Value:N}&notification_channel=webpush",
             },
             json.Value);
-        var deliveries = webPushChannel.Subscriptions.Values.Select(destination => SendSubscriptionAsync(destination, payload, ct)).ToArray();
+        var deliveries = webPushChannel.Subscriptions.Values.ToDictionary(
+            destination => destination.Endpoint,
+            destination => SendSubscriptionAsync(destination, payload, ct),
+            StringComparer.Ordinal);
         try
         {
-            await Task.WhenAll(deliveries);
+            await Task.WhenAll(deliveries.Values);
         }
-        catch (Exception) when (!ct.IsCancellationRequested && deliveries.Any(delivery => delivery.IsCompletedSuccessfully))
+        catch (Exception) when (!ct.IsCancellationRequested)
         {
-            // One accepted subscription is enough to mark this notification as sent.
+            foreach (var (endpoint, delivery) in deliveries)
+            {
+                if (delivery.Exception?.InnerException is PushServiceClientException { StatusCode: HttpStatusCode.Gone })
+                {
+                    webPushChannel.RemoveSubscription(endpoint);
+                }
+            }
+
+            if (!deliveries.Values.Any(delivery => delivery.IsCompletedSuccessfully))
+            {
+                throw;
+            }
         }
     }
 

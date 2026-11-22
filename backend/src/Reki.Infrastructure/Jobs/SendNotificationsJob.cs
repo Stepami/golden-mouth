@@ -46,6 +46,11 @@ internal sealed class SendNotificationsJob(
                         }
                     }
 
+                    if (type == NotificationChannelType.WebPush)
+                    {
+                        await players.ReplacePlayerAsync(player, token);
+                    }
+
                     if (await notifications.GetPendingAsync(notification.PlayerId, type, token) is null)
                     {
                         var next = Notification.New(notification.PlayerId, type, timeProvider.GetUtcNow().AddDays(1), notification.Content);
