@@ -24,7 +24,7 @@ public abstract partial class NotificationSender(
         catch (Exception error)
         {
             ct.ThrowIfCancellationRequested();
-            LogSendError(notification.PlayerId.Value, notification.Id.Value, channelType, error.GetType().Name);
+            LogSendError(error, notification.PlayerId.Value, notification.Id.Value, channelType);
             return NotificationStatus.Failed;
         }
 
@@ -46,6 +46,6 @@ public abstract partial class NotificationSender(
     [SuppressMessage("ReSharper", "InconsistentNaming")]
     private partial void LogSent(string event_name, Guid player_id, Guid prop_id, string prop_kind, string activity_kind, long event_time_unix_ms);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Notification {NotificationId:N} delivery failed for player {PlayerId:N} via {ChannelType} ({Category})")]
-    private partial void LogSendError(Guid playerId, Guid notificationId, NotificationChannelType channelType, string category);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Notification {NotificationId:N} delivery failed for player {PlayerId:N} via {ChannelType}")]
+    private partial void LogSendError(Exception ex, Guid playerId, Guid notificationId, NotificationChannelType channelType);
 }
