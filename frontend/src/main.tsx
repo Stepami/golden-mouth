@@ -6,6 +6,7 @@ import { ErrorBoundary } from './app/ErrorBoundary'
 import { installAnalytics } from './app/analytics'
 import { installGlobalHandlers } from './app/log'
 import { initTelegram } from './telegram'
+import { rememberReferral } from './app/referral'
 import './theme.css'
 
 const callbackParams = new URLSearchParams(location.hash.slice(1))
@@ -16,7 +17,9 @@ if (yandexCallback) {
   script.onload = () => window.YaSendSuggestToken?.(window.location.origin)
   document.head.append(script)
 } else {
-  if (new URLSearchParams(location.search).has('shot')) document.documentElement.classList.add('shot')
+  const query = new URLSearchParams(location.search)
+  if (query.has('shot')) document.documentElement.classList.add('shot')
+  rememberReferral(query.get('ref'))
   initTelegram()
   installGlobalHandlers()
   installAnalytics()
