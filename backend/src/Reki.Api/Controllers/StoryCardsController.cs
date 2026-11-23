@@ -9,9 +9,7 @@ namespace Reki.Api.Controllers;
 
 [ApiController]
 [Route("cards/story")]
-public sealed class StoryCardsController(
-    ISender sender,
-    IStoryCardRenderer renderer) : ControllerBase
+public sealed class StoryCardsController(ISender sender) : ControllerBase
 {
     [AllowAnonymous]
     [HttpGet("{playerId}/{postId}.png", Name = "GetPublicStoryCard")]
@@ -23,12 +21,10 @@ public sealed class StoryCardsController(
         PostId postId,
         CancellationToken cancellationToken)
     {
-        var card = await sender.Send(
+        var png = await sender.Send(
             new PublicStoryCardQuery(playerId, postId),
             cancellationToken);
-        Response.ContentType = "image/png";
         Response.Headers.CacheControl = "no-store";
-        await renderer.RenderAsync(card, Response.Body, cancellationToken);
-        return TypedResults.Empty;
+        return TypedResults.Stream(png, "image/png");
     }
 }

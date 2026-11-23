@@ -1,4 +1,3 @@
-using Kot.MongoDB.Migrations;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Application;
@@ -49,6 +48,7 @@ public partial class Program
         builder.Services.AddApi();
         if (!OpenApiGeneration.IsRunning)
         {
+            builder.Services.AddHostedService<RekiStartupHostedService>();
             builder.Services
                 .AddApplication()
                 .AddInfrastructure(builder.Configuration, ApiJsonSerializerContext.Default);
@@ -73,9 +73,6 @@ public partial class Program
 
             app.UseAuthentication();
             app.UseAuthorization();
-
-            var migrator = app.Services.GetRequiredService<IMigrator>();
-            await migrator.MigrateAsync();
         }
 
         if (app.Environment.IsDevelopment())

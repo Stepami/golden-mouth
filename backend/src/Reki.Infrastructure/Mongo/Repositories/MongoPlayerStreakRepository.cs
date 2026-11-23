@@ -2,6 +2,7 @@ using MongoDB.Driver;
 using Reki.Application.Player.Streaks;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Streaks;
+using Reki.Infrastructure.Mongo.UnitOfWork;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 
@@ -13,9 +14,7 @@ internal sealed class MongoPlayerStreakRepository(
         database.GetCollection<PlayerStreak>(MongoCollections.PlayerStreaks);
 
     public async ValueTask<PlayerStreak?> GetLatestAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await (sessionProvider.Current is { } session
-                ? _streaks.Find(session, item => item.PlayerId == playerId && item.IsActive)
-                : _streaks.Find(item => item.PlayerId == playerId && item.IsActive))
+        await _streaks.Find(sessionProvider, item => item.PlayerId == playerId && item.IsActive)
             .SortByDescending(item => item.StartedAt)
             .FirstOrDefaultAsync(cancellationToken);
 

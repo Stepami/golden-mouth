@@ -1,6 +1,7 @@
 window.__REKI_CONFIG__ = Object.freeze({
   apiBaseUrl: '/api/v1',
   appClientId: 'reki-app',
+  telegramClientId: 8673609632,
   webPushPublicKey: 'BJmXVDwTVp0Hqu2Q2WE-fCC-yGs7iqFjh9DOniZuH-SIhvtPFi1fVtcU9mfTB4akGeKLzShYbZU5ywGRFEAxoZw',
   vkApplicationId: 54888095,
   vkRedirectUrl: window.location.origin,

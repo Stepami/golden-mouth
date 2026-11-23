@@ -1,3 +1,5 @@
+import { runtimeConfig } from '../app/runtimeConfig'
+
 interface TelegramLoginResult { id_token?: string; error?: string }
 interface TelegramLoginSdk {
   auth(options: { client_id: number; scope: string[] }, callback: (result: TelegramLoginResult) => void): void
@@ -29,9 +31,9 @@ export function preloadTelegramLogin(): Promise<void> {
   })
 }
 
-export function openTelegramLogin(clientId: number, onToken: (idToken: string) => void, onError: (outcome: 'error' | 'cancel') => void): void {
+export function openTelegramLogin(onToken: (idToken: string) => void, onError: (outcome: 'error' | 'cancel') => void): void {
   // Called directly from the button click so the browser permits the popup.
-  window.Telegram?.Login.auth({ client_id: clientId, scope: ['profile'] }, result => {
+  window.Telegram?.Login.auth({ client_id: runtimeConfig.telegramClientId, scope: ['profile'] }, result => {
     if (result.id_token) onToken(result.id_token)
     else if (result.error) onError(result.error === 'popup_closed' ? 'cancel' : 'error')
   })

@@ -2,7 +2,7 @@ using MongoDB.Driver;
 using Reki.Application;
 using Reki.Application.Exceptions;
 
-namespace Reki.Infrastructure.Mongo;
+namespace Reki.Infrastructure.Mongo.UnitOfWork;
 
 internal sealed class MongoUnitOfWork(
     IMongoClient client,

@@ -323,12 +323,12 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         using var friendApi = Factory.CreateApiClient(8003);
         await CreatePlayerWithWorldAsync(inviterApi);
         await CreatePlayerWithWorldAsync(otherApi);
-        var first = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
-        var other = await otherApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        var first = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
+        var other = await otherApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
 
         // Act
         await CreatePlayerWithWorldAsync(friendApi, referralCode: first.Code);
-        var repeated = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        var repeated = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
         var friend = await GetStoredPlayerAsync(8003);
         var inviter = await GetStoredPlayerAsync(8001);
 
@@ -372,7 +372,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
 
         var noInviter = await unknownApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
         await Assert.That(noInviter.Energy).IsEqualTo(9);
-        await Assert.That((await unknownApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
+        await Assert.That((await unknownApi.Invitation.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
     }
 
     [Test]
@@ -384,9 +384,9 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         using var inviterApi = Factory.CreateApiClient(inviterUserId);
         using var friendApi = Factory.CreateApiClient(friendUserId);
         var inviterProfile = await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        var referral = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
         var onboarded = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
-        var pendingInvite = await friendApi.Player.GetInvitationAsync(CancellationToken.None);
+        var pendingInvite = await friendApi.Invitation.GetInvitationAsync(CancellationToken.None);
         var inviterAfterOnboarding = await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None);
 
         // Act
@@ -405,7 +405,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await Assert.That(inviter.HitOwnWorldMilestone).IsTrue();
         await Assert.That(inviter.Energy).IsEqualTo(10);
         await Assert.That(friend.Energy).IsEqualTo(9);
-        await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
+        await Assert.That((await friendApi.Invitation.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
         await Assert.That(storedInviter["Wallet"]["Energy"].AsInt32).IsEqualTo(10);
         await Assert.That(storedFriend["Wallet"]["Energy"].AsInt32).IsEqualTo(8);
         await Assert.That(storedInviter["Wallet"]["Crystals"].AsInt32).IsEqualTo(13);
@@ -427,7 +427,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         const long inviterUserId = 8012;
         using var inviterApi = Factory.CreateApiClient(inviterUserId);
         var inviterProfile = await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        var referral = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
 
         // Act
         var lastPostWentViral = false;
@@ -465,7 +465,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         using var inviterApi = Factory.CreateApiClient(8560);
         using var friendApi = Factory.CreateApiClient(8561);
         var inviter = await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        var referral = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
         var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
         var players = Database.GetCollection<BsonDocument>("players");
         await players.UpdateManyAsync(
@@ -788,7 +788,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         using var inviterApi = Factory.CreateApiClient(8520);
         using var friendApi = Factory.CreateApiClient(8521);
         await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        var referral = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
         var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
         await PublishAsync(8521, "пост перед сбросом");
         await Assert.That((await inviterApi.Player.GetCurrentPlayerAsync(CancellationToken.None)).Energy).IsEqualTo(10);
@@ -801,7 +801,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         // Assert
         await Assert.That(currentInviter.Energy).IsEqualTo(10);
         await Assert.That(currentFriend.Energy).IsEqualTo(9);
-        await Assert.That((await friendApi.Player.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
+        await Assert.That((await friendApi.Invitation.GetInvitationAsync(CancellationToken.None)).Bonus).IsEqualTo(0);
         var invite = await Database.GetCollection<Invitation>("invites")
             .Find(item => item.InviteeId == friend.Id).SingleAsync();
         await Assert.That(invite.InviterBonusUsed).IsTrue();
@@ -817,7 +817,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         using var inviterApi = Factory.CreateApiClient(8550);
         using var friendApi = Factory.CreateApiClient(8551);
         await CreatePlayerWithWorldAsync(inviterApi);
-        var referral = await inviterApi.Player.GetReferralCodeAsync(CancellationToken.None);
+        var referral = await inviterApi.Invitation.GetReferralCodeAsync(CancellationToken.None);
         var friend = await CreatePlayerWithWorldAsync(friendApi, referralCode: referral.Code);
         var reset = new DateTimeOffset(2026, 10, 6, 6, 0, 0, TimeSpan.Zero);
         Factory.Session.Clock.SetUtcNow(reset);
@@ -890,7 +890,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     public async Task Invitation_WithoutAuthentication_ReturnsUnauthorizedAsync()
     {
         using var api = Factory.CreateApiClient();
-        var response = await Assert.ThrowsAsync<PlayerApiException>(() => api.Player.GetInvitationAsync(CancellationToken.None));
+        var response = await Assert.ThrowsAsync<InvitationApiException>(() => api.Invitation.GetInvitationAsync(CancellationToken.None));
         await Assert.That(response).IsNotNull();
         await Assert.That((HttpStatusCode)response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
     }
@@ -900,7 +900,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
     {
         using var api = Factory.CreateApiClient(8583);
         await api.RegisterAsync(new OnboardingRequest { BirthYear = 1990, Address = Address.Nick }, CancellationToken.None);
-        var response = await api.Player.GetInvitationAsync(CancellationToken.None);
+        var response = await api.Invitation.GetInvitationAsync(CancellationToken.None);
         await Assert.That(response.Bonus).IsEqualTo(0);
     }
 

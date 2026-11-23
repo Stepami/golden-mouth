@@ -11,11 +11,27 @@ using Reki.Domain.Player;
 using Reki.Domain.Player.Challenges;
 using Reki.Domain.Player.Streaks;
 using Reki.Domain.Posts;
+using Reki.Domain.Telemetry;
 using Reki.Domain.Worlds;
+using Vogen;
 
 namespace Reki.Infrastructure.Mongo;
 
-internal static class MongoClassMappings
+[BsonSerializer<Address>]
+[BsonSerializer<AuthorId>]
+[BsonSerializer<BonusId>]
+[BsonSerializer<CommentId>]
+[BsonSerializer<InvitationId>]
+[BsonSerializer<NotificationId>]
+[BsonSerializer<PlayerId>]
+[BsonSerializer<PostId>]
+[BsonSerializer<SessionId>]
+[BsonSerializer<SkillId>]
+[BsonSerializer<StarId>]
+[BsonSerializer<StreakId>]
+[BsonSerializer<ExternalUserId>]
+[BsonSerializer<WorldId>]
+internal static partial class MongoClassMappings
 {
     /// <summary>
     /// BSON mappings must be registered once before any infrastructure code uses them.
@@ -25,29 +41,20 @@ internal static class MongoClassMappings
         BsonSerializer.TryRegisterSerializer(new EnumSerializer<WorldDifficulty>(BsonType.String));
         BsonSerializer.TryRegisterSerializer(new EnumSerializer<DailyTaskType>(BsonType.String));
         BsonSerializer.TryRegisterSerializer(new EnumSerializer<AddressType>(BsonType.String));
-        BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.AddressBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.AuthorIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.BonusIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.CommentIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.InvitationIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(new BsonValueObjectConversions.NotificationIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.PlayerIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.PostIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.SessionIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.SkillIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.StarIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.StreakIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.ExternalUserIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(
-            new BsonValueObjectConversions.WorldIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new AddressBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new AuthorIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new BonusIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new CommentIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new InvitationIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new NotificationIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new PlayerIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new PostIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new SessionIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new SkillIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new StarIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new StreakIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new ExternalUserIdBsonSerializer());
+        BsonSerializer.TryRegisterSerializer(new WorldIdBsonSerializer());
 
         RegisterBonuses();
         RegisterNotificationChannels();

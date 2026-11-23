@@ -2,6 +2,7 @@ using MongoDB.Driver;
 using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Reki.Domain.Worlds;
+using Reki.Infrastructure.Mongo.UnitOfWork;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 
@@ -16,9 +17,7 @@ internal sealed class MongoWorldRepository(
         database.GetCollection<World>(MongoCollections.WorldTemplates);
 
     public async ValueTask InsertWorldAsync(World world, CancellationToken cancellationToken) =>
-        await (sessionProvider.Current is { } session
-            ? _worlds.InsertOneAsync(session, world, cancellationToken: cancellationToken)
-            : _worlds.InsertOneAsync(world, cancellationToken: cancellationToken));
+        await _worlds.InsertOneAsync(sessionProvider, world, cancellationToken);
 
     public async ValueTask ReplaceWorldAsync(World world, CancellationToken cancellationToken) =>
         await _worlds.ReplaceOneAsync(

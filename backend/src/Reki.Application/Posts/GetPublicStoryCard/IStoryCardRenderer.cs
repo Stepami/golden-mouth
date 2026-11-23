@@ -2,8 +2,7 @@ namespace Reki.Application.Posts.GetPublicStoryCard;
 
 public interface IStoryCardRenderer
 {
-    ValueTask RenderAsync(
+    ValueTask<Stream> RenderAsync(
         StoryCardData card,
-        Stream target,
         CancellationToken cancellationToken);
 }

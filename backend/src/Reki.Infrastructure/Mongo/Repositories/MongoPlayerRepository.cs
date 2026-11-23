@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using MongoDB.Driver;
 using Reki.Application.Player;
 using Reki.Domain.Player;
+using Reki.Infrastructure.Mongo.UnitOfWork;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 
@@ -15,15 +16,19 @@ internal sealed class MongoPlayerRepository(
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
         ExternalUserId externalUserId,
         CancellationToken cancellationToken) =>
-        await _players.Find(item => item.ExternalUserIds.Contains(externalUserId)).FirstOrDefaultAsync(cancellationToken);
+        await _players.Find(sessionProvider, item => item.ExternalUserIds.Contains(externalUserId))
+            .FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
-        await (sessionProvider.Current is { } session
-            ? _players.Find(session, item => item.Id == playerId)
-            : _players.Find(item => item.Id == playerId)).FirstOrDefaultAsync(cancellationToken);
+    public async ValueTask<PlayerProfile?> GetPlayerAsync(
+        PlayerId playerId,
+        CancellationToken cancellationToken) =>
+        await _players.Find(sessionProvider, item => item.Id == playerId)
+            .FirstOrDefaultAsync(cancellationToken);
 
     public async IAsyncEnumerable<PlayerProfile> GetPlayersForEnergyRecoveryAsync(
-        int cap, DateTimeOffset dueBefore, [EnumeratorCancellation] CancellationToken cancellationToken)
+        int cap,
+        DateTimeOffset dueBefore,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         using var cursor = await _players.FindAsync(
             item => item.Wallet.Energy < cap && item.Wallet.EnergyUpdatedAtUtc <= dueBefore,
@@ -36,7 +41,8 @@ internal sealed class MongoPlayerRepository(
     }
 
     public async IAsyncEnumerable<PlayerProfile> GetActivePlayersAsync(
-        DateTimeOffset since, [EnumeratorCancellation] CancellationToken cancellationToken)
+        DateTimeOffset since,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var filter = Builders<PlayerProfile>.Filter.Gte(item => item.LastSeenAt, since);
         using var cursor = await _players.FindAsync(
@@ -88,9 +94,7 @@ internal sealed class MongoPlayerRepository(
         var update = Builders<PlayerProfile>.Update
             .Set(item => item.DailyChallenge, player.DailyChallenge)
             .Inc(item => item.Version, player.Version - previousVersion);
-        await (sessionProvider.Current is { } session
-            ? _players.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken)
-            : _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));
+        await _players.UpdateOneAsync(sessionProvider, filter, update, cancellationToken);
     }
 
     public async ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>

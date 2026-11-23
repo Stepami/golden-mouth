@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+using AspNetCore.Authentication.ApiKey;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Diagnostics;
@@ -6,7 +9,9 @@ using Microsoft.Extensions.Options;
 using OpenTelemetry.Trace;
 using Reki.Application.Notifications;
 using Reki.Domain.Notifications;
+using Reki.Infrastructure.Auth;
 using Reki.Infrastructure.Telegram.Auth;
+using Reki.Infrastructure.Telegram.Command;
 using Telegram.Bot;
 
 namespace Reki.Infrastructure.Telegram;
@@ -18,6 +23,28 @@ internal static class DependencyInjection
         IConfiguration configuration)
     {
         services.AddOptions<TelegramOptions>().BindConfiguration(TelegramOptions.SectionName);
+        services.AddAuthentication().AddApiKeyInHeader(AuthConstants.Schemes.TelegramWebhook, _ => { });
+        services.AddOptions<ApiKeyOptions>(AuthConstants.Schemes.TelegramWebhook)
+            .Configure<IOptions<TelegramOptions>>((options, telegram) =>
+            {
+                options.KeyName = "X-Telegram-Bot-Api-Secret-Token";
+                options.SuppressWWWAuthenticateHeader = true;
+                options.Events.OnValidateKey = context =>
+                {
+                    var secret = telegram.Value.WebhookSecret;
+                    if (!string.IsNullOrEmpty(secret) && CryptographicOperations.FixedTimeEquals(
+                            Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(context.ApiKey)))
+                    {
+                        context.ValidationSucceeded();
+                    }
+                    else
+                    {
+                        context.ValidationFailed("Invalid webhook secret.");
+                    }
+
+                    return Task.CompletedTask;
+                };
+            });
         services.AddTransient<IOptionsFactory<TelegramBotClientOptions>, TelegramBotClientOptionsFactory>();
 
         services.AddRedaction();
@@ -33,6 +60,11 @@ internal static class DependencyInjection
             });
 
         services.AddKeyedSingleton<INotificationSender, TelegramNotificationSender>(NotificationChannelType.Telegram);
+
+        services.AddKeyedSingleton<IBotCommandHandler, StartCommandHandler>(StartCommandHandler.Command);
+        services.AddKeyedSingleton<IBotCommandHandler, HelpCommandHandler>(HelpCommandHandler.Command);
+        services.AddKeyedSingleton<IBotCommandHandler, InviteCommandHandler>(InviteCommandHandler.Command);
+        services.AddKeyedSingleton<IBotCommandHandler, StoriesCommandHandler>(StoriesCommandHandler.Command);
 
         return services.AddTelegramAuth(configuration);
     }
