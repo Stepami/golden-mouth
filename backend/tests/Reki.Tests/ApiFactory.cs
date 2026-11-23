@@ -12,6 +12,7 @@ using Reki.Domain.Player;
 using Reki.Infrastructure.Auth;
 using Reki.Infrastructure.ML.Nli;
 using Reki.Tests.Persistence;
+using Telegram.Bot;
 using TUnit.AspNetCore;
 using WebMotions.Fake.Authentication.JwtBearer;
 
@@ -71,6 +72,7 @@ public sealed class ApiFactory : TestWebApplicationFactory<Program>
         {
             services.AddFakeLogging();
             services.Replace(ServiceDescriptor.Singleton<IMigrationInstantiator, AtlasLocalMigrationInstantiator>());
+            services.Replace(ServiceDescriptor.Singleton(Substitute.For<ITelegramBotClient>()));
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Session.Clock));
             services.RemoveAll<IValidateOptions<NliOptions>>();
             var nli = Substitute.For<INliScorer>();

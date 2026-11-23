@@ -4,11 +4,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Reki.Api.Requests.Player;
-using Reki.Application.Invites;
 using Reki.Application.Player;
 using Reki.Application.Player.DeletePlayerCommand;
 using Reki.Application.Player.ExchangeEnergyCommand;
-using Reki.Application.Player.GetReferral;
 using Reki.Application.Player.MergePlayersCommand;
 using Reki.Application.Player.RefreshDailyChallengeCommand;
 using Reki.Application.Player.RegisterWebPushCommand;
@@ -27,7 +25,6 @@ namespace Reki.Api.Controllers;
 [Route("/")]
 public sealed class PlayerController(
     IRekiContext rekiContext,
-    IInvitationRepository invitations,
     ISender sender) : ControllerBase
 {
     [HttpGet("me", Name = "GetCurrentPlayer")]
@@ -49,24 +46,6 @@ public sealed class PlayerController(
     public async Task<Ok<EnergyExchangeResponse>> ExchangeEnergyAsync(CancellationToken cancellationToken)
     {
         var result = await sender.Send(new ExchangeEnergy(), cancellationToken);
-        return TypedResults.Ok(result);
-    }
-
-    [HttpGet("invitation", Name = "GetInvitation")]
-    [ActionName("GetInvitation")]
-    public async Task<Ok<InvitationResponse>> GetInvitationAsync(CancellationToken cancellationToken)
-    {
-        var invitation = await invitations.GetPendingInviteAsync(rekiContext.PlayerId, cancellationToken);
-        return TypedResults.Ok(new InvitationResponse(invitation?.BonusAmount ?? 0));
-    }
-
-    [HttpGet("referral", Name = "GetReferralCode")]
-    [ActionName("GetReferralCode")]
-    public async Task<Ok<ReferralResponse>> GetReferralCodeAsync(CancellationToken cancellationToken)
-    {
-        var result = await sender.Send(
-            new ReferralQuery(),
-            cancellationToken);
         return TypedResults.Ok(result);
     }
 

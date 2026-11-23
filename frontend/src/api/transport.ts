@@ -1,7 +1,7 @@
 import { error, warn } from '../app/log'
 import { runtimeConfig } from '../app/runtimeConfig'
 import { getAccessToken, refreshAccess } from './auth'
-import { PlayerClient, PostsClient, SocialClient, TelemetryClient, WorldsClient } from './generated/reki-api'
+import { InvitationClient, PlayerClient, PostsClient, SocialClient, TelemetryClient, WorldsClient } from './generated/reki-api'
 import type { GenerateReplyRequest, SwaggerResponse } from './generated/reki-api'
 import { assertSession, sessionGeneration } from './session'
 
@@ -41,7 +41,7 @@ export function transport(telemetry = false) {
 }
 const http = transport()
 export const sdk = {
-  player: new PlayerClient(baseUrl, http), posts: new PostsClient(baseUrl, http),
+  player: new PlayerClient(baseUrl, http), invitation: new InvitationClient(baseUrl, http), posts: new PostsClient(baseUrl, http),
   social: new SocialClient(baseUrl, http), telemetry: new TelemetryClient(baseUrl, http), worlds: new WorldsClient(baseUrl, http),
 }
 export async function data<T>(request: Promise<SwaggerResponse<T>>, authenticated = true): Promise<T> {
