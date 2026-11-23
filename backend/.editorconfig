@@ -117,6 +117,7 @@ dotnet_diagnostic.VSTHRD103.severity = none
 dotnet_diagnostic.SA1611.severity = none
 dotnet_diagnostic.SA1615.severity = none
 dotnet_diagnostic.SA1623.severity = none
+dotnet_diagnostic.S3263.severity = none
 dotnet_diagnostic.S6960.severity = none
 
 # The Async suffix is optional throughout the backend.

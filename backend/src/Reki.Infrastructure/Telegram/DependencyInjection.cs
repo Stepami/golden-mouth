@@ -11,6 +11,7 @@ using Reki.Application.Notifications;
 using Reki.Domain.Notifications;
 using Reki.Infrastructure.Auth;
 using Reki.Infrastructure.Telegram.Auth;
+using Reki.Infrastructure.Telegram.Command;
 using Telegram.Bot;
 
 namespace Reki.Infrastructure.Telegram;
@@ -59,6 +60,11 @@ internal static class DependencyInjection
             });
 
         services.AddKeyedSingleton<INotificationSender, TelegramNotificationSender>(NotificationChannelType.Telegram);
+
+        services.AddKeyedSingleton<IBotCommandHandler, StartCommandHandler>(StartCommandHandler.Command);
+        services.AddKeyedSingleton<IBotCommandHandler, HelpCommandHandler>(HelpCommandHandler.Command);
+        services.AddKeyedSingleton<IBotCommandHandler, InviteCommandHandler>(InviteCommandHandler.Command);
+        services.AddKeyedSingleton<IBotCommandHandler, StoriesCommandHandler>(StoriesCommandHandler.Command);
 
         return services.AddTelegramAuth(configuration);
     }

@@ -1,6 +1,7 @@
 using Kot.MongoDB.Migrations;
 using Microsoft.Extensions.Options;
 using Reki.Infrastructure.Telegram;
+using Reki.Infrastructure.Telegram.Command;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 
@@ -23,6 +24,9 @@ internal sealed class RekiStartupHostedService(
                 allowedUpdates: [UpdateType.Message],
                 dropPendingUpdates: false,
                 secretToken: telegramOptions.Value.WebhookSecret,
+                cancellationToken: cancellationToken);
+            await telegramBotClient.SetMyCommands(
+                BotCommands.All,
                 cancellationToken: cancellationToken);
         }
     }
