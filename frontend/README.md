@@ -2,11 +2,11 @@
 
 Telegram Mini App игры «Реки». Правила для агента и людей: [AGENTS.md](AGENTS.md). Навыки агента: [apm.yml](apm.yml).
 
-В `public/runtime-config/config.js` задаются same-origin `apiBaseUrl`, собственный `appClientId`, публичные `vkApplicationId` / `vkRedirectUrl` `yandexClientId` / `yandexRedirectUrl` и feature flags. Яндекс redirect URL должен использовать тот же origin, что и страница входа, и совпадать с зарегистрированным в OAuth-приложении; callback на этом URL передаёт токен через SDK. VK application ID должен совпадать с серверной настройкой `Vk:ApplicationId`; redirect URL должен быть зарегистрирован в VK ID. По умолчанию redirect использует текущий origin без завершающего слеша. Приложение использует настоящий API; ошибки не подменяются локальным успехом. Local Compose запускает Vite dev server и проксирует `/api` в backend.
+В `public/runtime-config/config.js` задаются same-origin `apiBaseUrl`, собственный `appClientId`, публичные `telegramClientId`, `vkApplicationId` / `vkRedirectUrl`, `yandexClientId` / `yandexRedirectUrl` и feature flags. Яндекс redirect URL должен использовать тот же origin, что и страница входа, и совпадать с зарегистрированным в OAuth-приложении; callback на этом URL передаёт токен через SDK. VK application ID должен совпадать с серверной настройкой `Vk:ApplicationId`; redirect URL должен быть зарегистрирован в VK ID. По умолчанию redirect использует текущий origin без завершающего слеша. Приложение использует настоящий API; ошибки не подменяются локальным успехом. Local Compose запускает Vite dev server и проксирует `/api` в backend.
 
 В local Compose Vite-плагин читает общий `TG_PAT`, даёт `@tma.js/sdk` вымышленного игрока и свежий HMAC-подписанный `initData`. Compose передаёт тот же `TG_PAT` в настройку `TgMiniAppAuth` backend; отключения auth для development нет. Production build и nginx не включают эмулятор.
 
-Для локальной проверки браузерного Telegram Login JS через HTTPS установи [mkcert по официальной инструкции](https://github.com/FiloSottile/mkcert#installation). Зарегистрируй `https://localhost:5173` в Allowed URLs BotFather. Публичный Telegram Client ID фронт получит от backend через `GET /api/v1/auth/external/tg/client-id`. Запусти backend отдельно, затем из `frontend/` в PowerShell:
+Для локальной проверки браузерного Telegram Login JS через HTTPS установи [mkcert по официальной инструкции](https://github.com/FiloSottile/mkcert#installation). Зарегистрируй `https://localhost:5173` в Allowed URLs BotFather. Браузерный Telegram Login использует `telegramClientId` из runtime config. Для другого бота укажи его числовой ID в этом поле. Запусти backend отдельно, затем из `frontend/` в PowerShell:
 
 ```powershell
 mkcert -install

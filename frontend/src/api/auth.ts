@@ -18,7 +18,6 @@ let accessToken = ''
 let registrationExternalId = ''
 let refreshRequest: Promise<boolean> | undefined
 let startupRequest: Promise<boolean> | undefined
-let telegramClientIdRequest: Promise<number> | undefined
 let widgetRequest: Promise<void> | undefined
 let pendingWidgetToken = sessionStorage.getItem(pendingLoginKey) ?? ''
 let pendingYandexToken = ''
@@ -82,16 +81,6 @@ function schedulePendingExpiry() {
 }
 
 schedulePendingExpiry()
-
-export function loadTelegramClientId(): Promise<number> {
-  return telegramClientIdRequest ??= fetch(`${baseUrl}/auth/external/tg/client-id`, { cache: 'no-store', signal: AbortSignal.timeout(authTimeoutMs) }).then(async response => {
-    if (!response.ok) throw new Error(`Telegram client ID unavailable (${response.status})`)
-    return response.json() as Promise<number>
-  }).catch(error => {
-    telegramClientIdRequest = undefined
-    throw error
-  })
-}
 
 function storedRefresh(): string | null {
   try { return localStorage.getItem(refreshKey) } catch { return null }

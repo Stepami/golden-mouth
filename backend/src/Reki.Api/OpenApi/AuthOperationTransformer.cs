@@ -11,14 +11,9 @@ internal sealed class AuthOperationTransformer : IOpenApiOperationTransformer
         OpenApiOperationTransformerContext context,
         CancellationToken cancellationToken)
     {
-        var requestType = operation.OperationId switch
-        {
-            "Auth_Refresh" => typeof(RefreshTokenRequest),
-            "Auth_Logout" => typeof(LogoutRequest),
-            "ExternalTelegramAuth_ExchangeMiniApp" or "ExternalTelegramAuth_ExchangeTelegramLogin" => typeof(TokenExchangeRequest),
-            "ExternalVkAuth_ExchangeVk" or "ExternalYandexAuth_ExchangeYandex" => typeof(TokenExchangeRequest),
-            _ => null,
-        };
+        var requestType = context.Description.ActionDescriptor.Parameters
+            .Select(parameter => parameter.ParameterType)
+            .FirstOrDefault(type => type == typeof(TokenExchangeRequest) || type == typeof(RefreshTokenRequest) || type == typeof(LogoutRequest));
         if (requestType is not null && operation.RequestBody?.Content is { } requestContent &&
             requestContent.TryGetValue("application/x-www-form-urlencoded", out var form))
         {
@@ -28,7 +23,7 @@ internal sealed class AuthOperationTransformer : IOpenApiOperationTransformer
             };
         }
 
-        if (operation.OperationId is "Auth_Refresh" or "ExternalTelegramAuth_ExchangeMiniApp" or "ExternalTelegramAuth_ExchangeTelegramLogin" or "ExternalVkAuth_ExchangeVk" or "ExternalYandexAuth_ExchangeYandex")
+        if (requestType == typeof(TokenExchangeRequest) || requestType == typeof(RefreshTokenRequest))
         {
             operation.Responses ??= new OpenApiResponses();
             operation.Responses["200"] = new OpenApiResponse
