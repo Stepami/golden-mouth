@@ -1,11 +1,10 @@
-using Mediator;
 using Reki.Application.Player;
 using Reki.Application.Posts;
-using Reki.Application.Posts.GetPublicStoryCard;
 using Reki.Application.Worlds;
 using Reki.Domain.Player;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Reki.Infrastructure.Telegram.Command;
 
@@ -13,7 +12,6 @@ internal sealed class StoriesCommandHandler(
     IPlayerRepository players,
     IWorldPlayerCache worldPlayerCache,
     IPostRepository posts,
-    ISender sender,
     ITelegramBotClient telegram) : IBotCommandHandler, IBotCommand
 {
     public static string Command { get; } = BotCommands.Stories.Command;
@@ -44,9 +42,11 @@ internal sealed class StoriesCommandHandler(
         }
 
         var postId = playerPosts.Items[0].Id;
-        await using var card = await sender.Send(new PublicStoryCardQuery(player.Id, postId));
-        await telegram.SendPhoto(
+        var cardUrl = $"https://reki-app.ru/api/v1/cards/story/{player.Id.Value:N}/{postId.Value:N}.png";
+        await telegram.SendMessage(
             message.Chat.Id,
-            InputFile.FromStream(card, $"{player.Id}_{postId}.png"));
+            "Вот твоя карточка - сохрани её для сторис!",
+            replyMarkup: new InlineKeyboardMarkup(
+                InlineKeyboardButton.WithUrl("Открыть карточку", cardUrl)));
     }
 }
