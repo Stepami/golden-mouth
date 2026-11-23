@@ -24,6 +24,7 @@ using Reki.Application.Social.Responses.Dm;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds.Responses;
 using Reki.Domain.Invites;
+using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Challenges;
 using Reki.Domain.Player.Streaks;
@@ -50,6 +51,7 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(StarFeedSourceContent))]
 [JsonSerializable(typeof(string[]))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
+[JsonSerializable(typeof(NotificationChannelType))]
 [JsonSerializable(typeof(StarFeedRequest))]
 [JsonSerializable(typeof(StarFeedOnPostPublishedRequest))]
 [JsonSerializable(typeof(StarFeedOnCommentPublishedRequest))]

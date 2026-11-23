@@ -13,6 +13,7 @@ using OpenIddict.MongoDb.Models;
 using Reki.Application.Balance;
 using Reki.Domain.Bonuses;
 using Reki.Domain.Invites;
+using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Challenges;
 using Reki.Domain.Posts;
@@ -82,7 +83,7 @@ public sealed class GameIndexMigrationTests(TestSessionFixture mongo)
                 new Dictionary<SkillId, SkillProgress>(),
                 1990,
                 new PlayerSettings("all", "off", false),
-                []).ToBsonDocument();
+                new Dictionary<NotificationChannelType, PlayerNotificationChannel>()).ToBsonDocument();
         }
     }
 

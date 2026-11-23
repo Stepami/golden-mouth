@@ -158,7 +158,7 @@ public sealed class PlayerControllerTests(ApiFactory factory) : GameApiTestBase(
         await notifications.DeleteManyAsync(item => item.PlayerId == response.Id);
         await players.UpdateOneAsync(
             item => item.Id == response.Id,
-            Builders<PlayerProfile>.Update.Set(item => item.NotificationChannels, Array.Empty<PlayerNotificationChannel>()));
+            Builders<PlayerProfile>.Update.Set(item => item.NotificationChannels, new Dictionary<NotificationChannelType, PlayerNotificationChannel>()));
         Factory.Services.GetRequiredService<IMemoryCache>().Remove(CacheKeyPrefixes.UpdateLastSeenAt + response.Id);
 
         await api.Player.GetCurrentPlayerAsync(CancellationToken.None);

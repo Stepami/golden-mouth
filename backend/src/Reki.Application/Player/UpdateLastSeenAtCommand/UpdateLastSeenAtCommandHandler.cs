@@ -29,21 +29,19 @@ internal sealed class UpdateLastSeenAtCommandHandler(
             async token =>
             {
                 await players.ReplacePlayerAsync(player, token);
-                if (player.NotificationChannels.Count <= 0)
-                {
-                    return Unit.Value;
-                }
-
                 var sendAt = player.LastSeenAt.AddDays(1);
-                var pending = await notifications.GetPendingAsync(player.Id, token);
-                if (pending is null)
+                foreach (var type in player.NotificationChannels.Keys)
                 {
-                    await notifications.SaveAsync(Notification.New(player.Id, sendAt), token);
-                }
-                else if (player.LastSeenAt - oldLastSeenAt >= TimeSpan.FromHours(2))
-                {
-                    pending.Reschedule(sendAt);
-                    await notifications.SaveAsync(pending, token);
+                    var pending = await notifications.GetPendingAsync(player.Id, type, token);
+                    if (pending is null)
+                    {
+                        await notifications.SaveAsync(Notification.New(player.Id, type, sendAt), token);
+                    }
+                    else if (player.LastSeenAt - oldLastSeenAt >= TimeSpan.FromHours(2))
+                    {
+                        pending.Reschedule(sendAt);
+                        await notifications.SaveAsync(pending, token);
+                    }
                 }
 
                 return Unit.Value;

@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Reki.Domain.Notifications;
-using Reki.Domain.Player;
 
 namespace Reki.Application.Notifications;
 
@@ -10,11 +9,11 @@ public abstract partial class NotificationSender(
     ILogger<NotificationSender> logger,
     TimeProvider timeProvider) : INotificationSender
 {
-    public async Task SendAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct)
+    public async Task<NotificationStatus> SendAsync(PlayerNotificationChannel channel, Notification notification, CancellationToken ct)
     {
         if (channel.Type != channelType)
         {
-            return;
+            return NotificationStatus.Pending;
         }
 
         try
@@ -30,10 +29,12 @@ public abstract partial class NotificationSender(
                 channelType.ToString().ToLowerInvariant(),
                 "delivery",
                 timeProvider.GetUtcNow().ToUnixTimeMilliseconds());
+            return NotificationStatus.Sent;
         }
         catch (Exception error)
         {
             LogSendError(error, notification.PlayerId.Value, notification.Id.Value, channelType);
+            return NotificationStatus.Failed;
         }
     }
 

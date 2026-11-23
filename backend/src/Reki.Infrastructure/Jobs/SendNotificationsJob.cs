@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Reki.Application;
 using Reki.Application.Notifications;
 using Reki.Application.Player;
@@ -11,37 +12,58 @@ internal sealed class SendNotificationsJob(
     INotificationRepository notifications,
     IPlayerRepository players,
     IUnitOfWork unitOfWork,
-    TimeProvider timeProvider,
-    IEnumerable<INotificationSender> senders) : ITickerFunction
+    IServiceProvider services,
+    TimeProvider timeProvider) : ITickerFunction<NotificationChannelType>
 {
-    public async Task ExecuteAsync(TickerFunctionContext context, CancellationToken cancellationToken = default)
+    public async Task ExecuteAsync(TickerFunctionContext<NotificationChannelType> context, CancellationToken cancellationToken = default)
     {
-        await foreach (var notification in notifications.GetDueAsync(cancellationToken))
+        // Legacy standalone jobs without a payload deserialize as Telegram and have no parent.
+        var type = context.Request;
+        if (type == NotificationChannelType.None || context.ParentId is null)
+        {
+            return;
+        }
+
+        await foreach (var notification in notifications.GetDueAsync(type, cancellationToken))
         {
             var player = await players.GetPlayerAsync(notification.PlayerId, cancellationToken);
-            if (player is null || player.NotificationChannels.Count == 0)
+            if (player is null || !player.NotificationChannels.TryGetValue(type, out var channel))
             {
-                notification.MarkSent();
-                await notifications.SaveAsync(notification, cancellationToken);
+                await notifications.DeleteAsync(notification.Id, cancellationToken);
                 continue;
             }
 
-            await Task.WhenAll(
-                player.NotificationChannels
-                    .SelectMany(channel =>
-                        senders.Select(sender =>
-                            sender.SendAsync(channel, notification, cancellationToken))));
+            var sender = services.GetRequiredKeyedService<INotificationSender>(type);
+            var status = await sender.SendAsync(channel, notification, cancellationToken);
+            notification.Complete(status);
 
-            var now = timeProvider.GetUtcNow();
             await unitOfWork.ExecuteAsync(
                 async token =>
                 {
-                    notification.MarkSent();
                     await notifications.SaveAsync(notification, token);
-                    await notifications.SaveAsync(
-                        Notification.New(notification.PlayerId, now.AddDays(1), notification.Content),
-                        token);
-                    return true;
+                    if (status == NotificationStatus.Failed)
+                    {
+                        var recent = await notifications.GetLastThreeAsync(notification.PlayerId, type, token);
+                        if (recent.Count == 3 && recent.All(item => item.Status == NotificationStatus.Failed))
+                        {
+                            player.RemoveNotificationChannel(type);
+                            await players.ReplacePlayerAsync(player, token);
+                            return status;
+                        }
+                    }
+
+                    if (type == NotificationChannelType.WebPush)
+                    {
+                        await players.ReplacePlayerAsync(player, token);
+                    }
+
+                    if (await notifications.GetPendingAsync(notification.PlayerId, type, token) is null)
+                    {
+                        var next = Notification.New(notification.PlayerId, type, timeProvider.GetUtcNow().AddDays(1), notification.Content);
+                        await notifications.SaveAsync(next, token);
+                    }
+
+                    return status;
                 },
                 cancellationToken);
         }
