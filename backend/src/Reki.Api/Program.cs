@@ -1,9 +1,13 @@
 using Kot.MongoDB.Migrations;
+using Microsoft.Extensions.Options;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Application;
 using Reki.Infrastructure;
+using Reki.Infrastructure.Telegram;
 using Serilog;
+using Telegram.Bot;
+using Telegram.Bot.Types.Enums;
 using TickerQ.DependencyInjection;
 
 namespace Reki.Api;
@@ -76,6 +80,16 @@ public partial class Program
 
             var migrator = app.Services.GetRequiredService<IMigrator>();
             await migrator.MigrateAsync();
+            var telegram = app.Services.GetRequiredService<IOptions<TelegramOptions>>().Value;
+            if (!string.IsNullOrEmpty(telegram.WebhookSecret))
+            {
+                await app.Services.GetRequiredService<ITelegramBotClient>().SetWebhook(
+                    "https://reki-webhook.stepami.workers.dev/",
+                    allowedUpdates: [UpdateType.Message],
+                    dropPendingUpdates: false,
+                    secretToken: telegram.WebhookSecret,
+                    cancellationToken: app.Lifetime.ApplicationStopping);
+            }
         }
 
         if (app.Environment.IsDevelopment())

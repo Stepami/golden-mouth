@@ -26,6 +26,7 @@ public static class AuthConstants
     {
         public const string MiniApp = TgMiniAppAuth.TgMiniAppAuthConstants.AuthenticationScheme;
         public const string TelegramLogin = nameof(TelegramLogin);
+        public const string TelegramWebhook = nameof(TelegramWebhook);
         public const string Onboarding = nameof(Onboarding);
         public const string AppBearer = nameof(AppBearer);
         public const string Vk = nameof(Vk);

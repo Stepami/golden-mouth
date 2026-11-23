@@ -2,6 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
+using Telegram.Bot;
 
 namespace Reki.Api.Serialization;
 
@@ -26,6 +27,7 @@ internal static class DependencyInjection
         options.Encoder = JavaScriptEncoder.Create(UnicodeRanges.All);
         options.TypeInfoResolverChain.Clear();
         options.TypeInfoResolverChain.Add(ApiJsonSerializerContext.Default);
+        options.TypeInfoResolverChain.Add(JsonBotSerializerContext.Default);
         options.Converters.Clear();
         foreach (var converter in ApiJsonSerializerContext.Default.Options.Converters)
         {

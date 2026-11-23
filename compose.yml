@@ -29,6 +29,7 @@ services:
       Mongo__ConnectionString: ${MONGO_CONNECTION_STRING:-mongodb://mongo:27017/?replicaSet=rs0}
       Mongo__DatabaseName: ${MONGO_DATABASE_NAME:-reki}
       Telegram__BotToken: ${TG_PAT:-}
+      Telegram__WebhookSecret: ${TG_WEBHOOK:-}
       VapidKeyOptions__PrivateKey: ${VAPID_PRIVATE:-}
       Vk__ApplicationId: ${VK_APPLICATION_ID:-54888095}
       Yandex__ClientId: ${YANDEX_CLIENT_ID:-799a21610c6b495c8d8c01fd9b8c4012}
