@@ -11,6 +11,7 @@ using Reki.Application.Posts;
 using Reki.Application.Worlds;
 using Reki.Infrastructure.Mongo.Options;
 using Reki.Infrastructure.Mongo.Repositories;
+using Reki.Infrastructure.Mongo.UnitOfWork;
 
 namespace Reki.Infrastructure.Mongo;
 

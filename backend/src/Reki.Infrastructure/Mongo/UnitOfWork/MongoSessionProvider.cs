@@ -1,6 +1,6 @@
 using MongoDB.Driver;
 
-namespace Reki.Infrastructure.Mongo;
+namespace Reki.Infrastructure.Mongo.UnitOfWork;
 
 internal sealed class MongoSessionProvider
 {

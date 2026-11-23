@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using MongoDB.Driver;
 using Reki.Application.Player;
 using Reki.Domain.Player;
+using Reki.Infrastructure.Mongo.UnitOfWork;
 
 namespace Reki.Infrastructure.Mongo.Repositories;
 

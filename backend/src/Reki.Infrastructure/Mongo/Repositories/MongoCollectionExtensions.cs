@@ -1,7 +1,8 @@
 using System.Linq.Expressions;
 using MongoDB.Driver;
+using Reki.Infrastructure.Mongo.UnitOfWork;
 
-namespace Reki.Infrastructure.Mongo;
+namespace Reki.Infrastructure.Mongo.Repositories;
 
 internal static class MongoCollectionExtensions
 {
