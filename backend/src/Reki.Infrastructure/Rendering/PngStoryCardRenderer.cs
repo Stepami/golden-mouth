@@ -20,9 +20,8 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
         _boldTypeface = LoadTypeface("DejaVuSans-Bold.ttf");
     }
 
-    public async ValueTask RenderAsync(
+    public async ValueTask<Stream> RenderAsync(
         StoryCardData card,
-        Stream target,
         CancellationToken cancellationToken)
     {
         await _renderSlots.WaitAsync(cancellationToken);
@@ -40,10 +39,18 @@ internal sealed class PngStoryCardRenderer : IStoryCardRenderer, IDisposable
             canvas.Flush();
 
             using var image = surface.Snapshot();
-            using var encoded = image.Encode(SKEncodedImageFormat.Png, 92)
+            var encoded = image.Encode(SKEncodedImageFormat.Png, 92)
                 ?? throw new InvalidOperationException("Unable to encode the story card as PNG.");
-            using var encodedStream = encoded.AsStream();
-            await encodedStream.CopyToAsync(target, cancellationToken);
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return encoded.AsStream(streamDisposesData: true);
+            }
+            catch
+            {
+                encoded.Dispose();
+                throw;
+            }
         }
         finally
         {

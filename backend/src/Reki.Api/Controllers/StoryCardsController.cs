@@ -26,9 +26,8 @@ public sealed class StoryCardsController(
         var card = await sender.Send(
             new PublicStoryCardQuery(playerId, postId),
             cancellationToken);
-        Response.ContentType = "image/png";
         Response.Headers.CacheControl = "no-store";
-        await renderer.RenderAsync(card, Response.Body, cancellationToken);
-        return TypedResults.Empty;
+        var png = await renderer.RenderAsync(card, cancellationToken);
+        return TypedResults.Stream(png, "image/png");
     }
 }
