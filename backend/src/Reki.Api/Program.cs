@@ -1,13 +1,8 @@
-using Kot.MongoDB.Migrations;
-using Microsoft.Extensions.Options;
 using Reki.Api.OpenApi;
 using Reki.Api.Serialization;
 using Reki.Application;
 using Reki.Infrastructure;
-using Reki.Infrastructure.Telegram;
 using Serilog;
-using Telegram.Bot;
-using Telegram.Bot.Types.Enums;
 using TickerQ.DependencyInjection;
 
 namespace Reki.Api;
@@ -53,6 +48,7 @@ public partial class Program
         builder.Services.AddApi();
         if (!OpenApiGeneration.IsRunning)
         {
+            builder.Services.AddHostedService<RekiStartupHostedService>();
             builder.Services
                 .AddApplication()
                 .AddInfrastructure(builder.Configuration, ApiJsonSerializerContext.Default);
@@ -77,19 +73,6 @@ public partial class Program
 
             app.UseAuthentication();
             app.UseAuthorization();
-
-            var migrator = app.Services.GetRequiredService<IMigrator>();
-            await migrator.MigrateAsync();
-            var telegram = app.Services.GetRequiredService<IOptions<TelegramOptions>>().Value;
-            if (!string.IsNullOrEmpty(telegram.WebhookSecret))
-            {
-                await app.Services.GetRequiredService<ITelegramBotClient>().SetWebhook(
-                    telegram.WebhookUrl,
-                    allowedUpdates: [UpdateType.Message],
-                    dropPendingUpdates: false,
-                    secretToken: telegram.WebhookSecret,
-                    cancellationToken: app.Lifetime.ApplicationStopping);
-            }
         }
 
         if (app.Environment.IsDevelopment())
