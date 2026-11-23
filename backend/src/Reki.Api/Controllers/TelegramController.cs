@@ -3,10 +3,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Reki.Infrastructure.Auth;
 using Reki.Infrastructure.Telegram.Command;
-using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.InlineQueryResults;
 
 namespace Reki.Api.Controllers;
 
@@ -16,22 +14,11 @@ namespace Reki.Api.Controllers;
 [Route("/telegram")]
 public sealed partial class TelegramController(
     ILogger<TelegramController> logger,
-    IServiceProvider services,
-    ITelegramBotClient telegram) : ControllerBase
+    IServiceProvider services) : ControllerBase
 {
     [HttpPost("webhook")]
     public async Task<Ok> Webhook([FromBody] Update update)
     {
-        if (update.InlineQuery is { } inlineQuery)
-        {
-            var query = inlineQuery.Query;
-            var results = query.StartsWith(BotCommands.StoryInlinePrefix, StringComparison.Ordinal) && query.Length > BotCommands.StoryInlinePrefix.Length
-                ? new InlineQueryResult[] { new InlineQueryResultCachedPhoto(inlineQuery.Id, query[BotCommands.StoryInlinePrefix.Length..]) }
-                : [];
-            await telegram.AnswerInlineQuery(inlineQuery.Id, results, isPersonal: true);
-            return TypedResults.Ok();
-        }
-
         if (update.Message is not { Chat.Type: ChatType.Private, From: not null, Text: { } text } message ||
             !text.StartsWith('/'))
         {
