@@ -8,10 +8,11 @@ namespace Reki.Application.Posts.GetPublicStoryCard;
 internal sealed class PublicStoryCardQueryHandler(
     IPlayerRepository playerRepository,
     IPostRepository postRepository,
-    IWorldRepository worldRepository)
-    : IQueryHandler<PublicStoryCardQuery, StoryCardData>
+    IWorldRepository worldRepository,
+    IStoryCardRenderer renderer)
+    : IQueryHandler<PublicStoryCardQuery, Stream>
 {
-    public async ValueTask<StoryCardData> Handle(
+    public async ValueTask<Stream> Handle(
         PublicStoryCardQuery query,
         CancellationToken cancellationToken)
     {
@@ -22,6 +23,7 @@ internal sealed class PublicStoryCardQueryHandler(
         var world = await worldRepository.GetWorldAsync(player.Id, post.WorldId, cancellationToken)
             ?? throw new ResourceNotFoundException("Post not found.");
 
-        return StoryCardData.From(world, post);
+        var card = StoryCardData.From(world, post);
+        return await renderer.RenderAsync(card, cancellationToken);
     }
 }
