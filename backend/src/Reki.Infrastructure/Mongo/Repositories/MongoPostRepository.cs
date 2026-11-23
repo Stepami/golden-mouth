@@ -32,9 +32,7 @@ internal sealed class MongoPostRepository(
         var document = post.ToBsonDocument();
         document["_embedding"] = new BsonArray(embedding.ToArray());
         var posts = database.GetCollection<BsonDocument>(MongoCollections.Posts);
-        await (sessionProvider.Current is { } session
-            ? posts.InsertOneAsync(session, document, cancellationToken: cancellationToken)
-            : posts.InsertOneAsync(document, cancellationToken: cancellationToken));
+        await posts.InsertOneAsync(sessionProvider, document, cancellationToken);
     }
 
     public async ValueTask<IReadOnlyList<PostSimilarity>> FindSimilarPostsAsync(
@@ -137,9 +135,7 @@ internal sealed class MongoPostRepository(
         var update = Builders<GamePost>.Update
             .Set(item => item.LikedBy, post.LikedBy)
             .Set(item => item.Version, post.Version);
-        await (sessionProvider.Current is { } session
-            ? _posts.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken)
-            : _posts.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));
+        await _posts.UpdateOneAsync(sessionProvider, filter, update, cancellationToken);
     }
 
     public async ValueTask SaveReplyAsync(GamePost post, CancellationToken cancellationToken)
@@ -148,9 +144,7 @@ internal sealed class MongoPostRepository(
         var update = Builders<GamePost>.Update
             .Set(item => item.Comments, post.Comments)
             .Inc(item => item.Version, 1);
-        await (sessionProvider.Current is { } session
-            ? _posts.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken)
-            : _posts.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));
+        await _posts.UpdateOneAsync(sessionProvider, filter, update, cancellationToken);
     }
 
     public async ValueTask DeletePostsAsync(

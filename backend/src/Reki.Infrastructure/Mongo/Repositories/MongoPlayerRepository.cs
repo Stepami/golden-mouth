@@ -16,16 +16,14 @@ internal sealed class MongoPlayerRepository(
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
         ExternalUserId externalUserId,
         CancellationToken cancellationToken) =>
-        await (sessionProvider.Current is { } session
-            ? _players.Find(session, item => item.ExternalUserIds.Contains(externalUserId))
-            : _players.Find(item => item.ExternalUserIds.Contains(externalUserId))).FirstOrDefaultAsync(cancellationToken);
+        await _players.Find(sessionProvider, item => item.ExternalUserIds.Contains(externalUserId))
+            .FirstOrDefaultAsync(cancellationToken);
 
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
         PlayerId playerId,
         CancellationToken cancellationToken) =>
-        await (sessionProvider.Current is { } session
-            ? _players.Find(session, item => item.Id == playerId)
-            : _players.Find(item => item.Id == playerId)).FirstOrDefaultAsync(cancellationToken);
+        await _players.Find(sessionProvider, item => item.Id == playerId)
+            .FirstOrDefaultAsync(cancellationToken);
 
     public async IAsyncEnumerable<PlayerProfile> GetPlayersForEnergyRecoveryAsync(
         int cap,
@@ -96,9 +94,7 @@ internal sealed class MongoPlayerRepository(
         var update = Builders<PlayerProfile>.Update
             .Set(item => item.DailyChallenge, player.DailyChallenge)
             .Inc(item => item.Version, player.Version - previousVersion);
-        await (sessionProvider.Current is { } session
-            ? _players.UpdateOneAsync(session, filter, update, cancellationToken: cancellationToken)
-            : _players.UpdateOneAsync(filter, update, cancellationToken: cancellationToken));
+        await _players.UpdateOneAsync(sessionProvider, filter, update, cancellationToken);
     }
 
     public async ValueTask DeletePlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
