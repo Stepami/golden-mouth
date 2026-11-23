@@ -21,7 +21,7 @@ internal sealed class RekiStartupHostedService(
         {
             await telegramBotClient.SetWebhook(
                 telegramOptions.Value.WebhookUrl,
-                allowedUpdates: [UpdateType.Message, UpdateType.InlineQuery],
+                allowedUpdates: [UpdateType.Message],
                 dropPendingUpdates: false,
                 secretToken: telegramOptions.Value.WebhookSecret,
                 cancellationToken: cancellationToken);
