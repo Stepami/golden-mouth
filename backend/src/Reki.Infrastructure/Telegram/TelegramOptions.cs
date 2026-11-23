@@ -8,6 +8,8 @@ public sealed class TelegramOptions
 
     public string ApiUrl { get; set; } = string.Empty;
 
+    public string WebhookUrl { get; set; } = string.Empty;
+
     public string BotToken { get; set; } = string.Empty;
 
     public string WebhookSecret { get; set; } = string.Empty;

@@ -84,7 +84,7 @@ public partial class Program
             if (!string.IsNullOrEmpty(telegram.WebhookSecret))
             {
                 await app.Services.GetRequiredService<ITelegramBotClient>().SetWebhook(
-                    "https://reki-webhook.stepami.workers.dev/",
+                    telegram.WebhookUrl,
                     allowedUpdates: [UpdateType.Message],
                     dropPendingUpdates: false,
                     secretToken: telegram.WebhookSecret,
