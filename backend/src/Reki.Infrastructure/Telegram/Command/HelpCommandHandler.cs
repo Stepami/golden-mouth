@@ -7,8 +7,8 @@ internal sealed class HelpCommandHandler(ITelegramBotClient telegram) : IBotComm
 {
     public static string Command { get; } = BotCommands.Help.Command;
 
-    public async Task Handle(Message message) =>
-        await telegram.SendMessage(
+    public Task Handle(Message message) =>
+        telegram.SendMessage(
             message.Chat.Id,
             BotCommands.All
                 .Select(command => $"/{command.Command} — {command.Description}")
