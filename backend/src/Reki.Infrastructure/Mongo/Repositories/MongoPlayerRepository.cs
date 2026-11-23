@@ -16,15 +16,21 @@ internal sealed class MongoPlayerRepository(
     public async ValueTask<PlayerProfile?> GetPlayerAsync(
         ExternalUserId externalUserId,
         CancellationToken cancellationToken) =>
-        await _players.Find(item => item.ExternalUserIds.Contains(externalUserId)).FirstOrDefaultAsync(cancellationToken);
+        await (sessionProvider.Current is { } session
+            ? _players.Find(session, item => item.ExternalUserIds.Contains(externalUserId))
+            : _players.Find(item => item.ExternalUserIds.Contains(externalUserId))).FirstOrDefaultAsync(cancellationToken);
 
-    public async ValueTask<PlayerProfile?> GetPlayerAsync(PlayerId playerId, CancellationToken cancellationToken) =>
+    public async ValueTask<PlayerProfile?> GetPlayerAsync(
+        PlayerId playerId,
+        CancellationToken cancellationToken) =>
         await (sessionProvider.Current is { } session
             ? _players.Find(session, item => item.Id == playerId)
             : _players.Find(item => item.Id == playerId)).FirstOrDefaultAsync(cancellationToken);
 
     public async IAsyncEnumerable<PlayerProfile> GetPlayersForEnergyRecoveryAsync(
-        int cap, DateTimeOffset dueBefore, [EnumeratorCancellation] CancellationToken cancellationToken)
+        int cap,
+        DateTimeOffset dueBefore,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         using var cursor = await _players.FindAsync(
             item => item.Wallet.Energy < cap && item.Wallet.EnergyUpdatedAtUtc <= dueBefore,
@@ -37,7 +43,8 @@ internal sealed class MongoPlayerRepository(
     }
 
     public async IAsyncEnumerable<PlayerProfile> GetActivePlayersAsync(
-        DateTimeOffset since, [EnumeratorCancellation] CancellationToken cancellationToken)
+        DateTimeOffset since,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var filter = Builders<PlayerProfile>.Filter.Gte(item => item.LastSeenAt, since);
         using var cursor = await _players.FindAsync(
