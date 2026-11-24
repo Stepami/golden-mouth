@@ -57,7 +57,8 @@ internal sealed class SendNotificationsJob(
                         await players.ReplacePlayerAsync(player, token);
                     }
 
-                    if (await notifications.GetPendingAsync(notification.PlayerId, type, token) is null)
+                    if (notification.Kind is NotificationKind.Regular &&
+                        await notifications.GetPendingAsync(notification.PlayerId, type, token) is null)
                     {
                         var next = Notification.New(notification.PlayerId, type, timeProvider.GetUtcNow().AddDays(1), notification.Content);
                         await notifications.SaveAsync(next, token);
