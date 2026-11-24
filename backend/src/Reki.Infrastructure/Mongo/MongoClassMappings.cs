@@ -5,7 +5,6 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Options;
 using MongoDB.Bson.Serialization.Serializers;
 using Reki.Domain.Bonuses;
-using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Challenges;
@@ -21,7 +20,6 @@ namespace Reki.Infrastructure.Mongo;
 [BsonSerializer<AuthorId>]
 [BsonSerializer<BonusId>]
 [BsonSerializer<CommentId>]
-[BsonSerializer<InvitationId>]
 [BsonSerializer<NotificationId>]
 [BsonSerializer<PlayerId>]
 [BsonSerializer<PostId>]
@@ -45,7 +43,6 @@ internal static partial class MongoClassMappings
         BsonSerializer.TryRegisterSerializer(new AuthorIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(new BonusIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(new CommentIdBsonSerializer());
-        BsonSerializer.TryRegisterSerializer(new InvitationIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(new NotificationIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(new PlayerIdBsonSerializer());
         BsonSerializer.TryRegisterSerializer(new PostIdBsonSerializer());
@@ -244,23 +241,6 @@ internal static partial class MongoClassMappings
                     item.DemoPosts,
                     item.Rules,
                     item.Stars,
-                    item.Version));
-        });
-        RegisterWithMongoId<Invitation, InvitationId>(item => item.Id, configure: classMap =>
-        {
-            classMap.MapMember(item => item.InviterBonusUsedAtUtc).SetDefaultValue((object?)null);
-            classMap.MapMember(item => item.InviteeBonusUsedAtUtc).SetDefaultValue((object?)null);
-            classMap.MapMember(item => item.Version).SetDefaultValue(0);
-            classMap.MapCreator(item => new Invitation(
-                    item.Id,
-                    item.InviterId,
-                    item.InviteeId,
-                    item.CreatedAtUtc,
-                    item.InviterBonusUsed,
-                    item.InviteeBonusUsed,
-                    item.BonusAmount,
-                    item.InviterBonusUsedAtUtc,
-                    item.InviteeBonusUsedAtUtc,
                     item.Version));
         });
         RegisterWithMongoId<Notification, NotificationId>(

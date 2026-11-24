@@ -24,7 +24,6 @@ using Reki.Application.Social.Responses.Challenge;
 using Reki.Application.Social.Responses.Dm;
 using Reki.Application.Telemetry;
 using Reki.Application.Worlds.Responses;
-using Reki.Domain.Invites;
 using Reki.Domain.Notifications;
 using Reki.Domain.Player;
 using Reki.Domain.Player.Challenges;
@@ -70,13 +69,11 @@ namespace Reki.Api.Serialization;
 [JsonSerializable(typeof(StreakId))]
 [JsonSerializable(typeof(PostId))]
 [JsonSerializable(typeof(CommentId))]
-[JsonSerializable(typeof(InvitationId))]
 [JsonSerializable(typeof(Stream))]
 [JsonSerializable(typeof(object))]
 [JsonSerializable(typeof(PlayerResponse))]
 [JsonSerializable(typeof(PlayerStreakResponse))]
 [JsonSerializable(typeof(ReferralResponse))]
-[JsonSerializable(typeof(InvitationResponse))]
 [JsonSerializable(typeof(OnboardingRequest))]
 [JsonSerializable(typeof(MergePlayersRequest))]
 [JsonSerializable(typeof(CreatePostRequest))]

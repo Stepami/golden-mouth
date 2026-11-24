@@ -14,7 +14,6 @@ import { ageBand } from '../app/ageBand'
 import { getWorldDraft, setWorldDraft } from '../app/worldDraft'
 import { worldOf, contentOf } from '../api/worldContent'
 import type { Player } from '../api/types'
-import { api } from '../api/client'
 import { needsRegistration } from '../api/auth'
 import { useNav } from '../app/nav'
 import { useStore } from '../app/store'
@@ -159,36 +158,23 @@ export function ChannelHead({ firstPublishedPostId }: { firstPublishedPostId?: s
   </>
 }
 
-export function Home({ firstPostConfirmed = false, channelEmpty = false }: { firstPostConfirmed?: boolean; channelEmpty?: boolean } = {}) {
+export function Home({ firstPostConfirmed = false }: { firstPostConfirmed?: boolean } = {}) {
   const guest = useGuestSession()
-  return guest ? <HomeView player={guest.player} title={guest.world.title} context={guest.world.firstContext} goal={guest.goal} firstPostConfirmed guest /> : <LiveHome firstPostConfirmed={firstPostConfirmed} channelEmpty={channelEmpty} />
+  return guest ? <HomeView player={guest.player} title={guest.world.title} context={guest.world.firstContext} goal={guest.goal} firstPostConfirmed guest /> : <LiveHome firstPostConfirmed={firstPostConfirmed} />
 }
 
-function LiveHome({ firstPostConfirmed, channelEmpty }: { firstPostConfirmed: boolean; channelEmpty: boolean }) {
+function LiveHome({ firstPostConfirmed }: { firstPostConfirmed: boolean }) {
   const p = useStore().player!; const profile = contentOf(p.world); const goal = usePresetGoal(p.world)
   const worldId = p.worldInstanceId ?? p.world
   const story = useNextStory()
   const startingNextStory = story?.phase === 'post' && story.worldId === worldId
   const starter = startingNextStory ? profile.ideas.find(idea => idea.trim()) : undefined
   const prompt = startingNextStory && !starter ? profile.firstPrompt?.trim() : undefined
-  const [invitation, setInvitation] = useState<{ playerId: string; worldId: string; bonus: number }>()
-  useEffect(() => {
-    if (startingNextStory) return
-    const controller = new AbortController()
-    const load = async () => {
-      if (!channelEmpty && (await api.channelPosts(worldId, undefined, controller.signal)).items.length > 0) return
-      const bonus = await api.invitation(controller.signal)
-      if (!controller.signal.aborted) setInvitation({ playerId: p.id, worldId, bonus })
-    }
-    void load().catch(() => {})
-    return () => controller.abort()
-  }, [p.id, worldId, channelEmpty, startingNextStory])
-  const bonus = !startingNextStory && invitation?.playerId === p.id && invitation.worldId === worldId ? invitation.bonus : 0
-  return <HomeView player={p} title={worldOf(p.world).title} context={profile.firstContext} goal={goal} firstPostConfirmed={firstPostConfirmed || startingNextStory} bonus={bonus} starter={starter} prompt={prompt} offer={<NextStoryChannelOffer player={p} />} hint={<NextStoryChannelHint player={p} />} />
+  return <HomeView player={p} title={worldOf(p.world).title} context={profile.firstContext} goal={goal} firstPostConfirmed={firstPostConfirmed || startingNextStory} starter={starter} prompt={prompt} offer={<NextStoryChannelOffer player={p} />} hint={<NextStoryChannelHint player={p} />} />
 }
 
-function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus = 0, guest = false, starter, prompt, offer, hint }: {
-  player: Pick<Player, 'world' | 'streak'>; title: string; context: string; goal: ReturnType<typeof usePresetGoal>; firstPostConfirmed: boolean; bonus?: number; guest?: boolean; starter?: string; prompt?: string; offer?: React.ReactNode; hint?: React.ReactNode
+function HomeView({ player: p, title, context, goal, firstPostConfirmed, guest = false, starter, prompt, offer, hint }: {
+  player: Pick<Player, 'world' | 'streak'>; title: string; context: string; goal: ReturnType<typeof usePresetGoal>; firstPostConfirmed: boolean; guest?: boolean; starter?: string; prompt?: string; offer?: React.ReactNode; hint?: React.ReactNode
 }) {
   const nav = useNav()
   const session = useGuestSession()
@@ -205,7 +191,6 @@ function HomeView({ player: p, title, context, goal, firstPostConfirmed, bonus =
       {suggested && <div className="story-first-step next-story-idea"><b className="small">{starter ? "Идея для поста" : "Первый шаг"}</b><p>{suggested}</p></div>}
       <div className="small eyebrow">Сегодня всё начинается</div><p className="first-story-context">{context}</p>
       {!suggested && goal && <div className="story-first-step"><b className="small">Первый шаг</b><p>{goal.firstStep}</p></div>}
-      {bonus > 0 && <p>🎁 Первый пост даст кристаллы: +{bonus} 💎</p>}
     </div>{!suggested && <p className="small muted first-story-footer">Можно начать своими словами — это твоя история.</p>}
   </div><div className="bottom-cta" style={guest ? undefined : { bottom: 78 }}>{session?.hint ?? hint}<button className="btn" onClick={() => { if (!guest) tap('first_post_open_editor'); nav.push('02-1_compose', { firstPostConfirmed }) }}>Написать первый пост</button></div></div>
 }

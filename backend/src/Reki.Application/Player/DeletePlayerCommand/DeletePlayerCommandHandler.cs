@@ -1,7 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Reki.Application.Auth;
-using Reki.Application.Invites;
 using Reki.Application.Notifications;
 using Reki.Application.Player.Streaks;
 using Reki.Application.Posts;
@@ -18,7 +17,6 @@ internal sealed class DeletePlayerCommandHandler(
     IWorldRepository worlds,
     IWorldPlayerCache worldCache,
     IPostRepository posts,
-    IInvitationRepository invitationRepository,
     INotificationRepository notifications,
     IBonusRepository bonuses,
     ProductTelemetry telemetry)
@@ -34,7 +32,6 @@ internal sealed class DeletePlayerCommandHandler(
             {
                 await posts.DeletePostsAsync(playerId, [], token);
                 await worlds.DeleteWorldsAsync(playerId, [], token);
-                await invitationRepository.DeleteInvitesAsync(playerId, token);
                 await notifications.DeleteForPlayerAsync(playerId, token);
                 await streaks.DeleteForPlayerAsync(playerId, token);
                 await bonuses.DeleteForPlayerAsync(playerId, token);

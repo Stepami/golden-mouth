@@ -218,7 +218,6 @@ export const api = {
         api.clearSession();
     },
     loadWorldTemplates: loadTemplates,
-    invitation: async (signal?: AbortSignal): Promise<number> => Number((await data(sdk.invitation.getInvitation(signal))).bonus),
     restore: (): Promise<Player | undefined> => loadPlayer(),
     me: (worldId?: string): Promise<Player> => {
         const key = worldId ?? sessionPlayer?.worldInstanceId ?? '';

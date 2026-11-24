@@ -3,7 +3,6 @@ using MongoDB.Bson;
 using MongoDB.Bson.IO;
 using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
-using Reki.Domain.Invites;
 using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
@@ -23,7 +22,7 @@ internal sealed class MoveReferralStateToInvites : RekiMigrationBase
     {
         var invites = db.GetCollection<BsonDocument>(MongoCollections.Invites);
         var inviteeIndex = new CreateIndexModel<BsonDocument>(
-            new BsonDocument(nameof(Invitation.InviteeId), 1),
+            new BsonDocument("InviteeId", 1),
             new CreateIndexOptions<BsonDocument>
             {
                 Name = "ux_invites_invitee",
@@ -31,7 +30,7 @@ internal sealed class MoveReferralStateToInvites : RekiMigrationBase
                 PartialFilterExpression = new BsonDocument("InviteeId", new BsonDocument("$type", "string")),
             });
         var inviterIndex = new CreateIndexModel<BsonDocument>(
-            new BsonDocument(nameof(Invitation.InviterId), 1),
+            new BsonDocument("InviterId", 1),
             new CreateIndexOptions { Name = "ix_invites_inviter" });
         await invites.Indexes.CreateManyAsync([inviteeIndex, inviterIndex], cancellationToken);
         await MoveLegacyStateAsync(db, session, cancellationToken);

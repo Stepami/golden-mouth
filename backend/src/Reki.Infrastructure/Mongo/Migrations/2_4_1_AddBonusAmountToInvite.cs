@@ -3,7 +3,6 @@ using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Reki.Application.Balance;
-using Reki.Domain.Invites;
 using Reki.Infrastructure.Mongo.Repositories;
 
 namespace Reki.Infrastructure.Mongo.Migrations;
@@ -21,7 +20,7 @@ internal sealed class AddBonusAmountToInvite(IOptionsMonitor<GameBalance> balanc
         await db.GetCollection<BsonDocument>(MongoCollections.Invites).UpdateManyAsync(
             session,
             FilterDefinition<BsonDocument>.Empty,
-            Builders<BsonDocument>.Update.Set(nameof(Invitation.BonusAmount), currentBalance.InviteBonusBoth),
+            Builders<BsonDocument>.Update.Set("BonusAmount", currentBalance.InviteBonusBoth),
             cancellationToken: cancellationToken);
     }
 }
