@@ -14571,184 +14571,3164 @@
       "title": "Последние инфобизеры",
       "records": [
         {
-          "id": "infobiz:greedy_wolf:1",
+          "id": "infobiz:greedy_wolf:first-task",
           "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
-          "worldName": "Последние инфобизеры",
           "starId": "greedy_wolf",
           "starName": "Меркантил",
-          "text": "Курс даст тебе работу? Давай сначала посмотрим, что ты сможешь показать на собесе.",
+          "text": "До собеса ещё надо добраться. Кинь первую строку резюме. Покажу, где тебя могут пролистать.",
           "language": "ru",
           "usageMode": "authored_example",
-          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
-          "when": "Спросили о трудоустройстве",
           "situationIds": [
-            "question"
-          ]
+            "question",
+            "action"
+          ],
+          "when": "Игрок спрашивает, где получить первый опыт, если без опыта его даже не зовут на собеседование.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "first-task",
+          "exampleInput": "Я готовлюсь к собесам, но меня разворачивают на словах «без опыта». Где взять первую задачу, если даже до разговора не допускают?",
+          "context": "Игровой персонаж работает в такси и ищет первую задачу в IT. Ника требует коммерческий опыт на стартовую позицию."
         },
         {
-          "id": "infobiz:greedy_wolf:2",
+          "id": "infobiz:greedy_wolf:ad-promise",
           "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
-          "worldName": "Последние инфобизеры",
           "starId": "greedy_wolf",
           "starName": "Меркантил",
-          "text": "Проценты красиво выглядят на слайде. Давай разберём один кейс от заявки до собеса.",
+          "text": "Окей, «любой» в рекламе широко звучит. Кидай вопрос, на котором застрял, покажу, что с ним делаем на «Вкате».",
           "language": "ru",
           "usageMode": "authored_example",
-          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
-          "when": "Попросили статистику",
           "situationIds": [
-            "evidence"
-          ]
+            "accusation",
+            "question"
+          ],
+          "when": "Игрок просит проверить, поможет ли обещание курса с незнакомой задачей на собеседовании.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "ad-promise",
+          "exampleInput": "В рекламе обещали подготовить к любому собесу. Если меня спросят про задачу, которой я никогда не делал, ваш курс тоже поможет?",
+          "context": "Игрок цитирует рекламу «Вката». Участники ещё не сверяли обещания курса с результатами выпускников."
         },
         {
-          "id": "infobiz:greedy_wolf:3",
+          "id": "infobiz:greedy_wolf:order-sheet",
           "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
-          "worldName": "Последние инфобизеры",
           "starId": "greedy_wolf",
           "starName": "Меркантил",
-          "text": "Вот этот проект я бы первым поставил в портфолио. Только покажи, что в нём делал ты.",
+          "text": "Для резюме уже есть что взять. «Сделал таблицу» пролистают, а «посчитал, сколько остаётся с заказа после двух расходов» можно обсудить на собесе.",
           "language": "ru",
           "usageMode": "authored_example",
-          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
-          "when": "Похвалили практику",
           "situationIds": [
-            "support"
-          ]
-        },
-        {
-          "id": "infobiz:alexey_nl:4",
-          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
-          "worldName": "Последние инфобизеры",
-          "starId": "alexey_nl",
-          "starName": "Куляш AI",
-          "text": "Положим рядом обещание из рекламы и требования вакансии. Уже видно, где расходится.",
-          "language": "ru",
-          "usageMode": "authored_example",
-          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
-          "when": "Попросили проверить рекламу",
-          "situationIds": [
-            "evidence"
-          ]
-        },
-        {
-          "id": "infobiz:alexey_nl:5",
-          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
-          "worldName": "Последние инфобизеры",
-          "starId": "alexey_nl",
-          "starName": "Куляш AI",
-          "text": "Один выпускник устроился. Сколько человек было в потоке?",
-          "language": "ru",
-          "usageMode": "authored_example",
-          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
-          "when": "Привели один удачный пример",
-          "situationIds": [
-            "evidence"
-          ]
-        },
-        {
-          "id": "infobiz:alexey_nl:6",
-          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
-          "worldName": "Последние инфобизеры",
-          "starId": "alexey_nl",
-          "starName": "Куляш AI",
-          "text": "Покажи, что выпускник сделал сам и какие решения может объяснить. Тогда есть что обсуждать.",
-          "language": "ru",
-          "usageMode": "authored_example",
-          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
-          "when": "Прислали проект",
-          "situationIds": [
-            "evidence"
-          ]
-        },
-        {
-          "id": "infobiz:nika:7",
-          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
-          "worldName": "Последние инфобизеры",
-          "starId": "nika",
-          "starName": "Ника Борщ",
-          "text": "Сертификат вижу. Теперь покажи, где в проекте ты застрял и как из этого выбрался.",
-          "language": "ru",
-          "usageMode": "authored_example",
-          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
-          "when": "Кандидат принёс сертификат",
-          "situationIds": [
-            "evidence"
-          ]
-        },
-        {
-          "id": "infobiz:nika:8",
-          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
-          "worldName": "Последние инфобизеры",
-          "starId": "nika",
-          "starName": "Ника Борщ",
-          "text": "Дай одну задачу, которую ты довёл до конца. На собесе с неё и начнём.",
-          "language": "ru",
-          "usageMode": "authored_example",
-          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
-          "when": "Новичка просят показать опыт",
-          "situationIds": [
+            "evidence",
             "question"
-          ]
+          ],
+          "when": "Игрок показывает расчёт по реальным заказам и спрашивает, можно ли считать его опытом.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "order-sheet",
+          "exampleInput": "Собрал таблицу для своих смен. По заказам считает, сколько осталось после бензина и комиссии. Всё ещё ноль опыта?",
+          "context": "Игрок показал учебную таблицу доходов по заказам. В посте есть отдельные поля для бензина и комиссии, но расчёты на тестовых данных не показаны."
         },
         {
-          "id": "infobiz:nika:9",
+          "id": "infobiz:greedy_wolf:fake-internship",
           "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
-          "worldName": "Последние инфобизеры",
-          "starId": "nika",
-          "starName": "Ника Борщ",
-          "text": "Отлично. Расскажи, что пришлось переделать после первой обратной связи.",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Стажировку убери, на уточняющем вопросе будет неловко. Можем прямо сейчас собрать из твоей таблицы нормальный ответ для собеса.",
           "language": "ru",
           "usageMode": "authored_example",
-          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
-          "when": "Кандидат обещает быстро учиться",
           "situationIds": [
-            "question"
-          ]
+            "boundary",
+            "risk"
+          ],
+          "when": "Игрок предлагает выдать настоящую учебную или домашнюю задачу за вымышленную стажировку.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "fake-internship",
+          "exampleInput": "А если я в резюме напишу, что таблица была задачей на стажировке? Сама-то таблица настоящая.",
+          "context": "Игрок обсуждает, как описать учебную работу в резюме. Коммерческой стажировки в истории персонажа не было."
         },
         {
-          "id": "infobiz:2kotleti_news:10",
+          "id": "infobiz:greedy_wolf:bigger-channel",
           "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
-          "worldName": "Последние инфобизеры",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "По просмотрам не докажешь. Дайте строчку из рекламы и вопрос с собеса. Разберём, где наш курс реально помогает.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "evidence",
+            "disagreement"
+          ],
+          "when": "В споре качество курса предлагают оценить по тому, у кого больше подписчиков.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "bigger-channel",
+          "exampleInput": "«Если бы Куляш был прав, у него было бы больше подписчиков». Это теперь так проверяют, выполнил курс обещание или нет?",
+          "context": "В споре о «Вкате» один из комментаторов ставит число подписчиков выше вопросов Куляша. Итоговый обзор Бургера ещё не вышел."
+        },
+        {
+          "id": "infobiz:2kotleti_news:first-task",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
           "starId": "2kotleti_news",
           "starName": "Бургер в Декабре",
-          "text": "В рекламе гарантировали работу. В комментариях уже гарантируют только жаркий спор.",
+          "text": "Вакансия стартовая. Старт нужно принести с собой. Ника, где кандидат должен взять первую задачу?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "question",
+            "action"
+          ],
+          "when": "Игрок спрашивает, где получить первый опыт, если без опыта его даже не зовут на собеседование.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "first-task",
+          "exampleInput": "Я готовлюсь к собесам, но меня разворачивают на словах «без опыта». Где взять первую задачу, если даже до разговора не допускают?",
+          "context": "Игровой персонаж работает в такси и ищет первую задачу в IT. Ника требует коммерческий опыт на стартовую позицию."
+        },
+        {
+          "id": "infobiz:2kotleti_news:ad-promise",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "В слове «любой» работы больше, чем в остальной рекламе. Меркантил, какой вопрос твой курс всё-таки не покрывает?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "accusation",
+            "question"
+          ],
+          "when": "Игрок просит проверить, поможет ли обещание курса с незнакомой задачей на собеседовании.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "ad-promise",
+          "exampleInput": "В рекламе обещали подготовить к любому собесу. Если меня спросят про задачу, которой я никогда не делал, ваш курс тоже поможет?",
+          "context": "Игрок цитирует рекламу «Вката». Участники ещё не сверяли обещания курса с результатами выпускников."
+        },
+        {
+          "id": "infobiz:2kotleti_news:order-sheet",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "В черновике заголовок про первую работу. Пока там одна таблица. Ника, что в ней нужно проверить, чтобы у неё был вес на собесе?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "evidence",
+            "question"
+          ],
+          "when": "Игрок показывает расчёт по реальным заказам и спрашивает, можно ли считать его опытом.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "order-sheet",
+          "exampleInput": "Собрал таблицу для своих смен. По заказам считает, сколько осталось после бензина и комиссии. Всё ещё ноль опыта?",
+          "context": "Игрок показал учебную таблицу доходов по заказам. В посте есть отдельные поля для бензина и комиссии, но расчёты на тестовых данных не показаны."
+        },
+        {
+          "id": "infobiz:2kotleti_news:fake-internship",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "В черновике уже и стажировка, а в исходнике одна таблица. Меркантил, как ты предложишь описать её в резюме?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "boundary",
+            "risk"
+          ],
+          "when": "Игрок предлагает выдать настоящую учебную или домашнюю задачу за вымышленную стажировку.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "fake-internship",
+          "exampleInput": "А если я в резюме напишу, что таблица была задачей на стажировке? Сама-то таблица настоящая.",
+          "context": "Игрок обсуждает, как описать учебную работу в резюме. Коммерческой стажировки в истории персонажа не было."
+        },
+        {
+          "id": "infobiz:2kotleti_news:bigger-channel",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Охват в кадре, доказательства за кадром. Пока придержу заголовок и спрошу Меркантила про обещание.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "evidence",
+            "disagreement"
+          ],
+          "when": "В споре качество курса предлагают оценить по тому, у кого больше подписчиков.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "bigger-channel",
+          "exampleInput": "«Если бы Куляш был прав, у него было бы больше подписчиков». Это теперь так проверяют, выполнил курс обещание или нет?",
+          "context": "В споре о «Вкате» один из комментаторов ставит число подписчиков выше вопросов Куляша. Итоговый обзор Бургера ещё не вышел."
+        },
+        {
+          "id": "infobiz:alexey_nl:first-task",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "До курса пока один вопрос: в какой момент рекрутер отсеивает человека? Даже до разговора дело не дошло.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "question",
+            "action"
+          ],
+          "when": "Игрок спрашивает, где получить первый опыт, если без опыта его даже не зовут на собеседование.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "first-task",
+          "exampleInput": "Я готовлюсь к собесам, но меня разворачивают на словах «без опыта». Где взять первую задачу, если даже до разговора не допускают?",
+          "context": "Игровой персонаж работает в такси и ищет первую задачу в IT. Ника требует коммерческий опыт на стартовую позицию."
+        },
+        {
+          "id": "infobiz:alexey_nl:ad-promise",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Берём ровно «к любому собесу». Как проверим подготовку, если на интервью просят рассказать о задаче, которой у человека не было?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "accusation",
+            "question"
+          ],
+          "when": "Игрок просит проверить, поможет ли обещание курса с незнакомой задачей на собеседовании.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "ad-promise",
+          "exampleInput": "В рекламе обещали подготовить к любому собесу. Если меня спросят про задачу, которой я никогда не делал, ваш курс тоже поможет?",
+          "context": "Игрок цитирует рекламу «Вката». Участники ещё не сверяли обещания курса с результатами выпускников."
+        },
+        {
+          "id": "infobiz:alexey_nl:order-sheet",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Меркантил, в рекламе обещали подготовить к любому собесу. Вот расчёт с реальных смен. Он поможет пройти фильтр «без коммерческого опыта»?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "evidence",
+            "question"
+          ],
+          "when": "Игрок показывает расчёт по реальным заказам и спрашивает, можно ли считать его опытом.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "order-sheet",
+          "exampleInput": "Собрал таблицу для своих смен. По заказам считает, сколько осталось после бензина и комиссии. Всё ещё ноль опыта?",
+          "context": "Игрок показал учебную таблицу доходов по заказам. В посте есть отдельные поля для бензина и комиссии, но расчёты на тестовых данных не показаны."
+        },
+        {
+          "id": "infobiz:alexey_nl:fake-internship",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Про стажировку попросят назвать того, кто ставил задачу. Лучше так и написать: считал свои смены. Это можно показать.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "boundary",
+            "risk"
+          ],
+          "when": "Игрок предлагает выдать настоящую учебную или домашнюю задачу за вымышленную стажировку.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "fake-internship",
+          "exampleInput": "А если я в резюме напишу, что таблица была задачей на стажировке? Сама-то таблица настоящая.",
+          "context": "Игрок обсуждает, как описать учебную работу в резюме. Коммерческой стажировки в истории персонажа не было."
+        },
+        {
+          "id": "infobiz:alexey_nl:bigger-channel",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Подписчиков вижу. Открой рекламу: какая именно строчка обещает работу после курса?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "evidence",
+            "disagreement"
+          ],
+          "when": "В споре качество курса предлагают оценить по тому, у кого больше подписчиков.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "bigger-channel",
+          "exampleInput": "«Если бы Куляш был прав, у него было бы больше подписчиков». Это теперь так проверяют, выполнил курс обещание или нет?",
+          "context": "В споре о «Вкате» один из комментаторов ставит число подписчиков выше вопросов Куляша. Итоговый обзор Бургера ещё не вышел."
+        },
+        {
+          "id": "infobiz:nika:first-task",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Стартовая должность, задачи рабочие. На какой части этой задачи тебе пока нужен человек рядом?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "question",
+            "action"
+          ],
+          "when": "Игрок спрашивает, где получить первый опыт, если без опыта его даже не зовут на собеседование.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "first-task",
+          "exampleInput": "Я готовлюсь к собесам, но меня разворачивают на словах «без опыта». Где взять первую задачу, если даже до разговора не допускают?",
+          "context": "Игровой персонаж работает в такси и ищет первую задачу в IT. Ника требует коммерческий опыт на стартовую позицию."
+        },
+        {
+          "id": "infobiz:nika:ad-promise",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Если опыта не было, так и скажи. Я спрошу, какое число проверишь первым, когда таблица выдаст странный итог.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "accusation",
+            "question"
+          ],
+          "when": "Игрок просит проверить, поможет ли обещание курса с незнакомой задачей на собеседовании.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "ad-promise",
+          "exampleInput": "В рекламе обещали подготовить к любому собесу. Если меня спросят про задачу, которой я никогда не делал, ваш курс тоже поможет?",
+          "context": "Игрок цитирует рекламу «Вката». Участники ещё не сверяли обещания курса с результатами выпускников."
+        },
+        {
+          "id": "infobiz:nika:order-sheet",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Таблица для своих смен — понятная задача. С чем сравниваешь итог, чтобы доверять цифрам? Как коммерческий опыт эту таблицу я пока не засчитаю.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "evidence",
+            "question"
+          ],
+          "when": "Игрок показывает расчёт по реальным заказам и спрашивает, можно ли считать его опытом.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "order-sheet",
+          "exampleInput": "Собрал таблицу для своих смен. По заказам считает, сколько осталось после бензина и комиссии. Всё ещё ноль опыта?",
+          "context": "Игрок показал учебную таблицу доходов по заказам. В посте есть отдельные поля для бензина и комиссии, но расчёты на тестовых данных не показаны."
+        },
+        {
+          "id": "infobiz:nika:fake-internship",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Если стажировки не было, за выдуманный опыт откажу. Таблицу могу обсудить отдельно как учебный проект.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "boundary",
+            "risk"
+          ],
+          "when": "Игрок предлагает выдать настоящую учебную или домашнюю задачу за вымышленную стажировку.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "fake-internship",
+          "exampleInput": "А если я в резюме напишу, что таблица была задачей на стажировке? Сама-то таблица настоящая.",
+          "context": "Игрок обсуждает, как описать учебную работу в резюме. Коммерческой стажировки в истории персонажа не было."
+        },
+        {
+          "id": "infobiz:nika:bigger-channel",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Хоть миллион просмотров. Открой таблицу, покажи спорную цифру и скажи, в чьи сроки была нужна эта работа.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "situationIds": [
+            "evidence",
+            "disagreement"
+          ],
+          "when": "В споре качество курса предлагают оценить по тому, у кого больше подписчиков.",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "sceneId": "bigger-channel",
+          "exampleInput": "«Если бы Куляш был прав, у него было бы больше подписчиков». Это теперь так проверяют, выполнил курс обещание или нет?",
+          "context": "В споре о «Вкате» один из комментаторов ставит число подписчиков выше вопросов Куляша. Итоговый обзор Бургера ещё не вышел."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3993",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Вот из твоей последней задачи на собесе что вообще успели понять? Давай начнём с этого.",
           "language": "ru",
           "usageMode": "authored_example",
           "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
-          "when": "Спор о гарантиях",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок хорошо знает работу, но теряется на собеседовании."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3992",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Нормально делаешь задачи — отлично. А если в пятницу уберут весь проект, какая работа у тебя уже на примете?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "risk"
+          ],
+          "when": "Игрок полагает, что хорошие результаты исключают сокращение."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3985",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Если сработал автоматический фильтр, давай посмотрим отклик. У тебя опыт вообще видно на первом экране?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок подозревает автоматический отказ и хочет проверить отклик."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3984",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Давай без доклада про личный бренд. Какой вопрос тебе уже трижды задали? Вот с него и начни пост.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок обсуждает развитие канала и ищет тему."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3978",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "«Могу, просто не хочу» отлично работает до первой просьбы показать результат.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок шутит, что выполнил бы работу при желании."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3973",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Ну что, помощники тебе уже подготовили ответ? Теперь расскажи, почему выбрал именно его.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок рассчитывает поручить всю подготовку помощникам."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3971",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Прежде чем строить теорию про тайный фильтр: ты дату в отклике вообще проверил?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок объясняет простой сбой сложным заговором."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3968",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Мне тоже хочется уйти думать про стратегию. Скинь экран, на котором застопорился, и разберём место.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок просит разобраться в конкретном затруднении с инструментом."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3966",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Принеси один отказ, который тебя задел. Посмотрим, что человеку было видно к моменту отказа.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок предлагает разбирать карьерные случаи на примерах."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3960",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "«Везде ждут большего» — чего именно? Кинь одно требование из вакансии, а то мы так и до телепатии дойдём.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок пересказывает общее правило без примеров."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3956",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Если представить одну и ту же задачу на двадцать лет, мне тоже станет не по себе. Какую работу тебе самому интересно пробовать?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок боится, что за первой работой последует долгая рутина."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3955",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Прежде чем полгода собираться на первую работу, возьми задачу, которой уже кому-то можно помочь. Есть из чего выбрать?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок недавно закончил учёбу и не понимает, откуда брать первый опыт."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3952",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Совет «пройди любой курс и откликайся» уже сильно просрочен. Давай посмотрим, что от новичков хотят в твоих вакансиях.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
           "situationIds": [
             "disagreement"
-          ]
+          ],
+          "when": "Игрок рассчитывает, что любой курс автоматически даст работу."
         },
         {
-          "id": "infobiz:2kotleti_news:11",
+          "id": "infobiz:greedy_wolf:telegram-3947",
           "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
-          "worldName": "Последние инфобизеры",
-          "starId": "2kotleti_news",
-          "starName": "Бургер в Декабре",
-          "text": "Пока у нас две версии и один скрин. До победного отчёта ещё далеко.",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Когда условия площадки меняются, неприятно всё начинать сначала. Где у тебя лежит копия портфолио?",
           "language": "ru",
           "usageMode": "authored_example",
           "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
-          "when": "Попросили подвести итог",
           "situationIds": [
-            "evidence"
-          ]
+            "risk"
+          ],
+          "when": "Игрок зависит от одной внешней площадки и боится её ограничений."
         },
         {
-          "id": "infobiz:2kotleti_news:12",
+          "id": "infobiz:greedy_wolf:telegram-3946",
           "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
-          "worldName": "Последние инфобизеры",
-          "starId": "2kotleti_news",
-          "starName": "Бургер в Декабре",
-          "text": "Вот и новость: в треде наконец есть что проверить. С неё и начну обзор.",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Тебя перестали звать на обсуждения? Отдельно запиши, какие задачи у тебя забрали, и уточни, что осталось твоей зоной ответственности.",
           "language": "ru",
           "usageMode": "authored_example",
           "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
-          "when": "Появился проверяемый факт",
           "situationIds": [
             "evidence"
-          ]
+          ],
+          "when": "Игрок подозревает, что его вытесняют из рабочих процессов."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3945",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Окей, у нанимающей команды другой взгляд. Давай вытащим один пункт, на котором мы реально расходимся.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Игрок пересказывает возражение оппонента в споре о найме."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3944",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Обещание «устроим на работу» звучит красиво. Где там написано, что человек получит после первого занятия?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "accusation"
+          ],
+          "when": "Игрок сомневается в ценности карьерной консультации."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3933",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Спасибо, что пересмотрел. Если вторая версия стала понятнее, скажи, на каком примере наконец щёлкнуло.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок поддерживает переизданный материал."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3927",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Давайте на секунду забудем про ярлык и вернёмся к собесу. Какой вопрос вообще проверял умение делать работу?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "boundary"
+          ],
+          "when": "Обсуждение собеседования перешло на унижение кандидата."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3926",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Я бы начал с простого: сколько живёшь на накопления, пока ищешь работу? Остальные планы тогда можно примерить к реальности.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "risk"
+          ],
+          "when": "Игрок собирается рискнуть доходом ради смены профессии."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3925",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Нормально тревожиться перед собесом. Давай выпишем один вопрос, на котором тебя клинит, и потренируем именно его.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок переживает из-за подготовки к собеседованию."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3924",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Звание «нормис» получил, осталось узнать, какой именно совет оказался слишком нормальным.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок подшучивает над слишком бытовым советом."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3922",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Если мой совет теперь официально дедовский, ладно. Покажи, где он перестал работать.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок считает рекомендацию старомодной."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3921",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Спасибо. Я свой ответ уже дал, теперь интересно, где ты бы меня прижал вторым вопросом.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок хвалит публичный ответ Меркантила на неудобный вопрос."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3920",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Бывает, сам уверен, что шарю, пока не попросят сравнить две реальные попытки. Что получилось во второй?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Игрок защищает привычный подход и не хочет смотреть альтернативы."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3918",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Если короткий разбор никому не нужен, могу вернуть лекцию на четыре часа. Но сначала скажите, что в разборе лишнее.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок подшучивает над коротким форматом или просит перемен."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3917",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Дайте им одинаковое тестовое и одинаковое время. Потом уже выясним, кто быстрее и на каком месте.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок сравнивает кандидатов или инструменты без равных условий."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3916",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "В пример резюме можно не влюбляться. Посмотри лучше, какое достижение считывается с первой строки.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок отвлекается на внешний вид рекомендации."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3914",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Если новое направление пугает, возьми одну задачу на пробу. Через вечер будет больше данных, чем после месяца думок.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок хочет сменить направление, но сомневается, потянет ли."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3906",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Когда резюме совпадает с вакансией до запятой, я бы проверил, где там осталась твоя собственная работа.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "risk"
+          ],
+          "when": "Игрок собирается просто переписать описание вакансии в резюме."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3903",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Раньше было проще, допустим. А сегодня какой из трёх этапов тебя тормозит: отклик, тестовое или разговор?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок сравнивает сегодняшний найм с прошлым."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3894",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Если стало всё равно, пару дней можно выдохнуть. Потом выбери одно маленькое дело: отправить отклик или разобрать одну задачу.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок поделился усталостью, и ему нужен подъёмный следующий шаг."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3892",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Нет денег на продвижение? Начни с человека, которому уже полезна твоя работа. Что он написал, когда получил результат?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок ищет, как начать продвигать свой проект с ограниченным бюджетом."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3889",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Спасибо, что доверился. Давай подберём один разбор под твою задачу: где тебе сейчас нужнее помощь?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок благодарит за вступление или поддержку."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3888",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Скинь вопрос, который у тебя завис после разбора. Если такой же всплыл у других, поставлю первым в следующий выпуск.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок предлагает обновить материал по реальным запросам."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3886",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Если на собесе узнают, кем ты был в прошлой жизни, спроси, какая часть вакансии про это. Посмотрим, где им станет смешно.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок шутит про абсурдный критерий трудоустройства."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3879",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Окей, в одном месте меня поймали на слове. Давай разберём, в каком выводе я теперь должен поправиться.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Игрок разносит аргументы Меркантила после дискуссии."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3877",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Выдели два вечера в неделю на отклики. Когда работой надо заняться срочно, хорошо иметь уже начатый разговор.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок планирует подаваться только после увольнения."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3870",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Ставишь запись на паузу и отвечаешь вслух. Если получается только перечитать конспект, вот тебе и первая тренировка.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок просит практический способ готовиться к интервью."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3868",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Концовка «без негатива» зачтена. А теперь ткни пальцем, в какой строчке совета я ошибся.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок заканчивает резкую реплику успокаивающей оговоркой."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3864",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Возьми три похожие вакансии и посмотри вилки. Потом уже решай, упёрся ты в профессию или в потолок на текущем месте.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "risk"
+          ],
+          "when": "Игрок говорит, что ему некуда расти в профессии."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3855",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Рад, что помогло. Если расскажешь, какой конкретный ход сработал, будет из чего сделать следующий разбор.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок благодарит за помощь с карьерной задачей."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3845",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Вытаскивай самый бесячий кусок этой истории. Начнём с него, потом посмотрим на остальное.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок просит разобрать неприятный опыт на работе."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3844",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Назови одну задачу, которую уже делегируешь помощнику. Потом разберём ту часть, за которую всё ещё отвечаешь ты.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок спрашивает, что учить при автоматизации работы."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3839",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Если кто-то познакомил тебя с работодателем, вернись с ответом, как прошло. Из таких мелочей и получается полезное знакомство.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "trust"
+          ],
+          "when": "Игрок сомневается в пользе профессиональных знакомств."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3837",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Когда никто не назначает тебе задачу, поставь себе маленькую: к вечеру собрать одну работающую страницу портфолио.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок не может начать обучение без чьего-то плана."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3792",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "«Вкат» можно проверять на противоречия сколько угодно. Принеси обещание, которое кажется тебе пустым, и разберём его дословно.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "accusation"
+          ],
+          "when": "Игрок обвиняет Меркантила в слишком широких обещаниях курса."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3767",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Это собеседование, а не посвящение в орден. Запнулся на вопросе — разберём вопрос и пойдём дальше.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Игрок воспринимает карьерный провал как оценку всей личности."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3738",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Если тема ни разу не встретилась в твоих задачах, в конец списка. Начни с упражнения, которое можно показать на собесе.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок застрял в теории вместо выполнения практического задания."
+        },
+        {
+          "id": "infobiz:greedy_wolf:telegram-3733",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "greedy_wolf",
+          "starName": "Меркантил",
+          "text": "Окей, цену сейчас оставим. Давай сперва посмотрим, поможет ли тебе хоть один конкретный материал.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "boundary"
+          ],
+          "when": "Игрок просит прекратить рекламу и перейти к сути."
+        },
+        {
+          "id": "infobiz:nika:telegram-6963",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Коллеги, спасибо, что подкинули примеры. Без вас я бы сидела и делала вид, что одного резюме достаточно для выводов.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Читатели поддержали разбор и принесли свои примеры."
+        },
+        {
+          "id": "infobiz:nika:telegram-6962",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Мне помогли на первом собеседовании, и вот это я запоминаю надолго. Теперь пора сделать то же самое для кого-то ещё.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "trust"
+          ],
+          "when": "Игрок благодарит за давнюю помощь или возвращает услугу."
+        },
+        {
+          "id": "infobiz:nika:telegram-6951",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Я люблю свою команду, поэтому не хочу, чтобы всё держалось на одном человеке. Дайте коллеге время научиться делать вашу часть.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок решает, стоит ли обучать коллег."
+        },
+        {
+          "id": "infobiz:nika:telegram-6948",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Напишите мне одним сообщением всё, что хотели. Мне такое удовольствие сейчас реже достаётся, чем обед вовремя.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок прислал много отрывочных сообщений вместо описания задачи."
+        },
+        {
+          "id": "infobiz:nika:telegram-6944",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Так, кто у нас так толково написал про отклики? Аккуратнее: такими комментариями можно напроситься на разговор.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок оставил удачное наблюдение и привлёк внимание Ники."
+        },
+        {
+          "id": "infobiz:nika:telegram-6943",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Давайте покажем работу человека, который рискнул и сделал. Если хотите помочь, скажите, что у вас реально получилось бы использовать.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок поделился своим первым проектом и боится его показывать."
+        },
+        {
+          "id": "infobiz:nika:telegram-6940",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "На разговор о карьере иногда идёшь за советом. А потом понимаешь, что полезнее всего оказались люди, которым теперь можно написать.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок оценивает, принесло ли пользу профессиональное знакомство."
+        },
+        {
+          "id": "infobiz:nika:telegram-6939",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Так, если на собеседовании кандидата перебивают каждые десять секунд, мы проверяем только его терпение. Где там вопрос по работе?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "boundary"
+          ],
+          "when": "Игрок описывает неприятное собеседование."
+        },
+        {
+          "id": "infobiz:nika:telegram-6936",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Если тебя ценят за то, что только ты закрываешь чужие завалы, это дорогая суперсила. Что произойдёт, когда ты перестанешь?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "risk"
+          ],
+          "when": "Игрок верит, что авралы делают его незаменимым."
+        },
+        {
+          "id": "infobiz:nika:telegram-6935",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Коллеги, давайте посчитаем: за эту неделю сколько было откликов и сколько ответов? С этого и начнём.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок говорит, что рынок не отвечает, без конкретных чисел."
+        },
+        {
+          "id": "infobiz:nika:telegram-6933",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Так, я правда этого не знала. Дайте секунду, я сейчас перечитаю условия и вернусь с ответом.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок заметил, что Ника пропустила важное условие."
+        },
+        {
+          "id": "infobiz:nika:telegram-6932",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Если хотите сделать мне приятно, напишите, какая мысль пригодилась. Сладкий эпитет я забуду, а это смогу повторить.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "boundary"
+          ],
+          "when": "Игрок хочет похвалить Нику или поддержать её работу."
+        },
+        {
+          "id": "infobiz:nika:telegram-6927",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Коллеги, я вообще-то пришла нанимать людей. Как так вышло, что опять учу нас всех нормально описывать одну задачу?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок замечает, что обсуждение найма превратилось в урок."
+        },
+        {
+          "id": "infobiz:nika:telegram-6917",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Респект приняла. Я тоже иногда радуюсь, когда кто-то замечает работу без специального созвона с напоминанием.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок публично поддерживает Нику."
+        },
+        {
+          "id": "infobiz:nika:telegram-6915",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Я пришла сказать спасибо. Ты не просто согласился, ты показал конкретное место, где мы могли сделать лучше.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок помог Нике разобраться в спорной ситуации."
+        },
+        {
+          "id": "infobiz:nika:telegram-6914",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Мем про рекрутеров смешной. Особенно если после него никто так и не спросил, кто придумал тестовое на три дня.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок шутит над рекрутерами и иронизирует над наймом."
+        },
+        {
+          "id": "infobiz:nika:telegram-6912",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "На собеседовании легко начать играть роль идеального работника. Назови одну вещь, которую тебе правда важно знать до оффера.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок говорит, что боится показаться неудобным на собеседовании."
+        },
+        {
+          "id": "infobiz:nika:telegram-6909",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Коллеги, «работа из офиса» теперь в вакансии или руководство уже третий раз говорит, что это ненадолго?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок рассказывает о смене формата работы."
+        },
+        {
+          "id": "infobiz:nika:telegram-6906",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Так, отказ кандидату можно написать одной нормальной фразой. Унизить человека, который и так без работы, зачем?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "boundary"
+          ],
+          "when": "Игрок оправдывает грубый отказ кандидату."
+        },
+        {
+          "id": "infobiz:nika:telegram-6905",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Коллеги, мне опять прислали «поправьте, пожалуйста». Какой пункт меняем и что должно стать понятнее?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок передаёт правку без конкретики."
+        },
+        {
+          "id": "infobiz:nika:telegram-6902",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Тебе нужна эта должность или тебе нравится, как у этого человека устроен день? Одно вполне может идти без другого.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок выбирает карьерную цель, ориентируясь на чужой статус."
+        },
+        {
+          "id": "infobiz:nika:telegram-6901",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Если из чужой карьеры хочется скопировать один удачный год, давай сначала спросим, чем за него заплатили.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Игрок планирует повторить чужую карьеру по внешним признакам."
+        },
+        {
+          "id": "infobiz:nika:telegram-6898",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Хочешь, чтобы тебе поверили? Назови, кто отвечает, когда ждать ответ и что будет, если сроки поедут.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "trust"
+          ],
+          "when": "Игрок обещает исправить найм, не указав сроки и ответственность."
+        },
+        {
+          "id": "infobiz:nika:telegram-6896",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "В вакансии пишем «можно без опыта», а на собесе спрашиваем три коммерческих проекта. Коллеги, какой поворотник включали?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок заметил противоречие между вакансией и собеседованием."
+        },
+        {
+          "id": "infobiz:nika:telegram-6895",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Давайте прочитаем один пункт вакансии глазами человека, которого ещё ни разу не позвали на работу. Что он поймёт?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок предлагает пересмотреть требования к новичку."
+        },
+        {
+          "id": "infobiz:nika:telegram-6890",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "«Где-то руководил» я в заключение не поставлю. Какая была команда и за какой конкретно результат он отвечал?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок просит оценить резюме с расплывчатым опытом руководства."
+        },
+        {
+          "id": "infobiz:nika:telegram-6889",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Коллеги, можно по-честному признать ошибку в требованиях и по-человечески извиниться перед теми, кого так отсеяли.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "trust"
+          ],
+          "when": "Игрок предлагает скрыть ошибку найма из-за неудобства."
+        },
+        {
+          "id": "infobiz:nika:telegram-6888",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Это вопрос к человеку, который решает, кого мы нанимаем. Кто у вас вообще утвердил этот критерий?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок просит объяснить странное правило найма."
+        },
+        {
+          "id": "infobiz:nika:telegram-6886",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Коллеги, давайте не устраивать стендап на чужом отказе. Что конкретно кандидат должен был уметь после этого задания?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "boundary"
+          ],
+          "when": "Игрок предлагает высмеять соискателя после отказа."
+        },
+        {
+          "id": "infobiz:nika:telegram-6885",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Из ста откликов хочу один, который написал живой человек. Лучше неровно свою задачу описать, чем идеально перепечатать вакансию.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок сомневается, можно ли выделиться резюме."
+        },
+        {
+          "id": "infobiz:nika:telegram-6881",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Так. Из всей этой истории у меня один рабочий вопрос: что ты сделал своими руками и где можно проверить результат?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок прислал сложный пересказ, в котором теряется собственный вклад."
+        },
+        {
+          "id": "infobiz:nika:telegram-6880",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Отказы идут волной. Сохрани контакты тех, с кем разговор был нормальный: рынок меняется, а эти люди уже знают, что ты умеешь.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "risk"
+          ],
+          "when": "Игрок переживает затяжную серию отказов."
+        },
+        {
+          "id": "infobiz:nika:telegram-6874",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Если тебя кто-то поддержал на поисках, отдай пользу дальше. Например, посмотри резюме новичка и скажи, где ему можно помочь.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "trust"
+          ],
+          "when": "Игрок говорит о помощи, полученной от коллег."
+        },
+        {
+          "id": "infobiz:nika:telegram-6869",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Если на одну задачу нанимаем двоих и друг от друга прячем требования, странно потом требовать от них командной работы.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Игрок жалуется на раздробленную ответственность в работе."
+        },
+        {
+          "id": "infobiz:nika:telegram-6868",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Вот с тобой даже спорить приятно: отметил конкретную строчку и дал ответить. Давайте дальше таким составом.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок корректно возразил Нике в публичной ветке."
+        },
+        {
+          "id": "infobiz:nika:telegram-6867",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "С аргументом согласна. Теперь убери из него оценку человека, тогда я смогу повторить эту мысль вслух.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "boundary"
+          ],
+          "when": "Игрок прав по сути, но подаёт довод как унижение."
+        },
+        {
+          "id": "infobiz:nika:telegram-6866",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Так, коллеги, если это навык будущего, покажите задачу сегодняшнего дня, на которой он уже пригодился.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок советует изучать модный навык без практических примеров."
+        },
+        {
+          "id": "infobiz:nika:telegram-6865",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "В резюме ты продаёшь свою работу, это нормально. Давай пока покажем, что именно покупатель увидит после первой недели.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок стесняется описывать достижения в резюме."
+        },
+        {
+          "id": "infobiz:nika:telegram-6862",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Если на собесе требуют терпеть унижение, можно спокойно закрыть созвон. Заодно запиши, какой сигнал ты теперь будешь замечать раньше.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок делится неприятным опытом собеседования."
+        },
+        {
+          "id": "infobiz:nika:telegram-6855",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Коллеги, как идёт поиск? Отказы на отклике, на тестовом или в последнем разговоре? Это три разных проблемы.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок просит оценить, почему поиск застопорился."
+        },
+        {
+          "id": "infobiz:nika:telegram-6854",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Стол, стул и печенье зачла. Теперь можно вернуться к редким привилегиям вроде внятной зарплаты и списка задач?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок показывает вакансию с бесполезным списком преимуществ."
+        },
+        {
+          "id": "infobiz:nika:telegram-6848",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "По одному бодрому ответу я человека не оцениваю. Покажи работу, в которой было видно, как он себя ведёт, когда не всё получается.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок пытается судить о специалисте по первому впечатлению."
+        },
+        {
+          "id": "infobiz:nika:telegram-6794",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Можно дописать в вакансии «дружная команда» ещё три раза. Кандидаты потом всё равно расскажут друг другу, что там было на созвоне.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок предлагает улучшить образ вакансии без изменений в найме."
+        },
+        {
+          "id": "infobiz:nika:telegram-6779",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Час обсуждали, кто откроет документ. Коллеги, давайте сегодня на этот этап выделим хотя бы целых две минуты.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок жалуется на затянувшееся планирование."
+        },
+        {
+          "id": "infobiz:nika:telegram-6777",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Если человек год носит одни и те же задачи между созвонами, сначала спроси, кто ему вообще разрешал закончить хоть одну.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Игрок обвиняет коллегу в полной бесполезности."
+        },
+        {
+          "id": "infobiz:nika:telegram-6762",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "С титулами разобрались: все директорские. Теперь кто именно отвечает кандидату и в какой день?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок цитирует несколько руководящих должностей без ответственного лица."
+        },
+        {
+          "id": "infobiz:nika:telegram-6759",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Можем ещё созвон назначить, но лучше кто-нибудь прямо сейчас откроет вакансию и поправит требование.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок предлагает новое совещание вместо точной правки."
+        },
+        {
+          "id": "infobiz:nika:telegram-6742",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Так, «проверочное задание» закончилось там, где вы начали пользоваться его результатом. Как договорились с кандидатом об этом?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "accusation"
+          ],
+          "when": "Игрок рассказывает, что компания использовала бесплатное тестовое как рабочую задачу."
+        },
+        {
+          "id": "infobiz:nika:telegram-6731",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "На стажировку можно идти и без титула самого сильного. Важно честно показать, что ты уже можешь сделать без подсказки.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок сомневается, достаточно ли хорошо готов для первого отклика."
+        },
+        {
+          "id": "infobiz:nika:telegram-6724",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "nika",
+          "starName": "Ника Борщ",
+          "text": "Список сам никогда не кончится. Назови, какую задачу сегодня считаем последней, а остальное перенеси вместе со сроками.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "boundary"
+          ],
+          "when": "Игрок описывает бесконечную очередь задач."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4809",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Загляните в черновик разбора. Он пока без обложки, зато по ссылкам уже можно пройтись.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок впервые показывает свой небольшой разбор и просит помочь ему найти читателей."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4804",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "В заголовок уже просятся три отказа. Сначала выясним, кто из троих вообще дошёл до собеса.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок сравнивает результаты собеседований, объединяя отказ и неявку."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4792",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Ого. Кто бы мог подумать, что под объявлением о курсе обсуждают сам курс.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Кто-то с серьёзным видом сообщает о предсказуемой дискуссии."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4785",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Хорошо, вы уже видели пост. Давайте сверим, какой вывод там выдержит второй просмотр.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок просит обзор материала, который уже разошёлся по ленте."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4784",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Значит, следующий этап собеса — собрать аплодисменты. Где посмотреть шкалу оценки?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Кто-то предлагает судить кандидата по удачности шутки."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4783",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Замечание к правилам найма запишу сейчас. Потом по чужим отказам будем только гадать.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Игрок предлагает промолчать о непонятной процедуре найма."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4776",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Я вынесу в разбор один проверяемый аргумент. Остальное пусть остаётся жаром дискуссии.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "accusation"
+          ],
+          "when": "Игрок обвиняет автора курса или обзора и ссылается преимущественно на эмоции."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4764",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Спойлер: для трёх спорящих нужен четвёртый, который напомнит исходный вопрос.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок хочет добавить спорящих в уже перегруженную ветку."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4762",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Соберу выжимку: что пообещали, что показали и на какой вопрос пока тишина.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок просит коротко пересказать несколько связанных публикаций."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4751",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Вакансию хочется открыть ещё раз. Вдруг со второго раза рядом с требованиями появится зарплата.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок показывает привлекательный заголовок вакансии без важного условия."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4750",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Стоп, кто это сказал? Киньте сам пост, а то я пока вижу одни пересказы.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "В обсуждении появляется новое имя без понятного источника."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4746",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Критиковать обещание курса можно. Давайте сначала покажем, какое именно обещание обсуждаем.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "boundary"
+          ],
+          "when": "Игрок называет публичный разбор условий курса нападением на автора."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4744",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Поздравляю с первым оффером. Если захочешь, потом расскажешь, что на собесе реально пригодилось.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок делится хорошей новостью о работе после поисков."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4732",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Выжимка будет. Вердикт подождёт, пока ответят на второй вопрос.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок просит окончательный вывод по незавершённой перепалке."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4729",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "К разбору пускают всех? Тогда скажите сразу, кому доступна запись.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок упоминает встречу, но непонятно, доступна ли она обычным участникам."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4719",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Вот это уже можно вынести в заголовок. Есть условие, которое читатель сам проверит.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок впервые предлагает прозрачный и проверяемый вариант формулировки."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4718",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Если проект пока для себя, зачем записывать его в бизнес-план? В резюме у него и так есть место.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Собеседник считает любой личный проект бесполезным без выручки."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4717",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "В этот момент я обычно вспоминаю, что у меня хотя бы есть папка с источниками.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок предлагает сравнить себя с успешным создателем контента."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4712",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Если важное условие курса видно только после оплаты, в обзор пойдёт именно это условие.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "risk"
+          ],
+          "when": "Игрок предлагает заменить ясное предупреждение на аккуратную вывеску."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4711",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Спасибо, что читаете. Если у вас был такой собес, один проверяемый пример сейчас очень кстати.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "У канала появились новые читатели и автор зовёт их поучаствовать в сборе фактов."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4709",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "А что если на условия стажировки посмотрят сами стажёры? Хочу задать им тот же вопрос, что и организатору.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок обсуждает правила, не спросив тех, кого они затрагивают."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4706",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Очень необычно. Разбор отбора, а критерий отбора ещё нигде не прозвучал.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Собеседник много говорит о найме, но избегает конкретных критериев."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4697",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Придётся смириться: читатель нашёл в смете то, что я пропустил. Спасибо, заношу правку.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок указывает автору разбора на важную упущенную деталь."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4694",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "За красивое обещание лайк можно поставить авансом. А в разбор оно пойдёт после проверки.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Сторонники предлагают оценить объявление о результате ещё до того, как он достигнут."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4693",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Можно проверить совет на двух настоящих откликах? В теории у нас всё уже получилось.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок преподносит универсальный совет по резюме, хотя результаты зависят от ситуации."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4684",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Если после тишины написать рекрутеру ещё семь раз, мы проверим терпение рекрутера. Вот и весь эксперимент.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок хочет компенсировать отсутствие ответа напором."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4677",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "У нас пять созвонов про пробное задание. Кто-нибудь уже увидел само задание?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок описывает бурное обсуждение, за которым так и нет рабочего результата."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4670",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Так, список вопросов вырос опять. Начну с того, на который организатор хотя бы сможет ответить цифрой.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок просит обзор сразу по нескольким спорным обещаниям."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4669",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Работы стало больше, а что получилось быстрее? Вынесу в разбор только тот показатель, который отвечает на этот вопрос.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок подаёт рост объёма работы как доказательство эффективности."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4664",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "По этому совету главное на собесе — быть приятным. Я бы уточнил, какая задача от этого решится.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Кто-то советует строить карьеру исключительно на обаянии."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4661",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Навыки решают. Особенно когда в первом фильтре стоит три года стажа. Вот с этим и разберёмся.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "В вакансии обещают оценивать навыки, одновременно ставя высокий порог стажа."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4659",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Спасибо, что прислали условие отбора. Теперь спрошу, на каком этапе им пользуются и кто это решил.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок приносит непубличный ранее критерий, который можно проверить у ответственной стороны."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4656",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Задачу на стажировке пока не придумали, зато описание уже на три экрана. Начнём с первого абзаца.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Организатор публикует пышное описание без определения реальной задачи."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4655",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Хочу понять, где я промахнулся с обзором. Назови фразу, которую стоит перепроверить.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок предлагает автору замечание по обзору, но пока не приводит конкретную фразу."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4652",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Намёк услышал. А можно прочитать сам пункт, из которого ты это вывел?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок даёт понять, что условия курса что-то скрывают, но не указывает конкретный текст."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4650",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Хочу увидеть такой же разбор от второй стороны. Картинку можете оставить, цифры принесите свои.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок требует публичного ответа в духе исходного выступления."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4645",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Кандидату тяжело, согласен. Хочу разобраться, почему этот этап висит на нём одном.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Собеседник спорит о жалобе кандидата, игнорируя конкретное условие найма."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4639",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Похоже, спорят уже о любимом названии. Верну разговор к тому, что обещали человеку на входе.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Читатели защищают репутацию курса, хотя вопрос был об одном условии."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4638",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Прежде чем рассылать знакомым чужие резюме, узнайте, соглашались ли они на это.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "risk"
+          ],
+          "when": "Игрок предлагает быстро распространить данные других кандидатов ради помощи."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4635",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Сначала посмотрим условия стажировки. А «и что-нибудь ещё» поставлю в программу, когда назовут, что именно.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Организатор анонсирует повестку широкими обещаниями, и нужно выделить основное."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4633",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "С каждого, кто был на собесе, по одному вопросу. Сравним, что спрашивали на деле.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Нужно собрать свидетельства нескольких участников, чтобы проверить рекламную подготовку к собеседованию."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4628",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Смотрю на свой первый обзор. Там было три громких заголовка и один, в лучшем случае, факт.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок делится сомнениями насчёт первой попытки что-то объяснить публично."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4622",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Уточняю прямо: ошибся в одном месте обзора. Вот фраза, которую поправлю.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "boundary"
+          ],
+          "when": "Автору нужно исправить ошибку в публичном разборе после спорной реакции."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4603",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "После трёх новых фильтров появилась дерзкая мысль: открыть один отклик и прочитать его. Попрошу показать результат.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок рекламирует новый фильтр откликов, не показав, что тот даёт."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4588",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Вот открытое условие, которое каждый может проверить. Беру в разбор, чтобы было что поставить рядом с обещаниями.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Герой показывает конкретный результат, на который можно сослаться."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4577",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Кто оплачивает эту щедрость? Хочу увидеть одну смету, прежде чем писать заголовок про выгоду для всех.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок называет условия выгодными для обеих сторон без объяснения расходов."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4575",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Опыт одного человека оставлю в разборе как историю. Заголовку «никому не поможет» пока нужны данные.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Собеседник превращает один неудачный опыт ученика в вывод о всех."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4570",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Спрошу вторую сторону про срок. Если ответит, добавлю её слова прямо в обзор.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "trust"
+          ],
+          "when": "Одна сторона пообещала комментарий к обзору, но ещё не прислала его."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4566",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Нанимающий эти проценты видел? Тогда спрошу, что именно он по ним решает.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Рекрутер предлагает критерий резюме без подтверждения ответственного за найм."
+        },
+        {
+          "id": "infobiz:2kotleti_news:telegram-4565",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "2kotleti_news",
+          "starName": "Бургер в Декабре",
+          "text": "Спросим, какие резюме не дошли до нанимающего. Там обычно и прячется ответ.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок обвиняет соискателей, увидев только уже отобранные резюме."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-721",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Люблю, когда «серьёзно относимся» есть и на слайде, и в инструкции. Теперь покажите, как это проверяют на практике.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Игрок защищает решение официальной формулировкой компании."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-720",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Если простая шутка набрала больше просмотров, это ещё не победа эксперта. Это победа простой шутки.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок доказывает свой профессионализм охватом постов."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-716",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Во-первых, красиво. Во-вторых, на каком созвоне платная заплатка стала самостоятельным продуктом?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок хвалит красиво упакованное обходное решение."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-715",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Я очень надеюсь, что «ИИ проверит, понимаешь ли ты ИИ» — шутка. В каком месте этой схемы остаётся работа кандидата?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "accusation"
+          ],
+          "when": "Игрок предлагает инструмент с сомнительной проверкой навыков."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-713",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Окей, проценты доступности красивые. Сколько минут человек ждал возврата своего результата?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок приводит метрику надёжности без последствий для пользователей."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-711",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Я тоже иногда читаю «кнопка работает плохо» как «ты работаешь плохо». Давай перечитаем первую фразу буквально.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок воспринимает замечание о работе как личное нападение."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-709",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Там скоро продажи, а прогноз как раз обещает чудо к концу месяца. Совпадение отличное, методику всё-таки покажите.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "accusation"
+          ],
+          "when": "Игрок доверяет оптимистичному прогнозу прямо перед продажей."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-708",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Если освободился один вечер, возьми одну тему и разберись в ней до конца. На сцене избыток тем видно особенно хорошо.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок хочет подготовить выступление за короткий срок."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-705",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Кто победит: ещё один слой автоматизации или человек, который первым спросит, какую задачу мы вообще решаем?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок обсуждает сложное решение задачи с непонятной целью."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-704",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Сегодня посмеялись над абсурдным вопросом. Завтра кто-то пометит его обязательным в шаблоне собеседования.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "risk"
+          ],
+          "when": "Игрок замечает смешное, но уже существующее требование найма."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-703",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Слово «часть» выпало, и «часть работы» превратилась во «всю работу». Верните исходную формулировку, там всё меняется.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок пересказывает цитату с пропущенным ограничением."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-697",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Потерять результат после недели возни реально больно. Сначала проверим, что осталось у участников, потом уже будем спорить о виноватых.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок потерял рабочий материал или результат эксперимента."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-694",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Бесплатная идея. Берём старое обещание, добавляем слово «автоматизация» и повышаем цену. Клиентам останется объяснить зачем.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок хвалит новую упаковку знакомого коммерческого предложения."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-691",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Спасибо комментариям, теперь вместо одной методики у меня коллекция советов, которые противоречат друг другу. Есть что проверять.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок прислал подборку взаимоисключающих советов."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-682",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Вот короткий кейс: один кандидат закончил задачу, второй объяснил, почему такой результат бесполезен. Кого зовём дальше?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок хочет разобрать нестандартное собеседование на задаче."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-680",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "С возрастом наконец разобрались. Остался скромный тест: он сам принимал решение или красиво о нём рассказал?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Игрок судит о квалификации по возрасту."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-678",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Когда спорную историю цитируют пятнадцать раз, это всё ещё пятнадцать копий одной истории. Откуда взялась первая?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "risk"
+          ],
+          "when": "Игрок считает повторение сообщения доказательством."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-677",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "В этой ветке музыкальная пауза: когда закончится третий доклад о будущем найма, кто-нибудь включит запись реального собеса?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок пересказывает многочисленные прогнозы об изменениях в найме."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-670",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Слово «прорыв» пока оставим в кавычках. Какой прежний предел пробили и на чём это можно проверить?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок цитирует рекламный анонс как подтверждение превосходства инструмента."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-669",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "С мест сообщают: результаты перепутали прямо перед публикацией. Стоп рассылка, сначала поднимите исходную таблицу.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "risk"
+          ],
+          "when": "Игрок обнаружил серьёзную ошибку в публикуемых результатах."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-668",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Объясните мне, пожалуйста: человек проходит тестовое по всем пунктам, а потом его отклоняют по критерию, которого в задании не было?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок сообщает об отклонении кандидата по скрытому критерию."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-666",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Вот спасибо, это первая полезная правка за весь разговор. С ней хотя бы можно вернуться к проверяемому примеру.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок предложил практический выход в застрявшем споре."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-664",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Данные за прошлый сезон — полезный фон. Для вывода «сейчас без шансов» покажите хоть один свежий срез.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок делает вывод о сегодняшнем найме по старому исследованию."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-663",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Ещё пара таких требований, и описание вакансии можно выпускать с пометкой «научная фантастика».",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок приводит требования к кандидату, далёкие от реальной роли."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-656",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Вот за что спасибо: ты вытащил из разбора именно ту поправку, ради которой я его делал.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок хвалит разбор, заметив его существенную деталь."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-653",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Разработчики всё? Прекрасный заголовок. Остался неприятный вопрос, кто будет проверять ответ.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок шутливо объявляет профессию устаревшей после новой демонстрации."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-651",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Вывели борьбу с бессмысленными ответами на новый уровень: теперь в них ещё и уверенный тон поправили.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок говорит, что переписанный текст стал содержательнее, хотя изменился только стиль."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-648",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Рубрика «новичок, который уже всё умеет». Коллеги, чем такая роль отличается от обычного специалиста, кроме вилки?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок показывает противоречивую вакансию для начинающих."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-641",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Две версии одного резюме, один фильтр и разные ответы. Любопытно. А на других кандидатах это вообще повторили?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок предъявляет единичный случай как доказательство работы фильтра."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-640",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Назвать всех соискателей хитрецами просто. Сложнее придумать проверку, которую успешно пройдёт человек с реальным навыком.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "disagreement"
+          ],
+          "when": "Игрок считает всех начинающих кандидатов обманщиками."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-634",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Все снова в восторге. Я предпочту человека, который запустил это на своём примере и записал результат.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок предъявляет многочисленные похвалы вместо собственной проверки."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-633",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Когда курс продаётся на страхе остаться без работы, я хочу видеть меру успеха выпускника, а не меру тревоги в рекламе.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "accusation"
+          ],
+          "when": "Игрок обсуждает курс, рекламируемый через угрозы для карьеры."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-631",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Сто процентов выпускников устроились, если считать только тех, кто устроился. А сколько людей начали курс?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок приводит процент успеха без определения выборки."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-628",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Перед показом новой штуки я тоже переживаю. Давайте хотя бы договоримся, какой результат будем считать красивым сюрпризом, а какой — багом.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок волнуется перед демонстрацией проекта."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-622",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Прежде чем решать, заменит ли помощник специалиста, покажите три задачи, которые ему реально ставили.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок сравнивает потенциал автоматизации без конкретных задач."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-620",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "История активности показывает, сколько раз человек сдвинул мышь. За какой результат он отвечал, лучше спросить прямо.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок оценивает вклад сотрудника по активности в инструменте."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-614",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Драма в двух актах: утром обещали предсказуемый найм, вечером табличка снова решает судьбы на глазок.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок описывает быстрый переход от обещания порядка к хаосу."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-613",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Собрал три случая, которые у меня застряли в голове. Разберём первый по шагам, потом посмотрим, есть ли с остальными связь.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "action"
+          ],
+          "when": "Игрок просит разложить несколько новостей по темам."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-610",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Вилку можно сравнить, только если знаем роль, нагрузку и границы ответственности. Скинь два похожих предложения, а не один громкий максимум.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "question"
+          ],
+          "when": "Игрок просит оценить зарплату без сравнимых предложений."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-606",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Между ТЗ и результатом пока сижу я с блокнотом. В презентации это, конечно, называется бесшовной автоматизацией.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок хвалит автоматизированный процесс, где вручную всё сводит человек."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-604",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Сегодня без мемов: есть один удачный пример и три примера, где всё развалилось. Для вывода интереснее именно последние.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок просит серьезный разбор метода после яркой демонстрации."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-599",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Рад, что ты реально попробовал. Даже неудачный запуск полезнее очередного спора про «специалисты больше не нужны».",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок самостоятельно попробовал инструмент и поделился результатом."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-596",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Я видел презентацию про трансформацию. Хотелось бы ещё посмотреть на одну реальную задачу, которая после неё стала занимать меньше времени.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "accusation"
+          ],
+          "when": "Игрок рекламирует процесс повышения эффективности без результатов."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-594",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Вот это хорошая починка: всё по делу, и один смешной штрих остался. Кто сделал, тому спасибо.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок показывает удачное и человечное техническое решение."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-587",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "В комментариях причину уже нашли. Давайте проверим, кто действительно видел ошибку, а кто пересказал самый уверенный ответ.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "evidence"
+          ],
+          "when": "Игрок выдаёт объяснение из обсуждения за достоверное."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-579",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Если автор не читал инструкцию, которую мне прислал, я не собираюсь проверять её на кандидате.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "boundary"
+          ],
+          "when": "Игрок предлагает использовать непроверенный генеративный материал при найме."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-576",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Спасибо, что заметили разбор. Шутка, видно, зашла, теперь давайте скажем честно, где у неё был рабочий вывод.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "support"
+          ],
+          "when": "Игрок поздравляет Куляша с удачно принятым материалом."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-575",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Я думал, что спор уже решён, потому что вокруг все кивали. Потом прочитал возражение и понял, что обсуждали разные вещи.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "vulnerability"
+          ],
+          "when": "Игрок приносит доказательство из однородного круга мнений."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-571",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Срочно в номер: помощник прошёл тестовое. Теперь пусть сам объяснит нанимающему, в каком месте он ему подставил числа.",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "teasing"
+          ],
+          "when": "Игрок громко объявляет об успехе автоматического решения."
+        },
+        {
+          "id": "infobiz:alexey_nl:telegram-568",
+          "worldTemplateId": "5720946a-ea7c-4a10-9c50-51ce3deefc53",
+          "starId": "alexey_nl",
+          "starName": "Куляш AI",
+          "text": "Вчера курс обещал карьеру за счёт шаблона. Сегодня тот же шаблон генерирует помощник. Кто-нибудь измерил результат для ученика?",
+          "language": "ru",
+          "usageMode": "authored_example",
+          "sourceUrl": "https://github.com/Stepami/golden-mouth/issues/317",
+          "situationIds": [
+            "accusation"
+          ],
+          "when": "Игрок обвиняет образовательный продукт в подмене обещания."
         }
       ]
     }
